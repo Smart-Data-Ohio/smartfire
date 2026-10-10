@@ -4,7 +4,7 @@ import { Button } from "../../../ui/button.tsx";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import { Popover } from "../../../ui/popover.tsx";
 import { toast } from "../../../ui/toast-store.ts";
-import { markdownExcerpt } from "../../scheduled/scheduled-format.ts";
+import { scheduledExcerpt } from "../../scheduled/scheduled-format.ts";
 import { LazyCustomTimeDialog } from "./lazy-custom-time-dialog.tsx";
 import { sendAtLabel } from "./presets.ts";
 import { scheduled } from "./scheduled-store.ts";
@@ -77,9 +77,7 @@ export function ScheduledPopover({ items }: ScheduledPopoverProps) {
                     <span className="scheduled-item-when">
                       {sendAtLabel(new Date(item.sendAt), new Date())}
                     </span>
-                    <span className="scheduled-item-body">
-                      {markdownExcerpt(item.markdownSource)}
-                    </span>
+                    <span className="scheduled-item-body">{scheduledExcerpt(item)}</span>
                   </div>
                   <div className="scheduled-item-actions">
                     <IconButton

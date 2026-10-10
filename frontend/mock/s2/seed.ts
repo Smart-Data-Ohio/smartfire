@@ -519,6 +519,7 @@ export function seedS2(world: World, now: number, random: Random): void {
     threadId: null,
     replyToMessageId: null,
     markdownSource: "Reminder: retro notes are due by end of day. Add yours to the doc 🙏",
+    excerpt: "Reminder: retro notes are due by end of day. Add yours to the doc 🙏",
     sendAt: iso(sendAt),
     state: "pending",
     sendable: true,

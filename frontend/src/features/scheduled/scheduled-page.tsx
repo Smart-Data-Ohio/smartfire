@@ -17,7 +17,7 @@ import { PointMenu, type PointMenuRequest, requestMenu } from "../destinations/p
 import { PaneEmpty } from "../panes/pane-states.tsx";
 import { useNow } from "../threads/use-now.ts";
 import type { ScheduledEdit } from "./edit-scheduled-dialog.tsx";
-import { inlineWhen, markdownExcerpt, scheduledSection } from "./scheduled-format.ts";
+import { inlineWhen, scheduledExcerpt, scheduledSection } from "./scheduled-format.ts";
 import { ScheduledMenuItems, ScheduledRow, type ScheduledRowHandlers } from "./scheduled-row.tsx";
 import "./scheduled.css";
 
@@ -319,7 +319,7 @@ export function ScheduledPage() {
         }
       >
         {cancelling === null ? null : (
-          <p className="scheduled-cancel-preview">{markdownExcerpt(cancelling.markdownSource)}</p>
+          <p className="scheduled-cancel-preview">{scheduledExcerpt(cancelling)}</p>
         )}
       </Dialog>
     </PageFrame>

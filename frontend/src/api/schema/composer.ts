@@ -134,6 +134,8 @@ export const ScheduledMessage = Schema.Struct({
   threadId: Schema.NullOr(ThreadId),
   replyToMessageId: Schema.NullOr(MessageId),
   markdownSource: Schema.String,
+  /** The source as preview text, spoilers redacted by the server. Shown instead of the source. */
+  excerpt: Schema.String,
   sendAt: Timestamp,
   state: ScheduledMessageState,
   sendable: Schema.Boolean,

@@ -196,27 +196,6 @@ fn a_link_whose_label_holds_a_spoiler_conceals_it() {
 }
 
 #[test]
-fn redact_spoilers_hides_from_the_first_pair_marker_to_the_last_in_each_block() {
-    // The same cases as the SPA's redactMarkdownSpoilers (frontend/src/lib/spoiler-text.test.ts).
-    for (source, redacted) in [
-        ("see ||secret words|| now", "see spoiler now"),
-        ("||@[David] is the killer||", "spoiler"),
-        ("||nope", "||nope"),
-        ("a ||| b", "a ||| b"),
-        ("||top\n\nbottom||", "||top\n\nbottom||"),
-        ("plain\n\n||secret|| end", "plain\n\nspoiler end"),
-        ("||outer ||SECRET|| tail||", "spoiler"),
-        ("\\`||SECRET||\\`", "\\`spoiler\\`"),
-        ("`||` ||SECRET|| tail", "`spoiler tail"),
-        ("```\n||SECRET||\n```", "```\nspoiler\n```"),
-        ("||one|| and ||two||", "spoiler"),
-        ("no markers at all", "no markers at all"),
-    ] {
-        assert_eq!(markdown::redact_spoilers(source), redacted, "{source:?}");
-    }
-}
-
-#[test]
 fn a_forwarded_spoiler_survives_an_edit() {
     // A forward stores the rendered HTML with no Markdown source. Editing it starts from
     // Markdown made from that HTML, and saving renders that Markdown again.
@@ -233,28 +212,44 @@ fn a_forwarded_spoiler_survives_an_edit() {
     assert_eq!(edited, "<p>after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span></p>\n");
 }
 
+/// Scheduled-message excerpts (`markdown::redacted_excerpt`): Markdown with no stored HTML, read
+/// back from the same render as a message. The Scheduled page and the inbox show these.
 #[test]
-fn redact_spoilers_hides_the_whole_link_when_its_label_holds_a_spoiler() {
-    // The same table as LINK_CASES in frontend/src/lib/spoiler-text.test.ts.
-    for (source, redacted) in [
+fn redacted_excerpts_come_from_the_render() {
+    for (source, excerpt) in [
+        ("no markers at all, **raw** [docs](https://example.com/docs)", "no markers at all, **raw** [docs](https://example.com/docs)"),
+        ("see ||secret words|| now", "see spoiler now"),
+        ("||outer ||SECRET|| tail||", "spoiler"),
+        ("\\`||SECRET||\\`", "`spoiler`"),
+        ("`||x||` and ||y||", "||x|| and spoiler"),
+        ("||top\n\nbottom||", "||top\n\nbottom||"),
+        // A link or image around a spoiler loses its URL and title.
         (r#"[||Alice dies||](https://example.com/alice-dies "Alice dies")"#, "spoiler"),
-        (r#"see [the ||end||](https://example.com/a "t") now"#, "see spoiler now"),
-        (r#"[||x||](https://example.com/a "a) b") after"#, "spoiler after"),
-        ("[||x||](<https://example.com/alice dies>) after", "spoiler after"),
-        (
-            "read [||Alice dies||][ending] now\n\n[ending]: https://example.com/alice-dies \"Alice dies\"",
-            "read spoiler now\n\nspoiler",
-        ),
-        ("[||Alice dies||] now\n\n[||Alice dies||]: https://example.com/alice-dies", "spoiler now\n\nspoiler"),
-        ("[||x||][r]\n\n[r]: https://example.com/a\n  \"Alice dies\"", "spoiler\n\nspoiler"),
-        (r#"![||Alice dies||](https://example.com/alice.png "Alice dies") end"#, "spoiler end"),
-        ("[![||x||](https://example.com/i.png)](https://example.com/alice-dies)", "spoiler"),
-        ("||Alice dies|| <https://example.com/shown>", "spoiler <https://example.com/shown>"),
-        ("<https://example.com/||alice||>", "<https://example.com/spoiler>"),
-        ("||<https://example.com/alice-dies>||", "spoiler"),
-        ("[a](https://example.com/b) ||x|| [c](https://example.com/d)", "[a](https://example.com/b) spoiler [c](https://example.com/d)"),
-        ("[a][r] and no spoiler\n\n[r]: https://example.com/shown", "[a][r] and no spoiler\n\n[r]: https://example.com/shown"),
+        (r#"see [the ||end||](https://example.com/a "t") now"#, "see the spoiler now"),
+        // Round 5: an escaped `)` and a `)` inside `<…>` don't end the destination early.
+        (r#"[||x||](https://example.com/a\)b "Alice dies") after"#, "spoiler after"),
+        (r#"[||x||](<https://example.com/a)b> "Alice dies") after"#, "spoiler after"),
+        // Reference definitions, multiline or blockquoted, are resolved and never shown.
+        ("read [||Alice dies||][ending] now\n\n[ending]:\n  https://example.com/alice-dies\n  \"Alice dies\"", "read spoiler now"),
+        ("> [||x||][r]\n>\n> [r]: https://example.com/alice-dies \"Alice dies\"", "spoiler"),
+        ("[||Alice dies||] now\n\n[||Alice dies||]: https://example.com/alice-dies", "spoiler now"),
+        // Nested brackets and entities.
+        ("[a [||x||] b](https://example.com/alice-dies)", "a [spoiler] b"),
+        ("||Alice &amp; Bob|| &lt;3", "spoiler <3"),
+        (r#"[||x||](https://example.com/&#97;lice "&#65;lice")"#, "spoiler"),
+        // Images aren't rendered, so neither their alt text nor their URL shows.
+        (r#"![||Alice dies||](https://example.com/alice.png "Alice dies") end"#, "end"),
+        ("[![||x||](https://example.com/i.png)](https://example.com/alice-dies)", ""),
+        // Autolinks.
+        ("||Alice dies|| <https://example.com/shown>", "spoiler https://example.com/shown"),
+        ("<https://example.com/||alice||>", "https://example.com/||alice||"),
     ] {
-        assert_eq!(markdown::redact_spoilers(source), redacted, "{source:?}");
+        let shown = markdown::redacted_excerpt(source);
+        assert_eq!(shown, excerpt, "{source:?}");
+        if source.contains("||") {
+            for secret in ["Alice dies", "alice-dies", "SECRET", "secret words", "&#97;lice"] {
+                assert!(!shown.contains(secret), "{source:?} => {shown:?}");
+            }
+        }
     }
 }

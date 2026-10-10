@@ -387,6 +387,7 @@ fn scheduled(
         thread_id: row.thread_id,
         reply_to_message_id: row.reply_to_message_id,
         markdown_source: row.markdown_source.clone(),
+        excerpt: campfire_richtext::markdown::redacted_excerpt(&row.markdown_source),
         send_at: dto::time(row.send_at),
         state,
         sendable: row.pending() && sendable,

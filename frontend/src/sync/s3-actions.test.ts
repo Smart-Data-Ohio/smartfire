@@ -77,6 +77,7 @@ function scheduledMessage(
     threadId: null,
     replyToMessageId: null,
     markdownSource: `Later ${id}`,
+    excerpt: `Later ${id}`,
     sendAt: at(minute),
     state: "pending",
     sendable: true,

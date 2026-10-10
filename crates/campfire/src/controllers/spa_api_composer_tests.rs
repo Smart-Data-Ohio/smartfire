@@ -737,6 +737,47 @@ async fn scheduled_messages_are_listed_changed_and_cancelled() {
 }
 
 #[tokio::test]
+async fn a_scheduled_message_excerpt_keeps_its_spoilers_hidden() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let source = "[||Alice dies||](https://example.com/a\\)b \"Alice dies\") soon";
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
+            &schedule_body(source, LATER, None, None),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::ScheduledMessage = parse(&reply);
+    assert_eq!(row.markdown_source, source);
+    assert_eq!(row.excerpt, "spoiler soon");
+
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/scheduled_messages/{}", row.id),
+            &json!({"markdownSource": "> [||x||][r]\n>\n> [r]: https://example.com/alice-dies \"Alice dies\""}),
+        ))
+        .await;
+    let changed: api::ScheduledMessage = parse(&reply);
+    assert_eq!(changed.excerpt, "spoiler");
+    let list: api::ScheduledMessageList =
+        parse(&david.send(get("/api/v1/scheduled_messages")).await);
+    let listed = list
+        .scheduled_messages
+        .iter()
+        .find(|listed| listed.id == row.id)
+        .unwrap();
+    assert_eq!(listed.excerpt, "spoiler");
+    assert!(
+        list.scheduled_messages
+            .iter()
+            .all(|row| !row.excerpt.contains("Alice") && !row.excerpt.contains("example.com/alice"))
+    );
+}
+
+#[tokio::test]
 async fn sending_a_scheduled_message_now_posts_and_publishes_it() {
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;

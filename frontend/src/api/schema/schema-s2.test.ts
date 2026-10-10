@@ -224,6 +224,7 @@ describe("S2 DTO schemas", () => {
           threadId: 88,
           replyToMessageId: null,
           markdownSource: "Standup in 5",
+          excerpt: "Standup in 5",
           sendAt: "2026-10-07T13:55:00.000Z",
           state: "pending",
           sendable: true,

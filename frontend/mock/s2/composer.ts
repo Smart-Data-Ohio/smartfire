@@ -23,7 +23,7 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
-import { renderMarkdown } from "../markdown.ts";
+import { mockExcerpt, renderMarkdown } from "../markdown.ts";
 import { conversationNames } from "../s3/conversations.ts";
 import { beforeOf, keysetPage } from "../s3/model.ts";
 import { type RoomRecord, VIEWER_ID } from "../seed.ts";
@@ -745,6 +745,7 @@ export function createComposer(
       threadId,
       replyToMessageId: replyTo,
       markdownSource: markdown,
+      excerpt: mockExcerpt(markdown),
       sendAt,
       state: "pending",
       sendable: true,
@@ -766,10 +767,13 @@ export function createComposer(
   const updateScheduled = (id: number, body: Json | undefined): ScheduledMessage => {
     const current = idleOr409(id);
 
+    const markdownSource =
+      stringField(body, "markdownSource") === null ? current.markdownSource : markdownOf(body);
+
     const next = {
       ...current,
-      markdownSource:
-        stringField(body, "markdownSource") === null ? current.markdownSource : markdownOf(body),
+      markdownSource,
+      excerpt: mockExcerpt(markdownSource),
       sendAt: stringField(body, "sendAt") === null ? current.sendAt : sendAtOf(body),
     };
 

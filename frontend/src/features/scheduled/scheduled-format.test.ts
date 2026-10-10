@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
-import { markdownExcerpt, outcomeLabel, scheduledSection } from "./scheduled-format.ts";
+import { outcomeLabel, scheduledExcerpt, scheduledSection } from "./scheduled-format.ts";
 
 function scheduled(overrides: Partial<ScheduledMessage>): ScheduledMessage {
   return {
@@ -9,6 +9,7 @@ function scheduled(overrides: Partial<ScheduledMessage>): ScheduledMessage {
     threadId: null,
     replyToMessageId: null,
     markdownSource: "Hello",
+    excerpt: "Hello",
     sendAt: "2026-10-07T13:00:00.000Z",
     state: "pending",
     sendable: true,
@@ -45,15 +46,33 @@ describe("outcomeLabel", () => {
   });
 });
 
-describe("markdownExcerpt", () => {
+describe("scheduledExcerpt", () => {
   it("drops emphasis markers and folds whitespace", () => {
-    expect(markdownExcerpt("**Ship** it\n\n> _today_")).toBe("Ship it today");
+    const source = "**Ship** it\n\n> _today_";
+
+    expect(scheduledExcerpt(scheduled({ markdownSource: source, excerpt: source }))).toBe(
+      "Ship it today",
+    );
   });
 
-  it("replaces a spoiler with the word, and hides more rather than less", () => {
-    expect(markdownExcerpt("see ||the ending|| now")).toBe("see spoiler now");
-    expect(markdownExcerpt("||outer ||SECRET|| tail||")).toBe("spoiler");
-    expect(markdownExcerpt("\\`||SECRET||\\` tail")).toBe("\\spoiler\\ tail");
-    expect(markdownExcerpt("use `||the ending||` here")).toBe("use spoiler here");
+  // The server renders the source and redacts it (`markdown::redacted_excerpt`); these pairs
+  // come from crates/richtext/tests/spoilers.rs. The client never reads the source.
+  const REDACTED: readonly (readonly [string, string])[] = [
+    ["see ||the ending|| now", "see spoiler now"],
+    ['[||x||](https://example.com/a\\)b "Alice dies") after', "spoiler after"],
+    ['[||x||](<https://example.com/a)b> "Alice dies") after', "spoiler after"],
+    [
+      'read [||x||][r] now\n\n[r]:\n  https://example.com/alice-dies\n  "Alice dies"',
+      "read spoiler now",
+    ],
+    ['> [||x||][r]\n>\n> [r]: https://example.com/alice-dies "Alice dies"', "spoiler"],
+    ["[a [||x||] b](https://example.com/alice-dies)", "a [spoiler] b"],
+  ];
+
+  it.each(REDACTED)("shows the server's excerpt of %j, never the source", (source, excerpt) => {
+    const shown = scheduledExcerpt(scheduled({ markdownSource: source, excerpt }));
+
+    expect(shown).toBe(excerpt);
+    expect(shown).not.toMatch(/Alice|alice-dies|example\.com/);
   });
 });
