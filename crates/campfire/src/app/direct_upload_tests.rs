@@ -500,7 +500,7 @@ async fn composer_accepts_a_100_mb_video_and_retains_the_rails_bytes() {
                 ),
         )
         .await;
-    assert_eq!(reply.status.as_u16(), case["status"], "{}", reply.text());
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let (key, checksum): (String, String) = a.db().read(|c| {
         c.query_row("SELECT b.key,b.checksum FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.name='attachment' AND a.record_type='Message' ORDER BY a.record_id DESC LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?))).map_err(Into::into)
     }).await.unwrap();
@@ -511,5 +511,5 @@ async fn composer_accepts_a_100_mb_video_and_retains_the_rails_bytes() {
     );
     assert_eq!(checksum, case["stored_checksum"]);
     assert_eq!(std::fs::read(path).unwrap(), bytes);
-    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.status, StatusCode::CREATED);
 }

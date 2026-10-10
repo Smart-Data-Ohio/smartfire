@@ -1,0 +1,8 @@
+{
+  "guards": {
+    "anonymous": 302,
+    "bot": 403,
+    "outsider": 302,
+    "outsider_location": "http://campfire.test/"
+  }
+}

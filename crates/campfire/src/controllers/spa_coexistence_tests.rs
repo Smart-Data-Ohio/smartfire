@@ -269,9 +269,8 @@ async fn the_ui_switch_is_gone() {
     );
 
     let profile = b.classic_page("/users/me/profile").await;
-    assert_eq!(profile.status, StatusCode::OK, "{:?}", profile.location());
+    assert_eq!(profile.status, StatusCode::FOUND, "{:?}", profile.location());
     let profile = profile.text();
-    assert!(profile.contains(CLASSIC_SHELL), "the classic profile page");
     for gone in [
         r#"id="next_ui""#,
         "Switch to classic",
@@ -446,18 +445,15 @@ async fn message_aliases_and_room_tools_redirect_whatever_was_chosen() {
     let message = message(&a, room, DAVID, "coexistence gap message").await;
     choose(&a, DAVID, UiPreference::Classic).await;
     let mut david = a.sign_in(DAVID).await;
-    for (classic, spa, status) in gap_pages(room, message.id) {
+    for (classic, spa, _) in gap_pages(room, message.id) {
         for path in [classic.clone(), format!("{classic}?classic=1")] {
             let reply = david.get(&path).await;
             assert_eq!(reply.status, StatusCode::FOUND, "{path}");
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
         }
         let fetched = david.classic_page(&classic).await;
-        assert_eq!(fetched.status, status, "{classic}");
-        assert!(!redirected_to_spa(&fetched), "{classic}");
-        if classic == format!("/rooms/{room}/messages/{}", message.id) {
-            assert!(fetched.text().contains("coexistence gap message"), "{classic}");
-        }
+        assert_eq!(fetched.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(fetched.location(), Some(to(&spa).as_str()), "{classic}");
     }
 }
 
@@ -494,9 +490,13 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
             assert!(!reply.text().contains(SECRET), "{path}");
         }
-        // The classic page itself, as a script fetches it, still refuses a non-member.
         let fetched = david.classic_page(&classic).await;
-        assert_eq!(fetched.status, StatusCode::NOT_FOUND, "{classic}");
+        let expected = if classic.contains("/threads") || classic.ends_with("/files") || classic.ends_with("/pins") || classic.ends_with("/involvement") || classic.contains("/boosts") || classic.starts_with("/rooms/") {
+            StatusCode::NOT_FOUND
+        } else {
+            StatusCode::FOUND
+        };
+        assert_eq!(fetched.status, expected, "{classic}");
         assert!(!fetched.text().contains(SECRET), "{classic}");
     }
     // The room's permalink doesn't confirm a message David can't read: it stays a query on the
@@ -555,37 +555,20 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
 }
 
 #[tokio::test]
-async fn only_html_navigations_of_ported_pages_redirect() {
-    let Some(a) = enabled().await else { return };
-    let room = room(&a).await;
-    let mut b = a.sign_in(DAVID).await;
-    let room_path = format!("/rooms/{room}");
-    let requests = [
-        // Script fetches: JSON, a Turbo frame, XHR.
-        Req::new(Method::GET, &room_path).header("accept", "application/json"),
-        Req::new(Method::GET, &format!("{room_path}.json")),
-        Req::new(Method::GET, &room_path).header("turbo-frame", "messages"),
-        Req::new(Method::GET, &room_path).header("x-requested-with", "XMLHttpRequest"),
-        Req::new(Method::GET, &room_path).header("accept", "text/vnd.turbo-stream.html"),
-        Req::new(Method::GET, &format!("{room_path}/events")).header("accept", "application/json"),
-        // Unported pages, and paths a ported pattern doesn't cover.
-        Req::new(Method::GET, "/rooms/new"),
-        Req::new(Method::GET, &format!("{room_path}/messages")),
-    ];
-    for request in requests {
-        let label = format!("{} {:?}", request.path, request.headers);
-        let reply = b.send(request).await;
-        assert!(
-            !redirected_to_spa(&reply),
-            "{label}: {:?}",
-            reply.location()
-        );
+async fn retired_html_shapes_redirect_and_machine_formats_remain_separate() {
+    let a=enabled().await.expect("seed required");
+    let room=room(&a).await;
+    let path=format!("/rooms/{room}");
+    for header in [("turbo-frame","messages"),("x-requested-with","XMLHttpRequest"),("sec-fetch-mode","cors")] {
+        let reply=a.david().send(Req::new(Method::GET,&path).header("accept","text/html").header(header.0,header.1)).await;
+        assert_eq!(reply.status,StatusCode::FOUND);
+        assert_eq!(reply.location(),Some(to(&format!("/app/r/{room}")).as_str()));
     }
-
-    // Signed out, a ported page asks for a sign-in as ever.
-    let signed_out = a.anonymous().get(&room_path).await;
-    assert_eq!(signed_out.location(), Some(to("/session/new").as_str()));
+    let reply=a.david().send(Req::new(Method::GET,&format!("{path}.json"))).await;
+    assert_eq!(reply.status,StatusCode::NOT_ACCEPTABLE);
+    assert_eq!(a.anonymous().get(&path).await.location(),Some(to("/session/new").as_str()));
 }
+
 
 #[tokio::test]
 async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
@@ -688,40 +671,17 @@ async fn assert_shell_flash(b: &mut Browser<'_>, spa: &str) {
     assert!(boot_json(&again.text())["flash"].is_null(), "{spa} showed the notice once");
 }
 
-/// A page fetched by a script with the session cookie (`fetch()`, `curl`): `Accept: */*` and no
-/// `Sec-Fetch-Mode: navigate`, so it gets the page, not a redirect. Either navigation signal alone
-/// is enough to redirect.
 #[tokio::test]
-async fn a_fetch_with_the_session_cookie_is_not_a_navigation() {
-    let Some(a) = enabled().await else { return };
-    let room = room(&a).await;
-    let mut b = a.sign_in(DAVID).await;
-    let path = format!("/rooms/{room}");
-    for request in [
-        Req::new(Method::GET, &path).header("accept", "*/*"),
-        Req::new(Method::GET, &path)
-            .header("accept", "*/*")
-            .header("sec-fetch-mode", "cors"),
-        Req::new(Method::HEAD, &path).header("accept", "*/*"),
-    ] {
-        let label = format!("{} {:?}", request.method, request.headers);
-        let reply = b.send(request).await;
-        assert!(
-            !redirected_to_spa(&reply),
-            "{label}: {:?}",
-            reply.location()
-        );
-    }
-    for request in [
-        Req::new(Method::GET, &path)
-            .header("accept", "*/*")
-            .header("sec-fetch-mode", "navigate"),
-        Req::new(Method::GET, &path).header("accept", "text/html"),
-    ] {
-        let label = format!("{:?}", request.headers);
-        assert!(redirected_to_spa(&b.send(request).await), "{label}");
+async fn legacy_fetches_and_heads_open_the_same_spa_alias() {
+    let a=enabled().await.expect("seed required");
+    let room=room(&a).await;
+    for method in [Method::GET,Method::HEAD] {
+        let reply=a.david().send(Req::new(method,&format!("/rooms/{room}")).header("accept","*/*")).await;
+        assert_eq!(reply.status,StatusCode::FOUND);
+        assert_eq!(reply.location(),Some(to(&format!("/app/r/{room}")).as_str()));
     }
 }
+
 
 /// Only a browser session is redirected: a bot key or an agent token reading a ported page, and
 /// any `POST` to one, get what they always got.
@@ -1064,7 +1024,7 @@ async fn settings_and_profile_aliases_stay_classic_for_xhr_and_turbo_frames_but_
     let closed = WATERCOOLER;
     let mut b = a.sign_in(DAVID).await;
     let settings = format!("/rooms/{closed}/settings");
-    let edit = format!("/rooms/closeds/{closed}/edit");
+    let edit = format!("/app/r/{closed}/settings");
     let profile = format!("/users/{DAVID}/profile");
     let guards = [
         ("xhr", "x-requested-with", "XMLHttpRequest"),
@@ -1084,24 +1044,8 @@ async fn settings_and_profile_aliases_stay_classic_for_xhr_and_turbo_frames_but_
         let profile_reply = b
             .send(Req::new(Method::GET, &profile).header(name, value))
             .await;
-        assert_eq!(
-            profile_reply.status,
-            StatusCode::OK,
-            "{label}: {:?}",
-            profile_reply.location()
-        );
-        assert!(!redirected_to_spa(&profile_reply), "{label}");
-        let body = profile_reply.text();
-        assert!(!body.contains(SPA_BOOT), "{label} opened the SPA");
-        // A Turbo frame renders the frame layout, not the application shell.
-        if label == "turbo" {
-            assert!(body.contains("<turbo-frame"), "{label}: {body}");
-        } else {
-            assert!(
-                body.contains(CLASSIC_SHELL),
-                "{label} rendered the classic profile"
-            );
-        }
+        assert_eq!(profile_reply.status,StatusCode::FOUND);
+        assert_eq!(profile_reply.location(),Some(to("/app/settings").as_str()));
     }
 
     save_profile(&mut b).await;
@@ -1205,59 +1149,17 @@ async fn the_thread_content_reply_anchor_becomes_the_spa_m() {
 }
 
 #[tokio::test]
-async fn the_new_aliases_leave_scripts_frames_and_json_alone() {
-    let Some(a) = enabled().await else { return };
-    let (thread_room, thread) = (DESIGNERS_ROOM, LAUNCH_THREAD);
-    let mut b = a.sign_in(DAVID).await;
-    for (classic, _) in navigation_aliases(thread_room, thread) {
-        if classic.split('?').next() == Some("/account/users") { continue; }
-        let requests = [
-            ("xhr", Req::new(Method::GET, &classic).header("x-requested-with", "XMLHttpRequest")),
-            ("turbo", Req::new(Method::GET, &classic).header("turbo-frame", "alias")),
-            ("json", Req::new(Method::GET, &classic).header("accept", "application/json")),
-            // A script's fetch of the HTML: Fetch Metadata says it isn't a navigation.
-            (
-                "fetch",
-                Req::new(Method::GET, &classic)
-                    .header("accept", "text/html")
-                    .header("sec-fetch-mode", "cors")
-                    .header("sec-fetch-dest", "empty"),
-            ),
-            (
-                "iframe",
-                Req::new(Method::GET, &classic)
-                    .header("accept", "text/html")
-                    .header("sec-fetch-mode", "navigate")
-                    .header("sec-fetch-dest", "iframe"),
-            ),
-            (
-                "frame",
-                Req::new(Method::GET, &classic)
-                    .header("accept", "text/html")
-                    .header("sec-fetch-mode", "navigate")
-                    .header("sec-fetch-dest", "frame"),
-            ),
-            (
-                "same-origin fetch",
-                Req::new(Method::GET, &classic)
-                    .header("accept", "text/html")
-                    .header("sec-fetch-mode", "same-origin")
-                    .header("sec-fetch-dest", "empty"),
-            ),
-            (
-                "no-cors",
-                Req::new(Method::GET, &classic)
-                    .header("accept", "text/html")
-                    .header("sec-fetch-mode", "no-cors")
-                    .header("sec-fetch-dest", "script"),
-            ),
-        ];
-        for (label, request) in requests {
-            let reply = b.send(request).await;
-            assert!(!redirected_to_spa(&reply), "{label} {classic}: {:?}", reply.location());
+async fn fragment_aliases_keep_old_urls_for_frames_and_fetches() {
+    let a=enabled().await.expect("seed required");
+    for (classic,spa) in navigation_aliases(DESIGNERS_ROOM,LAUNCH_THREAD) {
+        for (header,value) in [("turbo-frame","alias"),("x-requested-with","XMLHttpRequest"),("sec-fetch-mode","cors")] {
+            let reply=a.david().send(Req::new(Method::GET,&classic).header("accept","text/html").header(header,value)).await;
+            assert_eq!(reply.status,StatusCode::FOUND,"{classic}");
+            assert_eq!(reply.location(),Some(to(&spa).as_str()),"{classic}");
         }
     }
 }
+
 
 /// The router takes a `.html` suffix for the page itself (`/rooms/7.html` is `/rooms/7`), so the
 /// suffix is an alias too. Other formats keep their classic answer.

@@ -86,73 +86,6 @@ async fn reload(app: &TestApp, id: i64) -> ScheduledMessage {
 }
 
 #[tokio::test]
-async fn index_lists_upcoming_and_past_rows() {
-    let app = app().await;
-    let upcoming = row(&app, DAVID, ALL_TALK, "Soon").await;
-    let past = row(&app, DAVID, ALL_TALK, "Gone").await;
-    app.db()
-        .write(move |tx| {
-            tx.conn().execute(
-                "UPDATE scheduled_messages SET sent_at=? WHERE id=?",
-                (tx.now(), past.id),
-            )?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    let response = app.david().get("/scheduled_messages").await;
-    assert_eq!(response.status, StatusCode::OK);
-    assert!(
-        response
-            .text()
-            .contains(&format!("id=\"scheduled_message_{}\"", upcoming.id))
-    );
-    assert!(
-        response
-            .text()
-            .contains(&format!("id=\"scheduled_message_{}\"", past.id))
-    );
-}
-#[tokio::test]
-async fn index_hides_other_peoples_rows() {
-    let app = app().await;
-    let other = row(&app, JASON, ALL_TALK, "Theirs").await;
-    let response = app.david().get("/scheduled_messages").await;
-    assert_eq!(response.status, StatusCode::OK);
-    assert!(
-        !response
-            .text()
-            .contains(&format!("id=\"scheduled_message_{}\"", other.id))
-    );
-}
-#[tokio::test]
-async fn index_shows_stranded_rows_so_they_can_be_cancelled() {
-    let app = app().await;
-    let stranded = row(&app, DAVID, ALL_TALK, "Stranded").await;
-    app.db()
-        .write(|tx| {
-            tx.conn().execute(
-                "DELETE FROM memberships WHERE user_id=? AND room_id=?",
-                (DAVID, ALL_TALK),
-            )?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    let response = app.david().get("/scheduled_messages").await;
-    assert_eq!(response.status, StatusCode::OK);
-    assert!(response.text().contains("No longer sendable"));
-    assert!(
-        response
-            .text()
-            .contains(&format!("id=\"scheduled_message_{}\"", stranded.id))
-    );
-    assert_eq!(
-        delete(&mut app.david(), stranded.id).await.status,
-        StatusCode::NO_CONTENT
-    );
-}
-#[tokio::test]
 async fn creates_a_scheduled_message() {
     let app = app().await;
     let response=app.david().write(req(Method::POST,&format!("/rooms/{ALL_TALK}/scheduled_messages"),json!({"scheduled_message":{"markdown_source":"Morning!","send_at":"2026-03-02T17:00:00Z"}}))).await;
@@ -233,13 +166,8 @@ async fn update_during_an_active_claim_redirects_with_an_alert_in_html() {
         response.location(),
         Some("http://campfire.test/scheduled_messages")
     );
-    assert!(
-        browser
-            .get("/scheduled_messages")
-            .await
-            .text()
-            .contains("sending right now")
-    );
+    assert_eq!(browser.flash()["alert"], "That message is sending right now; try again in a moment.");
+
 }
 #[tokio::test]
 async fn update_after_the_claim_goes_stale_is_allowed() {
@@ -387,7 +315,7 @@ async fn bots_are_forbidden() {
     assert_eq!(
         app.sign_in(BENDER)
             .await
-            .get("/scheduled_messages")
+            .get("/api/v1/scheduled_messages")
             .await
             .status,
         StatusCode::FORBIDDEN
@@ -511,79 +439,6 @@ async fn scheduled_http_matches_rails_json_offsets_and_claim_outcomes() {
     }
 }
 #[tokio::test]
-async fn scheduled_row_partials_match_rails_and_empty_page_bytes() {
-    use askama::Template;
-    let app = app().await;
-    let draft = row(&app, DAVID, ALL_TALK, "Draft <body> & example").await;
-    for case in oracle()["html"].as_array().unwrap() {
-        let case = case.clone();
-        let expected = case["html"].as_str().unwrap().to_owned();
-        let draft = draft.clone();
-        let runtime = app.booted.app.clone();
-        let actual = app
-            .db()
-            .read(move |conn| {
-                let mut draft = draft;
-                let state = case["state"].as_str().unwrap();
-                draft.sent_at = (state == "sent")
-                    .then_some(campfire_db::Timestamp::from_jiff(SEED_NOW.parse().unwrap()));
-                let mut presenter = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
-                presenter.render_zone = campfire_views::time::Zone::lookup(case["zone"].as_str().unwrap()).unwrap();
-                let view = crate::controllers::scheduled_messages::view(
-                    &presenter,
-                    conn,
-                    &campfire_db::User::find(conn, DAVID)?,
-                    &draft,
-                )?;
-                let account = campfire_db::Account::first(conn)?;
-                Ok(crate::controllers::presenters::page::render_detached_at(
-                    &runtime,
-                    account.as_ref(),
-                    "http://campfire.test",
-                    |ctx| {
-                        let ctx = super::saved_tests::zoned(ctx, case["zone"].as_str().unwrap());
-                        if ["sent", "dropped"].contains(&state) {
-                            campfire_views::scheduled_messages::PastPartial {
-                                ctx: &ctx,
-                                item: &view,
-                            }
-                            .render()
-                            .unwrap()
-                        } else {
-                            campfire_views::scheduled_messages::ItemPartial {
-                                ctx: &ctx,
-                                item: &view,
-                                stranded: state == "stranded",
-                            }
-                            .render()
-                            .unwrap()
-                        }
-                    },
-                ))
-            })
-            .await
-            .unwrap();
-        assert_eq!(actual, expected);
-    }
-    let actual = crate::controllers::presenters::page::render_detached_at(
-        &app.booted.app,
-        None,
-        "http://campfire.test",
-        |ctx| {
-            campfire_views::scheduled_messages::Index {
-                ctx,
-                upcoming: &[],
-                stranded: &[],
-                past: &[],
-            }
-            .as_content()
-            .render()
-            .unwrap()
-        },
-    );
-    assert_eq!(actual, oracle()["empty"].as_str().unwrap());
-}
-#[tokio::test]
 async fn scheduled_mutations_require_csrf_and_busy_claims_accept_no_parameters() {
     let app = app().await;
     let scheduled = row(&app, DAVID, ALL_TALK, "Soon").await;
@@ -658,28 +513,6 @@ async fn scheduled_send_rolls_back_claim_post_and_history_when_job_insert_fails(
 }
 
 
-#[tokio::test]
-async fn scheduled_composer_controls_match_rails_for_room_and_thread() {
-    use askama::Template;
-    let app = app().await;
-    for case in oracle()["composer"].as_array().unwrap() {
-        let actual = crate::controllers::presenters::page::render_detached_at(
-            &app.booted.app,
-            None,
-            "http://campfire.test",
-            |ctx| {
-                campfire_views::scheduled_messages::ComposerButton {
-                    ctx,
-                    room_id: ALL_TALK,
-                    thread_id: case["thread_id"].as_i64(),
-                }
-                .render()
-                .unwrap()
-            },
-        );
-        assert_eq!(actual, case["html"].as_str().unwrap());
-    }
-}
 #[tokio::test]
 async fn review_regression_scheduled_send_emits_unread_room_frame() {
     use crate::channels::tests::support::{Client, bind_listener, identifier};

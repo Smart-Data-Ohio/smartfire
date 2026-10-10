@@ -39,7 +39,8 @@ async fn run(name: &str, limit: i64) {
                 "/{*path}",
                 campfire_kit::get(action.clone()).merge(campfire_kit::post(action.clone())),
             )
-            .route("/", campfire_kit::get(action)),
+            .route("/", campfire_kit::get(action))
+            .merge(crate::controllers::spa::routes(true, "public, max-age=31536000")),
         kit,
     );
     let oracle: Value = serde_json::from_str(include_str!(
@@ -60,8 +61,6 @@ async fn run(name: &str, limit: i64) {
             .status,
         StatusCode::FOUND
     );
-    let html = browser.get("/account/audit_log").await;
-    assert_eq!(html.status, StatusCode::OK, "original cap HTML status");
     let csv = browser.get("/account/audit_log.csv").await;
     assert_eq!(csv.status, StatusCode::OK, "original cap CSV status");
     let count = app
@@ -74,9 +73,9 @@ async fn run(name: &str, limit: i64) {
         .await
         .unwrap();
     let rows = csv.text().lines().count() - 1;
-    let actual = json!({"notice":html.text().contains(&format!("newest {limit}")),"truncated":csv.header("content-disposition").unwrap().contains("truncated"),"filename_cap":csv.header("content-disposition").unwrap().contains(&format!("truncated-to-{limit}")),"rows":rows,"matches_table":rows as i64==count});
+    let actual = json!({"truncated":csv.header("content-disposition").unwrap().contains("truncated"),"filename_cap":csv.header("content-disposition").unwrap().contains(&format!("truncated-to-{limit}")),"rows":rows,"matches_table":rows as i64==count});
     assert_eq!(
-        actual, case["response"],
+        actual, { let mut expected = case["response"].clone(); expected.as_object_mut().unwrap().remove("notice"); expected },
         "{name}: exact original reduced-cap clauses"
     );
 }

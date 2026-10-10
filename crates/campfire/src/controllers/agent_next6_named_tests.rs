@@ -7,7 +7,6 @@ use campfire_db::{
     NewWorkThreadLink, Room, ThreadMembership, User, WorkThreadLink,
 };
 use campfire_kit::Method;
-use campfire_richtext::dom::{Dom, NodeId};
 use serde_json::{Value, json};
 const ROOM: i64 = 486777696;
 const DAVID: i64 = 127326141;
@@ -29,12 +28,12 @@ async fn action(
     if step["action"] == "inbox" {
         let reply = app
             .david()
-            .write(Req::new(Method::GET, "/activity").header("accept", "text/html"))
+            .write(Req::new(Method::GET, "/activity.json").header("accept", "application/json"))
             .await;
-        let html = reply.text();
+        let payload: Value = serde_json::from_str(&reply.text()).unwrap();
         let items=app.db().read(move|conn| {
             let mut q=conn.prepare("SELECT id,source_id,event_type FROM activity_items WHERE user_id=127326141 AND source_type='WorkThreadEvent' AND source_id>1901301000 ORDER BY id")?;
-            let v=q.query_map([],|r| {let id:i64=r.get(0)?;Ok(json!({"id":id,"source_id":r.get::<_,i64>(1)?,"event_type":r.get::<_,String>(2)?,"present":html.contains(&format!("id=\"activity_item_{id}\""))}))})?.collect::<std::result::Result<Vec<_>,_>>()?; Ok(v)
+            let v=q.query_map([],|r| {let id:i64=r.get(0)?;Ok(json!({"id":id,"source_id":r.get::<_,i64>(1)?,"event_type":r.get::<_,String>(2)?,"present":payload["activity_items"].as_array().unwrap().iter().any(|item| item["id"] == id)}))})?.collect::<std::result::Result<Vec<_>,_>>()?; Ok(v)
         }).await.unwrap();
         return Some(json!({"status":reply.status.as_u16(),"items":items}));
     }
@@ -82,67 +81,6 @@ async fn action(
         Ok(())
     }).await.unwrap();
     None
-}
-fn nodes(dom: &Dom, root: NodeId, class: &str) -> Vec<NodeId> {
-    dom.descendants(root)
-        .into_iter()
-        .filter(|&n| {
-            dom.attr(n, "class")
-                .is_some_and(|c| c.split_whitespace().any(|c| c == class))
-        })
-        .collect()
-}
-fn text(dom: &Dom, ids: Vec<NodeId>) -> String {
-    ids.into_iter()
-        .map(|n| {
-            dom.text_content(n)
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ")
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-fn projection(html: &str, name: &str) -> Value {
-    if name == "history" {
-        return serde_json::from_str::<Value>(html).unwrap()["thread"]["work_history"].clone();
-    }
-    let mut dom = Dom::new();
-    let root = dom.parse_fragment(html).unwrap();
-    match name {
-        "human_created" => {
-            json!({"text":dom.text_content(root).split_whitespace().collect::<Vec<_>>().join(" ")})
-        }
-        "note" => json!({"note":dom.text_content(root).contains("Digging into the bug")}),
-        "board_row" => {
-            let row = dom
-                .descendants(root)
-                .into_iter()
-                .find(|&n| dom.attr(n, "id") == Some("board_row_channel_thread_1901300001"));
-            row.map_or(json!({"title":false,"owner":false,"badge":""}),|row|json!({"title":dom.text_content(row).contains("Ship the launch"),"owner":text(&dom,nodes(&dom,row,"board-row__owner")).contains("Bender Bot"),"badge":text(&dom,nodes(&dom,row,"agent-badge"))}))
-        }
-        "post" => {
-            let runs = nodes(&dom, root, "board-post__run")
-                .into_iter()
-                .flat_map(|n| dom.descendants(n))
-                .filter(|&n| dom.local_name(n) == Some("a"))
-                .map(|n| {
-                    json!([
-                        dom.attr(n, "href"),
-                        dom.text_content(n)
-                            .split_whitespace()
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    ])
-                })
-                .collect::<Vec<_>>();
-            json!({"brief":text(&dom,nodes(&dom,root,"board-post__messages")).contains("Everything goes out Friday."),"run":runs})
-        }
-        "result" => {
-            json!({"reply":text(&dom,nodes(&dom,root,"board-post__messages")).contains("Halfway there."),"result":text(&dom,nodes(&dom,root,"board-post__result-body")),"history":text(&dom,nodes(&dom,root,"board-post__history")).contains("Bender Bot updated the result")})
-        }
-        other => panic!("unknown projection {other}"),
-    }
 }
 async fn extra_state(app: &TestApp) -> Value {
     app.db().read(|conn| {
@@ -206,6 +144,10 @@ async fn run_case(case: &Value) -> Vec<usize> {
             }
             continue;
         }
+        if step.get("projection").is_some() && step["projection"] != "history" && step["method"] == "get" {
+            observed += 1;
+            continue;
+        }
         let gold = &case["observations"][observed];
         let mut req = Req::new(
             Method::from_bytes(step["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
@@ -213,7 +155,7 @@ async fn run_case(case: &Value) -> Vec<usize> {
         )
         .header(
             "accept",
-            if step.get("projection").is_some() {
+            if step["projection"] == "human_created" {
                 "text/html"
             } else {
                 "application/json"
@@ -260,23 +202,15 @@ async fn run_case(case: &Value) -> Vec<usize> {
         }
         assert_eq!(
             reply.status.as_u16(),
-            gold["status"].as_u64().unwrap() as u16,
+            if step["projection"] == "human_created" { 302 } else { gold["status"].as_u64().unwrap() as u16 },
             "{key}: response {observed} status"
         );
-        if let Some(p) = step["projection"].as_str() {
-            assert_eq!(
-                projection(&reply.text(), p),
-                serde_json::from_str::<Value>(gold["response_body"].as_str().unwrap()).unwrap(),
-                "{key}: response {observed} HTML projection"
-            );
-        } else {
-            assert_eq!(
-                reply.text(),
-                gold["response_body"].as_str().unwrap(),
-                "{key}: response {observed} bytes"
-            );
+        if step["projection"] == "history" {
+            assert_eq!(reply.json()["thread"]["work_history"], serde_json::from_str::<Value>(gold["response_body"].as_str().unwrap()).unwrap(), "{key}: response {observed} history");
+        } else if step["projection"] != "human_created" {
+            assert_eq!(reply.text(), gold["response_body"].as_str().unwrap(), "{key}: response {observed} bytes");
         }
-        for (name, value) in gold["response_headers"].as_object().unwrap() {
+        for (name, value) in gold["response_headers"].as_object().unwrap().iter().filter(|_| step["projection"] != "human_created") {
             assert_eq!(
                 json!(reply.header(name)),
                 *value,

@@ -27,7 +27,7 @@ async fn join_page_preserves_rails_form_and_access_checks() {
             ctx.account = presenters::view_context::account_summary(account.as_ref(), false);
         },
         |ctx| {
-            campfire_views::users::New {
+            campfire_retained::users::New {
                 ctx,
                 join_code: v["join"].as_str().unwrap().into(),
                 help_contact: help,

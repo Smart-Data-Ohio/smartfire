@@ -201,19 +201,19 @@ async fn spa(b: &mut Browser<'_>, method: Method, path: &str, body: Value) -> ap
 }
 
 #[tokio::test]
-async fn settings_exist_only_with_the_spa() {
+async fn settings_exist_without_flags() {
     let clock = crate::controllers::presenters::test_support::seed_clock();
     let Some(a) = TestApp::boot_seed_with_env("default", clock, &[]).await else {
         return;
     };
     let mut b = a.sign_in(DAVID).await;
-    let unknown = b.send(get("/no-such-page")).await.status;
+
     for path in [
         "/api/v1/settings",
         "/api/v1/settings/sessions",
         "/api/v1/settings/push_subscriptions",
     ] {
-        assert_eq!(b.send(get(path)).await.status, unknown, "{path}");
+        assert_eq!(b.send(get(path)).await.status, StatusCode::OK, "{path}");
     }
 }
 
@@ -249,12 +249,7 @@ async fn the_settings_read_as_the_classic_profile_page_shows_them() {
     assert_eq!(settings.integrations.manage_path, "/users/me/profile");
     assert_eq!(settings.integrations.slack_import_path, "/slack/imports");
 
-    // The classic page agrees on what it can show.
-    let page = b.classic_page("/users/me/profile").await.text();
-    assert!(page.contains(&settings.profile.name), "the name");
-    for switch in &settings.notifications.inbox {
-        assert!(page.contains(&switch.label), "{}", switch.label);
-    }
+
 }
 
 #[tokio::test]

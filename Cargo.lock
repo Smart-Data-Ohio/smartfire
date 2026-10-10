@@ -407,6 +407,7 @@ dependencies = [
  "campfire_static_assets",
  "campfire_storage",
  "campfire_views",
+ "campfire_view_kit",
  "campfire_web",
  "flate2",
  "futures-util",

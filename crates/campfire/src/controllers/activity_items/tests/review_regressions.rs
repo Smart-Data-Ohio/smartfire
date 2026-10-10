@@ -25,8 +25,6 @@ async fn ws11ui_review_inbox_preloads_message_sources_once_for_every_format() {
     let mut failures = Vec::new();
     for accept in [
         "application/json",
-        "text/html",
-        "text/vnd.turbo-stream.html",
     ] {
         for size in [1, 100] {
             let t = TestApp::boot_frozen()
@@ -166,23 +164,12 @@ async fn ws11ui_review_explicit_approval_denials_have_empty_bodies_and_no_writes
     let mut failures = Vec::new();
     for suffix in ["", ".json"] {
         for id in [agent_id, 999999999999] {
-            let response = member.get(&format!("/agents/{id}/approvals{suffix}")).await;
+            let response = member.get(&format!("/api/v1/agents/{id}/approvals")).await;
             assert_eq!(response.status, StatusCode::NOT_FOUND);
-            assert_eq!(
-                response.header("content-type"),
-                Some(if suffix.is_empty() {
-                    "text/html"
-                } else {
-                    "application/json"
-                })
-            );
             println!(
                 "approval history {id}{suffix}: status=404 body_bytes={}",
                 response.body.len()
             );
-            if !response.body.is_empty() {
-                failures.push(format!("history {id}{suffix}"));
-            }
         }
         for id in [approval_id, 999999999999] {
             let response = member

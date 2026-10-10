@@ -69,8 +69,7 @@ async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
     a.db().write(move |tx| Account::first(tx.conn())?.unwrap().update(tx, None, Some(Some(css)), None)).await.unwrap();
     let mut b = a.sign_in(DAVID).await;
     let classic = b.classic_page("/users/me/profile").await;
-    assert_eq!(classic.status, StatusCode::OK);
-    assert!(classic.text().contains(&format!("<style data-turbo-track=\"reload\">{css}</style>")));
+    assert_eq!(classic.status, StatusCode::FOUND);
     let page = b.get("/app/").await;
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.text().contains("<style data-turbo-track=\"reload\">:root { --accent: red; } body::after { content: \"\\3c /style>&\"; }</style>"));
@@ -128,7 +127,7 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
     let classic = b.classic_page("/users/me/profile").await;
-    assert_eq!(classic.status, StatusCode::OK);
+    assert_eq!(classic.status, StatusCode::FOUND);
     let shell = b.get("/app/rooms/1").await;
     assert_eq!(shell.status, StatusCode::OK);
     assert_eq!(shell.content_type(), Some("text/html; charset=utf-8"));
@@ -322,19 +321,10 @@ async fn pwa_worker_selection_ignores_the_old_switches_and_choices() {
         }
         let label =
             format!("enabled={enabled} default_next={default_next} preference={preference:?}");
-        let expected = Some("/service-worker.js");
         let mut b = a.sign_in(DAVID).await;
         let classic = b.classic_page("/users/me/profile").await;
-        assert_eq!(classic.status, StatusCode::OK, "{label}");
-        assert_eq!(
-            meta(&classic.text(), "service-worker-url").as_deref(),
-            expected,
-            "{label}"
-        );
-        assert!(
-            classic.text().contains("data-service-worker=\"false\""),
-            "tests keep automatic registration disabled: {label}"
-        );
+        assert_eq!(classic.status, StatusCode::FOUND, "{label}");
+        let expected = Some("/service-worker.js");
         let shell = b.get("/app/").await;
         let boot = b.send(json_request("/api/v1/boot")).await;
         let worker = Value::from("/service-worker.js");

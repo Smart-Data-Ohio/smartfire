@@ -439,7 +439,7 @@ async fn check_panel(a: &TestApp, user_id: i64, panel: &api::TwoFactorSettings) 
         assert_eq!(actual.id, expected.id);
         assert_eq!(
             actual.description,
-            campfire_views::two_factor::device_description(&expected)
+            campfire_presentation::two_factor::device_description(&expected)
         );
         assert_eq!(actual.ip_address, expected.ip_address);
         assert_eq!(actual.last_used_at, expected.last_used_at.map(wire_time));

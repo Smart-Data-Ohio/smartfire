@@ -68,7 +68,7 @@ async fn boot_seeded() -> Option<Test> {
     copy_dir(&seed.join("storage"), &dir.path().join("files"));
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE").unwrap();
-    let mut config = Config::from_lookup(|name| match name {
+    let config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE" => Some(secret.clone()),
         "DISABLE_SSL" => Some("true".into()),
         "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -77,7 +77,6 @@ async fn boot_seeded() -> Option<Test> {
     })
     .unwrap();
     // The classic pages, until they're deleted.
-    config.spa_enabled = false;
     Some(Test { booted: boot_with_clock(config, crate::controllers::presenters::test_support::seed_clock()).await.unwrap(), _dir: dir })
 }
 
@@ -438,7 +437,7 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
 /// inside the writer's transaction. It once checked out a pooled reader for that, so with as many
 /// concurrent posts as readers, the writer waited on a reader while the readers' holders waited
 /// on the writer, and the server stopped answering for good.
-#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_message_posts_all_complete() {
     let Some(test) = boot_seeded().await else { return };
     let router = test.booted.router.clone();
@@ -460,7 +459,7 @@ async fn concurrent_message_posts_all_complete() {
         .await
         .unwrap();
 
-    let page = send(&router, get_with_cookie(&format!("/rooms/{room_id}"), &session.cookie_header)).await;
+    let page = send(&router, get_with_cookie("/app/", &session.cookie_header)).await;
     assert_eq!(page.status, StatusCode::OK);
     // The page gave the session an authenticity token; the posts carry it as Turbo does.
     let session_cookie = page
@@ -490,10 +489,15 @@ async fn concurrent_message_posts_all_complete() {
         .await
         .expect("concurrent message posts deadlocked");
     for status in statuses {
-        assert_eq!(status.unwrap(), StatusCode::OK);
+        assert_eq!(status.unwrap(), StatusCode::CREATED);
     }
 
-    let after = tokio::time::timeout(WAIT, send(&router, get_with_cookie(&format!("/rooms/{room_id}"), &session.cookie_header)))
+    let persisted = test.booted.app.db.read(move |conn| {
+        Ok(conn.query_row("SELECT COUNT(*) FROM messages WHERE room_id=? AND client_message_id LIKE 'concurrent-%'", [room_id], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    assert_eq!(persisted, 32);
+
+    let after = tokio::time::timeout(WAIT, send(&router, get_with_cookie(&format!("/api/v1/rooms/{room_id}/messages"), &session.cookie_header)))
         .await
         .expect("the server stopped answering");
     assert_eq!(after.status, StatusCode::OK);

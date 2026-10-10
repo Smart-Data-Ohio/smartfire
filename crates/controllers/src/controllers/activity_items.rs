@@ -2,12 +2,10 @@
 use crate::{
     app::AppCtx,
     concerns::{self, Before},
-    controllers::presenters::{activity, view_context},
+    controllers::presenters::activity,
 };
-use askama::Template;
 use campfire_db::{ActivityItem, models::activity_item::ActivityQuery};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, format};
-use campfire_views::{activity::Inbox};
 fn filters(c: &Ctx) -> (String, String) {
     let status = c
         .param_str("status")
@@ -17,7 +15,7 @@ fn filters(c: &Ctx) -> (String, String) {
     let kind = c
         .param_str("type")
         .filter(|s| {
-            campfire_views::activity::TYPES
+            campfire_presentation::activity::TYPES
                 .iter()
                 .any(|(key, _)| key == s)
         })
@@ -27,129 +25,43 @@ fn filters(c: &Ctx) -> (String, String) {
 }
 pub async fn index(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
+    if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {
+        return campfire_runtime::navigation::redirect(c).await;
+    }
     let viewer = concerns::require_current_user(c)?.clone();
     let viewer_id = viewer.id;
-    c.app()
-        .db
-        .write(move |tx| {
-            campfire_db::models::huddle_invitations::resolve_overdue(tx, Some(viewer_id))?;
-            campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))
-        })
-        .await
-        .map_err(Error::internal)?;
+    c.app().db.write(move |tx| {
+        campfire_db::models::huddle_invitations::resolve_overdue(tx, Some(viewer_id))?;
+        campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))
+    }).await.map_err(Error::internal)?;
     let (filter, kind) = filters(c);
-    let before = c
-        .param_str("before")
-        .filter(|s| !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()))
-        .and_then(|s| s.parse::<i64>().ok());
     let app = c.app().clone();
     let f = filter.clone();
     let k = kind.clone();
     let raw_before = c.param_str("before").map(str::to_owned);
-    let json =
-        c.respond_to(&[&format::HTML, &format::JSON])? == &format::JSON;
-    let (items, payloads, unread, next) = c
-        .app()
-        .db
-        .read(move |conn| {
-            let rows = ActivityItem::query_accessible(
-                conn,
-                &viewer,
-                ActivityQuery {
-                    state: Some(&f),
-                    type_filter: Some(&k),
-                    before: raw_before.as_deref(),
-                    limit: Some(100),
-                },
-            )?;
-            let unread = ActivityItem::unread_count(conn, &viewer)? as usize;
-            let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
-            let sources = if json {
-                activity::Sources::load_json(conn, &rows)?
-            } else {
-                activity::Sources::load(conn, &rows)?
-            };
-            let payloads = if json {
-                rows.iter()
-                    .map(|i| activity::payload_with_sources(conn, &app, i, &sources))
-                    .collect::<campfire_db::Result<Vec<_>>>()?
-            } else {
-                Vec::new()
-            };
-            let items = if json {
-                Vec::new()
-            } else {
-                rows.iter()
-                    .map(|i| activity::item(conn, &app, i, &viewer, &sources))
-                    .collect::<campfire_db::Result<Vec<_>>>()?
-            };
-            Ok((items, payloads, unread, next))
-        })
-        .await
-        .map_err(Error::internal)?;
+    let (payloads, unread, next) = c.app().db.read(move |conn| {
+        let rows = ActivityItem::query_accessible(conn, &viewer, ActivityQuery {
+            state: Some(&f), type_filter: Some(&k), before: raw_before.as_deref(), limit: Some(100),
+        })?;
+        let unread = ActivityItem::unread_count(conn, &viewer)? as usize;
+        let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
+        let sources = activity::Sources::load_json(conn, &rows)?;
+        let payloads = rows.iter().map(|item| activity::payload_with_sources(conn, &app, item, &sources))
+            .collect::<campfire_db::Result<Vec<_>>>()?;
+        Ok((payloads, unread, next))
+    }).await.map_err(Error::internal)?;
     no_store(c);
-    if json {
-        #[derive(serde::Serialize)]
-        struct Index<'a> {
-            activity_items: Vec<activity::Payload>,
-            filter: &'a str,
-            type_filter: &'a str,
-            unread_count: usize,
-            next_cursor: Option<i64>,
-        }
-        return c.json(
-            StatusCode::OK,
-            &Index {
-                activity_items: payloads,
-                filter: &filter,
-                type_filter: &kind,
-                unread_count: unread,
-                next_cursor: next,
-            },
-        );
+    #[derive(serde::Serialize)]
+    struct Index<'a> {
+        activity_items: Vec<activity::Payload>, filter: &'a str, type_filter: &'a str,
+        unread_count: usize, next_cursor: Option<i64>,
     }
-    let now = c.now();
-    c.respond_to(&[&format::HTML])?;
-    let mut response =
-        view_context::page_or_frame(
-            c,
-            StatusCode::OK,
-            |ctx| {
-                Inbox {
-                    ctx,
-                    items: &items,
-                    filter: &filter,
-                    type_filter: &kind,
-                    before,
-                    next_cursor: next,
-                    unread_count: unread,
-                    now,
-                }
-                .render()
-            },
-            |ctx| {
-                let page = Inbox {
-                    ctx,
-                    items: &items,
-                    filter: &filter,
-                    type_filter: &kind,
-                    before,
-                    next_cursor: next,
-                    unread_count: unread,
-                    now,
-                };
-                campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
-            },
-        )
-        .await?;
-    response
-        .headers
-        .insert("cache-control", "no-store".parse().unwrap());
-    response
-        .headers
-        .insert("pragma", "no-cache".parse().unwrap());
-    Ok(response)
+    c.json(StatusCode::OK, &Index {
+        activity_items: payloads, filter: &filter, type_filter: &kind,
+        unread_count: unread, next_cursor: next,
+    })
 }
+
 pub async fn unread_count(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let viewer = concerns::require_current_user(c)?.clone();
@@ -266,7 +178,7 @@ async fn state_response(
     }
     let (state, kind) = filters(c);
     let response = c.redirect_to_with(
-        &campfire_views::activity::path(&state, &kind, None, false),
+        &campfire_presentation::activity::path(&state, &kind, None, false),
         Redirect {
             status: Some(code),
             ..Default::default()

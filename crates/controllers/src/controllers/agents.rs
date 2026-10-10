@@ -8,8 +8,6 @@ use super::presenters::page::db_error;
 // Reviewed human agent pages alongside the REST/MCP service adapters.
 pub mod approvals;
 pub mod conversations;
-pub mod directory;
-pub mod history;
 mod id_args;
 pub mod integrations;
 pub mod mcp;

@@ -20,7 +20,7 @@ use campfire_db::models::google_identity::GoogleIdentity;
 use campfire_db::models::workspace_icon::{NewIcon, WorkspaceIcon};
 use campfire_db::{Account, Role, User};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
-use campfire_people::controllers::accounts::audit_logs;
+use campfire_runtime::presenters::accounts::audit_logs;
 use campfire_people::controllers::accounts::icons::image_facts;
 use campfire_storage::branding::{self, Kind, Prepared};
 use campfire_presentation::time::Zone;

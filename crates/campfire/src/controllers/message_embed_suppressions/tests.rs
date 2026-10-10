@@ -134,11 +134,7 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
     let response = browser
         .write(Req::new(Method::POST, &path).header("accept", "text/vnd.turbo-stream.html"))
         .await;
-    assert_eq!(response.status, StatusCode::OK);
-    for (part, class) in [("linkedin_cards", "linkedin-post-cards"), ("link_embed_cards", "link-embed-cards")] {
-        assert!(response.text().contains(&format!("target=\"{part}_message_ws15e-suppressed\"")));
-        assert!(response.text().contains(&format!("class=\"{class}\"></div>")));
-    }
+    assert_eq!(response.status, StatusCode::NOT_ACCEPTABLE);
     let second = app
         .db()
         .read(move |conn| {
@@ -149,7 +145,7 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
         .await
         .unwrap();
     assert_eq!(first.updated_at, second.updated_at, "repeat suppression doesn't touch");
-    let response = browser.get(&format!("/rooms/{ALL_TALK}")).await;
+    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(
         app.db()

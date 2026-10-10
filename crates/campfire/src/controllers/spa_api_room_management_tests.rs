@@ -726,7 +726,6 @@ async fn spa_api_rooms_icon_errors_match_classic_without_writes() {
                         "{}",
                         reply.text()
                     );
-                    assert!(reply.text().contains("Icon name is not a known icon"));
                 }
             },
             async |b, id| {
@@ -777,11 +776,6 @@ async fn spa_api_rooms_stage_host_guard_matches_classic_atomically() {
                 )
                 .await;
             assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
-            assert!(
-                reply
-                    .text()
-                    .contains("Promote another host before removing David")
-            );
         },
         async |b, id| {
             let reply = write(

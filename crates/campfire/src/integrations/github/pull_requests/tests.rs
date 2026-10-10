@@ -517,77 +517,6 @@ async fn github_notification_claims_validate_and_share_one_concurrent_winner_per
 }
 
 #[tokio::test]
-async fn github_card_cardset_header_and_files_html_are_byte_identical_to_rails() {
-    let vectors: Value =
-        serde_json::from_str(include_str!("../../../../../../vectors/github_cards.json")).unwrap();
-    let (app, _dir) = super::super::references::tests::application().await;
-    app.db.write(|tx| {
-        let now=tx.now();tx.conn().execute("INSERT INTO users (id,name,role,created_at,updated_at) VALUES (811,'Oracle',1,?,?)",params![now,now])?;
-        tx.conn().execute("INSERT INTO rooms (id,type,creator_id,name,created_at,updated_at) VALUES (815,'Rooms::Closed',811,'Cards',?,?)",params![now,now])?;
-        tx.conn().execute("INSERT INTO messages (id,room_id,creator_id,client_message_id,created_at,updated_at) VALUES (818,815,811,'card-parent',?,?)",params![now,now])?;
-        tx.conn().execute("INSERT INTO channel_threads (id,room_id,creator_id,parent_message_id,name,last_activity_at,created_at,updated_at) VALUES (817,815,811,818,'Discussion',?,?,?)",params![now,now,now])?;Ok(())
-    }).await.unwrap();
-    for case in vectors.as_array().unwrap() {
-        let case = case.clone();
-        let expected = case.clone();
-        let app_read = app.clone();
-        app.db.write(move|tx| {
-            tx.conn().execute_batch("DELETE FROM github_pull_request_references; DELETE FROM github_pull_request_threads; DELETE FROM github_pull_requests;")?;
-            let mut columns=vec!["created_at","updated_at"];let mut values=vec![SqlValue::Text(tx.now().to_db()),SqlValue::Text(tx.now().to_db())];
-            for (k,v) in case["attributes"].as_object().unwrap() {columns.push(k);values.push(match v {Value::Null=>SqlValue::Null,Value::Bool(b)=>SqlValue::Integer(i64::from(*b)),Value::Number(n)=>SqlValue::Integer(n.as_i64().unwrap()),Value::String(s)=>SqlValue::Text(if k.ends_with("_at"){s.replace(" UTC","Z").parse::<jiff::Timestamp>().unwrap().strftime("%Y-%m-%d %H:%M:%S.%6f").to_string()}else{s.clone()}),_=>SqlValue::Text(v.to_string())});}
-            tx.conn().execute(&format!("INSERT INTO github_pull_requests ({}) VALUES ({})",columns.join(","),vec!["?";columns.len()].join(",")),rusqlite::params_from_iter(values))?;
-            tx.conn().execute("INSERT INTO github_pull_request_references (github_pull_request_id,message_id,created_at,updated_at) VALUES (816,818,?,?)",params![tx.now(),tx.now()])?;
-            if case["mapped"]==true{PullRequestThread::create(tx,816,815,817)?;}
-            tx.conn().execute("UPDATE messages SET thread_id=? WHERE id=818",[if case["reply"]==true{Some(817)}else{None}])?;Ok(())
-        }).await.unwrap();
-        app.db
-            .read(move |conn| {
-                let pr = PullRequest::find(conn, 816)?;
-                let data = crate::controllers::presenters::github::card_with_files(conn, &pr, 815)?;
-                let message = Message::find(conn, 818)?;
-                let account = campfire_db::Account::first(conn)?;
-                crate::controllers::presenters::page::render_detached(
-                    &app_read,
-                    account.as_ref(),
-                    |ctx| {
-                        let cm = campfire_views::github::CardMessage {
-                            id: 818,
-                            room_id: 815,
-                            thread_id: message.thread_id,
-                        };
-                        for (key, actual) in [
-                            ("card", campfire_views::github::card(ctx, &data, Some(&cm))),
-                            (
-                                "cards",
-                                campfire_views::github::cards(
-                                    ctx,
-                                    &message.client_message_id,
-                                    &cm,
-                                    std::slice::from_ref(&data),
-                                ),
-                            ),
-                            (
-                                "header",
-                                campfire_views::github::thread_header(ctx, 815, 817, &data),
-                            ),
-                            ("files", campfire_views::github::files_summary(&data)),
-                        ] {
-                            assert_eq!(actual, expected[key], "{} {key}", expected["name"]);
-                            if (key == "cards" || key == "header") && pr.private != Some(false) {
-                                assert!(!actual.contains("Secret title"));
-                                assert!(actual.contains("turbo-frame"));
-                            }
-                        }
-                    },
-                );
-                Ok(())
-            })
-            .await
-            .unwrap();
-    }
-}
-
-#[tokio::test]
 async fn github_pr_agent_payload_security_hides_private_and_unknown_details_without_owner_access() {
     use super::super::{
         accounts::AccountInput,
@@ -738,80 +667,6 @@ async fn github_pr_thread_concurrent_losers_leave_one_mapping_and_one_thread() {
 
 
 #[tokio::test]
-async fn github_pr_and_thread_stamps_invalidate_message_fragments_without_touching_message() {
-    let (app, _dir) = super::super::references::tests::application().await;
-    let message = app
-        .db
-        .write(|tx| {
-            let m = message(
-                tx,
-                fixtures::identify("designers"),
-                "https://github.com/o/r/pull/12",
-            )?;
-            let pr = PullRequest::for_message(tx.conn(), m.id)?.remove(0);
-            update(
-                tx,
-                pr.id,
-                &[
-                    ("private", SqlValue::Integer(0)),
-                    ("title", SqlValue::Text("Initial".into())),
-                ],
-            )?;
-            Ok(m)
-        })
-        .await
-        .unwrap();
-    let app_read = app.clone();
-    let m = message.clone();
-    let first = app
-        .db
-        .read(move |conn| {
-            let view = crate::controllers::presenters::Presenter::new(conn, &app_read, None)
-                .message(&m)?;
-            let account = campfire_db::Account::first(conn)?;
-            Ok(crate::controllers::presenters::page::render_detached(
-                &app_read,
-                account.as_ref(),
-                |ctx| campfire_views::messages::message(ctx, &view),
-            ))
-        })
-        .await
-        .unwrap();
-    assert!(first.contains("Initial"));
-    let m = message.clone();
-    app.db
-        .write(move |tx| {
-            let pr = PullRequest::for_message(tx.conn(), m.id)?.remove(0);
-            tx.conn().execute(
-                "UPDATE github_pull_requests SET title='Updated',updated_at=? WHERE id=?",
-                params![tx.now().since(jiff::SignedDuration::from_secs(1)), pr.id],
-            )?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    let app_read = app.clone();
-    app.db
-        .read(move |conn| {
-            let stored = Message::find(conn, message.id)?;
-            assert_eq!(stored.updated_at, message.updated_at);
-            let view = crate::controllers::presenters::Presenter::new(conn, &app_read, None)
-                .message(&stored)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = crate::controllers::presenters::page::render_detached(
-                &app_read,
-                account.as_ref(),
-                |ctx| campfire_views::messages::message(ctx, &view),
-            );
-            assert!(html.contains("Updated"));
-            assert!(!html.contains("Initial"));
-            Ok(())
-        })
-        .await
-        .unwrap();
-}
-
-#[tokio::test]
 async fn review_refresh_queue_is_atomic_with_triggering_save() {
     let (app,_dir)=super::super::references::tests::application().await;
     let pr=app.db.write(|tx| {
@@ -826,5 +681,3 @@ async fn review_refresh_queue_is_atomic_with_triggering_save() {
     assert!(result.is_err(),"queue insertion failure must roll back the triggering PR save");
     app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert_eq!(stored.title.as_deref(),Some("Before"));assert!(stored.fetch_requested_at.is_none());let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class GLOB 'Github::*'",[],|r|r.get(0))?;assert_eq!(jobs,0);Ok(())}).await.unwrap();
 }
-
-use campfire_web::controllers::presenters::Rendering;

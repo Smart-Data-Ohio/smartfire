@@ -12,17 +12,15 @@ pub mod rendered {
 pub use crate::controllers::presenters::message_payload as payload;
 pub use crate::controllers::presenters::message_freshness as freshness;
 
-use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Room, Timeline};
 use campfire_kit::format;
-use campfire_kit::{Ctx, Error, Freshness, Param, Result, StatusCode, halt, permit_keys};
+use campfire_kit::{Ctx, Error, Param, Result, StatusCode, halt, permit_keys};
 use campfire_storage::{Blob, Staged};
-use campfire_views::messages as views;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::attachments::{self, Assignment};
-use crate::controllers::presenters::page::{self, db_error};
+use crate::controllers::presenters::page::db_error;
 use crate::controllers::presenters::{DbResolver, Presenter};
 use crate::queue::{WEBHOOK_HOLD, WebhookJob};
 pub use crate::messaging::{canonicalize_body, process_attachment, save_staged};
@@ -40,22 +38,10 @@ pub async fn index(c: &mut Ctx) -> Result {
         if !json { c.expires_now(); }
         return Ok(c.head(StatusCode::NO_CONTENT));
     }
-    let records = messages.clone();
-    let etag = c.app().db.read(move |conn| freshness::etag(conn, &records)).await.map_err(db_error)?;
-    let freshness = Freshness {
-        etag: Some(etag),
-        template: Some(freshness::INDEX_TEMPLATE_DIGEST.trim().into()),
-        ..Freshness::default()
-    };
-    if let Some(not_modified) = c.fresh_when(freshness) {
-        return Ok(not_modified);
-    }
-    c.respond_to(&[&format::HTML])?;
-    let views = present(c, move |presenter| presenter.messages(&messages)).await?;
-    let response = page::bare(c, StatusCode::OK, &format::HTML, |ctx| views::Index { ctx, messages: &views }.render()).await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &views, &c.url_for(""));
-    Ok(response.with_cached_fragments(fragments))
+    if json { return Err(Error::UnknownFormat); }
+    c.redirect_to(&c.url_for(&format!("/app/r/{}", room.id)))
 }
+
 
 /// `create`: `set_room` runs inside the action, and a room that's gone renders `room_not_found`.
 pub async fn create(c: &mut Ctx) -> Result {
@@ -96,28 +82,6 @@ async fn create_action(c: &mut Ctx) -> Result {
     };
 
     Ok(c.head(StatusCode::CREATED))
-}
-
-pub async fn show(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let room = set_root_room(c).await?;
-    let message = set_message(c, &room).await?;
-    c.respond_to(&[&format::HTML])?;
-    let view = present(c, move |presenter| presenter.message(&message)).await?;
-    page::content_in_application_layout(c, StatusCode::OK, |ctx| views::Show { ctx, message: &view }.render()).await
-}
-
-pub async fn edit(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let room = set_root_room(c).await?;
-    let message = set_message(c, &room).await?;
-    ensure_can_edit(c, &message)?;
-    c.respond_to(&[&format::HTML])?;
-    let edit = present(c, move |presenter| {
-        Ok(views::EditView { editable_body_html: presenter.editable_markdown_source(&message)?, message: presenter.message(&message)? })
-    })
-    .await?;
-    page::content_in_application_layout(c, StatusCode::OK, |ctx| views::Edit { ctx, edit: &edit }.render()).await
 }
 
 pub async fn update(c: &mut Ctx) -> Result {
@@ -172,7 +136,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 // --- Before-actions and params --------------------------------------------------------------------
 
 /// `RoomScoped`: a membership in an alive room, including during deferred deletion.
-async fn set_root_room(c: &mut Ctx) -> Result<Room> {
+pub async fn set_root_room(c: &mut Ctx) -> Result<Room> {
     let (_, room) = concerns::set_room(c).await?;
     if room.deleted_at.is_some() {
         return Err(Error::NotFound);
@@ -189,7 +153,7 @@ pub async fn preview(c: &mut Ctx) -> Result {
     let source = permitted.get("markdown_source").ok_or_else(|| Error::ParameterMissing("markdown_source".into()))?;
     let source = source.as_str().ok_or_else(|| Error::internal(anyhow::anyhow!("markdown_source has no length")))?.to_owned();
     if source.chars().count() > campfire_db::message::SOURCE_LIMIT {
-        let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"error": "Markdown is limited to 50,000 characters"}));
+        let body = campfire_presentation::helpers::to_rails_json(&serde_json::json!({"error": "Markdown is limited to 50,000 characters"}));
         return Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY, &format::JSON, body));
     }
     let html = render_preview(c, room.id, source).await?;
@@ -223,7 +187,7 @@ pub fn ensure_can_delete(c: &mut Ctx, message: &Message) -> Result<()> {
 }
 
 /// `@room.messages.find(params[:id])`
-pub(crate) async fn set_message(c: &mut Ctx, room: &Room) -> Result<Message> {
+pub async fn set_message(c: &mut Ctx, room: &Room) -> Result<Message> {
     let Some(id) = c.param_str("id").and_then(cast_integer) else { return Err(Error::NotFound) };
     let room_id = room.id;
     c.app().db.read(move |conn| Message::find_in(conn, Timeline::Room(room_id), id)).await.map_err(db_error)
@@ -414,7 +378,7 @@ fn render_record_invalid(c: &mut Ctx, error: Error) -> Result {
         for (attribute, message) in &errors.0 {
             by_attribute.entry((*attribute).to_owned()).or_insert_with(|| serde_json::json!([])).as_array_mut().unwrap().push(message.clone().into());
         }
-        let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"errors": by_attribute}));
+        let body = campfire_presentation::helpers::to_rails_json(&serde_json::json!({"errors": by_attribute}));
         Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY, &format::JSON, body))
     } else {
         Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
@@ -793,7 +757,7 @@ pub async fn present<T: Send + 'static>(
             presenter.current_user_id = Some(current_user_id);
             presenter.use_viewer_zone(current_user_id)?;
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
+            let value = campfire_app::cache::with(&app.fragment_cache, || f(&presenter))?;
             Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_render_refreshes()))
         })
         .await
@@ -805,15 +769,9 @@ pub async fn present<T: Send + 'static>(
     Ok(value)
 }
 
-/// `render action: :room_not_found` (inside the layout).
 async fn render_room_not_found(c: &mut Ctx) -> Result {
-    // Explicit `render action: :room_not_found` looks up the request's format; Rails has
-    // only the HTML template. A Turbo Stream/JSON rescue therefore raises MissingTemplate.
     if c.format()?.is_some_and(|requested| *requested != format::HTML) {
-        return Err(Error::internal(anyhow::anyhow!("Missing messages/room_not_found template for request format")));
+        return Err(Error::internal(anyhow::anyhow!("Unsupported missing-room response format")));
     }
-    c.respond_to(&[&format::HTML])?;
-    page::content_in_application_layout(c, StatusCode::OK, |_| views::RoomNotFound.render()).await
+    Ok(c.head(StatusCode::OK))
 }
-
-use campfire_web::controllers::presenters::{Rendering};

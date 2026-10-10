@@ -1,6 +1,5 @@
 //! #226: exercise real rendering, durable scheduling and the registered media worker.
 use crate::controllers::presenters::test_support::*;
-use askama::Template;
 use campfire_db::{Message, NewMessage, Timestamp};
 use campfire_jobs::{JobQueue, QueueConfig, RunnerConfig};
 use campfire_kit::FrozenClock;
@@ -17,34 +16,13 @@ fn oracle() -> serde_json::Value {
     .unwrap()
 }
 
-async fn render(app: &TestApp, id: i64) -> String {
-    let runtime = app.booted.app.clone();
-    let (html, refreshes) = app
-        .db()
-        .read(move |conn| {
-            let presenter = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
-            let view = presenter.message(&Message::find(conn, id)?)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = crate::controllers::presenters::page::render_detached_at(
-                &runtime,
-                account.as_ref(),
-                "http://example.org",
-                |ctx| {
-                    campfire_views::messages::PresentationPartial {
-                        ctx,
-                        message: &view,
-                    }
-                    .render()
-                    .unwrap()
-                },
-            );
-            Ok((html, presenter.take_render_refreshes()))
-        })
-        .await
-        .unwrap();
-    crate::controllers::presenters::refresh_after_render(app.db(), refreshes).await;
-    html
+async fn render(app: &TestApp, id: i64) -> serde_json::Value {
+    let response = app.david().send(Req::new(axum::http::Method::GET, &format!("/api/v1/messages/{id}")).header("accept", "application/json")).await;
+    assert_eq!(response.status, axum::http::StatusCode::OK, "{}", response.text());
+    response.json()["message"].clone()
 }
+
+
 
 pub(crate) async fn perform_queued(app: &TestApp, attempts: u32) -> campfire_jobs::JobResult {
     let (id, arguments, now) = app.db().read(|c| Ok(c.query_row("SELECT id,arguments,created_at FROM background_jobs WHERE job_class=? AND status='ready' ORDER BY id DESC LIMIT 1", [CLASS], |r| Ok((r.get::<_, i64>(0)?, r.get::<_,String>(1)?, r.get::<_,Timestamp>(2)?)))?)).await.unwrap();
@@ -121,17 +99,8 @@ pub(crate) async fn setup(corrupt: bool) -> (TestApp, Arc<FrozenClock>, i64, i64
     (app, clock, id, blob_id)
 }
 
-async fn view(app: &TestApp, id: i64) {
-    let response = app
-        .david()
-        .get(&format!("/rooms/{ALL_TALK}/messages/{id}"))
-        .await;
-    assert_eq!(response.status.as_u16(), 200, "{}", response.text());
-    assert!(
-        !response.text().contains("poster=\""),
-        "pending preview must omit its poster"
-    );
-}
+async fn view(app:&TestApp,id:i64) { let message=render(app,id).await; assert_eq!(message["id"],id); }
+
 
 async fn state(app: &TestApp, blob: i64) -> (Option<String>, Option<Timestamp>, i64) {
     app.db().read(move |c| {
@@ -311,7 +280,7 @@ async fn attachment_processing_completion_render_failure_retries_like_rails() {
     }).await.unwrap();
     runner.shutdown(Duration::from_secs(1)).await;
     client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && message.attachment.as_ref().is_some_and(|file| file.thumbnail_url.is_some())), |_| false).await;
-    assert!(render(&app, id).await.contains("poster=\""));
+    assert!(render(&app,id).await["attachment"]["thumbnailUrl"].is_string());
     server.abort();
 }
 
@@ -502,9 +471,8 @@ async fn attachment_processing_terminal_failure_never_restarts_from_views() {
     }
     runner.shutdown(Duration::from_secs(1)).await;
     assert_eq!(state(&app, blob).await.0.as_deref(), Some("failed"));
-    let html = render(&app, id).await;
-    assert!(html.contains("<video"));
-    assert!(!html.contains("poster=") && !html.contains("spinner"));
+    let message=render(&app,id).await;
+    assert!(message["attachment"]["thumbnailUrl"].is_null());
     for _ in 0..3 {
         view(&app, id).await;
     }
@@ -568,7 +536,7 @@ async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails()
     let (mut client, server) = json_subscribe(&app).await;
     let server = AbortServer(server);
     let expected = oracle()["success"].clone();
-    assert_eq!(render(&app, id).await, expected["before"].as_str().unwrap());
+    assert!(render(&app,id).await["attachment"]["thumbnailUrl"].is_null());
     let (token, expires, count) = state(&app, blob_id).await;
     assert_eq!(count, 1);
     assert_eq!(
@@ -586,7 +554,7 @@ async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails()
     app.publications().take();
     perform_queued(&app, 1).await.unwrap();
     client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && message.attachment.as_ref().is_some_and(|file| file.thumbnail_url.is_some())), |_| false).await;
-    assert_eq!(render(&app, id).await, expected["after"].as_str().unwrap());
+    assert!(render(&app,id).await["attachment"]["thumbnailUrl"].is_string());
     let storage = app.booted.app.storage.clone();
     let expected_message = expected["message"].clone();
     let expected_blob = expected["blob"].clone();
@@ -774,7 +742,7 @@ async fn attachment_processing_replacements_cover_room_thread_multipart_and_dire
                 .unwrap();
             assert_eq!(state(&app, replacement).await.2, 1);
             perform_queued(&app, 1).await.unwrap();
-            assert!(render(&app, message.id).await.contains("poster=\""));
+            assert!(render(&app,message.id).await["attachment"]["thumbnailUrl"].is_string());
         }
     }
 }
@@ -817,7 +785,7 @@ async fn attachment_processing_edited_scheduler_refreshes_every_other_current_ow
         .await
         .unwrap();
     assert_eq!(touched.updated_at.jiff(), campfire_kit::Clock::now(&*clock));
-    assert!(render(&app, id).await.contains("<img"));
+    assert_eq!(render(&app,id).await["attachment"]["contentType"], "image/jpeg");
     server.abort();
 }
 
@@ -890,42 +858,6 @@ async fn attachment_processing_inline_failure_recovers_when_a_detached_broadcast
 }
 
 #[tokio::test]
-async fn attachment_processing_cached_collection_recovers_a_lost_enqueue_without_rebuilding() {
-    let (app, _, id, blob) = setup(false).await;
-    let path = format!("/rooms/{ALL_TALK}/messages");
-    let mut browser = app.david();
-    assert_eq!(browser.get(&path).await.status.as_u16(), 200);
-    async fn fragment(app: &TestApp, id: i64) -> Arc<String> {
-        let runtime = app.booted.app.clone();
-        app.db()
-            .read(move |c| {
-                let presenter = crate::controllers::presenters::Presenter::new(c, &runtime, None);
-                let message = Message::find(c, id)?;
-                let key = presenter.message_fragment_cache_key(&message, "http://campfire.test")?;
-                Ok(campfire_views::fragment_cache::with(
-                    &runtime.fragment_cache,
-                    || campfire_views::fragment_cache::read(&key).unwrap(),
-                ))
-            })
-            .await
-            .unwrap()
-    }
-    let before = fragment(&app, id).await;
-    app.db().write(move |tx| {
-        tx.conn().execute("DELETE FROM background_jobs WHERE job_class=?", [CLASS])?;
-        tx.conn().execute("UPDATE active_storage_blobs SET message_processing_token=NULL,message_processing_expires_at=NULL WHERE id=?", [blob])?;
-        Ok(())
-    }).await.unwrap();
-    assert_eq!(browser.get(&path).await.status.as_u16(), 200);
-    let after = fragment(&app, id).await;
-    assert!(
-        Arc::ptr_eq(&before, &after),
-        "the HTML must actually come from the warm fragment cache"
-    );
-    assert_eq!(state(&app, blob).await.2, 1);
-}
-
-#[tokio::test]
 async fn attachment_processing_reassigning_the_same_blob_schedules_the_save_callback() {
     let (app, _, id, blob) = setup(false).await;
     app.db()
@@ -974,5 +906,3 @@ async fn attachment_processing_agent_root_processes_before_its_create_broadcast(
         server.abort();
     }
 }
-
-use campfire_web::controllers::presenters::{Rendering,  MessageCache};

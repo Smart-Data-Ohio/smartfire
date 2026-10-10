@@ -40,9 +40,9 @@ async fn joins_reads_and_leaves_match_rails_json_redirects_and_rows() {
         if let Some(text) = row["json_text"].as_str() { assert_eq!(response.text(), text, "{}", row["name"]); }
         let member = app.db().read(move |conn| Ok(ThreadMembership::find_by_thread_and_user(conn, id, DAVID)?.map(|member| json!({
             "id": member.id, "involvement": member.involvement.name(),
-            "joined_at": campfire_views::messages::support::json_time(member.joined_at.jiff()),
-            "unread_at": member.unread_at.map(|time| campfire_views::messages::support::json_time(time.jiff())),
-            "updated_at": campfire_views::messages::support::json_time(member.updated_at.jiff()),
+            "joined_at": campfire_presentation::messages::support::json_time(member.joined_at.jiff()),
+            "unread_at": member.unread_at.map(|time| campfire_presentation::messages::support::json_time(time.jiff())),
+            "updated_at": campfire_presentation::messages::support::json_time(member.updated_at.jiff()),
         })))).await.unwrap();
         assert_eq!(json!(member), row["membership"], "{}", row["name"]);
     }

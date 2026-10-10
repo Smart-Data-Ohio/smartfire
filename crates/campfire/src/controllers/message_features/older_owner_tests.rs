@@ -34,22 +34,17 @@ fn oracle() -> Value {
 
 async fn windows(app: &TestApp, group: &Value) {
     for path in [
-        format!("/rooms/{QUIET_CORNER}/messages"),
+        format!("/api/v1/rooms/{QUIET_CORNER}/messages"),
         format!(
-            "/rooms/{QUIET_CORNER}/threads/{}/messages",
+            "/api/v1/threads/{}/messages",
             group["thread_id"]
         ),
     ] {
         let response = app.david().get(&path).await;
         assert_eq!(response.status, axum::http::StatusCode::OK);
         for id in group["old_ids"].as_array().unwrap() {
-            assert!(
-                !response
-                    .text()
-                    .contains(&format!("data-message-id=\"{id}\"")),
-                "old reference in {path}"
-            );
-        }
+                assert!(!response.json()["messages"].as_array().unwrap().iter().any(|message| message["id"] == *id));
+            }
     }
 }
 fn update(

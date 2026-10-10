@@ -58,8 +58,6 @@ mod app {
     #[cfg(test)]
     mod admin_two_factor_tests;
     #[cfg(test)]
-    mod full_page_tests;
-    #[cfg(test)]
     mod auth_page_fixture_tests;
     #[cfg(test)]
     mod profile_security_tests;
@@ -100,8 +98,6 @@ mod app {
     mod google_lifecycle_tests;
     #[cfg(test)]
     mod google_admin_tests;
-    #[cfg(test)]
-    mod google_page_tests;
     #[cfg(test)]
     mod google_reporting_tests;
     #[cfg(test)]

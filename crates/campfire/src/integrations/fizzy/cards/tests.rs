@@ -395,37 +395,3 @@ async fn ws15e_fizzy_transport_error_is_cached_and_job_has_one_attempt() {
         .await
         .unwrap();
 }
-
-
-
-#[tokio::test]
-async fn ws15e_fizzy_containers_match_rails_bytes_sorted_and_use_numeric_frame_message_id() {
-    let app = app().await;
-    let vectors: Value =
-        serde_json::from_str(include_str!("../../../../../../vectors/ws15e_fizzy.json")).unwrap();
-    for case in vectors["containers"].as_array().unwrap() {
-        let case = case.clone();
-        app.db().write(move|tx| {
-            let mut message=Message::create(tx,NewMessage {room_id:ALL_TALK,creator_id:KEVIN,body:Some("body".into()),..Default::default()})?;
-            let mut expected=case["html"].as_str().unwrap().to_string();
-            let mut ids=Vec::new();
-            for attrs in case["cards"].as_array().unwrap() {
-                let card=Card::for_reference(tx,attrs["account_id"].as_str().unwrap(),attrs["number"].as_i64().unwrap())?;
-                tx.conn().execute("INSERT INTO fizzy_card_references(message_id,fizzy_card_id,created_at,updated_at) VALUES (?1,?2,?3,?3)",params![message.id,card.id,tx.now()])?;
-                let fixture_id=attrs["id"].as_i64().unwrap();
-                expected=expected.replace(&format!("_fizzy_card_{fixture_id}\""),&format!("_fizzy_card_fixture_{fixture_id}\""));
-                expected=expected.replace(&format!("/cards/{fixture_id}/card?"),&format!("/cards/fixture_{fixture_id}/card?"));
-                ids.push((fixture_id,card.id));
-            }
-            // Rails fixture IDs are view inputs; substitute them without changing any output markup.
-            for (fixture,id) in ids {
-                expected=expected.replace(&format!("_fizzy_card_fixture_{fixture}\""),&format!("_fizzy_card_{id}\""));
-                expected=expected.replace(&format!("/cards/fixture_{fixture}/card?"),&format!("/cards/{id}/card?"));
-            }
-            expected=expected.replace("card_for_message_99_",&format!("card_for_message_{}_",message.id)).replace("message_id=99",&format!("message_id={}",message.id)).replace("/rooms/42/",&format!("/rooms/{ALL_TALK}/"));
-            message.client_message_id="ws15e-fizzy-key".into();
-            assert_eq!(crate::controllers::presenters::fizzy_cards::container(tx.conn(),&message)?,expected);
-            Ok(())
-        }).await.unwrap();
-    }
-}

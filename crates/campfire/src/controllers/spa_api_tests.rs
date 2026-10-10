@@ -102,11 +102,7 @@ async fn play_chat_sound_messages_match_the_classic_catalog() {
                 presentation,
             })
         );
-        let classic = b.classic_page(&format!("/rooms/{HQ}")).await;
-        assert!(classic.text().contains(&format!(
-            "data-sound-url-value=\"{}\"",
-            read.message.sound.unwrap().url
-        )));
+
     }
     let unknown: api::MessageDTO =
         parse(&post(&mut b, HQ, "unknown-play-sound", "/play unknown").await);
@@ -138,19 +134,18 @@ async fn play_chat_sound_quiet_policy_is_the_classic_layout_policy() {
 }
 
 #[tokio::test]
-async fn the_api_exists_only_with_the_spa() {
+async fn the_api_exists_without_flags() {
     let Some(a) = app(false).await else { return };
     let mut b = a.sign_in(DAVID).await;
-    let unknown = b.send(get("/no-such-page")).await.status;
+
     for path in [
         "/api/v1/me",
         "/api/v1/sidebar",
         &format!("/api/v1/rooms/{HQ}"),
-        "/api/v1/sync",
     ] {
-        assert_eq!(b.send(get(path)).await.status, unknown, "{path}");
+        assert_eq!(b.send(get(path)).await.status, StatusCode::OK, "{path}");
     }
-    assert!(!a.booted.app.cable.sync_enabled());
+    assert!(a.booted.app.cable.sync_enabled());
 }
 
 #[tokio::test]

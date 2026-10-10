@@ -214,7 +214,7 @@ pub async fn decide(
     match decision_result {
         ApprovalDecision::Forbidden => Err(Error::NotFound),
         ApprovalDecision::Invalid(errors) => {
-            let message = campfire_views::helpers::to_sentence(&errors.full_messages(), " and ");
+            let message = campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ");
             let message = if message.is_empty() {
                 "Request cannot be decided"
             } else {

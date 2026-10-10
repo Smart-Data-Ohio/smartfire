@@ -1,5 +1,0 @@
-{% extends "layouts/application.html" %}
-{%- block head %}{% endblock %}{% block nav %}  <div class="flex-item-justify-start">
-    {{ h::link_back_to(ctx, crate::slack::run_base(admin)) }}
-  </div>
-{% endblock %}{% block content %}{% if admin %}{% include "slack/import_runs/admin_show.html" %}{% else %}{% include "slack/import_runs/personal_show.html" %}{% endif %}{% endblock %}

@@ -1,6 +1,5 @@
 //! Request-level ports of test/controllers/users/stars_controller_test.rb.
 use crate::controllers::presenters::test_support::*;
-use askama::Template;
 use axum::http::{Method, StatusCode};
 
 fn vectors() -> serde_json::Value {
@@ -170,28 +169,6 @@ async fn ws12_stars_match_rails_json_bytes_statuses_headers_and_rows() {
         );
     }
 }
-
-#[tokio::test]
-async fn ws12_stars_toggle_matches_every_rails_byte() {
-    let app = TestApp::boot_frozen()
-        .await
-        .expect("WS12 requires default seed");
-    for case in vectors()["fragments"].as_array().unwrap() {
-        let starred = case["starred"].as_bool().unwrap();
-        let html = super::people_tests::render(&app, |_| {
-            campfire_views::users::StarToggle {
-                user_id: KEVIN,
-                starred,
-            }
-            .render()
-            .unwrap()
-        });
-        assert_eq!(html, case["html"].as_str().unwrap());
-
-    }
-}
-
-
 
 #[tokio::test]
 async fn ws12_stars_html_redirects_and_inactive_targets_match_rails() {

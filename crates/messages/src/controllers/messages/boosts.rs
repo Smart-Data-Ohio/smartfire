@@ -3,33 +3,13 @@
 
 pub mod by_bots;
 
-use askama::Template;
 use campfire_db::{Boost, Message};
-use campfire_kit::{Ctx, Error, Result, StatusCode, format, permit_keys};
-use campfire_views::messages as views;
+use campfire_kit::{Ctx, Error, Result, StatusCode, permit_keys};
+use campfire_presentation::messages as views;
 
-use super::present;
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::page::{self, db_error};
-use crate::controllers::presenters::user_view;
-
-pub async fn index(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let message = set_message(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let view = present(c, move |presenter| presenter.message(&message)).await?;
-    page::content(c, StatusCode::OK, |ctx| views::BoostsIndex { ctx, message: &view }.render()).await
-}
-
-pub async fn new(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let message = set_message(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let user = user_view(&c.app().secrets, require_current_user(c)?);
-    let view = present(c, move |presenter| presenter.message(&message)).await?;
-    page::content(c, StatusCode::OK, |ctx| views::NewBoost { ctx, message: &view, user: &user }.render()).await
-}
+use crate::controllers::presenters::page::db_error;
 
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
@@ -69,7 +49,7 @@ pub async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
 }
 
 /// `Current.user.reachable_messages.find(params[:message_id])`
-async fn set_message(c: &mut Ctx) -> Result<Message> {
+pub async fn set_message(c: &mut Ctx) -> Result<Message> {
     let user_id = require_current_user(c)?.id;
     let Some(id) = c.param_str("message_id").and_then(cast_integer) else { return Err(Error::NotFound) };
     c.app().db.read(move |conn| Message::find_reachable(conn, user_id, id)).await.map_err(db_error)
@@ -90,5 +70,3 @@ pub(crate) async fn destroy_boost(c: &Ctx, message: &Message, boost: Boost) -> R
     broadcast_reactions(c, message).await?;
     Ok(())
 }
-
-use campfire_web::controllers::presenters::{Rendering};

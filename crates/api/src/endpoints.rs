@@ -11,7 +11,7 @@ use campfire_messages::controllers::messages::{self as posting, MessageParams};
 use campfire_runtime::concerns::{self, Authentication, Before};
 use campfire_runtime::presenters::attachments::Assignment;
 use campfire_runtime::context::db_error;
-use campfire_runtime::presenters::room_shell;
+use campfire_runtime::presenters::room_unread;
 use serde::de::DeserializeOwned;
 
 use crate::dto;
@@ -422,7 +422,7 @@ async fn destroy_read(c: &mut Ctx) -> Result {
             let message = Message::find_in(tx.conn(), Timeline::Room(room_id), message_id)?;
             membership.mark_unread_before(tx, &message)?;
             // The count the sidebar row shows from here on.
-            Ok(room_shell::first_unread(tx.conn(), &membership)?.map_or(0, |(_, count)| count))
+            Ok(room_unread::first_unread(tx.conn(), &membership)?.map_or(0, |(_, count)| count))
         })
         .await
         .map_err(db_error)?;

@@ -7,36 +7,13 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use campfire_db::{CachedStatements, Connection, PushSubscription};
-use campfire_kit::{Ctx, Error, ParamMap, Result, StatusCode, format, permit_keys};
-use campfire_views::users;
+use campfire_kit::{Ctx, Error, ParamMap, Result, StatusCode, permit_keys};
 use rusqlite::types::Value;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
 use crate::controllers::presenters;
-use crate::controllers::presenters::page::framed_page;
 use crate::net::{Network, guard};
-
-pub async fn index(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    c.respond_to(&[&format::HTML])?;
-    let user_id = concerns::require_current_user(c)?.id;
-    let subscriptions = c
-        .app()
-        .db
-        .read(move |conn| PushSubscription::for_user(conn, user_id))
-        .await
-        .map_err(Error::internal)?;
-    let push_subscriptions: Vec<_> = subscriptions
-        .iter()
-        .map(presenters::accounts::push_subscription)
-        .collect();
-    framed_page!(c, StatusCode::OK, |ctx| users::PushSubscriptionsIndex {
-        ctx,
-        push_subscriptions: push_subscriptions.clone()
-    })
-    .await
-}
 
 pub async fn create(c: &mut Ctx) -> Result {
     c.wrap_parameters("push_subscription", None);

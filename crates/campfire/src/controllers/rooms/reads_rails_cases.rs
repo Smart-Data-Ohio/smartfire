@@ -86,7 +86,7 @@ async fn mark(index: usize) {
     let membership = membership(&app).await;
     assert!(membership.unread());
     assert_eq!(membership.last_read_message_id, index.checked_sub(1).map(|i| roots[i].id));
-    let first = app.db().read(move |conn| Ok(crate::controllers::presenters::room_shell::unread_divider(conn, &membership, &roots)?.message_id)).await.unwrap();
+    let first = app.db().read(move |conn| Ok(crate::controllers::presenters::room_unread::first_unread(conn, &membership)?.map(|(id,_)|id))).await.unwrap();
     assert_eq!(first, Some(target));
 }
 #[tokio::test]

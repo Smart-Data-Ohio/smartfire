@@ -100,7 +100,7 @@ async fn self_and_unenrolled_resets_change_nothing_and_have_exact_alerts() {
             .location(),
         Some("http://campfire.test/account/edit")
     );
-    assert!(admin.get("/account/edit").await.text().contains("Reset someone else&#39;s two-step sign-in from here. To change your own, use Disable on your profile."));
+    assert!(admin.boot_flash().await["message"].as_str().unwrap_or("").contains("Reset someone else's two-step sign-in from here. To change your own, use Disable on your profile."));
     assert!(enabled(&a, DAVID).await);
     assert_eq!(
         a.db()
@@ -121,11 +121,8 @@ async fn self_and_unenrolled_resets_change_nothing_and_have_exact_alerts() {
         Some("http://campfire.test/account/edit")
     );
     assert!(
-        admin
-            .get("/account/edit")
-            .await
-            .text()
-            .contains("Kevin doesn&#39;t have two-step sign-in enabled.")
+        admin.boot_flash().await["message"].as_str().unwrap_or("")
+            .contains("Kevin doesn't have two-step sign-in enabled.")
     );
     assert_eq!(audit(&a).await, 0);
 }
@@ -151,7 +148,7 @@ async fn reset_removes_all_auth_rows_records_actor_target_and_requires_enrollmen
         Some("http://campfire.test/account/edit")
     );
     assert!(
-        admin.get("/account/edit").await.text().contains(
+        admin.boot_flash().await["message"].as_str().unwrap_or("").contains(
             "Two-step sign-in reset for Kevin. They will set it up again at next sign-in."
         )
     );
@@ -181,7 +178,7 @@ async fn reset_removes_all_auth_rows_records_actor_target_and_requires_enrollmen
             ]))
             .await
             .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     assert_eq!(
         member.get("/").await.location(),
@@ -268,33 +265,28 @@ async fn admin_reset_disconnects_real_sockets_and_reset_still_works_without_a_li
     assert!(!enabled(&a, crate::controllers::presenters::test_support::JASON).await);
 }
 #[tokio::test]
-async fn account_rows_offer_reset_only_for_other_enrolled_humans_to_admins() {
+async fn account_people_json_exposes_reset_facts_only_to_administrators() {
     let a = app().await;
     let mut admin = a.sign_in(DAVID).await;
-    let text = admin.get("/account/edit").await.text();
-    assert!(text.contains(&format!("action=\"{}\"", path(KEVIN))));
-    assert!(!text.contains(&format!("action=\"{}\"", path(DAVID))));
-    assert!(!text.contains(&format!("action=\"{}\"", path(BENDER))));
+    let reply = admin.get("/api/v1/admin/people").await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
+    let rows = payload["people"].as_array().unwrap();
+    let kevin = rows.iter().find(|row| row["id"] == KEVIN).unwrap();
+    assert_eq!(kevin["twoFactorEnabled"], true);
+    assert_eq!(kevin["you"], false);
+    assert_eq!(rows.iter().find(|row| row["id"] == DAVID).unwrap()["you"], true);
+    assert!(!rows.iter().any(|row| row["id"] == BENDER));
     let mut member = a.sign_in(KEVIN).await;
-    assert!(
-        !member
-            .get("/account/edit")
-            .await
-            .text()
-            .contains("two_factor_reset")
-    );
-    a.db()
-        .write(|tx| User::find(tx.conn(), KEVIN)?.reset_two_factor(tx))
-        .await
-        .unwrap();
-    assert!(
-        !admin
-            .get("/account/edit")
-            .await
-            .text()
-            .contains(&format!("action=\"{}\"", path(KEVIN)))
-    );
+    let reply = member.get("/api/v1/admin/people").await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
+    assert!(payload["people"].as_array().unwrap().iter().all(|row| row["twoFactorEnabled"] == false));
+    a.db().write(|tx| User::find(tx.conn(), KEVIN)?.reset_two_factor(tx)).await.unwrap();
+    let payload: serde_json::Value = serde_json::from_str(&admin.get("/api/v1/admin/people").await.text()).unwrap();
+    assert_eq!(payload["people"].as_array().unwrap().iter().find(|row| row["id"] == KEVIN).unwrap()["twoFactorEnabled"], false);
 }
+
 #[tokio::test]
 async fn self_service_limits_use_ip_and_user_windows_and_remembered_actions_share_a_bucket() {
     for (method, endpoint) in [
@@ -323,60 +315,46 @@ async fn self_service_limits_use_ip_and_user_windows_and_remembered_actions_shar
         for n in 0..10 {
             assert_eq!(
                 b.write(request(n, "198.18.0.1")).await.location(),
-                Some("http://campfire.test/users/me/profile")
+                Some(if endpoint == "/two_factor_reauthentication" { "http://campfire.test/app/settings/security" } else { "http://campfire.test/users/me/profile" })
             );
         }
         b.write(request(11, "198.18.0.1")).await;
         assert!(
-            b.get("/users/me/profile")
-                .await
-                .text()
+            b.boot_flash().await["message"].as_str().unwrap_or("")
                 .contains("Too many attempts. Try again in a few minutes."),
             "{endpoint} IP limit"
         );
         let mut other = a.sign_in(KEVIN).await;
         other.write(request(11, "198.18.0.1")).await;
         assert!(
-            other
-                .get("/users/me/profile")
-                .await
-                .text()
+            other.boot_flash().await["message"].as_str().unwrap_or("")
                 .contains("Too many attempts. Try again in a few minutes."),
             "{endpoint} IP bucket shared across users"
         );
         clock.advance(jiff::SignedDuration::from_secs(181));
         other.write(request(12, "198.18.0.1")).await;
         assert!(
-            !other
-                .get("/users/me/profile")
-                .await
-                .text()
+            !other.boot_flash().await["message"].as_str().unwrap_or("")
                 .contains("Too many attempts. Try again in a few minutes."),
             "{endpoint} IP window resets after three minutes"
         );
         b.write(request(12, "198.18.0.2")).await;
         assert!(
-            b.get("/users/me/profile")
-                .await
-                .text()
+            b.boot_flash().await["message"].as_str().unwrap_or("")
                 .contains("Too many attempts. Try again in a few minutes."),
             "{endpoint} user limit across IPs"
         );
         clock.advance(jiff::SignedDuration::from_secs(121));
         b.write(request(12, "198.18.0.4")).await;
         assert!(
-            b.get("/users/me/profile")
-                .await
-                .text()
+            b.boot_flash().await["message"].as_str().unwrap_or("")
                 .contains("Too many attempts. Try again in a few minutes."),
             "{endpoint} user limit survives five minutes"
         );
         clock.advance(jiff::SignedDuration::from_secs(600));
         b.write(request(13, "198.18.0.3")).await;
         assert!(
-            !b.get("/users/me/profile")
-                .await
-                .text()
+            !b.boot_flash().await["message"].as_str().unwrap_or("")
                 .contains("Too many attempts. Try again in a few minutes."),
             "{endpoint} window expires"
         );
@@ -466,6 +444,6 @@ async fn challenge_ip_bucket_is_shared_and_rejects_valid_codes_until_three_minut
             )
             .await
             .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
 }

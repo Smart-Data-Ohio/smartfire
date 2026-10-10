@@ -296,17 +296,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
         return Ok(());
     }
-    let Some(endpoint) = c.current::<MatchedRoute>().map(|route| route.endpoint) else {
-        return Ok(());
-    };
-    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
-    let screen_path = screen_path(c.request.path());
-    let location = if endpoint == "rooms#show" {
-        let confirmed = confirmed_room_query(c, screen_path, query).await?;
-        campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
-    } else {
-        campfire_spa::screens::profile_url(endpoint, screen_path, query, require_current_user(c)?.id)
-    };
+    let location = alias_location(c).await?;
     let Some(location) = location else {
         return Ok(());
     };
@@ -316,6 +306,20 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     keep_waiting_flash(c);
     let location = c.url_for(&location);
     halt(c.redirect_to(&location)?)
+}
+
+/// Resolve a durable alias, retaining only room-query records the viewer may open.
+pub async fn alias_location(c:&Ctx)->Result<Option<String>> {
+    let Some(endpoint)=c.current::<MatchedRoute>().map(|route|route.endpoint) else {return Ok(None)};
+    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
+    let screen_path = screen_path(c.request.path());
+    let location = if endpoint == "rooms#show" {
+        let confirmed = confirmed_room_query(c, screen_path, query).await?;
+        campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
+    } else {
+        campfire_spa::screens::profile_url(endpoint, screen_path, query, require_current_user(c)?.id)
+    };
+    Ok(location)
 }
 
 /// `path` as the screen map spells it: the router takes `/rooms/7.html` for `/rooms/7` (the
