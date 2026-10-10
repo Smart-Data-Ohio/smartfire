@@ -156,67 +156,9 @@ async fn snapshot(a: &TestApp) -> Value {
         .unwrap()
 }
 
-/// A classic page of David's following his status badge and out-of-office notice streams, so
-/// their publications are recorded.
-async fn follow_status(
-    a: &TestApp,
-) -> (
-    crate::channels::tests::support::Client,
-    tokio::task::JoinHandle<()>,
-) {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let router = a.booted.app.cable.router::<()>("/cable");
-    let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    let headers = request.headers_mut();
-    headers.insert("origin", format!("http://{address}").parse().unwrap());
-    headers.insert(
-        "sec-websocket-protocol",
-        "actioncable-v1-json".parse().unwrap(),
-    );
-    headers.insert(
-        "cookie",
-        crate::controllers::presenters::test_support::david_cookie()
-            .parse()
-            .unwrap(),
-    );
-    let mut client = crate::channels::tests::support::Client {
-        socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
-    };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let gid = campfire_app::cable::user_gid(DAVID).to_param();
-    for stream in ["status", "ooo_notice"] {
-        let signed =
-            rails_compat::turbo::signed_stream_name(&a.booted.app.secrets, &[&gid, stream]);
-        let identifier = crate::channels::tests::support::identifier(
-            json!({"channel": "Turbo::StreamsChannel", "signed_stream_name": signed}),
-        );
-        client.confirm(&identifier).await;
-    }
-    (client, serving)
-}
-
-/// The frames published until they stop coming (some go out after the response).
-async fn settle(a: &TestApp) -> Vec<(String, String)> {
-    let capture = a.publications();
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    frames
-}
-
-/// What one write did: David's rows afterwards and the classic frames it published.
+/// What one write left in David's persisted rows.
 struct Outcome {
     rows: Value,
-    frames: Vec<(String, String)>,
 }
 
 /// Runs `exercise` as David on a fresh app, recording what it leaves behind.
@@ -225,16 +167,12 @@ where
     F: AsyncFnOnce(&mut Browser<'_>),
 {
     let a = app().await?;
-    let (_client, cable) = follow_status(&a).await;
     let mut b = a.sign_in(DAVID).await;
     b.authenticity_token().await;
     a.publications().take();
     exercise(&mut b).await;
-    let frames = settle(&a).await;
-    cable.abort();
     Some(Outcome {
         rows: snapshot(&a).await,
-        frames,
     })
 }
 
@@ -247,7 +185,6 @@ where
     let classic = outcome(classic).await?;
     let spa = outcome(spa).await?;
     assert_eq!(spa.rows, classic.rows, "rows");
-    assert_eq!(spa.frames, classic.frames, "frames");
     Some((classic, spa))
 }
 
@@ -629,7 +566,7 @@ async fn notifications_save_as_the_classic_forms_do() {
 
 #[tokio::test]
 async fn a_status_change_saves_and_broadcasts_as_the_classic_form_does() {
-    let Some((classic_side, _)) = assert_parity(
+    let Some((_classic_side, _)) = assert_parity(
         async |b| {
             classic(
                 b,
@@ -678,23 +615,6 @@ async fn a_status_change_saves_and_broadcasts_as_the_classic_form_does() {
     else {
         return;
     };
-    assert!(
-        classic_side
-            .frames
-            .iter()
-            .any(|(stream, frame)| stream.ends_with(":status") && frame.contains("Back Friday")),
-        "the status badge: {:?}",
-        classic_side.frames
-    );
-    assert!(
-        classic_side
-            .frames
-            .iter()
-            .any(|(stream, _)| stream.ends_with(":ooo_notice")),
-        "the out-of-office notice: {:?}",
-        classic_side.frames
-    );
-
     // Clearing both, and a status-free change that announces nothing.
     assert_parity(
         async |b| {

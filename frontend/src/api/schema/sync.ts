@@ -14,7 +14,7 @@ import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
 import { EventsChanged } from "./events.ts";
 import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./huddle.ts";
-import { RoomId, UserId } from "./ids.ts";
+import { RoomId, ThreadId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import { RoomCategoryRemoved } from "./organize.ts";
 import type { Assert, Pinned } from "./pin.ts";
@@ -65,6 +65,12 @@ export const Typing = Schema.Struct({ userId: UserId, on: Schema.Boolean });
 
 export type TypingPin = Assert<Pinned<typeof Typing, GeneratedTyping>>;
 
+const ThreadGithubUpdated = Schema.Struct({
+  roomId: RoomId,
+  threadId: ThreadId,
+  pullRequestId: Schema.Int,
+});
+
 /** What happened: `type` names the event and `data` carries its body. */
 export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("settings.updated"), data: Settings }),
@@ -82,6 +88,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("thread.indicator"), data: ThreadIndicatorChanged }),
   Schema.Struct({ type: Schema.Literal("thread.created"), data: Thread }),
   Schema.Struct({ type: Schema.Literal("thread.updated"), data: Thread }),
+  Schema.Struct({ type: Schema.Literal("thread.github.updated"), data: ThreadGithubUpdated }),
   Schema.Struct({ type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
   Schema.Struct({
     type: Schema.Literal("board.automations.changed"),
@@ -151,6 +158,11 @@ export const SyncEvent = Schema.Union([
   }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.created"), data: Thread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.updated"), data: Thread }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("thread.github.updated"),
+    data: ThreadGithubUpdated,
+  }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
   Schema.Struct({
     ...eventFields,

@@ -129,57 +129,8 @@ impl LinksIndex<'_> {
         )
     }
 }
-#[derive(Template)]
-#[template(path = "threads/work/links/create.turbo_stream.html")]
-pub struct LinksChange<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub thread_id: i64,
-    pub links: &'a Links,
-}
-impl LinksChange<'_> {
-    fn stream(&self, context: &'static str) -> h::Html {
-        let content = LinksBox {
-            ctx: self.ctx,
-            thread_id: self.thread_id,
-            links: self.links,
-            context,
-        }
-        .render()
-        .expect("changed links");
-        let template = if content.is_empty() {
-            "\n".into()
-        } else {
-            format!("\n  {content}\n")
-        };
-        h::content_tag(
-            "turbo-stream",
-            h::attrs().attr("action", "replace").attr(
-                "target",
-                format!("work-thread-links-{context}-{}", self.thread_id),
-            ),
-            &format!("<template>{template}</template>"),
-        )
-    }
-}
-#[derive(Template)]
-#[template(path = "threads/work/links/invalid.turbo_stream.html")]
-pub struct LinksInvalid<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub thread_id: i64,
-    pub error: &'a str,
-}
-impl LinksInvalid<'_> {
-    fn stream(&self, context: &'static str) -> h::Html {
-        let id = format!("work-thread-links-{context}-status-{}", self.thread_id);
-        let status = format!(
-            "<p class=\"work-links__status work-links__status--error\"\n   id=\"{id}\" role=\"status\">{}</p>\n",
-            h::escape(self.error)
-        );
-        h::content_tag(
-            "turbo-stream",
-            h::attrs().attr("action", "replace").attr("target", id),
-            &format!("<template>\n  {status}\n</template>"),
-        )
-    }
-}
+
+
+
+
 pub use campfire_presentation::work_threads::*;

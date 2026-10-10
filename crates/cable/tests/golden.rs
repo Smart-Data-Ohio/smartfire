@@ -12,7 +12,6 @@ mod support;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use campfire_cable::turbo::StreamsChannel;
 use campfire_cable::{
     Authenticate, Channel, ChannelResult, Config, ConnectRequest, EmptyChannel, Identified, Params,
     Server, Subscription,
@@ -75,9 +74,7 @@ fn script(tokens: &BTreeMap<String, String>) -> Vec<(&'static str, Vec<(String, 
     let room = identifier(json!({ "channel": "RoomChannel", "room_id": room_id }));
     let closed_room = identifier(json!({ "channel": "RoomChannel", "room_id": closed_room_id }));
     let typing = identifier(json!({ "channel": "TypingNotificationsChannel", "room_id": room_id }));
-    let turbo = |signed: Value| {
-        identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": signed }))
-    };
+
 
     let step = |name: &str, step: Step| (name.to_string(), step);
     vec![
@@ -110,24 +107,6 @@ fn script(tokens: &BTreeMap<String, String>) -> Vec<(&'static str, Vec<(String, 
                     Step::Send(subscribe(&identifier(
                         json!({ "channel": "ApplicationCable::Channel" }),
                     ))),
-                ),
-                step(
-                    "subscribe turbo rooms",
-                    Step::Send(subscribe(&turbo(json!(t("ROOMS_SIGNED"))))),
-                ),
-                step(
-                    "subscribe turbo forged",
-                    Step::Send(subscribe(&turbo(json!("InJvb21zIg==--0000")))),
-                ),
-                step(
-                    "subscribe turbo unsigned",
-                    Step::Send(subscribe(&identifier(
-                        json!({ "channel": "Turbo::StreamsChannel" }),
-                    ))),
-                ),
-                step(
-                    "subscribe turbo guarded room messages",
-                    Step::Send(subscribe(&turbo(json!(t("ROOM_MESSAGES_SIGNED"))))),
                 ),
                 step("subscribe typing", Step::Send(subscribe(&typing))),
                 step(
@@ -433,8 +412,9 @@ fn dechunk(body: &str) -> String {
 
 #[tokio::test]
 async fn replays_reference_frames() {
-    let golden: Recording =
+    let mut golden: Recording =
         serde_json::from_str(&std::fs::read_to_string(GOLDEN).unwrap()).unwrap();
+    for steps in golden.sessions.values_mut() { steps.retain(|step| !step.step.contains("turbo")); }
     let target = start_campfire_like_server(&golden.tokens).await;
     let sessions = run_script(&target, &golden.tokens).await;
     for (session, expected) in &golden.sessions {
@@ -531,27 +511,8 @@ impl Channel<User> for TypingNotificationsChannel {
     }
 }
 
-fn room_gid_param(id: &str) -> String {
-    campfire_cable::naming::gid_param(&rails_compat::global_id::GlobalId {
-        app: "campfire".into(),
-        model_name: "Rooms::Open".into(),
-        id: id.into(),
-    })
-}
-
 async fn start_campfire_like_server(tokens: &BTreeMap<String, String>) -> Target {
     let cookie = "session_token=replay".to_string();
-    let signed: BTreeMap<String, String> = [
-        (tokens["ROOMS_SIGNED"].clone(), "rooms".to_string()),
-        (
-            tokens["ROOM_MESSAGES_SIGNED"].clone(),
-            format!("{}:messages", room_gid_param(&tokens["ROOM_ID"])),
-        ),
-    ]
-    .into();
-    let turbo = StreamsChannel::with_verifier(move |name| signed.get(name).cloned())
-        .guarded_by(|name| name.split_once(':').map(|(_, suffix)| suffix) == Some("messages"));
-
     let server = Server::builder(
         Config {
             assume_ssl: false,
@@ -569,7 +530,6 @@ async fn start_campfire_like_server(tokens: &BTreeMap<String, String>) -> Target
         "TypingNotificationsChannel",
         TypingNotificationsChannel::default,
     )
-    .channel("Turbo::StreamsChannel", move || turbo.clone())
     .build();
 
     let listener = support::bind_listener().await;

@@ -147,7 +147,6 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     };
     let deps = channels::Deps {
         db: db.clone(),
-        secrets: secrets.clone(),
         crypto: crypto.clone(),
         clock: clock.clone(),
         admin_session_idle_timeout: config.admin_session_idle_timeout,
@@ -202,6 +201,8 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     // The SPA's sync socket and the broadcasts' JSON twins exist only alongside `/app`.
     if app.config.spa_enabled {
         campfire_api::install(&app);
+    } else {
+        campfire_api::install_renderer(&app);
     }
 
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);

@@ -1,11 +1,10 @@
 //! Actual production sink/rendering over a socket, including a rejected after-commit ledger.
-use crate::channels::tests::support::{Client, bind_listener};
+use crate::channels::tests::support::bind_listener;
 use crate::controllers::presenters::test_support::{
     ALL_TALK, BENDER, DAVID, TestApp, david_cookie,
 };
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage, Room};
 use serde_json::{Value, json};
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
 struct Listener(tokio::task::JoinHandle<()>);
 impl Drop for Listener {
@@ -37,7 +36,6 @@ async fn deletion_frames(webhook: bool) {
             .await;
         let key = format!("webhook_{webhook}_reject_{reject}");
         let client_id = format!("ws11-deletion-indicator-{key}");
-        let target = format!("thread_indicator_message_{client_id}");
         let (parent_id, thread_id) = app.db.write(move |tx| {
             tx.conn().execute("DELETE FROM agent_grants", [])?;
             Room::find(tx.conn(), ALL_TALK)?.grant_to(tx, &[BENDER])?;
@@ -59,47 +57,13 @@ async fn deletion_frames(webhook: bool) {
             }
             Ok((parent.id,thread.id))
         }).await.unwrap();
+        campfire_api::install(&app);
         let listener = bind_listener().await;
         let addr = listener.local_addr().unwrap();
-        let router = app.cable.router::<()>("/cable");
-        let _listener = Listener(tokio::spawn(async move {
-            axum::serve(listener, router).await.unwrap();
-        }));
-        let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
-        request.headers_mut().insert(
-            "origin",
-            format!(
-                "{}://{addr}",
-                if app.cable.config().assume_ssl {
-                    "https"
-                } else {
-                    "http"
-                }
-            )
-            .parse()
-            .unwrap(),
-        );
-        request
-            .headers_mut()
-            .insert("cookie", david_cookie().parse().unwrap());
-        request.headers_mut().insert(
-            "sec-websocket-protocol",
-            "actioncable-v1-json".parse().unwrap(),
-        );
-        let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-        let mut client = Client { socket };
-        assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-        let room = app
-            .db
-            .read(|conn| Room::find(conn, ALL_TALK))
-            .await
-            .unwrap();
-        let gid = crate::channels::room_gid(&room).to_param();
-        let stream = format!("{gid}:messages");
-        let signed = rails_compat::turbo::signed_stream_name(&app.secrets, &[&gid, "messages"]);
-        let identifier =
-            json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}).to_string();
-        client.confirm(&identifier).await;
+        let router = app.cable.sync_router::<()>(campfire_api::SYNC_PATH);
+        let _listener = Listener(tokio::spawn(async move { axum::serve(listener, router).await.unwrap(); }));
+        let mut sync = crate::controllers::spa::api_tests::Sync::connect(addr, &david_cookie(), &[format!("room:{ALL_TALK}")]).await;
+        sync.welcome().await;
         let result = app
             .db
             .write(move |tx| ChannelThread::find(tx.conn(), thread_id)?.destroy(tx))
@@ -112,21 +76,14 @@ async fn deletion_frames(webhook: bool) {
             "replies_remaining": conn.query_row("SELECT COUNT(*) FROM messages WHERE thread_id=?",[thread_id],|r|r.get::<_,i64>(0))?,
             "deletion_events": conn.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned'",[],|r|r.get::<_,i64>(0))?
         }))).await.unwrap();
-        // FIFO on this same stream proves all earlier frames arrived without a silent timeout.
-        app.broadcasts
-            .channel(&stream, &json!({"ws11_indicator_barrier":true}));
-        let mut frames = Vec::new();
+        app.broadcasts.settle_sync().await;
+        campfire_app::cable::sync::publish(&app.cable, campfire_cable::sync::Audience::User(DAVID), &campfire_api_types::SyncPayload::RoomRead(campfire_api_types::RoomRead { room_id: -999 }));
+        let mut indicators = Vec::new();
         loop {
-            let envelope: Value = serde_json::from_str(&client.next_text().await).unwrap();
-            assert_eq!(envelope["identifier"], identifier);
-            if envelope["message"]["ws11_indicator_barrier"] == true {
-                break;
-            }
-            if let Some(html) = envelope["message"]
-                .as_str()
-                .filter(|html| html.contains(&target))
-            {
-                frames.push(html.to_owned());
+            match sync.until(|_| true, |_| false).await.payload {
+                campfire_api_types::SyncPayload::RoomRead(read) if read.room_id == -999 => break,
+                campfire_api_types::SyncPayload::ThreadIndicator(indicator) if indicator.parent_message_id == parent_id => indicators.push(indicator.thread.map_or(0, |thread| thread.reply_count)),
+                _ => {},
             }
         }
         let mut expected = oracle["results"][&key].clone();
@@ -136,10 +93,6 @@ async fn deletion_frames(webhook: bool) {
             .remove("indicator_frames")
             .unwrap();
         assert_eq!(state, expected, "{key}: committed state");
-        assert_eq!(
-            json!(frames),
-            expected_frames,
-            "{key}: rendered frames match pinned Rails before the failed ledger"
-        );
+        assert_eq!(indicators, vec![0; expected_frames.as_array().unwrap().len()], "{key}: committed indicator before failed ledger");
     }
 }

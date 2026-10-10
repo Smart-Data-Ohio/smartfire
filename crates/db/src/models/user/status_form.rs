@@ -58,14 +58,7 @@ impl StatusForm {
             json!({"presence_setting":self.presence,"custom_status_emoji":self.emoji,"custom_status_text":self.text,"custom_status_expires_at":self.expiry.map(|t|t.to_db())}),
         )?;
         if changed {
-            use crate::broadcasts::{Broadcast, Partial, Streamable, TurboAction, TurboStream};
-            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::Turbo(TurboStream {
-                streamables: vec![Streamable::User(id), Streamable::Name("status".into())],
-                action: TurboAction::Update,
-                target: format!("status_badge_user_{id}"),
-                partial: Some(Partial::UserStatus { user_id: id }),
-                maintain_scroll: false,
-            })));
+            tx.emit_after_commit(crate::Event::broadcast(&crate::broadcasts::Broadcast::UserStatus { user_id: id }));
         }
         Ok(())
     }

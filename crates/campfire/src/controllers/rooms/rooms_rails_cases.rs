@@ -124,43 +124,14 @@ async fn shows_records_the_last_room_visited_in_a_cookie() {
 }
 #[tokio::test]
 async fn destroy_removes_the_room_from_everyone_and_enqueues_its_deletion() {
-    use crate::channels::tests::support::{Client, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+
+
     let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     let mut david = app.david();
-    let listener = crate::channels::tests::support::bind_listener().await;
-    let addr = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
-    request
-        .headers_mut()
-        .insert("cookie", david.cookie_header().parse().unwrap());
-    request
-        .headers_mut()
-        .insert("host", "campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("origin", "http://campfire.test".parse().unwrap());
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let signed = rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &["rooms"]);
-    client
-        .confirm(&identifier(
-            serde_json::json!({"channel":"Turbo::StreamsChannel","signed_stream_name":signed}),
-        ))
-        .await;
     root(&david.write(destroy(id)).await);
     pending_destroy(&app, id).await;
-    let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-    assert_eq!(
-        frame["message"],
-        format!(r#"<turbo-stream action="remove" target="list_rooms_closed_{id}"></turbo-stream>"#)
-    );
-    client.assert_silent().await;
-    server.abort();
+
 }
 #[tokio::test]
 async fn destroy_stamps_the_sweep_claim() {
@@ -429,7 +400,7 @@ async fn posted_link_preview(href:&str,url:&str,client_id:&str)->String {
     let mut browser=app.david();
     let response=browser.write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
         .form(&[("message[body]",&body),("message[client_message_id]",client_id)])).await;
-    assert_eq!(response.status,StatusCode::OK,"{}",response.text());
+    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
     let response=browser.get(&campfire_routes::room(ALL_TALK)).await;
     assert_eq!(response.status,StatusCode::OK);
     response.text()

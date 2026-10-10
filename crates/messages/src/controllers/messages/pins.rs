@@ -12,12 +12,10 @@ pub async fn create(c: &mut Ctx) -> Result {
     c.start_action();
     let pinner = require_current_user(c)?.id;
     let room_id = message.room_id;
-    let origin = crate::controllers::presenters::page::renderer_base_url(c);
     let pinned = c
         .app()
         .db
-        .write_scoped(
-            move || crate::channels::message_features::origin(&origin),
+        .write(
             move |tx| MessagePin::pin(tx, &message, pinner),
         )
         .await;
@@ -47,11 +45,9 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let message = features::reachable_message(c).await?;
     c.start_action();
     let room_id = message.room_id;
-    let origin = crate::controllers::presenters::page::renderer_base_url(c);
     c.app()
         .db
-        .write_scoped(
-            move || crate::channels::message_features::origin(&origin),
+        .write(
             move |tx| {
                 if let Some(pin) = MessagePin::find_by_message(tx.conn(), message.id)? {
                     pin.unpin(tx)?;

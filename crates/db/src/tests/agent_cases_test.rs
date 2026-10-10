@@ -697,9 +697,9 @@ fn ws11_agent_case_note_only_change_still_broadcasts_the_badge() {
     assert_eq!(
         t.events()
             .iter()
-            .filter(|e| matches!(e,Event::Broadcast(b) if b.kind=="Agent#broadcast_status_change"))
+            .filter(|e| matches!(e,Event::Broadcast(b) if b.kind=="Agent#sync_status"))
             .count(),
-        2
+        1
     );
 }
 

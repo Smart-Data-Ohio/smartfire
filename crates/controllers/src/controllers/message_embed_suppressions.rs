@@ -48,38 +48,13 @@ pub async fn create(c: &mut Ctx) -> Result {
     } else {
         campfire_routes::room_at_message(message.room_id, message.id)
     };
-    let targets = [
-        crate::channels::broadcasts::message_dom_id(&message, Some("linkedin_cards")),
-        crate::channels::broadcasts::message_dom_id(&message, Some("link_embed_cards")),
-    ];
-    let (linkedin, generic) = app
-        .db
-        .read(move |conn| {
-            link_embeds::broadcast_message(&app2, conn, &message, true)?;
-            link_embeds::broadcast_message(&app2, conn, &message, false)?;
-            Ok((
-                link_embeds::container(&app2, conn, &message, true)?,
-                link_embeds::container(&app2, conn, &message, false)?,
-            ))
-        })
-        .await
-        .map_err(db_error)?;
+    app.db.read(move |conn| {
+        link_embeds::broadcast_message(&app2, conn, &message, false)
+    }).await.map_err(db_error)?;
     c.no_store();
-    let accepted = c.respond_to(&[&format::TURBO_STREAM, &format::JSON, &format::HTML])?;
+    let accepted = c.respond_to(&[&format::JSON, &format::HTML])?;
     if accepted == &format::JSON {
         Ok(c.render_as(StatusCode::OK, campfire_kit::response::JSON_UTF8, "{\"embeds_suppressed\":true}"))
-    } else if accepted == &format::TURBO_STREAM {
-        let html = [(&targets[0], linkedin), (&targets[1], generic)]
-            .map(|(target, html)| {
-                campfire_cable::turbo::action_tag(
-                    campfire_cable::turbo::Action::Replace,
-                    campfire_cable::turbo::Target::Target(target),
-                    Some(&html),
-                    &[],
-                )
-            })
-            .concat();
-        Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, html))
     } else {
         c.redirect_to(&c.url_for(&permalink))
     }

@@ -156,7 +156,13 @@ impl Timestamp {
 
     /// The time as the JSON API carries it: RFC 3339 in UTC with milliseconds.
     pub fn to_wire(self) -> String {
-        self.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+        if let Some(time) = self.try_jiff() {
+            return time.strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+        }
+        let (proxy, shift) = self.calendar_proxy();
+        let year = I512::from(proxy.to_zoned(jiff::tz::TimeZone::UTC).year()) + shift;
+        let year = if year.is_negative() { format!("-{:06}", year.unsigned_abs()) } else { format!("+{year:06}") };
+        format!("{year}{}", proxy.strftime("-%m-%dT%H:%M:%S%.3fZ"))
     }
 
     /// The injected clock's evaluation time, with fixed precision for snapshot ordering.
@@ -348,6 +354,18 @@ impl Clock for TestClock {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn json_dates_preserve_wide_years_without_panicking() {
+        for (stored, wire) in [
+            ("2026-03-08 06:30:00.123456", "2026-03-08T06:30:00.123Z"),
+            ("60310-02-02 20:30:00", "+060310-02-02T20:30:00.000Z"),
+            ("12026-07-04 20:30:00", "+012026-07-04T20:30:00.000Z"),
+            ("-12026-07-04 20:30:00", "-012026-07-04T20:30:00.000Z"),
+        ] {
+            assert_eq!(Timestamp::parse_db(stored).unwrap().to_wire(), wire);
+        }
+    }
 
     #[test]
     fn impossible_dates_dont_parse() {

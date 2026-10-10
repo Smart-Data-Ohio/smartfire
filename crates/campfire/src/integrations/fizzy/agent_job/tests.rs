@@ -504,9 +504,7 @@ async fn ws15e_review_legacy_deactivated_token_repairs_disconnection() {
 
 #[tokio::test]
 async fn ws15e_review_owner_suspension_quietly_finalizes_only_after_commit() {
-    use crate::channels::{tests::support::Client, broadcasts::{Stream,message_dom_id}};
-    use campfire_db::{Message,NewMessage,Room};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    use campfire_db::{Message,NewMessage};
     let app = app().await;
     let (_,agent) = setup(&app,"comment").await;
     let message = app.db().write(move |tx| {
@@ -514,37 +512,19 @@ async fn ws15e_review_owner_suspension_quietly_finalizes_only_after_commit() {
         Message::create(tx,NewMessage {room_id:ALL_TALK,creator_id:BENDER,client_message_id:Some("review-quiet-final".into()),markdown_source:Some("Partial draft".into()),streaming:true,..Default::default()})
     }).await.unwrap();
     let jobs = app.db().read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-    let listener=crate::integrations::test_support::ws15e_listener().await;
-    let addr=listener.local_addr().unwrap();
-    let router=app.booted.app.cable.router::<()>("/cable");
-    let serving=tokio::spawn(async move {axum::serve(listener,router).await.unwrap()});
-    let mut request=format!("ws://{addr}/cable").into_client_request().unwrap();
-    request.headers_mut().insert("origin",format!("http://{addr}").parse().unwrap());
-    request.headers_mut().insert("sec-websocket-protocol","actioncable-v1-json".parse().unwrap());
-    request.headers_mut().insert("cookie",david_cookie().parse().unwrap());
-    let mut client=Client {socket:tokio_tungstenite::connect_async(request).await.unwrap().0};
-    assert_eq!(client.next_text().await,r#"{"type":"welcome"}"#);
-    let room=app.db().read(|c|Room::find(c,ALL_TALK)).await.unwrap();
-    let stream=Stream::conversation(&room,&message);
-    let signed=rails_compat::turbo::signed_stream_name(&app.booted.app.secrets,&stream.streamables());
-    let identifier=json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}).to_string();
-    client.confirm(&identifier).await;
+    let (mut client, serving) = crate::controllers::messages::attachment_processing_tests::json_subscribe(&app).await;
     let rollback:campfire_db::Result<()> = app.db().write(|tx| {
         campfire_db::User::find(tx.conn(),JASON)?.deactivate(tx)?;
         Err(campfire_db::Error::Other("rollback owner removal".into()))
     }).await;
     assert!(rollback.is_err());
-    client.assert_silent().await;
     let id=message.id;
     assert!(app.db().read(move |c|Ok(Message::find(c,id)?.streaming)).await.unwrap());
     app.db().write(|tx| campfire_db::User::find(tx.conn(),JASON)?.deactivate(tx)).await.unwrap();
-    let frame=tokio::time::timeout(std::time::Duration::from_secs(1),client.next_text()).await;
+    let event = client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && !message.streaming), |event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && message.streaming)).await;
+    let campfire_api_types::SyncPayload::MessageUpdated(update) = event.payload else { unreachable!() };
+    assert!(update.body_html.contains("Partial draft"));
     serving.abort();
-    let frame:Value=serde_json::from_str(&frame.expect("quiet finalization reaches real cable caller")).unwrap();
-    assert_eq!(frame["identifier"],identifier);
-    let html=frame["message"].as_str().unwrap();
-    assert!(html.contains(&format!("target=\"{}\"",message_dom_id(&message,None))));
-    assert!(html.contains("Partial draft"));
     app.db().read(move |c| {
         assert!(!Message::find(c,id)?.streaming);
         assert!(c.query_row("SELECT working_presence IS NULL AND working_presence_expires_at IS NULL FROM agents WHERE id=?",[agent],|r|r.get::<_,bool>(0))?);

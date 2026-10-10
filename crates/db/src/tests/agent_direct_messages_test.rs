@@ -211,7 +211,7 @@ fn ws11_dm_new_room_commits_denial_and_scope_is_rechecked_on_existing_room() {
         let result=dms::open_and_post(tx,id("bender_agent"),id("david"),attrs("Now",None),DriveInput::Absent,&Context::default())?;
         assert!(matches!(result,DirectMessageResult::Denied(r) if r.status==403));Ok(())
     });
-    let broadcasts=t.sink.take().into_iter().filter(|e|matches!(e,Event::Broadcast(r) if r.decode::<crate::broadcasts::Broadcast>().is_some_and(|r|matches!(r,Ok(crate::broadcasts::Broadcast::Turbo(s)) if s.target=="direct_rooms")))).count();
+    let broadcasts=t.sink.take().into_iter().filter(|e|matches!(e,Event::Broadcast(r) if r.decode::<crate::broadcasts::Broadcast>().is_some_and(|r|matches!(r,Ok(crate::broadcasts::Broadcast::MembershipChanged { .. }))))).count();
     assert_eq!(broadcasts, 2);
 }
 #[test]

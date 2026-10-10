@@ -186,7 +186,7 @@ async fn stream_controller_start_denials_preserve_global_stream_count_and_exact_
 }
 
 #[tokio::test]
-async fn stream_controller_stop_permissions_unknown_ids_and_turbo_panel_match_rails() {
+async fn stream_controller_stop_permissions_and_unknown_ids_preserve_stream_state() {
     for (name, actor, speaker, admin, with_stream, unknown, turbo, status) in [
         (
             "speaker presenter",
@@ -239,14 +239,14 @@ async fn stream_controller_stop_permissions_unknown_ids_and_turbo_panel_match_ra
             StatusCode::FORBIDDEN,
         ),
         (
-            "turbo host stop",
+            "legacy host stop",
             DAVID,
             false,
             false,
             true,
             false,
             true,
-            StatusCode::OK,
+            StatusCode::FOUND,
         ),
     ] {
         let Some(test) = TestApp::boot_with_huddle(configured()).await else {
@@ -298,15 +298,6 @@ async fn stream_controller_stop_permissions_unknown_ids_and_turbo_panel_match_ra
                 response.location(),
                 Some(format!("http://campfire.test/rooms/{room_id}").as_str()),
                 "{name}"
-            );
-        }
-        if turbo {
-            assert!(response.text().contains("Go live"));
-            assert!(!response.text().contains("Live: David"));
-            assert!(
-                response
-                    .text()
-                    .contains(&format!("target=\"stage_panel_rooms_stage_{room_id}\""))
             );
         }
         let ended = with_stream && status != StatusCode::FORBIDDEN && !unknown;
@@ -476,176 +467,4 @@ async fn stream_controller_successor_and_members_edit_preserve_the_rails_lifecyc
             .await
             .unwrap()
     );
-}
-
-#[tokio::test]
-async fn stream_controller_start_stop_and_silent_noop_deliver_exact_rails_fanout() {
-    use super::call_channel_broadcast_tests::{Socket, next, socket};
-    use crate::channels::broadcasts::Stream as Channel;
-    use futures_util::SinkExt;
-    use serde_json::{Value, json};
-    use tokio_tungstenite::tungstenite::Message;
-    async fn drain(test: &TestApp, socket: &mut Socket, user: i64) -> Vec<Value> {
-        test.booted
-            .app
-            .broadcasts
-            .replace(&Channel::user_rooms(user), "ws13_stream_barrier", "");
-        let mut frames = Vec::new();
-        loop {
-            let frame = next(socket).await;
-            if frame["message"]
-                .as_str()
-                .unwrap()
-                .contains("target=\"ws13_stream_barrier\"")
-            {
-                break;
-            }
-            frames.push(frame);
-        }
-        frames
-    }
-    fn user_frames(frames: &[Value]) -> Vec<&str> {
-        frames
-            .iter()
-            .filter(|f| {
-                serde_json::from_str::<Value>(f["identifier"].as_str().unwrap()).unwrap()["channel"]
-                    == "Turbo::StreamsChannel"
-            })
-            .map(|f| f["message"].as_str().unwrap())
-            .collect()
-    }
-    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
-        return;
-    };
-    let room = fixture(&test).await;
-    let room_id = room.id;
-    grant(&test, room_id, DAVID, Some(0), false).await;
-    let listener = crate::channels::tests::support::bind_listener().await;
-    let addr = listener.local_addr().unwrap();
-    let (stop, stopping) = tokio::sync::oneshot::channel();
-    let router = test.booted.router.clone();
-    let serving = tokio::spawn(async move {
-        axum::serve(listener, router)
-            .with_graceful_shutdown(async {
-                let _ = stopping.await;
-            })
-            .await
-            .unwrap()
-    });
-    let mut host = socket(&test, addr, DAVID).await;
-    let mut listener = socket(&test, addr, JASON).await;
-    let stream = Channel::room_messages(&room);
-    let identifier=json!({"channel":"RoomMessagesChannel","signed_stream_name":rails_compat::turbo::signed_stream_name(&test.booted.app.secrets,&stream.streamables())}).to_string();
-    host.send(Message::Text(
-        json!({"command":"subscribe","identifier":identifier})
-            .to_string()
-            .into(),
-    ))
-    .await
-    .unwrap();
-    assert_eq!(next(&mut host).await["type"], "confirm_subscription");
-    let mut browser = test.sign_in(DAVID).await;
-    let path = format!("/rooms/{room_id}/stage/stream");
-    let before = live_count(&test).await;
-    let response = browser
-        .write(Req::new(Method::POST, &path).form(&[("quality", "1080p30")]))
-        .await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(
-        response.location(),
-        Some(format!("http://campfire.test/rooms/{room_id}").as_str())
-    );
-    let stream = live(&test, room_id).await.unwrap();
-    let host_member = member(&test, room_id, DAVID).await.id;
-    assert_eq!(stream.quality, "1080p30");
-    assert_eq!(stream.user_id, DAVID);
-    assert_eq!(stream.membership_id, host_member);
-    assert_eq!(
-        response.header("X-Stream-Id"),
-        Some(stream.id.to_string().as_str())
-    );
-    assert_eq!(live_count(&test).await, before + 1);
-    let actor = drain(&test, &mut host, DAVID).await;
-    let viewer = drain(&test, &mut listener, JASON).await;
-    assert_eq!(actor.len(), 4, "{actor:?}");
-    assert_eq!(user_frames(&actor).len(), 3);
-    assert_eq!(viewer.len(), 3, "{viewer:?}");
-    for prefix in ["sidebar_stage_live", "event_stage_live", "stage_panel"] {
-        assert!(
-            user_frames(&actor)
-                .iter()
-                .any(|f| f.contains(&format!("target=\"{prefix}_rooms_stage_{room_id}\"")))
-        );
-    }
-    assert_eq!(
-        actor
-            .iter()
-            .filter(|f| f["message"].as_str().unwrap().contains(&format!(
-                "target=\"stage_live_badge_rooms_stage_{room_id}\""
-            )))
-            .count(),
-        1
-    );
-    let page = browser.get(&format!("/rooms/{room_id}")).await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(
-        page.text()
-            .contains(&format!("data-stream-id=\"{}\"", stream.id))
-    );
-    assert!(
-        page.text()
-            .contains(&format!("name=\"stream_id\" value=\"{}\"", stream.id))
-    );
-    let response = browser.write(Req::new(Method::DELETE, &path)).await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(
-        response.location(),
-        Some(format!("http://campfire.test/rooms/{room_id}").as_str())
-    );
-    assert!(live(&test, room_id).await.is_none());
-    let actor = drain(&test, &mut host, DAVID).await;
-    let viewer = drain(&test, &mut listener, JASON).await;
-    assert_eq!(actor.len(), 4);
-    assert_eq!(viewer.len(), 3);
-    assert!(
-        user_frames(&actor)
-            .iter()
-            .all(|f| !f.contains("action=\"append\""))
-    );
-    // Quiet host stop succeeds without any badge/panel event or room message.
-    let response = browser.write(Req::new(Method::DELETE, &path)).await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(
-        response.location(),
-        Some(format!("http://campfire.test/rooms/{room_id}").as_str())
-    );
-    assert!(drain(&test, &mut host, DAVID).await.is_empty());
-    assert!(drain(&test, &mut listener, JASON).await.is_empty());
-    role(&test, room_id, JASON, "speaker").await;
-    let membership = member(&test, room_id, JASON).await.id;
-    test.db()
-        .write(move |tx| Stream::create(tx, room_id, membership, JASON, "720p15", None))
-        .await
-        .unwrap();
-    drain(&test, &mut host, DAVID).await;
-    drain(&test, &mut listener, JASON).await;
-    let response = browser.write(Req::new(Method::DELETE, &path)).await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    assert!(live(&test, room_id).await.is_none());
-    let actor = drain(&test, &mut host, DAVID).await;
-    let viewer = drain(&test, &mut listener, JASON).await;
-    assert_eq!(actor.len(), 4);
-    assert_eq!(viewer.len(), 4);
-    let event = user_frames(&viewer)
-        .into_iter()
-        .filter(|f| f.contains("action=\"append\""))
-        .collect::<Vec<_>>();
-    assert_eq!(event.len(), 1);
-    assert!(event[0].contains("target=\"huddle_role_events\""));
-    assert!(event[0].contains(&format!("data-huddle-stream-room-id=\"{room_id}\"")));
-    assert!(event[0].contains("data-huddle-stream-kind=\"stream-stopped\""));
-    host.close(None).await.unwrap();
-    listener.close(None).await.unwrap();
-    stop.send(()).unwrap();
-    serving.await.unwrap();
 }

@@ -1,9 +1,16 @@
 The behavioral template map is `template-coverage.json`. It reconciles the cutover inventory
 at `78b9b1546`: **207 of the 208 declarations have Rails byte receipts; one is not reachable**.
-It also inventories newer declarations and port-only files: 283 of 284 Rails declarations have
-receipts, and 290 of 298 Rust template files have receipts. The eight remaining Rust files are
-retained renderers outside the production path; their active replacements are mapped separately.
-The map does not label those live Rails counterparts dead.
+It also inventories newer declarations and port-only files. After K15 PR5, 272 Rails declarations
+and 284 live Rust templates have receipts. Eight Rust files are retained renderers outside the
+production path; their active replacements are mapped separately.
+
+K15 PR5 removed nine Rust Turbo templates and the producers corresponding to eleven historical
+Rails Turbo declarations. Their map entries have an explicit `removed` disposition with the
+controller source as evidence. The guard requires removed Rust files to be absent, and rejects
+marking an ordinary HTML template removed. These entries remain in the inventory without being
+counted as live files or stale entries. Request tests now assert empty acknowledgements, JSON
+responses, or SPA redirects while keeping mutation and permission checks. Recorded Rails bytes
+remain historical inputs.
 
 Each receipt names an annotated Rust test and its committed Rails oracle. Each declaration
 records the fixture branch and render chain. Output witnesses identify an actual string in a
@@ -35,7 +42,7 @@ receipts; the main-content boundary keeps this corpus focused on its controller 
 Comparisons preserve whitespace, fields, URLs and asset references within the captured region.
 
 The producer and the reference image it ran in were removed with the Rails app; the recorded
-fixture (`vectors/template_coverage_http.json`) and this map are frozen.
+fixture (`vectors/template_coverage_http.json`) is frozen. The map tracks current reachability.
 
 `coverage/test-templates.py` runs every mapped receipt plus the whole views suite using four
 nextest workers. Set `CI=1` so absent seeds fail. The Rails declarations are a frozen list (the

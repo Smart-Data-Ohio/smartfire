@@ -207,3 +207,33 @@ if (SHOTS) {
     await expect(page).toHaveURL(/q=zebracorn$/);
   });
 }
+
+test("ID pickers, media chips and sort survive a linked search", async ({ page }) => {
+  await open(page, "search");
+  await page.getByRole("button", { name: "From", exact: true }).click();
+  await expect(field(page)).toHaveValue("from_id:");
+  await suggestions(page)
+    .getByRole("option", { name: /Maya Okafor.*from_id:2/ })
+    .click();
+  await field(page).press("Enter");
+  await expect(page).toHaveURL(/q=from_id%3A2/);
+  await expect(page.getByRole("button", { name: "Remove From: Maya Okafor" })).toBeVisible();
+  await page.getByRole("button", { name: "In", exact: true }).click();
+  await field(page).fill("from_id:2 in_id:launch");
+  await suggestions(page)
+    .getByRole("option", { name: /launch-planning.*in_id:/ })
+    .click();
+  await field(page).press("Enter");
+  await expect(page.getByRole("button", { name: "Remove In: launch-planning" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Sort", exact: true }).selectOption("oldest");
+  await expect(page).toHaveURL(/sort%3Aoldest/);
+  await expect(page.getByRole("combobox", { name: "Sort", exact: true })).toHaveValue("oldest");
+  await page.getByRole("button", { name: "Images", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Remove has: image" })).toBeVisible();
+  await page.screenshot({ path: "/tmp/search-filters-ui.png", fullPage: true });
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "Sort", exact: true })).toHaveValue("oldest");
+  await expect(page.getByRole("button", { name: "Remove In: launch-planning" })).toBeVisible();
+  await page.getByRole("button", { name: "Remove has: image" }).click();
+  await expect(page).not.toHaveURL(/has%3Aimage/);
+});

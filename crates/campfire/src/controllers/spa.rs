@@ -18,7 +18,7 @@ mod url_contract_fixtures;
 
 #[cfg(test)]
 #[path = "spa_api_tests.rs"]
-mod api_tests;
+pub(crate) mod api_tests;
 
 #[cfg(test)]
 #[path = "spa_api_s2_tests.rs"]

@@ -2,12 +2,12 @@
 use crate::{
     app::AppCtx,
     concerns::{self, Before},
-    controllers::presenters::{activity, page, view_context},
+    controllers::presenters::{activity, view_context},
 };
 use askama::Template;
 use campfire_db::{ActivityItem, models::activity_item::ActivityQuery};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, format};
-use campfire_views::{activity::Inbox, helpers as h};
+use campfire_views::{activity::Inbox};
 fn filters(c: &Ctx) -> (String, String) {
     let status = c
         .param_str("status")
@@ -47,7 +47,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     let k = kind.clone();
     let raw_before = c.param_str("before").map(str::to_owned);
     let json =
-        c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])? == &format::JSON;
+        c.respond_to(&[&format::HTML, &format::JSON])? == &format::JSON;
     let (items, payloads, unread, next) = c
         .app()
         .db
@@ -109,16 +109,8 @@ pub async fn index(c: &mut Ctx) -> Result {
         );
     }
     let now = c.now();
-    let chosen = c.respond_to(&[&format::HTML, &format::TURBO_STREAM])?;
-    let mut response = if chosen == &format::TURBO_STREAM {
-        page::bare(c,StatusCode::OK,&format::TURBO_STREAM,|ctx|{
-            let list=campfire_views::activity::List{ctx,items:&items,filter:&filter,type_filter:&kind,now}.render()?;
-            let count=format!("<span id=\"activity-unread-count\" class=\"activity-inbox__count\" {}>{unread}</span>",if unread==0 {"hidden"}else{""});
-            let pagination=next.map(|id|h::link_to_text("Older activity",&campfire_views::activity::path(&filter,&kind,Some(id),false),h::attrs().class("btn btn--plain activity-inbox__older")).0).map(|link|format!("  {link}\n")).unwrap_or_default();
-            let chunks=[("activity-items-list",format!("  <div id=\"activity-items-list\" class=\"activity-inbox__list\" aria-live=\"polite\">\n    {list}\n  </div>\n")),("activity-unread-count",format!("  {count}\n")),("activity-items-pagination",format!("  <div id=\"activity-items-pagination\">\n    {pagination}\n  </div>\n"))];
-            Ok(chunks.into_iter().map(|(target,html)|format!("<turbo-stream action=\"replace\" target=\"{target}\"><template>\n{html}</template></turbo-stream>")).collect::<Vec<_>>().join("\n"))
-        }).await?
-    } else {
+    c.respond_to(&[&format::HTML])?;
+    let mut response =
         view_context::page_or_frame(
             c,
             StatusCode::OK,
@@ -149,8 +141,7 @@ pub async fn index(c: &mut Ctx) -> Result {
                 campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
             },
         )
-        .await?
-    };
+        .await?;
     response
         .headers
         .insert("cache-control", "no-store".parse().unwrap());
@@ -252,7 +243,7 @@ async fn state_response(
     item: Option<ActivityItem>,
     error: Option<&str>,
 ) -> Result {
-    let chosen = c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])?;
+    let chosen = c.respond_to(&[&format::HTML, &format::JSON])?;
     if chosen == &format::JSON {
         if let Some(error) = error {
             return c.json(
@@ -270,28 +261,18 @@ async fn state_response(
             .map_err(Error::internal)?;
         return c.json(StatusCode::OK, &payload);
     }
-    let code = if chosen == &format::TURBO_STREAM {
-        StatusCode::SEE_OTHER
-    } else {
-        StatusCode::FOUND
-    };
+    let code = StatusCode::FOUND;
     if let Some(error) = error {
         c.flash().set_alert(error);
     }
     let (state, kind) = filters(c);
-    let mut response = c.redirect_to_with(
+    let response = c.redirect_to_with(
         &campfire_views::activity::path(&state, &kind, None, false),
         Redirect {
             status: Some(code),
             ..Default::default()
         },
     )?;
-    if chosen == &format::TURBO_STREAM {
-        response.headers.insert(
-            "content-type",
-            "text/vnd.turbo-stream.html; charset=utf-8".parse().unwrap(),
-        );
-    }
     Ok(response)
 }
 
@@ -304,7 +285,7 @@ pub async fn open(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     let app = c.app().clone();
-    let chosen = c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])?;
+    let chosen = c.respond_to(&[&format::HTML, &format::JSON])?;
     if chosen == &format::JSON {
         let payload = c
             .app()
@@ -320,19 +301,13 @@ pub async fn open(c: &mut Ctx) -> Result {
             .read(move |conn| activity::destination(conn, &item))
             .await
             .map_err(Error::internal)?;
-        let mut response = c.redirect_to_with(
+        let response = c.redirect_to_with(
             &destination,
             Redirect {
                 status: Some(StatusCode::SEE_OTHER),
                 ..Default::default()
             },
         )?;
-        if chosen == &format::TURBO_STREAM {
-            response.headers.insert(
-                "content-type",
-                "text/vnd.turbo-stream.html; charset=utf-8".parse().unwrap(),
-            );
-        }
         Ok(response)
     }
 }

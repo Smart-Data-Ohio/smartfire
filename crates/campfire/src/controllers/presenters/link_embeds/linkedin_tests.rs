@@ -1,12 +1,10 @@
 use super::*;
 use campfire_db::Message;
-use campfire_db::Room;
-use crate::cable::broadcasts::Stream;
 use crate::integrations::link_embed::Reference;
 use crate::controllers::presenters::test_support::*;
-use crate::integrations::link_embed::{Embed, metadata_parser::Metadata, sync_message};
-use campfire_db::{ChannelThread, NewChannelThread, NewMessage};
-use serde_json::{Value, json};
+use crate::integrations::link_embed::{Embed, metadata_parser::Metadata};
+use campfire_db::NewMessage;
+use serde_json::Value;
 use std::time::Duration;
 async fn app() -> TestApp {
     let mut app = TestApp::boot().await.expect("pinned seed required");
@@ -242,108 +240,4 @@ async fn ws15e_linkedin_mixed_helpers_split_chips_and_use_own_player() {
         let parts=components(&super::super::Presenter::new(c,&app2,None),&message)?;
         assert!(parts.link_embed_cards.is_empty());assert_eq!(parts.linkedin_cards.len(),2);Ok(())
     }).await.unwrap();
-}
-
-#[tokio::test]
-async fn ws15e_linkedin_broadcasts_commit_to_room_and_thread_with_own_key() {
-    use crate::channels::tests::support::Client;
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let mut app = TestApp::boot().await.expect("build parity seed");
-    app.booted.jobs.stop(Duration::from_secs(1)).await;
-    for threaded in [false, true] {
-        let (message, embed) = app
-        .db()
-        .write(move |tx| {
-            let thread_id=if threaded {Some(ChannelThread::create(tx,NewChannelThread{room_id:ALL_TALK,creator_id:DAVID,name:Some("LinkedIn thread".into()),..Default::default()})?.id)}else{None};
-            let message = Message::create(
-                tx,
-                NewMessage {
-                    room_id: ALL_TALK,
-                    thread_id,
-                    creator_id: DAVID,
-                    client_message_id: Some("ws15e-broadcast".into()),
-                    body: Some("<p>https://www.linkedin.com/feed/update/urn:li:activity:9000#own</p>".into()),
-                    ..Default::default()
-                },
-            )?;
-            tx.conn().execute(
-                "UPDATE messages SET markdown_source='https://www.linkedin.com/feed/update/urn:li:activity:9000#own' WHERE id=?",
-                [message.id],
-            )?;
-            let message = Message::find(tx.conn(), message.id)?;
-            sync_message(tx, &message, false)?;
-            let embed = Reference::for_message(tx.conn(), &message)?[0].embed.clone();
-            Ok((message, embed))
-        })
-        .await
-        .unwrap();
-        let listener = crate::integrations::test_support::ws15e_listener().await;
-        let addr = listener.local_addr().unwrap();
-        let router = app.booted.app.cable.router::<()>("/cable");
-        let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-        let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
-        request
-            .headers_mut()
-            .insert("origin", format!("http://{addr}").parse().unwrap());
-        request.headers_mut().insert(
-            "sec-websocket-protocol",
-            "actioncable-v1-json".parse().unwrap(),
-        );
-        request
-            .headers_mut()
-            .insert("cookie", david_cookie().parse().unwrap());
-        let mut client = Client {
-            socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
-        };
-        assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-        let room = app
-            .db()
-            .read(|conn| Room::find(conn, ALL_TALK))
-            .await
-            .unwrap();
-        let stream = Stream::conversation(&room, &message);
-        let signed =
-            rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &stream.streamables());
-        let identifier =
-            json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}).to_string();
-        client.confirm(&identifier).await;
-        let rollback = embed.clone();
-        let result: campfire_db::Result<()> = app
-            .db()
-            .write(move |tx| {
-                rollback.save_metadata(
-                    tx,
-                    &Metadata {
-                        title: Some("Rolled back".into()),
-                        ..Default::default()
-                    },
-                )?;
-                Err(campfire_db::Error::Other("rollback".into()))
-            })
-            .await;
-        assert!(result.is_err());
-        client.assert_silent().await;
-        app.db()
-            .write(move |tx| {
-                embed.save_metadata(
-                    tx,
-                    &Metadata {
-                        title: Some("Committed & safe".into()),
-                        ..Default::default()
-                    },
-                )
-            })
-            .await
-            .unwrap();
-        let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-        let html = frame["message"].as_str().unwrap();
-        assert_eq!(frame["identifier"], identifier);
-        assert!(html.contains("action=\"replace\""));
-        assert!(html.contains("target=\"linkedin_cards_message_ws15e-broadcast\""));
-        assert!(html.contains("maintain_scroll=\"true\""));
-        assert!(html.contains("Committed &amp; safe"));
-        assert!(html.contains("https://www.linkedin.com/feed/update/urn:li:activity:9000#own"));
-        client.assert_silent().await;
-        serving.abort();
-    }
 }

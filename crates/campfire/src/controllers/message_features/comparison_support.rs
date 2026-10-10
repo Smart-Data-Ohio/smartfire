@@ -25,120 +25,17 @@ pub(super) fn embed_seed() -> u64 {
         .unwrap_or(0)
 }
 
-pub(super) async fn embed_streams(
-    app: &crate::controllers::presenters::test_support::TestApp,
-    thread: i64,
-) -> (
-    crate::channels::tests::support::Client,
-    tokio::task::JoinHandle<()>,
-) {
-    use crate::channels::tests::support::identifier;
-    use crate::controllers::presenters::test_support::QUIET_CORNER;
-    let (mut client, server) = super::quote_integration_tests::stream(app).await;
-    let gid = campfire_views::helpers::gid_param("ChannelThread", thread);
-    let thread = identifier(json!({"channel":"RoomMessagesChannel","signed_stream_name":
-        rails_compat::turbo::signed_stream_name(&app.booted.app.secrets,&[&gid,"messages"])}));
-    if embed_seed() % 2 == 1 {
-        let room = app
-            .db()
-            .read(|conn| campfire_db::Room::find(conn, QUIET_CORNER))
-            .await
-            .unwrap();
-        let gid = crate::channels::room_gid(&room).to_param();
-        let root = identifier(json!({"channel":"RoomMessagesChannel","signed_stream_name":
-            rails_compat::turbo::signed_stream_name(&app.booted.app.secrets,&[&gid,"messages"])}));
-        client.unsubscribe(&root).await;
-        client.confirm(&thread).await;
-        client.confirm(&root).await;
-    } else {
-        client.confirm(&thread).await;
-    }
-    (client, server)
-}
-/// Rails publishes each callback/job batch in order even when Cable delivery reorders it.
-/// Observe actual Hub output under its publication lock, independently of the receiver.
-/// Negative control: reverse the real presenter batch (check_publication_mutants.py).
-pub(super) async fn published_frames(
-    app: &crate::controllers::presenters::test_support::TestApp,
-    client: &mut crate::channels::tests::support::Client,
-    expected: &Value,
-    context: &str,
-) {
-    // Socket receipt is the existing completion barrier for asynchronous jobs.
-    // Every received frame was recorded before fanout; snapshot only afterwards.
-    frames(app, client, expected, context).await;
-    let actual = app.publications().take().into_iter().map(|(stream, payload)| {
-        json!({"stream":stream,"html":serde_json::from_str::<Value>(&payload).unwrap()})
-    }).collect::<Vec<_>>();
-    assert_eq!(json!(actual), *expected, "ordered publication differs from Rails: {context}");
-}
-
-/// Cable uses independent subscription callbacks. Rails' publication transcript is
-/// ordered, but live Redis/worker-pool delivery is not. Preserve every envelope,
-/// HTML byte and duplicate while allowing only arrival order to vary.
-pub(super) async fn frames(
-    app: &crate::controllers::presenters::test_support::TestApp,
-    client: &mut crate::channels::tests::support::Client,
-    expected: &Value,
-    context: &str,
-) {
-    let expected = expected
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|frame| {
-            let signed = rails_compat::turbo::signed_stream_name(
-                &app.booted.app.secrets,
-                &[frame["stream"].as_str().unwrap()],
-            );
-            let identifier = crate::channels::tests::support::identifier(
-                json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
-            );
-            json!({"identifier":identifier,"message":frame["html"]})
-        })
-        .collect::<Vec<_>>();
-    let mut actual = Vec::with_capacity(expected.len());
-    for _ in &expected {
-        actual.push(serde_json::from_str::<Value>(&client.next_text().await).unwrap());
-    }
-    assert_eq!(
-        frame_multiset(actual),
-        frame_multiset(expected),
-        "{context}"
-    );
-}
-
-fn frame_multiset(frames: Vec<Value>) -> Vec<String> {
-    let mut frames = frames
-        .into_iter()
-        .map(|f| f.to_string())
-        .collect::<Vec<_>>();
-    frames.sort();
-    frames
-}
-
-#[test]
-fn wire_multiset_preserves_count_bytes_and_stream_identity() {
-    let frame = json!({"identifier":"room","message":"<turbo-stream>exact bytes</turbo-stream>"});
-    let other = json!({"identifier":"thread","message":"different bytes"});
-    let expected = frame_multiset(vec![frame.clone(), frame.clone(), other.clone()]);
-    assert_eq!(
-        expected,
-        frame_multiset(vec![other.clone(), frame.clone(), frame.clone()])
-    );
-    assert_ne!(expected, frame_multiset(vec![frame.clone(), other.clone()]));
-    assert_ne!(
-        expected,
-        frame_multiset(vec![other.clone(), other.clone(), frame.clone()])
-    );
-    for (key, value) in [("identifier", "wrong-stream"), ("message", "changed bytes")] {
-        let mut changed = frame.clone();
-        changed[key] = json!(value);
-        assert_ne!(
-            expected,
-            frame_multiset(vec![changed, frame.clone(), other.clone()])
-        );
-    }
+pub(super) async fn settle_jobs(app: &crate::controllers::presenters::test_support::TestApp) {
+    tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        loop {
+            let now = app.db().env().now();
+            let pending = app.db().read(move |conn| Ok(conn.query_row(
+                "SELECT COUNT(*) FROM background_jobs WHERE status='running' OR (status='ready' AND run_at<=?)",
+                [now], |row| row.get::<_, i64>(0))?)).await.unwrap();
+            if pending == 0 { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    }).await.expect("fetch jobs complete");
 }
 
 pub(super) fn row(
@@ -192,45 +89,6 @@ pub(super) fn same_row(actual: &Value, expected: &Value, context: &str) {
             assert_eq!(got, want, "{context}.{key}");
         }
     }
-}
-
-/// The actual callback is queued on this current-thread runtime and cannot start
-/// until the comparator awaits. Producer control: taking the publication snapshot
-/// before the socket receive deterministically fails with an empty actual batch.
-/// See reference-tools/messaging/check_capture_completion.py.
-#[tokio::test(flavor = "current_thread")]
-async fn ordered_capture_waits_for_actual_callback_publication_without_sleep() {
-    let oracle: Value = serde_json::from_str(include_str!(
-        "../../../../../vectors/messaging/older_provider_callbacks.json"
-    )).unwrap();
-    let group = &oracle["groups"][0];
-    let step = &group["steps"][0];
-    assert_eq!(step["kind"], "github");
-    let app = super::quote_integration_tests::app_rows(group["rows"].clone()).await;
-    let (mut client, server) = super::quote_integration_tests::stream(&app).await;
-    assert!(app.publications().take().is_empty());
-    let state = app.booted.app.clone();
-    let id = step["id"].as_i64().unwrap();
-    let input = step["attributes"].clone();
-    let callback = tokio::spawn(async move {
-        state.db.write(move |tx| {
-            let attrs = input.as_object().unwrap().iter().map(|(key, value)| {
-                let key = match key.as_str() {
-                    "title" => "title",
-                    "state" => "state",
-                    "review_decision" => "review_decision",
-                    "check_status" => "check_status",
-                    _ => panic!("unlisted GitHub callback input"),
-                };
-                (key, rusqlite::types::Value::Text(value.as_str().unwrap().into()))
-            }).collect::<Vec<_>>();
-            crate::integrations::github::pull_requests::update(tx, id, &attrs).map(|_| ())
-        }).await.unwrap();
-    });
-    published_frames(&app, &mut client, &step["frames"], "deferred actual callback").await;
-    callback.await.unwrap();
-    client.assert_silent().await;
-    server.abort();
 }
 
 /// Expand only recorded Rails expectations. Candidate rows are always selected

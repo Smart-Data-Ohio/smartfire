@@ -1,7 +1,6 @@
 //! Users::StarsController: only the signed-in human's own private preference rows.
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
-use crate::controllers::presenters::page;
 use campfire_db::UserStar;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 
@@ -56,13 +55,7 @@ async fn change(c: &mut Ctx, starred: bool) -> Result {
     {
         return Err(Error::internal(error));
     }
-    match c.respond_to(&[&format::TURBO_STREAM, &format::JSON, &format::HTML])? {
-        f if *f == format::TURBO_STREAM => {
-            page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |_| {
-                campfire_views::users::star_stream(target_id, starred)
-            })
-            .await
-        }
+    match c.respond_to(&[&format::JSON, &format::HTML])? {
         f if *f == format::JSON => Ok(c.render(
             StatusCode::OK,
             &format::JSON,

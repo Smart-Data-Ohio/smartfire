@@ -37,7 +37,7 @@ fn ws11_deletion_indicator_precedes_failed_ledger_with_webhook() {
 }
 
 fn deletion_indicator_before_ledger(webhook: bool) {
-    use crate::broadcasts::{Broadcast, Partial};
+    use crate::broadcasts::{Broadcast};
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../vectors/agents_deletion_indicator_contract.json"
     ))
@@ -93,11 +93,9 @@ fn deletion_indicator_before_ledger(webhook: bool) {
             .take()
             .iter()
             .filter_map(|event| match event.as_broadcast()? {
-                Broadcast::Turbo(stream) => match stream.partial {
-                    Some(Partial::ThreadIndicator { reply_count, .. }) => {
-                        Some((stream.target.clone(), reply_count, stream.maintain_scroll))
-                    }
-                    _ => None,
+                Broadcast::ThreadIndicator { message_id, reply_count } => {
+                    assert_eq!(message_id, parent.id);
+                    Some((format!("thread_indicator_message_{}", parent.client_message_id), reply_count, true))
                 },
                 _ => None,
             })

@@ -73,14 +73,7 @@ pub struct NextPageContainer {
     pub page: String,
 }
 
-/// `accounts/users/index.turbo_stream.erb`.
-#[derive(Template)]
-#[template(path = "accounts/users/index.turbo_stream.html")]
-pub struct UsersIndexTurboStream<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub users: Vec<UserSummary>,
-    pub next_page: Option<String>,
-}
+
 pub trait BotFormRendering {
     fn icon_field(&self, ctx: &ViewContext<'_>, form: &h::FormWith) -> askama::Result<h::Html>;
     fn webhook_options(&self, ctx: &ViewContext<'_>) -> h::Attrs;

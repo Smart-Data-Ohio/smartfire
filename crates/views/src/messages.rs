@@ -465,30 +465,11 @@ pub struct Edit<'a> {
     pub edit: &'a EditView,
 }
 
-/// `messages/create.turbo_stream`: appends the new message to its room's list. Also what
-/// `Message#broadcast_create` sends.
-#[derive(Template)]
-#[template(path = "messages/create.turbo_stream.html")]
-pub struct CreateStream<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub message: &'a MessageItem,
-    pub room_kind: RoomKind,
-}
 
-#[derive(Template)]
-#[template(path = "channel_thread_messages/create.turbo_stream.html")]
-pub struct ThreadCreateStream<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub message: &'a MessageView,
-    pub thread_id: i64,
-}
 
-/// `messages/destroy.turbo_stream`, also what `Message#broadcast_remove` sends.
-#[derive(Template)]
-#[template(path = "messages/destroy.turbo_stream.html")]
-pub struct DestroyStream<'a> {
-    pub message: &'a MessageView,
-}
+
+
+
 
 /// `messages/boosts/_boosts`.
 #[derive(Template)]
