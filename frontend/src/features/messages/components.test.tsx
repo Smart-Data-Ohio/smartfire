@@ -118,6 +118,30 @@ describe("reaction pills", () => {
     expect(party.textContent).toContain("2");
   });
 
+  it("plays an animated workspace icon, and shows its first frame under reduced motion", async () => {
+    const icon = messageFixture(11, ROOM, {
+      reactions: [
+        { content: ":dance:", title: "Dance", imageUrl: "/icons/dance", reactorIds: [2] },
+      ],
+    });
+
+    const { container } = render(
+      <ReactionsRow message={icon} viewerId={VIEWER} canReact onAddReaction={() => {}} />,
+    );
+
+    const image = () => container.querySelector(".reaction-image")?.getAttribute("src");
+
+    expect(image()).toBe("/icons/dance");
+
+    document.documentElement.dataset.motion = "reduce";
+
+    try {
+      await waitFor(() => expect(image()).toBe("/icons/dance?still=1"));
+    } finally {
+      delete document.documentElement.dataset.motion;
+    }
+  });
+
   it("toggles a reaction on click", async () => {
     const user = userEvent.setup();
     const sent = await post("Launch is on");

@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Boost } from "../../gen/Boost.ts";
 import type { Reaction } from "../../gen/Reaction.ts";
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { preloadEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
 import { AnimatedNumber } from "../../motion/animated-number.tsx";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
@@ -108,7 +109,7 @@ function ReactionPill({ message, reaction, viewerId, fresh, canReact }: PillProp
           {reaction.imageUrl === null ? (
             reaction.content
           ) : (
-            <img className="reaction-image" src={reaction.imageUrl} alt="" draggable={false} />
+            <EmojiImage className="reaction-image" src={reaction.imageUrl} draggable={false} />
           )}
         </span>
         <AnimatedNumber value={reaction.reactorIds.length} className="reaction-count" />

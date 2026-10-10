@@ -7,6 +7,8 @@ export interface EmojiChoice {
   readonly title: string;
   /** Icons only: the image to draw. */
   readonly imageUrl: string | null;
+  /** An icon's first frame, when known: the still to show under reduced motion. */
+  readonly stillUrl?: string | null;
 }
 
 /** The server's quick reactions (`EmojiHelper::REACTIONS`), in order. */

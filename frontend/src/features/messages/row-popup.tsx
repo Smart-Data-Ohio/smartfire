@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Placement } from "../../lib/anchor.ts";
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { LazyEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
 import { type EmojiChoice, quickReactions, useRecentEmoji } from "../../lib/emoji/recent.ts";
 import { readDurationMs } from "../../motion/durations.ts";
@@ -171,7 +172,7 @@ function QuickReactions({ onReact, onMore }: QuickReactionsProps) {
           {choice.imageUrl === null ? (
             <span aria-hidden="true">{choice.content}</span>
           ) : (
-            <img src={choice.imageUrl} alt="" width={24} height={24} />
+            <EmojiImage src={choice.imageUrl} still={choice.stillUrl} width={24} height={24} />
           )}
         </MenuQuickItem>
       ))}
