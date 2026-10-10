@@ -51,11 +51,16 @@ describe("S7 admin schemas", () => {
       restrictRoomCreationToAdministrators: false,
       uploadLimitBytes: 100 * 1024 * 1024,
       version: "2.0.0",
+      description: "Our community",
+      vanitySlug: "smart-data",
+      vanityUrl: "https://chat.example/join/smart-data",
     });
     roundTrips(UpdateWorkspace, {
       name: null,
       restrictRoomCreationToAdministrators: true,
       uploadLimitBytes: null,
+      description: null,
+      vanitySlug: null,
     });
     roundTrips(UpdateLogo, { signedId: "blob-1" });
     roundTrips(UpdateBanner, { signedId: "blob-2" });

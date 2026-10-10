@@ -126,6 +126,8 @@ export const admin = {
           name: null,
           restrictRoomCreationToAdministrators: null,
           uploadLimitBytes: null,
+          description: null,
+          vanitySlug: null,
           ...change,
         }),
       ),

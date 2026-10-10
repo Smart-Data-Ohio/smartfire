@@ -30,6 +30,7 @@ async fn join_page_preserves_rails_form_and_access_checks() {
             campfire_retained::users::New {
                 ctx,
                 join_code: v["join"].as_str().unwrap().into(),
+                description: String::new(),
                 help_contact: help,
             }
             .as_content()

@@ -30,8 +30,15 @@ pub async fn new(c: &mut Ctx) -> Result {
     let account = verify_join_code(c).await?;
     c.respond_to(&[&format::HTML])?;
     let help_contact = c.app().db.read(presenters::accounts::help_contact).await.map_err(Error::internal)?;
+    let description = account.settings().description().to_string();
     let join_code = account.join_code;
-    retained_page!(c, StatusCode::OK, |ctx| campfire_retained::users::New { ctx, join_code: join_code.clone(), help_contact: help_contact.clone() }).await
+    retained_page!(c, StatusCode::OK, |ctx| campfire_retained::users::New {
+        ctx,
+        join_code: join_code.clone(),
+        description: description.clone(),
+        help_contact: help_contact.clone()
+    })
+    .await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -92,7 +99,11 @@ async fn verify_join_code(c: &mut Ctx) -> Result<Account> {
         .map_err(Error::internal)?
         // `Current.account.join_code` on nil raises NoMethodError.
         .ok_or_else(|| Error::internal(anyhow::anyhow!("undefined method 'join_code' for nil")))?;
-    if c.param_str("join_code") != Some(account.join_code.as_str()) {
+    let settings = account.settings();
+    let valid = c
+        .param_str("join_code")
+        .is_some_and(|code| code == account.join_code || settings.vanity_slug() == Some(code));
+    if !valid {
         return halt(c.head(StatusCode::NOT_FOUND));
     }
     Ok(account)

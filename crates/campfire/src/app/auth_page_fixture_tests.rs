@@ -168,6 +168,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                         let page = users::New {
                             ctx: &ctx,
                             join_code: "fixture-join-code".into(),
+                            description: "A place for R&D.".into(),
                             help_contact: None,
                         };
                         shell(&ctx, page.page_title(), page.as_head(), page.as_content())

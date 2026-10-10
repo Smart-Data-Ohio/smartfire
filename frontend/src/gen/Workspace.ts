@@ -31,4 +31,12 @@ uploadLimitBytes: number,
 /**
  * The footer's "Smartfire version" badge text.
  */
-version: string, };
+version: string,
+/**
+ * Plain-text workspace description, empty when unset.
+ */
+description: string,
+/**
+ * The optional single-instance invite alias.
+ */
+vanitySlug: string | null, vanityUrl: string | null, };
