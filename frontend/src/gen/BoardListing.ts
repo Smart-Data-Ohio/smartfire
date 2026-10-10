@@ -2,6 +2,7 @@
 import type { BoardDigest } from "./BoardDigest";
 import type { BoardOwnerOption } from "./BoardOwnerOption";
 import type { BoardStatusFilter } from "./BoardStatusFilter";
+import type { BoardTag } from "./BoardTag";
 import type { BoardTagCount } from "./BoardTagCount";
 import type { ThreadSummary } from "./ThreadSummary";
 import type { User } from "./User";
@@ -52,4 +53,4 @@ canAdminister: boolean,
  * The posts' creators and the owner options' users, once each. (Owners are whole on
  * [`crate::WorkFacts::owner`].)
  */
-users: Array<User>, };
+users: Array<User>, tags: Array<BoardTag>, tagsRequired: boolean, defaultBoardTagId: number | null, };

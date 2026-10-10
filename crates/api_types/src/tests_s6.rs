@@ -96,6 +96,9 @@ fn a_board_listing_round_trips() {
             }),
             can_administer: true,
             users: vec![user()],
+            tags: vec![BoardTag { id: 12, name: "Bug Report".into(), emoji: Some("🐛".into()), position: 0 }],
+            tags_required: true,
+            default_board_tag_id: Some(12),
         },
         json!({
             "roomId": 40,
@@ -111,6 +114,9 @@ fn a_board_listing_round_trips() {
             "digest": {"date": "2026-10-07", "text": "Stale work digest: 1 post past its SLA"},
             "canAdminister": true,
             "users": [serde_json::to_value(user()).unwrap()],
+            "tags": [{"id":12,"name":"Bug Report","emoji":"🐛","position":0}],
+            "tagsRequired": true,
+            "defaultBoardTagId": 12,
         }),
     );
     for (value, wire) in [
@@ -133,11 +139,17 @@ fn the_new_post_form_and_create_round_trip() {
             }],
             tag_suggestions: vec!["api".into()],
             users: vec![user()],
+            tags: vec![],
+            tags_required: false,
+            default_board_tag_id: None,
         },
         json!({
             "ownerCandidates": [{"userId": 7, "provider": null, "description": null}],
             "tagSuggestions": ["api"],
             "users": [serde_json::to_value(user()).unwrap()],
+            "tags": [],
+            "tagsRequired": false,
+            "defaultBoardTagId": null,
         }),
     );
     assert_wire(

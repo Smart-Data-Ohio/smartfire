@@ -10,6 +10,9 @@ impl ChannelThread {
         names: Option<Vec<String>>,
     ) -> Result<()> {
         let room = Room::find(tx.conn(), self.room_id)?;
+        let names = if room.board() {
+            names.map(|names| crate::BoardTagPolicy::post_tags(tx.conn(), room.id, &names)).transpose()?
+        } else { names };
         if let Err(error) = changed
             .validate_for_save(
                 tx.conn(),
@@ -67,7 +70,7 @@ impl ChannelThread {
                 }
                 let rule = BoardTagAssignment::for_room(tx.conn(), thread.room_id)?
                     .into_iter()
-                    .find(|rule| added.contains(&rule.tag));
+                    .find(|rule| added.iter().any(|name| caseless::default_caseless_match_str(name, &rule.tag)));
                 if let Some(rule) = rule {
                     // A failed callback leaves the original tag write committed. Its owner,
                     // audit, ledger and durable jobs succeed or roll back together.
