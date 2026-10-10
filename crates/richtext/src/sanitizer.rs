@@ -106,6 +106,9 @@ impl SafeList {
         tags.extend(["action-text-attachment", "figure", "figcaption"]);
         let mut attributes = DEFAULT_ALLOWED_ATTRIBUTES.to_vec();
         attributes.extend(ATTACHMENT_ATTRIBUTES);
+        // Markdown spoilers are stored with `data-spoiler`. The timeline renders through this
+        // allowlist, so the attribute has to survive or the reader cannot reveal them.
+        attributes.push("data-spoiler");
         SafeList { tags, attributes }
     }
 

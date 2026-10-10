@@ -1,6 +1,6 @@
 //! Discord-style `||spoiler||` text: inline only, inert in code, redacted in plain-text previews.
 use campfire_richtext::markdown::{self, IconCatalog};
-use campfire_richtext::{AttachableResolver, GidLookup, RenderContext, SignedLookup};
+use campfire_richtext::{AttachableResolver, Content, GidLookup, MentionUser, RenderContext, SignedLookup};
 
 struct NoRecords;
 impl AttachableResolver for NoRecords {
@@ -83,6 +83,72 @@ fn plain_text_previews_replace_spoiler_contents() {
     assert_eq!(preview("||one|| and ||two||"), "spoiler and spoiler");
     assert_eq!(preview("||**secret**||"), "spoiler");
     assert!(preview("use `||secret||` here").contains("||secret||"));
+}
+
+fn david() -> MentionUser {
+    MentionUser {
+        id: 1,
+        name: "David".into(),
+        title: "David – Founder".into(),
+        attachable_sgid: "eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--f7d8e8773314d3310320f3cdd08e5597bb51ca1a".into(),
+        user_path: "/users/1".into(),
+        avatar_path: "/users/1/avatar?v=1".into(),
+    }
+}
+
+struct DavidRecords;
+impl AttachableResolver for DavidRecords {
+    fn locate_signed(&self, sgid: &str) -> SignedLookup {
+        if sgid == david().attachable_sgid { SignedLookup::User(david()) } else { SignedLookup::Invalid }
+    }
+    fn find_gid(&self, _: &str) -> GidLookup {
+        GidLookup::NotFound
+    }
+}
+
+fn david_ctx() -> RenderContext<'static> {
+    RenderContext { resolver: &DavidRecords, request_host: None }
+}
+
+fn render_david(source: &str) -> String {
+    markdown::render(source, &(|name: &str| (name == "David").then(david)), &IconCatalog::default()).unwrap()
+}
+
+/// Richtext mentions are `@[Name]`. There is no `<@id>` form on this path.
+fn assert_mention_stays_concealed(html: &str) {
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(html).unwrap();
+    let spoilers: Vec<_> = dom.descendants(root).into_iter().filter(|&node| dom.has_attr(node, "data-spoiler")).collect();
+    assert_eq!(spoilers.len(), 1, "{html}");
+    let text = dom.text_content(spoilers[0]);
+    assert!(text.contains("David") && text.contains("killer"), "{html}");
+    for node in dom.descendants(root) {
+        if dom.text(node).is_some_and(|value| value.contains("David") || value.contains("killer")) {
+            let hidden = dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+            assert!(hidden, "{html}");
+        }
+    }
+    let mention_inside = dom.descendants(root).into_iter().any(|node| {
+        dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "mention"))
+            && dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"))
+    });
+    assert!(mention_inside, "{html}");
+}
+
+#[test]
+fn a_mention_inside_a_spoiler_stays_concealed() {
+    let body = render_david("||@[David] is the killer||");
+    let shown = markdown::presentation(&body, &david_ctx(), &IconCatalog::default(), None).unwrap();
+    assert_mention_stays_concealed(&shown);
+
+    let timeline = Content::load(&body, &david_ctx()).unwrap().to_rendered_html_with_layout(&david_ctx()).unwrap();
+    assert_mention_stays_concealed(&timeline);
+}
+
+#[test]
+fn plain_text_hides_a_mention_inside_a_spoiler() {
+    let text = markdown::plain_text(&render_david("||@[David] is the killer||"), &david_ctx(), &IconCatalog::default()).unwrap();
+    assert_eq!(text, "spoiler");
 }
 
 #[test]

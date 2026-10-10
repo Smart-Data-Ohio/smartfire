@@ -1,5 +1,6 @@
 /** Sections and words for the scheduled-messages page (the classic page's three groups). */
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import { redactMarkdownSpoilers } from "../../lib/spoiler-text.ts";
 import { sendAtLabel } from "../composer/schedule/presets.ts";
 
 /** Upcoming (pending, sendable), stranded (pending, can't be sent) or past (sent or dropped). */
@@ -13,9 +14,9 @@ export function scheduledSection(item: ScheduledMessage): ScheduledSection {
   return item.sendable ? "upcoming" : "stranded";
 }
 
-/** The Markdown as quiet text: emphasis and heading markers dropped, whitespace folded. */
+/** The Markdown as quiet text: spoilers redacted, emphasis and heading markers dropped, whitespace folded. */
 export function markdownExcerpt(markdown: string): string {
-  return markdown
+  return redactMarkdownSpoilers(markdown)
     .replace(/[*_~`>#]+/g, "")
     .replace(/\s+/g, " ")
     .trim();

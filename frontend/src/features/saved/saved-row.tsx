@@ -15,6 +15,7 @@ import { ConversationLabel, conversationText } from "../destinations/conversatio
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
+import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -115,6 +116,7 @@ export function SavedRow({
   handlers,
 }: SavedRowProps) {
   const author = useUser(message?.creatorId);
+  const bodyRef = useSpoilerReveal(message?.bodyHtml ?? "");
   const done = item.status === "done";
   const reminder = reminderLabel(item, now);
   const authorName = author?.name ?? UNKNOWN_NAME;
@@ -217,6 +219,7 @@ export function SavedRow({
             <p className="saved-body text-faint">This message is no longer available.</p>
           ) : (
             <div
+              ref={bodyRef}
               className="saved-body message-body"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
               dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}

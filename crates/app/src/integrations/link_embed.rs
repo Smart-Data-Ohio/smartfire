@@ -52,4 +52,13 @@ mod tests {
             assert_eq!(serde_json::to_value(selected).unwrap(), case["selected"], "{case}");
         }
     }
+
+    #[test]
+    fn a_link_inside_a_spoiler_is_not_unfurled() {
+        let html = r#"<p><span class="spoiler" data-spoiler=""><a href="https://example.com/hidden">secret</a></span> <a href="https://example.com/shown">open</a></p>"#;
+        let selected = reference_urls(html, "", "").unwrap();
+        assert_eq!(selected.len(), 1, "{selected:?}");
+        assert!(selected[0].url.contains("shown"), "{selected:?}");
+        assert!(!selected[0].url.contains("hidden"), "{selected:?}");
+    }
 }

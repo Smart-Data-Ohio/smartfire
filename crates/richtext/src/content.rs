@@ -71,6 +71,7 @@ impl Content {
         let root = self.root;
         render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
         render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
+        contain_spoiler_blocks(&mut dom, root);
         sanitizer::sanitize(&dom.to_html(root), &SafeList::action_text()).map_err(Error::Parse)
     }
 
@@ -249,6 +250,61 @@ fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth
     })
 }
 
+/// Tags whose start tag closes an open `<p>` and, with it, a spoiler span wrapped in that paragraph.
+fn closes_paragraph(name: &str) -> bool {
+    matches!(
+        name,
+        "address" | "article" | "aside" | "blockquote" | "details" | "dialog" | "div" | "dl" | "fieldset" | "figcaption" | "figure" | "footer"
+            | "form"
+            | "h1"
+            | "h2"
+            | "h3"
+            | "h4"
+            | "h5"
+            | "h6"
+            | "header"
+            | "hgroup"
+            | "hr"
+            | "li"
+            | "main"
+            | "nav"
+            | "ol"
+            | "p"
+            | "pre"
+            | "section"
+            | "summary"
+            | "table"
+            | "tbody"
+            | "td"
+            | "tfoot"
+            | "th"
+            | "thead"
+            | "tr"
+            | "ul"
+    )
+}
+
+fn inside_spoiler(dom: &Dom, node: NodeId) -> bool {
+    dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"))
+}
+
+/// Turns block tags under `root` into spans so a later HTML parse cannot lift them out of a spoiler.
+fn inline_blocks(dom: &mut Dom, root: NodeId) {
+    let blocks: Vec<NodeId> =
+        dom.descendants(root).into_iter().filter(|&node| dom.local_name(node).is_some_and(closes_paragraph)).collect();
+    for node in blocks {
+        dom.set_local_name(node, "span");
+    }
+}
+
+/// A spoiler stays wrapped around a mention or any other expansion that would otherwise be a block.
+pub(crate) fn contain_spoiler_blocks(dom: &mut Dom, root: NodeId) {
+    let spoilers: Vec<NodeId> = dom.descendants(root).into_iter().filter(|&node| dom.has_attr(node, "data-spoiler")).collect();
+    for spoiler in spoilers {
+        inline_blocks(dom, spoiler);
+    }
+}
+
 fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<(), Error> {
     for node in attachment_nodes(dom, root) {
         sanitize_content_attribute(dom, node)?;
@@ -260,6 +316,11 @@ fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: u
         };
         let html = render_attachment_html_at(&attachment, ctx, depth, default_renderer)?;
         dom.set_inner_html(full, &html).map_err(Error::Parse)?;
+        // The partial is parsed again in the attachment's parent. A `<div>` there closes a spoiler
+        // span, so block tags inside a spoiler become spans before that parse.
+        if inside_spoiler(dom, node) {
+            inline_blocks(dom, full);
+        }
         let replacement = dom.to_html(full);
         dom.replace_with_html(node, &replacement).map_err(Error::Parse)?;
     }
@@ -316,6 +377,9 @@ fn render_attachment_galleries(
             let full = node_with_full_attributes(dom, *member, &attachment.attachable)?;
             let html = render_attachment_html_at(&attachment, ctx, depth, default_renderer)?;
             dom.set_inner_html(full, &html).map_err(Error::Parse)?;
+            if inside_spoiler(dom, *member) {
+                inline_blocks(dom, full);
+            }
             rendered.push_str(&dom.to_html(full));
         }
         let html = format!(

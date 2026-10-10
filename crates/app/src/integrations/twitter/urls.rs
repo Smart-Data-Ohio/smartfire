@@ -73,4 +73,13 @@ mod tests {
             assert_eq!(json!(extract(&text)), case["refs"]);
         }
     }
+
+    #[test]
+    fn a_status_url_inside_a_spoiler_is_not_a_card() {
+        let html = r#"<p><span data-spoiler="">https://x.com/NASA/status/42</span> https://x.com/NASA/status/7</p>"#;
+        let text = non_code_text(html).unwrap();
+        let refs = extract(&text);
+        assert_eq!(refs.len(), 1, "{text}");
+        assert_eq!(refs[0].post_id, "7");
+    }
 }

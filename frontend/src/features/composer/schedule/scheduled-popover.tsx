@@ -4,20 +4,13 @@ import { Button } from "../../../ui/button.tsx";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import { Popover } from "../../../ui/popover.tsx";
 import { toast } from "../../../ui/toast-store.ts";
+import { markdownExcerpt } from "../../scheduled/scheduled-format.ts";
 import { LazyCustomTimeDialog } from "./lazy-custom-time-dialog.tsx";
 import { sendAtLabel } from "./presets.ts";
 import { scheduled } from "./scheduled-store.ts";
 
 interface ScheduledPopoverProps {
   readonly items: readonly ScheduledMessage[];
-}
-
-/** The Markdown as one quiet line: markers dropped, whitespace folded. */
-function excerpt(markdown: string): string {
-  return markdown
-    .replace(/[*_~`>#]+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function failed(title: string) {
@@ -84,7 +77,9 @@ export function ScheduledPopover({ items }: ScheduledPopoverProps) {
                     <span className="scheduled-item-when">
                       {sendAtLabel(new Date(item.sendAt), new Date())}
                     </span>
-                    <span className="scheduled-item-body">{excerpt(item.markdownSource)}</span>
+                    <span className="scheduled-item-body">
+                      {markdownExcerpt(item.markdownSource)}
+                    </span>
                   </div>
                   <div className="scheduled-item-actions">
                     <IconButton

@@ -427,6 +427,9 @@ pub fn presentation(body: &str, ctx: &RenderContext, icons: &dyn IconResolver, a
             dom.set_inner_html(node, &attachables::render_mention_in_context(&user, ctx)).map_err(Error::Parse)?;
         }
     }
+    // A mention is a `<div>`. Parsed again by the sanitizer, that start tag closes the open
+    // paragraph and the spoiler span, so the name and the words after it would render in the open.
+    crate::content::contain_spoiler_blocks(&mut dom, root);
     let html = sanitize_presentation(&dom.to_html(root), icons, asset_host)?;
     Ok(format!("<div class=\"markdown-body\" data-controller=\"drive-link\">{html}</div>"))
 }

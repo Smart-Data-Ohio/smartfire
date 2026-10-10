@@ -441,6 +441,7 @@
 
   /* Links, code and mentions in the body stay usable above the card's stretched link. */
   .search-hit-body a,
+  .search-hit-body .spoiler,
   .search-hit-drive,
   .search-hit .search-conv {
     position: relative;

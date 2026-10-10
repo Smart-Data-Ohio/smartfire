@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { inlineMentions } from "../../lib/body-html.ts";
@@ -122,6 +122,56 @@ describe("BodyHtml", () => {
 
     expect(third.hasAttribute("data-revealed")).toBe(true);
     expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("keeps a concealed link untitled, out of tab order, and unnamed until it is revealed", async () => {
+    const user = userEvent.setup();
+
+    const html =
+      '<p>before <span class="spoiler" data-spoiler="">' +
+      '<a href="https://example.com" title="Alice dies">ending</a></span> after</p>';
+
+    render(<BodyHtml html={html} className="message-body" />);
+
+    const spoiler = screen.getByRole("button", { name: "Spoiler, activate to reveal" });
+    const link = document.querySelector("a");
+
+    expect(link).not.toBeNull();
+
+    if (link === null) {
+      return;
+    }
+
+    expect(link.getAttribute("title")).toBeNull();
+    expect(link.tabIndex).toBe(-1);
+    expect(link.inert).toBe(true);
+    expect(screen.queryByRole("link", { name: "ending" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Alice dies" })).toBeNull();
+
+    await user.click(spoiler);
+
+    expect(spoiler.hasAttribute("data-revealed")).toBe(true);
+    expect(link.getAttribute("title")).toBe("Alice dies");
+    expect(link.inert).toBe(false);
+    expect(link.hasAttribute("tabindex")).toBe(false);
+    expect(screen.getByRole("link", { name: "ending" })).toBe(link);
+  });
+
+  it("keeps a mention inside the spoiler and drops its link and button", () => {
+    const html =
+      '<p><span class="spoiler" data-spoiler="">' +
+      '<span class="mention mention--user-1">' +
+      '<a class="btn avatar" href="/users/1" title="David – Founder">D</a>' +
+      '<button class="profile-card-name" type="button">David</button>' +
+      "</span> is the killer</span></p>";
+
+    const { container } = render(<BodyHtml html={html} className="message-body" />);
+    const spoiler = container.querySelector("[data-spoiler]");
+
+    expect(spoiler?.textContent).toContain("David");
+    expect(spoiler?.textContent).toContain("is the killer");
+    expect(spoiler?.querySelector(".mention .profile-card-name")?.textContent).toBe("David");
+    expect(container.querySelector("a, button")).toBeNull();
   });
 });
 

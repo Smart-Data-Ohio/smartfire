@@ -49,4 +49,9 @@ describe("markdownExcerpt", () => {
   it("drops emphasis markers and folds whitespace", () => {
     expect(markdownExcerpt("**Ship** it\n\n> _today_")).toBe("Ship it today");
   });
+
+  it("replaces a spoiler with the word and leaves one in code", () => {
+    expect(markdownExcerpt("see ||the ending|| now")).toBe("see spoiler now");
+    expect(markdownExcerpt("use `||the ending||` here")).toContain("||the ending||");
+  });
 });

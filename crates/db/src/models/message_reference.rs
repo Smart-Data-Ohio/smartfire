@@ -76,7 +76,10 @@ pub fn non_code_text(html: &str) -> Result<String> {
     ];
     fn walk(dom: &Dom, node: NodeId, text: &mut String, hrefs: &mut Vec<String>) {
         let name = dom.local_name(node).unwrap_or("");
-        if matches!(name, "code" | "pre") {
+        // Quote cards and GitHub references read this text. A URL inside a spoiler is still hidden.
+        let spoiler = dom.has_attr(node, "data-spoiler")
+            || dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+        if matches!(name, "code" | "pre") || spoiler {
             return;
         }
         if let Some(value) = dom.text(node) {
@@ -231,4 +234,19 @@ pub fn removed_source(tx: &mut Tx<'_>, mut ids: Vec<i64>) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn spoilers_hide_quote_links() {
+        let html = r#"<p><a href="/rooms/1/@10">open</a> <span data-spoiler=""><a href="/rooms/1/@99">hidden</a> /rooms/2/@77</span></p>"#;
+        let text = non_code_text(html).unwrap();
+        assert!(text.contains("/rooms/1/@10"), "{text}");
+        assert!(!text.contains("@99"), "{text}");
+        assert!(!text.contains("@77"), "{text}");
+        assert_eq!(extract_message_ids(&text), vec![10]);
+    }
 }
