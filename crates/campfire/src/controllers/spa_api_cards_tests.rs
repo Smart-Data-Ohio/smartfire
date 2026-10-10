@@ -1855,9 +1855,18 @@ async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purg
     a.db().write(move |tx| campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx)).await.unwrap();
     assert_eq!(author.send(get(original)).await.status, StatusCode::NOT_FOUND);
     crate::active_storage::purge(&a.booted.app, blob_id).await.unwrap();
-    // The still's purge job can run later than its original's job.
-    assert_eq!(author.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(author.send(get(&variant_disk)).await.status, StatusCode::NOT_FOUND);
+    // The still's purge job can run later than its original's job, so drive the still's purge here too.
+    // purge is a no-op when the queued job already removed the still.
+    crate::active_storage::purge(&a.booted.app, variant).await.unwrap();
+    // A queued job that already removed the row may still be deleting files; wait for that bounded time.
+    for _ in 0..50 {
+        if author.send(get(&variant_disk)).await.status == StatusCode::NOT_FOUND {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert_eq!(author.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND, "still URL still resolves after its purge");
+    assert_eq!(author.send(get(&variant_disk)).await.status, StatusCode::NOT_FOUND, "still disk URL still resolves after its purge");
     let exists = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_some())).await.unwrap();
     assert!(!exists);
 }

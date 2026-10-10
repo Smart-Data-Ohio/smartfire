@@ -59,6 +59,16 @@ fn auth_and_font_paths_match_the_pre_extraction_manifest() {
 }
 
 #[test]
+fn only_retained_browser_assets_are_embedded() {
+    let browser_assets: Vec<_> = campfire_static_assets::manifest()
+        .iter()
+        .map(|(logical, _)| *logical)
+        .filter(|logical| logical.ends_with(".js") || logical.ends_with(".css"))
+        .collect();
+    assert_eq!(browser_assets, ["auth.css", "auth.js", "unsupported.js"]);
+}
+
+#[test]
 fn public_and_media_files_are_served_like_action_dispatch_static() {
     for case in fixture("static_responses.json").as_array().unwrap() {
         let env = &case["env"];

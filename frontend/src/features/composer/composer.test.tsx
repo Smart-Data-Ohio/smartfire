@@ -461,6 +461,7 @@ describe("Drive submissions", () => {
     expect(submit).toHaveBeenCalledExactlyOnceWith({
       markdown: "First reply",
       attachmentSignedId: null,
+      attachmentSignedIds: [],
       driveFileIds: ["roadmap"],
     });
     await attachDrive("Budget");
@@ -555,6 +556,32 @@ describe("several files in one send", () => {
 
     return input;
   }
+
+  it("hands every uploaded file to a thread-start submission", async () => {
+    landUploads();
+    const submit = vi.fn(async () => {});
+    const { container } = render(<Composer roomId={ROOM} onSubmit={submit} placeholder="Reply…" />);
+
+    fireEvent.change(picker(container), {
+      target: {
+        files: [
+          new File(["one"], "one.txt"),
+          new File(["two"], "two.txt"),
+          new File(["three"], "three.txt"),
+        ],
+      },
+    });
+    await waitFor(() => expect(container.querySelectorAll('[data-phase="done"]')).toHaveLength(3));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Reply…" }), { key: "Enter" });
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledExactlyOnceWith({
+        markdown: "",
+        attachmentSignedId: null,
+        attachmentSignedIds: ["signed-one.txt", "signed-two.txt", "signed-three.txt"],
+        driveFileIds: [],
+      }),
+    );
+  });
 
   it("posts the text and every file as one message", async () => {
     landUploads();

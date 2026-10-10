@@ -129,21 +129,22 @@ export function createPanes(ctx: S2Context): Panes {
       .flatMap((thread) => thread.messages);
 
     for (const message of [...record.messages, ...replies]) {
-      const attachment = message.attachment;
+      const attachments =
+        message.attachments ?? (message.attachment === null ? [] : [message.attachment]);
 
-      if (attachment === null) continue;
+      for (const attachment of attachments) {
+        if (type !== "all" && fileGroup(attachment.contentType) !== type) continue;
 
-      if (type !== "all" && fileGroup(attachment.contentType) !== type) continue;
+        if (needle !== "" && !attachment.filename.toLowerCase().includes(needle)) continue;
 
-      if (needle !== "" && !attachment.filename.toLowerCase().includes(needle)) continue;
-
-      all.push({
-        messageId: message.id,
-        threadId: message.threadId,
-        creatorId: message.creatorId,
-        attachment,
-        createdAt: message.createdAt,
-      });
+        all.push({
+          messageId: message.id,
+          threadId: message.threadId,
+          creatorId: message.creatorId,
+          attachment,
+          createdAt: message.createdAt,
+        });
+      }
     }
 
     all.sort(
