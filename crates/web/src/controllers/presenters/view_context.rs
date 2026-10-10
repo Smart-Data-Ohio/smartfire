@@ -191,7 +191,7 @@ impl Layout {
         #[cfg(any(test, feature = "test-support"))]
         let secrets = super::render_secrets::fixed_render_secrets().unwrap_or(secrets);
         let flash = c.peek_flash();
-        let asset_path = |path: &str| campfire_assets::asset_path(path);
+        let asset_path = |path: &str| campfire_static_assets::asset_path(path);
         let ctx = campfire_retained::Context {
             current_user: self.current_user.clone(),
             account: self.account.clone(),

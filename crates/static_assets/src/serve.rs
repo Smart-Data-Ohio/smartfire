@@ -2,7 +2,6 @@
 //! serving the embedded reference/public plus the precompiled public/assets, with the headers
 //! from reference/config/environments/production.rb (`public_file_server.headers`).
 
-use crate::embedded;
 use std::borrow::Cow;
 
 /// `config.public_file_server.headers` in production.rb: `"public, max-age=#{1.minute.to_i},
@@ -47,17 +46,27 @@ impl StaticResponse {
 
 /// FileHandler#attempt: Some(response) when a public file matches a GET or HEAD request,
 /// None to hand the request to the app.
-pub fn serve(request: &StaticRequest) -> Option<StaticResponse> {
+/// Serve a sorted embedded file table with the same rules as retained assets.
+pub fn serve_embedded(
+    request: &StaticRequest,
+    files: &'static [(&'static str, &'static [u8])],
+    built_at: &'static str,
+) -> Option<StaticResponse> {
     if request.method != "GET" && request.method != "HEAD" {
         return None;
     }
-    let (body, content_headers) = find_file(request.path, request.accept_encoding.unwrap_or(""))?;
-    Some(serve_file(request, body, content_headers))
+    let (body, content_headers) =
+        find_file(request.path, request.accept_encoding.unwrap_or(""), files)?;
+    Some(serve_file(request, body, content_headers, built_at))
 }
 
 type ContentHeaders = Vec<(&'static str, String)>;
 
-fn find_file(path_info: &str, accept_encoding: &str) -> Option<(&'static [u8], ContentHeaders)> {
+fn find_file(
+    path_info: &str,
+    accept_encoding: &str,
+    files: &'static [(&'static str, &'static [u8])],
+) -> Option<(&'static [u8], ContentHeaders)> {
     let path = clean_path(path_info)?;
     let extname = file_extname(&path);
     let content_type = mime_type(extname);
@@ -71,22 +80,23 @@ fn find_file(path_info: &str, accept_encoding: &str) -> Option<(&'static [u8], C
 
     candidates
         .into_iter()
-        .find_map(|(path, content_type)| try_files(&path, content_type, accept_encoding))
+        .find_map(|(path, content_type)| try_files(&path, content_type, accept_encoding, files))
 }
 
 fn try_files(
     path: &[u8],
     content_type: &'static str,
     accept_encoding: &str,
+    files: &'static [(&'static str, &'static [u8])],
 ) -> Option<(&'static [u8], ContentHeaders)> {
     let mut headers: ContentHeaders = vec![("content-type", content_type.to_string())];
 
     if !compressible(content_type) {
-        return file(path).map(|body| (body, headers));
+        return file(path, files).map(|body| (body, headers));
     }
 
     for (encoding, extension) in [("br", ".br"), ("gzip", ".gz")] {
-        if let Some(body) = file(&[path, extension.as_bytes()].concat()) {
+        if let Some(body) = file(&[path, extension.as_bytes()].concat(), files) {
             headers.push(("vary", "accept-encoding".to_string()));
             if accepts(accept_encoding, encoding) {
                 headers.push(("content-encoding", encoding.to_string()));
@@ -94,7 +104,7 @@ fn try_files(
             }
         }
     }
-    file(path).map(|body| (body, headers))
+    file(path, files).map(|body| (body, headers))
 }
 
 /// Rack::Files#serving, then FileHandler#serve's `headers.update(content_headers)`.
@@ -102,8 +112,8 @@ fn serve_file(
     request: &StaticRequest,
     file: &'static [u8],
     content_headers: ContentHeaders,
+    last_modified: &'static str,
 ) -> StaticResponse {
-    let last_modified = embedded::BUILT_AT;
     if request.if_modified_since == Some(last_modified) {
         return StaticResponse {
             status: 304,
@@ -287,12 +297,12 @@ fn hex_value(b: u8) -> Option<u8> {
     (b as char).to_digit(16).map(|d| d as u8)
 }
 
-fn file(path: &[u8]) -> Option<&'static [u8]> {
+fn file(path: &[u8], files: &'static [(&'static str, &'static [u8])]) -> Option<&'static [u8]> {
     let path = std::str::from_utf8(path).ok()?;
-    embedded::FILES
+    files
         .binary_search_by(|(url, _)| (*url).cmp(path))
         .ok()
-        .map(|index| embedded::FILES[index].1)
+        .map(|index| files[index].1)
 }
 
 /// FileHandler's compressible_content_types: /\A(?:text\/|application\/javascript|image\/svg\+xml)/

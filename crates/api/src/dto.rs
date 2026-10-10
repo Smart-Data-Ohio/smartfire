@@ -437,10 +437,10 @@ pub(crate) fn messages_and_fetches(
 fn message_sound(sound: &campfire_db::Sound) -> api::MessageSound {
     api::MessageSound {
         name: sound.name.into(),
-        url: campfire_assets::asset_path(&sound.asset_path()),
+        url: campfire_static_assets::asset_path(&sound.asset_path()),
         presentation: match sound.image {
             Some(image) => api::SoundPresentation::Image {
-                url: campfire_assets::image_path(&image.asset_path()),
+                url: campfire_static_assets::image_path(&image.asset_path()),
                 width: image.width,
                 height: image.height,
             },
@@ -1686,7 +1686,7 @@ mod tests {
     fn play_sounds_carry_the_classic_catalog_and_asset_urls() {
         let bell = super::message_sound(campfire_db::Sound::find_by_name("bell").unwrap());
         assert_eq!(bell.name, "bell");
-        assert_eq!(bell.url, campfire_assets::asset_path("bell.mp3"));
+        assert_eq!(bell.url, campfire_static_assets::asset_path("bell.mp3"));
         assert_eq!(
             bell.presentation,
             api::SoundPresentation::Text {
@@ -1694,11 +1694,11 @@ mod tests {
             }
         );
         let modem = super::message_sound(campfire_db::Sound::find_by_name("56k").unwrap());
-        assert_eq!(modem.url, campfire_assets::asset_path("56k.mp3"));
+        assert_eq!(modem.url, campfire_static_assets::asset_path("56k.mp3"));
         assert_eq!(
             modem.presentation,
             api::SoundPresentation::Image {
-                url: campfire_assets::image_path("sounds/56k.webp"),
+                url: campfire_static_assets::image_path("sounds/56k.webp"),
                 width: 79,
                 height: 33,
             }

@@ -19,6 +19,7 @@ campfire_richtext = { path = "crates/richtext" }
 campfire_storage  = { path = "crates/storage" }
 campfire_cable    = { path = "crates/cable" }
 campfire_assets   = { path = "crates/assets" }
+campfire_static_assets = { path = "crates/static_assets" }
 campfire_view_kit = { path = "crates/view_kit" }
 campfire_views    = { path = "crates/views" }
 campfire_retained = { path = "crates/retained_pages" }

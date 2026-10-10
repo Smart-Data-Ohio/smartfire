@@ -11,6 +11,25 @@ fn concurrent_first_requests_all_get_the_whole_file() {
 }
 
 #[tokio::test]
+async fn signed_default_bot_avatar_serves_retained_bytes_and_headers() {
+    use axum::http::{Method, StatusCode};
+    use crate::controllers::presenters::test_support::{TestApp, Req, BENDER};
+    let app = TestApp::boot_frozen().await.expect("seed required");
+    let user = app.db().read(|conn| User::find(conn, BENDER)).await.unwrap();
+    let path = presenters::user_summary(&app.booted.app.secrets, &user).avatar_path;
+    let mut browser = app.david();
+    let shown = browser.send(Req::new(Method::GET, &path)).await;
+    assert_eq!(shown.status, StatusCode::OK);
+    assert_eq!(shown.body, include_bytes!("../../../../../static_assets/media/images/default-bot-avatar.svg"));
+    assert_eq!(shown.header("content-type"), Some("image/svg+xml"));
+    assert_eq!(shown.header("cache-control"), Some("max-age=1800, public, stale-while-revalidate=604800"));
+    let head = browser.send(Req::new(Method::HEAD, &path)).await;
+    assert_eq!(head.status, StatusCode::OK);
+    assert!(head.body.is_empty());
+    assert_eq!(head.header("content-length"), shown.header("content-length"));
+}
+
+#[tokio::test]
 async fn default_initials_svg_matches_rails_bytes_and_cache_validation() {
     use axum::http::{Method, StatusCode};
     use crate::controllers::presenters::test_support::{TestApp, Req, DAVID};

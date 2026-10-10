@@ -1,8 +1,8 @@
-//! Auth assets work through the classic pipeline independently of the SPA build.
-use campfire_assets::{StaticRequest, asset_path, serve};
+//! Retained auth assets work independently of classic bundles and the SPA build.
+use campfire_static_assets::{StaticRequest, asset_path, serve};
 
 #[test]
-fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
+fn standalone_auth_assets_and_fonts_are_served() {
     let css_path = asset_path("auth.css");
     let css = serve(&StaticRequest {
         method: "GET",
@@ -89,14 +89,6 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
             && !popup_text.contains("??"),
         "unsupported.js is the es5 popup handler"
     );
-    assert!(!campfire_assets::javascript_importmap_tags().contains(&popup_path));
-    assert!(!campfire_assets::all_stylesheet_paths().contains(&"auth.css"));
-    assert!(
-        !campfire_assets::stylesheet_link_tag_all(&[])
-            .html
-            .contains(&css_path)
-    );
-    assert!(!campfire_assets::javascript_importmap_tags().contains(&script_path));
 }
 
 #[path = "../../retained_pages/auth_build.rs"]
@@ -106,7 +98,7 @@ mod bundle;
 fn auth_bundle_recurses_in_order_deduplicates_and_resolves_font_urls_at_their_source() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
-    let crate_dir = root.join("crates/assets");
+    let crate_dir = root.join("crates/static_assets");
     let frontend = root.join("frontend/src");
     for path in [
         crate_dir.join("auth"),

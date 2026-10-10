@@ -12,7 +12,7 @@ pub fn page_title_tag(page_title: Option<&str>) -> Html {
 pub fn auth_stylesheet_tag() -> Html {
     raw(format!(
         "<link rel=\"stylesheet\" href=\"{}\">",
-        campfire_assets::stylesheet_path("auth")
+        campfire_static_assets::stylesheet_path("auth")
     ))
 }
 
@@ -20,7 +20,7 @@ pub fn auth_stylesheet_tag() -> Html {
 pub fn auth_script_tag() -> Html {
     raw(format!(
         "<script src=\"{}\"></script>",
-        campfire_assets::javascript_path("auth")
+        campfire_static_assets::javascript_path("auth")
     ))
 }
 
@@ -29,7 +29,7 @@ pub fn auth_script_tag() -> Html {
 pub fn unsupported_script_tag() -> Html {
     raw(format!(
         "<script src=\"{}\"></script>",
-        campfire_assets::javascript_path("unsupported")
+        campfire_static_assets::javascript_path("unsupported")
     ))
 }
 
