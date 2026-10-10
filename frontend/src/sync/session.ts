@@ -28,7 +28,7 @@ import {
   resetRoomRereads,
 } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
-import { Outbox, type SendOptions } from "./outbox.ts";
+import { Outbox, roomSendRevision, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import {
   changedSince,
@@ -57,6 +57,7 @@ interface RoomVisit {
   readonly token: number;
   readonly focusMessageId: number | null;
   readonly load: number;
+  readonly sendRevision: number;
   /** This visit's reads a newer room outcome (a membership fact) refused. */
   readonly refused: number;
 }
@@ -67,7 +68,13 @@ let nextVisitToken = 0,
 const visits = new Map<number, RoomVisit>();
 
 function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
-  const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId, load: 0, refused: 0 };
+  const visit: RoomVisit = {
+    token: ++nextVisitToken,
+    focusMessageId,
+    load: 0,
+    sendRevision: roomSendRevision(roomId),
+    refused: 0,
+  };
 
   visits.set(roomId, visit);
 
@@ -153,6 +160,7 @@ const loadFirstPage = Effect.fnUntraced(function* (
   }
 
   const focusMessageId = visits.get(roomId)?.focusMessageId ?? null;
+  const sendRevision = visits.get(roomId)?.sendRevision ?? roomSendRevision(roomId);
   let cursor: PageCursor = null;
 
   if (focusMessageId !== null) {
@@ -162,6 +170,13 @@ const loadFirstPage = Effect.fnUntraced(function* (
   }
 
   yield* messages(roomId, cursor).pipe(
+    // A send from here while the page loaded lands at the present, beyond a window opened at the
+    // first unread or a permalink: open at the present instead, where the reader sees it.
+    Effect.flatMap((page) =>
+      page.after !== null && current() && roomSendRevision(roomId) !== sendRevision
+        ? messages(roomId, null)
+        : Effect.succeed(page),
+    ),
     Effect.tap((page) =>
       Effect.sync(() => {
         if (!current()) {
@@ -251,7 +266,7 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   const started = beginRoomRequest();
 
   if (open !== undefined && open.token === token) {
-    visits.set(roomId, { ...open, load });
+    visits.set(roomId, { ...open, load, sendRevision: roomSendRevision(roomId) });
   }
 
   const loaded = yield* Effect.result(room(roomId));
