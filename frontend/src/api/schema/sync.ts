@@ -31,6 +31,7 @@ import {
   ThreadRemoved,
   ThreadUnread,
 } from "./thread.ts";
+import { User } from "./user.ts";
 
 /** A sync topic: `user`, `room:<id>` or `thread:<id>`. */
 const Topic = Schema.String;
@@ -73,6 +74,7 @@ const ThreadGithubUpdated = Schema.Struct({
 
 /** What happened: `type` names the event and `data` carries its body. */
 export const SyncPayload = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("user.updated"), data: User }),
   Schema.Struct({ type: Schema.Literal("settings.updated"), data: Settings }),
   Schema.Struct({ type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.updated"), data: MessageDTO }),
@@ -131,6 +133,7 @@ const eventFields = { seq: Schema.Int, topic: Topic };
  * Kept in step with `SyncPayload` above (the pins fail otherwise).
  */
 export const SyncEvent = Schema.Union([
+  Schema.Struct({ ...eventFields, type: Schema.Literal("user.updated"), data: User }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("settings.updated"), data: Settings }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.updated"), data: MessageDTO }),

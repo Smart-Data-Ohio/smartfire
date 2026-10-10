@@ -169,7 +169,7 @@ impl WorkThreadEvent {
         }
         errors.into_result()?;
         let id = tx.conn().query_row("INSERT INTO work_thread_events(channel_thread_id,actor_id,event_type,from_status,to_status,from_owner_id,to_owner_id,from_owner_name,to_owner_name,metadata,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",
-            params![thread.id,actor.map(|u|u.id),kind,from_status,thread.work_status,from_owner.map(|u|u.id),to_owner.map(|u|u.id),from_owner.map(|u|u.name.as_str()),to_owner.map(|u|u.name.as_str()),metadata,tx.now(),tx.now()], |r|r.get::<_,i64>(0))?;
+            params![thread.id,actor.map(|u|u.id),kind,from_status,thread.work_status,from_owner.map(|u|u.id),to_owner.map(|u|u.id),from_owner.map(|u|u.display_name()),to_owner.map(|u|u.display_name()),metadata,tx.now(),tx.now()], |r|r.get::<_,i64>(0))?;
         tx.after_commit_record("work_thread_events", id, move |tx| {
             let Some(event) = Self::find_by_id(tx.conn(), id)? else {
                 return Ok(());
@@ -291,6 +291,6 @@ fn owner(conn: &Connection, id: Option<i64>) -> Result<Option<User>> {
         .map(Option::flatten)
 }
 fn snapshot(user: Option<&User>) -> Value {
-    user.map(|u| json!({"id":u.id,"name":u.name,"status":u.status.name(),"role":u.role.name()}))
+    user.map(|u| json!({"id":u.id,"name":u.display_name(),"status":u.status.name(),"role":u.role.name()}))
         .unwrap_or(Value::Null)
 }

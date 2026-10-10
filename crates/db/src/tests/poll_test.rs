@@ -203,6 +203,12 @@ fn results_payload_carries_counts_and_voters_unless_anonymous() {
     assert_eq!(payload["room_id"], id("watercooler"));
     assert_eq!(payload["closes_at"], serde_json::Value::Null);
     assert_eq!(payload["closed"], false);
+    t.write(|tx| {
+        let mut user = crate::User::find(tx.conn(), id("david"))?;
+        user.update(tx, crate::UserChanges { nickname: Some(Some("D".into())), ..Default::default() })
+    });
+    let renamed = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), Some(id("david")), &campfire_storage::AppMessageVerifier::new(vec![0; 64])));
+    assert_eq!(renamed["options"][0]["voters"], serde_json::json!(["D", "Jason"]));
 }
 
 #[test]

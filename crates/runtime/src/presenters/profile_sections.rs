@@ -20,7 +20,7 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
         .query_map([id], |r| r.get::<_, String>(0))?
         .collect::<std::result::Result<Vec<_>, _>>()?
         .join("\n");
-    fields.notifications.allowed_people=c.prepare("SELECT users.id,users.name FROM users JOIN dnd_allowed_users ON users.id=dnd_allowed_users.allowed_user_id WHERE dnd_allowed_users.user_id=? ORDER BY LOWER(users.name)")?.query_map([id],|r|Ok((r.get(0)?,r.get(1)?)))?.collect::<std::result::Result<Vec<_>,_>>()?;
+    fields.notifications.allowed_people=c.prepare("SELECT users.* FROM users JOIN dnd_allowed_users ON users.id=dnd_allowed_users.allowed_user_id WHERE dnd_allowed_users.user_id=? ORDER BY LOWER(users.name)")?.query_map([id],|r|{let user=campfire_db::User::from_row(r)?;Ok((user.id,user.display_name().to_owned()))})?.collect::<std::result::Result<Vec<_>,_>>()?;
     fields.github=c.query_row("SELECT github_login,disconnected_reason,token_source FROM github_connected_accounts WHERE user_id=?",[id],|r| {
         let reason:Option<String>=r.get(1)?;Ok(if reason.as_deref().is_some_and(|s|!is_blank(s)){ConnectionPanel::Rejected{reason}}else{ConnectionPanel::Connected{name:r.get(0)?,workspace:None,app_token:r.get::<_,String>(2)?=="app"}})
     }).optional()?.unwrap_or_default();

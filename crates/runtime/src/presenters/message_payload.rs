@@ -172,7 +172,7 @@ fn user_with_icon(
     icon: Option<&str>,
     icon_url: Option<String>,
 ) -> Value {
-    json!({"id": user.id, "name": user.name, "role": user.role.name(),
+    json!({"id": user.id, "name": user.display_name(), "role": user.role.name(),
         "avatar_url": format!("{base}{}", avatar_path(p.secrets, user)), "icon_name": icon, "icon_avatar_url": icon_url})
 }
 

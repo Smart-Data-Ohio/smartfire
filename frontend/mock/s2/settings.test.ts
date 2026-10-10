@@ -15,7 +15,26 @@ import type { Settings } from "../../src/gen/Settings.ts";
 import type { Json } from "../json.ts";
 import { USER_IDS } from "../seed.ts";
 import { MOCK_PASSWORD } from "./settings.ts";
-import { errorOf, expectStatus, get, harness, NOW } from "./testing.ts";
+import { collect, errorOf, expectStatus, get, harness, NOW } from "./testing.ts";
+
+it("publishes the public identity when the profile nickname changes", async () => {
+  const { server } = harness();
+  const events = collect(server);
+
+  await expectStatus(
+    server,
+    "PATCH",
+    "/api/v1/settings/profile",
+    { nickname: "NickExample", pronouns: "they/them" },
+    200,
+  );
+
+  expect(events.find((event) => event.type === "user.updated")).toMatchObject({
+    topic: "user",
+    type: "user.updated",
+    data: { id: USER_IDS.riel, name: "NickExample", pronouns: "they/them" },
+  });
+});
 
 /** Every key of a write body, `null` unless given. */
 function body(keys: readonly string[], given: Readonly<Record<string, Json>>): Json {

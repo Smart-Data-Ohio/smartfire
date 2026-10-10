@@ -32,7 +32,7 @@ impl CalendarEvent {
         }
         let room = Room::find(conn, event.room_id)?;
         let title = if room.direct() {
-            User::find(conn, event.organizer_id)?.name
+            User::find(conn, event.organizer_id)?.display_name().to_owned()
         } else {
             room.name.unwrap_or_default()
         };

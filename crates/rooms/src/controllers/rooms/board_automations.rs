@@ -89,7 +89,7 @@ pub async fn create_tag_assignment(c: &mut Ctx) -> Result {
     let name = c
         .app()
         .db
-        .read(move |conn| Ok(User::find(conn, id)?.name))
+        .read(move |conn| Ok(User::find(conn, id)?.display_name().to_owned()))
         .await
         .map_err(db_error)?;
     super::audit_room(
@@ -122,7 +122,7 @@ pub async fn destroy_tag_assignment(c: &mut Ctx) -> Result {
     let name = c
         .app()
         .db
-        .read(move |conn| Ok(User::find(conn, assignee)?.name))
+        .read(move |conn| Ok(User::find(conn, assignee)?.display_name().to_owned()))
         .await
         .map_err(db_error)?;
     let tag = assignment.tag.clone();

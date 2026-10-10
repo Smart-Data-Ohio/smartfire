@@ -266,7 +266,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     return {
       id,
-      name: user.name,
+      name: user.accountName,
       avatarUrl: user.avatarUrl,
       role: user.role === "administrator" ? "administrator" : "member",
       banned: user.status === "banned",

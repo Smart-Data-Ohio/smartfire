@@ -260,11 +260,11 @@ impl PushSubscription {
         let body = message.notification_text(conn, rich_text)?;
         let path = format!("/rooms/{}", room.id);
         let (title, body) = if room.direct() {
-            (creator.name, body)
+            (creator.display_name().to_owned(), body)
         } else {
             (
                 room.name.clone().unwrap_or_default(),
-                format!("{}: {body}", creator.name),
+                format!("{}: {body}", creator.display_name()),
             )
         };
         Ok(PushPayload {

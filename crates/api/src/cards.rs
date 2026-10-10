@@ -368,7 +368,7 @@ pub(crate) fn cards(
         .collect();
     let authors: HashMap<i64, String> = User::where_ids(conn, &author_ids)?
         .into_iter()
-        .map(|user| (user.id, user.name))
+        .map(|user| (user.id, user.display_name().to_owned()))
         .collect();
     let source_room_ids: Vec<i64> = sources
         .values()
@@ -1467,7 +1467,7 @@ async fn show_quote_card(c: &mut Ctx) -> Result {
                 return Ok(api::QuotePreviewResult::Hidden);
             }
             let source_room = Room::find(conn, source.room_id)?;
-            let author = User::find(conn, source.creator_id)?.name;
+            let author = User::find(conn, source.creator_id)?.display_name().to_owned();
             let presenter = Presenter::new(conn, &app, None);
             Ok(api::QuotePreviewResult::Loaded(quote_preview(
                 &presenter,

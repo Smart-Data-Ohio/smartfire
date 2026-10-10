@@ -19,7 +19,7 @@ pub fn eligible_email(email: &str) -> bool {
     PATTERN.is_match(email)
 }
 pub fn eligible(conn: &Connection, room_id: i64, requester_id: i64) -> Result<Vec<Recipient>> {
-    let rows=conn.prepare("SELECT u.id,u.name,u.email_address FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id!=? AND u.status=0 AND u.role!=2 AND NOT EXISTS(SELECT 1 FROM agents a WHERE a.user_id=u.id) AND u.email_address IS NOT NULL AND u.email_address!='' ORDER BY LOWER(u.name),u.id")?.query_map([room_id,requester_id],|r|Ok(Recipient{id:r.get(0)?,name:r.get(1)?,email:r.get(2)?}))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    let rows=conn.prepare("SELECT u.* FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id!=? AND u.status=0 AND u.role!=2 AND NOT EXISTS(SELECT 1 FROM agents a WHERE a.user_id=u.id) AND u.email_address IS NOT NULL AND u.email_address!='' ORDER BY LOWER(u.name),u.id")?.query_map([room_id,requester_id],|r|Ok(Recipient{id:r.get("id")?,name:crate::User::from_row(r)?.display_name().to_owned(),email:r.get("email_address")?}))?.collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(rows
         .into_iter()
         .filter(|r| eligible_email(&r.email))

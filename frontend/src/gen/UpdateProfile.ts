@@ -12,4 +12,4 @@ currentPassword: string | null,
 /**
  * A new password; blank keeps the current one.
  */
-password: string | null, bio: string | null, githubLogin: string | null, };
+password: string | null, bio: string | null, githubLogin: string | null, pronouns: string | null, nickname: string | null, };

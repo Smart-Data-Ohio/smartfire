@@ -170,7 +170,7 @@ impl request_forgery::AuthenticityTokens for KitTokens {
 pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser {
     CurrentUser {
         id: user.id,
-        name: user.name.clone(),
+        name: user.display_name().to_owned(),
         administrator: user.can_administer(None, false),
         bot: user.is_bot(),
         avatar_url: crate::presenters::avatar_path(secrets, user),

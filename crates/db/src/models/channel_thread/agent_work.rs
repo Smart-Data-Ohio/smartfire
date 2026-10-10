@@ -174,7 +174,7 @@ impl ChannelThread {
             let to_owner = User::find(tx.conn(),receiver.user_id)?;
             audit_log::AuditLog::record(tx,audit_log::NewAuditLog { action:"work.handoff".into(),actor:Some(sender.into()),
                 target:Some(audit_log::Target {record_type:"ChannelThread".into(),id:fresh.id,label:Some(fresh.name.clone())}),
-                changes:Some(json!({"from_owner":from_owner.map(|u|u.name),"to_owner":to_owner.name,"summary":truncate(&package.summary,200,"...")})),
+                changes:Some(json!({"from_owner":from_owner.map(|u|u.display_name().to_owned()),"to_owner":to_owner.display_name(),"summary":truncate(&package.summary,200,"...")})),
                 ..Default::default() },context)?;
             Ok((fresh,handoff))
         })?;

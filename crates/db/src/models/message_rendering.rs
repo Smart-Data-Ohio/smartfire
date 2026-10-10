@@ -221,7 +221,7 @@ impl RenderingRecords {
             &directs,
             |r| Ok((r.get(0)?, User::from_row(r)?)),
         )? {
-            data.direct_names.entry(id).or_default().push(user.name.clone());
+            data.direct_names.entry(id).or_default().push(user.display_name().to_owned());
             data.direct_members.entry(id).or_default().push(user);
         }
         if !payload {
@@ -293,9 +293,9 @@ impl RenderingRecords {
             }
             for (vote, name) in rows(
                 conn,
-                "SELECT poll_votes.*,users.name AS user_name FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_id IN ($ids) ORDER BY poll_votes.id",
+                &format!("SELECT poll_votes.*,{} FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_id IN ($ids) ORDER BY poll_votes.id", User::projection("users", "voter_")),
                 &poll_ids,
-                |r| Ok((PollVote::from_row(r)?, r.get("user_name")?)),
+                |r| Ok((PollVote::from_row(r)?, r.get::<_, Option<i64>>("voter_id")?.map(|_| User::from_prefixed_row(r, "voter_").map(|user| user.display_name().to_owned())).transpose()?)),
             )? {
                 data.votes
                     .entry(vote.poll_id)

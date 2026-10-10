@@ -99,7 +99,7 @@ pub async fn add_members(c: &mut Ctx) -> Result {
             let added = updated.add_direct_members(tx, &users, user)?;
             let names = added
                 .iter()
-                .map(|id| User::find(tx.conn(), *id).map(|u| u.name))
+                .map(|id| User::find(tx.conn(), *id).map(|u| u.display_name().to_owned()))
                 .collect::<campfire_db::Result<Vec<_>>>()?;
             Ok(names)
         })

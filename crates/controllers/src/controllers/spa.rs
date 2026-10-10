@@ -98,7 +98,7 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         None => None,
     };
     Ok(Boot {
-        user: BootUser { id: user.id, name: user.name, avatar_url },
+        user: BootUser { id: user.id, name: user.display_name().to_owned(), avatar_url },
         custom_styles: account.as_ref().and_then(|account| account.custom_styles.clone()),
         account: BootAccount {
             upload_limit_bytes: account.as_ref().map_or(

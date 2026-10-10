@@ -708,7 +708,7 @@ impl Message {
             User::find_by_id(tx.conn(), id)
                 .ok()
                 .flatten()
-                .map(|u| u.name)
+                .map(|u| u.display_name().to_owned())
         };
         if markdown {
             text.try_markdown_plain_text(tx.conn(), &body, &names)
@@ -970,7 +970,7 @@ impl Message {
         if *body == previous {
             return Ok(false);
         }
-        let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
+        let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.display_name().to_owned());
         let has_text = |html: &str| {
             rich_text
                 .try_to_plain_text(conn, html, &names)
@@ -1445,7 +1445,7 @@ impl Message {
     fn plain_text_body_from_html(&self, conn: &Connection, rich_text: &dyn RichText, html: Option<&str>, budget: Option<usize>) -> Result<String> {
         let mut text = String::new();
         if let Some(html) = html {
-            let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
+            let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.display_name().to_owned());
             text = if self.markdown() {
                 rich_text
                     .try_markdown_plain_text(conn, html, &names)
@@ -1697,7 +1697,7 @@ fn drive_file_ids(conn: &Connection, message_id: i64) -> Result<Vec<String>> {
     )
 }
 
-/// `forward_note_mentionees`: the note's `@[Name]` names that identify exactly one active member
+/// `forward_note_mentionees`: the note's `@[Name]` display names that identify exactly one active member
 /// of the room, as those members.
 pub fn forward_note_mentionees(conn: &Connection, room_id: i64, note: &str) -> Result<Vec<User>> {
     let mut unique = Vec::new();
@@ -1710,10 +1710,17 @@ pub fn forward_note_mentionees(conn: &Connection, room_id: i64, note: &str) -> R
         return Ok(Vec::new());
     }
     let sql = format!(
-        r#"SELECT "users".* FROM "users" INNER JOIN "memberships" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? AND "users"."status" = 0 AND "users"."name" IN (SELECT "users"."name" FROM "users" INNER JOIN "memberships" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? AND "users"."status" = 0 AND "users"."name" IN ({}) GROUP BY "users"."name" HAVING (COUNT(*) = 1))"#,
+        r#"WITH members AS (
+            SELECT users.*, COALESCE(users.nickname, users.name) AS display_name
+            FROM users INNER JOIN memberships ON users.id = memberships.user_id
+            WHERE memberships.room_id = ? AND users.status = 0
+        ) SELECT * FROM members WHERE display_name IN (
+            SELECT display_name FROM members WHERE display_name IN ({})
+            GROUP BY display_name HAVING COUNT(*) = 1
+        )"#,
         placeholders(unique.len())
     );
-    let mut values: Vec<rusqlite::types::Value> = vec![room_id.into(), room_id.into()];
+    let mut values: Vec<rusqlite::types::Value> = vec![room_id.into()];
     values.extend(unique.into_iter().map(rusqlite::types::Value::from));
     query_all(
         conn,
