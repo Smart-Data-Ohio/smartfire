@@ -36,10 +36,9 @@ impl Fresh {
             "/../../parity/.env.reference"
         ))
         .unwrap();
-        let config = Config::from_lookup(|key| match key {
+        let mut config = Config::from_lookup(|key| match key {
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
-            "SPA_ENABLED" => Some(if spa_enabled { "1" } else { "0" }.into()),
             _ => environment.lines().find_map(|line| {
                 line.split_once('=')
                     .filter(|(name, _)| *name == key)
@@ -47,6 +46,8 @@ impl Fresh {
             }),
         })
         .unwrap();
+        // Without the SPA, the classic pages, until they're deleted.
+        config.spa_enabled = spa_enabled;
         let boot = crate::server::boot_with_network(
             config,
             Arc::new(campfire_kit::FrozenClock::new(

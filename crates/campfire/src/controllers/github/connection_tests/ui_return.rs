@@ -1,7 +1,7 @@
 use super::*;
 
 #[tokio::test]
-async fn github_callback_returns_to_integrations_only_for_next_ui_in_every_handled_outcome() {
+async fn github_callback_returns_to_the_spa_integrations_whatever_was_chosen_in_every_handled_outcome() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     for enabled in [false, true] {
         for preference in [UiPreference::Classic, UiPreference::Next] {
@@ -47,7 +47,9 @@ async fn github_callback_returns_to_integrations_only_for_next_ui_in_every_handl
                 let (status, headers, _) =
                     request(&fresh, "GET", &path, Value::Null, session).await;
                 assert_eq!(status, 302, "{outcome}");
-                let destination = if enabled && preference == UiPreference::Next {
+                // A stored choice of the classic UI is ignored; only a classic page test (the SPA
+                // off) still lands on the classic profile.
+                let destination = if enabled {
                     "/app/settings/integrations"
                 } else {
                     "/users/me/profile"

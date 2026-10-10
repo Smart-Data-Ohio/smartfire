@@ -3,7 +3,7 @@ import rows from "../gen/screens.json";
 /**
  * One row of the screen map (`crates/spa/src/screens.rs`, written to `src/gen/screens.json`):
  * a classic page and where it lives in the SPA. `ported` says whether the SPA has built it; the
- * server sends people who use the new UI from a ported classic page to its SPA URL.
+ * server always sends a signed-in person from a ported classic page to its SPA URL.
  */
 export interface Screen {
   readonly endpoint: string;
@@ -236,56 +236,6 @@ export function spaUrlFor(path: string, search = "", viewerId?: number): string 
   }
 
   return null;
-}
-
-/**
- * The classic URL of an SPA `path` (`/app/r/12` is `/rooms/12`), ported or not, else `null`:
- * where a destination the SPA hasn't built opens, with a full page load.
- */
-export function classicUrlFor(path: string, search = ""): string | null {
-  for (const screen of SCREENS) {
-    const captured = capture(screen.spa, path);
-
-    if (captured !== null) {
-      return `${fill(screen.classic, captured)}${keptSearch(search)}`;
-    }
-  }
-
-  return null;
-}
-
-/** A router location's path as the map spells it: the router's `pathname` leaves out `/app/`. */
-function spaPath(pathname: string): string {
-  return pathname === "/app" || pathname.startsWith("/app/")
-    ? pathname
-    : `/app/${pathname.replace(/^\//, "")}`;
-}
-
-/**
- * The classic page, with `?classic=1`, for a router location (its `pathname` with or without the
- * `/app/` basepath), or the classic home when nothing maps.
- */
-export function classicPageFor(pathname: string, search = ""): string {
-  return withClassicBypass(classicUrlFor(spaPath(pathname), search) ?? "/");
-}
-
-/** `url` with `?classic=1`, which keeps a person who uses the SPA on the classic page. */
-export function withClassicBypass(url: string): string {
-  const parsed = new URL(url, "http://x");
-
-  parsed.searchParams.set("classic", "1");
-
-  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-}
-
-/**
- * Where an SPA path the router can't open goes: its classic page (with `?classic=1`) when the map
- * names one, else `null` (a 404).
- */
-export function unportedClassicPage(pathname: string, search: string): string | null {
-  const classic = classicUrlFor(spaPath(pathname), search);
-
-  return classic === null ? null : withClassicBypass(classic);
 }
 
 /** Whether `path` is the SPA's (under `/app/`). */

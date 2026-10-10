@@ -971,13 +971,12 @@ impl Group {
         fixture_profile: &str,
     ) -> Option<Group> {
         let fixtures = super::url_contract_fixtures::FixtureContext::boot(fixture_profile).await;
-        let mut env = Vec::new();
-        if spa_enabled {
-            env.push(("SPA_ENABLED", "1"));
-        }
-        if spa_default_next {
-            env.push(("SPA_DEFAULT", "next"));
-        }
+        // The old switches as a deployment may still write them: the app no longer reads them,
+        // so every case runs against what production serves (never the classic page test mode).
+        let mut env = vec![
+            ("SPA_ENABLED", if spa_enabled { "1" } else { "0" }),
+            ("SPA_DEFAULT", if spa_default_next { "next" } else { "classic" }),
+        ];
         env.extend(fixtures.env());
         let app = match fixtures.github_network() {
             Some(network) => {

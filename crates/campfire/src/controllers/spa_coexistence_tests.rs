@@ -1,6 +1,8 @@
-//! Both UIs side by side (plan §5.0) over the seeded app: a person's UI choice, the classic pages
-//! the SPA has ported redirecting there for people who use it, `?classic=1`, the profile's switch,
-//! and the `SPA_ENABLED` / `SPA_DEFAULT` gates.
+//! The SPA is the only UI for signed-in people (cutover step 26), over the seeded app: every
+//! classic page the SPA has ported is an alias that sends a signed-in navigation to its SPA screen.
+//! There's no way back: a stored choice of the classic UI, `?classic=1`, the old
+//! `POST /app/ui_preference` switch and the `SPA_ENABLED` / `SPA_DEFAULT` env vars change nothing.
+//! Scripts, Turbo frames, bot keys, agent tokens and writes still get the classic responses.
 
 use axum::http::{Method, StatusCode};
 use campfire_db::models::user::ui_preference::{self, UiPreference};
@@ -65,6 +67,8 @@ async fn message(a: &TestApp, room_id: i64, creator_id: i64, content: &str) -> M
         .unwrap()
 }
 
+/// Message aliases and room tools: the classic path, its SPA screen, and what the classic page
+/// itself answers to a script's fetch.
 fn gap_pages(room: i64, message: i64) -> [(String, String, StatusCode); 10] {
     [
         (
@@ -77,7 +81,7 @@ fn gap_pages(room: i64, message: i64) -> [(String, String, StatusCode); 10] {
             format!("/app/r/{room}/m/{message}"),
             StatusCode::OK,
         ),
-        // The bare classic actions have no room_id; keep their existing 404 on opt-out.
+        // The bare classic actions have no room_id; the classic page answers 404.
         (
             format!("/messages/{message}"),
             format!("/app/m/{message}"),
@@ -131,68 +135,193 @@ fn redirected_to_spa(reply: &Reply) -> bool {
         .is_some_and(|location| location.starts_with(&to("/app")))
 }
 
-/// `POST /app/ui_preference` as the profile's form sends it, with the session's token.
-async fn post_ui(b: &mut Browser<'_>, pairs: &[(&str, &str)]) -> Reply {
-    b.write(Req::new(Method::POST, "/app/ui_preference").form(pairs))
-        .await
+/// `path` with a `classic` parameter in each spelling that once kept the classic page.
+fn with_classic(path: &str) -> [String; 3] {
+    let joiner = if path.contains('?') { '&' } else { '?' };
+    ["classic=1", "classic=true", "classic"].map(|pair| format!("{path}{joiner}{pair}"))
 }
 
 #[tokio::test]
-async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
+async fn ported_pages_send_everyone_to_the_spa() {
     let Some(a) = enabled().await else { return };
     let room = room(&a).await;
     let posted = message(&a, room, DAVID, "anchor").await;
-    choose(&a, DAVID, UiPreference::Next).await;
+    // Neither has chosen a UI.
+    assert_eq!(stored(&a, DAVID).await, None);
+    assert_eq!(stored(&a, JASON).await, None);
+    for user in [DAVID, JASON] {
+        let mut b = a.sign_in(user).await;
+        for (classic, spa) in [
+            ("/".to_string(), "/app/".to_string()),
+            (format!("/rooms/{room}"), format!("/app/r/{room}")),
+            (
+                format!("/rooms/{room}/@12345"),
+                format!("/app/r/{room}/m/12345"),
+            ),
+            (
+                format!("/rooms/{room}/threads/77"),
+                format!("/app/r/{room}/t/77"),
+            ),
+            (
+                format!("/rooms/{room}?message_id={}", posted.id),
+                format!("/app/r/{room}/m/{}", posted.id),
+            ),
+            (
+                format!("/rooms/{room}/events"),
+                format!("/app/r/{room}/events"),
+            ),
+        ] {
+            let reply = b.get(&classic).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{user} {classic}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{user} {classic}");
+        }
+        let head = b
+            .send(Req::new(Method::HEAD, &format!("/rooms/{room}")))
+            .await;
+        assert_eq!(
+            head.location(),
+            Some(to(&format!("/app/r/{room}")).as_str()),
+            "{user}"
+        );
+    }
+}
+
+/// A person who once chose the classic UI is sent to the SPA like everyone else.
+#[tokio::test]
+async fn a_stored_classic_choice_no_longer_keeps_the_classic_pages() {
+    let Some(a) = enabled().await else { return };
+    let room = room(&a).await;
+    choose(&a, DAVID, UiPreference::Classic).await;
     let mut david = a.sign_in(DAVID).await;
     for (classic, spa) in [
         ("/".to_string(), "/app/".to_string()),
         (format!("/rooms/{room}"), format!("/app/r/{room}")),
-        (
-            format!("/rooms/{room}/@12345"),
-            format!("/app/r/{room}/m/12345"),
-        ),
-        (
-            format!("/rooms/{room}/threads/77"),
-            format!("/app/r/{room}/t/77"),
-        ),
-        (
-            format!("/rooms/{room}?message_id={}", posted.id),
-            format!("/app/r/{room}/m/{}", posted.id),
-        ),
-        (
-            format!("/rooms/{room}/events"),
-            format!("/app/r/{room}/events"),
-        ),
+        ("/users/me/profile".to_string(), "/app/settings".to_string()),
+        (format!("/users/{JASON}"), format!("/app/people/{JASON}")),
+        ("/account/edit".to_string(), "/app/admin".to_string()),
     ] {
         let reply = david.get(&classic).await;
         assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
     }
-    let head = david
-        .send(Req::new(Method::HEAD, &format!("/rooms/{room}")))
-        .await;
-    assert_eq!(
-        head.location(),
-        Some(to(&format!("/app/r/{room}")).as_str())
-    );
-
-    // Jason hasn't chosen, so he stays on the classic page.
-    let mut jason = a.sign_in(JASON).await;
-    let page = jason.get(&format!("/rooms/{room}")).await;
-    assert!(!redirected_to_spa(&page), "{:?}", page.location());
+    assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Classic));
 }
 
-// The composer opens the `/event` command's classic URL in a new tab. For someone on the new
-// UI that lands on the SPA's new-event form with the command's query intact: Rails' sorted,
-// form-encoded `event[...]` keys, of which the form's prefill (`newEventPrefill`) reads
-// `event[title]` and `event[starts_at]` (an ISO time in UTC).
+/// `?classic=1` (or any other `classic` value) once kept a ported page classic. Now the redirect
+/// happens anyway, and the parameter is dropped from the SPA URL.
+#[tokio::test]
+async fn a_classic_query_no_longer_keeps_the_classic_page() {
+    let Some(a) = enabled().await else { return };
+    let room = room(&a).await;
+    let posted = message(&a, room, DAVID, "anchor").await;
+    choose(&a, DAVID, UiPreference::Classic).await;
+    let mut b = a.sign_in(DAVID).await;
+    for (classic, spa) in [
+        (format!("/rooms/{room}"), format!("/app/r/{room}")),
+        (
+            format!("/rooms/{room}?message_id={}", posted.id),
+            format!("/app/r/{room}/m/{}", posted.id),
+        ),
+        ("/users/me/profile".to_string(), "/app/settings".to_string()),
+        ("/work?state=agents".to_string(), "/app/work?state=agents".to_string()),
+    ] {
+        for path in with_classic(&classic).into_iter().chain([format!(
+            "{classic}{}classic=0",
+            if classic.contains('?') { '&' } else { '?' }
+        )]) {
+            let reply = b.get(&path).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{path}: {}", reply.text());
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
+        }
+    }
+}
+
+/// The old switch is gone: posting to it, with the session's token, isn't a success or a redirect
+/// and stores nothing. The classic profile no longer offers it.
+#[tokio::test]
+async fn the_ui_switch_is_gone() {
+    let Some(a) = enabled().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    for pairs in [
+        &[("ui", "classic")][..],
+        &[("ui", "classic"), ("return_to", "/rooms/5")][..],
+        &[("ui", "next")][..],
+    ] {
+        let reply = b
+            .write(Req::new(Method::POST, "/app/ui_preference").form(pairs))
+            .await;
+        assert!(
+            !reply.status.is_success() && !reply.status.is_redirection(),
+            "{pairs:?}: {:?} {:?}",
+            reply.status,
+            reply.location()
+        );
+        assert_eq!(stored(&a, DAVID).await, None, "{pairs:?} stored nothing");
+    }
+    let signed_out = a
+        .anonymous()
+        .send(Req::new(Method::POST, "/app/ui_preference").form(&[("ui", "classic")]))
+        .await;
+    assert!(
+        !signed_out.status.is_success() && !signed_out.status.is_redirection(),
+        "{:?}",
+        signed_out.status
+    );
+
+    let profile = b.classic_page("/users/me/profile").await;
+    assert_eq!(profile.status, StatusCode::OK, "{:?}", profile.location());
+    let profile = profile.text();
+    assert!(profile.contains(CLASSIC_SHELL), "the classic profile page");
+    for gone in [
+        r#"id="next_ui""#,
+        "Switch to classic",
+        "Try the new Smartfire",
+        "/app/ui_preference",
+    ] {
+        assert!(!profile.contains(gone), "{gone}: {profile}");
+    }
+}
+
+/// The env vars that once kept the classic UI are no longer read: an app started with
+/// `SPA_ENABLED=0` and `SPA_DEFAULT=classic` sends everyone to the SPA.
+#[tokio::test]
+async fn spa_enabled_0_and_spa_default_classic_still_send_everyone_to_the_spa() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+
+    let Some(a) = app(&[("SPA_ENABLED", "0"), ("SPA_DEFAULT", "classic")]).await else {
+        return;
+    };
+    let room = room(&a).await;
+    for user in [DAVID, JASON] {
+        let mut b = a.sign_in(user).await;
+        for (classic, spa) in [
+            ("/".to_string(), "/app/".to_string()),
+            (format!("/rooms/{room}"), format!("/app/r/{room}")),
+            ("/users/me/profile/edit".to_string(), "/app/settings".to_string()),
+        ] {
+            let reply = b.get(&classic).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{user} {classic}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{user} {classic}");
+        }
+        let shell = b.get("/app/").await;
+        assert_eq!(shell.status, StatusCode::OK, "{user}");
+        assert!(shell.text().contains(SPA_BOOT), "{user}");
+    }
+    // Only a signed-in session is sent on; the edit alias keeps its 404 for anyone else.
+    profile_edit_is_not_found(&mut a.anonymous(), "").await;
+    profile_edit_is_not_found(&mut a.anonymous(), &format!("?bot_key={BENDER_KEY}")).await;
+}
+
+// The composer opens the `/event` command's classic URL in a new tab. That lands on the SPA's
+// new-event form with the command's query intact: Rails' sorted, form-encoded `event[...]` keys,
+// of which the form's prefill (`newEventPrefill`) reads `event[title]` and `event[starts_at]` (an
+// ISO time in UTC).
 #[tokio::test]
 async fn the_event_commands_link_opens_the_spa_form_with_its_prefill() {
     let a = enabled()
         .await
         .expect("the default frozen seed is required");
     let room = crate::controllers::presenters::test_support::ALL_TALK;
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut david = a.sign_in(DAVID).await;
     let reply = david
         .write(super::api_tests::json_body(
@@ -243,74 +372,51 @@ async fn the_event_commands_link_opens_the_spa_form_with_its_prefill() {
 async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
     const BOARD: i64 = 699448332;
     const POST: i64 = 4;
-    for env in [
-        &[("SPA_ENABLED", "1")][..],
-        &[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")][..],
+    let a = enabled()
+        .await
+        .expect("the default frozen seed is required");
+    let mut david = a.sign_in(DAVID).await;
+    for (classic, spa) in [
+        (format!("/rooms/{BOARD}"), format!("/app/r/{BOARD}")),
+        (
+            format!("/rooms/{BOARD}/threads/{POST}"),
+            format!("/app/r/{BOARD}/t/{POST}"),
+        ),
+        (
+            format!("/rooms/{BOARD}/threads/new"),
+            format!("/app/r/{BOARD}/posts/new"),
+        ),
     ] {
-        let a = app(env).await.expect("the default frozen seed is required");
-        if env.len() == 1 {
-            choose(&a, DAVID, UiPreference::Next).await;
-        }
-        let mut david = a.sign_in(DAVID).await;
-        for (classic, spa) in [
-            (format!("/rooms/{BOARD}"), format!("/app/r/{BOARD}")),
-            (
-                format!("/rooms/{BOARD}/threads/{POST}"),
-                format!("/app/r/{BOARD}/t/{POST}"),
-            ),
-            (
-                format!("/rooms/{BOARD}/threads/new"),
-                format!("/app/r/{BOARD}/posts/new"),
-            ),
-        ] {
-            let reply = david.get(&classic).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{env:?} {classic}");
-            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
-            let bypass = david.get(&format!("{classic}?classic=1")).await;
-            assert_eq!(
-                bypass.status,
-                StatusCode::OK,
-                "{classic}: {}",
-                bypass.text()
-            );
-            assert!(!redirected_to_spa(&bypass), "{classic}");
-        }
-        let filter = "status=blocked&owner=me&tag=Release&page=2";
-        let reply = david.get(&format!("/rooms/{BOARD}?{filter}")).await;
-        assert_eq!(
-            reply.location(),
-            Some(to(&format!("/app/r/{BOARD}?{filter}")).as_str())
-        );
-        let reply = david.get("/work").await;
-        assert_eq!(reply.status, StatusCode::FOUND);
-        assert_eq!(reply.location(), Some(to("/app/work").as_str()));
-        // The work filter carries over, and the handoff page's room is the SPA's to resolve.
-        for (classic, spa) in [
-            (
-                "/work?state=agents".to_string(),
-                "/app/work?state=agents".to_string(),
-            ),
-            (
-                format!("/threads/{POST}/work/handoff/new"),
-                format!("/app/t/{POST}/handoff"),
-            ),
-        ] {
-            let reply = david.get(&classic).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{env:?} {classic}");
-            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
-        }
-        let opted_out = post_ui(
-            &mut david,
-            &[
-                ("ui", "classic"),
-                ("return_to", &format!("/app/r/{BOARD}/posts/new")),
-            ],
-        )
-        .await;
-        assert_eq!(
-            opted_out.location(),
-            Some(to(&format!("/rooms/{BOARD}/threads/new")).as_str())
-        );
+        let reply = david.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+        let bypass = david.get(&format!("{classic}?classic=1")).await;
+        assert_eq!(bypass.status, StatusCode::FOUND, "{classic}?classic=1");
+        assert_eq!(bypass.location(), Some(to(&spa).as_str()), "{classic}?classic=1");
+    }
+    let filter = "status=blocked&owner=me&tag=Release&page=2";
+    let reply = david.get(&format!("/rooms/{BOARD}?{filter}")).await;
+    assert_eq!(
+        reply.location(),
+        Some(to(&format!("/app/r/{BOARD}?{filter}")).as_str())
+    );
+    let reply = david.get("/work").await;
+    assert_eq!(reply.status, StatusCode::FOUND);
+    assert_eq!(reply.location(), Some(to("/app/work").as_str()));
+    // The work filter carries over, and the handoff page's room is the SPA's to resolve.
+    for (classic, spa) in [
+        (
+            "/work?state=agents".to_string(),
+            "/app/work?state=agents".to_string(),
+        ),
+        (
+            format!("/threads/{POST}/work/handoff/new"),
+            format!("/app/t/{POST}/handoff"),
+        ),
+    ] {
+        let reply = david.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
     }
 }
 
@@ -321,7 +427,6 @@ async fn message_aliases_and_room_tools_redirect_to_the_new_ui() {
         .expect("the default frozen seed is required");
     let room = crate::controllers::presenters::test_support::ALL_TALK;
     let message = message(&a, room, DAVID, "coexistence gap message").await;
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut david = a.sign_in(DAVID).await;
     for (classic, spa, _) in gap_pages(room, message.id) {
         let reply = david.get(&classic).await;
@@ -330,34 +435,28 @@ async fn message_aliases_and_room_tools_redirect_to_the_new_ui() {
     }
 }
 
+/// A stored classic choice and `?classic=1` both still redirect the aliases. A script's fetch of
+/// the classic page gets what it always got.
 #[tokio::test]
-async fn message_aliases_and_room_tools_keep_the_classic_behavior_on_opt_out() {
+async fn message_aliases_and_room_tools_redirect_whatever_was_chosen() {
     let a = enabled()
         .await
         .expect("the default frozen seed is required");
     let room = crate::controllers::presenters::test_support::ALL_TALK;
     let message = message(&a, room, DAVID, "coexistence gap message").await;
+    choose(&a, DAVID, UiPreference::Classic).await;
     let mut david = a.sign_in(DAVID).await;
-    for preference in [UiPreference::Classic, UiPreference::Next] {
-        choose(&a, DAVID, preference).await;
-        for (classic, _, status) in gap_pages(room, message.id) {
-            let path = if preference == UiPreference::Next {
-                format!("{classic}?classic=1")
-            } else {
-                classic.clone()
-            };
+    for (classic, spa, status) in gap_pages(room, message.id) {
+        for path in [classic.clone(), format!("{classic}?classic=1")] {
             let reply = david.get(&path).await;
-            assert_eq!(reply.status, status, "{path}");
-            assert!(!redirected_to_spa(&reply), "{path}");
-            assert!(
-                reply
-                    .content_type()
-                    .is_some_and(|kind| kind.starts_with("text/html")),
-                "{path}"
-            );
-            if classic == format!("/rooms/{room}/messages/{}", message.id) {
-                assert!(reply.text().contains("coexistence gap message"), "{path}");
-            }
+            assert_eq!(reply.status, StatusCode::FOUND, "{path}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
+        }
+        let fetched = david.classic_page(&classic).await;
+        assert_eq!(fetched.status, status, "{classic}");
+        assert!(!redirected_to_spa(&fetched), "{classic}");
+        if classic == format!("/rooms/{room}/messages/{}", message.id) {
+            assert!(fetched.text().contains("coexistence gap message"), "{classic}");
         }
     }
 }
@@ -388,21 +487,40 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
     assert!(read.message.body_html.contains(SECRET));
 
     let mut david = a.sign_in(DAVID).await;
-    for preference in [UiPreference::Classic, UiPreference::Next] {
-        choose(&a, DAVID, preference).await;
-        for (classic, spa, _) in gap_pages(DIRECT_KEVIN_BENDER, message.id) {
-            let reply = david.get(&classic).await;
-            if preference == UiPreference::Next {
-                assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
-                assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
-            } else {
-                assert_eq!(reply.status, StatusCode::NOT_FOUND, "{classic}");
-            }
-            assert!(!reply.text().contains(SECRET), "{classic}");
-            let bypass = david.get(&format!("{classic}?classic=1")).await;
-            assert_eq!(bypass.status, StatusCode::NOT_FOUND, "{classic}");
-            assert!(!bypass.text().contains(SECRET), "{classic}");
+    for (classic, spa, _) in gap_pages(DIRECT_KEVIN_BENDER, message.id) {
+        for path in [classic.clone(), format!("{classic}?classic=1")] {
+            let reply = david.get(&path).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{path}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
+            assert!(!reply.text().contains(SECRET), "{path}");
         }
+        // The classic page itself, as a script fetches it, still refuses a non-member.
+        let fetched = david.classic_page(&classic).await;
+        assert_eq!(fetched.status, StatusCode::NOT_FOUND, "{classic}");
+        assert!(!fetched.text().contains(SECRET), "{classic}");
+    }
+    // The room's permalink doesn't confirm a message David can't read: it stays a query on the
+    // plain room route, `classic` dropped.
+    for path in [
+        format!("/rooms/{DIRECT_KEVIN_BENDER}?message_id={}", message.id),
+        format!(
+            "/rooms/{DIRECT_KEVIN_BENDER}?message_id={}&classic=1",
+            message.id
+        ),
+    ] {
+        let reply = david.get(&path).await;
+        assert_eq!(
+            reply.location(),
+            Some(
+                to(&format!(
+                    "/app/r/{DIRECT_KEVIN_BENDER}?message_id={}",
+                    message.id
+                ))
+                .as_str()
+            ),
+            "{path}"
+        );
+        assert!(!reply.text().contains(SECRET), "{path}");
     }
     // After redirecting, the resolver and room tools still authorize their data reads.
     for path in [
@@ -424,37 +542,22 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
     }
     let mut anonymous = a.anonymous();
     for (classic, _, _) in gap_pages(DIRECT_KEVIN_BENDER, message.id) {
-        let reply = anonymous.get(&classic).await;
-        assert_eq!(
-            reply.location(),
-            Some(to("/session/new").as_str()),
-            "{classic}"
-        );
-        assert!(!reply.text().contains(SECRET), "{classic}");
+        for path in [classic.clone(), format!("{classic}?classic=1")] {
+            let reply = anonymous.get(&path).await;
+            assert_eq!(
+                reply.location(),
+                Some(to("/session/new").as_str()),
+                "{path}"
+            );
+            assert!(!reply.text().contains(SECRET), "{path}");
+        }
     }
-}
-
-#[tokio::test]
-async fn classic_1_keeps_them_on_the_classic_page() {
-    let Some(a) = enabled().await else { return };
-    let room = room(&a).await;
-    choose(&a, DAVID, UiPreference::Next).await;
-    let mut b = a.sign_in(DAVID).await;
-    let page = b.get(&format!("/rooms/{room}?classic=1")).await;
-    assert_eq!(
-        (page.status, page.content_type()),
-        (StatusCode::OK, Some("text/html; charset=utf-8"))
-    );
-    assert!(redirected_to_spa(
-        &b.get(&format!("/rooms/{room}?classic=0")).await
-    ));
 }
 
 #[tokio::test]
 async fn only_html_navigations_of_ported_pages_redirect() {
     let Some(a) = enabled().await else { return };
     let room = room(&a).await;
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut b = a.sign_in(DAVID).await;
     let room_path = format!("/rooms/{room}");
     let requests = [
@@ -492,7 +595,6 @@ async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
         assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
         Ok(bot.id)
     }).await.unwrap();
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut b = a.sign_in(DAVID).await;
     for (id, destination) in [
         (DAVID, "/app/settings".to_string()),
@@ -507,8 +609,9 @@ async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
         }
     }
     assert_eq!(b.get("/users/me/profile/edit").await.location(), Some(to("/app/settings").as_str()));
-    assert_eq!(b.get("/users/me/profile/edit?classic=1").await.status, StatusCode::NOT_FOUND);
-    assert_eq!(b.get(&format!("/users/{bot}?classic=1")).await.status, StatusCode::OK);
+    // `?classic=1` no longer keeps the classic answer (the edit alias's 404, the bot's page).
+    assert_eq!(b.get("/users/me/profile/edit?classic=1").await.location(), Some(to("/app/settings").as_str()));
+    assert_eq!(b.get(&format!("/users/{bot}?classic=1")).await.location(), Some(to(&format!("/app/people/{bot}")).as_str()));
 }
 
 async fn profile_edit_is_not_found(browser: &mut Browser<'_>, query: &str) {
@@ -532,39 +635,57 @@ async fn signed_out_profile_edit_keeps_classic_not_found() {
 async fn bot_key_profile_edit_keeps_classic_not_found() {
     use crate::controllers::presenters::test_support::BENDER_KEY;
 
-    let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else { return };
+    let Some(a) = enabled().await else { return };
     let mut browser = a.anonymous();
     profile_edit_is_not_found(&mut browser, &format!("?classic=1&bot_key={BENDER_KEY}")).await;
     profile_edit_is_not_found(&mut browser, &format!("?bot_key={BENDER_KEY}")).await;
 }
 
+/// A classic action that leaves a notice for the next page no longer keeps that page classic: the
+/// notice rides the redirect, and the SPA shell's boot JSON shows it once.
 #[tokio::test]
-async fn disabled_spa_profile_edit_keeps_classic_not_found() {
-    use crate::controllers::presenters::test_support::BENDER_KEY;
-
-    let Some(a) = app(&[("SPA_ENABLED", "0"), ("SPA_DEFAULT", "next")]).await else { return };
-    choose(&a, DAVID, UiPreference::Next).await;
-    profile_edit_is_not_found(&mut a.anonymous(), "").await;
-    profile_edit_is_not_found(&mut a.anonymous(), &format!("?bot_key={BENDER_KEY}")).await;
-    profile_edit_is_not_found(&mut a.sign_in(DAVID).await, "").await;
-}
-
-/// A classic action that leaves a notice for the next page keeps that page classic, so the
-/// notice shows; the next visit, with the flash shown, goes to the SPA again.
-#[tokio::test]
-async fn a_pending_flash_keeps_the_classic_page() {
+async fn a_pending_flash_follows_the_redirect_into_the_spa_shell() {
     let Some(a) = enabled().await else { return };
     let room = room(&a).await;
     let path = format!("/rooms/{room}");
-    choose(&a, DAVID, UiPreference::Next).await;
+    let spa = format!("/app/r/{room}");
     let mut b = a.sign_in(DAVID).await;
+    save_profile(&mut b).await;
+    let flashed = b.get(&path).await;
+    assert_eq!(flashed.status, StatusCode::FOUND);
+    assert_eq!(flashed.location(), Some(to(&spa).as_str()));
+    assert_shell_flash(&mut b, &spa).await;
+}
+
+/// The profile save's classic form post, which leaves `notice: "✓"` for the next page.
+async fn save_profile(b: &mut Browser<'_>) {
     let saved = b
         .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
         .await;
     assert_eq!(saved.status, StatusCode::FOUND);
-    let shown = b.get(&path).await;
-    assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
-    assert!(redirected_to_spa(&b.get(&path).await));
+}
+
+/// The shell's boot JSON in a page.
+fn boot_json(page: &str) -> serde_json::Value {
+    let pattern = regex::Regex::new(
+        r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#,
+    )
+    .unwrap();
+    serde_json::from_str(&pattern.captures(page).expect("the shell's boot JSON")[1]).unwrap()
+}
+
+/// The SPA shell at `spa` shows the profile notice in its boot JSON, then not on the next load.
+async fn assert_shell_flash(b: &mut Browser<'_>, spa: &str) {
+    let shell = b.get(spa).await;
+    assert_eq!(shell.status, StatusCode::OK, "{spa}: {:?}", shell.location());
+    assert_eq!(
+        boot_json(&shell.text())["flash"],
+        serde_json::json!({"kind": "notice", "message": "✓"}),
+        "{spa}"
+    );
+    let again = b.get(spa).await;
+    assert_eq!(again.status, StatusCode::OK, "{spa}");
+    assert!(boot_json(&again.text())["flash"].is_null(), "{spa} showed the notice once");
 }
 
 /// A page fetched by a script with the session cookie (`fetch()`, `curl`): `Accept: */*` and no
@@ -574,7 +695,6 @@ async fn a_pending_flash_keeps_the_classic_page() {
 async fn a_fetch_with_the_session_cookie_is_not_a_navigation() {
     let Some(a) = enabled().await else { return };
     let room = room(&a).await;
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut b = a.sign_in(DAVID).await;
     let path = format!("/rooms/{room}");
     for request in [
@@ -604,7 +724,7 @@ async fn a_fetch_with_the_session_cookie_is_not_a_navigation() {
 }
 
 /// Only a browser session is redirected: a bot key or an agent token reading a ported page, and
-/// any `POST` to one, get what they always got, even with everyone defaulted to the new UI.
+/// any `POST` to one, get what they always got.
 #[tokio::test]
 async fn keys_tokens_and_posts_are_never_redirected() {
     use crate::controllers::presenters::test_support::BENDER_KEY;
@@ -612,9 +732,7 @@ async fn keys_tokens_and_posts_are_never_redirected() {
     use sha2::{Digest, Sha256};
 
     const SECRET: &str = "coexistence-agent-credential";
-    let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
-        return;
-    };
+    let Some(a) = enabled().await else { return };
     let room = room(&a).await;
     a.db()
         .write(|tx| {
@@ -685,7 +803,6 @@ async fn keys_tokens_and_posts_are_never_redirected() {
 #[tokio::test]
 async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
     let Some(a) = enabled().await else { return };
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut david = a.sign_in(DAVID).await;
     for (classic, spa) in [
         ("/account/edit", "/app/admin"),
@@ -714,7 +831,6 @@ async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
 #[tokio::test]
 async fn the_bot_pages_redirect_but_their_saves_stay_classic() {
     let Some(a) = enabled().await else { return };
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut david = a.sign_in(DAVID).await;
     let bender = crate::controllers::presenters::test_support::BENDER;
     for (classic, spa) in [
@@ -751,152 +867,6 @@ async fn the_bot_pages_redirect_but_their_saves_stay_classic() {
 }
 
 #[tokio::test]
-async fn spa_default_next_moves_everyone_who_has_not_chosen_classic() {
-    let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
-        return;
-    };
-    let room = room(&a).await;
-    let path = format!("/rooms/{room}");
-    assert_eq!(stored(&a, JASON).await, None);
-    let mut jason = a.sign_in(JASON).await;
-    assert_eq!(
-        jason.get(&path).await.location(),
-        Some(to(&format!("/app/r/{room}")).as_str())
-    );
-
-    choose(&a, DAVID, UiPreference::Classic).await;
-    let mut david = a.sign_in(DAVID).await;
-    assert!(!redirected_to_spa(&david.get(&path).await));
-    let profile = david.get("/users/me/profile").await.text();
-    assert!(profile.contains("Try the new Smartfire"));
-}
-
-#[tokio::test]
-async fn nothing_changes_without_spa_enabled() {
-    for env in [&[][..], &[("SPA_DEFAULT", "next")][..]] {
-        let Some(a) = app(env).await else { return };
-        let room = room(&a).await;
-        choose(&a, DAVID, UiPreference::Next).await;
-        let mut b = a.sign_in(DAVID).await;
-        for path in ["/".to_string(), format!("/rooms/{room}")] {
-            assert!(!redirected_to_spa(&b.get(&path).await), "{env:?} {path}");
-        }
-        let profile = b.get("/users/me/profile").await;
-        assert_eq!(profile.status, StatusCode::OK);
-        assert!(
-            !profile.text().contains("next_ui") && !profile.text().contains("/app/ui_preference"),
-            "{env:?}"
-        );
-        let post = post_ui(&mut b, &[("ui", "classic")]).await;
-        assert_eq!(post.status, StatusCode::NOT_FOUND, "{env:?}");
-        assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Next));
-    }
-}
-
-#[tokio::test]
-async fn the_profile_switch_opts_in_and_back_out() {
-    let Some(a) = enabled().await else { return };
-    let mut b = a.sign_in(DAVID).await;
-    let profile = b.get("/users/me/profile").await.text();
-    assert!(profile.contains(r#"<div class="flex flex-wrap align-center gap pad-block-half" id="next_ui"><form class="button_to" data-turbo="false" method="post" action="/app/ui_preference"><button class="btn btn--reversed" type="submit">Try the new Smartfire</button>"#), "{profile}");
-    assert!(
-        profile.contains(r#"<input type="hidden" name="ui" value="next" /></form>"#),
-        "{profile}"
-    );
-
-    let opted_in = post_ui(&mut b, &[("ui", "next")]).await;
-    assert_eq!(opted_in.status, StatusCode::SEE_OTHER);
-    assert_eq!(opted_in.location(), Some(to("/app/").as_str()));
-    assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Next));
-
-    // The profile is the SPA's settings now; `?classic=1` keeps it here, with the way back.
-    assert_eq!(
-        b.get("/users/me/profile").await.location(),
-        Some(to("/app/settings").as_str())
-    );
-    let profile = b.get("/users/me/profile?classic=1").await;
-    assert_eq!(profile.status, StatusCode::OK);
-    let profile = profile.text();
-    assert!(
-        profile.contains(r#"<a class="btn btn--reversed" href="/app/">Open the new Smartfire</a>"#),
-        "{profile}"
-    );
-    assert!(
-        profile.contains("Switch to classic")
-            && profile.contains(r#"name="return_to" value="/users/me/profile""#),
-        "{profile}"
-    );
-
-    let opted_out = post_ui(
-        &mut b,
-        &[("ui", "classic"), ("return_to", "/app/r/5/t/9?m=3")],
-    )
-    .await;
-    assert_eq!(opted_out.status, StatusCode::SEE_OTHER);
-    assert_eq!(
-        opted_out.location(),
-        Some(to("/rooms/5/threads/9?m=3").as_str())
-    );
-    assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Classic));
-}
-
-#[tokio::test]
-async fn switching_to_classic_returns_only_to_local_pages() {
-    let Some(a) = enabled().await else { return };
-    let mut b = a.sign_in(DAVID).await;
-    for (return_to, landing) in [
-        (None, "/"),
-        (Some("/app/"), "/"),
-        (Some("/app"), "/"),
-        (Some("/app/r/12"), "/rooms/12"),
-        (Some("/app/r/12/m/34"), "/rooms/12/@34"),
-        (Some("/app/activity"), "/activity"),
-        (Some("/app/nowhere"), "/"),
-        (Some("/users/me/profile"), "/users/me/profile"),
-        (Some("/rooms/3?classic=1"), "/rooms/3?classic=1"),
-        (Some("//evil.example/x"), "/"),
-        (Some("/\\evil.example"), "/"),
-        (Some("https://evil.example/"), "/"),
-        (Some("javascript:alert(1)"), "/"),
-        (Some(""), "/"),
-    ] {
-        let mut pairs = vec![("ui", "classic")];
-        pairs.extend(return_to.map(|path| ("return_to", path)));
-        let reply = post_ui(&mut b, &pairs).await;
-        assert_eq!(reply.status, StatusCode::SEE_OTHER, "{return_to:?}");
-        assert_eq!(
-            reply.location(),
-            Some(to(landing).as_str()),
-            "{return_to:?}"
-        );
-    }
-}
-
-#[tokio::test]
-async fn the_switch_needs_a_known_ui_and_the_session_token() {
-    let Some(a) = enabled().await else { return };
-    let mut b = a.sign_in(DAVID).await;
-    for pairs in [&[("ui", "Next")][..], &[("ui", "")][..], &[][..]] {
-        assert_eq!(
-            post_ui(&mut b, pairs).await.status,
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "{pairs:?}"
-        );
-    }
-    let forged = b
-        .send(Req::new(Method::POST, "/app/ui_preference").form(&[("ui", "next")]))
-        .await;
-    assert_ne!(forged.status, StatusCode::SEE_OTHER);
-    assert_eq!(stored(&a, DAVID).await, None, "neither changed anything");
-
-    let signed_out = a
-        .anonymous()
-        .send(Req::new(Method::POST, "/app/ui_preference").form(&[("ui", "next")]))
-        .await;
-    assert_ne!(signed_out.status, StatusCode::SEE_OTHER);
-}
-
-#[tokio::test]
 async fn the_shell_loads_in_full_from_a_turbo_visit() {
     let Some(a) = enabled().await else { return };
     let mut b = a.sign_in(DAVID).await;
@@ -915,8 +885,6 @@ const BOARD_THREAD: i64 = 4;
 const RELEASE_BOARD: i64 = 699448332;
 const SPA_BOOT: &str = "<script type=\"application/json\" id=\"boot\"";
 const CLASSIC_SHELL: &str = "data-controller=\"local-time lightbox";
-/// The profile save's notice (`"✓"`), as the application layout renders the flash.
-const PROFILE_NOTICE: &str = "role=\"alert\" aria-atomic=\"true\">✓</span>";
 
 /// Follow redirects on `start` until a page, and return that page's path and body.
 async fn follow(b: &mut Browser<'_>, start: &str) -> (String, Reply) {
@@ -956,8 +924,6 @@ fn assert_page(path: &str, reply: &Reply, classic: bool) {
 #[tokio::test]
 async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
     let Some(a) = enabled().await else { return };
-    choose(&a, DAVID, UiPreference::Next).await;
-    choose(&a, KEVIN, UiPreference::Next).await;
     let mut david = a.sign_in(DAVID).await;
     let owned = david
         .get(&format!("/rooms/{DESIGNERS_ROOM}?thread={LAUNCH_THREAD}"))
@@ -1058,75 +1024,63 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
     );
 }
 
-/// Settings and another person's profile alias, followed to the page each UI actually opens.
+/// Settings and another person's profile alias, followed to the page they open: the SPA screen,
+/// whatever was chosen and with or without `?classic=1`. A direct message has no SPA settings, so
+/// its alias opens the classic direct-message edit form.
 #[tokio::test]
-async fn settings_and_profile_aliases_follow_through_for_each_ui() {
+async fn settings_and_profile_aliases_follow_through_to_the_spa() {
     let Some(a) = enabled().await else { return };
     let closed = WATERCOOLER;
     let board = 699448332i64;
     let direct = 186869642i64;
-    choose(&a, DAVID, UiPreference::Next).await;
-    let mut next = a.sign_in(DAVID).await;
-    let (path, page) = follow(&mut next, &format!("/rooms/{closed}/settings")).await;
-    assert_eq!(path, format!("/app/r/{closed}/settings"));
-    assert_page(&path, &page, false);
-    let (path, page) = follow(&mut next, &format!("/rooms/{board}/settings")).await;
-    assert_eq!(path, format!("/app/r/{board}/settings"));
-    assert_page(&path, &page, false);
-    let (path, page) = follow(&mut next, &format!("/rooms/{direct}/settings")).await;
-    assert_eq!(path, format!("/rooms/directs/{direct}/edit?classic=1"));
-    assert_page(&path, &page, true);
-    let (path, page) = follow(&mut next, &format!("/rooms/{closed}/settings?classic=1")).await;
-    assert_eq!(path, format!("/rooms/closeds/{closed}/edit?classic=1"));
-    assert_page(&path, &page, true);
-    let (path, page) = follow(&mut next, &format!("/users/{JASON}/profile")).await;
-    assert_eq!(path, format!("/app/people/{JASON}"));
-    assert_page(&path, &page, false);
-    let (path, page) = follow(&mut next, &format!("/users/{JASON}/profile?classic=1")).await;
-    assert_eq!(path, format!("/users/{JASON}?classic=1"));
-    assert_page(&path, &page, true);
-
-    choose(&a, DAVID, UiPreference::Classic).await;
-    let mut classic = a.sign_in(DAVID).await;
-    let (path, page) = follow(&mut classic, &format!("/rooms/{closed}/settings")).await;
-    assert_eq!(path, format!("/rooms/closeds/{closed}/edit"));
-    assert_page(&path, &page, true);
-    let (path, page) = follow(&mut classic, &format!("/rooms/{board}/settings")).await;
-    assert_eq!(path, format!("/rooms/boards/{board}/edit"));
-    assert_page(&path, &page, true);
-    let (path, page) = follow(&mut classic, &format!("/users/{JASON}/profile")).await;
-    assert_eq!(path, format!("/users/{JASON}"));
-    assert_page(&path, &page, true);
-    assert!(
-        page.text().contains("Jason"),
-        "the person page, not the viewer's profile"
-    );
+    for preference in [None, Some(UiPreference::Classic)] {
+        if let Some(preference) = preference {
+            choose(&a, DAVID, preference).await;
+        }
+        let mut b = a.sign_in(DAVID).await;
+        for query in ["", "?classic=1"] {
+            let label = format!("{preference:?} {query}");
+            let (path, page) = follow(&mut b, &format!("/rooms/{closed}/settings{query}")).await;
+            assert_eq!(path, format!("/app/r/{closed}/settings"), "{label}");
+            assert_page(&path, &page, false);
+            let (path, page) = follow(&mut b, &format!("/rooms/{board}/settings{query}")).await;
+            assert_eq!(path, format!("/app/r/{board}/settings"), "{label}");
+            assert_page(&path, &page, false);
+            let (path, page) = follow(&mut b, &format!("/rooms/{direct}/settings{query}")).await;
+            assert_eq!(path, format!("/rooms/directs/{direct}/edit"), "{label}");
+            assert_page(&path, &page, true);
+            let (path, page) = follow(&mut b, &format!("/users/{JASON}/profile{query}")).await;
+            assert_eq!(path, format!("/app/people/{JASON}"), "{label}");
+            assert_page(&path, &page, false);
+        }
+    }
 }
 
-/// A pending flash, an XHR, or a Turbo frame keeps the settings and own-profile aliases
-/// classic. The same URLs go to the SPA on an ordinary navigation once nothing is waiting.
+/// An XHR or a Turbo frame keeps the settings and own-profile aliases classic. A pending flash no
+/// longer does: the notice rides the redirect into the SPA shell.
 #[tokio::test]
-async fn settings_and_profile_aliases_stay_classic_for_flash_xhr_and_turbo_frames() {
+async fn settings_and_profile_aliases_stay_classic_for_xhr_and_turbo_frames_but_not_a_flash() {
     let Some(a) = enabled().await else { return };
     let closed = WATERCOOLER;
-    choose(&a, DAVID, UiPreference::Next).await;
     let mut b = a.sign_in(DAVID).await;
     let settings = format!("/rooms/{closed}/settings");
-    let edit = format!("/rooms/closeds/{closed}/edit?classic=1");
+    let edit = format!("/rooms/closeds/{closed}/edit");
     let profile = format!("/users/{DAVID}/profile");
     let guards = [
         ("xhr", "x-requested-with", "XMLHttpRequest"),
         ("turbo", "turbo-frame", "alias"),
     ];
     for (label, name, value) in guards {
-        let settings_reply = b
-            .send(Req::new(Method::GET, &settings).header(name, value))
-            .await;
-        assert_eq!(
-            settings_reply.location(),
-            Some(to(&edit).as_str()),
-            "{label}"
-        );
+        for path in [settings.clone(), format!("{settings}?classic=1")] {
+            let settings_reply = b
+                .send(Req::new(Method::GET, &path).header(name, value))
+                .await;
+            assert_eq!(
+                settings_reply.location(),
+                Some(to(&edit).as_str()),
+                "{label} {path}"
+            );
+        }
         let profile_reply = b
             .send(Req::new(Method::GET, &profile).header(name, value))
             .await;
@@ -1150,41 +1104,16 @@ async fn settings_and_profile_aliases_stay_classic_for_flash_xhr_and_turbo_frame
         }
     }
 
-    let saved = b
-        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
-        .await;
-    assert_eq!(saved.status, StatusCode::FOUND);
+    save_profile(&mut b).await;
     let flashed = b.get(&settings).await;
-    assert_eq!(flashed.location(), Some(to(&edit).as_str()));
-    let shown = b.get(&edit).await;
-    assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
-    assert!(shown.text().contains(CLASSIC_SHELL));
-    assert!(
-        shown.text().contains(PROFILE_NOTICE),
-        "the profile notice should survive the settings hop"
-    );
-    assert!(redirected_to_spa(&b.get(&settings).await));
+    let spa_settings = format!("/app/r/{closed}/settings");
+    assert_eq!(flashed.location(), Some(to(&spa_settings).as_str()));
+    assert_shell_flash(&mut b, &spa_settings).await;
 
-    let saved = b
-        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
-        .await;
-    assert_eq!(saved.status, StatusCode::FOUND);
+    save_profile(&mut b).await;
     let flashed_profile = b.get(&profile).await;
-    assert_eq!(
-        flashed_profile.status,
-        StatusCode::OK,
-        "{:?}",
-        flashed_profile.location()
-    );
-    assert!(flashed_profile.text().contains(CLASSIC_SHELL));
-    assert!(
-        flashed_profile.text().contains(PROFILE_NOTICE),
-        "the profile notice should render on the numeric profile"
-    );
-    assert_eq!(
-        b.get(&profile).await.location(),
-        Some(to("/app/settings").as_str())
-    );
+    assert_eq!(flashed_profile.location(), Some(to("/app/settings").as_str()));
+    assert_shell_flash(&mut b, "/app/settings").await;
 }
 
 #[path = "spa_coexistence_tests/auth_return.rs"]

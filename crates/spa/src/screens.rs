@@ -1,11 +1,12 @@
 //! The screen map: which classic pages have an SPA equivalent, and where each one lives under
-//! `/app/`. It drives both directions of the coexistence (plan §5.0):
+//! `/app/`. The SPA is the only UI for signed-in people, so the classic URLs are aliases:
 //!
-//! - A person who uses the new UI and opens a **ported** classic page (`GET`, an HTML
-//!   navigation) is sent to its SPA URL ([`spa_url`]); `?classic=1` keeps them on the classic page.
+//! - A signed-in person who opens a **ported** classic page (`GET`, an HTML navigation) is sent to
+//!   its SPA URL ([`spa_url`]). A `classic` query parameter is dropped; it no longer keeps anyone
+//!   on the classic page.
 //! - The SPA reads the same table (`frontend/src/gen/screens.json`, written from [`SCREENS`] by
-//!   [`json`]) to open classic links it has ported in place, and to send a destination it hasn't
-//!   ported yet to its classic page with a full page load ([`classic_url`] is the same mapping).
+//!   [`json`]) to open classic links it has ported in place. [`classic_url`] is the reverse
+//!   mapping.
 //!
 //! One classic page can hold several SPA screens (the profile page's sections): each has a row, all
 //! map back to it, and its redirect goes to the first. Several classic links can also share an SPA
@@ -13,7 +14,7 @@
 //! A slice that ports a screen adds its SPA
 //! route and flips `ported` here in the same PR. Unported
 //! rows name where a screen will live, so the SPA can link there already: the server never
-//! redirects to them, and the SPA forwards them to the classic page.
+//! redirects to them.
 //!
 //! Patterns use the route table's syntax without `(.:format)`: a segment is a literal, or a
 //! literal prefix and a `:param` (`@:message_id`). Every parameter is a record id, so it matches
@@ -80,7 +81,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:board_id/automations",
         true,
     ),
-    // S8: message aliases share the permalink; the room's permalink above wins on opt-out.
+    // S8: message aliases share the permalink; the room's permalink above maps back first.
     screen(
         "messages#show",
         "/rooms/:room_id/messages/:id",
@@ -300,7 +301,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings",
         true,
     ),
-    // Sections of the classic profile page: they map back to it ("Switch to classic"), and its
+    // Sections of the classic profile page: they map back to it ([`classic_url`]), and its
     // redirect goes to the row above.
     screen(
         "users/profiles#show",
@@ -696,9 +697,8 @@ fn from_hex(byte: u8) -> Option<u8> {
     }
 }
 
-/// The classic URL for an SPA `path` (under `/app/`), ported or not: where "Switch to classic"
-/// lands, and where the SPA sends a destination it hasn't built. `query` carries over, less
-/// `classic`.
+/// The classic URL for an SPA `path` (under `/app/`), ported or not: the reverse of [`spa_url`].
+/// `query` carries over, less `classic`.
 pub fn classic_url(path: &str, query: Option<&str>) -> Option<String> {
     SCREENS.iter().find_map(|screen| {
         Some(with_query(
@@ -804,15 +804,6 @@ fn with_query(mut url: String, query: Option<&str>) -> String {
         url.push_str(&kept.join("&"));
     }
     url
-}
-
-/// Whether a request's query asks to stay on the classic page: a `classic` parameter, any value
-/// but `0` or empty.
-pub fn bypassed(query: Option<&str>) -> bool {
-    query.unwrap_or("").split('&').any(|pair| {
-        let (name, value) = pair.split_once('=').unwrap_or((pair, "1"));
-        name == "classic" && !matches!(value, "" | "0")
-    })
 }
 
 #[cfg(test)]

@@ -313,7 +313,7 @@ async fn the_settings_read_as_the_classic_profile_page_shows_them() {
     assert_eq!(settings.integrations.slack_import_path, "/slack/imports");
 
     // The classic page agrees on what it can show.
-    let page = b.get("/users/me/profile").await.text();
+    let page = b.classic_page("/users/me/profile").await.text();
     assert!(page.contains(&settings.profile.name), "the name");
     for switch in &settings.notifications.inbox {
         assert!(page.contains(&switch.label), "{}", switch.label);

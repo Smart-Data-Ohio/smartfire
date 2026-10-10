@@ -261,6 +261,13 @@ pub struct TestApp {
     _dir: tempfile::TempDir,
 }
 
+/// Whether a test app serves the SPA. A running app always does (`Config::spa_enabled`); a test
+/// that names `SPA_ENABLED` (any value) gets that. The classic page tests, which name nothing, keep
+/// the classic pages they were written against until those pages are deleted.
+pub fn serves_spa(extra: &[(&str, &str)]) -> bool {
+    extra.iter().any(|(name, _)| *name == "SPA_ENABLED")
+}
+
 impl TestApp {
     /// Start only when an ordered producer assertion is needed. Nothing is recorded by default.
     pub fn publications(&self) -> &campfire_cable::pubsub::PublicationCapture {
@@ -585,6 +592,7 @@ impl TestApp {
         .unwrap();
         // Every environment uses this private seed copy, not an empty environment-named database.
         config.storage.database = dir.path().join("db/production.sqlite3");
+        config.spa_enabled = serves_spa(extra);
         config
     }
 
@@ -915,6 +923,13 @@ impl Browser<'_> {
 
     pub async fn get(&mut self, path: &str) -> Reply {
         self.send(Req::new(Method::GET, path)).await
+    }
+
+    /// A classic page as a parity test reads it in an app that serves the SPA: a request that
+    /// isn't a navigation (`Accept: */*`), so the page answers instead of sending a signed-in
+    /// person to its SPA screen. Only until the classic pages are deleted.
+    pub async fn classic_page(&mut self, path: &str) -> Reply {
+        self.send(Req::new(Method::GET, path).header("accept", "*/*")).await
     }
 
     /// A write as the app's own pages make it: with the session's authenticity token in

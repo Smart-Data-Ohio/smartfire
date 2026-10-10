@@ -1,7 +1,7 @@
 {
   "version": 1,
   "title": "Smartfire navigation URL contract (cutover step 1)",
-  "notes": "Machine-readable pin of every navigation URL family and retained boundary from the SPA cutover inventory (AGENTS.md; ~/.cache/spa-cutover-inventory.md sections 1, 5, 6 row 1). Each entry names its broad family pattern plus concrete representative cases that run today over real HTTP against a booted TestApp (see crates/campfire/src/controllers/url_contract_tests.rs). The runner reads ALL expectation state from this file: later default flips and prefix drops must need only expectation edits here, never hardcoded path assertions in the test. Statuses pin 302 (classic navigation redirects, incl. SPA coexistence) vs 303 (POST /app/ui_preference only). Locations pin target query preservation and classic=1 handling. owner_today is one of classic/spa/both/server/static/api. after_cutover.action is one of spa (canonical same-path SPA screen, served or handed off internally without a self-redirect), alias (legacy HTML navigation redirects to target, preserving query context and authorization), retain (existing endpoint and behavior remain). known_bug records current defects or missing screens and their fix_before deadline. Expectations describe this revision, not permission to preserve bugs throughout cutover: fix blockers before their deadline and update their expectations with the behavior change. The contract tracks the screens and retained boundaries available in this revision.",
+  "notes": "Machine-readable pin of every navigation URL family and retained boundary from the SPA cutover inventory (AGENTS.md; ~/.cache/spa-cutover-inventory.md sections 1, 5, 6 row 1). Each entry names its broad family pattern plus concrete representative cases that run today over real HTTP against a booted TestApp (see crates/campfire/src/controllers/url_contract_tests.rs). The runner reads ALL expectation state from this file: later default flips and prefix drops must need only expectation edits here, never hardcoded path assertions in the test. Statuses pin 302 for classic navigation redirects to the SPA (since cutover step 26 every signed-in HTML navigation of a ported classic page, whatever a stored preference, ?classic=1 or the old SPA_ENABLED/SPA_DEFAULT switches say). Locations pin target query preservation; a classic parameter is dropped. owner_today is one of classic/spa/both/server/static/api. after_cutover.action is one of spa (canonical same-path SPA screen, served or handed off internally without a self-redirect), alias (legacy HTML navigation redirects to target, preserving query context and authorization), retain (existing endpoint and behavior remain). known_bug records current defects or missing screens and their fix_before deadline. Expectations describe this revision, not permission to preserve bugs throughout cutover: fix blockers before their deadline and update their expectations with the behavior change. The contract tracks the screens and retained boundaries available in this revision.",
   "placeholders": {
     "OPEN_ROOM": "201306877",
     "OPEN_PETS": "104393281",
@@ -94,7 +94,7 @@
       "category": "workspace",
       "classic_endpoint": "welcome#show",
       "owner_today": "both",
-      "after_cutover": {"action": "spa", "target": "/", "notes": "Overlaps the classic GET; preference-aware dispatch hands off internally, never redirects the path to itself."},
+      "after_cutover": {"action": "spa", "target": "/", "notes": "Overlaps the classic GET; every signed-in navigation hands off to /app/; never redirects the path to itself."},
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
@@ -103,12 +103,12 @@
       "notification_notes": "Mail sign-in alert links to /users/me/sessions, not here. Push click paths may be /.",
       "cases": [
         {"id": "root.next.redirect", "method": "GET", "path": "/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}},
-        {"id": "root.classic.redirect", "method": "GET", "path": "/", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/{OPEN_PETS}"}},
+        {"id": "root.classic.redirect", "method": "GET", "path": "/", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}},
         {"id": "root.default_next", "method": "GET", "path": "/", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": true, "expect": {"status": 302, "location": "/app/"}},
-        {"id": "root.default_classic", "method": "GET", "path": "/", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/{OPEN_PETS}"}},
-        {"id": "root.disabled", "method": "GET", "path": "/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/{OPEN_PETS}"}},
+        {"id": "root.default_classic", "method": "GET", "path": "/", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}},
+        {"id": "root.switch_off_ignored", "method": "GET", "path": "/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}},
         {"id": "root.anonymous", "method": "GET", "path": "/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": true, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "root.next.classic_escape", "method": "GET", "path": "/?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/{OPEN_PETS}"}}
+        {"id": "root.next.classic_escape", "method": "GET", "path": "/?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}}
       ]
     },
     {
@@ -128,9 +128,9 @@
       "cases": [
         {"id": "room.next.redirect", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}},
         {"id": "room.head.next", "method": "HEAD", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}", "body_empty": true}},
-        {"id": "room.classic.page", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "All Talk"], "absent": ["{SPA_BOOT}"]}},
+        {"id": "room.classic.page", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}},
         {"id": "room.anonymous", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "room.nonmember", "method": "GET", "path": "/rooms/{DIRECT_KB}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}}
+        {"id": "room.nonmember", "method": "GET", "path": "/rooms/{DIRECT_KB}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DIRECT_KB}"}}
       ]
     },
     {
@@ -193,8 +193,8 @@
         {"id": "kinds.voice.redirect", "method": "GET", "path": "/rooms/{VOICE_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{VOICE_ROOM}"}},
         {"id": "kinds.stage.redirect", "method": "GET", "path": "/rooms/{STAGE_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{STAGE_ROOM}"}},
         {"id": "kinds.board.redirect", "method": "GET", "path": "/rooms/{BOARD_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}"}},
-        {"id": "kinds.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Release board"]}},
-        {"id": "kinds.voice.classic", "method": "GET", "path": "/rooms/{VOICE_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Team lounge"]}}
+        {"id": "kinds.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}"}},
+        {"id": "kinds.voice.classic", "method": "GET", "path": "/rooms/{VOICE_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{VOICE_ROOM}"}}
       ]
     },
     {
@@ -256,7 +256,7 @@
       "notification_notes": "Thread-nudge push links carry thread/message context; preserve it through the alias.",
       "cases": [
         {"id": "permalink.next.redirect", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/@{MSG_DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}},
-        {"id": "permalink.classic.page", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/@{MSG_DAVID}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "{MSG_EXCERPT}"]}}
+        {"id": "permalink.classic.page", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/@{MSG_DAVID}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}}
       ]
     },
     {
@@ -275,10 +275,10 @@
       "notification_notes": "Message links in notifications use permalinks; same dependency.",
       "cases": [
         {"id": "msg.show.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}},
-        {"id": "msg.show.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "{MSG_EXCERPT}"]}},
+        {"id": "msg.show.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}},
         {"id": "msg.edit.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}},
-        {"id": "msg.edit.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "msg.edit.other.forbidden", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_JZ}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 403, "body_empty": true}}
+        {"id": "msg.edit.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}},
+        {"id": "msg.edit.other.forbidden", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_JZ}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_JZ}"}}
       ]
     },
     {
@@ -297,12 +297,12 @@
       "notification_notes": "No producer emits bare links.",
       "cases": [
         {"id": "bare.show.next", "method": "GET", "path": "/messages/{MSG_DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}},
-        {"id": "bare.show.classic404", "method": "GET", "path": "/messages/{MSG_DAVID}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "content_type_prefix": "text/html", "markers": ["{ERR404}"]}},
+        {"id": "bare.show.classic404", "method": "GET", "path": "/messages/{MSG_DAVID}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}},
         {"id": "bare.edit.next", "method": "GET", "path": "/messages/{MSG_DAVID}/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}},
-        {"id": "bare.edit.classic404", "method": "GET", "path": "/messages/{MSG_DAVID}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "content_type_prefix": "text/html", "markers": ["{ERR404}"]}},
+        {"id": "bare.edit.classic404", "method": "GET", "path": "/messages/{MSG_DAVID}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}},
         {"id": "bare.boosts.next", "method": "GET", "path": "/messages/{MSG_DAVID}/boosts", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}},
-        {"id": "bare.boosts.classic", "method": "GET", "path": "/messages/{MSG_DAVID}/boosts", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "bare.boosts.new.classic", "method": "GET", "path": "/messages/{MSG_DAVID}/boosts/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}}
+        {"id": "bare.boosts.classic", "method": "GET", "path": "/messages/{MSG_DAVID}/boosts", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}},
+        {"id": "bare.boosts.new.classic", "method": "GET", "path": "/messages/{MSG_DAVID}/boosts/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/m/{MSG_DAVID}"}}
       ]
     },
     {
@@ -321,13 +321,13 @@
       "notification_notes": "Involvement state drives unread; keep the JSON twin.",
       "cases": [
         {"id": "panes.threads.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/threads", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/threads"}},
-        {"id": "panes.threads.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/threads", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "panes.threads.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/threads", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/threads"}},
         {"id": "panes.files.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/files", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/files"}},
-        {"id": "panes.files.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/files", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "panes.files.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/files", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/files"}},
         {"id": "panes.pins.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/pins", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/pins"}},
-        {"id": "panes.pins.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/pins", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "panes.pins.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/pins", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/pins"}},
         {"id": "panes.involvement.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/involvement", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/notifications"}},
-        {"id": "panes.involvement.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/involvement", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}}
+        {"id": "panes.involvement.classic", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/involvement", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/notifications"}}
       ]
     },
     {
@@ -346,14 +346,14 @@
       "notification_notes": "Thread push links carry ?thread=:id; translate into the thread route, not a plain room route.",
       "cases": [
         {"id": "thread.show.next", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/t/{THREAD_DESIGNERS}"}},
-        {"id": "thread.show.classic", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Launch review"]}},
+        {"id": "thread.show.classic", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/t/{THREAD_DESIGNERS}"}},
         {"id": "thread.board.next", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/t/{BOARD_THREAD}"}},
-        {"id": "thread.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Planned work"]}},
+        {"id": "thread.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/t/{BOARD_THREAD}"}},
         {"id": "thread.content.html", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "absent": ["{CLASSIC_SHELL}", "{SPA_BOOT}", "id=\"root\""], "markers": ["thread-panel__thread-content", "data-controller=\"thread-messages\""]}},
         {"id": "thread.content.json500", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "headers": {"accept": "application/json"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "content_type_prefix": "application/json", "markers": ["{\"status\":406,\"error\":\"Not Acceptable\"}"]}},
         {"id": "thread.new.board", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/posts/new"}},
-        {"id": "thread.new.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}},
-        {"id": "thread.new.plain404", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}}
+        {"id": "thread.new.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/posts/new"}},
+        {"id": "thread.new.plain404", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/posts/new"}}
       ]
     },
     {
@@ -412,12 +412,12 @@
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "roomforms.opens.new", "method": "GET", "path": "/rooms/opens/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/rooms/new/open"}},
-        {"id": "roomforms.opens.edit", "method": "GET", "path": "/rooms/opens/{OPEN_ROOM}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "roomforms.boards.new", "method": "GET", "path": "/rooms/boards/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "roomforms.opens.edit", "method": "GET", "path": "/rooms/opens/{OPEN_ROOM}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{OPEN_ROOM}/settings"}},
+        {"id": "roomforms.boards.new", "method": "GET", "path": "/rooms/boards/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/rooms/new/board"}},
         {"id": "roomforms.boards.new.next", "method": "GET", "path": "/rooms/boards/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/rooms/new/board"}},
-        {"id": "roomforms.boards.edit", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "roomforms.boards.edit", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
         {"id": "roomforms.boards.edit.next", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
-        {"id": "roomforms.boards.edit.next.bypass", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/edit?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}}
+        {"id": "roomforms.boards.edit.next.bypass", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/edit?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}}
       ]
     },
     {
@@ -456,17 +456,17 @@
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "GET /rooms/:id/settings redirects by room type. Next UI opens /app/r/:id/settings for open, closed, voice, stage and board (the kinds the SPA settings dialog edits). A direct goes to its classic edit form with classic=1, so it isn't bounced into the SPA. classic=1 on the alias is carried onto the edit form. The route table and recognition vectors still record rooms/settings#show as a missing controller, which is what Rails' route set says; the runtime handles the path.",
+      "notes": "GET /rooms/:id/settings redirects by room type. A signed-in navigation opens /app/r/:id/settings for open, closed, voice, stage and board (the kinds the SPA settings dialog edits). A direct goes to its classic edit form (no SPA screen yet). A classic parameter on the alias is dropped. The route table and recognition vectors still record rooms/settings#show as a missing controller, which is what Rails' route set says; the runtime handles the path.",
       "bookmark_notes": "No stable bookmarks; creation links live in the sidebar.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "errors.room.settings500", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/closeds/{CLOSED_ROOM}/edit"}},
+        {"id": "errors.room.settings500", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/settings"}},
         {"id": "errors.room.settings.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/settings"}},
-        {"id": "errors.room.settings.next.bypass", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/closeds/{CLOSED_ROOM}/edit?classic=1"}},
-        {"id": "errors.room.settings.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/boards/{BOARD_ROOM}/edit"}},
+        {"id": "errors.room.settings.next.bypass", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/settings"}},
+        {"id": "errors.room.settings.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
         {"id": "errors.room.settings.board.next", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
-        {"id": "errors.room.settings.board.next.bypass", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/boards/{BOARD_ROOM}/edit?classic=1"}},
-        {"id": "errors.room.settings.direct.next", "method": "GET", "path": "/rooms/{DIRECT_DJ}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/directs/{DIRECT_DJ}/edit?classic=1"}}
+        {"id": "errors.room.settings.board.next.bypass", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
+        {"id": "errors.room.settings.direct.next", "method": "GET", "path": "/rooms/{DIRECT_DJ}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/directs/{DIRECT_DJ}/edit"}}
       ]
     },
     {
@@ -484,10 +484,10 @@
       "bookmark_notes": "Admin bookmark; keep reachable.",
       "notification_notes": "SLA nudges reference board posts; keep those links.",
       "cases": [
-        {"id": "automations.admin", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Automations for Release board", "SLA timers"]}},
+        {"id": "automations.admin", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
         {"id": "automations.admin.next", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
-        {"id": "automations.admin.next.bypass", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Automations for Release board", "SLA timers"], "location_absent": true}},
-        {"id": "automations.nonmember.redirect", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}},
+        {"id": "automations.admin.next.bypass", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
+        {"id": "automations.nonmember.redirect", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
         {"id": "automations.nonmember.next", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
         {"id": "automations.anonymous", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
       ]
@@ -510,10 +510,10 @@
         {"id": "events.index.next.redirect", "method": "GET", "path": "/rooms/{DESIGNERS}/events", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events"}},
         {"id": "events.show.next.redirect", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}"}},
         {"id": "events.attendance.next.redirect", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance"}},
-        {"id": "events.new", "method": "GET", "path": "/rooms/{DESIGNERS}/events/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "events.show", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Launch party planning"]}},
-        {"id": "events.edit", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "events.attendance", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "events.new", "method": "GET", "path": "/rooms/{DESIGNERS}/events/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/new"}},
+        {"id": "events.show", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}"}},
+        {"id": "events.edit", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}/edit"}},
+        {"id": "events.attendance", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance"}},
         {"id": "events.ics.406", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}.ics", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "content_type_prefix": "text/html", "body_empty": true}},
         {"id": "events.anonymous", "method": "GET", "path": "/rooms/{DESIGNERS}/events", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
       ]
@@ -536,13 +536,13 @@
         {"id": "agents.dir.next.redirect", "method": "GET", "path": "/agents", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents"}},
         {"id": "agents.approvals.next.redirect", "method": "GET", "path": "/agents/{AGENT}/approvals", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents/{AGENT}/approvals"}},
         {"id": "agents.ledger.next.redirect", "method": "GET", "path": "/agents/{AGENT}/events", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents/{AGENT}/events"}},
-        {"id": "agents.dir.bot403", "method": "GET", "path": "/agents", "auth": "bender", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 403}},
-        {"id": "agents.approvals.admin", "method": "GET", "path": "/agents/{AGENT}/approvals", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "agents.approvals.stranger404", "method": "GET", "path": "/agents/{AGENT}/approvals", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}},
-        {"id": "agents.approvals.unknown404", "method": "GET", "path": "/agents/999999999/approvals", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}},
-        {"id": "agents.ledger", "method": "GET", "path": "/agents/{AGENT}/events", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "agents.dir.bot403", "method": "GET", "path": "/agents", "auth": "bender", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents"}},
+        {"id": "agents.approvals.admin", "method": "GET", "path": "/agents/{AGENT}/approvals", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents/{AGENT}/approvals"}},
+        {"id": "agents.approvals.stranger404", "method": "GET", "path": "/agents/{AGENT}/approvals", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents/{AGENT}/approvals"}},
+        {"id": "agents.approvals.unknown404", "method": "GET", "path": "/agents/999999999/approvals", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents/999999999/approvals"}},
+        {"id": "agents.ledger", "method": "GET", "path": "/agents/{AGENT}/events", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/agents/{AGENT}/events"}},
         {"id": "agents.botprofile.next", "method": "GET", "path": "/users/{BENDER}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{BENDER}"}},
-        {"id": "agents.botprofile.classic", "method": "GET", "path": "/users/{BENDER}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}}
+        {"id": "agents.botprofile.classic", "method": "GET", "path": "/users/{BENDER}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{BENDER}"}}
       ]
     },
     {
@@ -561,9 +561,9 @@
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "people.index.next", "method": "GET", "path": "/users", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people"}},
-        {"id": "people.index.classic", "method": "GET", "path": "/users", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "people.index.classic", "method": "GET", "path": "/users", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people"}},
         {"id": "people.show.next", "method": "GET", "path": "/users/{JASON}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
-        {"id": "people.show.classic", "method": "GET", "path": "/users/{JASON}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Jason"]}},
+        {"id": "people.show.classic", "method": "GET", "path": "/users/{JASON}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
         {"id": "people.card", "method": "GET", "path": "/users/{JASON}/card", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Jason"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "people.card.unknown", "method": "GET", "path": "/users/999999999/card", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
       ]
@@ -579,23 +579,23 @@
       "bookmarks": true,
       "notifications": false,
     "known_bug": null,
-    "notes": "A numeric id equal to the viewer redirects like me, including edit aliases. Other ids open their SPA person page on ordinary next-UI navigations. Classic show aliases redirect to their person page, keeping the query. Edit aliases retain classic's 404. Navigation and pending-flash guards still apply. classic=0 and empty classic do NOT bypass (only classic=1 and other nonzero values do).",
+    "notes": "A numeric id equal to the viewer redirects like me, including edit aliases. Other ids open their SPA person page on ordinary next-UI navigations. Classic show aliases redirect to their person page, keeping the query. Edit aliases retain classic's 404. The navigation guard still applies. A classic parameter no longer bypasses anything.",
       "bookmark_notes": "Profile links from menus and mail (sign-in alert links /users/me/sessions).",
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "profile.me.next", "method": "GET", "path": "/users/me/profile", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
-        {"id": "profile.me.classic", "method": "GET", "path": "/users/me/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Try the new Smartfire"]}},
-        {"id": "profile.me.next.bypass", "method": "GET", "path": "/users/me/profile?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Open the new Smartfire"], "location_absent": true}},
+        {"id": "profile.me.classic", "method": "GET", "path": "/users/me/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
+        {"id": "profile.me.next.bypass", "method": "GET", "path": "/users/me/profile?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
         {"id": "profile.me.next.classic0", "method": "GET", "path": "/users/me/profile?classic=0", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
         {"id": "profile.numeric.stays", "method": "GET", "path": "/users/{DAVID}/profile", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
-        {"id": "profile.other.renders.own", "method": "GET", "path": "/users/{JASON}/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/users/{JASON}"}},
+        {"id": "profile.other.renders.own", "method": "GET", "path": "/users/{JASON}/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
         {"id": "profile.other.next", "method": "GET", "path": "/users/{JASON}/profile", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
         {"id": "profile.own.show.next", "method": "GET", "path": "/users/{DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
         {"id": "profile.me.edit.next", "method": "GET", "path": "/users/me/profile/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
         {"id": "profile.numeric.edit.next", "method": "GET", "path": "/users/{DAVID}/profile/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
         {"id": "profile.other.edit.next", "method": "GET", "path": "/users/{JASON}/profile/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
-        {"id": "profile.me.edit.classic", "method": "GET", "path": "/users/me/profile/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
-        {"id": "profile.other.next.bypass", "method": "GET", "path": "/users/{JASON}/profile?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/users/{JASON}?classic=1"}}
+        {"id": "profile.me.edit.classic", "method": "GET", "path": "/users/me/profile/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
+        {"id": "profile.other.next.bypass", "method": "GET", "path": "/users/{JASON}/profile?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}}
       ]
     },
     {
@@ -615,9 +615,9 @@
       "cases": [
         {"id": "sections.status.next", "method": "GET", "path": "/users/me/status/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/status"}},
         {"id": "sections.sessions.next", "method": "GET", "path": "/users/me/sessions", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/sessions"}},
-        {"id": "sections.sessions.classic", "method": "GET", "path": "/users/me/sessions", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "sections.sessions.classic", "method": "GET", "path": "/users/me/sessions", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/sessions"}},
         {"id": "sections.devices.next", "method": "GET", "path": "/users/me/push_subscriptions", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/devices"}},
-        {"id": "sections.devices.classic", "method": "GET", "path": "/users/me/push_subscriptions", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}}
+        {"id": "sections.devices.classic", "method": "GET", "path": "/users/me/push_subscriptions", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/devices"}}
       ]
     },
     {
@@ -636,8 +636,8 @@
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "account.edit.next", "method": "GET", "path": "/account/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin"}},
-        {"id": "account.edit.classic", "method": "GET", "path": "/account/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "account.edit.member", "method": "GET", "path": "/account/edit", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "account.edit.classic", "method": "GET", "path": "/account/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin"}},
+        {"id": "account.edit.member", "method": "GET", "path": "/account/edit", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin"}},
         {"id": "account.icons.next", "method": "GET", "path": "/account/icons", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/icons"}},
         {"id": "account.styles.next", "method": "GET", "path": "/account/custom_styles/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/styles"}},
         {"id": "account.audit.next", "method": "GET", "path": "/account/audit_log", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/audit-log"}},
@@ -663,13 +663,13 @@
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "bots.index.next", "method": "GET", "path": "/account/bots", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots"}},
-        {"id": "bots.index.classic", "method": "GET", "path": "/account/bots", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "bots.index.classic", "method": "GET", "path": "/account/bots", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots"}},
         {"id": "bots.new.next", "method": "GET", "path": "/account/bots/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots/new"}},
         {"id": "bots.edit.next", "method": "GET", "path": "/account/bots/{BENDER}/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots/{BENDER}"}},
-        {"id": "bots.edit.classic", "method": "GET", "path": "/account/bots/{BENDER}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "bots.edit.classic", "method": "GET", "path": "/account/bots/{BENDER}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots/{BENDER}"}},
         {"id": "bots.creds.next", "method": "GET", "path": "/account/bots/{BENDER}/credentials", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots/{BENDER}/credentials"}},
         {"id": "bots.grants.next", "method": "GET", "path": "/account/bots/{BENDER}/grants", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots/{BENDER}/grants"}},
-        {"id": "bots.member403", "method": "GET", "path": "/account/bots", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 403}}
+        {"id": "bots.member403", "method": "GET", "path": "/account/bots", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/bots"}}
       ]
     },
     {
@@ -688,16 +688,16 @@
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "slack.setup.next", "method": "GET", "path": "/account/slack_import", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack"}},
-        {"id": "slack.setup.classic", "method": "GET", "path": "/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "slack.setup.classic", "method": "GET", "path": "/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "slack.runs.next", "method": "GET", "path": "/account/slack_import/runs", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack/runs"}},
-        {"id": "slack.runs.classic", "method": "GET", "path": "/account/slack_import/runs", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "slack.runs.classic", "method": "GET", "path": "/account/slack_import/runs", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack/runs"}},
         {"id": "slack.personal.next", "method": "GET", "path": "/slack/imports", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/slack"}},
-        {"id": "slack.personal.classic", "method": "GET", "path": "/slack/imports", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "slack.run.classic", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "slack.personal.classic", "method": "GET", "path": "/slack/imports", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/slack"}},
+        {"id": "slack.run.classic", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack/runs/1"}},
         {"id": "slack.run.next", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack/runs/{SLACK_RUN}"}},
-        {"id": "slack.plan.classic", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}/plan", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Import plan"]}},
+        {"id": "slack.plan.classic", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}/plan", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack/runs/1/plan"}},
         {"id": "slack.plan.next", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}/plan", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack/runs/{SLACK_RUN}/plan"}},
-        {"id": "slack.personal_detail.classic", "method": "GET", "path": "/slack/imports/{SLACK_PERSONAL}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "slack.personal_detail.classic", "method": "GET", "path": "/slack/imports/{SLACK_PERSONAL}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/slack/2"}},
         {"id": "slack.personal_detail.next", "method": "GET", "path": "/slack/imports/{SLACK_PERSONAL}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings/slack/{SLACK_PERSONAL}"}},
         {"id": "slack.run_status", "method": "GET", "path": "/account/slack_import/runs/{SLACK_RUN}/status", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["completed"], "absent": ["{SPA_BOOT}"], "location_absent": true}},
         {"id": "slack.personal_status", "method": "GET", "path": "/slack/imports/{SLACK_PERSONAL}/status", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["completed"], "absent": ["{SPA_BOOT}"], "location_absent": true}}
@@ -719,15 +719,15 @@
       "notification_notes": "Activity links into events and approvals stay classic until those screens exist.",
       "cases": [
         {"id": "lists.activity.next", "method": "GET", "path": "/activity", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/activity"}},
-        {"id": "lists.activity.classic", "method": "GET", "path": "/activity", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "lists.activity.classic", "method": "GET", "path": "/activity", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/activity"}},
         {"id": "lists.saved.next", "method": "GET", "path": "/saved", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/saved"}},
-        {"id": "lists.saved.classic", "method": "GET", "path": "/saved", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "lists.saved.classic", "method": "GET", "path": "/saved", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/saved"}},
         {"id": "lists.scheduled.next", "method": "GET", "path": "/scheduled_messages", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/scheduled"}},
-        {"id": "lists.scheduled.classic", "method": "GET", "path": "/scheduled_messages", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "lists.scheduled.classic", "method": "GET", "path": "/scheduled_messages", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/scheduled"}},
         {"id": "lists.search.next", "method": "GET", "path": "/searches", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/search"}},
-        {"id": "lists.search.classic", "method": "GET", "path": "/searches", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "lists.search.classic", "method": "GET", "path": "/searches", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/search"}},
         {"id": "lists.work.next", "method": "GET", "path": "/work", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/work"}},
-        {"id": "lists.work.classic", "method": "GET", "path": "/work", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}}
+        {"id": "lists.work.classic", "method": "GET", "path": "/work", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/work"}}
       ]
     },
     {
@@ -741,14 +741,14 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
         {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "{SPA_RELOAD}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
         {"id": "app.noslash", "method": "GET", "path": "/app", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}},
         {"id": "app.anonymous", "method": "GET", "path": "/app/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "app.disabled", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
+        {"id": "app.switch_off_ignored", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}
       ]
     },
     {
@@ -762,7 +762,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
@@ -782,7 +782,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
@@ -815,7 +815,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
@@ -845,7 +845,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
@@ -868,7 +868,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
@@ -887,7 +887,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
@@ -1072,9 +1072,9 @@
       "cases": [
         {"id": "oauth.slack.start.anon", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
         {"id": "oauth.slack.start.nosudo", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/sudo/new"}},
-        {"id": "oauth.slack.start.sudo.classic", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "sudo": true, "expect": {"status": 302, "location": "/account/slack_import"}},
+        {"id": "oauth.slack.start.sudo.classic", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "sudo": true, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "oauth.slack.start.sudo.next", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "sudo": true, "expect": {"status": 302, "location": "/app/admin/slack"}},
-        {"id": "oauth.slack.callback.classic", "method": "GET", "path": "/slack/oauth/callback", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/account/slack_import"}},
+        {"id": "oauth.slack.callback.classic", "method": "GET", "path": "/slack/oauth/callback", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "oauth.slack.callback.next", "method": "GET", "path": "/slack/oauth/callback", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "oauth.google.connect.anon", "method": "POST", "path": "/google/connect", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
         {"id": "oauth.google.connect.unconfigured", "method": "POST", "path": "/google/connect", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 404}},
@@ -1088,13 +1088,13 @@
         {"id": "oauth.google.signin.signedin", "method": "POST", "path": "/session/google", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 302, "location": "/"}},
         {"id": "oauth.google.signin.anon", "method": "POST", "path": "/session/google", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 404}},
         {"id": "oauth.google.signin.callback.unconfigured", "method": "GET", "path": "/session/google/callback", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
-        {"auth": "david", "before": [{"capture_query": {"GOOGLE_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/google/connect"}], "expect": {"location": "/users/me/profile", "status": 302, "session": {"flash": {"flashes": {"notice": "Google Calendar connected."}}}}, "fixture_profile": "oauth", "id": "oauth.google.callback.configured.classic", "method": "GET", "path": "/google/callback?code=contract-code&state={GOOGLE_OAUTH_STATE}", "preference": "classic", "spa_enabled": true, "sudo": true},
+        {"auth": "david", "before": [{"capture_query": {"GOOGLE_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/google/connect"}], "expect": {"status": 302, "location": "/app/settings/integrations"}, "fixture_profile": "oauth", "id": "oauth.google.callback.configured.classic", "method": "GET", "path": "/google/callback?code=contract-code&state={GOOGLE_OAUTH_STATE}", "preference": "classic", "spa_enabled": true, "sudo": true},
         {"auth": "david", "before": [{"capture_query": {"GOOGLE_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/google/connect"}], "expect": {"location": "/app/settings/integrations", "status": 302, "session": {"flash": {"flashes": {"notice": "Google Calendar connected."}}}}, "fixture_profile": "oauth", "id": "oauth.google.callback.configured.next", "method": "GET", "path": "/google/callback?code=contract-code&state={GOOGLE_OAUTH_STATE}", "preference": "next", "spa_enabled": true, "sudo": true},
-        {"auth": "david", "before": [{"capture_query": {"GITHUB_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://github.com/login/oauth/authorize", "status": 302}, "method": "GET", "path": "/github/app/connect"}], "expect": {"location": "/users/me/profile", "status": 302, "session": {"flash": {"flashes": {"notice": "GitHub connected as contract-octocat."}}}}, "fixture_profile": "oauth", "id": "oauth.github.callback.configured.classic", "method": "GET", "path": "/github/app/callback?code=contract-code&state={GITHUB_OAUTH_STATE}", "preference": "classic", "spa_enabled": true, "sudo": true},
+        {"auth": "david", "before": [{"capture_query": {"GITHUB_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://github.com/login/oauth/authorize", "status": 302}, "method": "GET", "path": "/github/app/connect"}], "expect": {"status": 302, "location": "/app/settings/integrations"}, "fixture_profile": "oauth", "id": "oauth.github.callback.configured.classic", "method": "GET", "path": "/github/app/callback?code=contract-code&state={GITHUB_OAUTH_STATE}", "preference": "classic", "spa_enabled": true, "sudo": true},
         {"auth": "david", "before": [{"capture_query": {"GITHUB_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://github.com/login/oauth/authorize", "status": 302}, "method": "GET", "path": "/github/app/connect"}], "expect": {"location": "/app/settings/integrations", "status": 302, "session": {"flash": {"flashes": {"notice": "GitHub connected as contract-octocat."}}}}, "fixture_profile": "oauth", "id": "oauth.github.callback.configured.next", "method": "GET", "path": "/github/app/callback?code=contract-code&state={GITHUB_OAUTH_STATE}", "preference": "next", "spa_enabled": true, "sudo": true},
-        {"after": [{"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"connection": {"state": "connected"}, "teamName": "URL contract R3", "teamKnown": true}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/admin/slack"}], "auth": "david", "before": [{"capture_query": {"SLACK_OAUTH_STATE": "state"}, "expect": {"location_prefix": "https://slack.com/oauth/v2/authorize", "status": 302}, "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import"}], "expect": {"location": "/account/slack_import", "session": {"flash": {"flashes": {"notice": "Slack connected."}}}, "status": 302}, "fixture_profile": "oauth_slack_r3", "id": "oauth.slack.callback.configured.classic", "method": "GET", "path": "/slack/oauth/callback?code=contract-code&state={SLACK_OAUTH_STATE}", "preference": "classic", "spa_default_next": false, "spa_enabled": true, "sudo": true},
+        {"after": [{"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"connection": {"state": "connected"}, "teamName": "URL contract R3", "teamKnown": true}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/admin/slack"}], "auth": "david", "before": [{"capture_query": {"SLACK_OAUTH_STATE": "state"}, "expect": {"location_prefix": "https://slack.com/oauth/v2/authorize", "status": 302}, "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import"}], "expect": {"status": 302, "location": "/app/admin/slack"}, "fixture_profile": "oauth_slack_r3", "id": "oauth.slack.callback.configured.classic", "method": "GET", "path": "/slack/oauth/callback?code=contract-code&state={SLACK_OAUTH_STATE}", "preference": "classic", "spa_default_next": false, "spa_enabled": true, "sudo": true},
         {"after": [{"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"connection": {"state": "connected"}, "teamName": "URL contract R3", "teamKnown": true}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/admin/slack"}], "auth": "david", "before": [{"capture_query": {"SLACK_OAUTH_STATE": "state"}, "expect": {"location_prefix": "https://slack.com/oauth/v2/authorize", "status": 302}, "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import"}], "expect": {"location": "/app/admin/slack", "session": {"flash": {"flashes": {"notice": "Slack connected."}}}, "status": 302}, "fixture_profile": "oauth_slack_r3", "id": "oauth.slack.callback.configured.next", "method": "GET", "path": "/slack/oauth/callback?code=contract-code&state={SLACK_OAUTH_STATE}", "preference": "next", "spa_default_next": false, "spa_enabled": true, "sudo": true},
-        {"after": [{"method": "POST", "path": "/two_factor_challenge", "csrf": true, "form": {"code": "{GOOGLE_SIGNIN_TOTP}"}, "expect": {"status": 302, "location": "/"}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/two_factor_challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.classic", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": false, "spa_enabled": true},
+        {"after": [{"method": "POST", "path": "/two_factor_challenge", "csrf": true, "form": {"code": "{GOOGLE_SIGNIN_TOTP}"}, "expect": {"status": 302, "location": "/app/"}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/two_factor_challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.classic", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": false, "spa_enabled": true},
         {"after": [{"method": "POST", "path": "/two_factor_challenge", "csrf": true, "form": {"code": "{GOOGLE_SIGNIN_TOTP}"}, "expect": {"status": 302, "location": "/app/"}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/two_factor_challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.next", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": true, "spa_enabled": true}
       ]
     },
@@ -1139,7 +1139,7 @@
         {"id": "errors.unknown.head", "method": "HEAD", "path": "/no-such-page", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}},
         {"id": "errors.rooms.new", "method": "GET", "path": "/rooms/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}},
         {"id": "errors.rooms.edit", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}},
-        {"id": "errors.profile.edit", "method": "GET", "path": "/users/me/profile/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
+        {"id": "errors.profile.edit", "method": "GET", "path": "/users/me/profile/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}}
       ]
     },
     {
@@ -1250,7 +1250,7 @@
         {"id": "api.me", "method": "GET", "path": "/api/v1/me", "headers": {"accept": "application/json"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "application/json", "markers": ["\"user\"", "\"emailAddress\""], "absent": ["{SPA_BOOT}", "{CLASSIC_SHELL}"]}},
         {"id": "api.me.anon401", "method": "GET", "path": "/api/v1/me", "headers": {"accept": "application/json"}, "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 401, "content_type_prefix": "application/json", "markers": ["\"_tag\":\"Unauthorized\"", "Sign in to continue"], "location_absent": true}},
         {"id": "api.room.unknown", "method": "GET", "path": "/api/v1/rooms/999999999", "headers": {"accept": "application/json"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "content_type_prefix": "application/json", "markers": ["\"_tag\":\"NotFound\""]}},
-        {"id": "api.disabled", "method": "GET", "path": "/api/v1/me", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
+        {"id": "api.switch_off_ignored", "method": "GET", "path": "/api/v1/me", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "application/json", "markers": ["\"user\""], "absent": ["{SPA_BOOT}", "{CLASSIC_SHELL}"]}, "headers": {"accept": "application/json"}},
         {"id": "api.unknown", "method": "GET", "path": "/api/v1/no-such-endpoint", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
         {"id": "api.boot", "method": "GET", "path": "/api/v1/boot", "headers": {"accept": "application/json"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "application/json", "markers": ["\"csrfToken\""]}},
         {"id": "api.boot.anon401", "method": "GET", "path": "/api/v1/boot", "headers": {"accept": "application/json"}, "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 401, "body_empty": true, "location_absent": true}},
@@ -1268,38 +1268,34 @@
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "Plain (non-WebSocket) GETs answer the cable 404 text, not the app error page. With the SPA disabled the sync route does not exist and falls through to the app 404. Upgrade flows are covered by the sync/cable suites.",
+      "notes": "Plain (non-WebSocket) GETs answer the cable 404 text, not the app error page. The sync route always exists: the old SPA_ENABLED switch no longer turns it off. Upgrade flows are covered by the sync/cable suites.",
       "bookmark_notes": "Not bookmarked.",
       "notification_notes": "Live delivery rides these sockets.",
       "cases": [
         {"id": "rt.cable.get404", "method": "GET", "path": "/cable", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "content_type_prefix": "text/plain", "markers": ["Page not found"]}},
         {"id": "rt.sync.get404", "method": "GET", "path": "/api/v1/sync", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "content_type_prefix": "text/plain", "markers": ["Page not found"]}},
-        {"id": "rt.sync.disabled", "method": "GET", "path": "/api/v1/sync", "auth": "anonymous", "preference": null, "spa_enabled": false, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
+        {"id": "rt.sync.switch_off_ignored", "method": "GET", "path": "/api/v1/sync", "auth": "anonymous", "preference": null, "spa_enabled": false, "spa_default_next": false, "expect": {"status": 404, "content_type_prefix": "text/plain", "markers": ["Page not found"]}}
       ]
     },
     {
       "id": "ui_preference",
-      "family": "UI switch",
+      "family": "Retired UI switch",
       "pattern": "POST /app/ui_preference",
       "category": "app",
-      "classic_endpoint": "spa#update_ui_preference",
+      "classic_endpoint": null,
       "owner_today": "spa",
-      "after_cutover": {"action": "retain", "target": "same URL until forced retirement", "notes": "Keep during default rollout. Replace/remove the menu and endpoint at forced retirement, and give old POSTs an explicit response."},
+      "after_cutover": {"action": "retain", "target": "none", "notes": "Removed at cutover step 26 with the SPA's Switch to classic and the classic profile's Try the new Smartfire: there is no way back to the classic UI."},
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "The only 303 in the contract. Next goes to /app/; classic maps return_to (SPA paths to their classic page, classic paths as-is, anything else to /).",
+      "notes": "POST answers 404 and stores nothing; GET is an ordinary SPA path (the shell, whose router shows its not-found page).",
       "bookmark_notes": "Not bookmarked; form posts only.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "ui.next", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "next"}, "expect": {"status": 303, "location": "/app/"}},
-        {"id": "ui.classic.spa_return", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "classic", "return_to": "/app/r/5/t/9?m=3"}, "expect": {"status": 303, "location": "/rooms/5/threads/9?m=3"}},
-        {"id": "ui.classic.bare", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "classic"}, "expect": {"status": 303, "location": "/"}},
-        {"id": "ui.classic.evil", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "classic", "return_to": "https://evil.example/"}, "expect": {"status": 303, "location": "/"}},
-        {"id": "ui.bogus", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "Next"}, "expect": {"status": 422}},
-        {"id": "ui.anonymous", "method": "POST", "path": "/app/ui_preference", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "form": {"ui": "next"}, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "ui.get404", "method": "GET", "path": "/app/ui_preference", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
-        {"id": "ui.disabled", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "classic", "spa_enabled": false, "spa_default_next": false, "form": {"ui": "next"}, "expect": {"status": 404, "markers": ["{ERR404}"]}}
+        {"id": "ui.next.gone", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "next"}, "expect": {"status": 404, "markers": ["{ERR404}"]}},
+        {"id": "ui.classic.spa_return.gone", "method": "POST", "path": "/app/ui_preference", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"ui": "classic", "return_to": "/app/r/5/t/9?m=3"}, "expect": {"status": 404, "markers": ["{ERR404}"]}},
+        {"id": "ui.anonymous.gone", "method": "POST", "path": "/app/ui_preference", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "form": {"ui": "next"}, "expect": {"status": 404, "markers": ["{ERR404}"]}},
+        {"id": "ui.get.spa_path", "method": "GET", "path": "/app/ui_preference", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}
       ]
     },
     {
@@ -1313,7 +1309,7 @@
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "Only a signed-in browser session navigating to HTML is redirected. Keys, tokens, POSTs, Turbo frames, XHR, and Accept */* fetches are not. A pending flash also keeps the classic page (covered by existing coexistence tests, not pinned here).",
+      "notes": "Only a signed-in browser session navigating to HTML is redirected. Keys, tokens, POSTs, Turbo frames, XHR, and Accept */* fetches are not. A pending flash no longer keeps the classic page: it is kept for the SPA shell, which shows it (covered by the coexistence tests, not pinned here).",
       "bookmark_notes": "n/a.",
       "notification_notes": "Bot writes reach broadcasts; keep those effects.",
       "cases": [
@@ -1339,12 +1335,12 @@
       "bookmark_notes": "Work links from threads.",
       "notification_notes": "Handoff notifications link here.",
       "cases": [
-        {"id": "work.handoff", "method": "GET", "path": "/threads/{WORK_THREAD}/work/handoff/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "work.handoff", "method": "GET", "path": "/threads/{WORK_THREAD}/work/handoff/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{WORK_THREAD}/handoff"}},
         {"id": "work.handoff.next", "method": "GET", "path": "/threads/{WORK_THREAD}/work/handoff/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{WORK_THREAD}/handoff"}},
-        {"id": "work.links", "method": "GET", "path": "/threads/{WORK_THREAD}/work/links", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "work.links", "method": "GET", "path": "/threads/{WORK_THREAD}/work/links", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{WORK_THREAD}/links"}},
         {"id": "work.links.next", "method": "GET", "path": "/threads/{WORK_THREAD}/work/links", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{WORK_THREAD}/links"}},
-        {"id": "work.handoff.untracked422", "method": "GET", "path": "/threads/{THREAD_DESIGNERS}/work/handoff/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 422, "body_empty": true}},
-        {"id": "work.links.untracked422", "method": "GET", "path": "/threads/{THREAD_DESIGNERS}/work/links", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 422, "body_empty": true}}
+        {"id": "work.handoff.untracked422", "method": "GET", "path": "/threads/{THREAD_DESIGNERS}/work/handoff/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{THREAD_DESIGNERS}/handoff"}},
+        {"id": "work.links.untracked422", "method": "GET", "path": "/threads/{THREAD_DESIGNERS}/work/links", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{THREAD_DESIGNERS}/links"}}
       ]
     },
     {
@@ -1381,7 +1377,7 @@
       "bookmark_notes": "Message actions link here.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "fizzy.new", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}/fizzy_cards/new", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}}
+        {"id": "fizzy.new", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/messages/{MSG_DAVID}/fizzy_cards/new", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}/fizzy/new"}}
       ]
     },
     {
@@ -1447,7 +1443,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (NotFound forwards unported destinations to classic with classic=1). Behind the common before-actions, so sign-in/2FA apply.",
+      "notes": "The server answers the shell (200) for every /app/* path; client-side routing decides (an unknown path is the SPA's not-found page; it never forwards to classic). Behind the common before-actions, so sign-in/2FA apply.",
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [

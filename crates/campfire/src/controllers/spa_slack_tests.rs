@@ -155,18 +155,21 @@ async fn refused(b: &mut Browser<'_>, method: Method, path: &str, body: Value, a
     assert_eq!(error["message"], alert, "{path}");
 }
 
-/// A classic redirect's flash, read from the page it lands on.
+/// A classic redirect's flash, read from the page it lands on: the classic page's SPA screen,
+/// whose shell carries the flash.
 async fn flash(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&str, &str)]) -> String {
-    let reply = b.write(Req::new(method, path).form(fields)).await;
+    let mut reply = b.write(Req::new(method, path).form(fields)).await;
     assert!(
         reply.status.is_redirection(),
         "{path}: {}: {}",
         reply.status,
         reply.text()
     );
-    let location = reply.header("location").expect("a redirect").to_owned();
-    let page = b.send(Req::new(Method::GET, &location)).await;
-    page.text()
+    for _ in 0..3 {
+        let Some(location) = reply.header("location").map(str::to_owned) else { break };
+        reply = b.send(Req::new(Method::GET, &location)).await;
+    }
+    reply.text()
 }
 
 // --- Reads and gates ---------------------------------------------------------------------------
@@ -1259,10 +1262,10 @@ async fn a_personal_import_undoes_as_the_classic_button_undoes_it() {
     .await;
 }
 
-/// Someone who uses the new UI lands on the SPA's Slack pages from the classic URLs, while the
-/// classic forms still post and redirect as before. A page a classic write left a notice for
-/// stays classic once so the notice shows (so does Slack's OAuth return, "Slack connected."); the
-/// next visit goes to the SPA. Someone who hasn't opted in keeps the classic pages.
+/// Signed-in people land on the SPA's Slack pages from the classic URLs, whatever their stored
+/// preference and with or without `?classic=1`, while the classic forms still post and redirect
+/// as before. A notice a classic write left goes with the redirect to the SPA shell, which shows
+/// it once.
 #[tokio::test]
 async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
@@ -1308,10 +1311,17 @@ async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
         );
     }
 
+    // `?classic=1` no longer keeps the classic page.
     let kept = david
         .get(&format!("/account/slack_import/runs/{dry_run}?classic=1"))
         .await;
-    assert_eq!(kept.status, StatusCode::OK);
+    assert_eq!(kept.status, StatusCode::FOUND);
+    assert!(
+        kept.location().is_some_and(|spa| spa
+            .starts_with(&format!("http://campfire.test/app/admin/slack/runs/{dry_run}"))),
+        "{:?}",
+        kept.location()
+    );
 
     // The classic form's start runs as before and answers with the classic redirect.
     let save = david
@@ -1325,19 +1335,21 @@ async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
     let location = save.location().expect("the classic redirect").to_owned();
     assert!(!location.contains("/app/"), "{location}");
 
-    // The page the notice waits for shows it, classic; the next visit goes to the SPA.
-    let shown = david.get(&location).await;
+    // The page the notice waits for goes to the SPA, which shows the notice once.
+    let redirected = david.get(&location).await;
+    assert_eq!(redirected.status, StatusCode::FOUND);
+    let spa = redirected
+        .location()
+        .filter(|spa| spa.starts_with("http://campfire.test/app/admin/slack/runs/"))
+        .unwrap_or_else(|| panic!("{:?}", redirected.location()))
+        .trim_start_matches("http://campfire.test")
+        .to_owned();
+    let shown = david.get(&spa).await;
     assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
     assert!(shown.text().contains("Dry run started."));
-    let again = david.get(&location).await;
-    assert_eq!(again.status, StatusCode::FOUND);
-    assert!(
-        again
-            .location()
-            .is_some_and(|spa| spa.starts_with("http://campfire.test/app/admin/slack/runs/")),
-        "{:?}",
-        again.location()
-    );
+    let again = david.get(&spa).await;
+    assert_eq!(again.status, StatusCode::OK);
+    assert!(!again.text().contains("Dry run started."));
 
     // A HEAD navigation redirects as a GET does.
     let head = david
@@ -1349,9 +1361,14 @@ async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
         Some("http://campfire.test/app/settings/slack")
     );
 
-    // Kevin hasn't opted in: the classic page.
+    // Kevin hasn't opted in: the SPA all the same.
     let mut kevin = a.sign_in(KEVIN).await;
-    assert_eq!(kevin.get("/slack/imports").await.status, StatusCode::OK);
+    let reply = kevin.get("/slack/imports").await;
+    assert_eq!(reply.status, StatusCode::FOUND);
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/settings/slack")
+    );
 }
 
 // --- Undo blocked, credentials of agents, racing starts ---------------------------------------

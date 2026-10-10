@@ -1,23 +1,11 @@
 import { describe, expect, it } from "vitest";
-import {
-  classicPageFor,
-  classicUrlFor,
-  SCREENS,
-  spaUrlFor,
-  unportedClassicPage,
-  withClassicBypass,
-} from "./screens.ts";
+import { SCREENS, spaUrlFor } from "./screens.ts";
 
 /** `pattern` with its parameters filled with 7, 8, 9 in order. */
 function sample(pattern: string): string {
   let next = 7;
 
   return pattern.replace(/:[a-z_]+/g, () => String(next++));
-}
-
-/** Parameter names do not distinguish paths that map to the same SPA screen. */
-function screenPattern(pattern: string): string {
-  return pattern.replace(/:[a-z_]+/g, ":id");
 }
 
 describe("the screen map", () => {
@@ -84,20 +72,6 @@ describe("the screen map", () => {
     }
   });
 
-  it("maps every SPA URL back to its first classic page, including shared destination aliases", () => {
-    for (const screen of SCREENS) {
-      const canonical = SCREENS.find((row) => screenPattern(row.spa) === screenPattern(screen.spa));
-
-      expect(classicUrlFor(sample(screen.spa)), screen.spa).toBe(
-        canonical === undefined ? null : sample(canonical.classic),
-      );
-    }
-
-    expect(classicUrlFor("/app")).toBe("/");
-    expect(classicUrlFor("/app/nowhere")).toBeNull();
-    expect(classicUrlFor("/app/r/general")).toBeNull();
-  });
-
   it("translates room notification queries into the thread and message routes", () => {
     expect(spaUrlFor("/rooms/12", "?thread=9&message_id=4")).toBe("/app/r/12/t/9?m=4");
     expect(spaUrlFor("/rooms/12", "?thread=9")).toBe("/app/r/12/t/9");
@@ -128,17 +102,6 @@ describe("the screen map", () => {
 
   it("carries the query over without classic", () => {
     expect(spaUrlFor("/rooms/12", "?a=1&classic=0&b=2")).toBe("/app/r/12?a=1&b=2");
-    expect(classicUrlFor("/app/search", "q=fire&classic=1")).toBe("/searches?q=fire");
-    expect(withClassicBypass("/activity")).toBe("/activity?classic=1");
-    expect(withClassicBypass("/searches?q=fire#top")).toBe("/searches?q=fire&classic=1#top");
-  });
-
-  it("finds the classic page for a router location, with or without the basepath", () => {
-    expect(unportedClassicPage("/activity", "")).toBe("/activity?classic=1");
-    expect(unportedClassicPage("/nowhere", "")).toBeNull();
-    expect(classicPageFor("/r/12", "?message_id=9")).toBe("/rooms/12?message_id=9&classic=1");
-    expect(classicPageFor("/app/r/12")).toBe("/rooms/12?classic=1");
-    expect(classicPageFor("/")).toBe("/?classic=1");
-    expect(classicPageFor("/nowhere")).toBe("/?classic=1");
+    expect(spaUrlFor("/searches", "q=fire&classic=1")).toBe("/app/search?q=fire");
   });
 });

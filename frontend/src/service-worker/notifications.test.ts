@@ -57,7 +57,7 @@ async function worker() {
 }
 
 describe("shared worker notifications", () => {
-  it("opens an old classic click URL unchanged so the server can honor the chosen UI", async () => {
+  it("opens an old classic click URL unchanged, for the server to send on to the SPA", async () => {
     const f = await worker();
     const close = vi.fn();
 

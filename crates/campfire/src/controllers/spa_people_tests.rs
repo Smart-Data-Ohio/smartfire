@@ -718,7 +718,7 @@ async fn legacy_bot_profiles_keep_classic_actions_and_admin_visibility() {
         assert!(profile.transfer_url.is_none());
         assert!(!profile.can_ban);
         assert_eq!(profile.can_manage_bot, viewer == DAVID);
-        let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+        let classic = browser.classic_page(&format!("/users/{id}")).await.text();
         assert_eq!(classic.contains("Manage capability grants"), viewer == DAVID);
     }
 }
@@ -739,7 +739,7 @@ async fn active_bot_profiles_allow_the_non_admin_agent_owner_to_manage() {
     let mut browser = a.sign_in(owner).await;
     let profile = check_profile(&a, &mut browser, owner, id).await;
     assert!(profile.can_manage_bot);
-    let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+    let classic = browser.classic_page(&format!("/users/{id}")).await.text();
     assert!(classic.contains("Manage capability grants"));
 }
 
@@ -763,7 +763,7 @@ async fn inactive_legacy_bot_profiles_hide_classic_actions() {
     assert!(profile.dnd_allowed.is_none());
     assert!(profile.email_address.is_none());
     assert!(profile.transfer_url.is_none());
-    let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+    let classic = browser.classic_page(&format!("/users/{id}")).await.text();
     assert!(classic.contains("Inactive Legacy Bot is no longer on this account"));
     assert!(!classic.contains("Manage capability grants"));
     assert!(!classic.contains("/rooms/directs?"));

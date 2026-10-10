@@ -739,23 +739,6 @@ fn every_spa_url_maps_back_to_its_first_classic_page() {
     assert_eq!(classic_url("/app/r/general", None), None);
 }
 
-#[test]
-fn classic_1_bypasses_the_redirect() {
-    for query in ["classic=1", "a=b&classic=1", "classic", "classic=true"] {
-        assert!(bypassed(Some(query)), "{query}");
-    }
-    for query in [
-        None,
-        Some(""),
-        Some("classic=0"),
-        Some("classic="),
-        Some("classical=1"),
-        Some("x=classic"),
-    ] {
-        assert!(!bypassed(query), "{query:?}");
-    }
-}
-
 /// `frontend/src/gen/screens.json` is [`json`]'s output. `UPDATE_SCREENS=1` (or `pnpm gen` in
 /// `frontend/`) rewrites it.
 #[test]

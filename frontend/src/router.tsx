@@ -647,7 +647,7 @@ export const router = createRouter({
   // 0, not TanStack's 500ms, including reduced motion: the 150ms wait and the ~300ms reveal already stop a flash.
   defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
   defaultPendingComponent: RoutePending,
-  // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
+  // An unknown SPA path is a 404; it never forwards to a classic page (the server would send it back).
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,
 });
