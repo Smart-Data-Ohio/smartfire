@@ -267,6 +267,8 @@ pub struct MessageParams {
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub attachments: Vec<Assignment>,
+    /// SPA uploads need recorded ownership; legacy signed blobs can predate that metadata.
+    pub require_upload_owner: bool,
     pub client_message_id: Option<String>,
     pub reply_to_message_id: Option<i64>,
     pub reply_notify_author: Option<bool>,
@@ -402,7 +404,7 @@ async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, cha
             changes.legacy_attachment_snapshot = Some(campfire_richtext::legacy_markdown::non_mention_attachments(&body)
                 .map_err(|error| campfire_db::Error::Other(error.to_string()))?);
         }
-        let blob = attachment_blob_for_message(tx, attachment, uploader_id, "attachment", Some(message.id))?;
+        let blob = attachment_blob_for_message(tx, attachment, uploader_id, "attachment", Some(message.id), false)?;
         if attachment_given { message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?; }
         message.edit(tx, changes)?;
         if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
@@ -578,7 +580,7 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
                 ..Default::default()
             })?;
             ThreadMembership::join(tx, thread.id, creator_id)?;
-            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id")?;
+            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id", attributes.require_upload_owner)?;
             let files = attachment_blobs(tx, files, creator_id)?;
             let message = thread.post_message(tx, creator_id, NewMessage {
                 markdown_source: attributes.markdown_source,
@@ -651,7 +653,7 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     None => attributes.client_message_id = None,
                 }
             }
-            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id")?;
+            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id", attributes.require_upload_owner)?;
             let mut files = attachment_blobs(tx, files, creator_id)?;
             let attributes = NewMessage {
                     room_id,
@@ -697,16 +699,19 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
 
 /// Resolve and claim an upload inside the same writer transaction that attaches it.
 /// BEGIN IMMEDIATE prevents another writer from claiming it before this save finishes.
-pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, uploader_id: i64, attribute: &'static str) -> campfire_db::Result<Option<Blob>> {
-    attachment_blob_for_message(tx, assignment, uploader_id, attribute, None)
+pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, uploader_id: i64, attribute: &'static str, require_upload_owner: bool) -> campfire_db::Result<Option<Blob>> {
+    attachment_blob_for_message(tx, assignment, uploader_id, attribute, None, require_upload_owner)
 }
 
-fn attachment_blob_for_message(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, uploader_id: i64, attribute: &'static str, message_id: Option<i64>) -> campfire_db::Result<Option<Blob>> {
+fn attachment_blob_for_message(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, uploader_id: i64, attribute: &'static str, message_id: Option<i64>, require_upload_owner: bool) -> campfire_db::Result<Option<Blob>> {
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => {
             let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?
                 .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+            if !require_upload_owner && current.metadata.get("uploader_id").is_none() {
+                return attachments::save_existing(tx, blob).map(Some);
+            }
             let owner = current.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64);
             let (current_attachment, attached_elsewhere): (bool, bool) = tx.conn().query_row(
                 "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND record_type='Message' AND record_id IS ?2 AND name IN ('attachment','attachments')),
@@ -728,7 +733,7 @@ fn attachment_blob_for_message(tx: &mut campfire_db::Tx<'_>, assignment: Assignm
 }
 
 fn attachment_blobs(tx: &mut campfire_db::Tx<'_>, assignments: Vec<Assignment<Staged>>, uploader_id: i64) -> campfire_db::Result<Vec<Blob>> {
-    assignments.into_iter().filter_map(|assignment| attachment_blob(tx, assignment, uploader_id, "attachment_signed_ids").transpose()).collect()
+    assignments.into_iter().filter_map(|assignment| attachment_blob(tx, assignment, uploader_id, "attachment_signed_ids", true).transpose()).collect()
 }
 
 /// Assigning something that isn't an upload, a signed blob id, nil or "".
@@ -755,7 +760,7 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         .db
         .write(move |tx| {
             let mut message = message;
-            let blob = attachment_blob_for_message(tx, attachment, uploader_id, "attachment", Some(message.id))?;
+            let blob = attachment_blob_for_message(tx, attachment, uploader_id, "attachment", Some(message.id), false)?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }

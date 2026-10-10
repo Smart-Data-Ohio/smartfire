@@ -636,6 +636,34 @@ async fn grouped_files_reject_already_attached_uploads_in_both_slots() {
 }
 
 #[tokio::test]
+async fn grouped_files_round7_legacy_signed_blobs_remain_shareable() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let file = upload(&mut david, "legacy.txt").await;
+    let file_id = blob_id(&a, &file);
+    let original_id = a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata='{}' WHERE id=?", [file_id])?;
+        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(file_id),
+            ..Default::default()
+        })?;
+        Ok(message.attachments(tx.conn())?[0].0.id)
+    }).await.unwrap();
+    let reply = david.write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages"))
+        .header("accept", "text/vnd.turbo-stream.html")
+        .header("content-type", "application/json")
+        .body(json!({"message": {"attachment": file.signed_id}}).to_string())).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    a.db().read(move |conn| {
+        let mut query = conn.prepare("SELECT id FROM active_storage_attachments WHERE blob_id=? ORDER BY id")?;
+        let ids = query.query_map([file_id], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        assert_eq!(ids.len(), 2);
+        assert_eq!(ids[0], original_id);
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
 async fn grouped_files_require_recorded_upload_ownership() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
@@ -657,20 +685,16 @@ async fn grouped_files_require_recorded_upload_ownership() {
         .await
         .unwrap();
     let before = write_counts(&a).await;
-    let reply = b
-        .write(json_body(
-            Method::POST,
-            &format!("/api/v1/rooms/{HQ}/messages"),
-            &json!({"clientMessageId": "unowned", "attachmentSignedIds": [file.signed_id]}),
-        ))
-        .await;
-    assert_eq!(
-        reply.status,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "{}",
-        reply.text()
-    );
-    assert_eq!(write_counts(&a).await, before);
+    for files in [
+        json!({"attachmentSignedId": file.signed_id}),
+        json!({"attachmentSignedIds": [file.signed_id]}),
+    ] {
+        for (path, body) in file_posts("unowned", files.clone()) {
+            let reply = b.write(json_body(Method::POST, &path, &body)).await;
+            assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {}", reply.text());
+            assert_eq!(write_counts(&a).await, before);
+        }
+    }
 }
 
 #[tokio::test]

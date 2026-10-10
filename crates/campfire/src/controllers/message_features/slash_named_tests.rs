@@ -128,9 +128,9 @@ async fn run(index: usize) {
             .unwrap()
             .iter()
             .filter(|q| {
-                q.contains("SELECT * FROM \"active_storage_attachments\"")
-                    && q.contains("\"record_id\" = ?")
-                    && q.contains("LIMIT 1")
+                q.contains("SELECT * FROM active_storage_attachments")
+                    && q.contains("record_id=?")
+                    && q.contains("name IN ('attachment','attachments')")
             })
             .count();
         let id = result.message_id;

@@ -341,10 +341,10 @@ async fn create_post(c: &mut Ctx) -> Result {
             {
                 return Ok((thread.id, false));
             }
-            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id")?;
+            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id", true)?;
             let mut blobs = Vec::with_capacity(files.len() + 1);
             for file in files {
-                if let Some(blob) = attachment_blob(tx, file, creator_id, "attachment_signed_ids")? { blobs.push(blob); }
+                if let Some(blob) = attachment_blob(tx, file, creator_id, "attachment_signed_ids", true)? { blobs.push(blob); }
             }
             let message = message.map(|message| NewMessage {
                 markdown_source: Some(message.markdown_source),

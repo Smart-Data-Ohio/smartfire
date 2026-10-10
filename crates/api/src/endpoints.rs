@@ -350,6 +350,7 @@ async fn post_message(c: &mut Ctx) -> Result {
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),
                 attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
+                require_upload_owner: true,
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
                 reply_notify_author: input.reply_notify_author,
