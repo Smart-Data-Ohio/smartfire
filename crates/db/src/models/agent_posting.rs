@@ -424,13 +424,7 @@ pub fn broadcast_stream_start(tx: &mut Tx<'_>, message: &Message) -> Result<()> 
         || room_dom_id(&room, Some("messages")),
         |id| dom_id("channel_thread", id, Some("messages")),
     );
-    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::append(
-        conversation_messages(tx.conn(), message)?,
-        target,
-        Partial::Message {
-            message_id: message.id,
-        },
-    )));
+    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
     Ok(())
 }
 

@@ -22,7 +22,7 @@ use campfire_views::messages as views;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::attachments::{self, Assignment};
-use crate::controllers::presenters::page::{self, Rendered, db_error};
+use crate::controllers::presenters::page::{self, db_error};
 use crate::controllers::presenters::{DbResolver, Presenter, room_kind};
 use crate::queue::{WEBHOOK_HOLD, WebhookJob};
 pub use crate::messaging::{canonicalize_body, process_attachment, save_staged};
@@ -752,63 +752,15 @@ pub async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<
 /// `@message.broadcast_create`: the message partial appended to the room, then the unread pings.
 pub async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
-    let base_url = page::renderer_base_url(c);
-    let viewer_id = require_current_user(c)?.id;
-    let refreshes = c.app()
-        .db
-        .read(move |conn| {
-            let mut presenter = Presenter::new(conn, &app, None);
-            presenter.use_viewer_zone(viewer_id)?;
-            let view = presenter.message(&message)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::uncached_message(ctx, &view));
-            let partials = Rendered { message: Some(html), ..Rendered::default() };
-            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
-            Ok(presenter.take_render_refreshes())
-        })
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
-    Ok(())
+    c.app().db.read(move |conn| {
+        app.broadcasts.message_create(conn, &room, &message, &*app.db.env().rich_text)
+    }).await.map_err(db_error)
 }
 
 /// `broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial:
 /// "messages/presentation", attributes: { maintain_scroll: true }`
 pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
-    let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
-    let base_url = page::renderer_base_url(c);
-    let refreshes = c.app()
-        .db
-        .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
-            let view = presenter.message(&message)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
-                views::PresentationPartial { ctx, message: &view }.render()
-            })
-            .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-            let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
-            app.broadcasts.message_replace(&room, &message, &partials);
-            let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
-                Ok([
-                    ("meta", views::MetaPartial {ctx, message: &view}.render()?),
-                    // Empty containers remove their old cards after an edit.
-                    ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
-                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
-                    ("message_link_cards", campfire_views::message_links::cards(ctx, &view).0),
-                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
-                    ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
-                    ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
-                ])
-            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-            for (part, html) in replacements {
-                app.broadcasts.message_part_replace(&room, &message, part, &html);
-            }
-            Ok(presenter.take_render_refreshes())
-        })
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
+    c.app().broadcasts.message_replace(room, message);
     Ok(())
 }
 

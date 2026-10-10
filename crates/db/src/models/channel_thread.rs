@@ -15,7 +15,7 @@ use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 use serde::{Deserialize, Serialize};
 
-use crate::broadcasts::{Broadcast, Partial, dom_id, room_messages};
+use crate::broadcasts::{Broadcast};
 use crate::database::Tx;
 use crate::error::{Error, Errors, OptionalExt, Result};
 use crate::events::{Event, Job};
@@ -1326,18 +1326,8 @@ pub fn thread_base_push(candidate: &ThreadPushCandidate) -> bool {
 
 /// The indicator replace (`messages/_thread_indicator`) for a thread's parent message.
 pub fn thread_indicator_broadcast(room: &Room, parent: &Message, reply_count: i64) -> Broadcast {
-    Broadcast::replace_keeping_scroll(
-        room_messages(room),
-        dom_id(
-            "message",
-            &parent.client_message_id,
-            Some("thread_indicator"),
-        ),
-        Partial::ThreadIndicator {
-            message_id: parent.id,
-            reply_count,
-        },
-    )
+    Broadcast::ThreadIndicator { message_id: parent.id,
+            reply_count }
 }
 
 /// `set_default_name`: the parent message's first line, truncated to 100 with "…", else

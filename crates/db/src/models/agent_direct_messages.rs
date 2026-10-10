@@ -5,7 +5,7 @@ use super::{
     agent_posting::{DriveInput, PostResult},
     agent_service::ServiceResult,
 };
-use crate::broadcasts::{Broadcast, Partial, Streamable, TurboAction, TurboStream};
+use crate::broadcasts::{Broadcast};
 use crate::sql::exists;
 use crate::{Agent, Message, NewMessage, Result, Room, Tx, User};
 use rusqlite::params;
@@ -77,21 +77,8 @@ pub fn open_and_post(
         return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
     }
     if new_room {
-        let member_ids = room.user_ids(tx.conn())?;
-        for m in room.memberships(tx.conn())? {
-            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::Turbo(TurboStream {
-                streamables: vec![
-                    Streamable::User(m.user_id),
-                    Streamable::Name("rooms".into()),
-                ],
-                action: TurboAction::Prepend,
-                target: "direct_rooms".into(),
-                partial: Some(Partial::DirectSidebar {
-                    membership_id: m.id,
-                    member_ids: member_ids.clone(),
-                }),
-                maintain_scroll: false,
-            })));
+        for membership in room.memberships(tx.conn())? {
+            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MembershipChanged { membership_id: membership.id }));
         }
         let user = User::find(tx.conn(), agent.user_id)?;
         AuditLog::record(

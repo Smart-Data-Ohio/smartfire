@@ -210,13 +210,7 @@ pub fn broadcast_update(tx: &mut Tx<'_>, message: &mut Message) -> Result<bool> 
 }
 pub(crate) fn broadcast_final(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     use crate::broadcasts::{Broadcast, Partial, conversation_messages, message_dom_id};
-    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::replace(
-        conversation_messages(tx.conn(), message)?,
-        message_dom_id(message, None),
-        Partial::MessageReplace {
-            message_id: message.id,
-        },
-    )));
+    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MessageUpdated { message_id: message.id }));
     Ok(())
 }
 pub fn trailing(tx: &mut Tx<'_>, job: &StreamTrailingBroadcastJob) -> Result<bool> {

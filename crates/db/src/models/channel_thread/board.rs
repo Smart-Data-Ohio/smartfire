@@ -2,7 +2,6 @@
 //! writes by the automation domain; work mutations use the merged WS11 agent APIs.
 use super::*;
 use crate::Involvement;
-use crate::broadcasts::{TurboAction, TurboStream};
 
 pub const BOARD_POSTS_PER_PAGE: i64 = 50;
 pub const BOARD_POSTS_MAX_PAGE: i64 = 20;
@@ -231,17 +230,7 @@ impl ChannelThread {
     }
 
     pub fn broadcast_board_row_replace(&self, tx: &mut Tx<'_>) -> Result<()> {
-        let room = self.room(tx.conn())?;
-        for column in [false, true] {
-            tx.emit_after_commit(Event::broadcast(&Broadcast::replace(
-                room_messages(&room),
-                self.board_row_id(column),
-                Partial::BoardRow {
-                    thread_id: self.id,
-                    column,
-                },
-            )));
-        }
+        ThreadWorkChange::emit(tx, self.id);
         Ok(())
     }
 
@@ -257,17 +246,7 @@ impl ChannelThread {
         )
     }
 
-    fn prepend_board_column(&self, tx: &mut Tx<'_>, room: &Room) {
-        tx.emit_after_commit(Event::broadcast(&board_prepend(
-            room,
-            &format!(
-                "board_column_{}",
-                self.work_status.as_deref().unwrap_or_default()
-            ),
-            self.id,
-            true,
-        )));
-    }
+
 
     pub(super) fn register_board_creation(tx: &mut Tx<'_>, id: i64, room: &Room) {
         if !room.board() {
@@ -279,13 +258,6 @@ impl ChannelThread {
                 return Ok(());
             };
             let room = thread.room(tx.conn())?;
-            tx.emit_after_commit(Event::broadcast(&board_prepend(
-                &room,
-                "board_posts",
-                id,
-                false,
-            )));
-            thread.prepend_board_column(tx, &room);
             let recipients = Membership::for_room(tx.conn(), room.id)?
                 .into_iter()
                 .filter(|membership| {
@@ -319,78 +291,27 @@ impl ChannelThread {
         });
     }
 
-    pub(super) fn register_board_update(
-        &self,
-        tx: &mut Tx<'_>,
-        room: &Room,
-        row_changed: bool,
-        status_changed: bool,
-    ) -> Result<()> {
-        if !room.board() || tx.has_commit_record("board_post_creation", self.id) {
-            return Ok(());
-        }
-        if row_changed {
+    pub(super) fn register_board_update(&self, tx: &mut Tx<'_>, room: &Room, row_changed: bool, _status_changed: bool) -> Result<()> {
+        if room.board() && !tx.has_commit_record("board_post_creation", self.id) && row_changed {
             ThreadWorkChange::emit(tx, self.id);
         }
-        let id = self.id;
-        tx.after_commit_record_latest("board_post_update", id, move |tx| {
-            if !row_changed {
-                return Ok(());
-            }
-            let Some(thread) = Self::find_by_id(tx.conn(), id)? else {
-                return Ok(());
-            };
-            if status_changed {
-                let room = thread.room(tx.conn())?;
-                tx.emit_after_commit(Event::broadcast(&Broadcast::replace(
-                    room_messages(&room),
-                    thread.board_row_id(false),
-                    Partial::BoardRow {
-                        thread_id: id,
-                        column: false,
-                    },
-                )));
-                tx.emit_after_commit(Event::broadcast(&Broadcast::remove(
-                    room_messages(&room),
-                    thread.board_row_id(true),
-                )));
-                thread.prepend_board_column(tx, &room);
-            } else {
-                thread.broadcast_board_row_replace(tx)?;
-            }
-            Ok(())
-        });
         Ok(())
     }
 
     pub(super) fn register_board_destruction(&self, tx: &mut Tx<'_>) -> Result<()> {
         let room = self.room(tx.conn())?;
-        if !room.board() {
-            return Ok(());
+        if room.board() {
+            let thread_id = self.id;
+            tx.after_commit_record("channel_threads", thread_id, move |tx| {
+                tx.emit_after_commit(Event::broadcast(&Broadcast::ThreadRemoved { thread_id, room_id: room.id }));
+                Ok(())
+            });
         }
-        let id = self.id;
-        tx.after_commit_record("channel_threads", id, move |tx| {
-            for prefix in ["board_row", "board_column_row"] {
-                tx.emit_after_commit(Event::broadcast(&Broadcast::remove(
-                    room_messages(&room),
-                    dom_id("channel_thread", id, Some(prefix)),
-                )));
-            }
-            Ok(())
-        });
         Ok(())
     }
 }
 
-fn board_prepend(room: &Room, target: &str, thread_id: i64, column: bool) -> Broadcast {
-    Broadcast::Turbo(TurboStream {
-        streamables: room_messages(room),
-        action: TurboAction::Prepend,
-        target: target.into(),
-        partial: Some(Partial::BoardRow { thread_id, column }),
-        maintain_scroll: false,
-    })
-}
+
 
 fn board_counts(
     conn: &Connection,

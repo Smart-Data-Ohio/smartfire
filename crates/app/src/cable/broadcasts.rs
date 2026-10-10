@@ -1,27 +1,7 @@
-//! The broadcast layer: a typed API for every broadcast the Rails app makes, producing exactly
-//! the stream names, targets and `<turbo-stream>` markup its Turbo and Action Cable calls do.
-//! `crates/cable/BROADCASTS.md` lists each of the app's broadcast calls and where it stands.
-//!
-//! - [`Stream`] names a stream the way `broadcast_*_to`/`turbo_stream_from` build it: records are
-//!   their GID param (`[@room, :messages]` is `<room gid param>:messages`), symbols themselves.
-//! - Targets are `dom_id`s ([`dom_id`], [`room_dom_id`], [`message_dom_id`]): STI rooms use their
-//!   own `param_key` (`messages_rooms_open_1`), and a message's `to_key` is its
-//!   `client_message_id` (`message_<uuid>`).
-//! - [`Broadcasts::turbo`] and its shorthands send a Turbo Stream action with HTML the caller
-//!   rendered (`campfire_views`, rendered once, outside any request, as
-//!   `ApplicationController.render` does); [`Broadcasts::channel`] is `ActionCable.server.broadcast`.
-//! - The named methods are the broadcasts of domains already ported, with their partials from
-//!   [`Partials`].
-//!
-//! Broadcast HTML is shared by every subscriber, so it must carry nothing session-bound: the cable
-//! server refuses (and logs) any that holds a CSRF token or CSP nonce
-//! (`campfire_cable::turbo::session_bound`).
-use campfire_cable::turbo::{Action, Target};
+//! JSON sync publications and the retained Action Cable channel notifications.
 use campfire_db::models::activity_item::ActivityItemsRemoved;
 use campfire_db::rich_text::RichText;
-use campfire_db::{Connection, Involvement, Membership, Message, Room};
-#[cfg(any(test, feature = "test-support"))]
-use campfire_db::Boost;
+use campfire_db::{Connection, Membership, Message, Room};
 use rails_compat::global_id::GlobalId;
 use serde::Serialize;
 
@@ -29,28 +9,6 @@ use campfire_db::broadcasts::unread_rooms_stream_name;
 
 use super::sync::{self, RendererSlot, SyncRenderer};
 use super::{Cable, read_rooms_stream_name, room_gid, thread_gid, user_gid};
-
-/// The partials Turbo renders for broadcasts (`ApplicationController.render(partial:, locals:)`,
-/// html format, no request). Each returns the rendered HTML.
-pub trait Partials: Send + Sync {
-    /// `messages/_message` with `message:`.
-    fn message(&self, message: &Message) -> String;
-    /// `messages/_presentation` with `message:`.
-    fn message_presentation(&self, message: &Message) -> String;
-    /// Legacy append-frame primitive, retained for the cable wire tests. The default serves the
-    /// crates above's non-test builds, whose implementations define it only under `cfg(test)`.
-    #[cfg(any(test, feature = "test-support"))]
-    fn boost(&self, _boost: &Boost) -> String {
-        String::new()
-    }
-    /// `users/sidebars/rooms/_shared` with `room:`.
-    fn shared_room(&self, room: &Room) -> String;
-    /// `users/sidebars/rooms/_direct` with `membership:`.
-    fn direct_room(&self, membership: &Membership) -> String;
-    /// The sidebar row for a room that isn't direct (`users/sidebars/rooms/_stage`, `_voice`,
-    /// `_board` or `_shared` by its type) with `room:`, `membership:` and, when given, `unread:`.
-    fn sidebar_row(&self, room: &Room, membership: &Membership, unread: Option<bool>) -> String;
-}
 
 /// `dom_id(record, prefix)`.
 pub fn dom_id(param_key: &str, key: impl std::fmt::Display, prefix: Option<&str>) -> String {
@@ -154,7 +112,6 @@ pub fn conversation_messages_target(room: &Room, message: &Message) -> String {
     }
 }
 
-const MAINTAIN_SCROLL: &[(&str, Option<&str>)] = &[("maintain_scroll", Some("true"))];
 
 /// `ActionCable.server.broadcast "user_#{id}_reads", { room_id: }`
 /// (reference/app/channels/presence_channel.rb, reference/app/controllers/rooms/reads_controller.rb).
@@ -295,57 +252,6 @@ impl Broadcasts {
         sync::sidebar_row_removed_later(&self.server, &self.sync, user_id, room_id);
     }
 
-    // The primitives
-
-    /// `broadcast_action_to stream, action:, target:, html:, attributes:` (`maintain_scroll: true`
-    /// is the only attribute the app passes). Returns how many subscribers it reached.
-    pub fn turbo(
-        &self,
-        stream: &Stream,
-        action: Action,
-        target: &str,
-        html: Option<&str>,
-        maintain_scroll: bool,
-    ) -> usize {
-        if html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots) {
-            tracing::error!("refusing to broadcast an unresolved CSRF token slot");
-            return 0;
-        }
-        let attributes = if maintain_scroll {
-            MAINTAIN_SCROLL
-        } else {
-            &[]
-        };
-        self.server.broadcast_action_to(
-            &stream.streamables(),
-            action,
-            Target::Target(target),
-            html,
-            attributes,
-        )
-    }
-
-    pub fn append(&self, stream: &Stream, target: &str, html: &str) -> usize {
-        self.turbo(stream, Action::Append, target, Some(html), false)
-    }
-
-    pub fn prepend(&self, stream: &Stream, target: &str, html: &str) -> usize {
-        self.turbo(stream, Action::Prepend, target, Some(html), false)
-    }
-
-    pub fn replace(&self, stream: &Stream, target: &str, html: &str) -> usize {
-        self.turbo(stream, Action::Replace, target, Some(html), false)
-    }
-
-    #[allow(dead_code)] // WS14's status and OOO broadcasts use this primitive.
-    pub fn update(&self, stream: &Stream, target: &str, html: &str) -> usize {
-        self.turbo(stream, Action::Update, target, Some(html), false)
-    }
-
-    pub fn remove(&self, stream: &Stream, target: &str) -> usize {
-        self.turbo(stream, Action::Remove, target, None, false)
-    }
-
     /// `ActionCable.server.broadcast broadcasting, payload`, for the channels' own streams
     /// (`UnreadThreadsChannel.stream_name_for`, `ActivityChannel.stream_name_for`, ...).
     pub fn channel<T: Serialize + ?Sized>(&self, broadcasting: &str, payload: &T) -> usize {
@@ -420,19 +326,9 @@ impl Broadcasts {
     /// `message.broadcast_create`: append the message to its conversation (`thread || room`),
     /// then, unless it's a thread message or a system note, `broadcast_unread_room`.
     pub fn message_create(
-        &self,
-        conn: &Connection,
-        room: &Room,
-        message: &Message,
-        partials: &dyn Partials,
+        &self, conn: &Connection, room: &Room, message: &Message,
         rich_text: &dyn RichText,
     ) -> campfire_db::Result<()> {
-        let html = partials.message(message);
-        self.append(
-            &Stream::conversation(room, message),
-            &conversation_messages_target(room, message),
-            &html,
-        );
         self.sync_message(conn, message, true);
         if message.thread_id.is_none() && !message.system_note {
             self.unread_room(conn, room, message, rich_text)?;
@@ -489,10 +385,6 @@ impl Broadcasts {
     /// `message.broadcast_remove`: `broadcast_remove_to message_stream_target, :messages`.
     /// MessagesController#destroy and `User#remove_banned_content`.
     pub fn message_remove(&self, room: &Room, message: &Message) {
-        self.remove(
-            &Stream::conversation(room, message),
-            &message_dom_id(message, None),
-        );
         sync::message_removed(&self.server, message);
         // Its unread count and pings, and their inbox items, went with it; every member's row
         // is read afresh, which also moves a direct row's preview back to the message before.
@@ -508,239 +400,44 @@ impl Broadcasts {
         }
     }
 
-    /// MessagesController#update: replace `[message, :presentation]` on `[@room, :messages]` (the
-    /// room's stream even for a thread message) with `messages/_presentation`, keeping the scroll
-    /// position. The controller's other replaces (`:meta` and the card containers) go through
-    /// [`Self::message_part_replace`].
-    pub fn message_replace(&self, room: &Room, message: &Message, partials: &dyn Partials) {
-        let html = partials.message_presentation(message);
-        self.message_part_replace(room, message, "presentation", &html);
+    /// A message edit also changes the newest direct-message preview.
+    pub fn message_replace(&self, room: &Room, message: &Message) {
+        sync::message_updated_later(&self.server, &self.sync, message.id);
+        self.direct_preview_later(room, message);
     }
 
-    /// `@message.broadcast_replace_to @room, :messages, target: [ @message, part ], partial:,
-    /// attributes: { maintain_scroll: true }` (MessagesController#update).
-    pub fn message_part_replace(&self, room: &Room, message: &Message, part: &str, html: &str) {
-        self.turbo(
-            &Stream::room_messages(room),
-            Action::Replace,
-            &message_dom_id(message, Some(part)),
-            Some(html),
-            true,
-        );
-        // Every edit replaces the presentation; its other parts don't change the DTO.
-        if part == "presentation" {
-            sync::message_updated_later(&self.server, &self.sync, message.id);
-            self.direct_preview_later(room, message);
-        }
-    }
-
-    /// `broadcast_reactions_replace`: `messages/boosts/_reactions` over `dom_id(message, :boosts)`
-    /// on the conversation, keeping the scroll position (Messages::BoostsController).
-    #[allow(dead_code)] // WS8 switches the inherited boost broadcasts to this API.
-    pub fn message_reactions_replace(&self, room: &Room, message: &Message, html: &str) {
-        self.turbo(
-            &Stream::conversation(room, message),
-            Action::Replace,
-            &message_dom_id(message, Some("boosts")),
-            Some(html),
-            true,
-        );
+    pub fn message_reactions_replace(&self, message: &Message) {
         sync::message_reactions_later(&self.server, &self.sync, message.id);
     }
 
-    /// `broadcast_replace_to` a thread reply's conversation over `dom_id(message, part)`,
-    /// keeping the scroll position (ChannelThreadMessagesController#update's edit frames).
-    pub fn message_thread_part_replace(&self, room: &Room, message: &Message, part: &str, html: &str) {
-        self.turbo(
-            &Stream::conversation(room, message),
-            Action::Replace,
-            &message_dom_id(message, Some(part)),
-            Some(html),
-            true,
-        );
-        if part == "presentation" {
-            sync::message_updated_later(&self.server, &self.sync, message.id);
-            self.direct_preview_later(room, message);
-        }
-    }
-
-    // Messages::BoostsController's `broadcast_create`/`broadcast_remove`
-
-    /// Legacy append frame, retained for the cable wire tests.
-    #[cfg(any(test, feature = "test-support"))]
-    pub fn boost_create(
-        &self,
-        room: &Room,
-        message: &Message,
-        boost: &Boost,
-        partials: &dyn Partials,
-    ) {
-        let html = partials.boost(boost);
-        let target = format!("boosts_message_{}", message.client_message_id);
-        self.turbo(
-            &Stream::conversation(room, message),
-            Action::Append,
-            &target,
-            Some(&html),
-            true,
-        );
-    }
-
-    /// Remove `dom_id(boost)` from the conversation.
-    // Current controllers replace grouped reactions. Keep the legacy frame primitive for its wire tests.
-    #[cfg(any(test, feature = "test-support"))]
-    pub fn boost_remove(&self, room: &Room, message: &Message, boost: &Boost) {
-        self.remove(
-            &Stream::conversation(room, message),
-            &dom_id("boost", boost.id, None),
-        );
-    }
-
-    // The sidebar's room lists (layouts/application.html.erb streams from `:rooms` and
-    // `[Current.user, :rooms]`).
-
-    /// RoomsController#destroy: remove `[room, :list]` from everyone's `:rooms`.
     pub fn room_remove(&self, room: &Room) {
-        self.remove(&Stream::rooms(), &room_dom_id(room, "list"));
         sync::room_removed(&self.server, &self.sync, room.id);
     }
 
-    /// Rooms::OpensController#create: prepend to everyone's `shared_rooms`.
-    pub fn open_room_create(&self, room: &Room, partials: &dyn Partials) {
-        self.prepend(
-            &Stream::rooms(),
-            "shared_rooms",
-            &partials.shared_room(room),
-        );
+    pub fn open_room_create(&self, room: &Room) {
         sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
-    /// Rooms::OpensController#update: replace `[room, :list]` on `:rooms`, then `[room, :header]`
-    /// with `rooms/show/header_identity` (`header`, when the caller rendered it). `room` is the
-    /// room as an open room (`becomes!(Rooms::Open)`), so the targets name that class even when
-    /// the room was closed before.
-    pub fn open_room_update(&self, room: &Room, partials: &dyn Partials, header: Option<&str>) {
-        self.replace(
-            &Stream::rooms(),
-            &room_dom_id(room, "list"),
-            &partials.shared_room(room),
-        );
-        if let Some(header) = header {
-            self.replace(&Stream::rooms(), &room_dom_id(room, "header"), header);
-        }
+    pub fn open_room_update(&self, room: &Room) {
         sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
-    /// Rooms::ClosedsController#create: render once, prepend to each member's own stream
-    /// (`room.users`).
-    pub fn closed_room_create(
-        &self,
-        conn: &Connection,
-        room: &Room,
-        partials: &dyn Partials,
-    ) -> campfire_db::Result<()> {
-        let html = partials.shared_room(room);
+    pub fn closed_room_create(&self, conn: &Connection, room: &Room) -> campfire_db::Result<()> {
         let user_ids = room.user_ids(conn)?;
-        for &user_id in &user_ids {
-            self.prepend(&Stream::user_rooms(user_id), "shared_rooms", &html);
-        }
         sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
         Ok(())
     }
 
-    /// Rooms::ClosedsController#update: after `memberships.revise`, replace `[room, :list]` for
-    /// each remaining member (`room` as a closed room), then `[room, :header]` for each.
-    pub fn closed_room_update(
-        &self,
-        conn: &Connection,
-        room: &Room,
-        partials: &dyn Partials,
-        header: Option<&str>,
-    ) -> campfire_db::Result<()> {
-        let html = partials.shared_room(room);
-        let target = room_dom_id(room, "list");
-        let user_ids = room.user_ids(conn)?;
-        for &user_id in &user_ids {
-            self.replace(&Stream::user_rooms(user_id), &target, &html);
-        }
-        if let Some(header) = header {
-            let target = room_dom_id(room, "header");
-            for &user_id in &user_ids {
-                self.replace(&Stream::user_rooms(user_id), &target, header);
-            }
-        }
-        sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
-        Ok(())
+    pub fn closed_room_update(&self, conn: &Connection, room: &Room) -> campfire_db::Result<()> {
+        self.closed_room_create(conn, room)
     }
 
-    /// Rooms::DirectsController#create: prepend `users/sidebars/rooms/_direct` to each member's
-    /// `direct_rooms`, rendered per membership.
-    pub fn direct_room_create(
-        &self,
-        conn: &Connection,
-        room: &Room,
-        partials: &dyn Partials,
-    ) -> campfire_db::Result<()> {
-        for membership in room.memberships(conn)? {
-            let html = partials.direct_room(&membership);
-            self.prepend(
-                &Stream::user_rooms(membership.user_id),
-                "direct_rooms",
-                &html,
-            );
-        }
+    pub fn direct_room_create(&self, room: &Room) {
         sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
-        Ok(())
     }
 
-    /// Rooms::InvolvementsController#update (`broadcast_visibility_changes`). `previous` is
-    /// `involvement_previously_was` (nil reads as no involvement: `nil.to_s.inquiry`).
-    pub fn involvement_change(
-        &self,
-        room: &Room,
-        membership: &Membership,
-        previous: Option<Involvement>,
-        partials: &dyn Partials,
-    ) {
-        sync::sidebar_rows_later(
-            &self.server,
-            &self.sync,
-            room.id,
-            Some(vec![membership.user_id]),
-        );
-        let stream = Stream::user_rooms(membership.user_id);
-        let was = |involvement| previous == Some(involvement);
-        let muted_transition =
-            membership.involved_in(Involvement::Muted) != was(Involvement::Muted);
-        if room.direct() {
-            if muted_transition {
-                self.replace(
-                    &stream,
-                    &room_dom_id(room, "list"),
-                    &partials.direct_room(membership),
-                );
-            }
-        } else if membership.involved_in(Involvement::Invisible) {
-            self.remove(&stream, &room_dom_id(room, "list"));
-        } else if was(Involvement::Invisible) {
-            let target = if room.stage() {
-                "stage_rooms"
-            } else if room.voice() {
-                "voice_rooms"
-            } else if room.board() {
-                "board_rooms"
-            } else {
-                "shared_rooms"
-            };
-            self.prepend(
-                &stream,
-                target,
-                &partials.sidebar_row(room, membership, None),
-            );
-        } else if muted_transition {
-            let html = partials.sidebar_row(room, membership, Some(membership.unread()));
-            self.replace(&stream, &room_dom_id(room, "list"), &html);
-        }
+    pub fn involvement_change(&self, room: &Room, membership: &Membership) {
+        sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(vec![membership.user_id]));
     }
 }
 

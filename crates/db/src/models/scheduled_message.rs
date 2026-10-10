@@ -5,7 +5,7 @@
 use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 
-use crate::broadcasts::{Broadcast, Partial, conversation_messages, dom_id, room_dom_id};
+use crate::broadcasts::{Broadcast};
 use crate::error::OptionalExt;
 use crate::models::message::SOURCE_LIMIT;
 use crate::sql::{CachedStatements, query_all, query_one};
@@ -519,13 +519,7 @@ impl ScheduledMessage {
             Some(thread) => dom_id("channel_thread", thread, Some("messages")),
             None => room_dom_id(&room, Some("messages")),
         };
-        tx.emit_after_commit(Event::broadcast(&Broadcast::append(
-            conversation_messages(tx.conn(), &message)?,
-            target,
-            Partial::Message {
-                message_id: message.id,
-            },
-        )));
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
         if message.thread_id.is_none() {
             let mentioned_ids: Vec<_> = message
                 .mentionees(tx.conn(), tx.rich_text())?

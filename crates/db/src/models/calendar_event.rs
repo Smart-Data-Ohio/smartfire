@@ -458,13 +458,7 @@ impl CalendarEvent {
             },
         )?;
         let room = Room::find(tx.conn(), self.room_id)?;
-        tx.emit_after_commit(SideEffect::broadcast(&Broadcast::append(
-            room_messages(&room),
-            room_dom_id(&room, Some("messages")),
-            Partial::Message {
-                message_id: message.id,
-            },
-        )));
+        tx.emit_after_commit(SideEffect::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
         Ok(())
     }
     /// Current notified going/maybe active human members, re-read in the triggering write.
