@@ -80,6 +80,8 @@ describe("S7 admin schemas", () => {
   it("round-trip custom styles and icons", () => {
     roundTrips(CustomStyles, { css: "body { color: red }" });
     roundTrips(WorkspaceIconList, {
+      animatedLimit: 250,
+      animatedUsage: 1,
       icons: [
         {
           id: 3,
@@ -87,6 +89,8 @@ describe("S7 admin schemas", () => {
           title: "Acme Corp",
           creatorName: "Ada Lovelace",
           imageUrl: "/icons/acme",
+          animated: true,
+          stillUrl: "/icons/acme?still=1",
         },
       ],
     });

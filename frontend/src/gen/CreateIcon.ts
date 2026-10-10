@@ -6,6 +6,6 @@
  */
 export type CreateIcon = { name: string, title: string,
 /**
- * The uploaded SVG or PNG (`POST /api/v1/uploads`); `null` is refused as a missing image.
+ * The uploaded SVG, PNG, GIF or WebP; `null` is refused as a missing image.
  */
 signedId: string | null, };

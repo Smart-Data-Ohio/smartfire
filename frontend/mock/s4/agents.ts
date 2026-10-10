@@ -163,6 +163,8 @@ const SEEDS: readonly AgentSeed[] = [
       kind: "emoji",
       character: "\u{1F52D}",
       imageUrl: null,
+      animated: false,
+      stillUrl: null,
     },
     provider: "OpenAI",
     runtime: "codex",

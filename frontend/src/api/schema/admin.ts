@@ -158,6 +158,8 @@ export const WorkspaceIcon = Schema.Struct({
   title: Schema.String,
   creatorName: Schema.String,
   imageUrl: Schema.String,
+  animated: Schema.Boolean,
+  stillUrl: Schema.String,
 });
 
 export type WorkspaceIcon = typeof WorkspaceIcon.Type;
@@ -165,7 +167,11 @@ export type WorkspaceIcon = typeof WorkspaceIcon.Type;
 export type WorkspaceIconPin = Assert<Pinned<typeof WorkspaceIcon, GeneratedWorkspaceIcon>>;
 
 /** Every workspace icon. */
-export const WorkspaceIconList = Schema.Struct({ icons: Schema.Array(WorkspaceIcon) });
+export const WorkspaceIconList = Schema.Struct({
+  icons: Schema.Array(WorkspaceIcon),
+  animatedLimit: Schema.Int,
+  animatedUsage: Schema.Int,
+});
 
 export type WorkspaceIconList = typeof WorkspaceIconList.Type;
 
