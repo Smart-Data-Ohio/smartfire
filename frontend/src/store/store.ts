@@ -543,10 +543,12 @@ export const mutations = {
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
-  refreshActivityUnreadCountForPolicy: (unread: ActivityUnreadCount, generation: number) =>
-    apply((state) => activity.refreshUnreadCountForPolicy(state, unread, generation)),
-  setActivityUnreadCount: (unread: ActivityUnreadCount, generation?: number) =>
-    apply((state) => activity.setActivityUnreadCount(state, unread, generation)),
+  setActivityUnreadCount: (
+    unread: ActivityUnreadCount,
+    generation?: number,
+    requestSequence?: number,
+  ) =>
+    apply((state) => activity.setActivityUnreadCount(state, unread, generation, requestSequence)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
   setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>

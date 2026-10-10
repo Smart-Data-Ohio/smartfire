@@ -1211,6 +1211,51 @@ describe("activity actions", () => {
     );
   }
 
+  for (const newerKind of ["badge", "page", "write"]) {
+    it.effect(`orders tied count snapshots from a newer ${newerKind} before an older refresh`, () =>
+      Effect.gen(function* () {
+        mutations.setActivityUnreadCount({ unreadCount: 0, unreadRevision: 7 });
+        const fake = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({ unreadCount: 0, unreadRevision: 7 }),
+          ),
+        );
+        const older = yield* Effect.forkChild(activity.loadUnreadCount());
+        yield* Deferred.await(started);
+
+        if (newerKind === "badge") {
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 1, unreadRevision: 7 });
+          yield* activity.loadUnreadCount();
+        } else if (newerKind === "page") {
+          yield* fake.reply("GET /activity", {
+            items: [item(3, 30)],
+            users: [],
+            nextCursor: null,
+            unreadCount: 1,
+            unreadRevision: 7,
+          });
+          yield* activity.load("all", "unread");
+        } else {
+          yield* fake.reply("PATCH /activity/3", {
+            item: item(3, 30),
+            unreadCount: 1,
+            unreadRevision: 7,
+          });
+          yield* activity.setState(3, "unread");
+        }
+
+        expect(store.getState().activity.unreadCount).toBe(1);
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(older);
+        expect(store.getState().activity.unreadCount).toBe(1);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
+
   it.effect(
     "accepts a legitimate increase from a blocked count GET after an older page lands",
     () =>

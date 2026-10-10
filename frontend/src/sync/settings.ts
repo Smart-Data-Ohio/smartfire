@@ -5,7 +5,6 @@
  * `ActionError`; a rejected change carries its field messages in `fields`.
  */
 
-import { activityUnreadCount } from "../api/activity-endpoints.ts";
 import { me, sidebar } from "../api/endpoints.ts";
 import {
   accountSettings,
@@ -54,8 +53,10 @@ import {
   showAccountTheme,
   type ThemePreference,
 } from "../lib/appearance.ts";
+import { beginSnapshotRequest, newerSnapshotRequest } from "../store/request-order.ts";
 import type { State } from "../store/state.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
+import { loadUnreadCount } from "./activity-actions.ts";
 import { runAction } from "./runtime.ts";
 
 export {
@@ -128,50 +129,53 @@ async function write<A>(run: Promise<A>): Promise<A> {
 
 export type { TokenService };
 
-let notificationWriteVersion = 0;
+let latestSettings: { readonly sequence: number; readonly value: Settings } | null = null;
+
+async function settingsSnapshot(run: () => Promise<Settings>): Promise<Settings> {
+  const sequence = beginSnapshotRequest();
+  const next = await run();
+
+  if (latestSettings === null || newerSnapshotRequest(sequence, latestSettings.sequence)) {
+    latestSettings = { sequence, value: next };
+    mutations.setNotificationPreferences(next.notifications);
+  }
+
+  // Settings screens also replace their local page with the returned snapshot.
+  return latestSettings.value;
+}
 
 export const settings = {
-  load: async (): Promise<Settings> => {
-    const version = notificationWriteVersion;
-    const next = await runAction(loadSettings());
-
-    if (version === notificationWriteVersion) {
-      mutations.setNotificationPreferences(next.notifications);
-    }
-
-    return next;
-  },
+  load: (): Promise<Settings> => settingsSnapshot(() => runAction(loadSettings())),
 
   updateProfile: (change: Partial<UpdateProfile>): Promise<Settings> =>
-    write(runAction(updateProfile({ ...UNCHANGED.profile, ...change }))),
+    write(settingsSnapshot(() => runAction(updateProfile({ ...UNCHANGED.profile, ...change })))),
 
-  setAvatar: (signedId: string): Promise<Settings> => write(runAction(updateAvatar(signedId))),
+  setAvatar: (signedId: string): Promise<Settings> =>
+    write(settingsSnapshot(() => runAction(updateAvatar(signedId)))),
 
-  removeAvatar: (): Promise<Settings> => write(runAction(removeAvatar())),
+  removeAvatar: (): Promise<Settings> => write(settingsSnapshot(() => runAction(removeAvatar()))),
 
   updateAppearance: (change: Partial<UpdateAppearance>): Promise<Settings> =>
-    write(runAction(updateAppearance({ ...UNCHANGED.appearance, ...change }))),
+    write(
+      settingsSnapshot(() => runAction(updateAppearance({ ...UNCHANGED.appearance, ...change }))),
+    ),
 
   updateCalls: (change: Partial<UpdateCalls>): Promise<Settings> =>
-    write(runAction(updateCalls({ ...UNCHANGED.calls, ...change }))),
+    write(settingsSnapshot(() => runAction(updateCalls({ ...UNCHANGED.calls, ...change })))),
 
-  updateNotifications: async (change: Partial<UpdateNotifications>): Promise<Settings> => {
-    const next = await write(
-      runAction(updateNotifications({ ...UNCHANGED.notifications, ...change })),
-    );
-
-    notificationWriteVersion += 1;
-    mutations.setNotificationPreferences(next.notifications);
-
-    return next;
-  },
+  updateNotifications: (change: Partial<UpdateNotifications>): Promise<Settings> =>
+    write(
+      settingsSnapshot(() =>
+        runAction(updateNotifications({ ...UNCHANGED.notifications, ...change })),
+      ),
+    ),
 
   updateStatus: (change: Partial<UpdateStatus>): Promise<Settings> =>
-    write(runAction(updateStatus({ ...UNCHANGED.status, ...change }))),
+    write(settingsSnapshot(() => runAction(updateStatus({ ...UNCHANGED.status, ...change })))),
 
   /** Lets someone's messages through DND (`true`), or stops (`false`). */
   setDndAllowance: (userId: number, allowed: boolean): Promise<Settings> =>
-    runAction(setDndAllowance(userId, allowed)),
+    settingsSnapshot(() => runAction(setDndAllowance(userId, allowed))),
 
   sessions: (): Promise<SessionList> => runAction(sessions()),
 
@@ -293,10 +297,7 @@ export function followNotificationPreferences(): () => void {
   const refreshSidebar = () => {
     const clock = sidebarRowClock();
     const generation = store.getState().activity.generation;
-    void runAction(activityUnreadCount()).then(
-      (unread) => mutations.refreshActivityUnreadCountForPolicy(unread, generation),
-      () => undefined,
-    );
+    void runAction(loadUnreadCount(generation)).catch(() => undefined);
     void runAction(sidebar()).then(
       (next) => mutations.loadSidebar(next, clock),
       () => undefined,

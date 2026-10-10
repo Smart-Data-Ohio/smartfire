@@ -35,6 +35,7 @@ import {
   pagedStale,
   pagedWithout,
 } from "./paged-list.ts";
+import { newerSnapshotRequest } from "./request-order.ts";
 import type { State } from "./state.ts";
 
 /** What `PATCH /activity/:id` does: "unhandled" clears handled and keeps it read. */
@@ -88,6 +89,8 @@ export interface ActivitySlice {
   readonly generation: number;
   /** The generation the held count belongs to; an older one is only a display fallback. */
   readonly serverUnreadGeneration: number;
+  /** Request-start order for count snapshots at the same server revision. */
+  readonly unreadRequestSequence: number;
   /** How each change on its way moves the badge, by its token. */
   readonly pendingUnread: Readonly<Record<number, PendingUnread>>;
 }
@@ -101,6 +104,7 @@ export const emptyActivity: ActivitySlice = {
   deferredUnread: null,
   generation: 0,
   serverUnreadGeneration: 0,
+  unreadRequestSequence: 0,
   pendingUnread: {},
 };
 
@@ -150,21 +154,48 @@ function absorbedUnread(
   );
 }
 
+/** Server revisions take precedence; request order resolves ties. */
+function acceptedCount(
+  activity: ActivitySlice,
+  unread: ActivityUnreadCount | null,
+  requestSequence?: number,
+): ActivityUnreadCount | null {
+  if (unread === null || requestSequence === undefined) return unread;
+
+  const revision = Math.max(
+    activity.serverUnreadGeneration === activity.generation
+      ? (activity.serverUnread?.unreadRevision ?? -1)
+      : -1,
+    activity.deferredUnread?.unreadRevision ?? -1,
+  );
+
+  return unread.unreadRevision > revision ||
+    (unread.unreadRevision === revision &&
+      newerSnapshotRequest(requestSequence, activity.unreadRequestSequence))
+    ? unread
+    : null;
+}
+
 /** Installs the newest snapshot only when it covers every outstanding badge adjustment. */
 function withCounts(
   activity: ActivitySlice,
   unread: ActivityUnreadCount | null,
   pendingUnread: ActivitySlice["pendingUnread"] = activity.pendingUnread,
+  requestSequence?: number,
 ): ActivitySlice {
+  unread = acceptedCount(activity, unread, requestSequence);
   const held = activity.serverUnread;
   let snapshot = activity.serverUnreadGeneration === activity.generation ? held : null;
   const projected = absorbedUnread(pendingUnread, snapshot?.unreadRevision ?? null);
 
-  // Equal revisions keep their first count, including a candidate still waiting for coverage.
+  // Ordered HTTP snapshots may change policy without changing the activity revision.
   for (const candidate of [activity.deferredUnread, unread]) {
     if (
       candidate !== null &&
-      (snapshot === null || candidate.unreadRevision > snapshot.unreadRevision)
+      (snapshot === null ||
+        candidate.unreadRevision > snapshot.unreadRevision ||
+        (candidate.unreadRevision === snapshot.unreadRevision &&
+          (candidate === activity.deferredUnread || requestSequence !== undefined)))
     ) {
       snapshot = { unreadCount: candidate.unreadCount, unreadRevision: candidate.unreadRevision };
     }
@@ -191,6 +222,10 @@ function withCounts(
     ...activity,
     serverUnread,
     serverUnreadGeneration,
+    unreadRequestSequence:
+      unread !== null && requestSequence !== undefined
+        ? Math.max(activity.unreadRequestSequence, requestSequence)
+        : activity.unreadRequestSequence,
     deferredUnread: waiting && snapshot !== held ? snapshot : null,
     pendingUnread: remaining,
     unreadCount: shownCount(serverUnread?.unreadCount ?? null, remaining),
@@ -443,6 +478,7 @@ export function setActivityListFailed(
 export interface ActivityLoadStart {
   readonly generation: number;
   readonly activityGeneration: number;
+  readonly requestSequence?: number;
 }
 
 /** What a load of `tab` in `status` started from; pass it back to `landActivityPage`. */
@@ -477,7 +513,12 @@ export function landActivityPage(
   const counted = withCounts(
     state.activity,
     page,
-    confirmedUnread(state.activity, page, page.items),
+    confirmedUnread(
+      state.activity,
+      acceptedCount(state.activity, page, start?.requestSequence),
+      page.items,
+    ),
+    start?.requestSequence,
   );
 
   if (!pagedCurrent(activityListOf(state, tab, status), start?.generation)) {
@@ -631,6 +672,7 @@ export interface ActivityChangeEnd {
   readonly settled: ActivityItem | null;
   /** The server's count snapshot afterwards; `null` keeps it. */
   readonly unread: ActivityUnreadCount | null;
+  readonly requestSequence?: number;
 }
 
 /**
@@ -643,18 +685,20 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     return state;
   }
 
+  const unread = acceptedCount(state.activity, end.unread, end.requestSequence);
+
   const pending =
-    end.unread !== null && end.settled !== null
-      ? confirmedUnread(state.activity, end.unread, [end.settled])
+    unread !== null && end.settled !== null
+      ? confirmedUnread(state.activity, unread, [end.settled])
       : state.activity.pendingUnread;
 
   const heldChange = pending[end.token];
 
   const change =
-    heldChange !== undefined && end.unread !== null && end.settled !== null
+    heldChange !== undefined && unread !== null && end.settled !== null
       ? {
           ...heldChange,
-          serverItem: observedItem(heldChange, end.settled, end.unread.unreadRevision),
+          serverItem: observedItem(heldChange, end.settled, unread.unreadRevision),
         }
       : heldChange;
 
@@ -691,7 +735,7 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     }
   }
 
-  return withActivity(state, withCounts(activity, end.unread, pendingUnread));
+  return withActivity(state, withCounts(activity, unread, pendingUnread, end.requestSequence));
 }
 
 /** An item went with its source (`activity.removed`): out of the store and every list. */
@@ -726,6 +770,7 @@ export function setActivityUnreadCount(
   state: State,
   unread: ActivityUnreadCount,
   generation = state.activity.generation,
+  requestSequence?: number,
 ): State {
   const activity = state.activity;
 
@@ -733,27 +778,7 @@ export function setActivityUnreadCount(
     return state;
   }
 
-  return withActivity(state, withCounts(activity, unread));
-}
-
-/** Mute expiry can change a badge without changing any activity rows. */
-export function refreshUnreadCountForPolicy(
-  state: State,
-  unread: ActivityUnreadCount,
-  generation: number,
-): State {
-  const activity = state.activity;
-
-  if (
-    generation !== activity.generation ||
-    (activity.serverUnread !== null && unread.unreadRevision < activity.serverUnread.unreadRevision)
-  )
-    return state;
-
-  return withActivity(
-    state,
-    withCounts({ ...activity, serverUnread: unread, serverUnreadGeneration: generation }, unread),
-  );
+  return withActivity(state, withCounts(activity, unread, activity.pendingUnread, requestSequence));
 }
 
 /** The server couldn't replay what was missed: every loaded list reloads when next shown. */

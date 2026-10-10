@@ -184,3 +184,107 @@ fn a9_a_mute_suppresses_an_already_queued_huddle_invitation() {
     });
     assert!(frames(&db.sink.take(), recipient).is_empty());
 }
+
+#[test]
+fn a9_room_mutes_suppress_huddle_join_notices_until_expiry() {
+    for banner_only in [false, true] {
+        for mute in ["forever", "minutes15"] {
+            let db = TestDb::new();
+            db.clock
+                .travel_to(Timestamp::parse_db("2035-01-01 12:00:00").unwrap());
+            let caller = crate::fixtures::identify("david");
+            let recipient = crate::fixtures::identify("jason");
+            let room = crate::fixtures::identify("david_and_jason");
+            let mut grant = db.write(move |tx| {
+                let until = if mute == "forever" {
+                    Value::Null
+                } else {
+                    serde_json::json!(tx.now().since(jiff::SignedDuration::from_secs(900)).jiff())
+                };
+                tx.conn().execute(
+                    "UPDATE users SET inbox_preferences=? WHERE id=?",
+                    rusqlite::params![
+                        serde_json::json!({"huddle_invitations": !banner_only, "room_mute_until": {room.to_string(): until}}).to_string(),
+                        recipient
+                    ],
+                )?;
+                let session = Session::start(tx, caller, None, None)?.id;
+                let member = Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap().id;
+                let mut grant = HuddleGrant::issue(tx, session, member, room, &HuddleConfig {
+                    api_secret: Some("a9-huddle-fixture".into()),
+                    admin_configured: false,
+                })?;
+                grant.record_seen(tx)?;
+                crate::models::huddle_notices::notify_join(tx, grant.id)?;
+                Ok(grant)
+            });
+            let events = db.sink.take();
+            let notices = |events: &[crate::Event]| {
+                events.iter().filter_map(|event| match event.as_broadcast()? {
+                    crate::broadcasts::Broadcast::Cable {stream, payload} if *stream == format!("user_{recipient}_huddle_notices") => Some(payload.clone()),
+                    _ => None,
+                }).collect::<Vec<_>>()
+            };
+            assert!(notices(&events).is_empty(), "{mute}, banner_only={banner_only}");
+            assert!(events.iter().all(|event| event.as_job::<crate::models::huddle_notices::PushRequest>().is_none()));
+            if mute == "minutes15" {
+                db.travel(900);
+                db.write(move |tx| {
+                    grant.record_seen(tx)?;
+                    crate::models::huddle_notices::notify_join(tx, grant.id)
+                });
+                let events = db.sink.take();
+                assert_eq!(notices(&events).len(), 1, "join notice resumes at expiry");
+                assert_eq!(notices(&events)[0]["huddleJoinNotice"]["eventType"], "huddle_joined");
+            }
+        }
+    }
+}
+
+#[test]
+fn a9_room_mutes_suppress_leave_toasts_and_keep_ended_cleanup() {
+    let db = TestDb::new();
+    let caller = crate::fixtures::identify("david");
+    let recipient = crate::fixtures::identify("jason");
+    let room = crate::fixtures::identify("david_and_jason");
+    let (caller_grant, viewer_grant) = db.write(move |tx| {
+        let config = HuddleConfig {
+            api_secret: Some("a9-huddle-fixture".into()),
+            admin_configured: false,
+        };
+        let mut grants = Vec::new();
+        for user in [caller, recipient] {
+            let session = Session::start(tx, user, None, None)?.id;
+            let member = Membership::find_by_room_and_user(tx.conn(), room, user)?.unwrap().id;
+            let mut grant = HuddleGrant::issue(tx, session, member, room, &config)?;
+            grant.record_seen(tx)?;
+            grants.push(grant);
+        }
+        let until = tx.now().since(jiff::SignedDuration::from_secs(900)).jiff();
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            rusqlite::params![serde_json::json!({"room_mute_until": {room.to_string(): until}}).to_string(), recipient],
+        )?;
+        Ok((grants.remove(0), grants.remove(0)))
+    });
+    db.sink.take();
+    let leaving = caller_grant.clone();
+    db.write(move |tx| crate::models::huddle_notices::notify_leave(tx, &leaving));
+    let notices = |events: &[crate::Event]| {
+        events.iter().filter_map(|event| match event.as_broadcast()? {
+            crate::broadcasts::Broadcast::Cable {stream, payload} if *stream == format!("user_{recipient}_huddle_notices") => Some(payload.clone()),
+            _ => None,
+        }).collect::<Vec<_>>()
+    };
+    assert!(notices(&db.sink.take()).is_empty(), "muted active call emits no leave toast");
+    let joining = caller_grant.clone();
+    db.write(move |tx| crate::models::huddle_notices::notify_join(tx, joining.id));
+    assert!(notices(&db.sink.take()).is_empty(), "muted active call emits no join toast");
+    db.write(move |tx| {
+        tx.conn().execute("UPDATE huddle_grants SET last_seen_at=NULL WHERE id=?", [viewer_grant.id])?;
+        crate::models::huddle_notices::notify_leave(tx, &caller_grant)
+    });
+    let events = db.sink.take();
+    assert_eq!(notices(&events).len(), 1, "ended frame still dismisses an existing banner");
+    assert_eq!(notices(&events)[0]["huddleJoinNotice"]["eventType"], "huddle_ended");
+}
