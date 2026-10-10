@@ -660,91 +660,9 @@ async fn a_classic_vote_tells_the_spa_tabs() {
 }
 
 /// The classic frames a run of poll changes sends to a classic tab on Designers.
-async fn poll_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    let designers = a
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, DESIGNERS))
-        .await
-        .unwrap();
-    let gid = campfire_app::cable::room_gid(&designers).to_param();
-    let signed =
-        rails_compat::turbo::signed_stream_name(&a.booted.app.secrets, &[&gid, "messages"]);
-    client
-        .confirm(&crate::channels::tests::support::identifier(
-            json!({"channel": "RoomMessagesChannel", "signed_stream_name": signed}),
-        ))
-        .await;
-    let mut kevin = a.sign_in(KEVIN).await;
-    kevin.authenticity_token().await;
-    let (_sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let mut sync =
-            Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
-    for option_ids in [json!([2]), json!([]), json!([3])] {
-        let reply = kevin
-            .write(
-                Req::new(
-                    Method::POST,
-                    &format!("/rooms/{DESIGNERS}/polls/{OPEN_POLL}/vote"),
-                )
-                .header("accept", "application/json")
-                .header("content-type", "application/json")
-                .body(json!({ "option_ids": option_ids }).to_string()),
-            )
-            .await;
-        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    }
-    let now = a.booted.app.db.env().now();
-    a.db()
-        .write(move |tx| campfire_db::Poll::close_by_id(tx, OPEN_POLL, now))
-        .await
-        .unwrap();
-    // Some frames go out after the response (the after-commit sink): wait for them to settle.
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    cable.abort();
-    if let Some(server) = server {
-        server.abort();
-    }
-    Some(frames)
-}
 
-#[tokio::test]
-async fn classic_poll_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (poll_frames(false).await, poll_frames(true).await) else {
-        return;
-    };
-    let card = format!(r#"target=\"card_poll_{OPEN_POLL}\""#);
-    assert_eq!(
-        off.iter()
-            .filter(|(_, frame)| frame.contains(&card))
-            .count(),
-        4,
-        "{off:#?}"
-    );
-    assert_eq!(off, on);
-}
+
+
 
 #[tokio::test]
 async fn messages_carry_their_cards() {
@@ -1715,4 +1633,105 @@ async fn card_followup_quote_updates_reach_room_and_thread_tabs() {
         assert_eq!(preview.excerpt, "Quote after refresh");
         server.abort();
     }
+}
+
+#[tokio::test]
+async fn github_thread_header_updates_arrive_after_the_parent_is_deleted() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    a.db().write(|tx| {
+        tx.conn().execute("UPDATE channel_threads SET parent_message_id=? WHERE id=8", [PR_MESSAGE])?;
+        campfire_db::Message::find(tx.conn(), PR_MESSAGE)?.destroy(tx)?;
+        assert_eq!(campfire_db::ChannelThread::find(tx.conn(), 8)?.parent_message_id, None);
+        Ok(())
+    }).await.unwrap();
+    let (addr, server) = serve(&a).await;
+    let david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut owner = Sync::connect(addr, &david.cookie_header(), &["thread:8".into()]).await;
+    let mut member = Sync::connect(addr, &kevin.cookie_header(), &["thread:8".into()]).await;
+    owner.welcome().await;
+    member.welcome().await;
+    a.db().write(|tx| {
+        tx.emit_after_commit(campfire_db::Event::broadcast(&campfire_app::integrations::github::pull_requests::CardUpdated { pull_request_id: 1 }));
+        Ok(())
+    }).await.unwrap();
+    for socket in [&mut owner, &mut member] {
+        let event = socket.until(|event| matches!(&event.payload, api::SyncPayload::ThreadGithubUpdated(change) if change.thread_id == 8), |_| false).await;
+        assert_eq!(event.topic, "thread:8");
+        assert_eq!(event.payload, api::SyncPayload::ThreadGithubUpdated(api::ThreadGithubUpdated { room_id: DESIGNERS, thread_id: 8, pull_request_id: 1 }));
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn link_and_linkedin_refreshes_reach_room_and_thread_tabs_without_html() {
+    for (message_id, linkedin) in [(LINK_MESSAGE, false), (LINKEDIN_MESSAGE, true)] {
+        for threaded in [false, true] {
+            let Some(a) = app(true).await else { return };
+            let a = a.without_job_runner().await;
+            let (topic, thread_id) = card_conversation(&a, message_id, threaded).await;
+            let (addr, server) = serve(&a).await;
+            let david = a.sign_in(DAVID).await;
+            let mut sync = Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+            sync.welcome().await;
+            for standalone in [false, true] {
+                let title = if standalone { "Standalone refreshed card" } else { "Batched refreshed card" };
+                let _embed_id = a.db().write(move |tx| {
+                    let embed_id: i64 = tx.conn().query_row("SELECT link_embed_id FROM link_embed_references WHERE message_id=? LIMIT 1", [message_id], |row| row.get(0))?;
+                    tx.conn().execute("UPDATE link_embeds SET title=? WHERE id=?", (title, embed_id))?;
+                    if !standalone {
+                        tx.emit_after_commit(campfire_db::Event::broadcast(&campfire_app::integrations::link_embed::store::CardUpdate { embed_id }));
+                    }
+                    Ok(embed_id)
+                }).await.unwrap();
+                if standalone {
+                    let state = a.booted.app.clone();
+                    a.db().read(move |conn| {
+                        let message = campfire_db::Message::find(conn, message_id)?;
+                        crate::controllers::presenters::link_embeds::broadcast_message(&state, conn, &message, linkedin)
+                    }).await.unwrap();
+                }
+                let cards = changed_cards(&mut sync, &topic, message_id, thread_id).await;
+                let actual_title = match cards.cards.as_slice() {
+                    [api::MessageCard::Link(card)] if !linkedin => &card.title,
+                    [api::MessageCard::Linkedin(card)] if linkedin => &card.title,
+                    other => panic!("unexpected {other:?}"),
+                };
+                assert_eq!(actual_title.as_deref(), Some(title));
+            }
+            server.abort();
+        }
+    }
+}
+
+#[tokio::test]
+async fn wide_calendar_years_reach_the_message_socket_without_a_turbo_renderer() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    sync.welcome().await;
+    let event_id = a.db().write(|tx| {
+        let event = campfire_db::CalendarEvent::create(tx, campfire_db::NewCalendarEvent {
+            room_id: DESIGNERS, organizer_id: DAVID, title: "Wide calendar".into(),
+            starts_at: campfire_db::Timestamp::parse_db("60310-02-02 20:30:00"),
+            ends_at: campfire_db::Timestamp::parse_db("60310-02-02 21:30:00"),
+            time_zone: "America/New_York".into(), ..Default::default()
+        })?;
+        Ok(event.id)
+    }).await.unwrap();
+    let response = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &json!({
+        "markdownSource": format!("/rooms/{DESIGNERS}/events/{event_id}"),
+        "clientMessageId": "wide-calendar-sync", "replyToMessageId": null, "replyNotifyAuthor": null,
+    }))).await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let message_id = parse::<api::MessageDTO>(&response).id;
+    let event = sync.until(move |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == message_id), |_| false).await;
+    let api::SyncPayload::MessageCreated(message) = event.payload else { unreachable!() };
+    let [api::MessageCard::Event(card)] = message.cards.as_slice() else { panic!("{:?}", message.cards) };
+    assert_eq!(card.starts_at, "+060310-02-02T20:30:00.000Z");
+    assert_eq!(card.ends_at.as_deref(), Some("+060310-02-02T21:30:00.000Z"));
+    server.abort();
 }

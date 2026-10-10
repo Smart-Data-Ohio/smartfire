@@ -64,10 +64,12 @@ pub const SYNC_PATH: &str = "/api/v1/sync";
 
 /// Starts the sync engine on the app's cable server and has the broadcast points publish their
 /// JSON twins. Call once, at boot, on the runtime the app serves from.
+pub fn install_renderer(app: &Arc<AppState>) {
+    app.broadcasts.install_sync_renderer(Arc::new(sync::Renderer::new(app, tokio::runtime::Handle::current())));
+}
+
 pub fn install(app: &Arc<AppState>) {
-    let runtime = tokio::runtime::Handle::current();
-    app.broadcasts
-        .install_sync_renderer(Arc::new(sync::Renderer::new(app, runtime)));
+    install_renderer(app);
     app.cable.install_sync(
         sync::Handler::new(app),
         campfire_cable::sync::SyncConfig::default(),

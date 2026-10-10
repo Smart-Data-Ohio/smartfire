@@ -3,7 +3,7 @@ use campfire_db::Clock as _;
 use serde_json::json;
 
 use super::support::*;
-use crate::channels::{room_gid, user_gid};
+use crate::channels::room_gid;
 
 // ApplicationCable::Connection
 
@@ -140,7 +140,7 @@ async fn unread_rooms_streams_only_the_subscribers_own_stream() {
     member.confirm(&unreads).await;
 
     let message = app.message("first").await;
-    app.message_create(&direct, &message).await;
+    app.unread_room(&direct, &message).await;
 
     assert_eq!(member.next_text().await, delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, direct.id)));
     member.assert_silent().await;
@@ -219,91 +219,15 @@ async fn typing_notifications_reject_non_members() {
     client.reject(&room_identifier("TypingNotificationsChannel", id("watercooler"))).await;
 }
 
-// RoomMessagesChannel (reference/test/channels/room_messages_channel_test.rb)
 
-#[tokio::test]
-async fn a_member_may_subscribe_to_a_rooms_message_stream() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let signed = app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]);
-    let channel = identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }));
 
-    let mut kevin = app.connect("kevin").await;
-    kevin.confirm(&channel).await;
 
-    let message = app.message("first").await;
-    app.broadcasts.message_remove(&designers, &message);
-    let frame = kevin.next_text().await;
-    assert_eq!(frame, delivery(&channel, &html_json(r#"<turbo-stream action="remove" target="message_0001"></turbo-stream>"#)));
-}
 
-#[tokio::test]
-async fn room_message_streams_are_rejected_for_everyone_else() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let hq = app.room("hq").await;
-    let signed = app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]);
-    let subscribe = |signed: serde_json::Value| identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }));
 
-    // A user who was never a member.
-    let mut bender = app.connect("bender").await;
-    bender.reject(&subscribe(json!(signed))).await;
-    // Another room the user isn't in.
-    bender.reject(&subscribe(json!(app.signed_stream_name(&[&room_gid(&hq).to_param(), "messages"])))).await;
 
-    let mut kevin = app.connect("kevin").await;
-    // An unsigned stream name.
-    kevin.reject(&subscribe(json!(format!("{}:messages", room_gid(&designers).to_param())))).await;
-    // A missing stream name.
-    kevin.reject(&identifier(json!({ "channel": "RoomMessagesChannel" }))).await;
-    // A signed name that isn't a room's message stream.
-    kevin.reject(&subscribe(json!(app.signed_stream_name(&["rooms"])))).await;
-    // A room whose type changed since the name was signed (`Rooms::Open.find` of a closed room).
-    let stale = campfire_db::Room { room_type: campfire_db::RoomType::Open, ..designers.clone() };
-    kevin.reject(&subscribe(json!(app.signed_stream_name(&[&room_gid(&stale).to_param(), "messages"])))).await;
-    // A user GID in place of a room.
-    kevin.reject(&subscribe(json!(app.signed_stream_name(&[&user_gid(id("kevin")).to_param(), "messages"])))).await;
-}
 
-#[tokio::test]
-async fn a_revoked_member_may_not_resubscribe_with_a_harvested_stream_name() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let signed = app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]);
-    let channel = identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }));
 
-    let mut kevin = app.connect("kevin").await;
-    kevin.confirm(&channel).await;
 
-    let room = designers.clone();
-    app.db.write(move |tx| room.revoke_from(tx, &[id("kevin")])).await.unwrap();
-    kevin.until_closed().await;
-
-    let mut kevin = app.connect("kevin").await;
-    kevin.reject(&channel).await;
-}
-
-// Turbo::StreamsChannel with RoomStreamsAreAuthorized
-
-#[tokio::test]
-async fn the_stock_turbo_channel_refuses_room_message_streams_but_serves_the_room_list() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let turbo = |signed: String| identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": signed }));
-    let mut kevin = app.connect("kevin").await;
-
-    kevin.reject(&turbo(app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]))).await;
-    kevin.reject(&turbo("forged--0000".into())).await;
-    kevin.reject(&identifier(json!({ "channel": "Turbo::StreamsChannel" }))).await;
-
-    let rooms = turbo(app.signed_stream_name(&["rooms"]));
-    kevin.confirm(&rooms).await;
-    app.broadcasts.room_remove(&designers);
-    assert_eq!(
-        kevin.next_text().await,
-        delivery(&rooms, &html_json(&format!(r#"<turbo-stream action="remove" target="list_rooms_closed_{}"></turbo-stream>"#, designers.id)))
-    );
-}
 
 // Preserve the golden's second receiver, but bound further public callbacks.
 

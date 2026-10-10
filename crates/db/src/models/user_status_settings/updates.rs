@@ -22,18 +22,6 @@ impl Broadcast for StatusBadgeBroadcast {
     const KIND: &'static str = "Calendar::MeetingDispatcher.broadcast_badges_for";
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OooNoticeBroadcast {
-    pub user_id: i64,
-    pub name: String,
-    pub visible: bool,
-    pub until_date: Option<String>,
-    pub note: Option<String>,
-}
-impl Broadcast for OooNoticeBroadcast {
-    const KIND: &'static str = "Calendar::OooDispatcher.broadcast_ooo_for";
-}
-
 impl UserStatusSettings {
     /// Conditional boundary claim. A stale false claimant cannot clear a newly extended end.
     /// Like update_all, this does not refresh the loaded record's attributes or dirty tracking.
@@ -87,28 +75,10 @@ impl UserStatusSettings {
 
     pub fn announce_ooo(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.announce_badge(tx)?;
-        self.announce_ooo_notice(tx);
         Ok(())
     }
 
-    pub fn announce_ooo_notice(&self, tx: &mut Tx<'_>) {
-        let now = tx.now();
-        tx.emit_after_commit(Event::broadcast(&OooNoticeBroadcast {
-            user_id: self.user.id,
-            name: self.user.name.clone(),
-            visible: self.presence_setting != "invisible" && self.out_of_office(now),
-            until_date: self.ooo_until_effective(now).map(|t| {
-                t.jiff()
-                    .to_zoned(self.zone())
-                    .strftime("%B %d, %Y")
-                    .to_string()
-            }),
-            note: self
-                .ooo_note
-                .clone()
-                .filter(|n| self.manual_ooo_active(now) && !n.chars().all(char::is_whitespace)),
-        }));
-    }
+
 
     pub fn save_status(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         let attributes = self.attributes();

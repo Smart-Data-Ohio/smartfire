@@ -6,7 +6,6 @@
 use rusqlite::{Connection, Row, params};
 use serde_json::json;
 
-use crate::broadcasts::{Broadcast};
 use crate::database::Tx;
 use crate::error::{Error, Errors, OptionalExt, Result};
 use crate::events::Event;

@@ -9,6 +9,7 @@ edition.workspace = true
 test-support = ["campfire_web/test-support", "campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support"]
 
 [dependencies]
+campfire_api_types.workspace = true
 campfire_runtime.workspace = true
 campfire_presentation.workspace = true
 httpdate.workspace = true

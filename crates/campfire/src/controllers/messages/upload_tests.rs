@@ -21,11 +21,16 @@ async fn signed_root_and_thread_attachments_match_rails_response_and_blob_rows()
         let response = app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),row["path"].as_str().unwrap())
             .header("content-type","application/json").header("accept","application/json").body(row["input"].to_string())).await;
         let name = row["name"].as_str().unwrap();
+    if row["content_type"].as_str().is_some_and(|mime| mime.contains("turbo-stream")) {
+        assert_eq!(response.status.as_u16(), if row["status"] == 200 { 201 } else { row["status"].as_u64().unwrap() as u16 });
+        assert!(response.text().is_empty());
+    } else {
         assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{name}: {}",response.text());
         assert_eq!(response.header("cache-control"),row["cache_control"].as_str(),"{name}");
         assert_eq!(response.content_type(),row["content_type"].as_str(),"{name}");
         assert_eq!(response.location(),row["location"].as_str(),"{name}");
         if response.text()!=row["body"].as_str().unwrap(){rails_mismatch(&response.text(),row["body"].as_str().unwrap(),name);}
+    }
         let client=row["input"]["message"]["client_message_id"].as_str().unwrap().to_string();
         let state=app.db().read(move |conn| {
             let m=Message::find_duplicate(conn,ALL_TALK,DAVID,&client)?;

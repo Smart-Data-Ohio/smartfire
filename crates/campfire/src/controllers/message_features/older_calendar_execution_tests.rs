@@ -1,5 +1,5 @@
 //! Execute the real Calendar consumers and their durable children against pinned Rails exchanges.
-use super::quote_integration_tests::{insert_rows, stream};
+use super::quote_integration_tests::{insert_rows};
 use crate::{
     app::{
         google_api_tests::{self as support, Recorded},
@@ -86,20 +86,8 @@ async fn run_matrix(fatal_only: bool) {
             let entry = group["entry_id"].as_i64().unwrap();
             let name = case["name"].as_str().unwrap().to_owned();
             let setup = name.clone();
-            let (mut client, server) = stream(&app).await;
-            let gid = campfire_views::helpers::gid_param(
-                "ChannelThread",
-                group["thread_id"].as_i64().unwrap(),
-            );
-            let signed = rails_compat::turbo::signed_stream_name(
-                &app.booted.app.secrets,
-                &[&gid, "messages"],
-            );
-            client
-                .confirm(&crate::channels::tests::support::identifier(
-                    json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
-                ))
-                .await;
+
+
             let crypto = rails_compat::ar_encryption::ArEncryption::new(&app.booted.app.secrets);
             app.db().write(move|tx|{
    tx.conn().execute("DELETE FROM event_calendar_entries WHERE id!=?",[entry])?;
@@ -229,7 +217,7 @@ async fn run_matrix(fatal_only: bool) {
                     .await
                     .unwrap();
             }
-            client.assert_silent().await;
+
             assert!(case["frames"].as_array().unwrap().is_empty());
             let calls=recorded.calls.lock().unwrap().iter().map(|c|{assert_eq!(c["access_token"],FIXTURE_TOKEN);let body=c["body"].as_str().unwrap();json!({"method":c["method"],"path":c["path"],"body":if body.is_empty(){Value::Null}else{serde_json::from_str::<Value>(body).unwrap()}})}).collect::<Vec<_>>();
             assert_eq!(
@@ -275,7 +263,7 @@ async fn run_matrix(fatal_only: bool) {
             if let Some(previous) = counts.insert(name.clone(), count) {
                 assert_eq!(count, previous, "{name}: read growth");
             }
-            server.abort();
+
         }
     }
     println!(

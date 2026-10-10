@@ -105,7 +105,7 @@ async fn create_action(c: &mut Ctx, room: Room, thread: ChannelThread) -> Result
             message
         };
     if c.format()? == Some(&format::JSON) { c.no_store(); }
-    match c.respond_to(&[&format::HTML, &format::JSON, &format::TURBO_STREAM])? {
+    match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::HTML => c.redirect_to(&c.url_for(&format!("/rooms/{}/threads/{}", room.id, thread.id))),
         f if *f == format::JSON => {
             let viewer = require_current_user(c)?.clone();
@@ -113,10 +113,7 @@ async fn create_action(c: &mut Ctx, room: Room, thread: ChannelThread) -> Result
             let payload = messages::present(c, move |p| messages::payload::thread_message(p, &message, &viewer, &base)).await?;
             Ok(c.render(StatusCode::CREATED, &format::JSON, serde_json::to_string(&payload).map_err(Error::internal)?))
         },
-        _ => {
-            let view = messages::present(c, move |p| p.message(&message)).await?;
-            page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |ctx| campfire_views::messages::ThreadCreateStream { ctx, message: &view, thread_id: thread.id }.render()).await
-        }
+        _ => unreachable!("negotiated HTML or JSON"),
     }
 }
 

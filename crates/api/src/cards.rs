@@ -16,7 +16,6 @@ use campfire_app::integrations::fizzy::{
 use campfire_app::integrations::github::pull_requests::{self, PullRequest};
 use campfire_app::integrations::link_embed::Reference as LinkReference;
 use campfire_app::integrations::twitter::post::Post;
-use campfire_channels::channels::message_features::origin as renderer_origin;
 use campfire_db::models::calendar_event::attendance::RESPONSES;
 use campfire_db::models::poll::{LABEL_LIMIT, MAX_OPTIONS, MIN_OPTIONS};
 use campfire_db::{
@@ -838,15 +837,13 @@ async fn show_poll(c: &mut Ctx) -> Result {
 async fn post_vote(c: &mut Ctx) -> Result {
     let (room, poll_id, viewer_id) = set_poll(c).await?;
     let api::VotePoll { option_ids } = body(c).await?;
-    let origin = campfire_runtime::context::renderer_base_url(c);
     let room_id = room.id;
     #[cfg(feature = "test-support")]
     crate::test_hooks::before_poll_vote_write(poll_id).await;
     let outcome = c
         .app()
         .db
-        .write_scoped(
-            move || renderer_origin(&origin),
+        .write(
             move |tx| {
                 // Votes on a poll take turns in the writer: each reads the poll it changes.
                 let mut poll = Poll::find_in_room(tx.conn(), room_id, poll_id)?;
@@ -887,12 +884,10 @@ async fn post_vote(c: &mut Ctx) -> Result {
 
 async fn post_end_poll(c: &mut Ctx) -> Result {
     let (room, poll_id, viewer_id) = set_poll(c).await?;
-    let origin = campfire_runtime::context::renderer_base_url(c);
     let outcome = c
         .app()
         .db
-        .write_scoped(
-            move || renderer_origin(&origin),
+        .write(
             move |tx| {
                 let mut poll = Poll::find_in_room(tx.conn(), room.id, poll_id)?;
                 let message = Message::find(tx.conn(), poll.message_id)?;

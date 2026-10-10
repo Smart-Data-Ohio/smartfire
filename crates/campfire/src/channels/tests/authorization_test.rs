@@ -5,8 +5,6 @@
 use serde_json::json;
 
 use super::support::*;
-use crate::channels::threads::thread_gid;
-use crate::channels::{room_gid, user_gid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Principal {
@@ -20,16 +18,12 @@ enum Principal {
 }
 
 /// The subscriptions tried, in this order on one connection.
-const CHANNELS: [&str; 16] = [
+const CHANNELS: [&str; 12] = [
     "HeartbeatChannel",
     "RoomChannel",
     "PresenceChannel",
     "TypingNotificationsChannel",
     "TypingNotificationsChannel (thread)",
-    "RoomMessagesChannel (room messages)",
-    "RoomMessagesChannel (thread messages)",
-    "Turbo::StreamsChannel (room messages)",
-    "Turbo::StreamsChannel ([user, :rooms])",
     "ActivityChannel",
     "HuddleNoticeChannel",
     "AgentsChannel",
@@ -42,18 +36,15 @@ const CHANNELS: [&str; 16] = [
 /// `C` confirmed, `R` rejected, per [`CHANNELS`]; `None` when the connection itself is refused.
 fn expected(principal: Principal) -> Option<&'static str> {
     match principal {
-        Principal::Member => Some("CCCCCCCRCCCCCCCC"),
-        Principal::NonMember => Some("CRRRRRRRCCCCCCCC"),
-        Principal::Bot => Some("CCCCCCCRCRRRCCCC"),
+        Principal::Member => Some("CCCCCCCCCCCC"),
+        Principal::NonMember => Some("CRRRRCCCCCCC"),
+        Principal::Bot => Some("CCCCCRRRCCCC"),
         Principal::Banned | Principal::Deactivated | Principal::TwoFactorPending | Principal::ExpiredSession => None,
     }
 }
 
 /// The room is watercooler (Jason, David and Bender; not Kevin).
-fn identifiers(app: &TestApp, room: &campfire_db::Room, thread: i64, user_id: i64) -> Vec<String> {
-    let room_param = room_gid(room).to_param();
-    let thread_param = thread_gid(thread).to_param();
-    let signed = |streamables: &[&str]| json!(app.signed_stream_name(streamables));
+fn identifiers(_app: &TestApp, room: &campfire_db::Room, thread: i64, _user_id: i64) -> Vec<String> {
     let plain = |channel: &str| identifier(json!({ "channel": channel }));
     vec![
         plain("HeartbeatChannel"),
@@ -61,10 +52,6 @@ fn identifiers(app: &TestApp, room: &campfire_db::Room, thread: i64, user_id: i6
         room_identifier("PresenceChannel", room.id),
         room_identifier("TypingNotificationsChannel", room.id),
         identifier(json!({ "channel": "TypingNotificationsChannel", "room_id": room.id, "thread_id": thread })),
-        identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed(&[&room_param, "messages"]) })),
-        identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed(&[&thread_param, "messages"]) })),
-        identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": signed(&[&room_param, "messages"]) })),
-        identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": signed(&[&user_gid(user_id).to_param(), "rooms"]) })),
         plain("ActivityChannel"),
         plain("HuddleNoticeChannel"),
         plain("AgentsChannel"),

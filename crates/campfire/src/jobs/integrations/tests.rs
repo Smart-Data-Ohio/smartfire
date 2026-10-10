@@ -11,7 +11,7 @@ use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, BENDER, DA
 async fn attachment_processing_root_webhook_recovers_failed_inline_video_like_rails() {
     let test_app = TestApp::boot_frozen().await.unwrap().without_job_runner().await;
     let app = &test_app.booted.app;
-    let (_client, server) = crate::controllers::messages::attachment_processing_tests::subscribe(&test_app).await;
+    let (mut client, server) = crate::controllers::messages::attachment_processing_tests::json_subscribe(&test_app).await;
     let (room, bot, trigger) = app.db.write(|tx| {
         tx.conn().execute("DELETE FROM background_jobs", [])?;
         Ok((Room::find(tx.conn(), ALL_TALK)?, User::find(tx.conn(), BENDER)?,
@@ -32,10 +32,9 @@ async fn attachment_processing_root_webhook_recovers_failed_inline_video_like_ra
         Ok(serde_json::json!({"processing_jobs":count,"preview_attached":preview_attached,"token_suffix":token.and_then(|t| t.rsplit(':').next().map(str::to_owned))}))
     }).await.unwrap();
     let mut actual = actual;
-    actual["append_without_poster"] = serde_json::json!(test_app.publications().take().iter().any(|(_, bytes)| {
-        let payload: serde_json::Value = serde_json::from_str(bytes).unwrap();
-        payload.as_str().is_some_and(|html| html.contains("<video") && !html.contains("poster="))
-    }));
+    let event = client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageCreated(message) if message.id == id), |_| false).await;
+    let campfire_api_types::SyncPayload::MessageCreated(message) = event.payload else { unreachable!() };
+    actual["append_without_poster"] = serde_json::json!(message.attachment.is_some_and(|file| file.preview == campfire_api_types::AttachmentPreview::Video && file.thumbnail_url.is_none()));
     let expected: serde_json::Value = serde_json::from_str(include_str!("../../../../../vectors/message_attachment_processing_failures.json")).unwrap();
     assert_eq!(actual, expected["root_webhook"], "rendering the root reply must preserve Rails' recovery request");
     server.abort();

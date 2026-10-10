@@ -15,7 +15,6 @@ campfire_storage.workspace = true
 campfire_views.workspace = true
 campfire_app.workspace = true
 campfire_web.workspace = true
-campfire_channels.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 jiff.workspace = true

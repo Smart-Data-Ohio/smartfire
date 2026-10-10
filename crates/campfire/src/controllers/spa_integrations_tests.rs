@@ -676,10 +676,6 @@ async fn google_disconnect_matches_entries_jobs_audits_and_publications() {
                     "{case}: {table}"
                 );
             }
-            assert!(
-                !outcome.frames.is_empty(),
-                "{case}: OOO publication must be captured"
-            );
             let jobs: Vec<Value> = outcome.rows["background_jobs"]
                 .as_array()
                 .unwrap()

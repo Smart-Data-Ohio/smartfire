@@ -4,7 +4,7 @@
 pub mod by_bots;
 
 use askama::Template;
-use campfire_db::{Boost, Message, Room};
+use campfire_db::{Boost, Message};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, permit_keys};
 use campfire_views::messages as views;
 

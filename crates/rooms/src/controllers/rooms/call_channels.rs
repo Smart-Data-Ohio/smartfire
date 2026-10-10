@@ -25,7 +25,6 @@ use campfire_views::{
 };
 use serde_json::json;
 
-use crate::controllers::presenters::calls::row;
 
 type CreateOutcome = std::result::Result<Room, (Option<String>, Option<String>)>;
 type UpdateOutcome = std::result::Result<Room, (Room, Vec<String>)>;
@@ -314,48 +313,14 @@ async fn render(c: &mut Ctx, form: CallForm, status: StatusCode) -> Result {
     }
 }
 
-pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
-    let app = c.app().clone();
-    let room = room.clone();
-    let base = page::renderer_base_url(c);
-    c.app()
-        .db
-        .read(move |conn| {
-            let row = row(&app, conn, &room)?;
-            let html = page::render_detached_at(&app, None, &base, |ctx| row.render(ctx));
-            let header = page::render_detached_at(&app, None, &base, |ctx| row.header(ctx));
-            for member in room.users(conn)? {
-                let stream = crate::channels::broadcasts::Stream::user_rooms(member.id);
-                if update {
-                    app.broadcasts.replace(&stream, &row.dom_id("list"), &html);
-                } else {
-                    app.broadcasts.prepend(
-                        &stream,
-                        if room.stage() {
-                            "stage_rooms"
-                        } else {
-                            "voice_rooms"
-                        },
-                        &html,
-                    );
-                }
-            }
-            if update {
-                for member in room.users(conn)? {
-                    app.broadcasts.replace(
-                        &crate::channels::broadcasts::Stream::user_rooms(member.id),
-                        &row.dom_id("header"),
-                        &header,
-                    );
-                }
-            }
-            for membership in room.memberships(conn)? {
-                app.broadcasts.sync_membership_row(membership.id);
-            }
-            Ok(())
-        })
-        .await
-        .map_err(db_error)
+pub async fn broadcast(c: &Ctx, room: &Room, _update: bool) -> Result<()> {
+    let (app, room) = (c.app().clone(), room.clone());
+    c.app().db.read(move |conn| {
+        for membership in room.memberships(conn)? {
+            app.broadcasts.sync_membership_row(membership.id);
+        }
+        Ok(())
+    }).await.map_err(db_error)
 }
 
 /// Generic `/rooms/:id` deletion of a voice/stage channel delegates to WS8a's
@@ -419,5 +384,3 @@ pub async fn destroy_operation(c: &Ctx, room: &Room) -> Result<()> {
     c.app().broadcasts.room_remove(room);
     Ok(())
 }
-
-use campfire_views::rendering::*;

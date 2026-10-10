@@ -1,7 +1,7 @@
 //! One named port for every built-in DispatcherTest case, through the app adapter.
 //! Producer control: check_slash_count_mutant.py inserts a real message after
 //! rejected /remind while preserving the error; the total-count assertion rejects it.
-use super::quote_integration_tests::{insert_rows, stream_with_cookie};
+use super::quote_integration_tests::{insert_rows};
 use crate::controllers::presenters::{Presenter, test_support::*};
 use campfire_db::{
     Message, Timestamp,
@@ -61,23 +61,6 @@ async fn run(index: usize) {
     .without_job_runner()
     .await;
     insert_rows(&app, case["rows"].clone()).await;
-    let mut socket = None;
-    let mut streams = std::collections::HashMap::new();
-    if index == 21 {
-        let cookie = app.sign_in(DAVID).await.cookie_header();
-        let (mut client, server) = stream_with_cookie(&app, &cookie).await;
-        for suffix in ["status", "ooo_notice"] {
-            let gid = campfire_views::helpers::gid_param("User", DAVID);
-            let signed =
-                rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid, suffix]);
-            let identifier = crate::channels::tests::support::identifier(
-                json!({"channel":"Turbo::StreamsChannel","signed_stream_name":signed}),
-            );
-            streams.insert(identifier.clone(), format!("{gid}:{suffix}"));
-            client.confirm(&identifier).await;
-        }
-        socket = Some((client, server));
-    }
     let initial = case["initial"].clone();
     app.db()
         .write(move |tx| {
@@ -148,30 +131,15 @@ async fn run(index: usize) {
    let saved=id.map(|id|campfire_db::SavedItem::find_by_user_and_message(conn,DAVID,id)).transpose()?.flatten().map(|s|json!({"status":s.status,"remind_at":s.remind_at.map(stamp)})).unwrap_or(Value::Null);
    let count_after:i64=conn.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get(0))?;
    let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Bot::WebhookJob'",[],|r|r.get(0))?;
-   Ok(json!({"message_counts":[count_before,count_after],"result":result,"state":state,"message":message,"saved":saved,"legacy_jobs":jobs,"attachment_calls":attachment_calls,"frames":null}))
+   Ok(json!({"message_counts":[count_before,count_after],"result":result,"state":state,"message":message,"saved":saved,"legacy_jobs":jobs,"attachment_calls":attachment_calls}))
   }).await.unwrap();
-        if let Some((client, _)) = &mut socket {
-            let mut frames = vec![];
-            for _ in row["frames"].as_array().unwrap() {
-                let wire: Value = serde_json::from_str(&client.next_text().await).unwrap();
-                assert_eq!(wire.as_object().unwrap().len(), 2);
-                let stream = streams
-                    .get(wire["identifier"].as_str().unwrap())
-                    .expect("subscribed status stream");
-                frames.push(json!({"stream":stream,"html":wire["message"]}));
-            }
-            client.assert_silent().await;
-            actual["frames"] = json!(frames);
-        }
+
         assert_eq!(actual["message_counts"], row["message_counts"], "slash actual total-message counts differ from Rails: {name}");
         actual.as_object_mut().unwrap().remove("message_counts");
-        let expected = json!({"result":row["result"],"state":row["state"],"message":row["message"],"saved":row["saved"],"legacy_jobs":row["legacy_jobs"],"attachment_calls":row["attachment_calls"],"frames":row["frames"]});
+        let expected = json!({"result":row["result"],"state":row["state"],"message":row["message"],"saved":row["saved"],"legacy_jobs":row["legacy_jobs"],"attachment_calls":row["attachment_calls"]});
         assert_eq!(actual, expected, "{name}: {}", row["text"]);
     }
-    if let Some((mut client, server)) = socket {
-        client.socket.close(None).await.unwrap();
-        server.abort();
-    }
+
     println!("WS8bm2 named slash: {name} matched Rails");
 }
 macro_rules! named {

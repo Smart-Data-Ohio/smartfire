@@ -656,62 +656,7 @@ async fn scheduled_send_rolls_back_claim_post_and_history_when_job_insert_fails(
         StatusCode::OK
     );
 }
-#[tokio::test]
-async fn scheduled_send_reaches_a_real_websocket_with_one_token_free_message_frame() {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let app = app().await;
-    let scheduled = row(&app, DAVID, ALL_TALK, "Scheduled socket example").await;
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    request
-        .headers_mut()
-        .insert("host", "campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("origin", "http://campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("cookie", david_cookie().parse().unwrap());
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let room = app
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, ALL_TALK))
-        .await
-        .unwrap();
-    let stream = rails_compat::turbo::signed_stream_name(
-        &app.booted.app.secrets,
-        &[&crate::channels::room_gid(&room).to_param(), "messages"],
-    );
-    client
-        .confirm(&identifier(
-            json!({"channel":"RoomMessagesChannel","signed_stream_name":stream}),
-        ))
-        .await;
-    assert_eq!(
-        send(&mut app.david(), scheduled.id).await.status,
-        StatusCode::OK
-    );
-    let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
-    let html = frame["message"].as_str().unwrap();
-    assert!(html.starts_with("<turbo-stream action=\"append\""));
-    assert!(html.contains("Scheduled socket example"));
-    assert!(html.contains("http://campfire.test/"));
-    assert!(!html.contains("authenticity_token") && !html.contains("nonce=\""));
-    assert!(
-        tokio::time::timeout(std::time::Duration::from_millis(100), client.next_text())
-            .await
-            .is_err()
-    );
-    server.abort();
-}
+
 
 #[tokio::test]
 async fn scheduled_composer_controls_match_rails_for_room_and_thread() {
@@ -744,7 +689,7 @@ async fn review_regression_scheduled_send_emits_unread_room_frame() {
     let listener = bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let _server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
     let mut request = format!("ws://{address}/cable")
         .into_client_request()
         .unwrap();
@@ -779,5 +724,5 @@ async fn review_regression_scheduled_send_emits_unread_room_frame() {
         frame["identifier"],
         identifier(json!({"channel":"UnreadRoomsChannel"}))
     );
-    server.abort();
+
 }

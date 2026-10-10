@@ -125,7 +125,7 @@ async fn standalone_message_wrapper_matches_rails_bytes() {
         if html != expected {
             rails_mismatch(&html, expected, "standalone message");
         }
-        assert_eq!(campfire_cable::turbo::session_bound(&html), None);
+
     }
 }
 

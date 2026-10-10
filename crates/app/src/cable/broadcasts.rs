@@ -1,117 +1,13 @@
 //! JSON sync publications and the retained Action Cable channel notifications.
 use campfire_db::models::activity_item::ActivityItemsRemoved;
 use campfire_db::rich_text::RichText;
-use campfire_db::{Connection, Membership, Message, Room};
-use rails_compat::global_id::GlobalId;
+use campfire_db::{Connection, Involvement, Membership, Message, Room};
 use serde::Serialize;
 
 use campfire_db::broadcasts::unread_rooms_stream_name;
 
 use super::sync::{self, RendererSlot, SyncRenderer};
-use super::{Cable, read_rooms_stream_name, room_gid, thread_gid, user_gid};
-
-/// `dom_id(record, prefix)`.
-pub fn dom_id(param_key: &str, key: impl std::fmt::Display, prefix: Option<&str>) -> String {
-    match prefix {
-        Some(prefix) => format!("{prefix}_{param_key}_{key}"),
-        None => format!("{param_key}_{key}"),
-    }
-}
-
-/// `Room.model_name.param_key` for the room's STI class: `Rooms::Open` is `rooms_open`.
-pub fn room_param_key(room: &Room) -> String {
-    room.room_type
-        .class_name()
-        .replace("::", "_")
-        .to_ascii_lowercase()
-}
-
-/// `dom_id(room, prefix)`.
-pub fn room_dom_id(room: &Room, prefix: &str) -> String {
-    dom_id(&room_param_key(room), room.id, Some(prefix))
-}
-
-/// `dom_id(message, prefix)`: messages are keyed by `client_message_id`.
-pub fn message_dom_id(message: &Message, prefix: Option<&str>) -> String {
-    dom_id("message", &message.client_message_id, prefix)
-}
-
-/// `dom_id(thread, prefix)`.
-pub fn thread_dom_id(thread_id: i64, prefix: &str) -> String {
-    dom_id("channel_thread", thread_id, Some(prefix))
-}
-
-pub const ROOMS: &str = "rooms";
-pub const MESSAGES: &str = "messages";
-
-/// A Turbo stream: the streamables `broadcast_*_to` and `turbo_stream_from` take.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Stream(Vec<String>);
-
-impl Stream {
-    /// `record, :suffix`
-    pub fn record(gid: &GlobalId, suffix: &str) -> Self {
-        Self(vec![gid.to_param(), suffix.to_string()])
-    }
-
-    /// A single name (`:rooms`, `AgentsChannel::STREAM_NAME`).
-    pub fn named(name: &str) -> Self {
-        Self(vec![name.to_string()])
-    }
-
-    /// `:rooms`: every signed-in user's sidebar.
-    pub fn rooms() -> Self {
-        Self::named(ROOMS)
-    }
-
-    /// `user, :rooms`: one user's sidebar.
-    pub fn user_rooms(user_id: i64) -> Self {
-        Self::record(&user_gid(user_id), ROOMS)
-    }
-
-    /// `user, :status`
-    #[allow(dead_code)] // WS14's status broadcasts use this API.
-    pub fn user_status(user_id: i64) -> Self {
-        Self::record(&user_gid(user_id), "status")
-    }
-
-    /// `member, :ooo_notice`
-    #[allow(dead_code)] // WS14's OOO broadcasts use this API.
-    pub fn ooo_notice(user_id: i64) -> Self {
-        Self::record(&user_gid(user_id), "ooo_notice")
-    }
-
-    /// `room, :messages`
-    pub fn room_messages(room: &Room) -> Self {
-        Self::record(&room_gid(room), MESSAGES)
-    }
-
-    /// `thread, :messages`
-    pub fn thread_messages(thread_id: i64) -> Self {
-        Self::record(&thread_gid(thread_id), MESSAGES)
-    }
-
-    /// `message.conversation, :messages` (`thread || room`); `room` is the message's.
-    pub fn conversation(room: &Room, message: &Message) -> Self {
-        match message.thread_id {
-            Some(thread_id) => Self::thread_messages(thread_id),
-            None => Self::room_messages(room),
-        }
-    }
-
-    pub fn streamables(&self) -> Vec<&str> {
-        self.0.iter().map(String::as_str).collect()
-    }
-}
-
-/// `dom_id(message.conversation, :messages)`: where a conversation's messages are appended.
-pub fn conversation_messages_target(room: &Room, message: &Message) -> String {
-    match message.thread_id {
-        Some(thread_id) => thread_dom_id(thread_id, MESSAGES),
-        None => room_dom_id(room, MESSAGES),
-    }
-}
-
+use super::{Cable, read_rooms_stream_name};
 
 /// `ActionCable.server.broadcast "user_#{id}_reads", { room_id: }`
 /// (reference/app/channels/presence_channel.rb, reference/app/controllers/rooms/reads_controller.rb).
@@ -161,6 +57,18 @@ impl Broadcasts {
     /// type rendered.
     pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {
         sync::message(&self.server, &self.sync, conn, message, created);
+    }
+
+    pub fn sync_message_checked(&self, conn: &Connection, message: &Message, created: bool) -> bool {
+        sync::checked_message(&self.server, &self.sync, conn, message, created)
+    }
+
+    pub fn sync_digest_messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<i64>> {
+        sync::checked_messages(&self.server, &self.sync, conn, messages)
+    }
+
+    pub fn sync_digest_message(&self, conn: &Connection, message: &Message) -> bool {
+        sync::checked_message(&self.server, &self.sync, conn, message, true)
     }
 
     /// `thread.indicator` (and `thread.updated`) for the indicator replace of a thread's parent
@@ -329,7 +237,9 @@ impl Broadcasts {
         &self, conn: &Connection, room: &Room, message: &Message,
         rich_text: &dyn RichText,
     ) -> campfire_db::Result<()> {
-        self.sync_message(conn, message, true);
+        if !self.sync_message_checked(conn, message, true) {
+            return Err(campfire_db::Error::Other("message JSON publication failed".into()));
+        }
         if message.thread_id.is_none() && !message.system_note {
             self.unread_room(conn, room, message, rich_text)?;
         }

@@ -1,7 +1,7 @@
 //! `app/controllers/rooms/directs_controller.rb`: active capped selection and group writes.
 //! Group notes and directory events come from WS8a; templates consume per-viewer facts.
 
-use campfire_db::{Account, CachedStatements, Membership, Room, User};
+use campfire_db::{CachedStatements, Room, User};
 use campfire_kit::{Ctx, Param, Redirect, Result, StatusCode};
 use campfire_views::rooms::{DirectEditView, DirectPickerUser, DirectsEdit, DirectsNew};
 
@@ -9,7 +9,7 @@ use super::{Scope, audit_room, destroy_room, redirect_to_room, set_room};
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::Presenter;
-use crate::controllers::presenters::page::{self, Rendered, db_error};
+use crate::controllers::presenters::page::{self, db_error};
 
 /// Same alias as the other room-type show actions: the membership-scoped room, then the
 /// canonical `/rooms/:id` page.
@@ -320,24 +320,6 @@ pub async fn ensure_can_delete(c: &Ctx, room: &Room) -> Result<()> {
 
 /// `broadcast_create_room`: `users/sidebars/rooms/_direct` for each membership, to its user.
 pub async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
-    let (app, room) = (c.app().clone(), room.clone());
-    let base_url = page::renderer_base_url(c);
-    c.app()
-        .db
-        .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
-            let account = Account::first(conn)?;
-            let mut partials = Rendered::default();
-            for membership in Membership::for_room(conn, room.id)? {
-                let direct = presenter.sidebar_direct(&membership)?;
-                let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
-                    Ok::<_, askama::Error>(campfire_views::users::direct_room(ctx, &direct))
-                })
-                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-                partials.direct_rooms.push((membership.id, html));
-            }
-            app.broadcasts.direct_room_create(conn, &room, &partials)
-        })
-        .await
-        .map_err(db_error)
+    c.app().broadcasts.direct_room_create(room);
+    Ok(())
 }

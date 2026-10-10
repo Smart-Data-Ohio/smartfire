@@ -514,11 +514,6 @@ impl ScheduledMessage {
         tx.conn().execute_cached("UPDATE scheduled_messages SET sent_at = ?, sent_message_id = ?, updated_at = ? WHERE id = ?",
             params![now, message.id, tx.now(), id])?;
         scheduled.emit_change(tx, false);
-        let room = Room::find(tx.conn(), message.room_id)?;
-        let target = match message.thread_id {
-            Some(thread) => dom_id("channel_thread", thread, Some("messages")),
-            None => room_dom_id(&room, Some("messages")),
-        };
         tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
         if message.thread_id.is_none() {
             let mentioned_ids: Vec<_> = message

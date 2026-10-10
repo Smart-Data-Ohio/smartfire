@@ -441,7 +441,7 @@ impl CalendarEvent {
         Ok(())
     }
     fn announce_in_channel(&self, tx: &mut Tx<'_>) -> Result<()> {
-        use crate::broadcasts::{Broadcast, Partial, room_dom_id, room_messages};
+        use crate::broadcasts::Broadcast;
         let url = format!(
             "{}/rooms/{}/events/{}",
             tx.env().default_url_origin,
@@ -457,7 +457,6 @@ impl CalendarEvent {
                 ..Default::default()
             },
         )?;
-        let room = Room::find(tx.conn(), self.room_id)?;
         tx.emit_after_commit(SideEffect::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
         Ok(())
     }

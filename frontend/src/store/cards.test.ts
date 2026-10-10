@@ -605,3 +605,42 @@ describe("visibleCards", () => {
     expect(visibleCards({ ...message, embedsSuppressed: true })).toEqual([github(9)]);
   });
 });
+
+it("refreshes a thread PR header without a parent and rejects the previous preview response", () => {
+  const key = githubKey(ROOM, 9, { threadId: 8 });
+  const now = Date.parse(at(10));
+
+  const started = previewLoading(
+    previewLoaded(initialState, "github", key, 9, { state: "hidden" }, now, 0),
+    "github",
+    key,
+    9,
+  );
+
+  const changed = events(started, [
+    {
+      type: "thread.github.updated",
+      seq: 1,
+      topic: "thread:8",
+      data: { roomId: ROOM, threadId: 8, pullRequestId: 9 },
+    },
+  ]);
+
+  const preview = changed.cards.previews.github[key];
+
+  expect(preview?.generation).toBe(2);
+  expect(preview?.value).toEqual({ state: "hidden" });
+  expect(needsFetch(preview, now + 1)).toBe(true);
+
+  const late = previewLoaded(
+    changed,
+    "github",
+    key,
+    9,
+    { state: "failed", message: "old" },
+    now + 1,
+    1,
+  );
+
+  expect(late.cards.previews.github[key]).toEqual(preview);
+});

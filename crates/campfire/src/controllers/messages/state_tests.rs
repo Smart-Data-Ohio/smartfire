@@ -73,7 +73,7 @@ async fn complete_message_states_match_rails_on_cache_misses_and_hits() {
             }).await.unwrap();
             let expected = row["html"].as_str().unwrap();
             if html != expected { rails_mismatch(&html, expected, row["name"].as_str().unwrap()); }
-            assert_eq!(campfire_cable::turbo::session_bound(&html), None);
+
         }
     }
 }

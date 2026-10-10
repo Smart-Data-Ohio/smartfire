@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
-use serde_json::{Value, json};
+use serde_json::json;
 
 use super::api_tests::{BOOSTED, Sync, app, created_in, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
@@ -719,158 +719,6 @@ fn created_again(id: i64) -> impl Fn(&api::SyncEvent) -> bool {
     move |event| matches!(&event.payload, api::SyncPayload::MessageCreated(m) if m.id == id)
 }
 
-/// The classic frames for the actions the S2 endpoints share broadcasts with: reactions and
-/// boosts, pins and their notes, an edit in a thread, and a scheduled message going out.
-async fn classic_action_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    // A classic page open, as in `classic_frames`.
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    let identifier =
-        crate::channels::tests::support::identifier(json!({ "channel": "UnreadRoomsChannel" }));
-    client.confirm(&identifier).await;
-    // And the board thread's page, for the edit there.
-    let thread_gid = campfire_app::cable::thread_gid(BOARD_THREAD).to_param();
-    let signed =
-        rails_compat::turbo::signed_stream_name(&a.booted.app.secrets, &[&thread_gid, "messages"]);
-    let identifier = crate::channels::tests::support::identifier(
-        json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }),
-    );
-    client.confirm(&identifier).await;
-    let mut david = a.sign_in(DAVID).await;
-    david.authenticity_token().await;
-    let (_sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let topics = [format!("room:{ALL_TALK}"), format!("thread:{BOARD_THREAD}")];
-        let mut sync = Sync::connect(addr, &david.cookie_header(), &topics).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
-    let classic = |method: Method, path: String, body: Value| {
-        Req::new(method, &path)
-            .header("accept", "application/json")
-            .header("content-type", "application/json")
-            .body(body.to_string())
-    };
-
-    let boosts = format!("/messages/{BOOSTED}/boosts");
-    for content in ["👍", "Nice one"] {
-        let reply = david
-            .write(classic(
-                Method::POST,
-                boosts.clone(),
-                json!({"boost": {"content": content}}),
-            ))
-            .await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
-    }
-    let boost = a
-        .db()
-        .read(|conn| {
-            Ok(conn.query_row(
-                "SELECT id FROM boosts WHERE message_id = ? AND content = 'Nice one'",
-                [BOOSTED],
-                |row| row.get::<_, i64>(0),
-            )?)
-        })
-        .await
-        .unwrap();
-    let reply = david
-        .write(classic(
-            Method::DELETE,
-            format!("{boosts}/{boost}"),
-            json!({}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
-    for method in [Method::POST, Method::DELETE] {
-        let reply = david
-            .write(classic(
-                method,
-                format!("/messages/{DAVIDS}/pin"),
-                json!({}),
-            ))
-            .await;
-        assert!(reply.status.is_success(), "{}", reply.text());
-    }
-    let reply = david
-        .write(classic(
-            Method::PATCH,
-            format!("/rooms/{BOARD}/threads/{BOARD_THREAD}/messages/{BOARD_REPLY}.json"),
-            json!({"message": {"markdown_source": "Thread parity"}}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    a.db()
-        .write(|tx| {
-            use campfire_db::{NewScheduledMessage, ScheduledMessage};
-            let now = campfire_db::Timestamp::from_jiff("2026-03-02T17:00:00Z".parse().unwrap());
-            let row = ScheduledMessage::create(
-                tx,
-                NewScheduledMessage {
-                    user_id: DAVID,
-                    room_id: ALL_TALK,
-                    thread_id: None,
-                    reply_to_message_id: None,
-                    markdown_source: "Scheduled parity".into(),
-                    send_at: now,
-                },
-            )?;
-            assert!(ScheduledMessage::dispatch(tx, row.id, now, true)?);
-            Ok(())
-        })
-        .await
-        .unwrap();
-
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    cable.abort();
-    if let Some(server) = server {
-        server.abort();
-    }
-    Some(frames)
-}
-
-#[tokio::test]
-async fn the_action_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (
-        classic_action_frames(false).await,
-        classic_action_frames(true).await,
-    ) else {
-        return;
-    };
-    let has = |needle: &str| off.iter().any(|(_, frame)| frame.contains(needle));
-    assert!(has("target=\\\"boosts_message_"), "reactions: {off:#?}");
-    assert!(has("Thread parity"), "a thread edit: {off:#?}");
-    assert!(has("Scheduled parity"), "a scheduled send: {off:#?}");
-    assert!(has("pinned a message"), "a pin note: {off:#?}");
-    // The pin note and the scheduled message get fresh client ids each run.
-    let uuid =
-        regex::Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").unwrap();
-    let same = |(stream, frame): &(String, String)| {
-        (stream.clone(), uuid.replace_all(frame, "UUID").into_owned())
-    };
-    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
-    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
-        assert_eq!(same(off), same(on), "frame {index}");
-    }
-}
-
 /// A sidebar row event for `room_id` whose preview is `excerpt` (`None`: no preview).
 fn previewing(room_id: i64, excerpt: Option<&'static str>) -> impl Fn(&api::SyncEvent) -> bool {
     move |event| {
@@ -1335,6 +1183,9 @@ async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let room = parse::<api::SidebarRow>(&reply).room.id;
 
+    let mut remaining_viewer = Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
+    remaining_viewer.welcome().await;
+
     // Kevin follows the room on a sync socket past its hello, and on a classic subscription.
     let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{room}")]).await;
     sync.welcome().await;
@@ -1357,18 +1208,9 @@ async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
         socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
     };
     assert_eq!(classic.next_text().await, r#"{"type":"welcome"}"#);
-    let gid = a
-        .db()
-        .read(move |conn| campfire_db::Room::find(conn, room))
-        .await
-        .map(|room| crate::channels::room_gid(&room).to_param())
-        .unwrap();
     let identifier = crate::channels::tests::support::identifier(json!({
-        "channel": "RoomMessagesChannel",
-        "signed_stream_name": rails_compat::turbo::signed_stream_name(
-            &a.booted.app.secrets,
-            &[&gid, "messages"],
-        ),
+        "channel": "RoomChannel",
+        "room_id": room,
     }));
     classic.confirm(&identifier).await;
 
@@ -1412,7 +1254,7 @@ async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
     });
     let posted = published
         .iter()
-        .position(|(_, payload)| payload.contains("after-revocation"));
+        .position(|(stream, _)| stream == &format!("user_{DAVID}_unreads"));
     assert!(
         disconnect.is_some() && posted.is_some() && disconnect < posted,
         "the disconnect goes out when the revocation commits: {:?}",
@@ -1422,7 +1264,12 @@ async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
             .collect::<Vec<_>>()
     );
 
-    // Both sockets close, still with the row paused, and neither got the later message.
+    remaining_viewer.until(
+        |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "after-revocation"),
+        |_| false,
+    ).await;
+
+    // Both revoked sockets close, still with the row paused, and neither got the later message.
     let frames = tokio::time::timeout(Duration::from_secs(5), classic.until_closed())
         .await
         .expect("the classic socket is disconnected while the row is paused");
@@ -1935,4 +1782,74 @@ async fn row_publications_waiting_on_a_room_hold_no_readers() {
     )
     .await;
     server.abort();
+}
+
+
+#[tokio::test]
+async fn deleting_reply_sources_publishes_root_and_thread_tombstones() {
+    for threaded in [false, true] {
+        let Some(a) = super::admin_tests::app().await else { return };
+        let (source_id, reply_id, thread_id) = a.db().write(move |tx| {
+            let thread_id = if threaded {
+                Some(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+                    room_id: ALL_TALK, creator_id: DAVID, name: Some("Tombstones".into()), ..Default::default()
+                })?.id)
+            } else { None };
+            let source = campfire_db::Message::create(tx, campfire_db::NewMessage {
+                room_id: ALL_TALK, creator_id: DAVID, thread_id,
+                markdown_source: Some("Source to remove".into()), ..Default::default()
+            })?;
+            let reply = campfire_db::Message::create(tx, campfire_db::NewMessage {
+                room_id: ALL_TALK, creator_id: DAVID, thread_id,
+                markdown_source: Some("Reply remains".into()), reply_to_message_id: Some(source.id), ..Default::default()
+            })?;
+            Ok((source.id, reply.id, thread_id))
+        }).await.unwrap();
+        let topic = thread_id.map_or_else(|| format!("room:{ALL_TALK}"), |id| format!("thread:{id}"));
+        let (addr, server) = serve(&a).await;
+        let mut david = a.sign_in(DAVID).await;
+        let mut sync = Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+        sync.welcome().await;
+        let path = if threaded {
+            format!("/rooms/{ALL_TALK}/threads/{}/messages/{source_id}.turbo_stream", thread_id.unwrap())
+        } else { format!("/api/v1/messages/{source_id}") };
+        let reply = david.write(Req::new(Method::DELETE, &path).header("accept", "application/json")).await;
+        assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+        sync.until(removed(source_id), |_| false).await;
+        let event = sync.until(updated(reply_id), |_| false).await;
+        assert_eq!(event.topic, topic);
+        let api::SyncPayload::MessageUpdated(reply) = event.payload else { unreachable!() };
+        assert_eq!(reply.reply_to_message_id, None);
+        assert_eq!(reply.reply_target_deleted_at.as_deref(), Some("2026-03-02T16:00:00.000Z"));
+        assert_eq!(reply.markdown_source.as_deref(), Some("Reply remains"));
+        server.abort();
+    }
+}
+
+
+#[tokio::test]
+async fn failed_json_publication_keeps_bot_webhooks_held_without_subscribers() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let (room_id, message_id) = a.db().write(|tx| {
+        let bot = campfire_db::User::create_integration_bot(tx, "Publication bot")?;
+        campfire_db::Webhook::create(tx, bot.id, Some("https://example.test/bot"))?;
+        let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Direct, None, DAVID, &[DAVID, bot.id])?;
+        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: room.id, creator_id: DAVID, markdown_source: Some("Publish before bots".into()), ..Default::default()
+        })?;
+        crate::controllers::messages::deliver_webhooks_to_bots(tx, &room, &message)?;
+        tx.conn().execute_batch("ALTER TABLE boosts RENAME TO unavailable_boosts")?;
+        Ok((room.id, message.id))
+    }).await.unwrap();
+    let before = a.db().read(|conn| Ok(conn.query_row("SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'", [], |row| row.get::<_, campfire_db::Timestamp>(0))?)).await.unwrap();
+    let state = a.booted.app.clone();
+    let failed = a.db().read(move |conn| {
+        let room = campfire_db::Room::find(conn, room_id)?;
+        let message = campfire_db::Message::find(conn, message_id)?;
+        state.broadcasts.message_create(conn, &room, &message, &*state.db.env().rich_text)
+    }).await;
+    assert!(failed.is_err());
+    assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'", [], |row| row.get::<_, campfire_db::Timestamp>(0))?)).await.unwrap(), before);
+    assert!(before > a.db().env().now(), "publication did not acknowledge the held webhook");
 }

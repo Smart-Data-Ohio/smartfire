@@ -234,20 +234,6 @@ impl ChannelThread {
         Ok(())
     }
 
-    fn board_row_id(&self, column: bool) -> String {
-        dom_id(
-            "channel_thread",
-            self.id,
-            Some(if column {
-                "board_column_row"
-            } else {
-                "board_row"
-            }),
-        )
-    }
-
-
-
     pub(super) fn register_board_creation(tx: &mut Tx<'_>, id: i64, room: &Room) {
         if !room.board() {
             return;

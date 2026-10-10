@@ -4,7 +4,6 @@
 //! frames of the broadcasts they sit beside byte for byte the same with the sync engine on.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
@@ -1047,115 +1046,6 @@ async fn agent_steps_reach_the_parents_conversation_and_the_message() {
             .any(|step| step.name == "Fetch the logs")
     );
     server.abort();
-}
-
-/// The classic frames of an agent's status change, an approval decision and a step change.
-async fn classic_agent_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    // The classic pages open: the agents directory and David's inbox.
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    for channel in ["AgentsChannel", "ActivityChannel"] {
-        let identifier = crate::channels::tests::support::identifier(json!({ "channel": channel }));
-        client.confirm(&identifier).await;
-    }
-    let mut david = a.sign_in(DAVID).await;
-    david.authenticity_token().await;
-    let (_sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let topics = [format!("room:{ALL_TALK}")];
-        let mut sync = Sync::connect(addr, &david.cookie_header(), &topics).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
-
-    a.db()
-        .write(|tx| {
-            let mut agent = Agent::find(tx.conn(), AGENT)?.unwrap();
-            agent.status = "working".into();
-            agent.status_note = Some("Frame parity".into());
-            agent.save(tx)?;
-            agent.set_working_presence(tx, Some("Parity presence"))?;
-            AgentStep::create(
-                tx,
-                NewAgentStep {
-                    agent_id: AGENT,
-                    message_id: Some(BENDERS_MESSAGE),
-                    name: "Parity step".into(),
-                    ..Default::default()
-                },
-            )?;
-            tx.emit_after_commit(Event::broadcast(&StepParentChange {
-                message_id: Some(BENDERS_MESSAGE),
-                thread_id: None,
-            }));
-            Ok(())
-        })
-        .await
-        .unwrap();
-    let reply = david
-        .write(
-            crate::controllers::presenters::test_support::Req::new(
-                Method::PATCH,
-                &format!("/agent_approvals/{SEEDED_APPROVAL}"),
-            )
-            .header("accept", "text/html")
-            .form(&[("decision", "denied")]),
-        )
-        .await;
-    assert_eq!(reply.status, StatusCode::SEE_OTHER, "{}", reply.text());
-
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    cable.abort();
-    if let Some(server) = server {
-        server.abort();
-    }
-    Some(frames)
-}
-
-#[tokio::test]
-async fn the_agent_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (
-        classic_agent_frames(false).await,
-        classic_agent_frames(true).await,
-    ) else {
-        return;
-    };
-    let has = |needle: &str| off.iter().any(|(_, frame)| frame.contains(needle));
-    assert!(
-        has(&format!("status_badge_agent_{AGENT}")),
-        "the badge: {off:#?}"
-    );
-    assert!(
-        has(&format!("directory_row_agent_{AGENT}")),
-        "the row: {off:#?}"
-    );
-    assert!(has("Parity step"), "the step's message: {off:#?}");
-    assert!(
-        off.iter()
-            .any(|(stream, _)| *stream == format!("user_{DAVID}_activity")),
-        "the decided request's inbox item: {off:#?}"
-    );
-    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
-    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
-        assert_eq!(off, on, "frame {index}");
-    }
 }
 
 /// Inserts a ledger entry for Bender's agent, `age_seconds` old, answering its id.

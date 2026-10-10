@@ -86,6 +86,13 @@ impl SyncRenderer for Renderer {
             .ok()
     }
 
+    fn messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<api::MessageDTO>> {
+        let app = self.app.upgrade()?;
+        dto::digest_messages(conn, &app, messages)
+            .inspect_err(|error| tracing::warn!(%error, "sync: digest batch not rendered"))
+            .ok()
+    }
+
     fn reactions(&self, conn: &Connection, message: &Message) -> Option<api::MessageReactions> {
         let app = self.app.upgrade()?;
         dto::message_reactions(conn, &app, message)

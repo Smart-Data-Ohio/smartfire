@@ -184,7 +184,7 @@ pub use stage::{
     StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
 };
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
-pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing, WorkspaceBranding};
+pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, ThreadGithubUpdated, Typing, WorkspaceBranding};
 pub use thread::{
     CreateThread, JoinThread, Thread, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
     ThreadIndicatorChanged, ThreadInvolvement, ThreadList, ThreadMembership, ThreadMembershipState,

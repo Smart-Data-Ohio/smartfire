@@ -1,12 +1,9 @@
 //! HTML adapter only; shared X cards use persisted, session-independent facts.
 use crate::{
     app::App,
-    cable::broadcasts::{Stream, message_dom_id},
 };
-use campfire_db::{Account, Room};
 #[cfg(any(test, feature = "test-support"))]
 use campfire_db::Message;
-use campfire_views::helpers::AvatarIcon;
 #[cfg(any(test, feature = "test-support"))]
 pub fn container(
     app: &App,
@@ -19,69 +16,21 @@ pub fn container(
     }))
 }
 pub fn broadcast_updates(app: &App, post_id: i64) -> anyhow::Result<()> {
-    let app2 = app.clone();
-    app.db.read_blocking(move |conn| {
-        use crate::integrations::{
-            message_batches::{self, Reference},
-            twitter::post::Post,
-        };
-        let account = Account::first(conn)?;
-        let logo_url = match super::resolve_avatar_icon(conn, "x") {
-            Some(AvatarIcon::Image { url, .. }) => Some(url),
-            _ => None,
-        };
+    let app = app.clone();
+    app.db.clone().read_blocking(move |conn| {
+        use crate::integrations::message_batches::{self, Reference};
         let mut after = None;
         loop {
             let messages = message_batches::next(conn, Reference::TwitterPost(post_id), after)?;
-            let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
-            let room_ids: Vec<_> = messages
-                .iter()
-                .map(|m| m.room_id)
-                .collect::<std::collections::BTreeSet<_>>()
-                .into_iter()
-                .collect();
-            let rooms: std::collections::HashMap<_, _> = Room::for_ids(conn, &room_ids)?
-                .into_iter()
-                .map(|r| (r.id, r))
-                .collect();
-            let mut posts = Post::for_messages(conn, &ids)?;
-            for message in &messages {
-                let room = rooms
-                    .get(&message.room_id)
-                    .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-                let mut ordered = posts.remove(&message.id).unwrap_or_default();
-                Post::order_cards(&mut ordered);
-                let cards: Vec<_> = ordered
-                    .into_iter()
-                    .map(|p| card_from_post(p, logo_url.clone()))
-                    .collect();
-                let html = super::page::render_detached(&app2, account.as_ref(), |ctx| {
-                    campfire_views::twitter::cards_for_client_id(
-                        ctx,
-                        &message.client_message_id,
-                        &[],
-                        &cards,
-                    )
-                    .0
-                });
-                app2.broadcasts.turbo(
-                    &Stream::conversation(room, message),
-                    campfire_cable::turbo::Action::Replace,
-                    &message_dom_id(message, Some("twitter_cards")),
-                    Some(&html),
-                    true,
-                );
-            }
-            app2.broadcasts.sync_message_cards(conn, &messages);
-            if messages.len() < message_batches::SIZE {
-                break;
-            }
-            after = messages.last().map(|m| m.id);
+            app.broadcasts.sync_message_cards(conn, &messages);
+            if messages.len() < message_batches::SIZE { break; }
+            after = messages.last().map(|message| message.id);
         }
         Ok(())
     })?;
     Ok(())
 }
+
 pub use campfire_runtime::presenters::twitter_cards::*;
 
 #[cfg(any(test, feature = "test-support"))]

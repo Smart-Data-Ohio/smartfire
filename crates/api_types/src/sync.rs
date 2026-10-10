@@ -119,6 +119,9 @@ pub enum SyncPayload {
     /// [`MessageDTO`] the `POST` returns, so `clientMessageId` reconciles a pending send.
     #[serde(rename = "message.created")]
     MessageCreated(MessageDTO),
+    /// A mapped PR discussion header changed. Refetch through the viewer-authorized card API.
+    #[serde(rename = "thread.github.updated")]
+    ThreadGithubUpdated(ThreadGithubUpdated),
     /// On the message's conversation topic: an edit, embed suppression, or a streaming agent
     /// message growing or finishing. Applied only if `updatedAt` is newer than the copy held.
     #[serde(rename = "message.updated")]
@@ -279,4 +282,14 @@ pub struct Typing {
     pub user_id: i64,
     /// `false` when they sent, cleared the composer or left.
     pub on: bool,
+}
+
+/// Viewer-neutral invalidation of a discussion header, including a deleted starter message.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ThreadGithubUpdated {
+    pub room_id: i64,
+    pub thread_id: i64,
+    pub pull_request_id: i64,
 }

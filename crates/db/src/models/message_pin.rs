@@ -106,8 +106,7 @@ impl MessagePin {
         }
         let pin = Self::create(tx, message, message.room_id, pinner_id)?;
         if let Some(note) = pin.post_pin_note(tx, message)? {
-            let room = Room::find(tx.conn(), note.room_id)?;
-            tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: note.id }));
+                        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: note.id }));
         }
         Ok(Ok(pin))
     }

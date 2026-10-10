@@ -449,20 +449,7 @@ fn board_deletion_rows_precede_a_failing_agent_ledger_callback() {
         t.try_write(move |tx| ChannelThread::find(tx.conn(), post.id)?.destroy(tx))
             .is_err()
     );
-    let rows = t.events()[from..]
-        .iter()
-        .filter_map(|event| match event.as_broadcast()? {
-            Broadcast::Turbo(frame) if frame.target.starts_with("board_") => Some(frame.target),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(
-        rows,
-        [
-            format!("board_row_channel_thread_{}", post.id),
-            format!("board_column_row_channel_thread_{}", post.id)
-        ]
-    );
+    assert!(t.events()[from..].iter().any(|event| event.as_broadcast() == Some(Broadcast::ThreadRemoved { thread_id: post.id, room_id: post.room_id })));
     assert!(
         t.read(|conn| ChannelThread::find_by_id(conn, post.id))
             .is_none()

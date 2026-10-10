@@ -1325,7 +1325,7 @@ pub fn thread_base_push(candidate: &ThreadPushCandidate) -> bool {
 }
 
 /// The indicator replace (`messages/_thread_indicator`) for a thread's parent message.
-pub fn thread_indicator_broadcast(room: &Room, parent: &Message, reply_count: i64) -> Broadcast {
+pub fn thread_indicator_broadcast(_room: &Room, parent: &Message, reply_count: i64) -> Broadcast {
     Broadcast::ThreadIndicator { message_id: parent.id,
             reply_count }
 }
