@@ -241,3 +241,5 @@ async fn relative_overflow_reminders_match_fresh_rails_rows_and_saved_page() {
     }
     assert_eq!(compare_feature_input_requests(vector).await, 4);
 }
+
+use campfire_web::controllers::presenters::Rendering;

@@ -108,6 +108,12 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     }
     if let Some(preferences) = preferences.as_object() {
         for (key, value) in preferences {
+            if key == "settings_revision" {
+                if value.as_i64().is_none_or(|revision| revision < 0) {
+                    errors.add("inbox_preferences", "settings revision is invalid");
+                }
+                continue;
+            }
             if crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
                 if !crate::models::notification_policy::valid_preference(key, value) {
                     errors.add("inbox_preferences", format!("{key} is invalid"));

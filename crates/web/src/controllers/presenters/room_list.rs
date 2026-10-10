@@ -2,13 +2,21 @@
 use super::{Presenter, Result, page};
 use askama::Template;
 use campfire_db::Message;
+pub trait RoomList {
+    fn room_message_list(
+        &self,
+        records: &[Message],
+        divider_id: Option<i64>,
+        unread_count: i64,
+    ) -> Result<String>;
+}
 
-impl Presenter<'_> {
+impl RoomList for Presenter<'_> {
     #[allow(
         dead_code,
         reason = "WS8b-r's separately owned room shell supplies the unread facts after merge"
     )]
-    pub fn room_message_list(
+    fn room_message_list(
         &self,
         records: &[Message],
         divider_id: Option<i64>,
@@ -41,3 +49,5 @@ impl Presenter<'_> {
         })
     }
 }
+
+use crate::controllers::presenters::Rendering;

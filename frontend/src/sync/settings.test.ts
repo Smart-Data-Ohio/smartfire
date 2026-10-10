@@ -35,6 +35,33 @@ function held<A>() {
   return { promise, release };
 }
 
+it("applies a mute committed after a GET even when its PATCH started first", async () => {
+  const roomId = SEED_IDS.rooms.general;
+  await settings.updateNotifications({ roomMute: { roomId, duration: "off" } });
+  const started = held<void>();
+  const gate = held<void>();
+  intercept = async (input, init) => {
+    if (String(input).endsWith("/settings/notifications")) {
+      started.release();
+      await gate.promise;
+    }
+
+    return fetch(input, init);
+  };
+
+  const pending = settings.updateNotifications({ roomMute: { roomId, duration: "forever" } });
+  await started.promise;
+  const before = await settings.load();
+  expect(roomMuted(before.notifications, roomId, Date.now())).toBe(false);
+  gate.release();
+  const saved = await pending;
+  expect(roomMuted(store.getState().sidebar.notificationPreferences, roomId, Date.now())).toBe(
+    true,
+  );
+  expect(roomMuted(saved.notifications, roomId, Date.now())).toBe(true);
+  expect(roomMuted((await settings.load()).notifications, roomId, Date.now())).toBe(true);
+});
+
 it.each(["PATCH", "GET"])(
   "keeps a room mute when an older settings PATCH lands after a newer %s",
   async (newerMethod) => {
@@ -114,7 +141,7 @@ it("keeps newer settings GET results when an earlier GET arrives last", async ()
 });
 
 it.each(["policy", "badge"])(
-  "keeps a newer %s refresh over a delayed mute count at the same activity revision",
+  "keeps a newer %s refresh over a delayed mute count at an older server revision",
   async (newerKind) => {
     const started = held<void>();
     const gate = held<void>();
@@ -123,8 +150,13 @@ it.each(["policy", "badge"])(
     intercept = async (input, init) => {
       if (String(input).endsWith("/activity/unread_count")) {
         countRequests += 1;
+
         const first = countRequests === 1;
-        const response = Response.json({ unreadCount: first ? 0 : 1, unreadRevision: 7 });
+
+        const response = Response.json({
+          unreadCount: first ? 0 : 1,
+          unreadRevision: first ? 8 : 9,
+        });
 
         if (first) {
           started.release();

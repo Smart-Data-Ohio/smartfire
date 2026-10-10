@@ -14,7 +14,7 @@ use campfire_app::cable::sync::{self as twins, SyncRenderer};
 use campfire_app::cable::{CableUser, room_gid, thread_gid};
 use campfire_cable::sync::{SyncHandler, SyncSession};
 use campfire_db::{Connection, Membership, Message, Room, WorkspacePresenceLease};
-use campfire_web::concerns::expire_idle_timed_out_session;
+use campfire_runtime::concerns::expire_idle_timed_out_session;
 use rusqlite::OptionalExtension as _;
 
 use crate::dto;
@@ -175,7 +175,13 @@ impl SyncRenderer for Renderer {
         let Some(row) = campfire_db::ScheduledMessage::find_by_id(conn, id)? else {
             return Ok(None);
         };
-        Ok(crate::composer::scheduled_rows(conn, &[row], app.db.env().now())?.pop())
+        Ok(crate::composer::scheduled_rows(
+            conn,
+            &[row],
+            app.db.env().now(),
+            app.db.env().rich_text.as_ref(),
+        )?
+        .pop())
     }
 
     fn agent_status(

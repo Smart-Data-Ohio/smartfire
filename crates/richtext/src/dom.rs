@@ -168,6 +168,13 @@ impl Dom {
         self.element(id).map(|e| &*e.name.local)
     }
 
+    /// Keeps the element's attributes and children, and changes its tag.
+    pub fn set_local_name(&mut self, id: NodeId, local: &str) {
+        if let Some(element) = self.element_mut(id) {
+            element.name.local = LocalName::from(local);
+        }
+    }
+
     pub fn is_html_element(&self, id: NodeId) -> bool {
         self.element(id).is_some_and(|e| e.name.ns == ns!(html))
     }

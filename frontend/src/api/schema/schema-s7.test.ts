@@ -24,6 +24,7 @@ import {
 
 // The wire JSON below mirrors crates/api_types/src/tests_s7.rs.
 const settingsJson = {
+  revision: 3,
   profile: {
     userId: 7,
     name: "Ada Lovelace",

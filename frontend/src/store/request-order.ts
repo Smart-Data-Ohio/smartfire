@@ -4,8 +4,3 @@ let nextSequence = 0;
 export function beginSnapshotRequest(): number {
   return ++nextSequence;
 }
-
-/** A pending or failed newer request does not displace a completed snapshot. */
-export function newerSnapshotRequest(started: number, completed: number): boolean {
-  return started > completed;
-}

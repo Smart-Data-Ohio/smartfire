@@ -12,8 +12,8 @@ use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
 use campfire_db::{Membership, Room, User, UserStar};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_rooms::controllers::rooms::{audit_room, directs};
-use campfire_web::concerns;
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::concerns;
+use campfire_runtime::context::db_error;
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now, set_room};
@@ -440,7 +440,7 @@ async fn index_files(c: &mut Ctx) -> Result {
 
 /// `switchers#show`'s read model, as the contract types it.
 async fn show_switcher(c: &mut Ctx) -> Result {
-    use campfire_web::controllers::presenters::switcher;
+    use campfire_runtime::presenters::switcher;
     before_actions(c).await?;
     let viewer = concerns::require_current_user(c)?.clone();
     let base_url = c.url_for("");

@@ -245,3 +245,5 @@ async fn github_write_bot_credentials_are_forbidden_and_never_reach_github() {
     }
     assert!(fresh.server.received().is_empty());
 }
+
+use campfire_views::rendering::*;

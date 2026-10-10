@@ -57,6 +57,7 @@ impl NotificationLevel {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NotificationPreferences {
+    pub settings_revision: i64,
     pub default_notification_level: NotificationLevel,
     pub room_notification_levels: BTreeMap<i64, Option<NotificationLevel>>,
     pub room_mute_until: BTreeMap<i64, Option<jiff::Timestamp>>,

@@ -176,7 +176,44 @@ fn a9_notification_preferences_extend_and_preserve_legacy_keys() {
     });
     let raw: String = t.read(|c| Ok(c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?));
     let value: Value = serde_json::from_str(&raw).unwrap();
-    assert_eq!(value, json!({"agent_work":"0","custom_legacy":true,"default_notification_level":"mentions","room_notification_levels":{"1":null},"room_mute_until":{"1":"2030-01-01T00:00:00Z"}}));
+    assert_eq!(value, json!({"settings_revision":1,"agent_work":"0","custom_legacy":true,"default_notification_level":"mentions","room_notification_levels":{"1":null},"room_mute_until":{"1":"2030-01-01T00:00:00Z"}}));
+}
+
+#[test]
+fn a9_preference_writes_advance_settings_and_activity_revisions() {
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    let before = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
+    for revision in 1..=2 {
+        t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
+            inbox_preferences: Some(json!({"default_notification_level":"nothing", "settings_revision":0})),
+            ..Default::default()
+        }));
+        let value: Value = t.read(|c| {
+            let raw: String = c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?;
+            Ok(serde_json::from_str(&raw).unwrap())
+        });
+        assert_eq!(value["settings_revision"], revision);
+        let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
+        assert!(after.revision > before.revision);
+    }
+}
+
+#[test]
+fn a9_clearing_preferences_keeps_the_settings_revision_monotonic() {
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    for preferences in [json!({"default_notification_level":"nothing"}), Value::Null] {
+        t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
+            inbox_preferences: Some(preferences),
+            ..Default::default()
+        }));
+    }
+    let revision: i64 = t.read(|c| Ok(c.query_row(
+        "SELECT json_extract(inbox_preferences, '$.settings_revision') FROM users WHERE id=?",
+        [id("david")], |r| r.get(0)
+    )?));
+    assert_eq!(revision, 2);
 }
 
 #[test]

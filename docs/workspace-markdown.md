@@ -18,7 +18,9 @@ New messages use Markdown in a compact, automatically growing message box. Type 
 
 On a desktop, Enter sends, Shift+Enter inserts a line break, and Ctrl/Cmd+Enter sends. On a touch device or narrow screen, Enter inserts a line break; use the send button to send. Ctrl/Cmd+B, Ctrl/Cmd+I, and Ctrl/Cmd+K format the selection. Use attachments for images and other files; file paste and file drop continue to work. Links to X posts render as live cards under the message; see [X post cards](x-posts.md).
 
-Type `@` to find a member of the current room. Selecting a suggestion inserts `@[Display Name]`. Only an exact, unique, active room member is resolved to a mention. Ambiguous names and names outside the room stay plain text. Mentions inside code or links do not notify anyone. The resolved identity is saved with the message, so a later display-name change does not redirect an existing mention.
+In the SPA, type `@` to find a member of the current room. Selecting a suggestion inserts a stable user-ID token such as `<@123>`. The message displays the person's current name, even when names repeat or change. Editing preserves the token. Unknown, deleted, inactive, or nonmember IDs stay literal text and do not notify anyone.
+
+Legacy `@[Display Name]` mentions still resolve when exactly one active room member has that exact name. Ambiguous names and names outside the room stay plain text. Mentions inside code or links, or preceded by a backslash, do not notify anyone.
 
 Discord-style shortcodes such as `:openai:` or `:thumbsup:` render inline as brand icons or emoji, with `:` autocomplete in the composer and the reaction input. Shortcodes inside code or link labels stay literal. See [Brand icons and emoji shortcodes](icons.md).
 

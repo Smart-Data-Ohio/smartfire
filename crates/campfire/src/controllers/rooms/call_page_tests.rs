@@ -295,3 +295,5 @@ async fn complete_voice_and_stage_form_pages_match_fourteen_rails_renders() {
         }
     }
 }
+
+use campfire_views::rendering::*;

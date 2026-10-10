@@ -9,9 +9,10 @@ use campfire_kit::{Ctx, Error, Param, Result, StatusCode};
 use campfire_rooms::controllers::rooms::{
     self, boards, call_channels, closeds, directs, opens, operations,
 };
-use campfire_views::helpers::IconSource;
-use campfire_web::concerns::require_current_user;
-use campfire_web::controllers::presenters::{Presenter, accounts, page::db_error};
+use campfire_presentation::helpers::IconSource;
+use campfire_runtime::concerns::require_current_user;
+use campfire_runtime::presenters::{Presenter, accounts};
+use campfire_runtime::context::db_error;
 
 use crate::{
     dto,
@@ -465,7 +466,7 @@ async fn create_room(c: &mut Ctx) -> Result {
                     icon.as_deref(),
                     creator,
                     &grantees,
-                    campfire_web::rich_text::room_icon_resolves,
+                    campfire_runtime::rich_text::room_icon_resolves,
                 )?
             };
             tx.conn().execute_cached(

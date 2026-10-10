@@ -5,10 +5,18 @@ import { mutations, store } from "./store.ts";
 
 afterEach(() => store.setState(initialState, true));
 
-it("refreshes the activity count when mute policy changes without a content revision", () => {
+it("accepts a count at the newest server revision regardless of request-start order", () => {
+  const first = beginSnapshotRequest();
+  const second = beginSnapshotRequest();
+  mutations.setActivityUnreadCount({ unreadCount: 0, unreadRevision: 8 }, undefined, second);
+  mutations.setActivityUnreadCount({ unreadCount: 1, unreadRevision: 8 }, undefined, first);
+  expect(store.getState().activity.unreadCount).toBe(1);
+});
+
+it("orders mute-policy counts by server revision", () => {
   mutations.setActivityUnreadCount({ unreadCount: 2, unreadRevision: 7 });
   mutations.setActivityUnreadCount(
-    { unreadCount: 0, unreadRevision: 7 },
+    { unreadCount: 0, unreadRevision: 8 },
     store.getState().activity.generation,
     beginSnapshotRequest(),
   );

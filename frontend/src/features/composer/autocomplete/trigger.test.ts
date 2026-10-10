@@ -35,6 +35,8 @@ describe("findTrigger", () => {
 
   it("doesn't reopen on an inserted mention token", () => {
     expect(at("@[Ada Lovelace] |")).toBeNull();
+    expect(at("<@123>|")).toBeNull();
+    expect(at("<@123> |")).toBeNull();
   });
 
   it("stays on the caret's line", () => {
@@ -78,6 +80,15 @@ describe("findTrigger", () => {
 });
 
 describe("applyCompletion", () => {
+  it("inserts a stable user ID and keeps it intact when editing surrounding text", () => {
+    expect(
+      applyCompletion(
+        "<@123> and @ad tomorrow",
+        { kind: "mention", query: "ad", start: 11, end: 14 },
+        "<@456>",
+      ),
+    ).toEqual({ value: "<@123> and <@456> tomorrow", caret: 18 });
+  });
   it("replaces the trigger and query, adds a space and puts the caret after it", () => {
     const trigger = { kind: "mention", query: "ad", start: 3, end: 6 } as const;
 

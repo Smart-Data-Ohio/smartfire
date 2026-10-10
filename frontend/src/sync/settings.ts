@@ -53,7 +53,6 @@ import {
   showAccountTheme,
   type ThemePreference,
 } from "../lib/appearance.ts";
-import { beginSnapshotRequest, newerSnapshotRequest } from "../store/request-order.ts";
 import type { State } from "../store/state.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { loadUnreadCount } from "./activity-actions.ts";
@@ -129,19 +128,21 @@ async function write<A>(run: Promise<A>): Promise<A> {
 
 export type { TokenService };
 
-let latestSettings: { readonly sequence: number; readonly value: Settings } | null = null;
+let latestSettings: Settings | null = null;
 
 async function settingsSnapshot(run: () => Promise<Settings>): Promise<Settings> {
-  const sequence = beginSnapshotRequest();
   const next = await run();
 
-  if (latestSettings === null || newerSnapshotRequest(sequence, latestSettings.sequence)) {
-    latestSettings = { sequence, value: next };
+  if (
+    latestSettings?.profile.userId !== next.profile.userId ||
+    next.revision >= latestSettings.revision
+  ) {
+    latestSettings = next;
     mutations.setNotificationPreferences(next.notifications);
   }
 
   // Settings screens also replace their local page with the returned snapshot.
-  return latestSettings.value;
+  return latestSettings;
 }
 
 export const settings = {

@@ -1,29 +1,21 @@
 //! Complete room header region: app/views/rooms/show/_nav.html.erb.
 use super::RoomView;
 use crate::{
-    ViewContext, helpers as h, huddle::Participant, huddle_stage::Stage, messages::RoomKind,
+    ViewContext, helpers as h, messages::RoomKind,
 };
 use askama::Template;
-use serde::Deserialize;
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct Navigation {
-    pub room: RoomView,
-    #[serde(default)]
-    pub icon: Option<h::AvatarIcon>,
-    pub pins_count: i64,
-    pub involvement: String,
-    pub participants: Vec<Participant>,
-    pub stage: Option<Stage>,
+pub trait NavigationRendering {
+    fn identity(&self, ctx: &ViewContext) -> String;
+    fn render(&self, ctx: &ViewContext) -> String;
 }
-impl Navigation {
-    pub fn identity(&self, ctx: &ViewContext) -> String {
+impl NavigationRendering for Navigation {
+    fn identity(&self, ctx: &ViewContext) -> String {
         if self.room.header.is_some() {
             return self.room.header_html(ctx).to_string();
         }
         Identity { ctx, nav: self }.render().expect("room identity")
     }
-    pub fn render(&self, ctx: &ViewContext) -> String {
+    fn render(&self, ctx: &ViewContext) -> String {
         Nav {
             ctx,
             nav: self,
@@ -33,6 +25,7 @@ impl Navigation {
         .expect("room navigation")
     }
 }
+
 #[derive(Template)]
 #[template(path = "rooms/show/_workspace_nav.html")]
 struct Nav<'a> {
@@ -201,3 +194,6 @@ impl Nav<'_> {
 mod filters {
     pub use crate::helpers::filters::*;
 }
+pub use campfire_presentation::rooms::navigation::*;
+
+use crate::rendering::*;

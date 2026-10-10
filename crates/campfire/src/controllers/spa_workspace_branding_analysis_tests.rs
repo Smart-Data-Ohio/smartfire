@@ -12,11 +12,11 @@ async fn with_media_observation<F: Future>(work: F) -> (F::Output, bool) {
     tokio::pin!(work);
     let mut full = true;
     loop {
-        let (available, capacity) = campfire_web::active_storage::media_permits();
+        let (available, capacity) = campfire_runtime::active_storage::media_permits();
         full &= available == capacity;
         tokio::select! {
             result = &mut work => {
-                let (available, capacity) = campfire_web::active_storage::media_permits();
+                let (available, capacity) = campfire_runtime::active_storage::media_permits();
                 return (result, full && available == capacity);
             }
             () = tokio::time::sleep(Duration::from_millis(1)) => {}
@@ -254,7 +254,7 @@ async fn spa_workspace_branding_full_pool_render_deadlines_keep_existing_fallbac
     let (_, blocked_id) = upload_bytes(&a, &animated_gif(), "blocked.gif", "image/gif").await;
     let blocked_blob = blob(&a, blocked_id).await;
     let blocked = branding::test_hooks::block_reads(&blocked_blob.key);
-    let first = campfire_web::active_storage::process_branding_with_deadline(
+    let first = campfire_runtime::active_storage::process_branding_with_deadline(
         branding::processing_timeout(&blocked_blob),
         {
             let storage = a.booted.app.storage.clone();
@@ -284,7 +284,7 @@ async fn spa_workspace_branding_full_pool_render_deadlines_keep_existing_fallbac
     .await;
     let reached = blocked.reached.load(Ordering::Relaxed);
     let queued_reached = queued.reached.load(Ordering::Relaxed);
-    let slots = campfire_web::active_storage::branding_permits();
+    let slots = campfire_runtime::active_storage::branding_permits();
     drop(queued);
     drop(blocked);
     branding_slots_are_free().await;
@@ -317,19 +317,19 @@ async fn spa_workspace_branding_legacy_analysis_uses_its_pool_and_deadline() {
     let ((first, second), media_full) = with_media_observation(async {
         let first = tokio::time::timeout(
             Duration::from_secs(2),
-            campfire_web::active_storage::analyze(&a.booted.app, id),
+            campfire_runtime::active_storage::analyze(&a.booted.app, id),
         )
         .await;
         let second = tokio::time::timeout(
             Duration::from_secs(2),
-            campfire_web::active_storage::analyze(&a.booted.app, id),
+            campfire_runtime::active_storage::analyze(&a.booted.app, id),
         )
         .await;
         (first, second)
     })
     .await;
     let reached = blocked.reached.load(Ordering::Relaxed);
-    let slots = campfire_web::active_storage::branding_permits();
+    let slots = campfire_runtime::active_storage::branding_permits();
     drop(blocked);
     branding_slots_are_free().await;
     assert!(first.unwrap().is_err());
@@ -338,7 +338,7 @@ async fn spa_workspace_branding_legacy_analysis_uses_its_pool_and_deadline() {
     assert_eq!(slots, (0, 1));
     assert!(media_full);
     assert!(!blob(&a, id).await.is_analyzed());
-    let analyzed = campfire_web::active_storage::analyze(&a.booted.app, id)
+    let analyzed = campfire_runtime::active_storage::analyze(&a.booted.app, id)
         .await
         .unwrap()
         .unwrap();
@@ -380,7 +380,7 @@ async fn spa_workspace_branding_legacy_analysis_caps_bytes_before_open_or_copy()
             branding::test_hooks::stall(&source.key, campfire_storage::vips::StallPhase::Header);
         let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
         let (result, full) =
-            with_media_observation(campfire_web::active_storage::analyze(&a.booted.app, id)).await;
+            with_media_observation(campfire_runtime::active_storage::analyze(&a.booted.app, id)).await;
         branding_slots_are_free().await;
         assert!(full);
         assert_eq!(
@@ -449,7 +449,7 @@ async fn spa_workspace_branding_direct_upload_cannot_forge_analysis_provenance()
     )
     .await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
-    let analyzed = campfire_web::active_storage::analyze(&a.booted.app, id)
+    let analyzed = campfire_runtime::active_storage::analyze(&a.booted.app, id)
         .await
         .unwrap()
         .unwrap();
@@ -589,7 +589,7 @@ async fn detached_legacy_analysis(name: &'static str, replace: bool, classic_rem
         assert_server_mark(&a, &blob(&a, source_id).await);
         if source_id == id {
             // Dependent analysis must stay bounded after purge destroys its variant association.
-            campfire_web::active_storage::purge(&a.booted.app, id)
+            campfire_runtime::active_storage::purge(&a.booted.app, id)
                 .await
                 .unwrap();
         }
@@ -631,14 +631,14 @@ async fn spa_workspace_branding_replacement_between_analysis_reads_stays_bounded
     let (reached, reached_here) = std::sync::mpsc::channel();
     let (go, go_here) = std::sync::mpsc::channel::<()>();
     // Analysis has loaded the unmarked blob; the replacement commits before it classifies it.
-    campfire_web::active_storage::test_hooks::between_analysis_reads(id, move || {
+    campfire_runtime::active_storage::test_hooks::between_analysis_reads(id, move || {
         reached.send(()).unwrap();
         go_here.recv().unwrap();
     });
     let (result, full) = with_media_observation(async {
         let app = a.booted.app.clone();
         let analysis =
-            tokio::spawn(async move { campfire_web::active_storage::analyze(&app, id).await });
+            tokio::spawn(async move { campfire_runtime::active_storage::analyze(&app, id).await });
         tokio::task::spawn_blocking(move || reached_here.recv().unwrap())
             .await
             .unwrap();
@@ -681,14 +681,14 @@ async fn spa_workspace_branding_purge_between_analysis_reads_stops_without_copyi
     let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
     let (reached, reached_here) = std::sync::mpsc::channel();
     let (go, go_here) = std::sync::mpsc::channel::<()>();
-    campfire_web::active_storage::test_hooks::between_analysis_reads(id, move || {
+    campfire_runtime::active_storage::test_hooks::between_analysis_reads(id, move || {
         reached.send(()).unwrap();
         go_here.recv().unwrap();
     });
     let (result, full) = with_media_observation(async {
         let app = a.booted.app.clone();
         let analysis =
-            tokio::spawn(async move { campfire_web::active_storage::analyze(&app, id).await });
+            tokio::spawn(async move { campfire_runtime::active_storage::analyze(&app, id).await });
         tokio::task::spawn_blocking(move || reached_here.recv().unwrap())
             .await
             .unwrap();

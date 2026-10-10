@@ -4,7 +4,7 @@
 //! holds, and inserts an in-app Markdown link (`[#name](/rooms/12)`; links starting with `/`
 //! open in place). The server has no room-reference syntax to target.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
 use crate::{Timestamp, User};
@@ -25,10 +25,9 @@ pub struct UserSuggestionList {
 #[ts(export)]
 pub struct UserSuggestion {
     pub user: User,
-    /// What to insert: `@[Exact Name]`, the only mention syntax (resolved when the message
-    /// renders against exactly one active room member of that name). `null` when the name
-    /// isn't unique in scope or contains `[`, `]` or a line break: the row shows disabled
-    /// ("Duplicate name — type as plain text").
+    /// What to insert: `<@123>`, resolved by stable user id against active room members.
+    /// Display names can repeat or change. Legacy `@[Exact Name]` tokens still resolve by name.
+    /// Nullable for compatibility with older servers that cannot mention duplicate names.
     pub mention_token: Option<String>,
 }
 
@@ -176,7 +175,14 @@ pub struct ScheduledMessage {
     pub room_id: i64,
     pub thread_id: Option<i64>,
     pub reply_to_message_id: Option<i64>,
+    /// The visible target's author and plain-text excerpt; null after deletion or access loss.
+    pub reply_target: Option<crate::QuotePreview>,
     pub markdown_source: String,
+    /// `markdown_source` as preview text, with each `||spoiler||` replaced by "spoiler" and
+    /// any link or image whose label holds one dropped to its label
+    /// (`markdown::redacted_excerpt`, which reads the same render as the message). Lists and
+    /// cancel prompts show this, never the raw source.
+    pub excerpt: String,
     pub send_at: Timestamp,
     /// Derived from the timestamps, as the model does: there's no status column.
     pub state: ScheduledMessageState,
@@ -230,9 +236,10 @@ pub struct CreateScheduledMessage {
     pub reply_to_message_id: Option<i64>,
 }
 
-/// `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time or both
-/// (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A field left out (or
-/// `null`) keeps its value. `sendAt` must be in the future when it changes (422).
+/// `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time or reply target
+/// (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A field left out keeps
+/// its value. Null text/time also keep their values; a null reply target clears it.
+/// `sendAt` must be in the future when it changes (422).
 ///
 /// The other actions on one:
 /// - `DELETE /api/v1/scheduled_messages/:id` cancels it (204; `#destroy`), deleting its activity
@@ -248,7 +255,7 @@ pub struct CreateScheduledMessage {
 /// Editing or cancelling one that's `sending` is a 409 ("That message is sending right now; try
 /// again in a moment."). Any of the three on one that isn't the viewer's or isn't pending is a
 /// 404.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateScheduledMessage {
@@ -258,6 +265,38 @@ pub struct UpdateScheduledMessage {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub send_at: Option<Timestamp>,
+    /// Omit to keep the target; null clears it. A target must be visible in the same stream.
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reply_to_message_id: Option<Option<i64>>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateScheduledMessageFields {
+    #[serde(default)]
+    markdown_source: Option<String>,
+    #[serde(default)]
+    send_at: Option<Timestamp>,
+    #[serde(default, deserialize_with = "present_reply_target")]
+    reply_to_message_id: Option<Option<i64>>,
+}
+
+impl<'de> Deserialize<'de> for UpdateScheduledMessage {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let fields = UpdateScheduledMessageFields::deserialize(deserializer)?;
+        Ok(Self {
+            markdown_source: fields.markdown_source,
+            send_at: fields.send_at,
+            reply_to_message_id: fields.reply_to_message_id,
+        })
+    }
+}
+
+fn present_reply_target<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Option<i64>>, D::Error> {
+    Option::<i64>::deserialize(deserializer).map(Some)
 }
 
 /// Which of the viewer's scheduled messages to list.

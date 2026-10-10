@@ -1,4 +1,6 @@
 //! Plain view models for `app/views/searches`.
+pub use campfire_presentation::searches::*;
+
 use crate::{
     ViewContext,
     helpers::{self as h, filters},
@@ -6,36 +8,6 @@ use crate::{
     messages::MessageItem,
 };
 use askama::Template;
-#[derive(Clone, Debug)]
-pub struct Chip {
-    pub label: String,
-    pub remove_query: String,
-}
-#[derive(Clone, Debug)]
-pub struct SectionRow {
-    pub title: String,
-    pub path: String,
-    pub room_label: String,
-    pub time: jiff::Timestamp,
-    pub status: Option<String>,
-}
-#[derive(Clone, Debug)]
-pub struct Section {
-    pub id: String,
-    pub heading: String,
-    pub records: Vec<SectionRow>,
-}
-pub struct IndexView {
-    pub query: Option<String>,
-    pub q: Option<String>,
-    pub messages: Vec<MessageItem>,
-    pub recent_searches: Vec<RecentSearch>,
-    pub return_to_room: Option<(i64, String)>,
-    pub has_more: bool,
-    pub oldest_id: Option<i64>,
-    pub chips: Vec<Chip>,
-    pub sections: Vec<Section>,
-}
 #[derive(Template)]
 #[template(path="searches/index.html",blocks=["head","content"])]
 pub struct Index<'a> {
@@ -57,13 +29,6 @@ impl Page for Index<'_> {
     fn has_sidebar(&self) -> bool {
         true
     }
-}
-pub fn search_path(query: &str) -> String {
-    format!(
-        "{}?q={}",
-        campfire_routes::searches(),
-        h::url::cgi_escape(query)
-    )
 }
 #[derive(Template)]
 #[template(path = "searches/_filters.html")]
@@ -116,6 +81,27 @@ pub struct Older<'a> {
 pub struct Clear<'a> {
     pub ctx: &'a ViewContext<'a>,
 }
+
+impl Clear<'_> {
+    pub fn searches(&self) -> &[RecentSearch] {
+        &[]
+    }
+}
+
+
+
+
+pub struct IndexView {
+    pub query: Option<String>,
+    pub q: Option<String>,
+    pub messages: Vec<MessageItem>,
+    pub recent_searches: Vec<RecentSearch>,
+    pub return_to_room: Option<(i64, String)>,
+    pub has_more: bool,
+    pub oldest_id: Option<i64>,
+    pub chips: Vec<Chip>,
+    pub sections: Vec<Section>,
+}
 impl IndexView {
     pub fn filters(&self, ctx: &ViewContext) -> h::Html {
         h::raw(
@@ -159,12 +145,6 @@ impl IndexView {
     }
     pub fn no_results(&self) -> bool {
         self.messages.is_empty() && self.sections.is_empty()
-    }
-}
-
-impl Clear<'_> {
-    pub fn searches(&self) -> &[RecentSearch] {
-        &[]
     }
 }
 

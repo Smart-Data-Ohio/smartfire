@@ -81,7 +81,7 @@ fn ruby_differential_corpus_is_byte_identical() {
         );
     }
     let ctx = RenderContext { resolver: &oracle, request_host: Some("once.campfire.test".into()) };
-    let mentions = |name: &str| markdown::MentionResolver::unique_active_member(members.as_slice(), name);
+    let mentions = members.as_slice();
     let mut failures = Vec::new();
     let cases = json["cases"].as_array().unwrap();
     assert!(cases.len() >= 4200);

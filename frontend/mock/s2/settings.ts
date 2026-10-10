@@ -94,6 +94,7 @@ function initialState(world: World, now: number): State {
 
   return {
     settings: {
+      revision: 0,
       profile: {
         userId: VIEWER_ID,
         name: viewer?.name ?? "You",
@@ -273,7 +274,8 @@ export function createSettings(
   const update = (change: (settings: Settings) => Settings) => {
     const held = current();
 
-    held.settings = change(held.settings);
+    held.settings = { ...change(held.settings), revision: held.settings.revision + 1 };
+    ctx.world().activityRevision++;
 
     return ok(page());
   };
@@ -550,7 +552,7 @@ export function createSettings(
     if (allowed) world.dndAllowed.add(userId);
     else world.dndAllowed.delete(userId);
 
-    return ok(page());
+    return update((held) => held);
   };
 
   const sessionList = (notice: string | null): SessionList => ({

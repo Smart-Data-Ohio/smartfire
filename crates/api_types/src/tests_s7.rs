@@ -9,6 +9,7 @@ use crate::*;
 
 fn settings() -> Settings {
     Settings {
+        revision: 3,
         profile: ProfileSettings {
             user_id: 7,
             name: "Ada Lovelace".into(),
@@ -83,6 +84,7 @@ fn settings_wire() {
     assert_wire(
         &settings(),
         json!({
+            "revision": 3,
             "profile": {
                 "userId": 7,
                 "name": "Ada Lovelace",

@@ -574,3 +574,5 @@ async fn thread_rename_preserves_parent_and_reply_fragments() {
         );
     }
 }
+
+use campfire_web::controllers::presenters::MessageCache;

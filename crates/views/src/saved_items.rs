@@ -2,26 +2,14 @@
 use crate::helpers::filters;
 use crate::{ViewContext, helpers as h, layouts::Page};
 use askama::Template;
-
-pub struct Item {
-    pub id: i64,
-    pub status: String,
-    pub created_at: String,
-    pub remind_at: Option<String>,
-    pub reminded_at: Option<String>,
-    pub room_name: String,
-    pub author_name: String,
-    pub body: String,
-    pub message_path: String,
+pub trait ItemRendering {
+    fn created(&self, _ctx: &ViewContext) -> h::Html;
+    fn reminder(&self, _ctx: &ViewContext) -> h::Html;
+    fn status_button(&self, filter: &str) -> h::Html;
+    fn remove_button(&self, filter: &str) -> h::Html;
 }
-impl Item {
-    pub fn done(&self) -> bool {
-        self.status == "done"
-    }
-    pub fn status_class(&self) -> String {
-        self.status.replace('_', "-")
-    }
-    pub fn created(&self, _ctx: &ViewContext) -> h::Html {
+impl ItemRendering for Item {
+    fn created(&self, _ctx: &ViewContext) -> h::Html {
         crate::time::local_datetime_tag_iso(
             &self.created_at,
             "time",
@@ -29,7 +17,7 @@ impl Item {
             "",
         )
     }
-    pub fn reminder(&self, _ctx: &ViewContext) -> h::Html {
+    fn reminder(&self, _ctx: &ViewContext) -> h::Html {
         crate::time::local_datetime_tag_iso(
             self.reminded_at.as_deref().or(self.remind_at.as_deref()).expect("has reminder"),
             "time",
@@ -37,10 +25,7 @@ impl Item {
             "",
         )
     }
-    fn path(&self, filter: &str) -> String {
-        format!("{}?status={filter}", campfire_routes::saved_item(self.id))
-    }
-    pub fn status_button(&self, filter: &str) -> h::Html {
+    fn status_button(&self, filter: &str) -> h::Html {
         h::button_to_form_params(
             &self.path(filter),
             h::attrs().method("patch").class("btn btn--plain"),
@@ -52,7 +37,7 @@ impl Item {
             )],
         )
     }
-    pub fn remove_button(&self, filter: &str) -> h::Html {
+    fn remove_button(&self, filter: &str) -> h::Html {
         h::button_to_form(
             &self.path(filter),
             h::attrs().method("delete").class("btn btn--plain"),
@@ -61,6 +46,7 @@ impl Item {
         )
     }
 }
+
 #[derive(Template)]
 #[template(path = "saved_items/_item.html")]
 pub struct ItemPartial<'a> {
@@ -113,3 +99,4 @@ impl Page for Index<'_> {
         true
     }
 }
+pub use campfire_presentation::saved_items::*;

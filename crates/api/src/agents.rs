@@ -13,9 +13,9 @@ use campfire_db::models::agent_posting::{self, Cap};
 use campfire_db::models::agent_profile::{self, DirectoryRecord};
 use campfire_db::{Agent, AgentApproval, Connection, Membership, Room, Timestamp, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_web::concerns::{self, AuthenticatedBy};
-use campfire_web::controllers::presenters::page::db_error;
-use campfire_web::controllers::presenters::{accounts, view_context};
+use campfire_runtime::concerns::{self, AuthenticatedBy};
+use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::accounts;
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now};
@@ -242,7 +242,7 @@ async fn show_agent(c: &mut Ctx) -> Result {
         return Err(Error::NotFound);
     };
     let id = agent_id(c, "agent_id")?;
-    let zone = view_context::time_zone(c).await?;
+    let zone = campfire_runtime::request_context::time_zone(c).await?;
     let (secrets, now) = (c.app().secrets.clone(), now(c));
     let profile = c
         .app()
@@ -584,7 +584,7 @@ const OUTCOMES: [&str; 4] = ["pending", "delivered", "acknowledged", "suppressed
 
 /// `history`'s 140-character cut, ending "..." when cut.
 fn cut(text: &str) -> String {
-    campfire_views::helpers::application::truncate(text, 140, "...")
+    campfire_presentation::helpers::application::truncate(text, 140, "...")
 }
 
 fn metadata_text(value: &serde_json::Value) -> String {

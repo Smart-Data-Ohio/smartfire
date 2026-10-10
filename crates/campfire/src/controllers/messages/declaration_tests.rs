@@ -116,3 +116,5 @@ async fn legacy_v2_fragment_and_page_validators_cannot_serve_the_vulnerable_auto
         assert!(response.text().contains(oracle["html"].as_str().unwrap()));
     }
 }
+
+use campfire_web::controllers::presenters::{Rendering, MessageCache};

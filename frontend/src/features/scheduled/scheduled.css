@@ -133,6 +133,33 @@
   }
 
   /* The edit dialog. */
+  .scheduled-reply {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scheduled-reply-icon {
+    margin-right: var(--space-1);
+    vertical-align: middle;
+  }
+
+  .scheduled-reply-picker {
+    margin-top: var(--space-2);
+  }
+
+  .scheduled-edit-target {
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-pane);
+    color: var(--text);
+    font: inherit;
+  }
+
   .scheduled-edit {
     display: flex;
     flex-direction: column;

@@ -1,36 +1,16 @@
 //! Plain card facts and Rails' generic embed partial. No persistence or fetching here.
-use askama::Template;
-use serde::Deserialize;
+pub use campfire_presentation::link_embeds::*;
 
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(default)]
-pub struct Card {
-    pub url: String,
-    pub title: Option<String>,
-    pub description: Option<String>,
-    pub site_name: Option<String>,
-    pub image_url: Option<String>,
+use askama::Template;
+pub trait CardRendering {
+    fn render(&self) -> String;
 }
-impl Card {
-    pub fn title(&self) -> Option<&str> {
-        self.title.as_deref().filter(|s| !crate::helpers::is_blank(s))
-    }
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref().filter(|s| !crate::helpers::is_blank(s))
-    }
-    pub fn site_name(&self) -> Option<&str> {
-        self.site_name.as_deref().filter(|s| !crate::helpers::is_blank(s))
-    }
-    pub fn image(&self) -> Option<&str> {
-        self.image_url.as_deref().filter(|s| !crate::helpers::is_blank(s))
-    }
-    pub fn usable(&self) -> bool {
-        self.title().is_some() || self.description().is_some()
-    }
-    pub fn render(&self) -> String {
+impl CardRendering for Card {
+    fn render(&self) -> String {
         CardPartial { card: self }.render().expect("link card renders")
     }
 }
+
 #[derive(Template)]
 #[template(path = "link_embeds/_card.html")]
 struct CardPartial<'a> {

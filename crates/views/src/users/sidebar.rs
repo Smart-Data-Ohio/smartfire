@@ -6,24 +6,11 @@ use crate::{
     layouts::Page,
 };
 use askama::Template;
-
-#[derive(Clone, Debug, Default, serde::Deserialize)]
-pub struct RoomMenu {
-    pub menu_categorizable: bool,
-    pub menu_favorited: bool,
-    pub menu_favorite_position: Option<i64>,
-    pub menu_muted: bool,
-    pub menu_default_involvement: String,
-    pub menu_category_id: Option<i64>,
-    pub menu_can_delete: bool,
-    pub menu_can_leave: bool,
-    pub menu_leave_url: String,
-    pub menu_open_room: bool,
-    pub menu_direct_room: bool,
-    pub menu_room_label: Option<String>,
+pub trait RoomMenuRendering {
+    fn data(&self) -> h::Attrs;
 }
-impl RoomMenu {
-    pub fn data(&self) -> h::Attrs {
+impl RoomMenuRendering for RoomMenu {
+    fn data(&self) -> h::Attrs {
         h::attrs()
             .data("menu_categorizable", self.menu_categorizable)
             .data("menu_favorited", self.menu_favorited)
@@ -43,24 +30,11 @@ impl RoomMenu {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SidebarDirect {
-    pub room_id: i64,
-    pub unread: bool,
-    pub updated_at_epoch: String,
-    /// Other members in preloaded association order; self if there are none.
-    pub members: Vec<UserSummary>,
-    pub label: String,
-    pub menu: RoomMenu,
-    pub viewer_administrator: bool,
-    /// WS13 supplies its already rendered trusted partial and the collection-key participant IDs.
-    pub huddle_participants: Option<String>,
-    pub participant_ids: Option<Vec<i64>>,
-    pub membership_id: i64,
-    pub membership_updated_at: jiff::Timestamp,
-    pub avatar_zone: crate::time::Zone,
+pub trait SidebarDirectRendering {
+    fn row_attrs(&self) -> h::Attrs;
+    fn link_attrs(&self) -> h::Attrs;
 }
-impl SidebarDirect {
+impl SidebarDirectRendering for SidebarDirect {
     fn row_attrs(&self) -> h::Attrs {
         h::attrs()
             .class(self.class_names())
@@ -77,14 +51,8 @@ impl SidebarDirect {
             .data("room_id", self.room_id)
             .merge(self.menu.data())
     }
-    fn class_names(&self) -> String {
-        format!(
-            "sidebar-item direct{}{}",
-            if self.unread { " unread" } else { "" },
-            if self.menu.menu_muted { " muted" } else { "" }
-        )
-    }
 }
+
 #[derive(Clone, Debug)]
 pub enum SidebarDirectItem {
     Fragment(crate::fragment_cache::Fragment),
@@ -147,18 +115,12 @@ fn direct_room_digest() -> &'static str {
     });
     &DIGEST
 }
-#[derive(Clone, Debug)]
-pub struct SidebarRoom {
-    pub id: i64,
-    pub param_key: String,
-    pub name: String,
-    pub unread: bool,
-    pub menu: RoomMenu,
-    pub icon: Option<h::AvatarIcon>,
-    /// Rendered by WS13; None means huddles are unconfigured.
-    pub huddle_participants: Option<String>,
+pub trait SidebarRoomRendering {
+    fn venue_children(&self) -> h::Html;
+    fn shared_link_attrs(&self) -> h::Attrs;
+    fn link_attrs(&self) -> h::Attrs;
 }
-impl SidebarRoom {
+impl SidebarRoomRendering for SidebarRoom {
     fn venue_children(&self) -> h::Html {
         // WS13 can replace the complete children via huddle_participants. This default is
         // Rails' empty venue mount, which exists even when Huddle.configured? is false.
@@ -201,20 +163,8 @@ impl SidebarRoom {
             .merge(self.menu.data())
             .class(self.class_names())
     }
-    fn class_names(&self) -> String {
-        format!(
-            "sidebar-item room btn{}{}{}",
-            match self.param_key.as_str() {
-                "rooms_board" => " board-room",
-                "rooms_voice" => " voice-room",
-                "rooms_stage" => " voice-room stage-room",
-                _ => "",
-            },
-            if self.unread { " unread" } else { "" },
-            if self.menu.menu_muted { " muted" } else { "" }
-        )
-    }
 }
+
 #[derive(Template)]
 #[template(path = "users/sidebars/rooms/_direct.html")]
 pub struct SidebarDirectPartial<'a> {
@@ -227,15 +177,11 @@ pub struct SidebarSharedPartial<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub room: SidebarRoom,
 }
-
-/// The outer sidebar owns section layout; WS12/WS13 supply configured feature children.
-#[derive(Clone, Debug)]
-pub enum SidebarItem {
-    Direct(Box<SidebarDirect>),
-    Room(Box<SidebarRoom>),
+pub trait SidebarItemRendering {
+    fn render(&self, ctx: &ViewContext) -> h::Html;
 }
-impl SidebarItem {
-    pub fn render(&self, ctx: &ViewContext) -> h::Html {
+impl SidebarItemRendering for SidebarItem {
+    fn render(&self, ctx: &ViewContext) -> h::Html {
         h::raw(match self {
             Self::Direct(row) => direct_room(ctx, row),
             Self::Room(room) => SidebarSharedPartial {
@@ -247,20 +193,11 @@ impl SidebarItem {
         })
     }
 }
-#[derive(Clone, Debug)]
-pub struct SidebarCategory {
-    pub id: i64,
-    pub name: String,
-    pub collapsed: bool,
-    pub rooms: Vec<SidebarRoom>,
+
+pub trait SidebarCategoryRendering {
+    fn collapse_button(&self, ctx: &ViewContext) -> h::Html;
 }
-impl SidebarCategory {
-    fn path(&self) -> String {
-        format!("/room_categories/{}", self.id)
-    }
-    fn toggle_label(&self) -> &'static str {
-        if self.collapsed { "Expand" } else { "Collapse" }
-    }
+impl SidebarCategoryRendering for SidebarCategory {
     fn collapse_button(&self, ctx: &ViewContext) -> h::Html {
         // button_to serializes nested params after its token, sorted by field name.
         let image = h::image_tag(
@@ -300,6 +237,7 @@ impl SidebarCategory {
         )
     }
 }
+
 #[derive(Template)]
 #[template(path="users/sidebars/show.html",blocks=["head","content"])]
 pub struct SidebarShow<'a> {
@@ -344,3 +282,6 @@ impl SidebarShow<'_> {
         h::profile_card_trigger(self.current_user.id, false)
     }
 }
+pub use campfire_presentation::users::sidebar::*;
+
+use crate::rendering::*;

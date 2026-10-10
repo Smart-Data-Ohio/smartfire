@@ -76,7 +76,9 @@ function scheduledMessage(
     roomId: ROOM,
     threadId: null,
     replyToMessageId: null,
+    replyTarget: null,
     markdownSource: `Later ${id}`,
+    excerpt: `Later ${id}`,
     sendAt: at(minute),
     state: "pending",
     sendable: true,
@@ -1212,7 +1214,7 @@ describe("activity actions", () => {
   }
 
   for (const newerKind of ["badge", "page", "write"]) {
-    it.effect(`orders tied count snapshots from a newer ${newerKind} before an older refresh`, () =>
+    it.effect(`orders newer server counts from a ${newerKind} before an older refresh`, () =>
       Effect.gen(function* () {
         mutations.setActivityUnreadCount({ unreadCount: 0, unreadRevision: 7 });
         const fake = yield* FakeApi;
@@ -1228,7 +1230,7 @@ describe("activity actions", () => {
         yield* Deferred.await(started);
 
         if (newerKind === "badge") {
-          yield* fake.reply("GET /activity/unread_count", { unreadCount: 1, unreadRevision: 7 });
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 1, unreadRevision: 8 });
           yield* activity.loadUnreadCount();
         } else if (newerKind === "page") {
           yield* fake.reply("GET /activity", {
@@ -1236,14 +1238,14 @@ describe("activity actions", () => {
             users: [],
             nextCursor: null,
             unreadCount: 1,
-            unreadRevision: 7,
+            unreadRevision: 8,
           });
           yield* activity.load("all", "unread");
         } else {
           yield* fake.reply("PATCH /activity/3", {
             item: item(3, 30),
             unreadCount: 1,
-            unreadRevision: 7,
+            unreadRevision: 8,
           });
           yield* activity.setState(3, "unread");
         }

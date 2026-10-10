@@ -52,6 +52,7 @@ pub fn appearance(conn: &rusqlite::Connection, user: i64) -> Result<Appearance> 
 /// Run inside the same writer transaction as core profile, security and attachment changes.
 /// Validation also examines unchanged settings, as User#save does in Rails.
 pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
+    let preferences_changing = changes.inbox_preferences.is_some();
     let mut attrs = Map::new();
     for (key, value) in [
         ("theme", changes.theme),
@@ -104,21 +105,24 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
     }
 
     if let Some(preferences) = changes.inbox_preferences {
+        let raw: Option<String> = tx.conn().query_row(
+            "SELECT inbox_preferences FROM users WHERE id=?",
+            [user],
+            |r| r.get(0),
+        )?;
+        let mut existing = raw
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|v| v.as_object().cloned())
+            .unwrap_or_default();
         let value = if let Some(preferences) = preferences.as_object() {
-            let raw: Option<String> = tx.conn().query_row(
-                "SELECT inbox_preferences FROM users WHERE id=?",
-                [user],
-                |r| r.get(0),
-            )?;
-            let mut existing = raw
-                .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-                .and_then(|v| v.as_object().cloned())
-                .unwrap_or_default();
             for (key, value) in preferences {
                 if INBOX_KEYS.contains(&key.as_str()) || crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
                     existing.insert(key.clone(), value.clone());
                 }
             }
+            Value::Object(existing)
+        } else if preferences.is_null() {
+            existing.retain(|key, _| key == "settings_revision");
             Value::Object(existing)
         } else {
             preferences
@@ -128,5 +132,34 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
             Value::String(serde_json::to_string(&value).expect("JSON preferences")),
         );
     }
-    crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))
+    crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))?;
+    if preferences_changing {
+        bump_revision(tx, user)?;
+    }
+    Ok(())
+}
+
+/// Advance within the settings write transaction; request bodies cannot assign this revision.
+pub fn bump_revision(tx: &Tx<'_>, user: i64) -> Result<()> {
+    let raw: Option<String> = tx.conn().query_row(
+        "SELECT inbox_preferences FROM users WHERE id=?",
+        [user],
+        |r| r.get(0),
+    )?;
+    let mut preferences = raw
+        .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+        .and_then(|value| value.as_object().cloned())
+        .unwrap_or_default();
+    let revision = preferences
+        .get("settings_revision")
+        .and_then(Value::as_i64)
+        .unwrap_or(0)
+        .checked_add(1)
+        .ok_or_else(|| crate::Error::Other("settings revision exhausted".into()))?;
+    preferences.insert("settings_revision".into(), Value::from(revision));
+    tx.conn().execute(
+        "UPDATE users SET inbox_preferences=?,activity_revision=activity_revision+1 WHERE id=?",
+        rusqlite::params![Value::Object(preferences).to_string(), user],
+    )?;
+    Ok(())
 }

@@ -23,12 +23,12 @@ use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action}
 use campfire_people::controllers::accounts::audit_logs;
 use campfire_people::controllers::accounts::icons::image_facts;
 use campfire_storage::branding::{self, Kind, Prepared};
-use campfire_views::time::Zone;
-use campfire_web::concerns::{self, Authentication, Before, session_keys};
-use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
-use campfire_web::controllers::presenters::page::db_error;
-use campfire_web::controllers::presenters::pagination::Page;
-use campfire_web::controllers::presenters::{self, accounts as account_presenters};
+use campfire_presentation::time::Zone;
+use campfire_runtime::concerns::{self, Authentication, Before, session_keys};
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
+use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::pagination::Page;
+use campfire_runtime::presenters::{self, accounts as account_presenters};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -373,7 +373,7 @@ async fn branding_image(c: &mut Ctx, signed_id: &str, kind: Kind) -> Result<Prep
         return Err(fail(c, validation("signedId", "must be 10 MB or smaller")));
     }
     let storage = c.app().storage.clone();
-    let prepared = campfire_web::active_storage::process_branding_with_deadline(
+    let prepared = campfire_runtime::active_storage::process_branding_with_deadline(
         branding::processing_timeout(&blob),
         move |cancel| Ok(branding::prepare(&storage, blob, kind, &cancel)),
     )
@@ -465,7 +465,7 @@ fn save_branding(
             .map_err(attachments::storage_error)?
             .is_some()
         {
-            campfire_web::active_storage::keep_after_commit(tx, image);
+            campfire_runtime::active_storage::keep_after_commit(tx, image);
             animated = true;
         } else {
             // A competing upload may have recorded it, or a previous still may be missing.
@@ -489,7 +489,7 @@ fn save_branding(
         "UPDATE active_storage_blobs SET content_type = ?1, metadata = ?2 WHERE id = ?3",
         rusqlite::params![prepared.blob.content_type, blob.metadata.encode(), blob.id],
     )?;
-    campfire_web::active_storage::mark_branding_tree(tx.conn(), marker, blob.id)?;
+    campfire_runtime::active_storage::mark_branding_tree(tx.conn(), marker, blob.id)?;
     Ok(())
 }
 
@@ -565,18 +565,18 @@ async fn new_join_code(c: &mut Ctx) -> Result {
 // --- People ------------------------------------------------------------------------------------
 
 /// One row of the people list, the administrator-only fields blanked for everyone else.
-fn person(summary: campfire_views::users::UserSummary, viewer: i64, admin: bool) -> api::Person {
+fn person(summary: campfire_presentation::users::UserSummary, viewer: i64, admin: bool) -> api::Person {
     let offer = summary.offer_google_email_link();
     api::Person {
         id: summary.id,
         name: summary.name,
         avatar_url: summary.avatar_path,
-        role: if summary.role == campfire_views::users::Role::Administrator {
+        role: if summary.role == campfire_presentation::users::Role::Administrator {
             api::PersonRole::Administrator
         } else {
             api::PersonRole::Member
         },
-        banned: summary.status == campfire_views::users::Status::Banned,
+        banned: summary.status == campfire_presentation::users::Status::Banned,
         you: summary.id == viewer,
         two_factor_enabled: admin && summary.two_factor_enabled,
         email_address: summary.email_address.filter(|_| admin),
@@ -664,7 +664,7 @@ async fn change_role(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             campfire_db::models::user::profile_settings::update(tx, user.id, Default::default())?;
-            campfire_web::authentication::update_role(tx, &mut user, role, &audit)
+            campfire_runtime::authentication::update_role(tx, &mut user, role, &audit)
         })
         .await;
     match saved {
@@ -699,7 +699,7 @@ async fn deactivate_person(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     c.app()
         .db
-        .write(move |tx| campfire_web::authentication::deactivate_user(tx, &mut user, &audit))
+        .write(move |tx| campfire_runtime::authentication::deactivate_user(tx, &mut user, &audit))
         .await
         .map_err(Error::internal)?;
     c.json(StatusCode::OK, &api::PersonRemoved { id })
@@ -738,7 +738,7 @@ async fn create_two_factor_reset(c: &mut Ctx) -> Result {
     let reset = user.clone();
     c.app()
         .db
-        .write(move |tx| campfire_web::authentication::reset_two_factor(tx, &reset, &audit))
+        .write(move |tx| campfire_runtime::authentication::reset_two_factor(tx, &reset, &audit))
         .await
         .map_err(Error::internal)?;
     let person = load_person(c, user).await?;
@@ -913,7 +913,7 @@ async fn save_icon(c: &mut Ctx) -> Result {
     let assignment = image.stage(c.app()).await?;
     let facts = image_facts(c, &assignment).await?;
     let audit = audit_context(c)?;
-    let brand = campfire_web::rich_text::builtin_icon(icon.name.as_deref().unwrap_or(""));
+    let brand = campfire_runtime::rich_text::builtin_icon(icon.name.as_deref().unwrap_or(""));
     let saved = c
         .app()
         .db
@@ -1038,7 +1038,7 @@ async fn show_audit_log(c: &mut Ctx) -> Result {
         .map(|row| api::AuditLogEntry {
             id: row.id,
             created_at: time(row.created_at),
-            changes: campfire_views::accounts::audit_logs::changes_summary(&row.details),
+            changes: campfire_presentation::accounts::audit_logs::changes_summary(&row.details),
             action: row.action,
             actor: present(row.actor_label),
             target: present(row.target_label),

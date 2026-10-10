@@ -86,11 +86,12 @@ pub fn prepare_push(
     } else {
         "'invisible','nothing'"
     };
+    let involvement = super::notification_policy::involvement_sql("m", "u.inbox_preferences");
     // Membership.disconnected is a timestamp scope, independent of its connection counter.
     let ids: Vec<i64> = query_all(
         tx.conn(),
         &format!(
-            "SELECT s.id FROM push_subscriptions s JOIN users u ON u.id=s.user_id JOIN memberships m ON m.user_id=u.id WHERE u.id=? AND m.room_id=? AND m.involvement NOT IN ({excluded}) AND (m.connected_at IS NULL OR m.connected_at<?) ORDER BY s.id"
+            "SELECT s.id FROM push_subscriptions s JOIN users u ON u.id=s.user_id JOIN memberships m ON m.user_id=u.id WHERE u.id=? AND m.room_id=? AND {involvement} NOT IN ({excluded}) AND (m.connected_at IS NULL OR m.connected_at<?) ORDER BY s.id"
         ),
         params![
             request.recipient_id,
@@ -162,7 +163,7 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
         if !viewer_in_call
             && (!room.direct()
                 || matches!(
-                    membership.involvement,
+                    preferences.involvement(room.id, membership.involvement),
                     Some(Involvement::Nothing | Involvement::Invisible)
                 )
                 || rung.contains(&viewer.id))

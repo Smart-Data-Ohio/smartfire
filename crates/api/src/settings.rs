@@ -21,11 +21,11 @@ use campfire_people::controllers::{
     qr_code, two_factor,
     users::push_subscriptions::{self, test_notifications},
 };
-use campfire_web::authentication;
-use campfire_web::concerns::{self, Authentication, Before, current_session};
-use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
-use campfire_web::controllers::presenters::page::db_error;
-use campfire_web::controllers::presenters::{self, profile_sections};
+use campfire_runtime::authentication;
+use campfire_runtime::concerns::{self, Authentication, Before, current_session};
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
+use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::{self, profile_sections};
 use serde::de::DeserializeOwned;
 
 use crate::dto::time;
@@ -310,7 +310,7 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
     let (user, status, sections, appearance, avatar_attached) = c
         .app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let user = User::find(conn, id)?;
             let status = UserStatusSettings::find(conn, id)?;
             let sections = profile_sections::load(conn, id, now)?;
@@ -323,6 +323,7 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
     let integrations = integrations(c, id).await?;
     let now = campfire_db::Timestamp::from_jiff(now);
     Ok(api::Settings {
+        revision: status.notification_preferences.settings_revision,
         profile: api::ProfileSettings {
             user_id: user.id,
             name: user.name.clone(),
@@ -345,7 +346,7 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                 .time_zone
                 .as_deref()
                 .and_then(profile_settings::zone_identifier),
-            time_zones: campfire_views::users::profile_time_zones()
+            time_zones: campfire_presentation::users::profile_time_zones()
                 .iter()
                 .map(|(label, value)| api::TimeZoneChoice {
                     label: label.clone(),
@@ -571,7 +572,8 @@ async fn write_profile(
                 password_changing,
                 &audit,
             )?;
-            profile_settings::update(tx, user.id, settings)
+            profile_settings::update(tx, user.id, settings)?;
+            profile_settings::bump_revision(tx, user.id)
         })
         .await
         .map_err(Error::internal)
@@ -676,7 +678,10 @@ async fn assign_avatar(c: &mut Ctx, id: i64, avatar: Assignment) -> Result {
     let avatar = avatar.stage(c.app()).await?;
     c.app()
         .db
-        .write(move |tx| attachments::assign(tx, Record::user(id), "avatar", avatar))
+        .write(move |tx| {
+            attachments::assign(tx, Record::user(id), "avatar", avatar)?;
+            profile_settings::bump_revision(tx, id)
+        })
         .await
         .map_err(Error::internal)?;
     reply(c, id).await
@@ -825,7 +830,7 @@ async fn save_notifications(c: &mut Ctx) -> Result {
                     },
                 )?;
             }
-            Ok(())
+            profile_settings::bump_revision(tx, id)
         })
         .await
         .map_err(Error::internal)?;
@@ -930,7 +935,7 @@ async fn save_status(c: &mut Ctx) -> Result {
             if changed {
                 settings.announce_badge(tx)?;
             }
-            Ok(())
+            profile_settings::bump_revision(tx, id)
         })
         .await
         .map_err(Error::internal)?;
@@ -973,7 +978,7 @@ async fn change_dnd_allowance(c: &mut Ctx, create: bool) -> Result {
             } else {
                 DndAllowedUser::remove(tx, owner, target)?;
             }
-            Ok(())
+            profile_settings::bump_revision(tx, owner)
         })
         .await;
     if let Err(error) = result
@@ -1247,7 +1252,7 @@ async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettin
         has_password: presenters::accounts::profile_has_password(user),
         devices: data.devices.iter().map(|device| api::RememberedDevice {
             id: device.id,
-            description: campfire_views::two_factor::device_description(device),
+            description: campfire_presentation::two_factor::device_description(device),
             ip_address: device.ip_address.clone(),
             last_used_at: device.last_used_at
                 .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
@@ -1255,7 +1260,7 @@ async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettin
     })
 }
 
-fn account_membership(row: campfire_views::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
+fn account_membership(row: campfire_presentation::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
     // The presenter supplies the classic involvement name. A missing one (NULL, which the classic
     // row shows as "") stays `None`: no mention reaches it, so it isn't `mentions`.
     let involvement = if row.involvement.is_empty() {

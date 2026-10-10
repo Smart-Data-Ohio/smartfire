@@ -38,6 +38,184 @@ fn with_pool(original: &App, pool: Pool) -> App {
         fragment_cache: original.fragment_cache.clone(),
     })
 }
+
+async fn deliver_original_message_push(app: &App, pool: &Pool, class: &'static str) {
+    app.db.write(move |tx| {
+        assert_eq!(tx.conn().execute(
+            "UPDATE background_jobs SET run_at=? WHERE job_class=?",
+            rusqlite::params![tx.now(), class],
+        )?, 1);
+        Ok(())
+    }).await.unwrap();
+    let runner = campfire_jobs::start(
+        app.db.clone(),
+        app.jobs.queue.clone(),
+        crate::jobs::registry(),
+        app.clone(),
+        crate::queue::runner_config(&app.config),
+    );
+    app.jobs.queue.wake(class);
+    wait_for_jobs_and_deliveries(&app.db, pool, &[class]).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
+async fn message_push_jobs(db: &campfire_db::Database) -> Vec<(String, String)> {
+    db.read(|conn| {
+        let mut statement = conn.prepare_cached(
+            "SELECT job_class,arguments FROM background_jobs WHERE job_class IN ('Room::PushMessageJob','ChannelThread::PushMessageJob','Message::MentionPushJob') ORDER BY id",
+        )?;
+        let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+    }).await.unwrap()
+}
+
+async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
+    use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN};
+    use campfire_db::{
+        ActivityItem, ChannelThread, Message, MessageChanges, NewChannelThread, NewMessage,
+        ThreadInvolvement, ThreadMembership,
+    };
+    for (threaded, promoted) in [(false, false), (false, true), (true, false), (true, true)] {
+        let test = TestApp::boot_frozen()
+            .await
+            .expect("mention edits require seeded app tests");
+        let original = test.booted.app.clone();
+        test.booted.jobs.shutdown(Duration::from_secs(5)).await;
+        let db = original.db.clone();
+        let service = push_service(201, "Created").await;
+        let receiver = Receiver::new();
+        let subscription = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
+        let follower = TestDb::id("jz");
+        let message = db.write(move |tx| {
+            tx.conn().execute_batch("DELETE FROM activity_items; UPDATE memberships SET involvement='mentions',connected_at=NULL; UPDATE users SET dnd_enabled=0,quiet_hours_enabled=0,ooo_until=NULL,presence_setting='auto'")?;
+            tx.conn().execute("DELETE FROM push_subscriptions WHERE id NOT IN (SELECT MIN(id) FROM push_subscriptions GROUP BY user_id)", [])?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=? WHERE user_id=?",
+                rusqlite::params![subscription.endpoint, subscription.p256dh_key, subscription.auth_key, DAVID])?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint='https://fcm.googleapis.com/fcm/send/123',p256dh_key=?,auth_key=? WHERE user_id=?",
+                rusqlite::params![subscription.p256dh_key, subscription.auth_key, JASON])?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint='https://fcm.googleapis.com/fcm/send/456',p256dh_key=?,auth_key=? WHERE user_id=?",
+                rusqlite::params![subscription.p256dh_key, subscription.auth_key, follower])?;
+            tx.conn().execute("UPDATE memberships SET involvement='everything' WHERE room_id=654632876 AND user_id=?", [follower])?;
+            let question = Message::create(tx, NewMessage { room_id: 654632876, creator_id: DAVID, markdown_source: Some("Question".into()), ..Default::default() })?;
+            let thread_id = if threaded {
+                let thread = ChannelThread::create(tx, NewChannelThread { room_id: question.room_id, creator_id: KEVIN, name: Some("Mention edits".into()), ..Default::default() })?;
+                for user in [DAVID, JASON, KEVIN, follower] {
+                    let involvement = if user == DAVID && !promoted { ThreadInvolvement::Mentions } else { ThreadInvolvement::Everything };
+                    ThreadMembership::join(tx, thread.id, user)?.update_involvement(tx, involvement)?;
+                }
+                Some(thread.id)
+            } else { None };
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            let message = Message::create(tx, NewMessage {
+                room_id: question.room_id, creator_id: KEVIN, thread_id,
+                reply_to_message_id: (!threaded && promoted).then_some(question.id),
+                markdown_source: Some(format!("Answer <@{JASON}>")), ..Default::default()
+            })?;
+            let activity = ActivityItem::find_by_user_and_source(tx.conn(), DAVID, "Message", message.id)?;
+            assert_eq!(activity.is_some(), promoted);
+            if let Some(activity) = activity { activity.mark_handled(tx)?; }
+            Ok(message)
+        }).await.unwrap();
+        let message_id = message.id;
+        let original_class = if threaded { "ChannelThread::PushMessageJob" } else { "Room::PushMessageJob" };
+        let jobs = message_push_jobs(&db).await;
+        let arguments = if let Some(thread_id) = message.thread_id {
+            serde_json::json!({"thread_id": thread_id, "message_id": message_id})
+        } else {
+            serde_json::json!({"room_id": message.room_id, "message_id": message_id})
+        };
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].0, original_class);
+        assert_eq!(serde_json::from_str::<Value>(&jobs[0].1).unwrap(), arguments);
+        db.write(|tx| {
+            tx.conn().execute("UPDATE background_jobs SET run_at='2099-01-01 00:00:00'", [])?;
+            Ok(())
+        }).await.unwrap();
+        let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
+        let app = with_pool(&original, pool.clone());
+        if original_delivered {
+            deliver_original_message_push(&app, &pool, original_class).await;
+            assert_eq!(service.server.received().len(), 2 + usize::from(promoted));
+        }
+        let jobs_before_edit = message_push_jobs(&db).await;
+        let now = db.env().now();
+        for &mentioned in edits {
+            let (before, unread) = db.read(move |conn| Ok((
+                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
+                ActivityItem::unread_snapshot(conn, DAVID, now)?,
+            ))).await.unwrap();
+            db.write(move |tx| {
+                let mut message = Message::find(tx.conn(), message_id)?;
+                message.edit(tx, MessageChanges {
+                    markdown_source: Some(if mentioned {
+                        format!("Answer <@{JASON}> <@{DAVID}>")
+                    } else {
+                        format!("Answer <@{JASON}>")
+                    }),
+                    ..Default::default()
+                })
+            }).await.unwrap();
+            let (activity, after) = db.read(move |conn| Ok((
+                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
+                ActivityItem::unread_snapshot(conn, DAVID, now)?,
+            ))).await.unwrap();
+            if mentioned || promoted {
+                let activity = activity.unwrap();
+                assert_eq!(activity.event_type, if mentioned { "mention" } else if threaded { "thread_activity" } else { "reply" });
+                assert!(activity.unread());
+                if let Some(before) = &before { assert_eq!(activity.id, before.id); }
+            } else {
+                assert!(activity.is_none());
+            }
+            let was_unread = before.is_some_and(|item| item.unread());
+            assert_eq!(after.count, unread.count + i64::from(mentioned || promoted) - i64::from(was_unread));
+            assert!(after.revision > unread.revision);
+            assert_eq!(message_push_jobs(&db).await, jobs_before_edit, "edits must not enqueue or modify pushes");
+        }
+        if !original_delivered {
+            deliver_original_message_push(&app, &pool, original_class).await;
+        }
+        assert!(message_push_jobs(&db).await.is_empty());
+        pool.shutdown().await;
+        let requests = service.server.received();
+        let david_pushed = promoted || (!original_delivered && *edits.last().unwrap());
+        assert_eq!(requests.len(), 2 + usize::from(david_pushed), "threaded={threaded}, promoted={promoted}, edits={edits:?}");
+        for (endpoint, count) in [("/fcm/send/abc", usize::from(david_pushed)), ("/fcm/send/123", 1), ("/fcm/send/456", 1)] {
+            assert_eq!(requests.iter().filter(|request| request.target == endpoint).count(), count, "{endpoint}");
+        }
+        for request in requests {
+            let delivered: Value = serde_json::from_str(&receiver.open(&request.body)).unwrap();
+            if threaded {
+                assert_eq!(delivered["title"], "Mention edits");
+                assert!(delivered["options"]["data"]["path"].as_str().unwrap().contains(&format!("message_id={message_id}")));
+            } else {
+                assert_eq!(delivered["options"]["data"]["path"], "/rooms/654632876");
+            }
+            assert!(delivered["options"]["body"].as_str().unwrap().contains("Answer"));
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_after_original_delivery_update_activity_without_pushes() {
+    mention_edit_delivery(&[true], true).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_before_original_delivery_push_added_recipient_once() {
+    mention_edit_delivery(&[true], false).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_add_then_remove_preserve_follower_and_reply_pushes() {
+    mention_edit_delivery(&[true, false], false).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_add_remove_readd_push_recipient_once() {
+    mention_edit_delivery(&[true, false, true], false).await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn ws17_durable_event_board_and_huddle_jobs_decrypt_complete_rails_json() {
     let test = TestApp::boot_frozen()

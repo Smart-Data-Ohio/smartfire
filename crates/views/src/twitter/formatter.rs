@@ -1,20 +1,15 @@
 //! Twitter::PostFormatter. Only locally escaped strings become HTML-safe.
+pub use campfire_presentation::twitter::formatter::*;
+
 use crate::helpers::html::{Html, escape, raw};
 use campfire_richtext::ruby::url_encode;
 use regex::Regex;
 use std::sync::LazyLock;
-static URL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"https?://[^ \t\r\n\x0b\x0c<>"'`\])}]+"#).unwrap());
-static TOKEN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"@[A-Za-z0-9_]{1,15}\b|#[\p{Alphabetic}\p{Nd}_]+").unwrap());
 fn newline(text: &str) -> String {
     text.replace("\r\n", "\n").replace('\n', "<br>")
 }
 pub fn plain(text: &str) -> Html {
     raw(newline(&escape(text)))
-}
-pub fn clamp(text: &str) -> bool {
-    text.chars().count() > 480 || text.bytes().filter(|b| *b == b'\n').count() >= 12
 }
 fn chunk(text: &str) -> String {
     let mut output = String::new();
@@ -75,6 +70,14 @@ pub fn format(text: &str) -> Html {
     out.push_str(&word(&text[start..]));
     raw(newline(&out))
 }
+
+
+
+static URL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"https?://[^ \t\r\n\x0b\x0c<>"'`\])}]+"#).unwrap());
+static TOKEN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"@[A-Za-z0-9_]{1,15}\b|#[\p{Alphabetic}\p{Nd}_]+").unwrap());
+
 #[cfg(test)]
 mod tests {
     use super::*;

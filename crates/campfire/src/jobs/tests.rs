@@ -908,7 +908,7 @@ async fn an_invalid_interval_disables_only_its_loop() {
 #[test]
 fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let golden: serde_json::Value =
-        serde_json::from_str(include_str!("../../../web/src/ws8_runtime_vectors.json")).unwrap();
+        serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
     let periodic = periodic::periodic(periodic::PeriodicIntervals {
         reminders: Duration::from_secs(17),
         retention: Duration::from_secs(123),
@@ -987,7 +987,7 @@ async fn ws8_quote_refresh_does_not_wait_for_future_maintenance() {
 fn ws8_template_free_broadcast_payloads_match_rails() {
     use campfire_db::broadcasts::{Broadcast, Streamable};
     let golden: serde_json::Value =
-        serde_json::from_str(include_str!("../../../web/src/ws8_runtime_vectors.json")).unwrap();
+        serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
     for row in golden["broadcasts"].as_array().unwrap() {
         if row["kind"] != "remove" { continue; }
         let event = Broadcast::remove(
@@ -1007,7 +1007,7 @@ fn ws8_template_free_broadcast_payloads_match_rails() {
 #[test]
 fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
     use campfire_db::{ChannelThread, Config, Database, Env, Message, NewChannelThread, NewMessage, RecordingSink, ThreadMembership, fixtures};
-    let golden: serde_json::Value = serde_json::from_str(include_str!("../../../web/src/ws8_runtime_vectors.json")).unwrap();
+    let golden: serde_json::Value = serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
     let setup = golden["thread_broadcast"].clone();
     let sink = RecordingSink::new();
     let dir = tempfile::tempdir().unwrap();
@@ -1063,7 +1063,7 @@ async fn ws8_storage_copies_match_rails_and_rollback_on_durable_enqueue_failure(
     let app = booted.app.clone();
     booted.jobs.shutdown(WAIT).await;
     let g: serde_json::Value =
-        serde_json::from_str(include_str!("../../../web/src/ws8_runtime_vectors.json")).unwrap();
+        serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
     let storage = app.storage.clone();
     let staged = storage
         .stage_bytes(

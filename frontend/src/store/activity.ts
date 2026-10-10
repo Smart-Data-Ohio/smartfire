@@ -35,7 +35,6 @@ import {
   pagedStale,
   pagedWithout,
 } from "./paged-list.ts";
-import { newerSnapshotRequest } from "./request-order.ts";
 import type { State } from "./state.ts";
 
 /** What `PATCH /activity/:id` does: "unhandled" clears handled and keeps it read. */
@@ -89,8 +88,6 @@ export interface ActivitySlice {
   readonly generation: number;
   /** The generation the held count belongs to; an older one is only a display fallback. */
   readonly serverUnreadGeneration: number;
-  /** Request-start order for count snapshots at the same server revision. */
-  readonly unreadRequestSequence: number;
   /** How each change on its way moves the badge, by its token. */
   readonly pendingUnread: Readonly<Record<number, PendingUnread>>;
 }
@@ -104,7 +101,6 @@ export const emptyActivity: ActivitySlice = {
   deferredUnread: null,
   generation: 0,
   serverUnreadGeneration: 0,
-  unreadRequestSequence: 0,
   pendingUnread: {},
 };
 
@@ -154,7 +150,7 @@ function absorbedUnread(
   );
 }
 
-/** Server revisions take precedence; request order resolves ties. */
+/** An HTTP snapshot may refresh a tie, but cannot confirm changes at an older revision. */
 function acceptedCount(
   activity: ActivitySlice,
   unread: ActivityUnreadCount | null,
@@ -169,11 +165,7 @@ function acceptedCount(
     activity.deferredUnread?.unreadRevision ?? -1,
   );
 
-  return unread.unreadRevision > revision ||
-    (unread.unreadRevision === revision &&
-      newerSnapshotRequest(requestSequence, activity.unreadRequestSequence))
-    ? unread
-    : null;
+  return unread.unreadRevision >= revision ? unread : null;
 }
 
 /** Installs the newest snapshot only when it covers every outstanding badge adjustment. */
@@ -188,7 +180,7 @@ function withCounts(
   let snapshot = activity.serverUnreadGeneration === activity.generation ? held : null;
   const projected = absorbedUnread(pendingUnread, snapshot?.unreadRevision ?? null);
 
-  // Ordered HTTP snapshots may change policy without changing the activity revision.
+  // HTTP refreshes at the same revision also observe timed mute expiry.
   for (const candidate of [activity.deferredUnread, unread]) {
     if (
       candidate !== null &&
@@ -222,10 +214,6 @@ function withCounts(
     ...activity,
     serverUnread,
     serverUnreadGeneration,
-    unreadRequestSequence:
-      unread !== null && requestSequence !== undefined
-        ? Math.max(activity.unreadRequestSequence, requestSequence)
-        : activity.unreadRequestSequence,
     deferredUnread: waiting && snapshot !== held ? snapshot : null,
     pendingUnread: remaining,
     unreadCount: shownCount(serverUnread?.unreadCount ?? null, remaining),

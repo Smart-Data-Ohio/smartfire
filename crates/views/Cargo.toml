@@ -4,6 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+campfire_presentation.workspace = true
 bnum.workspace = true
 rails_compat.workspace = true
 askama = { workspace = true, features = ["blocks"] }

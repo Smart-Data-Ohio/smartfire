@@ -46,7 +46,7 @@ pub fn publish_queued_ring(tx: &mut Tx<'_>, id: i64) -> Result<()> {
 fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
     if request.invitation["eventType"] == "huddle_started" && request.invitation["state"] == "unread" {
         let room = request.invitation["roomId"].as_i64().ok_or_else(|| crate::Error::Other("huddle invitation has no room".into()))?;
-        if UserStatusSettings::find(tx.conn(), request.recipient_id)?.notification_preferences.muted(room, tx.now()) { return Ok(()); }
+        if !invitation_allowed(tx.conn(), request.recipient_id, room, tx.now())? { return Ok(()); }
     }
     let item = request.invitation["activityItemId"].as_i64().unwrap_or_default();
     tx.conn().execute_cached(
@@ -62,6 +62,17 @@ fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
     let sound = !UserStatusSettings::find(tx.conn(), request.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), request)?, tx.now()) && ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), None)?;
     publish_current_ring(tx, request, sound);
     Ok(())
+}
+
+fn invitation_allowed(conn: &Connection, recipient: i64, room: i64, now: Timestamp) -> Result<bool> {
+    let Some(member) = crate::Membership::find_by_room_and_user(conn, room, recipient)? else {
+        return Ok(false);
+    };
+    let preferences = super::notification_policy::NotificationPreferences::load(conn, recipient)?;
+    Ok(!preferences.muted(room, now) && !matches!(
+        preferences.involvement(room, member.involvement),
+        Some(crate::Involvement::Nothing | crate::Involvement::Invisible)
+    ))
 }
 
 fn ring_room(conn: &Connection, request: &RingRequest) -> Result<i64> {
@@ -157,11 +168,10 @@ fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest
     };
     let grant = HuddleGrant::find_by_id(tx.conn(), current.grant_id.unwrap())?.unwrap();
     let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
-    let Some(member) = crate::Membership::find_by_room_and_user(tx.conn(), room.id, viewer.id)? else { return Ok(None); };
+    if crate::Membership::find_by_room_and_user(tx.conn(), room.id, viewer.id)?.is_none() { return Ok(None); }
     if current.invitation["eventType"] == "huddle_started" && current.invitation["state"] == "unread" {
         if room.deleted_at.is_some() { return Ok(None); }
-        if matches!(member.involvement, Some(crate::Involvement::Nothing | crate::Involvement::Invisible)) { return Ok(None); }
-        if UserStatusSettings::find(tx.conn(), viewer.id)?.notification_preferences.muted(room.id, tx.now()) { return Ok(None); }
+        if !invitation_allowed(tx.conn(), viewer.id, room.id, tx.now())? { return Ok(None); }
         // Group rings belong to the call: another live participant keeps them
         // going after the starter leaves (HuddleGrant#others_in_call?).
         if grant.revoked() && !tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL AND last_seen_at>?)",params![room.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))? { return Ok(None); }
@@ -245,9 +255,10 @@ pub(crate) fn after_issued(
     if !room.direct() {
         return Ok(());
     }
+    let involvement = super::notification_policy::involvement_sql("m", "u.inbox_preferences");
     let recipients = query_all(
         tx.conn(),
-        "SELECT u.* FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id!=? AND u.status=0 AND u.role!=2 AND (m.involvement IS NULL OR m.involvement NOT IN ('nothing','invisible')) ORDER BY u.id",
+        &format!("SELECT u.* FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id!=? AND u.status=0 AND u.role!=2 AND ({involvement} IS NULL OR {involvement} NOT IN ('nothing','invisible')) ORDER BY u.id"),
         params![room.id, grant.user_id],
         User::from_row,
     )?;
@@ -266,7 +277,7 @@ fn invite_recipient(
     recipient: &User,
     dedup: Timestamp,
 ) -> Result<()> {
-    if UserStatusSettings::find(tx.conn(), recipient.id)?.notification_preferences.muted(room.id, tx.now()) {
+    if !invitation_allowed(tx.conn(), recipient.id, room.id, tx.now())? {
         return Ok(());
     }
     let in_call = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND user_id=? AND last_seen_at>?)",params![room.id,recipient.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))?;

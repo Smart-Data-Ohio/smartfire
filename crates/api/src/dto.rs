@@ -11,7 +11,7 @@ use campfire_db::{
     RoomType, Snapshot, StageRole, Status, Timestamp, User, UserStatusSettings,
     WorkspacePresenceLease,
 };
-use campfire_web::controllers::presenters::{self, Presenter, accounts, room_shell};
+use campfire_runtime::presenters::{self, Presenter, accounts, room_shell};
 use rails_compat::Secrets;
 
 /// A [`Timestamp`] as the wire carries it: RFC 3339 in UTC with milliseconds.
@@ -127,8 +127,8 @@ pub fn agent_status(status: &str) -> api::AgentStatus {
 /// `users.icon_name` resolved as the classic avatar does (`resolve_avatar_icon`): a brand logo,
 /// else a workspace icon, else the built-in icon or emoji of that name.
 fn avatar_icon(name: &str, custom_title: Option<&str>) -> Option<api::Icon> {
-    use campfire_views::helpers::AvatarIcon;
-    let builtin = campfire_views::messages::reactions::static_icon(name);
+    use campfire_presentation::helpers::AvatarIcon;
+    let builtin = campfire_presentation::messages::reactions::static_icon(name);
     let resolved = if matches!(builtin, Some(AvatarIcon::Image { brand: true, .. })) {
         builtin
     } else {
@@ -524,12 +524,12 @@ pub(crate) fn ids_query<T>(
 
 /// `AttachmentView` with its blob's type and size.
 fn attachment(
-    view: campfire_views::messages::AttachmentView,
+    view: campfire_presentation::messages::AttachmentView,
     content_type: Option<&str>,
     byte_size: i64,
 ) -> api::Attachment {
-    use campfire_views::messages::AttachmentPreview;
-    use campfire_views::messages::support::RubyNumber;
+    use campfire_presentation::messages::AttachmentPreview;
+    use campfire_presentation::messages::support::RubyNumber;
     let pixels = |number: Option<RubyNumber>| {
         number.map(|number| match number {
             RubyNumber::Int(value) => value,
@@ -562,10 +562,10 @@ fn reactions_and_boosts(
     presenter: &Presenter<'_>,
     message_id: i64,
 ) -> Result<(Vec<api::Reaction>, Vec<api::Boost>)> {
-    use campfire_views::helpers::AvatarIcon;
+    use campfire_presentation::helpers::AvatarIcon;
     let (mut reactions, mut boosts) = (Vec::<api::Reaction>::new(), Vec::new());
     for boost in campfire_db::Boost::for_message_ordered(conn, message_id)? {
-        let Some(reaction) = campfire_views::messages::reactions::resolve(&boost.content, presenter)
+        let Some(reaction) = campfire_presentation::messages::reactions::resolve(&boost.content, presenter)
         else {
             boosts.push(api::Boost {
                 id: boost.id,
@@ -974,7 +974,7 @@ fn last_direct_messages(
             let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
             let last = api::SidebarLastMessage {
                 creator_id,
-                excerpt: campfire_views::helpers::truncate(&text, 140, "…"),
+                excerpt: campfire_presentation::helpers::truncate(&text, 140, "…"),
                 created_at: time(created_at),
             };
             (room_id, last)
@@ -1199,7 +1199,7 @@ pub fn me(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let dnd = settings.manual_dnd_active(now);
-    let preferences = presenters::view_context::user_preferences(conn, viewer.id, now.jiff())?;
+    let preferences = campfire_runtime::request_context::user_preferences(conn, viewer.id, now.jiff())?;
     let sounds = preferences.notification_sounds;
     let chat_sounds = api::ChatSounds {
         muted: sounds.muted,
@@ -1360,7 +1360,7 @@ pub fn forward_destinations(
         .map(|room| {
             let name = if room.direct() {
                 let names = direct_names.get(&room.id).map_or(&[][..], Vec::as_slice);
-                let name = campfire_views::helpers::to_sentence(names, " and ");
+                let name = campfire_presentation::helpers::to_sentence(names, " and ");
                 if name.is_empty() { viewer.name.clone() } else { name }
             } else {
                 room.name.clone().unwrap_or_default()

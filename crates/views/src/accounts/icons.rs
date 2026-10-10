@@ -5,21 +5,10 @@ use crate::{
     layouts::Page,
 };
 use askama::Template;
-#[derive(Clone, Debug)]
-pub struct Icon {
-    pub id: i64,
-    pub name: String,
-    pub title: String,
-    pub creator_name: String,
+pub trait FormRendering {
+    fn field(&self, name: &str, tag: h::Html) -> h::Html;
 }
-#[derive(Clone, Debug, Default)]
-pub struct Form {
-    pub name: Option<String>,
-    pub title: Option<String>,
-    pub errors: Vec<String>,
-    pub invalid_fields: Vec<String>,
-}
-impl Form {
+impl FormRendering for Form {
     fn field(&self, name: &str, tag: h::Html) -> h::Html {
         if self.invalid_fields.iter().any(|f| f == name) {
             h::content_tag(
@@ -32,6 +21,7 @@ impl Form {
         }
     }
 }
+
 #[derive(Template)]
 #[template(path="accounts/icons/index.html",blocks=["head","nav","content"])]
 pub struct Index<'a> {
@@ -44,3 +34,4 @@ impl Page for Index<'_> {
         Some("Workspace icons".into())
     }
 }
+pub use campfire_presentation::accounts::icons::*;

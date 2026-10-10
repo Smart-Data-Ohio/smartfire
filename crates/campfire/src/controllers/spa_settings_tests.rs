@@ -114,7 +114,8 @@ async fn snapshot(a: &TestApp) -> Value {
             let user = statement.query_row([DAVID], |row| {
                 let mut columns = Map::new();
                 for (index, name) in names.iter().enumerate() {
-                    if name == "password_digest" {
+                    // SPA ordering metadata has its own revision tests below.
+                    if name == "password_digest" || name == "activity_revision" {
                         continue;
                     }
                     let value: rusqlite::types::Value = row.get(index)?;
@@ -124,6 +125,13 @@ async fn snapshot(a: &TestApp) -> Value {
                             rusqlite::types::Value::Null => Value::Null,
                             rusqlite::types::Value::Integer(number) => json!(number),
                             rusqlite::types::Value::Real(number) => json!(number),
+                            rusqlite::types::Value::Text(text) if name == "inbox_preferences" => {
+                                let mut preferences: Value = serde_json::from_str(&text).unwrap();
+                                if let Some(values) = preferences.as_object_mut() {
+                                    values.remove("settings_revision");
+                                }
+                                json!(preferences.to_string())
+                            }
                             rusqlite::types::Value::Text(text) => json!(text),
                             rusqlite::types::Value::Blob(bytes) => json!(bytes),
                         },
@@ -1304,6 +1312,51 @@ async fn a9_notification_default_mute_and_membership_scope() {
     )
     .await;
     assert_eq!(denied.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn a9_every_settings_write_advances_a_persisted_revision() {
+    let Some(app) = app().await else { panic!("restored default seed required") };
+    let mut b = app.sign_in(DAVID).await;
+    let initial = b.send(get("/api/v1/settings")).await;
+    let mut revision = parse::<serde_json::Value>(&initial)["revision"].as_i64()
+        .expect("settings GET returns a server revision");
+    let initial_count = b.send(get("/api/v1/activity/unread_count")).await;
+    let mut activity_revision = parse::<api::ActivityUnreadCount>(&initial_count).unread_revision;
+    let allowance = format!("/api/v1/settings/dnd_allowances/{KEVIN}");
+    for (method, path, body) in [
+        (Method::PATCH, "/api/v1/settings/profile", json!({"bio":"revision test"})),
+        (Method::DELETE, "/api/v1/settings/avatar", json!({})),
+        (Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark"})),
+        (Method::PATCH, "/api/v1/settings/calls", json!({"voiceMode":"push_to_talk"})),
+        (Method::PATCH, "/api/v1/settings/status", json!({"presenceSetting":"auto"})),
+        (Method::PATCH, "/api/v1/settings/notifications", json!({"dndEnabled":false})),
+        (Method::POST, allowance.as_str(), json!({})),
+        (Method::DELETE, allowance.as_str(), json!({})),
+    ] {
+        let response = write(&mut b, method, path, body).await;
+        assert_eq!(response.status, StatusCode::OK, "{path}: {}", response.text());
+        let next = parse::<serde_json::Value>(&response)["revision"].as_i64().unwrap();
+        assert!(next > revision, "{path} did not advance revision");
+        revision = next;
+        let read = b.send(get("/api/v1/settings")).await;
+        assert_eq!(parse::<serde_json::Value>(&read)["revision"], revision);
+        let persisted = app.booted.app.db.read(|conn| {
+            Ok(conn.query_row("SELECT json_extract(inbox_preferences, '$.settings_revision') FROM users WHERE id=?", [DAVID], |r| r.get::<_, i64>(0))?)
+        }).await.unwrap();
+        assert_eq!(persisted, revision);
+        let count = b.send(get("/api/v1/activity/unread_count")).await;
+        let next = parse::<api::ActivityUnreadCount>(&count).unread_revision;
+        assert!(next > activity_revision, "{path} did not advance the count revision");
+        activity_revision = next;
+    }
+    let rejected = write(&mut b, Method::PATCH, "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":i64::MAX,"duration":"forever"}})).await;
+    assert_eq!(rejected.status, StatusCode::NOT_FOUND);
+    let read = b.send(get("/api/v1/settings")).await;
+    assert_eq!(parse::<api::Settings>(&read).revision, revision);
+    let count = b.send(get("/api/v1/activity/unread_count")).await;
+    assert_eq!(parse::<api::ActivityUnreadCount>(&count).unread_revision, activity_revision);
 }
 
 #[tokio::test]

@@ -57,3 +57,5 @@ pub async fn show(c: &mut Ctx) -> Result {
     })
     .await
 }
+
+use campfire_views::rendering::*;

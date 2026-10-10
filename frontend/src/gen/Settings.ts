@@ -9,4 +9,8 @@ import type { StatusSettings } from "./StatusSettings";
 /**
  * `GET /api/v1/settings`, and the answer to profile, appearance, notification and status writes.
  */
-export type Settings = { profile: ProfileSettings, appearance: AppearanceSettings, notifications: NotificationSettings, status: StatusSettings, calls: CallSettings, integrations: IntegrationSettings, };
+export type Settings = {
+/**
+ * Monotonic, persisted ordering for every settings response.
+ */
+revision: number, profile: ProfileSettings, appearance: AppearanceSettings, notifications: NotificationSettings, status: StatusSettings, calls: CallSettings, integrations: IntegrationSettings, };

@@ -17,11 +17,14 @@ use crate::models::User;
 use crate::sql::{CachedStatements, query_one};
 use crate::time::Timestamp;
 
-/// Items deleted with their source, as `(id, user_id)`. The classic inbox drops them only on
+/// Removed inbox items, as `(id, user_id)`. The classic inbox drops them only on
 /// reload, so it has no frame; the cable sink publishes the single-page app's `activity.removed`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ActivityItemsRemoved {
     pub items: Vec<(i64, i64)>,
+    /// A retained message's room, so removing a mention also refreshes its sidebar counts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<i64>,
 }
 
 impl crate::events::Broadcast for ActivityItemsRemoved {
@@ -429,7 +432,7 @@ impl ActivityItem {
     /// Tells the owners' other tabs that these `(id, user_id)` items went with their source.
     pub(crate) fn emit_removed(tx: &mut Tx<'_>, items: Vec<(i64, i64)>) {
         if !items.is_empty() {
-            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items }));
+            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items, room_id: None }));
         }
     }
 }

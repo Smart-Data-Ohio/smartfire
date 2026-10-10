@@ -20,6 +20,8 @@ use crate::{Involvement, PresenceSetting, TextSize, Theme, Timestamp, VoiceMode}
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Settings {
+    /// Monotonic, persisted ordering for every settings response.
+    pub revision: i64,
     pub profile: ProfileSettings,
     pub appearance: AppearanceSettings,
     pub notifications: NotificationSettings,

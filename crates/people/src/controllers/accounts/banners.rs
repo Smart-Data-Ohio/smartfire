@@ -98,7 +98,7 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
         };
         let legacy = blob.metadata.get(branding::ANIMATED_KEY).is_none();
         let timeout = branding::processing_timeout(&blob);
-        let variant = campfire_web::active_storage::processed_branding_variant_with_deadline(
+        let variant = campfire_runtime::active_storage::processed_branding_variant_with_deadline(
             c.app(),
             blob,
             Variation::resize_to_limit(width, height, Some(&format)),

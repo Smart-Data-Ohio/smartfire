@@ -13,20 +13,6 @@ pub fn frames_from_cards(message: &Message, cards: &[Card]) -> Vec<String> {
         format!("\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_{}_fizzy_card_{}\" src=\"{}\"></turbo-frame>\n",message.id,card.id,campfire_views::helpers::escape(&src))
     }).collect()
 }
-#[cfg(any(test, feature = "test-support"))]
-pub fn container(conn: &campfire_db::Connection, message: &Message) -> campfire_db::Result<String> {
-    Ok(container_from_cards(
-        message,
-        &Card::for_message(conn, message.id)?,
-    ))
-}
-fn container_from_cards(message: &Message, cards: &[Card]) -> String {
-    format!(
-        "<div id=\"{}\" class=\"fizzy-cards\">{}</div>\n",
-        campfire_views::helpers::escape(&message_dom_id(message, Some("fizzy_cards"))),
-        frames_from_cards(message, cards).concat()
-    )
-}
 pub fn broadcast_updates(app: &App, card_id: i64) -> anyhow::Result<()> {
     let app2 = app.clone();
     app.db.read_blocking(move |conn| {
@@ -74,4 +60,19 @@ pub fn broadcast_updates(app: &App, card_id: i64) -> anyhow::Result<()> {
         Ok(())
     })?;
     Ok(())
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn container(conn: &campfire_db::Connection, message: &Message) -> campfire_db::Result<String> {
+    Ok(container_from_cards(
+        message,
+        &Card::for_message(conn, message.id)?,
+    ))
+}
+fn container_from_cards(message: &Message, cards: &[Card]) -> String {
+    format!(
+        "<div id=\"{}\" class=\"fizzy-cards\">{}</div>\n",
+        campfire_presentation::helpers::escape(&message_dom_id(message, Some("fizzy_cards"))),
+        frames_from_cards(message, cards).concat()
+    )
 }

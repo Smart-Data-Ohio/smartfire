@@ -52,6 +52,7 @@ import type { Icon } from "../gen/Icon.ts";
 import type { InboundEmail } from "../gen/InboundEmail.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { MessagePage } from "../gen/MessagePage.ts";
 import type { MessageRead } from "../gen/MessageRead.ts";
 import type { PinList } from "../gen/PinList.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
@@ -274,6 +275,12 @@ const saved = {
 
 /** Scheduled messages (S3, and the composer's). Loads never reject; writes reject on failure. */
 const scheduled = {
+  replyPage: (
+    roomId: number,
+    threadId: number | null,
+    before: number | null,
+  ): Promise<MessagePage> =>
+    runAction(scheduledActions.replyPage(roomId, threadId, before === null ? null : { before })),
   /** Loads (or reloads) `pending`, `past` or `room:<id>` (see `roomScheduledKey`). */
   load: (key: ScheduledListKey): Promise<void> => runAction(scheduledActions.load(key)),
   loadMore: (key: ScheduledListKey): Promise<void> => runAction(scheduledActions.loadMore(key)),

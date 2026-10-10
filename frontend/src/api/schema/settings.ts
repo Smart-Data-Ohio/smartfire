@@ -223,6 +223,7 @@ export type IntegrationChangePin = Assert<
 
 /** `GET /api/v1/settings`: everything the settings screens show. */
 export const Settings = Schema.Struct({
+  revision: Schema.Number,
   profile: ProfileSettings,
   appearance: AppearanceSettings,
   notifications: NotificationSettings,

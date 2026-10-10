@@ -7,16 +7,9 @@ pub mod flash;
 pub mod helpers;
 pub mod sudo;
 
-pub use context::{AccountSummary, CurrentUser, NotificationSounds, Platform, UserPreferences};
+pub use context::{HelpContact, AccountSummary, CurrentUser, NotificationSounds, Platform, UserPreferences};
 
 mod context;
-
-/// `User.administrator.first`, shown by the help-contact partial.
-#[derive(Clone, Debug)]
-pub struct HelpContact {
-    pub name: String,
-    pub email_address: String,
-}
 
 /// `AllowBrowser::VERSIONS`, minus the browsers it blocks outright (`ie: false`).
 pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [
