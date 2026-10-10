@@ -64,6 +64,35 @@ export function pendingAttachment(entry: TrayFile): PendingAttachment {
   };
 }
 
+/** The file part of a send's options. */
+type SendOptions = NonNullable<Parameters<typeof actions.send>[2]>;
+
+/** How many files one message can carry (the server's `attachmentSignedIds` cap). */
+export const MAX_FILES = 10;
+
+/**
+ * How a send carries its uploaded files: one goes in the legacy single-file slot, as before
+ * grouped files; several go together as `attachmentSignedIds`, in tray order.
+ */
+export function fileOptions(files: readonly TrayFile[]): SendOptions {
+  const [first] = files;
+
+  if (files.length <= 1) {
+    return {
+      attachmentSignedId: first?.snapshot.signedId ?? null,
+      attachment: first === undefined ? null : pendingAttachment(first),
+    };
+  }
+
+  return {
+    attachmentSignedId: null,
+    attachmentSignedIds: files.flatMap((entry) =>
+      entry.snapshot.signedId === null ? [] : [entry.snapshot.signedId],
+    ),
+    attachments: files.map(pendingAttachment),
+  };
+}
+
 /**
  * The composer's attachment tray: each file uploads directly as soon as it's added, and the tray
  * tracks every upload's progress. Unmounting cancels unfinished uploads and frees the previews.

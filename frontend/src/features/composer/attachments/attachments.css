@@ -237,6 +237,58 @@
     }
   }
 
+  /* Phones: the tray is one swipeable row, so ten files don't push the composer up the screen.
+     The top padding leaves room for the corner remove buttons the scroller would otherwise clip. */
+  @media (width < 720px) {
+    .tray {
+      flex-wrap: nowrap;
+      padding-top: var(--space-4);
+      padding-bottom: var(--space-1);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+    }
+
+    .tray-chip {
+      flex-shrink: 0;
+      scroll-snap-align: start;
+    }
+
+    .tray-chip[data-kind="file"] {
+      width: min(236px, 66vw);
+    }
+  }
+
+  /* Touch phones: remove paints a 24 px disc, and an invisible ring takes it to a 44 px target.
+     Retry on a file card is a full 44 px target too. */
+  @media (width < 720px) and (pointer: coarse) {
+    .tray {
+      gap: var(--space-3);
+    }
+
+    .tray-remove.button {
+      --button-height: 24px;
+
+      width: 24px;
+      top: -10px;
+      right: -10px;
+    }
+
+    .tray-remove.button::after {
+      position: absolute;
+      inset: calc((24px - var(--touch-target)) / 2);
+      content: "";
+    }
+
+    .tray-chip[data-kind="file"] .tray-retry.button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+      margin-right: var(--space-5);
+    }
+  }
+
   /* The drop overlay: fixed over the pane, so the pane's own layout is untouched. */
   .drop-overlay {
     position: fixed;
