@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -1400,4 +1400,77 @@ it("shows option images and inline emoji in choices and final results, using sti
   );
   expect(screen.getAllByText("🌮")).toHaveLength(poll.options.length - 1);
   delete document.documentElement.dataset.motion;
+});
+
+it("shows the custom emoji name when its image fails to load", () => {
+  const message = held(messages.pollOpen);
+  const original = message.poll;
+
+  if (original === null) throw new Error("expected seeded poll");
+
+  const poll = {
+    ...original,
+    closed: true,
+    options: original.options.map((option, index) =>
+      index === 0 ? { ...option, media: { kind: "emoji", content: ":party:" } as const } : option,
+    ),
+  };
+
+  const view = render(<PollCard message={message} poll={poll} />);
+  const image = view.container.querySelector<HTMLImageElement>(".poll-option-emoji img");
+
+  if (image === null) throw new Error("expected a custom emoji image");
+
+  fireEvent.error(image);
+  expect(screen.getByText(":party:")).toBeTruthy();
+  expect(view.container.querySelector(".poll-option-emoji img")).toBeNull();
+});
+
+it("gives custom poll emoji their shortcode as alternative text", () => {
+  const message = held(messages.pollOpen);
+  const original = message.poll;
+
+  if (original === null) throw new Error("expected seeded poll");
+
+  const view = render(
+    <PollCard
+      message={message}
+      poll={{
+        ...original,
+        closed: true,
+        options: original.options.map((option, index) =>
+          index === 0 ? { ...option, media: { kind: "emoji", content: ":party:" } } : option,
+        ),
+      }}
+    />,
+  );
+
+  expect(view.container.querySelector(".poll-option-emoji img")?.getAttribute("alt")).toBe(
+    ":party:",
+  );
+});
+
+it("shows the custom emoji name when it is absent from the catalog", async () => {
+  const message = held(messages.pollOpen);
+  const original = message.poll;
+
+  if (original === null) throw new Error("expected seeded poll");
+
+  const view = render(
+    <PollCard
+      message={message}
+      poll={{
+        ...original,
+        closed: true,
+        options: original.options.map((option, index) =>
+          index === 0
+            ? { ...option, media: { kind: "emoji", content: ":deleted_party:" } }
+            : option,
+        ),
+      }}
+    />,
+  );
+
+  await screen.findByText(":deleted_party:");
+  expect(view.container.querySelector(".poll-option-emoji img")).toBeNull();
 });

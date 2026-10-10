@@ -11,6 +11,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { useAnnouncer } from "../destinations/live-region.tsx";
+import { loadCustomIcons } from "../messages/commands.ts";
 import { useViewerId } from "../messages/use-message.ts";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { AvatarGroup } from "../threads/avatar-group.tsx";
@@ -20,6 +21,42 @@ import { closesLabel, percent } from "./format.ts";
 type Poll = NonNullable<MessageDTO["poll"]>;
 
 type PollOption = Poll["options"][number];
+
+function CustomOptionEmoji({
+  name,
+  reduced,
+}: {
+  readonly name: string;
+  readonly reduced: boolean;
+}) {
+  const content = `:${name}:`;
+  const [display, setDisplay] = useState<"image" | "text">("image");
+
+  useEffect(() => {
+    let live = true;
+
+    loadCustomIcons().then(
+      (icons) => {
+        if (live && !icons.some((icon) => icon.content === content)) setDisplay("text");
+      },
+      () => undefined,
+    );
+
+    return () => {
+      live = false;
+    };
+  }, [content]);
+
+  return display === "text" ? (
+    content
+  ) : (
+    <img
+      src={`/icons/${encodeURIComponent(name)}${reduced ? "?still=1" : ""}`}
+      alt={content}
+      onError={() => setDisplay("text")}
+    />
+  );
+}
 
 function OptionLabel({ option }: { readonly option: PollOption }) {
   const reduced = useReducedMotion();
@@ -41,11 +78,11 @@ function OptionLabel({ option }: { readonly option: PollOption }) {
         />
       ) : null}
       {media?.kind === "emoji" ? (
-        <span className="poll-option-emoji" aria-hidden="true">
+        <span className="poll-option-emoji" aria-hidden={custom === null ? true : undefined}>
           {custom === null ? (
             media.content
           ) : (
-            <img src={`/icons/${encodeURIComponent(custom)}${reduced ? "?still=1" : ""}`} alt="" />
+            <CustomOptionEmoji key={custom} name={custom} reduced={reduced} />
           )}
         </span>
       ) : null}

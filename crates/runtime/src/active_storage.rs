@@ -1,7 +1,7 @@
 //! The Active Storage endpoints (`activestorage/config/routes.rb`) over `campfire_storage`, as the
 //! engine's controllers serve them, plus `ActiveStorage::Blob#purge` for the purge job.
 //!
-//! Poll option media additionally requires membership in its room and uses private, uncached
+//! Poll option media additionally requires poll access and uses private, uncached
 //! responses, including stills and disk redirects. Other downloads stay public behind signed
 //! URLs; the disk `PUT` and direct uploads require a
 //! Campfire session (`reference/config/initializers/active_storage_authentication.rb`). The disk
@@ -159,7 +159,7 @@ async fn set_blob(c: &mut Ctx) -> Result<Blob> {
 }
 
 /// Follow still/variant images back to their original, including redirected disk URLs.
-async fn authorize_poll_media(c: &Ctx, blob_id: i64) -> Result<bool> {
+async fn authorize_poll_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
     let (restricted, rooms) = c.app().db.read(move |conn| {
         let mut roots = conn.prepare_cached(
             "WITH RECURSIVE roots(id) AS (
@@ -192,14 +192,20 @@ async fn authorize_poll_media(c: &Ctx, blob_id: i64) -> Result<bool> {
         Ok((restricted, rooms))
     }).await.map_err(Error::internal)?;
     if !restricted { return Ok(false); }
-    let session = find_session_by_cookie(c).await?.ok_or(Error::NotFound)?;
-    let user_id = session.user_id;
-    let verified = session.two_factor_verified();
+    let (user_id, verified) = if let Some(session) = find_session_by_cookie(c).await? {
+        (session.user_id, session.two_factor_verified())
+    } else if crate::concerns::bot_authentication(c).await?
+        || crate::concerns::agent_authentication(c).await? {
+        (crate::concerns::require_current_user(c)?.id, true)
+    } else {
+        return Err(Error::NotFound);
+    };
     let allowed = c.app().db.read(move |conn| {
         let user = campfire_db::User::find(conn, user_id)?;
         if !user.is_active() || (!verified && user.requires_two_factor()) { return Ok(false); }
         for room in rooms {
-            if conn.query_row("SELECT EXISTS(SELECT 1 FROM memberships WHERE room_id=? AND user_id=?)", params![room, user_id], |r| r.get::<_, bool>(0))? {
+            if campfire_db::Room::find_for_user(conn, user_id, room)?.is_some()
+                && campfire_db::models::agent_access::capability_for_user(conn, user_id, "post_messages", room)? != Some(false) {
                 return Ok(true);
             }
         }
@@ -1046,7 +1052,15 @@ pub async fn create_direct_upload(
     let blob = c
         .app()
         .db
-        .write(move |tx| new_blob.insert(tx.conn(), now).map_err(storage_error))
+        .write(move |tx| {
+            let blob = new_blob.insert(tx.conn(), now).map_err(storage_error)?;
+            // The existing purge job refuses attached blobs, so abandoned direct uploads expire.
+            tx.emit_after_commit(campfire_db::Event::job_in(
+                std::time::Duration::from_secs(24 * 60 * 60),
+                &campfire_app::queue::PurgeJob { blob_id: blob.id },
+            ));
+            Ok(blob)
+        })
         .await
         .map_err(Error::internal)?;
 
