@@ -482,6 +482,7 @@ export class Engine extends Context.Service<
         scope: Scope.Scope,
         topicList: readonly string[],
         activityThrough?: number,
+        sidebarThrough?: number,
       ) {
         // What the store doesn't hold (an open calendar's events) reads itself again meanwhile.
         emitResync(topicList);
@@ -491,7 +492,7 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
-            yield* withRowTicket((since) =>
+            const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
                 Effect.map((data) => {
                   // Authoritative: every HTTP reply already on its way is stale now.
@@ -504,13 +505,22 @@ export class Engine extends Context.Service<
                 }),
                 // A room it gave back that shows as unavailable reads itself again.
                 Effect.tap((restored) => Effect.forkIn(recoverResyncedRooms(restored), scope)),
+                Effect.as(true),
               ),
             ).pipe(
               Effect.catch((error) =>
-                Effect.logWarning("sync: sidebar resync failed", error.message),
+                Effect.logWarning("sync: sidebar resync failed", error.message).pipe(
+                  Effect.as(false),
+                ),
               ),
               Effect.provideContext(api),
             );
+
+            // Replayed layout events are covered only by a snapshot that actually installed.
+            if (installed && sidebarThrough !== undefined) {
+              yield* Ref.set(snapshotThrough, sidebarThrough);
+            }
+
             yield* boot().pipe(
               Effect.tap((data) =>
                 Effect.sync(() => mutations.setWorkspaceStyles(data.customStyles)),
@@ -718,8 +728,7 @@ export class Engine extends Context.Service<
           // The stored cursor predates the page reload. Refetch after every replayed event
           // happened, then skip sidebar and activity events the fresh snapshots cover.
           if (afterReload && frame.replayThrough > point.seq) {
-            yield* Ref.set(snapshotThrough, frame.replayThrough);
-            yield* resync(scope, ["user"], frame.replayThrough);
+            yield* resync(scope, ["user"], frame.replayThrough, frame.replayThrough);
           } else {
             yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
           }
