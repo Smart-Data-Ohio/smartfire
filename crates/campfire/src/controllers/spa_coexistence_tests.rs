@@ -1163,9 +1163,44 @@ async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state()
             )
             .await;
         assert_eq!(navigated.location(), Some(to(&spa).as_str()), "navigate {classic}");
+        // The SPA's service worker forwards a navigation with `fetch(request)`: still
+        // `Sec-Fetch-Mode: navigate`, but `Sec-Fetch-Dest: empty`.
+        for accept in ["*/*", "text/html,application/xhtml+xml"] {
+            let forwarded = b
+                .send(
+                    Req::new(Method::GET, &classic)
+                        .header("accept", accept)
+                        .header("sec-fetch-mode", "navigate")
+                        .header("sec-fetch-dest", "empty"),
+                )
+                .await;
+            assert_eq!(forwarded.status, StatusCode::FOUND, "worker {accept} {classic}");
+            assert_eq!(
+                forwarded.location(),
+                Some(to(&spa).as_str()),
+                "worker {accept} {classic}"
+            );
+        }
         let (path, page) = follow(&mut b, &classic).await;
         assert_eq!(path, spa, "{classic}");
         assert_page(&path, &page, false);
+    }
+}
+
+/// A thread's content opens at a reply with `message_id`; the SPA's thread route reads it as `m`.
+#[tokio::test]
+async fn the_thread_content_reply_anchor_becomes_the_spa_m() {
+    let Some(a) = enabled().await else { return };
+    let (room, thread) = (DESIGNERS_ROOM, LAUNCH_THREAD);
+    let mut b = a.sign_in(DAVID).await;
+    let base = format!("/rooms/{room}/threads/{thread}/content");
+    for (query, spa) in [
+        ("?message_id=123", format!("/app/r/{room}/t/{thread}?m=123")),
+        ("?message_id=123&classic=1", format!("/app/r/{room}/t/{thread}?m=123")),
+        ("?message_id=latest", format!("/app/r/{room}/t/{thread}")),
+    ] {
+        let reply = b.get(&format!("{base}{query}")).await;
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{query}");
     }
 }
 
@@ -1193,6 +1228,27 @@ async fn the_new_aliases_leave_scripts_frames_and_json_alone() {
                     .header("accept", "text/html")
                     .header("sec-fetch-mode", "navigate")
                     .header("sec-fetch-dest", "iframe"),
+            ),
+            (
+                "frame",
+                Req::new(Method::GET, &classic)
+                    .header("accept", "text/html")
+                    .header("sec-fetch-mode", "navigate")
+                    .header("sec-fetch-dest", "frame"),
+            ),
+            (
+                "same-origin fetch",
+                Req::new(Method::GET, &classic)
+                    .header("accept", "text/html")
+                    .header("sec-fetch-mode", "same-origin")
+                    .header("sec-fetch-dest", "empty"),
+            ),
+            (
+                "no-cors",
+                Req::new(Method::GET, &classic)
+                    .header("accept", "text/html")
+                    .header("sec-fetch-mode", "no-cors")
+                    .header("sec-fetch-dest", "script"),
             ),
         ];
         for (label, request) in requests {

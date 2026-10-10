@@ -596,6 +596,9 @@ fn spa_url_inner(
             {
                 return Some(url);
             }
+            if screen.endpoint == "channel_threads#content" {
+                return Some(thread_anchor_url(spa, query));
+            }
             Some(with_query(spa, query))
         })
 }
@@ -641,6 +644,35 @@ fn room_notification_url(
         url.push_str(&rest.join("&"));
     }
     Some(url)
+}
+
+/// A thread's content fragment opens at `message_id` (the last value, as params read it); the
+/// SPA's thread route reads that reply as `m`. A `message_id` that isn't a record id is dropped,
+/// as the SPA would ignore it; other pairs carry over, less `classic`.
+fn thread_anchor_url(spa: String, query: Option<&str>) -> String {
+    let mut anchor = None;
+    let mut rest = Vec::new();
+    for pair in query.unwrap_or("").split('&') {
+        if pair.is_empty() {
+            continue;
+        }
+        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match query_component(name).as_deref() {
+            Some("classic") => {}
+            Some("message_id") => anchor = record_id(value),
+            _ => rest.push(pair),
+        }
+    }
+    let mut pairs = Vec::with_capacity(rest.len() + 1);
+    if let Some(anchor) = anchor {
+        pairs.push(format!("m={anchor}"));
+    }
+    pairs.extend(rest.into_iter().map(str::to_string));
+    if pairs.is_empty() {
+        spa
+    } else {
+        format!("{spa}?{}", pairs.join("&"))
+    }
 }
 
 /// `thread` (first value) and `message_id` from `query`, plus every other pair.

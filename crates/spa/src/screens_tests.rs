@@ -458,6 +458,20 @@ fn fragments_opened_as_pages_map_to_their_screen() {
         spa_url("channel_threads#content", "/rooms/7/threads/8/content", None).as_deref(),
         Some("/app/r/7/t/8")
     );
+    // The content's reply anchor is the thread route's `m`.
+    for (query, spa) in [
+        ("message_id=123", "/app/r/7/t/8?m=123"),
+        ("message_id=%31%32%33&x=1", "/app/r/7/t/8?m=123&x=1"),
+        ("message_id=5&message_id=123&classic=1", "/app/r/7/t/8?m=123"),
+        ("message_id=latest", "/app/r/7/t/8"),
+        ("message_id=", "/app/r/7/t/8"),
+    ] {
+        assert_eq!(
+            spa_url("channel_threads#content", "/rooms/7/threads/8/content", Some(query)).as_deref(),
+            Some(spa),
+            "{query}"
+        );
+    }
     assert_eq!(
         spa_url("channel_thread_messages#index", "/rooms/7/threads/8/messages", None).as_deref(),
         Some("/app/r/7/t/8")

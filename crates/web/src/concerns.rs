@@ -408,19 +408,22 @@ async fn confirmed_room_query(
     }).await.map_err(Error::internal)
 }
 
-/// A browser opening a page: `Sec-Fetch-Mode: navigate` to a document, or, from a client that
+/// A browser opening a page: `Sec-Fetch-Mode: navigate` outside a frame, or, from a client that
 /// sends no Fetch Metadata, an `Accept` naming `text/html`. A `fetch()` or `curl` with the session
 /// cookie and `Accept: */*`, or a script's `fetch()` of HTML (`Sec-Fetch-Mode: cors`), isn't one,
 /// so it isn't redirected.
 fn navigates(c: &Ctx) -> bool {
-    // A browser that sends Fetch Metadata says what the request is: only a top-level document
-    // navigation counts, whatever it accepts (a script's `fetch()` or a frame's load doesn't).
+    // A browser that sends Fetch Metadata says what the request is: only a top-level navigation
+    // counts, whatever it accepts (a script's `fetch()` or a frame's load doesn't). The SPA's
+    // service worker forwards a navigation with `Sec-Fetch-Dest: empty`, so any destination but a
+    // nested browsing context's counts.
     if let Some(mode) = c.request.header("sec-fetch-mode") {
-        let document = c
-            .request
-            .header("sec-fetch-dest")
-            .is_none_or(|dest| dest.eq_ignore_ascii_case("document"));
-        return mode.eq_ignore_ascii_case("navigate") && document;
+        let nested = c.request.header("sec-fetch-dest").is_some_and(|dest| {
+            ["iframe", "frame", "fencedframe", "embed", "object"]
+                .iter()
+                .any(|nested| dest.eq_ignore_ascii_case(nested))
+        });
+        return mode.eq_ignore_ascii_case("navigate") && !nested;
     }
     c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
 }
