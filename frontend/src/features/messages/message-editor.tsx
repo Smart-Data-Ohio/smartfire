@@ -5,6 +5,7 @@ import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { DriveChip } from "../cards/link-cards.tsx";
 import {
   insertLink,
   markerForChord,
@@ -18,6 +19,48 @@ interface MessageEditorProps {
   readonly onClose: () => void;
   /** Saving an empty message with no file means deleting it: the row asks first. */
   readonly onRequestDelete: () => void;
+}
+
+export type EditPlan =
+  | { readonly kind: "close" }
+  | { readonly kind: "delete" }
+  | {
+      readonly kind: "save";
+      readonly body: {
+        readonly markdownSource: string;
+        readonly removeDriveFileIds?: readonly string[];
+      };
+    };
+
+/**
+ * What Save does. Unchanged text with no Drive removals just closes. An empty message with no
+ * file and no Drive file left is a delete. Otherwise the request carries the Markdown and, when
+ * chips were removed, those file ids.
+ */
+export function planEdit(input: {
+  readonly markdown: string;
+  readonly original: string;
+  readonly removedIds: readonly string[];
+  readonly remainingDrive: number;
+  readonly hasAttachment: boolean;
+}): EditPlan {
+  const markdown = input.markdown.trimEnd();
+
+  if (markdown === input.original.trimEnd() && input.removedIds.length === 0) {
+    return { kind: "close" };
+  }
+
+  if (markdown.trim() === "" && !input.hasAttachment && input.remainingDrive === 0) {
+    return { kind: "delete" };
+  }
+
+  return {
+    kind: "save",
+    body:
+      input.removedIds.length === 0
+        ? { markdownSource: markdown }
+        : { markdownSource: markdown, removeDriveFileIds: input.removedIds },
+  };
 }
 
 /** What Enter does in the editor, matching the composer: Enter saves, Shift/Alt+Enter is a newline. */
@@ -48,6 +91,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
   const [text, setText] = useState<string | null>(message.markdownSource);
   const [original, setOriginal] = useState<string | null>(message.markdownSource);
   const [saving, setSaving] = useState(false);
+  const [removedDrive, setRemovedDrive] = useState<readonly string[]>([]);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const placedCaret = useRef(false);
@@ -119,15 +163,24 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
       return;
     }
 
-    const markdown = text.trimEnd();
+    const attached = message.cards.flatMap((card) => (card.kind === "drive" ? [card.data] : []));
+    const remaining = attached.filter((card) => !removedDrive.includes(card.fileId));
 
-    if (markdown === (original ?? "").trimEnd()) {
+    const plan = planEdit({
+      markdown: text,
+      original: original ?? "",
+      removedIds: removedDrive,
+      remainingDrive: remaining.length,
+      hasAttachment: message.attachment !== null,
+    });
+
+    if (plan.kind === "close") {
       onClose();
 
       return;
     }
 
-    if (markdown.trim() === "" && message.attachment === null) {
+    if (plan.kind === "delete") {
       onRequestDelete();
 
       return;
@@ -135,10 +188,12 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
 
     setSaving(true);
 
-    actions.messages.edit(message.id, markdown).then(onClose, (error: ActionError) => {
-      setSaving(false);
-      toast({ title: "Couldn't save your edit", description: error.message, tone: "danger" });
-    });
+    actions.messages
+      .edit(message.id, plan.body.markdownSource, plan.body.removeDriveFileIds)
+      .then(onClose, (error: ActionError) => {
+        setSaving(false);
+        toast({ title: "Couldn't save your edit", description: error.message, tone: "danger" });
+      });
   };
 
   const apply = (edit: TextEdit) => {
@@ -194,6 +249,15 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
   return (
     <div className="message-editor enter-fade">
       <div className="message-editor-card">
+        {message.cards.map((card) =>
+          card.kind === "drive" && !removedDrive.includes(card.data.fileId) ? (
+            <DriveChip
+              key={card.data.fileId}
+              card={card.data}
+              onRemove={() => setRemovedDrive((current) => [...current, card.data.fileId])}
+            />
+          ) : null,
+        )}
         <textarea
           ref={textareaRef}
           className="message-editor-input"

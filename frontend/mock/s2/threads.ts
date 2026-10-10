@@ -40,7 +40,7 @@ import {
   threadStatus,
   touched,
 } from "./model.ts";
-import { clientMessageIdOf, nestedMessage, parseMessage } from "./posting.ts";
+import { clientMessageIdOf, driveCards, nestedMessage, parseMessage } from "./posting.ts";
 import type { Uploads } from "./uploads.ts";
 
 const INVOLVEMENTS: readonly ThreadInvolvement[] = ["nothing", "mentions", "everything"];
@@ -334,6 +334,7 @@ export function createThreads(
         action: false,
         systemNote: false,
         forward: null,
+        cards: driveCards(parsed.driveFileIds),
       },
       true,
     );
@@ -374,6 +375,7 @@ export function createThreads(
       action: false,
       systemNote: false,
       forward: null,
+      cards: driveCards(parsed.driveFileIds),
     });
 
     world.sentByClientId.set(key, message);

@@ -631,6 +631,7 @@ fn create_message_requests_round_trip() {
             reply_to_message_id: None,
             reply_notify_author: None,
             attachment_signed_id: None,
+            drive_file_ids: None,
         },
         json!({
             "clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",

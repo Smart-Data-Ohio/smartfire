@@ -170,6 +170,7 @@ export interface MessageDraft {
   readonly action: boolean;
   readonly systemNote: boolean;
   readonly forward: ForwardOrigin | null;
+  readonly cards?: MessageDTO["cards"];
 }
 
 /** A plain draft: no reply, attachment or forward. */
@@ -227,7 +228,7 @@ export function buildMessage(
     pinned: false,
     thread: null,
     poll: null,
-    cards: [],
+    cards: draft.cards ?? [],
     cardsAsOf: createdAt,
     steps: [],
     createdAt,

@@ -2,8 +2,9 @@
  * Reading a `CreateMessage` body, shared by the root timeline, thread replies and new threads.
  */
 import type { Attachment } from "../../src/gen/Attachment.ts";
+import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import { validation } from "../http.ts";
-import { field, intField, isRecord, type Json, stringField } from "../json.ts";
+import { field, intField, isRecord, type Json, stringArrayField, stringField } from "../json.ts";
 import { SOURCE_LIMIT } from "./model.ts";
 
 /** A `CreateMessage` body that passed validation. */
@@ -12,6 +13,7 @@ export interface ParsedMessage {
   readonly markdown: string;
   readonly replyToMessageId: number | null;
   readonly attachment: Attachment | null;
+  readonly driveFileIds: readonly string[];
 }
 
 /** The `clientMessageId`, checked first so a retry is answered before anything else. */
@@ -49,14 +51,28 @@ export function parseMessage(
   const clientMessageId = clientMessageIdOf(body);
   const signedId = stringField(body, "attachmentSignedId");
   const attachment = signedId === null || signedId === "" ? null : attach(signedId);
-  const markdown = checkMarkdown(stringField(body, "markdownSource"), attachment !== null);
+  const driveFileIds = stringArrayField(body, "driveFileIds") ?? [];
+
+  const markdown = checkMarkdown(
+    stringField(body, "markdownSource"),
+    attachment !== null || driveFileIds.length > 0,
+  );
 
   return {
     clientMessageId,
     markdown,
     replyToMessageId: intField(body, "replyToMessageId"),
     attachment,
+    driveFileIds,
   };
+}
+
+/** Drive chips for ids the composer pinned. The name isn't stored, matching the message card. */
+export function driveCards(ids: readonly string[]): MessageDTO["cards"] {
+  return ids.map((fileId) => ({
+    kind: "drive",
+    data: { fileId, url: `https://drive.google.com/open?id=${fileId}` },
+  }));
 }
 
 /** The nested `message` of a `CreateThread` body. */

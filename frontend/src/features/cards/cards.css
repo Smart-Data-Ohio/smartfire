@@ -1164,6 +1164,37 @@
     color: var(--text-muted);
   }
 
+  .drive-chip-link {
+    display: flex;
+    flex: 1;
+    gap: var(--space-3);
+    align-items: center;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .drive-remove {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 18px;
+  }
+
+  @media (width < 720px) and (pointer: coarse) {
+    .drive-remove {
+      width: var(--touch-target);
+      height: var(--touch-target);
+    }
+  }
+
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
   @media (width < 720px) {

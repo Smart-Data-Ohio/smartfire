@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
-import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
+import {
+  CreateMessage as CreateMessageSchema,
+  type CreateMessage as DecodedCreateMessage,
+} from "../api/schema/message.ts";
 import {
   FakeApi,
   meFixture,
@@ -15,7 +18,6 @@ import {
 } from "../api/testing.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
-import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
@@ -2421,7 +2423,7 @@ describe("outbox", () => {
     ),
   );
 
-  it.effect("marks a rejected send failed, and retries it with the same client id", () =>
+  it.effect("retries a rejected send with the same client id, reply and Drive files", () =>
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
@@ -2434,7 +2436,11 @@ describe("outbox", () => {
         yield* startEngine;
         yield* session.openRoom(12, null);
 
-        const id = yield* session.send(12, "hello");
+        const id = yield* session.send(12, "hello", {
+          clientMessageId: "019a0000-0000-7000-8000-000000000001",
+          reply: { messageId: 1, notify: false },
+          driveFileIds: ["roadmap"],
+        });
 
         yield* settle;
 
@@ -2450,7 +2456,13 @@ describe("outbox", () => {
         const posts = (yield* api.requests).filter((request) => request.method === "POST");
 
         expect(posts).toHaveLength(2);
-        expect(posts[0]?.body).toMatchObject({ clientMessageId: id, markdownSource: "hello" });
+        expect(posts[0]?.body).toMatchObject({
+          clientMessageId: "019a0000-0000-7000-8000-000000000001",
+          markdownSource: "hello",
+          replyToMessageId: 1,
+          replyNotifyAuthor: false,
+          driveFileIds: ["roadmap"],
+        });
         expect(posts[1]?.body).toEqual(posts[0]?.body);
         expect(store.getState().pending[id]).toBeUndefined();
         expect(timelineIds(12)).toEqual([1, 2]);
@@ -2542,7 +2554,7 @@ describe("outbox", () => {
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
-        const posted = yield* Ref.make<CreateMessage | null>(null);
+        const posted = yield* Ref.make<DecodedCreateMessage | null>(null);
 
         yield* serve([messageFixture(1, 12)]);
         yield* api.route("POST /threads/88/messages", (request) =>

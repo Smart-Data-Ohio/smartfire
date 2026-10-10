@@ -102,6 +102,8 @@ export interface PendingMessage {
   /** A finished direct upload's signed id, posted as the message's file. */
   readonly attachmentSignedId: string | null;
   readonly attachment: PendingAttachment | null;
+  /** Drive file ids pinned on the pending message; absent when there are none. */
+  readonly driveFileIds?: readonly string[];
   /** The message it replies to (inline, on the same timeline), or `null`. */
   readonly replyToMessageId: number | null;
   /** Whether the replied-to author is notified; `null` when it isn't a reply. */

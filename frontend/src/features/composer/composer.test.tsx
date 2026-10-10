@@ -10,6 +10,32 @@ import { draftKey, readDraft } from "./draft.ts";
 
 const ROOM = 12;
 
+function serveDrive() {
+  vi.spyOn(actions.drive, "preparePicker").mockResolvedValue({
+    choose: async () => null,
+    dispose: () => {},
+  });
+  vi.spyOn(actions.drive, "search").mockResolvedValue({
+    files: ["Roadmap", "Budget"].map((name) => ({
+      id: name.toLowerCase(),
+      name,
+      kind: "document",
+      modifiedAt: null,
+      owner: null,
+      url: null,
+    })),
+  });
+  vi.spyOn(actions.drive, "recipients").mockResolvedValue({ recipients: [] });
+}
+
+async function attachDrive(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Attach and more" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "From Google Drive" }));
+  fireEvent.click(await screen.findByRole("option", { name: new RegExp(name) }));
+  fireEvent.click(await screen.findByRole("button", { name: "Attach only" }));
+  await screen.findByRole("button", { name: `Remove ${name}` });
+}
+
 beforeEach(() => {
   sessionStorage.clear();
   clearCommandCache();
@@ -118,6 +144,8 @@ describe("a send waiting on uploads", () => {
   it("sends only what was submitted, keeping text and files added while it waited", async () => {
     const firstUpload = Promise.withResolvers<{ signedId: string; uploadUrl: string }>();
 
+    serveDrive();
+
     vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
 
     const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
@@ -159,11 +187,13 @@ describe("a send waiting on uploads", () => {
 
     fireEvent.change(input, { target: { value: "With the file" } });
     await attach("first.txt");
+    await attachDrive("Roadmap");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(send).not.toHaveBeenCalled();
 
     fireEvent.change(input, { target: { value: "Typed while waiting" } });
     await attach("second.txt");
+    await attachDrive("Budget");
     await waitFor(() => expect(screen.getByText("second.txt")).toBeTruthy());
     expect(send).not.toHaveBeenCalled();
 
@@ -173,11 +203,131 @@ describe("a send waiting on uploads", () => {
     expect(send).toHaveBeenCalledWith(
       ROOM,
       "With the file",
-      expect.objectContaining({ attachmentSignedId: "signed-first" }),
+      expect.objectContaining({ attachmentSignedId: "signed-first", driveFileIds: ["roadmap"] }),
     );
     expect(input).toHaveProperty("value", "Typed while waiting");
     expect(screen.queryByText("first.txt")).toBeNull();
     expect(screen.getByText("second.txt")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove Roadmap" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove Budget" })).toBeTruthy();
+  });
+});
+
+describe("a Drive grant finishing after send", () => {
+  it("adds only the new file to the next draft after the submitted upload finishes", async () => {
+    const upload = Promise.withResolvers<{ signedId: string; uploadUrl: string }>();
+    const granted = Promise.withResolvers<Awaited<ReturnType<typeof actions.drive.share>>>();
+    serveDrive();
+    vi.spyOn(actions.drive, "recipients").mockResolvedValue({
+      recipients: [{ id: 2, name: "Maya", email: "maya@example.com" }],
+    });
+    vi.spyOn(actions.drive, "share").mockReturnValue(granted.promise);
+    vi.spyOn(actions.messages, "startUpload").mockReturnValue(upload.promise);
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class {
+        status = 204;
+        upload = { onprogress: null };
+        onload: (() => void) | null = null;
+        onerror = null;
+        onabort = null;
+        open() {}
+        setRequestHeader() {}
+        abort() {}
+        send() {
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+    const { container } = render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+    const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
+
+    if (picker === null) throw new Error("no file input");
+    fireEvent.change(picker, { target: { files: [new File(["bytes"], "pending.txt")] } });
+    await attachDrive("Roadmap");
+    fireEvent.change(input, { target: { value: "Submitted with A" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(send).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Attach and more" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "From Google Drive" }));
+    fireEvent.click(await screen.findByRole("option", { name: /Budget/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Maya/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Grant view access and attach" }));
+    await act(async () => upload.resolve({ signedId: "signed-pending", uploadUrl: "/put" }));
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send).toHaveBeenCalledWith(
+      ROOM,
+      "Submitted with A",
+      expect.objectContaining({ driveFileIds: ["roadmap"] }),
+    );
+    expect(screen.queryByRole("button", { name: "Remove Roadmap" })).toBeNull();
+    await act(async () =>
+      granted.resolve({
+        outcome: "shared",
+        fileId: "budget",
+        blocked: null,
+        changedIds: [],
+        recipients: [],
+        results: [],
+      }),
+    );
+    expect(await screen.findByRole("button", { name: "Remove Budget" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove Roadmap" })).toBeNull();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(send).toHaveBeenLastCalledWith(
+      ROOM,
+      "",
+      expect.objectContaining({ driveFileIds: ["budget"] }),
+    );
+  });
+});
+
+describe("Drive submissions", () => {
+  it("sends a Drive file without text while the latest page is loading", async () => {
+    const latest = Promise.withResolvers<void>();
+
+    serveDrive();
+    vi.spyOn(actions, "jumpToPresent").mockReturnValue(latest.promise);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    await attachDrive("Roadmap");
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Message" }), { key: "Enter" });
+
+    expect(send).toHaveBeenCalledExactlyOnceWith(
+      ROOM,
+      "",
+      expect.objectContaining({ driveFileIds: ["roadmap"], reply: null }),
+    );
+    expect(screen.queryByRole("button", { name: "Remove Roadmap" })).toBeNull();
+    await act(async () => latest.resolve());
+  });
+
+  it("keeps a Drive file added while a new thread's first send is in flight", async () => {
+    const sent = Promise.withResolvers<void>();
+    const submit = vi.fn(() => sent.promise);
+
+    serveDrive();
+    render(<Composer roomId={ROOM} placeholder="Message" onSubmit={submit} />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    fireEvent.change(input, { target: { value: "First reply" } });
+    await attachDrive("Roadmap");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(submit).toHaveBeenCalledExactlyOnceWith({
+      markdown: "First reply",
+      attachmentSignedId: null,
+      driveFileIds: ["roadmap"],
+    });
+    await attachDrive("Budget");
+    await act(async () => sent.resolve());
+
+    expect(input).toHaveProperty("value", "");
+    expect(screen.queryByRole("button", { name: "Remove Roadmap" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove Budget" })).toBeTruthy();
   });
 });
 
