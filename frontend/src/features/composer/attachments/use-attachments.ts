@@ -23,10 +23,10 @@ export interface Attachments {
   readonly remove: (id: string) => void;
   readonly retry: (id: string) => void;
   /**
-   * Empties the tray after a send. The pending rows keep showing the thumbnails, so their URLs
-   * are released a little later instead of now.
+   * Removes only the files captured by a send, preserving later additions. Pending rows keep
+   * showing the thumbnails, so their URLs are released a little later instead of now.
    */
-  readonly clearSent: () => void;
+  readonly clearSent: (sent: readonly TrayFile[]) => void;
 }
 
 /** How long a sent image's local preview URL outlives the tray (the pending row uses it). */
@@ -146,11 +146,15 @@ export function useAttachments(max: number): Attachments {
     void tasks.current.get(id)?.retry();
   };
 
-  const clearSent = () => {
-    const urls = files.flatMap((entry) => (entry.previewUrl === null ? [] : [entry.previewUrl]));
+  const clearSent = (sent: readonly TrayFile[]) => {
+    const ids = new Set(sent.map((entry) => entry.id));
+    const urls = sent.flatMap((entry) => (entry.previewUrl === null ? [] : [entry.previewUrl]));
 
-    tasks.current.clear();
-    setFiles([]);
+    for (const id of ids) {
+      tasks.current.delete(id);
+    }
+
+    setFiles((current) => current.filter((entry) => !ids.has(entry.id)));
     window.setTimeout(() => {
       for (const url of urls) {
         URL.revokeObjectURL(url);

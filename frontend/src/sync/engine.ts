@@ -231,6 +231,8 @@ export class Engine extends Context.Service<
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+      /** Replayed messages update the store, but must not play sounds. */
+      const replayThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -627,7 +629,7 @@ export class Engine extends Context.Service<
         const now = yield* Clock.currentTimeMillis;
 
         mutations.applyEvents(fresh, now);
-        emitSyncEvents(fresh);
+        emitSyncEvents(fresh, yield* Ref.get(replayThrough));
         const open = new Set(yield* topics.subscribed);
 
         const workIds = new Set(
@@ -678,6 +680,7 @@ export class Engine extends Context.Service<
         frame: Extract<ServerFrame, { t: "welcome" }>,
         scope: Scope.Scope,
       ) {
+        yield* Ref.set(replayThrough, frame.replayThrough);
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 
@@ -695,11 +698,11 @@ export class Engine extends Context.Service<
 
           // The stored cursor predates the page reload. Refetch after every replayed event
           // happened, then skip sidebar and activity events the fresh snapshots cover.
-          if (afterReload && frame.seq > point.seq) {
-            yield* Ref.set(snapshotThrough, frame.seq);
-            yield* resync(scope, ["user"], frame.seq);
+          if (afterReload && frame.replayThrough > point.seq) {
+            yield* Ref.set(snapshotThrough, frame.replayThrough);
+            yield* resync(scope, ["user"], frame.replayThrough);
           } else {
-            yield* Effect.forkChild(refreshUnreadCount(frame.seq));
+            yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
           }
 
           return;

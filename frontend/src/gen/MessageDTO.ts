@@ -3,6 +3,7 @@ import type { AgentStep } from "./AgentStep";
 import type { Attachment } from "./Attachment";
 import type { Boost } from "./Boost";
 import type { MessageCard } from "./MessageCard";
+import type { MessageSound } from "./MessageSound";
 import type { Poll } from "./Poll";
 import type { Reaction } from "./Reaction";
 import type { ThreadIndicator } from "./ThreadIndicator";
@@ -30,6 +31,10 @@ clientMessageId: string,
  * The rendered body from the server's sanitizer pipeline.
  */
 bodyHtml: string,
+/**
+ * The classic built-in `/play` presentation; attachments take precedence.
+ */
+sound: MessageSound | null,
 /**
  * The Markdown the body was written in, for editing; `null` for rich-text-only bodies.
  */

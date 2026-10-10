@@ -4,4 +4,12 @@ import type { SyncEvent } from "./SyncEvent";
 /**
  * A frame the server sends.
  */
-export type ServerFrame = { "t": "welcome", epoch: string, seq: number, resumed: boolean, } | { "t": "batch", events: Array<SyncEvent>, } | { "t": "resync", topics: Array<string>, reason: string, } | { "t": "bye", reconnect: boolean, reason: string, } | { "t": "ping" };
+export type ServerFrame = { "t": "welcome", epoch: string,
+/**
+ * The client's starting cursor. On resume this stays at its last acknowledged event.
+ */
+seq: number, resumed: boolean,
+/**
+ * Events through this ring head are reconnect replay, not live arrivals.
+ */
+replayThrough: number, } | { "t": "batch", events: Array<SyncEvent>, } | { "t": "resync", topics: Array<string>, reason: string, } | { "t": "bye", reconnect: boolean, reason: string, } | { "t": "ping" };

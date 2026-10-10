@@ -173,6 +173,7 @@ function message(id: number, roomId = ROOM, threadId: number | null = null): Mes
     threadId,
     creatorId: 2,
     clientMessageId: `client-${id}`,
+    sound: null,
     bodyHtml: `<p>${id}</p>`,
     markdownSource: `${id}`,
     systemNote: false,

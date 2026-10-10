@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { MessageDTO, PendingMessage, Timeline } from "../../store/model.ts";
-import { emptyTimeline } from "../../store/state.ts";
+import {
+  addPending,
+  applyEvents,
+  applyPage,
+  receiveMessage,
+  setPageReplacing,
+} from "../../store/reducers.ts";
+import { emptyTimeline, initialState, type State } from "../../store/state.ts";
 import { firstMessageKey, prepended, type TimelineItem, timelineItems } from "./timeline-items.ts";
 
 function message(id: number, creatorId: number, createdAt: string, systemNote = false): MessageDTO {
@@ -10,6 +17,7 @@ function message(id: number, creatorId: number, createdAt: string, systemNote = 
     threadId: null,
     creatorId,
     clientMessageId: `client-${id}`,
+    sound: null,
     bodyHtml: `<p>${id}</p>`,
     markdownSource: `${id}`,
     systemNote,
@@ -153,6 +161,10 @@ describe("timelineItems", () => {
       "day:Today",
       "1*",
     ]);
+
+    expect(
+      summary(layout([message(1, 7, local(6, 9, 0))], { after: 1, arrived: [] }, [pending])),
+    ).toEqual(["intro", "day:Today", "1*", "p"]);
   });
 
   it("keys a confirmed message like its pending row", () => {
@@ -160,6 +172,69 @@ describe("timelineItems", () => {
 
     expect(row?.key).toBe("c-client-1");
   });
+
+  it.each(["POST response", "broadcast"])(
+    "keeps a sent row visible when its %s arrives before the latest page",
+    (first) => {
+      const history = message(1, 7, local(6, 9, 0));
+      const confirmed = message(9, 7, local(6, 9, 2));
+
+      const pending: PendingMessage = {
+        clientMessageId: confirmed.clientMessageId,
+        roomId: 1,
+        threadId: null,
+        attachmentSignedId: null,
+        attachment: null,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        creatorId: 7,
+        markdownSource: "9",
+        createdAt: confirmed.createdAt,
+        state: "sending",
+        error: null,
+      };
+
+      const page = { messages: [history], users: [], before: null, after: 1, saved: [] };
+
+      const sent = addPending(
+        setPageReplacing(applyPage(initialState, 1, page, "replace"), 1),
+        pending,
+      );
+
+      const rows = (state: State) =>
+        timelineItems({
+          timeline: state.timelines[1] ?? emptyTimeline,
+          messages: state.messages,
+          pending: Object.values(state.pending),
+          now,
+        });
+
+      const broadcast = (state: State) =>
+        applyEvents(
+          state,
+          [{ seq: 1, topic: "room:1", type: "message.created", data: confirmed }],
+          0,
+        );
+
+      expect(summary(rows(sent))).toEqual(["intro", "day:Today", "1*", "p"]);
+
+      const reconciled =
+        first === "POST response" ? receiveMessage(sent, confirmed) : broadcast(sent);
+
+      expect(summary(rows(reconciled))).toEqual(["intro", "day:Today", "1*", "9"]);
+      expect(rows(reconciled).at(-1)?.key).toBe(rows(sent).at(-1)?.key);
+      expect(reconciled.pending).toEqual({});
+
+      const echoed =
+        first === "POST response" ? broadcast(reconciled) : receiveMessage(reconciled, confirmed);
+
+      expect(summary(rows(echoed))).toEqual(["intro", "day:Today", "1*", "9"]);
+      // The GET was read before this send, so reconciliation must also survive a stale page.
+      const landed = applyPage(echoed, 1, { ...page, after: null }, "replace");
+
+      expect(summary(rows(landed))).toEqual(["intro", "day:Today", "1*", "9"]);
+    },
+  );
 });
 
 describe("prepended", () => {

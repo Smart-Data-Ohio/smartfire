@@ -15,12 +15,25 @@ pub struct Me {
     pub do_not_disturb: DoNotDisturb,
     /// `null` when quiet hours are off.
     pub quiet_hours: Option<QuietHours>,
+    /// The same playback gates as the classic sound controller, evaluated on each play.
+    pub chat_sounds: ChatSounds,
     /// `null` when not out of office.
     pub out_of_office: Option<OutOfOffice>,
     /// Where `/app/` opens: the room in the `last_room` cookie if the person is still a member
     /// (`last_room_visited`), else their original room (`Room::original_for_user`); `null` when
     /// they belong to no room.
     pub last_room_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ChatSounds {
+    pub muted: bool,
+    pub quiet_hours: Option<QuietHours>,
+    pub time_zone: String,
+    /// Meeting and out-of-office windows, as inclusive-start/exclusive-end epoch seconds.
+    pub quiet_windows: Vec<(i64, i64)>,
 }
 
 /// Appearance and huddle settings, already normalized the way the layouts read them.

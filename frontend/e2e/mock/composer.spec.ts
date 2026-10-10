@@ -3,6 +3,7 @@ import { boardDeckPdf, onboardingMockupPng } from "../../mock/s2/assets.ts";
 import {
   expect,
   expectTouchTargets,
+  holdSync,
   matrix,
   PHONE_TOUCH,
   ROOM_IDS,
@@ -77,6 +78,338 @@ async function throttleUploads(page: Page, bytesPerSecond: number | null): Promi
     latency: 0,
     downloadThroughput: -1,
     uploadThroughput: bytesPerSecond ?? -1,
+  });
+}
+
+test("typing and attaching during a latest-page fetch keeps the next draft and its file", async ({
+  page,
+}) => {
+  await openApp(page, `${GENERAL}/m/10005`);
+  await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+  const input = composer(page);
+  const files = page.locator('.composer input[type="file"]');
+
+  await files.setInputFiles({
+    name: "first.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("First file"),
+  });
+  await expect(page.getByRole("button", { name: "Remove first.txt" })).toBeVisible();
+
+  let releasePage: () => void = () => undefined;
+
+  const gate = new Promise<void>((resolve) => {
+    releasePage = resolve;
+  });
+
+  let fetching = false;
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() === "GET") {
+      fetching = true;
+      await gate;
+    }
+
+    return route.continue();
+  });
+
+  try {
+    await input.fill("First captured message");
+    await input.press("Enter");
+    await expect.poll(() => fetching).toBe(true);
+    await input.fill("My next message");
+    await files.setInputFiles({
+      name: "next.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Next file"),
+    });
+    await expect(page.getByRole("button", { name: "Remove next.txt" })).toBeVisible();
+    releasePage();
+    await expect(posted(page, "First captured message")).toBeVisible();
+    await expect(input).toHaveValue("My next message");
+    await expect(page.getByRole("button", { name: "Remove first.txt" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Remove next.txt" })).toBeVisible();
+
+    await input.press("Enter");
+    await expect(posted(page, "My next message")).toBeVisible();
+    await expect(
+      page.getByRole("log", { name: "Messages" }).getByText("next.txt", { exact: true }),
+    ).toBeVisible();
+    await expect(input).toHaveValue("");
+  } finally {
+    releasePage();
+  }
+});
+
+test("an ordinary send posts and shows its pending row before the latest page arrives", async ({
+  page,
+}) => {
+  await openApp(page, `${GENERAL}/m/10005`);
+  await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+  const latest = Promise.withResolvers<void>();
+  const response = Promise.withResolvers<void>();
+  let fetching = false;
+  const posts: unknown[] = [];
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() === "GET") {
+      fetching = true;
+      await latest.promise;
+    } else {
+      posts.push(route.request().postDataJSON());
+      await response.promise;
+    }
+
+    return route.continue();
+  });
+
+  try {
+    const input = composer(page);
+
+    await input.fill("Immediate message from history");
+    await input.press("Enter");
+    await expect.poll(() => fetching).toBe(true);
+    await expect.poll(() => posts.length).toBe(1);
+    expect(posts[0]).toMatchObject({ markdownSource: "Immediate message from history" });
+    await expect(page.locator('[data-pending="sending"]')).toContainText(
+      "Immediate message from history",
+    );
+    await expect(page.locator('[data-pending="sending"]')).toBeVisible();
+    await expect(input).toHaveValue("");
+    await input.fill("The next draft");
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+
+    latest.resolve();
+    response.resolve();
+    await expect(posted(page, "Immediate message from history")).toBeVisible();
+    await expect(page.locator('[data-pending="sending"]')).toHaveCount(0);
+    await expect(input).toHaveValue("The next draft");
+  } finally {
+    latest.resolve();
+    response.resolve();
+  }
+});
+
+test("a second ordinary send from history posts before the latest page arrives", async ({
+  page,
+}) => {
+  await openApp(page, `${GENERAL}/m/10005`);
+  await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+  const latest = Promise.withResolvers<void>();
+  let fetching = false;
+  const posts: { markdownSource: string }[] = [];
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() === "GET") {
+      fetching = true;
+      await latest.promise;
+    } else {
+      posts.push(route.request().postDataJSON());
+    }
+
+    return route.continue();
+  });
+
+  try {
+    const input = composer(page);
+
+    await input.fill("First send from history");
+    await input.press("Enter");
+    await expect.poll(() => fetching).toBe(true);
+    await expect.poll(() => posts.length).toBe(1);
+
+    await input.fill("Second send from history");
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+    await input.press("Enter");
+    await expect
+      .poll(() => posts.map((post) => post.markdownSource))
+      .toEqual(["First send from history", "Second send from history"]);
+
+    latest.resolve();
+    await expect(posted(page, "First send from history")).toBeVisible();
+    await expect(posted(page, "Second send from history")).toBeVisible();
+  } finally {
+    latest.resolve();
+  }
+});
+
+for (const sync of ["held", "live"]) {
+  test(`an ordinary send never leaves the view when its POST answers at once (sync ${sync})`, async ({
+    page,
+  }) => {
+    const releaseSync = await holdSync(page);
+
+    await openApp(page, `${GENERAL}/m/10005`);
+    await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+    if (sync === "live") {
+      await releaseSync();
+      await page.waitForLoadState("networkidle");
+    }
+
+    const latest = Promise.withResolvers<void>();
+    let fetching = false;
+
+    // Only the latest-page GET waits; the POST goes straight through.
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+      if (route.request().method() === "GET") {
+        fetching = true;
+        await latest.promise;
+      }
+
+      return route.continue();
+    });
+
+    const text = `Never hidden, sync ${sync}`;
+
+    // Counts every DOM change after the row first shows that leaves no row with the text. The
+    // count sits on <html>, outside the observed <body>, so writing it doesn't wake the observer.
+    await page.evaluate((watched) => {
+      let seen = false;
+      let missing = 0;
+
+      document.documentElement.dataset.sendGaps = "0";
+
+      new MutationObserver(() => {
+        const shown = [...document.querySelectorAll("[data-pending], [data-message-id]")].some(
+          (row) => row.textContent?.includes(watched),
+        );
+
+        if (shown) {
+          seen = true;
+        } else if (seen) {
+          missing += 1;
+          document.documentElement.dataset.sendGaps = String(missing);
+        }
+      }).observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+      });
+    }, text);
+
+    const gaps = () => page.evaluate(() => Number(document.documentElement.dataset.sendGaps));
+
+    try {
+      const input = composer(page);
+      const confirmed = page.locator("[data-message-id]").filter({ hasText: text });
+
+      await input.fill(text);
+      await input.press("Enter");
+      await expect.poll(() => fetching).toBe(true);
+
+      // The POST answered while the GET is still held: the confirmed row took the pending one's
+      // place.
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+      await expect(page.locator('[data-pending="sending"]')).toHaveCount(0);
+      expect(await gaps()).toBe(0);
+
+      // The broadcast's echo may land before or after the page: either way, one row.
+      await releaseSync();
+
+      const landed = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === `/api/v1/rooms/${ROOM_IDS.general}/messages` &&
+          new URL(response.url()).search === "",
+      );
+
+      latest.resolve();
+      await landed;
+      await expect(page.locator('[data-message-id="10005"]')).toHaveCount(0);
+      await page.waitForLoadState("networkidle");
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+      expect(await gaps()).toBe(0);
+    } finally {
+      latest.resolve();
+      await releaseSync();
+    }
+  });
+}
+
+for (const first of ["POST response", "broadcast"]) {
+  test(`an ordinary send stays visible when the ${first} arrives before the latest page`, async ({
+    page,
+  }) => {
+    const releaseSync = await holdSync(page);
+
+    await openApp(page, `${GENERAL}/m/10005`);
+    await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+    if (first === "broadcast") {
+      await releaseSync();
+      await page.waitForLoadState("networkidle");
+    }
+
+    const latest = Promise.withResolvers<void>();
+    const post = Promise.withResolvers<void>();
+    const reply = Promise.withResolvers<void>();
+    let fetching = false;
+    let replied = false;
+
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages*`, async (route) => {
+      if (route.request().method() === "GET") {
+        fetching = true;
+        await latest.promise;
+
+        return route.continue();
+      }
+
+      await post.promise;
+      const response = await route.fetch();
+
+      if (first === "broadcast") await reply.promise;
+
+      await route.fulfill({ response });
+      replied = true;
+    });
+
+    try {
+      const text = `Continuous message, ${first} first`;
+      const input = composer(page);
+      const confirmed = page.locator("[data-message-id]").filter({ hasText: text });
+
+      await input.fill(text);
+      await input.press("Enter");
+      await expect.poll(() => fetching).toBe(true);
+      await expect(page.locator('[data-pending="sending"]')).toContainText(text);
+      await expect(page.locator('[data-pending="sending"]')).toBeVisible();
+      post.resolve();
+
+      // The GET stays held while the real POST reply or sync broadcast reconciles the row.
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+      await expect(page.locator('[data-pending="sending"]')).toHaveCount(0);
+      expect(replied).toBe(first === "POST response");
+
+      await releaseSync();
+      reply.resolve();
+      await expect.poll(() => replied).toBe(true);
+      await expect(confirmed).toBeVisible();
+
+      const landed = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === `/api/v1/rooms/${ROOM_IDS.general}/messages` &&
+          new URL(response.url()).search === "",
+      );
+
+      latest.resolve();
+      await landed;
+      await expect(page.locator('[data-message-id="10005"]')).toHaveCount(0);
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+    } finally {
+      latest.resolve();
+      post.resolve();
+      reply.resolve();
+      await releaseSync();
+    }
   });
 }
 

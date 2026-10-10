@@ -27,6 +27,7 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     threadId: null,
     creatorId: 2,
     clientMessageId: `client-${id}`,
+    sound: null,
     bodyHtml: `<p>${id}</p>`,
     markdownSource: `${id}`,
     systemNote: false,

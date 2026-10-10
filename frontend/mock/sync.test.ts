@@ -73,6 +73,7 @@ describe("hello and resume", () => {
         epoch: server.syncState().epoch,
         seq: server.syncState().seq,
         resumed: false,
+        replayThrough: server.syncState().seq,
       },
     ]);
   });
@@ -91,7 +92,12 @@ describe("hello and resume", () => {
     const second = open(server, [`room:${rooms.general}`], first);
     const [welcome, replay] = second.frames;
 
-    expect(welcome).toMatchObject({ t: "welcome", resumed: true });
+    expect(welcome).toMatchObject({
+      t: "welcome",
+      seq: first.events().at(-1)?.seq,
+      resumed: true,
+      replayThrough: server.syncState().seq,
+    });
     expect(replay?.t).toBe("batch");
 
     const replayed = second.events();

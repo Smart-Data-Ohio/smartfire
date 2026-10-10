@@ -17,6 +17,7 @@ const COMMANDS = [
   command("shrug"),
   command("me", "<text>"),
   command("status", "<text>"),
+  command("play", "<sound>"),
 ];
 
 describe("slashName", () => {
@@ -32,10 +33,21 @@ describe("slashName", () => {
   it("tells when the command list is needed", () => {
     expect(looksLikeCommand("  /me waves")).toBe(true);
     expect(looksLikeCommand("plain text")).toBe(false);
+    expect(looksLikeCommand("  /PLAY bell")).toBe(false);
   });
 });
 
 describe("routeSlash", () => {
+  it("posts /play through normal message submission, even when the command is registered", () => {
+    expect(routeSlash("/play bell", COMMANDS)).toEqual({
+      kind: "message",
+      markdown: "/play bell",
+    });
+    expect(routeSlash("  /PLAY bell  ", COMMANDS)).toEqual({
+      kind: "message",
+      markdown: "  /PLAY bell",
+    });
+  });
   it("runs a known command with the whole trimmed line", () => {
     expect(routeSlash("/remind in 5m stretch \n", COMMANDS)).toEqual({
       kind: "command",
@@ -66,6 +78,7 @@ describe("filterCommands", () => {
       "shrug",
       "me",
       "status",
+      "play",
     ]);
     expect(filterCommands(COMMANDS, "zz")).toEqual([]);
   });

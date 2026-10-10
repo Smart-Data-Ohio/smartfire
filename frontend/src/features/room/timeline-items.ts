@@ -64,7 +64,7 @@ interface TimelineInput {
  * Lays a room's loaded window out as rows: the room intro at the very start, a spinner row at an
  * edge that's still loading, day dividers, the unread divider before the first unread message,
  * and messages grouped by author. Pending sends follow the confirmed messages once the window
- * reaches the present.
+ * reaches the present or while its replacement page loads.
  */
 export function timelineItems({
   timeline,
@@ -127,7 +127,9 @@ export function timelineItems({
       items.push({ kind: "loading", key: "loading-newer" });
     }
 
-    return items;
+    if (timeline.arrived === null) {
+      return items;
+    }
   }
 
   for (const entry of pending) {

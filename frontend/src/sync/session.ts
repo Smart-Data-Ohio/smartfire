@@ -658,7 +658,11 @@ const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older"
   const from = direction === "older" ? timeline.before : timeline.after;
   const busy = direction === "older" ? timeline.loadingOlder : timeline.loadingNewer;
 
-  if (from === null || busy) {
+  // A replacement on its way (the present, or around a message) supersedes newer pages. One that
+  // landed first would go in above a send made meanwhile and push its pending row out of view.
+  const replacing = direction === "newer" && timeline.arrived !== null;
+
+  if (from === null || busy || replacing) {
     return;
   }
 

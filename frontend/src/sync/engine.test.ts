@@ -33,7 +33,7 @@ import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
-import { onResync } from "./signals.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
@@ -85,11 +85,11 @@ const pushEvents = (...events: readonly SyncEvent[]) =>
     yield* settle;
   });
 
-const welcome = (seq: number, resumed: boolean, epoch = "e1") =>
+const welcome = (seq: number, resumed: boolean, epoch = "e1", replayThrough = seq) =>
   Effect.gen(function* () {
     const socket = yield* MemorySocket;
 
-    yield* socket.push({ t: "welcome", epoch, seq, resumed });
+    yield* socket.push({ t: "welcome", epoch, seq, resumed, replayThrough });
     yield* settle;
   });
 
@@ -702,6 +702,38 @@ describe("reconnecting", () => {
 });
 
 describe("resuming", () => {
+  it.effect("marks reconnect replay as historical for sound playback", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const observed: [number, number][] = [];
+
+        const stop = onSyncEvents((events, liveAfter) => {
+          observed.push(...events.map((event): [number, number] => [event.seq, liveAfter]));
+        });
+
+        try {
+          yield* serve([]);
+          yield* startEngine;
+          yield* welcome(10, false);
+          yield* pushEvents(unreadEvent(11));
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          // The real resumed welcome keeps the old cursor; the replay boundary is separate.
+          yield* welcome(11, true, "e1", 13);
+          yield* pushEvents(unreadEvent(12), unreadEvent(13), unreadEvent(14));
+          expect(observed).toEqual([
+            [11, 10],
+            [12, 13],
+            [13, 13],
+            [14, 13],
+          ]);
+        } finally {
+          stop();
+        }
+      }),
+    ),
+  );
   it.effect("says hello with the cursor and applies a replayed event only once", () =>
     withSync(
       Effect.gen(function* () {
@@ -765,7 +797,7 @@ describe("resuming", () => {
           // By the time the socket says welcome, 43 has happened too.
           yield* api.reply("GET /sidebar", counted(3));
           yield* startEngine;
-          yield* welcome(43, true);
+          yield* welcome(40, true, "e1", 43);
 
           expect(unreadCount(12)).toBe(3);
 
@@ -782,6 +814,44 @@ describe("resuming", () => {
         }),
       );
     }),
+  );
+
+  it.effect(
+    "refetches through the replay head while keeping the resumed cursor until replay arrives",
+    () =>
+      Effect.gen(function* () {
+        sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+        yield* withSync(
+          Effect.gen(function* () {
+            const api = yield* FakeApi;
+
+            yield* serve([]);
+            yield* api.reply(
+              "GET /sidebar",
+              sidebarFixture([{ ...sidebarRowFixture(12, "general"), unreadCount: 3 }]),
+            );
+            yield* api.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 3 });
+            yield* startEngine;
+            yield* welcome(40, true, "e1", 43);
+
+            expect((yield* api.requests).filter((request) => request.path === "/sidebar")).toEqual([
+              { method: "GET", path: "/sidebar" },
+            ]);
+            expect(unreadCount(12)).toBe(3);
+            expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
+              JSON.stringify({ epoch: "e1", seq: 40 }),
+            );
+
+            yield* pushEvents(unreadEvent(41), unreadEvent(42), unreadEvent(43), unreadEvent(44));
+
+            expect(unreadCount(12)).toBe(4);
+            expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
+              JSON.stringify({ epoch: "e1", seq: 44 }),
+            );
+          }),
+        );
+      }),
   );
 
   it.effect("excludes activity items and removals already covered by the initial snapshot", () =>
@@ -807,7 +877,7 @@ describe("resuming", () => {
           );
           yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
           yield* startEngine;
-          yield* welcome(43, true);
+          yield* welcome(40, true, "e1", 43);
           yield* pushEvents(
             {
               seq: 41,
@@ -878,7 +948,7 @@ describe("resuming", () => {
             Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
           );
           yield* startEngine;
-          yield* welcome(41, true);
+          yield* welcome(40, true, "e1", 41);
           yield* pushEvents({
             seq: 41,
             topic: "user",
@@ -965,7 +1035,7 @@ describe("resuming", () => {
               yield* serve([]);
               yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
               yield* startEngine;
-              yield* welcome(43, true);
+              yield* welcome(40, true, "e1", 43);
               yield* socket.drop;
               yield* TestClock.adjust(250);
 
@@ -1132,7 +1202,7 @@ describe("resuming", () => {
 
           const before = (yield* api.requests).length;
 
-          yield* welcome(42, true);
+          yield* welcome(40, true, "e1", 42);
           yield* pushEvents(unreadEvent(41), unreadEvent(42));
 
           expect((yield* api.requests).slice(before)).toEqual([

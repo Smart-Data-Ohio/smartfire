@@ -4,6 +4,17 @@
  * Discord's density with Slack's row anatomy.
  */
 @layer app {
+  .message-sound {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .message-sound img {
+    max-width: 100%;
+    object-fit: contain;
+  }
+
   /* ── Row states ─────────────────────────────────────────────────────────── */
 
   .message {

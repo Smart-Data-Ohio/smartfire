@@ -3,6 +3,7 @@
  * forwards, each publishing what the contract says on the message's conversation topic or the
  * viewer's `user` topic.
  */
+
 import type { ForwardDestinationList } from "../../src/gen/ForwardDestinationList.ts";
 import type { ForwardResult } from "../../src/gen/ForwardResult.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
@@ -17,6 +18,7 @@ import { forbidden, type MockResponse, noContent, notFound, ok, validation } fro
 import { field, intField, isRecord, type Json, stringField } from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { VIEWER_ID } from "../seed.ts";
+import { mockSound } from "../sounds.ts";
 import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { reactionContent } from "./emoji.ts";
@@ -114,6 +116,7 @@ export function createMessages(
       ...current,
       bodyHtml: renderMarkdown(markdown, ctx.mentionables()),
       markdownSource: markdown,
+      sound: current.attachment === null ? mockSound(markdown) : null,
       editedAt: changed ? updatedAt : current.editedAt,
       updatedAt,
     };
