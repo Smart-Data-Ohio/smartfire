@@ -113,13 +113,27 @@ pub fn animated(blob: &Blob) -> bool {
 /// until dimensions and the total animation budget have been checked.
 pub fn prepare(
     storage: &Storage,
-    mut blob: Blob,
+    blob: Blob,
     kind: Kind,
     cancel: &Cancellation,
 ) -> Result<Prepared, Invalid> {
+    prepare_with_limit(storage, blob, kind, cancel, MAX_BYTES)
+}
+
+/// Use the same decoded image budgets with a caller's upload byte limit.
+pub fn prepare_with_limit(
+    storage: &Storage,
+    mut blob: Blob,
+    kind: Kind,
+    cancel: &Cancellation,
+    max_bytes: u64,
+) -> Result<Prepared, Invalid> {
+    if blob.byte_size < 0 || blob.byte_size as u64 > max_bytes {
+        return Err(Invalid::Size);
+    }
     configure_cancellation(&blob, cancel);
     let path = storage.service.path_for(&blob.key);
-    let (image, content_type) = header(&path, kind, cancel)?;
+    let (image, content_type) = header(&path, kind, cancel, max_bytes)?;
     blob.content_type = Some(content_type.to_owned());
     blob.metadata.set("identified", Json::Bool(true));
     blob.metadata
@@ -159,7 +173,7 @@ pub(crate) fn prepare_emoji(
     cancel: &Cancellation,
 ) -> Result<PreparedEmoji, String> {
     let path = storage.service.path_for(key);
-    let (image, content_type) = header(&path, Kind::Emoji, cancel)
+    let (image, content_type) = header(&path, Kind::Emoji, cancel, MAX_BYTES)
         .map_err(|invalid| invalid.message(Kind::Emoji).to_owned())?;
     if image.width() != image.height() {
         return Err("must be square".into());
@@ -250,7 +264,7 @@ pub fn transform_variant(
         }
         legacy_image(storage, blob, cancel)?
     } else {
-        header(&path, kind, cancel)
+        header(&path, kind, cancel, MAX_BYTES)
             .map_err(|invalid| crate::Error::Analyze(invalid.message(kind).to_owned()))?
             .0
     };
@@ -279,10 +293,11 @@ fn header(
     path: &Path,
     kind: Kind,
     cancel: &Cancellation,
+    max_bytes: u64,
 ) -> Result<(Image, &'static str), Invalid> {
     cancel.check().map_err(|_| Invalid::Format)?;
     let mut file = std::fs::File::open(path).map_err(|_| Invalid::Format)?;
-    if file.metadata().map_err(|_| Invalid::Format)?.len() > MAX_BYTES {
+    if file.metadata().map_err(|_| Invalid::Format)?.len() > max_bytes {
         return Err(Invalid::Size);
     }
     let mut magic = [0; 12];
