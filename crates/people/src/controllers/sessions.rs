@@ -21,7 +21,13 @@ const REJECTION: &str = "Too many requests or unauthorized.";
 
 /// `allow_unauthenticated_access only: %i[ new create ]`, `before_action :ensure_user_exists, only: :new`
 pub async fn new(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "sessions#new",
+        Before::default().allow_unauthenticated_access(),
+        ResponseMode::Html,
+    )
+    .await?;
     ensure_user_exists(c).await?;
     // Our Rails app: background polls redirected to sign in keep their JSON Accept header, and
     // get a 401 (`format.json { head :unauthorized }`) rather than UnknownFormat's 406.
@@ -41,7 +47,13 @@ pub async fn create_json(c: &mut Ctx) -> Result {
 }
 
 async fn create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "sessions#create",
+        Before::default().allow_unauthenticated_access(),
+        mode,
+    )
+    .await?;
     if mode == ResponseMode::Json {
         let body: campfire_api_types::PasswordSignIn = match auth::body(c).await {
             Ok(body) => body,
@@ -84,7 +96,13 @@ pub async fn destroy_json(c: &mut Ctx) -> Result {
 }
 
 async fn destroy_response(c: &mut Ctx, mode: ResponseMode) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    auth::before_actions(
+        c,
+        "sessions#destroy",
+        Before::default(),
+        mode,
+    )
+    .await?;
     if mode == ResponseMode::Json {
         let body: campfire_api_types::SignOut = auth::body(c).await?;
         c.params.remove("push_subscription_endpoint");
