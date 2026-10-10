@@ -100,7 +100,7 @@ static LINKS: LazyLock<regex::Regex> =
 
 fn url_fields(text: &str) -> Vec<Range<usize>> {
     if text.trim_start().starts_with(['{', '[']) {
-        return json_fields(text, 0, false);
+        return json_fields(text);
     }
     if let Some(first) = LINKS.find(text)
         && first.start() == 0
@@ -111,21 +111,14 @@ fn url_fields(text: &str) -> Vec<Range<usize>> {
             .collect();
     }
     let mut fields = Vec::new();
-    let mut raw: Option<(String, bool, usize)> = None;
+    let mut raw: Option<String> = None;
     for tag in TAGS.captures_iter(text) {
         let Some(name) = tag.name("tag") else {
             continue;
         };
         let closing = tag.name("close").is_some();
-        if let Some((raw_name, importmap, start)) = &raw {
+        if let Some(raw_name) = &raw {
             if closing && name.as_str().eq_ignore_ascii_case(raw_name) {
-                if *importmap {
-                    fields.extend(json_fields(
-                        &text[*start..tag.get(0).unwrap().start()],
-                        *start,
-                        true,
-                    ));
-                }
                 raw = None;
             }
             continue;
@@ -134,7 +127,6 @@ fn url_fields(text: &str) -> Vec<Range<usize>> {
             continue;
         }
         let attrs = tag.name("attrs").unwrap();
-        let mut importmap = false;
         for attr in ATTRS.captures_iter(attrs.as_str()) {
             let value = attr
                 .name("double")
@@ -148,25 +140,18 @@ fn url_fields(text: &str) -> Vec<Range<usize>> {
             {
                 fields.push(attrs.start() + value.start()..attrs.start() + value.end());
             }
-            if key.eq_ignore_ascii_case("type") && value.as_str() == "importmap" {
-                importmap = true
-            }
         }
         if ["script", "style", "textarea", "title"]
             .iter()
             .any(|tag| name.as_str().eq_ignore_ascii_case(tag))
         {
-            raw = Some((
-                name.as_str().to_string(),
-                importmap && name.as_str().eq_ignore_ascii_case("script"),
-                tag.get(0).unwrap().end(),
-            ));
+            raw = Some(name.as_str().to_string());
         }
     }
     fields
 }
 
-fn json_fields(text: &str, offset: usize, importmap: bool) -> Vec<Range<usize>> {
+fn json_fields(text: &str) -> Vec<Range<usize>> {
     if serde_json::from_str::<serde_json::Value>(text).is_err() {
         return Vec::new();
     }
@@ -184,8 +169,7 @@ fn json_fields(text: &str, offset: usize, importmap: bool) -> Vec<Range<usize>> 
                 ["href", "src", "content"].contains(&&key.as_str()[1..key.len() - 1])
                     && text[key.end()..value.start()].trim() == ":"
             });
-            (importmap || named_value)
-                .then_some(offset + value.start() + 1..offset + value.end() - 1)
+            named_value.then_some(value.start() + 1..value.end() - 1)
         })
         .collect()
 }
@@ -226,7 +210,7 @@ fn logical_url(value: &str, live: bool) -> Result<Option<String>, String> {
     }) else {
         // A known logical asset emitted without its required fingerprint is also invalid.
         if live
-            && let Some((_, current)) = campfire_assets::manifest()
+            && let Some((_, current)) = campfire_static_assets::manifest()
                 .iter()
                 .find(|(logical, _)| *logical == path)
             && *current != path
@@ -238,7 +222,7 @@ fn logical_url(value: &str, live: bool) -> Result<Option<String>, String> {
         return Ok(None);
     };
     let logical = format!("{stem}{}", &suffix[8..]);
-    let Some((_, current)) = campfire_assets::manifest()
+    let Some((_, current)) = campfire_static_assets::manifest()
         .iter()
         .find(|(name, _)| *name == logical)
     else {
@@ -257,13 +241,13 @@ mod tests {
     use super::*;
 
     fn pages() -> (String, String) {
-        let first = campfire_assets::stylesheet_path("people");
-        let second = campfire_assets::stylesheet_path("base");
+        let first = campfire_static_assets::stylesheet_path("auth");
+        let second = campfire_static_assets::asset_path("fonts/inter-latin-var.woff2");
+        let script = campfire_static_assets::javascript_path("auth");
         let actual = format!(
-            "<link rel=\"stylesheet\" href=\"{first}\"><link rel=\"stylesheet\" href=\"{second}\">{}",
-            campfire_assets::javascript_importmap_tags()
+            "<link rel=\"stylesheet\" href=\"{first}\"><link rel=\"preload\" href=\"{second}\"><script src=\"{script}\"></script>"
         );
-        let expected = actual.replace(&first, "/assets/people-00000000.css");
+        let expected = actual.replace(&first, "/assets/auth-00000000.css");
         (actual, expected)
     }
 
@@ -275,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_dropped_reordered_and_duplicated_stylesheets() {
+    fn rejects_dropped_reordered_and_duplicated_asset_tags() {
         let (actual, expected) = pages();
         let tags: Vec<_> = actual.split_inclusive('>').take(2).collect();
         for changed in [
@@ -294,11 +278,11 @@ mod tests {
     #[test]
     fn rejects_wrong_and_missing_digests_even_when_golden_agrees() {
         let (actual, expected) = pages();
-        let path = campfire_assets::stylesheet_path("people");
+        let path = campfire_static_assets::stylesheet_path("auth");
         for wrong in [
-            "/assets/people-00000000.css",
-            "/assets/people.css",
-            "/assets/people-not-a-digest.css",
+            "/assets/auth-00000000.css",
+            "/assets/auth.css",
+            "/assets/auth-not-a-digest.css",
         ] {
             let changed = actual.replace(&path, wrong);
             assert!(
@@ -306,49 +290,24 @@ mod tests {
                     .unwrap_err()
                     .contains("asset")
             );
-            if wrong != "/assets/people-not-a-digest.css" {
+            if wrong != "/assets/auth-not-a-digest.css" {
                 assert!(matching_bytes(&changed, &changed).is_err());
             }
         }
     }
 
     #[test]
-    fn rejects_importmap_and_non_asset_byte_changes() {
+    fn rejects_non_asset_byte_changes() {
         let (actual, expected) = pages();
         for changed in [
             format!("{actual} "),
             actual.replacen("stylesheet", "alternate", 1),
-            actual.replacen("\"imports\"", "\"wrong_imports\"", 1),
-            actual.replacen("type=\"importmap\"", "type=\"wrong\"", 1),
+            actual.replacen("src=", "data-src=", 1),
             actual.replacen("/assets/", "/wrong-assets/", 1),
         ] {
             assert_ne!(changed, actual);
             assert!(matching_bytes(&changed, &expected).is_err());
         }
-    }
-
-    #[test]
-    fn checks_js_importmap_digests_without_changing_json_bytes() {
-        let actual = campfire_assets::javascript_importmap_tags();
-        let (logical, current) = campfire_assets::manifest()
-            .iter()
-            .find(|(l, _)| *l == "application.js")
-            .unwrap();
-        let stale = current.replace(
-            current
-                .rsplit_once('-')
-                .unwrap()
-                .1
-                .split('.')
-                .next()
-                .unwrap(),
-            "00000000",
-        );
-        let expected = actual.replace(current, &stale);
-        assert_ne!(actual, expected);
-        assert!(matching_bytes(actual, &expected).is_ok());
-        assert!(matching_bytes(&expected, actual).is_err());
-        assert!(matching_bytes(&actual.replace(current, logical), actual).is_err());
     }
 }
 
@@ -357,9 +316,9 @@ mod reviewed_mutations {
     use super::*;
 
     fn rejected(wrapper: &str) {
-        let current = campfire_assets::stylesheet_path("people");
+        let current = campfire_static_assets::stylesheet_path("auth");
         let actual = wrapper.replace("URL", &current);
-        let expected = wrapper.replace("URL", "/assets/people-00000000.css");
+        let expected = wrapper.replace("URL", "/assets/auth-00000000.css");
         assert_ne!(actual, expected);
         assert!(!compare(wrapper, &actual, &expected));
     }
@@ -386,7 +345,7 @@ mod reviewed_mutations {
     }
     #[test]
     fn leaves_unchanged_external_urls_byte_exact() {
-        let page = r#"<link href="https://cdn.example.test/assets/people-00000000.css">"#;
+        let page = r#"<link href="https://cdn.example.test/assets/auth-00000000.css">"#;
         assert!(compare("external URL", page, page));
     }
 }
@@ -397,7 +356,7 @@ mod field_boundaries {
 
     #[test]
     fn frozen_fixture_field_is_strict_while_another_use_of_the_asset_is_live() {
-        let current = campfire_assets::asset_path("icons/brands/github.svg");
+        let current = campfire_static_assets::asset_path("icons/brands/github.svg");
         let frozen = "/assets/icons/brands/github-00000000.svg";
         let actual =
             format!(r#"<img class="fixture" src="{frozen}"><img class="live" src="{current}">"#);
@@ -436,16 +395,15 @@ mod field_boundaries {
     }
 
     #[test]
-    fn accepts_only_local_attribute_importmap_pwa_and_link_header_values() {
-        let current = campfire_assets::stylesheet_path("people");
+    fn accepts_only_local_attribute_pwa_and_link_header_values() {
+        let current = campfire_static_assets::stylesheet_path("auth");
         for actual in [
             format!(r#"<meta content='{current}'>"#),
             format!(r#"<img src={current}>"#),
             format!(r#"{{"icons":[{{"src":"{current}"}}]}}"#),
             format!("<{current}>; rel=preload; as=style"),
-            format!(r#"<script type="importmap">{{"imports":{{"people":"{current}"}}}}</script>"#),
         ] {
-            let expected = actual.replace(&current, "/assets/people-00000000.css");
+            let expected = actual.replace(&current, "/assets/auth-00000000.css");
             assert!(compare("local field", &actual, &expected));
             assert!(!compare("wrong actual", &expected, &actual));
         }
@@ -453,18 +411,18 @@ mod field_boundaries {
 
     #[test]
     fn comments_raw_text_json_keys_and_unknown_paths_remain_byte_exact() {
-        let current = campfire_assets::stylesheet_path("people");
+        let current = campfire_static_assets::stylesheet_path("auth");
         for wrapper in [
             r#"<!-- <img src="URL"> -->"#,
             r#"<!-- <img src="URL">"#,
             r#"<script>const html = '<img src="URL">'</script>"#,
             r#"<textarea><img src="URL"></textarea>"#,
             r#"<p title='src="URL"'>text</p>"#,
-            r#"<script type="importmap">{"imports":{"URL":"other"}}</script>"#,
+            r#"<script type="application/json">{"imports":{"URL":"other"}}</script>"#,
             r#"{"caption":"URL"}"#,
         ] {
             let actual = wrapper.replace("URL", &current);
-            let expected = wrapper.replace("URL", "/assets/people-00000000.css");
+            let expected = wrapper.replace("URL", "/assets/auth-00000000.css");
             assert!(!compare("ordinary bytes", &actual, &expected));
         }
         let unknown = r#"<img src="/assets/not-in-pipeline-00000000.css">"#;

@@ -1,7 +1,0 @@
-{
-  "name": "smartfire-code-highlighter",
-  "private": true,
-  "type": "module",
-  "scripts": { "build": "node build.mjs", "test": "node --test highlighter.test.mjs" },
-  "devDependencies": { "esbuild": "0.28.2", "shiki": "4.4.3" }
-}

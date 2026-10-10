@@ -10,8 +10,7 @@ of the classic application Layout.
 fragment, broadcast and HTML-cache adapters, including mail's publication callback. Those
 adapters implement local rendering traits on the shared types. No HTML cache was moved here:
 JSON cache users access the existing app-owned cache through `campfire_app::cache`.
-The shared document response still uses the old stylesheet preload-header helper to preserve
-its wire bytes until the classic asset pipeline is removed.
+Retained documents load their auth assets directly through `campfire_static_assets`.
 
 `ws8_runtime_vectors.json` moved with the runtime. Include paths from tests point here; its
 contents, cookies and machine payloads are unchanged.
