@@ -672,6 +672,7 @@ fn sidebar_round_trips() {
         users: vec![user()],
         direct_placeholder_user_ids: vec![7],
         can_create_rooms: true,
+        workspace_layout: crate::WorkspaceLayout { categories: vec![], rooms: vec![] },
     };
     let wire = serde_json::to_value(&sidebar).unwrap();
     assert_eq!(

@@ -1168,6 +1168,7 @@ pub fn sidebar(
         users: users(conn, secrets, user_ids, now)?,
         direct_placeholder_user_ids: placeholders,
         can_create_rooms,
+        workspace_layout: crate::sync::workspace_layout(conn, viewer.id)?,
     })
 }
 

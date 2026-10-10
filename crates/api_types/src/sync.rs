@@ -267,6 +267,9 @@ pub enum SyncPayload {
     /// On the presenter's `user` topic: someone else ended their stream.
     #[serde(rename = "stage.stream.stopped")]
     StageStreamStopped(StageStreamStopped),
+    /// A shared organization change, filtered for the recipient on their user topic.
+    #[serde(rename = "workspace.layout.updated")]
+    WorkspaceLayoutUpdated(crate::WorkspaceLayout),
 }
 
 /// Workspace images as the SPA uses them; animated sources have a PNG still URL too.

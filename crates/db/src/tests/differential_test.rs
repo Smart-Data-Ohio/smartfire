@@ -157,7 +157,10 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
         let mut fields: Vec<(String, String)> = Vec::new();
         for (i, name) in names.iter().enumerate() {
             if table == "rooms"
-                && matches!(name.as_str(), "tags_required" | "default_board_tag_id" | "topic")
+                && matches!(
+                    name.as_str(),
+                    "topic" | "workspace_category_id" | "workspace_position" | "tags_required" | "default_board_tag_id"
+                )
             {
                 continue;
             }

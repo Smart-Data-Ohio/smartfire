@@ -170,6 +170,7 @@ describe("DTO schemas", () => {
       users: [userJson],
       directPlaceholderUserIds: [7],
       canCreateRooms: true,
+      workspaceLayout: { categories: [], rooms: [] },
     });
     roundTrips(ReadState, { roomId: 12, unread: true, firstUnreadMessageId: 9000, unreadCount: 4 });
     roundTrips(UserList, { users: [userJson] });
