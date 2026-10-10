@@ -155,6 +155,10 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
       order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),
       rows,
       categories: replyCategories(state, sidebar.categories, since),
+      workspaceLayout:
+        state.sidebar.workspaceLayoutTouchedAt > since
+          ? state.sidebar.workspaceLayout
+          : sidebar.workspaceLayout,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
@@ -1001,15 +1005,31 @@ export function setRoomUnavailable(state: State, roomId: number, keepRow = false
 }
 
 function removeRow(state: State, roomId: number): State {
-  if (state.sidebar.rows[roomId] === undefined) {
+  const workspaceRooms = state.sidebar.workspaceLayout.rooms.filter(
+    (room) => room.roomId !== roomId,
+  );
+
+  if (
+    state.sidebar.rows[roomId] === undefined &&
+    workspaceRooms.length === state.sidebar.workspaceLayout.rooms.length
+  ) {
     return state;
   }
 
   const { [roomId]: _gone, ...rows } = state.sidebar.rows;
+  const layoutChanged = workspaceRooms.length !== state.sidebar.workspaceLayout.rooms.length;
+  const clock = layoutChanged ? state.rowTouches.clock + 1 : state.rowTouches.clock;
 
   return {
     ...state,
-    sidebar: { ...state.sidebar, rows, order: state.sidebar.order.filter((id) => id !== roomId) },
+    rowTouches: { ...state.rowTouches, clock },
+    sidebar: {
+      ...state.sidebar,
+      rows,
+      order: state.sidebar.order.filter((id) => id !== roomId),
+      workspaceLayout: { ...state.sidebar.workspaceLayout, rooms: workspaceRooms },
+      workspaceLayoutTouchedAt: layoutChanged ? clock : state.sidebar.workspaceLayoutTouchedAt,
+    },
   };
 }
 
@@ -1144,6 +1164,17 @@ export function applyEvents(
         break;
       case "sidebar.row.removed":
         next = removeRow(next, event.data.roomId);
+        break;
+      case "workspace.layout.updated":
+        next = {
+          ...next,
+          rowTouches: { ...next.rowTouches, clock: next.rowTouches.clock + 1 },
+          sidebar: {
+            ...next.sidebar,
+            workspaceLayout: event.data,
+            workspaceLayoutTouchedAt: next.rowTouches.clock + 1,
+          },
+        };
         break;
       case "sidebar.category.upserted":
         next = upsertCategory(next, event.data);

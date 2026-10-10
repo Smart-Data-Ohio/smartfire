@@ -170,3 +170,6 @@ pub mod message_quote;
 pub mod reminder_policy;
 pub mod drive_attachment;
 pub use drive_attachment::DriveAttachment;
+
+pub mod workspace_category;
+pub use workspace_category::WorkspaceCategory;

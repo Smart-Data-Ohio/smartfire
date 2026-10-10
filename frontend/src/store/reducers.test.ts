@@ -326,6 +326,7 @@ describe("sidebar counts", () => {
         users: [],
         directPlaceholderUserIds: [],
         canCreateRooms: true,
+        workspaceLayout: { categories: [], rooms: [] },
       },
       0,
     );
@@ -382,6 +383,7 @@ describe("sidebar counts", () => {
         users: [],
         directPlaceholderUserIds: [],
         canCreateRooms: true,
+        workspaceLayout: { categories: [], rooms: [] },
       },
       0,
     );

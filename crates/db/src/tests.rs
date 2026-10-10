@@ -250,3 +250,5 @@ mod agent_capability_batch_test;
 mod agent_event_clock_test;
 mod cutover_drive_attachment_test;
 mod ui_preference_test;
+
+mod workspace_category_test;

@@ -3,7 +3,7 @@
   "built": "2026-10-05: parity/bin/ci-seed prepare, image, build and validate (Rails validation passed) at origin/main 7b402893f",
   "env_keys_sha256": "5312e05b96e7bfd8f1feebedae66a8f45e2b807715e17c7f874fdb48dc4ea567",
   "files": {
-    "agents_ui/db/production.sqlite3": "4f390b6d47b9518e22d52ad0c547328f55604596270028c89895e748678cd090",
+    "agents_ui/db/production.sqlite3": "1f4c11dce32ce72fda367b76c635465dccec6471302157ccbd9dd3a0d2e25a87",
     "agents_ui/labels.json": "65208d45afe1d309e1bbff7870b03a10cf4fda32434c6f9e5e0707c78c919ace",
     "agents_ui/storage/1l/a4/1la4o27xxpq9ksfz8queu37rsz24": "e862029b2398043281a748f77485525f8ae3c3d951db21c0ce806f2488216246",
     "agents_ui/storage/2k/7n/2k7n5s996jb5k5xwhx14f5oetpj4": "f95cac806ae17f0d59ad75e5d03d82a05019a65469e9e325baae898d46e7f1e5",
@@ -19,7 +19,7 @@
     "agents_ui/storage/6b/tc/6btcnksw2px5m61m8ttuft8qq5sg": "03511ce37fe4c163e6af2b64238248fbfc7461241cb125c73f708ea1f4d170de",
     "agents_ui/storage/ex/0u/ex0ujd9i7haorvtq2hku4qo22hd8": "e1229db9bf54715acfed155e4513ace66b3e961e74190d7ca3e04d79fffde87b",
     "agents_ui/storage/ra/od/raodqbbpbhm7xp5hfgb3tu8on8vi": "6ce7061de3595da77975e268a979f9dd0e1f187b7ebdbb42a88ac211a79aa3aa",
-    "default/db/production.sqlite3": "894eb6de2e4e5836f94412655d854fab96ca3a444d35ff2ae71d9a917abd91a6",
+    "default/db/production.sqlite3": "344366163d2356adefff473946d29b2383deb6b38d914a04c8bf6b54b0a7fd65",
     "default/labels.json": "88195889d719aae45f88b6fb0f18047d63db87642bca7b4bd871d52eeb020727",
     "default/storage/1l/a4/1la4o27xxpq9ksfz8queu37rsz24": "e862029b2398043281a748f77485525f8ae3c3d951db21c0ce806f2488216246",
     "default/storage/2k/7n/2k7n5s996jb5k5xwhx14f5oetpj4": "f95cac806ae17f0d59ad75e5d03d82a05019a65469e9e325baae898d46e7f1e5",
@@ -35,9 +35,9 @@
     "default/storage/6b/tc/6btcnksw2px5m61m8ttuft8qq5sg": "03511ce37fe4c163e6af2b64238248fbfc7461241cb125c73f708ea1f4d170de",
     "default/storage/ex/0u/ex0ujd9i7haorvtq2hku4qo22hd8": "e1229db9bf54715acfed155e4513ace66b3e961e74190d7ca3e04d79fffde87b",
     "default/storage/ra/od/raodqbbpbhm7xp5hfgb3tu8on8vi": "6ce7061de3595da77975e268a979f9dd0e1f187b7ebdbb42a88ac211a79aa3aa",
-    "first_run/db/production.sqlite3": "6ecfa39f792cc4d8bbe6371d1fcc670268ea41fd937cdcccc5b3de4d16b52eae",
+    "first_run/db/production.sqlite3": "9afe832cac064c1a0e5c5ec01d15d4223df5bcd8399a6f8d4005dfcdbfeb7d51",
     "first_run/labels.json": "9bd6b8c289a3b1e990409262f35876e0c9b6cd362682d45de94f4eff4160f2e1",
-    "ledger_originals/db/production.sqlite3": "eafa02e5fb130a07927859e27cf2c9fdaa59d443d1632c7b511bf42bf7cb1c47",
+    "ledger_originals/db/production.sqlite3": "3406bde670ada58c3df78c2373e30c711ed8f5c7ecd2badfa48f0576d3b1459e",
     "ledger_originals/labels.json": "f6b766d9d4eb29804105a60872935a3b96fb7dace38bd58d05c0bdcf20560a06"
   }
 }

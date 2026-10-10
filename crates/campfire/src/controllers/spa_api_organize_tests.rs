@@ -916,3 +916,260 @@ async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
     both(&mut sync, room_read, muted_row).await;
     server.abort();
 }
+
+#[tokio::test]
+async fn workspace_layout_is_admin_only_and_visible_in_snapshots() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = send(
+        &mut kevin,
+        Method::POST,
+        "/api/v1/workspace_categories",
+        json!({"name": "Team"}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN, "{}", reply.text());
+    let reply = send(
+        &mut david,
+        Method::POST,
+        "/api/v1/workspace_categories",
+        json!({"name": "Team"}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let category: serde_json::Value = parse(&reply);
+    let reply = send(
+        &mut david,
+        Method::PUT,
+        &format!("/api/v1/rooms/{ALL_PETS}/workspace_category"),
+        json!({"workspaceCategoryId": category["id"], "position": 0}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    for (browser, visible) in [(&mut david, true), (&mut kevin, false)] {
+        let reply = browser.get("/api/v1/sidebar").await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let sidebar: serde_json::Value = parse(&reply);
+        assert_eq!(sidebar["workspaceLayout"]["categories"][0]["name"], "Team");
+        let rooms = sidebar["workspaceLayout"]["rooms"].as_array().unwrap();
+        assert_eq!(rooms.iter().any(|room| room["roomId"] == ALL_PETS), visible);
+        assert!(
+            !rooms
+                .iter()
+                .any(|room| room["roomId"] == DIRECT_DAVID_JASON)
+        );
+    }
+}
+
+#[tokio::test]
+async fn workspace_layout_broadcasts_each_members_visible_rooms() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut ds = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    let mut ks = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    ds.welcome().await;
+    ks.welcome().await;
+    let created = send(
+        &mut david,
+        Method::POST,
+        "/api/v1/workspace_categories",
+        json!({"name": "Team"}),
+    )
+    .await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let category: serde_json::Value = parse(&created);
+    let id = category["id"].as_i64().unwrap();
+    for sync in [&mut ds, &mut ks] {
+        sync.until(
+            |event| {
+                let value = serde_json::to_value(&event.payload).unwrap();
+                value["type"] == "workspace.layout.updated"
+                    && value["data"]["categories"][0]["id"] == id
+            },
+            |_| false,
+        )
+        .await;
+    }
+    let moved = send(
+        &mut david,
+        Method::PUT,
+        &format!("/api/v1/rooms/{ALL_PETS}/workspace_category"),
+        json!({"workspaceCategoryId": id, "position": 0}),
+    )
+    .await;
+    assert_eq!(moved.status, StatusCode::OK, "{}", moved.text());
+    for (sync, visible) in [(&mut ds, true), (&mut ks, false)] {
+        let event = sync
+            .until(
+                |event| {
+                    let value = serde_json::to_value(&event.payload).unwrap();
+                    value["type"] == "workspace.layout.updated"
+                        && value["data"]["rooms"].as_array().is_some_and(|rooms| {
+                            rooms.iter().any(|room| {
+                                room["roomId"] == ALL_PETS && room["workspaceCategoryId"] == id
+                            }) == visible
+                        })
+                },
+                |_| false,
+            )
+            .await;
+        let value = serde_json::to_value(&event.payload).unwrap();
+        assert_eq!(event.topic, "user");
+        assert!(
+            !value["data"]["rooms"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|room| room["roomId"] == DIRECT_DAVID_JASON)
+        );
+    }
+    let path = format!("/api/v1/workspace_categories/{id}");
+    let renamed = send(&mut david, Method::PATCH, &path, json!({"name": "Squad"})).await;
+    assert_eq!(renamed.status, StatusCode::OK);
+    ds.until(
+        |event| {
+            serde_json::to_value(&event.payload).unwrap()["data"]["categories"][0]["name"]
+                == "Squad"
+        },
+        |_| false,
+    )
+    .await;
+    assert_eq!(
+        david.write(Req::new(Method::DELETE, &path)).await.status,
+        StatusCode::NO_CONTENT
+    );
+    ds.until(
+        |event| {
+            let value = serde_json::to_value(&event.payload).unwrap();
+            value["type"] == "workspace.layout.updated" && value["data"]["categories"] == json!([])
+        },
+        |_| false,
+    )
+    .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn workspace_layout_validates_orders_and_preserves_personal_preferences() {
+    let Some(a) = app(true).await else { return };
+    let before = a
+        .db()
+        .read(|conn| Membership::find_by_room_and_user(conn, ALL_TALK, DAVID))
+        .await
+        .unwrap()
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    for name in [" ".to_string(), "é".repeat(51)] {
+        assert_eq!(
+            fields(
+                &send(
+                    &mut david,
+                    Method::POST,
+                    "/api/v1/workspace_categories",
+                    json!({"name": name})
+                )
+                .await
+            ),
+            ["name"]
+        );
+    }
+    let first: serde_json::Value = parse(
+        &send(
+            &mut david,
+            Method::POST,
+            "/api/v1/workspace_categories",
+            json!({"name": "First"}),
+        )
+        .await,
+    );
+    let second: serde_json::Value = parse(
+        &send(
+            &mut david,
+            Method::POST,
+            "/api/v1/workspace_categories",
+            json!({"name": "Second"}),
+        )
+        .await,
+    );
+    let id = first["id"].as_i64().unwrap();
+    let path = format!("/api/v1/workspace_categories/{id}");
+    for (method, path, body) in [
+        (Method::PATCH, path.clone(), json!({"name": "Mine"})),
+        (Method::DELETE, path.clone(), json!({})),
+        (
+            Method::PUT,
+            "/api/v1/workspace_categories/order".into(),
+            json!({"categoryIds": [second["id"], id]}),
+        ),
+        (
+            Method::PUT,
+            format!("/api/v1/rooms/{ALL_TALK}/workspace_category"),
+            json!({"workspaceCategoryId": id, "position": 0}),
+        ),
+    ] {
+        assert_eq!(
+            send(&mut kevin, method, &path, body).await.status,
+            StatusCode::FORBIDDEN
+        );
+    }
+    let reply = send(
+        &mut david,
+        Method::PUT,
+        "/api/v1/workspace_categories/order",
+        json!({"categoryIds": [second["id"], id]}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let reply = send(
+        &mut david,
+        Method::PUT,
+        "/api/v1/workspace_categories/order",
+        json!({"categoryIds": [id, id]}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CONFLICT);
+    for (room, category, status) in [
+        (DIRECT_DAVID_JASON, id, StatusCode::UNPROCESSABLE_ENTITY),
+        (ALL_TALK, -1, StatusCode::NOT_FOUND),
+        (ALL_TALK, id, StatusCode::OK),
+    ] {
+        assert_eq!(
+            send(
+                &mut david,
+                Method::PUT,
+                &format!("/api/v1/rooms/{room}/workspace_category"),
+                json!({"workspaceCategoryId": category, "position": 0})
+            )
+            .await
+            .status,
+            status
+        );
+    }
+    let after = a
+        .db()
+        .read(|conn| Membership::find_by_room_and_user(conn, ALL_TALK, DAVID))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(before, after);
+    a.db()
+        .write(|tx| {
+            let mut member =
+                Membership::find_by_room_and_user(tx.conn(), ALL_TALK, DAVID)?.unwrap();
+            member.update_involvement(tx, campfire_db::Involvement::Invisible)
+        })
+        .await
+        .unwrap();
+    let sidebar: serde_json::Value = parse(&david.get("/api/v1/sidebar").await);
+    assert!(
+        !sidebar["workspaceLayout"]["rooms"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|room| room["roomId"] == ALL_TALK)
+    );
+}

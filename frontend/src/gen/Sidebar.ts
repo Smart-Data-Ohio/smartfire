@@ -2,6 +2,7 @@
 import type { RoomCategory } from "./RoomCategory";
 import type { SidebarRow } from "./SidebarRow";
 import type { User } from "./User";
+import type { WorkspaceLayout } from "./WorkspaceLayout";
 
 /**
  * `GET /api/v1/sidebar`: every room in the viewer's sidebar (`users/sidebars#show`), one row
@@ -41,4 +42,4 @@ directPlaceholderUserIds: Array<number>,
  * Whether the viewer may create channels: an administrator, or anyone when the account
  * doesn't restrict room creation to administrators.
  */
-canCreateRooms: boolean, };
+canCreateRooms: boolean, workspaceLayout: WorkspaceLayout, };

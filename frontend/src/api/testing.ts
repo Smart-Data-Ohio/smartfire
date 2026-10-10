@@ -12,6 +12,8 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { User } from "../gen/User.ts";
 import { ApiClient, type ApiRequest } from "./client.ts";
 import { type ApiFailure, NotFound, ServerError } from "./errors.ts";
+import { Sidebar as SidebarSchema } from "./schema/sidebar.ts";
+import { wire } from "./wire.ts";
 
 export function userFixture(id: number, name = `User ${id}`): User {
   return {
@@ -154,6 +156,7 @@ export function sidebarFixture(
     users: [userFixture(7, "Ada Lovelace")],
     directPlaceholderUserIds: [...placeholders],
     canCreateRooms: true,
+    workspaceLayout: { categories: [], rooms: [] },
   };
 }
 
@@ -237,4 +240,8 @@ export class FakeApi extends Context.Service<
       }),
     ),
   ).pipe(Layer.provideMerge(FakeApi.layer));
+}
+
+export function decodeSidebar(json: Schema.Json): Sidebar {
+  return Effect.runSync(wire<Sidebar>(SidebarSchema)(json));
 }

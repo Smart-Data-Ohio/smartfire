@@ -131,6 +131,11 @@ impl Broadcasts {
         sync::organized_later(&self.server, &self.sync, change);
     }
 
+    /// The shared layout changed; each member receives only their visible rooms.
+    pub fn sync_workspace_organized(&self) {
+        sync::workspace_organized_later(&self.server, &self.sync);
+    }
+
     /// `poll.updated` and the voter's `poll.ballot` for a vote or a close.
     pub fn sync_poll(&self, change: campfire_db::models::poll::PollChanged) {
         sync::poll_later(&self.server, &self.sync, change);
