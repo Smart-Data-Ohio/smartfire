@@ -100,6 +100,272 @@ async fn reset_factor(app: &TestApp, enabled: bool) -> (String, Vec<String>) {
     }).await.unwrap()
 }
 
+fn browser_session(app: &TestApp, browser: &Browser<'_>) -> Value {
+    let cookies = browser.cookie_header();
+    let raw = cookies
+        .split("; ")
+        .find_map(|pair| pair.strip_prefix("_campfire_session="))
+        .unwrap();
+    campfire_kit::RailsCrypto::new(app.booted.app.secrets.clone())
+        .decrypt_cookie(
+            "_campfire_session",
+            &rails_compat::cookies::unescape(raw),
+            app.booted.app.clock.now(),
+        )
+        .unwrap()
+}
+
+fn body_token(mut request: Req, json: bool, token: &str) -> Req {
+    if json {
+        let mut body: Value = serde_json::from_slice(&request.body).unwrap();
+        body["authenticity_token"] = json!(token);
+        request.body = serde_json::to_vec(&body).unwrap();
+    } else {
+        if !request.body.is_empty() {
+            request.body.push(b'&');
+        }
+        request.body.extend_from_slice(
+            format!(
+                "authenticity_token={}",
+                crate::controllers::presenters::test_support::encode(token)
+            )
+            .as_bytes(),
+        );
+    }
+    request
+}
+
+#[tokio::test]
+async fn unenrolled_logout_and_challenge_match_retained_exemptions() {
+    let mut outcomes = Vec::new();
+    for json in [false, true] {
+        let app = app().await;
+        reset_factor(&app, false).await;
+        let mut browser = app.anonymous();
+        browser.get("/session/new").await;
+        let sign_in = password(&mut browser, json, "david@37signals.com", "secret123456").await;
+        assert_eq!(destination(&sign_in, json), "http://campfire.test/app/");
+        let before = facts(&app).await;
+        let path = if json {
+            "/api/v1/two_factor/challenge"
+        } else {
+            "/two_factor_challenge"
+        };
+        let reply = browser
+            .send(Req::new(Method::GET, path).header(
+                "accept",
+                if json {
+                    "application/json"
+                } else {
+                    "text/html"
+                },
+            ))
+            .await;
+        assert_eq!(
+            reply.status,
+            if json {
+                StatusCode::OK
+            } else {
+                StatusCode::FOUND
+            }
+        );
+        assert_eq!(destination(&reply, json), "http://campfire.test/");
+        assert_eq!(
+            browser.get("/app/two_factor/challenge").await.location(),
+            Some("http://campfire.test/")
+        );
+        let reply = challenge(&mut browser, json, "123456", false).await;
+        assert_eq!(destination(&reply, json), "http://campfire.test/");
+        assert_eq!(facts(&app).await, before);
+        let request = if json {
+            json_request(Method::DELETE, "/api/v1/session", json!({}))
+        } else {
+            Req::new(Method::DELETE, "/session")
+        };
+        let reply = browser.write(request).await;
+        assert_eq!(destination(&reply, json), "http://campfire.test/");
+        assert!(
+            !browser
+                .cookie_header()
+                .split("; ")
+                .any(|pair| pair.starts_with("session_token="))
+        );
+        let after = facts(&app).await;
+        assert_eq!(
+            before["sessions"].as_array().unwrap().len(),
+            after["sessions"].as_array().unwrap().len() + 1
+        );
+        outcomes.push((cookie_contract(&reply), after));
+    }
+    assert_eq!(outcomes[0], outcomes[1]);
+}
+
+#[tokio::test]
+async fn unenrolled_public_shells_match_retained_forms_and_preserve_return_path() {
+    for transfer in [false, true] {
+        let mut outcomes = Vec::new();
+        for spa in [false, true] {
+            let app = app().await;
+            reset_factor(&app, false).await;
+            let mut browser = app.anonymous();
+            browser.get("/session/new").await;
+            password(&mut browser, false, "david@37signals.com", "secret123456").await;
+            assert_eq!(
+                browser
+                    .get("/app/settings/security?return=1")
+                    .await
+                    .location(),
+                Some("http://campfire.test/two_factor_setup")
+            );
+            let before = facts(&app).await;
+            let session = browser_session(&app, &browser);
+            let return_path = session["return_to_after_authenticating"].clone();
+            assert_eq!(
+                return_path,
+                "http://campfire.test/app/settings/security?return=1"
+            );
+            let token = crate::controllers::presenters::accounts::transfer_id(
+                &app.booted.app.secrets,
+                DAVID,
+                app.booted.app.clock.now(),
+            );
+            let retained = if transfer {
+                format!("/session/transfers/{token}")
+            } else {
+                "/session/new".into()
+            };
+            let path = if spa {
+                format!("/app{retained}")
+            } else {
+                retained
+            };
+            let reply = browser.get(&path).await;
+            assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+            assert_eq!(reply.location(), None);
+            if spa {
+                let boot = inline_boot(&reply);
+                assert_eq!(boot["kind"], "signedOut");
+                assert_eq!(boot.as_object().unwrap().len(), 5);
+            } else {
+                assert!(reply.text().contains("<form"));
+            }
+            assert_eq!(
+                browser_session(&app, &browser)["return_to_after_authenticating"],
+                return_path
+            );
+            assert_eq!(facts(&app).await, before);
+            let reply = browser
+                .write(Req::new(
+                    Method::PUT,
+                    &format!("/session/transfers/{token}"),
+                ))
+                .await;
+            assert_eq!(
+                reply.location(),
+                Some("http://campfire.test/app/settings/security?return=1")
+            );
+            outcomes.push(facts(&app).await);
+        }
+        assert_eq!(outcomes[0], outcomes[1]);
+    }
+}
+
+#[tokio::test]
+async fn body_authenticity_tokens_match_retained_validation() {
+    for (valid_body, valid_header) in [(true, None), (true, Some(false)), (false, Some(true))] {
+        let mut outcomes = Vec::new();
+        for json in [false, true] {
+            let app = app().await;
+            let (secret, _) = reset_factor(&app, true).await;
+            let mut browser = app.anonymous();
+            let boot = browser.get("/api/v1/session/boot").await.json();
+            let token = boot["csrfToken"].as_str().unwrap();
+            let code = totp::at(&secret, app.booted.app.clock.now().as_second()).unwrap();
+            let requests = if json {
+                vec![
+                    json_request(
+                        Method::POST,
+                        "/api/v1/session",
+                        json!({"emailAddress":"david@37signals.com","password":"secret123456"}),
+                    ),
+                    json_request(
+                        Method::POST,
+                        "/api/v1/two_factor/challenge",
+                        json!({"code":code,"rememberDevice":false}),
+                    ),
+                    json_request(Method::DELETE, "/api/v1/session", json!({})),
+                ]
+            } else {
+                vec![
+                    Req::new(Method::POST, "/session").form(&[
+                        ("email_address", "david@37signals.com"),
+                        ("password", "secret123456"),
+                    ]),
+                    Req::new(Method::POST, "/two_factor_challenge")
+                        .form(&[("code", &code), ("remember_device", "0")]),
+                    Req::new(Method::DELETE, "/session").form(&[]),
+                ]
+            };
+            let mut cookies = Vec::new();
+            for (step, request) in requests.into_iter().enumerate() {
+                let before = facts(&app).await;
+                for rejected in [
+                    body_token(request.clone(), json, "invalid"),
+                    body_token(request.clone(), json, token)
+                        .header("origin", "https://attacker.test"),
+                    body_token(request.clone(), json, token).header("origin", "null"),
+                ] {
+                    let reply = browser.send(rejected).await;
+                    assert_eq!(
+                        reply.status,
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        "step {step}"
+                    );
+                    assert_eq!(facts(&app).await, before);
+                }
+                let mut request =
+                    body_token(request, json, if valid_body { token } else { "invalid" });
+                if let Some(valid) = valid_header {
+                    request = request.header("x-csrf-token", if valid { token } else { "invalid" });
+                }
+                let reply = browser.send(request).await;
+                assert_eq!(
+                    reply.status,
+                    if json {
+                        StatusCode::OK
+                    } else {
+                        StatusCode::FOUND
+                    },
+                    "step {step}: {}",
+                    reply.text()
+                );
+                if step == 0 {
+                    if json {
+                        assert_eq!(reply.json()["kind"], "secondFactorRequired");
+                    } else {
+                        assert_eq!(
+                            reply.location(),
+                            Some("http://campfire.test/two_factor_challenge")
+                        );
+                    }
+                } else {
+                    assert_eq!(
+                        destination(&reply, json),
+                        if step == 1 {
+                            "http://campfire.test/app/"
+                        } else {
+                            "http://campfire.test/"
+                        }
+                    );
+                }
+                cookies.push(cookie_contract(&reply));
+            }
+            outcomes.push((cookies, facts(&app).await));
+        }
+        assert_eq!(outcomes[0], outcomes[1]);
+    }
+}
+
 #[tokio::test]
 async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() {
     let app = app().await;

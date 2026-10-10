@@ -6,14 +6,20 @@ use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 use campfire_retained::sessions;
 
 use crate::app::AppCtx;
-use crate::concerns::{self, Before};
+use crate::concerns::Before;
 use crate::controllers::auth::{self, ResponseMode};
 use crate::controllers::presenters;
 use crate::controllers::presenters::page::retained_page;
 
 /// `allow_unauthenticated_access`: an auto-submitting form that PUTs back to this URL.
 pub async fn show(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "sessions/transfers#show",
+        Before::default().allow_unauthenticated_access(),
+        ResponseMode::Html,
+    )
+    .await?;
     c.respond_to(&[&format::HTML])?;
     // `url_for({})`: this request's own path.
     let action = c.request.path().to_string();
@@ -34,7 +40,13 @@ pub async fn update_json(c: &mut Ctx) -> Result {
 }
 
 async fn update_response(c: &mut Ctx, mode: ResponseMode) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "sessions/transfers#update",
+        Before::default().allow_unauthenticated_access(),
+        mode,
+    )
+    .await?;
     let transfer_id = c.param_str("id").unwrap_or_default().to_string();
     let user_id =
         presenters::accounts::user_id_from_transfer_id(&c.app().secrets, &transfer_id, c.now());
