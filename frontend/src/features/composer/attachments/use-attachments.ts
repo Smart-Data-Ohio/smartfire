@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { browserDeps, type UploadSnapshot, UploadTask } from "../../../lib/upload/direct-upload.ts";
+import {
+  browserDeps,
+  DEFAULT_UPLOAD_LIMIT_BYTES,
+  type UploadSnapshot,
+  UploadTask,
+  uploadSizeError,
+} from "../../../lib/upload/direct-upload.ts";
 import type { PendingAttachment } from "../../../store/model.ts";
+import { useStore } from "../../../store/store.ts";
 import { actions } from "../../../sync/runtime.ts";
+import { toast } from "../../../ui/toast-store.ts";
 
 /** One file in the composer's tray. */
 export interface TrayFile {
@@ -18,7 +26,7 @@ export interface Attachments {
   readonly ready: boolean;
   readonly uploading: boolean;
   readonly failed: boolean;
-  /** Adds files and starts their uploads; returns how many it took (the tray has a cap). */
+  /** Refuses oversized files, starts valid uploads, and returns how many valid files didn't fit. */
   readonly add: (files: readonly File[]) => number;
   readonly remove: (id: string) => void;
   readonly retry: (id: string) => void;
@@ -61,6 +69,10 @@ export function pendingAttachment(entry: TrayFile): PendingAttachment {
  * tracks every upload's progress. Unmounting cancels unfinished uploads and frees the previews.
  */
 export function useAttachments(max: number): Attachments {
+  const limitBytes = useStore(
+    (state) => state.boot?.account.uploadLimitBytes ?? DEFAULT_UPLOAD_LIMIT_BYTES,
+  );
+
   const [files, setFiles] = useState<readonly TrayFile[]>([]);
   const tasks = useRef(new Map<string, UploadTask>());
 
@@ -101,14 +113,25 @@ export function useAttachments(max: number): Attachments {
   };
 
   const add = (incoming: readonly File[]) => {
+    const valid = incoming.filter((file) => {
+      const error = uploadSizeError(file, limitBytes);
+
+      if (error === null) return true;
+      toast({ title: "File too large", description: error, tone: "danger" });
+
+      return false;
+    });
+
     const room = Math.max(0, max - tasks.current.size);
-    const taken = incoming.slice(0, room);
+    const taken = valid.slice(0, room);
 
     const entries = taken.map((file): TrayFile => {
       const id = `upload-${nextId++}`;
 
-      const task = new UploadTask(file, browserDeps(actions.messages.startUpload), (snapshot) =>
-        patch(id, snapshot),
+      const task = new UploadTask(
+        file,
+        browserDeps(actions.messages.startUpload, limitBytes),
+        (snapshot) => patch(id, snapshot),
       );
 
       tasks.current.set(id, task);
@@ -126,7 +149,7 @@ export function useAttachments(max: number): Attachments {
       setFiles((current) => [...current, ...entries]);
     }
 
-    return taken.length;
+    return valid.length - taken.length;
   };
 
   const remove = (id: string) => {

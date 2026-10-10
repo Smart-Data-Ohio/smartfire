@@ -503,6 +503,53 @@ async fn write_counts(a: &TestApp) -> (i64, i64, i64) {
 }
 
 #[tokio::test]
+async fn grouped_files_round6_enforce_current_per_file_limit_before_any_write() {
+    const MB: usize = 1024 * 1024;
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let small = upload(&mut david, "small.txt").await;
+    let bytes = vec![0; 2 * MB];
+    let created = david.write(json_body(Method::POST, "/api/v1/uploads", &json!({
+        "filename": "large.bin", "byteSize": bytes.len(),
+        "checksum": campfire_storage::key::checksum(&bytes),
+        "contentType": "application/octet-stream",
+    }))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let large: api::DirectUpload = parse(&created);
+    let received = david.send(Req::new(Method::PUT, &large.upload_url)
+        .header("content-type", "application/octet-stream")
+        .header("content-length", &bytes.len().to_string())
+        .body(bytes)).await;
+    assert_eq!(received.status, StatusCode::NO_CONTENT, "{}", received.text());
+    let lowered = david.write(json_body(Method::PATCH, "/api/v1/admin/workspace",
+        &json!({"uploadLimitBytes": MB}))).await;
+    assert_eq!(lowered.status, StatusCode::OK, "{}", lowered.text());
+    let before = write_counts(&a).await;
+    let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
+    let single = david.write(json_body(Method::POST, &path, &json!({
+        "clientMessageId": "size-limit-single", "attachmentSignedId": large.signed_id,
+    }))).await;
+    assert_eq!(single.status, StatusCode::PAYLOAD_TOO_LARGE, "{}", single.text());
+    assert_eq!(write_counts(&a).await, before);
+    for (path, body) in file_posts("size-limit-grouped", json!({
+        "attachmentSignedIds": [small.signed_id, large.signed_id],
+    })) {
+        let reply = david.write(json_body(Method::POST, &path, &body)).await;
+        assert_eq!(reply.status, StatusCode::PAYLOAD_TOO_LARGE, "{path}: {}", reply.text());
+        assert_eq!(write_counts(&a).await, before, "{path} must not claim either upload");
+    }
+    let raised = david.write(json_body(Method::PATCH, "/api/v1/admin/workspace",
+        &json!({"uploadLimitBytes": 2 * MB}))).await;
+    assert_eq!(raised.status, StatusCode::OK, "{}", raised.text());
+    let accepted = david.write(json_body(Method::POST, &path, &json!({
+        "clientMessageId": "size-limit-grouped",
+        "attachmentSignedIds": [small.signed_id, large.signed_id],
+    }))).await;
+    assert_eq!(accepted.status, StatusCode::CREATED, "{}", accepted.text());
+    assert_eq!(parse::<api::MessageDTO>(&accepted).attachments.unwrap().len(), 2);
+}
+
+#[tokio::test]
 async fn grouped_files_reject_other_uploaders_without_claiming_owned_files() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

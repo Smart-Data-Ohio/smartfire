@@ -1,7 +1,12 @@
 import { type DragEvent, useEffect, useId, useRef, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
-import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
+import {
+  browserDeps,
+  DEFAULT_UPLOAD_LIMIT_BYTES,
+  UploadTask,
+} from "../../lib/upload/direct-upload.ts";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
+import { store } from "../../store/store.ts";
 import { admin } from "../../sync/admin.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -341,19 +346,26 @@ export function WorkspaceProfile() {
     previews.current.add(preview);
     set(kind, { pending: { preview, file, percent: 0, saving: false }, error: null });
 
-    const task = new UploadTask(file, browserDeps(actions.messages.startUpload), (snapshot) => {
-      if (snapshot.phase === "uploading") {
-        set(kind, {
-          pending: {
-            preview,
-            file,
-            percent: uploadPercent(snapshot.loaded, snapshot.total),
-            saving: false,
-          },
-          error: null,
-        });
-      }
-    });
+    const task = new UploadTask(
+      file,
+      browserDeps(
+        actions.messages.startUpload,
+        store.getState().boot?.account.uploadLimitBytes ?? DEFAULT_UPLOAD_LIMIT_BYTES,
+      ),
+      (snapshot) => {
+        if (snapshot.phase === "uploading") {
+          set(kind, {
+            pending: {
+              preview,
+              file,
+              percent: uploadPercent(snapshot.loaded, snapshot.total),
+              saving: false,
+            },
+            error: null,
+          });
+        }
+      },
+    );
 
     void task
       .start()

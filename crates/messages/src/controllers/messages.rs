@@ -350,7 +350,7 @@ pub async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: 
     let params = c.params.require("message")?;
     let scalar = params.permit(&permit_keys(&["client_message_id", "reply_to_message_id", "reply_notify_author"]));
     let attachment_given = attributes.attachment.is_some();
-    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    let attachment = stage_attachment(c, attributes.attachment.unwrap_or(Assignment::Unchanged)).await?;
     if matches!(attachment, Assignment::Invalid) { return Err(invalid_attachment()); }
     let changes = campfire_db::MessageChanges {
         clear_markdown_source: attributes.markdown_source.is_none(),
@@ -453,6 +453,14 @@ pub fn attachment_assignment(permitted: &campfire_kit::ParamMap) -> Result<Optio
     }
 }
 
+pub async fn stage_attachment(c: &Ctx, assignment: Assignment) -> Result<Assignment<Staged>> {
+    if matches!(assignment, Assignment::Unchanged | Assignment::Delete | Assignment::Invalid) {
+        return assignment.stage(c.app()).await;
+    }
+    let limit = campfire_web::active_storage::upload_limit_bytes(c.app()).await?;
+    assignment.stage_with_limit(c.app(), limit as u64).await
+}
+
 /// `@room.root_messages.find(params[:before])` and friends (`find_paged_messages`).
 pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Message>> {
     let present = |key: &str| c.params.get(key).filter(|p| p.is_present()).cloned();
@@ -540,7 +548,7 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
     use campfire_db::{ChannelThread, Membership, NewChannelThread, ThreadMembership};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
-    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    let attachment = stage_attachment(c, attributes.attachment.unwrap_or(Assignment::Unchanged)).await?;
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
@@ -615,7 +623,7 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
-    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    let attachment = stage_attachment(c, attributes.attachment.unwrap_or(Assignment::Unchanged)).await?;
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
@@ -734,7 +742,7 @@ fn invalid_attachment() -> Error {
 pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: MessageParams) -> Result<Message> {
     let uploader_id = require_current_user(c)?.id;
     let attachment_given = attributes.attachment.is_some();
-    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    let attachment = stage_attachment(c, attributes.attachment.unwrap_or(Assignment::Unchanged)).await?;
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }

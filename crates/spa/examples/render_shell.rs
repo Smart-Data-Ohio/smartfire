@@ -19,6 +19,7 @@ fn main() {
         user: BootUser { id: 1, name: "Riel St. Amand".into(), avatar_url: "/avatar.svg".into() },
         custom_styles: None,
         account: BootAccount {
+            upload_limit_bytes: 104_857_600,
             name: Some("Smart Data".into()),
             logo_url: None,
             logo_still_url: None,
