@@ -742,8 +742,7 @@ pub async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result
 /// `broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial:
 /// "messages/presentation", attributes: { maintain_scroll: true }`
 pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
-    c.app().broadcasts.message_replace(room, message);
-    Ok(())
+    rendered::broadcast_edit(c, room, message, false).await
 }
 
 /// `deliver_webhooks_to_bots`, in the message's transaction: every active bot in a direct room,

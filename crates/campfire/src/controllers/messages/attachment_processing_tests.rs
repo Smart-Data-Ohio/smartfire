@@ -658,6 +658,42 @@ async fn attachment_processing_refused_enqueues_back_off_durably_then_recover() 
 }
 
 #[tokio::test]
+async fn bot_caption_edit_recovers_video_preview_after_enqueue_failure() {
+    let (app, clock, id, blob) = setup(false).await;
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE messages SET creator_id=? WHERE id=?", (BENDER, id))?;
+        tx.conn().execute_batch("CREATE TRIGGER reject_bot_preview BEFORE INSERT ON background_jobs WHEN NEW.job_class='Message::AttachmentProcessingJob' BEGIN SELECT RAISE(ABORT,'queue refused'); END")?;
+        Message::find(tx.conn(), id)?.replace_attachment(tx, Some(blob))
+    }).await.unwrap();
+    let (token, expires, count) = state(&app, blob).await;
+    assert_eq!(token.as_deref(), Some("enqueue_failed:1"));
+    assert_eq!(count, 0);
+    clock.set(expires.unwrap().jiff());
+    app.db().write(|tx| {
+        tx.conn().execute_batch("DROP TRIGGER reject_bot_preview")?;
+        Ok(())
+    }).await.unwrap();
+
+    let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}");
+    let mut bot = app.anonymous();
+    for caption in ["Updated caption", "Another caption"] {
+        let response = bot.send(Req::new(axum::http::Method::PUT, &path).body(caption)).await;
+        assert_eq!(response.status.as_u16(), 200, "{}", response.text());
+        assert_eq!(response.json()["body"]["plain_text"], caption);
+        let (token, expires, count) = state(&app, blob).await;
+        assert_eq!(count, 1, "bot caption edits must recover the pending video preview exactly once");
+        assert!(token.unwrap().ends_with(":1"));
+        assert!(expires.is_some());
+    }
+    app.db().read(move |conn| {
+        let message = Message::find(conn, id)?;
+        assert_eq!(message.attachment(conn)?.unwrap().1.id, blob);
+        assert!(message.body_html(conn)?.unwrap().contains("Another caption"));
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
 async fn attachment_processing_replacements_cover_room_thread_multipart_and_direct() {
     for thread in [false, true] {
         for multipart in [false, true] {

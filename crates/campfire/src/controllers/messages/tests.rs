@@ -343,6 +343,47 @@ async fn the_bot_api() {
 }
 
 #[tokio::test]
+async fn bot_unchanged_body_edit_refreshes_stale_pull_requests_once() {
+    let app = TestApp::boot_with_test_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        SEED_NOW.parse().unwrap(),
+    )))
+    .await
+    .expect("build the default parity seed")
+    .without_job_runner()
+    .await;
+    let base = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
+    let body = "<p>https://github.com/rails/rails/pull/3141</p>";
+    let mut bot = app.anonymous();
+    let created = bot.send(Req::new(Method::POST, &base).body(body)).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let id: i64 = created.location().unwrap().rsplit('/').next().unwrap().parse().unwrap();
+    let (pr, saved_body) = app.db().write(move |tx| {
+        let message = Message::find(tx.conn(), id)?;
+        let prs = crate::integrations::github::pull_requests::PullRequest::for_message(tx.conn(), id)?;
+        assert_eq!(prs.len(), 1);
+        let pr = prs[0].id;
+        tx.conn().execute("DELETE FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [])?;
+        tx.conn().execute("UPDATE github_pull_requests SET private=0,title='Stale cached PR',fetched_at='2000-01-01 00:00:00',fetch_requested_at=NULL WHERE id=?", [pr])?;
+        Ok((pr, message.body_html(tx.conn())?.unwrap()))
+    }).await.unwrap();
+
+    for _ in 0..2 {
+        let response = bot.send(Req::new(Method::PUT, &format!("{base}/{id}")).body(body)).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let (edited_at, jobs, requested_at) = app.db().read(move |conn| {
+            let message = Message::find(conn, id)?;
+            let jobs = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob' AND json_extract(arguments,'$.pull_request_id')=?", [pr], |row| row.get::<_, i64>(0))?;
+            let requested_at = crate::integrations::github::pull_requests::PullRequest::find(conn, pr)?.fetch_requested_at;
+            Ok((message.edited_at, jobs, requested_at))
+        }).await.unwrap();
+        assert!(edited_at.is_none(), "identical body must skip reference synchronization");
+        assert_eq!(jobs, 1, "bot edits must schedule a stale card refresh exactly once");
+        assert!(requested_at.is_some());
+    }
+    assert_eq!(app.db().read(move |conn| Message::find(conn, id)?.body_html(conn)).await.unwrap().unwrap(), saved_body);
+}
+
+#[tokio::test]
 async fn ws11_agent_credentials_are_authenticated_then_denied_on_human_endpoints() {
     let app = TestApp::boot().await.expect("build the default parity seed");
     let oracle = ws11_oracle();
