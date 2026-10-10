@@ -137,13 +137,14 @@ impl EventReminderSource {
         ))
     }
 }
-fn allowed_reminders(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<Vec<i64>> {
+fn allowed_reminders(conn: &Connection, ids: &[i64], room_id: i64, now: Timestamp) -> Result<Vec<i64>> {
     let users = UserStatusSettings::for_ids(conn, ids)?;
     Ok(ids
         .iter()
         .copied()
         .filter(|id| {
             NotificationPolicy {
+                room_id: Some(room_id),
                 recipient: users.get(id),
                 kind: NotificationKind::Reminder,
                 room_involvement: None,
@@ -173,7 +174,7 @@ pub fn event_reminder_push(
         params![id, event.room_id],
         |r| r.get::<_, i64>(0),
     )?;
-    let ids = allowed_reminders(conn, &ids, now)?;
+    let ids = allowed_reminders(conn, &ids, event.room_id, now)?;
     Ok(Some(PushDelivery {
         payload: event.payload(conn, now)?,
         subscriptions: PushSubscription::for_users(conn, &ids)?,
@@ -265,7 +266,7 @@ pub fn board_nudge_push(
     {
         return Ok(None);
     }
-    if allowed_reminders(conn, &[nudge.recipient_id], now)?.is_empty() {
+    if allowed_reminders(conn, &[nudge.recipient_id], nudge.room_id, now)?.is_empty() {
         return Ok(None);
     }
     Ok(Some(PushDelivery {
@@ -333,13 +334,15 @@ fn huddle_recipient(
     } else {
         "('invisible','nothing')"
     };
-    let eligible:bool=conn.query_row(&format!("SELECT EXISTS(SELECT 1 FROM memberships WHERE id=? AND involvement NOT IN {excluded} AND (connected_at IS NULL OR connected_at<?))"),params![membership.as_ref().map(|m|m.id),now.since(-crate::models::membership::CONNECTION_TTL)],|r|r.get(0))?;
+    let effective = super::notification_policy::involvement_sql("memberships", "(SELECT inbox_preferences FROM users WHERE id=memberships.user_id)");
+    let eligible:bool=conn.query_row(&format!("SELECT EXISTS(SELECT 1 FROM memberships WHERE id=? AND ({effective}) NOT IN {excluded} AND (connected_at IS NULL OR connected_at<?))"),params![membership.as_ref().map(|m|m.id),now.since(-crate::models::membership::CONNECTION_TTL)],|r|r.get(0))?;
     if join && (!eligible || !huddle_inbox_enabled(conn, recipient_id)?) {
         return Ok(None);
     }
     let users = UserStatusSettings::for_ids(conn, &[recipient_id])?;
     let exceptions = dnd_exceptions_for(conn, &[recipient_id], Some(sender_id))?;
     if !(NotificationPolicy {
+        room_id: Some(room_id),
         recipient: users.get(&recipient_id),
         kind: if join {
             NotificationKind::HuddleJoin

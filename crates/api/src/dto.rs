@@ -932,11 +932,18 @@ fn notification_counts_sql(one_room: bool) -> String {
         true => format!(r#" AND {column} = ?2"#),
         false => String::new(),
     };
-    format!(
+    let sql = format!(
         r#"WITH "bounds" AS (SELECT "ms"."room_id", "ms"."involvement", "ms"."unread_at", "ms"."last_read_message_id" AS "read_id", "read"."created_at" AS "read_created_at" FROM "memberships" "ms" LEFT JOIN "messages" "read" ON "read"."id" = "ms"."last_read_message_id" AND "read"."room_id" = "ms"."room_id" AND "read"."thread_id" IS NULL WHERE "ms"."user_id" = ?1 AND "ms"."involvement" IN ('everything', 'mentions', 'muted', 'nothing') AND "ms"."unread_at" IS NOT NULL{bounds_only}), "roots" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "b"."involvement" = 'everything' AND NOT "m"."system_note" AND "m"."creator_id" != ?1 AS "notifies" FROM "bounds" "b" INNER JOIN "messages" "m" ON "m"."room_id" = "b"."room_id" AND "m"."thread_id" IS NULL WHERE {IN_UNREAD_RANGE}), "pinged" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "m"."thread_id", "activity_items"."event_type" = 'mention' AS "mention" FROM "activity_items" INNER JOIN "messages" "m" ON "m"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ?1 AND "activity_items"."source_type" = 'Message' AND "activity_items"."read_at" IS NULL AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity'){pinged_only}), "notifying" AS (SELECT "room_id", "id", 0 AS "thread" FROM "roots" WHERE "notifies" UNION SELECT "p"."room_id", "p"."id", "p"."thread_id" IS NOT NULL FROM "pinged" "p" INNER JOIN "memberships" "ms" ON "ms"."room_id" = "p"."room_id" AND "ms"."user_id" = ?1 WHERE ("ms"."involvement" IN ('everything', 'mentions') OR ("ms"."involvement" = 'muted' AND "p"."mention")) AND CASE WHEN "p"."thread_id" IS NULL THEN "p"."id" IN (SELECT "id" FROM "roots") ELSE EXISTS (SELECT 1 FROM "thread_memberships" "tm" WHERE "tm"."thread_id" = "p"."thread_id" AND "tm"."user_id" = ?1 AND "tm"."unread_at" IS NOT NULL AND ("tm"."last_read_message_id" IS NULL OR "p"."id" > "tm"."last_read_message_id")) END) SELECT "room_id", SUM("unread"), SUM("mentions"), SUM("notifications"), SUM("threads") FROM (SELECT "room_id", 1 AS "unread", 0 AS "mentions", 0 AS "notifications", 0 AS "threads" FROM "roots" UNION ALL SELECT "room_id", 0, "mention", 0, 0 FROM "pinged" UNION ALL SELECT "room_id", 0, 0, 1, "thread" FROM "notifying") GROUP BY "room_id""#,
         bounds_only = only(r#""ms"."room_id""#),
         pinged_only = only(r#""m"."room_id""#),
-    )
+    );
+    let preferences = "(SELECT inbox_preferences FROM users WHERE id=?1)";
+    let effective = campfire_db::models::notification_policy::involvement_sql("ms", preferences);
+    let unmuted = campfire_db::models::notification_policy::unmuted_sql("ms.room_id", preferences);
+    sql.replace(r#""ms"."involvement", "ms"."unread_at""#, &format!(r#"({effective}) AS "involvement", "ms"."unread_at""#))
+        .replace(r#""ms"."involvement""#, &format!("({effective})"))
+        .replace(r#"WHERE "ms"."user_id" = ?1"#, &format!(r#"WHERE "ms"."user_id" = ?1 AND {unmuted}"#))
+        .replace(r#"WHERE ("#, &format!("WHERE {unmuted} AND ("))
 }
 
 /// Each direct room's newest root message that isn't a system note, by room: one statement,

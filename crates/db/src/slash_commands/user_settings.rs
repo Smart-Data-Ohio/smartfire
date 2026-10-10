@@ -108,6 +108,12 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     }
     if let Some(preferences) = preferences.as_object() {
         for (key, value) in preferences {
+            if crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
+                if !crate::models::notification_policy::valid_preference(key, value) {
+                    errors.add("inbox_preferences", format!("{key} is invalid"));
+                }
+                continue;
+            }
             if !matches!(value, Value::Bool(_))
                 && ![
                     json!(0),

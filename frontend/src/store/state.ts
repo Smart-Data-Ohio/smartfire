@@ -1,5 +1,6 @@
 import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
+import type { NotificationSettings } from "../gen/NotificationSettings.ts";
 import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import { type AgentsSlice, emptyAgents } from "./agents.ts";
@@ -120,6 +121,8 @@ export interface State {
 }
 
 export interface SidebarState {
+  readonly notificationPreferences?: NotificationSettings;
+  readonly notificationClock?: number;
   readonly status: LoadStatus;
   /** Room ids in the server's order (`LOWER(rooms.name)`). */
   readonly order: readonly number[];

@@ -25,6 +25,7 @@ fn ws17_policy_matches_rails_combinations() {
     for row in vectors["policies"].as_array().unwrap() {
         user.dnd_enabled = row["quiet"].as_bool().unwrap();
         let policy = NotificationPolicy {
+            room_id: None,
             recipient: Some(&user),
             kind: match row["kind"].as_str().unwrap() {
                 "room_message" => NotificationKind::RoomMessage,
@@ -87,6 +88,7 @@ fn ws17_status_readers_match_rails_times_zones_and_dst() {
         });
         let now = instant(row["now"].as_str().unwrap());
         let policy = NotificationPolicy {
+            room_id: None,
             recipient: Some(&user),
             kind: NotificationKind::Reminder,
             room_involvement: None,
@@ -138,6 +140,7 @@ fn ws17_allowed_sender_bypasses_dnd_but_stars_alone_do_not() {
             .unwrap())
     });
     let policy = |u| NotificationPolicy {
+        room_id: None,
         recipient: u,
         kind: NotificationKind::Huddle,
         room_involvement: None,
@@ -158,4 +161,86 @@ fn ws17_allowed_sender_bypasses_dnd_but_stars_alone_do_not() {
     p.room_involvement = Some(Some(Involvement::Everything));
     assert!(p.push()); // Rails gates inbox activity, not push, by active human.
     assert_eq!(p.inbox_event_type(), None);
+}
+
+#[test]
+fn a9_notification_preferences_extend_and_preserve_legacy_keys() {
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"agent_work":"0","custom_legacy":true}).to_string(), id("david")])?;
+        profile_settings::update(tx, id("david"), Changes {
+            inbox_preferences: Some(json!({"default_notification_level":"mentions", "room_notification_levels":{"1":null}, "room_mute_until":{"1":"2030-01-01T00:00:00Z"}})),
+            ..Default::default()
+        })
+    });
+    let raw: String = t.read(|c| Ok(c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?));
+    let value: Value = serde_json::from_str(&raw).unwrap();
+    assert_eq!(value, json!({"agent_work":"0","custom_legacy":true,"default_notification_level":"mentions","room_notification_levels":{"1":null},"room_mute_until":{"1":"2030-01-01T00:00:00Z"}}));
+}
+
+#[test]
+fn a9_muted_rooms_do_not_contribute_to_push_badges() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=? WHERE user_id=?", rusqlite::params![tx.now(), id("david")])?;
+        let rooms: Vec<i64> = crate::sql::query_all(tx.conn(), "SELECT room_id FROM memberships WHERE user_id=?", [id("david")], |r| r.get(0))?;
+        let mutes: serde_json::Map<String,Value> = rooms.into_iter().map(|id| (id.to_string(), Value::Null)).collect();
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"room_mute_until":mutes}).to_string(), id("david")])?;
+        Ok(())
+    });
+    assert_eq!(t.read(|c| crate::Membership::unread_count(c, id("david"))), 0);
+}
+
+#[test]
+fn a9_inheritance_override_and_mute_expiry_resolve_at_delivery() {
+    use crate::models::notification_policy::{NotificationLevel, NotificationPreferences};
+    let t = TestDb::new();
+    let mut user = t.read(|c| UserStatusSettings::find(c, id("david")));
+    let now = instant("2026-10-10T12:00:00Z");
+    let end = now.since(jiff::SignedDuration::from_secs(900));
+    let mut preferences = NotificationPreferences::parse(Some(r#"{"agent_work":"0","default_notification_level":"mentions","room_notification_levels":{"1":null,"2":"everything"},"room_mute_until":{"1":"2026-10-10T12:15:00Z","3":null}}"#));
+    assert_eq!(preferences.involvement(1, Some(Involvement::Everything)), Some(Involvement::Mentions));
+    assert_eq!(preferences.involvement(2, Some(Involvement::Nothing)), Some(Involvement::Everything));
+    preferences.default_notification_level = NotificationLevel::Everything;
+    user.notification_preferences = preferences;
+    let mut policy = NotificationPolicy {
+        room_id: Some(1), recipient: Some(&user), kind: NotificationKind::RoomMessage,
+        room_involvement: Some(Some(Involvement::Mentions)), thread_involvement: None,
+        mentioned: true, reply_to_recipient: true, keyword_matched: true, dnd_exception: true, now,
+    };
+    assert!(!policy.push());
+    assert!(!policy.sound());
+    assert_eq!(policy.inbox_event_type(), None);
+    policy.now = end;
+    assert!(policy.push());
+    assert_eq!(policy.inbox_event_type(), Some("mention"));
+    policy.mentioned = false;
+    policy.reply_to_recipient = false;
+    assert!(policy.push(), "inherited all-messages default takes effect after expiry");
+    policy.room_id = Some(3);
+    assert!(!policy.push(), "indefinite mute has no deadline");
+    assert_eq!(serde_json::to_value(&user.notification_preferences).unwrap()["agent_work"], "0");
+}
+
+
+#[test]
+fn a9_existing_activity_badges_follow_mute_at_read_time() {
+    let t = TestDb::new();
+    let room = t.write(|tx| {
+        let message = crate::Message::find(tx.conn(), id("first"))?;
+        crate::ActivityItem::refresh_unread(tx, id("david"), "Message", message.id, "mention")?;
+        Ok(message.room_id)
+    });
+    let before = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david")));
+    assert!(before.count > 0);
+    for (until, muted) in [(json!(null), true), (json!("2030-01-01T00:00:00Z"), true), (json!("2020-01-01T00:00:00Z"), false)] {
+        t.write(move |tx| {
+            tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"room_mute_until": {room.to_string(): until}}).to_string(), id("david")])?;
+            Ok(())
+        });
+        let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david")));
+        assert_eq!(after.count, if muted {before.count - 1} else {before.count});
+        assert_eq!(after.revision, before.revision);
+    }
 }

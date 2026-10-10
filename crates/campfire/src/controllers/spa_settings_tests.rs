@@ -1221,3 +1221,87 @@ impl Sync {
         }
     }
 }
+
+
+#[tokio::test]
+async fn a9_notification_default_mute_and_membership_scope() {
+    let Some(app) = app().await else {
+        panic!("restored default seed required")
+    };
+    let mut b = app.sign_in(DAVID).await;
+    let rooms = app
+        .booted
+        .app
+        .db
+        .read(|conn| campfire_db::Membership::for_user(conn, DAVID))
+        .await
+        .unwrap();
+    let room_id = rooms[0].room_id;
+    let saved = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({
+            "defaultNotificationLevel":"mentions",
+            "roomNotification":{"roomId":room_id,"level":null},
+            "roomMute":{"roomId":room_id,"duration":"minutes15"}
+        }),
+    )
+    .await;
+    assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+    let saved: api::Settings = parse(&saved);
+    assert_eq!(
+        saved.notifications.default_notification_level,
+        api::NotificationLevel::Mentions
+    );
+    assert_eq!(
+        saved
+            .notifications
+            .room_notification_levels
+            .get(&room_id.to_string()),
+        Some(&None)
+    );
+    let until: jiff::Timestamp = saved.notifications.room_mute_until[&room_id.to_string()]
+        .as_ref()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert_eq!(
+        until,
+        SEED_NOW.parse::<jiff::Timestamp>().unwrap() + jiff::SignedDuration::from_secs(15 * 60)
+    );
+    let sidebar = b.send(get("/api/v1/sidebar")).await;
+    assert_eq!(sidebar.status, StatusCode::OK, "{}", sidebar.text());
+    let sidebar: api::Sidebar = parse(&sidebar);
+    let row = sidebar
+        .rows
+        .iter()
+        .find(|row| row.room.id == room_id)
+        .expect("muted room remains in sidebar");
+    assert_eq!(row.notification_count, 0);
+    assert_eq!(row.thread_notification_count, 0);
+    let badge = b.send(get("/api/v1/activity/unread_count")).await;
+    assert_eq!(badge.status, StatusCode::OK, "{}", badge.text());
+    let unmuted = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":room_id,"duration":"off"}}),
+    )
+    .await;
+    assert_eq!(unmuted.status, StatusCode::OK);
+    assert!(
+        parse::<api::Settings>(&unmuted)
+            .notifications
+            .room_mute_until
+            .is_empty()
+    );
+    let denied = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":i64::MAX,"duration":"forever"}}),
+    )
+    .await;
+    assert_eq!(denied.status, StatusCode::NOT_FOUND);
+}

@@ -16,6 +16,7 @@ pub use writes::{clock_time_to_minutes, minutes_to_clock_time, replace_keyword_a
 #[derive(Debug, Clone)]
 pub struct UserStatusSettings {
     pub user: User,
+    pub notification_preferences: super::notification_policy::NotificationPreferences,
     pub presence_setting: String,
     pub custom_status_emoji: Option<String>,
     pub custom_status_text: Option<String>,
@@ -157,6 +158,7 @@ impl UserStatusSettings {
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         let mut user = Self {
             user: User::from_row(row)?,
+            notification_preferences: super::notification_policy::NotificationPreferences::parse(row.get::<_, Option<String>>("inbox_preferences")?.as_deref()),
             presence_setting: row.get("presence_setting")?,
             custom_status_emoji: row.get("custom_status_emoji")?,
             custom_status_text: row.get("custom_status_text")?,

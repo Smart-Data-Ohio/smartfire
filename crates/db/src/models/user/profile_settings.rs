@@ -115,7 +115,7 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
                 .and_then(|v| v.as_object().cloned())
                 .unwrap_or_default();
             for (key, value) in preferences {
-                if INBOX_KEYS.contains(&key.as_str()) {
+                if INBOX_KEYS.contains(&key.as_str()) || crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
                     existing.insert(key.clone(), value.clone());
                 }
             }

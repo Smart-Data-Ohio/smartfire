@@ -19,11 +19,17 @@ pub struct ActivityUnread {
     pub revision: i64,
 }
 
+fn unmuted_activity_sql() -> String {
+    let room = "COALESCE(activity_messages.room_id, activity_saved_messages.room_id, activity_work_threads.room_id, activity_sla_nudges.room_id, activity_huddle_grants.room_id, activity_events.room_id)";
+    format!(" AND {}", crate::models::notification_policy::unmuted_sql(room, "users.inbox_preferences"))
+}
+
 impl ActivityItem {
     pub fn unread_snapshot(conn: &Connection, user_id: i64) -> Result<ActivityUnread> {
         let count =
             include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL";
+                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
+                + &unmuted_activity_sql();
         let sql = format!("SELECT ({count}), activity_revision FROM users WHERE id = ?1");
         Ok(crate::sql::query_one(conn, &sql, [user_id], |row| {
             Ok(ActivityUnread {
@@ -52,7 +58,8 @@ impl ActivityItem {
         }
         let sql =
             include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL";
+                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
+                + &unmuted_activity_sql();
         Ok(conn.query_row(&sql, [user.id], |row| row.get(0))?)
     }
 

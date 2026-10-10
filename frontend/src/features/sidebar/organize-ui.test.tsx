@@ -274,14 +274,28 @@ describe("a room's menu", () => {
     expect(screen.queryByRole("menuitem", { name: "Move down" })).toBeNull();
   });
 
-  it("mutes a room", async () => {
+  it("mutes a room for 15 minutes without changing its notification level", async () => {
     const user = await open(seeded(QUIET));
+    const previous = seeded(QUIET).membership.involvement;
 
-    await user.click(screen.getByRole("menuitem", { name: "Mute" }));
-    expect(seeded(QUIET).membership.involvement).toBe("muted");
+    await user.click(screen.getByRole("menuitem", { name: "Notifications" }));
+    await user.click(screen.getByRole("menuitem", { name: "Mute for" }));
+    await user.click(screen.getByRole("menuitem", { name: "15 minutes" }));
     await waitFor(() =>
-      expect(store.getState().sidebar.rows[QUIET]?.membership.involvement).toBe("muted"),
+      expect(
+        store.getState().sidebar.notificationPreferences?.roomMuteUntil[String(QUIET)],
+      ).toBeTruthy(),
     );
+    expect(store.getState().sidebar.rows[QUIET]?.membership.involvement).toBe(previous);
+    expect(seeded(QUIET).membership.involvement).toBe("muted");
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(screen.getByRole("menuitem", { name: "Unmute" }));
+    await waitFor(() =>
+      expect(
+        store.getState().sidebar.notificationPreferences?.roomMuteUntil[String(QUIET)],
+      ).toBeUndefined(),
+    );
+    expect(seeded(QUIET).membership.involvement).toBe(previous);
   });
 
   it("offers no Move to for a direct message, and Unmute and Mark as read when they apply", async () => {

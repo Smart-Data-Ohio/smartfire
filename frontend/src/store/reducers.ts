@@ -124,6 +124,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
     ...state,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
+      ...state.sidebar,
       status: "ready",
       // A row sync added that the snapshot predates takes its sorted place, as an upsert would.
       order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),

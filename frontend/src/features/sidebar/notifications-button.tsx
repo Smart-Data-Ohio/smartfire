@@ -1,7 +1,7 @@
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { SidebarRow } from "../../store/model.ts";
-import { organizedSidebar } from "../../store/organize.ts";
+import { roomMuted, roomNotificationLevel } from "../../store/notification-preferences.ts";
 import { useStore } from "../../store/store.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Menu, SubMenu } from "../../ui/menu.tsx";
@@ -20,7 +20,9 @@ export interface NotificationTarget {
  * (no sidebar row) reads the header's own copy of the membership.
  */
 export function useNotificationTarget(roomId: number): NotificationTarget | null {
-  const row = useStore((state) => organizedSidebar(state.sidebar).rows[roomId]);
+  const row = useStore((state) => state.sidebar.rows[roomId]);
+  const preferences = useStore((state) => state.sidebar.notificationPreferences);
+  const now = useStore((state) => state.sidebar.notificationClock ?? Date.now());
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
   const room = row?.room ?? detail?.room;
   const level = row?.membership.involvement ?? detail?.membership.involvement;
@@ -31,7 +33,11 @@ export function useNotificationTarget(roomId: number): NotificationTarget | null
 
   const displayName = row?.displayName ?? detail?.displayName ?? "";
 
-  return { row: { room, displayName }, level, choice: involvementChoice(level) };
+  const effective = roomMuted(preferences, roomId, now)
+    ? "muted"
+    : roomNotificationLevel(preferences, roomId, level);
+
+  return { row: { room, displayName }, level, choice: involvementChoice(effective) };
 }
 
 /** A controlled menu's state: `Menu`'s `open` and `onOpenChange`. */

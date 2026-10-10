@@ -14,7 +14,7 @@ use campfire_db::models::audit_log::{Actor, Context};
 use campfire_db::models::user::profile_settings::{self, INBOX_KEYS};
 use campfire_db::models::user_status_settings::clock_time_to_minutes;
 use campfire_db::{
-    DndAllowedUser, Errors, PushSubscription, Session, User, UserChanges, UserStatusSettings,
+    DndAllowedUser, Errors, Membership, PushSubscription, Session, User, UserChanges, UserStatusSettings,
 };
 use campfire_kit::{Ctx, Error, Kit, Param, Result, StatusCode, action, unparsed_action};
 use campfire_people::controllers::{
@@ -354,6 +354,12 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                 .collect(),
         },
         notifications: api::NotificationSettings {
+            default_notification_level: notification_level(status.notification_preferences.default_notification_level),
+            room_notification_levels: status.notification_preferences.room_notification_levels.iter()
+                .map(|(id, level)| (id.to_string(), level.map(notification_level))).collect(),
+            room_mute_until: status.notification_preferences.room_mute_until.iter()
+                .filter(|(_, until)| until.is_none_or(|until| until > now.jiff()))
+                .map(|(id, until)| (id.to_string(), until.map(|until| until.to_string()))).collect(),
             dnd_enabled: sections.notifications.manual_dnd,
             quiet_hours_enabled: sections.notifications.quiet_hours,
             quiet_hours_start: sections.notifications.quiet_start.clone(),
@@ -708,6 +714,23 @@ async fn save_calls(c: &mut Ctx) -> Result {
     reply(c, id).await
 }
 
+fn notification_level(level: campfire_db::models::notification_policy::NotificationLevel) -> api::NotificationLevel {
+    use campfire_db::models::notification_policy::NotificationLevel as Level;
+    match level {
+        Level::Everything => api::NotificationLevel::Everything,
+        Level::Mentions => api::NotificationLevel::Mentions,
+        Level::Nothing => api::NotificationLevel::Nothing,
+    }
+}
+fn stored_notification_level(level: api::NotificationLevel) -> campfire_db::models::notification_policy::NotificationLevel {
+    use campfire_db::models::notification_policy::NotificationLevel as Level;
+    match level {
+        api::NotificationLevel::Everything => Level::Everything,
+        api::NotificationLevel::Mentions => Level::Mentions,
+        api::NotificationLevel::Nothing => Level::Nothing,
+    }
+}
+
 async fn save_notifications(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
     let update: api::UpdateNotifications = body(c).await?;
@@ -753,11 +776,45 @@ async fn save_notifications(c: &mut Ctx) -> Result {
                 .collect(),
         )
     });
+    let default_level = update.default_notification_level;
+    let room_notification = update.room_notification;
+    let room_mute = update.room_mute;
     let keywords = update.keyword_alerts;
     c.app()
         .db
         .write(move |tx| {
             settings.save_with_keywords(tx, keywords.as_deref())?;
+            if default_level.is_some() || room_notification.is_some() || room_mute.is_some() {
+                let mut preferences = campfire_db::models::notification_policy::NotificationPreferences::load(tx.conn(), id)?;
+                if let Some(level) = default_level {
+                    preferences.default_notification_level = stored_notification_level(level);
+                }
+                if let Some(change) = room_notification {
+                    Membership::find_by_room_and_user(tx.conn(), change.room_id, id)?
+                        .ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
+                    preferences.room_notification_levels.insert(change.room_id, change.level.map(stored_notification_level));
+                }
+                if let Some(change) = room_mute {
+                    Membership::find_by_room_and_user(tx.conn(), change.room_id, id)?
+                        .ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
+                    let seconds = match change.duration {
+                        api::RoomMuteDuration::Minutes15 => Some(15 * 60),
+                        api::RoomMuteDuration::Hour1 => Some(60 * 60),
+                        api::RoomMuteDuration::Hours8 => Some(8 * 60 * 60),
+                        api::RoomMuteDuration::Hours24 => Some(24 * 60 * 60),
+                        api::RoomMuteDuration::Forever | api::RoomMuteDuration::Off => None,
+                    };
+                    if change.duration == api::RoomMuteDuration::Off {
+                        preferences.room_mute_until.remove(&change.room_id);
+                    } else {
+                        preferences.room_mute_until.insert(change.room_id, seconds.map(|seconds| tx.now().since(jiff::SignedDuration::from_secs(seconds)).jiff()));
+                    }
+                }
+                profile_settings::update(tx, id, profile_settings::Changes {
+                    inbox_preferences: Some(serde_json::to_value(preferences).expect("notification preferences")),
+                    ..Default::default()
+                })?;
+            }
             if inbox.is_some() {
                 profile_settings::update(
                     tx,

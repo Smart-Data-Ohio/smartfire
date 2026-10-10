@@ -1,4 +1,5 @@
 import type { ChatSounds } from "../gen/ChatSounds.ts";
+import { roomMuted } from "../store/notification-preferences.ts";
 import { emptyTimeline } from "../store/state.ts";
 import { store } from "../store/store.ts";
 import { onSyncEvents } from "./signals.ts";
@@ -67,6 +68,7 @@ export function listenForChatSounds(roomId: number, viewingLatestPage: () => boo
 
       if (
         event.seq > liveAfter &&
+        !roomMuted(state.sidebar.notificationPreferences, roomId, Date.now()) &&
         message.sound !== null &&
         message.threadId === null &&
         message.roomId === roomId &&

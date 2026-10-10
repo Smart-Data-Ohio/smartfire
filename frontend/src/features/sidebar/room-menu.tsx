@@ -1,8 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { RoomMuteDuration } from "../../gen/RoomMuteDuration.ts";
 import type { Placement } from "../../lib/anchor.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
+import { roomMuted, roomNotificationLevel } from "../../store/notification-preferences.ts";
 import {
   canCategorize,
   defaultInvolvement,
@@ -11,6 +13,7 @@ import {
 } from "../../store/organize.ts";
 import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
+import { settings as settingsActions } from "../../sync/settings.ts";
 import {
   Menu,
   MenuGroup,
@@ -21,6 +24,7 @@ import {
   SubMenu,
 } from "../../ui/menu.tsx";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
+import { toastFailure } from "../settings/settings-parts.tsx";
 import { markRead, moveRoom, setInvolvement, toggleFavorite } from "./organize-commands.ts";
 import { involvementChoice, involvementChoices } from "./organize-model.ts";
 
@@ -45,24 +49,88 @@ interface NotificationItemsProps {
 
 /** The notification levels as radio items, the current one checked. */
 export function NotificationItems({ row, level }: NotificationItemsProps) {
+  const preferences = useStore((state) => state.sidebar.notificationPreferences);
+  const effective = roomNotificationLevel(preferences, row.room.id, level);
+  const inherited = preferences?.roomNotificationLevels[String(row.room.id)] === null;
+  const [busy, setBusy] = useState(false);
+
   return (
-    <MenuGroup label="Notify me about">
-      {involvementChoices(row).map((choice) => (
+    <>
+      <MenuGroup label="Notify me about">
         <MenuRadioItem
-          key={choice.level}
-          icon={choice.icon}
-          description={choice.description}
-          checked={choice.level === level}
+          icon="settings"
+          checked={inherited}
+          description={`Account default: ${involvementChoice(preferences?.defaultNotificationLevel ?? "everything").label}`}
           onSelect={() => {
-            if (choice.level !== level) {
-              setInvolvement(row.room.id, row.displayName, choice.level, level);
-            }
+            if (busy) return;
+            setBusy(true);
+            void settingsActions
+              .updateNotifications({ roomNotification: { roomId: row.room.id, level: null } })
+              .catch((error: Error) => toastFailure("Couldn't change notifications", error))
+              .finally(() => setBusy(false));
           }}
         >
-          {choice.label}
+          Use account default
         </MenuRadioItem>
-      ))}
-    </MenuGroup>
+        {involvementChoices(row).map((choice) => (
+          <MenuRadioItem
+            key={choice.level}
+            icon={choice.icon}
+            description={choice.description}
+            checked={!inherited && choice.level === effective}
+            onSelect={() => {
+              if (inherited || choice.level !== effective) {
+                setInvolvement(row.room.id, row.displayName, choice.level, effective);
+              }
+            }}
+          >
+            {choice.label}
+          </MenuRadioItem>
+        ))}
+      </MenuGroup>
+      <MenuSeparator />
+      <RoomMuteItems roomId={row.room.id} />
+    </>
+  );
+}
+
+const MUTE_DURATIONS = [
+  { duration: "minutes15", label: "15 minutes" },
+  { duration: "hour1", label: "1 hour" },
+  { duration: "hours8", label: "8 hours" },
+  { duration: "hours24", label: "24 hours" },
+  { duration: "forever", label: "Until I turn it back on" },
+] as const satisfies readonly { readonly duration: RoomMuteDuration; readonly label: string }[];
+
+export function RoomMuteItems({ roomId }: { readonly roomId: number }) {
+  const preferences = useStore((state) => state.sidebar.notificationPreferences);
+  const now = useStore((state) => state.sidebar.notificationClock ?? Date.now());
+  const muted = roomMuted(preferences, roomId, now);
+  const [busy, setBusy] = useState(false);
+
+  const save = (duration: RoomMuteDuration) => {
+    setBusy(true);
+    void settingsActions
+      .updateNotifications({ roomMute: { roomId, duration } })
+      .catch((error: Error) => toastFailure("Couldn't change room mute", error))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <>
+      {muted ? (
+        <MenuItem icon="bell" disabled={busy} onSelect={() => save("off")}>
+          Unmute room
+        </MenuItem>
+      ) : null}
+      <SubMenu label={muted ? "Change mute duration" : "Mute for"} icon="bell-off">
+        {MUTE_DURATIONS.map(({ duration, label }) => (
+          <MenuItem key={duration} disabled={busy} onSelect={() => save(duration)}>
+            {label}
+          </MenuItem>
+        ))}
+      </SubMenu>
+    </>
   );
 }
 
@@ -104,9 +172,11 @@ interface RoomMenuItemsProps {
  */
 export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsProps) {
   const navigate = useNavigate();
+  const preferences = useStore((state) => state.sidebar.notificationPreferences);
+  const now = useStore((state) => state.sidebar.notificationClock ?? Date.now());
+  const timedMute = roomMuted(preferences, row.room.id, now);
   const { favoritePosition, roomCategoryId, involvement, unreadAt } = row.membership;
   const starred = favoritePosition !== null;
-  const muted = involvement === "muted";
   const favorite = useFavoritePlace(row.room.id);
   const { kind } = row.room;
 
@@ -180,19 +250,22 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
       <SubMenu label="Notifications" icon={involvementChoice(involvement).icon}>
         <NotificationItems row={row} level={involvement} />
       </SubMenu>
-      <MenuItem
-        icon={muted ? "bell" : "bell-off"}
-        onSelect={() =>
-          setInvolvement(
-            row.room.id,
-            row.displayName,
-            muted ? defaultInvolvement(row) : "muted",
-            involvement,
-          )
-        }
-      >
-        {muted ? "Unmute" : "Mute"}
-      </MenuItem>
+      {involvement === "muted" || timedMute ? (
+        <MenuItem
+          icon="bell"
+          onSelect={() => {
+            if (timedMute) {
+              void settingsActions
+                .updateNotifications({ roomMute: { roomId: row.room.id, duration: "off" } })
+                .catch((error: Error) => toastFailure("Couldn't unmute room", error));
+            } else {
+              setInvolvement(row.room.id, row.displayName, defaultInvolvement(row), involvement);
+            }
+          }}
+        >
+          Unmute
+        </MenuItem>
+      ) : null}
       {unreadAt === null ? null : (
         <>
           <MenuSeparator />

@@ -28,6 +28,9 @@ fn settings() -> Settings {
             time_zones: vec![TimeZoneChoice { label: "(GMT+00:00) London".into(), value: "Europe/London".into() }],
         },
         notifications: NotificationSettings {
+            default_notification_level: NotificationLevel::Everything,
+            room_notification_levels: Default::default(),
+            room_mute_until: Default::default(),
             dnd_enabled: false,
             quiet_hours_enabled: true,
             quiet_hours_start: Some("22:00".into()),
@@ -99,6 +102,9 @@ fn settings_wire() {
                 "timeZones": [{ "label": "(GMT+00:00) London", "value": "Europe/London" }]
             },
             "notifications": {
+                "defaultNotificationLevel": "everything",
+                "roomNotificationLevels": {},
+                "roomMuteUntil": {},
                 "dndEnabled": false,
                 "quietHoursEnabled": true,
                 "quietHoursStart": "22:00",
@@ -174,6 +180,9 @@ fn settings_writes_wire() {
             ..UpdateNotifications::default()
         },
         json!({
+            "defaultNotificationLevel": null,
+            "roomNotification": null,
+            "roomMute": null,
             "dndEnabled": true,
             "quietHoursEnabled": null,
             "quietHoursStart": null,

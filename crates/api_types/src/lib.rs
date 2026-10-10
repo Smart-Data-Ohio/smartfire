@@ -165,7 +165,7 @@ pub use search::{
 pub use settings::{
     AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, CreatePushSubscription, DndAllowedPerson,
     GoogleIntegration, InboxSwitch,
-    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
+    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, NotificationLevel, RoomNotificationUpdate, RoomMuteDuration, RoomMuteUpdate, OooPreset,
     ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
     RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
     TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,

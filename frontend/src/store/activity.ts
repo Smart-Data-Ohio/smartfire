@@ -736,6 +736,26 @@ export function setActivityUnreadCount(
   return withActivity(state, withCounts(activity, unread));
 }
 
+/** Mute expiry can change a badge without changing any activity rows. */
+export function refreshUnreadCountForPolicy(
+  state: State,
+  unread: ActivityUnreadCount,
+  generation: number,
+): State {
+  const activity = state.activity;
+
+  if (
+    generation !== activity.generation ||
+    (activity.serverUnread !== null && unread.unreadRevision < activity.serverUnread.unreadRevision)
+  )
+    return state;
+
+  return withActivity(
+    state,
+    withCounts({ ...activity, serverUnread: unread, serverUnreadGeneration: generation }, unread),
+  );
+}
+
 /** The server couldn't replay what was missed: every loaded list reloads when next shown. */
 export function markActivityStale(state: State): State {
   const lists = eachPaged(state.activity.lists, pagedStale);

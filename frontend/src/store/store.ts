@@ -15,6 +15,7 @@ import type { BoardListing } from "../gen/BoardListing.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
+import type { NotificationSettings } from "../gen/NotificationSettings.ts";
 import type { PinState } from "../gen/PinState.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
@@ -263,6 +264,13 @@ export const mutations = {
   setWorkspaceStyles: (css: string | null) => apply((state) => setWorkspaceStyles(state, css)),
   setWorkspaceBranding: (branding: WorkspaceBranding) =>
     apply((state) => setWorkspaceBranding(state, branding)),
+  setNotificationPreferences: (notificationPreferences: NotificationSettings) =>
+    apply((state) => ({
+      ...state,
+      sidebar: { ...state.sidebar, notificationPreferences, notificationClock: Date.now() },
+    })),
+  tickNotificationClock: () =>
+    apply((state) => ({ ...state, sidebar: { ...state.sidebar, notificationClock: Date.now() } })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
@@ -535,6 +543,8 @@ export const mutations = {
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
+  refreshActivityUnreadCountForPolicy: (unread: ActivityUnreadCount, generation: number) =>
+    apply((state) => activity.refreshUnreadCountForPolicy(state, unread, generation)),
   setActivityUnreadCount: (unread: ActivityUnreadCount, generation?: number) =>
     apply((state) => activity.setActivityUnreadCount(state, unread, generation)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>

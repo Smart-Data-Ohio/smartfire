@@ -45,6 +45,17 @@ export const TimeZoneChoice = Schema.Struct({ label: Schema.String, value: Schem
 
 export type TimeZoneChoicePin = Assert<Pinned<typeof TimeZoneChoice, GeneratedTimeZoneChoice>>;
 
+export const NotificationLevel = Schema.Literals(["everything", "mentions", "nothing"]);
+
+export const RoomMuteDuration = Schema.Literals([
+  "minutes15",
+  "hour1",
+  "hours8",
+  "hours24",
+  "forever",
+  "off",
+]);
+
 /** The profile section of the settings page. */
 export const ProfileSettings = Schema.Struct({
   userId: UserId,
@@ -96,6 +107,9 @@ export type InboxSwitchPin = Assert<Pinned<typeof InboxSwitch, GeneratedInboxSwi
 
 /** Do not disturb, quiet hours, keyword alerts and inbox switches. */
 export const NotificationSettings = Schema.Struct({
+  defaultNotificationLevel: NotificationLevel,
+  roomNotificationLevels: Schema.Record(Schema.String, Schema.NullOr(NotificationLevel)),
+  roomMuteUntil: Schema.Record(Schema.String, Schema.NullOr(Schema.String)),
   dndEnabled: Schema.Boolean,
   quietHoursEnabled: Schema.Boolean,
   quietHoursStart: Schema.NullOr(Schema.String),
@@ -257,6 +271,11 @@ export type UpdateAppearancePin = Assert<
 
 /** `PATCH /api/v1/settings/notifications`. `inbox` changes only the keys it names. */
 export const UpdateNotifications = Schema.Struct({
+  defaultNotificationLevel: Schema.NullOr(NotificationLevel),
+  roomNotification: Schema.NullOr(
+    Schema.Struct({ roomId: RoomId, level: Schema.NullOr(NotificationLevel) }),
+  ),
+  roomMute: Schema.NullOr(Schema.Struct({ roomId: RoomId, duration: RoomMuteDuration })),
   dndEnabled: Schema.NullOr(Schema.Boolean),
   quietHoursEnabled: Schema.NullOr(Schema.Boolean),
   quietHoursStart: Schema.NullOr(Schema.String),

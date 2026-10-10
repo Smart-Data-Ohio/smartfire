@@ -55,9 +55,17 @@ fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
     let mut event = Event::job(request);
     if let Event::Job(job) = &mut event { job.arguments["delivered"] = serde_json::json!(1); }
     tx.emit_after_commit(event);
-    let sound = ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), None)?;
+    let sound = !UserStatusSettings::find(tx.conn(), request.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), request)?, tx.now()) && ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), None)?;
     publish_current_ring(tx, request, sound);
     Ok(())
+}
+
+fn ring_room(conn: &Connection, request: &RingRequest) -> Result<i64> {
+    if let Some(id) = request.grant_id {
+        return Ok(HuddleGrant::find_by_id(conn, id)?.ok_or(crate::Error::RecordNotFound("HuddleGrant"))?.room_id);
+    }
+    request.invitation.get("roomId").and_then(serde_json::Value::as_i64)
+        .ok_or_else(|| crate::Error::Other("huddle invitation has no room".into()))
 }
 
 /// `Huddle::RingPolicy.ring?`: an override replaces the entire sound decision.
@@ -75,6 +83,7 @@ pub fn ring_allowed(
     }
     let exceptions = super::notification_policy::dnd_exceptions_for(conn, &[recipient_id], caller_id)?;
     Ok(NotificationPolicy {
+        room_id: None,
         recipient: Some(&recipient),
         kind: NotificationKind::Huddle,
         room_involvement: None,
@@ -93,7 +102,7 @@ pub fn publish_ring_with_policy(
     quiet_check: Option<&dyn Fn(&UserStatusSettings) -> bool>,
 ) -> Result<()> {
     let Some(current) = current_ring(tx, request)? else { return Ok(()); };
-    let sound = ring_allowed(tx.conn(), current.recipient_id, Some(current.sender_id), tx.now(), quiet_check)?;
+    let sound = !UserStatusSettings::find(tx.conn(), current.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), &current)?, tx.now()) && ring_allowed(tx.conn(), current.recipient_id, Some(current.sender_id), tx.now(), quiet_check)?;
     publish_current_ring(tx, &current, sound);
     Ok(())
 }

@@ -4,7 +4,9 @@
  * is reloaded after it so the rest of the app shows the change at once. Failures reject with an
  * `ActionError`; a rejected change carries its field messages in `fields`.
  */
-import { me } from "../api/endpoints.ts";
+
+import { activityUnreadCount } from "../api/activity-endpoints.ts";
+import { me, sidebar } from "../api/endpoints.ts";
 import {
   accountSettings,
   connectService,
@@ -53,7 +55,7 @@ import {
   type ThemePreference,
 } from "../lib/appearance.ts";
 import type { State } from "../store/state.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { runAction } from "./runtime.ts";
 
 export {
@@ -77,6 +79,9 @@ const UNCHANGED = {
   appearance: { theme: null, textSize: null, timeZone: null },
   calls: { voiceMode: null, pushToTalkKey: null },
   notifications: {
+    defaultNotificationLevel: null,
+    roomNotification: null,
+    roomMute: null,
     dndEnabled: null,
     quietHoursEnabled: null,
     quietHoursStart: null,
@@ -124,7 +129,12 @@ async function write<A>(run: Promise<A>): Promise<A> {
 export type { TokenService };
 
 export const settings = {
-  load: (): Promise<Settings> => runAction(loadSettings()),
+  load: async (): Promise<Settings> => {
+    const next = await runAction(loadSettings());
+    mutations.setNotificationPreferences(next.notifications);
+
+    return next;
+  },
 
   updateProfile: (change: Partial<UpdateProfile>): Promise<Settings> =>
     write(runAction(updateProfile({ ...UNCHANGED.profile, ...change }))),
@@ -139,8 +149,15 @@ export const settings = {
   updateCalls: (change: Partial<UpdateCalls>): Promise<Settings> =>
     write(runAction(updateCalls({ ...UNCHANGED.calls, ...change }))),
 
-  updateNotifications: (change: Partial<UpdateNotifications>): Promise<Settings> =>
-    write(runAction(updateNotifications({ ...UNCHANGED.notifications, ...change }))),
+  updateNotifications: async (change: Partial<UpdateNotifications>): Promise<Settings> => {
+    const next = await write(
+      runAction(updateNotifications({ ...UNCHANGED.notifications, ...change })),
+    );
+
+    mutations.setNotificationPreferences(next.notifications);
+
+    return next;
+  },
 
   updateStatus: (change: Partial<UpdateStatus>): Promise<Settings> =>
     write(runAction(updateStatus({ ...UNCHANGED.status, ...change }))),
@@ -258,4 +275,81 @@ export async function saveAccountTheme(theme: ThemePreference): Promise<void> {
     showAccountTheme(before);
     throw error;
   }
+}
+
+/** Refreshes preferences across tabs and schedules the next mute expiry. */
+export function followNotificationPreferences(): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let viewerId = store.getState().me?.user.id;
+  let held = store.getState().sidebar.notificationPreferences;
+
+  const refreshSidebar = () => {
+    const clock = sidebarRowClock();
+    const generation = store.getState().activity.generation;
+    void runAction(activityUnreadCount()).then(
+      (unread) => mutations.refreshActivityUnreadCountForPolicy(unread, generation),
+      () => undefined,
+    );
+    void runAction(sidebar()).then(
+      (next) => mutations.loadSidebar(next, clock),
+      () => undefined,
+    );
+  };
+
+  const refresh = () => {
+    if (store.getState().me !== null) {
+      void settings.load().catch(() => undefined);
+    }
+  };
+
+  const schedule = () => {
+    clearTimeout(timer);
+    const now = Date.now();
+
+    const ends = Object.values(held?.roomMuteUntil ?? {})
+      .flatMap((until) => (until === null ? [] : [Date.parse(until)]))
+      .filter((end) => end > now);
+
+    if (ends.length === 0) return;
+    timer = setTimeout(
+      () => {
+        mutations.tickNotificationClock();
+        refreshSidebar();
+        schedule();
+      },
+      Math.min(Math.min(...ends) - now, 2_147_483_647),
+    );
+  };
+
+  const unsubscribe = store.subscribe((state) => {
+    const currentId = state.me?.user.id;
+
+    if (currentId !== viewerId) {
+      viewerId = currentId;
+      refresh();
+    }
+
+    if (state.sidebar.notificationPreferences !== held) {
+      held = state.sidebar.notificationPreferences;
+      schedule();
+      refreshSidebar();
+    }
+  });
+
+  const visible = () => {
+    if (document.visibilityState === "visible") {
+      mutations.tickNotificationClock();
+      refresh();
+    }
+  };
+
+  refresh();
+  schedule();
+  document.addEventListener("visibilitychange", visible);
+
+  return () => {
+    unsubscribe();
+    clearTimeout(timer);
+    document.removeEventListener("visibilitychange", visible);
+  };
 }
