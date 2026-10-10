@@ -48,6 +48,7 @@ combine with OR, everything else combines with AND.
 | `after:YYYY-MM-DD` | Messages created after the date |
 | `on:YYYY-MM-DD` | Messages created on the date |
 | `is:thread` | Messages posted inside a thread |
+| `sort:newest`, `sort:oldest`, `sort:relevance` | Message ordering; the last sort operator wins |
 
 Examples: `from:@jz launch`, `in:#designers has:file mockup`,
 `on:2026-09-01 deploy`, `is:thread has:pin`. A query of only operators
@@ -70,8 +71,19 @@ them. `has:image` only sees uploaded files, because Drive attachments
 store no MIME type. Quiet system notes (pin notes and the like) never
 match, even for filter-only queries.
 
-Message results page newest-first through "Load older results", as
-before. Boards, work threads (outside boards), and events matching the
+Message results default to newest first. Oldest sorts by creation time
+and ID ascending. Relevance scores each message by the number of FTS5
+match spans in its indexed plain text, including stemmed matches.
+Repeated spans increase the score; overlapping spans count once.
+Results sort by score, creation time and ID, all descending. Without
+search words, relevance uses newest first.
+
+Each page's cursor contains its last result's sort keys. Unrelated
+activity in any room cannot change relevance scores or cause pages to
+repeat or skip unchanged matches. The cursor still works after its
+message is deleted. Editing a matching message can change its order.
+
+Boards, work threads (outside boards), and events matching the
 operator-free text render as capped side sections above the messages,
 each scoped to rooms the viewer belongs to and further narrowed by
 `in:`; they show only on the first page.

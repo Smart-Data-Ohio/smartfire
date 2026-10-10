@@ -476,23 +476,40 @@ async fn hostile_and_oversized_queries_answer_cleanly() {
 #[tokio::test]
 async fn relevance_search_pages_survive_unrelated_private_room_activity() {
     let Some(a) = app(true).await else { return };
+    // Isolate corpus statistics from the frozen seed's unrelated messages.
+    a.db()
+        .write(|tx| {
+            tx.conn().execute("DELETE FROM message_search_index", [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
-    let mut expected = Vec::new();
     for n in 0..85 {
-        expected.push(
-            post(&mut david, DESIGNERS, 300 + n, "corpusneedle")
-                .await
-                .id,
-        );
+        let source = if n < 45 {
+            "corpusneedle"
+        } else {
+            "corpusneedle corpusneedle corpusneedle padding padding"
+        };
+        post(&mut david, DESIGNERS, 300 + n, source).await;
     }
     let path = "/api/v1/search?q=corpusneedle&sort=relevance";
     let reply = kevin.send(get(path)).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let first: api::SearchResults = parse(&reply);
     assert_eq!(first.messages.len(), 40);
+    let mut expected = ids(&first).into_iter().rev().collect::<Vec<_>>();
+    let mut cursor = first.next_cursor.clone();
+    while let Some(after) = cursor {
+        let page: api::SearchResults =
+            parse(&kevin.send(get(&format!("{path}&before={after}"))).await);
+        expected.extend(ids(&page).into_iter().rev());
+        cursor = page.next_cursor;
+    }
+    assert_eq!(expected.len(), 85);
     // Kevin cannot access this room, but its message still changes the FTS corpus.
-    post(&mut david, ALL_TALK, 400, "unrelated words").await;
+    post(&mut david, ALL_TALK, 400, &"unrelated ".repeat(20)).await;
     let mut found = ids(&first).into_iter().rev().collect::<Vec<_>>();
     let mut cursor = first.next_cursor.expect("a second relevance page");
     for size in [40, 5] {
@@ -508,7 +525,7 @@ async fn relevance_search_pages_survive_unrelated_private_room_activity() {
             assert!(page.next_cursor.is_none());
         }
     }
-    assert_eq!(found, expected.into_iter().rev().collect::<Vec<_>>());
+    assert_eq!(found, expected);
 }
 
 #[tokio::test]

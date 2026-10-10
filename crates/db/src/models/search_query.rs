@@ -67,8 +67,15 @@ pub enum SearchSort {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SearchCursor {
-    Message { created_at: Timestamp, id: i64 },
-    Relevance { offset: u32 },
+    Message {
+        created_at: Timestamp,
+        id: i64,
+    },
+    Relevance {
+        score: u32,
+        created_at: Timestamp,
+        id: i64,
+    },
 }
 
 #[derive(Debug)]
@@ -335,7 +342,7 @@ impl SearchQuery {
     }
     /// ID-keyed paging, whether or not the cursor message still exists or is reachable.
     /// Relevance falls back to newest throughout this adapter because an ID can't encode
-    /// its offset. The SPA uses [`Self::messages_for_user_sorted`] for relevance.
+    /// its score. The SPA uses [`Self::messages_for_user_sorted`] for relevance.
     pub fn messages_for_user_after(
         &self,
         conn: &Connection,
@@ -357,8 +364,8 @@ impl SearchQuery {
             .page)
     }
 
-    /// Newest/oldest use message keys; relevance uses an offset because FTS5 recalculates
-    /// ranks when the corpus changes. Relevance pages are approximate if matches change.
+    /// Relevance counts FTS match spans in each message, independent of corpus statistics.
+    /// Pages use descending (score, created_at, id) keys, stable while matches stay unchanged.
     /// The wire page is reversed; the SPA reverses it into display order.
     pub fn messages_for_user_sorted(
         &self,
@@ -387,50 +394,62 @@ impl SearchQuery {
             values.push(user.into());
         }
         let ranked = self.sort == SearchSort::Relevance && self.match_expression().is_some();
-        sql = sql.replacen(
-            "SELECT messages.*",
-            "SELECT messages.id,messages.created_at",
-            1,
-        );
-        if let Some(SearchCursor::Message { created_at, id }) = after {
-            sql.push_str(if self.sort == SearchSort::Oldest {
-                " AND (messages.created_at,messages.id)>(?,?)"
-            } else {
-                " AND (messages.created_at,messages.id)<(?,?)"
-            });
-            values.extend([created_at.to_db().into(), id.into()]);
-        }
-        sql.push_str(if ranked {
-            " ORDER BY idx.rank ASC,messages.created_at DESC,messages.id DESC LIMIT ?"
-        } else if self.sort == SearchSort::Oldest {
-            " ORDER BY messages.created_at ASC,messages.id ASC LIMIT ?"
-        } else {
-            " ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?"
-        });
-        values.push((super::message::PAGE_SIZE + 1).into());
-        let offset = match after {
-            Some(SearchCursor::Relevance { offset }) => offset,
-            _ => 0,
-        };
         if ranked {
-            sql.push_str(" OFFSET ?");
-            values.push(offset.into());
+            // Each highlighted span adds one character. Materialize it while the FTS cursor
+            // is active, before filtering by the score in the keyset cursor.
+            sql = sql.replacen("SELECT messages.*", "SELECT messages.id,messages.created_at,length(highlight(message_search_index,0,char(1),''))-length(idx.body) AS score", 1);
+            sql = format!("WITH hits AS MATERIALIZED ({sql}) SELECT id,created_at,score FROM hits");
+            if let Some(SearchCursor::Relevance {
+                score,
+                created_at,
+                id,
+            }) = after
+            {
+                sql.push_str(" WHERE (score,created_at,id)<(?,?,?)");
+                values.extend([score.into(), created_at.to_db().into(), id.into()]);
+            }
+            sql.push_str(" ORDER BY score DESC,created_at DESC,id DESC LIMIT ?");
+        } else {
+            sql = sql.replacen(
+                "SELECT messages.*",
+                "SELECT messages.id,messages.created_at,0 AS score",
+                1,
+            );
+            if let Some(SearchCursor::Message { created_at, id }) = after {
+                sql.push_str(if self.sort == SearchSort::Oldest {
+                    " AND (messages.created_at,messages.id)>(?,?)"
+                } else {
+                    " AND (messages.created_at,messages.id)<(?,?)"
+                });
+                values.extend([created_at.to_db().into(), id.into()]);
+            }
+            sql.push_str(if self.sort == SearchSort::Oldest {
+                " ORDER BY messages.created_at ASC,messages.id ASC LIMIT ?"
+            } else {
+                " ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?"
+            });
         }
-        let mut keys: Vec<(Timestamp, i64)> =
+        values.push((super::message::PAGE_SIZE + 1).into());
+        let mut keys: Vec<(Timestamp, i64, u32)> =
             query_all(conn, &sql, rusqlite::params_from_iter(values), |row| {
-                Ok((row.get(1)?, row.get(0)?))
+                Ok((row.get(1)?, row.get(0)?, row.get(2)?))
             })?;
         let has_more = keys.len() > super::message::PAGE_SIZE as usize;
         keys.truncate(super::message::PAGE_SIZE as usize);
         let next = if !has_more {
             None
-        } else if ranked {
-            offset
-                .checked_add(super::message::PAGE_SIZE as u32)
-                .map(|offset| SearchCursor::Relevance { offset })
         } else {
-            keys.last()
-                .map(|&(created_at, id)| SearchCursor::Message { created_at, id })
+            keys.last().map(|&(created_at, id, score)| {
+                if ranked {
+                    SearchCursor::Relevance {
+                        score,
+                        created_at,
+                        id,
+                    }
+                } else {
+                    SearchCursor::Message { created_at, id }
+                }
+            })
         };
         let messages = if keys.is_empty() {
             vec![]
@@ -441,7 +460,7 @@ impl SearchQuery {
                     "SELECT * FROM messages WHERE id IN ({})",
                     crate::sql::placeholders(keys.len())
                 ),
-                rusqlite::params_from_iter(keys.iter().map(|&(_, id)| id)),
+                rusqlite::params_from_iter(keys.iter().map(|&(_, id, _)| id)),
                 Message::from_row,
             )?
             .into_iter()
@@ -449,7 +468,7 @@ impl SearchQuery {
             .collect::<std::collections::HashMap<_, _>>();
             keys.iter()
                 .rev()
-                .filter_map(|(_, id)| by_id.remove(id))
+                .filter_map(|(_, id, _)| by_id.remove(id))
                 .collect()
         };
         Ok(SortedSearchPage {

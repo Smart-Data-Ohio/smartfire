@@ -702,7 +702,7 @@ export function createSearch(ctx: S2Context): Search {
         const words = textTokens(plainText(message.bodyHtml)).map(stem);
         const count = words.filter((word) => terms.includes(word)).length;
 
-        return [message.id, count / Math.max(1, words.length)];
+        return [message.id, count];
       }),
     );
 

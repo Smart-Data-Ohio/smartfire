@@ -368,8 +368,13 @@ fn filtered_query(raw: &str, filters: &api::SearchFilters, explicit_sort: bool) 
 fn encode_search_cursor(key: search_query::SearchCursor, sort: search_query::SearchSort) -> String {
     let (created_at, id) = match key {
         search_query::SearchCursor::Message { created_at, id } => (created_at, id),
-        search_query::SearchCursor::Relevance { offset } => {
-            return URL_SAFE_NO_PAD.encode(format!("relevance|offset|{offset}"));
+        search_query::SearchCursor::Relevance {
+            score,
+            created_at,
+            id,
+        } => {
+            return URL_SAFE_NO_PAD
+                .encode(format!("relevance|{}|{id}|{score}", created_at.to_db()));
         }
     };
     if sort == search_query::SearchSort::Newest {
@@ -393,12 +398,16 @@ fn decode_search_cursor(
     }
     let text = String::from_utf8(URL_SAFE_NO_PAD.decode(raw).ok()?).ok()?;
     let parts = text.split('|').collect::<Vec<_>>();
-    if let ["relevance", "offset", offset] = parts.as_slice() {
+    if let ["relevance", at, id, score] = parts.as_slice()
+        && !score.is_empty()
+    {
         if sort != search_query::SearchSort::Relevance {
             return None;
         }
         return Some(search_query::SearchCursor::Relevance {
-            offset: offset.parse::<u32>().ok().filter(|offset| *offset > 0)?,
+            score: score.parse::<u32>().ok()?,
+            created_at: campfire_db::Timestamp::parse_db(at)?,
+            id: id.parse::<i64>().ok().filter(|id| *id > 0)?,
         });
     }
     let [mode, at, id, ""] = parts.as_slice() else {
@@ -423,7 +432,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sorted_cursors_round_trip_and_reject_wrong_modes_and_invalid_offsets() {
+    fn relevance_rejects_obsolete_offset_cursors() {
+        let cursor = URL_SAFE_NO_PAD.encode("relevance|offset|40");
+        assert_eq!(
+            decode_search_cursor(&cursor, search_query::SearchSort::Relevance),
+            None
+        );
+    }
+
+    #[test]
+    fn sorted_cursors_round_trip_and_reject_wrong_modes_and_invalid_scores() {
         use search_query::{SearchCursor, SearchSort};
         let created_at = campfire_db::Timestamp::parse_db("2026-10-06 12:00:00.123456").unwrap();
         let message = SearchCursor::Message { created_at, id: 42 };
@@ -433,7 +451,11 @@ mod tests {
             (SearchSort::Relevance, message),
             (
                 SearchSort::Relevance,
-                SearchCursor::Relevance { offset: 40 },
+                SearchCursor::Relevance {
+                    score: 3,
+                    created_at,
+                    id: 42,
+                },
             ),
         ] {
             let cursor = encode_search_cursor(key, sort);
@@ -449,12 +471,20 @@ mod tests {
             "relevance|offset|4294967296",
             "relevance|2026-10-06 12:00:00|42|-0.000123",
             "relevance|2026-10-06 12:00:00|42|NaN",
+            "relevance|2026-10-06 12:00:00|42|1.5",
+            "relevance|2026-10-06 12:00:00|42|4294967296",
+            "relevance|2026-10-06 12:00:00|-1|3",
+            "relevance|not-a-time|42|3",
         ] {
             let invalid = URL_SAFE_NO_PAD.encode(raw);
             assert_eq!(decode_search_cursor(&invalid, SearchSort::Relevance), None);
         }
         let relevance = encode_search_cursor(
-            SearchCursor::Relevance { offset: 40 },
+            SearchCursor::Relevance {
+                score: 3,
+                created_at,
+                id: 42,
+            },
             SearchSort::Relevance,
         );
         assert_eq!(decode_search_cursor(&relevance, SearchSort::Oldest), None);

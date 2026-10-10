@@ -7,7 +7,7 @@
 //! also `docs/search.md`.
 //!
 //! Search covers messages and, on the first page, matching board posts, work threads and events.
-//! Messages default to newest first; oldest and FTS5 relevance ordering are also available.
+//! Messages default to newest first; oldest and per-message relevance ordering are also available.
 //! There are no people, room or file results on the server:
 //! - **people and rooms** come from the quick switcher's [`crate::Switcher`], matched on the
 //!   client;
@@ -91,9 +91,10 @@ pub enum SearchSort {
 /// 422 (`ApiError::Validation` on `q`). New: the classic page has no such limits.
 ///
 /// `before` is the previous page's `nextCursor`: 40 results a page. Newest/oldest use timestamp
-/// and ID keys. Relevance orders by FTS5 rank with timestamp and ID tie breakers, and pages
-/// by offset because ranks change with the corpus. Relevance pages are approximate if
-/// matching messages change. Without text, relevance uses newest keys. A cursor that doesn't decode
+/// and ID keys. Relevance counts FTS match spans in each message's indexed plain text, with
+/// overlapping spans counted once. It orders by score, timestamp and ID, all descending,
+/// and pages by those keys. Unrelated activity cannot change the ordering; editing a matching
+/// message can. Without text, relevance uses newest keys. A cursor that doesn't decode
 /// or names a different sort is a 422 (`ApiError::Validation` on
 /// `before`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -115,8 +116,8 @@ pub struct SearchResults {
     pub conversations: Vec<ConversationName>,
     /// Pass as `before` for the next page; `null` when no further match exists.
     ///
-    /// Opaque to the client: a message key for newest/oldest, or an offset for relevance.
-    /// Message keys remain valid if that message is deleted or leaves the viewer's reach.
+    /// Opaque to the client: timestamp and ID keys, plus the score for relevance.
+    /// Keys remain valid if that message is deleted or leaves the viewer's reach.
     pub next_cursor: Option<String>,
     /// First page only, and only when `q` has words: up to 10 of each kind whose name (title or
     /// description, for events) contains every word. Narrowed by `in:` and `in_id:`. Author-ID,

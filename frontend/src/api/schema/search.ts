@@ -116,7 +116,7 @@ export type SearchSectionPin = Assert<Pinned<typeof SearchSection, GeneratedSear
 /**
  * `GET /api/v1/search?q=&before=`: 40 matching messages a page, in reverse display order;
  * sections on the first page only. Pass the opaque `nextCursor` back as `before`. Newest and
- * oldest use message keys; relevance uses an offset. People and rooms come from the switcher, files from
+ * oldest use message keys; relevance uses score, timestamp and ID keys. People and rooms come from the switcher, files from
  * `has:file` / `has:image`.
  */
 export const SearchResults = Schema.Struct({
