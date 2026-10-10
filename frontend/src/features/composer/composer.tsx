@@ -230,6 +230,9 @@ export function Composer({
   const hasFiles = attachments.files.length > 0;
   const hasDrive = driveFiles.length > 0;
   const canSend = (hasText || hasFiles || hasDrive) && !running;
+  // A new thread's submit holds the tray: files added now would not be in the request, and the
+  // tray goes with the navigation that follows a created thread.
+  const addingLocked = creating && running;
   // An inline reply (classic's Reply): a new thread's first message never carries one.
   const reply = useReplyTarget(creating ? null : key);
 
@@ -374,10 +377,12 @@ export function Composer({
     return true;
   };
 
-  const openPicker = () => fileInputRef.current?.click();
+  const openPicker = () => {
+    if (!addingLocked) fileInputRef.current?.click();
+  };
 
   const addFiles = (files: readonly File[]) => {
-    if (files.length === 0) {
+    if (files.length === 0 || addingLocked) {
       return;
     }
 
@@ -393,7 +398,7 @@ export function Composer({
     focusInput();
   };
 
-  const drop = useDropTarget(rootRef, addFiles, true);
+  const drop = useDropTarget(rootRef, addFiles, !addingLocked);
 
   /** Takes the room's window to the present, where a message from here lands. */
   const toPresent = () => {
@@ -834,7 +839,8 @@ export function Composer({
 
     if (files.length > 0) {
       event.preventDefault();
-      addFiles(files.map((file) => pastedName(file)));
+
+      if (!addingLocked) addFiles(files.map((file) => pastedName(file)));
 
       return;
     }
@@ -867,6 +873,7 @@ export function Composer({
       label: "Upload a file",
       icon: "paperclip",
       shortcut: shortcutKeys("upload"),
+      disabled: addingLocked,
       onSelect: openPicker,
     },
     {
