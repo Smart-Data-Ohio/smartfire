@@ -20,6 +20,7 @@ const base: Boot = {
   serviceWorkerUrl: null,
   version: "2.0.0",
   revision: null,
+  appearancePreferences: null,
 };
 
 describe("showBootFlash", () => {

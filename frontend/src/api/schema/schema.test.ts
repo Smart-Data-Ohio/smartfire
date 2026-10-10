@@ -110,8 +110,10 @@ describe("DTO schemas", () => {
       user: userJson,
       emailAddress: "ada@example.com",
       preferences: {
+        settingsRevision: 4,
         theme: "system",
         textSize: "default",
+        appearancePreferences: null,
         timeZone: "America/New_York",
         timeZoneExplicit: false,
         tourCompleted: true,

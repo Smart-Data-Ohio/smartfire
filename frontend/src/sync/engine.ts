@@ -40,7 +40,7 @@ import {
 } from "./room-refresh.ts";
 import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { recoverResyncedRooms, roomVisitToken } from "./session.ts";
-import { applySettingsSnapshot } from "./settings-snapshot.ts";
+import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
@@ -703,6 +703,8 @@ export class Engine extends Context.Service<
         const newEpoch = point?.epoch !== frame.epoch;
 
         // The epoch fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
+        // A page's first welcome has no earlier epoch to restart from, so in-flight settings loads stay valid.
+        if (newEpoch && point !== null) beginSettingsEpoch();
         mutations.beginActivityGeneration(newEpoch);
         yield* Ref.set(activitySnapshotThrough, {
           generation: store.getState().activity.generation,

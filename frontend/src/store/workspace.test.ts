@@ -22,6 +22,7 @@ const BOOT: Boot = {
   cableUrl: "/cable",
   version: "test",
   revision: null,
+  appearancePreferences: null,
   serviceWorkerUrl: null,
 };
 

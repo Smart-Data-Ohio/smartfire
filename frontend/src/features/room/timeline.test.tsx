@@ -206,6 +206,7 @@ const VIEWER: Boot = {
   serviceWorkerUrl: null,
   version: "test",
   revision: null,
+  appearancePreferences: null,
 };
 
 /** Where a virtualised row sits in the list, from the wrapper Virtua positions. */

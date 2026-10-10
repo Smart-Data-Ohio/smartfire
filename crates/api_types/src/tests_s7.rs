@@ -28,6 +28,7 @@ fn settings() -> Settings {
             text_size: TextSize::Default,
             time_zone: Some("Europe/London".into()),
             time_zones: vec![TimeZoneChoice { label: "(GMT+00:00) London".into(), value: "Europe/London".into() }],
+            appearance_preferences: None,
         },
         notifications: NotificationSettings {
             default_notification_level: NotificationLevel::Everything,
@@ -103,7 +104,8 @@ fn settings_wire() {
                 "theme": "dark",
                 "textSize": "default",
                 "timeZone": "Europe/London",
-                "timeZones": [{ "label": "(GMT+00:00) London", "value": "Europe/London" }]
+                "timeZones": [{ "label": "(GMT+00:00) London", "value": "Europe/London" }],
+                "appearancePreferences": null
             },
             "notifications": {
                 "defaultNotificationLevel": "everything",
@@ -173,8 +175,8 @@ fn settings_writes_wire() {
     );
     assert_wire(&UpdateAvatar { signed_id: "eyJf--1".into() }, json!({ "signedId": "eyJf--1" }));
     assert_wire(
-        &UpdateAppearance { theme: Some(Theme::System), text_size: None, time_zone: Some(String::new()) },
-        json!({ "theme": "system", "textSize": null, "timeZone": "" }),
+        &UpdateAppearance { theme: Some(Theme::System), text_size: None, time_zone: Some(String::new()), appearance_preferences: None },
+        json!({ "theme": "system", "textSize": null, "timeZone": "", "appearancePreferences": null }),
     );
     assert_wire(
         &UpdateNotifications {

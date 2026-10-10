@@ -43,6 +43,7 @@ const settingsJson = {
     textSize: "default",
     timeZone: "Europe/London",
     timeZones: [{ label: "(GMT+00:00) London", value: "Europe/London" }],
+    appearancePreferences: null,
   },
   notifications: {
     defaultNotificationLevel: "everything",
@@ -146,7 +147,12 @@ describe("S7 settings schemas", () => {
       githubLogin: null,
     });
     roundTrips(UpdateAvatar, { signedId: "eyJf--1" });
-    roundTrips(UpdateAppearance, { theme: "system", textSize: null, timeZone: "" });
+    roundTrips(UpdateAppearance, {
+      theme: "system",
+      textSize: null,
+      timeZone: "",
+      appearancePreferences: null,
+    });
     roundTrips(UpdateNotifications, {
       defaultNotificationLevel: null,
       roomNotification: null,
