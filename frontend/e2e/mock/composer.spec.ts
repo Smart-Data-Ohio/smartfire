@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { boardDeckPdf, onboardingMockupPng } from "../../mock/s2/assets.ts";
+import { SEED_IDS } from "../../mock/server.ts";
 import {
   expect,
   expectTouchTargets,
@@ -421,7 +422,7 @@ matrix("autocomplete: people, emoji, commands and channels", async ({ page, them
   await settle(page);
   await shot(page, "autocomplete-mention", theme);
   await composer(page).press("Enter");
-  await expect(composer(page)).toHaveValue("Thanks @[Maya Okafor] ");
+  await expect(composer(page)).toHaveValue(`Thanks <@${SEED_IDS.users.maya}> `);
   await expect(suggestions(page)).toBeHidden();
 
   await clearComposer(page);

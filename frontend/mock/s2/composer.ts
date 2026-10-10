@@ -179,9 +179,6 @@ export function createComposer(
     const scope = roomId === null ? [...world.users.keys()] : ctx.roomOr404(roomId).memberIds;
     const people = ctx.usersFor(scope).filter((user) => user.status === "active");
     const needle = (query.get("query") ?? "").trim().toLowerCase();
-    const counts = new Map<string, number>();
-
-    for (const person of people) counts.set(person.name, (counts.get(person.name) ?? 0) + 1);
 
     const suggestions = people
       .filter((user) => user.name.toLowerCase().includes(needle))
@@ -193,8 +190,7 @@ export function createComposer(
       .slice(0, USER_SUGGESTIONS)
       .map((user) => ({
         user,
-        mentionToken:
-          counts.get(user.name) === 1 && !/[[\]\n\r]/.test(user.name) ? `@[${user.name}]` : null,
+        mentionToken: `<@${user.id}>`,
       }));
 
     return { suggestions };

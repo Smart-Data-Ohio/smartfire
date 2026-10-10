@@ -45,7 +45,7 @@ pub const MARKDOWN_TAGS: &[&str] = &[
 pub const MARKDOWN_ATTRIBUTES: &[&str] = &["align", "checked", "class", "disabled", "href", "rel", "start", "target", "title", "type"];
 pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "task-list-item"];
 const BLOCK_TAGS: &[&str] = &["blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "pre", "table", "tr", "ul"];
-static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]").unwrap());
+static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]|<@([1-9][0-9]*)>").unwrap());
 static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
 static ICON_ALT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^:([a-z0-9_]+):$").unwrap());
 static LANGUAGE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^language-[a-zA-Z0-9_+#.\-]+$").unwrap());
@@ -99,12 +99,21 @@ pub struct RoomMember {
 pub trait MentionResolver {
     /// Exactly one active member of the current room with this exact, case-sensitive name.
     fn unique_active_member(&self, name: &str) -> Option<MentionUser>;
+    /// An active member of the current room with this stable user id.
+    fn active_member(&self, _id: i64) -> Option<MentionUser> {
+        None
+    }
 }
-impl MentionResolver for [RoomMember] {
+impl MentionResolver for &[RoomMember] {
     fn unique_active_member(&self, name: &str) -> Option<MentionUser> {
         let mut matches = self.iter().filter(|m| m.active && m.user.name == name);
         let first = matches.next()?;
         matches.next().is_none().then(|| first.user.clone())
+    }
+    fn active_member(&self, id: i64) -> Option<MentionUser> {
+        self.iter()
+            .find(|m| m.active && m.user.id == id)
+            .map(|m| m.user.clone())
     }
 }
 impl<F: Fn(&str) -> Option<MentionUser>> MentionResolver for F {
@@ -161,7 +170,11 @@ pub fn mention_token(name: &str) -> Option<String> {
     (!is_blank(name) && !name.contains(['[', ']', '\r', '\n'])).then(|| format!("@[{name}]"))
 }
 
-fn protect_mentions(source: &str) -> (String, Vec<(String, String)>, Regex) {
+pub fn user_mention_token(id: i64) -> String {
+    format!("<@{id}>")
+}
+
+fn protect_mentions(source: &str) -> (String, Vec<String>, Regex) {
     // Unpredictable and absent from the input, so a user cannot forge an attachment placeholder.
     let prefix = loop {
         let bytes: [u8; 12] = rand::random();
@@ -181,7 +194,7 @@ fn protect_mentions(source: &str) -> (String, Vec<(String, String)>, Regex) {
         }
         protected.push_str(&source[cursor..m.start()]);
         protected.push_str(&format!("{prefix}{}TOKEN", tokens.len()));
-        tokens.push((m.as_str().to_owned(), c[1].to_owned()));
+        tokens.push(m.as_str().to_owned());
         cursor = m.end();
     }
     protected.push_str(&source[cursor..]);
@@ -225,11 +238,24 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
 fn skipped(dom: &Dom, node: NodeId, tags: &[&str]) -> bool {
     dom.ancestors(node).iter().any(|&a| dom.local_name(a).is_some_and(|name| tags.contains(&name)))
 }
-fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[(String, String)], pattern: &Regex, mentions: &dyn MentionResolver) {
-    let users = tokens.iter().map(|(_, name)| (name.clone(), mentions.unique_active_member(name))).collect::<HashMap<_, _>>();
+fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[String], pattern: &Regex, mentions: &dyn MentionResolver) {
+    let users = tokens
+        .iter()
+        .map(|token| {
+            let user = if token.starts_with("@[") {
+                mentions.unique_active_member(&token[2..token.len() - 1])
+            } else {
+                token[2..token.len() - 1]
+                    .parse()
+                    .ok()
+                    .and_then(|id| mentions.active_member(id))
+            };
+            (token, user)
+        })
+        .collect::<HashMap<_, _>>();
     for node in dom.descendants(root) {
         for (key, value) in dom.attrs(node) {
-            let restored = pattern.replace_all(&value, |c: &regex::Captures| tokens[c[1].parse::<usize>().unwrap()].0.clone());
+            let restored = pattern.replace_all(&value, |c: &regex::Captures| tokens[c[1].parse::<usize>().unwrap()].clone());
             dom.set_attr(node, &key, &restored);
         }
         let Some(text) = dom.text(node).map(str::to_owned) else {
@@ -249,8 +275,8 @@ fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[(String, String)], pa
             if cursor < m.start() {
                 pending_text.push_str(&text[cursor..m.start()]);
             }
-            let (token, name) = &tokens[c[1].parse::<usize>().unwrap()];
-            let user = if skip { None } else { users.get(name).and_then(Option::as_ref) };
+            let token = &tokens[c[1].parse::<usize>().unwrap()];
+            let user = if skip { None } else { users.get(token).and_then(Option::as_ref) };
             match user {
                 Some(user) => {
                     if !pending_text.is_empty() {
