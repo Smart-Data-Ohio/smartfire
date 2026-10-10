@@ -162,9 +162,9 @@ pub struct MessagePreview {
     pub body_html: String,
 }
 
-/// A message to be sent later (`scheduled_messages`). Text only: attachments can't be
-/// scheduled. The scheduler checks every 30 s and posts it as the viewer, like a typed message
-/// (`ScheduledMessage::dispatch`, from `app/models/scheduled_message/dispatcher.rb`). If it
+/// A message to be sent later (`scheduled_messages`). The scheduler checks every 30 s and
+/// posts it as the viewer, like a typed message (`ScheduledMessage::dispatch`, from
+/// `app/models/scheduled_message/dispatcher.rb`). If it
 /// can't be posted by then it's dropped instead, with a `scheduled_message_dropped` activity
 /// item.
 ///
@@ -207,6 +207,16 @@ pub struct ScheduledMessage {
     /// page's "Not sent (channel access lost)").
     pub drop_reason: Option<String>,
     pub created_at: Timestamp,
+    pub attachments: Vec<ScheduledAttachment>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ScheduledAttachment {
+    pub attachment: crate::Attachment,
+    /// Keeps this upload when editing the scheduled draft's ordered file list.
+    pub signed_id: String,
 }
 
 /// A scheduled message's state (`ScheduledMessage#pending?/sent?/dropped?/claimed?`).
@@ -227,7 +237,7 @@ pub enum ScheduledMessageState {
 /// `POST /api/v1/rooms/:id/scheduled_messages` (201 with the [`ScheduledMessage`];
 /// `scheduled_messages#create`). Active humans only (403 otherwise).
 ///
-/// A thread that isn't in this room is a 404. 422 when the text is blank or over 50 000
+/// A thread that isn't in this room is a 404. 422 when the text is blank with no files or over 50 000
 /// characters, `sendAt` isn't in the future, or the reply target isn't in the same conversation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -237,9 +247,16 @@ pub struct CreateScheduledMessage {
     pub send_at: Timestamp,
     pub thread_id: Option<i64>,
     pub reply_to_message_id: Option<i64>,
+    /// The same owned upload slots as an immediate send; do not combine them.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_signed_id: Option<String>,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_signed_ids: Option<Vec<String>>,
 }
 
-/// `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time or reply target
+/// `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time, files or reply target
 /// (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A field left out keeps
 /// its value. Null text/time also keep their values; a null reply target clears it.
 /// `sendAt` must be in the future when it changes (422).
@@ -272,6 +289,13 @@ pub struct UpdateScheduledMessage {
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reply_to_message_id: Option<Option<i64>>,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_signed_id: Option<String>,
+    /// Replace the ordered file list, including retained signed ids; an empty list removes all.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_signed_ids: Option<Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -283,6 +307,10 @@ struct UpdateScheduledMessageFields {
     send_at: Option<Timestamp>,
     #[serde(default, deserialize_with = "present_reply_target")]
     reply_to_message_id: Option<Option<i64>>,
+    #[serde(default)]
+    attachment_signed_id: Option<String>,
+    #[serde(default)]
+    attachment_signed_ids: Option<Vec<String>>,
 }
 
 impl<'de> Deserialize<'de> for UpdateScheduledMessage {
@@ -292,6 +320,8 @@ impl<'de> Deserialize<'de> for UpdateScheduledMessage {
             markdown_source: fields.markdown_source,
             send_at: fields.send_at,
             reply_to_message_id: fields.reply_to_message_id,
+            attachment_signed_id: fields.attachment_signed_id,
+            attachment_signed_ids: fields.attachment_signed_ids,
         })
     }
 }

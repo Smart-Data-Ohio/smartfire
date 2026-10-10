@@ -603,10 +603,16 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
+        if blob.is_video() && (blob.is_previewable() || blob.is_variable()) {
+            self.recover_attachment_preview(message, blob)?;
+        }
+        self.attachment_file(blob)
+    }
+
+    pub fn attachment_file(&self, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
         let verifier = &*self.storage.verifier;
         let preview = if blob.is_previewable() || blob.is_variable() {
             if blob.is_video() {
-                self.recover_attachment_preview(message, blob)?;
                 // `attachment.preview(format: :webp, resize_to_limit: [...])`
                 let poster = Variation::new(vec![
                     (

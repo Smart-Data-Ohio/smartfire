@@ -23,7 +23,7 @@ import {
   ok,
   validation,
 } from "../http.ts";
-import { field, intField, type Json, stringField } from "../json.ts";
+import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
 import { mockExcerpt, renderMarkdown } from "../markdown.ts";
 import { conversationNames } from "../s3/conversations.ts";
 import { beforeOf, keysetPage } from "../s3/model.ts";
@@ -31,8 +31,9 @@ import { type RoomRecord, VIEWER_ID } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { imageIcons, searchIcons } from "./emoji.ts";
 import { iso, type MessageDraft, plainDraft, SOURCE_LIMIT, type ThreadRecord } from "./model.ts";
-import { checkMarkdown } from "./posting.ts";
+import { checkMarkdown, groupedFiles } from "./posting.ts";
 import type { Threads } from "./threads.ts";
+import type { Uploads } from "./uploads.ts";
 import { endOfLocalDay, leadingTime, longDate, longTime, trailingTime } from "./when.ts";
 
 /** The viewer's time zone (`Me.preferences.timeZone`), which slash command times are read in. */
@@ -170,6 +171,7 @@ export function createComposer(
   save: (messageId: number, remindAt: string) => void,
   hooks: ScheduledHooks = NO_HOOKS,
   uploadedIcons: () => readonly Icon[] = () => [],
+  uploads: Pick<Uploads, "attachment">,
 ): Composer {
   const timers = new Map<number, number>();
 
@@ -604,12 +606,19 @@ export function createComposer(
     return iso(at);
   };
 
-  const markdownOf = (body: Json | undefined): string => {
-    const markdown = checkMarkdown(stringField(body, "markdownSource"), false);
+  const markdownOf = (body: Json | undefined, hasFiles: boolean): string =>
+    checkMarkdown(stringField(body, "markdownSource"), hasFiles);
 
-    if (markdown.trim() === "") throw validation("body", "Body can't be blank");
+  const scheduledFiles = (body: Json | undefined): ScheduledMessage["attachments"] => {
+    const single = stringField(body, "attachmentSignedId");
+    const grouped = groupedFiles(body, single, uploads.attachment);
+    const many = stringArrayField(body, "attachmentSignedIds") ?? [];
+    const ids = many.length > 0 ? many : single ? [single] : [];
 
-    return markdown;
+    return ids.map((signedId, index) => ({
+      signedId,
+      attachment: grouped?.[index] ?? uploads.attachment(signedId),
+    }));
   };
 
   const arm = (message: ScheduledMessage) => {
@@ -691,6 +700,8 @@ export function createComposer(
     const draft: MessageDraft = {
       ...plainDraft(VIEWER_ID, message.markdownSource, ctx.uuid()),
       replyToMessageId: replyPreview(message)?.messageId ?? null,
+      attachment: message.attachments[0]?.attachment ?? null,
+      attachments: message.attachments.map((file) => file.attachment),
     };
 
     let posted: MessageDTO;
@@ -777,7 +788,8 @@ export function createComposer(
 
     ctx.roomOr404(roomId);
 
-    const markdown = markdownOf(body);
+    const attachments = scheduledFiles(body);
+    const markdown = markdownOf(body, attachments.length > 0);
     const sendAt = sendAtOf(body);
 
     checkTarget(roomId, threadId, replyTo);
@@ -798,6 +810,7 @@ export function createComposer(
       droppedAt: null,
       dropReason: null,
       createdAt: iso(ctx.now()),
+      attachments,
     };
 
     world.scheduled.set(message.id, message);
@@ -811,12 +824,21 @@ export function createComposer(
   const updateScheduled = (id: number, body: Json | undefined): ScheduledMessage => {
     const current = idleOr409(id);
 
-    const markdownSource =
-      stringField(body, "markdownSource") === null ? current.markdownSource : markdownOf(body);
+    const attachments =
+      field(body, "attachmentSignedIds") === undefined &&
+      field(body, "attachmentSignedId") === undefined
+        ? current.attachments
+        : scheduledFiles(body);
+
+    const markdownSource = checkMarkdown(
+      stringField(body, "markdownSource") ?? current.markdownSource,
+      attachments.length > 0,
+    );
 
     const next = {
       ...current,
       markdownSource,
+      attachments,
       excerpt: mockExcerpt(markdownSource),
       sendAt: stringField(body, "sendAt") === null ? current.sendAt : sendAtOf(body),
       replyToMessageId:

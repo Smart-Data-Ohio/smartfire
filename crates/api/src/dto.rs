@@ -556,7 +556,7 @@ pub(crate) fn ids_query<T>(
 }
 
 /// `AttachmentView` with its blob's type and size.
-fn attachment(
+pub(crate) fn attachment(
     view: campfire_presentation::messages::AttachmentView,
     content_type: Option<&str>,
     byte_size: i64,
