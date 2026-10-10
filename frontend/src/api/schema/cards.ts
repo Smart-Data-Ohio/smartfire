@@ -106,6 +106,7 @@ export type PollResultsPin = Assert<Pinned<typeof PollResults, GeneratedPollResu
  */
 export const CreatePoll = Schema.Struct({
   clientMessageId: Schema.String,
+  threadId: Schema.NullOr(ThreadId),
   question: Schema.String,
   options: Schema.Array(Schema.String),
   multiple: Schema.Boolean,

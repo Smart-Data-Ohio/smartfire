@@ -1,5 +1,6 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Thread } from "../../gen/Thread.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
@@ -9,6 +10,22 @@ import { Composer } from "./composer.tsx";
 import { draftKey, readDraft } from "./draft.ts";
 
 const ROOM = 12;
+
+function pollThread(status: Thread["status"]): Thread {
+  return {
+    id: 7,
+    roomId: ROOM,
+    parentMessageId: null,
+    creatorId: 1,
+    name: "Lunch",
+    status,
+    replyCount: 0,
+    lastActivityAt: "2026-10-09T12:00:00Z",
+    autoArchiveAfterMinutes: 1440,
+    createdAt: "2026-10-09T12:00:00Z",
+    work: null,
+  };
+}
 
 function serveDrive() {
   vi.spyOn(actions.drive, "preparePicker").mockResolvedValue({
@@ -60,9 +77,61 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   store.setState(initialState, true);
+});
+
+describe("polls in the composer", () => {
+  it("posts a poll to the active thread and preserves its draft on refusal", async () => {
+    store.setState({ threads: { 7: pollThread("active") } });
+
+    const create = vi
+      .spyOn(actions.cards, "createPoll")
+      .mockRejectedValue(new Error("Thread closed"));
+
+    render(<Composer roomId={ROOM} threadId={7} placeholder="Message" />);
+    fireEvent.click(screen.getByRole("button", { name: "Attach and more" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Create a poll" }));
+    await screen.findByRole("dialog", { name: "Create a poll" });
+    fireEvent.change(screen.getByRole("textbox", { name: "Question" }), {
+      target: { value: "Lunch?" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Option 1" }), {
+      target: { value: "Pizza" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Option 2" }), {
+      target: { value: "Tacos" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Post poll" }));
+    await screen.findByText("Thread closed");
+    expect(create).toHaveBeenCalledExactlyOnceWith(ROOM, {
+      clientMessageId: expect.any(String),
+      question: "Lunch?",
+      options: ["Pizza", "Tacos"],
+      multiple: false,
+      anonymous: false,
+      closesAt: null,
+      threadId: 7,
+    });
+    expect(screen.getByRole("textbox", { name: "Question" })).toHaveProperty("value", "Lunch?");
+  });
+
+  it.each(["closed", "locked"] as const)("hides poll creation in a %s thread", async (status) => {
+    store.setState({ threads: { 7: pollThread(status) } });
+    render(<Composer roomId={ROOM} threadId={7} />);
+    fireEvent.click(screen.getByRole("button", { name: "Attach and more" }));
+    await screen.findByRole("menuitem", { name: "Upload a file" });
+    expect(screen.queryByRole("menuitem", { name: "Create a poll" })).toBeNull();
+  });
+
+  it("keeps poll creation out of a new thread's first reply", async () => {
+    render(<Composer roomId={ROOM} onSubmit={async () => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Attach and more" }));
+    await screen.findByRole("menuitem", { name: "Upload a file" });
+    expect(screen.queryByRole("menuitem", { name: "Create a poll" })).toBeNull();
+  });
 });
 
 describe("sending from history", () => {

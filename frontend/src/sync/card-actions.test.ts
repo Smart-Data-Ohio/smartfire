@@ -114,6 +114,7 @@ describe("card actions", () => {
 
       const body = {
         clientMessageId: "0199a000-0000-7000-8000-000000000001",
+        threadId: null,
         question: "Lunch?",
         options: ["Tea", "Coffee"],
         multiple: false,

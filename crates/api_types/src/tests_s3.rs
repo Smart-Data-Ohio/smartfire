@@ -613,13 +613,14 @@ fn polls_round_trip() {
     assert_wire(
         &CreatePoll {
             client_message_id: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12".into(),
+            thread_id: None,
             question: "Lunch?".into(),
             options: vec!["Tacos".into(), "Pizza".into()],
             multiple: false,
             anonymous: false,
             closes_at: None,
         },
-        json!({"clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12", "question": "Lunch?", "options": ["Tacos", "Pizza"], "multiple": false, "anonymous": false, "closesAt": null}),
+        json!({"clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12", "threadId": null, "question": "Lunch?", "options": ["Tacos", "Pizza"], "multiple": false, "anonymous": false, "closesAt": null}),
     );
     assert_wire(&VotePoll { option_ids: vec![] }, json!({"optionIds": []}));
 }

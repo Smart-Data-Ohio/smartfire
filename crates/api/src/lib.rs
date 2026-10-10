@@ -209,6 +209,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             post(unparsed_action(cards::vote)),
         )
         .route(
+            "/api/v1/rooms/{room_id}/polls/{poll_id}/end",
+            post(unparsed_action(cards::end_poll)),
+        )
+        .route(
             "/api/v1/rooms/{room_id}/events",
             get(action(events::index)).post(unparsed_action(events::create)),
         )

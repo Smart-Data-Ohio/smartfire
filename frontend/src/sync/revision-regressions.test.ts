@@ -422,7 +422,7 @@ describe("S4 revisions through held network responses", () => {
       );
 
       const updating = yield* Effect.forkChild(
-        threads.update(THREAD, { name: "Renamed", status: null }),
+        threads.update(THREAD, { name: "Renamed", autoArchiveAfterMinutes: null, status: null }),
       );
 
       yield* Deferred.await(updateStarted);

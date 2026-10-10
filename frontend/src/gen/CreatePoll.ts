@@ -12,12 +12,17 @@
  *
  * 422 when the question is blank, there are fewer than 2 or more than 10 non-blank options,
  * a label is over 200 characters, or `closesAt` isn't in the future.
+ * A thread must belong to the room (404) and be active when written (403 if closed or locked).
  */
 export type CreatePoll = {
 /**
  * The sender's id for the question message: a UUID, as for [`crate::CreateMessage`].
  */
 clientMessageId: string,
+/**
+ * Post inside this thread of the room; `null` for the root timeline.
+ */
+threadId: number | null,
 /**
  * Markdown, posted as the message.
  */
