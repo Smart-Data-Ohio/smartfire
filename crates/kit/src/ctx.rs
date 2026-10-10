@@ -56,6 +56,8 @@ pub struct Ctx {
     live: bool,
     /// The validated, spooled body of an [`crate::unparsed_action`].
     unread_body: Option<tokio::fs::File>,
+    // Body is Send but not Sync; shared references to Ctx must remain Send.
+    streaming_body: Option<std::sync::Mutex<axum::body::Body>>,
     spooled_params_pending: bool,
 }
 
@@ -122,12 +124,30 @@ impl Ctx {
             rendered_format: None,
             live: false,
             unread_body: None,
+            streaming_body: None,
             spooled_params_pending: false,
         }
     }
 
     pub(crate) fn leave_body_unread(&mut self, body: tokio::fs::File) {
         self.unread_body = Some(body);
+    }
+
+    pub(crate) fn leave_body_streaming(&mut self, body: axum::body::Body) {
+        self.streaming_body = Some(std::sync::Mutex::new(body));
+    }
+
+    /// Count a streamed upload's bytes as they arrive, stopping before writing a chunk that
+    /// exceeds the action's limit or the configured request limit.
+    pub async fn spool_body(&mut self, limit: usize) -> Result<()> {
+        let limit = self.kit.config().max_body_bytes.map_or(limit, |configured| configured.min(limit));
+        if let Some(body) = self.streaming_body.take() {
+            let body = body.into_inner().map_err(|error| Error::internal(anyhow::anyhow!(error.to_string())))?;
+            self.unread_body = crate::body::validate_unparsed(body, Some(limit))
+                .await.map_err(|error| Error::Status(error.status()))?;
+            self.defer_spooled_params();
+        }
+        Ok(())
     }
 
     pub(crate) fn defer_spooled_params(&mut self) {

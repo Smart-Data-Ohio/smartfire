@@ -43,6 +43,7 @@ export const Workspace = Schema.Struct({
   joinUrl: Schema.String,
   canAdminister: Schema.Boolean,
   restrictRoomCreationToAdministrators: Schema.Boolean,
+  uploadLimitBytes: Schema.Int,
   version: Schema.String,
 });
 
@@ -54,6 +55,7 @@ export type WorkspacePin = Assert<Pinned<typeof Workspace, GeneratedWorkspace>>;
 export const UpdateWorkspace = Schema.Struct({
   name: Schema.NullOr(Schema.String),
   restrictRoomCreationToAdministrators: Schema.NullOr(Schema.Boolean),
+  uploadLimitBytes: Schema.NullOr(Schema.Int),
 });
 
 export type UpdateWorkspace = typeof UpdateWorkspace.Type;

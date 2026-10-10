@@ -2,6 +2,9 @@
 
 The existing app remains an ONCE deployment on `campfire` in GCP project `smart-data-campfire`, zone `us-central1-a`. Its hostname is `chat.smartdata.net`. Update that deployment in place so its storage volume, account, users, messages, uploaded files, session signing key, and web-push keys remain attached.
 
+The [upload size policy](../docs/uploads.md) documents the 100 MB default and the transport
+limits to preserve when changing the hosting or proxy configuration.
+
 The separate [Huddles media package](huddles/README.md) runs on `campfire-huddles` in the same zone. It is independent of the app's database. This separates resource usage and maintenance; it does not provide zone redundancy. The anticipated workspace size is about 135 users. Concurrent call participants and screen-share traffic need separate capacity testing; the initial two-CPU/eight-GiB media host is a pilot size, not a demonstrated 135-participant capacity.
 
 ## Automated path

@@ -197,6 +197,7 @@ const VIEWER: Boot = {
     logoStillUrl: null,
     bannerUrl: null,
     bannerStillUrl: null,
+    uploadLimitBytes: 100 * 1024 * 1024,
   },
   theme: "system",
   textSize: "default",

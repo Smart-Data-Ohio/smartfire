@@ -298,6 +298,7 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
         restrict_room_creation_to_administrators: account
             .settings()
             .restrict_room_creation_to_administrators(),
+        upload_limit_bytes: account.settings().upload_limit_bytes(),
         version: c.app().config.app_version.clone(),
     };
     c.json(StatusCode::OK, &workspace)
@@ -306,7 +307,15 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
 async fn save_workspace(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateWorkspace = body(c).await?;
-    let settings = update
+    if let Some(bytes) = update.upload_limit_bytes
+        && !(1..=campfire_db::models::account::MAX_UPLOAD_LIMIT_BYTES).contains(&bytes)
+    {
+        return Err(fail(
+            c,
+            validation("uploadLimitBytes", "must be a positive safe integer"),
+        ));
+    }
+    let mut settings = update
         .restrict_room_creation_to_administrators
         .map(|restrict| {
             vec![(
@@ -314,6 +323,11 @@ async fn save_workspace(c: &mut Ctx) -> Result {
                 restrict.to_string(),
             )]
         });
+    if let Some(bytes) = update.upload_limit_bytes {
+        settings
+            .get_or_insert_with(Vec::new)
+            .push(("upload_limit_bytes".into(), bytes.to_string()));
+    }
     write_workspace(
         c,
         update.name,

@@ -194,7 +194,7 @@ async fn start(
         }
     }
     let attachment = match assignment {
-        Some(assignment) => Some(assignment.stage(c.app()).await?),
+        Some(assignment) => Some(messages::stage_attachment(c, assignment).await?),
         None => None,
     };
     if matches!(
