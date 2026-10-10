@@ -1,7 +1,0 @@
-.colorize--white {
-  filter: var(--icon-filter-inverse, invert(100%));
-}
-
-.colorize--black {
-  filter: var(--icon-filter, none);
-}

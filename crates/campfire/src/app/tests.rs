@@ -141,7 +141,7 @@ async fn health_check() {
 #[tokio::test]
 async fn public_files_are_served_before_routing() {
     let Some(test) = boot_seeded().await else { return };
-    let css = campfire_assets::stylesheet_path(campfire_assets::all_stylesheet_paths()[0]);
+    let css = campfire_static_assets::stylesheet_path("auth");
     let reply = send(&test.booted.router, get(&css)).await;
     assert_eq!(reply.status, StatusCode::OK, "{css}");
     // Our Rails marks fingerprinted assets immutable (RailsExt::ImmutableAssetHeaders) and serves
@@ -149,7 +149,7 @@ async fn public_files_are_served_before_routing() {
     assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
 
     let manifest = send(&test.booted.router, get("/assets/.manifest.json")).await;
-    assert_eq!(manifest.body, campfire_assets::manifest_json().as_bytes());
+    assert_eq!(manifest.body, campfire_static_assets::manifest_json().as_bytes());
 
     let robots = send(&test.booted.router, get("/robots.txt")).await;
     assert_eq!(robots.status, StatusCode::OK);

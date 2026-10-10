@@ -9,7 +9,7 @@
 #   docker build -t campfire-rust --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
 #
 # The build context is the repository root. crates/static_assets holds retained auth/media/public
-# inputs; web/ still holds the classic browser bundles. Runtime hooks live in this tree and honor the storage overrides.
+# inputs. Runtime hooks live in this tree and honor the storage overrides.
 #
 # Media: variants and video posters must be byte-identical to the reference's, so libvips and
 # ffmpeg are built from the same Debian trixie source packages the reference image ships
@@ -167,12 +167,7 @@ ARG CARGO_CACHE_SCOPE=campfire-rust
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates crates
-# Retained static inputs come with crates/. Only classic browser inputs still come from web/.
-COPY web/app/assets web/app/assets
-COPY web/app/javascript web/app/javascript
-COPY web/vendor/javascript web/vendor/javascript
-COPY web/config/importmap.rb web/config/importmap.rb
-COPY web/config/initializers/assets.rb web/config/initializers/assets.rb
+# Retained auth, media and public inputs come with crates/static_assets.
 # crates/spa/build.rs embeds the SPA built above (and fails the build if SPA_DIST has none).
 COPY frontend/src/auth frontend/src/auth
 COPY frontend/src/styles frontend/src/styles

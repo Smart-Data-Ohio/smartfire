@@ -1,6 +1,5 @@
 //! What a page carries for its own request: the authenticity tokens (`csrf_meta_tags`, a form's
-//! hidden `authenticity_token`) and the Content Security Policy nonce (`csp_meta_tag`, the
-//! importmap tags).
+//! hidden `authenticity_token`) and the Content Security Policy nonce (`csp_meta_tag`).
 //!
 //! The controller lends them for the length of a render ([`rendering_with`]); templates and
 //! helpers read them without threading them through every view model. Outside a render that has
@@ -10,7 +9,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use super::html::{Html, Safe, escape};
+use super::html::{Html, Safe};
 use super::tag::{attrs, legacy_tag};
 
 /// `form_authenticity_token` for this request's session.
@@ -187,35 +186,6 @@ pub fn csp_meta_tag() -> Html {
     }
 }
 
-/// `javascript_importmap_tags` with this request's nonce on the import map, each
-/// `modulepreload` link and the module script, as importmap-rails adds it.
-pub fn javascript_importmap_tags(tags: &str) -> Html {
-    let Some(nonce) = csp_nonce() else {
-        return Safe(tags.to_string());
-    };
-    let attribute = format!(" nonce=\"{}\">", escape(&nonce));
-    let mut out = String::with_capacity(tags.len() + 64 * attribute.len());
-    let mut rest = tags;
-    while let Some(start) = [
-        "<script type=\"importmap\"",
-        "<link rel=\"modulepreload\"",
-        "<script type=\"module\"",
-    ]
-    .iter()
-    .filter_map(|open| rest.find(open))
-    .min()
-    {
-        let Some(end) = rest[start..].find('>').map(|end| start + end) else {
-            break;
-        };
-        out.push_str(&rest[..end]);
-        out.push_str(&attribute);
-        rest = &rest[end + 1..];
-    }
-    out.push_str(rest);
-    Safe(out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,17 +307,6 @@ mod tests {
         assert!(
             !form_with("/rooms").open().0.contains("authenticity_token"),
             "none outside a render"
-        );
-    }
-
-    #[test]
-    fn importmap_tags_get_the_nonce() {
-        let tags = "<script type=\"importmap\" data-turbo-track=\"reload\">{}</script>\n<link rel=\"modulepreload\" href=\"/a.js\">\n<link rel=\"modulepreload\" href=\"/b.js\">\n<script type=\"module\">import \"application\"</script>";
-        assert_eq!(javascript_importmap_tags(tags).0, tags);
-        let with_nonce = rendering_with(secrets(Some("N")), || javascript_importmap_tags(tags).0);
-        assert_eq!(
-            with_nonce,
-            "<script type=\"importmap\" data-turbo-track=\"reload\" nonce=\"N\">{}</script>\n<link rel=\"modulepreload\" href=\"/a.js\" nonce=\"N\">\n<link rel=\"modulepreload\" href=\"/b.js\" nonce=\"N\">\n<script type=\"module\" nonce=\"N\">import \"application\"</script>"
         );
     }
 
