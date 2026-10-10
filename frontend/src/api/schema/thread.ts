@@ -154,6 +154,7 @@ export type ThreadCreatedPin = Assert<Pinned<typeof ThreadCreated, GeneratedThre
 /** The body of `PATCH /api/v1/threads/:id`; `null` leaves a field alone. */
 export const UpdateThread = Schema.Struct({
   name: Schema.NullOr(Schema.String),
+  autoArchiveAfterMinutes: Schema.NullOr(Schema.Int),
   status: Schema.NullOr(ThreadStatus),
 });
 

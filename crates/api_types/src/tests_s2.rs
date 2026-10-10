@@ -670,9 +670,18 @@ fn threads_round_trip() {
     assert_wire(
         &UpdateThread {
             name: None,
+            auto_archive_after_minutes: None,
             status: Some(ThreadStatus::Locked),
         },
-        json!({"name": null, "status": "locked"}),
+        json!({"name": null, "autoArchiveAfterMinutes": null, "status": "locked"}),
+    );
+    assert_wire(
+        &UpdateThread {
+            name: Some("Renamed".into()),
+            auto_archive_after_minutes: Some(1440),
+            status: None,
+        },
+        json!({"name": "Renamed", "autoArchiveAfterMinutes": 1440, "status": null}),
     );
     assert_wire(
         &JoinThread {
