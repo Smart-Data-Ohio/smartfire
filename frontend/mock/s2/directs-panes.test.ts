@@ -252,6 +252,57 @@ describe("files", () => {
     expect(code.files.map((file) => file.attachment.filename)).toEqual(["rate_limiter.rs"]);
   });
 
+  it("lists every file from a thread's grouped first reply", async () => {
+    const { server } = harness();
+    const ids: string[] = [];
+
+    for (const filename of ["one.txt", "two.txt", "three.txt"]) {
+      const upload = await expectStatus<{ signedId: string; uploadUrl: string }>(
+        server,
+        "POST",
+        "/api/v1/uploads",
+        {
+          filename,
+          byteSize: 1,
+          checksum: "DMF1ucDxtqgxw5niaXcmYQ==",
+          contentType: "text/plain",
+        },
+        200,
+      );
+
+      await server.handleBinary({
+        method: "PUT",
+        path: upload.uploadUrl,
+        headers: { "Content-Type": "text/plain" },
+        bytes: new TextEncoder().encode("a"),
+      });
+      ids.push(upload.signedId);
+    }
+
+    await expectStatus(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/threads`,
+      {
+        parentMessageId: messages.generalChart,
+        name: "Grouped files",
+        message: messageBody("grouped-first-reply", "", { attachmentSignedIds: ids }),
+      },
+      201,
+    );
+
+    const files = await get<FileList>(
+      server,
+      `/api/v1/rooms/${rooms.general}/files?type=documents`,
+    );
+
+    expect(files.files.slice(0, 3).map((file) => file.attachment.filename)).toEqual([
+      "one.txt",
+      "two.txt",
+      "three.txt",
+    ]);
+  });
+
   it("pages 30 at a time", async () => {
     const { server } = harness();
 

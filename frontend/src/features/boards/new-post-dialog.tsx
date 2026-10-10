@@ -7,8 +7,16 @@ import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
+import { IconButton } from "../../ui/icon-button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { AttachmentTray } from "../composer/attachments/attachment-tray.tsx";
+import {
+  fileOptions,
+  MAX_FILES,
+  pastedName,
+  useAttachments,
+} from "../composer/attachments/use-attachments.ts";
 import { isAgent } from "../people/people.ts";
 import {
   MAX_TAGS,
@@ -182,6 +190,8 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const briefId = useId();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const attachments = useAttachments(MAX_FILES);
   // One opening of the dialog: a reply that lands after Cancel, a reopen or a room change belongs
   // to an opening that's gone, and must neither navigate nor touch the new draft.
   const openingRef = useRef(0);
@@ -189,6 +199,12 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   // lost reply answers the post the first attempt made instead of making a second.
   const clientIdRef = useRef(uuid7(Date.now()));
   const savingRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      for (const file of attachments.files) attachments.remove(file.id);
+    }
+  }, [open, attachments]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: opening or a new room is the trigger
   useEffect(() => {
@@ -240,11 +256,25 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
     draft.brief !== EMPTY.brief ||
     draft.status !== EMPTY.status ||
     draft.ownerId !== EMPTY.ownerId ||
-    draft.tags !== EMPTY.tags;
+    draft.tags !== EMPTY.tags ||
+    attachments.files.length > 0;
 
   const fail = (next: Fields) => {
     setFields(next);
     setAttempt((count) => count + 1);
+  };
+
+  const addFiles = (files: readonly File[]) => {
+    if (savingRef.current) return;
+
+    const overflow = attachments.add(files);
+
+    if (overflow > 0) {
+      toast({
+        title: `A message holds up to ${MAX_FILES} files`,
+        description: `${overflow === 1 ? "1 file wasn't" : `${overflow} files weren't`} added. Create this post, then add the rest in a reply.`,
+      });
+    }
   };
 
   const submit = () => {
@@ -261,6 +291,20 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
       return;
     }
 
+    if (!attachments.ready) {
+      toast({
+        title: attachments.failed ? "A file didn't upload" : "Wait for the files to upload",
+        description: attachments.failed
+          ? "Retry or remove it before creating the post."
+          : "Create the post once all uploads finish.",
+        tone: "danger",
+      });
+
+      return;
+    }
+
+    const files = attachments.files;
+    const uploaded = fileOptions(files);
     const opening = openingRef.current;
     const current = () => openingRef.current === opening;
 
@@ -273,6 +317,8 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
         ownerId: draft.ownerId === "" ? null : Number(draft.ownerId),
         tags,
         brief: draft.brief,
+        attachmentSignedId: uploaded.attachmentSignedId ?? null,
+        attachmentSignedIds: uploaded.attachmentSignedIds ?? [],
         clientId: clientIdRef.current,
       })
       .then(
@@ -281,6 +327,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
             return;
           }
 
+          attachments.clearSent(files);
           setDraft(EMPTY);
           setFields(NO_FIELDS);
           onCreated(detail.thread.id);
@@ -313,6 +360,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
 
   const close = (next: boolean) => {
     if (!next) {
+      for (const file of attachments.files) attachments.remove(file.id);
       setFields(NO_FIELDS);
       onClose();
     }
@@ -330,7 +378,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
           <Button variant="secondary" onClick={() => close(false)}>
             Cancel
           </Button>
-          <Button variant="primary" loading={saving} onClick={submit}>
+          <Button variant="primary" loading={saving} disabled={!attachments.ready} onClick={submit}>
             Create post
           </Button>
         </>
@@ -365,11 +413,44 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
             rows={5}
             value={draft.brief}
             onChange={(event) => set({ brief: event.target.value })}
+            onPaste={(event) => {
+              const files = [...event.clipboardData.files];
+
+              if (files.length > 0) {
+                event.preventDefault();
+                addFiles(files.map((file) => pastedName(file)));
+              }
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                 event.preventDefault();
                 submit();
               }
+            }}
+          />
+          <AttachmentTray
+            files={attachments.files}
+            onRemove={attachments.remove}
+            onRetry={attachments.retry}
+          />
+          <IconButton
+            icon="plus"
+            label="Upload files"
+            size="sm"
+            disabled={saving}
+            onClick={() => fileInputRef.current?.click()}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled={saving}
+            onChange={(event) => {
+              addFiles([...(event.target.files ?? [])]);
+              event.target.value = "";
             }}
           />
           <p className="field-error t-error-msg" aria-live="polite">
