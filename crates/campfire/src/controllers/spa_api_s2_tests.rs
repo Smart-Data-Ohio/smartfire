@@ -1260,10 +1260,21 @@ async fn a_client_resuming_after_a_leave_sees_the_removal() {
         ))
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let mut removal_seen = false;
     loop {
         match sync.next().await {
+            // The removal can reach this socket before the bye; keep the cursor short of it so the
+            // resume still has to deliver it rather than waiting on a replay with nothing in it.
             Some(api::ServerFrame::Batch { events }) => {
-                seq = events.last().map_or(seq, |event| event.seq);
+                for event in events {
+                    if matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room)
+                    {
+                        removal_seen = true;
+                    }
+                    if !removal_seen {
+                        seq = event.seq;
+                    }
+                }
             }
             Some(api::ServerFrame::Ping) => {}
             Some(api::ServerFrame::Bye {
