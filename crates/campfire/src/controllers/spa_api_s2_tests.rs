@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 
 use super::api_tests::{BOOSTED, Sync, app, created_in, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
-    ALL_TALK, DAVID, HQ, JASON, KEVIN, Req, TestApp,
+    ALL_TALK, BENDER_KEY, DAVID, HQ, JASON, KEVIN, Req, TestApp,
 };
 
 /// David's newest root message in All Talk.
@@ -589,6 +589,54 @@ async fn a_forwarded_spoiler_stays_hidden_after_an_edit() {
         "{}",
         edited.body_html
     );
+}
+
+#[tokio::test]
+async fn a_bot_spoiler_reads_the_same_in_the_app_and_every_excerpt() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let rich_text = a.booted.app.db.env().rich_text.clone();
+    for (html, spoiler) in [
+        (r#"<p>before <span class="spoiler">SECRET</span> after</p>"#, true),
+        (r#"<p>before <span data-spoiler="">SECRET</span> after</p>"#, true),
+        (r#"<p>before <span class="loud spoiler" data-spoiler="no">SECRET</span> after</p>"#, true),
+        (r#"<p>before <b class="spoiler">SECRET</b> after</p>"#, false),
+        (r#"<p>before <a href="https://example.com/x" data-spoiler="">SECRET</a></p>"#, false),
+    ] {
+        let mut bot = a.anonymous();
+        let reply = bot
+            .send(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")).body(html))
+            .await;
+        assert!(reply.status.is_success(), "{html}: {}", reply.text());
+        let id: i64 = a
+            .db()
+            .read(|conn| Ok(conn.query_row("SELECT MAX(id) FROM messages", [], |row| row.get(0))?))
+            .await
+            .unwrap();
+        let rich_text = rich_text.clone();
+        let excerpt = a
+            .db()
+            .read(move |conn| campfire_db::Message::find(conn, id)?.plain_text_body(conn, &*rich_text))
+            .await
+            .unwrap();
+        assert_eq!(!excerpt.contains("SECRET"), spoiler, "{html}: {excerpt}");
+
+        let read: api::MessageRead = parse(&david.send(get(&format!("/api/v1/messages/{id}"))).await);
+        let shown = read.message.body_html;
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&shown).unwrap();
+        let spoiler_class =
+            |node| dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+        let canonical =
+            |node| dom.local_name(node) == Some("span") && dom.attr(node, "data-spoiler") == Some("") && spoiler_class(node);
+        for node in dom.descendants(root) {
+            let marked = dom.has_attr(node, "data-spoiler") || spoiler_class(node);
+            assert!(!marked || (spoiler && canonical(node)), "{html}: {shown}");
+            if dom.text(node).is_some_and(|text| text.contains("SECRET")) {
+                assert_eq!(dom.ancestors(node).iter().any(|&up| canonical(up)), spoiler, "{html}: {shown}");
+            }
+        }
+    }
 }
 
 #[tokio::test]

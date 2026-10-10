@@ -3,10 +3,15 @@ import { type RefCallback, useCallback } from "react";
 /** What a screen reader hears while the spoiler is still covered. The words stay in the DOM. */
 export const SPOILER_LABEL = "Spoiler, activate to reveal";
 
-const SPOILER = "[data-spoiler], .spoiler";
+/**
+ * A spoiler: the one marker the server writes (crates/richtext's sanitizer turns every spoiler it
+ * keeps into `span[data-spoiler]`, and its plain-text excerpts read the same). A bare `spoiler`
+ * class or a `data-spoiler` on another element is not one, here or in any excerpt.
+ */
+const SPOILER = "span[data-spoiler]";
 
 /** A spoiler that is still covered. */
-const COVERED = "[data-spoiler]:not([data-revealed]), .spoiler:not([data-revealed])";
+const COVERED = "span[data-spoiler]:not([data-revealed])";
 
 /**
  * A link whose label holds a covered spoiler (`[||ending||](url "title")`). Its URL and title
@@ -97,14 +102,13 @@ export function bindSpoilers(root: HTMLElement): () => void {
  * inserts message HTML uses it, so spoilers reveal the same way everywhere. It binds when the
  * node mounts, so a node mounted again with the same markup (an edit cancelled) is covered and
  * revealable too. When `html` changes, the callback changes with it and binds the new markup.
- * Every spoiler span has the `spoiler` class (`[data-spoiler]` is the same span).
  */
 export function useSpoilerReveal(html: string): RefCallback<HTMLElement> {
   // The callback reads `html`, so the React Compiler keeps it as a dependency too. Markup with no
-  // spoiler needs no listeners.
+  // `data-spoiler` needs no listeners.
   return useCallback(
     (node: HTMLElement | null) =>
-      node === null || !html.includes("spoiler") ? undefined : bindSpoilers(node),
+      node === null || !html.includes("data-spoiler") ? undefined : bindSpoilers(node),
     [html],
   );
 }

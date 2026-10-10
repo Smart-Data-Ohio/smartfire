@@ -14,6 +14,14 @@ describe("htmlPlainText", () => {
     expect(htmlPlainText(html)).toBe("see spoiler now||secret||");
   });
 
+  // The server writes every spoiler it keeps as `span[data-spoiler]` (crates/richtext's
+  // sanitizer); its plain text treats nothing else as one, and neither does this.
+  it("recognises only the canonical spoiler span", () => {
+    expect(htmlPlainText('<p>a <span data-spoiler="">SECRET</span> b</p>')).toBe("a spoiler b");
+    expect(htmlPlainText('<p>a <span class="spoiler">x</span> b</p>')).toBe("a x b");
+    expect(htmlPlainText('<p>a <b data-spoiler="">x</b> b</p>')).toBe("a x b");
+  });
+
   it("keeps a link's label but never its URL or title", () => {
     expect(
       htmlPlainText(

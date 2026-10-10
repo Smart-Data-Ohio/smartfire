@@ -553,7 +553,7 @@
 
   /* A Discord-style spoiler (`||text||`). The words stay in the DOM; the bar hides them until
      this one spoiler is revealed. Tokens cover light and dark. Reduced motion drops the fade. */
-  .message-body .spoiler {
+  .message-body span[data-spoiler] {
     border-radius: var(--radius-xs);
     background: var(--text);
     box-decoration-break: clone;
@@ -568,13 +568,13 @@
   /* Everything inside a covered spoiler is hidden whatever its own rules say: a mention chip's
      colours and background, a custom emoji image, a link's underline. Those rules come later
      with the same specificity, so this one is important. The bar behind stays painted. */
-  .message-body .spoiler:not([data-revealed]) * {
+  .message-body span[data-spoiler]:not([data-revealed]) * {
     /* biome-ignore lint/complexity/noImportantStyles: a descendant's own rule must not show it */
     visibility: hidden !important;
   }
 
-  .message-body .spoiler:not([data-revealed]) *::before,
-  .message-body .spoiler:not([data-revealed]) *::after {
+  .message-body span[data-spoiler]:not([data-revealed]) *::before,
+  .message-body span[data-spoiler]:not([data-revealed]) *::after {
     /* biome-ignore lint/complexity/noImportantStyles: a descendant's own rule must not show it */
     visibility: hidden !important;
   }
@@ -584,12 +584,12 @@
     text-decoration: none;
   }
 
-  .message-body .spoiler:focus-visible {
+  .message-body span[data-spoiler]:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 1px;
   }
 
-  .message-body .spoiler[data-revealed] {
+  .message-body span[data-spoiler][data-revealed] {
     background: var(--bg-sunken);
     color: inherit;
     cursor: text;
@@ -598,12 +598,12 @@
 
   /* The OS setting, unless Appearance asks for full motion; or Appearance's own reduce. */
   @media (prefers-reduced-motion: reduce) {
-    :root:not([data-motion="full"]) .message-body .spoiler {
+    :root:not([data-motion="full"]) .message-body span[data-spoiler] {
       transition: none;
     }
   }
 
-  :root[data-motion="reduce"] .message-body .spoiler {
+  :root[data-motion="reduce"] .message-body span[data-spoiler] {
     transition: none;
   }
 

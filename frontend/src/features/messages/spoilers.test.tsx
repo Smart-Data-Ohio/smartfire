@@ -294,6 +294,20 @@ function Toggled({ html }: { readonly html: string }) {
   );
 }
 
+describe("the spoiler marker", () => {
+  it("covers only the canonical span the server writes", () => {
+    const html =
+      '<p><span data-spoiler="">one</span> <span class="spoiler">two</span> ' +
+      '<b data-spoiler="">three</b> <i class="spoiler">four</i></p>';
+
+    render(<BodyHtml html={html} className="message-body" />);
+
+    const buttons = screen.getAllByRole("button", { name: SPOILER_LABEL });
+
+    expect(buttons.map((button) => button.textContent)).toEqual(["one"]);
+  });
+});
+
 describe("binding", () => {
   const html = `<p>${spoiler('<a href="https://example.com" title="Alice dies">ending</a>')}</p>`;
 

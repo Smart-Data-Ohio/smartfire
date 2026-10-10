@@ -23,7 +23,7 @@ export function messagePlainText(markdown: string | null, html: string): string 
 export function htmlPlainText(html: string): string {
   const document = new DOMParser().parseFromString(html, "text/html");
 
-  for (const node of document.querySelectorAll("[data-spoiler], .spoiler")) {
+  for (const node of document.querySelectorAll("span[data-spoiler]")) {
     if (node.isConnected) {
       node.replaceWith(document.createTextNode("spoiler"));
     }

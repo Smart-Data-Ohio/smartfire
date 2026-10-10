@@ -345,3 +345,58 @@ fn many_urls_inside_spoilers_render_quickly() {
     assert_eq!(html.matches("data-spoiler").count(), 400);
     assert!(started.elapsed() < std::time::Duration::from_secs(5), "{:?}", started.elapsed());
 }
+
+/// Bot and webhook HTML, each way it might mark a spoiler, and whether it is one: a `span` with
+/// the `spoiler` class or a `data-spoiler` attribute. Any other element marked so is not.
+const BOT_HTML: &[(&str, bool)] = &[
+    (r#"<p>before <span class="spoiler">SECRET</span> after</p>"#, true),
+    (r#"<p>before <span data-spoiler="">SECRET</span> after</p>"#, true),
+    (r#"<p>before <span data-spoiler>SECRET</span> after</p>"#, true),
+    (r#"<p>before <span data-spoiler="no">SECRET</span> after</p>"#, true),
+    (r#"<p>before <span class="loud spoiler">SECRET</span> after</p>"#, true),
+    (r#"<p>before <span class="spoiler" data-spoiler="">SECRET</span> after</p>"#, true),
+    (r#"<p>before <b class="spoiler">SECRET</b> after</p>"#, false),
+    (r#"<div class="spoiler">SECRET</div>"#, false),
+    (r#"<p>before <a href="https://example.com/x" data-spoiler="">SECRET</a></p>"#, false),
+];
+
+/// The reader's HTML marks the secret with the one canonical marker, a `span` with
+/// `data-spoiler=""` and the `spoiler` class, or (not a spoiler) carries neither marker anywhere.
+fn assert_canonical(html: &str, spoiler: bool) {
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(html).unwrap();
+    let canonical = |node| {
+        dom.local_name(node) == Some("span")
+            && dom.attr(node, "data-spoiler") == Some("")
+            && dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
+    };
+    for node in dom.descendants(root) {
+        let marked = dom.has_attr(node, "data-spoiler")
+            || dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+        assert!(!marked || (spoiler && canonical(node)), "{html}");
+        if dom.text(node).is_some_and(|text| text.contains("SECRET")) {
+            assert_eq!(dom.ancestors(node).iter().any(|&ancestor| canonical(ancestor)), spoiler, "{html}");
+        }
+    }
+}
+
+#[test]
+fn bot_html_spoilers_have_one_marker_everywhere() {
+    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+    let icons = IconCatalog::default();
+    for &(html, spoiler) in BOT_HTML {
+        for text in [
+            campfire_richtext::to_plain_text(html, &ctx).unwrap(),
+            markdown::plain_text(html, &ctx, &icons).unwrap(),
+        ] {
+            assert_eq!(!text.contains("SECRET"), spoiler, "{html}: {text}");
+            assert_eq!(text.contains("spoiler"), spoiler, "{html}: {text}");
+        }
+        let content = Content::load(html, &ctx).unwrap();
+        assert_canonical(&content.render(&ctx).unwrap(), spoiler);
+        assert_canonical(&content.to_rendered_html_with_layout(&ctx).unwrap(), spoiler);
+        assert_canonical(&markdown::sanitize_presentation(html, &icons, None).unwrap(), spoiler);
+        let filtered = campfire_richtext::filters::sanitize_attributes(Content::load(html, &ctx).unwrap()).unwrap();
+        assert_canonical(&filtered.to_html(), spoiler);
+    }
+}

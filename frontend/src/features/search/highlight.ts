@@ -113,7 +113,7 @@ export function highlightHtml(html: string, terms: readonly string[]): string {
 
   for (const node of texts) {
     // A match inside a spoiler would paint a highlight on the hidden words. Leave them covered.
-    if (node.parentElement?.closest("[data-spoiler], .spoiler") != null) {
+    if (node.parentElement?.closest("span[data-spoiler]") != null) {
       continue;
     }
 

@@ -341,9 +341,9 @@ impl crate::AttachableResolver for NoAttachables {
     }
 }
 
-/// A spoiler span: `data-spoiler`, or the `spoiler` class it is rendered with.
+/// A spoiler span, as stored HTML may mark one (`sanitizer::is_spoiler_span`).
 pub fn is_spoiler(dom: &Dom, node: NodeId) -> bool {
-    dom.has_attr(node, "data-spoiler") || dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
+    sanitizer::is_spoiler_span(dom, node)
 }
 
 /// Whether `node` hides a spoiler's words: the spoiler itself, or a link whose label holds one
@@ -639,7 +639,7 @@ fn plain_node(dom: &Dom, node: NodeId, icons: &dyn IconResolver) -> String {
     }
     // Push, email, activity and sidebar excerpts are this plain text. The hidden words stay in
     // the HTML for the reader who reveals them, and are replaced here so a preview can't leak them.
-    if name == "span" && dom.has_attr(node, "data-spoiler") {
+    if sanitizer::is_spoiler_span(dom, node) {
         return "spoiler".to_owned();
     }
     if name == "img" {

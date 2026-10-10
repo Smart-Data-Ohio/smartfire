@@ -285,7 +285,7 @@ fn closes_paragraph(name: &str) -> bool {
 }
 
 fn inside_spoiler(dom: &Dom, node: NodeId) -> bool {
-    dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"))
+    dom.ancestors(node).iter().any(|&ancestor| sanitizer::is_spoiler_span(dom, ancestor))
 }
 
 /// Turns block tags under `root` into spans so a later HTML parse cannot lift them out of a spoiler.
@@ -299,7 +299,7 @@ fn inline_blocks(dom: &mut Dom, root: NodeId) {
 
 /// A spoiler stays wrapped around a mention or any other expansion that would otherwise be a block.
 pub(crate) fn contain_spoiler_blocks(dom: &mut Dom, root: NodeId) {
-    let spoilers: Vec<NodeId> = dom.descendants(root).into_iter().filter(|&node| dom.has_attr(node, "data-spoiler")).collect();
+    let spoilers: Vec<NodeId> = dom.descendants(root).into_iter().filter(|&node| sanitizer::is_spoiler_span(dom, node)).collect();
     for spoiler in spoilers {
         inline_blocks(dom, spoiler);
     }
