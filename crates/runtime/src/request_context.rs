@@ -92,13 +92,7 @@ impl RequestContext {
             || c.cookies
                 .get("enable_service_worker")
                 .is_some_and(|value| !campfire_richtext::ruby::is_blank(value));
-        let service_worker_url = if app.config.spa_enabled {
-            Some(concerns::service_worker_url(
-                concerns::effective_ui(c).await?,
-            ))
-        } else {
-            None
-        };
+        let service_worker_url = Some("/service-worker.js".into());
         let mut summary = account_summary(account.as_ref(), has_logo);
         summary.logo_url = crate::presenters::accounts::fresh_account_logo_path_in_zone(
             account.as_ref(),

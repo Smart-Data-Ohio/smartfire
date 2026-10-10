@@ -6,7 +6,7 @@
 //! them (renders for broadcasts, and the views' own tests) there are none, and the tags are left
 //! out, as with forgery protection and the policy off.
 
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::html::{Html, Safe};
@@ -35,32 +35,6 @@ pub struct RequestSecrets {
 
 thread_local! {
     static CURRENT: RefCell<Option<Rc<RequestSecrets>>> = const { RefCell::new(None) };
-    /// How many fragments for the cache are being rendered, one inside another.
-    /// `campfire_views::fragment_cache` raises this while it stores a fragment.
-    static FRAGMENT_DEPTH: Cell<usize> = const { Cell::new(0) };
-}
-
-/// Ends a fragment render when dropped. Holding it is what leaves token slots in the stored HTML.
-#[must_use = "the fragment render ends when this guard drops"]
-pub struct FragmentRender {
-    _private: (),
-}
-
-impl Drop for FragmentRender {
-    fn drop(&mut self) {
-        FRAGMENT_DEPTH.with(|depth| depth.set(depth.get() - 1));
-    }
-}
-
-/// A fragment rendered for the cache leaves token slots instead of this render's token.
-pub fn enter_fragment_render() -> FragmentRender {
-    FRAGMENT_DEPTH.with(|depth| depth.set(depth.get() + 1));
-    FragmentRender { _private: () }
-}
-
-/// Whether a fragment for the cache is being rendered on this thread.
-pub fn rendering_fragment() -> bool {
-    FRAGMENT_DEPTH.with(|depth| depth.get() > 0)
 }
 
 /// Runs `render` with `secrets` available to the templates it renders.
@@ -85,17 +59,9 @@ fn current() -> Option<Rc<RequestSecrets>> {
 pub const PARAM: &str = "authenticity_token";
 
 /// `token_tag(nil, form_options: { action:, method: })`: the hidden per-form token field.
-///
-/// A fragment rendered for the cache is shown to whoever renders it next, so there the field is
-/// a slot instead ([`fill_token_slots`] puts each render's own field in it). Rails #148 omits
-/// tokens from the five cached message-tree forms; slots remain as defence in depth for any
-/// other form rendered inside a cached fragment.
 pub fn token_tag(action: &str, method: &str) -> Html {
     if current().is_some_and(|secrets| !secrets.tokens.enabled()) {
         return Safe(String::new());
-    }
-    if rendering_fragment() {
-        return Safe(format!("{}{method} {action}{SLOT_END}", slot_start()));
     }
     match current() {
         Some(secrets) => legacy_tag(
@@ -107,52 +73,6 @@ pub fn token_tag(action: &str, method: &str) -> Html {
         ),
         None => Safe(String::new()),
     }
-}
-
-/// Ends a token slot. Slots begin with [`slot_start`]; both are noncharacters that HTML escaping
-/// leaves alone, so the start carries a key of the process's own that no content can guess.
-const SLOT_END: char = '\u{FDD1}';
-
-fn slot_start() -> &'static str {
-    static START: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        use std::hash::{BuildHasher, Hasher};
-        let key = std::collections::hash_map::RandomState::new()
-            .build_hasher()
-            .finish();
-        format!("\u{FDD0}csrf-{key:016x} ")
-    });
-    &START
-}
-
-/// Whether `html` (a cached fragment) has token slots, so it isn't in a page as it's stored.
-pub fn has_token_slots(html: &str) -> bool {
-    html.contains(slot_start())
-}
-
-/// `html` with each token slot replaced by this render's [`token_tag`] for it: the viewer's own
-/// token, or nothing for a render without a request. Slots stay while a fragment that holds this
-/// one is being rendered for the cache.
-pub fn fill_token_slots(html: &str) -> std::borrow::Cow<'_, str> {
-    let start = slot_start();
-    if rendering_fragment() || !html.contains(start) {
-        return std::borrow::Cow::Borrowed(html);
-    }
-    let mut out = String::with_capacity(html.len() + 64);
-    let mut rest = html;
-    while let Some(at) = rest.find(start) {
-        out.push_str(&rest[..at]);
-        let slot = &rest[at + start.len()..];
-        let Some(end) = slot.find(SLOT_END) else {
-            break;
-        };
-        let (method, action) = slot[..end]
-            .split_once(' ')
-            .unwrap_or(("post", &slot[..end]));
-        out.push_str(&token_tag(action, method).0);
-        rest = &slot[end + SLOT_END.len_utf8()..];
-    }
-    out.push_str(rest);
-    std::borrow::Cow::Owned(out)
 }
 
 /// `csrf_meta_tags`
@@ -310,36 +230,4 @@ mod tests {
         );
     }
 
-    /// Whose render it is, in the tokens it gives out.
-    struct Viewer(&'static str);
-
-    impl AuthenticityTokens for Viewer {
-        fn global(&self) -> String {
-            format!("{}:global", self.0)
-        }
-
-        fn for_form(&self, action: &str, method: &str) -> String {
-            format!("{}:{method}:{action}", self.0)
-        }
-    }
-
-    fn as_viewer<R>(name: &'static str, render: impl FnOnce() -> R) -> R {
-        rendering_with(
-            RequestSecrets {
-                tokens: Box::new(Viewer(name)),
-                csp_nonce: None,
-            },
-            render,
-        )
-    }
-
-    #[test]
-    fn content_cant_forge_a_token_slot() {
-        let forged = "\u{FDD0}csrf-0000000000000000 post /session\u{FDD1}";
-        assert!(!has_token_slots(forged));
-        assert_eq!(
-            as_viewer("david", || fill_token_slots(forged).into_owned()),
-            forged
-        );
-    }
 }

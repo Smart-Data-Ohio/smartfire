@@ -121,12 +121,12 @@ class ImageContextTest(unittest.TestCase):
                 self.assertTrue(ignored(path, rules), f".dockerignore lets {path} into the build context")
 
     def test_the_matcher_follows_buildkit(self):
-        rules = [(False, compile_pattern("*")), (True, compile_pattern("web/a.txt"))]
-        self.assertFalse(ignored("web/a.txt", rules))
-        self.assertTrue(ignored("web/b.txt", rules))
+        rules = [(False, compile_pattern("*")), (True, compile_pattern("inputs/a.txt"))]
+        self.assertFalse(ignored("inputs/a.txt", rules))
+        self.assertTrue(ignored("inputs/b.txt", rules))
         rules = [(False, compile_pattern("crates/*/tests/golden"))]
-        self.assertTrue(ignored("crates/views/tests/golden/x.json", rules))
-        self.assertFalse(ignored("crates/views/tests/x.rs", rules))
+        self.assertTrue(ignored("crates/presentation/tests/golden/x.json", rules))
+        self.assertFalse(ignored("crates/presentation/tests/x.rs", rules))
         rules = [(False, compile_pattern("**/node_modules"))]
         self.assertTrue(ignored("node_modules/x", rules))
         self.assertTrue(ignored("a/b/node_modules/x", rules))

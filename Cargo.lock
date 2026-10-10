@@ -387,7 +387,6 @@ dependencies = [
  "campfire_api",
  "campfire_api_types",
  "campfire_app",
- "campfire_assets",
  "campfire_cable",
  "campfire_channels",
  "campfire_controllers",
@@ -407,8 +406,6 @@ dependencies = [
  "campfire_static_assets",
  "campfire_storage",
  "campfire_view_kit",
- "campfire_views",
- "campfire_web",
  "flate2",
  "futures-util",
  "hmac",
@@ -468,7 +465,6 @@ dependencies = [
  "campfire_runtime",
  "campfire_static_assets",
  "campfire_storage",
- "campfire_web",
  "jiff",
  "rails_compat",
  "regex",
@@ -508,7 +504,6 @@ dependencies = [
  "campfire_routes",
  "campfire_static_assets",
  "campfire_storage",
- "campfire_views",
  "caseless",
  "flate2",
  "futures-util",
@@ -541,13 +536,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
-]
-
-[[package]]
-name = "campfire_assets"
-version = "0.1.0"
-dependencies = [
- "campfire_static_assets",
 ]
 
 [[package]]
@@ -590,8 +578,6 @@ dependencies = [
  "campfire_routes",
  "campfire_runtime",
  "campfire_storage",
- "campfire_views",
- "campfire_web",
  "futures-util",
  "http",
  "httpdate",
@@ -614,7 +600,6 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "campfire_app",
- "campfire_assets",
  "campfire_cable",
  "campfire_db",
  "campfire_kit",
@@ -628,8 +613,6 @@ dependencies = [
  "campfire_runtime",
  "campfire_spa",
  "campfire_storage",
- "campfire_views",
- "campfire_web",
  "jiff",
  "rails_compat",
  "rand 0.9.5",
@@ -785,8 +768,6 @@ dependencies = [
  "campfire_routes",
  "campfire_runtime",
  "campfire_storage",
- "campfire_views",
- "campfire_web",
  "jiff",
  "rails_compat",
  "serde_json",
@@ -810,8 +791,6 @@ dependencies = [
  "campfire_runtime",
  "campfire_static_assets",
  "campfire_storage",
- "campfire_views",
- "campfire_web",
  "jiff",
  "rails_compat",
  "rusqlite",
@@ -880,8 +859,6 @@ dependencies = [
  "campfire_routes",
  "campfire_runtime",
  "campfire_storage",
- "campfire_views",
- "campfire_web",
  "jiff",
  "rails_compat",
  "rusqlite",
@@ -908,7 +885,6 @@ dependencies = [
  "axum",
  "bytes",
  "campfire_app",
- "campfire_assets",
  "campfire_cable",
  "campfire_db",
  "campfire_jobs",
@@ -997,69 +973,6 @@ dependencies = [
  "rails_compat",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "campfire_views"
-version = "0.1.0"
-dependencies = [
- "askama",
- "bnum",
- "campfire_assets",
- "campfire_presentation",
- "campfire_richtext",
- "campfire_routes",
- "campfire_storage",
- "campfire_view_kit",
- "jiff",
- "rails_compat",
- "regex",
- "serde",
- "serde_json",
- "sha2",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "campfire_web"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "askama",
- "axum",
- "bytes",
- "campfire_app",
- "campfire_assets",
- "campfire_cable",
- "campfire_db",
- "campfire_jobs",
- "campfire_kit",
- "campfire_mail",
- "campfire_presentation",
- "campfire_retained",
- "campfire_richtext",
- "campfire_routes",
- "campfire_runtime",
- "campfire_spa",
- "campfire_static_assets",
- "campfire_storage",
- "campfire_views",
- "futures-util",
- "http",
- "indexmap",
- "jiff",
- "percent-encoding",
- "rails_compat",
- "rand 0.9.5",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]

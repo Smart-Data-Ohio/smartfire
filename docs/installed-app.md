@@ -1,31 +1,22 @@
 # Installed app
 
-Smartfire uses one service worker at `/service-worker.js`, registered with scope `/` by
-both UIs. `campfire_spa::pwa` owns the manifest, fallback worker, offline page and
-manifest illustrations. These responses do not use the classic template or asset crates.
-With `SPA_ENABLED` and a production build, the root worker serves the SPA's build-aware
-runtime; otherwise it serves the standalone fallback. A person's UI preference never
-changes the script URL. `/app/service-worker.js` remains a compatibility alias for old
-running bundles, serving the same worker bytes.
+Smartfire uses one service worker at `/service-worker.js`, registered with scope `/` by the SPA
+and retained auth pages. `campfire_spa::pwa` owns the manifest, fallback worker, offline page and
+illustrations. A production build supplies the SPA worker; Cargo-only builds use the standalone
+fallback. `/app/service-worker.js` remains a compatibility alias with the same bytes.
 
-Classic pages and auth pages register on load, with classic Turbo visits also reconciling
-the root registration. Test pages respect `data-service-worker="false"`. The SPA boot
-names `/service-worker.js` and quietly calls `registration.update()` on startup;
-development builds skip registration. No startup code unregisters the root worker or
-prompts for push permission. Updating the script at scope `/` preserves the registration
-and its existing push subscription.
+Retained auth pages register on load. The SPA boot names `/service-worker.js` and quietly calls
+`registration.update()` on startup; development builds skip registration. Updating the script
+preserves the registration and existing push subscription.
 
-Both UIs link to `/webmanifest.json`. It preserves the original absent `id` (the implicit
-identity derived from `start_url`), `start_url: "/"` and `scope: "/"`. The older
-`/app/manifest.webmanifest` URL redirects to that manifest. Shortcut destinations use the
-person's effective UI (`SPA_ENABLED`, their stored preference, then `SPA_DEFAULT`); a
-classic choice retains classic destinations. Unported shortcuts retain a working classic
-route until its SPA screen exists. Personalized manifests use private, revalidating caching.
+The manifest at `/webmanifest.json` preserves its absent `id`, `start_url: "/"` and `scope: "/"`.
+`/app/manifest.webmanifest` redirects there. Shortcuts always open SPA destinations.
+Manifests use private, revalidating caching.
 
 ## Offline shell and caching policy
 
-The root offline page uses the standalone fallback or the page built from
-`frontend/offline.html`, according to `SPA_ENABLED` and build availability.
+The root offline page uses the page built from `frontend/offline.html`, with a standalone
+fallback when no dist exists.
 `/app/offline.html` remains a compatibility alias. Its module scripts and CSS
 are same-origin content-hashed build assets, cached during installation. This page
 does not contain boot JSON or an authenticated shell.
@@ -42,7 +33,7 @@ The SPA worker handles only same-origin GET requests:
 - Navigations use the network. Only a failed network request falls back to the
   precached offline page. Navigation responses and the authenticated shell are
   never cached.
-- Classic static assets under `/assets/` retain cache-first runtime caching.
+- Retained media under `/assets/` retain cache-first runtime caching.
 - API requests, `/cable`, `/rails/`, uploads, account data, transfer links, QR codes
   and other non-navigation requests pass through untouched.
 - A response with `Cache-Control: no-store` is never written to a cache.
@@ -138,5 +129,5 @@ retention. Rust tests cover selection, manifests, embedding and response headers
 The production-preview Playwright suite exercises offline navigation, worker
 click handling and successive worker updates. It runs in the first Frontend e2e
 shard beside the mock suite. The separate Rust PWA browser suite has been removed.
-A healthy deployment checks the public auth pages and the enabled SPA's offline
+A healthy deployment checks the public auth pages and the SPA's offline
 shell, including their JS and CSS responses, without a browser.

@@ -1,3 +1,5 @@
+pub mod page;
+pub mod view_context;
 pub mod accounts;
 pub mod workspace_branding;
 pub mod status_settings;
@@ -31,7 +33,6 @@ use std::sync::LazyLock;
 use campfire_db::{Boost, Connection, Message, RichText, Room, RoomType, User};
 use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
-use campfire_app::cache as fragment_cache;
 use campfire_presentation::messages::json::{
     BoostJson, BoostMessageJson, UserJson,
 };
@@ -163,24 +164,19 @@ pub fn resolve_avatar_icon(conn: &Connection, name: &str) -> Option<campfire_pre
 }
 
 /// `users/_user.json.jbuilder` (`json.cache! user`).
-pub fn cached_user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
-    let key = || {
+pub fn cached_user_json(app: &AppState, base_url: &str, user: &User) -> UserJson {
+    let key = {
         jbuilder_key(
             "users/_user",
             &cache_key_with_version("users", user.id, user.updated_at.jiff()),
             base_url,
         )
     };
-    fragment_cache::try_fetch_value(key, || {
-        Ok::<_, std::convert::Infallible>(user_json(secrets, base_url, user))
-    })
-    .unwrap_or_else(|never| match never {})
+    app.json_cache.fetch_value(&key, || user_json(&app.secrets, base_url, user))
 }
 
-/// Jbuilder's `json.cache!` key: `jbuilder/views/<template>:<digest>/<record key>`. The digest
-/// is the Rust build's (templates can't change while the process runs). The JSON carries absolute
-/// URLs built from the request's `base_url`, which comes from its Host header, so the key does too:
-/// Rails' key doesn't, and one request with a forged Host fed its URLs to every bot.
+/// Legacy JSON cache keys include the serializer version and request origin so a Host header
+/// cannot feed its absolute URLs to other requests.
 pub fn jbuilder_key(template: &str, record: &str, base_url: &str) -> String {
     format!(
         "jbuilder/views/{template}:{}/{record}/{base_url}",
@@ -728,14 +724,14 @@ impl<'a> Presenter<'a> {
         message: &Message,
         base_url: &str,
     ) -> Result<BoostJson> {
-        let key = || {
+        let key = {
             jbuilder_key(
                 "messages/boosts/_boost",
                 &cache_key_with_version("boosts", boost.id, boost.updated_at.jiff()),
                 base_url,
             )
         };
-        fragment_cache::try_fetch_value(key, || self.render_boost_json(boost, message, base_url))
+        self.app.json_cache.try_fetch_value(&key, || self.render_boost_json(boost, message, base_url))
     }
 
     fn render_boost_json(
@@ -748,7 +744,7 @@ impl<'a> Presenter<'a> {
             id: boost.id,
             content: boost.content.clone(),
             created_at: json_time(boost.created_at.jiff()),
-            booster: cached_user_json(self.secrets, base_url, &self.user(boost.booster_id)?),
+            booster: cached_user_json(self.app, base_url, &self.user(boost.booster_id)?),
             message: BoostMessageJson {
                 id: boost.message_id,
                 url: format!(

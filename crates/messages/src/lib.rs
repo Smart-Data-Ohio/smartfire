@@ -9,7 +9,7 @@ pub mod controllers {
     pub mod messages;
 
     // The web layer's presenters, under the path this code names them by.
-    pub(crate) use campfire_web::controllers::presenters;
+    pub(crate) use campfire_runtime::presenters;
 }
 
 // The app, web and channels layers, under the paths this code used inside the campfire crate.

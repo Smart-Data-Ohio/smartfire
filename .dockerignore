@@ -51,6 +51,11 @@
 /ops/README.md
 # The huddle gateway has its own image (deploy/huddles/Dockerfile).
 /huddle-gateway
+# Reject any accidental reintroduction of the retired classic inputs.
+/web
+/crates/assets
+/crates/views
+/crates/web
 /crates/static_assets/public/assets
 # frontend/: the sources the image's spa stage builds from, never a local build or test output
 # (node_modules is excluded above).

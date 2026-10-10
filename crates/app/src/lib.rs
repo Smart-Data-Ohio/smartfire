@@ -31,5 +31,4 @@ pub mod state;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
 
-// Shared JSON fragments use the app-owned cache scope while classic HTML remains in views.
-pub use campfire_views::fragment_cache as cache;
+pub mod json_cache;

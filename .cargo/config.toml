@@ -10,7 +10,7 @@
 # panic recovery fail and a failing test can leave a lock held. For those, rebuild with LLVM
 # (ci/llvm.toml names each crate below):
 #
-#   cargo test -p campfire -p campfire_app -p campfire_web -p campfire_channels -p campfire_messages \
+#   cargo test -p campfire -p campfire_app -p campfire_runtime -p campfire_channels -p campfire_messages \
 #     -p campfire_rooms -p campfire_people -p campfire_controllers -p campfire_api --config ci/llvm.toml
 #
 # Release builds always use LLVM: the release profile names it below, and the production image
@@ -26,9 +26,6 @@ codegen-backend = "cranelift"
 codegen-backend = "cranelift"
 
 [profile.dev.package.campfire_runtime]
-codegen-backend = "cranelift"
-
-[profile.dev.package.campfire_web]
 codegen-backend = "cranelift"
 
 [profile.dev.package.campfire_channels]

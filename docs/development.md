@@ -18,12 +18,11 @@ describe the layout and working rules, [`ci/README.md`](../ci/README.md) the CI 
   builds; otherwise those checks skip.
 - **Python 3** for the seed and CI helper scripts.
 - **Docker** to build the image and use the CI toolchain wrapper.
-- **Node.js** for the huddle authorization gateway, the vendored JavaScript builders in
-  `web/script/`, and the browser and messaging harnesses.
+- **Node.js and pnpm** for the React UI and its browser checks, and Node.js for the huddle gateway.
 
-Dev, test and CI builds compile the `campfire` crate with Cranelift for speed; every other crate,
-and every release build, uses LLVM. Cranelift can't unwind, so the few panic-recovery tests need
-campfire rebuilt with LLVM (see [Running tests](#running-tests)).
+Local dev and test builds use Cranelift for the application crates named in `.cargo/config.toml`.
+CI tests and release builds use LLVM. Cranelift cannot unwind, so panic-recovery tests need
+`--config ci/llvm.toml` (see [Running tests](#running-tests)).
 
 ### Running the server
 
@@ -60,13 +59,12 @@ off and carries on. Generate a pair as described under "Secrets" in the
 
 ### Frontend assets
 
-The stylesheets, JavaScript (Stimulus controllers, Turbo, the import map), vendored JavaScript and
-`public/` files live in [`web/`](../web). The `campfire_assets` crate digests them at
-build time, so a change shows up after the next `cargo run`. Templates are Askama files under
-`crates/views/templates/`. The checked-in bundles in `web/vendor/javascript/` are built by
-the Node projects in `web/script/` (`livekit-client`, `code-highlighter`); rebuild them only
-when changing their pinned packages (see [`web/script/livekit-client/README.md`](../web/script/livekit-client/README.md)).
-For local huddles, see [huddles](huddles.md).
+The React UI lives in [`frontend/`](../frontend/README.md). Run `pnpm install --frozen-lockfile`
+and `pnpm check` there to validate and build `dist/`, then rebuild the Rust binary to embed it.
+The image performs this build in a Node stage; its runtime has no Node. The SPA and JSON sync
+are always served. Retained auth and public HTML live in `crates/retained_pages/templates/`,
+and their auth assets, shared media and public bytes live in `crates/static_assets/`.
+Historical digested asset URLs retain their bytes. For local huddles, see [huddles](huddles.md).
 
 ### Running tests
 

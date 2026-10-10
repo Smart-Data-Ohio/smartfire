@@ -9,7 +9,7 @@ use campfire_db::{Boost, ChannelThread, Message, MessagePin, Room, SavedItem};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as classic, boosts};
 use campfire_runtime::concerns;
-use campfire_web::controllers::messages::rendered;
+use campfire_messages::controllers::messages::rendered;
 use campfire_runtime::context::db_error;
 use campfire_runtime::messaging::ForwarderCopier;
 

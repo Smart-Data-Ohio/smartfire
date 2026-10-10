@@ -202,7 +202,7 @@ async fn enrollment_requires_authentication_and_real_csrf() {
 async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
     use crate::controllers::users::people_tests::retained;
     use askama::Template;
-    use campfire_views::helpers as h;
+    use campfire_view_kit::helpers as h;
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {
