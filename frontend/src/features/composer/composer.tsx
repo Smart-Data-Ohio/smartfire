@@ -204,8 +204,12 @@ export function Composer({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
-  // Polls are posted to the room itself, never from a thread or a new thread's first reply.
-  const canPoll = !creating && threadId === null;
+
+  const threadStatus = useStore((state) =>
+    threadId === null ? null : (state.threads[threadId]?.status ?? null),
+  );
+
+  const canPoll = !creating && (threadId === null || threadStatus === "active");
   const [poll, setPoll] = useState({ open: false, question: "" });
   const [running, setRunning] = useState(false);
   const submitting = useRef(false);
@@ -514,8 +518,8 @@ export function Composer({
           setPoll({ open: true, question: typed.replace(/^\/poll\b\s*/i, "") });
         } else {
           toast({
-            title: "Polls go in the room",
-            description: "Post it from the room's composer.",
+            title: "This thread is closed",
+            description: "Reopen it before creating a poll.",
           });
         }
 
@@ -1088,6 +1092,7 @@ export function Composer({
       {canPoll ? (
         <LazyCreatePollDialog
           roomId={roomId}
+          threadId={threadId}
           open={poll.open}
           initialQuestion={poll.question}
           onOpenChange={(open) => setPoll((current) => ({ ...current, open }))}

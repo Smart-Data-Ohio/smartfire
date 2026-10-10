@@ -29,6 +29,7 @@ type CloseId = (typeof CLOSES)[number]["id"];
 
 interface CreatePollDialogProps {
   readonly roomId: number;
+  readonly threadId?: number | null;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   /** What the question starts as (the text after `/poll`). */
@@ -99,7 +100,11 @@ export function CreatePollDialog(props: CreatePollDialogProps) {
       open={props.open}
       onOpenChange={props.onOpenChange}
       title="Create a poll"
-      description="Everyone in the room can vote."
+      description={
+        props.threadId == null
+          ? "Everyone in the room can vote."
+          : "Everyone in the thread can vote."
+      }
       size="md"
       dirty={dirty}
     >
@@ -115,6 +120,7 @@ interface CreatePollFormProps extends CreatePollDialogProps {
 
 function CreatePollForm({
   roomId,
+  threadId = null,
   onOpenChange,
   initialQuestion = "",
   onDirty,
@@ -167,6 +173,7 @@ function CreatePollForm({
     const span = CLOSES.find((choice) => choice.id === closes)?.ms ?? null;
 
     const poll = {
+      threadId,
       question: question.trim(),
       options: filledOptions(options),
       multiple,
