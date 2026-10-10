@@ -209,7 +209,8 @@ fn view_loaded(
         id: row.id,
         room_name,
         thread_name,
-        body: row.markdown_source.clone(),
+        // The excerpt hides spoilers as the SPA's scheduled list does.
+        body: campfire_richtext::markdown::redacted_excerpt(&row.markdown_source),
         send_at: features::html_datetime(row.send_at, zone),
         send_value: rails_compat::datetime::format(row.send_at, zone.tz(), "%Y-%m-%dT%H:%M"),
         sent_at: row.sent_at.map(|at| features::html_datetime(at, zone)),
@@ -384,7 +385,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             } else {
                 row.send_at
             };
-            row.update(tx, &source, time)?;
+            row.update(tx, &source, time, row.reply_to_message_id)?;
             Ok(UpdateOutcome::Saved(Box::new(row)))
         })
         .await;

@@ -75,3 +75,15 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message, enqueue_fetches: bool) -> campfi
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_pull_request_inside_a_spoiler_is_not_referenced() {
+        let html = r#"<p><span class="spoiler" data-spoiler="">https://github.com/acme/app/pull/4</span> https://github.com/acme/app/pull/9</p>"#;
+        let text = campfire_db::models::message_reference::non_code_text(html).unwrap();
+        assert_eq!(extract(&text), vec![("acme".into(), "app".into(), "9".into())]);
+    }
+}
+

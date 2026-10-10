@@ -168,7 +168,13 @@ impl SyncRenderer for Renderer {
         let Some(row) = campfire_db::ScheduledMessage::find_by_id(conn, id)? else {
             return Ok(None);
         };
-        Ok(crate::composer::scheduled_rows(conn, &[row], app.db.env().now())?.pop())
+        Ok(crate::composer::scheduled_rows(
+            conn,
+            &[row],
+            app.db.env().now(),
+            app.db.env().rich_text.as_ref(),
+        )?
+        .pop())
     }
 
     fn agent_status(

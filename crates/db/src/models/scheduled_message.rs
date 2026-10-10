@@ -218,14 +218,18 @@ impl ScheduledMessage {
         {
             errors.add("thread", "must belong to the scheduled room");
         }
-        if let Some(source) = attrs
-            .reply_to_message_id
-            .map(|id| Message::find_by_id(conn, id))
-            .transpose()?
-            .flatten()
-            && (source.room_id != attrs.room_id || source.thread_id != attrs.thread_id)
-        {
-            errors.add("reply_to_message", "must be in the same conversation");
+        if let Some(id) = attrs.reply_to_message_id {
+            match Message::find_by_id(conn, id)? {
+                None => errors.add("reply_to_message_id", "must be in the same conversation"),
+                Some(source)
+                    if !Self::reply_visible(
+                        conn, &source, attrs.user_id, attrs.room_id, attrs.thread_id,
+                    )? =>
+                {
+                    errors.add("reply_to_message", "must be in the same conversation");
+                }
+                Some(_) => {}
+            }
         }
         Ok(errors)
     }
@@ -286,23 +290,56 @@ impl ScheduledMessage {
 
     /// The draft's editable fields. Ownership and the controller's refusal to edit/cancel a
     /// live claim are WS8b's; `claimed` is provided for that guard.
-    pub fn update(&mut self, tx: &mut Tx<'_>, source: &str, send_at: Timestamp) -> Result<()> {
+    pub fn update(
+        &mut self,
+        tx: &mut Tx<'_>,
+        source: &str,
+        send_at: Timestamp,
+        reply_to_message_id: Option<i64>,
+    ) -> Result<()> {
         let attrs = NewScheduledMessage {
             user_id: self.user_id,
             room_id: self.room_id,
             thread_id: self.thread_id,
-            reply_to_message_id: self.reply_to_message_id,
+            reply_to_message_id,
             markdown_source: source.to_string(),
             send_at,
         };
         Self::validate(tx.conn(), &attrs, tx.now(), send_at != self.send_at)?.into_result()?;
-        if source != self.markdown_source || send_at != self.send_at {
-            tx.conn().execute_cached("UPDATE scheduled_messages SET markdown_source = ?, send_at = ?, updated_at = ? WHERE id = ?",
-                params![source, send_at, tx.now(), self.id])?;
+        if source != self.markdown_source
+            || send_at != self.send_at
+            || reply_to_message_id != self.reply_to_message_id
+        {
+            tx.conn().execute_cached("UPDATE scheduled_messages SET markdown_source = ?, send_at = ?, reply_to_message_id = ?, updated_at = ? WHERE id = ?",
+                params![source, send_at, reply_to_message_id, tx.now(), self.id])?;
             *self = Self::find(tx.conn(), self.id)?;
             self.emit_change(tx, false);
         }
         Ok(())
+    }
+
+    fn reply_visible(
+        conn: &Connection,
+        source: &Message,
+        user_id: i64,
+        room_id: i64,
+        thread_id: Option<i64>,
+    ) -> Result<bool> {
+        Ok(source.room_id == room_id
+            && source.thread_id == thread_id
+            && crate::models::message_quote::visible(conn, source, user_id)?)
+    }
+
+    /// Only a source still visible in this draft's stream can be shown as its reply preview.
+    pub fn reply_target(&self, conn: &Connection) -> Result<Option<Message>> {
+        let Some(id) = self.reply_to_message_id else {
+            return Ok(None);
+        };
+        let Some(source) = Message::find_by_id(conn, id)? else {
+            return Ok(None);
+        };
+        Ok(Self::reply_visible(conn, &source, self.user_id, self.room_id, self.thread_id)?
+            .then_some(source))
     }
 
     pub fn sendable(&self, conn: &Connection) -> Result<bool> {
@@ -486,12 +523,22 @@ impl ScheduledMessage {
             )?;
             return Ok(false);
         }
-        let reply_id = scheduled
+        let reply_source = scheduled
             .reply_to_message_id
             .map(|id| Message::find_by_id(tx.conn(), id))
             .transpose()?
-            .flatten()
-            .map(|message| message.id);
+            .flatten();
+        if let Some(source) = &reply_source
+            && !Self::reply_visible(
+                tx.conn(), source, scheduled.user_id, scheduled.room_id, scheduled.thread_id,
+            )?
+        {
+            scheduled.drop(
+                tx, Some("reply target is no longer visible in the same conversation"), now,
+            )?;
+            return Ok(false);
+        }
+        let reply_id = reply_source.map(|message| message.id);
         let attrs = NewMessage {
             room_id: scheduled.room_id,
             creator_id: scheduled.user_id,

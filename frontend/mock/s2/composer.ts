@@ -22,8 +22,8 @@ import {
   ok,
   validation,
 } from "../http.ts";
-import { intField, type Json, stringField } from "../json.ts";
-import { renderMarkdown } from "../markdown.ts";
+import { field, intField, type Json, stringField } from "../json.ts";
+import { mockExcerpt, renderMarkdown } from "../markdown.ts";
 import { conversationNames } from "../s3/conversations.ts";
 import { beforeOf, keysetPage } from "../s3/model.ts";
 import { type RoomRecord, VIEWER_ID } from "../seed.ts";
@@ -533,7 +533,40 @@ export function createComposer(
   const shown = (message: ScheduledMessage): ScheduledMessage => ({
     ...message,
     sendable: pending(message) && sendableNow(message),
+    replyTarget: replyPreview(message),
   });
+
+  const replyPreview = (message: ScheduledMessage): ScheduledMessage["replyTarget"] => {
+    if (!sendableNow(message) || message.replyToMessageId === null) return null;
+    const world = ctx.world();
+
+    const timeline =
+      message.threadId === null
+        ? world.rooms.get(message.roomId)?.messages
+        : world.threads.get(message.threadId)?.messages;
+
+    const target = timeline?.find(
+      (candidate) => candidate.id === message.replyToMessageId && !candidate.systemNote,
+    );
+
+    if (target === undefined) return null;
+
+    const excerpt = target.bodyHtml
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return {
+      messageId: target.id,
+      roomId: target.roomId,
+      threadId: target.threadId,
+      creatorId: target.creatorId,
+      authorName: world.users.get(target.creatorId)?.name ?? "Someone",
+      roomLabel: world.rooms.get(target.roomId)?.room.name ?? "a direct message",
+      excerpt: excerpt.length > 200 ? `${excerpt.slice(0, 197)}...` : excerpt,
+      createdAt: target.createdAt,
+    };
+  };
 
   const changed = (message: ScheduledMessage) => {
     ctx.publish([{ topic: "user", type: "scheduled.changed", data: shown(message) }]);
@@ -644,9 +677,17 @@ export function createComposer(
 
     if (thread?.locked === true) return message;
 
+    const target = (thread === null ? record.messages : thread.messages).find(
+      (candidate) => candidate.id === message.replyToMessageId,
+    );
+
+    if (target?.systemNote) {
+      return drop(message, "reply target is no longer visible in the same conversation");
+    }
+
     const draft: MessageDraft = {
       ...plainDraft(VIEWER_ID, message.markdownSource, ctx.uuid()),
-      replyToMessageId: message.replyToMessageId,
+      replyToMessageId: replyPreview(message)?.messageId ?? null,
     };
 
     let posted: MessageDTO;
@@ -687,7 +728,10 @@ export function createComposer(
       timeline = thread.messages;
     }
 
-    if (replyTo !== null && !timeline.some((message) => message.id === replyTo)) {
+    if (
+      replyTo !== null &&
+      !timeline.some((message) => message.id === replyTo && !message.systemNote)
+    ) {
       throw validation("replyToMessageId", "Reply to message must be in the same conversation");
     }
   };
@@ -740,7 +784,9 @@ export function createComposer(
       roomId,
       threadId,
       replyToMessageId: replyTo,
+      replyTarget: null,
       markdownSource: markdown,
+      excerpt: mockExcerpt(markdown),
       sendAt,
       state: "pending",
       sendable: true,
@@ -762,12 +808,22 @@ export function createComposer(
   const updateScheduled = (id: number, body: Json | undefined): ScheduledMessage => {
     const current = idleOr409(id);
 
+    const markdownSource =
+      stringField(body, "markdownSource") === null ? current.markdownSource : markdownOf(body);
+
     const next = {
       ...current,
-      markdownSource:
-        stringField(body, "markdownSource") === null ? current.markdownSource : markdownOf(body),
+      markdownSource,
+      excerpt: mockExcerpt(markdownSource),
       sendAt: stringField(body, "sendAt") === null ? current.sendAt : sendAtOf(body),
+      replyToMessageId:
+        field(body, "replyToMessageId") === undefined
+          ? current.replyToMessageId
+          : intField(body, "replyToMessageId"),
     };
+
+    if (next.replyToMessageId !== null)
+      checkTarget(next.roomId, next.threadId, next.replyToMessageId);
 
     ctx.world().scheduled.set(id, next);
     arm(next);

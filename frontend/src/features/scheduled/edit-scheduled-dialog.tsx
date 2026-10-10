@@ -12,6 +12,7 @@ import {
   toLocalInput,
 } from "../composer/schedule/presets.ts";
 import { useNow } from "../threads/use-now.ts";
+import { ReplyTargetPicker } from "./reply-target-picker.tsx";
 
 /** What the dialog saves: only the fields that changed (a missing one keeps its value). */
 export type ScheduledEdit = UpdateScheduledMessage;
@@ -74,8 +75,10 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const textId = useId();
   const [text, setText] = useState(item.markdownSource);
   const [when, setWhen] = useState(() => toLocalInput(new Date(item.sendAt)));
+  const [replyTo, setReplyTo] = useState(item.replyToMessageId);
+  const [choosingReply, setChoosingReply] = useState(false);
   // The message as this opening found it: a refresh of it meanwhile doesn't make the form dirty.
-  const [start] = useState(() => ({ text: item.markdownSource, when }));
+  const [start] = useState(() => ({ text: item.markdownSource, when, replyTo }));
   const [error, setError] = useState<string | undefined>(undefined);
   const [timeError, setTimeError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
@@ -88,7 +91,8 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const at = fromLocalInput(when);
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
   const textChanged = text !== item.markdownSource;
-  const dirty = text !== start.text || when !== start.when;
+  const replyChanged = replyTo !== item.replyToMessageId;
+  const dirty = text !== start.text || when !== start.when || replyTo !== start.replyTo;
 
   useEffect(() => onDirty(dirty), [dirty, onDirty]);
 
@@ -112,7 +116,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
       return;
     }
 
-    if (!textChanged && !timeChanged) {
+    if (!textChanged && !timeChanged && !replyChanged) {
       onClose();
 
       return;
@@ -120,12 +124,19 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
 
     const sendAt = at.toISOString();
 
-    const edit: ScheduledEdit =
-      textChanged && timeChanged
-        ? { markdownSource: text, sendAt }
-        : textChanged
-          ? { markdownSource: text }
-          : { sendAt };
+    const edit: ScheduledEdit = {};
+
+    if (textChanged) {
+      edit.markdownSource = text;
+    }
+
+    if (timeChanged) {
+      edit.sendAt = sendAt;
+    }
+
+    if (replyChanged) {
+      edit.replyToMessageId = replyTo;
+    }
 
     setBusy(true);
     onSave(item, edit).then(onClose, (failure: Error) => {
@@ -135,7 +146,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   };
 
   return (
-    <form className="scheduled-edit" onSubmit={submit}>
+    <form className="scheduled-edit" onSubmit={submit} noValidate>
       <div>
         <label htmlFor={textId} className="scheduled-edit-label">
           Message
@@ -160,6 +171,27 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
             {error}
           </p>
         )}
+      </div>
+      <div>
+        {replyTo === null ? null : (
+          <p className="scheduled-reply">
+            Replying to{" "}
+            {item.replyTarget?.messageId === replyTo
+              ? `${item.replyTarget.authorName}: ${item.replyTarget.excerpt}`
+              : "a message in this conversation"}
+          </p>
+        )}
+        <Button variant="secondary" size="sm" onClick={() => setChoosingReply(true)}>
+          {replyTo === null ? "Choose reply target" : "Change reply target"}
+        </Button>
+        {replyTo === null ? null : (
+          <Button variant="secondary" size="sm" onClick={() => setReplyTo(null)}>
+            Clear reply
+          </Button>
+        )}
+        {choosingReply ? (
+          <ReplyTargetPicker item={item} value={replyTo} onChange={setReplyTo} />
+        ) : null}
       </div>
       <div>
         <TextField

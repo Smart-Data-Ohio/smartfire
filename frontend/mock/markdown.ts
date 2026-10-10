@@ -223,3 +223,12 @@ export function renderMarkdown(source: string, people: readonly Mentionable[]): 
 
   return blocks.join("");
 }
+
+/**
+ * A scheduled message's `excerpt`. The server builds it from the render
+ * (`markdown::redacted_excerpt`); the mock, which renders no spoilers, only swaps each
+ * `||…||` on a line for the word "spoiler".
+ */
+export function mockExcerpt(source: string): string {
+  return source.replace(/\|\|[^\n]*?\|\|/g, "spoiler");
+}
