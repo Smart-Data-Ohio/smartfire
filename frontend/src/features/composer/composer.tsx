@@ -686,6 +686,11 @@ export function Composer({
     const submitted = text;
     const markdown = submitted.trimEnd();
     const taken = currentReply();
+    const files = attachments.files;
+
+    if (!attachments.ready) {
+      return Promise.reject(new Error("Wait for the files to upload, or retry failed uploads."));
+    }
 
     return scheduled
       .create(roomId, {
@@ -694,11 +699,15 @@ export function Composer({
         threadId,
         // Classic's schedule menu keeps the draft's reply target too.
         replyToMessageId: taken.target?.messageId ?? null,
+        attachmentSignedIds: files.flatMap((entry) =>
+          entry.snapshot.signedId === null ? [] : [entry.snapshot.signedId],
+        ),
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
         // The reply it took, not one picked while the request was out.
         cancelReplyAt(key, taken.revision);
+        attachments.clearSent(files);
         clearSubmitted(submitted);
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
@@ -845,7 +854,11 @@ export function Composer({
     }
   };
 
-  const scheduleBlocked = hasFiles || hasDrive ? "Files can't be scheduled" : null;
+  const scheduleBlocked = hasDrive
+    ? "Google Drive files can't be scheduled"
+    : !attachments.ready
+      ? "Wait for the files to upload"
+      : null;
 
   const plusActions: PlusAction[] = [
     {
@@ -868,7 +881,7 @@ export function Composer({
       id: "schedule",
       label: "Schedule message…",
       icon: "clock",
-      disabled: !hasText || hasFiles || hasDrive,
+      disabled: !canSend || scheduleBlocked !== null,
       onSelect: () => setCustomOpen(true),
     });
   }

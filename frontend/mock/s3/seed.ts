@@ -1039,6 +1039,7 @@ export function seedS3(world: World, now: number, random: Random): void {
       threadId,
       replyToMessageId: null,
       replyTarget: null,
+      attachments: [],
       markdownSource,
       excerpt: mockExcerpt(markdownSource),
       sendAt: iso(sendAt),

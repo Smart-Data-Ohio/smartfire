@@ -954,6 +954,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     },
     scheduledInboxHooks(ctx, activity),
     () => admin.uploadedIcons(),
+    uploads,
   );
 
   const agents = createAgents(ctx, createRandom(seed * 49_979_687 + 3), () => simulation.paused());

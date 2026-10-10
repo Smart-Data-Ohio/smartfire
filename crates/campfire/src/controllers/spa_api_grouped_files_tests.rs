@@ -426,7 +426,7 @@ async fn grouped_files_round3_forwards_copy_visible_foreign_owned_files() {
 }
 
 #[tokio::test]
-async fn grouped_files_round3_schedules_do_not_claim_or_dispatch_signed_uploads() {
+async fn scheduled_files_reject_foreign_uploads_and_mixed_slots() {
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
     let mut david = a.sign_in(DAVID).await;
     let file = upload(&mut a.sign_in(KEVIN).await, "foreign.txt").await;
@@ -434,19 +434,12 @@ async fn grouped_files_round3_schedules_do_not_claim_or_dispatch_signed_uploads(
     let scheduled = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
         &json!({"markdownSource": "Text only", "sendAt": "2026-03-03T16:00:00Z",
             "attachmentSignedId": file.signed_id, "attachmentSignedIds": [file.signed_id]}))).await;
-    assert_eq!(scheduled.status, StatusCode::CREATED, "{}", scheduled.text());
-    let id = parse::<api::ScheduledMessage>(&scheduled).id;
-    let edit = david.write(json_body(Method::PATCH, &format!("/api/v1/scheduled_messages/{id}"),
-        &json!({"markdownSource": "Still text", "attachmentSignedId": file.signed_id,
+    assert_eq!(scheduled.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", scheduled.text());
+    let scheduled = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+        &json!({"markdownSource": "Foreign", "sendAt": "2026-03-03T16:00:00Z",
             "attachmentSignedIds": [file.signed_id]}))).await;
-    assert_eq!(edit.status, StatusCode::OK, "{}", edit.text());
-    let sent = david.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{id}/send_now"), &json!({}))).await;
-    assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
+    assert_eq!(scheduled.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", scheduled.text());
     a.db().read(move |conn| {
-        let scheduled = campfire_db::ScheduledMessage::find(conn, id)?;
-        let message = campfire_db::Message::find(conn, scheduled.sent_message_id.unwrap())?;
-        assert_eq!(message.markdown_source.as_deref(), Some("Still text"));
-        assert!(message.attachments(conn)?.is_empty());
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [file_id], |row| row.get::<_, i64>(0))?, 0);
         Ok(())
     }).await.unwrap();
@@ -1205,4 +1198,180 @@ async fn grouped_files_keep_room_thread_and_delete_permissions() {
         .write(json_body(Method::POST, path, &locked_body))
         .await;
     assert_eq!(locked.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn scheduled_files_dispatch_in_order_with_reply_and_survive_history_deletion() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut b = a.sign_in(DAVID).await;
+    let first = upload(&mut b, "first.txt").await;
+    let second = upload(&mut b, "second.txt").await;
+    let target = a.db().write(|tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
+        room_id: ALL_TALK, creator_id: KEVIN, markdown_source: Some("Target".into()), ..Default::default()
+    })).await.unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &b.cookie_header(), &[format!("room:{ALL_TALK}")]).await;
+    sync.welcome().await;
+    let reply = b.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+        &json!({"markdownSource": "", "sendAt": "2026-03-03T16:00:00Z", "replyToMessageId": target.id,
+            "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: Value = parse(&reply);
+    assert_eq!(row["attachments"][0]["attachment"]["filename"], "second.txt");
+    let id = row["id"].as_i64().unwrap();
+    let sent = b.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{id}/send_now"), &json!({}))).await;
+    assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
+    a.db().write(move |tx| campfire_db::ScheduledMessage::find(tx.conn(), id)?.destroy(tx)).await.unwrap();
+    let message_id = parse::<api::ScheduledMessage>(&sent).sent_message_id.unwrap();
+    let event = sync.until(created_in(ALL_TALK), |_| false).await;
+    let api::SyncPayload::MessageCreated(live) = event.payload else { unreachable!() };
+    assert_eq!(live.reply_to_message_id, Some(target.id));
+    assert_eq!(live.attachments.unwrap().iter().map(|file| file.filename.as_str()).collect::<Vec<_>>(), ["second.txt", "first.txt"]);
+    a.db().read(move |conn| {
+        let message = campfire_db::Message::find(conn, message_id)?;
+        assert_eq!(message.reply_to_message_id, Some(target.id));
+        assert_eq!(message.markdown_source, None);
+        assert_eq!(message.attachments(conn)?.iter().map(|(_, blob)| blob.filename.as_str()).collect::<Vec<_>>(), ["second.txt", "first.txt"]);
+        let jobs: i64 = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob'", [], |row| row.get(0))?;
+        assert_eq!(jobs, 2);
+        Ok(())
+    }).await.unwrap();
+    server.abort();
+}
+
+#[tokio::test]
+async fn scheduled_files_cancel_purges_and_failure_retains_for_retry() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut b = a.sign_in(DAVID).await;
+    let file = upload(&mut b, "retry.txt").await;
+    let file_id = blob_id(&a, &file);
+    let reply = b.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+        &json!({"markdownSource": "Retry", "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": [file.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id = parse::<api::ScheduledMessage>(&reply).id;
+    a.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_scheduled_file BEFORE INSERT ON messages BEGIN SELECT RAISE(ABORT, 'injected failure'); END")?;
+        Ok(())
+    }).await.unwrap();
+    assert!(a.db().write(move |tx| campfire_db::ScheduledMessage::dispatch(tx, id, tx.now(), true)).await.is_err());
+    a.db().read(move |conn| {
+        assert_eq!(campfire_db::ScheduledMessage::find(conn, id)?.claimed_at, None);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND blob_id=?", [id, file_id], |row| row.get::<_, i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
+    let cancelled = b.write(json_body(Method::DELETE, &format!("/api/v1/scheduled_messages/{id}"), &json!({}))).await;
+    assert_eq!(cancelled.status, StatusCode::NO_CONTENT);
+    a.db().read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [file_id], |row| row.get::<_, i64>(0))?, 0);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='ActiveStorage::PurgeJob'", [], |row| row.get::<_, i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
+    crate::active_storage::purge(&a.booted.app, file_id).await.unwrap();
+    a.db().read(move |conn| {
+        assert!(campfire_storage::Blob::find(conn, file_id).unwrap().is_none());
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn scheduled_files_edit_add_remove_reorder_and_reject_over_limit() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut b = a.sign_in(DAVID).await;
+    let first = upload(&mut b, "first.txt").await;
+    let second = upload(&mut b, "second.txt").await;
+    let third = upload(&mut b, "third.txt").await;
+    let reply = b.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+        &json!({"markdownSource": "Files", "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": [first.signed_id, second.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id = parse::<api::ScheduledMessage>(&reply).id;
+    let path = format!("/api/v1/scheduled_messages/{id}");
+    let edit = b.write(json_body(Method::PATCH, &path,
+        &json!({"attachmentSignedIds": [second.signed_id, third.signed_id]}))).await;
+    assert_eq!(edit.status, StatusCode::OK, "{}", edit.text());
+    let saved: Value = parse(&edit);
+    assert_eq!(saved["attachments"][0]["attachment"]["filename"], "second.txt");
+    assert_eq!(saved["attachments"][1]["attachment"]["filename"], "third.txt");
+    let denied = b.write(json_body(Method::PATCH, &path, &json!({"attachmentSignedIds": vec![third.signed_id; 11]}))).await;
+    assert_eq!(denied.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let clear = b.write(json_body(Method::PATCH, &path, &json!({"attachmentSignedIds": []}))).await;
+    assert_eq!(clear.status, StatusCode::OK, "{}", clear.text());
+    assert_eq!(parse::<Value>(&clear)["attachments"], json!([]));
+}
+
+#[tokio::test]
+async fn scheduled_files_due_thread_dispatch_retries_without_losing_files_or_reply() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut b = a.sign_in(DAVID).await;
+    let first = upload(&mut b, "thread-first.txt").await;
+    let second = upload(&mut b, "thread-second.txt").await;
+    let (thread_id, target_id) = a.db().write(|tx| {
+        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
+        })?;
+        let target = thread.post_message(tx, DAVID, campfire_db::NewMessage {
+            markdown_source: Some("Thread target".into()), ..Default::default()
+        })?;
+        Ok((thread.id, target.id))
+    }).await.unwrap();
+    let reply = b.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+        &json!({"markdownSource": "Thread files", "threadId": thread_id, "replyToMessageId": target_id,
+            "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id = parse::<api::ScheduledMessage>(&reply).id;
+    a.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_file_attachment BEFORE INSERT ON active_storage_attachments WHEN NEW.record_type='Message' BEGIN SELECT RAISE(ABORT, 'attachment failure'); END")?;
+        Ok(())
+    }).await.unwrap();
+    let due = a.booted.app.db.env().now().since(jiff::SignedDuration::from_secs(172800));
+    let db = a.db().clone();
+    assert!(!tokio::task::spawn_blocking(move || campfire_db::ScheduledMessage::dispatch_due(&db, due)).await.unwrap().unwrap().contains(&id));
+    a.db().read(move |conn| {
+        let row = campfire_db::ScheduledMessage::find(conn, id)?;
+        assert!(row.pending());
+        assert_eq!(row.claimed_at, None);
+        assert_eq!(row.attachments(conn)?.len(), 2);
+        Ok(())
+    }).await.unwrap();
+    a.db().write(|tx| { tx.conn().execute_batch("DROP TRIGGER reject_file_attachment")?; Ok(()) }).await.unwrap();
+    let db = a.db().clone();
+    assert!(tokio::task::spawn_blocking(move || campfire_db::ScheduledMessage::dispatch_due(&db, due)).await.unwrap().unwrap().contains(&id));
+    a.db().read(move |conn| {
+        let row = campfire_db::ScheduledMessage::find(conn, id)?;
+        let message = campfire_db::Message::find(conn, row.sent_message_id.unwrap())?;
+        assert_eq!((message.room_id, message.thread_id, message.reply_to_message_id), (ALL_TALK, Some(thread_id), Some(target_id)));
+        assert_eq!(message.attachments(conn)?.iter().map(|(_, blob)| blob.filename.as_str()).collect::<Vec<_>>(), ["thread-second.txt", "thread-first.txt"]);
+        assert!(row.attachments(conn)?.is_empty());
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn scheduled_files_validate_unfinished_invalid_and_current_size_limit_before_claiming() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut b = a.sign_in(DAVID).await;
+    let file = upload(&mut b, "large.txt").await;
+    let file_id = blob_id(&a, &file);
+    let unfinished = b.write(json_body(Method::POST, "/api/v1/uploads", &json!({
+        "filename": "unfinished.txt", "byteSize": 5, "checksum": "XUFAKrxLKna5cZ2REBfFkg==", "contentType": "text/plain"
+    }))).await;
+    let unfinished = parse::<api::DirectUpload>(&unfinished);
+    let path = format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages");
+    for ids in [vec!["invalid".to_string()], vec![unfinished.signed_id], vec![file.signed_id.clone(); 11], vec![file.signed_id.clone(); 2]] {
+        let reply = b.write(json_body(Method::POST, &path, &json!({
+            "markdownSource": "Files", "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": ids
+        }))).await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    }
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET byte_size=104857601 WHERE id=?", [file_id])?;
+        Ok(())
+    }).await.unwrap();
+    let reply = b.write(json_body(Method::POST, &path, &json!({
+        "markdownSource": "Large", "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": [file.signed_id]
+    }))).await;
+    assert_eq!(reply.status, StatusCode::PAYLOAD_TOO_LARGE, "{}", reply.text());
+    a.db().read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [file_id], |row| row.get::<_, i64>(0))?, 0);
+        Ok(())
+    }).await.unwrap();
 }

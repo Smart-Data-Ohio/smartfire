@@ -261,6 +261,7 @@ function scheduled(
     threadId: null,
     replyToMessageId: null,
     replyTarget: null,
+    attachments: [],
     markdownSource: `Later ${id}`,
     excerpt: `Later ${id}`,
     sendAt: at(minute),

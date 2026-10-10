@@ -12,6 +12,7 @@ import { ConversationLabel, conversationText } from "../destinations/conversatio
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
+import { ScheduledFiles } from "./scheduled-files.tsx";
 import { outcomeLabel, scheduledExcerpt, scheduledSection } from "./scheduled-format.ts";
 
 /** What a scheduled row can ask for. */
@@ -270,6 +271,7 @@ export function ScheduledRow({
             </Tooltip>
           </div>
           <p className="scheduled-body">{scheduledExcerpt(item)}</p>
+          <ScheduledFiles files={item.attachments} />
           {section === "stranded" ? (
             <span className="scheduled-outcome" data-tone="warning">
               <Icon name="alert" size={12} />

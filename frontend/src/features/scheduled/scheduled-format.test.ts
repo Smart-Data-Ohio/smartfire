@@ -9,6 +9,7 @@ function scheduled(overrides: Partial<ScheduledMessage>): ScheduledMessage {
     threadId: null,
     replyToMessageId: null,
     replyTarget: null,
+    attachments: [],
     markdownSource: "Hello",
     excerpt: "Hello",
     sendAt: "2026-10-07T13:00:00.000Z",
