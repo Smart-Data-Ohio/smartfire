@@ -261,6 +261,13 @@ pub struct TestApp {
     _dir: tempfile::TempDir,
 }
 
+/// Whether a test app serves the SPA. A running app always does (`Config::spa_enabled`); a test
+/// that names `SPA_ENABLED` (any value) gets that. The classic page tests, which name nothing, keep
+/// the classic pages they were written against until those pages are deleted.
+pub fn serves_spa(extra: &[(&str, &str)]) -> bool {
+    extra.iter().any(|(name, _)| *name == "SPA_ENABLED")
+}
+
 impl TestApp {
     /// Start only when an ordered producer assertion is needed. Nothing is recorded by default.
     pub fn publications(&self) -> &campfire_cable::pubsub::PublicationCapture {
@@ -570,6 +577,44 @@ impl TestApp {
     }
 
     fn config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
+        let mut config = Self::production_config_for(dir, extra);
+        config.spa_enabled = serves_spa(extra);
+        config
+    }
+
+    /// Boots a seed on the config production parsing gives `vars`, with nothing overwritten
+    /// afterwards: not even [`serves_spa`]'s classic page switch.
+    pub async fn boot_seed_with_production_env(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        vars: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        let seed = seed_dir(name)?;
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("db")).unwrap();
+        std::fs::copy(
+            seed.join("db/production.sqlite3"),
+            dir.path().join("db/production.sqlite3"),
+        )
+        .unwrap();
+        copy_dir(&seed.join("storage"), &dir.path().join("files"));
+        let config = Self::production_config_for(&dir, vars);
+        let intervals = crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        };
+        let booted = boot_with_services(config, clock, crate::net::Network::system(), intervals)
+            .await
+            .unwrap();
+        Some(TestApp {
+            booted,
+            _dir: dir,
+            publications: Default::default(),
+        })
+    }
+
+    /// `Config::from_lookup` over `extra` and the seed's fixed values, pointed at this copy.
+    fn production_config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
         let mut config = Config::from_lookup(|name| match name {
@@ -915,6 +960,13 @@ impl Browser<'_> {
 
     pub async fn get(&mut self, path: &str) -> Reply {
         self.send(Req::new(Method::GET, path)).await
+    }
+
+    /// A classic page as a parity test reads it in an app that serves the SPA: a request that
+    /// isn't a navigation (`Accept: */*`), so the page answers instead of sending a signed-in
+    /// person to its SPA screen. Only until the classic pages are deleted.
+    pub async fn classic_page(&mut self, path: &str) -> Reply {
+        self.send(Req::new(Method::GET, path).header("accept", "*/*")).await
     }
 
     /// A write as the app's own pages make it: with the session's authenticity token in

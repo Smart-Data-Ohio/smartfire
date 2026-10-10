@@ -1,7 +1,7 @@
 use super::*;
 
 #[tokio::test]
-async fn google_link_and_reauthentication_return_to_the_selected_ui_with_the_same_flash() {
+async fn google_link_and_reauthentication_return_to_the_spa_with_the_same_flash_whatever_was_chosen() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     for preference in [UiPreference::Classic, UiPreference::Next] {
         let (a, r) = app_with_env(&[("SPA_ENABLED", "1")]).await;
@@ -11,16 +11,9 @@ async fn google_link_and_reauthentication_return_to_the_selected_ui_with_the_sam
             .unwrap();
         let mut b = a.sign_in(DAVID).await;
         b.get("/app/").await;
-        let integrations = if preference == UiPreference::Next {
-            "/app/settings/integrations"
-        } else {
-            "/users/me/profile"
-        };
-        let security = if preference == UiPreference::Next {
-            "/app/settings/security"
-        } else {
-            "/users/me/profile"
-        };
+        // A stored choice of the classic UI is ignored.
+        let integrations = "/app/settings/integrations";
+        let security = "/app/settings/security";
         let q = start(&mut b, "/user/profile/google_sign_in_link").await;
         let cancelled = b
             .get(&format!(
@@ -170,15 +163,11 @@ async fn google_sign_in_returns_directly_to_the_spa_after_the_last_factor() {
             let q = start(&mut b, "/session/google").await;
             answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
             let reply = callback(&mut b, &q["state"]).await;
-            let expected = if preference == UiPreference::Next {
-                next
-            } else {
-                saved
-            };
+            // A stored choice of the classic UI is ignored.
             assert_eq!(
                 reply.location(),
-                Some(format!("http://campfire.test{expected}").as_str()),
-                "{saved}"
+                Some(format!("http://campfire.test{next}").as_str()),
+                "{preference:?} {saved}"
             );
         }
     }

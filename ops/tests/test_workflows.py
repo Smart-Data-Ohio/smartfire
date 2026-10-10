@@ -131,6 +131,14 @@ class WorkflowTest(unittest.TestCase):
         self.assertLess(steps.index(by_id["cutover"]), steps.index(by_id["google_configuration"]))
         self.assertLess(steps.index(by_id["google_configuration"]), steps.index(spa))
         self.assertLess(steps.index(spa), steps.index(by_id["finish"]))
+        # Everyone gets the SPA whatever spa_mode wrote: its shell is checked after every applied
+        # release, whichever mode ran (unchanged and off included).
+        check = by_id["spa_check"]
+        self.assertEqual(check["if"], "steps.plan.outputs.dry_run != 'true' && steps.cutover.conclusion == 'success'")
+        self.assertNotIn("spa_mode", check["if"])
+        self.assertIn('python3 deploy/gcp/check-frontend.py "https://${GCP_APP_HOST}" --spa', check["run"])
+        self.assertLess(steps.index(spa), steps.index(check))
+        self.assertLess(steps.index(check), steps.index(by_id["finish"]))
         validation = next(step for step in steps if step.get("run") == "python3 deploy/gcp/spa-configuration.py --validate")
         self.assertNotIn("if", validation)
         self.assertLess(steps.index(validation), steps.index(by_id["preflight"]))

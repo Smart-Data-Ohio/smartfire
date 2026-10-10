@@ -99,6 +99,32 @@ fn only_intentional_aliases_share_a_url() {
                     ("users#show", "/users/:id"),
                     ("users/profiles#show", "/users/:user_id/profile"),
                     ("users/profiles#edit", "/users/:user_id/profile/edit"),
+                    ("users/cards#show", "/users/:id/card"),
+                ],
+            ),
+            (
+                "/app/r/7".to_string(),
+                vec![
+                    ("rooms#show", "/rooms/:id"),
+                    ("rooms/directs#edit", "/rooms/directs/:id/edit"),
+                ],
+            ),
+            (
+                "/app/r/7/t/8".to_string(),
+                vec![
+                    ("channel_threads#show", "/rooms/:room_id/threads/:id"),
+                    ("channel_threads#content", "/rooms/:room_id/threads/:id/content"),
+                    (
+                        "channel_thread_messages#index",
+                        "/rooms/:room_id/threads/:thread_id/messages",
+                    ),
+                ],
+            ),
+            (
+                "/app/admin/people".to_string(),
+                vec![
+                    ("accounts#edit", "/account/edit"),
+                    ("accounts/users#index", "/account/users"),
                 ],
             ),
             (
@@ -130,8 +156,8 @@ fn only_intentional_aliases_share_a_url() {
                 ],
             ),
         ]),
-        "only the message, room settings and profile aliases may share SPA URLs, \
-         with their fallback first"
+        "only the message, room, thread, people, room settings and profile aliases may share \
+         SPA URLs, with their fallback first"
     );
     assert!(SCREENS.iter().all(|screen| {
         std::ptr::eq(first_for_spa(screen), screen)
@@ -410,9 +436,65 @@ fn room_new_and_edit_pages_open_the_create_dialog_and_the_settings() {
         classic_url("/app/r/12/settings", None).as_deref(),
         Some("/rooms/12")
     );
+    // A direct message has no settings screen: its edit page opens the conversation, and its
+    // new page the New message picker.
     assert_eq!(
-        spa_url("rooms/directs#edit", "/rooms/directs/12/edit", None),
-        None
+        spa_url("rooms/directs#edit", "/rooms/directs/12/edit", None).as_deref(),
+        Some("/app/r/12")
+    );
+    assert_eq!(
+        spa_url("rooms/directs#new", "/rooms/directs/new", None).as_deref(),
+        Some("/app/rooms/new/direct")
+    );
+    assert_eq!(
+        classic_url("/app/rooms/new/direct", None).as_deref(),
+        Some("/rooms/directs/new")
+    );
+}
+
+#[test]
+fn fragments_opened_as_pages_map_to_their_screen() {
+    assert_eq!(
+        spa_url("channel_threads#content", "/rooms/7/threads/8/content", None).as_deref(),
+        Some("/app/r/7/t/8")
+    );
+    // The content's reply anchor is the thread route's `m`.
+    for (query, spa) in [
+        ("message_id=123", "/app/r/7/t/8?m=123"),
+        ("message_id=%31%32%33&x=1", "/app/r/7/t/8?m=123&x=1"),
+        ("message_id=5&message_id=123&classic=1", "/app/r/7/t/8?m=123"),
+        ("message_id=latest", "/app/r/7/t/8"),
+        ("message_id=", "/app/r/7/t/8"),
+    ] {
+        assert_eq!(
+            spa_url("channel_threads#content", "/rooms/7/threads/8/content", Some(query)).as_deref(),
+            Some(spa),
+            "{query}"
+        );
+    }
+    assert_eq!(
+        spa_url("channel_thread_messages#index", "/rooms/7/threads/8/messages", None).as_deref(),
+        Some("/app/r/7/t/8")
+    );
+    assert_eq!(
+        classic_url("/app/r/7/t/8", None).as_deref(),
+        Some("/rooms/7/threads/8")
+    );
+    assert_eq!(
+        spa_url("accounts/users#index", "/account/users", Some("page=2")).as_deref(),
+        Some("/app/admin/people?page=2")
+    );
+    assert_eq!(
+        classic_url("/app/admin/people", None).as_deref(),
+        Some("/account/edit")
+    );
+    assert_eq!(
+        profile_url("users/cards#show", "/users/9/card", None, 4).as_deref(),
+        Some("/app/people/9")
+    );
+    assert_eq!(
+        profile_url("users/cards#show", "/users/4/card", None, 4).as_deref(),
+        Some("/app/settings")
     );
 }
 
@@ -737,23 +819,6 @@ fn every_spa_url_maps_back_to_its_first_classic_page() {
     );
     assert_eq!(classic_url("/app/nowhere", None), None);
     assert_eq!(classic_url("/app/r/general", None), None);
-}
-
-#[test]
-fn classic_1_bypasses_the_redirect() {
-    for query in ["classic=1", "a=b&classic=1", "classic", "classic=true"] {
-        assert!(bypassed(Some(query)), "{query}");
-    }
-    for query in [
-        None,
-        Some(""),
-        Some("classic=0"),
-        Some("classic="),
-        Some("classical=1"),
-        Some("x=classic"),
-    ] {
-        assert!(!bypassed(query), "{query:?}");
-    }
 }
 
 /// `frontend/src/gen/screens.json` is [`json`]'s output. `UPDATE_SCREENS=1` (or `pnpm gen` in

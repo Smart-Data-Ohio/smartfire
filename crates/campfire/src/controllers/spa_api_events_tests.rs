@@ -600,7 +600,7 @@ async fn spa_api_events_form_defaults_values_and_scopes_match_classic_forms() {
         "same current-user venue options and order"
     );
     let prefilled = ok(&david.send(get(&format!("/api/v1/rooms/{DESIGNERS}/events/new?title=%20Prefilled%20&startsAt=2026-03-10T09%3A00&timeZone=America%2FNew_York"))).await);
-    let classic_prefill = david.get(&format!("/rooms/{DESIGNERS}/events/new?event[title]=%20Prefilled%20&event[starts_at]=2026-03-10T09%3A00&event[time_zone]=America%2FNew_York")).await;
+    let classic_prefill = david.classic_page(&format!("/rooms/{DESIGNERS}/events/new?event[title]=%20Prefilled%20&event[starts_at]=2026-03-10T09%3A00&event[time_zone]=America%2FNew_York")).await;
     assert_eq!(
         classic_prefill.status,
         StatusCode::OK,
@@ -1156,7 +1156,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         let expected = if suffix.is_empty() {
             old.write(classic_form(Method::PATCH, &path, &body)).await
         } else {
-            old.get(&path).await
+            old.classic_page(&path).await
         };
         let actual = if suffix.is_empty() {
             send(&mut new, Method::PATCH, &format!("/api/v1{path}"), &body).await
@@ -1202,7 +1202,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         format!("/rooms/{ALL_PETS}/events/{LAUNCH}/attendance"),
         format!("/rooms/{DESIGNERS}/events/411254270"),
     ] {
-        let expected = old.get(&path).await;
+        let expected = old.classic_page(&path).await;
         let actual = new.send(get(&format!("/api/v1{path}"))).await;
         assert_eq!(
             (expected.status, actual.status),
@@ -1240,7 +1240,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     let mut new_admin = next.sign_in(JASON).await;
     assert_eq!(
         old_admin
-            .get(&format!("/rooms/{DESIGNERS}/events/{LAUNCH}/edit"))
+            .classic_page(&format!("/rooms/{DESIGNERS}/events/{LAUNCH}/edit"))
             .await
             .status,
         StatusCode::OK
@@ -1256,7 +1256,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     );
     assert_eq!(
         old_admin
-            .get(&format!("/rooms/{DESIGNERS}/events/{CANCELLED}/edit"))
+            .classic_page(&format!("/rooms/{DESIGNERS}/events/{CANCELLED}/edit"))
             .await
             .status,
         StatusCode::FORBIDDEN
@@ -1284,7 +1284,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     ] {
         let path = format!("/rooms/{DESIGNERS}/events{suffix}");
         assert_eq!(
-            old.get(&path).await.status,
+            old.classic_page(&path).await.status,
             StatusCode::FORBIDDEN,
             "classic {path}"
         );
@@ -1298,7 +1298,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         sql(a,"UPDATE users SET role=0 WHERE id=712064548; UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=654632876;").await;
     }
     let path = format!("/rooms/{DESIGNERS}/events");
-    assert_eq!(old.get(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(old.classic_page(&path).await.status, StatusCode::NOT_FOUND);
     assert_eq!(
         new.send(get(&format!("/api/v1{path}"))).await.status,
         StatusCode::NOT_FOUND
@@ -1549,7 +1549,7 @@ fn event_calls(room: i64, event: i64, query: &str) -> Vec<Call> {
         Call {
             label: format!("GET {base}{suffix}"),
             write: false,
-            classic: Req::new(Method::GET, &path),
+            classic: Req::new(Method::GET, &path).header("accept", "*/*"),
             api: get(&format!("/api/v1{path}")),
         }
     })
@@ -1726,13 +1726,13 @@ async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_c
     new_david.authenticity_token().await;
     // Classic has no room-type check: a participant lists, opens the form and schedules.
     let path = format!("/rooms/{DIRECT_DAVID_JASON}/events");
-    assert_eq!(old_david.get(&path).await.status, StatusCode::OK);
+    assert_eq!(old_david.classic_page(&path).await.status, StatusCode::OK);
     let list = ok(&new_david.send(get(&format!("/api/v1{path}"))).await);
     assert_eq!(list["roomId"], DIRECT_DAVID_JASON);
     assert_eq!(list["roomKind"], "direct");
     assert_eq!(list["mayCreate"], true);
     assert_eq!(
-        old_david.get(&format!("{path}/new")).await.status,
+        old_david.classic_page(&format!("{path}/new")).await.status,
         StatusCode::OK
     );
     let form = ok(&new_david.send(get(&format!("/api/v1{path}/new"))).await);
@@ -1771,7 +1771,7 @@ async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_c
     let mut old_jason = classic.sign_in(JASON).await;
     let mut new_jason = next.sign_in(JASON).await;
     assert_eq!(
-        old_jason.get(&format!("{path}/{id}")).await.status,
+        old_jason.classic_page(&format!("{path}/{id}")).await.status,
         StatusCode::OK
     );
     ok(&new_jason.send(get(&format!("/api/v1{path}/{id}"))).await);

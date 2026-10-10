@@ -20,6 +20,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
+import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
@@ -208,6 +209,13 @@ const newRoomRoutes = NEW_ROOM_SLUGS.map((kind) =>
     component: () => <NewRoomRoute kind={kind} />,
   }),
 );
+
+/** `/app/rooms/new/direct`: the New message picker, opened over the home screen. */
+const newDirectRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "rooms/new/direct",
+  component: NewDirectRoute,
+});
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -622,6 +630,7 @@ const routeTree = rootRoute.addChildren([
     handoffResolverRoute,
     linksResolverRoute,
     ...newRoomRoutes,
+    newDirectRoute,
     roomRoute.addChildren([
       permalinkRoute,
       fizzyCardRoute,
@@ -647,7 +656,7 @@ export const router = createRouter({
   // 0, not TanStack's 500ms, including reduced motion: the 150ms wait and the ~300ms reveal already stop a flash.
   defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
   defaultPendingComponent: RoutePending,
-  // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
+  // An unknown SPA path is a 404; it never forwards to a classic page (the server would send it back).
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,
 });

@@ -132,7 +132,7 @@ fn owned_manifest_assets(body: &str) -> String {
 }
 
 #[tokio::test]
-async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences() {
+async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choices_say() {
     use crate::controllers::presenters::test_support::DAVID;
     use campfire_db::models::user::ui_preference::{self, UiPreference};
 
@@ -142,12 +142,13 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
     .unwrap();
     let before: serde_json::Value =
         serde_json::from_str(vectors["responses"][0]["body"].as_str().unwrap()).unwrap();
-    for (enabled, default_next, preference, next) in [
-        (false, true, Some(UiPreference::Next), false),
-        (true, false, None, false),
-        (true, true, None, true),
-        (true, true, Some(UiPreference::Classic), false),
-        (true, false, Some(UiPreference::Next), true),
+    // The SPA is served whatever these say, and a stored classic choice is ignored.
+    for (enabled, default_next, preference) in [
+        (false, true, Some(UiPreference::Next)),
+        (true, false, None),
+        (true, true, None),
+        (true, true, Some(UiPreference::Classic)),
+        (true, false, Some(UiPreference::Next)),
     ] {
         let env = [
             ("SPA_ENABLED", if enabled { "1" } else { "0" }),
@@ -174,12 +175,7 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
             );
         }
         assert_eq!(manifest.header("cache-control"), Some("private, no-cache"));
-        let expected_profile = if next {
-            "/app/settings"
-        } else {
-            "/users/me/profile"
-        };
-        assert_eq!(after["shortcuts"][1]["url"], expected_profile);
+        assert_eq!(after["shortcuts"][1]["url"], "/app/settings");
         let worker = browser.get("/service-worker.js").await;
         assert_eq!(worker.status, StatusCode::OK);
         assert_eq!(
@@ -196,7 +192,7 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
         );
         assert_eq!(
             worker.body,
-            campfire_spa::pwa::file("service-worker.js", enabled, None)
+            campfire_spa::pwa::file("service-worker.js", true, None)
                 .unwrap()
                 .body
         );
@@ -205,7 +201,7 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
         assert_eq!(
             offline.content_type(),
             Some(
-                campfire_spa::pwa::file("offline.html", enabled, None)
+                campfire_spa::pwa::file("offline.html", true, None)
                     .unwrap()
                     .file
                     .content_type
@@ -214,7 +210,7 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
         assert_eq!(offline.header("set-cookie"), None);
         assert_eq!(
             offline.body,
-            campfire_spa::pwa::file("offline.html", enabled, None)
+            campfire_spa::pwa::file("offline.html", true, None)
                 .unwrap()
                 .body
         );
@@ -230,7 +226,7 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
             alias_manifest.header("location"),
             Some("http://campfire.test/webmanifest.json")
         );
-        if !enabled || campfire_spa::file("offline.html", None).is_none() {
+        if campfire_spa::file("offline.html", None).is_none() {
             assert_eq!(
                 offline.header("content-security-policy"),
                 None,
@@ -264,13 +260,13 @@ async fn pwa_three_stable_urls_keep_identity_across_cutover_and_ui_preferences()
 }
 
 #[tokio::test]
-async fn old_notification_paths_use_server_aliases_and_honor_classic_choice() {
+async fn old_notification_paths_use_server_aliases_and_ignore_a_classic_choice() {
     use crate::controllers::presenters::test_support::DAVID;
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     let Some(app) = TestApp::boot_seed_with_env(
         "default",
         seed_clock(),
-        &[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")],
+        &[("SPA_ENABLED", "1")],
     )
     .await
     else {
@@ -278,22 +274,25 @@ async fn old_notification_paths_use_server_aliases_and_honor_classic_choice() {
     };
     let mut browser = app.sign_in(DAVID).await;
     let room = crate::controllers::presenters::test_support::ALL_TALK;
-    for (path, spa_path) in [
-        ("/activity".to_string(), "/app/activity".to_string()),
-        (format!("/rooms/{room}"), format!("/app/r/{room}")),
-    ] {
-        let reply = browser.get(&path).await;
-        assert_eq!(reply.status, StatusCode::FOUND);
-        assert_eq!(
-            reply.header("location"),
-            Some(format!("http://campfire.test{spa_path}").as_str())
-        );
-    }
-    app.db()
-        .write(|tx| ui_preference::store(tx, DAVID, UiPreference::Classic))
-        .await
-        .unwrap();
-    for path in ["/activity".to_string(), format!("/rooms/{room}")] {
-        assert_eq!(browser.get(&path).await.status, StatusCode::OK);
+    for preference in [None, Some(UiPreference::Classic)] {
+        if let Some(preference) = preference {
+            app.db()
+                .write(move |tx| ui_preference::store(tx, DAVID, preference))
+                .await
+                .unwrap();
+        }
+        for (path, spa_path) in [
+            ("/activity".to_string(), "/app/activity".to_string()),
+            (format!("/rooms/{room}"), format!("/app/r/{room}")),
+            (format!("/rooms/{room}?classic=1"), format!("/app/r/{room}")),
+        ] {
+            let reply = browser.get(&path).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{preference:?} {path}");
+            assert_eq!(
+                reply.header("location"),
+                Some(format!("http://campfire.test{spa_path}").as_str()),
+                "{preference:?} {path}"
+            );
+        }
     }
 }

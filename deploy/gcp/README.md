@@ -133,10 +133,16 @@ Dispatch **Deploy to GCP** from `main` with `spa_mode` set to one of these value
 
 | `spa_mode` | `SPA_ENABLED` | `SPA_DEFAULT` | Result |
 | --- | --- | --- | --- |
-| `unchanged` (default) | preserved | preserved | Keep the current UI settings. |
-| `off` | `0` | `classic` | Disable `/app/` and use the classic UI. |
-| `opt-in` | `1` | `classic` | Serve the SPA; members choose it from their classic profile. |
-| `default-next` | `1` | `next` | Use the SPA for members who have not chosen a UI. |
+| `unchanged` (default) | preserved | preserved | Keep the current settings. |
+| `off` | `0` | `classic` | Writes the values only; the SPA is still served. |
+| `opt-in` | `1` | `classic` | Writes the values only; the SPA is still served. |
+| `default-next` | `1` | `next` | Writes the values only; the SPA is still served. |
+
+Since cutover step 26 the app no longer reads `SPA_ENABLED` or `SPA_DEFAULT`: the SPA is the
+only UI for signed-in members, every classic page it has redirects there, and there is no
+opt-out. The modes still write the two values (so the workflow keeps working), and the release
+script still uses `SPA_ENABLED=1` to decide whether to check the built SPA shell, so keep
+production on `default-next`.
 
 To switch production to opt-in without changing its code, use
 `environment=production`, `git_sha=<currently deployed full SHA>`,

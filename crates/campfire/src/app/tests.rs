@@ -68,7 +68,7 @@ async fn boot_seeded() -> Option<Test> {
     copy_dir(&seed.join("storage"), &dir.path().join("files"));
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE").unwrap();
-    let config = Config::from_lookup(|name| match name {
+    let mut config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE" => Some(secret.clone()),
         "DISABLE_SSL" => Some("true".into()),
         "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -76,6 +76,8 @@ async fn boot_seeded() -> Option<Test> {
         _ => None,
     })
     .unwrap();
+    // The classic pages, until they're deleted.
+    config.spa_enabled = false;
     Some(Test { booted: boot_with_clock(config, crate::controllers::presenters::test_support::seed_clock()).await.unwrap(), _dir: dir })
 }
 
