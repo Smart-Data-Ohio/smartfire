@@ -440,13 +440,15 @@ async fn signs_in_with_a_password_and_out_again() {
     let page = browser.get("/session/new").await;
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.text().contains("<title>Sign in</title>"));
-    let html = page.text();
-    let stylesheet = html.split_once("<link rel=\"stylesheet\" href=\"")
-        .expect("retained auth stylesheet").1.split('"').next().unwrap();
-    assert!(stylesheet.starts_with("/assets/auth-") && stylesheet.ends_with(".css"));
-    let css = browser.get(stylesheet).await;
-    assert_eq!(css.status, StatusCode::OK);
-    assert_eq!(css.header("content-type"), Some("text/css"));
+    assert!(page.header("link").is_none());
+    assert!(page.text().contains(&format!(
+        "<link rel=\"stylesheet\" href=\"{}\">",
+        campfire_static_assets::stylesheet_path("auth")
+    )));
+    assert!(page.text().contains(&format!(
+        "<script src=\"{}\"></script>",
+        campfire_static_assets::javascript_path("auth")
+    )));
     page.assert_form("/session");
     let signed_in = browser
         .form(

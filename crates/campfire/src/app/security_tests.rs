@@ -170,9 +170,13 @@ fn compared(headers: impl Fn(&str) -> Option<String>) -> Vec<(String, Option<Str
 
 async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<&str>, token: Option<&str>) -> Reply {
     let method = vector["method"].as_str().unwrap();
-    let path = vector["path"].as_str().unwrap();
+    // The vector's classic base.css is retired; retained assets keep its header contract.
+    let path = match name {
+        "asset" | "asset_head" => campfire_static_assets::stylesheet_path("auth"),
+        _ => vector["path"].as_str().unwrap().to_string(),
+    };
     let env = &vector["env"];
-    let mut builder = request(method, path);
+    let mut builder = request(method, &path);
     if let Some(accept) = env["HTTP_ACCEPT"].as_str() {
         builder = builder.header(header::ACCEPT, accept);
     }

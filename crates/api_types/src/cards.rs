@@ -82,6 +82,30 @@ pub struct PollOption {
     /// Who chose it, by id. Empty for an anonymous poll. The classic card shows their names
     /// and works out the viewer's own vote from these ids.
     pub voter_ids: Vec<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub media: Option<PollOptionMedia>,
+}
+
+/// One uploaded image or emoji on an option, never a remote embed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[ts(export)]
+pub enum PollOptionMedia {
+    Image { url: String, still_url: Option<String> },
+    Emoji { content: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export)]
+pub struct CreatePollOptionMedia {
+    /// An uploaded PNG, JPEG, GIF or WebP, validated from its bytes, within the workspace upload limit.
+    #[ts(optional)]
+    pub signed_id: Option<String>,
+    /// One Unicode emoji or an existing workspace emoji name, optionally wrapped in colons.
+    #[ts(optional)]
+    pub emoji: Option<String>,
 }
 
 /// `GET /api/v1/rooms/:roomId/polls/:id` (`rooms/polls#show`), and the reply to
@@ -123,6 +147,10 @@ pub struct CreatePoll {
     pub multiple: bool,
     pub anonymous: bool,
     pub closes_at: Option<Timestamp>,
+    /// Positional media for the original options, before blank labels are dropped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub option_media: Option<Vec<Option<CreatePollOptionMedia>>>,
 }
 
 /// `POST /api/v1/rooms/:roomId/polls/:id/vote`: replace the viewer's whole ballot
