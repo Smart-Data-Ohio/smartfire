@@ -370,7 +370,7 @@ impl ScheduledMessage {
             }).collect()
     }
 
-    fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
+    pub(crate) fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
         for (attachment, _) in self.attachments(tx.conn())? {
             attachment.delete(tx)?;
             if !blob_ids.contains(&attachment.blob_id) {
