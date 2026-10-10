@@ -20,4 +20,8 @@ character: string | null,
 /**
  * Brand and custom only: the image (`/icons/:name` for custom).
  */
-imageUrl: string | null, };
+imageUrl: string | null, animated: boolean,
+/**
+ * First-frame rendition for custom animation, the original for static images, or `null` for Unicode.
+ */
+stillUrl: string | null, };

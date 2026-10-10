@@ -182,8 +182,23 @@ async fn index_user_suggestions(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &api::UserSuggestionList { suggestions })
 }
 
-fn icon(suggestion: icons::Suggestion) -> api::Icon {
-    api::Icon {
+fn icon(
+    conn: &campfire_db::Connection,
+    suggestion: icons::Suggestion,
+) -> campfire_db::Result<api::Icon> {
+    let animated = suggestion.kind == "custom"
+        && campfire_db::models::workspace_icon::WorkspaceIcon::animated_by_name(
+            conn,
+            &suggestion.name,
+        )?;
+    let still_url = suggestion.image.as_ref().map(|url| {
+        if animated {
+            format!("{url}?still=1")
+        } else {
+            url.clone()
+        }
+    });
+    Ok(api::Icon {
         name: suggestion.name,
         title: suggestion.title,
         kind: match suggestion.kind {
@@ -193,7 +208,9 @@ fn icon(suggestion: icons::Suggestion) -> api::Icon {
         },
         character: suggestion.character,
         image_url: suggestion.image,
-    }
+        animated,
+        still_url,
+    })
 }
 
 async fn index_icon_suggestions(c: &mut Ctx) -> Result {
@@ -202,26 +219,31 @@ async fn index_icon_suggestions(c: &mut Ctx) -> Result {
     let found = c
         .app()
         .db
-        .read(move |conn| icons::suggestions(conn, &query, false))
+        .read(move |conn| {
+            icons::suggestions(conn, &query, false)?
+                .into_iter()
+                .map(|suggestion| icon(conn, suggestion))
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
         .await
         .map_err(db_error)?;
-    c.json(
-        StatusCode::OK,
-        &api::IconList {
-            icons: found.into_iter().map(icon).collect(),
-        },
-    )
+    c.json(StatusCode::OK, &api::IconList { icons: found })
 }
 
 async fn index_icons(c: &mut Ctx) -> Result {
     before_actions(c).await?;
-    let found = c.app().db.read(icons::catalog).await.map_err(db_error)?;
-    c.json(
-        StatusCode::OK,
-        &api::IconList {
-            icons: found.into_iter().map(icon).collect(),
-        },
-    )
+    let found = c
+        .app()
+        .db
+        .read(|conn| {
+            icons::catalog(conn)?
+                .into_iter()
+                .map(|suggestion| icon(conn, suggestion))
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &api::IconList { icons: found })
 }
 
 // --- Slash commands -------------------------------------------------------------------------------
