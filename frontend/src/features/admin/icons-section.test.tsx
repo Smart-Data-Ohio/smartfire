@@ -112,7 +112,8 @@ describe("the workspace icons section", () => {
     await screen.findByText("Animated icons: 1 of 250 used.");
 
     expect(row("dance").querySelector("img")?.getAttribute("src")).toBe("/icons/dance?still=1");
-    expect(row("ohio").querySelector("img")?.getAttribute("src")).toBe("/icons/ohio");
+    // A static icon is asked for its still too; the server answers with the original.
+    expect(row("ohio").querySelector("img")?.getAttribute("src")).toBe("/icons/ohio?still=1");
   });
 
   it("says when the limit is reached", async () => {

@@ -10,16 +10,17 @@ const BODY_ICON = /<img\b[^>]*\bclass="icon icon--custom"[^>]*>/g;
 const BODY_ICON_SRC = /\bsrc="(\/icons\/[a-z0-9_]+)"/;
 
 /**
- * A custom emoji's first frame: the still the server named, else `?still=1` on a workspace icon's
- * URL (the server answers with an animated icon's first frame and a static icon's original), else
- * the image itself.
+ * A custom emoji's first frame. A workspace icon's is always its URL with `?still=1`, whatever
+ * still was named: the server answers with an animated icon's first frame and a static icon's
+ * original, and a named still may be stale (a catalog cached before a static icon was replaced
+ * by an animated one of its name). Any other image uses the named still, else itself.
  */
 export function stillSrc(src: string, still?: string | null): string {
-  if (still !== null && still !== undefined) {
-    return still;
+  if (WORKSPACE_ICON.test(src)) {
+    return `${src}?still=1`;
   }
 
-  return WORKSPACE_ICON.test(src) ? `${src}?still=1` : src;
+  return still ?? src;
 }
 
 /** Message HTML with every workspace icon on its first frame, for reduced motion. */
@@ -41,10 +42,7 @@ export function useMotionSafeHtml(html: string): string {
 
 type EmojiImageProps = {
   readonly src: string;
-  /**
-   * The first frame, from the server's current answer (`stillUrl`); otherwise it's worked out from
-   * `src`. Never pass a remembered one: an icon can be replaced by an animated one of its name.
-   */
+  /** The first frame (`stillUrl`), for images other than workspace icons (see `stillSrc`). */
   readonly still?: string | null | undefined;
   /** Shows the first frame while at rest, as a dense grid's cells do until active. */
   readonly resting?: boolean;

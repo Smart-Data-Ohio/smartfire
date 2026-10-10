@@ -48,10 +48,11 @@ function srcOf(element: Element | null | undefined): string | null | undefined {
 }
 
 describe("an animated emoji's first frame", () => {
-  it("is the still the server named, else ?still=1 on a workspace icon", () => {
+  it("is ?still=1 on a workspace icon, else the still the server named", () => {
     expect(stillSrc("/icons/dance", "/icons/dance?still=1")).toBe("/icons/dance?still=1");
     expect(stillSrc("/icons/dance")).toBe("/icons/dance?still=1");
     expect(stillSrc("/icons/dance", null)).toBe("/icons/dance?still=1");
+    expect(stillSrc("/brand/logo.gif", "/brand/logo.png")).toBe("/brand/logo.png");
     // Brand icons never move.
     expect(stillSrc("/assets/icons/brands/github.svg")).toBe("/assets/icons/brands/github.svg");
   });
@@ -73,6 +74,20 @@ describe("EmojiImage", () => {
     const { container } = render(<EmojiImage src={DANCE.imageUrl ?? ""} still={DANCE.stillUrl} />);
 
     expect(srcOf(container)).toBe("/icons/dance");
+  });
+
+  it("asks a workspace icon for ?still=1 even when the named still is its original", () => {
+    // A catalog cached while :dance: was static, before an animated GIF replaced it.
+    document.documentElement.dataset.motion = "reduce";
+
+    const { container, rerender } = render(<EmojiImage src="/icons/dance" still="/icons/dance" />);
+
+    expect(srcOf(container)).toBe("/icons/dance?still=1");
+
+    delete document.documentElement.dataset.motion;
+    rerender(<EmojiImage src="/icons/dance" still="/icons/dance" resting />);
+
+    expect(srcOf(container)).toBe("/icons/dance?still=1");
   });
 
   it("shows the first frame when the OS asks for reduced motion", () => {
