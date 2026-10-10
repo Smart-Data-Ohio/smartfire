@@ -77,6 +77,9 @@ test.describe("phone", () => {
 
     await search.fill("roadmap");
     await expect(page.getByRole("option", { name: /Q4 roadmap/ })).toBeVisible();
+    // The empty query's answer lists Q4 roadmap too; this one's answer resets the highlight, so the
+    // keys wait for it.
+    await expect(page.getByRole("option")).toHaveCount(1);
     await expectTouchTargets(page, ".drive-picker");
     await expect(page.getByRole("button", { name: "Close Drive search" })).toBeVisible();
     await search.press("ArrowDown");
@@ -85,6 +88,8 @@ test.describe("phone", () => {
     await expect(page.getByRole("dialog", { name: "Share a Drive file" })).toBeVisible();
     await page.getByRole("button", { name: "Attach only" }).click();
     await expect(page.getByRole("button", { name: "Remove Q4 roadmap" })).toBeVisible();
+    // Typing waits for the modal's exit: until then the page behind it is inert.
+    await expect(shareSurface(page)).toHaveCount(0);
 
     const input = page.getByRole("textbox", { name: "Message #general" });
 
@@ -172,7 +177,13 @@ test.describe("desktop", () => {
       .click();
     await page.getByRole("button", { name: "Attach only" }).click();
     await expect(page.getByRole("button", { name: "Remove Existing private plan" })).toBeVisible();
-    await page.getByRole("textbox", { name: "Message #general" }).fill("Chosen in Picker");
+    // The chip shows at once, but the modal keeps the page inert while its exit fades: text
+    // filled before it has gone lands nowhere, and the send goes out with the file alone.
+    await expect(shareSurface(page)).toHaveCount(0);
+    const input = page.getByRole("textbox", { name: "Message #general" });
+
+    await input.fill("Chosen in Picker");
+    await expect(input).toHaveValue("Chosen in Picker");
     await page.getByRole("button", { name: "Send message" }).click();
     const row = page.locator("[data-message-row]", { hasText: "Chosen in Picker" });
     await expect(row.getByRole("link", { name: /Google Drive file/ })).toHaveAttribute(
@@ -211,6 +222,9 @@ test.describe("desktop", () => {
     await expect(page.getByRole("button", { name: "Close Drive search" })).toHaveCount(0);
     await search.fill("roadmap");
     await expect(page.getByRole("option", { name: /Q4 roadmap/ })).toBeVisible();
+    // The empty query's answer lists Q4 roadmap too; this one's answer resets the highlight, so the
+    // keys wait for it.
+    await expect(page.getByRole("option")).toHaveCount(1);
     await search.press("ArrowDown");
     await search.press("Enter");
     await page.getByRole("button", { name: "Attach only" }).click();
