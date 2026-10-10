@@ -402,7 +402,7 @@ async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, cha
             changes.legacy_attachment_snapshot = Some(campfire_richtext::legacy_markdown::non_mention_attachments(&body)
                 .map_err(|error| campfire_db::Error::Other(error.to_string()))?);
         }
-        let blob = attachment_blob(tx, attachment, uploader_id, "attachment")?;
+        let blob = attachment_blob_for_message(tx, attachment, uploader_id, "attachment", Some(message.id))?;
         if attachment_given { message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?; }
         message.edit(tx, changes)?;
         if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
@@ -690,20 +690,25 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
 /// Resolve and claim an upload inside the same writer transaction that attaches it.
 /// BEGIN IMMEDIATE prevents another writer from claiming it before this save finishes.
 pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, uploader_id: i64, attribute: &'static str) -> campfire_db::Result<Option<Blob>> {
+    attachment_blob_for_message(tx, assignment, uploader_id, attribute, None)
+}
+
+fn attachment_blob_for_message(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, uploader_id: i64, attribute: &'static str, message_id: Option<i64>) -> campfire_db::Result<Option<Blob>> {
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => {
             let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?
                 .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
             let owner = current.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64);
-            let attached: bool = tx.conn().query_row(
-                "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)",
-                [blob.id], |row| row.get(0),
+            let (current_attachment, attached_elsewhere): (bool, bool) = tx.conn().query_row(
+                "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND record_type='Message' AND record_id IS ?2 AND name IN ('attachment','attachments')),
+                        EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND NOT (record_type='Message' AND record_id IS ?2 AND name IN ('attachment','attachments')))",
+                [Some(blob.id), message_id], |row| Ok((row.get(0)?, row.get(1)?)),
             )?;
             let mut errors = campfire_db::Errors::default();
-            if owner != Some(uploader_id) {
+            if !current_attachment && owner != Some(uploader_id) {
                 errors.add(attribute, "includes an upload that isn't yours");
-            } else if attached {
+            } else if attached_elsewhere {
                 errors.add(attribute, "includes an upload that is already attached");
             }
             errors.into_result()?;
@@ -742,7 +747,7 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         .db
         .write(move |tx| {
             let mut message = message;
-            let blob = attachment_blob(tx, attachment, uploader_id, "attachment")?;
+            let blob = attachment_blob_for_message(tx, attachment, uploader_id, "attachment", Some(message.id))?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }

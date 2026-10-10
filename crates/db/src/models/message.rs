@@ -23,6 +23,8 @@ pub const SOURCE_LIMIT: usize = 50_000;
 /// `DriveAttachment::MAX_PER_MESSAGE`
 pub const DRIVE_ATTACHMENTS_PER_MESSAGE: usize = 10;
 
+pub const ATTACHMENTS_PER_MESSAGE: usize = 10;
+
 const RECORD_TYPE: &str = "Message";
 
 #[derive(Debug, Clone, PartialEq)]
@@ -733,8 +735,15 @@ impl Message {
         Self::validate_with_associations(conn, attributes, new_record, false)
     }
 
+    fn validate_attachment_count(count: usize, errors: &mut Errors) {
+        if count > ATTACHMENTS_PER_MESSAGE {
+            errors.add("attachments", format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"));
+        }
+    }
+
     fn validate_with_associations(conn: &Connection, attributes: &NewMessage, new_record: bool, loaded_associations: bool) -> Result<Errors> {
         let mut errors = Errors::default();
+        Self::validate_attachment_count(attributes.attachment_blob_ids.len() + usize::from(attributes.attachment_blob_id.is_some()), &mut errors);
         // `belongs_to :room` and `:creator` (required)
         if !loaded_associations && Room::find_by_id(conn, attributes.room_id)?.is_none() {
             errors.add("room", "must exist");
@@ -1179,6 +1188,11 @@ impl Message {
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
     /// A streaming message saves even with no attachment change (`touch_streaming_activity`).
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
+        let grouped_count = self.attachments(tx.conn())?.iter()
+            .filter(|(attachment, _)| attachment.name == "attachments").count();
+        let mut errors = Errors::default();
+        Self::validate_attachment_count(grouped_count + usize::from(blob_id.is_some()), &mut errors);
+        errors.into_result()?;
         self.touch_streaming_activity(tx)?;
         if let Some(attachment) =
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?

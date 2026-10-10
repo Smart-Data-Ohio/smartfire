@@ -9,6 +9,190 @@ fn blob_id(a: &TestApp, file: &api::DirectUpload) -> i64 {
     .unwrap()
 }
 
+async fn legacy_attachment_edit(thread: bool, grouped: bool) {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let file = upload(&mut david, "current.txt").await;
+    let file_id = blob_id(&a, &file);
+    let message = a.db().write(move |tx| {
+        let thread_id = if thread {
+            Some(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+                room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
+            })?.id)
+        } else { None };
+        campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, thread_id,
+            markdown_source: Some("Original".into()),
+            attachment_blob_id: (!grouped).then_some(file_id),
+            attachment_blob_ids: if grouped { vec![file_id] } else { Vec::new() },
+            ..Default::default()
+        })
+    }).await.unwrap();
+    let base = message.thread_id.map_or_else(
+        || format!("/rooms/{ALL_TALK}/messages"),
+        |id| format!("/rooms/{ALL_TALK}/threads/{id}/messages"),
+    );
+    let path = format!("{base}/{}.json", message.id);
+    let reply = david.write(json_body(Method::PATCH, &path,
+        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+    a.db().read(move |conn| {
+        let saved = campfire_db::Message::find(conn, message.id)?;
+        assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
+        assert_eq!(saved.attachments(conn)?.len(), if grouped { 2 } else { 1 });
+        assert!(saved.attachments(conn)?.iter().all(|(_, blob)| blob.id == file_id));
+        Ok(())
+    }).await.unwrap();
+
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.uploader_id',?) WHERE id=?", [KEVIN, file_id])?;
+        Ok(())
+    }).await.unwrap();
+    let reply = david.write(json_body(Method::PATCH, &path,
+        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "a current attachment keeps its original uploader: {}", reply.text());
+
+    a.db().write(move |tx| {
+        campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(file_id),
+            ..Default::default()
+        })?;
+        Ok(())
+    }).await.unwrap();
+    let before = write_counts(&a).await;
+    let reply = david.write(json_body(Method::PATCH, &path,
+        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Rejected"}}))).await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    assert_eq!(write_counts(&a).await, before);
+    a.db().read(move |conn| {
+        assert_eq!(campfire_db::Message::find(conn, message.id)?.markdown_source.as_deref(), Some("Changed"));
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn grouped_files_round4_legacy_room_edit_keeps_current_attachment() {
+    legacy_attachment_edit(false, false).await;
+}
+
+#[tokio::test]
+async fn grouped_files_round4_legacy_thread_edit_keeps_current_attachment() {
+    legacy_attachment_edit(true, false).await;
+}
+
+#[tokio::test]
+async fn grouped_files_round4_legacy_edit_accepts_current_grouped_attachment() {
+    legacy_attachment_edit(false, true).await;
+}
+
+#[tokio::test]
+async fn grouped_files_round4_bot_edit_keeps_current_attachment() {
+    use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let file = upload(&mut a.sign_in(DAVID).await, "bot-current.txt").await;
+    let file_id = blob_id(&a, &file);
+    let id = a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.uploader_id',?) WHERE id=?", [BENDER, file_id])?;
+        Ok(campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, creator_id: BENDER, attachment_blob_id: Some(file_id),
+            ..Default::default()
+        })?.id)
+    }).await.unwrap();
+    let reply = a.anonymous().send(json_body(Method::PATCH,
+        &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"),
+        &json!({"attachment": file.signed_id}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    a.db().read(move |conn| {
+        let files = campfire_db::Message::find(conn, id)?.attachments(conn)?;
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].1.id, file_id);
+        Ok(())
+    }).await.unwrap();
+}
+
+async fn legacy_attachment_edit_limit(thread: bool, bot: bool) {
+    use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut files = Vec::new();
+    for index in 0..10 {
+        files.push(upload(&mut david, &format!("{index}.txt")).await.signed_id);
+    }
+    let extra = upload(&mut david, "eleventh.txt").await;
+    let extra_id = blob_id(&a, &extra);
+    let creator = if bot { BENDER } else { DAVID };
+    let thread_id = if thread {
+        Some(a.db().write(|tx| Ok(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
+        })?.id)).await.unwrap())
+    } else { None };
+    let create_path = thread_id.map_or_else(
+        || format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        |id| format!("/api/v1/threads/{id}/messages"),
+    );
+    let created = david.write(json_body(Method::POST, &create_path,
+        &json!({"clientMessageId": "ten-files-edit", "markdownSource": "Original", "attachmentSignedIds": files}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let id = parse::<api::MessageDTO>(&created).id;
+    if bot {
+        a.db().write(move |tx| {
+            tx.conn().execute("UPDATE messages SET creator_id=? WHERE id=?", [creator, id])?;
+            tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.uploader_id',?) WHERE id=?", [creator, extra_id])?;
+            Ok(())
+        }).await.unwrap();
+    }
+    let path = if bot { format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}") }
+        else if let Some(thread_id) = thread_id { format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{id}.json") }
+        else { format!("/rooms/{ALL_TALK}/messages/{id}.json") };
+    let before = write_counts(&a).await;
+    let input = if bot { json!({"attachment": extra.signed_id}) }
+        else { json!({"message": {"attachment": extra.signed_id, "markdown_source": "Rejected"}}) };
+    let request = json_body(Method::PATCH, &path, &input);
+    let reply = if bot { a.anonymous().send(request).await } else { david.write(request).await };
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {}", reply.text());
+    assert!(reply.text().contains("10"), "{}", reply.text());
+    assert_eq!(write_counts(&a).await, before);
+    let read = david.send(get(&format!("/api/v1/messages/{id}"))).await;
+    assert_eq!(read.status, StatusCode::OK, "{}", read.text());
+    let read: Value = parse(&read);
+    assert_eq!(read["message"]["attachments"].as_array().unwrap().len(), 10);
+    assert_eq!(read["message"]["markdownSource"], "Original");
+    a.db().read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [extra_id], |row| row.get::<_, i64>(0))?, 0);
+        Ok(())
+    }).await.unwrap();
+    a.db().write(move |tx| {
+        let files = campfire_db::Message::find(tx.conn(), id)?.attachments(tx.conn())?;
+        files.last().unwrap().0.delete(tx)
+    }).await.unwrap();
+    for _ in 0..2 {
+        let request = json_body(Method::PATCH, &path, &input);
+        let reply = if bot { a.anonymous().send(request).await } else { david.write(request).await };
+        assert_eq!(reply.status, StatusCode::OK, "nine grouped files plus the legacy file: {}", reply.text());
+        a.db().read(move |conn| {
+            let files = campfire_db::Message::find(conn, id)?.attachments(conn)?;
+            assert_eq!(files.len(), 10);
+            assert_eq!(files.last().unwrap().1.id, extra_id);
+            Ok(())
+        }).await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn grouped_files_round4_legacy_room_edit_enforces_total_limit() {
+    legacy_attachment_edit_limit(false, false).await;
+}
+
+#[tokio::test]
+async fn grouped_files_round4_legacy_thread_edit_enforces_total_limit() {
+    legacy_attachment_edit_limit(true, false).await;
+}
+
+#[tokio::test]
+async fn grouped_files_round4_bot_edit_enforces_total_limit() {
+    legacy_attachment_edit_limit(false, true).await;
+}
+
 async fn legacy_attachment_claims(thread: bool, edit: bool) {
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
     let mut david = a.sign_in(DAVID).await;

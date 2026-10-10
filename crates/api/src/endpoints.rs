@@ -19,7 +19,7 @@ use crate::error::{fail, not_found, validation};
 
 /// The most ids `GET /users` and `GET /presence` look up.
 const MAX_IDS: usize = 100;
-const MAX_MESSAGE_FILES: usize = 10;
+const MAX_MESSAGE_FILES: usize = campfire_db::message::ATTACHMENTS_PER_MESSAGE;
 /// The largest request body read: a message at `SOURCE_LIMIT` characters, four bytes each,
 /// escaped, with room to spare.
 pub(crate) const BODY_LIMIT: usize = 1 << 20;

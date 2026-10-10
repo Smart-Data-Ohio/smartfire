@@ -219,6 +219,57 @@ fn creating_a_blank_message_with_attachment_uses_filename_as_plain_text_body() {
     );
 }
 
+fn grouped_files_blobs(t: &TestDb) -> Vec<i64> {
+    t.write(|tx| (0..11).map(|index| {
+        Blob::create(tx, &Blob {
+            id: 0, key: format!("grouped-limit-{index}"), filename: format!("{index}.txt"),
+            content_type: Some("text/plain".into()), metadata: None, service_name: "local".into(),
+            byte_size: 5, checksum: None, created_at: tx.now(),
+        }).map(|blob| blob.id)
+    }).collect::<Result<Vec<_>>>())
+}
+
+#[test]
+fn grouped_files_round4_creates_enforce_total_across_both_slots() {
+    let t = TestDb::new();
+    let blobs = grouped_files_blobs(&t);
+    for single in [false, true] {
+        let files = blobs.clone();
+        let error = t.try_write(move |tx| Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"),
+            attachment_blob_id: single.then_some(files[0]),
+            attachment_blob_ids: files[usize::from(single)..].to_vec(),
+            ..Default::default()
+        })).unwrap_err();
+        let crate::Error::RecordInvalid(errors) = error else { panic!("{error}") };
+        assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"]);
+        let files = blobs[..10].to_vec();
+        let message = t.write(move |tx| Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"),
+            attachment_blob_id: single.then_some(files[0]),
+            attachment_blob_ids: files[usize::from(single)..].to_vec(),
+            ..Default::default()
+        }));
+        assert_eq!(t.read(move |conn| message.attachments(conn)).len(), 10);
+    }
+}
+
+#[test]
+fn grouped_files_round4_replacements_enforce_total_across_both_slots() {
+    let t = TestDb::new();
+    let blobs = grouped_files_blobs(&t);
+    let extra = blobs[10];
+    let message = t.write(move |tx| Message::create(tx, NewMessage {
+        room_id: id("hq"), creator_id: id("david"), attachment_blob_ids: blobs[..10].to_vec(),
+        ..Default::default()
+    }));
+    let mut edited = message.clone();
+    let error = t.try_write(move |tx| edited.replace_attachment(tx, Some(extra))).unwrap_err();
+    let crate::Error::RecordInvalid(errors) = error else { panic!("{error}") };
+    assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"]);
+    assert_eq!(t.read(move |conn| message.attachments(conn)).len(), 10);
+}
+
 #[test]
 fn sound_messages() {
     let t = TestDb::new();
