@@ -38,15 +38,13 @@ async fn attachment_processing_round3_completion_refreshes_both_slots() {
         campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
         Ok(message.id)
     }).await.unwrap();
-    let (_client, server) = subscribe(&app).await;
+    let (mut client, server) = json_subscribe(&app).await;
     let _server = AbortServer(server);
     app.publications().take();
     clock.set(app.booted.app.clock.now().checked_add(jiff::SignedDuration::from_secs(10)).unwrap());
     perform_queued(&app, 1).await.unwrap();
-    let frames = app.publications().take();
-    assert_eq!(frames.len(), 2, "each owner needs its completion broadcast");
-    for target in ["presentation_message_attachment-processing-1", "presentation_message_grouped-attachment-worker"] {
-        assert_eq!(frames.iter().filter(|(_, frame)| frame.contains(target)).count(), 1, "{target}");
+    for message in [id, grouped] {
+        client.until(move |event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(updated) if updated.id == message), |_| false).await;
     }
     let now = app.booted.app.clock.now();
     app.db().read(move |conn| {
