@@ -53,6 +53,13 @@ impl ThreadTag {
         query_all(conn, "SELECT * FROM thread_tags WHERE channel_thread_id IN (SELECT value FROM json_each(?)) ORDER BY name", [serde_json::json!(thread_ids).to_string()], Self::from_row)
     }
 
+    pub(crate) fn matching_names(conn: &Connection, room_id: i64, name: &str) -> Result<Vec<String>> {
+        let names = query_all(conn,
+            "SELECT DISTINCT thread_tags.name FROM thread_tags JOIN channel_threads ON channel_threads.id=thread_tags.channel_thread_id WHERE channel_threads.room_id=?",
+            [room_id], |row| row.get::<_, String>(0))?;
+        Ok(names.into_iter().filter(|stored| caseless::default_caseless_match_str(stored, name.trim())).collect())
+    }
+
     /// `thread.tags.create!(name:)`
     pub fn create(tx: &mut Tx<'_>, thread_id: i64, name: &str) -> Result<Self> {
         Self::validate(tx.conn(), thread_id, name)?.into_result()?;
@@ -190,7 +197,7 @@ impl BoardTag {
         if id.is_none() && tags.len() >= BOARD_TAG_LIMIT {
             errors.add("tags", "are limited to 20 per board");
         }
-        if tags.iter().any(|tag| Some(tag.id) != id && rails_compat::unicode::downcase(&tag.name) == rails_compat::unicode::downcase(name)) {
+        if tags.iter().any(|tag| Some(tag.id) != id && caseless::default_caseless_match_str(&tag.name, name)) {
             errors.add("name", "has already been taken");
         }
         errors.into_result()
@@ -206,8 +213,9 @@ impl BoardTag {
     }
 
     fn uses(&self, conn: &Connection) -> Result<Vec<ThreadTag>> {
-        query_all(conn, "SELECT thread_tags.* FROM thread_tags JOIN channel_threads ON channel_threads.id=thread_tags.channel_thread_id WHERE channel_threads.room_id=? AND lower(thread_tags.name)=lower(?)",
-            params![self.room_id,self.name], ThreadTag::from_row)
+        let names = ThreadTag::matching_names(conn, self.room_id, &self.name)?;
+        query_all(conn, "SELECT thread_tags.* FROM thread_tags JOIN channel_threads ON channel_threads.id=thread_tags.channel_thread_id WHERE channel_threads.room_id=? AND thread_tags.name IN (SELECT value FROM json_each(?))",
+            params![self.room_id,serde_json::json!(names).to_string()], ThreadTag::from_row)
     }
 
     pub fn update(tx: &mut Tx<'_>, room_id: i64, id: i64, name: &str, emoji: Option<&str>) -> Result<Self> {
@@ -216,10 +224,13 @@ impl BoardTag {
         Self::validate(tx.conn(), room_id, name, Some(id))?;
         tx.conn().execute("UPDATE board_tags SET name=?,emoji=?,updated_at=? WHERE id=?", params![name,emoji,tx.now(),id])?;
         if name != prior.name {
+            let mut threads = std::collections::HashSet::new();
             for tag in prior.uses(tx.conn())? {
+                if !threads.insert(tag.channel_thread_id) { continue; }
                 // A renamed catalog label can already be present as a free-text tag.
                 for duplicate in ThreadTag::for_thread(tx.conn(), tag.channel_thread_id)?.into_iter()
-                    .filter(|other| other.id != tag.id && rails_compat::unicode::downcase(&other.name) == rails_compat::unicode::downcase(name))
+                    .filter(|other| other.id != tag.id && (caseless::default_caseless_match_str(&other.name, name)
+                        || caseless::default_caseless_match_str(&other.name, &prior.name)))
                 {
                     duplicate.destroy(tx)?;
                 }
@@ -253,9 +264,8 @@ impl BoardTag {
     }
 
     pub fn canonical_name(conn: &Connection, room_id: i64, name: &str) -> Result<Option<String>> {
-        let name = rails_compat::unicode::downcase(name.trim());
         Ok(Self::for_room(conn, room_id)?.into_iter()
-            .find(|tag| rails_compat::unicode::downcase(&tag.name) == name).map(|tag| tag.name))
+            .find(|tag| caseless::default_caseless_match_str(&tag.name, name.trim())).map(|tag| tag.name))
     }
 }
 
@@ -290,7 +300,7 @@ impl BoardTagPolicy {
         let catalog = BoardTag::for_room(conn, room_id)?;
         let mut tags = Vec::new();
         for name in crate::models::channel_thread::normalize_tag_names(names) {
-            let name = catalog.iter().find(|tag| rails_compat::unicode::downcase(&tag.name) == name)
+            let name = catalog.iter().find(|tag| caseless::default_caseless_match_str(&tag.name, &name))
                 .map_or(name.clone(), |tag| tag.name.clone());
             if !tags.contains(&name) { tags.push(name); }
         }

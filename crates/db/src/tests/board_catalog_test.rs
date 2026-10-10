@@ -152,3 +152,127 @@ fn board_catalog_filter_includes_legacy_spelling_of_catalog_name() {
     let filtered = t.read(|conn| ChannelThread::board_posts_for(conn, room_id, "all", "anyone", "RUST", None, 1));
     assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [curated.id, legacy.id]);
 }
+
+#[test]
+fn board_catalog_agent_filters_include_catalog_legacy_and_renamed_tags() {
+    let t = channel_thread_test::frozen();
+    let room_id = board(&t);
+    let legacy = post(&t, room_id, &["rust", "legacy"]).unwrap();
+    let tag = t.write(move |tx| BoardTag::create(tx, room_id, "Rust", None));
+    let curated = post(&t, room_id, &["rust"]).unwrap();
+    let other_room = board(&t);
+    post(&t, other_room, &["rust"]).unwrap();
+    for filter in ["Rust", "rust", "RUST", " rust ", "legacy", "LEGACY"] {
+        let filtered = t.read(|conn| {
+            let agent = crate::Agent::find(conn, id("bender_agent"))?.unwrap();
+            let room = Room::find(conn, room_id)?;
+            crate::models::agent_work::list_board_posts(conn, &agent, &room, Some("all"), None, Some(filter))
+        });
+        let crate::models::agent_work::Outcome::Success { payload, status } = filtered else {
+            panic!("tag filter was denied");
+        };
+        assert_eq!(status, 200);
+        let expected = if filter.eq_ignore_ascii_case("legacy") { vec![legacy.id] } else { vec![curated.id, legacy.id] };
+        assert_eq!(payload.iter().map(|post| post.id).collect::<Vec<_>>(), expected, "filter {filter}");
+        let filtered = t.read(|conn| crate::models::agent_reading::board_posts(conn, room_id, id("bender"), "all", "", filter));
+        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), expected, "transport reader filter {filter}");
+    }
+    t.write(move |tx| BoardTag::update(tx, room_id, tag.id, "Renamed", None));
+    for filter in ["Renamed", "renamed", "RENAMED"] {
+        let filtered = t.read(|conn| {
+            let agent = crate::Agent::find(conn, id("bender_agent"))?.unwrap();
+            let room = Room::find(conn, room_id)?;
+            crate::models::agent_work::list_board_posts(conn, &agent, &room, Some("all"), None, Some(filter))
+        });
+        let crate::models::agent_work::Outcome::Success { payload, .. } = filtered else {
+            panic!("tag filter was denied");
+        };
+        assert_eq!(payload.iter().map(|post| post.id).collect::<Vec<_>>(), [curated.id, legacy.id], "filter {filter}");
+        let filtered = t.read(|conn| crate::models::agent_reading::board_posts(conn, room_id, id("bender"), "all", "", filter));
+        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [curated.id, legacy.id], "transport reader filter {filter}");
+    }
+}
+
+#[test]
+fn board_catalog_creation_rejects_unicode_case_equivalent_names() {
+    let t = channel_thread_test::frozen();
+    for (name, variant) in [("Σ", "ς"), ("Straße", "STRASSE")] {
+        let room_id = board(&t);
+        t.write(move |tx| BoardTag::create(tx, room_id, name, None));
+        let result = t.try_write(move |tx| BoardTag::create(tx, room_id, variant, None));
+        let Err(crate::Error::RecordInvalid(errors)) = result else {
+            panic!("case-equivalent catalog name {variant} was not rejected by the model: {result:?}");
+        };
+        assert_eq!(errors.on("name"), ["has already been taken"]);
+        assert_eq!(t.read(|conn| BoardTag::for_room(conn, room_id)).len(), 1);
+    }
+}
+
+#[test]
+fn board_catalog_rename_rejects_unicode_case_equivalent_names() {
+    let t = channel_thread_test::frozen();
+    for (name, variant) in [("Σ", "ς"), ("Straße", "STRASSE")] {
+        let room_id = board(&t);
+        t.write(move |tx| BoardTag::create(tx, room_id, name, None));
+        let other = t.write(move |tx| BoardTag::create(tx, room_id, "Other", None));
+        let other_id = other.id;
+        let result = t.try_write(move |tx| BoardTag::update(tx, room_id, other_id, variant, None));
+        let Err(crate::Error::RecordInvalid(errors)) = result else {
+            panic!("case-equivalent catalog rename {variant} was not rejected by the model: {result:?}");
+        };
+        assert_eq!(errors.on("name"), ["has already been taken"]);
+        assert_eq!(t.read(|conn| BoardTag::find(conn, room_id, other_id)), other);
+    }
+}
+
+#[test]
+fn board_catalog_unicode_case_equivalence_applies_to_lookup_posts_and_filters() {
+    let t = channel_thread_test::frozen();
+    let room_id = board(&t);
+    t.write(move |tx| BoardTag::create(tx, room_id, "Σ", None));
+    t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, None));
+    for variant in ["Σ", "σ", "ς"] {
+        assert_eq!(t.read(|conn| BoardTag::canonical_name(conn, room_id, variant)), Some("Σ".into()));
+    }
+    let post = post(&t, room_id, &["ς", "σ", "Σ"]).unwrap();
+    assert_eq!(names(&t, &post), ["Σ"]);
+    for variant in ["Σ", "σ", "ς"] {
+        let filtered = t.read(|conn| ChannelThread::board_posts_for(conn, room_id, "all", "anyone", variant, None, 1));
+        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [post.id]);
+        let filtered = t.read(|conn| {
+            let agent = crate::Agent::find(conn, id("bender_agent"))?.unwrap();
+            let room = Room::find(conn, room_id)?;
+            crate::models::agent_work::list_board_posts(conn, &agent, &room, Some("all"), None, Some(variant))
+        });
+        let crate::models::agent_work::Outcome::Success { payload, .. } = filtered else {
+            panic!("tag filter was denied");
+        };
+        assert_eq!(payload.iter().map(|post| post.id).collect::<Vec<_>>(), [post.id]);
+        let filtered = t.read(|conn| crate::models::agent_reading::board_posts(conn, room_id, id("bender"), "all", "", variant));
+        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [post.id]);
+    }
+}
+
+#[test]
+fn board_catalog_unicode_rename_merges_legacy_case_equivalent_tags() {
+    let t = channel_thread_test::frozen();
+    let room_id = board(&t);
+    let other_room = board(&t);
+    let legacy = post(&t, room_id, &["strasse", "renamed", "legacy"]).unwrap();
+    let other_post = post(&t, other_room, &["strasse"]).unwrap();
+    let tag = t.write(move |tx| BoardTag::create(tx, room_id, "Straße", None));
+    let curated = post(&t, room_id, &["Straße", "renamed"]).unwrap();
+    let curated_id = curated.id;
+    t.write(move |tx| crate::ThreadTag::create(tx, curated_id, "strasse"));
+    t.write(move |tx| BoardTag::update(tx, room_id, tag.id, "STRASSE", None));
+    assert_eq!(names(&t, &legacy), ["STRASSE", "legacy", "renamed"]);
+    assert_eq!(names(&t, &curated), ["STRASSE", "renamed"]);
+    t.write(move |tx| BoardTag::update(tx, room_id, tag.id, "Renamed", None));
+    assert_eq!(names(&t, &legacy), ["Renamed", "legacy"]);
+    assert_eq!(names(&t, &curated), ["Renamed"]);
+    assert_eq!(names(&t, &other_post), ["strasse"]);
+    t.write(move |tx| BoardTag::destroy(tx, room_id, tag.id));
+    assert_eq!(names(&t, &legacy), ["legacy"]);
+    assert!(names(&t, &curated).is_empty());
+    assert_eq!(names(&t, &other_post), ["strasse"]);
+}
