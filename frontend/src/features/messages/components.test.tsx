@@ -218,6 +218,23 @@ describe("reaction pills", () => {
 });
 
 describe("editing in place", () => {
+  it("keeps stable mention tokens when the author edits surrounding text", async () => {
+    const user = userEvent.setup();
+    let closed = 0;
+    const message = await post(`Hello <@${SEED_IDS.users.maya}>`);
+
+    render(
+      <MessageEditor message={message} onClose={() => (closed += 1)} onRequestDelete={() => {}} />,
+    );
+    const box = screen.getByRole("textbox", { name: "Edit message" });
+
+    expect(box).toHaveProperty("value", `Hello <@${SEED_IDS.users.maya}>`);
+    await user.type(box, " again{Enter}");
+    await waitFor(() => expect(closed).toBe(1));
+    expect(current(message.id)?.markdownSource).toBe(`Hello <@${SEED_IDS.users.maya}> again`);
+    expect(current(message.id)?.bodyHtml).toContain(`data-user-id="${SEED_IDS.users.maya}"`);
+  });
+
   it("decides Enter, Shift+Enter and Esc like the composer", () => {
     const key = (name: string, change = {}) => ({
       key: name,

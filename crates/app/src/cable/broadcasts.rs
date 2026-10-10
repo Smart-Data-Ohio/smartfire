@@ -17,6 +17,7 @@
 //! server refuses (and logs) any that holds a CSRF token or CSP nonce
 //! (`campfire_cable::turbo::session_bound`).
 use campfire_cable::turbo::{Action, Target};
+use campfire_db::models::activity_item::ActivityItemsRemoved;
 use campfire_db::rich_text::RichText;
 use campfire_db::{Connection, Involvement, Membership, Message, Room};
 #[cfg(any(test, feature = "test-support"))]
@@ -229,9 +230,9 @@ impl Broadcasts {
         sync::activity_item_later(&self.server, &self.sync, user_id, item_id);
     }
 
-    /// `activity.removed` for items deleted with their source.
-    pub fn sync_activity_removed(&self, items: Vec<(i64, i64)>) {
-        sync::activity_removed_later(&self.server, &self.sync, items);
+    /// `activity.removed` for removed inbox items.
+    pub fn sync_activity_removed(&self, removed: ActivityItemsRemoved) {
+        sync::activity_removed_later(&self.server, &self.sync, removed);
     }
 
     /// `scheduled.changed` or `scheduled.removed` for a scheduled message's change.

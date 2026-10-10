@@ -25,10 +25,9 @@ pub struct UserSuggestionList {
 #[ts(export)]
 pub struct UserSuggestion {
     pub user: User,
-    /// What to insert: `@[Exact Name]`, the only mention syntax (resolved when the message
-    /// renders against exactly one active room member of that name). `null` when the name
-    /// isn't unique in scope or contains `[`, `]` or a line break: the row shows disabled
-    /// ("Duplicate name — type as plain text").
+    /// What to insert: `<@123>`, resolved by stable user id against active room members.
+    /// Display names can repeat or change. Legacy `@[Exact Name]` tokens still resolve by name.
+    /// Nullable for compatibility with older servers that cannot mention duplicate names.
     pub mention_token: Option<String>,
 }
 
