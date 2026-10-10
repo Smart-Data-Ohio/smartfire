@@ -342,7 +342,7 @@ async fn invalid_ban_is_bare_422_in_classic_and_validation_in_api() {
                 assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
                 assert_eq!(
                     reply.body,
-                    include_bytes!("../../../../web/public/422.html")
+                    include_bytes!("../../../static_assets/public/422.html")
                 );
             },
             async |b, _| {
@@ -456,7 +456,7 @@ async fn private_ip_bans_keep_classic_validation_and_roll_back() {
             assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
             assert_eq!(
                 reply.body,
-                include_bytes!("../../../../web/public/422.html")
+                include_bytes!("../../../static_assets/public/422.html")
             );
         },
         async |b, _| {

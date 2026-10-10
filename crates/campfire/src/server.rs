@@ -4,7 +4,7 @@
 //!
 //! Request flow (mirroring the Rails middleware order): `Rack::Deflater` (config.ru) → kit's
 //! pre-routing middleware (`ActionDispatch::SSL`, request id, `_method` override) → public files
-//! (`ActionDispatch::Static`, from `campfire_assets`) → `/cable` (Action Cable) or the Rails route
+//! (`ActionDispatch::Static`, from the static asset crates) → `/cable` (Action Cable) or the Rails route
 //! table (`controllers::dispatch`).
 
 use std::sync::Arc;
@@ -322,13 +322,15 @@ async fn public_files(request: axum::extract::Request, next: Next) -> axum::resp
 
 fn static_response(request: &axum::extract::Request) -> Option<axum::response::Response> {
     let header = |name| request.headers().get(name).and_then(|v| v.to_str().ok());
-    let served = campfire_assets::serve(&campfire_assets::StaticRequest {
+    let static_request = campfire_static_assets::StaticRequest {
         method: request.method().as_str(),
         path: request.uri().path(),
         accept_encoding: header(axum::http::header::ACCEPT_ENCODING),
         range: header(axum::http::header::RANGE),
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
-    })?;
+    };
+    let served = campfire_assets::serve_classic(&static_request)
+        .or_else(|| campfire_static_assets::serve(&static_request))?;
     let immutable = immutable_asset(request.uri().path(), served.status);
     let mut response =
         axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
@@ -369,12 +371,12 @@ fn immutable_asset(path: &str, status: u16) -> bool {
 fn error_pages() -> ErrorPages {
     ErrorPages::new([404, 422, 500, 502].into_iter().filter_map(|status| {
         let path = format!("/{status}.html");
-        let request = campfire_assets::StaticRequest {
+        let request = campfire_static_assets::StaticRequest {
             method: "GET",
             path: &path,
             ..Default::default()
         };
-        campfire_assets::serve(&request).map(|page| (status, page.body.into_owned().into()))
+        campfire_static_assets::serve(&request).map(|page| (status, page.body.into_owned().into()))
     }))
 }
 

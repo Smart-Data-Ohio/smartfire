@@ -1,0 +1,14 @@
+{
+  "auth.css": "auth-1ccb175a.css",
+  "auth.js": "auth-87033f47.js",
+  "fonts/SourceSerif4-It.ttf.woff2": "fonts/SourceSerif4-It.ttf-f8101589.woff2",
+  "fonts/SourceSerif4-Regular.ttf.woff2": "fonts/SourceSerif4-Regular.ttf-57e32b66.woff2",
+  "fonts/SourceSerif4-Semibold.ttf.woff2": "fonts/SourceSerif4-Semibold.ttf-b1e7c947.woff2",
+  "fonts/SourceSerif4-SemiboldIt.ttf.woff2": "fonts/SourceSerif4-SemiboldIt.ttf-6f8af9d1.woff2",
+  "fonts/atkinson-hyperlegible-next-latin-var-italic.woff2": "fonts/atkinson-hyperlegible-next-latin-var-italic-b2c94818.woff2",
+  "fonts/atkinson-hyperlegible-next-latin-var.woff2": "fonts/atkinson-hyperlegible-next-latin-var-030ab76e.woff2",
+  "fonts/inter-latin-var-italic.woff2": "fonts/inter-latin-var-italic-6d99418a.woff2",
+  "fonts/inter-latin-var.woff2": "fonts/inter-latin-var-4c29d7c1.woff2",
+  "fonts/jetbrains-mono-latin-var.woff2": "fonts/jetbrains-mono-latin-var-7a1b3479.woff2",
+  "unsupported.js": "unsupported-92d42d45.js"
+}

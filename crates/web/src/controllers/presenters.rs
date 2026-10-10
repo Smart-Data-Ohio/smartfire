@@ -1077,9 +1077,9 @@ impl<'a> Presenter<'a> {
         }
         if let Some(sound) = campfire_db::message::sound_in(plain_text) {
             return Ok(MessageContent::Sound(SoundView {
-                url: campfire_assets::asset_path(&sound.asset_path()),
+                url: campfire_static_assets::asset_path(&sound.asset_path()),
                 image: sound.image.map(|image| SoundImage {
-                    src: campfire_assets::image_path(&image.asset_path()),
+                    src: campfire_static_assets::image_path(&image.asset_path()),
                     width: image.width,
                     height: image.height,
                 }),

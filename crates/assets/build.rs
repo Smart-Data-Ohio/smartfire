@@ -1,9 +1,7 @@
 //! Digests and compiles the reference's assets the way `bin/rails assets:precompile` does
-//! (Propshaft), renders the import map, and embeds the results plus the reference's public/ into the
+//! (Propshaft), renders the import map, and embeds the results into the
 //! crate as `$OUT_DIR/embedded.rs`. The inputs are the port's own copy in `web/`.
 
-#[path = "../retained_pages/auth_build.rs"]
-mod auth;
 #[path = "build/importmap.rs"]
 mod importmap;
 #[path = "build/propshaft.rs"]
@@ -27,7 +25,6 @@ fn main() {
         "app/assets",
         "app/javascript",
         "vendor/javascript",
-        "public",
         "config/importmap.rb",
         "config/initializers/assets.rb",
     ] {
@@ -45,11 +42,9 @@ fn main() {
         crate_dir.join("overrides").display()
     );
     println!("cargo:rerun-if-changed=build");
-    println!("cargo:rerun-if-changed=../retained_pages/auth_build.rs");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
 
-    let mut paths = load_path_dirs(&crate_dir, &rails_root);
-    paths.push(auth::prepare(&crate_dir, &out_dir));
+    let paths = load_path_dirs(&crate_dir, &rails_root);
     let load_path = propshaft::LoadPath::new(
         &paths,
         &assets_version(&rails_root),
@@ -62,6 +57,10 @@ fn main() {
     let mut entries = Vec::new(); // (logical, digested, body ident)
     for (index, asset) in load_path.assets.iter().enumerate() {
         let digested = load_path.digested_path(index);
+        if campfire_static_assets::digested_path(&asset.logical_path).is_some() {
+            entries.push((asset.logical_path.clone(), digested, String::new()));
+            continue;
+        }
         let body_path = match load_path.compiled_content(index) {
             Some(compiled) => {
                 let path = compiled_dir.join(&digested);
@@ -118,27 +117,12 @@ fn main() {
     }
     code.push_str("];\n");
 
-    // Everything ActionDispatch::Static can serve: reference/public plus the precompiled
-    // public/assets (the digested files and the manifest), sorted by URL path.
-    let mut files: Vec<(String, String)> = Vec::new();
-    let public = rails_root.join("public");
-    let mut public_files = Vec::new();
-    all_files(&public, &mut public_files);
-    // A stray precompile inside the reference app mustn't shadow what we build.
-    public_files.retain(|file| !file.starts_with(public.join("assets")) && file != &public.join("offline.html"));
-    for (i, file) in public_files.iter().enumerate() {
-        let url = format!("/{}", file.strip_prefix(&public).unwrap().display());
-        writeln!(
-            code,
-            "static PUBLIC_{i}: &[u8] = include_bytes!({:?});",
-            file.display().to_string()
-        )
-        .unwrap();
-        files.push((url, format!("PUBLIC_{i}")));
-    }
-    for (_, digested, body) in &entries {
-        files.push((format!("{PREFIX}/{digested}"), body.clone()));
-    }
+    // Only classic bundles are embedded here; retained media/public files are served by
+    // campfire_static_assets. The combined manifest keeps existing classic helpers working.
+    let mut files: Vec<(String, String)> = entries.iter()
+        .filter(|(_, _, body)| !body.is_empty())
+        .map(|(_, digested, body)| (format!("{PREFIX}/{digested}"), body.clone()))
+        .collect();
     files.push((
         format!("{PREFIX}/.manifest.json"),
         "MANIFEST_JSON.as_bytes()".to_string(),
@@ -269,21 +253,6 @@ fn importmap_tags(
     );
     tags.push("<script type=\"module\">import \"application\"</script>".to_string());
     tags.join("\n")
-}
-
-fn all_files(dir: &Path, files: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries {
-        let path = entry.unwrap().path();
-        if path.is_dir() {
-            all_files(&path, files);
-        } else {
-            files.push(path);
-        }
-    }
-    files.sort();
 }
 
 /// JSON.generate's string escaping (no script_safe, non-ASCII passed through).

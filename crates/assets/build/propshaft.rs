@@ -72,6 +72,19 @@ impl LoadPath {
             }
         }
 
+        // Retained bytes participate in classic CSS/JS reference resolution while their own
+        // digesting and serving belong to the independent static crate.
+        for &(logical_path, _) in campfire_static_assets::manifest() {
+            if !by_logical_path.contains_key(logical_path) {
+                by_logical_path.insert(logical_path.to_owned(), assets.len());
+                assets.push(Asset {
+                    logical_path: logical_path.to_owned(),
+                    source: PathBuf::new(),
+                    content: campfire_static_assets::asset_bytes(logical_path).unwrap().to_vec(),
+                });
+            }
+        }
+
         let quoted_url = |head: &str, excluded: &str| {
             format!(
                 r#"{head}\({WS}*["']?(?!(?:{excluded}))([^"' \t\n\x0B\x0C\r?#)]+)([#?][^"')]+)?{WS}*["']?\)"#
@@ -127,6 +140,9 @@ impl LoadPath {
     /// Propshaft::Asset#digested_path
     pub fn digested_path(&self, index: usize) -> String {
         let logical_path = &self.assets[index].logical_path;
+        if let Some(digested) = campfire_static_assets::digested_path(logical_path) {
+            return digested.to_owned();
+        }
         if self.already_digested.is_match(logical_path).unwrap() {
             return logical_path.clone();
         }
