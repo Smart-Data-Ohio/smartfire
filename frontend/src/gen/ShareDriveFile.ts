@@ -7,7 +7,7 @@ import type { DriveApprovedRecipient } from "./DriveApprovedRecipient";
  * set; a file that isn't already there is refused before any grant when the message is at the
  * classic limit of 10. Folders, shortcuts, and files the viewer cannot share are not granted.
  */
-export type ShareDriveFile = { fileId: string, recipients: Array<DriveApprovedRecipient>,
+export type ShareDriveFile = { fileId: string, recipients: Array<DriveApprovedRecipient>, 
 /**
  * Drive files already on this message. Omitted means none.
  */

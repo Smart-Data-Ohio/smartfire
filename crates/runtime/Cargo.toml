@@ -1,0 +1,55 @@
+[package]
+name = "campfire_runtime"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+# Test hooks the crates above drive in their own tests (fixed render secrets, the forgery switch,
+# test-only renderers). Production builds don't compile them.
+test-support = ["campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support", "campfire_storage/test-support"]
+
+[dependencies]
+campfire_assets.workspace = true
+campfire_view_kit.workspace = true
+rails_compat.workspace = true
+campfire_kit.workspace = true
+campfire_routes.workspace = true
+campfire_db.workspace = true
+campfire_jobs.workspace = true
+campfire_mail.workspace = true
+campfire_richtext.workspace = true
+campfire_storage.workspace = true
+campfire_cable.workspace = true
+campfire_static_assets.workspace = true
+campfire_presentation.workspace = true
+campfire_retained.workspace = true
+campfire_app.workspace = true
+campfire_spa.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+axum.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+jiff.workspace = true
+tracing.workspace = true
+regex.workspace = true
+indexmap = { workspace = true, features = ["serde"] }
+askama.workspace = true
+futures-util.workspace = true
+rusqlite.workspace = true
+rand.workspace = true
+percent-encoding.workspace = true
+http.workspace = true
+bytes.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+campfire_app = { workspace = true, features = ["test-support"] }
+campfire_jobs = { workspace = true, features = ["test-support"] }
+campfire_cable = { workspace = true, features = ["test-support"] }
+campfire_kit = { workspace = true, features = ["test-support"] }
+campfire_db = { workspace = true, features = ["test-support"] }
+tokio = { workspace = true, features = ["test-util"] }
+rusqlite = { workspace = true, features = ["limits", "trace"] }
+tempfile.workspace = true

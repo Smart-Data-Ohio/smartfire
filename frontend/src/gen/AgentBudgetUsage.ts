@@ -4,7 +4,7 @@ import type { AgentBudgetCap } from "./AgentBudgetCap";
 /**
  * Today's use of one daily cap (`budget_usage_line`), in the workspace's time zone.
  */
-export type AgentBudgetUsage = { cap: AgentBudgetCap, used: number,
+export type AgentBudgetUsage = { cap: AgentBudgetCap, used: number, 
 /**
  * `null` when the cap isn't set ("{used} messages" rather than "{used}/{limit} messages").
  */

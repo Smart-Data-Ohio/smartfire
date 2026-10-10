@@ -6,12 +6,12 @@
  * for (muted members only when mentioned, `unread_user_ids`), and to the person's other tabs
  * when they mark a room unread.
  */
-export type RoomUnread = { roomId: number,
+export type RoomUnread = { roomId: number, 
 /**
  * The new root message that made it unread; `null` when the person marked the room unread
  * themselves (the client then refetches the row's counts).
  */
-messageId: number | null,
+messageId: number | null, 
 /**
  * The message mentions this member (`mentionees`), so the mention count goes up too.
  */

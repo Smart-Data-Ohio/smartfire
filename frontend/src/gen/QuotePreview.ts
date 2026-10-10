@@ -3,15 +3,15 @@
 /**
  * What a quote card shows (`campfire_views::message_links::Card`).
  */
-export type QuotePreview = { messageId: number, roomId: number, threadId: number | null, creatorId: number,
+export type QuotePreview = { messageId: number, roomId: number, threadId: number | null, creatorId: number, 
 /**
  * The author's name, so a card from another room renders without that room's people.
  */
-authorName: string,
+authorName: string, 
 /**
  * The room's name, or `"a direct message"`.
  */
-roomLabel: string,
+roomLabel: string, 
 /**
  * The source's plain text, at most 200 characters (197 and `...`).
  */

@@ -242,3 +242,5 @@ async fn update_rolls_back_text_and_drive_changes_when_atomic_job_insert_fails()
     assert_eq!(app.db().read(move |conn| Message::find(conn, id)).await.unwrap(), original);
     assert!(app.db().read(move |conn| Message::find(conn, id)?.drive_file_ids(conn)).await.unwrap().is_empty());
 }
+
+use campfire_web::controllers::presenters::{Rendering};

@@ -5,45 +5,26 @@ use crate::{
     layouts::Page,
 };
 use askama::Template;
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct VenueOption {
-    pub id: i64,
-    pub name: String,
-    pub stage: bool,
+pub trait FormViewRendering {
+    fn form(&self) -> h::FormWith;
+    fn error_wrap(&self, field: &str, value: h::Html) -> h::Html;
+    fn label(&self, field: &str, text: &str) -> h::Html;
+    fn title_field(&self) -> h::Html;
+    fn description_field(&self) -> h::Html;
+    fn time_field(&self, field: &str) -> h::Html;
+    fn until_field(&self) -> h::Html;
+    fn meet_checkbox(&self) -> h::Html;
+    fn zone_field(&self) -> h::Html;
+    fn submit(&self) -> h::Html;
+    fn option(label: &str, value: &str, selected: bool) -> String;
+    fn repeat_select(&self) -> h::Html;
+    fn venue_select(&self) -> h::Html;
+
+    fn render_form(&self) -> h::Html;
 }
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct FormView {
-    pub room_id: i64,
-    pub room_name: String,
-    pub id: Option<i64>,
-    pub title: String,
-    pub title_value: Option<String>,
-    pub description: Option<String>,
-    pub starts_at: Option<String>,
-    pub ends_at: Option<String>,
-    pub time_zone: String,
-    pub venue_room_id: Option<i64>,
-    pub recurrence_rule: Option<String>,
-    pub recurrence_until: Option<String>,
-    pub meet_link_requested: bool,
-    pub meet_link: Option<String>,
-    pub series: bool,
-    pub head: bool,
-    pub errors: Vec<String>,
-    pub error_fields: Vec<String>,
-    pub venues: Vec<VenueOption>,
-}
-impl FormView {
-    pub fn path(&self) -> String {
-        let base = format!("/rooms/{}/events", self.room_id);
-        self.id.map(|id| format!("{base}/{id}")).unwrap_or(base)
-    }
-    pub fn back_path(&self) -> String {
-        self.id
-            .map(|_| self.path())
-            .unwrap_or_else(|| format!("/rooms/{}/events", self.room_id))
-    }
-    pub fn form(&self) -> h::FormWith {
+
+impl FormViewRendering for FormView {
+    fn form(&self) -> h::FormWith {
         h::form_with(self.path())
             .model("event")
             .method(if self.id.is_some() { "patch" } else { "post" })
@@ -60,10 +41,10 @@ impl FormView {
             value
         }
     }
-    pub fn label(&self, field: &str, text: &str) -> h::Html {
+    fn label(&self, field: &str, text: &str) -> h::Html {
         self.error_wrap(field, self.form().label(field, text, h::attrs()))
     }
-    pub fn title_field(&self) -> h::Html {
+    fn title_field(&self) -> h::Html {
         self.error_wrap(
             "title",
             self.form().text_field(
@@ -78,7 +59,7 @@ impl FormView {
             ),
         )
     }
-    pub fn description_field(&self) -> h::Html {
+    fn description_field(&self) -> h::Html {
         self.error_wrap(
             "description",
             self.form().text_area(
@@ -88,7 +69,7 @@ impl FormView {
             ),
         )
     }
-    pub fn time_field(&self, field: &str) -> h::Html {
+    fn time_field(&self, field: &str) -> h::Html {
         let value = if field == "starts_at" {
             self.starts_at.as_deref()
         } else {
@@ -101,7 +82,7 @@ impl FormView {
         options = options.attr_opt("value", value).type_("datetime-local");
         self.error_wrap(field, self.form().text_field(field, None, options))
     }
-    pub fn until_field(&self) -> h::Html {
+    fn until_field(&self) -> h::Html {
         self.error_wrap(
             "recurrence_until",
             self.form().text_field(
@@ -114,7 +95,7 @@ impl FormView {
             ),
         )
     }
-    pub fn meet_checkbox(&self) -> h::Html {
+    fn meet_checkbox(&self) -> h::Html {
         self.form().check_box(
             "meet_link_requested",
             h::attrs(),
@@ -123,7 +104,7 @@ impl FormView {
             if self.meet_link_requested { "1" } else { "0" },
         )
     }
-    pub fn zone_field(&self) -> h::Html {
+    fn zone_field(&self) -> h::Html {
         self.form().hidden_field(
             "time_zone",
             Some(&self.time_zone),
@@ -132,7 +113,7 @@ impl FormView {
                 .data("event_time_zone_target", "field"),
         )
     }
-    pub fn submit(&self) -> h::Html {
+    fn submit(&self) -> h::Html {
         let label = if self.id.is_some() {
             "Save changes"
         } else {
@@ -156,7 +137,7 @@ impl FormView {
         a = a.value(value);
         h::content_tag("option", a, &h::escape(label)).0
     }
-    pub fn repeat_select(&self) -> h::Html {
+    fn repeat_select(&self) -> h::Html {
         let mut options = Vec::new();
         if self.id.is_none() {
             options.push(Self::option(
@@ -189,7 +170,7 @@ impl FormView {
             ),
         )
     }
-    pub fn venue_select(&self) -> h::Html {
+    fn venue_select(&self) -> h::Html {
         let mut groups = Vec::new();
         for (label, stage) in [("Voice", false), ("Stage", true)] {
             let options = self
@@ -224,10 +205,16 @@ impl FormView {
             ),
         )
     }
-    pub fn error_count(&self) -> String {
-        super::pages::plural(self.errors.len() as i64, "error")
+
+    fn render_form(&self) -> h::Html {
+        h::raw(format!(
+            "\n{}",
+            Form { view: self }.render().expect("event form")
+        ))
     }
+
 }
+
 #[derive(Template)]
 #[template(path = "rooms/events/_form.html")]
 pub struct Form<'a> {
@@ -255,11 +242,5 @@ impl Page for Edit<'_> {
         Some(format!("Edit {}", self.view.title))
     }
 }
-impl FormView {
-    pub fn render_form(&self) -> h::Html {
-        h::raw(format!(
-            "\n{}",
-            Form { view: self }.render().expect("event form")
-        ))
-    }
-}
+
+pub use campfire_presentation::events::forms::*;

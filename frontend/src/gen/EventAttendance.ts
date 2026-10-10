@@ -6,15 +6,15 @@ import type { AttendanceResponse } from "./AttendanceResponse";
  * (`rooms/events/attendances#show`, the classic card's lazy frame). Also the reply to
  * [`RespondToEvent`]. Members of the event's room only.
  */
-export type EventAttendance = { eventId: number,
+export type EventAttendance = { eventId: number, 
 /**
  * `null` for "No response yet". The organizer starts as `going`.
  */
-response: AttendanceResponse | null, goingCount: number, maybeCount: number, declinedCount: number,
+response: AttendanceResponse | null, goingCount: number, maybeCount: number, declinedCount: number, 
 /**
  * The viewer may respond: an active human member, and the event isn't cancelled.
  */
-respondable: boolean,
+respondable: boolean, 
 /**
  * Offer "Apply to all future occurrences": it's the head of a series, or an occurrence
  * with later ones.

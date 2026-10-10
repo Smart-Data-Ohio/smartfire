@@ -88,3 +88,5 @@ async fn moderate(c: &mut Ctx, action: Action) -> Result {
         _ => Ok(c.head(StatusCode::NO_CONTENT)),
     }
 }
+
+use campfire_views::rendering::*;

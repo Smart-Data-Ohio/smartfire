@@ -1,26 +1,5 @@
 //! `app/views/rooms/github_subscriptions/_section.html.erb`.
 use crate::helpers as h;
-#[derive(Clone, Debug)]
-pub struct Subscription {
-    pub id: i64,
-    pub full_name: String,
-    pub events: Vec<String>,
-}
-#[derive(Clone, Debug, Default)]
-pub struct Section {
-    pub room_id: i64,
-    pub can_administer: bool,
-    pub administrator: bool,
-    pub subscriptions: Vec<Subscription>,
-}
-const EVENTS: [(&str, &str, bool); 6] = [
-    ("opened", "Opened", true),
-    ("merged", "Merged", true),
-    ("closed", "Closed", false),
-    ("review_requested", "Review requested", true),
-    ("review_submitted", "Review submitted", false),
-    ("checks_failed", "Checks failed", true),
-];
 fn checkbox(name: &str, id: &str, value: &str, checked: bool) -> String {
     h::legacy_tag(
         "input",
@@ -53,8 +32,11 @@ fn event_fields(prefix: &str, selected: impl Fn(&str, bool) -> bool, indent: usi
     }
     html
 }
-impl Section {
-    pub fn render(&self) -> h::Html {
+pub trait SectionRendering {
+    fn render(&self) -> h::Html;
+}
+impl SectionRendering for Section {
+    fn render(&self) -> h::Html {
         if !self.can_administer {
             return h::Safe(String::new());
         }
@@ -147,3 +129,5 @@ impl Section {
         h::Safe(html)
     }
 }
+
+pub use campfire_presentation::github::subscriptions::*;

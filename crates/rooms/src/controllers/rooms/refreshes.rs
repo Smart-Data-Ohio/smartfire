@@ -65,3 +65,5 @@ fn set_last_updated_at(c: &Ctx) -> Result<Timestamp> {
         .unwrap_or(if since < 0 { jiff::Timestamp::MIN } else { jiff::Timestamp::MAX });
     Ok(Timestamp::from_jiff(since))
 }
+
+use campfire_web::controllers::presenters::{Rendering};

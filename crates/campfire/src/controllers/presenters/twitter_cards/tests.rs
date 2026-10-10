@@ -626,3 +626,5 @@ async fn ws15e_x_bot_http_message_creates_reference_and_durable_fetch() {
         .await
         .unwrap();
 }
+
+use campfire_web::controllers::presenters::Rendering;

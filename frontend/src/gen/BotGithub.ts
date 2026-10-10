@@ -3,11 +3,11 @@
 /**
  * The GitHub account an agent's approved write actions post as.
  */
-export type BotGithub = { login: string,
+export type BotGithub = { login: string, 
 /**
  * GitHub accepts the token. When it doesn't, the account stays linked until replaced.
  */
-usable: boolean,
+usable: boolean, 
 /**
  * Why GitHub stopped accepting it, when known.
  */

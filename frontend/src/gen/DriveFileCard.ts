@@ -8,11 +8,11 @@
  *
  * Fill order: 2.
  */
-export type DriveFileCard = {
+export type DriveFileCard = { 
 /**
  * `drive_attachments.file_id`.
  */
-fileId: string,
+fileId: string, 
 /**
  * `https://drive.google.com/open?id={fileId}`.
  */

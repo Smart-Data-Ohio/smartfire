@@ -5,11 +5,11 @@ import type { BotRoom } from "./BotRoom";
 /**
  * One bot on the list.
  */
-export type BotSummary = { id: number, name: string, avatarUrl: string,
+export type BotSummary = { id: number, name: string, avatarUrl: string, 
 /**
  * Shown instead of `avatar_url` when set (no picture is uploaded).
  */
-icon: BotIcon | null,
+icon: BotIcon | null, 
 /**
  * "Workspace agent · Owned by Grace", "no owner recorded", as the classic list reads.
  */

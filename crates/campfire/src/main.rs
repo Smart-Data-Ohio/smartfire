@@ -18,14 +18,14 @@ use campfire_app::{config, errors, net, queue, security};
 #[cfg(test)]
 use campfire_app::{cable, state, test_support};
 #[cfg(test)]
-use campfire_web::{authentication, messaging};
+use campfire_runtime::{authentication, messaging};
 
 // The web layer (crates/web), likewise. `concerns`, `mail` and `controllers::presenters` (mirrored
 // in `controllers`) also hold tests of theirs that boot the whole app.
-use campfire_web::{active_storage, rich_text};
+use campfire_runtime::{active_storage, rich_text};
 
 mod concerns {
-    pub use campfire_web::concerns::*;
+    pub use campfire_runtime::concerns::*;
 
     #[cfg(test)]
     mod bot_model_cases;
@@ -378,6 +378,15 @@ fn disable_transparent_huge_pages() {
     }
 }
 
+
+
+#[cfg(test)]
+mod layering_tests;
+#[cfg(test)]
+mod sync_twin_tests;
+#[cfg(test)]
+mod slash_commands_tests;
+
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     #[test]
@@ -401,11 +410,3 @@ mod tests {
         assert_eq!(unsafe { std::ffi::CStr::from_ptr(thp) }, c"never");
     }
 }
-
-#[cfg(test)]
-mod layering_tests;
-#[cfg(test)]
-mod sync_twin_tests;
-#[cfg(test)]
-mod slash_commands_tests;
-

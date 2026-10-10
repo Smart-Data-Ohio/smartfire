@@ -7,7 +7,7 @@ import type { GithubSubscription } from "./GithubSubscription";
  * The same people who see the classic section: the room's creator and administrators,
  * on every room except a direct message.
  */
-export type GithubSubscriptionList = { subscriptions: Array<GithubSubscription>, administrator: boolean,
+export type GithubSubscriptionList = { subscriptions: Array<GithubSubscription>, administrator: boolean, 
 /**
  * Classic GitHub App OAuth start (`GET /github/app/connect`), or null when the app
  * is not configured. The callback has no return path back to room settings.

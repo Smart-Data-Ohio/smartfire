@@ -3,59 +3,13 @@ pub mod events;
 
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-use jiff::Timestamp;
-
-fn present(value: &str) -> bool {
-    !h::is_blank(value)
+pub trait GithubCardRendering {
+    fn avatar_tag(&self, ctx: &ViewContext) -> h::Html;
+    fn updated(&self, ctx: &ViewContext) -> h::Html;
+    fn link(&self) -> h::Html;
+    fn discuss(&self, room: i64, message: i64) -> h::Html;
 }
-
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub struct GithubCard {
-    pub id: i64,
-    pub full_name: String,
-    pub display_name: String,
-    pub number: i64,
-    pub state: String,
-    pub title: String,
-    pub author: String,
-    pub avatar: String,
-    pub base: String,
-    pub head: String,
-    pub review: String,
-    pub checks: String,
-    pub updated_at: Option<Timestamp>,
-    pub url: String,
-    pub error: String,
-    pub thread_id: Option<i64>,
-}
-impl GithubCard {
-    fn has(&self, value: &str) -> bool {
-        present(value)
-    }
-    fn state_label(&self) -> &'static str {
-        match self.state.as_str() {
-            "merged" => "Merged",
-            "closed" => "Closed",
-            "draft" => "Draft",
-            _ => "Open",
-        }
-    }
-    fn review_label(&self) -> Option<&'static str> {
-        match self.review.as_str() {
-            "approved" => Some("Approved"),
-            "changes_requested" => Some("Changes requested"),
-            "review_required" => Some("Review required"),
-            _ => None,
-        }
-    }
-    fn checks_label(&self) -> &'static str {
-        match self.checks.as_str() {
-            "passing" => "Checks passing",
-            "pending" => "Checks pending",
-            "failing" => "Checks failing",
-            _ => "No checks",
-        }
-    }
+impl GithubCardRendering for GithubCard {
     fn avatar_tag(&self, ctx: &ViewContext) -> h::Html {
         h::image_tag(
             ctx,
@@ -111,6 +65,7 @@ impl GithubCard {
         }
     }
 }
+
 #[derive(Template)]
 #[template(path = "message_providers/_github.html")]
 pub struct GithubPartial<'a> {
@@ -120,23 +75,12 @@ pub struct GithubPartial<'a> {
     pub message_id: i64,
     pub root_message: bool,
 }
-
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub struct EmbedCard {
-    pub url: String,
-    pub title: String,
-    pub description: String,
-    pub site: String,
-    pub image: String,
-    pub player_url: Option<String>,
+pub trait EmbedCardRendering {
+    fn title_link(&self) -> h::Html;
+    fn view_link(&self, chip: bool) -> h::Html;
+    fn image_link(&self, ctx: &ViewContext, kind: &str) -> h::Html;
 }
-impl EmbedCard {
-    fn has(&self, value: &str) -> bool {
-        present(value)
-    }
-    pub fn usable(&self) -> bool {
-        present(&self.title) || present(&self.description)
-    }
+impl EmbedCardRendering for EmbedCard {
     fn title_link(&self) -> h::Html {
         h::link_to_text(
             &self.title,
@@ -179,6 +123,7 @@ impl EmbedCard {
         )
     }
 }
+
 #[derive(Template)]
 #[template(path = "message_providers/_embed.html")]
 pub struct EmbedPartial<'a> {
@@ -190,17 +135,6 @@ pub struct EmbedPartial<'a> {
 pub struct LinkedinPartial<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub card: &'a EmbedCard,
-}
-
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub enum GithubEntry {
-    Public(Box<GithubCard>),
-    Private(String),
-}
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub struct EmbedEntry {
-    pub linkedin: bool,
-    pub card: EmbedCard,
 }
 
 /// WS8bm2 root composition seam. Context is used only by pure partial helpers.
@@ -285,3 +219,4 @@ pub fn embed_cards(
         values.as_deref().unwrap_or(fallback),
     )
 }
+pub use campfire_presentation::message_providers::*;

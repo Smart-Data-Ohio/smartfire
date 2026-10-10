@@ -8,13 +8,13 @@
  * `removeDriveFileIds` are dropped from the message (`message[drive_file_ids][]` on the classic
  * edit form is the set that remains; this is the inverse). The creator only, same as the text.
  */
-export type UpdateMessage = {
+export type UpdateMessage = { 
 /**
  * The new Markdown, up to 50 000 characters; blank only when the message has an
  * attachment or a Drive file left. Always sent: the classic update without it turns the
  * message into rich text.
  */
-markdownSource: string,
+markdownSource: string, 
 /**
  * Drive file ids to remove. Left out when the edit doesn't touch attachments. An invalid
  * id is a 422 (`includes an invalid file id`), as the classic edit is.

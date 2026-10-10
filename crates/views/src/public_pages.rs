@@ -3,37 +3,6 @@
 use crate::helpers as h;
 use askama::Template;
 
-#[derive(Clone, Copy)]
-pub enum Page {
-    About,
-    Privacy,
-    Terms,
-}
-
-impl Page {
-    pub fn title(self) -> &'static str {
-        match self {
-            Self::About => "Smartfire | About",
-            Self::Privacy => "Smartfire | Privacy Policy",
-            Self::Terms => "Smartfire | Terms of Service",
-        }
-    }
-
-    pub fn description(self) -> &'static str {
-        match self {
-            Self::About => {
-                "What Smartfire is: self-hosted, open-source team chat run by the organization hosting each workspace."
-            }
-            Self::Privacy => {
-                "Smartfire privacy policy: what each self-hosted workspace stores, who can see it, and how Google sign-in, Calendar, and Drive data is handled."
-            }
-            Self::Terms => {
-                "Smartfire terms of service: the open-source software license and the rules for using a self-hosted workspace."
-            }
-        }
-    }
-}
-
 macro_rules! public_template {
     ($name:ident, $path:literal) => {
         #[derive(Template)]
@@ -85,3 +54,4 @@ pub fn render(
     }
     .render()
 }
+pub use campfire_presentation::public_pages::*;

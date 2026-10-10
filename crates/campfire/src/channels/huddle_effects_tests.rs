@@ -814,3 +814,5 @@ async fn presence_job_fanout_and_missing_room_match_rails_counts() {
         .unwrap()
         .unwrap();
 }
+
+use campfire_views::rendering::*;

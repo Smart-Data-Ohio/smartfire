@@ -5,37 +5,37 @@ import type { User } from "./User";
 /**
  * `GET /api/v1/people/{id}` (`users#show`): what the classic page shows this viewer.
  */
-export type PersonProfile = { user: User,
+export type PersonProfile = { user: User, 
 /**
  * `profile_status_in_zone`, worded in the request's time zone. Set for a person who isn't
  * deactivated, including banned people; `None` for bots (`users/show.html:21,45-49`).
  */
-status: PersonStatus | null,
+status: PersonStatus | null, 
 /**
  * `Some(allowed)` for an active person other than the viewer (`users/show.html:51` and
  * `users/statuses/_allowance.html:2-8`); otherwise `None`.
  */
-dndAllowed: boolean | null,
+dndAllowed: boolean | null, 
 /**
  * Administrators only, for a person who isn't deactivated (`users/show.html:45-47`).
  */
-emailAddress: string | null,
+emailAddress: string | null, 
 /**
  * Administrators only, for an active person (`users/show.html:51,58-61`). The absolute
  * sign-in transfer URL (`users/profiles/_transfer.html:1`), as `AccountSettings` builds it.
  */
-transferUrl: string | null,
+transferUrl: string | null, 
 /**
  * The classic QR encoder's SVG of `transfer_url` (`qr_code::transfer_svg`), so the page can draw
  * the code itself instead of putting the link in a `/qr_code/...` URL. Set exactly when
  * `transfer_url` is.
  */
-transferQrSvg: string | null,
+transferQrSvg: string | null, 
 /**
  * Administrator, not the viewer, a person, not deactivated (`users/show.html:45,62-65`).
  * The button bans or removes the ban according to `user.status` (`users/_ban_button.html:1-7`).
  */
-canBan: boolean,
+canBan: boolean, 
 /**
  * Active bot and administrator or agent owner (`users/show.html:28`): the capability-grants link.
  */

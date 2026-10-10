@@ -4,7 +4,7 @@ import type { RoomKind } from "./RoomKind";
 /**
  * A conversation: channel, direct message, voice or stage room, or board.
  */
-export type Room = { id: number, kind: RoomKind,
+export type Room = { id: number, kind: RoomKind, 
 /**
  * `null` for direct messages, which are named after their members.
  */

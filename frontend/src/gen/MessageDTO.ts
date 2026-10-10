@@ -18,39 +18,39 @@ import type { ThreadIndicator } from "./ThreadIndicator";
  * - **delete**: it isn't a `systemNote`, and the viewer is the creator or an administrator;
  * - **pin, save, react, forward**: any human member of the room (bots never use this API).
  */
-export type MessageDTO = { id: number, roomId: number,
+export type MessageDTO = { id: number, roomId: number, 
 /**
  * `null` on the room's root timeline.
  */
-threadId: number | null, creatorId: number,
+threadId: number | null, creatorId: number, 
 /**
  * The sender's id for the message, which makes posting idempotent.
  */
-clientMessageId: string,
+clientMessageId: string, 
 /**
  * The rendered body from the server's sanitizer pipeline.
  */
-bodyHtml: string,
+bodyHtml: string, 
 /**
  * The classic built-in `/play` presentation; attachments take precedence.
  */
-sound: MessageSound | null,
+sound: MessageSound | null, 
 /**
  * The Markdown the body was written in, for editing; `null` for rich-text-only bodies.
  */
-markdownSource: string | null,
+markdownSource: string | null, 
 /**
  * A quiet timeline note: shown, but never unread or notified.
  */
-systemNote: boolean,
+systemNote: boolean, 
 /**
  * An `/me`-style action.
  */
-action: boolean,
+action: boolean, 
 /**
  * Still being written by an agent.
  */
-streaming: boolean, embedsSuppressed: boolean, replyToMessageId: number | null,
+streaming: boolean, embedsSuppressed: boolean, replyToMessageId: number | null, 
 /**
  * The original of a forward; `null` for an original or once the source is deleted. Where it
  * came from is viewer-relative (the viewer may not see that room), so it isn't here: the
@@ -58,65 +58,65 @@ streaming: boolean, embedsSuppressed: boolean, replyToMessageId: number | null,
  * viewer can't see the source and the header says only "Forwarded", as the classic card's
  * hidden "View original" link does (`message_forwards#forward_source`).
  */
-forwardedFromMessageId: number | null,
+forwardedFromMessageId: number | null, 
 /**
  * When this message was forwarded here (`messages.forwarded_at`); `null` for an original.
  * Stays set after the source is deleted, when `forwardedFromMessageId` goes `null`, so the
  * "Forwarded" label survives.
  */
-forwardedAt: string | null,
+forwardedAt: string | null, 
 /**
  * The forwarder's note (`messages.forward_note`, plain text, up to 50 000 characters),
  * shown above the forwarded body; `null` for none or an original.
  */
-forwardNote: string | null, editedAt: string | null,
+forwardNote: string | null, editedAt: string | null, 
 /**
  * The one attached file (`has_one_attached :attachment`); `null` for none.
  */
-attachment: Attachment | null,
+attachment: Attachment | null, 
 /**
  * Emoji and icon reactions grouped by content, in order of first reaction
  * (`boosts ORDER BY created_at`). Empty when there are none.
  */
-reactions: Array<Reaction>,
+reactions: Array<Reaction>, 
 /**
  * Free-text boosts (the `boosts` rows that aren't reactions), oldest first.
  */
-boosts: Array<Boost>,
+boosts: Array<Boost>, 
 /**
  * Pinned in its room (`message_pins` has a row for it).
  */
-pinned: boolean,
+pinned: boolean, 
 /**
  * Root messages with a thread only: the reply indicator. `null` on replies and on root
  * messages nobody has replied to in a thread.
  */
-thread: ThreadIndicator | null,
+thread: ThreadIndicator | null, 
 /**
  * The poll this message asks, if it's a poll's question (`polls.message_id`); `null`
  * otherwise. Kept current by `poll.updated` (by `asOf`, not `updatedAt`). A `null` here
  * never clears a poll the client already holds (see the **Ordering** note in
  * [`crate::MessageCard`]'s module).
  */
-poll: Poll | null,
+poll: Poll | null, 
 /**
  * The cards under the body (events, link previews), in the classic slot order; empty when
  * there are none or the server doesn't fill that kind yet (see [`crate::MessageCard`]).
  * Kept current by `message.cards`.
  */
-cards: Array<MessageCard>,
+cards: Array<MessageCard>, 
 /**
  * When the server read `cards`. A `message.cards` with an earlier `asOf` is stale, and so
  * is this message's `cards` when the client already holds a later one (see the **Ordering**
  * note in [`crate::MessageCard`]'s module). `poll` carries its own `asOf`.
  */
-cardsAsOf: string,
+cardsAsOf: string, 
 /**
  * An agent's progress steps on this message, in `(position, id)` order; empty for people's
  * messages and agents that report none. Kept current by `agent.steps`, merged per step by
  * its own `updatedAt` (see [`AgentStep`]), since a step change doesn't bump this message's.
  */
-steps: Array<AgentStep>, createdAt: string,
+steps: Array<AgentStep>, createdAt: string, 
 /**
  * Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
  * replies (`touch`), so a later `updatedAt` always holds the newer copy.

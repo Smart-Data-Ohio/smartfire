@@ -56,6 +56,71 @@ fn count(t: &TestDb) -> i64 {
 }
 
 #[test]
+fn dispatch_rechecks_scheduled_reply_target_visibility() {
+    let t = frozen();
+    let target = post_root(&t, "watercooler", "jason", "Target");
+    let row = schedule(&t, None, Some(target.id), "Later", 60);
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE messages SET system_note = 1 WHERE id = ?",
+            [target.id],
+        )?;
+        Ok(())
+    });
+    assert!(!send(&t, &row, true));
+    assert!(reload(&t, &row).dropped());
+}
+
+#[test]
+fn scheduled_replies_dispatch_as_replies_and_deleted_targets_dispatch_as_plain_messages() {
+    let t = frozen();
+    let target = post_root(&t, "watercooler", "jason", "Target");
+    let reply = schedule(&t, None, Some(target.id), "Reply", 60);
+    let deleted = schedule(&t, None, Some(target.id), "Plain", 60);
+    t.travel(120);
+    assert!(send(&t, &reply, false));
+    let sent = posted(&t, &reply);
+    assert_eq!(sent.reply_to_message_id, Some(target.id));
+    assert!(sent.reply_notify_author);
+    assert!(
+        t.read(|conn| ActivityItem::find_by_user_and_source(conn, id("jason"), "Message", sent.id))
+            .is_some_and(|item| item.event_type == "reply")
+    );
+    t.write(move |tx| target.destroy(tx));
+    assert!(send(&t, &deleted, false));
+    let sent = posted(&t, &deleted);
+    assert_eq!(sent.reply_to_message_id, None);
+    assert!(!sent.reply());
+}
+
+#[test]
+fn schedule_rejects_invisible_reply_targets_before_persisting() {
+    let t = frozen();
+    let target = post_root(&t, "watercooler", "jason", "Target");
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE messages SET system_note = 1 WHERE id = ?",
+            [target.id],
+        )?;
+        Ok(())
+    });
+    let result = t.try_write(move |tx| {
+        ScheduledMessage::create(
+            tx,
+            NewScheduledMessage {
+                user_id: id("david"),
+                room_id: id("watercooler"),
+                thread_id: None,
+                reply_to_message_id: Some(target.id),
+                markdown_source: "Later".into(),
+                send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+            },
+        )
+    });
+    assert!(matches!(result, Err(Error::RecordInvalid(_))));
+}
+
+#[test]
 fn schedules_for_the_future() {
     let t = frozen();
     let row = schedule(&t, None, None, "Morning!", 3600);
@@ -210,7 +275,7 @@ fn a_moved_send_time_fires_at_the_new_time() {
     t.travel(120);
     let later = t.now().since(jiff::SignedDuration::from_hours(2));
     let saved = row.clone();
-    t.write(move |tx| row.update(tx, "Moved", later));
+    t.write(move |tx| row.update(tx, "Moved", later, row.reply_to_message_id));
     assert!(!send(&t, &saved, false));
     assert!(reload(&t, &saved).pending());
     assert_eq!(reload(&t, &saved).claimed_at, None);

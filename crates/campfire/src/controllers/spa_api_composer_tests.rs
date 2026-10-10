@@ -896,6 +896,143 @@ async fn scheduled_messages_are_listed_changed_and_cancelled() {
 }
 
 #[tokio::test]
+async fn scheduled_reply_targets_can_be_changed_cleared_and_validated() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages");
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &schedule_body("Later", LATER, None, None),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::ScheduledMessage = parse(&reply);
+    let one = format!("/api/v1/scheduled_messages/{}", row.id);
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"replyToMessageId": ROOT_MESSAGE}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let changed: Value = parse(&reply);
+    assert_eq!(changed["replyToMessageId"], ROOT_MESSAGE);
+    assert_eq!(changed["replyTarget"]["messageId"], ROOT_MESSAGE);
+    assert!(
+        changed["replyTarget"]["excerpt"]
+            .as_str()
+            .is_some_and(|text| !text.is_empty())
+    );
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"markdownSource": "Edited"}),
+        ))
+        .await;
+    assert_eq!(
+        parse::<api::ScheduledMessage>(&reply).reply_to_message_id,
+        Some(ROOT_MESSAGE)
+    );
+    let foreign = a.db().read(|conn| {
+        Ok(conn.query_row("SELECT id FROM messages WHERE room_id <> ? AND thread_id IS NULL AND system_note = 0 LIMIT 1", [DESIGNERS], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    for target in [JASONS_REPLY, foreign, 999_999] {
+        let reply = david
+            .write(json_body(
+                Method::PATCH,
+                &one,
+                &json!({"replyToMessageId": target, "markdownSource": "Must not save"}),
+            ))
+            .await;
+        validation_fields(&reply);
+    }
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"replyToMessageId": null}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let changed: Value = parse(&reply);
+    assert_eq!(changed["replyToMessageId"], Value::Null);
+    assert_eq!(changed["replyTarget"], Value::Null);
+    assert_eq!(changed["markdownSource"], "Edited");
+
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"replyToMessageId": ROOT_MESSAGE}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("{one}/send_now"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let sent: api::ScheduledMessage = parse(&reply);
+    let message = a
+        .db()
+        .read(move |conn| campfire_db::Message::find(conn, sent.sent_message_id.unwrap()))
+        .await
+        .unwrap();
+    assert_eq!(message.reply_to_message_id, Some(ROOT_MESSAGE));
+    assert_eq!(message.markdown_source.as_deref(), Some("Edited"));
+}
+
+#[tokio::test]
+async fn scheduled_reply_edits_and_previews_recheck_room_access() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages");
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &schedule_body("Later", LATER, Some(THREAD), Some(JASONS_REPLY)),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::ScheduledMessage = parse(&reply);
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+                (DESIGNERS, DAVID),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/scheduled_messages/{}", row.id),
+            &json!({"replyToMessageId": JASONS_REPLY}),
+        ))
+        .await;
+    validation_fields(&reply);
+    let list: api::ScheduledMessageList =
+        parse(&david.send(get("/api/v1/scheduled_messages")).await);
+    let listed = list
+        .scheduled_messages
+        .iter()
+        .find(|item| item.id == row.id)
+        .unwrap();
+    assert!(listed.reply_target.is_none());
+    assert!(!listed.sendable);
+}
+
+#[tokio::test]
 async fn a_scheduled_message_excerpt_keeps_its_spoilers_hidden() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

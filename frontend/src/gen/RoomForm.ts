@@ -8,23 +8,23 @@ import type { User } from "./User";
  * `GET /api/v1/rooms/new?type=...` and `GET /api/v1/rooms/:id/edit`.
  * Existing forms are membership-scoped even for administrators and creators.
  */
-export type RoomForm = { type: RoomKind, roomId: number | null, name: string | null, iconName: string | null, displayName: string,
+export type RoomForm = { type: RoomKind, roomId: number | null, name: string | null, iconName: string | null, displayName: string, 
 /**
  * Effective selected active users. New selected-members forms select the viewer.
  */
-userIds: Array<number>,
+userIds: Array<number>, 
 /**
  * All persisted members, including inactive people; empty for a new room.
  */
-memberIds: Array<number>,
+memberIds: Array<number>, 
 /**
  * Active options in classic order. Direct edit contains only nonmembers.
  */
-candidateIds: Array<number>,
+candidateIds: Array<number>, 
 /**
  * The direct edit page's other members, or the viewer for a solo direct.
  */
-displayMemberIds: Array<number>, users: Array<User>,
+displayMemberIds: Array<number>, users: Array<User>, 
 /**
  * The types the workspace creation rule allows, including Direct.
  */

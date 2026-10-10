@@ -1,19 +1,5 @@
 //! Per-viewer write frame; forms receive request-local CSRF tokens through FormWith.
 use crate::helpers as h;
-#[derive(Clone, Debug, Default, serde::Deserialize)]
-pub struct WriteActions {
-    pub thread_id: i64,
-    pub room_id: i64,
-    pub pull_request_id: i64,
-    pub linked: bool,
-    pub usable: bool,
-    pub login: String,
-    pub notice: Option<String>,
-    pub alert: Option<String>,
-    pub comment_body: Option<String>,
-    pub review_body: Option<String>,
-    pub reviewers_body: Option<String>,
-}
 fn submit(label: &str) -> String {
     h::legacy_tag(
         "input",
@@ -26,8 +12,11 @@ fn submit(label: &str) -> String {
     )
     .0
 }
-impl WriteActions {
-    pub fn render(&self) -> String {
+pub trait WriteActionsRendering {
+    fn render(&self) -> String;
+}
+impl WriteActionsRendering for WriteActions {
+    fn render(&self) -> String {
         let mut html = format!(
             "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_{}\">\n",
             self.thread_id
@@ -142,3 +131,5 @@ impl WriteActions {
         html
     }
 }
+
+pub use campfire_presentation::github::write_actions::*;

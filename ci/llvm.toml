@@ -10,6 +10,9 @@ codegen-backend = "llvm"
 [profile.dev.package.campfire_app]
 codegen-backend = "llvm"
 
+[profile.dev.package.campfire_runtime]
+codegen-backend = "llvm"
+
 [profile.dev.package.campfire_web]
 codegen-backend = "llvm"
 

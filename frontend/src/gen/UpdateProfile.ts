@@ -3,12 +3,12 @@
 /**
  * `PATCH /api/v1/settings/profile` (`users/profiles#update`).
  */
-export type UpdateProfile = { name: string | null, emailAddress: string | null,
+export type UpdateProfile = { name: string | null, emailAddress: string | null, 
 /**
  * Needed to change `emailAddress` when the person has a password (`hasPassword`). A new
  * `password` doesn't need it, as on the classic page.
  */
-currentPassword: string | null,
+currentPassword: string | null, 
 /**
  * A new password; blank keeps the current one.
  */

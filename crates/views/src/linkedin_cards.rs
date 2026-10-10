@@ -1,16 +1,18 @@
 //! LinkedIn's card/chip partial, using the message's own raw reference URL.
+pub use campfire_presentation::linkedin_cards::*;
+
 use askama::Template;
-pub struct Card {
-    pub embed: crate::link_embeds::Card,
-    pub player_url: Option<String>,
+pub trait CardRendering {
+    fn render(&self) -> String;
 }
-impl Card {
-    pub fn render(&self) -> String {
+impl CardRendering for Card {
+    fn render(&self) -> String {
         CardPartial { card: self }
             .render()
             .expect("LinkedIn card renders")
     }
 }
+
 #[derive(Template)]
 #[template(path = "linkedin/posts/_card.html")]
 struct CardPartial<'a> {

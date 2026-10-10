@@ -76,6 +76,7 @@ function scheduledMessage(
     roomId: ROOM,
     threadId: null,
     replyToMessageId: null,
+    replyTarget: null,
     markdownSource: `Later ${id}`,
     excerpt: `Later ${id}`,
     sendAt: at(minute),

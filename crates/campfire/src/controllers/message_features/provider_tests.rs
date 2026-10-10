@@ -329,3 +329,5 @@ async fn human_edits_replace_all_eight_rails_targets_on_a_real_socket() {
         "WS8bm2 provider edits: 5 HTTP edits, 40/40 real socket replacement frames byte-identical to Rails"
     );
 }
+
+use campfire_web::controllers::presenters::Rendering;

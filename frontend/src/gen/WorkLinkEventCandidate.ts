@@ -4,7 +4,7 @@
  * One choice in the classic work links event picker (`board_posts::links`): the event's
  * title and start shown in its time zone. Candidates retain `starts_at ASC, id ASC` order.
  */
-export type WorkLinkEventCandidate = {
+export type WorkLinkEventCandidate = { 
 /**
  * Send as [`CreateWorkLink::event_id`].
  */

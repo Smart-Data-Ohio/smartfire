@@ -4,15 +4,15 @@
  * A root message's reply indicator ("3 replies · 2m ago" with avatars), on
  * `MessageDTO.thread` and in `thread.indicator`.
  */
-export type ThreadIndicator = { threadId: number,
+export type ThreadIndicator = { threadId: number, 
 /**
  * `messages_count`, as the classic indicator shows it. 0 hides the indicator.
  */
-replyCount: number,
+replyCount: number, 
 /**
  * The thread's `last_activity_at`.
  */
-lastReplyAt: string,
+lastReplyAt: string, 
 /**
  * Up to 3 distinct authors of the newest replies, newest first, for the avatar stack.
  * New: the classic indicator shows only the count.

@@ -251,6 +251,12 @@ export function ScheduledRow({
           <Icon name={glyphFor(item)} size={16} />
         </span>
         <div className="scheduled-main">
+          {item.replyTarget === null ? null : (
+            <p className="scheduled-reply">
+              <Icon name="corner-up-left" size={12} className="scheduled-reply-icon" />
+              Replying to {item.replyTarget.authorName}: {item.replyTarget.excerpt}
+            </p>
+          )}
           <div className="scheduled-line">
             <ConversationLabel conversation={conversation} />
             <Tooltip content={formatFull(item.sendAt)} describe={false}>

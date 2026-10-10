@@ -14,19 +14,19 @@ import type { User } from "./User";
  * At most 100 items a page. Listing first settles the viewer's overdue huddle invitations and
  * agent approvals, as the classic page does.
  */
-export type ActivityList = { items: Array<ActivityItem>,
+export type ActivityList = { items: Array<ActivityItem>, 
 /**
  * Every `creatorId` on the page, once each.
  */
-users: Array<User>,
+users: Array<User>, 
 /**
  * The viewer's unread items across every type (the badge), as `unreadCount` below.
  */
-unreadCount: number,
+unreadCount: number, 
 /**
  * Per-user server revision of this count. Ignore counts from older revisions.
  */
-unreadRevision: number,
+unreadRevision: number, 
 /**
  * Pass as `before` for the next page; `null` when this is the last. Set only when an older
  * row exists past this page (the server reads 101), unlike the classic `next_cursor`,

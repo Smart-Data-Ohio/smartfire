@@ -10,23 +10,23 @@ import type { XQuote } from "./XQuote";
  *
  * Fill order: 3.
  */
-export type XPostCard = { fetch: CardFetch,
+export type XPostCard = { fetch: CardFetch, 
 /**
  * X's status id (a string: it's past 2^53).
  */
-postId: string,
+postId: string, 
 /**
  * The post's link (`Post#view_url`): as written, or `https://x.com/i/status/<id>`.
  */
-url: string,
+url: string, 
 /**
  * `Post#display_name`: the author's name, `@handle`, or "Post on X".
  */
-authorName: string,
+authorName: string, 
 /**
  * `Post#display_handle`, without the `@`; `null` when unknown.
  */
-authorHandle: string | null, authorAvatarUrl: string | null, text: string | null, postedAt: string | null, replies: number | null, reposts: number | null, likes: number | null, media: Array<XMedia>,
+authorHandle: string | null, authorAvatarUrl: string | null, text: string | null, postedAt: string | null, replies: number | null, reposts: number | null, likes: number | null, media: Array<XMedia>, 
 /**
  * The post it quotes; `null` for none.
  */

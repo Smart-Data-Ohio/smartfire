@@ -80,7 +80,7 @@ pub mod users {
             .collect::<Vec<_>>();
         c.respond_to(&[&format::JSON])?;
         page.apply_headers(c);
-        let body = campfire_views::autocompletable::markdown_users_index_json(
+        let body = campfire_presentation::autocompletable::markdown_users_index_json(
             &users,
             &unique,
             &c.url_for(""),

@@ -21,27 +21,27 @@ import type { WorkStatus } from "./WorkStatus";
  *   agent, "must be an active agent member of the parent room with permission to post");
  * - `Validation` on `message` (past 50,000 characters).
  */
-export type CreateBoardPost = {
+export type CreateBoardPost = { 
 /**
  * The title, 1 to 100 characters.
  */
-name: string,
+name: string, 
 /**
  * The default is `planned`.
  */
-status: WorkStatus,
+status: WorkStatus, 
 /**
  * `null` leaves it unassigned.
  */
-ownerId: number | null,
+ownerId: number | null, 
 /**
  * Each is stripped and lower-cased; blanks and repeats are dropped; up to 5.
  */
-tags: Array<string>,
+tags: Array<string>, 
 /**
  * The brief; `null` for none. A blank `markdownSource` without an attachment counts as none.
  */
-message: CreateMessage | null,
+message: CreateMessage | null, 
 /**
  * The submission's retry identity: a UUID the client keeps across retries of one post, so a
  * retry after a lost reply can't make a second post. `null` makes no such promise.

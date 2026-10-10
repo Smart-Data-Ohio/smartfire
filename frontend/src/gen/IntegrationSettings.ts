@@ -5,16 +5,16 @@ import type { GoogleIntegration } from "./GoogleIntegration";
 /**
  * The connected services. OAuth starts remain browser navigations on the classic page.
  */
-export type IntegrationSettings = { google: GoogleIntegration, github: Connection,
+export type IntegrationSettings = { google: GoogleIntegration, github: Connection, 
 /**
  * The workspace has a GitHub App, so connecting can go through it ("Connect with GitHub")
  * as well as a pasted personal token.
  */
-githubAppConfigured: boolean, fizzy: Connection,
+githubAppConfigured: boolean, fizzy: Connection, 
 /**
  * Where the classic page manages these (`/users/me/profile`).
  */
-managePath: string,
+managePath: string, 
 /**
  * The Slack importer (`/slack/imports`).
  */

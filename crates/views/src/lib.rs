@@ -164,3 +164,5 @@ pub mod work_threads;
 
 #[cfg(test)]
 mod card_html_audit;
+
+pub mod rendering;

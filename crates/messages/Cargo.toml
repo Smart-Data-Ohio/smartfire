@@ -4,6 +4,8 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+campfire_runtime.workspace = true
+campfire_presentation.workspace = true
 rails_compat.workspace = true
 campfire_kit.workspace = true
 campfire_routes.workspace = true

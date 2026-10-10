@@ -17,26 +17,26 @@ import type { User } from "./User";
  * - **Voice**: non-favourite voice rooms;
  * - **Direct messages**: non-favourite direct rooms, newest `room.updatedAt` first.
  */
-export type Sidebar = {
+export type Sidebar = { 
 /**
  * One per membership whose involvement isn't `invisible`, in the server's order
  * (`ORDER BY LOWER(rooms.name)`).
  */
-rows: Array<SidebarRow>,
+rows: Array<SidebarRow>, 
 /**
  * The viewer's own categories, by `(position, id)`.
  */
-categories: Array<RoomCategory>,
+categories: Array<RoomCategory>, 
 /**
  * The people the direct rows and `directPlaceholderUserIds` name, once each.
  */
-users: Array<User>,
+users: Array<User>, 
 /**
  * Up to 20 active people the viewer has no direct room with yet, oldest account first
  * (`find_direct_placeholder_users`): the "start a conversation" suggestions under the
  * direct messages.
  */
-directPlaceholderUserIds: Array<number>,
+directPlaceholderUserIds: Array<number>, 
 /**
  * Whether the viewer may create channels: an administrator, or anyone when the account
  * doesn't restrict room creation to administrators.

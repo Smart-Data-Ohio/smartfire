@@ -9,23 +9,23 @@
  * stage for listeners. A role change or mute revokes the grant, which disconnects the client;
  * the `huddle.role` event tells it to join again for a fresh token.
  */
-export type HuddleCredentials = {
+export type HuddleCredentials = { 
 /**
  * The LiveKit server's public WebSocket URL.
  */
-url: string,
+url: string, 
 /**
  * The LiveKit access token (a JWT).
  */
-token: string,
+token: string, 
 /**
  * This grant's LiveKit identity.
  */
-identity: string, grantId: number, roomId: number,
+identity: string, grantId: number, roomId: number, 
 /**
  * As in [`HuddleDetail::room_name`].
  */
-roomName: string,
+roomName: string, 
 /**
  * What the token allows, so the client knows without decoding it: listeners skip the
  * microphone check and start with publishing off. New on the wire.

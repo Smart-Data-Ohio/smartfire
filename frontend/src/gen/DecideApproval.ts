@@ -15,7 +15,7 @@ import type { ApprovalDecision } from "./ApprovalDecision";
  *   changed since the request ("deny it and ask the agent to request again");
  * - `Validation` on `base` when it's no longer pending (decided, cancelled or expired).
  */
-export type DecideApproval = { decision: ApprovalDecision,
+export type DecideApproval = { decision: ApprovalDecision, 
 /**
  * The decision note (the classic `decision_note` param), up to 200 characters; a blank
  * note is none. Omit for none.

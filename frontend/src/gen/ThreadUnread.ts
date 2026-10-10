@@ -4,7 +4,7 @@
  * The `thread.unread` event on a member's `user` topic (the JSON twin of
  * `user_<id>_unread_threads`).
  */
-export type ThreadUnread = { threadId: number, roomId: number,
+export type ThreadUnread = { threadId: number, roomId: number, 
 /**
  * `false`: a reply made the thread unread for this member. `true`: sent to every room
  * member when a reply or the parent was deleted; refresh the thread's row without marking

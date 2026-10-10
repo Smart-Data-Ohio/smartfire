@@ -13,16 +13,16 @@ import type { HuddleRingState } from "./HuddleRingState";
  * (`PATCH /api/v1/activity/:id`), when there's an item. The inbox entry itself follows
  * `activity.item`.
  */
-export type HuddleRing = {
+export type HuddleRing = { 
 /**
  * The `huddle_started` or `huddle_missed` inbox item; `null` for a ring sent before its item
  * exists (as the call starts) and for the end-of-call frame that follows such a ring.
  */
-activityItemId: number | null, event: HuddleRingEvent, state: HuddleRingState, roomId: number,
+activityItemId: number | null, event: HuddleRingEvent, state: HuddleRingState, roomId: number, 
 /**
  * As the recipient sees it.
  */
-roomName: string, callerName: string,
+roomName: string, callerName: string, 
 /**
  * Don't play a sound: do-not-disturb, quiet hours or the recipient's sound settings
  * (`kind=huddle` sound policy). Always `false` when `event` is `ended`, which is sent

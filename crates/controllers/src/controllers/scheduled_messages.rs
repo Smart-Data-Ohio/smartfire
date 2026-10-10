@@ -385,7 +385,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             } else {
                 row.send_at
             };
-            row.update(tx, &source, time)?;
+            row.update(tx, &source, time, row.reply_to_message_id)?;
             Ok(UpdateOutcome::Saved(Box::new(row)))
         })
         .await;

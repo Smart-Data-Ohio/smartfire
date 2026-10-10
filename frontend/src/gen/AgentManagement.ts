@@ -5,7 +5,7 @@ import type { AgentBudgetUsage } from "./AgentBudgetUsage";
 /**
  * The management section of the profile, for administrators and the agent's owner only.
  */
-export type AgentManagement = { activitySummary: AgentActivitySummary,
+export type AgentManagement = { activitySummary: AgentActivitySummary, 
 /**
  * Messages, board posts and external actions, in that order.
  */

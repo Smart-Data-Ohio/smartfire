@@ -6,7 +6,7 @@ import type { AgentStatus } from "./AgentStatus";
  * The agent facts every human sees beside an agent's name ([`User::agent`]): the classic
  * "Agent" badge and `agents/_status_badge.html`.
  */
-export type AgentBadge = { agentId: number, kind: AgentKind, status: AgentStatus,
+export type AgentBadge = { agentId: number, kind: AgentKind, status: AgentStatus, 
 /**
  * `agents.suspended_at` is set: the badge reads "Suspended" whatever `status` says.
  */

@@ -10,33 +10,33 @@ import type { User } from "./User";
  * `presenters::agents::profile`). Any human may read it; an unknown agent is a 404. `grants`
  * and `management` are only for administrators and the agent's owner.
  */
-export type AgentProfile = { agent: AgentDirectoryRow,
+export type AgentProfile = { agent: AgentDirectoryRow, 
 /**
  * `null` when blank. The classic page joins these with " · ".
  */
-provider: string | null, runtime: string | null,
+provider: string | null, runtime: string | null, 
 /**
  * Up to 500 characters; `null` when blank.
  */
-description: string | null,
+description: string | null, 
 /**
  * The rooms the agent is in that the viewer is in too, by lower-cased name.
  */
-rooms: Array<AgentProfileRoom>,
+rooms: Array<AgentProfileRoom>, 
 /**
  * The agent's other rooms, which the viewer isn't in ("and {n} more").
  */
-hiddenRoomCount: number,
+hiddenRoomCount: number, 
 /**
  * `null` unless the viewer is an administrator or the agent's owner, like `management`.
  * **Departs from classic**, which shows grants to every human: a grant's `roomCount`
  * counts rooms the viewer may not be in.
  */
-grants: AgentGrants | null,
+grants: AgentGrants | null, 
 /**
  * `null` unless the viewer is an administrator or the agent's owner.
  */
-management: AgentManagement | null,
+management: AgentManagement | null, 
 /**
  * The bot user and the owner.
  */

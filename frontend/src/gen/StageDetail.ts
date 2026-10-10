@@ -5,7 +5,7 @@ import type { User } from "./User";
 /**
  * `GET /api/v1/rooms/:id/stage`: the stage panel's data.
  */
-export type StageDetail = { stage: StageState,
+export type StageDetail = { stage: StageState, 
 /**
  * Every member's directory entry.
  */

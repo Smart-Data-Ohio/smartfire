@@ -22,15 +22,15 @@ import type { WorkLinkKind } from "./WorkLinkKind";
  * [`crate::ThreadDetail`] (200) and publishes `thread.updated`, with the same viewing/tracking
  * checks. A missing link or a link belonging to another thread is 404.
  */
-export type CreateWorkLink = { kind: WorkLinkKind,
+export type CreateWorkLink = { kind: WorkLinkKind, 
 /**
  * For `pull_request`: GitHub PR URL, parsed by the classic `references::extract`.
  */
-pullRequestUrl?: string | null,
+pullRequestUrl?: string | null, 
 /**
  * For `event`: an event in the thread's room.
  */
-eventId?: number | null,
+eventId?: number | null, 
 /**
  * For `drive_file`: a Drive/Docs/Sheets/Slides/Forms URL; stored stripped, as classic.
  */

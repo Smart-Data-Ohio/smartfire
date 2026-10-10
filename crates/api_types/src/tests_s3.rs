@@ -156,6 +156,7 @@ fn scheduled() -> ScheduledMessage {
         room_id: 12,
         thread_id: None,
         reply_to_message_id: None,
+        reply_target: None,
         markdown_source: "Standup in 5".into(),
         excerpt: "Standup in 5".into(),
         send_at: "2026-10-07T13:55:00.000Z".into(),
@@ -175,6 +176,7 @@ fn scheduled_wire() -> serde_json::Value {
         "roomId": 12,
         "threadId": null,
         "replyToMessageId": null,
+        "replyTarget": null,
         "markdownSource": "Standup in 5",
         "excerpt": "Standup in 5",
         "sendAt": "2026-10-07T13:55:00.000Z",
@@ -435,6 +437,7 @@ fn scheduled_messages_carry_their_state() {
         &UpdateScheduledMessage {
             markdown_source: None,
             send_at: Some("2026-10-07T14:00:00.000Z".into()),
+            reply_to_message_id: None,
         },
         json!({"sendAt": "2026-10-07T14:00:00.000Z"}),
     );

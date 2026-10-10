@@ -25,6 +25,9 @@ codegen-backend = "cranelift"
 [profile.dev.package.campfire_app]
 codegen-backend = "cranelift"
 
+[profile.dev.package.campfire_runtime]
+codegen-backend = "cranelift"
+
 [profile.dev.package.campfire_web]
 codegen-backend = "cranelift"
 

@@ -9,20 +9,20 @@ import type { User } from "./User";
  * response; the client ranks as the person types (fuzzy subsequence, recents first when the
  * query is empty).
  */
-export type Switcher = {
+export type Switcher = { 
 /**
  * The viewer's rooms (memberships that aren't invisible, rooms not deleted), by
  * `LOWER(rooms.name)`.
  */
-rooms: Array<SwitcherRoom>,
+rooms: Array<SwitcherRoom>, 
 /**
  * Active humans but the viewer, by name.
  */
-people: Array<SwitcherPerson>,
+people: Array<SwitcherPerson>, 
 /**
  * The 15 most recently active threads in the viewer's rooms.
  */
-threads: Array<SwitcherThread>,
+threads: Array<SwitcherThread>, 
 /**
  * The people `people` names.
  */
