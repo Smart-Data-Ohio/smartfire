@@ -474,6 +474,44 @@ async fn hostile_and_oversized_queries_answer_cleanly() {
 }
 
 #[tokio::test]
+async fn relevance_search_pages_survive_unrelated_private_room_activity() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut expected = Vec::new();
+    for n in 0..85 {
+        expected.push(
+            post(&mut david, DESIGNERS, 300 + n, "corpusneedle")
+                .await
+                .id,
+        );
+    }
+    let path = "/api/v1/search?q=corpusneedle&sort=relevance";
+    let reply = kevin.send(get(path)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let first: api::SearchResults = parse(&reply);
+    assert_eq!(first.messages.len(), 40);
+    // Kevin cannot access this room, but its message still changes the FTS corpus.
+    post(&mut david, ALL_TALK, 400, "unrelated words").await;
+    let mut found = ids(&first).into_iter().rev().collect::<Vec<_>>();
+    let mut cursor = first.next_cursor.expect("a second relevance page");
+    for size in [40, 5] {
+        let reply = kevin.send(get(&format!("{path}&before={cursor}"))).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let page: api::SearchResults = parse(&reply);
+        assert_eq!(page.messages.len(), size);
+        assert!(page.sections.is_empty());
+        found.extend(ids(&page).into_iter().rev());
+        if size == 40 {
+            cursor = page.next_cursor.expect("a third relevance page");
+        } else {
+            assert!(page.next_cursor.is_none());
+        }
+    }
+    assert_eq!(found, expected.into_iter().rev().collect::<Vec<_>>());
+}
+
+#[tokio::test]
 async fn typed_search_filters_preserve_ids_visibility_and_sort() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

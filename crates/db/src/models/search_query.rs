@@ -65,11 +65,10 @@ pub enum SearchSort {
     Relevance,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct SearchCursor {
-    pub created_at: Timestamp,
-    pub id: i64,
-    pub rank: Option<f64>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchCursor {
+    Message { created_at: Timestamp, id: i64 },
+    Relevance { offset: u32 },
 }
 
 #[derive(Debug)]
@@ -334,9 +333,9 @@ impl SearchQuery {
         };
         self.messages_for_user_after(conn, user, zone, key)
     }
-    /// The single-page app's page: [`Self::messages_for_user`] starting strictly after the
-    /// `(created_at, id)` key `after` in `created_at DESC, id DESC` order, whether or not that
-    /// message still exists or is reachable.
+    /// ID-keyed paging, whether or not the cursor message still exists or is reachable.
+    /// Relevance falls back to newest throughout this adapter because an ID can't encode
+    /// its offset. The SPA uses [`Self::messages_for_user_sorted`] for relevance.
     pub fn messages_for_user_after(
         &self,
         conn: &Connection,
@@ -344,22 +343,23 @@ impl SearchQuery {
         zone: TimeZone,
         after: Option<(Timestamp, i64)>,
     ) -> Result<SearchPage> {
-        Ok(self
+        let mut query = self.clone();
+        if query.sort == SearchSort::Relevance {
+            query.sort = SearchSort::Newest;
+        }
+        Ok(query
             .messages_for_user_sorted(
                 conn,
                 user,
                 zone,
-                after.map(|(created_at, id)| SearchCursor {
-                    created_at,
-                    id,
-                    rank: None,
-                }),
+                after.map(|(created_at, id)| SearchCursor::Message { created_at, id }),
             )?
             .page)
     }
 
-    /// Keyset paging in the requested order. The wire page is reversed, as with classic
-    /// newest-first search; the SPA reverses it into display order.
+    /// Newest/oldest use message keys; relevance uses an offset because FTS5 recalculates
+    /// ranks when the corpus changes. Relevance pages are approximate if matches change.
+    /// The wire page is reversed; the SPA reverses it into display order.
     pub fn messages_for_user_sorted(
         &self,
         conn: &Connection,
@@ -387,32 +387,18 @@ impl SearchQuery {
             values.push(user.into());
         }
         let ranked = self.sort == SearchSort::Relevance && self.match_expression().is_some();
-        let rank = if ranked { "idx.rank" } else { "0.0" };
         sql = sql.replacen(
             "SELECT messages.*",
-            &format!("SELECT messages.id,messages.created_at,{rank} AS search_rank"),
+            "SELECT messages.id,messages.created_at",
             1,
         );
-        if let Some(key) = after {
-            if ranked {
-                sql.push_str(" AND (idx.rank > ? OR (idx.rank = ? AND (messages.created_at,messages.id)<(?,?)))");
-                let rank = key
-                    .rank
-                    .ok_or_else(|| crate::Error::Other("missing relevance cursor rank".into()))?;
-                values.extend([
-                    rank.into(),
-                    rank.into(),
-                    key.created_at.to_db().into(),
-                    key.id.into(),
-                ]);
+        if let Some(SearchCursor::Message { created_at, id }) = after {
+            sql.push_str(if self.sort == SearchSort::Oldest {
+                " AND (messages.created_at,messages.id)>(?,?)"
             } else {
-                sql.push_str(if self.sort == SearchSort::Oldest {
-                    " AND (messages.created_at,messages.id)>(?,?)"
-                } else {
-                    " AND (messages.created_at,messages.id)<(?,?)"
-                });
-                values.extend([key.created_at.to_db().into(), key.id.into()]);
-            }
+                " AND (messages.created_at,messages.id)<(?,?)"
+            });
+            values.extend([created_at.to_db().into(), id.into()]);
         }
         sql.push_str(if ranked {
             " ORDER BY idx.rank ASC,messages.created_at DESC,messages.id DESC LIMIT ?"
@@ -422,17 +408,30 @@ impl SearchQuery {
             " ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?"
         });
         values.push((super::message::PAGE_SIZE + 1).into());
-        let mut keys: Vec<SearchCursor> =
+        let offset = match after {
+            Some(SearchCursor::Relevance { offset }) => offset,
+            _ => 0,
+        };
+        if ranked {
+            sql.push_str(" OFFSET ?");
+            values.push(offset.into());
+        }
+        let mut keys: Vec<(Timestamp, i64)> =
             query_all(conn, &sql, rusqlite::params_from_iter(values), |row| {
-                Ok(SearchCursor {
-                    id: row.get(0)?,
-                    created_at: row.get(1)?,
-                    rank: if ranked { Some(row.get(2)?) } else { None },
-                })
+                Ok((row.get(1)?, row.get(0)?))
             })?;
         let has_more = keys.len() > super::message::PAGE_SIZE as usize;
         keys.truncate(super::message::PAGE_SIZE as usize);
-        let next = keys.last().copied().filter(|_| has_more);
+        let next = if !has_more {
+            None
+        } else if ranked {
+            offset
+                .checked_add(super::message::PAGE_SIZE as u32)
+                .map(|offset| SearchCursor::Relevance { offset })
+        } else {
+            keys.last()
+                .map(|&(created_at, id)| SearchCursor::Message { created_at, id })
+        };
         let messages = if keys.is_empty() {
             vec![]
         } else {
@@ -442,7 +441,7 @@ impl SearchQuery {
                     "SELECT * FROM messages WHERE id IN ({})",
                     crate::sql::placeholders(keys.len())
                 ),
-                rusqlite::params_from_iter(keys.iter().map(|key| key.id)),
+                rusqlite::params_from_iter(keys.iter().map(|&(_, id)| id)),
                 Message::from_row,
             )?
             .into_iter()
@@ -450,7 +449,7 @@ impl SearchQuery {
             .collect::<std::collections::HashMap<_, _>>();
             keys.iter()
                 .rev()
-                .filter_map(|key| by_id.remove(&key.id))
+                .filter_map(|(_, id)| by_id.remove(id))
                 .collect()
         };
         Ok(SortedSearchPage {

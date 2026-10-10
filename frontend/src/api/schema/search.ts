@@ -114,9 +114,9 @@ export type SearchSection = typeof SearchSection.Type;
 export type SearchSectionPin = Assert<Pinned<typeof SearchSection, GeneratedSearchSection>>;
 
 /**
- * `GET /api/v1/search?q=&before=`: 40 matching messages a page, oldest first, newest page
- * first; sections on the first page only. `nextCursor` is opaque (it encodes `createdAt` and
- * `id`); pass it back as `before`. People and rooms come from the switcher, files from
+ * `GET /api/v1/search?q=&before=`: 40 matching messages a page, in reverse display order;
+ * sections on the first page only. Pass the opaque `nextCursor` back as `before`. Newest and
+ * oldest use message keys; relevance uses an offset. People and rooms come from the switcher, files from
  * `has:file` / `has:image`.
  */
 export const SearchResults = Schema.Struct({

@@ -90,8 +90,10 @@ pub enum SearchSort {
 /// A `q` over 500 characters, or with more than 10 `from:` or more than 10 `in:` values, is a
 /// 422 (`ApiError::Validation` on `q`). New: the classic page has no such limits.
 ///
-/// `before` is the previous page's `nextCursor`: keyset paging on the selected sort, 40 a page.
-/// Relevance uses FTS5 rank, with timestamp and ID tie breakers. A cursor that doesn't decode
+/// `before` is the previous page's `nextCursor`: 40 results a page. Newest/oldest use timestamp
+/// and ID keys. Relevance orders by FTS5 rank with timestamp and ID tie breakers, and pages
+/// by offset because ranks change with the corpus. Relevance pages are approximate if
+/// matching messages change. Without text, relevance uses newest keys. A cursor that doesn't decode
 /// or names a different sort is a 422 (`ApiError::Validation` on
 /// `before`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -113,9 +115,8 @@ pub struct SearchResults {
     pub conversations: Vec<ConversationName>,
     /// Pass as `before` for the next page; `null` when no further match exists.
     ///
-    /// Opaque to the client: the last display row's sort key. Newest/oldest cursors remain
-    /// valid if that message is deleted or leaves the viewer's reach. Relevance ranks may
-    /// change when the indexed corpus changes.
+    /// Opaque to the client: a message key for newest/oldest, or an offset for relevance.
+    /// Message keys remain valid if that message is deleted or leaves the viewer's reach.
     pub next_cursor: Option<String>,
     /// First page only, and only when `q` has words: up to 10 of each kind whose name (title or
     /// description, for events) contains every word. Narrowed by `in:` and `in_id:`. Author-ID,

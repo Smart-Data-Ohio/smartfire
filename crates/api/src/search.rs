@@ -139,10 +139,11 @@ async fn index_search(c: &mut Ctx) -> Result {
             None => return Err(fail(c, validation("before", "is invalid"))),
         },
     };
-    if query.sort == search_query::SearchSort::Relevance
-        && query.match_expression().is_some()
-        && after.is_some_and(|key| key.rank.is_none())
-    {
+    if after.is_some_and(|key| {
+        matches!(key, search_query::SearchCursor::Relevance { .. })
+            != (query.sort == search_query::SearchSort::Relevance
+                && query.match_expression().is_some())
+    }) {
         return Err(fail(c, validation("before", "is invalid")));
     }
     if let Some(error) = bounded("q", &query) {
@@ -365,20 +366,21 @@ fn filtered_query(raw: &str, filters: &api::SearchFilters, explicit_sort: bool) 
 }
 
 fn encode_search_cursor(key: search_query::SearchCursor, sort: search_query::SearchSort) -> String {
+    let (created_at, id) = match key {
+        search_query::SearchCursor::Message { created_at, id } => (created_at, id),
+        search_query::SearchCursor::Relevance { offset } => {
+            return URL_SAFE_NO_PAD.encode(format!("relevance|offset|{offset}"));
+        }
+    };
     if sort == search_query::SearchSort::Newest {
-        return crate::cursor::encode(key.created_at, key.id);
+        return crate::cursor::encode(created_at, id);
     }
     let mode = if sort == search_query::SearchSort::Oldest {
         "oldest"
     } else {
         "relevance"
     };
-    URL_SAFE_NO_PAD.encode(format!(
-        "{mode}|{}|{}|{}",
-        key.created_at.to_db(),
-        key.id,
-        key.rank.map(|rank| rank.to_string()).unwrap_or_default()
-    ))
+    URL_SAFE_NO_PAD.encode(format!("{mode}|{}|{id}|", created_at.to_db()))
 }
 
 fn decode_search_cursor(
@@ -387,15 +389,19 @@ fn decode_search_cursor(
 ) -> Option<search_query::SearchCursor> {
     if sort == search_query::SearchSort::Newest {
         let (created_at, id) = crate::cursor::decode(raw)?;
-        return Some(search_query::SearchCursor {
-            created_at,
-            id,
-            rank: None,
-        });
+        return Some(search_query::SearchCursor::Message { created_at, id });
     }
     let text = String::from_utf8(URL_SAFE_NO_PAD.decode(raw).ok()?).ok()?;
     let parts = text.split('|').collect::<Vec<_>>();
-    let [mode, at, id, rank] = parts.as_slice() else {
+    if let ["relevance", "offset", offset] = parts.as_slice() {
+        if sort != search_query::SearchSort::Relevance {
+            return None;
+        }
+        return Some(search_query::SearchCursor::Relevance {
+            offset: offset.parse::<u32>().ok().filter(|offset| *offset > 0)?,
+        });
+    }
+    let [mode, at, id, ""] = parts.as_slice() else {
         return None;
     };
     let expected = if sort == search_query::SearchSort::Oldest {
@@ -406,15 +412,9 @@ fn decode_search_cursor(
     if *mode != expected {
         return None;
     }
-    let rank = if rank.is_empty() {
-        None
-    } else {
-        Some(rank.parse::<f64>().ok().filter(|rank| rank.is_finite())?)
-    };
-    Some(search_query::SearchCursor {
+    Some(search_query::SearchCursor::Message {
         created_at: campfire_db::Timestamp::parse_db(at)?,
         id: id.parse().ok()?,
-        rank,
     })
 }
 
@@ -423,27 +423,41 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sorted_cursors_round_trip_and_reject_wrong_modes_and_nonfinite_ranks() {
+    fn sorted_cursors_round_trip_and_reject_wrong_modes_and_invalid_offsets() {
         use search_query::{SearchCursor, SearchSort};
         let created_at = campfire_db::Timestamp::parse_db("2026-10-06 12:00:00.123456").unwrap();
-        for (sort, rank) in [
-            (SearchSort::Newest, None),
-            (SearchSort::Oldest, None),
-            (SearchSort::Relevance, Some(-0.000123456789)),
+        let message = SearchCursor::Message { created_at, id: 42 };
+        for (sort, key) in [
+            (SearchSort::Newest, message),
+            (SearchSort::Oldest, message),
+            (SearchSort::Relevance, message),
+            (
+                SearchSort::Relevance,
+                SearchCursor::Relevance { offset: 40 },
+            ),
         ] {
-            let key = SearchCursor {
-                created_at,
-                id: 42,
-                rank,
-            };
             let cursor = encode_search_cursor(key, sort);
             assert_eq!(decode_search_cursor(&cursor, sort), Some(key));
             if sort != SearchSort::Newest {
                 assert_eq!(decode_search_cursor(&cursor, SearchSort::Newest), None);
             }
         }
-        let invalid = URL_SAFE_NO_PAD.encode("relevance|2026-10-06 12:00:00|42|NaN");
-        assert_eq!(decode_search_cursor(&invalid, SearchSort::Relevance), None);
+        for raw in [
+            "relevance|offset|0",
+            "relevance|offset|-1",
+            "relevance|offset|1.5",
+            "relevance|offset|4294967296",
+            "relevance|2026-10-06 12:00:00|42|-0.000123",
+            "relevance|2026-10-06 12:00:00|42|NaN",
+        ] {
+            let invalid = URL_SAFE_NO_PAD.encode(raw);
+            assert_eq!(decode_search_cursor(&invalid, SearchSort::Relevance), None);
+        }
+        let relevance = encode_search_cursor(
+            SearchCursor::Relevance { offset: 40 },
+            SearchSort::Relevance,
+        );
+        assert_eq!(decode_search_cursor(&relevance, SearchSort::Oldest), None);
         assert_eq!(decode_search_cursor("garbage", SearchSort::Oldest), None);
     }
 
