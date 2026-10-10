@@ -7,10 +7,21 @@
  */
 import { Effect, Predicate, Schema } from "effect";
 import * as api from "../api/composer-endpoints.ts";
+import { messages, type PageCursor } from "../api/endpoints.ts";
+import { threadMessages } from "../api/thread-endpoints.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import { type ScheduledListKey, scheduledListOf, scheduledQueryOf } from "../store/scheduled.ts";
 import { mutations, store } from "../store/store.ts";
+
+/** Read-only candidates from the draft's conversation, without changing its timeline. */
+export const replyPage = Effect.fn("scheduled.replyPage")(function* (
+  roomId: number,
+  threadId: number | null,
+  cursor: PageCursor,
+) {
+  return yield* threadId === null ? messages(roomId, cursor) : threadMessages(threadId, cursor);
+});
 
 /** Loads (or reloads) a list's first page; a failure lands as the list's error. */
 export const load = Effect.fn("scheduled.load")(function* (key: ScheduledListKey) {

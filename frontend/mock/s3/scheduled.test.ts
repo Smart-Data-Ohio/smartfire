@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ActivityList } from "../../src/gen/ActivityList.ts";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { ScheduledMessageList } from "../../src/gen/ScheduledMessageList.ts";
 import { SCHEDULED_PAGE_SIZE } from "../s2/composer.ts";
@@ -27,6 +28,68 @@ function create(
 }
 
 describe("the scheduled lists", () => {
+  it("changes and clears reply targets, rejects another conversation, and sends the edited target", async () => {
+    const { server } = harness();
+    const page = await get<MessagePage>(server, `/api/v1/rooms/${rooms.general}/messages`);
+    const targets = page.messages.filter((message) => !message.systemNote);
+    const [first, second] = targets;
+
+    if (first === undefined || second === undefined) throw new Error("Expected two reply targets");
+
+    const created = await expectStatus<ScheduledMessage>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/scheduled_messages`,
+      {
+        markdownSource: "Later",
+        sendAt: new Date(NOW + HOUR).toISOString(),
+        threadId: null,
+        replyToMessageId: first.id,
+      },
+      201,
+    );
+
+    const path = `/api/v1/scheduled_messages/${created.id}`;
+    expect(created.replyTarget?.messageId).toBe(first.id);
+
+    const changed = await expectStatus<ScheduledMessage>(
+      server,
+      "PATCH",
+      path,
+      { replyToMessageId: second.id },
+      200,
+    );
+
+    expect(changed.replyTarget?.messageId).toBe(second.id);
+    const other = await get<MessagePage>(server, `/api/v1/rooms/${rooms.design}/messages`);
+    const foreign = other.messages.find((message) => !message.systemNote);
+
+    if (foreign === undefined) throw new Error("Expected a foreign reply target");
+    await expectStatus(server, "PATCH", path, { replyToMessageId: foreign.id }, 422);
+
+    const cleared = await expectStatus<ScheduledMessage>(
+      server,
+      "PATCH",
+      path,
+      { replyToMessageId: null },
+      200,
+    );
+
+    expect(cleared.replyToMessageId).toBeNull();
+    expect(cleared.replyTarget).toBeNull();
+    await expectStatus(server, "PATCH", path, { replyToMessageId: second.id }, 200);
+    const sent = await expectStatus<ScheduledMessage>(server, "POST", `${path}/send_now`, {}, 200);
+
+    const posted = await get<MessagePage>(
+      server,
+      `/api/v1/rooms/${rooms.general}/messages?around=${sent.sentMessageId}`,
+    );
+
+    expect(
+      posted.messages.find((message) => message.id === sent.sentMessageId)?.replyToMessageId,
+    ).toBe(second.id);
+  });
+
   it("lists pending ones soonest first, the stranded one not sendable, with names", async () => {
     const { server } = harness();
 

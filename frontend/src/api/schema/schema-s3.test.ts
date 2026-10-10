@@ -167,6 +167,7 @@ const scheduledJson = {
   roomId: 12,
   threadId: null,
   replyToMessageId: null,
+  replyTarget: null,
   markdownSource: "Standup in 5",
   sendAt: "2026-10-07T13:55:00.000Z",
   state: "dropped",
