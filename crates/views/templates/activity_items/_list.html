@@ -1,5 +1,0 @@
-{% if !items.is_empty() %}  {% for item in items %}{{ self.item(item)? }}{% endfor %}{{ "\n" }}{% else %}  <div class="activity-inbox__empty">
-    <p class="activity-inbox__empty-title">No {{ filter }} activity</p>
-    <p>New mentions and replies will show up here when they arrive.</p>
-  </div>
-{% endif %}

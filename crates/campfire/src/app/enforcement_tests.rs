@@ -25,7 +25,7 @@ async fn login(a: &TestApp) -> crate::controllers::presenters::test_support::Bro
         ]))
         .await
         .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     b
 }
@@ -207,7 +207,7 @@ async fn verified_sessions_browse_even_without_a_credential() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    assert_eq!(b.get("/users/me/profile").await.status, StatusCode::OK);
+    assert_eq!(b.get("/api/v1/settings/account").await.status, StatusCode::OK);
     assert_ne!(
         b.get("/").await.location(),
         Some("http://campfire.test/two_factor_setup")
@@ -242,7 +242,7 @@ async fn admin_idle_expiry_is_strict_configurable_and_does_not_expire_members() 
             .await
             .unwrap();
         assert_eq!(
-            b.get("/users/me/profile").await.status,
+            b.get("/api/v1/settings/account").await.status,
             StatusCode::OK,
             "exact expiry boundary is valid"
         );
@@ -285,7 +285,7 @@ async fn admin_idle_expiry_is_strict_configurable_and_does_not_expire_members() 
             })
             .await
             .unwrap();
-        assert_eq!(member.get("/users/me/profile").await.status, StatusCode::OK);
+        assert_eq!(member.get("/api/v1/settings/account").await.status, StatusCode::OK);
     }
 }
 
@@ -430,7 +430,7 @@ async fn storage_accepts_actual_completed_second_factor_and_nonhuman_sessions() 
         b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
             .await
             .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     assert_eq!(b.write(metadata()).await.status, StatusCode::OK);
     let mut bot = a

@@ -20,10 +20,10 @@ struct Fresh {
 impl Fresh {
     async fn new(secret: Option<&str>) -> Self {
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+            std::env::temp_dir().join("github-webhooks");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
-        let mut config = Config::from_lookup(|name| match name {
+        let config = Config::from_lookup(|name| match name {
             "SECRET_KEY_BASE" => Some("a".repeat(128)),
             "GITHUB_WEBHOOK_SECRET" => secret.map(str::to_owned),
             "DISABLE_SSL" => Some("1".into()),
@@ -32,7 +32,6 @@ impl Fresh {
         })
         .unwrap();
         // The classic pages, until they're deleted.
-        config.spa_enabled = false;
         let booted = crate::server::boot(config).await.unwrap();
         let crate::server::Booted { app, router, jobs, .. } = booted;
         jobs.shutdown(std::time::Duration::from_secs(1)).await;
@@ -349,7 +348,7 @@ async fn webhook_claims_prune_strictly_older_rows_only_on_a_winning_claim() {
     // Freeze the write's clock through an independent domain fixture below; the HTTP app clock
     // advances, so its retention boundary cannot be used for an exact equality assertion.
     let clock = std::sync::Arc::new(campfire_db::TestClock::frozen_at(fixed));
-    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+    let scratch = std::env::temp_dir().join("github-webhooks");
     let domain = tokio::task::spawn_blocking(move || {
         crate::integrations::test_support::TestDb::in_dir(clock, &scratch)
     })

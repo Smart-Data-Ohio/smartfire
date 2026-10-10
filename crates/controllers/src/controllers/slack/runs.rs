@@ -1,6 +1,7 @@
 //! `accounts/slack_import_runs_controller.rb` and `slack/imports_controller.rb`.
+use campfire_presentation::slack::{Issue, RoomTarget, RunData};
 use super::*;
-use crate::controllers::presenters::{page::framed_page, pagination::Page};
+use crate::controllers::presenters::{pagination::Page};
 use campfire_db::{
     audit_log::{AuditLog, NewAuditLog, Target},
     models::{
@@ -9,7 +10,6 @@ use campfire_db::{
     },
 };
 use campfire_kit::StatusCode;
-use campfire_views::slack::{Issue, PersonalIndex, Plan, RoomTarget, RunData, RunList, RunPage};
 use rusqlite::params;
 use serde_json::Value;
 
@@ -130,16 +130,16 @@ fn known_selection(selected: Vec<Value>, run: &SlackImport) -> Vec<Value> {
     ids
 }
 /// The person's saved time zone, as the run pages show times and read dates in it.
-pub async fn zone(c: &Ctx, id: i64) -> Result<campfire_views::time::Zone> {
+pub async fn zone(c: &Ctx, id: i64) -> Result<campfire_presentation::time::Zone> {
     let saved = c
         .app()
         .db
         .read(move |conn| User::saved_time_zone(conn, id))
         .await
         .map_err(Error::internal)?;
-    Ok(campfire_views::time::Zone::for_user(saved.as_deref()))
+    Ok(campfire_presentation::time::Zone::for_user(saved.as_deref()))
 }
-fn bound(zone: &campfire_views::time::Zone, value: &str, latest: bool) -> Option<String> {
+fn bound(zone: &campfire_presentation::time::Zone, value: &str, latest: bool) -> Option<String> {
     let date = value.parse::<jiff::civil::Date>().ok()?;
     let time = if latest {
         jiff::civil::Time::new(23, 59, 59, 0).ok()?
@@ -751,40 +751,16 @@ pub async fn list(c: &Ctx, uid: Option<i64>) -> Result<Vec<RunData>> {
         stmt.query_map(params![uid,uid],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().map(|id|data(conn,SlackImport::find(conn,id)?.unwrap(),now)).collect()
     }).await.map_err(Error::internal)
 }
-pub async fn admin_index(c: &mut Ctx) -> Result {
-    let user = before(c, true).await?;
-    let mut runs = list(c, None).await?;
-    let zone = zone(c, user.id).await?;
-    for run in &mut runs {
-        run.format_times(&zone);
-    }
-    framed_page!(c, StatusCode::OK, |ctx| RunList { ctx, runs: &runs }).await
-}
-pub async fn personal_index(c: &mut Ctx) -> Result {
-    let user = before(c, false).await?;
-    let setup = personal_data(c, user.id).await?;
-    let mut runs = list(c, Some(user.id)).await?;
-    let zone = zone(c, user.id).await?;
-    for run in &mut runs {
-        run.format_times(&zone);
-    }
-    framed_page!(c, StatusCode::OK, |ctx| PersonalIndex {
-        ctx,
-        data: &setup,
-        runs: &runs
-    })
-    .await
-}
 /// The personal page's setup state for `uid`: whether an administrator set up the import, and
 /// the person's own Slack connection.
-pub async fn personal_data(c: &Ctx, uid: i64) -> Result<campfire_views::slack::SetupData> {
+pub async fn personal_data(c: &Ctx, uid: i64) -> Result<campfire_presentation::slack::SetupData> {
     let crypto = service(c).encryption;
     c.app()
         .db
         .read(move |conn| {
             let w = campfire_db::models::slack::SlackWorkspace::current(conn)?;
             let connection = SlackConnection::for_user(conn, uid)?;
-            Ok(campfire_views::slack::SetupData {
+            Ok(campfire_presentation::slack::SetupData {
                 team_known: w
                     .and_then(|w| w.team_id)
                     .is_some_and(|s| !campfire_richtext::ruby::is_blank(&s)),
@@ -802,32 +778,6 @@ pub async fn personal_data(c: &Ctx, uid: i64) -> Result<campfire_views::slack::S
         })
         .await
         .map_err(Error::internal)
-}
-async fn show(c: &mut Ctx, admin: bool, status: bool) -> Result {
-    let user = before(c, admin).await?;
-    let run = find(c, &user, admin).await?;
-    let now = campfire_db::Timestamp::from_jiff(c.now());
-    let page_param = c.param_str("page").map(str::to_owned);
-    let mut data=c.app().db.read(move |conn| {
-        let mut data=data(conn,run,now)?;
-        if admin && !status {
-            (data.issues, data.next_page) = issues_page(conn, data.id, data.issues_count, page_param.as_deref())?;
-        }
-        Ok(data)
-    }).await.map_err(Error::internal)?;
-    data.format_times(&zone(c, user.id).await?);
-    if status {
-        return crate::controllers::presenters::page::content(c, StatusCode::OK, |_| {
-            Ok(campfire_views::slack::status(&data))
-        })
-        .await;
-    }
-    framed_page!(c, StatusCode::OK, |ctx| RunPage {
-        ctx,
-        data: &data,
-        admin
-    })
-    .await
 }
 /// A page of a run's issues (50 a page, oldest first) and the next page's number, if any.
 pub fn issues_page(
@@ -849,39 +799,6 @@ pub fn issues_page(
         .collect::<rusqlite::Result<_>>()?;
     Ok((issues, (!page.is_last()).then(|| page.next_param())))
 }
-pub async fn admin_show(c: &mut Ctx) -> Result {
-    show(c, true, false).await
-}
-pub async fn personal_show(c: &mut Ctx) -> Result {
-    show(c, false, false).await
-}
-pub async fn admin_status(c: &mut Ctx) -> Result {
-    show(c, true, true).await
-}
-pub async fn personal_status(c: &mut Ctx) -> Result {
-    show(c, false, true).await
-}
-pub async fn plan(c: &mut Ctx) -> Result {
-    let user = before(c, true).await?;
-    let run = find(c, &user, true).await?;
-    if run.kind != "workspace" || run.mode != "dry_run" || run.status != "completed" {
-        return redirect(
-            c,
-            &path(true, run.id),
-            None,
-            Some("The plan is ready when the dry run completes."),
-        );
-    }
-    let (data, rooms, oldest) = plan_data(c, &user, run).await?;
-    framed_page!(c, StatusCode::OK, |ctx| Plan {
-        ctx,
-        data: &data,
-        rooms: &rooms,
-        oldest: &oldest
-    })
-    .await
-}
-
 /// A completed dry run's plan: the run with its samples rendered, the rooms a conversation can
 /// merge into (by name), and a test import's default oldest day (two weeks back, in the
 /// person's time zone).

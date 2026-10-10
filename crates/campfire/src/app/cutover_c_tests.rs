@@ -1,9 +1,10 @@
-//! Remaining Rails HTTP assertions, using fresh Rails fixtures and the real router.
+//! Remaining Rails behavior over the SPA APIs and retired-page aliases, using fresh fixtures.
 use super::google_api_tests::{self as google, Recorded};
 use crate::controllers::presenters::test_support::{DAVID, KEVIN, Req, TestApp};
 use axum::http::Method;
 use campfire_db::{Message, NewMessage, Timestamp, fixtures};
 use campfire_richtext::dom::{Dom, NodeId};
+use serde_json::json;
 use std::sync::Arc;
 
 pub(crate) async fn app() -> TestApp {
@@ -38,10 +39,6 @@ fn dom(html: &str) -> (Dom, NodeId) {
     let mut d = Dom::new();
     let root = d.parse_fragment(html).unwrap();
     (d, root)
-}
-fn class(d: &Dom, n: NodeId, name: &str) -> bool {
-    d.attr(n, "class")
-        .is_some_and(|c| c.split_whitespace().any(|t| t == name))
 }
 fn nodes(d: &Dom, root: NodeId, filter: impl Fn(&Dom, NodeId) -> bool) -> Vec<NodeId> {
     d.descendants(root)
@@ -94,58 +91,72 @@ async fn message(app: &TestApp, files: Vec<String>) -> Message {
 async fn cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent() {
     let a = app().await;
     let m = message(&a, vec![FILE_A.into()]).await;
-    let path = format!("/rooms/{}/messages/{}", m.room_id, m.id);
+    let path = format!("/api/v1/messages/{}", m.id);
     let mut b = a.sign_in(DAVID).await;
     let without = b.get(&path).await;
     assert_eq!(without.status, 200);
-    let (d, root) = dom(&without.text());
-    let chips = nodes(&d, root, |d, n| class(d, n, "drive-attachments"));
-    assert_eq!(chips.len(), 1);
-    let first = d.to_html(chips[0]);
+    let first = without.json()["message"]["cards"].clone();
+    assert_eq!(
+        first,
+        json!([{
+            "kind": "drive", "data": {
+                "fileId": FILE_A, "url": format!("https://drive.google.com/open?id={FILE_A}")
+            }
+        }])
+    );
     grant(&a, DRIVE).await;
     let with = b.get(&path).await;
     assert_eq!(with.status, 200);
-    let (d, root) = dom(&with.text());
-    let chips = nodes(&d, root, |d, n| class(d, n, "drive-attachments"));
-    assert_eq!(chips.len(), 1);
-    let second = d.to_html(chips[0]);
-    assert_eq!(first, second);
-    assert!(second.contains("Google Drive file"));
+    assert_eq!(first, with.json()["message"]["cards"]);
 }
 #[tokio::test]
 async fn cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels() {
     let a = app().await;
     let m = message(&a, vec![FILE_A.into(), FILE_B.into()]).await;
-    let response = a
-        .sign_in(DAVID)
-        .await
+    let mut browser = a.sign_in(DAVID).await;
+    let response = browser
         .get(&format!("/rooms/{}/messages/{}/edit", m.room_id, m.id))
         .await;
+    assert_eq!(response.status, 302);
+    assert_eq!(
+        response.location(),
+        Some(format!("http://campfire.test/app/r/{}/m/{}", m.room_id, m.id).as_str())
+    );
+    let path = format!("/api/v1/messages/{}", m.id);
+    let response = browser.get(&path).await;
     assert_eq!(response.status, 200);
-    let (d, root) = dom(&response.text());
     assert_eq!(
-        nodes(&d, root, |d, n| class(d, n, "drive-attachment-chip")).len(),
-        2
+        response.json()["message"]["cards"],
+        json!([
+            {"kind": "drive", "data": {"fileId": FILE_A, "url": format!("https://drive.google.com/open?id={FILE_A}")}},
+            {"kind": "drive", "data": {"fileId": FILE_B, "url": format!("https://drive.google.com/open?id={FILE_B}")}}
+        ])
     );
-    for expected in [FILE_A, FILE_B, ""] {
-        assert_eq!(
-            nodes(&d, root, |d, n| d.local_name(n) == Some("input")
-                && d.attr(n, "type") == Some("hidden")
-                && d.attr(n, "name") == Some("message[drive_file_ids][]")
-                && d.attr(n, "value") == Some(expected))
-            .len(),
-            1
-        );
+    // K15 retired the removable chips and hidden sentinel; edits remove ids explicitly.
+    for (removed, remaining) in [(FILE_A, vec![FILE_B]), (FILE_B, vec![])] {
+        let response = browser
+            .write(
+                Req::new(Method::PATCH, &path)
+                    .header("content-type", "application/json")
+                    .body(
+                        serde_json::to_vec(
+                            &json!({"markdownSource": "shared", "removeDriveFileIds": [removed]}),
+                        )
+                        .unwrap(),
+                    ),
+            )
+            .await;
+        assert_eq!(response.status, 200, "{}", response.text());
+        let response = browser.get(&path).await;
+        assert_eq!(response.status, 200);
+        let ids = response.json()["message"]["cards"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|card| card["data"]["fileId"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(ids, remaining);
     }
-    assert_eq!(
-        nodes(&d, root, |d, n| class(
-            d,
-            n,
-            "drive-attachment-chip__remove"
-        ))
-        .len(),
-        2
-    );
 }
 async fn audit_success(a: &TestApp) -> i64 {
     a.db()
@@ -242,7 +253,7 @@ async fn cutover_c_sudo_audit_log_read_requires_no_confirmation() {
     assert_eq!(
         a.sign_in(DAVID)
             .await
-            .get("/account/audit_log")
+            .get("/api/v1/admin/audit_log")
             .await
             .status,
         200
@@ -391,117 +402,82 @@ const PICKER_ENV: &[(&str, &str)] = &[
     ("GOOGLE_PICKER_API_KEY", "test-picker-key"),
     ("GOOGLE_CLOUD_PROJECT_NUMBER", "123456789012"),
 ];
+// K15 replaced room markup with an alias; picker availability now comes from JSON.
 async fn room(a: &TestApp) -> crate::controllers::presenters::test_support::Reply {
-    a.sign_in(DAVID)
-        .await
-        .get(&format!("/rooms/{}", id("watercooler")))
-        .await
+    let room_id = id("watercooler");
+    let mut browser = a.sign_in(DAVID).await;
+    let response = browser.get(&format!("/rooms/{room_id}")).await;
+    assert_eq!(response.status, 302);
+    assert_eq!(
+        response.location(),
+        Some(format!("http://campfire.test/app/r/{room_id}").as_str())
+    );
+    browser.get("/api/v1/settings").await
 }
-fn controller_count(d: &Dom, root: NodeId, name: &str) -> usize {
-    nodes(d, root, |d, n| d.attr(n, "data-controller") == Some(name)).len()
+async fn picker(a: &TestApp) -> crate::controllers::presenters::test_support::Reply {
+    a.sign_in(DAVID).await.get("/api/v1/drive/picker").await
 }
 #[tokio::test]
 async fn cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant() {
-    let a = app().await;
+    let a = app_with_env(PICKER_ENV).await;
     for calendar in [false, true] {
         if calendar {
             grant(&a, "https://www.googleapis.com/auth/calendar.events").await;
         }
         let r = room(&a).await;
         assert_eq!(r.status, 200);
-        assert!(!r.text().contains("google-drive-previews"));
-        let (d, root) = dom(&r.text());
-        assert_eq!(controller_count(&d, root, "drive-picker"), 0);
-        assert_eq!(nodes(&d, root, |d, n| class(d, n, "attach-menu")).len(), 0);
-        assert_eq!(
-            nodes(&d, root, |d, n| d.local_name(n) == Some("button")
-                && class(d, n, "composer__attachment-btn")
-                && d.has_attr(n, "aria-haspopup"))
-            .len(),
-            0
-        );
-        // drive_link_previews_test.rb:88 (WS14g-231): the plain attach button opens the file picker.
-        assert_eq!(
-            nodes(&d, root, |d, n| d.local_name(n) == Some("button")
-                && class(d, n, "composer__attachment-btn")
-                && !d.has_attr(n, "aria-haspopup"))
-            .len(),
-            1
-        );
+        assert_eq!(r.json()["integrations"]["google"]["drive"], false);
+        let r = picker(&a).await;
+        assert_eq!(r.status, 404);
+        assert!(r.body.is_empty());
     }
 }
 #[tokio::test]
 async fn cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog() {
     let a = app().await;
+    let recorded = Recorded::new(vec![]);
+    recorded.answer(200, json!({"files": []}));
+    google::install(&a, recorded.clone()).await;
     grant(&a, DRIVE).await;
     let r = room(&a).await;
     assert_eq!(r.status, 200);
-    assert!(
-        r.text()
-            .contains("<meta name=\"google-drive-previews\" content=\"enabled\">")
-    );
-    let (d, root) = dom(&r.text());
-    assert_eq!(controller_count(&d, root, "drive-picker"), 1);
-    assert_eq!(
-        nodes(&d, root, |d, n| d.local_name(n) == Some("button")
-            && class(d, n, "composer__attachment-btn")
-            && d.attr(n, "aria-haspopup") == Some("menu"))
-        .len(),
-        1
-    );
-    let menus = nodes(&d, root, |d, n| class(d, n, "attach-menu"));
-    assert_eq!(menus.len(), 1);
-    let items = nodes(&d, menus[0], |d, n| d.attr(n, "role") == Some("menuitem"));
-    assert_eq!(items.len(), 2);
-    assert!(
-        items
-            .iter()
-            .any(|&n| d.text_content(n).trim() == "From this device")
-    );
-    assert!(
-        items
-            .iter()
-            .any(|&n| d.text_content(n).trim() == "From Google Drive")
-    );
-    assert_eq!(
-        nodes(&d, root, |d, n| class(d, n, "drive-picker__panel")
-            && d.attr(n, "role") == Some("dialog")
-            && d.attr(n, "aria-label") == Some("Find a Drive file"))
-        .len(),
-        1
-    );
+    assert_eq!(r.json()["integrations"]["google"]["drive"], true);
+    // Consent alone still supports Drive search; the enhanced picker needs configuration.
+    let r = a.sign_in(DAVID).await.get("/api/v1/drive/files").await;
+    assert_eq!(r.status, 200);
+    assert_eq!(r.json(), json!({"files": []}));
+    assert_eq!(recorded.calls.lock().unwrap().len(), 1);
+    assert_eq!(picker(&a).await.status, 404);
 }
 #[tokio::test]
 async fn cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas() {
     let a = app_with_env(PICKER_ENV).await;
     let r = room(&a).await;
     assert_eq!(r.status, 200);
-    for meta in [
-        "<meta name=\"google-drive-share\" content=\"enabled\">",
-        "<meta name=\"google-picker-client-id\" content=\"test-client-id\">",
-        "<meta name=\"google-picker-api-key\" content=\"test-picker-key\">",
-        "<meta name=\"google-cloud-project-number\" content=\"123456789012\">",
-    ] {
-        assert!(r.text().contains(meta));
-    }
-    let (d, root) = dom(&r.text());
-    assert_eq!(controller_count(&d, root, "drive-share"), 1);
+    assert_eq!(r.json()["integrations"]["google"]["drive"], false);
+    // Sharing can list the room's recipients before the viewer consents to Drive.
+    let r = a
+        .sign_in(DAVID)
+        .await
+        .get(&format!(
+            "/api/v1/rooms/{}/drive/recipients",
+            id("watercooler")
+        ))
+        .await;
+    assert_eq!(r.status, 200, "{}", r.text());
+    assert!(r.json()["recipients"].is_array());
+    assert_eq!(picker(&a).await.status, 404);
+    grant(&a, DRIVE).await;
+    let r = picker(&a).await;
+    assert_eq!(r.status, 200, "{}", r.text());
     assert_eq!(
-        nodes(&d, root, |d, n| d.local_name(n) == Some("button")
-            && class(d, n, "composer__attachment-btn")
-            && d.attr(n, "aria-haspopup") == Some("menu"))
-        .len(),
-        1
+        r.json(),
+        json!({
+            "clientId": "test-client-id", "apiKey": "test-picker-key",
+            "projectNumber": "123456789012", "accountEmail": "david@gmail.test"
+        })
     );
-    let menus = nodes(&d, root, |d, n| class(d, n, "attach-menu"));
-    assert_eq!(menus.len(), 1);
-    assert_eq!(
-        nodes(&d, menus[0], |d, n| d.attr(n, "role") == Some("menuitem")
-            && d.text_content(n).trim() == "From Google Drive")
-        .len(),
-        1
-    );
-    assert_eq!(controller_count(&d, root, "drive-picker"), 0);
+    assert_eq!(r.header("cache-control"), Some("no-store"));
 }
 #[tokio::test]
 async fn cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent() {
@@ -509,12 +485,15 @@ async fn cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_con
     grant(&a, DRIVE).await;
     let r = room(&a).await;
     assert_eq!(r.status, 200);
-    let (d, root) = dom(&r.text());
-    assert_eq!(controller_count(&d, root, "drive-share"), 1);
-    assert_eq!(controller_count(&d, root, "drive-picker"), 0);
-    assert!(
-        r.text()
-            .contains("<meta name=\"google-drive-previews\" content=\"enabled\">")
+    assert_eq!(r.json()["integrations"]["google"]["drive"], true);
+    let r = picker(&a).await;
+    assert_eq!(r.status, 200, "{}", r.text());
+    assert_eq!(
+        r.json(),
+        json!({
+            "clientId": "test-client-id", "apiKey": "test-picker-key",
+            "projectNumber": "123456789012", "accountEmail": "david@gmail.test"
+        })
     );
 }
 #[tokio::test]
@@ -523,21 +502,20 @@ async fn cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy() {
     grant(&a, DRIVE).await;
     let r = room(&a).await;
     assert_eq!(r.status, 200);
-    assert!(!r.text().contains("google-drive-share"));
-    let (d, root) = dom(&r.text());
-    assert_eq!(controller_count(&d, root, "drive-share"), 0);
-    assert_eq!(controller_count(&d, root, "drive-picker"), 1);
+    assert_eq!(r.json()["integrations"]["google"]["drive"], true);
+    let r = picker(&a).await;
+    assert_eq!(r.status, 404);
+    assert!(r.body.is_empty());
 }
 #[tokio::test]
 async fn cutover_c_picker_unconfigured_without_drive_grant_has_no_menu() {
     let a = app().await;
     let r = room(&a).await;
     assert_eq!(r.status, 200);
-    assert!(!r.text().contains("google-drive-share"));
-    let (d, root) = dom(&r.text());
-    assert_eq!(controller_count(&d, root, "drive-share"), 0);
-    assert_eq!(controller_count(&d, root, "drive-picker"), 0);
-    assert_eq!(nodes(&d, root, |d, n| class(d, n, "attach-menu")).len(), 0);
+    assert_eq!(r.json()["integrations"]["google"]["drive"], false);
+    let r = picker(&a).await;
+    assert_eq!(r.status, 404);
+    assert!(r.body.is_empty());
 }
 #[tokio::test]
 async fn cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_markup() {

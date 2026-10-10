@@ -281,7 +281,7 @@ impl Poll {
 
     /// `results_payload(viewer:)`: the card's, the vote response's and the agent API's JSON.
     /// Anonymous polls carry counts only.
-    pub fn results_payload(&self, conn: &Connection, rich_text: &dyn crate::RichText, now: Timestamp, viewer_id: Option<i64>) -> Result<serde_json::Value> {
+    pub fn results_payload(&self, conn: &Connection, rich_text: &dyn crate::RichText, now: Timestamp, viewer_id: Option<i64>, verifier: &dyn campfire_storage::Verifier) -> Result<serde_json::Value> {
         let message = Message::find(conn, self.message_id)?;
         let votes = self.votes(conn)?;
         let voted: Vec<i64> = votes.iter().filter(|vote| Some(vote.user_id) == viewer_id).map(|vote| vote.poll_option_id).collect();
@@ -304,9 +304,12 @@ impl Poll {
                     voters.sort();
                     entry["voters"] = json!(voters);
                 }
-                entry
+                if let Some(media) = option.media(conn, verifier)? {
+                    entry["media"] = media;
+                }
+                Ok(entry)
             })
-            .collect();
+            .collect::<Result<_>>()?;
         Ok(json!({
             "id": self.id,
             "message_id": self.message_id,
@@ -324,19 +327,17 @@ impl Poll {
 
     /// `message.poll` in `Message#destroy` (`has_one :poll, dependent: :destroy`): the options
     /// (and their votes), then the votes, then the poll.
-    pub(crate) fn destroy_for_message(tx: &Tx<'_>, message_id: i64) -> Result<()> {
+    pub(crate) fn destroy_for_message(tx: &mut Tx<'_>, message_id: i64) -> Result<()> {
         let Some(poll) = Self::find_by_message(tx.conn(), message_id)? else { return Ok(()) };
         poll.destroy(tx)
     }
 
     /// `destroy`: `has_many :poll_options, dependent: :destroy` (each destroying its votes), then
     /// `has_many :poll_votes, dependent: :destroy`, then the row.
-    pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached(
-            r#"DELETE FROM "poll_votes" WHERE "poll_votes"."poll_option_id" IN (SELECT "id" FROM "poll_options" WHERE "poll_id" = ?)"#,
-            [self.id],
-        )?;
-        tx.conn().execute_cached(r#"DELETE FROM "poll_options" WHERE "poll_options"."poll_id" = ?"#, [self.id])?;
+    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        for option in self.options(tx.conn())? {
+            option.destroy(tx)?;
+        }
         tx.conn().execute_cached(r#"DELETE FROM "poll_votes" WHERE "poll_votes"."poll_id" = ?"#, [self.id])?;
         tx.conn().execute_cached(r#"DELETE FROM "polls" WHERE "polls"."id" = ?"#, [self.id])?;
         Ok(())
@@ -389,6 +390,52 @@ impl PollOption {
             |r| r.get(0),
         )?;
         query_one(tx.conn(), r#"SELECT * FROM "poll_options" WHERE "id" = ?"#, [id], Self::from_row)?.or_not_found("PollOption")
+    }
+
+    /// A single polymorphic slot also stores emoji descriptors, without changing the schema.
+    pub fn attach_media(&self, tx: &Tx<'_>, blob_id: i64) -> Result<()> {
+        use crate::models::active_storage::Attachment;
+        if Attachment::find_for(tx.conn(), "PollOption", self.id, "media")?.is_some() {
+            return Err(invalid("media", "already exists"));
+        }
+        Attachment::create(tx, "PollOption", self.id, "media", blob_id)?;
+        Ok(())
+    }
+
+    pub fn attach_emoji(&self, tx: &Tx<'_>, content: &str) -> Result<()> {
+        use crate::models::active_storage::Blob;
+        // This descriptor has no file. Purging it uses the same attachment lifecycle as images.
+        let blob = Blob::create(tx, &Blob {
+            id: 0, key: crate::sql::uuid(), filename: "poll-emoji".into(),
+            content_type: Some("application/vnd.smartfire.poll-emoji".into()),
+            metadata: Some(json!({"poll_emoji": content, "poll_media": true, "identified": true, "analyzed": true}).to_string()),
+            service_name: "local".into(), byte_size: 0, checksum: None, created_at: tx.now(),
+        })?;
+        self.attach_media(tx, blob.id)
+    }
+
+    pub fn media(&self, conn: &Connection, verifier: &dyn campfire_storage::Verifier) -> Result<Option<serde_json::Value>> {
+        let Some(blob) = campfire_storage::Blob::attached(conn, "PollOption", self.id, "media").map_err(|e| Error::Other(e.to_string()))? else {
+            return Ok(None);
+        };
+        if blob.content_type() == "application/vnd.smartfire.poll-emoji" {
+            return Ok(blob.metadata.get("poll_emoji").and_then(campfire_storage::Json::as_str).map(|content| json!({"kind": "emoji", "content": content})));
+        }
+        let url = campfire_storage::paths::blob_redirect_path(verifier, &blob, None);
+        let still_url = (campfire_storage::branding::animated(&blob) || matches!(blob.metadata.get("poll_still"), Some(campfire_storage::Json::Bool(true)))).then(|| {
+            campfire_storage::paths::representation_redirect_path(verifier, &blob, &campfire_storage::branding::Kind::Logo.still_variation())
+        });
+        Ok(Some(json!({"kind": "image", "url": url, "stillUrl": still_url})))
+    }
+
+    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        if let Some(attachment) = crate::models::active_storage::Attachment::find_for(tx.conn(), "PollOption", self.id, "media")? {
+            attachment.delete(tx)?;
+            tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
+        }
+        tx.conn().execute_cached("DELETE FROM poll_votes WHERE poll_option_id=?", [self.id])?;
+        tx.conn().execute_cached("DELETE FROM poll_options WHERE id=?", [self.id])?;
+        Ok(())
     }
 
     /// `belongs_to :poll`, `validates :label, presence: true, length: { maximum: 200 }`

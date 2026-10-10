@@ -1,7 +1,6 @@
 use super::super::*;
 use campfire_db::models::calendar_event::changes::EventChanges;
-use campfire_db::models::stream::Stream;
-use campfire_db::{ActivityItem, Membership, Room, RoomType, fixtures};
+use campfire_db::{ActivityItem, Room, RoomType, fixtures};
 use std::sync::Arc;
 pub(super) fn id(label: &str) -> i64 {
     fixtures::identify(label)
@@ -165,49 +164,4 @@ pub(super) fn redirected(reply: &Reply, eid: i64) {
         reply.location(),
         Some(format!("http://campfire.test{}", path(eid)).as_str())
     );
-}
-pub(super) async fn query_count(app: &TestApp, client: &mut Browser<'_>, url: &str) -> usize {
-    let capture = app.db().capture_queries();
-    let reply = client.get(url).await;
-    assert_eq!(reply.status, StatusCode::OK);
-    app.db().stop_capturing_queries();
-    capture.lock().unwrap().len()
-}
-pub(super) async fn live(app: &TestApp, vid: i64) {
-    app.db()
-        .write(move |tx| {
-            let m = Membership::find_by_room_and_user(tx.conn(), vid, DAVID)?.unwrap();
-            Stream::create(tx, vid, m.id, DAVID, "1080p15", None)
-        })
-        .await
-        .unwrap();
-}
-
-/// DOM checks use the production HTML parser, so CSS class tokens and scoped text
-/// cannot be satisfied by a different fixture's card or an attribute substring.
-pub(super) fn headings(html: &str) -> Vec<String> {
-    let mut dom = campfire_richtext::dom::Dom::new();
-    let root = dom.parse_fragment(html).unwrap();
-    dom.descendants(root)
-        .into_iter()
-        .filter(|&n| dom.local_name(n) == Some("h1"))
-        .map(|n| {
-            dom.text_content(n)
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ")
-        })
-        .collect()
-}
-pub(super) fn cards(html: &str) -> Vec<String> {
-    let mut dom = campfire_richtext::dom::Dom::new();
-    let root = dom.parse_fragment(html).unwrap();
-    dom.descendants(root)
-        .into_iter()
-        .filter(|&n| {
-            dom.attr(n, "class")
-                .is_some_and(|c| c.split_whitespace().any(|word| word == "event-card"))
-        })
-        .map(|n| dom.to_html(n))
-        .collect()
 }

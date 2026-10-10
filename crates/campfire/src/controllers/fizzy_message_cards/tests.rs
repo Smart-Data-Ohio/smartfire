@@ -17,10 +17,6 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         return run(&case).await;
     }
     for case in [
-        "new",
-        "no_account",
-        "new_failure",
-        "new_rejected",
         "create",
         "thread",
         "invalid",
@@ -208,10 +204,7 @@ async fn run(case: &str) {
     } else {
         format!("/rooms/{room_id}/messages/{}/fizzy_cards", message.id)
     };
-    let get = matches!(
-        case,
-        "new" | "no_account" | "new_failure" | "new_rejected" | "nonmember" | "scope"
-    );
+    let get = false;
     let mut browser = if case == "nonmember" {
         app.sign_in(KEVIN).await
     } else {
@@ -236,19 +229,6 @@ async fn run(case: &str) {
         _ => StatusCode::FOUND,
     };
     assert_eq!(response.status, expected, "{case}: {}", response.text());
-    if case == "new" {
-        for text in [
-            "Engineering",
-            "Support",
-            "The deploy is broken",
-            "Track the fix",
-        ] {
-            assert!(response.text().contains(text));
-        }
-    }
-    if case == "no_account" {
-        assert!(response.text().contains("Connect Fizzy on your profile"));
-    }
     let success = matches!(case, "create" | "thread" | "direct_bots");
     let after = app
         .db()
@@ -308,44 +288,5 @@ async fn run(case: &str) {
     }
     if case == "enqueue_rollback" {
         app.db().read(|c| {assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_references WHERE message_id NOT IN (SELECT id FROM messages)",[],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_caches",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
-    }
-}
-#[tokio::test]
-async fn ws15e_fizzy_message_form_matches_pinned_rails_bytes() {
-    use askama::Template;
-    let app = TestApp::boot().await.expect("pinned seeds required");
-    let vector: serde_json::Value = serde_json::from_str(include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../vectors/ws15e_fizzy_message_form.json"
-    )))
-    .unwrap();
-    for case in vector["frames"].as_array().unwrap() {
-        let back = case["thread"]
-            .as_i64()
-            .map_or("/rooms/42".to_owned(), |id| {
-                format!("/rooms/42/threads/{id}")
-            });
-        let view = campfire_views::fizzy_message_cards::FormView {
-            action: format!("{back}/messages/99/fizzy_cards"),
-            back_path: back,
-            room_name: "Engineering <&>".into(),
-            plain: "The deploy <&> is broken\nTrack the fix".into(),
-            creator: "David <&>".into(),
-            connected: case["connected"].as_bool().unwrap(),
-            boards: json!([{"id":"03board1","name":"Engineering <&>"},{"id":"03board2","name":"Support"}]),
-            board_id: case["board"].as_str().unwrap_or("").into(),
-            title: "Deploy <&>".into(),
-            description: "Description <&>\nTwo".into(),
-            user_name: "David <&>".into(),
-            account_name: "Smart Data <&>".into(),
-        };
-        let html =
-            crate::controllers::presenters::page::render_detached(&app.booted.app, None, |ctx| {
-                campfire_views::fizzy_message_cards::New { ctx, view: &view }
-                    .as_content()
-                    .render()
-                    .unwrap()
-            });
-        assert_eq!(html, case["html"].as_str().unwrap(), "{}", case["name"]);
     }
 }

@@ -12,20 +12,9 @@ async fn a_member_can_rename_the_group_and_everyone_sees_the_compact_system_note
     let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
     let reply = app.david().write(Req::new(Method::PATCH, &format!("/rooms/directs/{id}")).form(&[("room[name]", "Weekend Plans")])).await;
     assert_eq!(reply.status, StatusCode::FOUND);
-    let note = app.db().read(move |conn| Ok(Message::for_room(conn, id)?.into_iter().filter(|m| m.system_note).max_by_key(|m| m.id).unwrap())).await.unwrap();
-    let reply = app.sign_in(JASON).await.get(&campfire_routes::room(id)).await;
-    assert_eq!(reply.status, StatusCode::OK);
-    let content = campfire_richtext::Content::wrap(&reply.text()).unwrap();
-    let dom = &content.dom;
-    let note_id = format!("message_{}", note.client_message_id);
-    let row = dom.descendants(content.root).into_iter().find(|&n| dom.attr(n, "id") == Some(note_id.as_str())).unwrap();
-    assert_eq!(dom.attr(row, "role"), Some("note"));
-    assert!(dom.attr(row, "class").unwrap().split_whitespace().any(|c| c == "message--system-note"));
-    for (class, text) in [("message__system-note-author", "David"), ("message__system-note-text", "renamed the group to Weekend Plans")] {
-        let node = dom.descendants(row).into_iter().find(|&n| dom.attr(n, "class").is_some_and(|s| s.split_whitespace().any(|c| c == class))).unwrap();
-        assert_eq!(dom.text_content(node).trim(), text);
-    }
+    assert_eq!(note(&app, id).await, "renamed the group to Weekend Plans");
 }
+
 
 #[tokio::test]
 async fn group_dm_notes_cannot_be_edited_or_deleted() {
@@ -166,35 +155,6 @@ async fn lower_writer_query_limit(app: &TestApp) {
         })
         .await
         .unwrap();
-}
-#[tokio::test]
-async fn new_lists_starred_people_first_with_a_star_marker() {
-    let app = setup().await;
-    app.db().write(|tx| {tx.conn().execute_cached("DELETE FROM user_stars WHERE user_id=?",[DAVID])?;tx.conn().execute_cached("INSERT INTO user_stars(user_id,starred_user_id,created_at,updated_at) VALUES(?,?,?,?)",(DAVID,KEVIN,tx.now(),tx.now()))?;Ok(())}).await.unwrap();
-    let reply = app.david().get("/rooms/directs/new").await;
-    assert_eq!(reply.status, StatusCode::OK);
-    let html = reply.text();
-    let first = html
-        .split("data-user-id=\"")
-        .nth(1)
-        .unwrap()
-        .split('"')
-        .next()
-        .unwrap();
-    assert_eq!(first, KEVIN.to_string());
-    assert!(html.contains("aria-label=\"Starred by you\" title=\"Starred by you\">★"));
-}
-#[tokio::test]
-async fn new_renders_a_client_side_filter_instead_of_the_autocomplete_picker() {
-    let app = setup().await;
-    let reply = app.david().get("/rooms/directs/new").await;
-    assert_eq!(reply.status, StatusCode::OK);
-    let html = reply.text();
-    assert!(html.contains("id=\"dm_picker_filter\""));
-    assert!(html.contains("data-controller=\"dm-picker multi-select\""));
-    assert!(!html.contains("data-controller=\"autocomplete\""));
-    assert!(html.contains("data-dm-picker-target=\"row\" data-name="));
-    assert!(!html.contains("Start Ping"));
 }
 #[tokio::test]
 async fn create_case() {
@@ -374,14 +334,14 @@ async fn leaving_removes_only_your_membership_and_the_group_keeps_working() {
     );
     assert!(!ids(&app, id).await.contains(&DAVID));
     assert_eq!(note(&app, id).await, "left the group");
-    root(&david.get(&format!("/rooms/{id}")).await);
+    root(&david.classic_page(&format!("/rooms/{id}")).await);
     assert_eq!(
         app.sign_in(JASON)
             .await
-            .get(&format!("/rooms/{id}"))
+            .classic_page(&format!("/rooms/{id}"))
             .await
             .status,
-        StatusCode::OK
+        StatusCode::FOUND
     );
 }
 #[tokio::test]
@@ -418,7 +378,7 @@ async fn leave_is_rejected_for_non_members() {
 async fn a_non_member_cannot_read_the_group() {
     let app = setup().await;
     let id = group(&app, &[JASON, KEVIN, JZ], JASON).await;
-    root(&app.david().get(&format!("/rooms/{id}")).await);
+    root(&app.david().classic_page(&format!("/rooms/{id}")).await);
 }
 #[tokio::test]
 async fn a_removed_member_loses_access_to_the_group() {
@@ -428,7 +388,7 @@ async fn a_removed_member_loses_access_to_the_group() {
         .write(move |tx| Room::find(tx.conn(), id)?.leave_direct(tx, DAVID))
         .await
         .unwrap();
-    root(&app.david().get(&format!("/rooms/{id}")).await);
+    root(&app.david().classic_page(&format!("/rooms/{id}")).await);
 }
 #[tokio::test]
 async fn destroy_only_allowed_for_all_room_users() {
@@ -557,30 +517,4 @@ async fn an_administrator_can_delete_a_group_dm() {
             .await,
     );
     pending_destroy(&app, id).await;
-}
-#[tokio::test]
-async fn the_group_settings_hide_the_delete_button_from_non_administrators() {
-    let app = setup().await;
-    let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
-    let page = app
-        .sign_in(KEVIN)
-        .await
-        .get(&format!("/rooms/directs/{id}/edit"))
-        .await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(!page.text().contains("aria-label=\"Delete Ping\""));
-    let page = app.david().get(&format!("/rooms/directs/{id}/edit")).await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains("aria-label=\"Delete Ping\""));
-}
-#[tokio::test]
-async fn one_to_one_dm_settings_still_offer_deletion_to_members() {
-    let app = setup().await;
-    let page = app
-        .sign_in(KEVIN)
-        .await
-        .get(&format!("/rooms/directs/{DIRECT_DAVID_KEVIN}/edit"))
-        .await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains("aria-label=\"Delete Ping\""));
 }

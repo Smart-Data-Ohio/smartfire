@@ -1,4 +1,0 @@
-{#- reference/app/views/rooms/involvements/show.html.erb, with Rooms::InvolvementsHelper -#}
-<turbo-frame data-controller="turbo-frame" data-action="notifications:ready@window-&gt;turbo-frame#load" data-turbo-frame-url-param="{{ h::routes::room_involvement(involvement.room_id) }}" id="{{ crate::messages::room_dom_id(*involvement.kind, *involvement.room_id, "involvement") }}">
-  {{ self.button() }}
-</turbo-frame>

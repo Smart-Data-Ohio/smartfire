@@ -151,7 +151,7 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
         .await;
     assert_eq!(response.status, StatusCode::NOT_ACCEPTABLE);
     assert!(response.body.is_empty());
-    let response = browser.get(&format!("/rooms/{ALL_TALK}")).await;
+    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(
         app.db()

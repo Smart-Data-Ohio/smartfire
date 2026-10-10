@@ -13,8 +13,6 @@ mod page_tests;
 #[cfg(test)]
 mod agent_work_tests;
 
-#[cfg(test)]
-mod board_read_tests;
 
 #[cfg(test)]
 mod board_write_tests;
@@ -22,14 +20,8 @@ mod board_write_tests;
 #[cfg(test)]
 pub(crate) mod write_tests;
 
-#[cfg(test)]
-mod content_tests;
 
-#[cfg(test)]
-mod github_tests;
 
-#[cfg(test)]
-mod chrome_tests;
 
 #[cfg(test)]
 mod declaration_tests;

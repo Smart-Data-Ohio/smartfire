@@ -65,52 +65,33 @@ async fn list_scopes_sorts_describes_and_hides_only_expired_admin_sessions() {
     let mut b = a.sign_in(KEVIN).await;
     let current = latest(&a, KEVIN).await;
     let id = current.id;
-    a.db()
-        .write(move |tx| {
-            tx.conn().execute(
-                "UPDATE sessions SET user_agent=?,ip_address='192.0.2.10' WHERE id=?",
-                rusqlite::params![CHROME, id],
-            )?;
-            Ok(())
-        })
-        .await
-        .unwrap();
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE sessions SET user_agent=?,ip_address='192.0.2.10' WHERE id=?", rusqlite::params![CHROME, id])?;
+        Ok(())
+    }).await.unwrap();
     let other = new_other(&a, KEVIN, 2).await;
     let foreign = new_other(&a, DAVID, 0).await;
-    let page = b.get("/users/me/sessions").await;
-    assert_eq!(page.status, StatusCode::OK, "{}", page.text());
-    assert_eq!(page.header("cache-control"), Some("no-store"));
-    let text = page.text();
-    for text in [
-        "Chrome on macOS",
-        "Firefox on Windows",
-        "192.0.2.10",
-        "2 days ago",
-        "(this device)",
-    ] {
-        assert!(page.text().contains(text), "{text}");
-    }
-    assert!(text.contains(&format!("action=\"/users/me/sessions/{}\"", other.id)));
-    assert!(!text.contains(&format!("action=\"/users/me/sessions/{}\"", foreign.id)));
-    assert!(
-        text.find(&format!("action=\"/users/me/sessions/{}\"", current.id))
-            .unwrap()
-            < text
-                .find(&format!("action=\"/users/me/sessions/{}\"", other.id))
-                .unwrap()
-    );
+    let reply = b.get("/api/v1/settings/sessions").await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
+    let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
+    let rows = payload["sessions"].as_array().unwrap();
+    assert_eq!(rows.iter().map(|row| row["id"].as_i64().unwrap()).collect::<Vec<_>>(), vec![current.id, 481019665, other.id]);
+    assert_eq!(rows[0]["description"], "Chrome on macOS");
+    assert_eq!(rows[0]["ipAddress"], "192.0.2.10");
+    assert_eq!(rows[0]["current"], true);
+    assert_eq!(rows[2]["description"], "Firefox on Windows");
+    assert_eq!(rows[2]["current"], false);
+    assert!(!rows.iter().any(|row| row["id"] == foreign.id));
     let mut admin = a.sign_in(DAVID).await;
     let expired = new_other(&a, DAVID, 8).await;
-    let text = admin.get("/users/me/sessions").await.text();
-    assert!(!text.contains(&format!("action=\"/users/me/sessions/{}\"", expired.id)));
-    assert!(
-        a.db()
-            .read(move |c| Session::find(c, expired.id))
-            .await
-            .is_ok(),
-        "hidden rows are not deleted"
-    );
+    let reply = admin.get("/api/v1/settings/sessions").await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
+    assert!(!payload["sessions"].as_array().unwrap().iter().any(|row| row["id"] == expired.id));
+    assert!(a.db().read(move |c| Session::find(c, expired.id)).await.is_ok(), "hidden rows are not deleted");
 }
+
 
 #[tokio::test]
 async fn session_descriptions_match_rails_browser_os_and_unknown_cases() {
@@ -163,7 +144,7 @@ async fn revoke_scopes_to_owner_and_requires_csrf_then_keeps_survivor_signed_in(
         Some("http://campfire.test/users/me/sessions")
     );
     assert_eq!(
-        survivor.get("/users/me/profile").await.status,
+        survivor.get("/api/v1/settings/account").await.status,
         StatusCode::OK
     );
     assert_eq!(
@@ -214,9 +195,8 @@ async fn revoke_others_preserves_current_and_noop_has_no_audit() {
         Some("http://campfire.test/users/me/sessions")
     );
     assert!(
-        b.get("/users/me/sessions")
-            .await
-            .text()
+        b.boot_flash()
+            .await["message"].as_str().unwrap_or("")
             .contains(&format!("Signed out {count} other sessions."))
     );
     a.db()
@@ -233,9 +213,8 @@ async fn revoke_others_preserves_current_and_noop_has_no_audit() {
         .await;
     assert_eq!(audit_count(&a, "session.revoke_others").await, before);
     assert!(
-        b.get("/users/me/sessions")
-            .await
-            .text()
+        b.boot_flash()
+            .await["message"].as_str().unwrap_or("")
             .contains("No other sessions to sign out.")
     );
 }
@@ -301,7 +280,7 @@ async fn revocation_drains_frames_then_disconnects_and_revoked_cookie_cannot_rec
     let mut reconnect = socket(&a, &cookie, addr).await;
     assert!(reconnect.next_text().await.contains("unauthorized"));
     reconnect.until_closed().await;
-    assert_eq!(owner.get("/users/me/profile").await.status, StatusCode::OK);
+    assert_eq!(owner.get("/api/v1/settings/account").await.status, StatusCode::OK);
     server.abort();
 }
 
@@ -340,7 +319,7 @@ async fn completed_sign_ins_record_devices_first_and_known_are_quiet_new_alerts_
         .unwrap();
     let mut first = a.anonymous();
     let reply = password(&mut first).await;
-    assert_eq!(reply.location(), Some("http://campfire.test/"));
+    assert_eq!(reply.location(), Some("http://campfire.test/app/"));
     let cookie = reply
         .headers
         .get_all("set-cookie")
@@ -366,7 +345,7 @@ async fn completed_sign_ins_record_devices_first_and_known_are_quiet_new_alerts_
     let mut second = a.anonymous();
     assert_eq!(
         password(&mut second).await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     assert_eq!((stats(&a).await.1, stats(&a).await.2), (2, 1));
     a.db().read(|c|{let session=latest_row(c)?;let (source,id):(String,i64)=c.query_row("SELECT source_type,source_id FROM activity_items WHERE user_id=? AND event_type='new_sign_in' ORDER BY id DESC LIMIT 1",[DAVID],|r|Ok((r.get(0)?,r.get(1)?)))?;assert_eq!((source,id),("Session".into(),session.id));assert_eq!(session.user_agent.as_deref(),Some(CHROME));assert!(!session.two_factor_verified());assert_eq!(c.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Smartfire::MailDeliveryJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
@@ -378,30 +357,6 @@ fn latest_row(c: &campfire_db::Connection) -> campfire_db::Result<Session> {
         .unwrap())
 }
 
-#[tokio::test]
-async fn session_page_bodies_and_profile_panel_match_pinned_rails_bytes() {
-    use askama::Template;
-    use campfire_views::{users,helpers as h};
-    struct Tokens;
-    impl h::request_forgery::AuthenticityTokens for Tokens {
-        fn global(&self) -> String { "GLOBAL".into() }
-        fn for_form(&self, action: &str, method: &str) -> String { format!("{}:{action}",method.to_lowercase()) }
-    }
-    let a=app().await;
-    let goldens:serde_json::Value=serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/../../vectors/session_views.json"))).unwrap();
-    let account=a.db().read(campfire_db::Account::first).await.unwrap();
-    let rows=goldens["sessions"].as_array().unwrap().iter().map(|v|users::UserSession{
-        id:v["id"].as_i64().unwrap(),current:v["current"].as_bool().unwrap(),description:v["description"].as_str().unwrap().into(),ip_address:v["ip_address"].as_str().map(str::to_string),last_active_at:v["last_active_at"].as_str().unwrap().parse().unwrap(),created_at:v["created_at"].as_str().unwrap().parse().unwrap(),
-    }).collect::<Vec<_>>();
-    for name in ["one","two","profile"] {
-        let actual=h::request_forgery::rendering_with(h::request_forgery::RequestSecrets{tokens:Box::new(Tokens),csp_nonce:Some("NONCE".into())},||{
-            crate::controllers::presenters::page::render_detached_at(&a.booted.app,account.as_ref(),"http://campfire.test",|ctx|{
-                if name=="profile" {users::ProfileSessions{ctx}.render().unwrap()} else {users::SessionsIndex{ctx,sessions:if name=="one"{vec![rows[0].clone()]}else{rows.clone()},now:"2026-03-02T16:00:00Z".parse().unwrap()}.as_content().render().unwrap()}
-            })
-        });
-        assert!(super::asset_goldens::compare(name, &actual, goldens[name].as_str().unwrap()));
-    }
-}
 #[tokio::test]
 async fn pending_first_factor_records_nothing_until_challenge_completes() {
     let a = app().await;
@@ -475,7 +430,7 @@ async fn configured_sign_in_uses_ws10_and_enqueue_failure_rolls_back_every_auth_
         .unwrap();
     assert_eq!(
         password(&mut b).await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     a.db().read(|c|{let args:String=c.query_row("SELECT args FROM ws9_sign_in_mail",[],|r|r.get(0))?;let value:serde_json::Value=serde_json::from_str(&args).unwrap();let id=c.query_row("SELECT id FROM activity_items WHERE user_id=? AND event_type='new_sign_in' ORDER BY id DESC LIMIT 1",[DAVID],|r|r.get::<_,i64>(0))?;assert_eq!(value,serde_json::json!({"notification":{"NewSignIn":{"activity_item_id":id}}}));Ok(())}).await.unwrap();
 }

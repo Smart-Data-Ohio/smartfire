@@ -6,7 +6,7 @@ use crate::controllers::presenters::test_support::{
 };
 use campfire_db::Timestamp;
 use campfire_kit::{Method, Param};
-use campfire_views::time::Zone;
+use campfire_presentation::time::Zone;
 use serde_json::{Value, json};
 
 fn inputs() -> Value {
@@ -127,7 +127,7 @@ fn pr196_r4_generated_exponent_boundaries_match_rails() {
 }
 
 #[tokio::test]
-async fn pr196_r4_http_save_then_list_boundary_expiries_matches_rails() {
+async fn pr196_r4_http_save_boundary_expiries_matches_rails() {
     let t = TestApp::boot_frozen()
         .await
         .unwrap()
@@ -174,13 +174,10 @@ async fn pr196_r4_http_save_then_list_boundary_expiries_matches_rails() {
             })
             .await
             .unwrap();
-        let listed = browser.get(&path).await;
-        let body = listed.text();
-        let tag = body
-            .rsplit_once("· expires ")
-            .and_then(|(_, tail)| tail.find("</time>").map(|end| tail[..end + 7].to_owned()));
-        let actual = json!({"save_status":saved.status.as_u16(),"list_status":listed.status.as_u16(),"stored":stored,"expiry_tag":tag});
-        let expected = json!({"save_status":case["save_status"],"list_status":case["list_status"],"stored":case["stored"],"expiry_tag":case["expiry_tag"]});
+        assert_eq!(saved.status.as_u16(), 201);
+        assert!(saved.json()["secret"].as_str().is_some());
+        let actual = json!({"stored":stored});
+        let expected = json!({"stored":case["stored"]});
         if actual != expected {
             failures.push(json!({"case":case,"actual":actual}));
         }
@@ -194,7 +191,7 @@ async fn pr196_r4_http_save_then_list_boundary_expiries_matches_rails() {
             .unwrap();
     }
     println!(
-        "R4 HTTP expiry save/list differential: {} compared; {} mismatches",
+        "R4 HTTP expiry save differential: {} compared; {} mismatches",
         cases.len(),
         failures.len()
     );

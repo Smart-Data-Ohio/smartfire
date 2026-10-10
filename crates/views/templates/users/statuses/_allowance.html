@@ -1,8 +1,0 @@
-            <div class="pad-inline-double margin-inline margin-block-start">
-{% if status.dnd_allowed %}                {% filter button_to(h::routes::user_dnd_allowance(status.user_id), h::attrs().method("delete").class("btn full-width")) %}
-                  {{ h::image_tag(ctx, "notification-bell-nothing.svg", h::attrs().aria_hidden().size(20)) }}
-                  <span>Mute during DND</span>
-{% endfilter %}{% else %}                {% filter button_to(h::routes::user_dnd_allowance(status.user_id), h::attrs().method("post").class("btn full-width")) %}
-                  {{ h::image_tag(ctx, "notification-bell-everything.svg", h::attrs().aria_hidden().size(20).class("colorize--black")) }}
-                  <span>Allow during DND</span>
-{% endfilter %}{% endif %}            </div>{{ "\n" }}

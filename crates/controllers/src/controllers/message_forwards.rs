@@ -41,7 +41,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let original = source(c).await?;
     let data = payload(c)?;
     let destinations = destinations_from(&data)?;
-    let note = data.get("note").and_then(Param::to_s).filter(|value| !campfire_views::helpers::is_blank(value));
+    let note = data.get("note").and_then(Param::to_s).filter(|value| !campfire_presentation::helpers::is_blank(value));
     let copier = ForwarderCopier::new(c.app().storage.clone());
     let creator = require_current_user(c)?.id;
     let snapshot = original.clone();
@@ -63,7 +63,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let results = match results {
         Ok(Ok(results)) => results,
         Ok(Err(refusal)) => return render_error(c, &refusal.to_string()),
-        Err(campfire_db::Error::RecordInvalid(errors)) => return render_error(c, &campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")),
+        Err(campfire_db::Error::RecordInvalid(errors)) => return render_error(c, &campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ")),
         Err(campfire_db::Error::Other(message)) if ["You cannot forward to that room", "That thread is locked"].contains(&message.as_str()) => return render_error(c, &message),
         Err(error) => return Err(db_error(error)),
     };
@@ -104,7 +104,7 @@ pub async fn destinations(c: &mut Ctx) -> Result {
         }
         let rows = rooms.iter().filter(|room| !room.board()).map(|room| {
             let name = if room.direct() {
-                let name = campfire_views::helpers::to_sentence(direct_names.get(&room.id).map_or(&[], Vec::as_slice), " and ");
+                let name = campfire_presentation::helpers::to_sentence(direct_names.get(&room.id).map_or(&[], Vec::as_slice), " and ");
                 if name.is_empty() {viewer.name.clone()} else {name}
             } else {room.name.clone().unwrap_or_default()};
             let threads = if room.direct() {Vec::new()} else {threads.iter().filter(|thread| thread.room_id == room.id && thread.locked_at.is_none())

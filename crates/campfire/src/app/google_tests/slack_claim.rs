@@ -477,30 +477,43 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
             | "replay-page" => (Method::GET, "/slack/imports".into(), vec![]),
             _ => panic!("unknown Rails interaction: {name}"),
         };
-        let reply = send(
+        let mut reply = send(
             &mut b,
             address,
-            method,
+            method.clone(),
             &path,
             &params,
             name.ends_with("csrf"),
         )
         .await;
+        let application_page = method == Method::GET && path.starts_with("/slack/imports") && row["status"] == 200;
+        if application_page {
+            assert_eq!(reply.status, StatusCode::FOUND, "{name}: classic alias");
+            let location = reply.location().unwrap().to_owned();
+            let expected_path = path.strip_prefix("/slack/imports").unwrap();
+            assert_eq!(location, format!("http://campfire.test/app/settings/slack{expected_path}"));
+            let path = url::Url::parse(&location).unwrap().path().to_owned();
+            reply = send(&mut b, address, Method::GET, &path, &[], false).await;
+        }
         assert_eq!(
             reply.status.as_u16() as u64,
             row["status"].as_u64().unwrap(),
             "{name}: status; {}",
             reply.text()
         );
-        assert_eq!(json!(reply.location()), row["location"], "{name}: redirect");
+        let expected_location = if row["location"] == "http://campfire.test/" {
+            json!("http://campfire.test/app/")
+        } else if path.starts_with("/slack/oauth/callback") && row["location"] == "http://campfire.test/slack/imports" {
+            json!("http://campfire.test/app/settings/slack")
+        } else { row["location"].clone() };
+        assert_eq!(json!(reply.location()), expected_location, "{name}: redirect");
         assert_eq!(
             json!(reply.content_type()),
             row["content_type"],
             "{name}: media type"
         );
-        if !crate::form_contracts::same_page(&reply.text(), row["body"].as_str().unwrap()) {
-            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../.scratch/claim-diff");
+        if !application_page && !crate::form_contracts::same_page(&reply.text(), row["body"].as_str().unwrap()) {
+            let dir = std::env::temp_dir().join("claim-diff");
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(format!("{name}.actual")), reply.body.clone()).unwrap();
             std::fs::write(

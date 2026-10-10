@@ -191,9 +191,9 @@ async fn ws15e_room_message_embeds_render_signed_proxy_urls() {
         })?;
         Ok(())
     }).await.unwrap();
-    let response = app.david().get(&format!("/rooms/{ALL_TALK}")).await;
+    let response = app.david().get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     assert_eq!(response.status, campfire_kit::StatusCode::OK);
-    let html = String::from_utf8(response.body).unwrap();
+    let html = response.json()["messages"].as_array().unwrap().iter().filter_map(|message| message["bodyHtml"].as_str()).collect::<Vec<_>>().join("\n");
     assert!(html.contains(&path(&app, "https://images.example.com/room-photo.png")));
-    assert!(!html.contains("https://images.example.com/room-photo.png"));
+    assert!(!html.contains("src=\"https://images.example.com/room-photo.png"));
 }

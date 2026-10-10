@@ -454,7 +454,7 @@ impl Browser {
     }
 
     async fn post(&mut self, path: &str, accept: &str, fields: &[(&str, &str)]) -> (axum::http::StatusCode, String) {
-        let body = fields.iter().map(|(k, v)| format!("{}={}", campfire_views::helpers::url::cgi_escape(k), campfire_views::helpers::url::cgi_escape(v))).collect::<Vec<_>>().join("&");
+        let body = fields.iter().map(|(k, v)| format!("{}={}", campfire_presentation::helpers::url::cgi_escape(k), campfire_presentation::helpers::url::cgi_escape(v))).collect::<Vec<_>>().join("&");
         let session = self.cookies.get(campfire_kit::session::SESSION_KEY).expect("a page established the browser's session");
         let token = crate::controllers::presenters::test_support::masked_session_token(&self.secrets, session).expect("the page gave the session a CSRF token");
         let request = axum::http::Request::post(path)

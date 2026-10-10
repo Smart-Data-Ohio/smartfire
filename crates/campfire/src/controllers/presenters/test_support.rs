@@ -97,7 +97,7 @@ pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
         .zip(expected.bytes())
         .position(|(a, b)| a != b)
         .unwrap_or(actual.len().min(expected.len()));
-    let parent = Path::new(ROOT).join("target/ws8bm-diffs");
+    let parent = std::env::temp_dir().join("ws8bm-diffs");
     let directory = std::fs::create_dir_all(&parent).ok().and_then(|_| {
         tempfile::Builder::new()
             .prefix("difference-")
@@ -259,13 +259,6 @@ pub struct TestApp {
     pub booted: Booted,
     publications: std::sync::OnceLock<campfire_cable::pubsub::PublicationCapture>,
     _dir: tempfile::TempDir,
-}
-
-/// Whether a test app serves the SPA. A running app always does (`Config::spa_enabled`); a test
-/// that names `SPA_ENABLED` (any value) gets that. The classic page tests, which name nothing, keep
-/// the classic pages they were written against until those pages are deleted.
-pub fn serves_spa(extra: &[(&str, &str)]) -> bool {
-    extra.iter().any(|(name, _)| *name == "SPA_ENABLED")
 }
 
 impl TestApp {
@@ -434,17 +427,8 @@ impl TestApp {
         .await
     }
 
-    pub async fn boot_with_github_app(
-        github_app: crate::integrations::github::client::AppClient,
-    ) -> Option<TestApp> {
-        Self::boot_with_clients(
-            "default",
-            seed_clock(),
-            crate::net::Network::system(),
-            &[],
-            Some(github_app),
-        )
-        .await
+    pub async fn boot_seed(name: &str) -> Option<TestApp> {
+        Self::boot_with_clients(name, seed_clock(), crate::net::Network::system(), &[], None).await
     }
 
     pub async fn boot_seed_with_env(
@@ -454,10 +438,6 @@ impl TestApp {
     ) -> Option<TestApp> {
         Self::boot_with_clients(name, clock, crate::net::Network::system(), vars, None).await
     }
-    pub async fn boot_seed(name: &str) -> Option<TestApp> {
-        Self::boot_with_clients(name, seed_clock(), crate::net::Network::system(), &[], None).await
-    }
-
     async fn boot_with_clients(
         name: &str,
         clock: campfire_kit::SharedClock,
@@ -577,13 +557,11 @@ impl TestApp {
     }
 
     fn config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
-        let mut config = Self::production_config_for(dir, extra);
-        config.spa_enabled = serves_spa(extra);
-        config
+        Self::production_config_for(dir, extra)
     }
 
     /// Boots a seed on the config production parsing gives `vars`, with nothing overwritten
-    /// afterwards: not even [`serves_spa`]'s classic page switch.
+    /// afterwards.
     pub async fn boot_seed_with_production_env(
         name: &str,
         clock: campfire_kit::SharedClock,
@@ -776,6 +754,7 @@ pub struct Browser<'a> {
     cookies: BTreeMap<String, String>,
 }
 
+#[derive(Clone)]
 pub struct Req {
     pub method: Method,
     pub path: String,
@@ -838,7 +817,7 @@ pub fn encode(value: &str) -> String {
     percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
 }
 
-pub use super::render_secrets::with_fixed_render_secrets;
+pub use campfire_runtime::request_secrets::with_fixed_render_secrets;
 
 impl Browser<'_> {
     /// The seeded app for parity assertions after a request.
@@ -863,6 +842,14 @@ impl Browser<'_> {
         let encrypted = crypto.encrypt_cookie(key, &session, None);
         self.cookies
             .insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+    }
+
+    pub async fn boot_flash(&mut self) -> serde_json::Value {
+        let page = self.get("/app/").await;
+        assert_eq!(page.status, StatusCode::OK, "{}", page.text());
+        let pattern = regex::Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#).unwrap();
+        let boot: serde_json::Value = serde_json::from_str(&pattern.captures(&page.text()).expect("SPA boot JSON")[1]).unwrap();
+        boot["flash"].clone()
     }
 
     /// The classic flash without following its redirect (which would run more presenters).
@@ -962,11 +949,9 @@ impl Browser<'_> {
         self.send(Req::new(Method::GET, path)).await
     }
 
-    /// A classic page as a parity test reads it in an app that serves the SPA: a request that
-    /// isn't a navigation (`Accept: */*`), so the page answers instead of sending a signed-in
-    /// person to its SPA screen. Only until the classic pages are deleted.
+    /// Exercise the compatibility alias's authorization gate as a fragment request.
     pub async fn classic_page(&mut self, path: &str) -> Reply {
-        self.send(Req::new(Method::GET, path).header("accept", "*/*")).await
+        self.send(Req::new(Method::GET, path).header("accept", "*/*").header("x-requested-with", "XMLHttpRequest")).await
     }
 
     /// A write as the app's own pages make it: with the session's authenticity token in

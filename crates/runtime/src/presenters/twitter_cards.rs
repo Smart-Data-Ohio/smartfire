@@ -1,4 +1,5 @@
 //! Shared X-card facts from persisted records, including their fetch intents.
+use campfire_app::app::App;
 use campfire_db::Message;
 use campfire_presentation::helpers::{AvatarIcon, IconSource};
 
@@ -41,4 +42,20 @@ pub fn card_from_post(
         fetch_error: post.fetch_error,
         logo_url,
     }
+}
+
+pub fn broadcast_updates(app: &App, post_id: i64) -> anyhow::Result<()> {
+    let app = app.clone();
+    app.db.clone().read_blocking(move |conn| {
+        use crate::integrations::message_batches::{self, Reference};
+        let mut after = None;
+        loop {
+            let messages = message_batches::next(conn, Reference::TwitterPost(post_id), after)?;
+            app.broadcasts.sync_message_cards(conn, &messages);
+            if messages.len() < message_batches::SIZE { break; }
+            after = messages.last().map(|message| message.id);
+        }
+        Ok(())
+    })?;
+    Ok(())
 }

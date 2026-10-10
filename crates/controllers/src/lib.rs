@@ -13,7 +13,6 @@ pub mod controllers {
     pub mod csp_reports;
     pub mod embeds;
     pub mod first_runs;
-    pub mod fizzy_cards;
     pub mod fizzy_connections;
     pub mod fizzy_message_cards;
     pub mod github;
@@ -25,6 +24,7 @@ pub mod controllers {
     pub mod message_embed_suppressions;
     pub mod message_forwards;
     pub mod public_pages;
+    pub mod navigation;
     pub mod pwa;
     pub mod saved_items;
     pub mod scheduled_messages;
@@ -33,7 +33,6 @@ pub mod controllers {
     pub mod spa;
     pub mod switchers;
     pub mod unfurl_links;
-    pub mod welcome;
     pub mod work_threads;
     pub mod workspace_icons;
 

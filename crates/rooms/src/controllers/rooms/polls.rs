@@ -197,6 +197,7 @@ async fn payload(c: &mut Ctx, poll: Poll, status: StatusCode) -> Result {
                 &*app.db.env().rich_text,
                 app.db.env().now(),
                 Some(viewer),
+                &*app.storage.verifier,
             )
         })
         .await

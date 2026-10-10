@@ -863,7 +863,6 @@ async fn sudo_views_preserve_six_rails_form_contracts() {
         }
     }
     let a = app().await;
-    let account = a.db().read(Account::first).await.unwrap();
     let goldens: Value =
         serde_json::from_str(include_str!("../../../../vectors/sudo_views.json")).unwrap();
     for (name, expected) in goldens.as_object().unwrap() {
@@ -873,10 +872,9 @@ async fn sudo_views_preserve_six_rails_form_contracts() {
                 csp_nonce: Some("NONCE".into()),
             },
             || {
-                crate::controllers::presenters::page::render_detached_at(
-                    &a.booted.app,
-                    account.as_ref(),
-                    "http://campfire.test",
+                crate::controllers::users::people_tests::render_with(
+                    &a,
+                    |_| {},
                     |ctx| {
                         let ctx = retained(ctx);
                         if name == "continue" {

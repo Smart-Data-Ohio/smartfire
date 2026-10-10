@@ -79,6 +79,7 @@ endpoint!(
 /// and enqueued on the writer after the read ([`Fetches::request`]).
 #[derive(Default)]
 pub(crate) struct Fetches {
+    pub(crate) render_refreshes: campfire_runtime::presenters::RenderRefreshes,
     links: BTreeSet<i64>,
     posts: BTreeSet<i64>,
     pull_requests: BTreeSet<i64>,
@@ -110,6 +111,7 @@ impl Fetches {
     /// read, and the next read asks again.
     pub(crate) async fn request(self, app: &App) {
         let Fetches {
+            render_refreshes,
             links,
             posts,
             pull_requests,
@@ -123,6 +125,7 @@ impl Fetches {
         {
             tracing::warn!(%error, "card fetches not requested");
         }
+        campfire_runtime::presenters::refresh_after_render(&app.db, render_refreshes).await;
         pull_requests::refresh_after_render(&app.db, pull_requests.into_iter().collect()).await;
     }
 }
@@ -133,6 +136,7 @@ pub(crate) fn polls(
     conn: &Connection,
     message_ids: &[i64],
     now: Timestamp,
+    verifier: &dyn campfire_storage::Verifier,
 ) -> campfire_db::Result<HashMap<i64, api::Poll>> {
     let rows: Vec<Poll> = ids_query(
         conn,
@@ -152,11 +156,14 @@ pub(crate) fn polls(
         },
     )?;
     let poll_ids: Vec<i64> = rows.iter().map(|poll| poll.id).collect();
-    let options: Vec<(i64, i64, String)> = ids_query(
+    let options: Vec<campfire_db::PollOption> = ids_query(
         conn,
-        r#"SELECT "poll_id", "id", "label" FROM "poll_options" WHERE "poll_id" IN ({}) ORDER BY "poll_id", "position", "id""#,
+        r#"SELECT * FROM "poll_options" WHERE "poll_id" IN ({}) ORDER BY "poll_id", "position", "id""#,
         &poll_ids,
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        |row| Ok(campfire_db::PollOption {
+            id: row.get("id")?, poll_id: row.get("poll_id")?, label: row.get("label")?,
+            position: row.get("position")?, created_at: row.get("created_at")?, updated_at: row.get("updated_at")?,
+        }),
     )?;
     let votes: Vec<(i64, i64, i64)> = ids_query(
         conn,
@@ -165,18 +172,18 @@ pub(crate) fn polls(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let as_of = dto::time(now);
-    Ok(rows
+    rows
         .into_iter()
         .map(|poll| {
             let poll_votes: Vec<&(i64, i64, i64)> =
                 votes.iter().filter(|vote| vote.0 == poll.id).collect();
             let options = options
                 .iter()
-                .filter(|option| option.0 == poll.id)
-                .map(|(_, id, label)| {
+                .filter(|option| option.poll_id == poll.id)
+                .map(|option| {
                     let mut voter_ids: Vec<i64> = poll_votes
                         .iter()
-                        .filter(|vote| vote.1 == *id)
+                        .filter(|vote| vote.1 == option.id)
                         .map(|vote| vote.2)
                         .collect();
                     let votes = voter_ids.len() as i64;
@@ -185,14 +192,15 @@ pub(crate) fn polls(
                     } else {
                         voter_ids.sort_unstable();
                     }
-                    api::PollOption {
-                        id: *id,
-                        label: label.clone(),
+                    Ok(api::PollOption {
+                        id: option.id,
+                        label: option.label.clone(),
                         votes,
                         voter_ids,
-                    }
+                        media: option.media(conn, verifier)?.map(serde_json::from_value).transpose().map_err(|e| campfire_db::Error::Other(e.to_string()))?,
+                    })
                 })
-                .collect();
+                .collect::<campfire_db::Result<_>>()?;
             let dto = api::Poll {
                 id: poll.id,
                 message_id: poll.message_id,
@@ -205,9 +213,9 @@ pub(crate) fn polls(
                 total_votes: poll_votes.len() as i64,
                 options,
             };
-            (poll.message_id, dto)
+            Ok((poll.message_id, dto))
         })
-        .collect())
+        .collect::<campfire_db::Result<_>>()
 }
 
 /// The options `user_id` chose on the poll, in option order.
@@ -224,8 +232,9 @@ fn poll_results(
     poll: &Poll,
     viewer_id: i64,
     now: Timestamp,
+    verifier: &dyn campfire_storage::Verifier,
 ) -> campfire_db::Result<api::PollResults> {
-    let poll_dto = polls(conn, &[poll.message_id], now)?
+    let poll_dto = polls(conn, &[poll.message_id], now, verifier)?
         .remove(&poll.message_id)
         .ok_or(campfire_db::Error::RecordNotFound("Poll"))?;
     Ok(api::PollResults {
@@ -241,6 +250,7 @@ pub(crate) fn poll_changed(
     poll_id: i64,
     voter_id: Option<i64>,
     now: Timestamp,
+    verifier: &dyn campfire_storage::Verifier,
 ) -> campfire_db::Result<Option<(api::PollUpdated, Option<api::PollBallot>)>> {
     let poll = match Poll::find(conn, poll_id) {
         Ok(poll) => poll,
@@ -250,7 +260,7 @@ pub(crate) fn poll_changed(
     let Some(message) = Message::find_by_id(conn, poll.message_id)? else {
         return Ok(None);
     };
-    let Some(dto) = polls(conn, &[message.id], now)?.remove(&message.id) else {
+    let Some(dto) = polls(conn, &[message.id], now, verifier)?.remove(&message.id) else {
         return Ok(None);
     };
     let ballot = match voter_id {
@@ -650,6 +660,67 @@ fn path_id(c: &Ctx, name: &str) -> Result<i64> {
         .ok_or(Error::NotFound)
 }
 
+enum PreparedPollMedia {
+    None,
+    Emoji(String),
+    Image(Box<campfire_storage::branding::Prepared>),
+}
+
+fn valid_poll_emoji(conn: &Connection, emoji: &str) -> campfire_db::Result<bool> {
+    if emoji.is_ascii() {
+        let name = emoji.strip_prefix(':').and_then(|s| s.strip_suffix(':')).unwrap_or(emoji);
+        return Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM workspace_icons WHERE name=?)", [name], |r| r.get(0))?);
+    }
+    // One Unicode emoji sequence, including joined families, flags, skin tones and keycaps.
+    static EMOJI: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| regex::Regex::new(r"\A(?:(?:\p{Regional_Indicator}{2})|[0-9#*]\x{FE0F}?\x{20E3}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\x{FE0F}?\p{Emoji_Modifier}?(?:[\x{E0020}-\x{E007E}]+\x{E007F})?(?:\x{200D}(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\x{FE0F}?\p{Emoji_Modifier}?)*)\z").unwrap());
+    Ok(EMOJI.is_match(emoji))
+}
+
+fn save_poll_media(tx: &mut campfire_db::Tx<'_>, storage: &campfire_storage::Storage, option: &campfire_db::PollOption, media: PreparedPollMedia) -> campfire_db::Result<()> {
+    use campfire_runtime::presenters::attachments::storage_error;
+    match media {
+        PreparedPollMedia::None => Ok(()),
+        PreparedPollMedia::Emoji(content) => option.attach_emoji(tx, &content),
+        PreparedPollMedia::Image(prepared) => {
+            let campfire_storage::branding::Prepared { mut blob, still } = *prepared;
+            blob.metadata.set("poll_media", campfire_storage::Json::Bool(true));
+            tx.conn().execute("UPDATE active_storage_blobs SET metadata=?, content_type=? WHERE id=?", rusqlite::params![blob.metadata.encode(), blob.content_type, blob.id])?;
+            if let Some((variation, still)) = still {
+                blob.metadata.set("poll_still", campfire_storage::Json::Bool(true));
+                blob.update_metadata(tx.conn(), blob.metadata.clone()).map_err(storage_error)?;
+                if storage.record_variant(tx.conn(), &blob, &variation, &still, tx.now().jiff()).map_err(storage_error)?.is_some() {
+                    campfire_runtime::active_storage::keep_after_commit(tx, still);
+                }
+            }
+            option.attach_media(tx, blob.id)
+        }
+    }
+}
+
+async fn poll_image(c: &mut Ctx, signed: &str) -> Result<campfire_storage::branding::Prepared> {
+    use campfire_runtime::presenters::attachments::Assignment;
+    use campfire_storage::branding::{self, Kind};
+    let limit = campfire_runtime::active_storage::upload_limit_bytes(c.app()).await? as u64;
+    let assignment = Assignment::Signed(signed.to_owned()).stage_with_limit(c.app(), limit).await
+        .map_err(|_| fail(c, validation("optionMedia", "isn't a valid upload or exceeds the workspace upload limit")))?;
+    let Assignment::Existing(blob) = assignment else { return Err(fail(c, validation("optionMedia", "isn't an uploaded image"))); };
+    if !matches!(blob.content_type(), "image/png" | "image/jpeg" | "image/gif" | "image/webp") {
+        return Err(fail(c, validation("optionMedia", "must be a PNG, JPEG, GIF or WebP image")));
+    }
+    let storage = c.app().storage.clone();
+    let prepared = campfire_runtime::active_storage::process_branding_with_deadline(
+        branding::processing_timeout(&blob),
+        move |cancel| Ok(branding::prepare_with_limit(&storage, blob, Kind::Logo, &cancel, limit)),
+    ).await.map_err(|_| fail(c, validation("optionMedia", "couldn't be read as an image")))?;
+    prepared.map_err(|invalid| {
+        let message = match invalid {
+            branding::Invalid::Size => "exceeds the workspace upload limit",
+            other => other.message(Kind::Logo),
+        };
+        fail(c, validation("optionMedia", message))
+    })
+}
+
 async fn post_poll(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (_, room) = set_room(c).await?;
@@ -718,6 +789,51 @@ async fn post_poll(c: &mut Ctx) -> Result {
             ),
         ));
     }
+    let media_inputs = input.option_media.unwrap_or_default();
+    if !media_inputs.is_empty() && media_inputs.len() != input.options.len() {
+        return Err(fail(c, validation("optionMedia", "must match the option labels")));
+    }
+    let mut media = Vec::new();
+    for (index, label) in input.options.iter().enumerate() {
+        let choice = media_inputs.get(index).and_then(Option::as_ref);
+        if campfire_richtext::ruby::is_blank(label) {
+            if choice.is_some() {
+                return Err(fail(c, validation("optionMedia", "needs an option label")));
+            }
+            continue;
+        }
+        let prepared = match choice {
+            None => PreparedPollMedia::None,
+            Some(choice) => match (&choice.signed_id, &choice.emoji) {
+                (Some(signed), None) => {
+                    let mut prepared = poll_image(c, signed).await?;
+                    if prepared.blob.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64).is_some_and(|id| id != creator_id) {
+                        return Err(fail(c, validation("optionMedia", "must be your uploaded image")));
+                    }
+                    // PNG can contain APNG animation even though its MIME type says PNG.
+                    if prepared.still.is_none() {
+                        let storage = c.app().storage.clone();
+                        let blob = prepared.blob.clone();
+                        let variation = campfire_storage::branding::Kind::Logo.still_variation();
+                        let transform = variation.clone();
+                        let still = campfire_runtime::active_storage::process_media(move || storage.transform_variant(&blob, &transform)).await.map_err(|_| fail(c, validation("optionMedia", "couldn't be read as an image")))?;
+                        prepared.still = Some((variation, still));
+                    }
+                    PreparedPollMedia::Image(Box::new(prepared))
+                }
+                (None, Some(emoji)) => {
+                    let mut emoji = emoji.trim().to_string();
+                    let value = emoji.clone();
+                    let valid = c.app().db.read(move |conn| valid_poll_emoji(conn, &value)).await.map_err(db_error)?;
+                    if !valid { return Err(fail(c, validation("optionMedia", "must be a Unicode emoji or an existing workspace emoji"))); }
+                    if emoji.is_ascii() && !emoji.starts_with(':') { emoji = format!(":{emoji}:"); }
+                    PreparedPollMedia::Emoji(emoji)
+                }
+                _ => return Err(fail(c, validation("optionMedia", "choose one image or emoji"))),
+            },
+        };
+        media.push(prepared);
+    }
     let closes_at = match input.closes_at.as_deref() {
         None => None,
         Some(raw) => match raw.parse::<jiff::Timestamp>() {
@@ -735,6 +851,7 @@ async fn post_poll(c: &mut Ctx) -> Result {
         closes_at,
     };
     let posted_room = room.clone();
+    let storage = c.app().storage.clone();
     let outcome = c
         .app()
         .db
@@ -750,6 +867,13 @@ async fn post_poll(c: &mut Ctx) -> Result {
                         "is already used in another conversation",
                     ))
                 });
+            }
+            // Claim only fresh uploads. Reusing a room's attachment would share its signed URL.
+            for image in &media {
+                if let PreparedPollMedia::Image(prepared) = image {
+                    let attached: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [prepared.blob.id], |r| r.get(0))?;
+                    if attached { return Ok(Err(validation("optionMedia", "must be a new uploaded image"))); }
+                }
             }
             let thread = match input.thread_id {
                 Some(id) => {
@@ -782,7 +906,10 @@ async fn post_poll(c: &mut Ctx) -> Result {
                 Some(mut thread) => thread.post_message(tx, creator_id, attributes)?,
                 None => Message::create(tx, attributes)?,
             };
-            Poll::create_for_message(tx, &message, poll)?;
+            let poll = Poll::create_for_message(tx, &message, poll)?;
+            for (option, media) in poll.options(tx.conn())?.into_iter().zip(media) {
+                save_poll_media(tx, &storage, &option, media)?;
+            }
             posting::deliver_webhooks_to_bots(tx, &posted_room, &message)?;
             Ok(Ok((message, true)))
         })
@@ -827,7 +954,7 @@ async fn show_poll(c: &mut Ctx) -> Result {
         .db
         .read(move |conn| {
             let poll = Poll::find_in_room(conn, room.id, poll_id)?;
-            poll_results(conn, &poll, viewer_id, app.db.env().now())
+            poll_results(conn, &poll, viewer_id, app.db.env().now(), &*app.storage.verifier)
         })
         .await
         .map_err(db_error)?;
@@ -840,6 +967,7 @@ async fn post_vote(c: &mut Ctx) -> Result {
     let room_id = room.id;
     #[cfg(feature = "test-support")]
     crate::test_hooks::before_poll_vote_write(poll_id).await;
+    let verifier = c.app().storage.verifier.clone();
     let outcome = c
         .app()
         .db
@@ -871,7 +999,7 @@ async fn post_vote(c: &mut Ctx) -> Result {
                     return Ok(Err(validation("optionIds", "can name only one option")));
                 }
                 poll.cast_vote(tx, viewer_id, &ids)?;
-                poll_results(tx.conn(), &poll, viewer_id, tx.now()).map(Ok)
+                poll_results(tx.conn(), &poll, viewer_id, tx.now(), &*verifier).map(Ok)
             },
         )
         .await
@@ -884,6 +1012,7 @@ async fn post_vote(c: &mut Ctx) -> Result {
 
 async fn post_end_poll(c: &mut Ctx) -> Result {
     let (room, poll_id, viewer_id) = set_poll(c).await?;
+    let verifier = c.app().storage.verifier.clone();
     let outcome = c
         .app()
         .db
@@ -899,7 +1028,7 @@ async fn post_end_poll(c: &mut Ctx) -> Result {
                     }));
                 }
                 poll.close(tx, tx.now())?;
-                poll_results(tx.conn(), &poll, viewer_id, tx.now()).map(Ok)
+                poll_results(tx.conn(), &poll, viewer_id, tx.now(), &*verifier).map(Ok)
             },
         )
         .await

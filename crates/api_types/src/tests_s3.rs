@@ -121,12 +121,14 @@ fn poll() -> Poll {
                 label: "Tacos".into(),
                 votes: 2,
                 voter_ids: vec![7, 8],
+                media: None,
             },
             PollOption {
                 id: 52,
                 label: "Pizza".into(),
                 votes: 1,
                 voter_ids: vec![9],
+                media: None,
             },
         ],
     }
@@ -628,6 +630,7 @@ fn polls_round_trip() {
             multiple: false,
             anonymous: false,
             closes_at: None,
+            option_media: None,
         },
         json!({"clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12", "threadId": null, "question": "Lunch?", "options": ["Tacos", "Pizza"], "multiple": false, "anonymous": false, "closesAt": null}),
     );

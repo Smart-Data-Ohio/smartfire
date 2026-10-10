@@ -20,3 +20,8 @@ mod app {
 #[cfg(test)]
 #[path = "../../../test-support/asset_goldens.rs"]
 mod asset_goldens;
+
+#[cfg(any(test, feature = "test-support"))]
+pub mod request_secrets;
+
+pub mod navigation;

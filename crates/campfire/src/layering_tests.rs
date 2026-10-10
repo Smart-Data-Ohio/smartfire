@@ -46,8 +46,8 @@ const LAYERS: &[(&str, &[&str])] = &[
 #[test]
 fn modules_name_only_their_own_layer_and_below() {
     let tree = ModuleTree::read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
-    // A walk that stopped early would pass vacuously.
-    assert!(tree.modules.len() > 550, "found only {} modules", tree.modules.len());
+    // A walk that stopped early would pass vacuously. K15 deleted classic UI modules; 536 remain.
+    assert!(tree.modules.len() > 535, "found only {} modules", tree.modules.len());
     let violations = tree.violations();
     assert!(
         violations.is_empty(),

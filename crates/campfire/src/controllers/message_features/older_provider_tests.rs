@@ -31,17 +31,12 @@ fn oracle() -> Value {
 async fn check_window(app: &TestApp, group: &Value) {
     let response = app
         .david()
-        .get(&format!("/rooms/{QUIET_CORNER}/messages"))
+        .get(&format!("/api/v1/rooms/{QUIET_CORNER}/messages"))
         .await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
     for id in group["old_ids"].as_array().unwrap() {
-        assert!(
-            !response
-                .text()
-                .contains(&format!("data-message-id=\"{id}\"")),
-            "older reference leaked into current window"
-        );
-    }
+                assert!(!response.json()["messages"].as_array().unwrap().iter().any(|message| message["id"] == *id));
+            }
 }
 
 

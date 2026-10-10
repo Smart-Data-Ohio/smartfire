@@ -6,23 +6,16 @@ use super::{
 };
 use crate::controllers::presenters::{
     Presenter,
-    page::{self, db_error},
-    user_view,
+    page::db_error,
 };
 use crate::{
     app::AppCtx,
-    concerns::{self, Before, before_actions, require_current_user},
+    concerns::{Before, before_actions, require_current_user},
 };
 use campfire_db::models::audit_log::{AuditLog, Context, NewAuditLog};
 use campfire_db::{CachedStatements, Membership, Room, RoomType, StageRole, User};
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_views::{
-    helpers::IconSource,
-    rooms::{
-        FormRoom,
-        calls::{CallForm, StagesEdit, StagesNew, VoicesEdit, VoicesNew},
-    },
-};
+use campfire_presentation::helpers::IconSource;
 use serde_json::json;
 
 
@@ -76,87 +69,24 @@ fn valid_icon(conn: &campfire_db::Connection, app: &crate::app::App, icon: Optio
     })
 }
 
-pub async fn show(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let room = set_room(c, scope(c)).await?;
-    concerns::remember_last_room_visited(c, room.id);
-    redirect_to_room(c, room.id)
-}
-pub async fn new(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    ensure_permission_to_create_rooms(c).await?;
-    let form = CallForm {
-        room: FormRoom {
-            id: None,
-            name: Some(
-                if stage(c) {
-                    "New stage channel"
-                } else {
-                    "New voice channel"
-                }
-                .into(),
-            ),
-        ..Default::default()},
-        stage: stage(c),
-        can_administer: true,
-        current_user_id: require_current_user(c)?.id,
-        selected_users: Vec::new(),
-        unselected_users: super::opens::active_users(c).await?,
-        icon_name: None,
-        icon: None,
-        errors: Vec::new(),
-        settings: None,
-    };
-    render(c, form, StatusCode::OK).await
-}
-pub async fn edit(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let room = set_room(c, scope(c)).await?;
-    let form = form(c, room, Vec::new()).await?;
-    render(c, form, StatusCode::OK).await
-}
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     ensure_permission_to_create_rooms(c).await?;
     let name = room_name_param(c)?.flatten();
     let icon = icon_param(c)?.flatten();
     let grantees = user_ids_param(c);
-    let creator = require_current_user(c)?.id;
     let kind = kind(c);
     let result = create_room(c, kind, name, icon, grantees).await?;
     let room = match result {
         Ok(room) => room,
-        Err((name, icon_name)) => {
-            let app = c.app().clone();
-            let for_icon = icon_name.clone();
-            let icon = c
-                .app()
-                .db
-                .read(move |conn| {
-                    Ok(for_icon
-                        .as_deref()
-                        .and_then(|n| Presenter::new(conn, &app, None).resolve_avatar_icon(n)))
-                })
-                .await
-                .map_err(db_error)?;
-            let form = CallForm {
-                room: FormRoom { id: None, name, ..Default::default()},
-                stage: stage(c),
-                can_administer: true,
-                current_user_id: creator,
-                selected_users: Vec::new(),
-                unselected_users: super::opens::active_users(c).await?,
-                icon_name,
-                icon,
-                errors: vec!["Icon name is not a known icon".into()],
-                settings: None,
-            };
-            return render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await;
+        Err((_name, _icon_name)) => {
+            return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
         }
     };
     broadcast(c, &room, false).await?;
     redirect_to_room(c, room.id)
 }
+
 
 pub async fn create_room(
     c: &Ctx,
@@ -217,12 +147,10 @@ pub async fn update(c: &mut Ctx) -> Result {
             broadcast(c, &room, true).await?;
             redirect_to_room(c, room.id)
         }
-        Err((room, errors)) => {
-            let form = form(c, room, errors).await?;
-            render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await
-        }
+        Err((_room, _errors)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
     }
 }
+
 pub async fn update_room(
     c: &Ctx,
     room: Room,
@@ -266,51 +194,6 @@ pub async fn update_room(
         }
         Ok(Ok(room))
     }).await.map_err(db_error)
-}
-
-async fn form(c: &Ctx, room: Room, errors: Vec<String>) -> Result<CallForm> {
-    let app = c.app().clone();
-    let current = require_current_user(c)?.clone();
-    c.app()
-        .db
-        .read(move |conn| {
-            let selected = room.user_ids(conn)?;
-            let (a, b): (Vec<_>, Vec<_>) = User::active_ordered(conn)?
-                .into_iter()
-                .partition(|u| selected.contains(&u.id));
-            let views =
-                |users: Vec<User>| users.iter().map(|u| user_view(&app.secrets, u)).collect();
-            Ok(CallForm {
-                room: FormRoom {
-                    id: Some(room.id),
-                    name: room.name.clone(),
-                ..Default::default()},
-                stage: room.stage(),
-                can_administer: current.can_administer(Some(room.creator_id), false),
-                current_user_id: current.id,
-                selected_users: views(a),
-                unselected_users: views(b),
-                icon: room
-                    .icon_name
-                    .as_deref()
-                    .and_then(|n| Presenter::new(conn, &app, None).resolve_avatar_icon(n)),
-                icon_name: room.icon_name.clone(),
-                settings: Some(super::call_navigation::edit_sections(
-                    &app, conn, &room, &current,
-                )?),
-                errors,
-            })
-        })
-        .await
-        .map_err(db_error)
-}
-async fn render(c: &mut Ctx, form: CallForm, status: StatusCode) -> Result {
-    match (form.stage, form.room.id.is_some()) {
-        (false, false) => page::framed_page!(c, status, |ctx| VoicesNew { ctx, form: &form }).await,
-        (false, true) => page::framed_page!(c, status, |ctx| VoicesEdit { ctx, form: &form }).await,
-        (true, false) => page::framed_page!(c, status, |ctx| StagesNew { ctx, form: &form }).await,
-        (true, true) => page::framed_page!(c, status, |ctx| StagesEdit { ctx, form: &form }).await,
-    }
 }
 
 pub async fn broadcast(c: &Ctx, room: &Room, _update: bool) -> Result<()> {

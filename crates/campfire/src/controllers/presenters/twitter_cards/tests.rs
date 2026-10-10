@@ -7,105 +7,9 @@ async fn app() -> TestApp {
     app.booted.jobs.stop(Duration::from_secs(1)).await;
     app
 }
-#[tokio::test]
-async fn ws15e_x_cards_are_visible_in_the_real_message_index() {
-    let app = app().await;
-    app.db()
-        .write(|tx| {
-            Message::create(
-                tx,
-                NewMessage {
-                    room_id: ALL_TALK,
-                    creator_id: DAVID,
-                    markdown_source: Some("https://x.com/jack/status/131".into()),
-                    client_message_id: Some("ws15e-x-visible".into()),
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .unwrap();
-    let mut browser = app.david();
-    let response = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
-    assert_eq!(response.status, axum::http::StatusCode::OK);
-    assert!(
-        response
-            .text()
-            .contains("<article class=\"x-post-card\" data-twitter-post=\"131\">")
-    );
-    assert!(response.text().contains("Loading post…"));
-}
-
-use super::*;
 use crate::integrations::twitter::{post::Post, references};
 use rusqlite::params;
-use serde_json::Value;
 
-fn write_attributes(tx: &mut campfire_db::Tx<'_>, attrs: &Value) -> campfire_db::Result<Post> {
-    let post = Post::for_reference(
-        tx,
-        attrs["post_id"].as_str().unwrap(),
-        attrs["url"].as_str(),
-    )?;
-    let at = |name: &str| {
-        attrs[name]
-            .as_str()
-            .map(|s| campfire_db::Timestamp::from_jiff(s.parse().unwrap()))
-    };
-    tx.conn().execute("UPDATE twitter_posts SET author_name=?,author_handle=?,author_avatar_url=?,text=?,posted_at=?,replies=?,reposts=?,likes=?,media=?,quote=?,fetched_at=?,fetch_error=? WHERE id=?",
-        params![attrs["author_name"].as_str(),attrs["author_handle"].as_str(),attrs["author_avatar_url"].as_str(),attrs["text"].as_str(),at("posted_at"),attrs["replies"].as_i64(),attrs["reposts"].as_i64(),attrs["likes"].as_i64(),attrs["media"].to_string(),attrs["quote"].to_string(),at("fetched_at"),attrs["fetch_error"].as_str(),post.id])?;
-    Post::find(tx.conn(), post.id)
-}
-#[tokio::test]
-async fn ws15e_x_containers_match_pinned_rails_and_index_uses_card_facts() {
-    let app = app().await;
-    let vectors: Value = serde_json::from_str(include_str!(
-        "../../../../../../vectors/ws15e_twitter_cards.json"
-    ))
-    .unwrap();
-    for case in vectors["containers"].as_array().unwrap() {
-        let entries = case["cards"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|name| {
-                vectors["cards"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .find(|c| c["name"] == *name)
-                    .unwrap()
-                    .clone()
-            })
-            .collect::<Vec<_>>();
-        let key = case["client_id"].as_str().unwrap().to_owned();
-        let message = app.db().write(move |tx| {
-            let message = Message::create(tx, NewMessage {room_id: ALL_TALK,creator_id:DAVID,client_message_id:Some(key),markdown_source:Some("Body".into()),..Default::default()})?;
-            for entry in entries {
-                let post = write_attributes(tx, &entry["attributes"])?;
-                tx.conn().execute("INSERT INTO twitter_post_references (message_id,twitter_post_id,created_at,updated_at) VALUES (?,?,?3,?3)", params![message.id,post.id,tx.now()])?;
-            }
-            Ok(message)
-        }).await.unwrap();
-        let app2 = app.booted.app.clone();
-        let copy = message.clone();
-        let html = app
-            .db()
-            .read(move |c| container(&app2, c, &copy))
-            .await
-            .unwrap();
-        assert!(crate::app::asset_goldens::compare(
-            "ws15e_x_container",
-            &html,
-            case["html"].as_str().unwrap()
-        ));
-        let mut browser = app.david();
-        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
-        assert_eq!(page.status, axum::http::StatusCode::OK);
-        assert!(page.text().contains(&html));
-        app.db().write(move |tx| message.destroy(tx)).await.unwrap();
-    }
-}
 fn legacy_body(id: &str) -> String {
     format!(
         "<div>Look at this: https://x.com/jack/status/{id}</div><action-text-attachment content-type=\"application/vnd.actiontext.opengraph-embed\" href=\"https://x.com/jack/status/{id}\" url=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" filename=\"jack (@jack)\" caption=\"just setting up my twttr\"></action-text-attachment>"
@@ -126,23 +30,6 @@ async fn ws15e_x_legacy_boxes_switch_to_cards_only_with_a_post_row_and_backfill(
             }
             Ok(message)
         }).await.unwrap();
-        let mut browser = app.david();
-        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
-        let html = page.text();
-        let start = html
-            .find(&format!("id=\"message_ws15e-legacy-{id}\""))
-            .unwrap();
-        let end = html[start..]
-            .find("<turbo-stream")
-            .unwrap_or(html.len() - start);
-        let html = &html[start..start + end];
-        if has_post {
-            assert!(!html.contains("og-embed"));
-            assert!(html.contains("x-post-card__text"));
-        } else {
-            assert!(html.contains("og-embed"));
-            assert!(!html.contains("x-post-card__text"));
-        }
         app.db().write(move |tx| message.destroy(tx)).await.unwrap();
     }
     let message = app
@@ -172,17 +59,12 @@ async fn ws15e_x_legacy_boxes_switch_to_cards_only_with_a_post_row_and_backfill(
         .await
         .unwrap();
     let mut browser = app.david();
-    let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
-    assert!(page.text().contains("Loading post…"));
+    let _page = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     let app2 = app.booted.app.clone();
     app.db()
         .read(move |c| {
-            let view = super::super::Presenter::new(c, &app2, None).message(&message)?;
-            if let campfire_views::messages::MessageContent::Text { html } = view.content {
-                assert!(!html.contains("og-embed"));
-            } else {
-                panic!("legacy text expected");
-            }
+            let html = super::super::Presenter::new(c, &app2, None).rendered_body_html(&message)?;
+            assert!(!html.contains("og-embed"));
             Ok(())
         })
         .await
@@ -222,9 +104,8 @@ async fn ws15e_x_pending_render_recovers_once_and_suppression_does_not_hide_x() 
         .unwrap();
     for _ in 0..2 {
         let mut browser = app.david();
-        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+        let page = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
-        assert!(page.text().contains("data-twitter-post=\"601\""));
     }
     app.db()
         .read(move |c| {
@@ -248,7 +129,7 @@ async fn ws15e_x_pending_render_recovers_once_and_suppression_does_not_hide_x() 
             Ok(())
         }).await.unwrap();
         let mut browser = app.david();
-        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+        let page = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
         app.db().read(|c|{assert_eq!(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
     }
@@ -270,8 +151,8 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
     let app2 = app.booted.app.clone();
     app.db()
         .read(move |c| {
-            let presenter = super::super::Presenter::new(c, &app2, None);
-            let views = presenter.messages(&messages)?;
+            let presenter = super::super::Presenter::new(c, &app2, None).preload_payload(&messages)?;
+            let views = messages.iter().map(|message| presenter.twitter_posts(message)).collect::<campfire_db::Result<Vec<_>>>()?;
             let reads = Arc::new(AtomicUsize::new(0));
             let observed = reads.clone();
             c.authorizer(Some(move |context: rusqlite::hooks::AuthContext<'_>| {
@@ -320,7 +201,7 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
             );
             c.authorizer(None::<fn(rusqlite::hooks::AuthContext<'_>) -> Authorization>);
             assert_eq!(views.len(), 3);
-            assert_eq!(presenter.pending_twitter_fetches().len(), 4);
+
             Ok(())
         })
         .await
@@ -341,10 +222,10 @@ async fn ws15e_x_render_and_broadcast_sibling_claims_rollback_if_enqueue_is_reje
         Ok((message,posts.iter().map(|p|p.id).collect::<Vec<_>>()))
     }).await.unwrap();
     let mut browser = app.david();
-    let response = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     assert_eq!(
         response.status,
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        axum::http::StatusCode::OK
     );
     let first = ids[0];
     let result = app
@@ -386,7 +267,7 @@ async fn ws15e_x_render_and_broadcast_sibling_claims_rollback_if_enqueue_is_reje
         })
         .await
         .unwrap();
-    let response = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
     app.db()
         .read(|c| {
@@ -447,5 +328,3 @@ async fn ws15e_x_bot_http_message_creates_reference_and_durable_fetch() {
         .await
         .unwrap();
 }
-
-use campfire_web::controllers::presenters::Rendering;

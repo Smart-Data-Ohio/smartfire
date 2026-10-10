@@ -153,7 +153,7 @@ async fn run(case: &str) {
         let (details,cipher): (String,String) = app.db().read(|c| Ok((c.query_row("SELECT details FROM audit_logs WHERE action='fizzy.account.connect' ORDER BY id DESC LIMIT 1",[],|r|r.get(0))?, c.query_row("SELECT access_token FROM fizzy_connected_accounts WHERE user_id=?",[DAVID],|r|r.get(0))?))).await.unwrap();
         assert!(!details.contains("new-token"));
         assert!(!cipher.contains("new-token"));
-        let flash = browser.get("/users/me/profile").await.text();
+        let flash = browser.flash().to_string();
         assert!(flash.contains("Fizzy connected as David (Smart Data)."));
     } else {
         assert!(account.is_none());
@@ -194,11 +194,7 @@ async fn run(case: &str) {
         _ => None,
     } {
         assert!(
-            browser
-                .get("/users/me/profile")
-                .await
-                .text()
-                .contains(expected)
+            browser.flash().to_string().contains(expected)
         );
     }
     if case == "link" {

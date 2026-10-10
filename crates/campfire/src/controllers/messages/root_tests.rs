@@ -2,7 +2,6 @@
 use std::sync::Arc;
 
 use axum::http::{Method, StatusCode};
-use askama::Template;
 use campfire_db::{Boost, ChannelThread, Message, MessagePin, NewChannelThread, NewMessage, NewSavedItem, SavedItem};
 use campfire_kit::clock::FrozenClock;
 use serde_json::{Value, json};
@@ -91,73 +90,11 @@ async fn actions_require_alive_membership_and_exclude_thread_messages() {
     assert_eq!(jason.get(&path).await.status, StatusCode::NOT_FOUND);
 }
 
-async fn edit_html(app: &TestApp, id: i64) -> String {
-    use crate::controllers::presenters::{Presenter, page};
-    let runtime = app.booted.app.clone();
-    app.db().read(move |conn| {
-        let presenter = Presenter::new(conn, &runtime, None);
-        let message = Message::find(conn, id)?;
-        let edit = campfire_views::messages::EditView {
-            editable_body_html: presenter.editable_markdown_source(&message)?, message: presenter.message(&message)?,
-        };
-        let account = campfire_db::Account::first(conn)?;
-        page::render_detached_at(&runtime, account.as_ref(), "http://campfire.test", |ctx| campfire_views::messages::Edit { ctx, edit: &edit }.render())
-            .map_err(|error| campfire_db::Error::Other(error.to_string()))
-    }).await.unwrap()
-}
-
-#[tokio::test]
-async fn standalone_message_wrapper_matches_rails_bytes() {
-    use crate::controllers::presenters::{Presenter, page};
-    let (app, _, ids) = fixture().await;
-    for row in oracle()["shows"].as_array().unwrap() {
-        let id = ids[row["index"].as_u64().unwrap() as usize];
-        let runtime = app.booted.app.clone();
-        let html = app.db().read(move |conn| {
-            let message = Presenter::new(conn, &runtime, None).message(&Message::find(conn, id)?)?;
-            let account = campfire_db::Account::first(conn)?;
-            page::render_detached_at(&runtime, account.as_ref(), "http://campfire.test", |ctx| {
-                campfire_views::messages::Show { ctx, message: &message }.render()
-                    .map_err(|error| campfire_db::Error::Other(error.to_string()))
-            })
-        }).await.unwrap();
-        let expected = row["html"].as_str().unwrap();
-        if html != expected {
-            rails_mismatch(&html, expected, "standalone message");
-        }
-
-    }
-}
-
-#[tokio::test]
-async fn edit_forms_and_actions_menu_match_rails_bytes() {
-    use crate::controllers::presenters::{Presenter, page};
-    let (app, _, ids) = fixture().await;
-    for row in oracle()["edits"].as_array().unwrap() {
-        assert_eq!(edit_html(&app, ids[row["index"].as_u64().unwrap() as usize]).await, row["html"].as_str().unwrap());
-        let id = ids[row["index"].as_u64().unwrap() as usize];
-        let runtime = app.booted.app.clone();
-        let body = app.db().read(move |conn| Presenter::new(conn, &runtime, None).rendered_body_html(&Message::find(conn, id)?)).await.unwrap();
-        assert_eq!(body, row["rendered_body"].as_str().unwrap());
-    }
-    let runtime = app.booted.app.clone();
-    let html = app.db().read(move |conn| {
-        let account = campfire_db::Account::first(conn)?;
-        page::render_detached_at(&runtime, account.as_ref(), "http://campfire.test", |ctx| campfire_views::messages::ActionsMenu { ctx }.render())
-            .map_err(|error| campfire_db::Error::Other(error.to_string()))
-    }).await.unwrap();
-    assert_eq!(html, oracle()["actions_menu"].as_str().unwrap());
-}
-
 #[tokio::test]
 async fn edit_http_uses_markdown_source_and_update_requires_csrf() {
     let (app, _, ids) = fixture().await;
     let mut david = app.david();
     let path = format!("/rooms/{ALL_TALK}/messages/{}", ids[0]);
-    let reply = david.get(&format!("{path}/edit")).await;
-    assert_eq!(reply.status, StatusCode::OK);
-    assert!(reply.text().contains("id=\"message_markdown_source\">\n**Before**\n\n@[David]</textarea>"));
-    assert!(reply.text().contains("name=\"authenticity_token\""));
     let id = ids[0];
     let original = app.db().read(move |conn| Message::find(conn, id)).await.unwrap();
     let reply = david.send(Req::new(Method::PATCH, &format!("{path}.json"))
@@ -198,14 +135,13 @@ async fn updates_match_rails_json_and_saved_rows_including_legacy_conversion() {
                 "body": message.body_html(conn)?.unwrap_or_default(),
                 "plain_text": message.plain_text_body(conn, &*runtime.db.env().rich_text)?,
                 "client_message_id": message.client_message_id,
-                "edited_at": message.edited_at.map(|time| campfire_views::messages::support::json_time(time.jiff())),
+                "edited_at": message.edited_at.map(|time| campfire_presentation::messages::support::json_time(time.jiff())),
                 "reply_to_message_id": message.reply_to_message_id,
                 "reply_notify_author": message.reply_notify_author,
                 "drive_file_ids": message.drive_file_ids(conn)?
             }))
         }).await.unwrap();
         assert_eq!(row, step["row"]);
-        assert_eq!(edit_html(&app, id).await, step["edit_html"].as_str().unwrap());
     }
 }
 
@@ -242,5 +178,3 @@ async fn update_rolls_back_text_and_drive_changes_when_atomic_job_insert_fails()
     assert_eq!(app.db().read(move |conn| Message::find(conn, id)).await.unwrap(), original);
     assert!(app.db().read(move |conn| Message::find(conn, id)?.drive_file_ids(conn)).await.unwrap().is_empty());
 }
-
-use campfire_web::controllers::presenters::{Rendering};

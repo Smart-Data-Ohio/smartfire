@@ -115,7 +115,7 @@ async fn revoked_sessions_immediately_make_a_member_offline() {
 #[tokio::test]
 async fn complete_member_json_matches_rails_for_each_viewer_and_room() {
  let app=setup().await;
- let fixtures:Value=serde_json::from_str(include_str!("../../../../views/tests/golden/rooms/members.json")).unwrap();
+ let fixtures:Value=serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../test-support/legacy-contracts/rooms/members.json"))).unwrap();
  for row in fixtures["rows"].as_array().unwrap() {
   let reply=app.sign_in(row["viewer_id"].as_i64().unwrap()).await.send(request(row["room_id"].as_i64().unwrap())).await;
   assert_eq!(reply.status,StatusCode::OK);

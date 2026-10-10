@@ -32,7 +32,8 @@ async fn classic_page(b: &mut Browser<'_>, method: Method, path: &str, fields: &
 /// A classic page read that must succeed (the credential and grant pages give a legacy bot its
 /// agent).
 async fn classic_read(b: &mut Browser<'_>, path: &str) {
-    let reply = b.classic_page(path).await;
+    let api_path = path.replacen("/account/bots/", "/api/v1/admin/bots/", 1);
+    let reply = b.send(get(&api_path)).await;
     assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
 }
 
