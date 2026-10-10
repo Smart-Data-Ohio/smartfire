@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -23,6 +23,23 @@ import { foreignThreadHref } from "./thread-target.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
 const DELETED = "This thread was deleted.";
+
+/** `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes, as the picker offers them. */
+const AUTO_ARCHIVE_OPTIONS = [
+  { minutes: 60, label: "1 hour" },
+  { minutes: 1440, label: "1 day" },
+  { minutes: 4320, label: "3 days" },
+  { minutes: 10080, label: "1 week" },
+] as const;
+
+const DEFAULT_AUTO_ARCHIVE_MINUTES = 4320;
+
+/** "1 week", for a duration the picker knows. */
+function autoArchiveLabel(minutes: number): string {
+  return (
+    AUTO_ARCHIVE_OPTIONS.find((option) => option.minutes === minutes)?.label ?? `${minutes} minutes`
+  );
+}
 
 /** "thread", or "post" in a board, whose threads are posts. */
 type Noun = "thread" | "post";
@@ -123,15 +140,28 @@ interface ThreadMenuProps {
   readonly permissions: ThreadPermissions | null;
   readonly noun: Noun;
   readonly onRename: () => void;
+  readonly onAutoArchive: () => void;
   readonly onDelete: () => void;
 }
 
 /**
- * Copy link, then what the viewer's permissions allow: rename, close or reopen, lock or unlock,
- * delete, and track as work.
+ * Copy link, then what the viewer's permissions allow: rename, set how long an idle thread stays
+ * open, close or reopen, lock or unlock, delete, and track as work.
  */
-function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }: ThreadMenuProps) {
+function ThreadMenu({
+  roomId,
+  threadId,
+  permissions,
+  noun,
+  onRename,
+  onAutoArchive,
+  onDelete,
+}: ThreadMenuProps) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
+
+  const autoArchive = useStore(
+    (state) => state.threads[threadId]?.autoArchiveAfterMinutes ?? DEFAULT_AUTO_ARCHIVE_MINUTES,
+  );
 
   const update = (body: Parameters<typeof actions.threads.update>[1], failure: string) =>
     void attempt(actions.threads.update(threadId, body), failure);
@@ -175,10 +205,20 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
           Rename {noun}…
         </MenuItem>
       ) : null}
+      {permissions?.canRename === true ? (
+        <MenuItem icon="timer" detail={autoArchiveLabel(autoArchive)} onSelect={onAutoArchive}>
+          Auto-archive after…
+        </MenuItem>
+      ) : null}
       {canClose ? (
         <MenuItem
           icon="archive"
-          onSelect={() => update({ name: null, status: "closed" }, `Couldn't close the ${noun}`)}
+          onSelect={() =>
+            update(
+              { name: null, autoArchiveAfterMinutes: null, status: "closed" },
+              `Couldn't close the ${noun}`,
+            )
+          }
         >
           Close {noun}
         </MenuItem>
@@ -186,7 +226,12 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
       {canReopen ? (
         <MenuItem
           icon="rotate-ccw"
-          onSelect={() => update({ name: null, status: "active" }, `Couldn't reopen the ${noun}`)}
+          onSelect={() =>
+            update(
+              { name: null, autoArchiveAfterMinutes: null, status: "active" },
+              `Couldn't reopen the ${noun}`,
+            )
+          }
         >
           Reopen {noun}
         </MenuItem>
@@ -194,7 +239,12 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
       {canLock ? (
         <MenuItem
           icon="lock"
-          onSelect={() => update({ name: null, status: "locked" }, `Couldn't lock the ${noun}`)}
+          onSelect={() =>
+            update(
+              { name: null, autoArchiveAfterMinutes: null, status: "locked" },
+              `Couldn't lock the ${noun}`,
+            )
+          }
         >
           Lock {noun}
         </MenuItem>
@@ -202,7 +252,12 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
       {canUnlock ? (
         <MenuItem
           icon="lock-open"
-          onSelect={() => update({ name: null, status: "active" }, `Couldn't unlock the ${noun}`)}
+          onSelect={() =>
+            update(
+              { name: null, autoArchiveAfterMinutes: null, status: "active" },
+              `Couldn't unlock the ${noun}`,
+            )
+          }
         >
           Unlock {noun}
         </MenuItem>
@@ -260,17 +315,23 @@ function RenameDialog({
     }
 
     setSaving(true);
-    actions.threads.update(threadId, { name: trimmed, status: null }).then(
-      () => {
-        setSaving(false);
-        onOpenChange(false);
-      },
-      (failure: Error) => {
-        setSaving(false);
-        setError(failure.message);
-        setAttempts((count) => count + 1);
-      },
-    );
+    actions.threads
+      .update(threadId, {
+        name: trimmed,
+        autoArchiveAfterMinutes: null,
+        status: null,
+      })
+      .then(
+        () => {
+          setSaving(false);
+          onOpenChange(false);
+        },
+        (failure: Error) => {
+          setSaving(false);
+          setError(failure.message);
+          setAttempts((count) => count + 1);
+        },
+      );
   };
 
   return (
@@ -311,6 +372,111 @@ function RenameDialog({
   );
 }
 
+/** Sets how long an idle thread stays open before it reads as closed. */
+function AutoArchiveDialog({
+  threadId,
+  open,
+  onOpenChange,
+}: {
+  readonly threadId: number;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+}) {
+  const fieldId = useId();
+
+  const current = useStore(
+    (state) => state.threads[threadId]?.autoArchiveAfterMinutes ?? DEFAULT_AUTO_ARCHIVE_MINUTES,
+  );
+
+  const [minutes, setMinutes] = useState(current);
+  // The duration as this opening found it: someone changing it meanwhile doesn't make it dirty.
+  const [opening, setOpening] = useState(current);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
+
+  if (open !== wasOpen) {
+    setWasOpen(open);
+
+    if (open) {
+      setMinutes(current);
+      setOpening(current);
+      setError(undefined);
+    }
+  }
+
+  const save = () => {
+    setSaving(true);
+    actions.threads
+      .update(threadId, {
+        name: null,
+        autoArchiveAfterMinutes: minutes,
+        status: null,
+      })
+      .then(
+        () => {
+          setSaving(false);
+          onOpenChange(false);
+        },
+        (failure: Error) => {
+          setSaving(false);
+          setError(failure.message);
+        },
+      );
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Auto-archive"
+      size="sm"
+      dirty={minutes !== opening}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={saving} onClick={save}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          save();
+        }}
+      >
+        <div className={`field t-input-wrap${error === undefined ? "" : " is-error"}`}>
+          <label className="field-label" htmlFor={fieldId}>
+            Auto-archive after
+          </label>
+          <select
+            id={fieldId}
+            className={`input t-input${error === undefined ? "" : " is-error"}`}
+            value={minutes}
+            aria-invalid={error === undefined ? undefined : true}
+            aria-describedby={error === undefined ? undefined : `${fieldId}-error`}
+            data-autofocus
+            onChange={(event) => setMinutes(Number(event.target.value))}
+          >
+            {AUTO_ARCHIVE_OPTIONS.map((option) => (
+              <option key={option.minutes} value={option.minutes}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p id={`${fieldId}-error`} className="field-error t-error-msg" aria-live="polite">
+            {error ?? ""}
+          </p>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
 /**
  * A locked thread refuses every reply, moderators' too, so the composer gives way to a disabled
  * bar that says why; whoever may unlock it gets the button right there.
@@ -325,7 +491,11 @@ function LockedComposer({ threadId, noun }: { readonly threadId: number; readonl
   const unlock = () => {
     setBusy(true);
     void attempt(
-      actions.threads.update(threadId, { name: null, status: "active" }),
+      actions.threads.update(threadId, {
+        name: null,
+        autoArchiveAfterMinutes: null,
+        status: "active",
+      }),
       `Couldn't unlock the ${noun}`,
     ).then(() => setBusy(false));
   };
@@ -458,6 +628,7 @@ export function ThreadPane({
 
   const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
   const [renaming, setRenaming] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const noun = useNoun(roomId);
@@ -543,6 +714,7 @@ export function ThreadPane({
               permissions={pane?.permissions ?? null}
               noun={noun}
               onRename={() => setRenaming(true)}
+              onAutoArchive={() => setArchiving(true)}
               onDelete={() => setDeleting(true)}
             />
           </>
@@ -564,6 +736,7 @@ export function ThreadPane({
         intro={noun === "post" ? <PostWork threadId={threadId} /> : undefined}
       />
       <RenameDialog threadId={threadId} noun={noun} open={renaming} onOpenChange={setRenaming} />
+      <AutoArchiveDialog threadId={threadId} open={archiving} onOpenChange={setArchiving} />
       <DeleteDialog
         roomId={roomId}
         threadId={threadId}

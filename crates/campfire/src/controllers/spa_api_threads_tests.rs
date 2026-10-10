@@ -577,6 +577,101 @@ async fn joining_and_leaving_answer() {
     assert_eq!(detail.membership, None);
 }
 
+/// The auto-archive duration is a thread setting: whoever may rename it may set it, only to one
+/// of the durations the model allows, and both topics hear the change.
+#[tokio::test]
+async fn setting_the_auto_archive_duration_answers_and_publishes() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let topics = [format!("room:{DESIGNERS}"), "thread:8".to_string()];
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &topics).await;
+    sync.welcome().await;
+    let path = "/api/v1/threads/8";
+
+    // Kevin is neither a moderator nor the thread's creator.
+    let reply = kevin
+        .write(json_body(
+            Method::PATCH,
+            path,
+            &json!({"autoArchiveAfterMinutes": 1440}),
+        ))
+        .await;
+    assert_eq!(
+        (reply.status, tag(&reply)),
+        (StatusCode::FORBIDDEN, "Forbidden".into()),
+        "{}",
+        reply.text()
+    );
+
+    // A duration the model doesn't allow.
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            path,
+            &json!({"autoArchiveAfterMinutes": 720}),
+        ))
+        .await;
+    assert_eq!(
+        (reply.status, tag(&reply)),
+        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into()),
+        "{}",
+        reply.text()
+    );
+    let envelope: api::ApiErrorResponse = parse(&reply);
+    let api::ApiError::Validation { fields, .. } = envelope.error else {
+        panic!("{envelope:?}")
+    };
+    assert!(fields.contains_key("autoArchiveAfterMinutes"), "{fields:?}");
+
+    // One week, then a day: the duration alone changes, and both topics hear it.
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            path,
+            &json!({"autoArchiveAfterMinutes": 10080}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let detail: api::ThreadDetail = parse(&reply);
+    assert_eq!(
+        (detail.thread.auto_archive_after_minutes, detail.thread.status),
+        (10080, api::ThreadStatus::Active)
+    );
+    let updated = |payload: &api::SyncPayload| matches!(payload, api::SyncPayload::ThreadUpdated(_));
+    let events = gather(
+        &mut sync,
+        &[
+            &on(format!("room:{DESIGNERS}"), updated),
+            &on("thread:8".into(), updated),
+        ],
+    )
+    .await;
+    for event in events {
+        let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(thread.auto_archive_after_minutes, 10080);
+    }
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            path,
+            &json!({"name": "Renamed", "autoArchiveAfterMinutes": 1440}),
+        ))
+        .await;
+    let detail: api::ThreadDetail = parse(&reply);
+    assert_eq!(
+        (
+            detail.thread.name.as_str(),
+            detail.thread.auto_archive_after_minutes
+        ),
+        ("Renamed", 1440)
+    );
+    server.abort();
+}
+
 #[tokio::test]
 async fn changing_and_deleting_threads_answer_and_publish() {
     let Some(a) = app(true).await else { return };

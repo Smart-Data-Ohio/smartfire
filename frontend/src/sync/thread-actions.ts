@@ -228,7 +228,7 @@ export const create = Effect.fn("threads.create")(function* (
   return reply.answer.detail.thread.id;
 });
 
-/** Renames, closes, reopens, locks or unlocks it. */
+/** Renames, sets the auto-archive duration, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
   yield* settledDetail(api.updateThread(threadId, body), (detail, since, read) =>
     mutations.loadThreadDetail(detail, since, read),
