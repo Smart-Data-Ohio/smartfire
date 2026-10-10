@@ -119,8 +119,15 @@ export class ApiClient extends Context.Service<
 
         if (request.auth === true && [400, 401, 403, 404, 422, 429].includes(response.status)) {
           return yield* readSuccess(response, decode).pipe(
+            Effect.tap((body) => {
+              if (response.status !== 401) return Effect.void;
+
+              const next = decodeNavigation(body);
+
+              return Option.isSome(next) ? navigation.assign(next.value.location) : Effect.void;
+            }),
             Effect.catchTag("ServerError", (error) =>
-              [403, 422].includes(response.status)
+              [401, 403, 422].includes(response.status)
                 ? readFailure(response, navigation)
                 : Effect.fail(error),
             ),
@@ -250,6 +257,10 @@ function readSuccess<A>(
 const decodeJsonText = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Json));
 
 const decodeErrorBody = Schema.decodeUnknownEffect(Schema.fromJsonString(ApiErrorResponse));
+
+const decodeNavigation = Schema.decodeUnknownOption(
+  Schema.Struct({ kind: Schema.Literal("navigate"), location: Schema.String }),
+);
 
 /** Turns a non-2xx response into its typed error; 401 also leaves for the sign-in page. */
 function readFailure(

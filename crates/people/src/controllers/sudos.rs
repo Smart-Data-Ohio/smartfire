@@ -10,33 +10,42 @@ use campfire_retained::sudos;
 use jiff::SignedDuration;
 use rusqlite::OptionalExtension;
 
+async fn before_actions(c: &mut Ctx, endpoint: &'static str) -> Result<()> {
+    let mode = if sudo::json_request(c)? {
+        auth::ResponseMode::Json
+    } else {
+        auth::ResponseMode::Html
+    };
+    auth::before_actions(c, endpoint, Before::default(), mode).await
+}
+
 pub async fn new(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    before_actions(c, "sudos#new").await?;
     render_new(c, StatusCode::OK).await
 }
 
 pub async fn new_json(c: &mut Ctx) -> Result {
     c.params.insert("format", Param::Str("json".into()));
     let result = new(c).await;
-    auth::complete(c, result)
+    complete(c, result)
 }
 
 pub async fn create_json(c: &mut Ctx) -> Result {
     c.params.insert("format", Param::Str("json".into()));
     let result = create(c).await;
-    auth::complete(c, result)
+    complete(c, result)
 }
 
 pub async fn google_json(c: &mut Ctx) -> Result {
     c.params.insert("format", Param::Str("json".into()));
     let result = google(c).await;
-    auth::complete(c, result)
+    complete(c, result)
 }
 
 pub async fn continue_json(c: &mut Ctx) -> Result {
     c.params.insert("format", Param::Str("json".into()));
     let result = async {
-        concerns::before_actions(c, Before::default()).await?;
+        before_actions(c, "sudos#continue").await?;
         let now = c.now();
         if !session_keys::sudo_verified(c.session(), now) {
             return render_new(c, StatusCode::FORBIDDEN).await;
@@ -44,7 +53,37 @@ pub async fn continue_json(c: &mut Ctx) -> Result {
         confirmed_json(c)
     }
     .await;
-    auth::complete(c, result)
+    complete(c, result)
+}
+
+fn complete(c: &mut Ctx, result: Result) -> Result {
+    match result {
+        Err(Error::Halt(response)) => {
+            if let Some(location) = response.get_header("location") {
+                return auth::json(
+                    c,
+                    StatusCode::OK,
+                    &SudoResponse::Navigate {
+                        location: location.into(),
+                    },
+                );
+            }
+            if matches!(response.body, campfire_kit::response::Body::Empty) {
+                let body = if response.status == StatusCode::UNAUTHORIZED {
+                    SudoResponse::Navigate {
+                        location: c.url_for(&campfire_routes::new_session()),
+                    }
+                } else {
+                    SudoResponse::Error {
+                        message: "This request is not allowed.".into(),
+                    }
+                };
+                return auth::json(c, response.status, &body);
+            }
+            Ok(*response)
+        }
+        result => result,
+    }
 }
 
 fn confirmed_json(c: &mut Ctx) -> Result {
@@ -53,23 +92,27 @@ fn confirmed_json(c: &mut Ctx) -> Result {
     auth::json(c, StatusCode::OK, &SudoResponse::Confirmed { retry })
 }
 
-pub fn google_return_path(c: &mut Ctx) -> Option<&'static str> {
-    c.session()
-        .get(session_keys::SUDO_PENDING_KEY)
-        .and_then(|pending| pending.get("google_json"))
-        .and_then(serde_json::Value::as_bool)
-        .filter(|json| *json)
-        .map(|_| "/app/sudo/continue")
+#[derive(Clone)]
+struct GoogleJson;
+
+/// Keep the consumed OAuth flow's response mode for the shared confirmation operation.
+pub fn restore_google_response_mode(c: &mut Ctx, flow: &serde_json::Value) {
+    if flow["purpose"] == "sudo" && flow["google_json"] == true {
+        c.set_current(GoogleJson);
+    }
+}
+
+pub fn google_return_path(c: &Ctx) -> Option<&'static str> {
+    c.current::<GoogleJson>().map(|_| "/app/sudo/continue")
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    before_actions(c, "sudos#create").await?;
     rate_limit(c).await?;
     if sudo::json_request(c)? {
-        let bytes = c.read_body(16 * 1024).await;
-        let input = match serde_json::from_slice::<SudoSubmission>(&bytes) {
+        let input = match auth::body::<SudoSubmission>(c).await {
             Ok(input) => input,
-            Err(_) => {
+            Err(Error::Halt(_)) => {
                 return reject(
                     c,
                     StatusCode::UNPROCESSABLE_ENTITY,
@@ -77,6 +120,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 )
                 .await;
             }
+            Err(error) => return Err(error),
         };
         let (verifier, key, value) = match input {
             SudoSubmission::Password { password } => ("password", "password", password),
@@ -169,29 +213,22 @@ pub async fn create(c: &mut Ctx) -> Result {
 }
 
 pub async fn google(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    before_actions(c, "sudos#google").await?;
     rate_limit(c).await?;
     let json_mode = sudo::json_request(c)?;
-    if !json_mode
-        && let Some(mut pending) = c.session().get(session_keys::SUDO_PENDING_KEY).cloned()
-    {
-        if let Some(pending) = pending.as_object_mut() {
-            pending.remove("google_json");
-        }
-        c.session().insert(session_keys::SUDO_PENDING_KEY, pending);
-    }
     let user_id = require_current_user(c)?.id;
     if let Some(google) = c.app().sudo.google()
         && linked_subject(c, user_id).await?.is_some()
     {
-        if !json_mode {
-            return google.start(c, user_id);
-        }
-        let mut pending = c.session().get(session_keys::SUDO_PENDING_KEY).cloned()
-            .unwrap_or_else(|| serde_json::json!({"method":"GET","path":"/app/","params":null,"origin":"/app/"}));
-        pending["google_json"] = serde_json::Value::Bool(true);
-        c.session().insert(session_keys::SUDO_PENDING_KEY, pending);
         let response = google.start(c, user_id)?;
+        if !json_mode {
+            return Ok(response);
+        }
+        let key = crate::integrations::google::sign_in::FLOW_SESSION_KEY;
+        if let Some(mut flow) = c.session().get(key).cloned() {
+            flow["google_json"] = serde_json::Value::Bool(true);
+            c.session().insert(key, flow);
+        }
         let location = response
             .get_header("location")
             .expect("Google authorization redirect")

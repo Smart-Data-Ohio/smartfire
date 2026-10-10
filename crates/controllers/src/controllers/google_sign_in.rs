@@ -96,6 +96,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
         .session()
         .remove(sign_in::FLOW_SESSION_KEY)
         .unwrap_or(Value::Null);
+    super::sudos::restore_google_response_mode(c, &flow);
     let valid = sign_in::valid_flow(&flow, &scalar(c, "state"), &c.app().secrets, c.now());
     let purpose = flow.get("purpose").and_then(Value::as_str).unwrap_or("");
     if valid && matches!(purpose, "link" | "reauth" | "sudo") {

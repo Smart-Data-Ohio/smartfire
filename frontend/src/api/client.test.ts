@@ -134,6 +134,25 @@ afterEach(() => {
 });
 
 describe("sudo HTTP statuses", () => {
+  it.effect("requires sign-in for a sudo 401 that cannot decode", () => {
+    const { layer, navigations } = harness(() => json(401, { kind: "error", fieldErrors: {} }));
+
+    return Effect.gen(function* () {
+      expect((yield* resumeSudo().pipe(Effect.flip))._tag).toBe("Unauthorized");
+      expect(navigations).toEqual(["/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("navigates to sign-in when a sudo before-action refuses the session", () => {
+    const next = { kind: "navigate", location: "http://campfire.test/session/new" };
+    const { layer, navigations } = harness(() => json(401, next));
+
+    return Effect.gen(function* () {
+      expect(yield* resumeSudo()).toEqual(next);
+      expect(navigations).toEqual(["http://campfire.test/session/new"]);
+    }).pipe(Effect.provide(layer));
+  });
+
   it.effect("decodes credential failures and expiry without leaving the SPA", () => {
     setCsrfMeta("held-token");
 

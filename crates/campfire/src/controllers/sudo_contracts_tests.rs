@@ -39,6 +39,133 @@ async fn facts(app: &TestApp) -> Value {
 }
 
 #[tokio::test]
+async fn sudo_review_body_token_matches_retained_confirmation() {
+    let mut outcomes = Vec::new();
+    for json_mode in [false, true] {
+        let app = TestApp::boot_frozen().await.unwrap();
+        let mut browser = app.sign_in(DAVID).await;
+        let token = browser.authenticity_token().await;
+        let before = facts(&app).await;
+        let req = if json_mode {
+            request(
+                Method::POST,
+                "/api/v1/sudo",
+                json!({"kind":"password","password":"secret123456","authenticity_token":token}),
+            )
+        } else {
+            Req::new(Method::POST, "/sudo")
+                .form(&[("password", "secret123456"), ("authenticity_token", &token)])
+        };
+        for origin in ["https://attacker.test", "null"] {
+            let reply = browser.send(req.clone().header("origin", origin)).await;
+            assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+            assert_eq!(facts(&app).await, before);
+        }
+        let reply = browser.send(req).await;
+        assert_eq!(
+            reply.status,
+            if json_mode {
+                StatusCode::OK
+            } else {
+                StatusCode::FOUND
+            },
+            "{}",
+            reply.text()
+        );
+        outcomes.push((
+            session(&app, &browser)["sudo_verified_at"].clone(),
+            facts(&app).await,
+        ));
+    }
+    assert_eq!(outcomes[0], outcomes[1]);
+}
+
+#[tokio::test]
+async fn sudo_review_before_action_refusals_decode_and_require_sign_in() {
+    for (method, path) in [
+        (Method::GET, "/api/v1/sudo"),
+        (Method::POST, "/api/v1/sudo"),
+        (Method::POST, "/api/v1/sudo/google"),
+        (Method::GET, "/api/v1/sudo/continue"),
+    ] {
+        let mut observed = Vec::new();
+        for json_mode in [false, true] {
+            let app = TestApp::boot_frozen().await.unwrap();
+            let mut browser = app.sign_in(DAVID).await;
+            browser.authenticity_token().await;
+            let sessions_before = app
+                .db()
+                .read(|conn| {
+                    Ok(conn.query_row(
+                        "SELECT count(*) FROM sessions WHERE user_id=?",
+                        [DAVID],
+                        |r| r.get::<_, i64>(0),
+                    )?)
+                })
+                .await
+                .unwrap();
+            app.db()
+                .write(|tx| {
+                    tx.conn().execute(
+                        "UPDATE sessions SET two_factor_verified_at=NULL WHERE user_id=?",
+                        [DAVID],
+                    )?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            let req = if json_mode {
+                request(
+                    method.clone(),
+                    path,
+                    json!({"kind":"password","password":"secret123456"}),
+                )
+            } else {
+                Req::new(
+                    method.clone(),
+                    if method == Method::GET {
+                        "/sudo/new"
+                    } else if path.ends_with("google") {
+                        "/sudo/google"
+                    } else {
+                        "/sudo"
+                    },
+                )
+                .form(&[("password", "secret123456")])
+            };
+            let reply = browser.write(req).await;
+            let location = if json_mode {
+                assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
+                assert_eq!(reply.header("cache-control"), Some("no-store"));
+                let body: campfire_api_types::SudoResponse =
+                    serde_json::from_slice(&reply.body).expect("sudo callback contract");
+                let campfire_api_types::SudoResponse::Navigate { location } = body else {
+                    panic!("sign-in navigation required")
+                };
+                location
+            } else {
+                assert_eq!(reply.status, StatusCode::FOUND);
+                reply.location().unwrap().to_owned()
+            };
+            assert_eq!(location, "http://campfire.test/session/new");
+            assert_eq!(
+                app.db()
+                    .read(|conn| Ok(conn.query_row(
+                        "SELECT count(*) FROM sessions WHERE user_id=?",
+                        [DAVID],
+                        |r| r.get::<_, i64>(0)
+                    )?))
+                    .await
+                    .unwrap(),
+                sessions_before - 1
+            );
+            observed.push(facts(&app).await);
+        }
+        assert_eq!(observed[0], observed[1], "{method} {path}");
+    }
+}
+
+#[tokio::test]
 async fn sudo_contract_password_and_totp_share_timestamps_audits_and_lockout() {
     for method in ["password", "totp"] {
         let mut observed = Vec::new();

@@ -164,6 +164,69 @@ async fn sessions(a: &TestApp) -> i64 {
 }
 
 #[tokio::test]
+async fn sudo_review_google_flow_survives_a_second_gated_request() {
+    for second_json in [false, true] {
+        let (a, r) = app().await;
+        a.db().write(|tx| {
+            tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        let mut b = a.sign_in(DAVID).await;
+        b.write(
+            Req::new(Method::POST, "/api/v1/admin/workspace/join_code")
+                .header("accept", "application/json"),
+        )
+        .await;
+        let started = b
+            .write(
+                Req::new(Method::POST, "/api/v1/sudo/google").header("accept", "application/json"),
+            )
+            .await;
+        assert_eq!(started.status, StatusCode::OK);
+        let q = url::Url::parse(started.json()["location"].as_str().unwrap())
+            .unwrap()
+            .query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect::<std::collections::BTreeMap<_, _>>();
+        let path = if second_json {
+            "/api/v1/admin/custom_styles"
+        } else {
+            "/account/custom_styles"
+        };
+        let mut req = Req::new(Method::PATCH, path)
+            .header("referer", "http://campfire.test/app/admin")
+            .form(&[("account[custom_styles]", "body{}")]);
+        if second_json {
+            req = req.header("accept", "application/json");
+        }
+        let gated = b.write(req).await;
+        assert_eq!(
+            gated.status,
+            if second_json {
+                StatusCode::FORBIDDEN
+            } else {
+                StatusCode::FOUND
+            }
+        );
+        answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+        let reply = callback(&mut b, &q["state"]).await;
+        assert_eq!(
+            reply.location(),
+            Some("http://campfire.test/app/sudo/continue")
+        );
+        assert_eq!(
+            b.get("/api/v1/sudo/continue").await.json(),
+            json!({"kind":"confirmed","retry":{"method":"PATCH","path":path,"returnTo":"/app/admin"}})
+        );
+        assert_eq!(
+            b.get("/api/v1/sudo/continue").await.json(),
+            json!({"kind":"confirmed","retry":null})
+        );
+        assert_eq!(actions(&a).await, vec!["sudo.confirm.success"]);
+    }
+}
+
+#[tokio::test]
 async fn sudo_contract_google_round_trip_resumes_json_once_with_identical_audit() {
     let mut outcomes = Vec::new();
     for json_mode in [false, true] {
