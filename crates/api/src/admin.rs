@@ -15,20 +15,21 @@ use axum::routing::{delete, get, patch, post, put};
 use campfire_api_types as api;
 use campfire_app::account_security;
 use campfire_app::app::AppCtx;
+use campfire_db::models::account::{validate_description, validate_vanity_slug};
 use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::models::google_identity::GoogleIdentity;
 use campfire_db::models::workspace_icon::{NewIcon, WorkspaceIcon};
 use campfire_db::{Account, Role, User};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
-use campfire_runtime::presenters::accounts::audit_logs;
 use campfire_people::controllers::accounts::icons::{image_facts, save_image};
-use campfire_storage::branding::{self, Kind, Prepared};
 use campfire_presentation::time::Zone;
 use campfire_runtime::concerns::{self, Authentication, Before, session_keys};
-use campfire_runtime::presenters::attachments::{self, Assignment, Record};
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::accounts::audit_logs;
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
 use campfire_runtime::presenters::pagination::Page;
 use campfire_runtime::presenters::{self, accounts as account_presenters};
+use campfire_storage::branding::{self, Kind, Prepared};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -300,6 +301,9 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
             .restrict_room_creation_to_administrators(),
         upload_limit_bytes: account.settings().upload_limit_bytes(),
         version: c.app().config.app_version.clone(),
+        description: account.settings().description().to_string(),
+        vanity_slug: account.settings().vanity_slug().map(str::to_string),
+        vanity_url: account.settings().vanity_slug().map(|slug| c.url_for(&campfire_routes::join(slug))),
     };
     c.json(StatusCode::OK, &workspace)
 }
@@ -315,6 +319,20 @@ async fn save_workspace(c: &mut Ctx) -> Result {
             validation("uploadLimitBytes", "must be a positive safe integer"),
         ));
     }
+    let description = update
+        .description
+        .as_deref()
+        .map(validate_description)
+        .transpose()
+        .map_err(|error| fail(c, validation("description", &error.to_string())))?
+        .map(str::to_string);
+    let vanity_slug = update
+        .vanity_slug
+        .as_deref()
+        .map(validate_vanity_slug)
+        .transpose()
+        .map_err(|error| fail(c, validation("vanitySlug", &error.to_string())))?
+        .map(str::to_string);
     let mut settings = update
         .restrict_room_creation_to_administrators
         .map(|restrict| {
@@ -327,6 +345,13 @@ async fn save_workspace(c: &mut Ctx) -> Result {
         settings
             .get_or_insert_with(Vec::new)
             .push(("upload_limit_bytes".into(), bytes.to_string()));
+    }
+    for (key, value) in [("description", description), ("vanity_slug", vanity_slug)] {
+        if let Some(value) = value {
+            settings
+                .get_or_insert_with(Vec::new)
+                .push((key.into(), value));
+        }
     }
     write_workspace(
         c,

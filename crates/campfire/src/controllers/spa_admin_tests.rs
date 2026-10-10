@@ -1370,3 +1370,182 @@ async fn integrations_health_reads_for_administrators() {
     assert!(health.github.connected >= 0);
     assert!(health.agent_delivery.pending >= 0);
 }
+
+#[tokio::test]
+async fn server_identity_saves_for_admins_and_members_can_only_read_it() {
+    let a = app().await.expect("seed required");
+    let mut david = a.david();
+    let reply = write(
+        &mut david,
+        Method::PATCH,
+        "/api/v1/admin/workspace",
+        json!({"description": "  A place for R&D.  ", "vanitySlug": "smart-data"}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let saved: Value = parse(&reply);
+    assert_eq!(saved["description"], "A place for R&D.");
+    assert_eq!(saved["vanitySlug"], "smart-data");
+    assert_eq!(saved["vanityUrl"], "http://campfire.test/join/smart-data");
+    let mut kevin = a.sign_in(KEVIN).await;
+    let read: Value = parse(&kevin.send(get("/api/v1/admin/workspace")).await);
+    assert_eq!(read["description"], saved["description"]);
+    for body in [
+        json!({"description": "Mine"}),
+        json!({"vanitySlug": "mine"}),
+    ] {
+        assert_eq!(
+            write(&mut kevin, Method::PATCH, "/api/v1/admin/workspace", body)
+                .await
+                .status,
+            StatusCode::FORBIDDEN
+        );
+    }
+    let persisted: Value = parse(&david.send(get("/api/v1/admin/workspace")).await);
+    assert_eq!(persisted, saved);
+}
+
+#[tokio::test]
+async fn server_identity_invalid_fields_return_clear_422_without_partial_writes() {
+    let a = app().await.expect("seed required");
+    let mut david = a.david();
+    let before: Value = parse(&david.send(get("/api/v1/admin/workspace")).await);
+    for (field, value) in [
+        ("description", "x".repeat(301)),
+        ("description", "<b>About</b>".into()),
+        ("vanitySlug", "app".into()),
+        ("vanitySlug", "ab".into()),
+        ("vanitySlug", "a".repeat(33)),
+        ("vanitySlug", "A_B".into()),
+        ("vanitySlug", "-abc".into()),
+        ("vanitySlug", "abc-".into()),
+    ] {
+        let reply = write(
+            &mut david,
+            Method::PATCH,
+            "/api/v1/admin/workspace",
+            json!({"name": "Must not save", field: value}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{field}: {}",
+            reply.text()
+        );
+        let err = error(&reply);
+        assert_eq!(err["_tag"], "Validation");
+        assert!(!err["fields"][field][0].as_str().unwrap().is_empty());
+        assert_eq!(
+            parse::<Value>(&david.send(get("/api/v1/admin/workspace")).await),
+            before
+        );
+    }
+}
+
+#[tokio::test]
+async fn server_vanity_join_enrols_and_survives_code_reset_until_cleared() {
+    let a = app().await.expect("seed required");
+    a.db()
+        .write(|tx| {
+            let mut account = campfire_db::Account::first(tx.conn())?.unwrap();
+            account.update(
+                tx,
+                None,
+                None,
+                Some(&[
+                    ("vanity_slug", "smart-data"),
+                    ("description", "A place for R&D."),
+                ]),
+            )
+        })
+        .await
+        .unwrap();
+    let page = a.anonymous().get("/join/smart-data").await;
+    assert_eq!(page.status, StatusCode::OK);
+    assert!(page.text().contains("A place for R&amp;D."));
+    let old_code = a
+        .db()
+        .read(|c| Ok(campfire_db::Account::first(c)?.unwrap().join_code))
+        .await
+        .unwrap();
+    assert!(
+        page.text()
+            .contains(&format!("action=\"/join/{old_code}\""))
+    );
+    a.db()
+        .write(|tx| {
+            campfire_db::Account::first(tx.conn())?
+                .unwrap()
+                .reset_join_code(tx)
+        })
+        .await
+        .unwrap();
+    let page = a.anonymous().get("/join/smart-data").await;
+    assert_eq!(page.status, StatusCode::OK);
+    assert!(
+        !page
+            .text()
+            .contains(&format!("action=\"/join/{old_code}\""))
+    );
+    assert_eq!(
+        a.anonymous().get(&format!("/join/{old_code}")).await.status,
+        StatusCode::NOT_FOUND
+    );
+    let count = a.db().read(campfire_db::User::count).await.unwrap();
+    let mut browser = a.anonymous();
+    browser.get("/join/smart-data").await;
+    let joined = browser
+        .write(Req::new(Method::POST, "/join/smart-data").form(&[
+            ("user[name]", "Vanity Member"),
+            ("user[email_address]", "vanity@example.test"),
+            ("user[password]", PASSWORD),
+            ("user[role]", "administrator"),
+        ]))
+        .await;
+    assert_eq!(joined.status, StatusCode::FOUND, "{}", joined.text());
+    assert!(browser.cookie_header().contains("session_token="));
+    a.db()
+        .read(move |c| {
+            assert_eq!(campfire_db::User::count(c)?, count + 1);
+            let user_id: i64 = c.query_row(
+                "SELECT id FROM users WHERE email_address = 'vanity@example.test'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(
+                campfire_db::User::find(c, user_id)?.role,
+                campfire_db::Role::Member
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = a.david();
+    let cleared = write(
+        &mut david,
+        Method::PATCH,
+        "/api/v1/admin/workspace",
+        json!({"vanitySlug": "", "description": ""}),
+    )
+    .await;
+    assert_eq!(cleared.status, StatusCode::OK);
+    let saved: Value = parse(&cleared);
+    assert_eq!(saved["vanitySlug"], Value::Null);
+    assert_eq!(saved["vanityUrl"], Value::Null);
+    assert_eq!(saved["description"], "");
+    assert_eq!(
+        a.anonymous().get("/join/smart-data").await.status,
+        StatusCode::NOT_FOUND
+    );
+    let mut anonymous = a.anonymous();
+    assert_eq!(
+        anonymous
+            .write(
+                Req::new(Method::POST, "/join/smart-data").form(&[("user[name]", "Must not join")])
+            )
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+}

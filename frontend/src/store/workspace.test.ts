@@ -48,6 +48,9 @@ function workspace(extra: Partial<Workspace> = {}): Workspace {
     restrictRoomCreationToAdministrators: false,
     uploadLimitBytes: 100 * 1024 * 1024,
     version: "2.0.0",
+    description: "",
+    vanitySlug: null,
+    vanityUrl: null,
     ...extra,
   };
 }

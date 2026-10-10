@@ -181,3 +181,91 @@ impl Account {
         *self = t.read(|c| Account::find(c, id));
     }
 }
+
+#[test]
+fn server_description_round_trips_trimmed_plain_text() {
+    let t = TestDb::new();
+    let mut account = signal(&t);
+    t.write(move |tx| {
+        account.update(
+            tx,
+            None,
+            None,
+            Some(&[
+                ("description", "  A place for R&D.  "),
+                ("upload_limit_bytes", "131072000"),
+            ]),
+        )
+    });
+    let account = signal(&t);
+    assert_eq!(
+        account.settings().get("description"),
+        Some(&serde_json::json!("A place for R&D."))
+    );
+    assert_eq!(account.settings().upload_limit_bytes(), 131_072_000);
+    let mut settings = account.settings();
+    assert!(
+        settings
+            .assign(&[("description", &"é".repeat(300))])
+            .is_ok()
+    );
+    for invalid in ["x".repeat(301), "<b>About</b>".into(), "bad\0text".into()] {
+        assert!(
+            settings.assign(&[("description", &invalid)]).is_err(),
+            "{invalid:?}"
+        );
+    }
+    settings.assign(&[("description", "  ")]).unwrap();
+    assert_eq!(settings.get("description"), Some(&serde_json::json!("")));
+}
+
+#[test]
+fn server_vanity_slug_validates_and_round_trips_without_losing_settings() {
+    let t = TestDb::new();
+    let mut account = signal(&t);
+    t.write(move |tx| {
+        account.update(
+            tx,
+            None,
+            None,
+            Some(&[
+                ("vanity_slug", "smart-data"),
+                ("description", "Our workspace"),
+            ]),
+        )
+    });
+    let account = signal(&t);
+    assert_eq!(
+        account.settings().get("vanity_slug"),
+        Some(&serde_json::json!("smart-data"))
+    );
+    assert_eq!(
+        account.settings().get("description"),
+        Some(&serde_json::json!("Our workspace"))
+    );
+    let mut settings = account.settings();
+    for invalid in [
+        "ab", "-abc", "abc-", "ABC", "a_b", "a/b", "a b", "café", "app", "api", "rooms", "users",
+        "session", "join", "assets", "admin", "settings", "privacy", "terms",
+    ] {
+        assert!(
+            settings.assign(&[("vanity_slug", invalid)]).is_err(),
+            "{invalid}"
+        );
+    }
+    assert!(
+        settings
+            .assign(&[("vanity_slug", &"a".repeat(33))])
+            .is_err()
+    );
+    for valid in [
+        "abc".to_string(),
+        "a".repeat(32),
+        "a--b".into(),
+        "123".into(),
+        "".into(),
+    ] {
+        settings.assign(&[("vanity_slug", &valid)]).unwrap();
+        assert_eq!(settings.get("vanity_slug"), Some(&serde_json::json!(valid)));
+    }
+}
