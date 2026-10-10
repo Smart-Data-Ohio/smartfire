@@ -944,6 +944,11 @@ pub async fn create_direct_upload(
     content_type: Option<String>,
     mut metadata: Json,
 ) -> Result<DirectUpload> {
+    let uploader_id = match crate::concerns::current_user(c) {
+        Some(user) => user.id,
+        None => find_session_by_cookie(c).await?
+            .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?.user_id,
+    };
     let limit = upload_limit_bytes(c.app()).await?;
     if byte_size > limit {
         return halt(upload_limit_response(c, limit)?);
@@ -951,6 +956,7 @@ pub async fn create_direct_upload(
     if let Json::Object(entries) = &mut metadata {
         entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
     }
+    metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
     let now = c.now();
     let new_blob = campfire_storage::NewBlob {

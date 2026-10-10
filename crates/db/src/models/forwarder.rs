@@ -218,21 +218,26 @@ fn build_forward(
 ) -> Result<NewMessage> {
     let body = snapshot_body(tx.conn(), source)?;
     let body = tx.rich_text().try_canonicalize_html(tx.conn(), &body).map_err(Error::Other)?;
-    let attachment_blob_id = match source.attachment(tx.conn())? {
-        Some((_, blob)) => {
-            let copy = copier.copy(tx, &blob)?;
-            let id = copy.id;
-            copied.push(copy);
-            Some(id)
+    let mut attachment_blob_id = None;
+    let mut attachment_blob_ids = Vec::new();
+    let files = source.attachments(tx.conn())?;
+    let grouped = files.iter().any(|(attachment, _)| attachment.name == "attachments");
+    for (_, blob) in files {
+        let copy = copier.copy(tx, &blob)?;
+        if !grouped {
+            attachment_blob_id = Some(copy.id);
+        } else {
+            attachment_blob_ids.push(copy.id);
         }
-        None => None,
-    };
+        copied.push(copy);
+    }
     Ok(NewMessage {
         room_id: room.id,
         creator_id,
         client_message_id: Some(client_id),
         body: Some(body),
         attachment_blob_id,
+        attachment_blob_ids,
         forwarded_from_message_id: Some(source.id),
         forwarded_at: Some(tx.now()),
         forwarded_markdown: source.markdown() || source.forwarded_markdown,

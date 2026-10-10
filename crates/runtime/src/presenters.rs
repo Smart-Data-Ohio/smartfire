@@ -946,10 +946,14 @@ impl<'a> Presenter<'a> {
                 .map_err(storage_error)?
         };
         let Some(blob) = blob else { return Ok(None) };
+        self.attachment_blob(message, &blob).map(Some)
+    }
+
+    pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
         let verifier = &*self.storage.verifier;
         let preview = if blob.is_previewable() || blob.is_variable() {
             if blob.is_video() {
-                self.recover_attachment_preview(message, &blob)?;
+                self.recover_attachment_preview(message, blob)?;
                 // `attachment.preview(format: :webp, resize_to_limit: [...])`
                 let poster = Variation::new(vec![
                     (
@@ -965,31 +969,31 @@ impl<'a> Presenter<'a> {
                     ),
                 ]);
                 AttachmentPreview::Video {
-                    poster_url: self.preview_attached(&blob)?.then(|| campfire_storage::paths::representation_redirect_path(
-                        verifier, &blob, &poster,
+                    poster_url: self.preview_attached(blob)?.then(|| campfire_storage::paths::representation_redirect_path(
+                        verifier, blob, &poster,
                     )),
                 }
             } else {
                 AttachmentPreview::Image {
-                    thumb_url: self.thumb_path(&blob)?,
+                    thumb_url: self.thumb_path(blob)?,
                 }
             }
         } else {
             AttachmentPreview::File
         };
-        Ok(Some(AttachmentView {
+        Ok(AttachmentView {
             filename: blob.filename.to_string(),
             filename_base: blob.filename.base().to_string(),
-            blob_path: campfire_storage::paths::blob_redirect_path(verifier, &blob, None),
+            blob_path: campfire_storage::paths::blob_redirect_path(verifier, blob, None),
             download_path: campfire_storage::paths::blob_redirect_path(
                 verifier,
-                &blob,
+                blob,
                 Some("attachment"),
             ),
             preview,
-            width: dimension(&blob, "width"),
-            height: dimension(&blob, "height"),
-        }))
+            width: dimension(blob, "width"),
+            height: dimension(blob, "height"),
+        })
     }
 
     pub fn preview_attached(&self, blob: &campfire_storage::Blob) -> Result<bool> {

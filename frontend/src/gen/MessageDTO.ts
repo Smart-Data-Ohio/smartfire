@@ -79,6 +79,12 @@ forwardNote: string | null, editedAt: string | null,
  */
 attachment: Attachment | null,
 /**
+ * Files from the `attachments` slot, plus any legacy `attachment`, in attachment-id
+ * order. Omitted for legacy single-file messages to preserve their JSON shape.
+ * `attachment` remains the first file for clients that don't read this list yet.
+ */
+attachments?: Array<Attachment>,
+/**
  * Emoji and icon reactions grouped by content, in order of first reaction
  * (`boosts ORDER BY created_at`). Empty when there are none.
  */
