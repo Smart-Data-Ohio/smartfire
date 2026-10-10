@@ -1161,25 +1161,67 @@ async fn fragment_aliases_keep_old_urls_for_frames_and_fetches() {
 }
 
 
-/// The router takes a `.html` suffix for the page itself (`/rooms/7.html` is `/rooms/7`), so the
-/// suffix is an alias too. Other formats keep their classic answer.
 #[tokio::test]
-async fn an_html_suffix_is_the_same_classic_alias() {
-    let Some(a) = enabled().await else { return };
+async fn html_suffixes_and_trailing_slashes_resolve_the_same_navigation_alias() {
+    let a = enabled().await.expect("seed required");
     let room = WATERCOOLER;
     let mut b = a.sign_in(DAVID).await;
+    let mut failures = Vec::new();
     for (classic, spa) in [
-        (format!("/rooms/{room}.html"), format!("/app/r/{room}")),
-        (format!("/rooms/{room}.html?thread={LAUNCH_THREAD}&x=1"), format!("/app/r/{room}?thread={LAUNCH_THREAD}&x=1")),
-        ("/users/me/profile.html".into(), "/app/settings".into()),
-        (format!("/users/{JASON}.html"), format!("/app/people/{JASON}")),
-        ("/searches.html?q=fire".into(), "/app/search?q=fire".into()),
-        ("/rooms/directs/new.html".into(), "/app/rooms/new/direct".into()),
-        (format!("/rooms/{room}/threads.html"), format!("/app/r/{room}/threads")),
+        (format!("/rooms/{room}"), format!("/app/r/{room}")),
+        (
+            format!("/rooms/{room}?thread={LAUNCH_THREAD}&x=1"),
+            format!("/app/r/{room}?thread={LAUNCH_THREAD}&x=1"),
+        ),
+        ("/users/me/profile".into(), "/app/settings".into()),
+        (format!("/users/{DAVID}/profile"), "/app/settings".into()),
+        (format!("/users/{JASON}"), format!("/app/people/{JASON}")),
+        ("/searches?q=fire".into(), "/app/search?q=fire".into()),
+        ("/rooms/directs/new".into(), "/app/rooms/new/direct".into()),
+        (
+            format!("/rooms/{room}/threads"),
+            format!("/app/r/{room}/threads"),
+        ),
+        (
+            format!("/rooms/{room}/files"),
+            format!("/app/r/{room}/files"),
+        ),
+        (
+            "/account/users?page=2".into(),
+            "/app/admin/people?page=2".into(),
+        ),
     ] {
-        let reply = b.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
-        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+        let (path, query) = classic.split_once('?').unwrap_or((&classic, ""));
+        for suffix in ["", ".html", ".xhtml"] {
+            for slash in ["", "/", "//"] {
+                let path = format!(
+                    "{path}{suffix}{slash}{}",
+                    if query.is_empty() {
+                        String::new()
+                    } else {
+                        format!("?{query}")
+                    }
+                );
+                let reply = b.get(&path).await;
+                if reply.status != StatusCode::FOUND || reply.location() != Some(to(&spa).as_str())
+                {
+                    failures.push(format!(
+                        "{path}: {:?} {:?}, expected 302 {spa}",
+                        reply.status,
+                        reply.location()
+                    ));
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    for path in ["/", "//", "///"] {
+        let reply = b.get(path).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{path}");
+        assert_eq!(reply.location(), Some(to("/app/").as_str()), "{path}");
+    }
+    for path in ["/.html", "/.html/", "/.xhtml", "/.xhtml/"] {
+        assert_eq!(b.get(path).await.status, StatusCode::NOT_FOUND, "{path}");
     }
     for other in [
         format!("/rooms/{room}.json"),
@@ -1187,7 +1229,11 @@ async fn an_html_suffix_is_the_same_classic_alias() {
         "/searches.json?q=fire".to_string(),
     ] {
         let reply = b.get(&other).await;
-        assert!(!redirected_to_spa(&reply), "{other}: {:?}", reply.location());
+        assert!(
+            !redirected_to_spa(&reply),
+            "{other}: {:?}",
+            reply.location()
+        );
     }
 }
 

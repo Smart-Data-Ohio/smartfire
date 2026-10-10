@@ -312,7 +312,8 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
 pub async fn alias_location(c:&Ctx)->Result<Option<String>> {
     let Some(endpoint)=c.current::<MatchedRoute>().map(|route|route.endpoint) else {return Ok(None)};
     let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
-    let screen_path = screen_path(c.request.path());
+    let path = crate::navigation::normalize_path(c.request.path());
+    let screen_path = screen_path(&path);
     let location = if endpoint == "rooms#show" {
         let confirmed = confirmed_room_query(c, screen_path, query).await?;
         campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
@@ -322,11 +323,11 @@ pub async fn alias_location(c:&Ctx)->Result<Option<String>> {
     Ok(location)
 }
 
-/// `path` as the screen map spells it: the router takes `/rooms/7.html` for `/rooms/7` (the
-/// `(.:format)` suffix), so a `.html` suffix is dropped. Other suffixes (`.json`) stay, so they
-/// match no screen, and the format check would refuse them anyway.
+/// Drop the recognized HTML suffixes from the normalized route path for the screen map.
 fn screen_path(path: &str) -> &str {
-    path.strip_suffix(".html").unwrap_or(path)
+    path.strip_suffix(".html")
+        .or_else(|| path.strip_suffix(".xhtml"))
+        .unwrap_or(path)
 }
 
 /// A notice or alert a classic action left for this page (`redirect_to ..., notice:`) carries on

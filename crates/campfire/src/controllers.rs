@@ -674,24 +674,7 @@ fn install_path_params(c: &mut Ctx, path_params: ParamMap) {
     c.path_params = path_params;
 }
 
-/// `Journey::Router::Utils.normalize_path`: one leading slash, repeated slashes squeezed,
-/// trailing slashes dropped, percent-escapes upcased.
-pub fn normalize_path(path: &str) -> String {
-    let mut normalized = String::with_capacity(path.len() + 1);
-    for c in format!("/{path}").chars() {
-        if c == '/' && normalized.ends_with('/') {
-            continue;
-        }
-        normalized.push(c);
-    }
-    while normalized.len() > 1 && normalized.ends_with('/') {
-        normalized.pop();
-    }
-    static ESCAPE: LazyLock<Regex> = LazyLock::new(|| Regex::new("%[a-fA-F0-9]{2}").unwrap());
-    ESCAPE
-        .replace_all(&normalized, |m: &regex::Captures| m[0].to_uppercase())
-        .into_owned()
-}
+pub use campfire_runtime::navigation::normalize_path;
 
 /// `Journey::Router::Utils.unescape_uri`, then Rails' check that the parameter is valid UTF-8
 /// (`ActionController::BadRequest` otherwise).

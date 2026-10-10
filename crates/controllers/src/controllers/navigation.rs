@@ -4,7 +4,7 @@ use crate::concerns::{
     self, Before, MatchedRoute, before_actions, cast_integer, require_current_user,
 };
 use crate::controllers::presenters::page::db_error;
-use campfire_kit::{Ctx, Error, Result, format};
+use campfire_kit::{Ctx, Error, Redirect, Result, format};
 
 fn human_page(c: &mut Ctx) -> Result<()> {
     concerns::deny_bots(c)?;
@@ -257,7 +257,7 @@ pub async fn record(c: &mut Ctx) -> Result {
     c.redirect_to(&c.url_for(&location))
 }
 
-/// Typed room lists also served machine clients by redirecting to their last room.
+/// HTML collections open the SPA; machine requests keep the original route outcomes.
 pub async fn room_index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     if c.format()?
@@ -266,15 +266,25 @@ pub async fn room_index(c: &mut Ctx) -> Result {
         concerns::keep_waiting_flash(c);
         return c.redirect_to(&c.url_for("/app/"));
     }
+    if c.current::<MatchedRoute>().ok_or(Error::NotFound)?.endpoint != "rooms#index" {
+        // These collections previously matched /rooms/:id and failed the room lookup.
+        return c.redirect_to_with(
+            &c.url_for(&campfire_routes::root()),
+            Redirect {
+                alert: Some("Room not found or inaccessible".into()),
+                ..Redirect::default()
+            },
+        );
+    }
     let user = require_current_user(c)?.id;
     let room = c
         .app()
         .db
         .read(move |conn| campfire_db::Room::last_for_user(conn, user))
         .await
-        .map_err(db_error)?
-        .ok_or_else(|| Error::internal(anyhow::anyhow!("No route matches room_url(nil)")))?;
-    c.redirect_to(&c.url_for(&campfire_routes::room(room.id)))
+        .map_err(db_error)?;
+    let path = room.map_or_else(campfire_routes::root, |room| campfire_routes::room(room.id));
+    c.redirect_to(&c.url_for(&path))
 }
 
 /// Refresh URLs have always redirected for every format, with the room membership gate.
