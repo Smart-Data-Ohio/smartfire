@@ -113,6 +113,61 @@ fn mention_job(t: &TestDb) -> MentionPushJob {
 }
 
 #[test]
+fn mention_edits_reserve_recipients_on_claimed_original_jobs_and_retries() {
+    for event_type in ["reply", "thread_activity"] {
+        for retry in [false, true] {
+            let t = frozen();
+            let message = message(&t, event_type);
+            let mut arguments = serde_json::json!({"message_id": message.id});
+            let class = if let Some(thread_id) = message.thread_id {
+                arguments["thread_id"] = serde_json::json!(thread_id);
+                "ChannelThread::PushMessageJob"
+            } else {
+                arguments["room_id"] = serde_json::json!(message.room_id);
+                "Room::PushMessageJob"
+            };
+            if retry {
+                arguments = serde_json::json!({"_campfire_retry_metadata_v1": {
+                    "arguments": arguments, "counts": {"transient": 1}
+                }});
+            }
+            let stored = arguments.to_string();
+            let job_id: i64 = t.write(move |tx| {
+                Ok(tx.conn().query_row(
+                    "INSERT INTO background_jobs (job_class,arguments,queue_name,status,created_at,updated_at,run_at) VALUES (?,?,'push','running',?,?,?) RETURNING id",
+                    rusqlite::params![class, stored, tx.now(), tx.now(), tx.now()],
+                    |row| row.get(0),
+                )?)
+            });
+            t.sink.take();
+            edit(&t, &message, true);
+            assert_eq!(mention_job(&t).recipient_ids, [id("david")]);
+            assert_eq!(
+                t.read(|conn| MentionPushJob::original_push_exclusions(conn, job_id)),
+                [id("david")]
+            );
+            let recipients = serde_json::json!([id("david")]);
+            if retry {
+                arguments["_campfire_retry_metadata_v1"]["arguments"]["mention_push_recipient_ids"] = recipients;
+            } else {
+                arguments["mention_push_recipient_ids"] = recipients;
+            }
+            let stored: String = t.read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT arguments FROM background_jobs WHERE id=? AND status='running'",
+                    [job_id],
+                    |row| row.get(0),
+                )?)
+            });
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&stored).unwrap(),
+                arguments
+            );
+        }
+    }
+}
+
+#[test]
 fn mention_edits_promote_existing_activity_and_only_notify_added_recipients() {
     for event_type in ["reply", "thread_activity", "keyword_alert"] {
         for previous_state in ["unread", "read", "handled"] {

@@ -2,6 +2,7 @@
 use super::Registry;
 use crate::app::App;
 use campfire_db::{ChannelThread, SavedItem};
+use campfire_db::models::activity_item::message_recorder::MentionPushJob;
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome};
 use serde::{Deserialize, Serialize};
 
@@ -68,21 +69,24 @@ async fn test_notification(app: App, job: TestNotification, _: Execution) -> Job
     Ok(Outcome::Done)
 }
 
-async fn thread_message(app: App, job: ThreadMessage, _: Execution) -> JobResult {
+async fn thread_message(app: App, job: ThreadMessage, execution: Execution) -> JobResult {
     let Some(pool) = app.web_push.clone() else {
         return Ok(Outcome::Done);
     };
     let db = app.db.clone();
     app.db
-        .read(move |conn| {
+        .write(move |tx| {
+            let excluded = MentionPushJob::original_push_exclusions(tx.conn(), execution.id)?;
             for push in ChannelThread::push_recipients_with_policy(
-                conn,
+                tx.conn(),
                 &*db.env().rich_text,
                 job.0.thread_id,
                 job.0.message_id,
-                db.env().now(),
+                tx.now(),
             )? {
-                pool.queue(conn, &push.payload, push.subscriptions)?;
+                if !excluded.contains(&push.user_id) {
+                    pool.queue(tx.conn(), &push.payload, push.subscriptions)?;
+                }
             }
             Ok(())
         })

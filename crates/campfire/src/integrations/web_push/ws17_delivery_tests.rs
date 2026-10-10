@@ -40,13 +40,16 @@ fn with_pool(original: &App, pool: Pool) -> App {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn mention_edits_deliver_only_the_added_recipients_push() {
+async fn mention_edits_and_pending_original_jobs_deliver_each_recipient_once() {
     use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN};
     use campfire_db::{
         ActivityItem, ChannelThread, Message, MessageChanges, NewChannelThread, NewMessage,
         ThreadInvolvement, ThreadMembership,
     };
-    for threaded in [false, true] {
+    for (threaded, promoted, edit_first) in [
+        (false, false, false), (false, false, true), (false, true, false), (false, true, true),
+        (true, false, false), (true, false, true), (true, true, false), (true, true, true),
+    ] {
         let test = TestApp::boot_frozen()
             .await
             .expect("mention edits require seeded app tests");
@@ -56,25 +59,35 @@ async fn mention_edits_deliver_only_the_added_recipients_push() {
         let service = push_service(201, "Created").await;
         let receiver = Receiver::new();
         let subscription = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
+        let follower = TestDb::id("jz");
         let message = db.write(move |tx| {
             tx.conn().execute_batch("DELETE FROM activity_items; UPDATE memberships SET involvement='mentions',connected_at=NULL; UPDATE users SET dnd_enabled=0,quiet_hours_enabled=0,ooo_until=NULL,presence_setting='auto'")?;
+            tx.conn().execute("DELETE FROM push_subscriptions WHERE id NOT IN (SELECT MIN(id) FROM push_subscriptions GROUP BY user_id)", [])?;
             tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=? WHERE user_id=?",
                 rusqlite::params![subscription.endpoint, subscription.p256dh_key, subscription.auth_key, DAVID])?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint='https://fcm.googleapis.com/fcm/send/123',p256dh_key=?,auth_key=? WHERE user_id=?",
+                rusqlite::params![subscription.p256dh_key, subscription.auth_key, JASON])?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint='https://fcm.googleapis.com/fcm/send/456',p256dh_key=?,auth_key=? WHERE user_id=?",
+                rusqlite::params![subscription.p256dh_key, subscription.auth_key, follower])?;
+            tx.conn().execute("UPDATE memberships SET involvement='everything' WHERE room_id=654632876 AND user_id=?", [follower])?;
             let question = Message::create(tx, NewMessage { room_id: 654632876, creator_id: DAVID, markdown_source: Some("Question".into()), ..Default::default() })?;
             let thread_id = if threaded {
                 let thread = ChannelThread::create(tx, NewChannelThread { room_id: question.room_id, creator_id: KEVIN, name: Some("Mention edits".into()), ..Default::default() })?;
-                for user in [DAVID, JASON, KEVIN] {
-                    ThreadMembership::join(tx, thread.id, user)?.update_involvement(tx, ThreadInvolvement::Everything)?;
+                for user in [DAVID, JASON, KEVIN, follower] {
+                    let involvement = if user == DAVID && !promoted { ThreadInvolvement::Mentions } else { ThreadInvolvement::Everything };
+                    ThreadMembership::join(tx, thread.id, user)?.update_involvement(tx, involvement)?;
                 }
                 Some(thread.id)
             } else { None };
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
             let message = Message::create(tx, NewMessage {
                 room_id: question.room_id, creator_id: KEVIN, thread_id,
-                reply_to_message_id: (!threaded).then_some(question.id),
+                reply_to_message_id: (!threaded && promoted).then_some(question.id),
                 markdown_source: Some(format!("Answer <@{JASON}>")), ..Default::default()
             })?;
-            ActivityItem::find_by_user_and_source(tx.conn(), DAVID, "Message", message.id)?.unwrap().mark_handled(tx)?;
-            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            let activity = ActivityItem::find_by_user_and_source(tx.conn(), DAVID, "Message", message.id)?;
+            assert_eq!(activity.is_some(), promoted);
+            if let Some(activity) = activity { activity.mark_handled(tx)?; }
             Ok(message)
         }).await.unwrap();
         let message_id = message.id;
@@ -90,12 +103,14 @@ async fn mention_edits_deliver_only_the_added_recipients_push() {
         })
         .await
         .unwrap();
-        let device_count = db
-            .read(|conn| Ok(PushSubscription::for_user(conn, DAVID)?.len()))
-            .await
-            .unwrap();
         let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
         let app = with_pool(&original, pool.clone());
+        let original_class = if threaded { "ChannelThread::PushMessageJob" } else { "Room::PushMessageJob" };
+        let classes = if edit_first { ["Message::MentionPushJob", original_class] } else { [original_class, "Message::MentionPushJob"] };
+        db.write(|tx| {
+            tx.conn().execute("UPDATE background_jobs SET run_at='2099-01-01 00:00:00'", [])?;
+            Ok(())
+        }).await.unwrap();
         let runner = campfire_jobs::start(
             db.clone(),
             app.jobs.queue.clone(),
@@ -103,15 +118,25 @@ async fn mention_edits_deliver_only_the_added_recipients_push() {
             app.clone(),
             crate::queue::runner_config(&app.config),
         );
-        wait_for_jobs_and_deliveries(&db, &pool, &["Message::MentionPushJob"]).await;
+        for class in classes {
+            db.write(move |tx| {
+                assert_eq!(tx.conn().execute("UPDATE background_jobs SET run_at=? WHERE job_class=?", rusqlite::params![tx.now(), class])?, 1);
+                Ok(())
+            }).await.unwrap();
+            app.jobs.queue.wake(class);
+            wait_for_jobs_and_deliveries(&db, &pool, &[class]).await;
+        }
         runner.shutdown(Duration::from_secs(5)).await;
         pool.shutdown().await;
         let requests = service.server.received();
         assert_eq!(
             requests.len(),
-            device_count,
-            "retained mentions must not get another push"
+            3,
+            "original and edit pushes must not overlap, threaded={threaded}, promoted={promoted}, edit_first={edit_first}"
         );
+        for endpoint in ["/fcm/send/abc", "/fcm/send/123", "/fcm/send/456"] {
+            assert_eq!(requests.iter().filter(|request| request.target == endpoint).count(), 1);
+        }
         for request in requests {
             let delivered: Value = serde_json::from_str(&receiver.open(&request.body)).unwrap();
             if threaded {

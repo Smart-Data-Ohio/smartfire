@@ -33,6 +33,37 @@ impl crate::Job for MentionPushJob {
 }
 
 impl MentionPushJob {
+    /// Reload edit-owned recipients even when the original job was claimed before the edit.
+    pub fn original_push_exclusions(conn: &Connection, job_id: i64) -> Result<Vec<i64>> {
+        query_all(
+            conn,
+            "SELECT value FROM json_each(COALESCE((SELECT node.value FROM background_jobs job, json_tree(job.arguments) node WHERE job.id=? AND node.key='mention_push_recipient_ids'), '[]'))",
+            [job_id],
+            |row| row.get(0),
+        )
+    }
+
+    fn exclude_from_original_push(tx: &Tx<'_>, message_id: i64, added: &[i64]) -> Result<()> {
+        // json_tree also finds the arguments inside the job runner's retry envelope.
+        let jobs: Vec<(i64, String)> = query_all(
+            tx.conn(),
+            "SELECT job.id,node.path FROM background_jobs job, json_tree(job.arguments) node WHERE job.job_class IN ('Room::PushMessageJob','ChannelThread::PushMessageJob') AND node.key='message_id' AND node.atom=?",
+            [message_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        for (job_id, path) in jobs {
+            let mut excluded = Self::original_push_exclusions(tx.conn(), job_id)?;
+            excluded.extend_from_slice(added);
+            excluded.sort_unstable();
+            excluded.dedup();
+            tx.conn().execute(
+                "UPDATE background_jobs SET arguments=json_set(arguments, ?, json(?)),updated_at=? WHERE id=?",
+                rusqlite::params![format!("{path}.mention_push_recipient_ids"), serde_json::json!(excluded).to_string(), tx.now(), job_id],
+            )?;
+        }
+        Ok(())
+    }
+
     pub fn deliveries(
         &self,
         conn: &Connection,
@@ -273,11 +304,17 @@ impl ActivityItem {
             if candidate.event_type == "mention"
                 && !previous_mentionees.contains(&candidate.user_id)
             {
+                let previous = Self::find_by_user_and_source(
+                    tx.conn(), candidate.user_id, "Message", message.id,
+                )?;
                 Self::refresh_unread(tx, candidate.user_id, "Message", message.id, "mention")?;
-                added.push(candidate.user_id);
+                if previous.is_none_or(|item| item.event_type != "mention") {
+                    added.push(candidate.user_id);
+                }
             }
         }
         if !added.is_empty() {
+            MentionPushJob::exclude_from_original_push(tx, message.id, &added)?;
             tx.emit_after_commit(crate::Event::job(&MentionPushJob {
                 message_id: message.id,
                 recipient_ids: added,
