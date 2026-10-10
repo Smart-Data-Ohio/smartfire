@@ -248,7 +248,7 @@
     pointer-events: none;
   }
 
-  .list-row-cover + * :is(time, a, button) {
+  .list-row-cover + * :is(time, a, button, span[data-spoiler]) {
     pointer-events: auto;
   }
 

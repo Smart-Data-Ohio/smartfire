@@ -106,6 +106,9 @@ impl SafeList {
         tags.extend(["action-text-attachment", "figure", "figcaption"]);
         let mut attributes = DEFAULT_ALLOWED_ATTRIBUTES.to_vec();
         attributes.extend(ATTACHMENT_ATTRIBUTES);
+        // Markdown spoilers are stored with `data-spoiler`. The timeline renders through this
+        // allowlist, so the attribute has to survive or the reader cannot reveal them.
+        attributes.push("data-spoiler");
         SafeList { tags, attributes }
     }
 
@@ -229,7 +232,45 @@ fn scrub(dom: &mut Dom, node: NodeId, list: &SafeList) {
         dom.detach(node);
         return;
     }
+    let spoiler = is_spoiler_span(dom, node);
     scrub_attributes(dom, node, list);
+    canonicalize_spoiler(dom, node, spoiler && list.allows_attribute("data-spoiler"));
+}
+
+/// Whether `node` is a spoiler as stored HTML may mark one: a `span` with a `data-spoiler`
+/// attribute or the `spoiler` class. Plain-text converters, which read stored HTML, ask this; the
+/// sanitizer writes every such span out in the one canonical form (`canonicalize_spoiler`).
+pub fn is_spoiler_span(dom: &Dom, node: NodeId) -> bool {
+    dom.local_name(node) == Some("span") && (dom.has_attr(node, "data-spoiler") || has_spoiler_class(dom, node))
+}
+
+fn has_spoiler_class(dom: &Dom, node: NodeId) -> bool {
+    dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
+}
+
+/// One spoiler marker for the reader and every converter: a kept spoiler span gets
+/// `data-spoiler=""` and the `spoiler` class (the SPA reveals `span[data-spoiler]` only). Anything
+/// else loses both, so an element that isn't a spoiler span, or a list that can't keep
+/// `data-spoiler`, never looks like one to some readers and not to others.
+fn canonicalize_spoiler(dom: &mut Dom, node: NodeId, spoiler: bool) {
+    if spoiler {
+        dom.set_attr(node, "data-spoiler", "");
+        if !has_spoiler_class(dom, node) {
+            let classes = dom.attr(node, "class").map(str::trim).filter(|classes| !classes.is_empty()).map(|classes| format!("{classes} spoiler"));
+            dom.set_attr(node, "class", classes.as_deref().unwrap_or("spoiler"));
+        }
+        return;
+    }
+    dom.remove_attr(node, "data-spoiler");
+    if has_spoiler_class(dom, node) {
+        let rest: Vec<String> =
+            dom.attr(node, "class").unwrap_or("").split_whitespace().filter(|class| *class != "spoiler").map(str::to_owned).collect();
+        if rest.is_empty() {
+            dom.remove_attr(node, "class");
+        } else {
+            dom.set_attr(node, "class", &rest.join(" "));
+        }
+    }
 }
 
 /// `PermitScrubber#scrub_attributes` with an attribute allowlist. Attributes are visited in order,

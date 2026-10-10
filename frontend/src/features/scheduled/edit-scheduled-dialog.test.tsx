@@ -16,6 +16,7 @@ const ITEM: ScheduledMessage = {
   replyToMessageId: null,
   replyTarget: null,
   markdownSource: "Hello",
+  excerpt: "Hello",
   sendAt: new Date(2030, 9, 7, 9, 0).toISOString(),
   state: "pending",
   sendable: true,

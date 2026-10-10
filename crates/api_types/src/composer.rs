@@ -178,6 +178,11 @@ pub struct ScheduledMessage {
     /// The visible target's author and plain-text excerpt; null after deletion or access loss.
     pub reply_target: Option<crate::QuotePreview>,
     pub markdown_source: String,
+    /// `markdown_source` as preview text, with each `||spoiler||` replaced by "spoiler" and
+    /// any link or image whose label holds one dropped to its label
+    /// (`markdown::redacted_excerpt`, which reads the same render as the message). Lists and
+    /// cancel prompts show this, never the raw source.
+    pub excerpt: String,
     pub send_at: Timestamp,
     /// Derived from the timestamps, as the model does: there's no status column.
     pub state: ScheduledMessageState,

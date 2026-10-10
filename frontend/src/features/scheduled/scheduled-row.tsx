@@ -12,7 +12,7 @@ import { ConversationLabel, conversationText } from "../destinations/conversatio
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
-import { markdownExcerpt, outcomeLabel, scheduledSection } from "./scheduled-format.ts";
+import { outcomeLabel, scheduledExcerpt, scheduledSection } from "./scheduled-format.ts";
 
 /** What a scheduled row can ask for. */
 export interface ScheduledRowHandlers {
@@ -269,7 +269,7 @@ export function ScheduledRow({
               </time>
             </Tooltip>
           </div>
-          <p className="scheduled-body">{markdownExcerpt(item.markdownSource)}</p>
+          <p className="scheduled-body">{scheduledExcerpt(item)}</p>
           {section === "stranded" ? (
             <span className="scheduled-outcome" data-tone="warning">
               <Icon name="alert" size={12} />

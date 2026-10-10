@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { inlineMentions } from "../../lib/body-html.ts";
 import { BodyHtml } from "./body-html.tsx";
@@ -79,4 +80,108 @@ describe("BodyHtml", () => {
     expect(container.querySelector("code")?.textContent).toBe("fn b() {}");
     expect(container.querySelectorAll("button.code-copy")).toHaveLength(1);
   });
+
+  it("reveals one spoiler on click and leaves the others covered", async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+
+    const html =
+      '<p><span class="spoiler" data-spoiler="">secret one</span> ' +
+      '<span class="spoiler" data-spoiler="">secret two</span> ' +
+      '<span class="spoiler" data-spoiler="">secret three</span></p>';
+
+    const { container } = render(<BodyHtml html={html} className="message-body" />);
+
+    container.addEventListener("click", onAction);
+    container.addEventListener("keydown", onAction);
+
+    const [first, second, third] = spoilerElements(container);
+
+    expect(first.getAttribute("aria-label")).toBe("Spoiler, activate to reveal");
+    expect(first.getAttribute("role")).toBe("button");
+    expect(first.textContent).toBe("secret one");
+
+    await user.click(first);
+
+    expect(first.hasAttribute("data-revealed")).toBe(true);
+    expect(first.hasAttribute("aria-label")).toBe(false);
+    expect(first.textContent).toBe("secret one");
+    expect(second.hasAttribute("data-revealed")).toBe(false);
+    expect(onAction).not.toHaveBeenCalled();
+
+    second.focus();
+    await user.keyboard("{Enter}");
+
+    expect(second.hasAttribute("data-revealed")).toBe(true);
+    expect(second.textContent).toBe("secret two");
+    expect(third.hasAttribute("data-revealed")).toBe(false);
+    expect(third.getAttribute("aria-label")).toBe("Spoiler, activate to reveal");
+
+    third.focus();
+    await user.keyboard(" ");
+
+    expect(third.hasAttribute("data-revealed")).toBe(true);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("keeps a concealed link untitled, out of tab order, and unnamed until it is revealed", async () => {
+    const user = userEvent.setup();
+
+    const html =
+      '<p>before <span class="spoiler" data-spoiler="">' +
+      '<a href="https://example.com" title="Alice dies">ending</a></span> after</p>';
+
+    render(<BodyHtml html={html} className="message-body" />);
+
+    const spoiler = screen.getByRole("button", { name: "Spoiler, activate to reveal" });
+    const link = document.querySelector("a");
+
+    expect(link).not.toBeNull();
+
+    if (link === null) {
+      return;
+    }
+
+    expect(link.getAttribute("title")).toBeNull();
+    expect(link.tabIndex).toBe(-1);
+    expect(link.inert).toBe(true);
+    expect(screen.queryByRole("link", { name: "ending" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Alice dies" })).toBeNull();
+
+    await user.click(spoiler);
+
+    expect(spoiler.hasAttribute("data-revealed")).toBe(true);
+    expect(link.getAttribute("title")).toBe("Alice dies");
+    expect(link.inert).toBe(false);
+    expect(link.hasAttribute("tabindex")).toBe(false);
+    expect(screen.getByRole("link", { name: "ending" })).toBe(link);
+  });
+
+  it("keeps a mention inside the spoiler and drops its link and button", () => {
+    const html =
+      '<p><span class="spoiler" data-spoiler="">' +
+      '<span class="mention mention--user-1">' +
+      '<a class="btn avatar" href="/users/1" title="David – Founder">D</a>' +
+      '<button class="profile-card-name" type="button">David</button>' +
+      "</span> is the killer</span></p>";
+
+    const { container } = render(<BodyHtml html={html} className="message-body" />);
+    const spoiler = container.querySelector("[data-spoiler]");
+
+    expect(spoiler?.textContent).toContain("David");
+    expect(spoiler?.textContent).toContain("is the killer");
+    expect(spoiler?.querySelector(".mention .profile-card-name")?.textContent).toBe("David");
+    expect(container.querySelector("a, button")).toBeNull();
+  });
 });
+
+function spoilerElements(container: HTMLElement): [HTMLElement, HTMLElement, HTMLElement] {
+  const spoilers = [...container.querySelectorAll<HTMLElement>("[data-spoiler]")];
+  const [first, second, third] = spoilers;
+
+  if (first === undefined || second === undefined || third === undefined) {
+    throw new Error(`expected 3 spoilers, found ${spoilers.length}`);
+  }
+
+  return [first, second, third];
+}
