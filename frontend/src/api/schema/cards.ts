@@ -59,11 +59,21 @@ import {
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
+export const PollOptionMedia = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("image"),
+    url: Schema.String,
+    stillUrl: Schema.NullOr(Schema.String),
+  }),
+  Schema.Struct({ kind: Schema.Literal("emoji"), content: Schema.String }),
+]);
+
 export const PollOption = Schema.Struct({
   id: PollOptionId,
   label: Schema.String,
   votes: Schema.Int,
   voterIds: Schema.Array(UserId),
+  media: Schema.optionalKey(PollOptionMedia),
 });
 
 export type PollOption = typeof PollOption.Type;
@@ -112,6 +122,16 @@ export const CreatePoll = Schema.Struct({
   multiple: Schema.Boolean,
   anonymous: Schema.Boolean,
   closesAt: Schema.NullOr(Timestamp),
+  optionMedia: Schema.optionalKey(
+    Schema.Array(
+      Schema.NullOr(
+        Schema.Struct({
+          signedId: Schema.optionalKey(Schema.String),
+          emoji: Schema.optionalKey(Schema.String),
+        }),
+      ),
+    ),
+  ),
 });
 
 export type CreatePoll = typeof CreatePoll.Type;
