@@ -60,6 +60,7 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
       creatorId: 1,
       createdAt: "2026-10-01T00:00:00.000Z",
       updatedAt: options.updatedAt ?? "2026-10-01T00:00:00.000Z",
+      topic: null,
     },
     membership: {
       id: id * 10,

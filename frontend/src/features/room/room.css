@@ -96,6 +96,20 @@
     white-space: nowrap;
   }
 
+  .room-topic-button {
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .room-topic-button:hover {
+    color: var(--text);
+  }
+
+  .room-topic-button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
   /* The agent's name wins the header's width; its status line gives way first. */
   .room-title:has(.room-header-agent) .room-title-name {
     flex-shrink: 0;

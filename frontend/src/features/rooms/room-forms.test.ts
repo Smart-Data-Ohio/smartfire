@@ -46,6 +46,7 @@ function form(patch: Partial<RoomForm> = {}): RoomForm {
     groupCapable: false,
     defaultInvolvement: "mentions",
     stageRoles: [],
+    topic: null,
     ...patch,
   };
 }
@@ -162,5 +163,27 @@ describe("icons", () => {
 
     expect(roomIconLook("gone", EMOJI, custom)).toEqual({ kind: "none" });
     expect(roomIconLook(null, EMOJI, custom)).toEqual({ kind: "none" });
+  });
+});
+
+describe("topic patches", () => {
+  it("trims, clears and omits topics without treating an untouched topic as dirty", () => {
+    const loaded = form({ topic: "Planning" });
+
+    const draft = {
+      name: loaded.name ?? "",
+      iconName: loaded.iconName,
+      userIds: loaded.userIds,
+      topic: " Planning ",
+    };
+
+    expect(isDirty(loaded, loaded.type, draft)).toBe(false);
+    expect(updateBody(loaded, "closed", draft)).toEqual({ type: "closed", userIds: [1, 2] });
+    expect(isDirty(loaded, loaded.type, { ...draft, topic: "" })).toBe(true);
+    expect(updateBody(loaded, "closed", { ...draft, topic: "  " })).toEqual({
+      type: "closed",
+      userIds: [1, 2],
+      topic: null,
+    });
   });
 });

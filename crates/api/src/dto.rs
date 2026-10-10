@@ -320,6 +320,7 @@ pub fn room(room: &Room) -> api::Room {
         creator_id: room.creator_id,
         created_at: time(room.created_at),
         updated_at: time(room.updated_at),
+        topic: room.topic.clone(),
     }
 }
 

@@ -91,6 +91,8 @@ export interface RoomDraft {
   readonly name: string;
   readonly iconName: string | null;
   readonly userIds: readonly number[];
+  /** Settings only; creation starts without a topic. */
+  readonly topic?: string;
 }
 
 /** A blank name takes the kind's default (the form's `name`), as the classic form pre-fills. */
@@ -132,7 +134,14 @@ export function updateBody(form: RoomForm, kind: ManagedKind, draft: RoomDraft):
   const name = draft.name.trim();
   const nameChange = name === (form.name ?? "") ? {} : { name: name === "" ? null : name };
   const iconChange = draft.iconName === form.iconName ? {} : { iconName: draft.iconName };
-  const changes = { ...nameChange, ...iconChange };
+  const topic = draft.topic?.trim();
+
+  const topicChange =
+    topic === undefined || topic === (form.topic ?? "")
+      ? {}
+      : { topic: topic === "" ? null : topic };
+
+  const changes = { ...nameChange, ...iconChange, ...topicChange };
 
   const userIds = [...new Set(draft.userIds)];
 
@@ -188,6 +197,8 @@ export function isDirty(form: RoomForm, kind: RoomKind, draft: RoomDraft): boole
   if (draft.name.trim() !== (form.name ?? "")) return true;
 
   if (draft.iconName !== form.iconName) return true;
+
+  if (draft.topic !== undefined && draft.topic.trim() !== (form.topic ?? "")) return true;
 
   if (!hasMemberList(kind)) return false;
 

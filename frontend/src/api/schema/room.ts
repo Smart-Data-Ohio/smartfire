@@ -24,6 +24,7 @@ export const Room = Schema.Struct({
   creatorId: UserId,
   createdAt: Timestamp,
   updatedAt: Timestamp,
+  topic: Schema.NullOr(Schema.String),
 });
 
 export type Room = typeof Room.Type;

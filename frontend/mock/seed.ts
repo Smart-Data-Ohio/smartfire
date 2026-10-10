@@ -829,6 +829,7 @@ export function seedWorld(now: number, random: Random): World {
         creatorId: seed.kind === "direct" ? VIEWER_ID : USER_IDS.priya,
         createdAt,
         updatedAt: newest === undefined ? createdAt : newest.createdAt,
+        topic: null,
       },
       memberIds: [...seed.memberIds],
       membership,

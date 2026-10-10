@@ -213,6 +213,9 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                         );
                         continue;
                     }
+                    if table == "rooms" && column == "topic" {
+                        continue;
+                    }
                     // Port-only user preferences and activity counter that Rails doesn't have.
                     if table == "users"
                         && matches!(column.as_str(), "activity_revision" | "appearance_preferences")
