@@ -30,11 +30,122 @@ pub struct AccountSettings {
 
 const RESTRICT_ROOM_CREATION: &str = "restrict_room_creation_to_administrators";
 const UPLOAD_LIMIT: &str = "upload_limit_bytes";
+const DESCRIPTION: &str = "description";
+const VANITY_SLUG: &str = "vanity_slug";
 const ANIMATED_EMOJI_LIMIT: &str = "animated_emoji_limit";
 pub const DEFAULT_ANIMATED_EMOJI_LIMIT: i64 = 250;
 pub const DEFAULT_UPLOAD_LIMIT_BYTES: i64 = 100 * 1024 * 1024;
 /// Largest integer the SPA can represent exactly.
 pub const MAX_UPLOAD_LIMIT_BYTES: i64 = 9_007_199_254_740_991;
+
+pub const DESCRIPTION_MAX_CHARS: usize = 300;
+pub const RESERVED_VANITY_SLUGS: &[&str] = &[
+    "app",
+    "api",
+    "rooms",
+    "users",
+    "session",
+    "sessions",
+    "join",
+    "assets",
+    "admin",
+    "account",
+    "accounts",
+    "settings",
+    "about",
+    "privacy",
+    "terms",
+    "up",
+    "health",
+    "cable",
+    "huddle",
+    "uploads",
+    "files",
+    "blobs",
+    "storage",
+    "messages",
+    "threads",
+    "events",
+    "boards",
+    "bots",
+    "agents",
+    "integrations",
+    "first_run",
+    "first-run",
+    "sudo",
+    "two_factor",
+    "two-factor",
+    "two_factor_setup",
+    "two-factor-setup",
+    "pwa",
+    "manifest",
+    "service-worker",
+    "favicon",
+    "robots",
+    "rails",
+];
+
+pub fn validate_description(value: &str) -> Result<&str> {
+    let value = value.trim();
+    if value.chars().count() > DESCRIPTION_MAX_CHARS {
+        return Err(Error::Other("must be 300 characters or fewer".into()));
+    }
+    if value.contains(['<', '>'])
+        || value
+            .chars()
+            .any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t')
+    {
+        return Err(Error::Other(
+            "must be plain text without HTML or control characters".into(),
+        ));
+    }
+    Ok(value)
+}
+
+pub fn validate_vanity_slug(value: &str) -> Result<&str> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Ok(value);
+    }
+    if !(3..=32).contains(&value.len())
+        || value.starts_with('-')
+        || value.ends_with('-')
+        || !value
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+    {
+        return Err(Error::Other("must be 3–32 lowercase letters, digits or hyphens, without a leading or trailing hyphen".into()));
+    }
+    if RESERVED_VANITY_SLUGS.contains(&value) {
+        return Err(Error::Other("is reserved; choose another slug".into()));
+    }
+    if looks_like_join_code(value) {
+        return Err(Error::Other("can't look like an invite code".into()));
+    }
+    Ok(value)
+}
+
+/// `validate_vanity_slug`, plus a check against the workspace's current join code, so a
+/// slug can never become a second way into `/join/:code` after a reset.
+pub fn validate_vanity_slug_for<'a>(value: &'a str, join_code: &str) -> Result<&'a str> {
+    let value = validate_vanity_slug(value)?;
+    if !value.is_empty() && value == join_code {
+        return Err(Error::Other("can't look like an invite code".into()));
+    }
+    Ok(value)
+}
+
+/// Whether a value has the shape of `generate_join_code`: 4-4-4 alphanumeric groups.
+fn looks_like_join_code(value: &str) -> bool {
+    value.len() == 14
+        && value.bytes().enumerate().all(|(i, c)| {
+            if i == 4 || i == 9 {
+                c == b'-'
+            } else {
+                c.is_ascii_alphanumeric()
+            }
+        })
+}
 
 impl AccountSettings {
     fn from_column(raw: Option<&str>) -> Self {
@@ -44,6 +155,20 @@ impl AccountSettings {
         data.entry(RESTRICT_ROOM_CREATION)
             .or_insert(Value::Bool(false));
         Self { data }
+    }
+
+    pub fn description(&self) -> &str {
+        self.data
+            .get(DESCRIPTION)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+    }
+
+    pub fn vanity_slug(&self) -> Option<&str> {
+        self.data
+            .get(VANITY_SLUG)
+            .and_then(Value::as_str)
+            .filter(|slug| !slug.is_empty())
     }
 
     /// `restrict_room_creation_to_administrators?`: `present?` of the stored value.
@@ -100,6 +225,12 @@ impl AccountSettings {
                         })?;
                     self.data
                         .insert(ANIMATED_EMOJI_LIMIT.into(), Value::from(limit));
+                }
+                DESCRIPTION => {
+                    self.data.insert(DESCRIPTION.into(), Value::from(validate_description(value)?));
+                }
+                VANITY_SLUG => {
+                    self.data.insert(VANITY_SLUG.into(), Value::from(validate_vanity_slug(value)?));
                 }
                 other => {
                     return Err(Error::Other(format!(
