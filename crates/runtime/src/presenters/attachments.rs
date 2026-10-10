@@ -109,7 +109,7 @@ impl Assignment {
                 let blob = app.db.read(move |conn| Blob::find(conn, id).map_err(storage_error)).await.map_err(Error::internal)?
                     .ok_or(Error::NotFound)?;
                 if let Some(limit) = limit {
-                    check_file_size(&app.storage.service.path_for(&blob.key), blob.byte_size as u64, limit).await?;
+                    check_blob_size(app, &blob, limit).await?;
                 }
                 let storage = app.storage.clone();
                 let blob = tokio::task::spawn_blocking(move || storage.identify_blob(blob)).await.map_err(Error::internal)?.map_err(Error::internal)?;
@@ -117,7 +117,7 @@ impl Assignment {
             }
             Assignment::Existing(blob) => {
                 if let Some(limit) = limit {
-                    check_file_size(&app.storage.service.path_for(&blob.key), blob.byte_size as u64, limit).await?;
+                    check_blob_size(app, &blob, limit).await?;
                 }
                 Assignment::Existing(blob)
             }
@@ -131,6 +131,24 @@ async fn check_file_size(path: &std::path::Path, declared: u64, limit: u64) -> R
         return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
     }
     let received = tokio::fs::metadata(path).await.map_err(Error::internal)?.len();
+    check_received_size(received, declared, limit)
+}
+
+async fn check_blob_size(app: &App, blob: &Blob, limit: u64) -> Result<()> {
+    let declared = blob.byte_size as u64;
+    if declared > limit {
+        return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
+    }
+    let received = match tokio::fs::metadata(app.storage.service.path_for(&blob.key)).await {
+        Ok(metadata) => metadata.len(),
+        // Missing originals still fail during identification or after-commit processing.
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(Error::internal(error)),
+    };
+    check_received_size(received, declared, limit)
+}
+
+fn check_received_size(received: u64, declared: u64, limit: u64) -> Result<()> {
     if received > limit {
         return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
     }

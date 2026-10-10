@@ -317,6 +317,67 @@ async fn upload_size_multipart_stops_reading_each_attachment_at_the_workspace_li
 }
 
 #[tokio::test]
+async fn upload_size_missing_existing_files_defer_processing_but_still_enforce_the_limit() {
+    use crate::controllers::presenters::attachments::Assignment;
+
+    let a = app(true).await.expect("restored default seed");
+    let blob = a
+        .db()
+        .read(|conn| Ok(campfire_storage::Blob::find(conn, 1).unwrap().unwrap()))
+        .await
+        .unwrap();
+    assert!(blob.is_identified());
+    assert!(blob.byte_size > 0);
+    a.booted.app.storage.service.delete(&blob.key).unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    for assignment in [Assignment::Signed(signed), Assignment::Existing(blob.clone())] {
+        let staged = assignment
+            .clone()
+            .stage_with_limit(&a.booted.app, blob.byte_size as u64)
+            .await
+            .expect("an identified blob's missing file is handled by attachment processing");
+        assert!(matches!(staged, Assignment::Existing(existing) if existing.id == blob.id));
+        assert!(matches!(
+            assignment
+                .stage_with_limit(&a.booted.app, blob.byte_size as u64 - 1)
+                .await,
+            Err(campfire_kit::Error::Status(StatusCode::PAYLOAD_TOO_LARGE))
+        ));
+    }
+}
+
+#[tokio::test]
+async fn upload_size_existing_file_lengths_are_checked_before_assignment() {
+    use crate::controllers::presenters::attachments::Assignment;
+
+    let a = app(true).await.expect("restored default seed");
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(b"a file", campfire_storage::Filename::new("file.txt"), Some("text/plain"))
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    for (bytes, expected) in [
+        (b"short".as_slice(), StatusCode::UNPROCESSABLE_ENTITY),
+        (b"too long".as_slice(), StatusCode::PAYLOAD_TOO_LARGE),
+    ] {
+        std::fs::write(a.booted.app.storage.service.path_for(&blob.key), bytes).unwrap();
+        for assignment in [Assignment::Signed(signed.clone()), Assignment::Existing(blob.clone())] {
+            let result = assignment.stage_with_limit(&a.booted.app, blob.byte_size as u64).await;
+            assert!(matches!(result, Err(campfire_kit::Error::Status(status)) if status == expected));
+        }
+    }
+}
+
+#[tokio::test]
 async fn upload_size_existing_blobs_are_limited_for_messages_but_not_avatars() {
     let a = app(true).await.expect("restored default seed");
     let mut david = a.sign_in(DAVID).await;
