@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { admin } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
@@ -7,6 +7,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { adminFailure, useAdmin } from "./admin-parts.tsx";
+import { descriptionError, vanitySlugError } from "./workspace-identity.ts";
 import { WorkspaceProfile } from "./workspace-profile.tsx";
 
 /** The name, saved on submit as the classic form saves it. */
@@ -81,6 +82,140 @@ function UploadLimitForm({ workspace }: { readonly workspace: Workspace }) {
       <Button type="submit" variant="primary" loading={busy("uploads")} disabled={busy("uploads")}>
         Save upload limit
       </Button>
+    </form>
+  );
+}
+
+function DescriptionForm({ workspace }: { readonly workspace: Workspace }) {
+  const { replace } = useAdmin();
+  const [description, setDescription] = useState(workspace.description);
+  const { busy, track } = useBusy();
+  const id = useId();
+  const error = descriptionError(description);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+
+    if (error !== undefined) return;
+
+    void track(
+      "description",
+      admin.updateWorkspace({ description: description.trim() }).then(
+        (next) => {
+          replace(next);
+          toast({ title: "Description saved", tone: "success" });
+        },
+        (error: Error) => adminFailure("Couldn't save the description", error),
+      ),
+    );
+  };
+
+  return (
+    <form className="settings-form" onSubmit={submit}>
+      <div className="field">
+        <label className="field-label" htmlFor={id}>
+          Description
+        </label>
+        <textarea
+          id={id}
+          className="input settings-textarea"
+          rows={3}
+          value={description}
+          aria-invalid={error !== undefined || undefined}
+          aria-describedby={`${id}-hint`}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+        <p
+          id={`${id}-hint`}
+          className={error === undefined ? "field-hint" : "field-error"}
+          aria-live="polite"
+        >
+          {error ?? "Plain text, up to 300 characters. Shown to members and on the join page."}
+        </p>
+      </div>
+      <Button
+        type="submit"
+        variant="primary"
+        loading={busy("description")}
+        disabled={busy("description") || error !== undefined}
+      >
+        Save description
+      </Button>
+    </form>
+  );
+}
+
+function VanityForm({ workspace }: { readonly workspace: Workspace }) {
+  const { replace } = useAdmin();
+  const [slug, setSlug] = useState(workspace.vanitySlug ?? "");
+  const { busy, track } = useBusy();
+  const error = vanitySlugError(slug);
+
+  const inviteUrl =
+    slug.trim() === "" || error !== undefined
+      ? null
+      : new URL(`/join/${slug.trim()}`, new URL(workspace.joinUrl, window.location.origin)).href;
+
+  const saved = slug.trim() === workspace.vanitySlug;
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+
+    if (error !== undefined) return;
+
+    void track(
+      "vanity",
+      admin.updateWorkspace({ vanitySlug: slug.trim() }).then(
+        (next) => {
+          replace(next);
+          toast({ title: "Vanity invite saved", tone: "success" });
+        },
+        (error: Error) => adminFailure("Couldn't save the vanity invite", error),
+      ),
+    );
+  };
+
+  const copy = () => {
+    if (inviteUrl === null || !saved) return;
+    void navigator.clipboard.writeText(inviteUrl).then(
+      () => toast({ title: "Vanity invite copied", tone: "success" }),
+      () => toast({ title: "Couldn't copy to the clipboard", tone: "danger" }),
+    );
+  };
+
+  return (
+    <form className="settings-form" onSubmit={submit}>
+      <TextField
+        label="Vanity slug"
+        value={slug}
+        error={error}
+        hint="Optional. Clear it to remove the vanity invite. Resetting the join link keeps it working."
+        onChange={(event) => setSlug(event.target.value)}
+      />
+      {inviteUrl === null ? null : (
+        <TextField
+          label="Vanity invite URL"
+          value={inviteUrl}
+          readOnly
+          hint={saved ? "Ready to share." : "Save this slug before sharing."}
+          onFocus={(event) => event.target.select()}
+        />
+      )}
+      <div className="settings-actions">
+        <Button
+          type="submit"
+          variant="primary"
+          loading={busy("vanity")}
+          disabled={busy("vanity") || error !== undefined}
+        >
+          Save vanity slug
+        </Button>
+        {inviteUrl === null ? null : (
+          <Button variant="secondary" icon="copy" disabled={!saved} onClick={copy}>
+            Copy vanity invite
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
@@ -166,7 +301,16 @@ export function WorkspaceSection() {
         description="The icon and banner everyone sees in the rail and at the top of the sidebar."
       >
         <WorkspaceProfile />
+        <section aria-label={`About ${workspace.name}`} className="workspace-about">
+          <h3 className="text-title">About</h3>
+          <p>{workspace.description === "" ? "No description yet." : workspace.description}</p>
+        </section>
       </SettingsGroup>
+      {workspace.canAdminister ? (
+        <SettingsGroup title="Description">
+          <DescriptionForm key={workspace.description} workspace={workspace} />
+        </SettingsGroup>
+      ) : null}
       {workspace.canAdminister ? (
         <SettingsGroup title="Name">
           <NameForm key={workspace.name} workspace={workspace} />
@@ -184,6 +328,9 @@ export function WorkspaceSection() {
       ) : null}
       <SettingsGroup title="Invite">
         <JoinLink />
+        {workspace.canAdminister ? (
+          <VanityForm key={workspace.vanitySlug} workspace={workspace} />
+        ) : null}
       </SettingsGroup>
       <SettingsGroup
         title="Uploads"

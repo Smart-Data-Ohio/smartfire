@@ -37,6 +37,11 @@ pub struct Workspace {
     pub upload_limit_bytes: i64,
     /// The footer's "Smartfire version" badge text.
     pub version: String,
+    /// Plain-text workspace description, empty when unset.
+    pub description: String,
+    /// The optional single-instance invite alias.
+    pub vanity_slug: Option<String>,
+    pub vanity_url: Option<String>,
 }
 
 /// `PATCH /api/v1/admin/workspace` (`accounts#update`). `null` leaves a key as it is.
@@ -47,6 +52,10 @@ pub struct UpdateWorkspace {
     pub name: Option<String>,
     pub restrict_room_creation_to_administrators: Option<bool>,
     pub upload_limit_bytes: Option<i64>,
+    /// An empty string clears the description; null leaves it unchanged.
+    pub description: Option<String>,
+    /// An empty string removes the alias; null leaves it unchanged.
+    pub vanity_slug: Option<String>,
 }
 
 /// `PUT /api/v1/admin/workspace/logo`: a blob uploaded with `POST /api/v1/uploads` becomes the
