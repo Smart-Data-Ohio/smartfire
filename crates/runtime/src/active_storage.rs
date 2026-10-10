@@ -539,6 +539,7 @@ pub(crate) fn touch_attachment_records(
     {
         match record_type.as_str() {
             "Message" => campfire_db::Message::find(tx.conn(), record_id)?.touch(tx)?,
+            "ScheduledMessage" => campfire_db::ScheduledMessage::find(tx.conn(), record_id)?.touch(tx)?,
             "User" => crate::controllers::presenters::accounts::touch(
                 tx.conn(),
                 "users",

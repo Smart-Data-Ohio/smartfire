@@ -641,3 +641,47 @@ describe("several files in one send", () => {
     });
   });
 });
+
+it("schedules two uploaded files in tray order without requiring text", async () => {
+  vi.spyOn(actions.messages, "startUpload").mockImplementation(async (body) => ({
+    signedId: `signed-${body.filename}`,
+    uploadUrl: "/put",
+  }));
+  vi.stubGlobal(
+    "XMLHttpRequest",
+    class {
+      status = 204;
+      upload = { onprogress: null };
+      onload: (() => void) | null = null;
+      onerror = null;
+      onabort = null;
+      open() {}
+      setRequestHeader() {}
+      abort() {}
+      send() {
+        queueMicrotask(() => this.onload?.());
+      }
+    },
+  );
+  const create = vi.spyOn(actions.scheduled, "create").mockRejectedValue(new Error("Keep draft"));
+  const { container } = render(<Composer roomId={ROOM} />);
+  const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
+
+  if (picker === null) throw new Error("no file input");
+  fireEvent.change(picker, {
+    target: { files: [new File(["one"], "one.txt"), new File(["two"], "two.txt")] },
+  });
+  await waitFor(() => expect(container.querySelectorAll('[data-phase="done"]')).toHaveLength(2));
+  fireEvent.click(screen.getByRole("button", { name: "Schedule message" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: /In 1 hour/ }));
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(
+      ROOM,
+      expect.objectContaining({
+        markdownSource: "",
+        attachmentSignedIds: ["signed-one.txt", "signed-two.txt"],
+      }),
+    ),
+  );
+  expect(screen.getByRole("button", { name: "Remove one.txt" })).toBeDefined();
+});

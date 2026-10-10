@@ -7,7 +7,8 @@ use rusqlite::{Connection, Row, params};
 
 use crate::broadcasts::{Broadcast};
 use crate::error::OptionalExt;
-use crate::models::message::SOURCE_LIMIT;
+use crate::models::active_storage::{Attachment, Blob};
+use crate::models::message::{ATTACHMENTS_PER_MESSAGE, SOURCE_LIMIT};
 use crate::sql::{CachedStatements, query_all, query_one};
 use crate::{
     ActivityItem, ChannelThread, Database, Errors, Event, Membership, Message, NewMessage, Result,
@@ -190,6 +191,16 @@ impl ScheduledMessage {
         now: Timestamp,
         send_at_changed: bool,
     ) -> Result<Errors> {
+        Self::validate_with_attachments(conn, attrs, now, send_at_changed, 0)
+    }
+
+    fn validate_with_attachments(
+        conn: &Connection,
+        attrs: &NewScheduledMessage,
+        now: Timestamp,
+        send_at_changed: bool,
+        file_count: usize,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
         if User::find_by_id(conn, attrs.user_id)?.is_none() {
             errors.add("user", "must exist");
@@ -197,8 +208,11 @@ impl ScheduledMessage {
         if Room::find_by_id(conn, attrs.room_id)?.is_none() {
             errors.add("room", "must exist");
         }
-        if attrs.markdown_source.trim().is_empty() {
+        if attrs.markdown_source.trim().is_empty() && file_count == 0 {
             errors.add("markdown_source", "can't be blank");
+        }
+        if file_count > ATTACHMENTS_PER_MESSAGE {
+            errors.add("attachments", format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"));
         }
         if attrs.markdown_source.chars().count() > SOURCE_LIMIT {
             errors.add(
@@ -235,11 +249,16 @@ impl ScheduledMessage {
     }
 
     pub fn create(tx: &mut Tx<'_>, attrs: NewScheduledMessage) -> Result<Self> {
-        Self::validate(tx.conn(), &attrs, tx.now(), true)?.into_result()?;
+        Self::create_with_attachments(tx, attrs, &[])
+    }
+
+    pub fn create_with_attachments(tx: &mut Tx<'_>, attrs: NewScheduledMessage, blob_ids: &[i64]) -> Result<Self> {
+        Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), true, blob_ids.len())?.into_result()?;
         let id = tx.conn().query_row_cached(
             "INSERT INTO scheduled_messages (user_id, room_id, thread_id, reply_to_message_id, markdown_source, send_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             params![attrs.user_id, attrs.room_id, attrs.thread_id, attrs.reply_to_message_id, attrs.markdown_source, attrs.send_at, tx.now(), tx.now()], |r| r.get(0))?;
         let created = Self::find(tx.conn(), id)?;
+        created.replace_attachments(tx, blob_ids)?;
         created.emit_change(tx, false);
         Ok(created)
     }
@@ -251,6 +270,12 @@ impl ScheduledMessage {
             room_id: self.room_id,
             removed,
         }));
+    }
+
+    pub fn touch(&self, tx: &mut Tx<'_>) -> Result<()> {
+        tx.conn().execute_cached("UPDATE scheduled_messages SET updated_at=? WHERE id=?", params![tx.now(), self.id])?;
+        self.emit_change(tx, false);
+        Ok(())
     }
 
     /// `scheduled.changed` for the pending ones in a room that its author (or, with `None`,
@@ -297,6 +322,17 @@ impl ScheduledMessage {
         send_at: Timestamp,
         reply_to_message_id: Option<i64>,
     ) -> Result<()> {
+        self.update_with_attachments(tx, source, send_at, reply_to_message_id, None)
+    }
+
+    pub fn update_with_attachments(
+        &mut self,
+        tx: &mut Tx<'_>,
+        source: &str,
+        send_at: Timestamp,
+        reply_to_message_id: Option<i64>,
+        blob_ids: Option<&[i64]>,
+    ) -> Result<()> {
         let attrs = NewScheduledMessage {
             user_id: self.user_id,
             room_id: self.room_id,
@@ -305,15 +341,44 @@ impl ScheduledMessage {
             markdown_source: source.to_string(),
             send_at,
         };
-        Self::validate(tx.conn(), &attrs, tx.now(), send_at != self.send_at)?.into_result()?;
+        let current = self.attachments(tx.conn())?.into_iter().map(|(attachment, _)| attachment.blob_id).collect::<Vec<_>>();
+        let files = blob_ids.unwrap_or(&current);
+        Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), send_at != self.send_at, files.len())?.into_result()?;
         if source != self.markdown_source
             || send_at != self.send_at
             || reply_to_message_id != self.reply_to_message_id
+            || files != current
         {
+            if files != current {
+                self.replace_attachments(tx, files)?;
+            }
             tx.conn().execute_cached("UPDATE scheduled_messages SET markdown_source = ?, send_at = ?, reply_to_message_id = ?, updated_at = ? WHERE id = ?",
                 params![source, send_at, reply_to_message_id, tx.now(), self.id])?;
             *self = Self::find(tx.conn(), self.id)?;
             self.emit_change(tx, false);
+        }
+        Ok(())
+    }
+
+    pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
+        query_all(conn,
+            "SELECT * FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND name='attachments' ORDER BY id",
+            [self.id], Attachment::from_row)?
+            .into_iter().map(|attachment| {
+                let blob = attachment.blob(conn)?;
+                Ok((attachment, blob))
+            }).collect()
+    }
+
+    fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
+        for (attachment, _) in self.attachments(tx.conn())? {
+            attachment.delete(tx)?;
+            if !blob_ids.contains(&attachment.blob_id) {
+                tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
+            }
+        }
+        for &blob_id in blob_ids {
+            Attachment::create(tx, "ScheduledMessage", self.id, "attachments", blob_id)?;
         }
         Ok(())
     }
@@ -437,6 +502,7 @@ impl ScheduledMessage {
     }
 
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.replace_attachments(tx, &[])?;
         ActivityItem::destroy_for_source(tx, "ScheduledMessage", self.id)?;
         tx.conn()
             .execute_cached("DELETE FROM scheduled_messages WHERE id = ?", [self.id])?;
@@ -544,7 +610,8 @@ impl ScheduledMessage {
             creator_id: scheduled.user_id,
             thread_id: scheduled.thread_id,
             reply_to_message_id: reply_id,
-            markdown_source: Some(scheduled.markdown_source.clone()),
+            markdown_source: Some(scheduled.markdown_source.clone()).filter(|source| !source.trim().is_empty()),
+            attachment_blob_ids: scheduled.attachments(tx.conn())?.into_iter().map(|(attachment, _)| attachment.blob_id).collect(),
             ..Default::default()
         };
         // Validate before thread joins/reopening mutate state. SQL/rendering failures propagate
@@ -558,6 +625,9 @@ impl ScheduledMessage {
             Some(mut thread) => thread.post_message(tx, scheduled.user_id, attrs)?,
             None => Message::create(tx, attrs)?,
         };
+        // The sent message now owns these blobs; deleting history must not purge them.
+        tx.conn().execute_cached("DELETE FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND name='attachments'", [id])?;
+        super::message_attachment_processing::schedule_message(tx, &message)?;
         tx.conn().execute_cached("UPDATE scheduled_messages SET sent_at = ?, sent_message_id = ?, updated_at = ? WHERE id = ?",
             params![now, message.id, tx.now(), id])?;
         scheduled.emit_change(tx, false);
@@ -580,8 +650,7 @@ impl ScheduledMessage {
                 }
             }
         }
-        // Scheduled messages have no attachment column. process_attachment therefore has no
-        // work here. Human root posts fan out to legacy bots; thread posts never do.
+        // Human root posts fan out to legacy bots; thread posts never do.
         crate::models::bot_webhook_fanout::deliver(tx, &message)?;
         Ok(true)
     }

@@ -15,6 +15,7 @@ import type { SlashCommandResult as GeneratedSlashCommandResult } from "../../ge
 import type { UpdateScheduledMessage as GeneratedUpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
 import type { UserSuggestion as GeneratedUserSuggestion } from "../../gen/UserSuggestion.ts";
 import type { UserSuggestionList as GeneratedUserSuggestionList } from "../../gen/UserSuggestionList.ts";
+import { Attachment } from "./attachment.ts";
 import { QuotePreview } from "./cards.ts";
 import { ConversationName } from "./conversation.ts";
 import { Icon } from "./icon.ts";
@@ -126,7 +127,7 @@ export type ScheduledMessageStatePin = Assert<
 >;
 
 /**
- * A message to send later; text only. A pending one that isn't `sendable` is stranded: it will
+ * A message to send later. A pending one that isn't `sendable` is stranded: it will
  * be dropped when due unless access comes back.
  */
 export const ScheduledMessage = Schema.Struct({
@@ -146,6 +147,7 @@ export const ScheduledMessage = Schema.Struct({
   droppedAt: Schema.NullOr(Timestamp),
   dropReason: Schema.NullOr(Schema.String),
   createdAt: Timestamp,
+  attachments: Schema.Array(Schema.Struct({ attachment: Attachment, signedId: Schema.String })),
 });
 
 export type ScheduledMessage = typeof ScheduledMessage.Type;
@@ -160,6 +162,8 @@ export const CreateScheduledMessage = Schema.Struct({
   sendAt: Timestamp,
   threadId: Schema.NullOr(ThreadId),
   replyToMessageId: Schema.NullOr(MessageId),
+  attachmentSignedId: Schema.optionalKey(Schema.String),
+  attachmentSignedIds: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 export type CreateScheduledMessage = typeof CreateScheduledMessage.Type;
@@ -173,6 +177,8 @@ export const UpdateScheduledMessage = Schema.Struct({
   markdownSource: Schema.optionalKey(Schema.String),
   sendAt: Schema.optionalKey(Timestamp),
   replyToMessageId: Schema.optionalKey(Schema.NullOr(MessageId)),
+  attachmentSignedId: Schema.optionalKey(Schema.String),
+  attachmentSignedIds: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;
