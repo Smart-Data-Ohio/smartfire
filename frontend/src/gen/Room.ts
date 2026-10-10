@@ -8,4 +8,4 @@ export type Room = { id: number, kind: RoomKind,
 /**
  * `null` for direct messages, which are named after their members.
  */
-name: string | null, iconName: string | null, creatorId: number, createdAt: string, updatedAt: string, };
+name: string | null, iconName: string | null, creatorId: number, createdAt: string, updatedAt: string, topic: string | null, };

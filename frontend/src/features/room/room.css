@@ -70,6 +70,28 @@
     min-width: 0;
   }
 
+  .room-title > a.room-title-button {
+    flex-shrink: 0;
+    max-width: min(18rem, calc(100% - 2rem));
+  }
+
+  .room-header:has(.room-topic-button) .page-header-heading {
+    min-width: 14rem;
+  }
+
+  .room-header:has(.room-topic-button) .page-header-actions {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .room-header:has(.room-topic-button) .header-search {
+    min-width: 0;
+  }
+
+  .room-header:has(.room-topic-button) .search-field {
+    max-width: 100%;
+  }
+
   .room-title-icon {
     flex-shrink: 0;
     color: var(--text-muted);
@@ -94,6 +116,21 @@
     font-size: var(--text-sidebar);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .room-topic-button {
+    flex: 1;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .room-topic-button:hover {
+    color: var(--text);
+  }
+
+  .room-topic-button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
   }
 
   /* The agent's name wins the header's width; its status line gives way first. */

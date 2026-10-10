@@ -33,6 +33,7 @@ const form: RoomForm = {
   groupCapable: false,
   defaultInvolvement: "everything",
   stageRoles: [],
+  topic: null,
 };
 
 const seed = () => {

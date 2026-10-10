@@ -73,6 +73,7 @@ describe("S8 room management schemas", () => {
       groupCapable: true,
       defaultInvolvement: "everything",
       stageRoles: [{ userId: 7, role: "host" }],
+      topic: null,
     });
   });
 

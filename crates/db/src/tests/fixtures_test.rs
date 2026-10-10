@@ -112,6 +112,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
                 !(table == "users"
                     && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname"))
             })
+            .filter(|(_, name)| !(table == "rooms" && name.as_str() == "topic"))
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
