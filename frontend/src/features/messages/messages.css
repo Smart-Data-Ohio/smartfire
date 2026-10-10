@@ -568,7 +568,8 @@
   }
 
   .attachment-tile.attachment-video {
-    object-fit: cover;
+    object-fit: contain;
+    background: var(--bg-skeleton);
   }
 
   .attachment-tile.attachment-image.attachment-pending img {
