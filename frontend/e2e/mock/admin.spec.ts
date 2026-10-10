@@ -1,4 +1,6 @@
 import type { Page } from "@playwright/test";
+import { animatedIconGif } from "../../mock/s2/assets.ts";
+import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
 import {
   DESKTOP,
   expect,
@@ -8,6 +10,7 @@ import {
   openApp,
   PHONE_SMALL,
   PHONE_TOUCH,
+  ROOM_IDS,
   SHOTS,
   shot,
   test,
@@ -121,6 +124,59 @@ test("deleting an icon keeps the focus in the list", async ({ page }) => {
 
   await expect(page.getByText("No workspace icons yet.")).toBeVisible();
   await expect(page.locator(".admin-focus-root")).toBeFocused();
+});
+
+test("an animated icon uploaded here plays in a reaction, and rests on its still under reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/app/admin/icons");
+  await expect(page.getByText("Animated icons: 0 of 250 used.")).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Name" }).fill("dance");
+  await page.getByRole("textbox", { name: "Title" }).fill("Dance");
+  await page.getByLabel("Icon file").setInputFiles({
+    name: "dance.gif",
+    mimeType: "image/gif",
+    buffer: Buffer.from(animatedIconGif()),
+  });
+  await page.getByRole("button", { name: "Upload icon" }).click();
+
+  const listed = page.locator(".settings-list-row", { hasText: ":dance:" });
+
+  await expect(listed.getByText("Animated")).toBeVisible();
+  await expect(page.getByText("Animated icons: 1 of 250 used.")).toBeVisible();
+
+  await page.goto(`/app/r/${ROOM_IDS.general}/m/${MESSAGE_IDS.generalReactions}`);
+
+  const target = page.locator(`[data-message-id="${MESSAGE_IDS.generalReactions}"]`);
+  const bar = target.getByRole("toolbar", { name: "Message actions" });
+
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await target.hover();
+    await expect(bar).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await bar.getByRole("button", { name: "Add reaction" }).click();
+  await page.getByRole("combobox", { name: "Search emoji" }).fill("dance");
+  await page.getByRole("option", { name: "Dance", exact: true }).click();
+
+  const image = target.getByRole("button", { name: /^Dance:/ }).locator("img");
+
+  // The original plays: the GIF itself, all its frames, not the still.
+  await expect(image).toHaveAttribute("src", "/icons/dance");
+  await expect
+    .poll(() =>
+      image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth),
+    )
+    .toBe(64);
+
+  const served = await page.request.get("/icons/dance");
+
+  expect(served.headers()["content-type"]).toBe("image/gif");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(image).toHaveAttribute("src", "/icons/dance?still=1");
 });
 
 test("custom CSS waits out the password confirmation", async ({ page, request }) => {

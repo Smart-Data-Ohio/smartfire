@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState } from "react";
+import { EmojiImage } from "../../../lib/emoji/emoji-image.tsx";
 import { usePresence } from "../../../motion/presence.ts";
 import { Avatar } from "../../../ui/avatar.tsx";
 import { Icon } from "../../../ui/icons/icon.tsx";
@@ -131,7 +132,12 @@ function SuggestionRow({ item }: { readonly item: Suggestion }) {
           <span className="autocomplete-glyph" aria-hidden="true">
             {item.icon.character ??
               (item.icon.imageUrl === null ? null : (
-                <img src={item.icon.imageUrl} alt="" width={20} height={20} />
+                <EmojiImage
+                  src={item.icon.imageUrl}
+                  still={item.icon.stillUrl}
+                  width={20}
+                  height={20}
+                />
               ))}
           </span>
           <span className="autocomplete-label">{item.insert}</span>

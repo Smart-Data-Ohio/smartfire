@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
 import { inlineMentions } from "../../lib/body-html.ts";
+import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 import { formatFull } from "../../lib/time.ts";
 import { SuccessCheck } from "../../motion/success-check.tsx";
 import { useStore } from "../../store/store.ts";
@@ -74,7 +75,8 @@ export function WorkResult({ threadId, work, updatedAt, canEdit, announce }: Wor
   const [saved, setSaved] = useState(false);
   const editRef = useRef<HTMLButtonElement | null>(null);
   const returnFocus = useRef(false);
-  const resultRef = useSpoilerReveal(work.resultHtml ?? "");
+  const resultHtml = useMotionSafeHtml(inlineMentions(work.resultHtml ?? ""));
+  const resultRef = useSpoilerReveal(resultHtml);
 
   // Back from the editor, focus returns to the button that opened it.
   useEffect(() => {
@@ -190,7 +192,7 @@ export function WorkResult({ threadId, work, updatedAt, canEdit, announce }: Wor
           ref={resultRef}
           className="message-body work-result-body"
           // biome-ignore lint/security/noDangerouslySetInnerHtml: resultHtml is the server's sanitizer output (crates/richtext), as message bodies are
-          dangerouslySetInnerHTML={{ __html: inlineMentions(work.resultHtml) }}
+          dangerouslySetInnerHTML={{ __html: resultHtml }}
         />
       )}
       {updatedAt === null || editing ? null : (

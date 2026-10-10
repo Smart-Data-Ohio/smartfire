@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Icon as IconDTO } from "../gen/Icon.ts";
 import { useResolvedTheme } from "../lib/appearance.ts";
+import { EmojiImage } from "../lib/emoji/emoji-image.tsx";
 import { loadForUpdate } from "../service-worker/update-required.ts";
 import { AgentThinking } from "./agent-thinking.tsx";
 import { Icon } from "./icons/icon.tsx";
@@ -124,10 +125,10 @@ function ChosenIcon({ icon, size }: { readonly icon: IconDTO; readonly size: num
   }
 
   return icon.imageUrl === null ? null : (
-    <img
+    <EmojiImage
       className="agent-avatar-icon"
       src={icon.imageUrl}
-      alt=""
+      still={icon.stillUrl}
       width={Math.round(size * 0.62)}
       height={Math.round(size * 0.62)}
       loading="lazy"
