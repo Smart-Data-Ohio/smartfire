@@ -7,6 +7,7 @@
  * The S1 routes live here; the S2 ones are modules under s2/, each handed an `S2Context` and
  * reached through `dispatch` when no S1 route matches.
  */
+
 import type { Me } from "../src/gen/Me.ts";
 import type { MessageDTO } from "../src/gen/MessageDTO.ts";
 import type { MessageReactions } from "../src/gen/MessageReactions.ts";
@@ -106,6 +107,7 @@ import {
   type World,
 } from "./seed.ts";
 import { createSimulation, type Simulation } from "./simulation.ts";
+import { mockSound } from "./sounds.ts";
 import {
   createSyncHub,
   type DropSocket,
@@ -465,6 +467,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     presenceSetting: "auto",
     doNotDisturb: world.doNotDisturb,
     quietHours: null,
+    chatSounds: {
+      muted: world.doNotDisturb.enabled,
+      quietHours: null,
+      timeZone: VIEWER_TIME_ZONE,
+      quietWindows:
+        world.outOfOffice === null || world.outOfOffice.keepNotifications
+          ? []
+          : [[0, Date.parse(world.outOfOffice.until) / 1000]],
+    },
     outOfOffice: world.outOfOffice,
     lastRoomId: ROOM_IDS.general,
   });
@@ -715,6 +726,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       ...current,
       bodyHtml: renderMarkdown(markdown, mentionables()),
       markdownSource: markdown,
+      sound: current.attachment === null ? mockSound(markdown) : null,
       streaming,
       updatedAt,
     };

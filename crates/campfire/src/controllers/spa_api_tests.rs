@@ -61,6 +61,85 @@ async fn post(b: &mut Browser<'_>, room_id: i64, client_message_id: &str, source
 }
 
 #[tokio::test]
+async fn play_chat_sound_messages_match_the_classic_catalog() {
+    let Some(a) = app(true).await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    for (name, presentation) in [
+        (
+            "bell",
+            api::SoundPresentation::Text {
+                text: "🔔".into()
+            },
+        ),
+        (
+            "56k",
+            api::SoundPresentation::Image {
+                url: campfire_assets::image_path("sounds/56k.webp"),
+                width: 79,
+                height: 33,
+            },
+        ),
+    ] {
+        let reply = b
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{HQ}/slash_commands"),
+                &json!({"text": format!("/play {name}"), "threadId": null}),
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let result: api::SlashCommandResult = parse(&reply);
+        let api::SlashCommandResult::Posted { message_id: id, .. } = result else {
+            panic!("/play did not post: {result:?}");
+        };
+        let read: api::MessageRead = parse(&b.send(get(&format!("/api/v1/messages/{id}"))).await);
+        assert_eq!(read.message.markdown_source, Some(format!("/play {name}")));
+        assert_eq!(
+            read.message.sound,
+            Some(api::MessageSound {
+                name: name.into(),
+                url: campfire_assets::asset_path(&format!("{name}.mp3")),
+                presentation,
+            })
+        );
+        let classic = b
+            .send(Req::new(Method::GET, &format!("/rooms/{HQ}?classic=1")))
+            .await;
+        assert!(classic.text().contains(&format!(
+            "data-sound-url-value=\"{}\"",
+            read.message.sound.unwrap().url
+        )));
+    }
+    let unknown: api::MessageDTO =
+        parse(&post(&mut b, HQ, "unknown-play-sound", "/play unknown").await);
+    assert_eq!(unknown.sound, None);
+}
+
+#[tokio::test]
+async fn play_chat_sound_quiet_policy_is_the_classic_layout_policy() {
+    let Some(a) = app(true).await else { return };
+    a.db().write(|tx| {
+        tx.conn().execute("UPDATE users SET presence_setting='dnd',quiet_hours_enabled=1,quiet_hours_start_minute=1320,quiet_hours_end_minute=420,time_zone='America/New_York',meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_calendar_enabled=1,ooo_notify_enabled=0 WHERE id=?", [DAVID])?;
+        tx.conn().execute("INSERT OR REPLACE INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,created_at,updated_at) VALUES(?,'[[\"2026-10-09T12:00:00Z\",\"2026-10-09T13:00:00Z\"]]','[[\"2026-10-09T14:00:00Z\",\"2026-10-09T15:00:00Z\"]]','2026-10-09 11:00:00','2026-10-09 11:00:00')", [DAVID])?;
+        Ok(())
+    }).await.unwrap();
+    let mut b = a.sign_in(DAVID).await;
+    let me: api::Me = parse(&b.send(get("/api/v1/me")).await);
+    assert_eq!(
+        me.chat_sounds,
+        api::ChatSounds {
+            muted: true,
+            quiet_hours: Some(api::QuietHours {
+                start_minute: 1320,
+                end_minute: 420
+            }),
+            time_zone: "America/New_York".into(),
+            quiet_windows: vec![(1791547200, 1791550800), (1791554400, 1791558000)],
+        }
+    );
+}
+
+#[tokio::test]
 async fn the_api_exists_only_with_the_spa() {
     let Some(a) = app(false).await else { return };
     let mut b = a.sign_in(DAVID).await;

@@ -8,16 +8,18 @@ import {
 import { act, render } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { messageFixture } from "../../api/testing.ts";
+import { meFixture, messageFixture, pageFixture } from "../../api/testing.ts";
 import type { Poll } from "../../gen/Poll.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import { resetReaderFocusForTests } from "../../lib/reader-focus.ts";
 import type { Boot, Timeline as RoomTimeline } from "../../store/model.ts";
 import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
-import { store } from "../../store/store.ts";
+import { mutations, store } from "../../store/store.ts";
 import { panes } from "../../sync/panes.ts";
 import { actions } from "../../sync/runtime.ts";
+// biome-ignore lint/style/noRestrictedImports: This integration test delivers an applied sync batch to the timeline.
+import { emitSyncEvents } from "../../sync/signals.ts";
 import { Dialog } from "../../ui/dialog.tsx";
 import { holdCardsChunk } from "../cards/card-slot.tsx";
 import { openPane } from "../panes/pane-store.ts";
@@ -423,6 +425,67 @@ describe("permalink placement", () => {
       patchTimeline({ after: 4 });
     });
     expect(loadNewer).toHaveBeenCalledWith(ROOM);
+  });
+
+  it("keeps live sounds silent after scrolling into older pages, even with the latest rows cached", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+
+    vi.spyOn(actions, "loadOlder").mockResolvedValue(undefined);
+    install(
+      Array.from({ length: 40 }, (_, index) => index + 361),
+      { after: null },
+    );
+    store.setState({ me: meFixture });
+    await renderTimeline(null);
+
+    await act(async () => {
+      mutations.applyPage(
+        ROOM,
+        pageFixture(Array.from({ length: 360 }, (_, index) => messageFixture(index + 1, ROOM))),
+        "older",
+      );
+    });
+
+    const list = document.querySelector<HTMLElement>("[data-message-list]");
+
+    expect(list).not.toBeNull();
+
+    if (list === null) return;
+
+    await act(async () => {
+      list.dispatchEvent(new WheelEvent("wheel", { deltaY: -20, bubbles: true }));
+      list.scrollTop = 0;
+      list.dispatchEvent(new Event("scroll"));
+    });
+
+    const arrive = (id: number) => {
+      const message = messageFixture(id, ROOM, {
+        sound: {
+          name: "bell",
+          url: "/assets/bell.mp3",
+          presentation: { kind: "text", text: "🔔" },
+        },
+      });
+
+      mutations.receiveMessage(message);
+      emitSyncEvents([{ seq: id, topic: `room:${ROOM}`, type: "message.created", data: message }]);
+    };
+
+    await act(async () => arrive(401));
+    expect(store.getState().timelines[ROOM]?.after).toBeNull();
+    expect(store.getState().timelines[ROOM]?.ids).toHaveLength(401);
+    expect(play).not.toHaveBeenCalled();
+
+    // Returning to the present does not replay the sound that arrived in history.
+    await act(async () => {
+      list.scrollTop = 20_000;
+      list.dispatchEvent(new Event("scroll"));
+    });
+    expect(play).not.toHaveBeenCalled();
+    await act(async () => arrive(402));
+    expect(play).toHaveBeenCalledOnce();
   });
 
   it("releases newer paging when the permalink list never measures", async () => {

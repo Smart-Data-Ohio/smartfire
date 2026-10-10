@@ -579,6 +579,144 @@
     font-size: inherit;
   }
 
+  /* A code block and its Copy button (src/lib/code-highlight/code-blocks.ts). The button sits in
+     the corner over the block, outside the scrolling <pre>, and shows on hover or focus; on a
+     touch screen, which has no hover, it always shows. */
+  .message-body .code-block {
+    position: relative;
+    margin-block: var(--space-1);
+  }
+
+  .message-body .code-block > pre {
+    margin-block: 0;
+    color: var(--code-plain);
+  }
+
+  .message-body .code-copy {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    min-height: 24px;
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    opacity: 0;
+    transition:
+      opacity var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .message-body .code-block:hover .code-copy,
+  .message-body .code-copy:focus-visible,
+  .message-body .code-copy[data-copied] {
+    opacity: 1;
+  }
+
+  .message-body .code-copy:hover {
+    color: var(--text);
+  }
+
+  .message-body .code-copy:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .message-body .code-copy[data-copied] {
+    color: var(--success-text);
+  }
+
+  @media (hover: none) {
+    .message-body .code-copy {
+      opacity: 1;
+    }
+  }
+
+  /* A phone's narrow block would put the button over the code: the block's top padding becomes a
+     strip the full-size button sits in, above the first line. */
+  @media (width < 720px) and (pointer: coarse) {
+    .message-body .code-block > pre {
+      padding-top: var(--touch-target);
+    }
+
+    .message-body .code-copy {
+      top: 0;
+      right: 0;
+      min-width: var(--touch-target);
+      min-height: var(--touch-target);
+      padding: 0 var(--space-3);
+      background: none;
+      box-shadow: none;
+    }
+  }
+
+  /* Each coloured run's kind, painted from the design tokens (tokens.css's --code-*). */
+  .code-token--comment {
+    color: var(--code-comment);
+  }
+
+  .code-token--keyword {
+    color: var(--code-keyword);
+  }
+
+  .code-token--control {
+    color: var(--code-control);
+  }
+
+  .code-token--string {
+    color: var(--code-string);
+  }
+
+  .code-token--regexp {
+    color: var(--code-regexp);
+  }
+
+  .code-token--special {
+    color: var(--code-special);
+  }
+
+  .code-token--number {
+    color: var(--code-number);
+  }
+
+  .code-token--variable {
+    color: var(--code-variable);
+  }
+
+  .code-token--constant {
+    color: var(--code-constant);
+  }
+
+  .code-token--function {
+    color: var(--code-function);
+  }
+
+  .code-token--type {
+    color: var(--code-type);
+  }
+
+  .code-token--punctuation {
+    color: var(--code-punctuation);
+  }
+
+  .code-token--invalid {
+    color: var(--code-invalid);
+  }
+
+  .code-token--inserted {
+    color: var(--code-inserted);
+  }
+
+  .code-token--deleted {
+    color: var(--code-deleted);
+  }
+
   .message-body blockquote {
     padding-left: var(--space-3);
     border-left: 3px solid var(--border-strong);

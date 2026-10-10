@@ -393,6 +393,12 @@ pub(crate) fn messages_and_fetches(
                 None => None,
             };
             let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
+            let sound = if attachment.is_none() {
+                campfire_db::message::sound_in(&presenter.plain_text_body(message)?)
+                    .map(message_sound)
+            } else {
+                None
+            };
             Ok(api::MessageDTO {
                 id: message.id,
                 room_id: message.room_id,
@@ -400,6 +406,7 @@ pub(crate) fn messages_and_fetches(
                 creator_id: message.creator_id,
                 client_message_id: message.client_message_id.clone(),
                 body_html: inline_mentions(&presenter.rendered_body_html(message)?),
+                sound,
                 markdown_source: message.markdown_source.clone(),
                 system_note: message.system_note,
                 action: message.action,
@@ -425,6 +432,23 @@ pub(crate) fn messages_and_fetches(
         })
         .collect::<Result<Vec<_>>>()
         .map(|dtos| (dtos, fetches))
+}
+
+fn message_sound(sound: &campfire_db::Sound) -> api::MessageSound {
+    api::MessageSound {
+        name: sound.name.into(),
+        url: campfire_assets::asset_path(&sound.asset_path()),
+        presentation: match sound.image {
+            Some(image) => api::SoundPresentation::Image {
+                url: campfire_assets::image_path(&image.asset_path()),
+                width: image.width,
+                height: image.height,
+            },
+            None => api::SoundPresentation::Text {
+                text: sound.text.unwrap_or_default().into(),
+            },
+        },
+    }
 }
 
 /// `agent_steps`' columns as [`agent_step`] reads them.
@@ -1165,6 +1189,21 @@ pub fn me(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let dnd = settings.manual_dnd_active(now);
+    let preferences = presenters::view_context::user_preferences(conn, viewer.id, now.jiff())?;
+    let sounds = preferences.notification_sounds;
+    let chat_sounds = api::ChatSounds {
+        muted: sounds.muted,
+        quiet_hours: sounds.quiet_hours.map(|(start, end)| api::QuietHours {
+            start_minute: minute(start),
+            end_minute: minute(end),
+        }),
+        time_zone: present(preferences.time_zone.as_deref()).unwrap_or_else(|| "UTC".into()),
+        quiet_windows: sounds
+            .meeting_quiet
+            .into_iter()
+            .chain(sounds.ooo_quiet)
+            .collect(),
+    };
     let quiet_hours = match (
         settings.quiet_hours_enabled,
         settings.quiet_hours_start_minute,
@@ -1221,6 +1260,7 @@ pub fn me(
             },
         },
         quiet_hours,
+        chat_sounds,
         out_of_office: settings
             .ooo_until_effective(now)
             .map(|until| api::OutOfOffice {
@@ -1640,6 +1680,29 @@ mod tests {
                 "one_room={one_room}:\n{text}"
             );
         }
+    }
+
+    #[test]
+    fn play_sounds_carry_the_classic_catalog_and_asset_urls() {
+        let bell = super::message_sound(campfire_db::Sound::find_by_name("bell").unwrap());
+        assert_eq!(bell.name, "bell");
+        assert_eq!(bell.url, campfire_assets::asset_path("bell.mp3"));
+        assert_eq!(
+            bell.presentation,
+            api::SoundPresentation::Text {
+                text: "🔔".into()
+            }
+        );
+        let modem = super::message_sound(campfire_db::Sound::find_by_name("56k").unwrap());
+        assert_eq!(modem.url, campfire_assets::asset_path("56k.mp3"));
+        assert_eq!(
+            modem.presentation,
+            api::SoundPresentation::Image {
+                url: campfire_assets::image_path("sounds/56k.webp"),
+                width: 79,
+                height: 33,
+            }
+        );
     }
 
     #[test]

@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PHONE_QUERY } from "../lib/breakpoints.ts";
+import { TOKEN_KINDS } from "../lib/code-highlight/kinds.ts";
 import {
   composite,
   contrastRatio,
@@ -133,6 +134,9 @@ const SURFACES = [
   "--bg-sunken",
 ];
 
+/** Every colour a code block's tokens take (src/lib/code-highlight/kinds.ts). */
+const CODE_TOKENS = ["--code-plain", ...TOKEN_KINDS.map((kind) => `--code-${kind}`)];
+
 /** Text token → the backgrounds it is used on; each text token once (a Map keeps the last). */
 const PAIR_LIST: readonly (readonly [string, readonly string[]])[] = [
   ["--text", [...SURFACES, "--mention-bg over --bg-pane"]],
@@ -157,6 +161,8 @@ const PAIR_LIST: readonly (readonly [string, readonly string[]])[] = [
   ["--tooltip-text", ["--tooltip-bg"]],
   ["--on-accent", ["--accent-solid"]],
   ["--on-danger", ["--danger-solid"]],
+  // A code block's colours, on its ground (room.css's `.message-body pre`).
+  ...CODE_TOKENS.map((token) => [token, ["--bg-sunken"]] as const),
 ];
 
 const PAIRS = new Map(PAIR_LIST);
