@@ -62,6 +62,11 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
                 }
             })
         }
+        campfire_db::models::workspace_category::WorkspaceOrganized::KIND => {
+            decode::<campfire_db::models::workspace_category::WorkspaceOrganized>(request).map(|_| {
+                if let Some(app) = app { app.broadcasts.sync_workspace_organized(); }
+            })
+        }
         campfire_db::models::poll::PollChanged::KIND => decode(request).map(|change| {
             if let Some(app) = app {
                 app.broadcasts.sync_poll(change);

@@ -510,6 +510,18 @@ impl Membership {
             }
             return Ok(());
         }
+        let visible = |level: Option<Involvement>| {
+            level.is_some_and(|level| level != Involvement::Invisible)
+        };
+        if visible(self.involvement) != visible(involvement)
+            && sql::exists(
+                tx.conn(),
+                "SELECT 1 FROM rooms WHERE id = ? AND type != 'Rooms::Direct' AND deleted_at IS NULL AND (workspace_category_id IS NOT NULL OR workspace_position IS NOT NULL)",
+                [self.room_id],
+            )?
+        {
+            tx.emit_after_commit(Event::broadcast(&super::workspace_category::WorkspaceOrganized));
+        }
         let now = tx.now();
         tx.conn().execute_cached(
             r#"UPDATE "memberships" SET "involvement" = ?, "updated_at" = ? WHERE "memberships"."id" = ?"#,

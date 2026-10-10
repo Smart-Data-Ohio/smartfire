@@ -172,6 +172,23 @@ pub fn routes(app: &AppState) -> Router<Kit> {
                 .delete(action(message_actions::unsave)),
         )
         .route(
+            "/api/v1/workspace_categories",
+            post(unparsed_action(organize::create_workspace_category)),
+        )
+        .route(
+            "/api/v1/workspace_categories/order",
+            put(unparsed_action(organize::order_workspace_categories)),
+        )
+        .route(
+            "/api/v1/workspace_categories/{category_id}",
+            patch(unparsed_action(organize::update_workspace_category))
+                .delete(action(organize::destroy_workspace_category)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/workspace_category",
+            put(unparsed_action(organize::move_workspace_room)),
+        )
+        .route(
             "/api/v1/room_categories",
             post(unparsed_action(organize::create_category)),
         )
