@@ -160,7 +160,7 @@ mod tests {
     /// Every builtin sound plays `NAME.mp3` and shows its image from the port's assets.
     #[test]
     fn builtin_sound_assets_exist() {
-        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/app/assets");
+        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../static_assets/media");
         for sound in BUILTIN {
             let mp3 = assets.join(format!("sounds/{}.mp3", sound.name));
             assert!(mp3.is_file(), "{} is missing", mp3.display());

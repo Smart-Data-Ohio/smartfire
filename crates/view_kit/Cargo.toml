@@ -7,7 +7,7 @@ publish.workspace = true
 
 [dependencies]
 askama.workspace = true
-campfire_assets.workspace = true
+campfire_static_assets.workspace = true
 campfire_routes.workspace = true
 rails_compat.workspace = true
 serde.workspace = true

@@ -74,7 +74,7 @@ async fn play_chat_sound_messages_match_the_classic_catalog() {
         (
             "56k",
             api::SoundPresentation::Image {
-                url: campfire_assets::image_path("sounds/56k.webp"),
+                url: campfire_static_assets::image_path("sounds/56k.webp"),
                 width: 79,
                 height: 33,
             },
@@ -98,7 +98,7 @@ async fn play_chat_sound_messages_match_the_classic_catalog() {
             read.message.sound,
             Some(api::MessageSound {
                 name: name.into(),
-                url: campfire_assets::asset_path(&format!("{name}.mp3")),
+                url: campfire_static_assets::asset_path(&format!("{name}.mp3")),
                 presentation,
             })
         );
