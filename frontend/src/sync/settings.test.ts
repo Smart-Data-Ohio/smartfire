@@ -12,6 +12,7 @@ import {
   setPalette,
   setPersonalAppearanceOverride,
 } from "../lib/appearance.ts";
+import { PALETTE_FIELDS, setFieldColour, tokensPayload } from "../lib/custom-palette.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
 import { organizedSidebar } from "../store/organize.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
@@ -29,6 +30,12 @@ import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.t
 import { emitResync } from "./signals.ts";
 
 const network = installMockNetwork();
+
+const DANGER = PALETTE_FIELDS.find((field) => field.token === "--danger-text") ?? {
+  token: "--danger-text",
+  label: "Danger",
+  hint: "",
+};
 
 const fetch = globalThis.fetch;
 
@@ -122,6 +129,46 @@ it("sends only changed personal fields, including explicit clears", async () => 
     version: 1,
     font: "mono",
   });
+});
+
+it("saves custom palette colours as one tokens field and clears them with null", async () => {
+  await personalAccount({ version: 1, palette: "ocean", tokens: { "--accent": "#123abc" } });
+  const bodies: unknown[] = [];
+  intercept = async (input, init) => {
+    if (String(input).endsWith("/settings/appearance") && init?.body !== undefined) {
+      bodies.push(await new Response(init.body).json());
+    }
+
+    return fetch(input, init);
+  };
+
+  const edited = setFieldColour({ "--accent": "#123abc" }, DANGER, "#cc0000");
+
+  await saveAccountPersonalAppearance({ tokens: tokensPayload(edited) });
+  expect(document.documentElement.style.getPropertyValue("--danger-text")).toBe("#cc0000");
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    palette: "ocean",
+    tokens: { "--accent": "#123abc", "--danger": "#cc0000", "--danger-text": "#cc0000" },
+  });
+
+  await saveAccountPersonalAppearance({ tokens: tokensPayload({}) });
+  expect(bodies).toEqual([
+    {
+      theme: null,
+      textSize: null,
+      timeZone: null,
+      appearancePreferences: {
+        tokens: { "--accent": "#123abc", "--danger": "#cc0000", "--danger-text": "#cc0000" },
+      },
+    },
+    { theme: null, textSize: null, timeZone: null, appearancePreferences: { tokens: null } },
+  ]);
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    palette: "ocean",
+  });
+  expect(document.documentElement.style.getPropertyValue("--danger-text")).toBe("");
 });
 
 it("keeps Forest when an Ocean save's held me response arrives after a settings.updated event", async () => {
