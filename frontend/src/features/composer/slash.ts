@@ -1,7 +1,7 @@
 /**
  * Slash-command routing, as the classic composer does it (crates/api_types composer.rs):
- * `//text` posts `/text` as an ordinary message, a known `/command` runs on the server, and an
- * unknown `/word` is posted as typed.
+ * `//text` posts `/text` as an ordinary message, `/play` uses normal message submission, a known
+ * `/command` runs on the server, and an unknown `/word` is posted as typed.
  */
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 
@@ -22,7 +22,9 @@ export function slashName(text: string): string | null {
 
 /** Whether sending this text needs the command list to decide where it goes. */
 export function looksLikeCommand(text: string): boolean {
-  return slashName(text.trim()) !== null;
+  const name = slashName(text.trim());
+
+  return name !== null && name !== "play";
 }
 
 /** Where a message goes: posted as Markdown, or run as a command. */
@@ -34,7 +36,9 @@ export function routeSlash(text: string, commands: readonly SlashCommand[]): Sla
   }
 
   const name = slashName(trimmed);
-  const command = name === null ? undefined : commands.find((entry) => entry.name === name);
+
+  const command =
+    name === null || name === "play" ? undefined : commands.find((entry) => entry.name === name);
 
   return command === undefined
     ? { kind: "message", markdown: text.trimEnd() }

@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { inlineMentions } from "../../lib/body-html.ts";
 import { BodyHtml } from "./body-html.tsx";
 
@@ -50,5 +50,33 @@ describe("BodyHtml", () => {
 
       expect(container.innerHTML).toBe(expected);
     }
+  });
+
+  it("colours a fenced block after mount and keeps it through an unrelated re-render", async () => {
+    const html = '<pre><code class="language-ts">const value: string = "hello";</code></pre>';
+    const { container, rerender } = render(<BodyHtml html={html} className="message-body" />);
+
+    await vi.waitFor(() => expect(container.querySelector(".code-token--keyword")).not.toBeNull());
+
+    const coloured = container.querySelector("code");
+
+    rerender(<BodyHtml html={html} className="message-body" data-stale />);
+
+    expect(container.querySelector("code")).toBe(coloured);
+    expect(container.querySelector(".code-token--string")?.textContent).toBe('"hello"');
+    expect(container.querySelectorAll("button.code-copy")).toHaveLength(1);
+  });
+
+  it("redoes the blocks when the body changes (an edit)", async () => {
+    const before = '<pre><code class="language-rust">fn a() {}</code></pre>';
+    const after = '<pre><code class="language-rust">fn b() {}</code></pre>';
+    const { container, rerender } = render(<BodyHtml html={before} className="message-body" />);
+
+    await vi.waitFor(() => expect(container.querySelector(".code-token")).not.toBeNull());
+    rerender(<BodyHtml html={after} className="message-body" />);
+    await vi.waitFor(() => expect(container.querySelector(".code-token")).not.toBeNull());
+
+    expect(container.querySelector("code")?.textContent).toBe("fn b() {}");
+    expect(container.querySelectorAll("button.code-copy")).toHaveLength(1);
   });
 });

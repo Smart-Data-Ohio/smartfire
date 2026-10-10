@@ -38,7 +38,8 @@ import {
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
-import { roomVisitToken } from "./session.ts";
+import { rowTicket, withRowTicket } from "./row-ticket.ts";
+import { recoverResyncedRooms, roomVisitToken } from "./session.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
@@ -230,6 +231,8 @@ export class Engine extends Context.Service<
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+      /** Replayed messages update the store, but must not play sounds. */
+      const replayThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -245,6 +248,7 @@ export class Engine extends Context.Service<
 
       /** Refetch room metadata at its current management revision, including lost access. */
       const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
+        const rowsSince = yield* rowTicket;
         const started = beginRoomRequest();
         const detail = yield* Effect.result(room(roomId));
 
@@ -286,13 +290,13 @@ export class Engine extends Context.Service<
           }
 
           markRoomsChanged([roomId]);
-          mutations.setRoomUnavailable(roomId, unavailableAt);
+          mutations.setRoomUnavailable(roomId, unavailableAt, rowsSince);
 
           return false;
         }
 
         return true;
-      });
+      }, Effect.scoped);
 
       /**
        * A room's newest page, merged into the window the reader is on (`resync`); then, for a
@@ -473,6 +477,7 @@ export class Engine extends Context.Service<
 
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
       const resync = Effect.fnUntraced(function* (
+        scope: Scope.Scope,
         topicList: readonly string[],
         activityThrough?: number,
       ) {
@@ -484,14 +489,21 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
-            yield* sidebar().pipe(
-              Effect.tap((data) =>
-                Effect.sync(() => {
-                  mutations.loadSidebar(data);
+            yield* withRowTicket((since) =>
+              sidebar().pipe(
+                Effect.map((data) => {
+                  // Authoritative: every HTTP reply already on its way is stale now.
+                  const restored = mutations.resyncSidebar(data, since);
+
                   // The snapshot is newer than any room write still on its way.
                   markSidebarSnapshot();
+
+                  return restored;
                 }),
+                // A room it gave back that shows as unavailable reads itself again.
+                Effect.tap((restored) => Effect.forkIn(recoverResyncedRooms(restored), scope)),
               ),
+            ).pipe(
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
               ),
@@ -531,7 +543,7 @@ export class Engine extends Context.Service<
         );
 
       const refreshRoom = (roomId: number, revision: number, allow: () => boolean = () => true) =>
-        Effect.suspend(() => {
+        withRowTicket((rowsSince) => {
           if (!allow()) return Effect.void;
 
           const started = beginRoomRequest();
@@ -551,7 +563,7 @@ export class Engine extends Context.Service<
 
               return Effect.sync(() => {
                 if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
-                  mutations.setRoomUnavailable(roomId, started);
+                  mutations.setRoomUnavailable(roomId, started, rowsSince);
                 }
               }).pipe(
                 Effect.andThen(
@@ -617,7 +629,7 @@ export class Engine extends Context.Service<
         const now = yield* Clock.currentTimeMillis;
 
         mutations.applyEvents(fresh, now);
-        emitSyncEvents(fresh);
+        emitSyncEvents(fresh, yield* Ref.get(replayThrough));
         const open = new Set(yield* topics.subscribed);
 
         const workIds = new Set(
@@ -664,7 +676,11 @@ export class Engine extends Context.Service<
         }
       });
 
-      const welcome = Effect.fnUntraced(function* (frame: Extract<ServerFrame, { t: "welcome" }>) {
+      const welcome = Effect.fnUntraced(function* (
+        frame: Extract<ServerFrame, { t: "welcome" }>,
+        scope: Scope.Scope,
+      ) {
+        yield* Ref.set(replayThrough, frame.replayThrough);
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 
@@ -682,18 +698,18 @@ export class Engine extends Context.Service<
 
           // The stored cursor predates the page reload. Refetch after every replayed event
           // happened, then skip sidebar and activity events the fresh snapshots cover.
-          if (afterReload && frame.seq > point.seq) {
-            yield* Ref.set(snapshotThrough, frame.seq);
-            yield* resync(["user"], frame.seq);
+          if (afterReload && frame.replayThrough > point.seq) {
+            yield* Ref.set(snapshotThrough, frame.replayThrough);
+            yield* resync(scope, ["user"], frame.replayThrough);
           } else {
-            yield* Effect.forkChild(refreshUnreadCount(frame.seq));
+            yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
           }
 
           return;
         }
 
         yield* cursor.set({ epoch: frame.epoch, seq: frame.seq });
-        yield* resync(["user", ...(yield* topics.subscribed)], frame.seq);
+        yield* resync(scope, ["user", ...(yield* topics.subscribed)], frame.seq);
       });
 
       /**
@@ -723,11 +739,11 @@ export class Engine extends Context.Service<
               break;
             case "welcome":
               yield* flush;
-              yield* welcome(frame);
+              yield* welcome(frame, scope);
               break;
             case "resync":
               yield* flush;
-              yield* resync(frame.topics);
+              yield* resync(scope, frame.topics);
               break;
             case "bye":
               yield* flush;

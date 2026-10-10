@@ -68,8 +68,11 @@ pub enum ServerFrame {
     /// The reply to `hello`. `resumed` is false when the client must refetch what it shows.
     Welcome {
         epoch: String,
+        /// The client's starting cursor. On resume this stays at its last acknowledged event.
         seq: i64,
         resumed: bool,
+        /// Events through this ring head are reconnect replay, not live arrivals.
+        replay_through: i64,
     },
     /// Events in sequence order, flushed every 25 ms or 64 events.
     Batch { events: Vec<SyncEvent> },

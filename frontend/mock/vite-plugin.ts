@@ -3,7 +3,8 @@
  * with no Rust app (`SMARTFIRE_MOCK=1 pnpm dev` or `vite --mode mock`). Dev server only; nothing
  * here reaches the production bundle.
  *
- * - `/api/v1/*` and `/__mock/*` go to `MockServer.handle` (held sends hold the HTTP response).
+ * - `/api/v1/*`, `/__mock/*` and classic's tour stamp (`/users/me/tour`) go to
+ *   `MockServer.handle` (held sends hold the HTTP response).
  * - `/rails/active_storage/*` (the direct-upload `PUT`, blob and thumbnail downloads) and
  *   `/icons/*` and `/assets/icons/brands/*` go to `MockServer.handleBinary` with the raw body, ahead of the `/rails` proxy.
  * - `/api/v1/sync` upgrades to a WebSocket bridged to `MockServer.connect`; every other upgrade

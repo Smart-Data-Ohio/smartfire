@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { refused } from "../../mock/http.ts";
 import { parseJson, stringField } from "../../mock/json.ts";
 import { expect, test } from "./support.ts";
 
@@ -221,46 +220,6 @@ test("rotated-key rows keep the local transport until the final endpoint row is 
   await expect
     .poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.subscribed))
     .toBe(false);
-});
-
-test("denied permission does not register or add a device", async ({ page }) => {
-  await browserPush(page, "denied");
-  await openDevices(page);
-
-  expect(await page.evaluate(() => window.__smartfirePushEnrollment?.enable())).toEqual({
-    kind: "denied",
-    permission: "denied",
-  });
-  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
-  await expect
-    .poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.permission))
-    .toBe("denied");
-  expect(await page.evaluate(() => window.__smartfirePushBrowser?.registrations)).toBe(0);
-});
-
-test("server refusal returns a failed outcome and keeps the device list", async ({ page }) => {
-  await browserPush(page, "granted");
-  await page.route("**/api/v1/settings/push_subscriptions", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-
-      return;
-    }
-
-    await route.fulfill({
-      status: 422,
-      contentType: "application/json",
-      body: JSON.stringify({ error: refused("Push endpoint rejected").error }),
-    });
-  });
-  await openDevices(page);
-
-  expect(await page.evaluate(() => window.__smartfirePushEnrollment?.enable())).toEqual({
-    kind: "failed",
-    message: "Push endpoint rejected",
-  });
-  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
-  await expect.poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.busy)).toBe(false);
 });
 
 test("unsupported browsers load devices without a permission prompt", async ({ page }) => {

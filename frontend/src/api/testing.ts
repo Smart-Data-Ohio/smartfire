@@ -49,6 +49,7 @@ export function messageFixture(
     threadId: null,
     creatorId: 7,
     clientMessageId: `client-${id}`,
+    sound: null,
     bodyHtml: `<p>Message ${id}</p>`,
     markdownSource: `Message ${id}`,
     systemNote: false,
@@ -98,6 +99,7 @@ export const meFixture: Me = {
   presenceSetting: "auto",
   doNotDisturb: { enabled: false, until: null },
   quietHours: null,
+  chatSounds: { muted: false, quietHours: null, timeZone: "UTC", quietWindows: [] },
   outOfOffice: null,
   lastRoomId: 12,
 };
@@ -133,6 +135,8 @@ export function sidebarRowFixture(
     directMemberIds: [...directMemberIds],
     unreadCount: 0,
     mentionCount: 0,
+    notificationCount: 0,
+    threadNotificationCount: 0,
   };
 }
 

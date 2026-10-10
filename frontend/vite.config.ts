@@ -54,6 +54,8 @@ export default defineConfig(({ mode }) => {
     ["/cable", { ...rust, ws: true }],
     ["/rails", rust],
     ["/session", rust],
+    // Classic's product tour stamp (src/api/tour-endpoints.ts).
+    ["/users/me/tour", rust],
   ]);
 
   if (!isMockEnabled(mode)) proxy.set("/api", { ...rust, ws: true });
@@ -91,6 +93,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    // The code-highlight worker (src/lib/code-highlight) loads each grammar as its own chunk,
+    // which needs a module worker.
+    worker: { format: "es" },
     server: { proxy: Object.fromEntries(proxy) },
     test: {
       include: [

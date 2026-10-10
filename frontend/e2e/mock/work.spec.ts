@@ -8,6 +8,7 @@ import {
   openHeaderTool,
   PHONE,
   ROOM_IDS,
+  SHOTS,
   shot,
   type Theme,
   test,
@@ -66,54 +67,6 @@ async function settle(page: Page): Promise<void> {
 
 // --- the thread pane ---
 
-matrix("a work thread's pane", async ({ page, theme, phone }) => {
-  await open(page, `r/${GENERAL}/t/${S4_WORK_IDS.agentOwned}`, theme);
-
-  const work = workSection(page);
-
-  await expect(
-    work.getByRole("button", { name: "Status: In progress. Change status" }),
-  ).toBeVisible();
-  await expect(work.getByRole("button", { name: "Owner: Ember. Change owner" })).toBeVisible();
-  await expect(work.getByRole("link", { name: "Run, opens in a new tab" })).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "work-pane", theme);
-
-  await work.getByRole("button", { name: "Result, steps and history" }).click();
-  await expect(work.getByRole("heading", { name: "History", exact: true })).toBeVisible();
-  await expect(work.getByRole("heading", { name: /^Steps \(\d+\)$/ })).toBeVisible();
-  await settle(page);
-  await shot(page, "work-pane-details", theme);
-
-  if (!phone) {
-    await work.getByRole("button", { name: /Change status/ }).click();
-    await expect(page.getByRole("menuitemradio", { name: "In progress" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await settle(page);
-    await shot(page, "work-status-menu", theme);
-    await page.keyboard.press("Escape");
-
-    await work.getByRole("button", { name: /Change owner/ }).click();
-    await expect(page.getByRole("group", { name: "Agents" })).toBeVisible();
-    await settle(page);
-    await shot(page, "work-owner-menu", theme);
-    await page.keyboard.press("Escape");
-  }
-});
-
-matrix("an inactive owner and a cancelled event", async ({ page, theme }) => {
-  await open(page, `r/${ROOM_IDS.design}/t/${S4_WORK_IDS.inactiveOwner}`, theme);
-
-  const work = workSection(page);
-
-  await expect(work.getByText("owner inactive")).toBeVisible();
-  await expect(work.getByRole("link", { name: /Cancelled$/ })).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "work-inactive-owner", theme);
-});
-
 test("changing the status shows at once and lands in the history", async ({ page }) => {
   await open(page, `r/${GENERAL}/t/${S4_WORK_IDS.agentOwned}`);
 
@@ -140,35 +93,6 @@ test("someone else's change refetches the pane's history", async ({ page, reques
 
   await expect(work.getByRole("button", { name: "Status: Done. Change status" })).toBeVisible();
   await expect(work.getByText("status In progress → Done")).toBeVisible();
-});
-
-matrix("handing work off to an agent", async ({ page, theme }) => {
-  await open(page, `r/${GENERAL}/t/${S4_WORK_IDS.done}`, theme);
-
-  const work = workSection(page);
-
-  await work.getByRole("button", { name: "Result, steps and history" }).click();
-  await work.getByRole("button", { name: "Hand off to an agent" }).click();
-
-  const dialog = page.getByRole("dialog", { name: /^Hand off/ });
-
-  await expect(dialog.getByRole("radio", { name: /Ember/ })).toBeFocused();
-  await settle(page);
-  await shot(page, "work-handoff", theme);
-
-  await dialog.getByRole("textbox", { name: /^Links/ }).fill("not a url");
-  await dialog.getByRole("button", { name: "Hand off" }).click();
-  await expect(dialog.getByText("Summary can't be blank")).toBeVisible();
-  await expect(dialog.getByText("Links must be http(s) URLs")).toBeVisible();
-  await shot(page, "work-handoff-errors", theme);
-
-  await dialog.getByRole("textbox", { name: /^Links/ }).fill("https://example.com/spec");
-  await dialog.getByRole("textbox", { name: "Summary" }).fill("Results are in; write the summary.");
-  await dialog.getByRole("button", { name: "Hand off" }).click();
-
-  await expect(dialog).toHaveCount(0);
-  await expect(work.getByRole("button", { name: "Owner: Ember. Change owner" })).toBeVisible();
-  await expect(work.getByText(/handed off owner .* → Ember/)).toBeVisible();
 });
 
 test("recording a result renders it with who updated it", async ({ page }) => {
@@ -212,19 +136,6 @@ test("tracking a thread as work, then stopping", async ({ page }) => {
 
 // --- thread rows and indicators ---
 
-matrix("work on the Threads pane's rows", async ({ page, theme }) => {
-  await open(page, `r/${GENERAL}`, theme);
-  await openHeaderTool(page, "Threads");
-
-  const row = pane(page).getByRole("button", { name: new RegExp(AGENT_OWNED) });
-
-  await expect(row.locator(".work-status")).toHaveAttribute("data-status", "in_progress");
-  await expect(row.getByText("Ember")).toBeVisible();
-  await expect(pane(page).getByRole("list", { name: `Links for ${AGENT_OWNED}` })).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "work-thread-rows", theme);
-});
-
 test("a reply indicator carries the thread's work", async ({ page }) => {
   // The root is above the present; its permalink loads and centers it in the virtualized list.
   await open(page, `r/${GENERAL}/m/${MESSAGE_IDS.generalThreadRoot}`);
@@ -247,6 +158,103 @@ test("a reply indicator carries the thread's work", async ({ page }) => {
   await settle(page);
   await shot(page, "work-indicator", "light");
 });
+
+// --- screenshots only: work-bar.test.tsx and work-facts.test.tsx check what these show, and the
+// tests above check the menus, dialog focus and history in the browser ---
+
+if (SHOTS) {
+  matrix("a work thread's pane", async ({ page, theme, phone }) => {
+    await open(page, `r/${GENERAL}/t/${S4_WORK_IDS.agentOwned}`, theme);
+
+    const work = workSection(page);
+
+    await expect(
+      work.getByRole("button", { name: "Status: In progress. Change status" }),
+    ).toBeVisible();
+    await expect(work.getByRole("button", { name: "Owner: Ember. Change owner" })).toBeVisible();
+    await expect(work.getByRole("link", { name: "Run, opens in a new tab" })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "work-pane", theme);
+
+    await work.getByRole("button", { name: "Result, steps and history" }).click();
+    await expect(work.getByRole("heading", { name: "History", exact: true })).toBeVisible();
+    await expect(work.getByRole("heading", { name: /^Steps \(\d+\)$/ })).toBeVisible();
+    await settle(page);
+    await shot(page, "work-pane-details", theme);
+
+    if (!phone) {
+      await work.getByRole("button", { name: /Change status/ }).click();
+      await expect(page.getByRole("menuitemradio", { name: "In progress" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      await settle(page);
+      await shot(page, "work-status-menu", theme);
+      await page.keyboard.press("Escape");
+
+      await work.getByRole("button", { name: /Change owner/ }).click();
+      await expect(page.getByRole("group", { name: "Agents" })).toBeVisible();
+      await settle(page);
+      await shot(page, "work-owner-menu", theme);
+      await page.keyboard.press("Escape");
+    }
+  });
+
+  matrix("an inactive owner and a cancelled event", async ({ page, theme }) => {
+    await open(page, `r/${ROOM_IDS.design}/t/${S4_WORK_IDS.inactiveOwner}`, theme);
+
+    const work = workSection(page);
+
+    await expect(work.getByText("owner inactive")).toBeVisible();
+    await expect(work.getByRole("link", { name: /Cancelled$/ })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "work-inactive-owner", theme);
+  });
+
+  matrix("handing work off to an agent", async ({ page, theme }) => {
+    await open(page, `r/${GENERAL}/t/${S4_WORK_IDS.done}`, theme);
+
+    const work = workSection(page);
+
+    await work.getByRole("button", { name: "Result, steps and history" }).click();
+    await work.getByRole("button", { name: "Hand off to an agent" }).click();
+
+    const dialog = page.getByRole("dialog", { name: /^Hand off/ });
+
+    await expect(dialog.getByRole("radio", { name: /Ember/ })).toBeFocused();
+    await settle(page);
+    await shot(page, "work-handoff", theme);
+
+    await dialog.getByRole("textbox", { name: /^Links/ }).fill("not a url");
+    await dialog.getByRole("button", { name: "Hand off" }).click();
+    await expect(dialog.getByText("Summary can't be blank")).toBeVisible();
+    await expect(dialog.getByText("Links must be http(s) URLs")).toBeVisible();
+    await shot(page, "work-handoff-errors", theme);
+
+    await dialog.getByRole("textbox", { name: /^Links/ }).fill("https://example.com/spec");
+    await dialog
+      .getByRole("textbox", { name: "Summary" })
+      .fill("Results are in; write the summary.");
+    await dialog.getByRole("button", { name: "Hand off" }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(work.getByRole("button", { name: "Owner: Ember. Change owner" })).toBeVisible();
+    await expect(work.getByText(/handed off owner .* → Ember/)).toBeVisible();
+  });
+
+  matrix("work on the Threads pane's rows", async ({ page, theme }) => {
+    await open(page, `r/${GENERAL}`, theme);
+    await openHeaderTool(page, "Threads");
+
+    const row = pane(page).getByRole("button", { name: new RegExp(AGENT_OWNED) });
+
+    await expect(row.locator(".work-status")).toHaveAttribute("data-status", "in_progress");
+    await expect(row.getByText("Ember")).toBeVisible();
+    await expect(pane(page).getByRole("list", { name: `Links for ${AGENT_OWNED}` })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "work-thread-rows", theme);
+  });
+}
 
 // --- the work page ---
 
@@ -351,6 +359,7 @@ test("Back after cancelling an in-app handoff leaves the thread", async ({ page 
 
   const dialog = page.getByRole("dialog", { name: /^Hand off/ });
 
+  await expect(dialog.getByRole("radio", { name: /Ember/ })).toBeFocused();
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(page).toHaveURL(thread);
   await expect(dialog).toHaveCount(0);

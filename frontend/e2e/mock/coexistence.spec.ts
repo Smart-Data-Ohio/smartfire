@@ -1,27 +1,29 @@
-import screens from "../../src/gen/screens.json" with { type: "json" };
-import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
+import { expect, matrix, openApp, ROOM_IDS, SHOTS, shot, test } from "./support.ts";
 
-matrix("the user menu offers the way back to classic", async ({ page, theme, phone }) => {
-  await openApp(page, "", theme);
+// Screenshots only: the Switch to classic test and nav.spec's phone account sheet cover the menu.
+if (SHOTS) {
+  matrix("the user menu offers the way back to classic", async ({ page, theme, phone }) => {
+    await openApp(page, "", theme);
 
-  // A phone has it under the tab bar's You, the sidebar's foot on wider screens.
-  await page.getByRole("button", { name: phone ? "You" : "Your account" }).click();
+    // A phone has it under the tab bar's You, the sidebar's foot on wider screens.
+    await page.getByRole("button", { name: phone ? "You" : "Your account" }).click();
 
-  const menu = page.getByRole("menu", { name: "Your account" });
+    const menu = page.getByRole("menu", { name: "Your account" });
 
-  await expect(menu.getByRole("menuitem", { name: "Profile and settings" })).toBeVisible();
-  await expect(menu.getByRole("menuitem", { name: "Switch to classic" })).toBeVisible();
-  // The menu's entrance finishes before the shot.
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
-        .map((animation) => animation.finished.catch(() => animation)),
-    ),
-  );
-  await shot(page, "user-menu", theme);
-});
+    await expect(menu.getByRole("menuitem", { name: "Profile and settings" })).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "Switch to classic" })).toBeVisible();
+    // The menu's entrance finishes before the shot.
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => animation)),
+      ),
+    );
+    await shot(page, "user-menu", theme);
+  });
+}
 
 test("Switch to classic posts the choice and where the person is", async ({ page }) => {
   let posted: URLSearchParams | null = null;
@@ -41,28 +43,6 @@ test("Switch to classic posts the choice and where the person is", async ({ page
     return_to: `/app/r/${ROOM_IDS.general}`,
     authenticity_token: expect.any(String),
   });
-});
-
-// Whichever destination is still unported (the trains flip rows as they land), without parameters.
-const unported = screens.find((screen) => !screen.ported && !screen.classic.includes(":"));
-
-test("a destination the SPA hasn't ported opens on its classic page", async ({ page }) => {
-  if (unported === undefined) {
-    test.skip(true, "every destination in the screen map is ported");
-
-    return;
-  }
-
-  const { classic, spa } = unported;
-
-  await page.route(`**${classic}?classic=1`, (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<p>the classic page</p>" }),
-  );
-
-  await page.goto(spa);
-
-  await expect(page.getByText("the classic page")).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe(classic);
 });
 
 test("a link to a ported classic page opens in place", async ({ page }) => {

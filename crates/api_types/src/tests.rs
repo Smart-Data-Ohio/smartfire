@@ -46,6 +46,7 @@ pub(crate) fn message() -> MessageDTO {
         creator_id: 7,
         client_message_id: "4f1c7a0e-5b0e-4c55-9d0a-6f3b2d1e8c11".into(),
         body_html: "<p>Hello <strong>there</strong></p>".into(),
+        sound: None,
         markdown_source: Some("Hello **there**".into()),
         system_note: false,
         action: false,
@@ -117,6 +118,12 @@ fn me_round_trips() {
         do_not_disturb: DoNotDisturb {
             enabled: true,
             until: Some("2026-10-06T17:00:00.000Z".into()),
+        },
+        chat_sounds: ChatSounds {
+            muted: false,
+            quiet_hours: None,
+            time_zone: "UTC".into(),
+            quiet_windows: vec![],
         },
         quiet_hours: Some(QuietHours {
             start_minute: 1320,
@@ -234,6 +241,7 @@ fn message_round_trips() {
             "creatorId": 7,
             "clientMessageId": "4f1c7a0e-5b0e-4c55-9d0a-6f3b2d1e8c11",
             "bodyHtml": "<p>Hello <strong>there</strong></p>",
+            "sound": null,
             "markdownSource": "Hello **there**",
             "systemNote": false,
             "action": false,
@@ -406,8 +414,9 @@ fn server_frames_match_the_protocol() {
             epoch: "b7c1".into(),
             seq: 48230,
             resumed: true,
+            replay_through: 48235,
         },
-        json!({"t": "welcome", "epoch": "b7c1", "seq": 48230, "resumed": true}),
+        json!({"t": "welcome", "epoch": "b7c1", "seq": 48230, "resumed": true, "replayThrough": 48235}),
     );
     assert_wire(
         &ServerFrame::Resync {
@@ -515,6 +524,8 @@ pub(crate) fn row() -> SidebarRow {
         direct_member_ids: vec![],
         unread_count: 4,
         mention_count: 1,
+        notification_count: 1,
+        thread_notification_count: 0,
         last_message: None,
         refresh_room: None,
     }
@@ -656,6 +667,8 @@ fn sidebar_round_trips() {
             "directMemberIds": [],
             "unreadCount": 4,
             "mentionCount": 1,
+            "notificationCount": 1,
+            "threadNotificationCount": 0,
         })
     );
     assert_eq!(

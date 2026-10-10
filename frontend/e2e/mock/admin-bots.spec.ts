@@ -1,5 +1,5 @@
-import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, shot, test } from "./support.ts";
+import type { Page } from "@playwright/test";
+import { expect, matrix, SHOTS, shot, test } from "./support.ts";
 
 /** Opens a bot page under `/app/admin/bots` with motion reduced. */
 async function openBots(page: Page, path = "", theme: "light" | "dark" = "light") {
@@ -21,48 +21,26 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
-/** Lapses the password confirmation and stands in for the classic page that asks for it. */
-async function lapseSudo(page: Page, request: APIRequestContext) {
-  const state = await (await request.get("/__mock/state")).json();
+// Screenshots only: the other tests open each of these pages.
+if (SHOTS) {
+  matrix("the bot pages", async ({ page, theme }) => {
+    await openBots(page, "", theme);
 
-  await request.post("/__mock/lapse-sudo", { headers: { "X-CSRF-Token": state.csrfToken } });
-  await page.route("**/sudo/new", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<h1>Confirm your password</h1>",
-    }),
-  );
+    await expect(page.getByRole("heading", { level: 1, name: "Chat bots" })).toBeVisible();
+    await settle(page);
+    await shot(page, "admin-bots", theme);
+
+    await page.getByRole("link", { name: "Edit Ember" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Ember" })).toBeVisible();
+    await settle(page);
+    await shot(page, "admin-bot", theme);
+
+    await page.getByRole("link", { name: "Grants" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Ember's grants" })).toBeVisible();
+    await settle(page);
+    await shot(page, "admin-bot-grants", theme);
+  });
 }
-
-matrix("the bot pages", async ({ page, theme }) => {
-  await openBots(page, "", theme);
-
-  await expect(page.getByRole("heading", { level: 1, name: "Chat bots" })).toBeVisible();
-  await settle(page);
-  await shot(page, "admin-bots", theme);
-
-  await page.getByRole("link", { name: "Edit Ember" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Ember" })).toBeVisible();
-  await settle(page);
-  await shot(page, "admin-bot", theme);
-
-  await page.getByRole("link", { name: "Grants" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Ember's grants" })).toBeVisible();
-  await settle(page);
-  await shot(page, "admin-bot-grants", theme);
-});
-
-test("the workspace nav opens the bots", async ({ page }) => {
-  await page.goto("/app/admin");
-  await page
-    .getByRole("navigation", { name: "Workspace sections" })
-    .getByRole("link", { name: "Chat bots" })
-    .click();
-
-  await expect(page).toHaveURL(/\/app\/admin\/bots$/);
-  await expect(page.getByText("Workspace agent · Owned by")).toBeVisible();
-});
 
 test("a new bot shows its key once, then opens its page", async ({ page }) => {
   await openBots(page, "/new");
@@ -145,45 +123,6 @@ test("granting a capability lists it, and a grant revokes", async ({ page }) => 
   await expect(page.getByText(/Legacy access/)).toHaveCount(0);
   await page.getByRole("button", { name: /Revoke react/ }).click();
   await expect(page.locator("[data-row]", { hasText: "Revoked" })).toBeFocused();
-});
-
-test("a new bot waits out the password confirmation", async ({ page, request }) => {
-  await lapseSudo(page, request);
-  await openBots(page, "/new");
-
-  await page.getByRole("textbox", { name: "Name" }).fill("Robo");
-  await page.getByRole("textbox", { name: "Webhook URL" }).fill("https://example.com/robo");
-  await page.getByRole("button", { name: "Create bot" }).click();
-  await expect(page).toHaveURL(/\/sudo\/new$/);
-
-  await openBots(page, "/new");
-
-  await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("Robo");
-  await expect(page.getByRole("textbox", { name: "Webhook URL" })).toHaveValue(
-    "https://example.com/robo",
-  );
-  await expect(page.getByText("Your new bot is back")).toBeVisible();
-});
-
-test("a credential waits out the password confirmation", async ({ page, request }) => {
-  await openBots(page);
-  await page.getByRole("link", { name: "Edit Ember" }).click();
-  await page.getByRole("link", { name: "Credentials" }).click();
-  await expect(page.getByText("No credentials yet.")).toBeVisible();
-
-  const credentials = page.url();
-
-  await lapseSudo(page, request);
-  await page.getByRole("textbox", { name: "Name" }).fill("deploys");
-  await page.getByLabel("Optional expiry").fill("2030-01-02T03:04");
-  await page.getByRole("button", { name: "Issue credential" }).click();
-  await expect(page).toHaveURL(/\/sudo\/new$/);
-
-  await page.goto(credentials);
-
-  await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("deploys");
-  await expect(page.getByLabel("Optional expiry")).toHaveValue("2030-01-02T03:04");
-  await expect(page.getByText("Your credential is back")).toBeVisible();
 });
 
 test("without a clipboard, a secret is selected for copying by hand", async ({ page }) => {

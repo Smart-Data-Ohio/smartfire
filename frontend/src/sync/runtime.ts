@@ -84,6 +84,7 @@ import * as agentActions from "./agent-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
 import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
+import { listenForChatSounds, playChatSound } from "./chat-sounds.ts";
 import { Engine } from "./engine.ts";
 import * as eventActions from "./event-actions.ts";
 import * as fizzyActions from "./fizzy-actions.ts";
@@ -556,6 +557,7 @@ const events = {
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
+  chatSounds: { listen: listenForChatSounds, play: playChatSound },
   boards: {
     automations: (roomId: number): Promise<BoardAutomations> =>
       runAction(boardActions.automations(roomId)),

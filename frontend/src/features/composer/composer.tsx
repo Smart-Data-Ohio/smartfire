@@ -9,6 +9,7 @@ import {
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../../gen/SlashCommandResult.ts";
 import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
+import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -18,6 +19,7 @@ import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { LazyCreatePollDialog } from "../cards/lazy-create-poll-dialog.tsx";
+import { startHuddleFromCommand } from "../huddle/slash-huddle.ts";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
 import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
@@ -39,6 +41,16 @@ import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
+import { ReplyChip } from "./reply-chip.tsx";
+import {
+  cancelReply,
+  cancelReplyAt,
+  type ReplySnapshot,
+  setReplyNotify,
+  snapshotReply,
+  trackSentReply,
+  useReplyTarget,
+} from "./reply-store.ts";
 import { LazyCustomTimeDialog } from "./schedule/lazy-custom-time-dialog.tsx";
 import { type SchedulePreset, sendAtLabel } from "./schedule/presets.ts";
 import { ScheduledPopover } from "./schedule/scheduled-popover.tsx";
@@ -75,6 +87,15 @@ export interface ComposerProps {
    * thread's first reply, so it neither shows nor clears the room's draft.
    */
   readonly draftKey?: string;
+}
+
+/** What one submit took, read as the author submits: only this is sent and then cleared. */
+interface Submission {
+  readonly snapshot: ReplySnapshot;
+  /** The draft as submitted (untrimmed, to compare with the composer's text later). */
+  readonly text: string;
+  readonly fileIds: ReadonlySet<string>;
+  readonly driveFileIds: ReadonlySet<string>;
 }
 
 /** How many files one message can carry along (the rest go as their own messages). */
@@ -174,6 +195,9 @@ export function Composer({
   const key = draftKey ?? conversationDraftKey(roomId, threadId);
   const creating = onSubmit !== undefined;
   const [text, setText] = useState(() => readDraft(key));
+  const textRef = useRef(text);
+  /** Bumps on every edit and clear: a later outcome only puts back a draft nobody has touched. */
+  const draftEdits = useRef(0);
   const [caret, setCaret] = useState(() => ({ start: text.length, end: text.length }));
   const [restore, setRestore] = useState<{ start: number; end: number } | null>(null);
   const [focused, setFocused] = useState(false);
@@ -202,6 +226,34 @@ export function Composer({
   const hasFiles = attachments.files.length > 0;
   const hasDrive = driveFiles.length > 0;
   const canSend = (hasText || hasFiles || hasDrive) && !running;
+  // An inline reply (classic's Reply): a new thread's first message never carries one.
+  const reply = useReplyTarget(creating ? null : key);
+
+  const replyGone = useStore(
+    (state) => reply !== null && state.messages[reply.messageId] === undefined,
+  );
+
+  const replySeq = reply?.seq ?? null;
+  const seenReplySeq = useRef(replySeq);
+
+  // The quoted message was deleted: there's nothing left to reply to.
+  useEffect(() => {
+    if (replyGone) {
+      cancelReply(key);
+    }
+  }, [replyGone, key]);
+
+  // A Reply picked on a message hands this composer the focus (as classic's does), but coming
+  // back to a conversation with a reply already set doesn't.
+  useEffect(() => {
+    if (replySeq === null || replySeq === seenReplySeq.current) {
+      return;
+    }
+
+    seenReplySeq.current = replySeq;
+    textareaRef.current?.focus();
+    requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
+  }, [replySeq]);
 
   // Grow with the text; CSS caps it at half the viewport and scrolls beyond that.
   useLayoutEffect(() => {
@@ -257,6 +309,8 @@ export function Composer({
   };
 
   const update = (next: string) => {
+    draftEdits.current += 1;
+    textRef.current = next;
     setText(next);
     writeDraft(key, next);
     actions.noteActivity();
@@ -297,12 +351,23 @@ export function Composer({
   };
 
   const clear = () => {
+    draftEdits.current += 1;
+    textRef.current = "";
     setText("");
     writeDraft(key, "");
-    setDriveFiles([]);
-    setDriveOpen(false);
     setPreviewOpen(false);
     focusInput();
+  };
+
+  /** Clears the draft only if it's still what was submitted; says whether it did. */
+  const clearSubmitted = (submitted: string): boolean => {
+    if (textRef.current !== submitted) {
+      return false;
+    }
+
+    clear();
+
+    return true;
   };
 
   const openPicker = () => fileInputRef.current?.click();
@@ -331,41 +396,100 @@ export function Composer({
   /** Takes the room's window to the present, where a message from here lands. */
   const toPresent = () => {
     if (threadId === null && store.getState().timelines[roomId]?.after != null) {
-      void actions.jumpToPresent(roomId);
+      return actions.jumpToPresent(roomId);
+    }
+
+    return Promise.resolve();
+  };
+
+  /**
+   * Posts the text with the first file, and each further file as its own message. Each carries
+   * the reply the submit took (`snapshot`, read before any await), as classic's text and uploads
+   * do. The chip goes with the send; a send that fails puts it back (`trackSentReply`). Only what
+   * the submit took is cleared: text typed or files added while it was out stay.
+   */
+  const deliver = async (
+    markdown: string,
+    files: readonly TrayFile[],
+    snapshot: ReplySnapshot,
+    submitted: string,
+    drive: readonly DrivePick[],
+  ) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    setRunning(true);
+
+    try {
+      const latest = toPresent();
+
+      // Sound broadcasts need the latest page; ordinary sends proceed while it loads.
+      if (files.length === 0 && slashName(markdown.trim()) === "play") {
+        await latest;
+      } else {
+        void latest;
+      }
+
+      const [first, ...rest] = files;
+      const target = snapshot.target;
+
+      const replying =
+        target === null ? null : { messageId: target.messageId, notify: target.notify };
+
+      const sentIds: string[] = [];
+
+      const post = (body: string, options: NonNullable<Parameters<typeof actions.send>[2]>) => {
+        const clientMessageId = uuid7(Date.now());
+
+        sentIds.push(clientMessageId);
+        actions.send(roomId, body, { ...options, threadId, reply: replying, clientMessageId });
+      };
+
+      const attachmentOptions = {
+        attachmentSignedId: first?.snapshot.signedId ?? null,
+        attachment: first === undefined ? null : pendingAttachment(first),
+      };
+
+      const options =
+        drive.length === 0
+          ? attachmentOptions
+          : { ...attachmentOptions, driveFileIds: drive.map((file) => file.id) };
+
+      post(markdown, options);
+
+      for (const entry of rest) {
+        post("", {
+          attachmentSignedId: entry.snapshot.signedId,
+          attachment: pendingAttachment(entry),
+        });
+      }
+
+      attachments.clearSent(files);
+      clearSentDrive(drive);
+      trackSentReply(key, snapshot, sentIds);
+      clearSubmitted(submitted);
+    } finally {
+      submitting.current = false;
+      setRunning(false);
     }
   };
 
-  /** Posts the text with the first file, and each further file as its own message. */
-  const deliver = (markdown: string, files: readonly TrayFile[]) => {
-    toPresent();
-
-    const [first, ...rest] = files;
-
-    actions.send(roomId, markdown, {
-      threadId,
-      attachmentSignedId: first?.snapshot.signedId ?? null,
-      attachment: first === undefined ? null : pendingAttachment(first),
-      driveFileIds: driveFiles.map((file) => file.id),
-    });
-
-    for (const entry of rest) {
-      actions.send(roomId, "", {
-        threadId,
-        attachmentSignedId: entry.snapshot.signedId,
-        attachment: pendingAttachment(entry),
-      });
+  const showResult = (
+    result: SlashCommandResult,
+    typed: string,
+    revision: number,
+    restoreTyped: () => void,
+  ) => {
+    // A command that ran consumes the draft and, as in classic, the reply with it (not one
+    // picked while it ran).
+    if (result.status !== "error") {
+      cancelReplyAt(key, revision);
     }
 
-    attachments.clearSent();
-    clear();
-  };
-
-  const showResult = (result: SlashCommandResult, typed: string) => {
     switch (result.status) {
       case "posted":
         // The server posted it with no pending row: go to it, as a send does.
         notePosted(threadId === null ? `room:${roomId}` : `thread:${threadId}`, result.messageId);
-        toPresent();
+        void toPresent();
 
         if (result.notice !== null) {
           toast({ title: result.notice, tone: "success" });
@@ -377,8 +501,7 @@ export function Composer({
 
         return;
       case "error":
-        update(typed);
-        setRestore({ start: typed.length, end: typed.length });
+        restoreTyped();
         toast({ title: "That command didn't work", description: result.message, tone: "danger" });
 
         return;
@@ -398,31 +521,46 @@ export function Composer({
 
         return;
       case "start_huddle":
-        toast({
-          title: `Huddles in #${result.roomName} aren't in this app yet`,
-          description: "Start it from the classic view for now.",
-        });
+        startHuddleFromCommand(result.roomId, result.roomName);
     }
   };
 
-  const runCommand = async (typed: string) => {
+  // The reply and the draft are read before the command-list lookup: a reply picked or text
+  // typed during it is newer input.
+  const runCommand = async (
+    typed: string,
+    snapshot: ReplySnapshot = currentReply(),
+    submitted: string = text,
+  ) => {
     const commands = await loadCommands(roomId, threadId).catch(() => []);
     const route = routeSlash(typed, commands);
 
     if (route.kind === "message") {
-      deliver(route.markdown, []);
+      await deliver(route.markdown, [], snapshot, submitted, []);
 
       return;
     }
 
     setRunning(true);
     actions.setTyping(roomId, false, threadId);
-    clear();
+
+    const cleared = clearSubmitted(submitted);
+    const edits = draftEdits.current;
+
+    // A command that fails puts its text back, unless the author has started something newer.
+    const restoreTyped = () => {
+      if (cleared && draftEdits.current === edits) {
+        update(typed);
+        setRestore({ start: typed.length, end: typed.length });
+      }
+    };
 
     try {
-      showResult(await composerActions.runSlashCommand(roomId, route.text, threadId), typed);
+      const result = await composerActions.runSlashCommand(roomId, route.text, threadId);
+
+      showResult(result, typed, snapshot.revision, restoreTyped);
     } catch (error) {
-      update(typed);
+      restoreTyped();
       toast({
         title: "That command didn't run",
         description:
@@ -434,12 +572,50 @@ export function Composer({
     }
   };
 
-  const send = () => {
-    if (!canSend) {
+  /** The reply a submit takes, read as the author submits; a new thread's never has one. */
+  const currentReply = () => snapshotReply(creating ? null : key);
+
+  /** What a send waiting on uploads took when Enter was pressed: it sends exactly that. */
+  const waitingSubmission = useRef<Submission | null>(null);
+
+  /** The submission's files still in the tray (one removed while it waited is dropped). */
+  const submittedFiles = (submission: Submission) =>
+    attachments.files.filter((entry) => submission.fileIds.has(entry.id));
+
+  const submittedDrive = (submission: Submission) =>
+    driveFiles.filter((file) => submission.driveFileIds.has(file.id));
+
+  const clearSentDrive = (sent: readonly DrivePick[]) => {
+    const ids = new Set(sent.map((file) => file.id));
+
+    setDriveFiles((current) => current.filter((file) => !ids.has(file.id)));
+  };
+
+  const send = (pending?: Submission) => {
+    if (pending === undefined && !canSend) {
       return;
     }
 
-    if (attachments.failed) {
+    const submission: Submission = pending ?? {
+      snapshot: currentReply(),
+      text,
+      fileIds: new Set(attachments.files.map((entry) => entry.id)),
+      driveFileIds: new Set(driveFiles.map((file) => file.id)),
+    };
+
+    const files = submittedFiles(submission);
+    const drive = submittedDrive(submission);
+    const markdown = submission.text.trimEnd();
+
+    if (markdown === "" && files.length === 0 && drive.length === 0) {
+      waitingSubmission.current = null;
+      setWaiting(false);
+
+      return;
+    }
+
+    if (files.some((entry) => entry.snapshot.phase === "failed")) {
+      waitingSubmission.current = null;
       setWaiting(false);
       toast({
         title: "A file didn't upload",
@@ -450,16 +626,15 @@ export function Composer({
       return;
     }
 
-    if (!attachments.ready) {
+    if (!files.every((entry) => entry.snapshot.phase === "done")) {
+      waitingSubmission.current = submission;
       setWaiting(true);
 
       return;
     }
 
+    waitingSubmission.current = null;
     setWaiting(false);
-
-    const markdown = text.trimEnd();
-    const files = attachments.files;
 
     actions.setTyping(roomId, false, threadId);
 
@@ -475,12 +650,13 @@ export function Composer({
       void onSubmit({
         markdown,
         attachmentSignedId: files[0]?.snapshot.signedId ?? null,
-        driveFileIds: driveFiles.map((file) => file.id),
+        driveFileIds: drive.map((file) => file.id),
       })
         .then(
           () => {
-            attachments.clearSent();
-            clear();
+            attachments.clearSent(files);
+            clearSentDrive(drive);
+            clearSubmitted(submission.text);
           },
           () => undefined,
         )
@@ -492,43 +668,54 @@ export function Composer({
       return;
     }
 
-    if (files.length === 0 && looksLikeCommand(markdown)) {
-      void runCommand(markdown);
+    if (files.length === 0 && drive.length === 0 && looksLikeCommand(markdown)) {
+      void runCommand(markdown, submission.snapshot, submission.text);
 
       return;
     }
 
-    deliver(markdown, files);
+    void deliver(markdown, files, submission.snapshot, submission.text, drive);
   };
 
-  // Enter while files upload: send as soon as they're all up (or stop if one fails).
+  // Enter while files upload: send as soon as the submitted ones are up (or stop if one fails).
   const sendRef = useRef(send);
 
   useLayoutEffect(() => {
     sendRef.current = send;
   });
 
-  const uploadsSettled = attachments.ready || attachments.failed || !hasFiles;
+  const waitingFor = waitingSubmission.current;
+
+  const uploadsSettled =
+    waitingFor === null ||
+    submittedFiles(waitingFor).every(
+      (entry) => entry.snapshot.phase === "done" || entry.snapshot.phase === "failed",
+    );
 
   useEffect(() => {
     if (waiting && uploadsSettled) {
-      sendRef.current();
+      sendRef.current(waitingSubmission.current ?? undefined);
     }
   }, [waiting, uploadsSettled]);
 
   const schedule = (at: Date): Promise<void> => {
-    const markdown = text.trimEnd();
+    const submitted = text;
+    const markdown = submitted.trimEnd();
+    const taken = currentReply();
 
     return scheduled
       .create(roomId, {
         markdownSource: markdown,
         sendAt: at.toISOString(),
         threadId,
-        replyToMessageId: null,
+        // Classic's schedule menu keeps the draft's reply target too.
+        replyToMessageId: taken.target?.messageId ?? null,
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
-        clear();
+        // The reply it took, not one picked while the request was out.
+        cancelReplyAt(key, taken.revision);
+        clearSubmitted(submitted);
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
           tone: "success",
@@ -600,6 +787,14 @@ export function Composer({
       return;
     }
 
+    if (event.key === "Escape" && reply !== null) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelReply(key);
+
+      return;
+    }
+
     if (event.key === "Enter" && !event.shiftKey && !event.altKey) {
       event.preventDefault();
       send();
@@ -607,7 +802,14 @@ export function Composer({
       return;
     }
 
-    if (event.key === "ArrowUp" && plain && !event.shiftKey && text === "" && !hasFiles) {
+    if (
+      event.key === "ArrowUp" &&
+      plain &&
+      !event.shiftKey &&
+      text === "" &&
+      !hasFiles &&
+      !hasDrive
+    ) {
       if (editLastOwnMessage(roomId, threadId)) {
         event.preventDefault();
       }
@@ -682,7 +884,7 @@ export function Composer({
       id: "schedule",
       label: "Schedule message…",
       icon: "clock",
-      disabled: !hasText || hasFiles,
+      disabled: !hasText || hasFiles || hasDrive,
       onSelect: () => setCustomOpen(true),
     });
   }
@@ -734,6 +936,16 @@ export function Composer({
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
         <div className="composer-card" data-drop={drop.active || undefined}>
+          {reply === null ? null : (
+            <ReplyChip
+              target={reply}
+              onNotifyChange={(notify) => setReplyNotify(key, notify)}
+              onCancel={() => {
+                cancelReply(key);
+                focusInput();
+              }}
+            />
+          )}
           <LazyPreviewPanel
             open={previewOpen}
             roomId={roomId}
@@ -836,7 +1048,7 @@ export function Composer({
             <SendButton
               canSend={canSend}
               waiting={waiting || running}
-              onSend={send}
+              onSend={() => send()}
               schedule={
                 creating
                   ? null

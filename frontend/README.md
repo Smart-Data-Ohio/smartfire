@@ -106,27 +106,12 @@ python3 parity/bin/frozen-seeds restore
 cargo test -j 4 -p campfire url_contract_tests -- --nocapture
 ```
 
-The existing `pwa` Rust correctness job runs the contract with built assets, then a smoke
-test against the actual `campfire`
-binary with the production SPA embedded: real sign-in, room navigation, message send and
-reload, followed by the contract's fragment cases. Its receipt records the final SPA URL
-and the timeline assertion after reload. It uses the frozen default seed and pinned Chromium
-image, with no API mocks. CI fails when the contract selector matches no tests.
-Browser runs reserve `SMARTFIRE_E2E_PORT=4320` or `4321`.
-
-For a local smoke run, build the SPA first (`pnpm build` in `frontend/`), then from the root:
-
-```sh
-python3 parity/bin/frozen-seeds restore
-export SPA_DIST="$PWD/frontend/dist"
-cargo build -j 4 -p campfire --bin campfire
-SPA_SMOKE_LOCAL=1 SMARTFIRE_E2E_PORT=4320 cargo nextest run -p campfire \
-  --build-jobs 4 -j 4 --run-ignored only \
-  -E 'test(=controllers::spa_smoke_tests::real_server_spa_smoke_sends_and_persists_a_message)'
-```
-
-The local browser uses the Chromium installed by `pnpm exec playwright install chromium`.
-CI runs both PWA browser tests with `bash ci/correctness.sh pwa` inside its correctness image.
+CI runs the mock suite in three Frontend e2e shards. The first shard also runs
+production-preview tests, including the PWA checks. Ordinary Rust tests retain
+the URL contract, manifests, worker selection and response-header checks.
+The separate real-server SPA and PWA browser suites have been removed.
+Deploy verifies public auth pages and the enabled SPA's built offline shell and
+asset responses after health succeeds.
 
 ## Design system
 

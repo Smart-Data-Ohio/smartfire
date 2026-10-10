@@ -128,11 +128,22 @@ pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
 pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("channel_threads", "client_post_id"),
     ("rooms", "client_room_id"),
+    ("thread_memberships", "last_read_message_id"),
 ];
 
 /// Whether `table.column` is in [`RUST_ONLY_COLUMNS`].
 pub fn rust_only_column(table: &str, column: &str) -> bool {
     RUST_ONLY_COLUMNS.contains(&(table, column))
+}
+
+/// Whether `table.column` is one of the API's per-attempt creation keys among
+/// [`RUST_ONLY_COLUMNS`], which classic paths and Slack imports never set. The others (a thread
+/// member's read position) are written by classic paths too.
+pub fn api_creation_key_column(table: &str, column: &str) -> bool {
+    matches!(
+        (table, column),
+        ("channel_threads", "client_post_id") | ("rooms", "client_room_id")
+    )
 }
 
 pub const DAVID: i64 = 127326141;
@@ -974,73 +985,4 @@ pub fn masked_session_token(
     )?;
     let real = session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?;
     Some(campfire_kit::csrf::RealToken::decode(real)?.masked(None))
-}
-
-/// Browser parity host for cases whose pinned Rails test leaves jobs enqueued.
-/// This is compiled only in the test binary. It serves the caller's freshly
-/// generated fixture, keeping the real router, durable enqueue and front server.
-#[tokio::test]
-#[ignore = "utility: external browser host; invoked explicitly by messaging/behavior-check.py"]
-async fn ws8bm_browser_host_without_jobs() {
-    assert_eq!(std::env::var("WS8BM_BROWSER_HOST").as_deref(), Ok("1"));
-    let config = Config::from_env().unwrap();
-    let clock = campfire_kit::clock::from_env().unwrap();
-    let booted = boot_with_services(
-        config,
-        clock,
-        crate::net::Network::system(),
-        crate::jobs::periodic::Intervals {
-            periodic: None,
-            huddle: None,
-        },
-    )
-    .await
-    .unwrap();
-    let app = TestApp {
-        booted,
-        _dir: tempfile::tempdir().unwrap(),
-        publications: Default::default(),
-    }
-    .without_job_runner()
-    .await;
-    // Tools-only interleaving of ActivityInboxTest's second ActivityItem.create!.
-    // The production binary has no control endpoint or file watcher. The browser
-    // requests this only after handling the first item, through the real writer.
-    if let Ok(path) = std::env::var("WS11UI_ACTIVITY_CONTROL") {
-        let db = app.db().clone();
-        let user: i64 = std::env::var("WS11UI_ACTIVITY_USER")
-            .unwrap()
-            .parse()
-            .unwrap();
-        let source: i64 = std::env::var("WS11UI_ACTIVITY_SOURCE")
-            .unwrap()
-            .parse()
-            .unwrap();
-        tokio::spawn(async move {
-            let request = std::path::PathBuf::from(format!("{path}.request"));
-            while !request.exists() {
-                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-            }
-            let item = db
-                .write(move |tx| {
-                    campfire_db::ActivityItem::refresh_unread(tx, user, "Message", source, "reply")
-                })
-                .await
-                .unwrap();
-            std::fs::write(
-                format!("{path}.response"),
-                serde_json::json!({"id":item.id}).to_string(),
-            )
-            .unwrap();
-        });
-    }
-    let front = campfire_kit::front::FrontConfig::from_env();
-    println!("WS8bm browser host: TestApp::without_job_runner; real router and durable enqueue");
-    campfire_kit::front::serve(
-        front,
-        app.booted.router.clone(),
-        campfire_kit::server::shutdown_signal(),
-    )
-    .await
-    .unwrap();
 }

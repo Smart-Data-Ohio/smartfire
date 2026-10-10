@@ -31,6 +31,10 @@ export interface SendOptions {
   readonly attachment?: PendingAttachment | null;
   /** Drive files pinned on this message. Left out when there are none. */
   readonly driveFileIds?: readonly string[];
+  /** An inline reply: the message it answers and whether that author is notified. */
+  readonly reply?: { readonly messageId: number; readonly notify: boolean } | null;
+  /** The `clientMessageId` to post under, when the caller follows the send; made here otherwise. */
+  readonly clientMessageId?: string;
 }
 
 /**
@@ -72,8 +76,8 @@ export class Outbox extends Context.Service<
         const message = {
           clientMessageId: pending.clientMessageId,
           markdownSource: pending.markdownSource,
-          replyToMessageId: null,
-          replyNotifyAuthor: null,
+          replyToMessageId: pending.replyToMessageId,
+          replyNotifyAuthor: pending.replyNotifyAuthor,
           attachmentSignedId: pending.attachmentSignedId,
         };
 
@@ -122,7 +126,7 @@ export class Outbox extends Context.Service<
         options: SendOptions = {},
       ) {
         const now = yield* Clock.currentTimeMillis;
-        const clientMessageId = uuid7(now);
+        const clientMessageId = options.clientMessageId ?? uuid7(now);
         const state = store.getState();
 
         const driveFileIds = options.driveFileIds;
@@ -133,6 +137,8 @@ export class Outbox extends Context.Service<
           threadId: options.threadId ?? null,
           attachmentSignedId: options.attachmentSignedId ?? null,
           attachment: options.attachment ?? null,
+          replyToMessageId: options.reply?.messageId ?? null,
+          replyNotifyAuthor: options.reply?.notify ?? null,
           creatorId: state.me?.user.id ?? state.boot?.user.id ?? 0,
           markdownSource: markdown,
           createdAt: new Date(now).toISOString(),

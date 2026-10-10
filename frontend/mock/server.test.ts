@@ -375,3 +375,30 @@ describe("live messages from others", () => {
     expect(events[1]?.data).toMatchObject({ unreadCount: 0 });
   });
 });
+
+describe("product tour", () => {
+  it("seeds the tour completed, and stamps it through classic's endpoint once cleared", async () => {
+    const server = quietServer();
+
+    const me = async () =>
+      field(field(await get<Json>(server, "/api/v1/me"), "preferences"), "tourCompleted");
+
+    expect(await me()).toBe(true);
+
+    await send(server, "POST", "/__mock/tour", { completed: false });
+    expect(await me()).toBe(false);
+
+    expect((await send(server, "PATCH", "/users/me/tour", null, "stale")).status).toBe(422);
+    expect(await send(server, "PATCH", "/users/me/tour", null)).toEqual({
+      status: 204,
+      json: null,
+    });
+    expect(await me()).toBe(true);
+    expect(field(await get<Json>(server, "/__mock/state"), "tourStamps")).toBe(1);
+
+    await send(server, "POST", "/__mock/tour", { completed: false });
+    server.reset();
+    expect(await me()).toBe(true);
+    expect(field(await get<Json>(server, "/__mock/state"), "tourStamps")).toBe(0);
+  });
+});

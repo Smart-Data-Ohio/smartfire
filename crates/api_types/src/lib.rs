@@ -135,12 +135,12 @@ pub use huddle::{
 };
 pub use join::{OpenRoomPreview, RoomJoin};
 pub use me::{
-    DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize, Theme,
-    VoiceMode,
+    ChatSounds, DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize,
+    Theme, VoiceMode,
 };
 pub use message::{
-    CreateMessage, MessageDTO, MessagePage, MessageRead, MessageRemoved, MessageSource,
-    UpdateMessage,
+    CreateMessage, MessageDTO, MessagePage, MessageRead, MessageRemoved, MessageSound,
+    MessageSource, SoundPresentation, UpdateMessage,
 };
 pub use organize::{
     AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,

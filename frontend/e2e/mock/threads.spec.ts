@@ -5,6 +5,7 @@ import {
   matrix,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
   simulateKeyboard,
   syncWelcomed,
@@ -188,16 +189,21 @@ test("a thread opened from the Threads pane goes back to the list", async ({ pag
   await expect(pane(page)).toHaveCount(0);
 });
 
-matrix("locked and closed threads", async ({ page, theme }) => {
-  await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalLocked}`, theme);
-  await expect(pane(page).getByRole("heading", { name: "Meeting format decision" })).toBeVisible();
-  await expect(pane(page).getByText("Locked", { exact: true }).first()).toBeVisible();
-  await shot(page, "thread-locked", theme);
+// Screenshots only: the locked state is checked by the next test.
+if (SHOTS) {
+  matrix("locked and closed threads", async ({ page, theme }) => {
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalLocked}`, theme);
+    await expect(
+      pane(page).getByRole("heading", { name: "Meeting format decision" }),
+    ).toBeVisible();
+    await expect(pane(page).getByText("Locked", { exact: true }).first()).toBeVisible();
+    await shot(page, "thread-locked", theme);
 
-  await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalClosed}`, theme);
-  await expect(pane(page).getByText("This thread is closed. Replying reopens it.")).toBeVisible();
-  await shot(page, "thread-closed", theme);
-});
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalClosed}`, theme);
+    await expect(pane(page).getByText("This thread is closed. Replying reopens it.")).toBeVisible();
+    await shot(page, "thread-closed", theme);
+  });
+}
 
 test("a locked thread refuses replies until a moderator unlocks it", async ({ page }) => {
   await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalLocked}`);

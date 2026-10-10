@@ -27,14 +27,14 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly people: readonly DirectoryPerson[] };
 
-/** Whether the SPA has an agent profile to open (S4); otherwise a bot's page stays classic. */
+/** Whether the SPA has an agent profile to open (S4). */
 export function useHasAgentPage(): boolean {
   const router = useRouter();
 
   return Object.hasOwn(router.routesByPath, "/agents/$agentId");
 }
 
-/** The link to someone's page: theirs in the SPA, or for a bot its agent or classic page. */
+/** The link to someone's page, or their agent profile when available. */
 export function PersonLink({
   userId,
   className,
@@ -47,7 +47,7 @@ export function PersonLink({
   const user = useUser(userId);
   const hasAgentPage = useHasAgentPage();
 
-  if (user?.role === "bot") {
+  if (user?.role === "bot" && user.agent !== null && hasAgentPage) {
     return (
       <a href={botPage(user, hasAgentPage)} className={className}>
         {children}

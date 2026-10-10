@@ -103,6 +103,10 @@ export interface PendingMessage {
   readonly attachment: PendingAttachment | null;
   /** Drive file ids pinned on the pending message; absent when there are none. */
   readonly driveFileIds?: readonly string[];
+  /** The message it replies to (inline, on the same timeline), or `null`. */
+  readonly replyToMessageId: number | null;
+  /** Whether the replied-to author is notified; `null` when it isn't a reply. */
+  readonly replyNotifyAuthor: boolean | null;
   readonly creatorId: number;
   readonly markdownSource: string;
   /** Local clock, RFC 3339: pending rows sort after every confirmed row by this. */

@@ -242,10 +242,6 @@ pub async fn before_actions_with_authentication(
         deny_agent_tokens(c)?;
     }
     let forgery_protection = before.forgery_protection;
-    // The original timezone system test temporarily disables Rails' verifier
-    // and token renderer. Only the external cfg(test) host has this switch.
-    #[cfg(any(test, feature = "test-support"))]
-    let forgery_protection = forgery_protection && !crate::test_support::forgery_disabled();
     if forgery_protection && !authenticated_by(c).skips_forgery_protection() {
         c.verify_authenticity_token()?;
     }
@@ -332,16 +328,12 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if campfire_spa::screens::bypassed(query) {
         return Ok(());
     }
-    // `/users/:id/profile` for the viewer's own id is the same page as `/users/me/profile`.
-    let own_id = c.param_str("user_id").and_then(cast_integer);
-    let own_profile = endpoint == "users/profiles#show"
-        && own_id.is_some_and(|id| current_user(c).is_some_and(|user| user.id == id));
-    let screen_path = if own_profile { "/users/me/profile" } else { c.request.path() };
+    let screen_path = c.request.path();
     let location = if endpoint == "rooms#show" {
         let confirmed = confirmed_room_query(c, screen_path, query).await?;
         campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
     } else {
-        campfire_spa::screens::spa_url(endpoint, screen_path, query)
+        campfire_spa::screens::profile_url(endpoint, screen_path, query, require_current_user(c)?.id)
     };
     let Some(location) = location else {
         return Ok(());
@@ -366,13 +358,21 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
 /// asked for classic, and no flash is waiting. Peeking the flash marks it discarded, so a
 /// controller that then redirects at a classic page must `keep` the flash or the next hop loses it.
 pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
+    if authenticated_by(c) != AuthenticatedBy::Session || !coexistence_navigation(c)? {
+        return Ok(false);
+    }
+    next_ui(c, require_current_user(c)?).await
+}
+
+/// The navigation gates for coexistence, before checking a person's session and UI choice.
+pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     use campfire_kit::format;
 
     let config = &c.app().config;
     if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
         return Ok(false);
     }
-    if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
+    if c.is_turbo_frame_request() || c.request.is_xhr() {
         return Ok(false);
     }
     let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
@@ -382,10 +382,7 @@ pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
     if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL) || !navigates(c) {
         return Ok(false);
     }
-    if !c.peek_flash().is_empty() {
-        return Ok(false);
-    }
-    next_ui(c, require_current_user(c)?).await
+    Ok(c.peek_flash().is_empty())
 }
 
 /// `thread` and `message_id` the viewer can open in the room `path` names. Anything else (another
@@ -1123,7 +1120,7 @@ pub async fn allow_browser(c: &mut Ctx) -> Result<()> {
 /// layout.
 async fn render_incompatible_browser(c: &mut Ctx) -> Result {
     use askama::Template;
-    use campfire_views::sessions::IncompatibleBrowser;
+    use campfire_retained::sessions::IncompatibleBrowser;
 
     let own_layout = c
         .current::<MatchedRoute>()
@@ -1132,25 +1129,26 @@ async fn render_incompatible_browser(c: &mut Ctx) -> Result {
                 || route.endpoint.starts_with("messages/by_bots#")
         });
     use crate::controllers::presenters::view_context::{
-        page_in_any_format, page_or_frame_in_any_format,
+        retained_document, retained_page_or_frame_in_any_format,
     };
 
     // An explicit `render template:`, so no format lookup: a blocked browser gets this page for
     // /webmanifest.json, /service-worker.js or `Accept: application/json` alike (verified against
-    // the reference), never a 406.
+    // the reference), never a 406. The document is the retained shell. Message controllers still
+    // force that full document when the request asks for a frame.
     let response = if own_layout {
-        page_in_any_format(c, StatusCode::OK, |ctx| {
+        retained_document(c, StatusCode::OK, |ctx| {
             IncompatibleBrowser { ctx }.render()
         })
         .await?
     } else {
-        page_or_frame_in_any_format(
+        retained_page_or_frame_in_any_format(
             c,
             StatusCode::OK,
             |ctx| IncompatibleBrowser { ctx }.render(),
             |ctx| {
                 let page = IncompatibleBrowser { ctx };
-                campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
+                campfire_retained::layouts::frame(ctx, page.as_head(), page.as_content())
             },
         )
         .await?

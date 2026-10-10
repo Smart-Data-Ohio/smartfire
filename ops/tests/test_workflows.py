@@ -37,7 +37,7 @@ def audit_actions(document):
 
 
 def plan(document, runtime=None):
-    step = next(step for step in document["jobs"]["deploy"]["steps"] if step.get("id") == "plan")
+    step = next(step for step in document["jobs"].get("prepare", document["jobs"]["deploy"])["steps"] if step.get("id") == "plan")
     with tempfile.TemporaryDirectory(dir=ROOT / ".scratch", prefix="workflow-plan-") as tmp:
         work = Path(tmp)
         fake_git = work / "git"
@@ -78,19 +78,20 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(plan(current), {**expected, "tag": f"rust-git-{REVISION}"})
         on = current.get("on", current.get("true"))
         self.assertNotIn("runtime", on["workflow_dispatch"]["inputs"])
-        self.assertNotIn("INPUT_RUNTIME", next(step for step in current["jobs"]["deploy"]["steps"] if step.get("id") == "plan")["env"])
+        self.assertNotIn("INPUT_RUNTIME", next(step for step in current["jobs"]["prepare"]["steps"] if step.get("id") == "plan")["env"])
         print("WORKFLOW PLAN: only the Rust full-SHA tag; no runtime input")
 
     def test_release_is_gated_on_the_rust_checks_alone(self):
         workflow = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
         steps = {step["id"]: step for step in workflow["jobs"]["deploy"]["steps"] if "id" in step}
-        gate = steps["ci"]["run"]
+        preparation = {step["id"]: step for step in workflow["jobs"]["prepare"]["steps"] if "id" in step}
+        gate = preparation["ci"]["run"]
         self.assertIn("rust.yml", gate)
         self.assertIn("push", gate)
         self.assertIn("schedule", gate)
         self.assertNotIn("ci.yml", (ROOT / ".github/workflows/deploy-gcp.yml").read_text())
         self.assertIn('select(.name == "Rust port")', gate)
-        plan = steps["plan"]["run"]
+        plan = preparation["plan"]["run"]
         self.assertIn('[ "$INPUT_ENVIRONMENT" = production ] && [ "$GITHUB_REF" != refs/heads/main ]', plan)
         self.assertLess(plan.index("refs/heads/main"), plan.index("git fetch"), "check the ref before anything else")
         preflight = steps["preflight"]
@@ -133,7 +134,7 @@ class WorkflowTest(unittest.TestCase):
         validation = next(step for step in steps if step.get("run") == "python3 deploy/gcp/spa-configuration.py --validate")
         self.assertNotIn("if", validation)
         self.assertLess(steps.index(validation), steps.index(by_id["preflight"]))
-        for name in ["configure-google.py", "configure-spa.py", "once_configuration.py"]:
+        for name in ["configure-google.py", "configure-spa.py", "once_configuration.py", "check-frontend.py"]:
             self.assertIn(f"/opt/campfire-deploy/{name}", by_id["copy"]["run"])
         # Current-image settings runs retain the ordinary release and recovery conditions.
         self.assertEqual(by_id["freeze"]["if"], "steps.plan.outputs.dry_run != 'true'")
@@ -144,8 +145,8 @@ class WorkflowTest(unittest.TestCase):
     def test_image_workflow_publishes_from_main_only_with_pinned_actions(self):
         image = yaml_json((ROOT / ".github/workflows/publish-image.yml").read_text())
         on = image.get("on", image.get("true"))
-        self.assertEqual(set(on), {"push", "workflow_dispatch"})
-        self.assertEqual(on["push"]["branches"], ["main"])
+        self.assertEqual(set(on), {"workflow_call", "workflow_dispatch"})
+        self.assertTrue(on["workflow_call"]["inputs"]["git_sha"]["required"])
         self.assertIs(on["workflow_dispatch"]["inputs"]["dry_run"]["default"], True)
         # Publishing runs are never cancelled, and a dry run has a group of its own.
         self.assertIs(image["concurrency"]["cancel-in-progress"], False)
@@ -157,14 +158,23 @@ class WorkflowTest(unittest.TestCase):
         self.assertNotIn("packages", amd64["permissions"])
         plan = next(step["run"] for step in amd64["steps"] if step.get("id") == "plan")
         self.assertIn('echo "tag=rust-git-${SHA}"', plan)
-        self.assertIn('[ "$PUBLISH" = true ] && [ "$REF" = refs/heads/main ]', plan)
+        self.assertIn("github.ref == 'refs/heads/main'", image["env"]["PUBLISH"])
         build = next(step["with"] for step in amd64["steps"]
                      if step.get("uses", "").startswith("docker/build-push-action@"))
         self.assertEqual((build["context"], build["file"], build["platforms"]),
                          (".", "Dockerfile", "linux/amd64"))
-        self.assertIn("GIT_REVISION=${{ github.sha }}", build["build-args"])
+        self.assertIn("GIT_REVISION=${{ steps.plan.outputs.sha }}", build["build-args"])
         self.assertFalse(build["provenance"])
-        self.assertEqual(sorted(image["jobs"]["ghcr"]["needs"]), ["amd64", "arm64"])
+        self.assertEqual(set(image["jobs"]), {"amd64"})
+        checkout = next(step for step in amd64["steps"] if step.get("uses", "").startswith("actions/checkout@"))
+        self.assertEqual(checkout["with"]["ref"], "${{ inputs.git_sha || github.sha }}")
+        deploy = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())["jobs"]
+        self.assertEqual(deploy["publish"]["needs"], "prepare")
+        self.assertIn("outputs.exists == 'false'", deploy["publish"]["if"])
+        self.assertIn("outputs.dry_run != 'true'", deploy["publish"]["if"])
+        self.assertEqual(deploy["publish"]["with"]["git_sha"], "${{ needs.prepare.outputs.sha }}")
+        self.assertEqual(deploy["deploy"]["needs"], ["prepare", "publish"])
+        self.assertIn("needs.publish.result == 'skipped'", deploy["deploy"]["if"])
         for workflow in [image, yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())]:
             self.assertGreater(audit_actions(workflow), 0)
         print("WORKFLOW ACTIONS: all third-party actions pinned; rust-git-<sha> comes from the amd64 job alone, on main")
@@ -185,7 +195,8 @@ class WorkflowTest(unittest.TestCase):
         self.assertNotIn("needs", job)
         e2e = frontend["jobs"]["e2e"]
         self.assertTrue(e2e["name"].startswith("Frontend e2e ("), e2e["name"])
-        self.assertNotIn("if", e2e)
+        self.assertEqual(e2e["if"], "needs.frontend.outputs.run == 'true'")
+        self.assertEqual(e2e["strategy"]["matrix"]["shard"], [1, 2, 3])
         self.assertEqual(frontend["permissions"], {})
         self.assertGreater(audit_actions(frontend), 0)
         # The only CI build of crates/spa against a real dist: the job builds one and embeds it.
@@ -199,16 +210,16 @@ class WorkflowTest(unittest.TestCase):
     def test_rust_gates_skip_frontend_only_changes(self):
         rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())
         script = next(step["run"] for step in rust["jobs"]["changes"]["steps"] if step.get("id") == "scope")
-        source = script[script.index("OUTSIDE ="):script.index("rust = True")]
+        source = script[script.index("RUST_DIRS ="):script.index("rust = True")]
         scope = {}
         exec(textwrap.dedent(source), scope)
         rust_input = scope["rust_input"]
         for path in [b"frontend/src/main.tsx", b"frontend/pnpm-lock.yaml", b"docs/development.md",
-                     b".github/workflows/frontend.yml"]:
+                     b".github/workflows/frontend.yml", b"ops/README.md", b"huddle-gateway/index.mjs"]:
             self.assertFalse(rust_input(path), path)
         # frontend/src/gen is generated from crates/api_types; the clippy job checks it.
         for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"web/app/javascript/application.js",
-                     b".github/workflows/rust.yml", b"frontendish/x", b"crates/api_types/src/lib.rs",
+                     b".github/workflows/rust.yml", b"crates/api_types/src/lib.rs",
                      b"frontend/src/gen/MessageDTO.ts"]:
             self.assertTrue(rust_input(path), path)
         print("WORKFLOW RUST SCOPE: frontend/-only pull requests skip the Rust gates")

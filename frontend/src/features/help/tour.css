@@ -1,0 +1,169 @@
+/*
+ * The product tour: a transparent full-viewport <dialog> holding the ring and the card. The ring
+ * (the spotlight) is a box over the step's anchor whose spread shadow is the scrim, so the page
+ * dims around the anchor; with no anchor it shrinks to the centre and the scrim covers it all.
+ * Between steps the ring and card glide on the move curve. Reduced motion (the OS setting unless
+ * the app's own preference says "full", or that preference set to "reduce": `data-motion`, see
+ * lib/appearance.ts) drops the glide and the scale-in outright and keeps only the dialog's fade.
+ */
+@layer app {
+  .tour {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    opacity: 1;
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      display var(--duration-medium),
+      overlay var(--duration-medium);
+    transition-behavior: allow-discrete;
+  }
+
+  .tour::backdrop {
+    background: transparent;
+  }
+
+  /* Without showModal() the open attribute alone has to put it above the page. */
+  .tour[open]:not(:modal) {
+    z-index: 100;
+  }
+
+  @starting-style {
+    .tour[open] {
+      opacity: 0;
+    }
+  }
+
+  .tour[data-state="closing"] {
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--duration-medium-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+
+  .tour:focus-visible {
+    outline: none;
+  }
+
+  .tour-spotlight {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 0 100vmax var(--scrim);
+    pointer-events: none;
+    transition-property: top, left, width, height;
+    transition-duration: var(--duration-medium);
+    transition-timing-function: var(--ease-move);
+  }
+
+  .tour[data-anchored] .tour-spotlight {
+    outline: 2px solid var(--focus-ring);
+  }
+
+  .tour-card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: min(24rem, calc(100vw - var(--space-6)));
+    padding: var(--space-5) var(--space-5) var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    translate: -50% -50%;
+    scale: 1;
+    transition-property: top, left, translate, scale;
+    transition-duration: var(--duration-medium);
+    transition-timing-function: var(--ease-move);
+  }
+
+  @starting-style {
+    .tour[open] .tour-card {
+      scale: var(--scale-surface);
+    }
+  }
+
+  /* Placed beside its anchor by tour.tsx. */
+  .tour[data-anchored]:not([data-dock]) .tour-card {
+    translate: none;
+  }
+
+  .tour-progress {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .tour-title {
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+  }
+
+  .tour-body {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .tour-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  .tour-spacer {
+    flex: 1;
+  }
+
+  /*
+   * Phones: a sheet across the screen, docked to the edge away from its anchor (the composer and
+   * the tab bar sit low, so their card docks at the top), or centred with no anchor.
+   */
+  @media (width < 720px) {
+    .tour-card {
+      right: var(--space-3);
+      left: var(--space-3);
+      width: auto;
+      translate: 0 -50%;
+    }
+
+    .tour[data-dock] .tour-card {
+      translate: none;
+    }
+
+    .tour[data-dock="bottom"] .tour-card {
+      top: auto;
+      bottom: calc(var(--space-3) + var(--safe-bottom));
+    }
+
+    .tour[data-dock="top"] .tour-card {
+      top: calc(var(--space-3) + var(--safe-top));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .tour .tour-spotlight,
+    :root:not([data-motion="full"]) .tour .tour-card {
+      transition: none;
+    }
+  }
+
+  :root[data-motion="reduce"] .tour .tour-spotlight,
+  :root[data-motion="reduce"] .tour .tour-card {
+    transition: none;
+  }
+}

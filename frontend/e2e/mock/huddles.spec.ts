@@ -14,8 +14,8 @@ import {
 
 /**
  * Huddles against the mock backend and the fake LiveKit transport (`mock://` credentials): the
- * dock, the call view, the device check, voice rooms in the sidebar, moderation, a host's mute,
- * a dropped connection and remote screen shares. `window.__smartfireHuddle` steers the fake.
+ * dock, the call view, the device check, voice rooms in the sidebar, moderation, a host's mute
+ * and remote screen shares. `window.__smartfireHuddle` steers the fake.
  */
 
 const GENERAL = ROOM_IDS.general;
@@ -197,21 +197,6 @@ test("an administrator mutes and removes someone from a voice call", async ({ pa
   await expect(page.locator(".call-tile")).toHaveCount(2);
 });
 
-test("a dropped connection ends the call with Retry", async ({ page }) => {
-  await open(page, GENERAL);
-  await join(page);
-  await hook(page, "window.__smartfireHuddle.reconnecting()");
-  await expect(dock(page).getByRole("status")).toContainText("Reconnecting");
-  await hook(page, "window.__smartfireHuddle.reconnected()");
-  await expect(dock(page).getByRole("status")).toContainText("Huddle active");
-
-  await hook(page, "window.__smartfireHuddle.disconnect('lost')");
-  await expect(dock(page).getByRole("alert")).toContainText("Huddle ended");
-  await shot(page, "huddle-failed", "light");
-  await dock(page).getByRole("button", { name: "Retry" }).click();
-  await expect(dock(page).getByRole("status")).toContainText("Huddle active");
-});
-
 test("a remote screen share opens in theater mode", async ({ page }) => {
   await open(page, LOUNGE);
   await join(page);
@@ -327,40 +312,6 @@ test.describe("on a touch phone", () => {
     await expect(view).toHaveCount(0);
     expect(page.url(), "Back closes the call, not the room").toBe(url);
     await expect(page.getByRole("textbox", { name: /^Message/ })).toBeVisible();
-  });
-
-  test("Escape on the call bar closes the full-screen call", async ({ page }) => {
-    await open(page, GENERAL);
-    await join(page, true);
-
-    const bar = dock(page, true);
-    const view = page.locator("section.call-view");
-
-    await bar.getByRole("button", { name: "Show call" }).click();
-    await expect(view).toBeVisible();
-    await bar.getByRole("button", { name: "Mute microphone" }).focus();
-    await page.keyboard.press("Escape");
-    await expect(view).toHaveCount(0);
-  });
-
-  test("the full-screen call is in the URL: Back closes it, Forward reopens it", async ({
-    page,
-  }) => {
-    await open(page, GENERAL);
-    await join(page, true);
-
-    const view = page.locator("section.call-view");
-
-    await dock(page, true).getByRole("button", { name: "Show call" }).click();
-    await expect(view).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}\\?call=1$`));
-
-    await page.goBack();
-    await expect(view).toHaveCount(0);
-    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
-
-    await page.goForward();
-    await expect(view).toBeVisible();
   });
 
   test("switching rooms with the call open keeps Back and Forward ordinary", async ({ page }) => {

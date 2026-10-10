@@ -1,0 +1,28 @@
+{% extends "layouts/auth.html" %}
+{%- block body_class %}auth auth--unsupported{% endblock %}
+{%- block head %}{{ h::unsupported_script_tag() }}{% endblock %}
+
+{% block content %}
+<div class="panel center">
+  <header>
+    <h1 class="txt-x-large txt-tight-lines txt-align-center margin-none-block-start margin-block-end">
+      Upgrade to a supported web browser
+    </h1>
+    <div class="flex align-start gap">
+      {{ h::translation_button(ctx, "incompatible_browser_messsage") }}
+      <p class="margin-none-block-start">Smartfire requires a modern web browser. Please use one of the browsers listed below and make sure auto-updates are enabled.</p>
+    </div>
+  </header>
+
+  <div class="browser-list flex align-center flex-wrap gap justify-center margin-block">
+{% for (browser, version) in crate::sessions::ALLOW_BROWSER_VERSIONS %}
+      <div class="browser flex flex-column">
+        {{ h::image_tag(ctx, "browsers/" ~ browser ~ ".svg", h::attrs().aria_hidden().class("center")) }}
+        <div class="flex flex-column align-center margin-block-start-half">
+          <strong>{{ h::capitalize(browser) }}</strong>
+          <span> {{ version }}+</span>
+        </div>
+      </div>
+{% endfor %}  </div>
+</div>
+{% endblock %}

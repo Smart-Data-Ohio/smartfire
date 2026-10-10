@@ -13,6 +13,7 @@ import { hasCards, useCardsChunkLoaded, useCardsChunkSettled } from "../cards/ca
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
+import { useChatSounds } from "../messages/use-chat-sounds.ts";
 import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
 import { useFollowPosted } from "./follow-posted.ts";
@@ -30,6 +31,9 @@ const BOTTOM_SLOP = 40;
 
 /** Start fetching the next page when this close to an edge. */
 const PAGE_AHEAD = 800;
+
+/** Classic's paginator keeps 300 messages before paging back trims away the live end. */
+const LATEST_PAGE_MESSAGES = 300;
 
 /** A message that arrived less than this ago, after the room opened, rises in. */
 const LIVE_WINDOW_MS = 8000;
@@ -165,6 +169,21 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   const now = Date.now();
   const items = timelineItems({ timeline, messages, pending, now });
+
+  useChatSounds(roomId, () => {
+    const list = listRef.current;
+    const latestIds = new Set(timeline.ids.slice(-LATEST_PAGE_MESSAGES));
+
+    const firstLatest = items.findIndex(
+      (item) => item.kind === "message" && latestIds.has(item.message.id),
+    );
+
+    return (
+      list !== null &&
+      list.viewportSize > 0 &&
+      list.findItemIndex(list.scrollOffset + list.viewportSize) >= firstLatest
+    );
+  });
 
   itemCountRef.current = items.length;
 

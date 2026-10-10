@@ -164,14 +164,20 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
       resume !== null && resume.epoch === epoch && resume.seq <= seq && resume.seq >= oldest - 1;
 
     if (!canResume) {
-      transmit(connection, { t: "welcome", epoch, seq, resumed: false });
+      transmit(connection, { t: "welcome", epoch, seq, resumed: false, replayThrough: seq });
 
       return;
     }
 
     // Welcome at the client's own point, then replay what it missed, so a client that takes
     // its cursor from `welcome` still applies the replay.
-    transmit(connection, { t: "welcome", epoch, seq: resume.seq, resumed: true });
+    transmit(connection, {
+      t: "welcome",
+      epoch,
+      seq: resume.seq,
+      resumed: true,
+      replayThrough: seq,
+    });
 
     const missed = ring.filter(
       (event) =>

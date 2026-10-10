@@ -2,6 +2,7 @@
  * What the mock keeps for S2 beyond the S1 rooms and messages (threads, pins, saved items,
  * stars, scheduled messages, uploaded blobs) and the pure helpers that turn it into wire DTOs.
  */
+
 import type { Attachment } from "../../src/gen/Attachment.ts";
 import type { DoNotDisturb } from "../../src/gen/DoNotDisturb.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
@@ -19,6 +20,7 @@ import { notFound, validation } from "../http.ts";
 import { escapeHtml, type Mentionable, renderMarkdown } from "../markdown.ts";
 import { type WorkRecord, workFacts } from "../s4/work-model.ts";
 import type { RoomRecord, World } from "../seed.ts";
+import { mockSound } from "../sounds.ts";
 
 /** Messages per page, as `Message::PAGE_SIZE`. */
 export const PAGE_SIZE = 40;
@@ -205,6 +207,7 @@ export function buildMessage(
     threadId,
     creatorId: draft.creatorId,
     clientMessageId: draft.clientMessageId,
+    sound: draft.attachment === null ? mockSound(draft.markdown) : null,
     bodyHtml: draft.systemNote
       ? escapeHtml(draft.markdown)
       : (draft.forward?.bodyHtml ?? renderMarkdown(draft.markdown, people)),

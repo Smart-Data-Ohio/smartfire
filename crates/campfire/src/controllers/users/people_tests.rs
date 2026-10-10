@@ -98,6 +98,25 @@ pub(crate) fn render_with(
     )
 }
 
+/// The fields a retained page reads, copied off a classic context tests already built.
+pub(crate) fn retained<'a>(ctx: &campfire_views::ViewContext<'a>) -> campfire_retained::Context<'a> {
+    campfire_retained::Context {
+        current_user: ctx.current_user.clone(),
+        account: ctx.account.clone(),
+        flash_notice: ctx.flash_notice.clone(),
+        flash_alert: ctx.flash_alert.clone(),
+        custom_styles: ctx.custom_styles.clone(),
+        platform: ctx.platform.clone(),
+        app_version: ctx.app_version.clone(),
+        base_url: ctx.base_url.clone(),
+        asset_path: ctx.asset_path,
+        chrome: campfire_retained::Chrome {
+            service_worker_auto_register: ctx.chrome.service_worker_auto_register,
+            service_worker_url: ctx.chrome.service_worker_url.clone(),
+        },
+    }
+}
+
 fn assert_bytes(name: &str, actual: &str, expected: &str) {
     if let Ok(dir) = std::env::var("WS8BR2_DIFF_DIR") {
         std::fs::create_dir_all(&dir).unwrap();

@@ -160,6 +160,10 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
             if table == "users" && name == "activity_revision" {
                 continue;
             }
+            // Port-only read boundary for the sidebar's thread pings that Rails doesn't have.
+            if table == "thread_memberships" && name == "last_read_message_id" {
+                continue;
+            }
             let value: rusqlite::types::Value = row.get(i).unwrap();
             if (table == "rooms" && name == "client_room_id")
                 || (table == "channel_threads" && name == "client_post_id")

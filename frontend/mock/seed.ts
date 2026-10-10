@@ -780,6 +780,7 @@ export function seedWorld(now: number, random: Random): World {
       threadId: null,
       creatorId: draft.creatorId,
       clientMessageId: seededUuid(random),
+      sound: null,
       bodyHtml: renderMarkdown(draft.markdown, people),
       markdownSource: draft.markdown,
       systemNote: false,

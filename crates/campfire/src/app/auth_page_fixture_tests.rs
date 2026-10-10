@@ -1,16 +1,14 @@
 //! Deterministic standalone pages for frontend screenshots, rendered by the Rust views.
 use crate::controllers::presenters::test_support::{TestApp, seed_clock};
 use askama::Template;
-use campfire_views::{
-    ViewContext, first_runs, helpers as h, layouts, sessions, sudos, two_factor, users,
-};
+use campfire_retained::{first_runs, helpers as h, layouts, sessions, sudos, two_factor, users};
 use std::collections::BTreeMap;
 use std::path::Path;
 
 const IMAGE: &str = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==";
 
 fn shell(
-    ctx: &ViewContext,
+    ctx: &campfire_retained::Context,
     title: Option<String>,
     head: impl Template,
     content: impl Template,
@@ -45,6 +43,7 @@ fn local_html(mut html: String, files: &mut BTreeMap<String, Vec<u8>>) -> String
             let relative = match *logical {
                 "auth.css" => "auth.css".to_string(),
                 "auth.js" => "auth.js".to_string(),
+                "unsupported.js" => "unsupported.js".to_string(),
                 _ => format!("images/{logical}"),
             };
             html = html.replace(&url, &format!("./{relative}"));
@@ -117,6 +116,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
         "sudo-totp",
         "sudo-continue",
         "transfer",
+        "incompatible-browser",
     ] {
         let html = crate::controllers::users::people_tests::render_with(
             if name == "first-run" { &first } else { &app },
@@ -132,6 +132,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                         | "first-run"
                         | "two-factor-challenge-alert"
                         | "transfer"
+                        | "incompatible-browser"
                 ) {
                     ctx.current_user = None;
                 }
@@ -147,79 +148,85 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                     _ => None,
                 };
             },
-            |ctx| match name {
-                "sign-in" | "sign-in-google-alert" => {
-                    let page = sessions::New {
-                        ctx,
-                        email_address: None,
-                        help_contact: None,
-                        google_sign_in_domains: if name == "sign-in" {
-                            vec![]
-                        } else {
-                            vec!["smartdata.net".into(), "cnbssoftware.com".into()]
-                        },
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
+            |ctx| {
+                let ctx = crate::controllers::users::people_tests::retained(ctx);
+                match name {
+                    "sign-in" | "sign-in-google-alert" => {
+                        let page = sessions::New {
+                            ctx: &ctx,
+                            email_address: None,
+                            help_contact: None,
+                            google_sign_in_domains: if name == "sign-in" {
+                                vec![]
+                            } else {
+                                vec!["smartdata.net".into(), "cnbssoftware.com".into()]
+                            },
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "join" => {
+                        let page = users::New {
+                            ctx: &ctx,
+                            join_code: "fixture-join-code".into(),
+                            help_contact: None,
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "first-run" => {
+                        let page = first_runs::Show { ctx: &ctx };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "two-factor-setup" => {
+                        let page = two_factor::Setup {
+                            ctx: &ctx,
+                            key: vectors["key"].as_str().unwrap().into(),
+                            qr: qr.clone(),
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "two-factor-challenge-alert" => {
+                        let page = two_factor::Challenge { ctx: &ctx };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "backup-codes" => {
+                        let page = two_factor::BackupCodes {
+                            ctx: &ctx,
+                            codes: codes.clone(),
+                            signed_out: 2,
+                            continue_url: "/app/settings/security".into(),
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "sudo-all" | "sudo-totp" => {
+                        let page = sudos::New {
+                            ctx: &ctx,
+                            password: name == "sudo-all",
+                            totp: true,
+                            google: name == "sudo-all",
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "sudo-continue" => {
+                        let page = sudos::Continue {
+                            ctx: &ctx,
+                            method: "patch".into(),
+                            path: "/account/users/127326141".into(),
+                            params: serde_json::json!({"user":{"name":"David <&>"}}),
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "transfer" => {
+                        let page = sessions::TransferShow {
+                            ctx: &ctx,
+                            action: "/session/transfers/fixture-transfer-token".into(),
+                        };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "incompatible-browser" => sessions::IncompatibleBrowser { ctx: &ctx }
+                        .render()
+                        .unwrap(),
+                    _ => unreachable!(),
                 }
-                "join" => {
-                    let page = users::New {
-                        ctx,
-                        join_code: "fixture-join-code".into(),
-                        help_contact: None,
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "first-run" => {
-                    let page = first_runs::Show { ctx };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "two-factor-setup" => {
-                    let page = two_factor::Setup {
-                        ctx,
-                        key: vectors["key"].as_str().unwrap().into(),
-                        qr: qr.clone(),
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "two-factor-challenge-alert" => {
-                    let page = two_factor::Challenge { ctx };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "backup-codes" => {
-                    let page = two_factor::BackupCodes {
-                        ctx,
-                        codes: codes.clone(),
-                        signed_out: 2,
-                        continue_url: "/app/settings/security".into(),
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "sudo-all" | "sudo-totp" => {
-                    let page = sudos::New {
-                        ctx,
-                        password: name == "sudo-all",
-                        totp: true,
-                        google: name == "sudo-all",
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "sudo-continue" => {
-                    let page = sudos::Continue {
-                        ctx,
-                        method: "patch".into(),
-                        path: "/account/users/127326141".into(),
-                        params: serde_json::json!({"user":{"name":"David <&>"}}),
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                "transfer" => {
-                    let page = sessions::TransferShow {
-                        ctx,
-                        action: "/session/transfers/fixture-transfer-token".into(),
-                    };
-                    shell(ctx, page.page_title(), page.as_head(), page.as_content())
-                }
-                _ => unreachable!(),
             },
         );
         let html = local_html(html, &mut files);
@@ -260,11 +267,18 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
 /// Text fixtures without trailing whitespace on any line, so they pass `git diff --check`; the
 /// pages have no preformatted text for that to change.
 fn tidy(name: &str, bytes: Vec<u8>) -> Vec<u8> {
-    if ![".html", ".css", ".js"].iter().any(|ext| name.ends_with(ext)) {
+    if ![".html", ".css", ".js"]
+        .iter()
+        .any(|ext| name.ends_with(ext))
+    {
         return bytes;
     }
     let text = String::from_utf8(bytes).unwrap();
-    let mut tidied = text.lines().map(str::trim_end).collect::<Vec<_>>().join("\n");
+    let mut tidied = text
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n");
     tidied.truncate(tidied.trim_end().len());
     tidied.push('\n');
     tidied.into_bytes()

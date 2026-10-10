@@ -6,6 +6,38 @@ use serde_json::json;
 use crate::tests::{assert_wire, message, user};
 use crate::*;
 
+#[test]
+fn a_message_carries_its_play_sound() {
+    let mut sound_message = message();
+    sound_message.sound = Some(MessageSound {
+        name: "bell".into(),
+        url: "/assets/bell-digest.mp3".into(),
+        presentation: SoundPresentation::Text {
+            text: "🔔".into()
+        },
+    });
+    let wire = serde_json::to_value(&sound_message).unwrap();
+    assert_eq!(
+        wire["sound"],
+        json!({
+            "name": "bell", "url": "/assets/bell-digest.mp3",
+            "presentation": { "kind": "text", "text": "🔔" },
+        })
+    );
+    assert_eq!(
+        serde_json::from_value::<MessageDTO>(wire).unwrap(),
+        sound_message
+    );
+    assert_wire(
+        &SoundPresentation::Image {
+            url: "/assets/56k.webp".into(),
+            width: 79,
+            height: 33,
+        },
+        json!({ "kind": "image", "url": "/assets/56k.webp", "width": 79, "height": 33 }),
+    );
+}
+
 fn attachment() -> Attachment {
     Attachment {
         filename: "roadmap.png".into(),

@@ -4,6 +4,7 @@ import type { MessageDTO as GeneratedMessageDTO } from "../../gen/MessageDTO.ts"
 import type { MessagePage as GeneratedMessagePage } from "../../gen/MessagePage.ts";
 import type { MessageRead as GeneratedMessageRead } from "../../gen/MessageRead.ts";
 import type { MessageRemoved as GeneratedMessageRemoved } from "../../gen/MessageRemoved.ts";
+import type { MessageSound as GeneratedMessageSound } from "../../gen/MessageSound.ts";
 import type { MessageSource as GeneratedMessageSource } from "../../gen/MessageSource.ts";
 import type { SavedMark as GeneratedSavedMark } from "../../gen/SavedMark.ts";
 import type { UpdateMessage as GeneratedUpdateMessage } from "../../gen/UpdateMessage.ts";
@@ -18,6 +19,22 @@ import { ThreadIndicator } from "./thread-parts.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
+export const MessageSound = Schema.Struct({
+  name: Schema.String,
+  url: Schema.String,
+  presentation: Schema.Union([
+    Schema.Struct({ kind: Schema.Literal("text"), text: Schema.String }),
+    Schema.Struct({
+      kind: Schema.Literal("image"),
+      url: Schema.String,
+      width: Schema.Int,
+      height: Schema.Int,
+    }),
+  ]),
+});
+
+export type MessageSoundPin = Assert<Pinned<typeof MessageSound, GeneratedMessageSound>>;
+
 /**
  * A message on a room's timeline or in a thread. `bodyHtml` is already sanitized. Viewer
  * independent: "you reacted" is the viewer's id in `reactorIds`, edit and delete rights follow
@@ -30,6 +47,7 @@ export const MessageDTO = Schema.Struct({
   creatorId: UserId,
   clientMessageId: Schema.String,
   bodyHtml: Schema.String,
+  sound: Schema.NullOr(MessageSound),
   markdownSource: Schema.NullOr(Schema.String),
   systemNote: Schema.Boolean,
   action: Schema.Boolean,

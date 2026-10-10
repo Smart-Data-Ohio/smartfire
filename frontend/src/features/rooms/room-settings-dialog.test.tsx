@@ -525,6 +525,69 @@ describe("room integration membership", () => {
     );
   });
 
+  it("keeps the newer member refresh when the older one lands after it", async () => {
+    const stale = held<RoomForm>();
+    const fresh = held<RoomForm>();
+
+    vi.spyOn(actions.rooms, "editForm")
+      .mockResolvedValueOnce(closedForm())
+      .mockImplementationOnce(() => stale.promise)
+      .mockImplementationOnce(() => fresh.promise);
+    vi.spyOn(actions.rooms, "githubSubscriptions").mockResolvedValue(githubList());
+    vi.spyOn(actions.rooms, "subscribeRepository")
+      .mockResolvedValueOnce(RAILS)
+      .mockResolvedValue({ id: 5, fullName: "campfire/campfire", events: ["opened"] });
+
+    const update = vi.spyOn(actions.rooms, "update").mockResolvedValue(savedRoom("renamed"));
+    const user = userEvent.setup();
+
+    await mount(CLOSED);
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    await user.click(screen.getByRole("tab", { name: "GitHub" }));
+
+    // The second subscribe starts its refresh while the first one is still in flight.
+    await user.type(screen.getByLabelText("Repository"), "rails/rails");
+    await user.click(screen.getByRole("button", { name: "Subscribe" }));
+    expect(await screen.findByText("Updating members…")).toBeTruthy();
+
+    await user.type(screen.getByLabelText("Repository"), "campfire/campfire");
+    await user.click(screen.getByRole("button", { name: "Subscribe" }));
+    expect(await screen.findByText("Updating members…")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", true);
+
+    // The newer response lands first: the bot the second subscribe added is saved.
+    fresh.release(
+      closedForm({ userIds: [1, 2, BOT], memberIds: [1, 2, BOT], candidateIds: [1, 2, 3, BOT] }),
+    );
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Members · 3" })).toBeTruthy());
+    expect(screen.queryByText("Updating members…")).toBeNull();
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", true);
+
+    // The older response predates the bot. Applying it would unsave the bot it never saw, so
+    // the member list and the save gate stay as the newer refresh left them.
+    stale.release(closedForm());
+    await act(async () => {
+      await stale.promise;
+    });
+    expect(screen.getByRole("tab", { name: "Members · 3" })).toBeTruthy();
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+    expect(screen.queryByText("Couldn't update the member list.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", true);
+
+    await user.click(screen.getByRole("tab", { name: "General" }));
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "renamed");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(CLOSED, {
+        type: "closed",
+        name: "renamed",
+        userIds: [1, 2, BOT],
+      }),
+    );
+  });
+
   it("shows an email address that finished rotating while the Email tab was unmounted", async () => {
     const created: InboundEmail = {
       enabled: true,

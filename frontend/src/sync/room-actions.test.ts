@@ -10,7 +10,7 @@ import {
 } from "../api/testing.ts";
 import type { RoomForm } from "../gen/RoomForm.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import * as rooms from "./room-actions.ts";
 import { invalidateRoom } from "./room-refresh.ts";
 
@@ -37,7 +37,7 @@ const form: RoomForm = {
 
 const seed = () => {
   mutations.reset();
-  mutations.loadSidebar(sidebarFixture([sidebarRowFixture(20, "Room")]));
+  mutations.loadSidebar(sidebarFixture([sidebarRowFixture(20, "Room")]), sidebarRowClock());
   mutations.setRoomDetail(roomDetailFixture(20), beginRoomRequest());
 };
 
@@ -153,7 +153,7 @@ describe("room management actions", () => {
               0,
             );
             invalidateRoom(20);
-            mutations.setRoomUnavailable(20, beginRoomRequest());
+            mutations.setRoomUnavailable(20, beginRoomRequest(), sidebarRowClock());
 
             return { room: row.room, detail: { ...detail, room: row.room }, row };
           }),

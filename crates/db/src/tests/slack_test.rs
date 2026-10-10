@@ -217,6 +217,10 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                     if table == "users" && column == "activity_revision" {
                         continue;
                     }
+                    // Port-only read boundary for the sidebar's thread pings.
+                    if table == "thread_memberships" && column == "last_read_message_id" {
+                        continue;
+                    }
                     value[column] = match row.get_ref(index)? {
                         ValueRef::Null => Value::Null,
                         ValueRef::Integer(v) => json!(v),

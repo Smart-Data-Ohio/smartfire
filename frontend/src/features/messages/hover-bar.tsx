@@ -21,7 +21,7 @@ interface HoverBarProps {
 
 /**
  * The floating toolbar at a message's top right (Slack's anatomy): three quick reactions, add a
- * reaction, reply in thread, forward, save, edit, and "More" for the full menu.
+ * reaction, reply, reply in thread, forward, save, edit, and "More" for the full menu.
  */
 export function HoverBar({
   permissions,
@@ -65,6 +65,15 @@ export function HoverBar({
           onPointerEnter={preloadEmojiPicker}
           onFocus={preloadEmojiPicker}
           onClick={(event) => onOpenPicker(event.currentTarget)}
+        />
+      ) : null}
+      {permissions.reply ? (
+        <IconButton
+          icon="corner-up-left"
+          size="sm"
+          label="Reply"
+          shortcut={shortcutKeys("message-reply")}
+          onClick={() => onCommand("reply")}
         />
       ) : null}
       {permissions.thread && !inThread ? (

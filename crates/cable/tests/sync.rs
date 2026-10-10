@@ -307,6 +307,7 @@ async fn resumes_within_the_ring_and_starts_over_otherwise() {
         .await;
     assert_eq!(welcome["resumed"], true);
     assert_eq!(welcome["seq"], a);
+    assert_eq!(welcome["replayThrough"], c);
     assert_eq!(
         client.batch().await,
         [

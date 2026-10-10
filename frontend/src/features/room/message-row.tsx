@@ -136,7 +136,7 @@ export function MessageRow({
       <Gutter creatorId={message.creatorId} createdAt={message.createdAt} groupStart={header} />
       <div className="message-main">
         <MessageFlags pinned={message.pinned} saved={row.saved} />
-        <ReplyQuote message={message} />
+        <ReplyQuote replyToMessageId={message.replyToMessageId} />
         {header ? (
           <MessageHeader
             creatorId={message.creatorId}
@@ -196,17 +196,20 @@ interface PendingRowProps {
  */
 export function PendingRow({ pending, groupStart }: PendingRowProps) {
   const failed = pending.state === "failed";
+  // A reply shows who wrote it under its quote line, as a confirmed one does.
+  const header = groupStart || pending.replyToMessageId !== null;
 
   return (
     <article
       className="message enter-rise"
-      data-group-start={groupStart || undefined}
+      data-group-start={header || undefined}
       data-pending={pending.state}
       aria-label={failed ? "Message not sent" : "Sending message"}
     >
-      <Gutter creatorId={pending.creatorId} createdAt={pending.createdAt} groupStart={groupStart} />
+      <Gutter creatorId={pending.creatorId} createdAt={pending.createdAt} groupStart={header} />
       <div className="message-main">
-        {groupStart ? (
+        <ReplyQuote replyToMessageId={pending.replyToMessageId} />
+        {header ? (
           <MessageHeader
             creatorId={pending.creatorId}
             createdAt={pending.createdAt}

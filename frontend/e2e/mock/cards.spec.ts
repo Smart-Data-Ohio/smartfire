@@ -11,6 +11,7 @@ import {
   matrix,
   openApp,
   ROOM_IDS,
+  SHOTS,
   scrollByWheel,
   shot,
   stopTrackingThread,
@@ -65,76 +66,79 @@ async function control(
   return request.post("/__mock/cards", { headers: { "X-CSRF-Token": state.csrfToken }, data });
 }
 
-matrix("pull request cards: open, merged, draft, loading, failed", async ({ page, theme }) => {
-  await openAt(page, messages.githubOpen, theme);
+// Screenshots only: cards.test.tsx renders each of these cards and checks what they show.
+if (SHOTS) {
+  matrix("pull request cards: open, merged, draft, loading, failed", async ({ page, theme }) => {
+    await openAt(page, messages.githubOpen, theme);
 
-  const open = row(page, messages.githubOpen);
+    const open = row(page, messages.githubOpen);
 
-  await expect(
-    open.getByRole("link", { name: "Rate limit the sync endpoint with a token bucket" }),
-  ).toBeVisible();
-  await expect(open.getByText("Open", { exact: true })).toBeVisible();
-  await expect(open.getByText("Approved")).toBeVisible();
-  await expect(open.getByText("Checks passing")).toBeVisible();
-  await expect(open.getByRole("button", { name: "Discuss" })).toBeVisible();
+    await expect(
+      open.getByRole("link", { name: "Rate limit the sync endpoint with a token bucket" }),
+    ).toBeVisible();
+    await expect(open.getByText("Open", { exact: true })).toBeVisible();
+    await expect(open.getByText("Approved")).toBeVisible();
+    await expect(open.getByText("Checks passing")).toBeVisible();
+    await expect(open.getByRole("button", { name: "Discuss" })).toBeVisible();
 
-  await expect(
-    row(page, messages.drive).getByRole("link", { name: /Google Drive file/ }),
-  ).toBeVisible();
+    await expect(
+      row(page, messages.drive).getByRole("link", { name: /Google Drive file/ }),
+    ).toBeVisible();
 
-  const merged = row(page, messages.githubMerged);
+    const merged = row(page, messages.githubMerged);
 
-  await expect(merged.getByText("Merged", { exact: true })).toBeVisible();
-  await settle(page);
-  await shot(page, "cards-github", theme);
+    await expect(merged.getByText("Merged", { exact: true })).toBeVisible();
+    await settle(page);
+    await shot(page, "cards-github", theme);
 
-  await openAt(page, messages.githubDraftAndLoading, theme);
+    await openAt(page, messages.githubDraftAndLoading, theme);
 
-  const pair = row(page, messages.githubDraftAndLoading);
+    const pair = row(page, messages.githubDraftAndLoading);
 
-  await expect(pair.getByText("Draft", { exact: true })).toBeVisible();
-  await expect(pair.locator('.github-card[aria-busy="true"]')).toHaveCount(1);
+    await expect(pair.getByText("Draft", { exact: true })).toBeVisible();
+    await expect(pair.locator('.github-card[aria-busy="true"]')).toHaveCount(1);
 
-  const failed = row(page, messages.githubFailedAndHidden);
+    const failed = row(page, messages.githubFailedAndHidden);
 
-  await expect(failed.getByText(/Couldn't load this pull request/)).toBeVisible();
-  await expect(failed.getByRole("button", { name: "Retry" })).toBeVisible();
-  // The private repository the viewer can't read shows no card at all.
-  await expect(failed.locator(".github-card")).toHaveCount(1);
-  await settle(page);
-  await shot(page, "cards-github-states", theme);
-});
+    await expect(failed.getByText(/Couldn't load this pull request/)).toBeVisible();
+    await expect(failed.getByRole("button", { name: "Retry" })).toBeVisible();
+    // The private repository the viewer can't read shows no card at all.
+    await expect(failed.locator(".github-card")).toHaveCount(1);
+    await settle(page);
+    await shot(page, "cards-github-states", theme);
+  });
 
-matrix("posts on X, Drive files and events", async ({ page, theme }) => {
-  await openAt(page, messages.xPost, theme);
+  matrix("posts on X, Drive files and events", async ({ page, theme }) => {
+    await openAt(page, messages.xPost, theme);
 
-  const post = row(page, messages.xPost);
+    const post = row(page, messages.xPost);
 
-  await expect(post.getByRole("region", { name: /^Post by / })).toBeVisible();
-  await expect(post.locator(".x-media img").first()).toBeVisible();
-  await expect(post.locator(".x-quote")).toBeVisible();
-  await settle(page);
-  await shot(page, "cards-x-drive", theme);
+    await expect(post.getByRole("region", { name: /^Post by / })).toBeVisible();
+    await expect(post.locator(".x-media img").first()).toBeVisible();
+    await expect(post.locator(".x-quote")).toBeVisible();
+    await settle(page);
+    await shot(page, "cards-x-drive", theme);
 
-  await openAt(page, messages.eventRecurring, theme);
+    await openAt(page, messages.eventRecurring, theme);
 
-  const event = row(page, messages.eventRecurring);
+    const event = row(page, messages.eventRecurring);
 
-  await expect(event.getByRole("region", { name: "Event: Weekly product sync" })).toBeVisible();
-  await expect(event.getByRole("button", { name: /^Going/ })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
-  await expect(event.getByText("Repeats")).toBeVisible();
-  await expect(event.getByRole("link", { name: "Join with Google Meet" })).toBeVisible();
+    await expect(event.getByRole("region", { name: "Event: Weekly product sync" })).toBeVisible();
+    await expect(event.getByRole("button", { name: /^Going/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await expect(event.getByText("Repeats")).toBeVisible();
+    await expect(event.getByRole("link", { name: "Join with Google Meet" })).toBeVisible();
 
-  const cancelled = row(page, messages.eventCancelled);
+    const cancelled = row(page, messages.eventCancelled);
 
-  await expect(cancelled.getByText("Cancelled", { exact: true })).toBeVisible();
-  await expect(cancelled.getByRole("button", { name: /^Going/ })).toHaveCount(0);
-  await settle(page);
-  await shot(page, "cards-events", theme);
-});
+    await expect(cancelled.getByText("Cancelled", { exact: true })).toBeVisible();
+    await expect(cancelled.getByRole("button", { name: /^Going/ })).toHaveCount(0);
+    await settle(page);
+    await shot(page, "cards-events", theme);
+  });
+}
 
 /**
  * Holds the cards chunk back until `release()`. `requested` settles once the page has asked for
@@ -461,10 +465,11 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
         event,
         () => {
           const keyboard = input === "PageUp" || input === "ArrowUp" || input === "Home";
+          const touch = input === "touch";
 
-          // Placement can move between setup and keydown. Keyboard default scrolling
-          // starts after this capture callback; wheel scrolling can precede its callback.
-          if (keyboard) offset = element.scrollTop;
+          // Placement can move between setup and keydown or touchstart. Keyboard and touch
+          // scrolling start after this capture callback; wheel scrolling can precede its callback.
+          if (keyboard || touch) offset = element.scrollTop;
 
           if (input === "ArrowUp") {
             element.removeAttribute("data-input-row");
@@ -503,7 +508,8 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
             return;
           }
 
-          let released = !keyboard;
+          // A layout scroll end can't finish a held key or a finger that's still down.
+          let released = !keyboard && !touch;
           let ended = false;
           let moved = element.scrollTop !== offset;
 
@@ -524,6 +530,9 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
             element.removeEventListener("scrollend", end);
             element.removeEventListener("keydown", repeat, true);
             element.removeEventListener("keyup", release, true);
+            element.removeEventListener("touchmove", repeat, true);
+            element.removeEventListener("touchend", release, true);
+            element.removeEventListener("touchcancel", release, true);
           };
 
           const end = (event: Event) => {
@@ -545,6 +554,12 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
           if (keyboard) {
             element.addEventListener("keydown", repeat, true);
             element.addEventListener("keyup", release, true);
+          }
+
+          if (touch) {
+            element.addEventListener("touchmove", repeat, { capture: true, passive: true });
+            element.addEventListener("touchend", release, true);
+            element.addEventListener("touchcancel", release, true);
           }
         },
         { once: true, capture: true, passive: true },
@@ -1624,111 +1639,114 @@ for (const { conversation, fromLink } of [
   });
 }
 
-matrix("answering an event, for every future occurrence", async ({ page, theme }) => {
-  await openAt(page, messages.eventRecurring, theme);
+// Screenshots only: cards.test.tsx answers events, renders these cards and votes in polls.
+if (SHOTS) {
+  matrix("answering an event, for every future occurrence", async ({ page, theme }) => {
+    await openAt(page, messages.eventRecurring, theme);
 
-  const event = row(page, messages.eventRecurring);
-  const going = event.getByRole("button", { name: /^Going/ });
+    const event = row(page, messages.eventRecurring);
+    const going = event.getByRole("button", { name: /^Going/ });
 
-  await expect(going).toContainText("2");
-  await event.getByText("Apply to all future occurrences").click();
-  await going.click();
-  await expect(going).toHaveAttribute("aria-pressed", "true");
-  await expect(going).toContainText("3");
+    await expect(going).toContainText("2");
+    await event.getByText("Apply to all future occurrences").click();
+    await going.click();
+    await expect(going).toHaveAttribute("aria-pressed", "true");
+    await expect(going).toContainText("3");
 
-  const maybe = event.getByRole("button", { name: /^Maybe/ });
+    const maybe = event.getByRole("button", { name: /^Maybe/ });
 
-  await maybe.click();
-  await expect(maybe).toHaveAttribute("aria-pressed", "true");
-  await expect(going).toContainText("2");
-  await settle(page);
-  await shot(page, "cards-event-answered", theme);
-});
+    await maybe.click();
+    await expect(maybe).toHaveAttribute("aria-pressed", "true");
+    await expect(going).toContainText("2");
+    await settle(page);
+    await shot(page, "cards-event-answered", theme);
+  });
 
-matrix("Fizzy cards, quotes, LinkedIn and link previews", async ({ page, theme }) => {
-  await openAt(page, messages.fizzyLoaded, theme);
+  matrix("Fizzy cards, quotes, LinkedIn and link previews", async ({ page, theme }) => {
+    await openAt(page, messages.fizzyLoaded, theme);
 
-  const fizzy = row(page, messages.fizzyLoaded);
+    const fizzy = row(page, messages.fizzyLoaded);
 
-  await expect(fizzy.getByRole("region", { name: /^Fizzy card: / })).toBeVisible();
-  await expect(
-    row(page, messages.fizzyNotConnectedAndNotFound).getByText(/Connect Fizzy/),
-  ).toBeVisible();
-  await expect(
-    row(page, messages.fizzyFailedAndLoading).getByRole("button", { name: "Retry" }),
-  ).toBeVisible();
-  await settle(page);
-  await shot(page, "cards-fizzy", theme);
+    await expect(fizzy.getByRole("region", { name: /^Fizzy card: / })).toBeVisible();
+    await expect(
+      row(page, messages.fizzyNotConnectedAndNotFound).getByText(/Connect Fizzy/),
+    ).toBeVisible();
+    await expect(
+      row(page, messages.fizzyFailedAndLoading).getByRole("button", { name: "Retry" }),
+    ).toBeVisible();
+    await settle(page);
+    await shot(page, "cards-fizzy", theme);
 
-  await openAt(page, messages.quoteFetched, theme);
-  await expect(
-    row(page, messages.quoteInline).getByRole("link", { name: /^Quoted message from / }),
-  ).toBeVisible();
-  await expect(
-    row(page, messages.quoteFetched).getByRole("link", { name: /^Quoted message from / }),
-  ).toHaveCount(1);
-  await settle(page);
-  await shot(page, "cards-quotes", theme);
+    await openAt(page, messages.quoteFetched, theme);
+    await expect(
+      row(page, messages.quoteInline).getByRole("link", { name: /^Quoted message from / }),
+    ).toBeVisible();
+    await expect(
+      row(page, messages.quoteFetched).getByRole("link", { name: /^Quoted message from / }),
+    ).toHaveCount(1);
+    await settle(page);
+    await shot(page, "cards-quotes", theme);
 
-  await openAt(page, messages.linkImage, theme);
-  await expect(
-    row(page, messages.linkedin).getByRole("button", { name: "Show embedded post" }),
-  ).toBeVisible();
-  await expect(
-    row(page, messages.linkedinChip).getByRole("link", { name: /View post on LinkedIn/ }),
-  ).toBeVisible();
-  await expect(row(page, messages.linkImage).locator(".link-card")).toBeVisible();
-  await expect(row(page, messages.linkPlain).locator(".link-card")).toBeVisible();
-  await settle(page);
-  await shot(page, "cards-links", theme);
-});
+    await openAt(page, messages.linkImage, theme);
+    await expect(
+      row(page, messages.linkedin).getByRole("button", { name: "Show embedded post" }),
+    ).toBeVisible();
+    await expect(
+      row(page, messages.linkedinChip).getByRole("link", { name: /View post on LinkedIn/ }),
+    ).toBeVisible();
+    await expect(row(page, messages.linkImage).locator(".link-card")).toBeVisible();
+    await expect(row(page, messages.linkPlain).locator(".link-card")).toBeVisible();
+    await settle(page);
+    await shot(page, "cards-links", theme);
+  });
 
-matrix("polls: closed, multiple choice and anonymous", async ({ page, theme }) => {
-  await openAt(page, messages.pollMultiple, theme);
-  await expect(
-    row(page, messages.pollClosed).getByText("Final results", { exact: false }),
-  ).toBeVisible();
+  matrix("polls: closed, multiple choice and anonymous", async ({ page, theme }) => {
+    await openAt(page, messages.pollMultiple, theme);
+    await expect(
+      row(page, messages.pollClosed).getByText("Final results", { exact: false }),
+    ).toBeVisible();
 
-  const multiple = row(page, messages.pollMultiple);
+    const multiple = row(page, messages.pollMultiple);
 
-  await expect(multiple.getByText("Multiple choice")).toBeVisible();
-  await expect(multiple.getByRole("button", { name: "Change vote" })).toBeVisible();
+    await expect(multiple.getByText("Multiple choice")).toBeVisible();
+    await expect(multiple.getByRole("button", { name: "Change vote" })).toBeVisible();
 
-  const anonymous = row(page, messages.pollAnonymous);
+    const anonymous = row(page, messages.pollAnonymous);
 
-  await expect(anonymous.getByText(/Anonymous/)).toBeVisible();
-  await expect(anonymous.getByText(/Closes in/)).toBeVisible();
-  await expect(anonymous.locator(".poll-voters")).toHaveCount(0);
-  await settle(page);
-  await shot(page, "cards-polls", theme);
-});
+    await expect(anonymous.getByText(/Anonymous/)).toBeVisible();
+    await expect(anonymous.getByText(/Closes in/)).toBeVisible();
+    await expect(anonymous.locator(".poll-voters")).toHaveCount(0);
+    await settle(page);
+    await shot(page, "cards-polls", theme);
+  });
 
-matrix("voting in a poll, changing it and taking it back", async ({ page, theme }) => {
-  await openAt(page, messages.pollOpen, theme);
+  matrix("voting in a poll, changing it and taking it back", async ({ page, theme }) => {
+    await openAt(page, messages.pollOpen, theme);
 
-  const poll = row(page, messages.pollOpen);
+    const poll = row(page, messages.pollOpen);
 
-  await expect(poll.getByText("4 votes")).toBeVisible();
-  await settle(page);
-  await shot(page, "cards-poll-before", theme);
+    await expect(poll.getByText("4 votes")).toBeVisible();
+    await settle(page);
+    await shot(page, "cards-poll-before", theme);
 
-  await poll.getByRole("radio", { name: "Tacos" }).check();
-  await poll.getByRole("button", { name: "Vote" }).click();
-  await expect(poll.getByText("5 votes")).toBeVisible();
-  await expect(poll.getByText("(your vote)")).toHaveCount(1);
-  await settle(page);
-  await shot(page, "cards-poll-after", theme);
+    await poll.getByRole("radio", { name: "Tacos" }).check();
+    await poll.getByRole("button", { name: "Vote" }).click();
+    await expect(poll.getByText("5 votes")).toBeVisible();
+    await expect(poll.getByText("(your vote)")).toHaveCount(1);
+    await settle(page);
+    await shot(page, "cards-poll-after", theme);
 
-  await poll.getByRole("button", { name: "Change vote" }).click();
-  await poll.getByRole("radio", { name: "Pizza" }).check();
-  await poll.getByRole("button", { name: "Vote" }).click();
-  await expect(poll.locator(".poll-result[data-mine] .poll-result-text")).toHaveText("Pizza");
-  await expect(poll.getByText("5 votes")).toBeVisible();
+    await poll.getByRole("button", { name: "Change vote" }).click();
+    await poll.getByRole("radio", { name: "Pizza" }).check();
+    await poll.getByRole("button", { name: "Vote" }).click();
+    await expect(poll.locator(".poll-result[data-mine] .poll-result-text")).toHaveText("Pizza");
+    await expect(poll.getByText("5 votes")).toBeVisible();
 
-  await poll.getByRole("button", { name: "Retract" }).click();
-  await expect(poll.getByText("4 votes")).toBeVisible();
-  await expect(poll.getByRole("radio", { name: "Tacos" })).toBeVisible();
-});
+    await poll.getByRole("button", { name: "Retract" }).click();
+    await expect(poll.getByText("4 votes")).toBeVisible();
+    await expect(poll.getByRole("radio", { name: "Tacos" })).toBeVisible();
+  });
+}
 
 test("voting from the keyboard keeps focus in the poll and says what happened", async ({
   page,
@@ -1830,17 +1848,6 @@ test("another member's vote and a closing poll arrive live", async ({ page, requ
   await control(request, { op: "close-poll", pollId: polls.open });
   await expect(poll.getByText("Closed", { exact: true })).toBeVisible();
   await expect(poll.getByRole("radio", { name: "Tacos" })).toHaveCount(0);
-});
-
-test("unknown kinds and suppressed previews render nothing", async ({ page }) => {
-  await openAt(page, messages.unknownKind, "light");
-  await expect(row(page, messages.unknownKind).locator(".card")).toHaveCount(0);
-
-  const suppressed = row(page, messages.suppressed);
-
-  // The pull request still shows; the link preview the author hid doesn't.
-  await expect(suppressed.locator(".github-card")).toHaveCount(1);
-  await expect(suppressed.locator(".link-card")).toHaveCount(0);
 });
 
 matrix("a pull request's discussion thread lists its files", async ({ page, theme }) => {

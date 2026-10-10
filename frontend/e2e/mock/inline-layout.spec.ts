@@ -1,7 +1,17 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
-import { DESKTOP, expect, PHONE, ROOM_IDS, shot, type Theme, test, USER_IDS } from "./support.ts";
+import {
+  DESKTOP,
+  expect,
+  PHONE,
+  ROOM_IDS,
+  shot,
+  THEMES,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /**
  * Icon-and-label rows, inline images and the reaction row's rhythm. Production once shipped the
@@ -67,7 +77,7 @@ function withImage(page: MessagePage, id: number): MessagePage {
   };
 }
 
-for (const theme of ["light", "dark"] as const) {
+for (const theme of THEMES) {
   test(`icons share a row with their labels (${theme})`, async ({ page }) => {
     await page.setViewportSize(DESKTOP);
     await page.context().grantPermissions(["microphone", "camera"]);
@@ -140,32 +150,6 @@ for (const theme of ["light", "dark"] as const) {
     expect(Math.round(add.height)).toBe(Math.round(chip.height));
   });
 
-  test(`brand and workspace icons sit in the text (${theme})`, async ({ page, request }) => {
-    const id = await post(request, "- :anthropic: Opus 5.5 - 58\n- :shipit: Ship it");
-
-    await page.setViewportSize(DESKTOP);
-    await openOn(page, id, theme);
-
-    const brand = row(page, id).locator("img.icon--brand");
-    const custom = row(page, id).locator("img.icon--custom");
-
-    await expect(brand).toBeVisible();
-
-    const icon = await box(brand);
-
-    expect(icon.height).toBeGreaterThanOrEqual(14);
-    expect(icon.height).toBeLessThanOrEqual(24);
-    // In the line, not a block above it: the list item stays one line tall around the icon.
-    const item = await box(row(page, id).locator("li").first());
-
-    expect(item.height).toBeLessThanOrEqual(28);
-    expect(icon.y).toBeGreaterThanOrEqual(item.y - 1);
-    expect(icon.y + icon.height).toBeLessThanOrEqual(item.y + item.height + 1);
-    // Brand icons are a black glyph on transparency: inverted in the dark theme only.
-    await expect(brand).toHaveCSS("filter", theme === "dark" ? "invert(1)" : "none");
-    await expect(custom).toHaveCSS("filter", "none");
-  });
-
   test(`inline images are bounded and sit on a backdrop (${theme})`, async ({ page, request }) => {
     // The newest message, whose body the replies below swap for a remote image.
     const id = await post(request, "The logo");
@@ -204,5 +188,34 @@ for (const theme of ["light", "dark"] as const) {
         "conic-gradient",
       );
     }
+  });
+}
+
+// The dark theme inverts brand icons, so this test always runs in both themes.
+for (const theme of ["light", "dark"] as const) {
+  test(`brand and workspace icons sit in the text (${theme})`, async ({ page, request }) => {
+    const id = await post(request, "- :anthropic: Opus 5.5 - 58\n- :shipit: Ship it");
+
+    await page.setViewportSize(DESKTOP);
+    await openOn(page, id, theme);
+
+    const brand = row(page, id).locator("img.icon--brand");
+    const custom = row(page, id).locator("img.icon--custom");
+
+    await expect(brand).toBeVisible();
+
+    const icon = await box(brand);
+
+    expect(icon.height).toBeGreaterThanOrEqual(14);
+    expect(icon.height).toBeLessThanOrEqual(24);
+    // In the line, not a block above it: the list item stays one line tall around the icon.
+    const item = await box(row(page, id).locator("li").first());
+
+    expect(item.height).toBeLessThanOrEqual(28);
+    expect(icon.y).toBeGreaterThanOrEqual(item.y - 1);
+    expect(icon.y + icon.height).toBeLessThanOrEqual(item.y + item.height + 1);
+    // Brand icons are a black glyph on transparency: inverted in the dark theme only.
+    await expect(brand).toHaveCSS("filter", theme === "dark" ? "invert(1)" : "none");
+    await expect(custom).toHaveCSS("filter", "none");
   });
 }

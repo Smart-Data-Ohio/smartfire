@@ -19,6 +19,14 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
     );
     assert!(css.contains("@layer tokens"));
     assert!(css.contains("@layer base"));
+    assert!(
+        css.contains(".browser-list") && css.contains(".language-list-menu"),
+        "the unsupported-browser panel and translation popup travel in the auth bundle"
+    );
+    assert!(
+        css.contains("body.auth.auth--unsupported") && !css.contains(":has(.browser-list)"),
+        "the unsupported-browser rules are not gated on :has()"
+    );
     for logical in [
         "fonts/inter-latin-var.woff2",
         "fonts/inter-latin-var-italic.woff2",
@@ -51,6 +59,37 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
     })
     .unwrap();
     assert_eq!(script.body.as_ref(), include_bytes!("../auth/auth.js"));
+    let script_text = std::str::from_utf8(&script.body).unwrap();
+    assert!(
+        script_text.contains("data-controller~='popup'"),
+        "auth.js dismisses the classic translation popup"
+    );
+    assert!(
+        script_text.find("classList.remove").unwrap()
+            < script_text.find("getBoundingClientRect").unwrap(),
+        "auth.js drops the upward class before it measures the popup"
+    );
+    let popup_path = asset_path("unsupported.js");
+    let popup = serve(&StaticRequest {
+        method: "GET",
+        path: &popup_path,
+        ..Default::default()
+    })
+    .unwrap();
+    assert_eq!(
+        popup.body.as_ref(),
+        include_bytes!("../auth/unsupported.js")
+    );
+    let popup_text = std::str::from_utf8(&popup.body).unwrap();
+    assert!(
+        popup_text.contains("data-controller~='popup'")
+            && popup_text.contains("classList.remove")
+            && !popup_text.contains("=>")
+            && !popup_text.contains("?.")
+            && !popup_text.contains("??"),
+        "unsupported.js is the es5 popup handler"
+    );
+    assert!(!campfire_assets::javascript_importmap_tags().contains(&popup_path));
     assert!(!campfire_assets::all_stylesheet_paths().contains(&"auth.css"));
     assert!(
         !campfire_assets::stylesheet_link_tag_all(&[])
@@ -60,7 +99,7 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
     assert!(!campfire_assets::javascript_importmap_tags().contains(&script_path));
 }
 
-#[path = "../build/auth.rs"]
+#[path = "../../retained_pages/auth_build.rs"]
 mod bundle;
 
 #[test]
@@ -77,6 +116,11 @@ fn auth_bundle_recurses_in_order_deduplicates_and_resolves_font_urls_at_their_so
         std::fs::create_dir_all(path).unwrap();
     }
     std::fs::write(crate_dir.join("auth/auth.js"), "window.fixture = true;").unwrap();
+    std::fs::write(
+        crate_dir.join("auth/unsupported.js"),
+        "window.popup = true;",
+    )
+    .unwrap();
     std::fs::write(
         frontend.join("auth/auth.css"),
         "@import '../styles/index.css';\n@import '../styles/shared.css';\n.auth { color: blue; }",
@@ -100,5 +144,9 @@ fn auth_bundle_recurses_in_order_deduplicates_and_resolves_font_urls_at_their_so
     assert_eq!(
         std::fs::read(output.join("auth.js")).unwrap(),
         b"window.fixture = true;"
+    );
+    assert_eq!(
+        std::fs::read(output.join("unsupported.js")).unwrap(),
+        b"window.popup = true;"
     );
 }

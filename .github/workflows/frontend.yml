@@ -1,17 +1,9 @@
 name: Frontend
 
-# The React SPA in frontend/: Biome, the vendored anti-slop Oxlint rules, tsc, Vitest and a
-# production build, with the entry chunks' gzip sizes in the job summary; then crates/spa's tests
-# with that build embedded. Rust's PWA correctness suite also embeds the production dist;
-# ordinary rust.yml jobs use the stub page, and the image builds on main.
-#
-# "Frontend" reports on every pull request so it can be a required check: a PR that touches
-# none of frontend/, crates/api_types (whose generated types the schemas in frontend/src/api are
-# pinned to), crates/spa and this workflow passes after the scope step, without installing
-# anything. The check that frontend/src/gen matches crates/api_types runs in rust.yml's clippy job.
-# Pushes to main always run everything, and so does a PR whose diff can't be read.
-#
-# This workflow only checks: read-only contents permission, no secrets, nothing published.
+# The required Frontend job reports on every PR and main push. It runs typecheck, lint,
+# Vitest and a production build for frontend inputs, then embeds that dist in crates/spa.
+# The mock e2e server uses Vite and the in-memory backend; it does not compile Rust.
+# Three advisory browser shards run only when those inputs change.
 
 on:
   push:
@@ -34,6 +26,8 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 15
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
     defaults:
       run:
         working-directory: frontend
@@ -42,13 +36,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          fetch-depth: 0
           filter: blob:none
           persist-credentials: false
           # Cone mode also brings the root's files (Cargo.toml, Cargo.lock, rust-toolchain.toml).
           sparse-checkout: |
             frontend
             .github/workflows/frontend.yml
+            .github/scripts
             crates
             .cargo
             vectors
@@ -57,27 +52,8 @@ jobs:
         id: scope
         working-directory: .
         env:
-          EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -uo pipefail
-          run=true
-          if [ "$EVENT" = pull_request ]; then
-            if paths="$(git diff --no-renames --name-only "$BASE...$HEAD" --)"; then
-              if [ -n "$paths" ] && ! grep -qE '^(frontend/|crates/api_types/|crates/spa/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
-                run=false
-              fi
-            else
-              echo "::warning::PR diff unavailable; running the frontend checks."
-            fi
-          fi
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-          if [ "$run" = true ]; then
-            echo "Run the frontend checks"
-          else
-            echo "No frontend inputs changed: nothing to check" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
+          PATTERN: '^(frontend/|crates/spa/|crates/api_types/|\.github/workflows/frontend\.yml$|\.github/scripts/)'
+        run: python3 .github/scripts/check-paths.py
 
       - name: Set up Node
         if: steps.scope.outputs.run == 'true'
@@ -194,18 +170,10 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-  # The mock Playwright suite (frontend/e2e/mock, playwright.mock.config.ts): the SPA on Vite's dev
-  # server with the in-memory mock backend, in Chromium. The config runs one worker against one
-  # mock server, so the suite is split across jobs, each with its own server, by test
-  # (--fully-parallel only changes how --shard splits it; each job still runs one test at a time).
-  #
-  # Not a required check, and "Frontend" doesn't need it: each shard reports as
-  # "Frontend e2e (i/n)". It runs when frontend/ or this workflow changes (a crates/api_types
-  # change the SPA sees comes with its regenerated frontend/src/gen), on every push to main, and
-  # when the PR diff can't be read. The browser is cached per Playwright version, saved from main.
-  # Six shards keep each one well inside the 15-minute timeout as the phone specs grow; at four,
-  # shards ran 12-15 minutes and the slowest were cancelled mid-run.
+  # Each shard owns one mock server and runs one browser worker.
   e2e:
+    needs: frontend
+    if: needs.frontend.outputs.run == 'true'
     name: Frontend e2e (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
     permissions:
@@ -214,7 +182,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [ 1, 2, 3, 4, 5, 6 ]
+        shard: [ 1, 2, 3 ]
     defaults:
       run:
         working-directory: frontend
@@ -222,41 +190,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
           filter: blob:none
           persist-credentials: false
           sparse-checkout: |
             frontend
             .github/workflows/frontend.yml
-
-      - name: Decide whether the e2e suite is needed
-        id: scope
-        working-directory: .
-        env:
-          EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -uo pipefail
-          run=true
-          if [ "$EVENT" = pull_request ]; then
-            if paths="$(git diff --no-renames --name-only "$BASE...$HEAD" --)"; then
-              if [ -n "$paths" ] && ! grep -qE '^(frontend/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
-                run=false
-              fi
-            else
-              echo "::warning::PR diff unavailable; running the e2e suite."
-            fi
-          fi
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-          if [ "$run" = true ]; then
-            echo "Run the e2e suite"
-          else
-            echo "No frontend changes: no e2e run" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
+            .github/scripts
 
       - name: Set up Node
-        if: steps.scope.outputs.run == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -264,7 +205,6 @@ jobs:
 
       # The pnpm version comes from frontend/package.json's packageManager field.
       - name: Set up pnpm
-        if: steps.scope.outputs.run == 'true'
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           package_json_file: frontend/package.json
@@ -272,13 +212,11 @@ jobs:
           cache_dependency_path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
-        if: steps.scope.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
       # The installed @playwright/test, as the lockfile resolved it, names the browser build.
       - name: Resolve the Playwright version
         id: playwright
-        if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           version="$(pnpm exec playwright --version | awk '{ print $2 }')"
@@ -287,7 +225,6 @@ jobs:
 
       - name: Restore the Playwright browser
         id: browser-cache
-        if: steps.scope.outputs.run == 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
@@ -297,7 +234,6 @@ jobs:
       # system libraries come with the runner image; apt runs only when the shell can't start,
       # because a slow mirror once spent six minutes of the job's fifteen there.
       - name: Install the Playwright browser
-        if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           pnpm exec playwright install --only-shell chromium
@@ -307,14 +243,13 @@ jobs:
           fi
 
       - name: Save the Playwright browser
-        if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.browser-cache.outputs.cache-hit != 'true' }}
+        if: ${{ matrix.shard == 1 && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.browser-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.browser-cache.outputs.cache-primary-key }}
 
       - name: Playwright (mock backend)
-        if: steps.scope.outputs.run == 'true'
         env:
           SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
           PLAYWRIGHT_HTML_OPEN: never
@@ -323,7 +258,7 @@ jobs:
       # The production build can order CSS differently from the dev server (shared chunks' sheets
       # link ahead of the entry's), so the layout checks run against `vite build` too.
       - name: Playwright (mock backend, production build)
-        if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 }}
+        if: ${{ matrix.shard == 1 }}
         env:
           SMARTFIRE_E2E_BUILD: "1"
           PLAYWRIGHT_HTML_OPEN: never
@@ -331,7 +266,7 @@ jobs:
 
       # The HTML report carries each failed test's trace (trace: retain-on-failure).
       - name: Keep the report of a failed run
-        if: ${{ failure() && steps.scope.outputs.run == 'true' }}
+        if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-report-${{ matrix.shard }}

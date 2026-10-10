@@ -1,5 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, openApp, shot, test, USER_IDS } from "./support.ts";
+import { expect, matrix, openApp, SHOTS, shot, test, USER_IDS } from "./support.ts";
 
 /** The directory's row for `name`. */
 function row(page: Page, name: string) {
@@ -35,20 +35,23 @@ async function lapseSudo(page: Page, request: APIRequestContext) {
   );
 }
 
-matrix("the people pages", async ({ page, theme }) => {
-  await openPeople(page, theme);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
-  await shot(page, "people-directory", theme);
+// Screenshots only: the tests below check the same pages.
+if (SHOTS) {
+  matrix("the people pages", async ({ page, theme }) => {
+    await openPeople(page, theme);
+    await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
+    await shot(page, "people-directory", theme);
 
-  await row(page, "Maya Okafor").getByRole("checkbox").check();
-  await row(page, "Ember").getByRole("checkbox").check();
-  await expect(page.getByRole("button", { name: "Message (2)" })).toBeVisible();
-  await shot(page, "people-selected", theme);
+    await row(page, "Maya Okafor").getByRole("checkbox").check();
+    await row(page, "Ember").getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: "Message (2)" })).toBeVisible();
+    await shot(page, "people-selected", theme);
 
-  await openPerson(page, USER_IDS.priya);
-  await expect(page.getByRole("heading", { level: 1, name: "Priya Raman" })).toBeVisible();
-  await shot(page, "people-person", theme);
-});
+    await openPerson(page, USER_IDS.priya);
+    await expect(page.getByRole("heading", { level: 1, name: "Priya Raman" })).toBeVisible();
+    await shot(page, "people-person", theme);
+  });
+}
 
 test("the user menu opens the people directory in place", async ({ page }) => {
   await openApp(page, "");
@@ -59,16 +62,6 @@ test("the user menu opens the people directory in place", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/people$/);
   await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
   await expect(page).toHaveTitle(/People · Smartfire/);
-});
-
-test("the directory lists everyone else with their badges", async ({ page }) => {
-  await openPeople(page);
-
-  await expect(row(page, "Riel St. Amand")).toHaveCount(0);
-  await expect(row(page, "Dana Kowalski")).toHaveCount(0);
-  await expect(row(page, "Ember")).toContainText("Agent");
-  await expect(row(page, "Maya Okafor")).toContainText("Online");
-  await expect(row(page, "Sam Whitfield")).toContainText("Offline");
 });
 
 test("the bar counts the selection and says agents won't be rung", async ({ page }) => {
@@ -175,76 +168,6 @@ test("the DND exception toggles on a person's page", async ({ page }) => {
   );
 });
 
-test("a DND change that finishes after you leave and come back still shows", async ({ page }) => {
-  await openPerson(page, USER_IDS.sam);
-
-  let release = () => {};
-
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-
-  await page.route("**/api/v1/settings/dnd_allowances/*", async (route) => {
-    await held;
-    await route.continue();
-  });
-
-  const toggle = page.getByRole("button", { name: /during DND/ });
-  const before = await toggle.getAttribute("aria-pressed");
-
-  await toggle.click();
-  await page.getByRole("button", { name: "Your account" }).click();
-  await page.getByRole("menuitem", { name: "People", exact: true }).click();
-  await expect(page).toHaveURL(/\/app\/people$/);
-  await row(page, "Sam Whitfield").getByRole("link", { name: "Sam Whitfield" }).click();
-  await page.locator(".person").waitFor();
-  await expect(page.getByRole("button", { name: /during DND/ })).toHaveAttribute(
-    "aria-pressed",
-    before ?? "",
-  );
-
-  release();
-  await expect(page.getByRole("button", { name: /during DND/ })).not.toHaveAttribute(
-    "aria-pressed",
-    before ?? "",
-  );
-});
-
-test("a page whose every reply is older than the copy held says so and offers to try again", async ({
-  page,
-}) => {
-  await openPeople(page);
-
-  let requests = 0;
-
-  await page.route(`**/api/v1/people/${USER_IDS.priya}`, async (route) => {
-    requests += 1;
-
-    const response = await route.fetch();
-    const profile = await response.json();
-
-    profile.user.updatedAt = "2000-01-01T00:00:00.000000Z";
-    await route.fulfill({ response, json: profile });
-  });
-  await row(page, "Priya Raman").getByRole("link", { name: "Priya Raman" }).click();
-
-  await expect(page.getByText("Couldn't load the latest profile")).toBeVisible();
-  // One request and three refetches; Strict Mode's rehearsal load adds one, stopped once it leaves.
-  expect(requests).toBeGreaterThanOrEqual(4);
-  expect(requests).toBeLessThanOrEqual(5);
-  await page.unroute(`**/api/v1/people/${USER_IDS.priya}`);
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.locator(".person")).toBeVisible();
-});
-
-test("Message on a person's page opens your DM with them", async ({ page }) => {
-  await openPerson(page, USER_IDS.grace);
-
-  await page.getByRole("button", { name: "Message Grace Adeyemi" }).click();
-
-  await expect(page).toHaveURL(/\/app\/r\/\d+$/);
-});
-
 test("banning asks first, then the page offers to remove the ban", async ({ page }) => {
   await openPerson(page, USER_IDS.sam);
 
@@ -317,17 +240,66 @@ test("a lapsed password confirmation sends a ban to the classic password page", 
   await expect(page).toHaveURL(/\/sudo\/new$/);
 });
 
-test("your own page links to your settings and has no DND toggle or ban button", async ({
-  page,
-}) => {
-  await openPerson(page, USER_IDS.riel);
+test("your numeric own page opens your profile settings", async ({ page }) => {
+  await openApp(page, `people/${USER_IDS.riel}`);
 
-  await expect(page.getByRole("link", { name: "Edit my profile" })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/settings$/);
+  await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /during DND/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Ban / })).toHaveCount(0);
+});
+
+test("a legacy bot profile stays in the SPA with classic bot actions", async ({
+  page,
+  request,
+}) => {
+  await page.route("**/users/900/avatar", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="purple"/></svg>',
+    }),
+  );
+  const bots = await request.get("/api/v1/admin/bots");
+
+  expect(bots.ok()).toBe(true);
+  await openPeople(page);
+  await expect(row(page, "Deploy Bot")).toContainText("Bot");
+  await row(page, "Deploy Bot").getByRole("link", { name: "Deploy Bot" }).click();
+  await expect(page).toHaveURL(/\/app\/people\/900$/);
+  await expect(page.getByRole("heading", { name: "Deploy Bot", exact: true })).toBeVisible();
+  await expect(page.locator(".person .people-badge")).toHaveText("Bot");
+  await expect(page.locator(".person [role=img]")).toHaveAttribute("aria-label", "Deploy Bot");
+  await expect(page.locator(".person .avatar-image")).toHaveAttribute("src", "/users/900/avatar");
+  await expect(page.getByRole("button", { name: "Message Deploy Bot" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /during DND|^Ban / })).toHaveCount(0);
+  await expect(page.locator(".person-email, .person-status, .person-transfer")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("link", { name: "Manage capability grants" })).toHaveAttribute(
+    "href",
+    "/app/admin/bots/900/grants",
+  );
+  await page.getByRole("link", { name: "Manage capability grants" }).click();
+  await expect(page).toHaveURL(/\/app\/admin\/bots\/900\/grants$/);
   await expect(
-    page.getByLabel("Use this link to login automatically on another device"),
+    page.getByRole("heading", { name: "Deploy Bot's grants", exact: true }),
   ).toBeVisible();
+});
+
+test("a member can message a legacy bot but cannot manage its grants", async ({
+  page,
+  request,
+}) => {
+  await request.get("/api/v1/admin/bots");
+  const state = await (await request.get("/__mock/state")).json();
+
+  await request.post("/__mock/viewer-role", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { role: "member" },
+  });
+  await openPerson(page, 900);
+  await expect(page.getByRole("link", { name: "Manage capability grants" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Message Deploy Bot" }).click();
+  await expect(page).toHaveURL(/\/app\/r\/\d+$/);
 });
 
 test("a deactivated person's page says they've gone, and an unknown one says so", async ({

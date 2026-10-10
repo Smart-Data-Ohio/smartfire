@@ -21,6 +21,14 @@ function screenPattern(pattern: string): string {
 }
 
 describe("the screen map", () => {
+  it("maps profile and edit aliases, with the viewer's numeric id opening settings", () => {
+    for (const path of ["/users/7", "/users/7/profile", "/users/7/profile/edit"]) {
+      expect(spaUrlFor(path, "?source=profile&classic=0", 7)).toBe("/app/settings?source=profile");
+      expect(spaUrlFor(path, "", 8)).toBe("/app/people/7");
+    }
+
+    expect(spaUrlFor("/users/me/profile/edit")).toBe("/app/settings");
+  });
   it("maps ported classic pages to their SPA URLs", () => {
     expect(spaUrlFor("/")).toBe("/app/");
     expect(spaUrlFor("/rooms/12")).toBe("/app/r/12");

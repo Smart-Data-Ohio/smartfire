@@ -236,6 +236,7 @@ export const ServerFrame = Schema.Union([
     epoch: Schema.String,
     seq: Schema.Int,
     resumed: Schema.Boolean,
+    replayThrough: Schema.Int,
   }),
   Schema.Struct({ t: Schema.Literal("batch"), events: Schema.Array(SyncEvent) }),
   Schema.Struct({ t: Schema.Literal("resync"), topics: Topics, reason: Schema.String }),
