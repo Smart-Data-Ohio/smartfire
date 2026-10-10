@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { EmojiData } from "../../lib/emoji/data.ts";
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import type { RoomKind } from "../../store/model.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { loadCustomIcons } from "../messages/commands.ts";
@@ -99,10 +100,9 @@ export function RoomGlyph({ kind, iconName, size, className }: RoomGlyphProps) {
       );
     case "image":
       return (
-        <img
+        <EmojiImage
           className={`${classes} room-glyph-image enter-fade`}
           src={look.url}
-          alt=""
           width={size}
           height={size}
           draggable={false}

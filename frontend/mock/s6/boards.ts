@@ -3,10 +3,10 @@ import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { BoardStatusFilter } from "../../src/gen/BoardStatusFilter.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
 import { notFound, ok, validation } from "../http.ts";
-import { field, intField, type Json, stringField } from "../json.ts";
+import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
 import { firstId, route, type S2Context } from "../s2/context.ts";
 import { iso, plainDraft, type ThreadRecord, threadDto } from "../s2/model.ts";
-import { clientMessageIdOf, parseMessage } from "../s2/posting.ts";
+import { clientMessageIdOf, draftFiles, parseMessage } from "../s2/posting.ts";
 import type { Threads } from "../s2/threads.ts";
 import type { Uploads } from "../s2/uploads.ts";
 import type { Work } from "../s4/work.ts";
@@ -198,7 +198,9 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
     const parsed =
       messageBody == null ||
-      (source.trim() === "" && field(messageBody, "attachmentSignedId") == null)
+      (source.trim() === "" &&
+        field(messageBody, "attachmentSignedId") == null &&
+        (stringArrayField(messageBody, "attachmentSignedIds") ?? []).length === 0)
         ? null
         : parseMessage(messageBody, uploads.attachment);
 
@@ -244,7 +246,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
         thread,
         {
           ...plainDraft(actorId, parsed.markdown, clientMessageId),
-          attachment: parsed.attachment,
+          ...draftFiles(parsed),
         },
         true,
       );

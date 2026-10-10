@@ -5,7 +5,7 @@ import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { CardSlot } from "../cards/card-slot.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
-import { AttachmentView } from "./attachments.tsx";
+import { AttachmentGallery } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
 import { SoundMessage } from "./sound-message.tsx";
@@ -149,10 +149,7 @@ function Body({ message }: { readonly message: MessageDTO }) {
 function Files({ message }: { readonly message: MessageDTO }) {
   const files = message.attachments ?? (message.attachment === null ? [] : [message.attachment]);
 
-  return files.map((attachment, index) => (
-    // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
-    <AttachmentView key={`${index}:${attachment.url}`} attachment={attachment} />
-  ));
+  return <AttachmentGallery attachments={files} />;
 }
 
 /** Where a forward came from, when the source message is in the store. */

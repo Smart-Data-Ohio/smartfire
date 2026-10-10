@@ -11,6 +11,7 @@ import type { SlashCommandResult } from "../../src/gen/SlashCommandResult.ts";
 import type { UserSuggestionList } from "../../src/gen/UserSuggestionList.ts";
 import { SEED_IDS } from "../server.ts";
 import { SHRUG } from "./composer.ts";
+import { readProfileImage } from "./profile-image.ts";
 import { collect, expectStatus, get, harness, NOW, send } from "./testing.ts";
 
 const { rooms, users, threads, scheduled, viewer } = SEED_IDS;
@@ -110,9 +111,40 @@ describe("autocomplete", () => {
       });
 
       expect(image.status).toBe(200);
+
+      if (icon.animated) continue;
+
+      expect(icon.stillUrl).toBe(icon.imageUrl);
       expect(image.contentType).toBe("image/svg+xml");
       expect(new TextDecoder().decode(image.bytes)).toMatch(/^<svg /);
     }
+  });
+
+  it("serves the animated fixture as a GIF, and its first frame at ?still=1", async () => {
+    const { server } = harness();
+    const all = await get<IconList>(server, "/api/v1/icons");
+    const parrot = all.icons.find((icon) => icon.name === "partyparrot");
+
+    expect(parrot).toMatchObject({
+      animated: true,
+      imageUrl: "/icons/partyparrot",
+      stillUrl: "/icons/partyparrot?still=1",
+    });
+
+    const fetchIcon = (path: string) => server.handleBinary({ method: "GET", path, bytes: null });
+    const playing = await fetchIcon("/icons/partyparrot");
+    const still = await fetchIcon("/icons/partyparrot?still=1");
+
+    expect(playing.contentType).toBe("image/gif");
+    expect(readProfileImage(playing.bytes)).toEqual({
+      format: "gif",
+      width: 64,
+      height: 64,
+      animated: true,
+    });
+    expect(still.contentType).toBe("image/svg+xml");
+    // A static icon answers ?still=1 with its original, as the server does.
+    expect((await fetchIcon("/icons/shipit?still=1")).contentType).toBe("image/svg+xml");
   });
 });
 

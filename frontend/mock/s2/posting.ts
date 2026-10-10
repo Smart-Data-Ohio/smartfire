@@ -12,8 +12,42 @@ export interface ParsedMessage {
   readonly clientMessageId: string;
   readonly markdown: string;
   readonly replyToMessageId: number | null;
+  /** The legacy single file, or a grouped message's first file. */
   readonly attachment: Attachment | null;
+  /** A grouped message's files (`attachmentSignedIds`), in order; `null` on the legacy path. */
+  readonly attachments: readonly Attachment[] | null;
   readonly driveFileIds: readonly string[];
+}
+
+/** How many files one message can carry (`ATTACHMENTS_PER_MESSAGE`). */
+export const MAX_MESSAGE_FILES = 10;
+
+/**
+ * The grouped files of a `CreateMessage` body, checked as `grouped_signed_ids` and
+ * `require_grouped_uploads` do: at most ten, not with the legacy slot, no repeats, each finished.
+ */
+function groupedFiles(
+  body: Json | undefined,
+  single: string | null,
+  attach: (signedId: string) => Attachment,
+): readonly Attachment[] | null {
+  const ids = stringArrayField(body, "attachmentSignedIds") ?? [];
+
+  if (ids.length === 0) return null;
+
+  if (ids.length > MAX_MESSAGE_FILES) {
+    throw validation("attachmentSignedIds", "has too many files (maximum is 10)");
+  }
+
+  if (single !== null && single !== "") {
+    throw validation("attachmentSignedIds", "cannot be combined with attachmentSignedId");
+  }
+
+  if (new Set(ids).size !== ids.length) {
+    throw validation("attachmentSignedIds", "includes a duplicate file");
+  }
+
+  return ids.map(attach);
 }
 
 /** The `clientMessageId`, checked first so a retry is answered before anything else. */
@@ -41,8 +75,8 @@ export function checkMarkdown(markdown: string | null, hasAttachment: boolean): 
 }
 
 /**
- * Validates a `CreateMessage` body. `attach` resolves `attachmentSignedId` (422 for one that
- * isn't a finished upload).
+ * Validates a `CreateMessage` body. `attach` resolves `attachmentSignedId` and each of
+ * `attachmentSignedIds` (422 for one that isn't a finished upload).
  */
 export function parseMessage(
   body: Json | undefined,
@@ -50,7 +84,9 @@ export function parseMessage(
 ): ParsedMessage {
   const clientMessageId = clientMessageIdOf(body);
   const signedId = stringField(body, "attachmentSignedId");
-  const attachment = signedId === null || signedId === "" ? null : attach(signedId);
+  const attachments = groupedFiles(body, signedId, attach);
+  const single = signedId === null || signedId === "" ? null : attach(signedId);
+  const attachment = attachments?.[0] ?? single;
   const driveFileIds = stringArrayField(body, "driveFileIds") ?? [];
 
   const markdown = checkMarkdown(
@@ -63,8 +99,24 @@ export function parseMessage(
     markdown,
     replyToMessageId: intField(body, "replyToMessageId"),
     attachment,
+    attachments,
     driveFileIds,
   };
+}
+
+/** A message's files: its grouped list, else its one legacy file. */
+export function filesOf(message: MessageDTO): readonly Attachment[] {
+  return message.attachments ?? (message.attachment === null ? [] : [message.attachment]);
+}
+
+/** The draft fields for a parsed message's files (`attachments` only when it was grouped). */
+export function draftFiles(parsed: ParsedMessage): {
+  readonly attachment: Attachment | null;
+  readonly attachments?: readonly Attachment[];
+} {
+  return parsed.attachments === null
+    ? { attachment: parsed.attachment }
+    : { attachment: parsed.attachment, attachments: parsed.attachments };
 }
 
 /** Drive chips for ids the composer pinned. The name isn't stored, matching the message card. */

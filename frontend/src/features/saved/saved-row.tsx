@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 import type { ConversationName } from "../../gen/ConversationName.ts";
 import type { SavedItem } from "../../gen/SavedItem.ts";
 import { inlineMentions } from "../../lib/body-html.ts";
+import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { formatFull } from "../../lib/time.ts";
 import { SuccessCheck } from "../../motion/success-check.tsx";
@@ -116,7 +117,8 @@ export function SavedRow({
   handlers,
 }: SavedRowProps) {
   const author = useUser(message?.creatorId);
-  const bodyRef = useSpoilerReveal(message?.bodyHtml ?? "");
+  const bodyHtml = useMotionSafeHtml(inlineMentions(message?.bodyHtml ?? ""));
+  const bodyRef = useSpoilerReveal(bodyHtml);
   const done = item.status === "done";
   const reminder = reminderLabel(item, now);
   const authorName = author?.name ?? UNKNOWN_NAME;
@@ -222,7 +224,7 @@ export function SavedRow({
               ref={bodyRef}
               className="saved-body message-body"
               // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-              dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}
+              dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
           )}
           {message?.attachment == null && reminder === null && !done ? null : (

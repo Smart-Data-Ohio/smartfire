@@ -524,3 +524,121 @@ describe("a slash command that fails", () => {
     await waitFor(() => expect(input).toHaveProperty("value", "/remind tomorrow lunch"));
   });
 });
+
+describe("several files in one send", () => {
+  function landUploads() {
+    vi.spyOn(actions.messages, "startUpload").mockImplementation((body) =>
+      Promise.resolve({ signedId: `signed-${body.filename}`, uploadUrl: "/put" }),
+    );
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class {
+        status = 204;
+        upload = { onprogress: null };
+        onload: (() => void) | null = null;
+        onerror = null;
+        onabort = null;
+        open() {}
+        setRequestHeader() {}
+        abort() {}
+        send() {
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+  }
+
+  function picker(container: HTMLElement): HTMLInputElement {
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+
+    if (input === null) throw new Error("no file input");
+
+    return input;
+  }
+
+  it("posts the text and every file as one message", async () => {
+    landUploads();
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    const { container } = render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    await act(async () => {
+      fireEvent.change(picker(container), {
+        target: { files: ["a.txt", "b.txt", "c.txt"].map((name) => new File(["bytes"], name)) },
+      });
+    });
+    fireEvent.change(input, { target: { value: "Three files" } });
+    await waitFor(() => expect(screen.getAllByText(/TXT · 5 bytes/)).toHaveLength(3));
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send).toHaveBeenCalledWith(
+      ROOM,
+      "Three files",
+      expect.objectContaining({
+        attachmentSignedId: null,
+        attachmentSignedIds: ["signed-a.txt", "signed-b.txt", "signed-c.txt"],
+        attachments: [
+          expect.objectContaining({ filename: "a.txt" }),
+          expect.objectContaining({ filename: "b.txt" }),
+          expect.objectContaining({ filename: "c.txt" }),
+        ],
+      }),
+    );
+    expect(screen.queryByRole("list", { name: "Attachments" })).toBeNull();
+  });
+
+  it("holds the send while a file has failed, until it's removed", async () => {
+    landUploads();
+    vi.spyOn(actions.messages, "startUpload").mockImplementation((body) =>
+      body.filename === "bad.txt"
+        ? Promise.reject(new Error("Network down"))
+        : Promise.resolve({ signedId: `signed-${body.filename}`, uploadUrl: "/put" }),
+    );
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    const { container } = render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    await act(async () => {
+      fireEvent.change(picker(container), {
+        target: { files: ["good.txt", "bad.txt"].map((name) => new File(["bytes"], name)) },
+      });
+    });
+    await screen.findByRole("button", { name: "Retry bad.txt" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(send).not.toHaveBeenCalled();
+    expect(toastSnapshot().at(-1)?.title).toBe("A file didn't upload");
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove bad.txt" }));
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send).toHaveBeenCalledWith(
+      ROOM,
+      "",
+      expect.objectContaining({ attachmentSignedId: "signed-good.txt" }),
+    );
+  });
+
+  it("says how many files didn't fit under the cap", async () => {
+    landUploads();
+    const { container } = render(<Composer roomId={ROOM} placeholder="Message" />);
+
+    await act(async () => {
+      fireEvent.change(picker(container), {
+        target: {
+          files: Array.from({ length: 12 }, (_, index) => new File(["bytes"], `f${index}.txt`)),
+        },
+      });
+    });
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(10);
+    expect(toastSnapshot().at(-1)).toMatchObject({
+      title: "A message holds up to 10 files",
+      description: "2 files weren't added. Send these, then add the rest.",
+    });
+  });
+});
