@@ -2,6 +2,7 @@ import { Link, notFound, useParams } from "@tanstack/react-router";
 import { useRef } from "react";
 import type { BotIcon } from "../../gen/BotIcon.ts";
 import type { BotKey } from "../../gen/BotKey.ts";
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -49,7 +50,7 @@ export function BotPicture({
 
   if (icon?.kind === "image") {
     return (
-      <img
+      <EmojiImage
         className="admin-icon-image"
         src={icon.url}
         alt={icon.title}

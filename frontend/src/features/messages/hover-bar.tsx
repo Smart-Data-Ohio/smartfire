@@ -1,3 +1,4 @@
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { preloadEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
 import { type EmojiChoice, quickReactions, useRecentEmoji } from "../../lib/emoji/recent.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
@@ -50,7 +51,7 @@ export function HoverBar({
             {choice.imageUrl === null ? (
               <span aria-hidden="true">{choice.content}</span>
             ) : (
-              <img src={choice.imageUrl} alt="" width={18} height={18} />
+              <EmojiImage src={choice.imageUrl} width={18} height={18} />
             )}
           </Button>
         </Tooltip>

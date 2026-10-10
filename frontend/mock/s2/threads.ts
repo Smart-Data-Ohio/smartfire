@@ -40,7 +40,13 @@ import {
   threadStatus,
   touched,
 } from "./model.ts";
-import { clientMessageIdOf, driveCards, nestedMessage, parseMessage } from "./posting.ts";
+import {
+  clientMessageIdOf,
+  draftFiles,
+  driveCards,
+  nestedMessage,
+  parseMessage,
+} from "./posting.ts";
 import type { Uploads } from "./uploads.ts";
 
 const INVOLVEMENTS: readonly ThreadInvolvement[] = ["nothing", "mentions", "everything"];
@@ -330,7 +336,7 @@ export function createThreads(
         clientMessageId,
         replyToMessageId: null,
         streaming: false,
-        attachment: parsed.attachment,
+        ...draftFiles(parsed),
         action: false,
         systemNote: false,
         forward: null,
@@ -371,7 +377,7 @@ export function createThreads(
       clientMessageId,
       replyToMessageId: replyTo,
       streaming: false,
-      attachment: parsed.attachment,
+      ...draftFiles(parsed),
       action: false,
       systemNote: false,
       forward: null,

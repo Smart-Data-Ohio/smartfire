@@ -58,7 +58,7 @@ import {
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
 import { createPeople } from "./s2/people.ts";
-import { clientMessageIdOf, driveCards, parseMessage } from "./s2/posting.ts";
+import { clientMessageIdOf, draftFiles, driveCards, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
 import { createSlack } from "./s2/slack.ts";
@@ -758,7 +758,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const message = createMessage(record, {
       ...plainDraft(VIEWER_ID, parsed.markdown, clientMessageId),
       replyToMessageId: replyTo,
-      attachment: parsed.attachment,
+      ...draftFiles(parsed),
       cards: driveCards(parsed.driveFileIds),
     });
 
@@ -925,14 +925,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     postToRoom: createMessage,
   };
 
-  const uploads = createUploads(ctx, () => admin.uploadLimitBytes());
+  const uploads = createUploads(
+    ctx,
+    () => admin.uploadLimitBytes(),
+    (name) => admin.iconFile(name),
+  );
+
   const admin = createAdmin(ctx, uploads);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
-  const messageActions = createMessages(ctx, threads, saved.savedChanged);
+
+  const messageActions = createMessages(ctx, threads, saved.savedChanged, () =>
+    admin.uploadedIcons(),
+  );
+
   const work = createWork(ctx, threads);
   const boards = createBoards(ctx, threads, uploads, work);
 
@@ -943,6 +952,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       messageActions.save(messageId, remindAt);
     },
     scheduledInboxHooks(ctx, activity),
+    () => admin.uploadedIcons(),
   );
 
   const agents = createAgents(ctx, createRandom(seed * 49_979_687 + 3), () => simulation.paused());
@@ -1260,6 +1270,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       case "lapse-sudo":
         admin.lapseSudo(flag("on", true));
+
+        return ok;
+      case "animated-icon-limit":
+        admin.setAnimatedIconLimit(int("limit"));
 
         return ok;
       case "hold-uploads":

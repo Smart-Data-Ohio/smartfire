@@ -137,10 +137,14 @@ export function pickerSections(
     {
       id: "recent",
       label: "Frequently used",
+      // A recent icon shows as the current catalog has it (its still included), when it's there.
       choices: recent.map((choice) =>
         choice.imageUrl === null
           ? emojiEntry(data, choice.content)
-          : { choice, shortcode: iconShortcode(choice) },
+          : {
+              choice: custom.find((icon) => icon.content === choice.content) ?? choice,
+              shortcode: iconShortcode(choice),
+            },
       ),
     },
     ...data.groups.map((group) => ({

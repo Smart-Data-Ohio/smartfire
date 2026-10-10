@@ -2,8 +2,13 @@ import { useSyncExternalStore } from "react";
 
 const QUERY = "(prefers-reduced-motion: reduce)";
 
+/** `matchMedia`, where the environment has it (some test DOMs leave it out or undefined). */
+function mediaQuery(): MediaQueryList | null {
+  return window.matchMedia instanceof Function ? window.matchMedia(QUERY) : null;
+}
+
 function systemPrefersReduced(): boolean {
-  return "matchMedia" in window && window.matchMedia(QUERY).matches;
+  return mediaQuery()?.matches ?? false;
 }
 
 /**
@@ -25,7 +30,7 @@ export function prefersReducedMotion(): boolean {
 }
 
 function subscribe(onChange: () => void): () => void {
-  const media = "matchMedia" in window ? window.matchMedia(QUERY) : null;
+  const media = mediaQuery();
   const observer = new MutationObserver(onChange);
 
   media?.addEventListener("change", onChange);

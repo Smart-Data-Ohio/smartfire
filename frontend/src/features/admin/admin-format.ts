@@ -123,6 +123,30 @@ export const REMOVE_CONFIRMATION =
 /** The classic page's rule for icon names. */
 export const ICON_NAME_HINT = "lowercase letters, numbers, underscores, 2–32 characters";
 
+/** The file types an icon upload accepts: still SVG and PNG, animated GIF and WebP. */
+export const ICON_FILE_TYPES = "image/svg+xml,image/png,image/gif,image/webp";
+
+/** How many animated icons the workspace holds of its limit; static icons don't count. */
+export function animatedCapacity(usage: number, limit: number): string {
+  const full = usage >= limit ? " The limit is reached; static icons are unlimited." : "";
+
+  return `Animated icons: ${usage} of ${limit} used.${full}`;
+}
+
+const CAPACITY_REACHED = /^animated emoji capacity reached \(limit: (\d+)\)$/;
+
+/**
+ * An icon file's error as it shows under the field: the server's capacity message said plainly,
+ * anything else as given.
+ */
+export function iconFileError(message: string | undefined): string | undefined {
+  const limit = message === undefined ? undefined : CAPACITY_REACHED.exec(message)?.[1];
+
+  return limit === undefined
+    ? message
+    : `The workspace already has ${limit} animated icons, its limit. Delete one, or upload a still SVG or PNG.`;
+}
+
 /** No filters set. */
 export const NO_FILTERS: AuditLogFilters = {
   actor: null,

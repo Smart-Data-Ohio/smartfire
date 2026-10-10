@@ -488,6 +488,69 @@ export function iconSvg(name: string): Uint8Array {
   );
 }
 
+/** The animated fixture's frames: one colour each, cycled. */
+const PARTY_COLORS: readonly (readonly [number, number, number])[] = [
+  [255, 107, 53],
+  [250, 204, 21],
+  [34, 197, 94],
+  [59, 130, 246],
+];
+
+/**
+ * An animated workspace icon: a looping 64×64 GIF that cycles through four solid colours, a tenth
+ * of a second each. Its LZW stream clears before every pixel, so codes stay 3 bits wide and need
+ * no table.
+ */
+export function animatedIconGif(): Uint8Array {
+  const side = 64;
+  const bytes: number[] = [...utf8("GIF89a"), side, 0, side, 0, 0xf1, 0, 0];
+
+  for (const color of PARTY_COLORS) bytes.push(...color);
+
+  bytes.push(0x21, 0xff, 0x0b, ...utf8("NETSCAPE2.0"), 3, 1, 0, 0, 0);
+
+  PARTY_COLORS.forEach((_color, index) => {
+    const packed: number[] = [];
+    let bits = 0;
+    let filled = 0;
+
+    const put = (code: number) => {
+      bits |= code << filled;
+      filled += 3;
+
+      while (filled >= 8) {
+        packed.push(bits & 0xff);
+        bits >>= 8;
+        filled -= 8;
+      }
+    };
+
+    for (let pixel = 0; pixel < side * side; pixel += 1) {
+      put(4);
+      put(index);
+    }
+
+    put(5);
+
+    if (filled > 0) packed.push(bits & 0xff);
+
+    bytes.push(0x21, 0xf9, 0x04, 0x00, 10, 0, 0, 0);
+    bytes.push(0x2c, 0, 0, 0, 0, side, 0, side, 0, 0, 2);
+
+    for (let at = 0; at < packed.length; at += 255) {
+      const block = packed.slice(at, at + 255);
+
+      bytes.push(block.length, ...block);
+    }
+
+    bytes.push(0);
+  });
+
+  bytes.push(0x3b);
+
+  return new Uint8Array(bytes);
+}
+
 // --- image sizes ---
 
 /** Pixel size from a PNG, GIF, JPEG or SVG header; `null` for anything else or unreadable. */
