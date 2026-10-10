@@ -7,8 +7,8 @@
  * Ordering (crates/api_types/src/cards.rs, **Ordering**): a message's `poll` and `cards` change
  * without its `updatedAt` moving, so each copy carries an `asOf` (`poll.asOf`, `cardsAsOf`). Per
  * message the store keeps the poll and the cards with the latest `asOf`, and on a tie the one
- * that arrived last; the rest of the message follows `updatedAt` as before. Ballots
- * (`PollBallot.asOf`) follow the same rule per poll.
+ * that arrived last. A closed poll accepts only a newer closed copy; the rest of the message
+ * follows `updatedAt` as before. Ballots (`PollBallot.asOf`) follow the timestamp rule per poll.
  */
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
@@ -143,10 +143,14 @@ export function githubActionsKey(roomId: number, pullRequestId: number): string 
 
 // --- ordering ---------------------------------------------------------------------------------
 
-/** The newer of two copies of a message's poll; on a tie the incoming (later) one. */
+/** The newer poll; ties take the incoming copy unless the held poll is already closed. */
 export function newerPoll(held: Poll | null, incoming: Poll | null): Poll | null {
   if (incoming === null) {
     // A poll never leaves its message; a copy without one is from before it was read.
+    return held;
+  }
+
+  if (held?.closed && (!incoming.closed || incoming.asOf <= held.asOf)) {
     return held;
   }
 
@@ -697,7 +701,7 @@ export function pollView(
   const server = viewerChoice(poll, ballot, viewerId);
   const closed = pollClosed(poll, now);
 
-  if (pending === undefined) {
+  if (pending === undefined || closed) {
     return { poll, myOptionIds: server, pending: false, closed };
   }
 

@@ -46,6 +46,7 @@ import {
   plainDraft,
   type ThreadRecord,
   threadDto,
+  threadStatus,
   touched,
 } from "../s2/model.ts";
 import { clientMessageIdOf } from "../s2/posting.ts";
@@ -1041,7 +1042,7 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
           pollId,
           messageId: poll.messageId,
           roomId,
-          threadId: null,
+          threadId: findMessage(roomId, poll.messageId)?.message.threadId ?? null,
           myOptionIds,
           asOf: sent.asOf,
         },
@@ -1051,6 +1052,24 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
     return ok({ poll: sent, myOptionIds });
   };
 
+  const end = (roomId: number, pollId: number) => {
+    const poll = pollOr404(roomId, pollId);
+    const creatorId = findMessage(roomId, poll.messageId)?.message.creatorId;
+    const viewer = ctx.world().users.get(VIEWER_ID);
+
+    if (viewer?.role === "bot" || (creatorId !== VIEWER_ID && viewer?.role !== "administrator")) {
+      throw forbidden("Only the poll author or an administrator can end this poll");
+    }
+
+    if (poll.closedAt === null) {
+      poll.closedAt = iso(ctx.now());
+      poll.asOf = nextAsOf(ctx.now(), poll.asOf);
+      publishPoll(poll);
+    }
+
+    return ok(results(poll));
+  };
+
   /** `POST /rooms/:roomId/polls`: the question as the viewer's message, poll attached. */
   const create = (roomId: number, body: Json | undefined) => {
     const record = ctx.roomOr404(roomId);
@@ -1058,8 +1077,24 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
     const key = `${roomId}:${VIEWER_ID}:${clientMessageId}`;
     const world = ctx.world();
     const duplicate = world.sentByClientId.get(key);
+    const threadId = intField(body, "threadId");
 
-    if (duplicate !== undefined) return ok(duplicate);
+    if (duplicate !== undefined) {
+      if (duplicate.threadId !== threadId)
+        throw validation("clientMessageId", "is already used in another conversation");
+
+      return ok(duplicate);
+    }
+
+    const thread = threadId === null ? null : world.threads.get(threadId);
+
+    if (threadId !== null && (thread === undefined || thread?.roomId !== roomId)) {
+      throw notFound("Thread not found");
+    }
+
+    if (thread != null && threadStatus(thread, ctx.now()) !== "active") {
+      throw forbidden("This thread is closed or locked");
+    }
 
     const question = (stringField(body, "question") ?? "").trim();
 
@@ -1103,7 +1138,7 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
     const built = buildMessage(
       world.nextMessageId++,
       roomId,
-      null,
+      threadId,
       plainDraft(VIEWER_ID, question, clientMessageId),
       createdAt,
       ctx.mentionables(),
@@ -1112,16 +1147,29 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
     const posted = { ...built, poll: pollOf(poll, ctx.now()) };
 
     cards.polls.set(pollId, poll);
-    record.messages.push(posted);
-    record.room = { ...record.room, updatedAt: createdAt };
-    record.membership = { ...record.membership, unreadAt: null, lastReadMessageId: posted.id };
-    record.mentionCount = 0;
     world.sentByClientId.set(key, posted);
 
-    ctx.publish([
-      { topic: `room:${roomId}`, type: "message.created", data: posted },
-      { topic: "user", type: "sidebar.row.upserted", data: ctx.sidebarRow(record) },
-    ]);
+    if (thread != null) {
+      thread.messages.push(posted);
+      thread.memberIds.add(VIEWER_ID);
+      thread.lastActivityAt = createdAt;
+      thread.updatedAt = createdAt;
+      const data = threadDto(thread, ctx.now());
+      ctx.publish([
+        { topic: `thread:${thread.id}`, type: "message.created", data: posted },
+        { topic: `thread:${thread.id}`, type: "thread.updated", data },
+        { topic: `room:${roomId}`, type: "thread.updated", data },
+      ]);
+    } else {
+      record.messages.push(posted);
+      record.room = { ...record.room, updatedAt: createdAt };
+      record.membership = { ...record.membership, unreadAt: null, lastReadMessageId: posted.id };
+      record.mentionCount = 0;
+      ctx.publish([
+        { topic: `room:${roomId}`, type: "message.created", data: posted },
+        { topic: "user", type: "sidebar.row.upserted", data: ctx.sidebarRow(record) },
+      ]);
+    }
 
     return ok(posted, 201);
   };
@@ -1494,6 +1542,9 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
       "POST",
       /^\/rooms\/(\d+)\/polls\/(\d+)\/vote$/,
       ({ ids: [roomId = 0, pollId = 0], body }) => vote(roomId, pollId, body),
+    ),
+    route("POST", /^\/rooms\/(\d+)\/polls\/(\d+)\/end$/, ({ ids: [roomId = 0, pollId = 0] }) =>
+      end(roomId, pollId),
     ),
     route(
       "GET",

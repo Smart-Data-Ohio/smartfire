@@ -5,6 +5,7 @@ import type { MessageCard } from "../gen/MessageCard.ts";
 import type { Poll } from "../gen/Poll.ts";
 import {
   applyBallot,
+  applyPollResults,
   githubKey,
   needsFetch,
   PREVIEW_TTL_MS,
@@ -316,6 +317,102 @@ describe("poll and card events", () => {
   });
 });
 
+describe("closed poll ordering", () => {
+  const message = messageFixture(1, ROOM, { poll: poll(at(10), [1, 0]) });
+  const ended = poll(at(20), [1, 0], { closed: true, closedAt: at(20) });
+  const state = applyPollResults(seeded(message), { poll: ended, myOptionIds: [] });
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when a delayed vote response arrives with asOf %s",
+    (asOf) => {
+      const sent = [402];
+      const pending = setPendingVote(seeded(message), ended.id, sent);
+      const closed = applyPollResults(pending, { poll: ended, myOptionIds: [] });
+
+      const settled = settleVote(closed, ended.id, sent, {
+        poll: poll(asOf, [1, 1]),
+        myOptionIds: sent,
+      });
+
+      expect(settled.messages[1]?.poll).toEqual(ended);
+      expect(settled.cards.pendingVotes[ended.id]).toBeUndefined();
+    },
+  );
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when results or a message page refetch arrives with asOf %s",
+    (asOf) => {
+      const open = poll(asOf, [1, 1]);
+      const results = applyPollResults(state, { poll: open, myOptionIds: [402] });
+
+      const page = applyPage(
+        state,
+        ROOM,
+        pageFixture([{ ...message, poll: open, updatedAt: at(30) }]),
+        "refresh",
+      );
+
+      expect(results.messages[1]?.poll).toEqual(ended);
+      expect(page.messages[1]?.poll).toEqual(ended);
+    },
+  );
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when a delayed poll sync update arrives with asOf %s",
+    (asOf) => {
+      const synced = events(seeded(message), [
+        {
+          type: "poll.updated",
+          seq: 1,
+          topic: `room:${ROOM}`,
+          data: { roomId: ROOM, threadId: null, poll: ended },
+        },
+        {
+          type: "poll.updated",
+          seq: 2,
+          topic: `room:${ROOM}`,
+          data: { roomId: ROOM, threadId: null, poll: poll(asOf, [1, 1]) },
+        },
+      ]);
+
+      expect(synced.messages[1]?.poll).toEqual(ended);
+    },
+  );
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when a delayed message sync update arrives with asOf %s",
+    (asOf) => {
+      const synced = events(state, [
+        {
+          type: "message.updated",
+          seq: 1,
+          topic: `room:${ROOM}`,
+          data: { ...message, poll: poll(asOf, [1, 1]), updatedAt: at(30) },
+        },
+      ]);
+
+      expect(synced.messages[1]?.poll).toEqual(ended);
+      expect(synced.messages[1]?.updatedAt).toBe(at(30));
+    },
+  );
+
+  it.each([at(19), at(20)])("ignores a closed snapshot with asOf %s", (asOf) => {
+    const results = applyPollResults(state, {
+      poll: poll(asOf, [1, 1], { closed: true, closedAt: at(20) }),
+      myOptionIds: [],
+    });
+
+    expect(results.messages[1]?.poll).toEqual(ended);
+  });
+
+  it("updates final counts from a newer closed snapshot", () => {
+    const newer = poll(at(21), [1, 1], { closed: true, closedAt: at(20) });
+    const results = applyPollResults(state, { poll: newer, myOptionIds: [] });
+
+    expect(results.messages[1]?.poll).toEqual(newer);
+  });
+});
+
 describe("reading polls", () => {
   it("works out the viewer's choice from voters, or the ballot when it's as new", () => {
     const open = poll(at(10), [1, 1], {
@@ -373,6 +470,16 @@ describe("reading polls", () => {
 
     expect(settleVote(state, 40, first, null).cards.pendingVotes[40]).toBe(second);
     expect(settleVote(state, 40, second, null).cards.pendingVotes[40]).toBeUndefined();
+  });
+
+  it("shows final server counts when a close arrives during a pending vote", () => {
+    const ended = poll(at(20), [1, 2], { closed: true, closedAt: at(20) });
+    const view = pollView(ended, undefined, [401], ME, 0);
+    expect(view.closed).toBe(true);
+    expect(view.poll.totalVotes).toBe(3);
+    expect(view.poll.options.map((option) => option.votes)).toEqual([1, 2]);
+    expect(view.myOptionIds).toEqual([]);
+    expect(view.pending).toBe(false);
   });
 
   it("keeps the newer ballot when an older one arrives", () => {

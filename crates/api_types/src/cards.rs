@@ -59,7 +59,7 @@ pub struct Poll {
     pub anonymous: bool,
     /// When voting stops by itself; `null` for never.
     pub closes_at: Option<Timestamp>,
-    /// When the periodic closer stamped it closed; `null` until then.
+    /// When the author, administrator or periodic closer stamped it closed; `null` until then.
     pub closed_at: Option<Timestamp>,
     /// Closed when sent (`Poll#closed?`: `closedAt` set, or `closesAt` passed). The client also
     /// treats it as closed once `closesAt` passes, before `poll.updated` says so.
@@ -85,7 +85,9 @@ pub struct PollOption {
 }
 
 /// `GET /api/v1/rooms/:roomId/polls/:id` (`rooms/polls#show`), and the reply to
-/// [`VotePoll`]: the poll with the viewer's own choice.
+/// [`VotePoll`] or `POST /api/v1/rooms/:roomId/polls/:id/end`: the poll with the viewer's own
+/// choice. Ending requires the author or an administrator (403), closes voting immediately,
+/// and publishes `poll.updated` to the conversation. Repeated endings leave `closedAt` unchanged.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -106,12 +108,15 @@ pub struct PollResults {
 ///
 /// 422 when the question is blank, there are fewer than 2 or more than 10 non-blank options,
 /// a label is over 200 characters, or `closesAt` isn't in the future.
+/// A thread must belong to the room (404) and be active when written (403 if closed or locked).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct CreatePoll {
     /// The sender's id for the question message: a UUID, as for [`crate::CreateMessage`].
     pub client_message_id: String,
+    /// Post inside this thread of the room; `null` for the root timeline.
+    pub thread_id: Option<i64>,
     /// Markdown, posted as the message.
     pub question: String,
     pub options: Vec<String>,
