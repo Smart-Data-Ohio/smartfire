@@ -70,7 +70,7 @@ impl ChannelThread {
                 }
                 let rule = BoardTagAssignment::for_room(tx.conn(), thread.room_id)?
                     .into_iter()
-                    .find(|rule| added.iter().any(|name| rails_compat::unicode::downcase(name) == rule.tag));
+                    .find(|rule| added.iter().any(|name| caseless::default_caseless_match_str(name, &rule.tag)));
                 if let Some(rule) = rule {
                     // A failed callback leaves the original tag write committed. Its owner,
                     // audit, ledger and durable jobs succeed or roll back together.
