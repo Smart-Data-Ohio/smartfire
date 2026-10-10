@@ -456,12 +456,13 @@ async fn direct_uploads_over_16_mib_match_rails_metadata_put_and_integrity() {
                 "application/octet-stream",
             ))
             .await;
-        assert_eq!(
-            created.status.as_u16(),
-            case["metadata_status"],
-            "{}",
-            created.text()
-        );
+        // The frozen Rails oracle has no size policy. Smartfire rejects declarations over 100 MiB.
+        let expected = if case["byte_size"].as_i64().unwrap() > 104_857_600 {
+            422
+        } else {
+            case["metadata_status"].as_u64().unwrap() as u16
+        };
+        assert_eq!(created.status.as_u16(), expected, "{}", created.text());
     }
 }
 

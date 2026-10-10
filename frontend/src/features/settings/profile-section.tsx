@@ -1,5 +1,10 @@
 import { type FormEvent, useRef, useState } from "react";
-import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
+import {
+  browserDeps,
+  DEFAULT_UPLOAD_LIMIT_BYTES,
+  UploadTask,
+} from "../../lib/upload/direct-upload.ts";
+import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
 import { Avatar } from "../../ui/avatar.tsx";
@@ -27,7 +32,14 @@ function AvatarPicker() {
   const upload = (file: File) => {
     setBusy("uploading");
 
-    const task = new UploadTask(file, browserDeps(actions.messages.startUpload), () => undefined);
+    const task = new UploadTask(
+      file,
+      browserDeps(
+        actions.messages.startUpload,
+        store.getState().boot?.account.uploadLimitBytes ?? DEFAULT_UPLOAD_LIMIT_BYTES,
+      ),
+      () => undefined,
+    );
 
     task
       .start()

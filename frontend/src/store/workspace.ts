@@ -32,5 +32,5 @@ export function setWorkspaceBranding(state: State, branding: WorkspaceBranding):
     return state;
   }
 
-  return { ...state, boot: { ...boot, account: { ...branding } } };
+  return { ...state, boot: { ...boot, account: { ...boot.account, ...branding } } };
 }

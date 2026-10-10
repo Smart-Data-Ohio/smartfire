@@ -135,7 +135,7 @@ export interface Uploads {
 }
 
 /** Creates the uploads module. */
-export function createUploads(ctx: S2Context): Uploads {
+export function createUploads(ctx: S2Context, limitBytes: () => number): Uploads {
   let holding = false;
   let held: (() => void)[] = [];
   let throttleMs = 0;
@@ -161,6 +161,13 @@ export function createUploads(ctx: S2Context): Uploads {
     }
 
     if (checksum === "") throw validation("checksum", "Checksum can't be blank");
+    const limit = limitBytes();
+
+    if (byteSize > limit) {
+      const mb = 1024 * 1024;
+      const size = limit % mb === 0 ? `${limit / mb} MB` : `${limit} bytes`;
+      throw validation("byteSize", `File exceeds the ${size} upload limit.`);
+    }
 
     const world = ctx.world();
     const id = world.nextBlobId++;

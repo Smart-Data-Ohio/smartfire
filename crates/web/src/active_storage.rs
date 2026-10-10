@@ -934,13 +934,17 @@ pub struct DirectUpload {
 
 /// `ActiveStorage::Blob.create_before_direct_upload!` and the blob's direct upload URL.
 pub async fn create_direct_upload(
-    c: &Ctx,
+    c: &mut Ctx,
     filename: String,
     byte_size: i64,
     checksum: String,
     content_type: Option<String>,
     mut metadata: Json,
 ) -> Result<DirectUpload> {
+    let limit = upload_limit_bytes(c).await?;
+    if byte_size > limit {
+        return halt(upload_limit_response(c, limit)?);
+    }
     if let Json::Object(entries) = &mut metadata {
         entries.retain(|(key, _)| !key.starts_with("branding"));
     }
@@ -973,6 +977,32 @@ pub async fn create_direct_upload(
     );
     let signed_id = paths::signed_blob_id(&*storage.verifier, blob.id, None);
     Ok(DirectUpload { blob, signed_id, path })
+}
+
+async fn upload_limit_bytes(c: &Ctx) -> Result<i64> {
+    c.app()
+        .db
+        .read(|conn| {
+            Ok(campfire_db::Account::first(conn)?.map_or(
+                campfire_db::models::account::DEFAULT_UPLOAD_LIMIT_BYTES,
+                |account| account.settings().upload_limit_bytes(),
+            ))
+        })
+        .await
+        .map_err(Error::internal)
+}
+
+fn upload_limit_response(c: &mut Ctx, limit: i64) -> Result<Response> {
+    let mb = 1024 * 1024;
+    let size = if limit % mb == 0 {
+        format!("{} MB", limit / mb)
+    } else {
+        format!("{limit} bytes")
+    };
+    let message = format!("File exceeds the {size} upload limit.");
+    c.json(StatusCode::UNPROCESSABLE_ENTITY, &serde_json::json!({
+        "error": {"_tag": "Validation", "message": message, "fields": {"byteSize": [message]}}
+    }))
 }
 
 /// `blob.as_json(root: false, methods: :signed_id).merge(direct_upload: { url:, headers: })`

@@ -33,6 +33,8 @@ pub struct Workspace {
     pub can_administer: bool,
     /// "Must be admin to create new rooms".
     pub restrict_room_creation_to_administrators: bool,
+    /// Maximum bytes per uploaded file. Defaults to 100 MiB.
+    pub upload_limit_bytes: i64,
     /// The footer's "Smartfire version" badge text.
     pub version: String,
 }
@@ -44,6 +46,7 @@ pub struct Workspace {
 pub struct UpdateWorkspace {
     pub name: Option<String>,
     pub restrict_room_creation_to_administrators: Option<bool>,
+    pub upload_limit_bytes: Option<i64>,
 }
 
 /// `PUT /api/v1/admin/workspace/logo`: a blob uploaded with `POST /api/v1/uploads` becomes the

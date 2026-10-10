@@ -29,6 +29,10 @@ pub struct AccountSettings {
 }
 
 const RESTRICT_ROOM_CREATION: &str = "restrict_room_creation_to_administrators";
+const UPLOAD_LIMIT: &str = "upload_limit_bytes";
+pub const DEFAULT_UPLOAD_LIMIT_BYTES: i64 = 100 * 1024 * 1024;
+/// Largest integer the SPA can represent exactly.
+pub const MAX_UPLOAD_LIMIT_BYTES: i64 = 9_007_199_254_740_991;
 
 impl AccountSettings {
     fn from_column(raw: Option<&str>) -> Self {
@@ -45,6 +49,14 @@ impl AccountSettings {
         present(self.data.get(RESTRICT_ROOM_CREATION))
     }
 
+    pub fn upload_limit_bytes(&self) -> i64 {
+        self.data
+            .get(UPLOAD_LIMIT)
+            .and_then(Value::as_i64)
+            .filter(|bytes| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(bytes))
+            .unwrap_or(DEFAULT_UPLOAD_LIMIT_BYTES)
+    }
+
     /// `restrict_room_creation_to_administrators = value`, cast as a boolean.
     pub fn set_restrict_room_creation_to_administrators(&mut self, value: &str) {
         let cast = cast_boolean(value).map(Value::Bool).unwrap_or(Value::Null);
@@ -56,6 +68,16 @@ impl AccountSettings {
         for (key, value) in values {
             match *key {
                 RESTRICT_ROOM_CREATION => self.set_restrict_room_creation_to_administrators(value),
+                UPLOAD_LIMIT => {
+                    let bytes = value
+                        .parse::<i64>()
+                        .ok()
+                        .filter(|bytes| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(bytes))
+                        .ok_or_else(|| {
+                            Error::Other("upload limit must be a positive safe integer".into())
+                        })?;
+                    self.data.insert(UPLOAD_LIMIT.into(), Value::from(bytes));
+                }
                 other => {
                     return Err(Error::Other(format!(
                         "undefined method '{other}=' for account settings"
