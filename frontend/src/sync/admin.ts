@@ -151,7 +151,11 @@ export const admin = {
   customStyles: (): Promise<CustomStyles> => runAction(customStyles()),
 
   updateCustomStyles: (css: string | null): Promise<CustomStyles> =>
-    runAction(updateCustomStyles(css)),
+    runAction(updateCustomStyles(css)).then((styles) => {
+      mutations.setWorkspaceStyles(styles.css);
+
+      return styles;
+    }),
 
   icons: (): Promise<WorkspaceIconList> => runAction(icons()),
 

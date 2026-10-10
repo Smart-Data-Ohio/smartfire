@@ -145,6 +145,7 @@ export interface AdminModule {
   readonly requireSudo: () => void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
+  readonly customStyles: () => string | null;
   readonly roomCreationRestricted: () => boolean;
   readonly hasIcon: (name: string) => boolean;
 }
@@ -423,6 +424,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     if (next !== held.css) {
       audit("account.custom_styles.change", held.name, "Account", "custom_styles changed");
       held.css = next;
+      ctx.publish([{ topic: "user", type: "workspace.styles.updated", data: { css: next } }]);
     }
 
     return ok({ css: held.css });
@@ -553,6 +555,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     },
     requireSudo,
     branding,
+    customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,
     hasIcon: (name) => current().icons.some((icon) => icon.name === name),
     routes: [

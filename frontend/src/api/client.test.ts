@@ -50,6 +50,7 @@ const bootJson = {
   },
   theme: "dark",
   textSize: "default",
+  customStyles: null,
   cableUrl: "/cable",
   serviceWorkerUrl: null,
   version: "2.0.0",

@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
-    BoardAutomationsChanged, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
+    BoardAutomationsChanged, CustomStyles, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
     PollBallot, PollUpdated, Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow,
     SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead,
     ThreadRemoved, ThreadUnread, Typing, UserPresence,
@@ -197,6 +197,7 @@ impl RendererSlot {
 /// `campfire_db::` or `crate::integrations::`).
 pub const TWINS: &[(&str, &[&str])] = &[
     ("workspace_branding::publish", &["workspace.updated"]),
+    ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -1657,6 +1658,19 @@ pub fn workspace_updated(server: &Cable, branding: WorkspaceBranding) {
             coalesce: Some("workspace".into()),
             ..publication
         },
+    );
+}
+
+/// Called after the workspace CSS save and audit commit, from both UIs.
+pub fn workspace_styles_updated(server: &Cable, css: Option<String>) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::Everyone,
+        &SyncPayload::WorkspaceStylesUpdated(CustomStyles { css }),
+        |publication| SyncPublication { coalesce: Some("workspace.styles".into()), ..publication },
     );
 }
 

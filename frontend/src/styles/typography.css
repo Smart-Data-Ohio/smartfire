@@ -181,23 +181,26 @@
     --font-sans: var(--font-preset-mono);
     --font-features: normal;
   }
+}
 
-  :root[data-text-size="smaller"] {
-    font-size: 87.5%;
-  }
+/* The person's text size stays above workspace :root font-size defaults. */
+:root[data-text-size="smaller"] {
+  font-size: 87.5%;
+}
 
-  :root[data-text-size="small"] {
-    font-size: 93.75%;
-  }
+:root[data-text-size="small"] {
+  font-size: 93.75%;
+}
 
-  :root[data-text-size="large"] {
-    font-size: 106.25%;
-  }
+:root[data-text-size="large"] {
+  font-size: 106.25%;
+}
 
-  :root[data-text-size="larger"] {
-    font-size: 112.5%;
-  }
+:root[data-text-size="larger"] {
+  font-size: 112.5%;
+}
 
+@layer tokens {
   /*
    * iOS zooms into a focused field whose text is under 16 px, so on touch screens the fields that
    * use the composer size never drop below it at the smaller text sizes, and on touch phones form

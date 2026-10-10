@@ -270,14 +270,14 @@
   :root[data-keyboard="open"] {
     --safe-bottom: 0px;
   }
+}
 
-  /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
-  :root[data-density="compact"] {
-    --message-avatar-size: 0px;
-    --message-gutter: 0px;
-    --message-pad-y: 1px;
-    --message-group-gap: 2px;
-    --sidebar-row-height: 24px;
-    --sidebar-row-gap: 0px;
-  }
+/* Device choices stay unlayered, more specific than workspace :root token defaults. */
+:root[data-density="compact"] {
+  --message-avatar-size: 0px;
+  --message-gutter: 0px;
+  --message-pad-y: 1px;
+  --message-group-gap: 2px;
+  --sidebar-row-height: 24px;
+  --sidebar-row-gap: 0px;
 }

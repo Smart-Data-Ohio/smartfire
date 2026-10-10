@@ -17,6 +17,7 @@ const BOOT: Boot = {
   },
   theme: "system",
   textSize: "default",
+  customStyles: null,
   cableUrl: "/cable",
   version: "test",
   revision: null,

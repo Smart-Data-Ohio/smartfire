@@ -146,6 +146,7 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
     };
     Ok(Boot {
         user: BootUser { id: user.id, name: user.name, avatar_url },
+        custom_styles: account.as_ref().and_then(|account| account.custom_styles.clone()),
         account: BootAccount {
             name: account.map(|account| account.name),
             logo_url: branding.as_ref().and_then(|branding| branding.logo_url.clone()),

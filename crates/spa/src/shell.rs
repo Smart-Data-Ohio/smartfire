@@ -30,13 +30,43 @@ pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: O
     tags.push_str(&format!("<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>", script_json(boot)));
 
     let page = with_nonce(template, &nonce);
-    match page.split_once(PLACEHOLDER) {
+    let page = match page.split_once(PLACEHOLDER) {
         Some((before, after)) => format!("{before}{tags}{after}"),
         None => match page.split_once("</head>") {
             Some((before, after)) => format!("{before}{tags}\n</head>{after}"),
             None => format!("{tags}\n{page}"),
         },
+    };
+    match boot.custom_styles.as_deref().filter(|styles| !styles.is_empty()) {
+        Some(styles) => {
+            // Classic puts workspace CSS after its sheets, unlayered. Escape only HTML's
+            // style end tags, preserving CSS operators; style-src allows inline CSS, no nonce.
+            let styles = style_contents(styles);
+            let tag = format!("<style data-turbo-track=\"reload\">{styles}</style>");
+            match page.split_once("</head>") {
+                Some((before, after)) => format!("{before}{tag}</head>{after}"),
+                None => format!("{page}{tag}"),
+            }
+        }
+        None => page,
     }
+}
+
+fn style_contents(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut from = 0;
+    for (start, _) in css.match_indices('<') {
+        let rest = &css[start..];
+        if rest.get(..7).is_some_and(|tag| tag.eq_ignore_ascii_case("</style"))
+            && rest.as_bytes().get(7).is_some_and(|byte| matches!(byte, b'\t' | b'\n' | b'\x0c' | b'\r' | b' ' | b'/' | b'>'))
+        {
+            out.push_str(&css[from..start]);
+            out.push_str("\\3c ");
+            from = start + 1;
+        }
+    }
+    out.push_str(&css[from..]);
+    out
 }
 
 /// `nonce` (an attribute, or empty) added to each `<script>` and `<link rel="modulepreload">`.

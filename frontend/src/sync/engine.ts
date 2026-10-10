@@ -13,7 +13,7 @@ import {
 } from "effect";
 import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
-import { messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
+import { boot, messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
 import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
@@ -506,6 +506,15 @@ export class Engine extends Context.Service<
             ).pipe(
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
+              ),
+              Effect.provideContext(api),
+            );
+            yield* boot().pipe(
+              Effect.tap((data) =>
+                Effect.sync(() => mutations.setWorkspaceStyles(data.customStyles)),
+              ),
+              Effect.catch((error) =>
+                Effect.logWarning("sync: workspace styles resync failed", error.message),
               ),
               Effect.provideContext(api),
             );
