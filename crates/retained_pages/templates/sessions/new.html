@@ -1,7 +1,6 @@
 {% extends "layouts/auth.html" %}
 {% import "auth/_macros.html" as auth %}
 
-{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
 
 {% block content %}
 <main class="auth-card"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>

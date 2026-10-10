@@ -332,8 +332,7 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
         range: header(axum::http::header::RANGE),
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
     };
-    let served = campfire_assets::serve_classic(&static_request)
-        .or_else(|| campfire_static_assets::serve(&static_request))?;
+    let served = campfire_static_assets::serve(&static_request)?;
     let immutable = immutable_asset(request.uri().path(), served.status);
     let mut response =
         axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));

@@ -223,10 +223,11 @@ class WorkflowTest(unittest.TestCase):
         exec(textwrap.dedent(source), scope)
         rust_input = scope["rust_input"]
         for path in [b"frontend/src/main.tsx", b"frontend/pnpm-lock.yaml", b"docs/development.md",
-                     b".github/workflows/frontend.yml", b"ops/README.md", b"huddle-gateway/index.mjs"]:
+                     b".github/workflows/frontend.yml", b"ops/README.md", b"huddle-gateway/index.mjs",
+                     b"web/app/javascript/application.js"]:
             self.assertFalse(rust_input(path), path)
         # frontend/src/gen is generated from crates/api_types; the clippy job checks it.
-        for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"web/app/javascript/application.js",
+        for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"crates/static_assets/auth/auth.js",
                      b".github/workflows/rust.yml", b"crates/api_types/src/lib.rs",
                      b"frontend/src/gen/MessageDTO.ts"]:
             self.assertTrue(rust_input(path), path)

@@ -177,7 +177,7 @@ async fn review_drive_null_response_keeps_rails_production_500() {
         assert!(case["body_is_production_500"].as_bool().unwrap());
         assert_eq!(
             response.body.as_slice(),
-            campfire_assets::serve(&campfire_assets::StaticRequest {
+            campfire_static_assets::serve(&campfire_static_assets::StaticRequest {
                 method: "GET",
                 path: "/500.html",
                 ..Default::default()
