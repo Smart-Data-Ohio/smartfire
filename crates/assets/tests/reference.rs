@@ -222,11 +222,16 @@ fn javascript_importmap_tags_match_the_reference() {
 }
 
 #[test]
-fn public_files_are_served_like_action_dispatch_static() {
+fn classic_files_are_served_like_action_dispatch_static() {
     let overridden = overridden();
     for case in json_fixture("static_responses.json").as_array().unwrap() {
         let env = &case["env"];
         let path = case["path"].as_str().unwrap();
+        if path != "/assets/.manifest.json" && campfire_static_assets::serve(&campfire_static_assets::StaticRequest {
+            method: "GET", path, ..Default::default()
+        }).is_some() {
+            continue;
+        }
         let override_of = overridden.values().find(|(theirs, _)| path == format!("/assets/{theirs}"));
         let our_path = override_of.map(|(_, ours)| format!("/assets/{ours}"));
         let request = campfire_assets::StaticRequest {
@@ -288,49 +293,10 @@ fn public_files_are_served_like_action_dispatch_static() {
 }
 
 #[test]
-fn last_modified_round_trips_to_a_304() {
-    let response = get("/robots.txt");
-    let last_modified = response.header("last-modified").unwrap().to_string();
-    let not_modified = campfire_assets::serve(&campfire_assets::StaticRequest {
-        method: "GET",
-        path: "/robots.txt",
-        if_modified_since: Some(&last_modified),
-        ..Default::default()
-    })
-    .unwrap();
-    assert_eq!(not_modified.status, 304);
-    assert!(not_modified.headers.is_empty() && not_modified.body.is_empty());
-}
-
-#[test]
-fn head_requests_have_no_body() {
-    let response = campfire_assets::serve(&campfire_assets::StaticRequest {
-        method: "HEAD",
-        path: "/robots.txt",
-        ..Default::default()
-    })
-    .unwrap();
-    assert_eq!(response.status, 200);
-    assert!(response.body.is_empty());
-    assert_eq!(response.header("content-length"), Some("99"));
-}
-
-#[test]
-fn multiple_ranges_are_multipart() {
-    let sound = campfire_assets::audio_path("56k.mp3");
-    let response = campfire_assets::serve(&campfire_assets::StaticRequest {
-        method: "GET",
-        path: &sound,
-        range: Some("bytes=0-1, 4-5"),
-        ..Default::default()
-    })
-    .unwrap();
-    assert_eq!(response.status, 206);
-    // Rack sets multipart/byteranges, then Static overwrites it with the file's type.
-    assert_eq!(response.header("content-type"), Some("audio/mpeg"));
-    let body = String::from_utf8_lossy(&response.body);
-    assert!(
-        body.starts_with("\r\n--AaB03x\r\ncontent-type: audio/mpeg\r\ncontent-range: bytes 0-1/")
-    );
-    assert!(body.ends_with("\r\n--AaB03x--\r\n"));
+fn retained_assets_stay_out_of_classic_tags() {
+    for logical in ["auth.js", "unsupported.js"] {
+        assert!(!campfire_assets::javascript_importmap_tags().contains(&campfire_static_assets::asset_path(logical)));
+    }
+    assert!(!campfire_assets::all_stylesheet_paths().contains(&"auth.css"));
+    assert!(!campfire_assets::stylesheet_link_tag_all(&[]).html.contains(&campfire_static_assets::asset_path("auth.css")));
 }

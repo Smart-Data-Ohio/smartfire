@@ -2,7 +2,7 @@
 
 ## gemoji
 
-`web/app/assets/emoji/emoji.json` (the emoji picker's data) was generated
+`crates/static_assets/media/emoji/emoji.json` (the emoji picker's data) was generated
 from [gemoji](https://github.com/github/gemoji) by the former Rails app's
 `emoji_picker:generate` task and is now committed as data.
 `crates/richtext/data/gemoji-4.1.0.json` (the shortcode table for messages

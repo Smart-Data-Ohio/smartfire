@@ -1,5 +1,5 @@
 # The Rust app image (Dockerfile) builds from Cargo.toml, Cargo.lock and crates/ in this context,
-# plus the parts of web/ that crates/assets/build.rs embeds, frontend/'s sources (the SPA that
+# including retained inputs in crates/static_assets, plus classic web/ bundles and frontend/ sources (the SPA that
 # crates/spa embeds, built in the image), the ops/ hooks it installs and, for the CI toolchain
 # stage, rust-toolchain.toml. Everything else stays out.
 # deploy/huddles/Dockerfile has its own Dockerfile.dockerignore.
@@ -54,7 +54,7 @@
 /web/.bundle
 # The huddle gateway has its own image (deploy/huddles/Dockerfile).
 /huddle-gateway
-/web/public/assets
+/crates/static_assets/public/assets
 # frontend/: the sources the image's spa stage builds from, never a local build or test output
 # (node_modules is excluded above).
 /frontend/dist
