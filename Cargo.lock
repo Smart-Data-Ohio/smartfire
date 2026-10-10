@@ -402,6 +402,7 @@ dependencies = [
  "campfire_rooms",
  "campfire_routes",
  "campfire_spa",
+ "campfire_static_assets",
  "campfire_storage",
  "campfire_views",
  "campfire_web",
@@ -451,7 +452,6 @@ dependencies = [
  "base64 0.22.1",
  "campfire_api_types",
  "campfire_app",
- "campfire_assets",
  "campfire_cable",
  "campfire_channels",
  "campfire_controllers",
@@ -462,6 +462,7 @@ dependencies = [
  "campfire_richtext",
  "campfire_rooms",
  "campfire_routes",
+ "campfire_static_assets",
  "campfire_storage",
  "campfire_views",
  "campfire_web",
@@ -494,7 +495,6 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "campfire_api_types",
- "campfire_assets",
  "campfire_cable",
  "campfire_db",
  "campfire_jobs",
@@ -502,6 +502,7 @@ dependencies = [
  "campfire_mail",
  "campfire_richtext",
  "campfire_routes",
+ "campfire_static_assets",
  "campfire_storage",
  "campfire_views",
  "caseless",
@@ -542,6 +543,7 @@ dependencies = [
 name = "campfire_assets"
 version = "0.1.0"
 dependencies = [
+ "campfire_static_assets",
  "fancy-regex",
  "serde_json",
  "sha1",
@@ -796,13 +798,13 @@ dependencies = [
  "anyhow",
  "askama",
  "campfire_app",
- "campfire_assets",
  "campfire_channels",
  "campfire_db",
  "campfire_kit",
  "campfire_retained",
  "campfire_richtext",
  "campfire_routes",
+ "campfire_static_assets",
  "campfire_storage",
  "campfire_views",
  "campfire_web",
@@ -888,6 +890,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "campfire_static_assets"
+version = "0.1.0"
+dependencies = [
+ "fancy-regex",
+ "httpdate",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
 name = "campfire_storage"
 version = "0.1.0"
 dependencies = [
@@ -914,8 +928,8 @@ name = "campfire_view_kit"
 version = "0.1.0"
 dependencies = [
  "askama",
- "campfire_assets",
  "campfire_routes",
+ "campfire_static_assets",
  "rails_compat",
  "serde",
  "serde_json",
@@ -960,6 +974,7 @@ dependencies = [
  "campfire_richtext",
  "campfire_routes",
  "campfire_spa",
+ "campfire_static_assets",
  "campfire_storage",
  "campfire_views",
  "futures-util",

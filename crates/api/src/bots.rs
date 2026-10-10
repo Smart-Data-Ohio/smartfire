@@ -167,7 +167,7 @@ fn icon(icon: AvatarIcon) -> api::BotIcon {
             url: if url.starts_with('/') || url.contains("://") {
                 url
             } else {
-                campfire_assets::asset_path(&url)
+                campfire_static_assets::asset_path(&url)
             },
         },
     }

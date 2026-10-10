@@ -1,10 +1,12 @@
 use super::*;
 
+/// A saved classic return path maps to its SPA URL after the final factor, for everyone: no choice,
+/// a stored choice of the classic UI, and with `?classic=1` (which no longer escapes the mapping).
 #[tokio::test]
-async fn spa_coexistence_password_and_challenge_success_map_returns_after_the_final_factor() {
+async fn spa_only_password_and_challenge_success_map_returns_to_the_spa_for_every_ui() {
     use campfire_db::{TwoFactorCredential, models::user::ui_preference};
     use rails_compat::{ar_encryption::ArEncryption, totp};
-    for preference in [UiPreference::Classic, UiPreference::Next] {
+    for preference in [None, Some(UiPreference::Classic)] {
         for challenge in [false, true] {
             for (saved, next) in [
                 ("/", "/app/"),
@@ -14,17 +16,20 @@ async fn spa_coexistence_password_and_challenge_success_map_returns_after_the_fi
                     "/rooms/486777696?message_id=217777555",
                     "/app/r/486777696/m/217777555",
                 ),
-                // `?classic=1` keeps the classic page, as it does on any SPA-routed request.
-                ("/rooms/486777696?classic=1", "/rooms/486777696?classic=1"),
+                // `classic` is dropped, not obeyed.
+                ("/rooms/486777696?classic=1", "/app/r/486777696"),
+                ("/users/me/profile?classic=1", "/app/settings"),
                 (
-                    "/users/me/profile?classic=1",
-                    "/users/me/profile?classic=1",
+                    "/rooms/486777696?message_id=217777555&classic=1",
+                    "/app/r/486777696/m/217777555",
                 ),
             ] {
                 let a = enabled().await.expect("frozen seed required");
                 let enc = ArEncryption::new(&a.booted.app.secrets);
                 let secret = a.db().write(move |tx| {
-                    ui_preference::store(tx, DAVID, preference)?;
+                    if let Some(preference) = preference {
+                        ui_preference::store(tx, DAVID, preference)?;
+                    }
                     if challenge {
                         let credential = TwoFactorCredential::for_user(tx.conn(), DAVID)?.unwrap();
                         tx.conn().execute("UPDATE two_factor_credentials SET last_totp_at=NULL,consecutive_failures=0,locked_until=NULL WHERE id=?", [credential.id])?;
@@ -54,15 +59,10 @@ async fn spa_coexistence_password_and_challenge_success_map_returns_after_the_fi
                 } else {
                     reply
                 };
-                let destination = if preference == UiPreference::Next {
-                    next
-                } else {
-                    saved
-                };
                 assert_eq!(
                     reply.location(),
-                    Some(to(destination).as_str()),
-                    "{saved}, challenge={challenge}"
+                    Some(to(next).as_str()),
+                    "{saved}, {preference:?}, challenge={challenge}"
                 );
             }
         }

@@ -1,11 +1,12 @@
 //! The screen map: which classic pages have an SPA equivalent, and where each one lives under
-//! `/app/`. It drives both directions of the coexistence (plan §5.0):
+//! `/app/`. The SPA is the only UI for signed-in people, so the classic URLs are aliases:
 //!
-//! - A person who uses the new UI and opens a **ported** classic page (`GET`, an HTML
-//!   navigation) is sent to its SPA URL ([`spa_url`]); `?classic=1` keeps them on the classic page.
+//! - A signed-in person who opens a **ported** classic page (`GET`, an HTML navigation) is sent to
+//!   its SPA URL ([`spa_url`]). A `classic` query parameter is dropped; it no longer keeps anyone
+//!   on the classic page.
 //! - The SPA reads the same table (`frontend/src/gen/screens.json`, written from [`SCREENS`] by
-//!   [`json`]) to open classic links it has ported in place, and to send a destination it hasn't
-//!   ported yet to its classic page with a full page load ([`classic_url`] is the same mapping).
+//!   [`json`]) to open classic links it has ported in place. [`classic_url`] is the reverse
+//!   mapping.
 //!
 //! One classic page can hold several SPA screens (the profile page's sections): each has a row, all
 //! map back to it, and its redirect goes to the first. Several classic links can also share an SPA
@@ -13,7 +14,7 @@
 //! A slice that ports a screen adds its SPA
 //! route and flips `ported` here in the same PR. Unported
 //! rows name where a screen will live, so the SPA can link there already: the server never
-//! redirects to them, and the SPA forwards them to the classic page.
+//! redirects to them.
 //!
 //! Patterns use the route table's syntax without `(.:format)`: a segment is a literal, or a
 //! literal prefix and a `:param` (`@:message_id`). Every parameter is a record id, so it matches
@@ -66,6 +67,19 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/t/:id",
         true,
     ),
+    // A thread's conversation fragment and message list, opened as a page: the thread itself.
+    screen(
+        "channel_threads#content",
+        "/rooms/:room_id/threads/:id/content",
+        "/app/r/:room_id/t/:id",
+        true,
+    ),
+    screen(
+        "channel_thread_messages#index",
+        "/rooms/:room_id/threads/:thread_id/messages",
+        "/app/r/:room_id/t/:thread_id",
+        true,
+    ),
     // S6: boards share the room and thread pages above; their new-post and automation pages are
     // distinct.
     screen(
@@ -80,7 +94,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:board_id/automations",
         true,
     ),
-    // S8: message aliases share the permalink; the room's permalink above wins on opt-out.
+    // S8: message aliases share the permalink; the room's permalink above maps back first.
     screen(
         "messages#show",
         "/rooms/:room_id/messages/:id",
@@ -164,10 +178,24 @@ pub const SCREENS: &[Screen] = &[
         "/app/rooms/new/board",
         true,
     ),
+    // A direct message's New message picker (the "+" by Direct messages).
+    screen(
+        "rooms/directs#new",
+        "/rooms/directs/new",
+        "/app/rooms/new/direct",
+        true,
+    ),
     // S8: a room's settings. The classic edit pages are one per kind, and a kind's form saved on
     // another kind's room would convert it, so the shared settings screen falls back to the room
-    // itself. Direct messages keep their classic edit page.
+    // itself. A direct message has no settings screen: its edit page opens the conversation,
+    // whose header has "Add people" and "Rename conversation".
     screen("rooms#show", "/rooms/:id", "/app/r/:id/settings", true),
+    screen(
+        "rooms/directs#edit",
+        "/rooms/directs/:id/edit",
+        "/app/r/:id",
+        true,
+    ),
     screen(
         "rooms/opens#edit",
         "/rooms/opens/:id/edit",
@@ -199,9 +227,9 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // `/rooms/:id/settings` is not a row here. Open, closed, voice, stage and board settings are
-    // this screen; a direct message is not (its settings URL collapses to the conversation). The
-    // controller resolves the type and sends a direct to its edit form. The rooms#show row above
-    // stays the classic fallback for `/app/r/:id/settings`.
+    // this screen; a direct message's settings URL opens the conversation. The controller
+    // resolves the type. The rooms#show row above stays the classic fallback for
+    // `/app/r/:id/settings`.
     // S8: a room's calendar, an event's page, its form and the viewer's response.
     screen(
         "rooms/events#index",
@@ -300,7 +328,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings",
         true,
     ),
-    // Sections of the classic profile page: they map back to it ("Switch to classic"), and its
+    // Sections of the classic profile page: they map back to it ([`classic_url`]), and its
     // redirect goes to the row above.
     screen(
         "users/profiles#show",
@@ -371,10 +399,19 @@ pub const SCREENS: &[Screen] = &[
         "/app/people/:user_id",
         true,
     ),
+    // A person's hover card, opened as a page: their page.
+    screen("users/cards#show", "/users/:id/card", "/app/people/:id", true),
     // S7: the workspace's account pages. The people list is the account page's lower half: it
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
     screen("accounts#edit", "/account/edit", "/app/admin/people", true),
+    // The people list's stream (any page), opened as a page: the people screen.
+    screen(
+        "accounts/users#index",
+        "/account/users",
+        "/app/admin/people",
+        true,
+    ),
     screen(
         "accounts/icons#index",
         "/account/icons",
@@ -521,6 +558,7 @@ pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String
 pub fn profile_url(endpoint: &str, path: &str, query: Option<&str>, viewer_id: i64) -> Option<String> {
     let pattern = match endpoint {
         "users#show" => "/users/:id",
+        "users/cards#show" => "/users/:id/card",
         "users/profiles#show" => "/users/:id/profile",
         "users/profiles#edit" => "/users/:id/profile/edit",
         _ => return spa_url(endpoint, path, query),
@@ -557,6 +595,9 @@ fn spa_url_inner(
                 && let Some(url) = room_notification_url(&spa, query, confirmed)
             {
                 return Some(url);
+            }
+            if screen.endpoint == "channel_threads#content" {
+                return Some(thread_anchor_url(spa, query));
             }
             Some(with_query(spa, query))
         })
@@ -603,6 +644,35 @@ fn room_notification_url(
         url.push_str(&rest.join("&"));
     }
     Some(url)
+}
+
+/// A thread's content fragment opens at `message_id` (the last value, as params read it); the
+/// SPA's thread route reads that reply as `m`. A `message_id` that isn't a record id is dropped,
+/// as the SPA would ignore it; other pairs carry over, less `classic`.
+fn thread_anchor_url(spa: String, query: Option<&str>) -> String {
+    let mut anchor = None;
+    let mut rest = Vec::new();
+    for pair in query.unwrap_or("").split('&') {
+        if pair.is_empty() {
+            continue;
+        }
+        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match query_component(name).as_deref() {
+            Some("classic") => {}
+            Some("message_id") => anchor = record_id(value),
+            _ => rest.push(pair),
+        }
+    }
+    let mut pairs = Vec::with_capacity(rest.len() + 1);
+    if let Some(anchor) = anchor {
+        pairs.push(format!("m={anchor}"));
+    }
+    pairs.extend(rest.into_iter().map(str::to_string));
+    if pairs.is_empty() {
+        spa
+    } else {
+        format!("{spa}?{}", pairs.join("&"))
+    }
 }
 
 /// `thread` (first value) and `message_id` from `query`, plus every other pair.
@@ -696,9 +766,8 @@ fn from_hex(byte: u8) -> Option<u8> {
     }
 }
 
-/// The classic URL for an SPA `path` (under `/app/`), ported or not: where "Switch to classic"
-/// lands, and where the SPA sends a destination it hasn't built. `query` carries over, less
-/// `classic`.
+/// The classic URL for an SPA `path` (under `/app/`), ported or not: the reverse of [`spa_url`].
+/// `query` carries over, less `classic`.
 pub fn classic_url(path: &str, query: Option<&str>) -> Option<String> {
     SCREENS.iter().find_map(|screen| {
         Some(with_query(
@@ -804,15 +873,6 @@ fn with_query(mut url: String, query: Option<&str>) -> String {
         url.push_str(&kept.join("&"));
     }
     url
-}
-
-/// Whether a request's query asks to stay on the classic page: a `classic` parameter, any value
-/// but `0` or empty.
-pub fn bypassed(query: Option<&str>) -> bool {
-    query.unwrap_or("").split('&').any(|pair| {
-        let (name, value) = pair.split_once('=').unwrap_or((pair, "1"));
-        name == "classic" && !matches!(value, "" | "0")
-    })
 }
 
 #[cfg(test)]

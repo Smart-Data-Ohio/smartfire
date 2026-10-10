@@ -7,8 +7,10 @@ publish.workspace = true
 build = "build.rs"
 
 [dependencies]
+campfire_static_assets.workspace = true
 
 [build-dependencies]
+campfire_static_assets.workspace = true
 fancy-regex.workspace = true
 sha1.workspace = true
 

@@ -68,7 +68,7 @@ async fn boot_seeded() -> Option<Test> {
     copy_dir(&seed.join("storage"), &dir.path().join("files"));
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE").unwrap();
-    let config = Config::from_lookup(|name| match name {
+    let mut config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE" => Some(secret.clone()),
         "DISABLE_SSL" => Some("true".into()),
         "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -76,6 +76,8 @@ async fn boot_seeded() -> Option<Test> {
         _ => None,
     })
     .unwrap();
+    // The classic pages, until they're deleted.
+    config.spa_enabled = false;
     Some(Test { booted: boot_with_clock(config, crate::controllers::presenters::test_support::seed_clock()).await.unwrap(), _dir: dir })
 }
 
@@ -147,9 +149,42 @@ async fn public_files_are_served_before_routing() {
     // other public files briefly cached (config.public_file_server.headers); vectors/kit_security.json.
     assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
 
+    let manifest = send(&test.booted.router, get("/assets/.manifest.json")).await;
+    assert_eq!(manifest.body, campfire_assets::manifest_json().as_bytes());
+
     let robots = send(&test.booted.router, get("/robots.txt")).await;
     assert_eq!(robots.status, StatusCode::OK);
     assert_eq!(robots.header("cache-control"), Some("public, max-age=60, stale-while-revalidate=300"));
+    assert_eq!(robots.body, include_bytes!("../../../static_assets/public/robots.txt"));
+
+    for logical in ["auth.css", "auth.js", "fonts/inter-latin-var.woff2", "default-bot-avatar.svg"] {
+        let path = campfire_static_assets::asset_path(logical);
+        let reply = send(&test.booted.router, get(&path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{logical}");
+        assert_eq!(reply.body, campfire_static_assets::asset_bytes(logical).unwrap());
+        assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
+        let head = Request::builder().method("HEAD").uri(&path).body(Body::empty()).unwrap();
+        let head = send(&test.booted.router, head).await;
+        assert!(head.body.is_empty());
+        assert_eq!(head.header("content-length"), reply.header("content-length"));
+        let conditional = Request::builder().uri(&path).header("if-modified-since", reply.header("last-modified").unwrap()).body(Body::empty()).unwrap();
+        let conditional = send(&test.booted.router, conditional).await;
+        assert_eq!(conditional.status, StatusCode::NOT_MODIFIED);
+        assert_eq!(conditional.header("cache-control"), reply.header("cache-control"));
+    }
+    let legacy = "/assets/56k-67359aa6.mp3";
+    let sound = send(&test.booted.router, get(legacy)).await;
+    assert_eq!(sound.status, StatusCode::OK);
+    assert_eq!(sound.body, campfire_static_assets::asset_bytes("56k.mp3").unwrap());
+    let range = Request::builder().uri(legacy).header("range", "bytes=0-9").body(Body::empty()).unwrap();
+    let range = send(&test.booted.router, range).await;
+    assert_eq!(range.status, StatusCode::PARTIAL_CONTENT);
+    assert_eq!(range.header("content-type"), Some("audio/mpeg"));
+    assert_eq!(range.body, &sound.body[..10]);
+    for status in [404, 422, 500, 502] {
+        let reply = send(&test.booted.router, get(&format!("/{status}.html"))).await;
+        assert_eq!(reply.body, std::fs::read(campfire_db::fixtures::reference_path(&format!("public/{status}.html"))).unwrap());
+    }
 }
 
 #[tokio::test]

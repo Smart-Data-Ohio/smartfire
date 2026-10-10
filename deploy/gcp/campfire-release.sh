@@ -1583,10 +1583,9 @@ phase_cutover() {
   local failures=0
 
   # Anonymous root requests land on auth. The public offline shell exposes the built SPA
-  # without a browser or a session. Disabled SPA deployments still verify the auth assets.
-  local frontend_args=()
-  if [ "$(settings_field "$container" '.spaEnabled')" = true ]; then frontend_args+=(--spa); fi
-  if python3 "$(dirname -- "${BASH_SOURCE[0]}")/check-frontend.py" "https://$app_host" "${frontend_args[@]}" \
+  # without a browser or a session. Every signed-in person gets the SPA whatever SPA_ENABLED
+  # says, so the SPA shell is checked on every release.
+  if python3 "$(dirname -- "${BASH_SOURCE[0]}")/check-frontend.py" "https://$app_host" --spa \
        > "$(state_path frontend-check.json)"; then
     log "frontend check: public pages reference served JS and CSS assets"
   else

@@ -6,6 +6,8 @@ import os
 import re
 import sys
 
+# The app no longer reads these (cutover step 26: the SPA is the only signed-in UI). The modes
+# still write them; the release script checks the SPA shell only when SPA_ENABLED is 1.
 MODES = {
     "unchanged": {},
     "off": {"SPA_ENABLED": "0", "SPA_DEFAULT": "classic"},

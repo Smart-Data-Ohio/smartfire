@@ -736,11 +736,13 @@ jobs:
             | gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
                 --command 'sudo python3 /opt/campfire-deploy/configure-spa.py'
 
-      # The release script checks the built SPA shell only when the SPA was already on, and the
-      # mode above is applied after it, so turning the SPA on is checked here once it is applied.
-      # Read-only: the application stays as deployed whatever this finds.
-      - name: Check the SPA shell the new mode serves
-        if: (inputs.spa_mode == 'opt-in' || inputs.spa_mode == 'default-next') && steps.plan.outputs.dry_run != 'true' && steps.spa_configuration.conclusion == 'success'
+      # Every signed-in person gets the SPA whatever spa_mode wrote, so the SPA shell is checked
+      # after every applied release, whichever mode ran (the release script checks it too, before
+      # the mode above is applied). Read-only: the application stays as deployed whatever this
+      # finds.
+      - name: Check the SPA shell
+        id: spa_check
+        if: steps.plan.outputs.dry_run != 'true' && steps.cutover.conclusion == 'success'
         timeout-minutes: 5
         shell: bash
         run: |

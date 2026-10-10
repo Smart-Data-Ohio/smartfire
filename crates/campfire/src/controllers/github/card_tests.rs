@@ -54,15 +54,16 @@ impl Fresh {
         .unwrap();
         let secret: Value =
             serde_json::from_str(include_str!("../../../../../vectors/github.json")).unwrap();
-        let config = Config::from_lookup(|key| match key {
+        let mut config = Config::from_lookup(|key| match key {
             "SECRET_KEY_BASE" => secret["secret_key_base"].as_str().map(str::to_owned),
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
-            "SPA_ENABLED" => case["spa_enabled"].as_bool().filter(|enabled| *enabled).map(|_| "1".into()),
             "GITHUB_WEBHOOK_SECRET" => case["webhook_secret"].as_str().map(str::to_owned),
             _ => None,
         })
         .unwrap();
+        // Cases without the SPA test the classic pages, until they're deleted.
+        config.spa_enabled = case["spa_enabled"].as_bool().unwrap_or(false);
         let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),
         ));

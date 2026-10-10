@@ -1,7 +1,7 @@
 use super::*;
 
 #[tokio::test]
-async fn slack_oauth_returns_to_validated_spa_screen_only_for_next_ui() {
+async fn slack_oauth_returns_to_validated_spa_screen_whatever_was_chosen() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     for preference in [UiPreference::Classic, UiPreference::Next] {
         for (role, classic, next) in [
@@ -47,11 +47,8 @@ async fn slack_oauth_returns_to_validated_spa_screen_only_for_next_ui() {
                     crate::controllers::presenters::test_support::encode(classic)
                 );
                 let (_, headers, _) = request(&f, "GET", &start, Value::Null, sudo()).await;
-                let destination = if preference == UiPreference::Next {
-                    next
-                } else {
-                    classic
-                };
+                // A stored choice of the classic UI is ignored.
+                let destination = next;
                 let session = if outcome == "unconfigured" {
                     assert_eq!(
                         headers["location"],

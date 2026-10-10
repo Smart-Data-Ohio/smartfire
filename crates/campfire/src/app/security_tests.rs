@@ -42,7 +42,7 @@ async fn boot_fresh(ssl: bool) -> Fresh {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE");
-    let config = Config::from_lookup(|name| match name {
+    let mut config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE" => Some(secret.clone()),
         "DISABLE_SSL" if !ssl => Some("true".into()),
         "LIVEKIT_URL" if ssl => Some("wss://livekit.campfire.test:7880".into()),
@@ -51,6 +51,8 @@ async fn boot_fresh(ssl: bool) -> Fresh {
         _ => None,
     })
     .unwrap();
+    // The classic pages, until they're deleted.
+    config.spa_enabled = false;
     Fresh { booted: boot(config).await.unwrap(), _dir: dir }
 }
 

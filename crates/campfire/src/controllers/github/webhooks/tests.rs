@@ -23,7 +23,7 @@ impl Fresh {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
-        let config = Config::from_lookup(|name| match name {
+        let mut config = Config::from_lookup(|name| match name {
             "SECRET_KEY_BASE" => Some("a".repeat(128)),
             "GITHUB_WEBHOOK_SECRET" => secret.map(str::to_owned),
             "DISABLE_SSL" => Some("1".into()),
@@ -31,6 +31,8 @@ impl Fresh {
             _ => None,
         })
         .unwrap();
+        // The classic pages, until they're deleted.
+        config.spa_enabled = false;
         let booted = crate::server::boot(config).await.unwrap();
         let crate::server::Booted { app, router, jobs, .. } = booted;
         jobs.shutdown(std::time::Duration::from_secs(1)).await;

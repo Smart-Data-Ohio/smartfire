@@ -428,12 +428,9 @@ async fn hostile_and_oversized_queries_answer_cleanly() {
     ] {
         assert!(search(&mut david, q).await.messages.is_empty(), "{q}");
         let classic = david
-            .send(Req::new(
-                Method::GET,
-                &format!(
-                    "/searches?q={}",
-                    url::form_urlencoded::byte_serialize(q.as_bytes()).collect::<String>()
-                ),
+            .classic_page(&format!(
+                "/searches?q={}",
+                url::form_urlencoded::byte_serialize(q.as_bytes()).collect::<String>()
             ))
             .await;
         assert_eq!(classic.status, StatusCode::OK, "{q}: {}", classic.text());
