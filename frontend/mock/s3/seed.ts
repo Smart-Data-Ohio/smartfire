@@ -18,7 +18,7 @@ import type { AgentBudgetCap } from "../../src/gen/AgentBudgetCap.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { SavedItem } from "../../src/gen/SavedItem.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
-import { type Mentionable, mentionsUser, renderMarkdown } from "../markdown.ts";
+import { type Mentionable, mentionsUser, mockExcerpt, renderMarkdown } from "../markdown.ts";
 import { createRandom, type Random } from "../random.ts";
 import { VIEWER_TIME_ZONE } from "../s2/composer.ts";
 import {
@@ -1038,7 +1038,9 @@ export function seedS3(world: World, now: number, random: Random): void {
       roomId,
       threadId,
       replyToMessageId: null,
+      replyTarget: null,
       markdownSource,
+      excerpt: mockExcerpt(markdownSource),
       sendAt: iso(sendAt),
       state: "pending",
       sendable: true,

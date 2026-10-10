@@ -54,7 +54,11 @@ pub fn non_code_text(html: &str) -> Result<String, campfire_richtext::dom::Parse
     use campfire_richtext::dom::{Dom, NodeData, NodeId};
     fn walk(dom: &Dom, node: NodeId, text: &mut String, hrefs: &mut Vec<String>) {
         let name = dom.name(node);
-        if matches!(name.as_ref(), "code" | "pre") {
+        // Code and spoilers are not part of the message a card may unfurl. A spoiler's text and
+        // its links stay hidden until the reader reveals that spoiler, and so does a link whose
+        // label holds a spoiler: its URL would give the hidden words away.
+        let spoiler = campfire_richtext::markdown::conceals_spoiler(dom, node);
+        if matches!(name.as_ref(), "code" | "pre") || spoiler {
             return;
         }
         if let NodeData::Text(value) = &dom.node(node).data {
@@ -137,5 +141,27 @@ mod tests {
         for case in vectors["non_code"].as_array().unwrap() {
             assert_eq!(non_code_text(case["html"].as_str().unwrap()).unwrap(), case["text"].as_str().unwrap(), "{case}");
         }
+    }
+
+    #[test]
+    fn spoilers_are_skipped_like_code() {
+        let html = r#"<p>see https://www.linkedin.com/feed/update/urn:li:activity:111 <a href="https://example.com/shown">shown</a> <span class="spoiler" data-spoiler="">https://www.linkedin.com/feed/update/urn:li:activity:222 <a href="https://example.com/hidden" title="secret">tweet</a></span></p>"#;
+        let text = non_code_text(html).unwrap();
+        assert!(text.contains("urn:li:activity:111"), "{text}");
+        assert!(text.contains("https://example.com/shown"), "{text}");
+        assert!(!text.contains("urn:li:activity:222"), "{text}");
+        assert!(!text.contains("example.com/hidden"), "{text}");
+        assert!(!text.contains("secret"), "{text}");
+        assert!(!text.contains("tweet"), "{text}");
+    }
+
+    #[test]
+    fn a_link_whose_label_holds_a_spoiler_is_skipped() {
+        let html = r#"<p><a href="https://www.linkedin.com/feed/update/urn:li:activity:333" title="Alice dies"><span class="spoiler" data-spoiler="">ending</span></a> <a href="https://example.com/shown">shown</a></p>"#;
+        let text = non_code_text(html).unwrap();
+        assert!(text.contains("https://example.com/shown"), "{text}");
+        assert!(!text.contains("activity:333"), "{text}");
+        assert!(!text.contains("ending"), "{text}");
+        assert!(extract(&text).is_empty(), "{text}");
     }
 }

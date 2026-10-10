@@ -96,3 +96,5 @@ async fn review_reaction_pairs_match_ruby_strip_and_legacy_classification() {
         assert_eq!(json!(stored), row["stored"], "{content:?}");
     }
 }
+
+use campfire_web::controllers::presenters::MessageCache;

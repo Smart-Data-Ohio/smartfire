@@ -11,8 +11,8 @@ use campfire_db::models::huddle_grant::{HuddleGrant, IN_CALL_WINDOW};
 use campfire_db::models::room_delete::HuddleConfig;
 use campfire_db::{Connection, Membership, Room, RoomType, Timestamp, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_web::concerns::{self, AuthenticatedBy, Authentication, Before};
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::concerns::{self, AuthenticatedBy, Authentication, Before};
+use campfire_runtime::context::db_error;
 use rails_compat::jwt::livekit;
 use serde::de::DeserializeOwned;
 

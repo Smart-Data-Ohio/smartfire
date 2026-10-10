@@ -419,3 +419,5 @@ pub async fn destroy_operation(c: &Ctx, room: &Room) -> Result<()> {
     c.app().broadcasts.room_remove(room);
     Ok(())
 }
+
+use campfire_views::rendering::*;

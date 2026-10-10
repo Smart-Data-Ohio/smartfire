@@ -40,3 +40,5 @@ async fn complete_github_containers_match_rails_in_room_lists_on_cold_and_warm_c
         }
     }
 }
+
+use campfire_web::controllers::presenters::RoomList;

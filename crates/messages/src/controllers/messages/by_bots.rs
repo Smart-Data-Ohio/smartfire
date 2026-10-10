@@ -27,13 +27,20 @@ pub async fn index(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::JSON])?;
     let body = present(c, move |presenter| {
         let messages = messages.iter().map(|m| presenter.agent_message_payload(m)).collect::<campfire_db::Result<Vec<_>>>()?;
-        Ok(campfire_views::helpers::to_rails_json(&messages))
+        Ok(campfire_presentation::helpers::to_rails_json(&messages))
     })
     .await?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
+    match create_action(c).await {
+        Err(error) => super::render_record_invalid(c, error),
+        result => result,
+    }
+}
+
+async fn create_action(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let room = set_room(c).await?;
     concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
@@ -83,7 +90,10 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     // MessagesController#update
     let attributes = message_params(c)?;
-    let message = update_message(c, message, attributes).await?;
+    let message = match update_message(c, message, attributes).await {
+        Ok(message) => message,
+        Err(error) => return super::render_record_invalid(c, error),
+    };
     broadcast_replace(c, &room, &message).await?;
     match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => render_show(c, message).await,

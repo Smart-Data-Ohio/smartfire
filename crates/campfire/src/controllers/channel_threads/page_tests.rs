@@ -223,3 +223,5 @@ async fn stale_listing_reads_do_not_persist_closure() {
     }
     assert!(app.db().read(move |conn| ChannelThread::find(conn, threads[2])).await.unwrap().closed_at.is_none());
 }
+
+use campfire_web::controllers::presenters::{Rendering};

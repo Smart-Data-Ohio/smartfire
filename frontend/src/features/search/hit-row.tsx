@@ -7,6 +7,7 @@ import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
+import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
@@ -136,6 +137,8 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
     [body, terms],
   );
 
+  const bodyRef = useSpoilerReveal(html);
+
   if (deleted) {
     return null;
   }
@@ -182,6 +185,7 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
         </div>
         {html === "" ? null : (
           <div
+            ref={bodyRef}
             className="search-hit-body message-body"
             // biome-ignore lint/security/noDangerouslySetInnerHtml: the server's sanitized body; the marks are added as DOM nodes, never as markup text
             dangerouslySetInnerHTML={{ __html: html }}

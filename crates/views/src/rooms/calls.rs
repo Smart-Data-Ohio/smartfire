@@ -1,22 +1,14 @@
 //! Voice and Stage room forms and rows; controllers supply plain render data.
-use super::FormRoom;
 use crate::{ViewContext, helpers as h, layouts::Page, messages::UserView};
 use askama::Template;
-
-#[derive(Clone, Debug)]
-pub struct CallForm {
-    pub room: FormRoom,
-    pub stage: bool,
-    pub can_administer: bool,
-    pub current_user_id: i64,
-    pub selected_users: Vec<UserView>,
-    pub unselected_users: Vec<UserView>,
-    pub icon_name: Option<String>,
-    pub icon: Option<h::AvatarIcon>,
-    pub errors: Vec<String>,
-    pub settings: Option<super::edit_sections::EditSections>,
+pub trait CallFormRendering {
+    fn github_section(&self, ctx: &ViewContext) -> String;
+    fn inbound_section(&self) -> String;
+    fn builder(&self) -> h::FormWith;
+    fn users_html(&self, ctx: &ViewContext, selected: bool) -> String;
+    fn icon_field(&self, ctx: &ViewContext) -> h::Html;
 }
-impl CallForm {
+impl CallFormRendering for CallForm {
     fn github_section(&self, ctx: &ViewContext) -> String {
         self.settings
             .as_ref()
@@ -29,15 +21,7 @@ impl CallForm {
             .map(|s| s.inbound())
             .unwrap_or_default()
     }
-    pub fn action(&self) -> String {
-        match (self.stage, self.room.id) {
-            (true, Some(id)) => campfire_routes::rooms_stage(id),
-            (true, None) => campfire_routes::rooms_stages(),
-            (false, Some(id)) => campfire_routes::rooms_voice(id),
-            (false, None) => campfire_routes::rooms_voices(),
-        }
-    }
-    pub fn builder(&self) -> h::FormWith {
+    fn builder(&self) -> h::FormWith {
         h::form_with(self.action())
             .model(if self.stage {
                 "rooms_stage"
@@ -87,6 +71,7 @@ impl CallForm {
         h::Safe(field)
     }
 }
+
 macro_rules! call_page {
     ($name:ident,$path:literal,$edit:literal) => {
         #[derive(Template)]
@@ -146,33 +131,17 @@ struct CallUser<'a> {
 mod filters {
     pub use crate::helpers::filters::*;
 }
+pub trait CallRowRendering {
+    fn dom_id(&self, prefix: &str) -> String;
+    fn options(&self) -> h::Attrs;
+    fn live_dot(&self) -> String;
+    fn render(&self, ctx: &ViewContext) -> String;
+    fn header(&self, ctx: &ViewContext) -> String;
 
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct CallRow {
-    pub id: i64,
-    pub name: String,
-    pub stage: bool,
-    pub icon: Option<h::AvatarIcon>,
-    pub participants: Vec<crate::huddle::Participant>,
-    pub live: bool,
-    pub live_name: String,
-    pub unread: bool,
-    pub muted: bool,
-    pub membership: bool,
-    pub favorited: bool,
-    pub favorite_position: Option<i64>,
-    pub category_id: Option<i64>,
-    pub can_delete: bool,
+    fn participants_html(&self) -> String;
 }
-impl CallRow {
-    fn param_key(&self) -> &str {
-        if self.stage {
-            "rooms_stage"
-        } else {
-            "rooms_voice"
-        }
-    }
-    pub fn dom_id(&self, prefix: &str) -> String {
+impl CallRowRendering for CallRow {
+    fn dom_id(&self, prefix: &str) -> String {
         h::dom_id(self.param_key(), self.id, Some(prefix))
     }
     fn options(&self) -> h::Attrs {
@@ -198,18 +167,6 @@ impl CallRow {
                 if self.muted { " muted" } else { "" }
             ))
     }
-    fn participants_html(&self) -> String {
-        crate::huddle::participants(
-            if self.stage {
-                "Rooms::Stage"
-            } else {
-                "Rooms::Voice"
-            },
-            self.id,
-            "sidebar",
-            &self.participants,
-        )
-    }
     fn live_dot(&self) -> String {
         // Shared dots don't read a viewer or roster.
         crate::huddle_stage::Stage {
@@ -225,7 +182,7 @@ impl CallRow {
         }
         .render("live_dot")
     }
-    pub fn render(&self, ctx: &ViewContext) -> String {
+    fn render(&self, ctx: &ViewContext) -> String {
         if self.stage {
             StageRow { ctx, row: self }.render()
         } else {
@@ -233,10 +190,24 @@ impl CallRow {
         }
         .unwrap()
     }
-    pub fn header(&self, ctx: &ViewContext) -> String {
+    fn header(&self, ctx: &ViewContext) -> String {
         format!("{}\n", Header { ctx, row: self }.render().unwrap())
     }
+
+    fn participants_html(&self) -> String {
+        crate::huddle::participants(
+            if self.stage {
+                "Rooms::Stage"
+            } else {
+                "Rooms::Voice"
+            },
+            self.id,
+            "sidebar",
+            &self.participants,
+        )
+    }
 }
+
 #[derive(Template)]
 #[template(path = "users/sidebars/rooms/_voice.html")]
 struct VoiceRow<'a> {
@@ -255,3 +226,6 @@ struct Header<'a> {
     ctx: &'a ViewContext<'a>,
     row: &'a CallRow,
 }
+pub use campfire_presentation::rooms::calls::*;
+
+use crate::rendering::*;

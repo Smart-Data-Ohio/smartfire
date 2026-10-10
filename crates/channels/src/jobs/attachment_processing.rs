@@ -48,7 +48,7 @@ async fn perform_owned(app: App, job: AttachmentProcessingJob) -> JobResult {
     let work = app.db.write({
         let job = job.clone();
         move |tx| {
-            let owner: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.record_type='Message' AND a.name='attachment' AND a.blob_id=?)", [job.blob_id], |r| r.get(0))?;
+            let owner: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND a.blob_id=?)", [job.blob_id], |r| r.get(0))?;
             if !owner {
                 processing::release(tx, job.blob_id, &job.token)?;
                 return Ok(None);
@@ -85,7 +85,7 @@ async fn perform_owned(app: App, job: AttachmentProcessingJob) -> JobResult {
         let job = job.clone();
         let app = app.clone();
         move |tx| {
-            let ids = tx.conn().prepare("SELECT m.id FROM messages m JOIN active_storage_attachments a ON a.record_id=m.id WHERE a.record_type='Message' AND a.name='attachment' AND a.blob_id=? ORDER BY m.id")?
+            let ids = tx.conn().prepare("SELECT DISTINCT m.id FROM messages m JOIN active_storage_attachments a ON a.record_id=m.id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND a.blob_id=? ORDER BY m.id")?
                 .query_map([job.blob_id], |r| r.get::<_, i64>(0))?.collect::<Result<Vec<_>, _>>()?;
             for id in ids {
                 let Some(mut message) = Message::find_by_id(tx.conn(), id)? else { continue; };

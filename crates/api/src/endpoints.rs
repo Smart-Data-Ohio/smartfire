@@ -8,10 +8,10 @@ use campfire_db::models::agent_posting::PostingOutcome;
 use campfire_db::{Account, Message, Timeline};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as posting, MessageParams};
-use campfire_web::concerns::{self, Authentication, Before};
-use campfire_web::controllers::presenters::attachments::Assignment;
-use campfire_web::controllers::presenters::page::db_error;
-use campfire_web::controllers::presenters::room_shell;
+use campfire_runtime::concerns::{self, Authentication, Before};
+use campfire_runtime::presenters::attachments::Assignment;
+use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::room_shell;
 use serde::de::DeserializeOwned;
 
 use crate::dto;
@@ -350,7 +350,6 @@ async fn post_message(c: &mut Ctx) -> Result {
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),
                 attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
-                claim_uploads: true,
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
                 reply_notify_author: input.reply_notify_author,

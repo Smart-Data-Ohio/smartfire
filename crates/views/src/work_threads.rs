@@ -2,20 +2,6 @@
 use crate::channel_threads::board::{Links, LinksBox};
 use crate::{ViewContext, helpers as h, helpers::filters, layouts::Page};
 use askama::Template;
-
-pub struct Row {
-    pub id: i64,
-    pub name: String,
-    pub path: String,
-    pub status: String,
-    pub status_label: String,
-    pub room_name: String,
-    pub owner_label: String,
-    pub agent: bool,
-    pub count: i64,
-    pub updated_at: jiff::Timestamp,
-    pub links: Links,
-}
 #[derive(Template)]
 #[template(path="work_threads/index.html", blocks=["head","content"])]
 pub struct Index<'a> {
@@ -82,13 +68,6 @@ impl Thread<'_> {
             .expect("work row links"),
         )
     }
-}
-pub struct Handoff {
-    pub id: i64,
-    pub room_id: i64,
-    pub name: String,
-    pub receivers: Vec<(String, i64)>,
-    pub error: Option<String>,
 }
 #[derive(Template)]
 #[template(path="threads/work/handoffs/new.html",blocks=["head","content"])]
@@ -203,3 +182,4 @@ impl LinksInvalid<'_> {
         )
     }
 }
+pub use campfire_presentation::work_threads::*;

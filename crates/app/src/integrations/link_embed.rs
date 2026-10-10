@@ -52,4 +52,31 @@ mod tests {
             assert_eq!(serde_json::to_value(selected).unwrap(), case["selected"], "{case}");
         }
     }
+
+    #[test]
+    fn a_link_inside_a_spoiler_is_not_unfurled() {
+        let html = r#"<p><span class="spoiler" data-spoiler=""><a href="https://example.com/hidden">secret</a></span> <a href="https://example.com/shown">open</a></p>"#;
+        let selected = reference_urls(html, "", "").unwrap();
+        assert_eq!(selected.len(), 1, "{selected:?}");
+        assert!(selected[0].url.contains("shown"), "{selected:?}");
+        assert!(!selected[0].url.contains("hidden"), "{selected:?}");
+    }
+
+    #[test]
+    fn a_bare_url_inside_a_spoiler_is_not_unfurled() {
+        let source = "||https://example.com/alice-dies|| https://example.com/shown ||<https://example.com/bob-dies>|| ||see www.example.com/carol-dies||";
+        let icons = campfire_richtext::markdown::IconCatalog::default();
+        let html = campfire_richtext::markdown::render(source, &(|_: &str| None), &icons).unwrap();
+        let selected = reference_urls(&html, source, "").unwrap();
+        let urls: Vec<_> = selected.iter().map(|r| r.url.as_str()).collect();
+        assert_eq!(urls, ["https://example.com/shown"], "{html}");
+    }
+
+    #[test]
+    fn a_link_whose_label_holds_a_spoiler_is_not_unfurled() {
+        let html = r#"<p><a href="https://example.com/alice-dies" title="Alice dies">see <span class="spoiler" data-spoiler="">ending</span></a> <a href="https://example.com/shown">open</a></p>"#;
+        let selected = reference_urls(html, "", "").unwrap();
+        assert_eq!(selected.len(), 1, "{selected:?}");
+        assert!(selected[0].url.contains("shown"), "{selected:?}");
+    }
 }

@@ -11,9 +11,9 @@ use campfire_db::{
 };
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as posting, MessageParams, ThreadOutcome};
-use campfire_web::concerns;
-use campfire_web::controllers::presenters::attachments::Assignment;
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::concerns;
+use campfire_runtime::presenters::attachments::Assignment;
+use campfire_runtime::context::db_error;
 
 use crate::dto;
 use crate::endpoints::{before_actions, blob_exists, body, grouped_signed_ids, message_page, now, require_grouped_uploads, set_room};
@@ -235,7 +235,6 @@ async fn message_params(
         markdown_source: Some(input.markdown_source).filter(|source| !source.trim().is_empty()),
         attachment: signed_id.map(Assignment::Signed),
         attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
-        claim_uploads: true,
         client_message_id: Some(client_message_id),
         reply_to_message_id: input.reply_to_message_id,
         reply_notify_author: input.reply_notify_author,

@@ -13,8 +13,8 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::message_features as features;
 use campfire_messages::controllers::messages as classic;
-use campfire_web::concerns;
-use campfire_web::controllers::presenters::page::{self, db_error};
+use campfire_runtime::concerns;
+use campfire_runtime::context::{self as page, db_error};
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now, set_room};
@@ -116,7 +116,7 @@ async fn create_upload(c: &mut Ctx) -> Result {
         ));
     }
     let content_type = Some(input.content_type);
-    let upload = campfire_web::active_storage::create_direct_upload(
+    let upload = campfire_runtime::active_storage::create_direct_upload(
         c,
         input.filename,
         input.byte_size,
@@ -367,6 +367,7 @@ fn scheduled(
     row: &ScheduledMessage,
     sendable: bool,
     sent_message_exists: bool,
+    reply_target: Option<api::QuotePreview>,
     now: campfire_db::Timestamp,
 ) -> api::ScheduledMessage {
     let state = if row.sent() {
@@ -383,7 +384,9 @@ fn scheduled(
         room_id: row.room_id,
         thread_id: row.thread_id,
         reply_to_message_id: row.reply_to_message_id,
+        reply_target,
         markdown_source: row.markdown_source.clone(),
+        excerpt: campfire_richtext::markdown::redacted_excerpt(&row.markdown_source),
         send_at: dto::time(row.send_at),
         state,
         sendable: row.pending() && sendable,
@@ -403,6 +406,7 @@ pub(crate) fn scheduled_rows(
     conn: &campfire_db::Connection,
     rows: &[ScheduledMessage],
     now: campfire_db::Timestamp,
+    rich_text: &dyn campfire_db::RichText,
 ) -> campfire_db::Result<Vec<api::ScheduledMessage>> {
     let pending = rows
         .iter()
@@ -416,7 +420,38 @@ pub(crate) fn scheduled_rows(
                 Some(id) => Message::find_by_id(conn, id)?.is_some(),
                 None => false,
             };
-            Ok(scheduled(row, sendable.contains(&row.id), exists, now))
+            let reply_target = row
+                .reply_target(conn)?
+                .map(|source| -> campfire_db::Result<_> {
+                    let room = Room::find(conn, source.room_id)?;
+                    let author = campfire_db::User::find(conn, source.creator_id)?;
+                    Ok(api::QuotePreview {
+                        message_id: source.id,
+                        room_id: source.room_id,
+                        thread_id: source.thread_id,
+                        creator_id: source.creator_id,
+                        author_name: author.name,
+                        room_label: if room.direct() {
+                            "a direct message".into()
+                        } else {
+                            room.name.unwrap_or_default()
+                        },
+                        excerpt: campfire_presentation::helpers::truncate(
+                            &source.plain_text_body(conn, rich_text)?,
+                            200,
+                            "...",
+                        ),
+                        created_at: dto::time(source.created_at),
+                    })
+                })
+                .transpose()?;
+            Ok(scheduled(
+                row,
+                sendable.contains(&row.id),
+                exists,
+                reply_target,
+                now,
+            ))
         })
         .collect()
 }
@@ -424,10 +459,12 @@ pub(crate) fn scheduled_rows(
 /// One row as the wire carries it, read afresh.
 async fn scheduled_reply(c: &Ctx, row: ScheduledMessage) -> Result<api::ScheduledMessage> {
     let now = now(c);
+    let rich_text = c.app().db.env().rich_text.clone();
     c.app()
         .db
         .read(move |conn| {
-            scheduled_rows(conn, std::slice::from_ref(&row), now).map(|mut rows| rows.remove(0))
+            scheduled_rows(conn, std::slice::from_ref(&row), now, rich_text.as_ref())
+                .map(|mut rows| rows.remove(0))
         })
         .await
         .map_err(db_error)
@@ -481,6 +518,7 @@ async fn index_scheduled(c: &mut Ctx) -> Result {
         },
     };
     let now = now(c);
+    let rich_text = c.app().db.env().rich_text.clone();
     let list = c
         .app()
         .db
@@ -502,7 +540,7 @@ async fn index_scheduled(c: &mut Ctx) -> Result {
                 rows.iter().map(|row| (row.room_id, row.thread_id)),
             )?;
             Ok(api::ScheduledMessageList {
-                scheduled_messages: scheduled_rows(conn, &rows, now)?,
+                scheduled_messages: scheduled_rows(conn, &rows, now, rich_text.as_ref())?,
                 conversations,
                 next_cursor,
             })
@@ -523,23 +561,6 @@ async fn create_scheduled(c: &mut Ctx) -> Result {
     let (room_id, reply_id) = (room.id, input.reply_to_message_id);
     // A thread that isn't this room's is a 404, as `rooms/slash_commands#thread_id` makes it.
     let thread_id = room_thread(c, &room, input.thread_id).await?;
-    // The model checks a reply target that exists; one that doesn't is refused here.
-    let reply_found = match reply_id {
-        Some(id) => c
-            .app()
-            .db
-            .read(move |conn| Message::find_by_id(conn, id))
-            .await
-            .map_err(db_error)?
-            .is_some(),
-        None => true,
-    };
-    if !reply_found {
-        return Err(fail(
-            c,
-            validation("replyToMessageId", "must be in the same conversation"),
-        ));
-    }
     let markdown_source = input.markdown_source;
     let row = c
         .app()
@@ -585,6 +606,7 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
         None => None,
     };
     let source = input.markdown_source;
+    let reply_to = input.reply_to_message_id;
     let change = c
         .app()
         .db
@@ -595,7 +617,8 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
             }
             let source = source.unwrap_or_else(|| row.markdown_source.clone());
             let send_at = send_at.unwrap_or(row.send_at);
-            row.update(tx, &source, send_at)?;
+            let reply_to = reply_to.unwrap_or(row.reply_to_message_id);
+            row.update(tx, &source, send_at, reply_to)?;
             Ok(Change::Saved(Box::new(row)))
         })
         .await

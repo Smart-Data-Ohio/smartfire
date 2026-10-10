@@ -328,7 +328,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                             "reply_notify_author violates NOT NULL".into(),
                         ));
                     }
-                    let blob = messages::attachment_blob(tx, assignment)?;
+                    let blob = messages::attachment_blob(tx, assignment, creator, "attachment")?;
                     let message = thread.post_message(
                         tx,
                         creator,

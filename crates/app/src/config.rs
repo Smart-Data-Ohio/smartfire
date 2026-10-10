@@ -61,7 +61,7 @@ pub struct Config {
     pub huddle: crate::huddle::Config,
     /// Slash-command launch availability, resolved by the WS13 configuration API.
     pub huddles_configured: bool,
-    pub google_picker: Option<campfire_views::layouts::GooglePicker>,
+    pub google_picker: Option<campfire_presentation::layouts::GooglePicker>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
     pub public_policy: crate::public_policy::PublicPolicy,

@@ -6,7 +6,7 @@ use campfire_api_types as api;
 use campfire_app::app::AppCtx;
 use campfire_controllers::controllers::fizzy_message_cards::{self as posting, Failure};
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::context::db_error;
 
 use crate::{dto, endpoints::body, error::fail};
 

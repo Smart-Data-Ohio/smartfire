@@ -10,6 +10,63 @@ use std::{sync::Arc, time::Duration};
 
 const CLASS: &str = "Message::AttachmentProcessingJob";
 
+/// Give a pinned seed file the state of a fresh direct upload before a request test.
+pub(crate) async fn fixture_upload(app: &TestApp, blob_id: i64, uploader_id: i64) {
+    app.db().write(move |tx| {
+        tx.conn().execute("DELETE FROM active_storage_attachments WHERE blob_id=?", [blob_id])?;
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.uploader_id',?) WHERE id=?",
+            [uploader_id, blob_id])?;
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn attachment_processing_round3_grouped_slot_is_processed() {
+    let (app, _, id, blob) = setup(false).await;
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_attachments SET name='attachments' WHERE record_type='Message' AND record_id=?", [id])?;
+        campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
+        Ok(())
+    }).await.unwrap();
+    perform_queued(&app, 1).await.unwrap();
+    let storage = app.booted.app.storage.clone();
+    assert!(app.db().read(move |conn| {
+        Ok(storage.existing_preview_image(conn, &Blob::find(conn, blob).unwrap().unwrap()).unwrap().is_some())
+    }).await.unwrap(), "grouped video must receive its preview");
+    assert_eq!(state(&app, blob).await.0, None);
+}
+
+#[tokio::test]
+async fn attachment_processing_round3_completion_refreshes_both_slots() {
+    let (app, clock, id, blob) = setup(false).await;
+    let grouped = app.db().write(move |tx| {
+        let message = Message::create(tx, NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Grouped".into()),
+            client_message_id: Some("grouped-attachment-worker".into()),
+            attachment_blob_ids: vec![blob], ..Default::default()
+        })?;
+        campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
+        Ok(message.id)
+    }).await.unwrap();
+    let (_client, server) = subscribe(&app).await;
+    let _server = AbortServer(server);
+    app.publications().take();
+    clock.set(app.booted.app.clock.now().checked_add(jiff::SignedDuration::from_secs(10)).unwrap());
+    perform_queued(&app, 1).await.unwrap();
+    let frames = app.publications().take();
+    assert_eq!(frames.len(), 2, "each owner needs its completion broadcast");
+    for target in ["presentation_message_attachment-processing-1", "presentation_message_grouped-attachment-worker"] {
+        assert_eq!(frames.iter().filter(|(_, frame)| frame.contains(target)).count(), 1, "{target}");
+    }
+    let now = app.booted.app.clock.now();
+    app.db().read(move |conn| {
+        for message in [id, grouped] {
+            assert_eq!(Message::find(conn, message)?.updated_at.jiff(), now, "owner {message} must refresh");
+        }
+        Ok(())
+    }).await.unwrap();
+}
+
 fn oracle() -> serde_json::Value {
     serde_json::from_str(include_str!(
         "../../../../../vectors/message_attachment_processing.json"
@@ -722,6 +779,7 @@ async fn attachment_processing_replacements_cover_room_thread_multipart_and_dire
                     ),
                 );
             } else {
+                fixture_upload(&app, blob, DAVID).await;
                 let signed = campfire_storage::paths::signed_blob_id(
                     &*app.booted.app.storage.verifier,
                     blob,
@@ -929,6 +987,7 @@ async fn attachment_processing_agent_root_processes_before_its_create_broadcast(
         }).await.unwrap();
         let (_client, server) = subscribe(&app).await;
         app.publications().take();
+        fixture_upload(&app, blob, BENDER).await;
         let signed = campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob, None);
         let response = app.anonymous().send(
             Req::new(axum::http::Method::POST, &format!("/rooms/{ALL_TALK}/agents/messages"))
@@ -952,3 +1011,5 @@ async fn attachment_processing_agent_root_processes_before_its_create_broadcast(
         server.abort();
     }
 }
+
+use campfire_web::controllers::presenters::{Rendering,  MessageCache};
