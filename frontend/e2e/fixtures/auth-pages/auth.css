@@ -3265,6 +3265,7 @@
     color: var(--text-muted);
     font-size: var(--text-ui);
     line-height: var(--leading-ui);
+    overflow-wrap: anywhere;
   }
 
   /* ── Forms ── */

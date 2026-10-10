@@ -37,6 +37,8 @@ const settingsJson = {
     githubLogin: "ada",
     githubVerified: false,
     bot: false,
+    pronouns: null,
+    nickname: null,
   },
   appearance: {
     theme: "dark",
@@ -145,6 +147,8 @@ describe("S7 settings schemas", () => {
       password: null,
       bio: null,
       githubLogin: null,
+      pronouns: null,
+      nickname: null,
     });
     roundTrips(UpdateAvatar, { signedId: "eyJf--1" });
     roundTrips(UpdateAppearance, {

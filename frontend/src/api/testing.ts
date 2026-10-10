@@ -27,6 +27,8 @@ export function userFixture(id: number, name = `User ${id}`): User {
     agent: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000000Z",
+    accountName: name,
+    pronouns: null,
   };
 }
 

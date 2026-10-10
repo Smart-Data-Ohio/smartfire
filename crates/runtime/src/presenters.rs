@@ -109,7 +109,7 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
 pub fn user_view(secrets: &Secrets, user: &User) -> UserView {
     UserView {
         id: user.id,
-        name: user.name.clone(),
+        name: user.display_name().to_owned(),
         title: user.title(),
         avatar_url: avatar_path(secrets, user),
         icon: None,
@@ -192,7 +192,7 @@ pub fn jbuilder_key(template: &str, record: &str, base_url: &str) -> String {
 pub fn user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
     UserJson {
         id: user.id,
-        name: user.name.clone(),
+        name: user.display_name().to_owned(),
         role: user.role.name().to_string(),
         avatar_url: format!("{base_url}{}", avatar_path(secrets, user)),
     }
@@ -480,10 +480,7 @@ impl<'a> Presenter<'a> {
         // Message#plain_text_body applies these after Markdown.plain_text, including
         // attachment-only Markdown and a forward note. forwarded_markdown is not markdown?.
         if campfire_presentation::helpers::is_blank(&text) {
-            text = message
-                .attachment(self.conn)?
-                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
-                .unwrap_or_default();
+            text = message.attachment_summary(self.conn)?;
         }
         Ok(
             match message
@@ -592,14 +589,17 @@ impl<'a> Presenter<'a> {
 
     /// `message.attachment` as `Messages::AttachmentPresentation` needs it.
     pub fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
-        let blob = if let Some(data) = &self.search_preloads {
-            data.attachments.get(&message.id).cloned()
-        } else {
-            campfire_storage::Blob::attached(self.conn, "Message", message.id, "attachment")
-                .map_err(storage_error)?
-        };
+        let blob = self.message_files(message)?.blobs.into_iter().next();
         let Some(blob) = blob else { return Ok(None) };
         self.attachment_blob(message, &blob).map(Some)
+    }
+
+    pub fn message_files(&self, message: &Message) -> Result<campfire_storage::blob::MessageAttachments> {
+        if let Some(data) = &self.search_preloads {
+            return Ok(data.attachments.get(&message.id).cloned().unwrap_or_default());
+        }
+        Ok(campfire_storage::Blob::attached_messages(self.conn, &[message.id])
+            .map_err(storage_error)?.remove(&message.id).unwrap_or_default())
     }
 
     pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
@@ -770,7 +770,7 @@ pub fn user_summary_in_zone(secrets: &Secrets, user: &User, zone: &campfire_pres
     use campfire_presentation::users::{Role, Status};
     campfire_presentation::users::UserSummary {
         id: user.id,
-        name: user.name.clone(),
+        name: user.display_name().to_owned(),
         bio: user.bio.clone(),
         email_address: user.email_address.clone(),
         role: match user.role {
@@ -801,6 +801,7 @@ pub fn account_user_summary(
         "SELECT google_identities.email,users.email_self_changed_at IS NOT NULL,users.google_email_link_allowed FROM users LEFT JOIN google_identities ON google_identities.user_id=users.id WHERE users.id=?",[user.id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
     )?;
     Ok(campfire_presentation::users::UserSummary {
+        name: user.name.clone(),
         two_factor_enabled: user.two_factor_enabled(conn)?,
         google_identity_email,
         email_self_changed,

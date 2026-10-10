@@ -3,6 +3,7 @@ import { store } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { plainText } from "./commands.ts";
+import { fileSummary, messageFiles } from "./message-files.ts";
 
 interface DeleteDialogProps {
   readonly message: MessageDTO;
@@ -55,7 +56,8 @@ export default function DeleteDialog({
       <figure className="forward-preview">
         <figcaption className="forward-preview-author">{author}</figcaption>
         <p className="forward-preview-text">
-          {text === "" ? (message.attachment?.filename ?? "Attachment") : text}
+          {text === "" ? fileSummary(message) : text}
+          {text !== "" && messageFiles(message).length > 1 ? ` · ${fileSummary(message)}` : null}
         </p>
       </figure>
     </Dialog>

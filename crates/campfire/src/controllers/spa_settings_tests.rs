@@ -81,6 +81,102 @@ const PROFILE: &[&str] = &[
 const APPEARANCE: &[&str] = &["theme", "textSize", "timeZone"];
 
 #[tokio::test]
+async fn pronouns_and_nickname_round_trip_with_shared_display_identity() {
+    let Some(a) = app().await else { panic!("restored default seed required") };
+    let mut b = a.sign_in(DAVID).await;
+    let original = read(&mut b).await.profile.name;
+    let reply = write(&mut b, Method::PATCH, "/api/v1/settings/profile",
+        json!({"pronouns":"  they/them  ","nickname":"  D  "})).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let saved: Value = parse(&reply);
+    assert_eq!(saved["profile"]["pronouns"], "they/them");
+    assert_eq!(saved["profile"]["nickname"], "D");
+    assert_eq!(saved["profile"]["name"], original);
+    let settings: Value = parse(&b.send(get("/api/v1/settings")).await);
+    assert_eq!(settings["profile"], saved["profile"]);
+    for path in [format!("/api/v1/rooms/{ALL_TALK}/messages"), format!("/api/v1/rooms/{ALL_TALK}/members"),
+        format!("/api/v1/autocomplete/users?roomId={ALL_TALK}&query=D")] {
+        let reply = b.send(get(&path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+        let data: Value = parse(&reply);
+        let users = data["users"].as_array().or_else(|| data["suggestions"].as_array()).unwrap();
+        let person = users.iter().map(|row| row.get("user").unwrap_or(row))
+            .find(|user| user["id"] == DAVID).unwrap();
+        assert_eq!(person["name"], "D", "{path}");
+        assert_eq!(person["accountName"], original);
+    }
+    let person: Value = parse(&b.send(get(&format!("/api/v1/people/{DAVID}"))).await);
+    assert_eq!(person["user"]["pronouns"], "they/them");
+    let people: Value = parse(&b.send(get("/api/v1/admin/people")).await);
+    assert_eq!(people["people"].as_array().unwrap().iter().find(|row| row["id"] == DAVID).unwrap()["name"], original);
+    let unchanged = write(&mut b, Method::PATCH, "/api/v1/settings/profile", json!({"bio":"still me"})).await;
+    assert_eq!(parse::<Value>(&unchanged)["profile"]["nickname"], "D");
+    let cleared = write(&mut b, Method::PATCH, "/api/v1/settings/profile", json!({"nickname":" ","pronouns":""})).await;
+    assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+    assert!(parse::<Value>(&cleared)["profile"]["nickname"].is_null());
+    let person: Value = parse(&b.send(get(&format!("/api/v1/people/{DAVID}"))).await);
+    assert_eq!(person["user"]["name"], original);
+}
+
+#[tokio::test]
+async fn pronouns_and_nickname_validation_is_atomic() {
+    let Some(a) = app().await else { panic!("restored default seed required") };
+    let mut b = a.sign_in(DAVID).await;
+    let before: Value = parse(&b.send(get("/api/v1/settings")).await);
+    for (field, value) in [("pronouns", "x".repeat(41)), ("nickname", "x".repeat(33)),
+        ("pronouns", "they\nthem".into()), ("nickname", "\tNick".into())] {
+        let reply = write(&mut b, Method::PATCH, "/api/v1/settings/profile", json!({field:value,"name":"should not save"})).await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert!(error(&reply)["fields"][field].is_array());
+        let after: Value = parse(&b.send(get("/api/v1/settings")).await);
+        assert_eq!(after["profile"], before["profile"]);
+    }
+}
+
+#[tokio::test]
+async fn profile_identity_changes_reach_other_users_and_refresh_direct_labels() {
+    let Some(a) = app().await else { panic!("restored default seed required") };
+    let room = a.db().write(|tx| campfire_db::Room::find_or_create_direct_for(tx, &[DAVID, JASON], DAVID)).await.unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = a.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut writer = a.sign_in(DAVID).await;
+    let observer = a.sign_in(JASON).await;
+    let mut sync = Sync::connect(addr, &observer.cookie_header()).await;
+    for body in [json!({"nickname":"NickExample","pronouns":"they/them"}), json!({"nickname":""})] {
+        let response = write(&mut writer, Method::PATCH, "/api/v1/settings/profile", body).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let settings: api::Settings = parse(&response);
+        let expected = settings.profile.nickname.as_deref().unwrap_or(&settings.profile.name);
+        let mut identity = None;
+        let mut label = None;
+        while identity.is_none() || label.is_none() {
+            if let api::ServerFrame::Batch { events } = sync.next().await {
+                for event in events {
+                    assert!(!matches!(event.payload, api::SyncPayload::SettingsUpdated(_)), "private settings must stay with their owner");
+                    let payload = serde_json::to_value(&event.payload).unwrap();
+                    if payload["type"] == "user.updated" && payload["data"]["id"] == DAVID {
+                        assert_eq!(event.topic, "user");
+                        identity = Some(payload["data"].clone());
+                    }
+                    if let api::SyncPayload::SidebarRowUpserted(row) = event.payload && row.room.id == room.id {
+                        label = Some(row.display_name);
+                    }
+                }
+            }
+        }
+        let identity = identity.unwrap();
+        assert_eq!(identity["name"], expected);
+        assert_eq!(identity["accountName"], settings.profile.name);
+        assert_eq!(identity["pronouns"], "they/them");
+        assert!(identity.get("emailAddress").is_none());
+        assert_eq!(label.unwrap(), expected.split_whitespace().next().unwrap());
+    }
+    server.abort();
+}
+
+#[tokio::test]
 async fn personal_appearance_round_trips_through_settings_boot_and_me() {
     for preferences in [
         json!({"version":1,"palette":"ocean","font":"serif","density":"compact","motion":"reduce","tokens":{"--accent":"#123abc","--bg-app":"rgb(10, 20, 30)"}}),

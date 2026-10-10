@@ -173,7 +173,7 @@ pub fn build_batched_with_users(
             && let Some(user) = users.get(&m.creator_id)
         {
             authors.push(
-                json!({"id":user.id,"name":user.name,"agent":user.is_bot(),"human":!user.is_bot()}),
+                json!({"id":user.id,"name":user.display_name(),"agent":user.is_bot(),"human":!user.is_bot()}),
             );
         }
     }

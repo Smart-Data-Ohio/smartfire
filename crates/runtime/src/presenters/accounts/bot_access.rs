@@ -6,16 +6,16 @@ pub fn credentials(
     agent_id: i64,
     zone: &campfire_presentation::time::Zone,
 ) -> Result<Vec<Credential>> {
-    let mut statement=conn.prepare("SELECT c.id,c.name,c.token_last_four,u.name,c.created_at,c.expires_at,c.last_used_at,c.revoked_at IS NOT NULL FROM agent_credentials c JOIN users u ON u.id=c.created_by_id WHERE c.agent_id=? ORDER BY c.created_at DESC")?;
+    let mut statement=conn.prepare("SELECT u.*,c.id AS credential_id,c.name AS credential_name,c.token_last_four,c.created_at AS credential_created_at,c.expires_at,c.last_used_at,c.revoked_at IS NOT NULL AS revoked FROM agent_credentials c JOIN users u ON u.id=c.created_by_id WHERE c.agent_id=? ORDER BY c.created_at DESC")?;
     Ok(statement
         .query_map([agent_id], |r| {
             Ok(Credential {
-                id: r.get(0)?,
-                name: r.get(1)?,
-                last_four: r.get(2)?,
-                created_by: r.get(3)?,
-                created_at: r.get::<_, campfire_db::Timestamp>(4)?.jiff(),
-                expires_at: r.get::<_, Option<campfire_db::Timestamp>>(5)?.map(|t| {
+                id: r.get("credential_id")?,
+                name: r.get("credential_name")?,
+                last_four: r.get("token_last_four")?,
+                created_by: User::from_row(r)?.display_name().to_owned(),
+                created_at: r.get::<_, campfire_db::Timestamp>("credential_created_at")?.jiff(),
+                expires_at: r.get::<_, Option<campfire_db::Timestamp>>("expires_at")?.map(|t| {
                     CredentialExpiry::Extended {
                         datetime:
                             crate::controllers::presenters::bot_input_casts::extended_datetime(
@@ -25,9 +25,9 @@ pub fn credentials(
                     }
                 }),
                 last_used_at: r
-                    .get::<_, Option<campfire_db::Timestamp>>(6)?
+                    .get::<_, Option<campfire_db::Timestamp>>("last_used_at")?
                     .map(|t| t.jiff()),
-                revoked: r.get(7)?,
+                revoked: r.get("revoked")?,
             })
         })?
         .collect::<rusqlite::Result<_>>()?)
@@ -35,17 +35,17 @@ pub fn credentials(
 type GrantPage = (bool, Vec<Grant>, Vec<(String, String)>);
 pub fn grants(conn: &Connection, agent_id: i64, bot_id: i64, viewer: &User) -> Result<GrantPage> {
     let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-    let mut statement=conn.prepare("SELECT g.id,g.capability,g.room_id,u.name,g.created_at,g.revoked_at IS NOT NULL FROM agent_grants g JOIN users u ON u.id=g.granted_by_id WHERE g.agent_id=? ORDER BY g.revoked_at,g.capability,g.room_id")?;
+    let mut statement=conn.prepare("SELECT u.*,g.id AS grant_id,g.capability,g.room_id,g.created_at AS grant_created_at,g.revoked_at IS NOT NULL AS revoked FROM agent_grants g JOIN users u ON u.id=g.granted_by_id WHERE g.agent_id=? ORDER BY g.revoked_at,g.capability,g.room_id")?;
     let mut grants = Vec::new();
     let rows = statement
         .query_map([agent_id], |r| {
             Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, Option<i64>>(2)?,
-                r.get::<_, String>(3)?,
-                r.get::<_, campfire_db::Timestamp>(4)?,
-                r.get::<_, bool>(5)?,
+                r.get::<_, i64>("grant_id")?,
+                r.get::<_, String>("capability")?,
+                r.get::<_, Option<i64>>("room_id")?,
+                User::from_row(r)?.display_name().to_owned(),
+                r.get::<_, campfire_db::Timestamp>("grant_created_at")?,
+                r.get::<_, bool>("revoked")?,
             ))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;

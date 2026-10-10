@@ -29,6 +29,18 @@ export function mergeConversationNames(state: State, names: readonly Conversatio
   };
 }
 
+export function updateConversationRoom(
+  state: State,
+  room: Pick<ConversationName, "roomId" | "roomName" | "roomKind" | "roomIconName">,
+): State {
+  return mergeConversationNames(
+    state,
+    Object.values(state.conversationNames)
+      .filter((name) => name.roomId === room.roomId)
+      .map((name) => ({ ...name, ...room })),
+  );
+}
+
 /**
  * What to call a conversation: the name a list brought, else one made from the sidebar row and
  * the thread record; `null` when the store knows neither (the row can say "a conversation").

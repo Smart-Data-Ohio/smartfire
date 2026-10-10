@@ -161,7 +161,7 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
             }
             // Port-only user preferences and activity counter that Rails doesn't have.
             if table == "users"
-                && matches!(name.as_str(), "activity_revision" | "appearance_preferences")
+                && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname")
             {
                 continue;
             }

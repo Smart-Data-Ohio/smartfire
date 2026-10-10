@@ -193,7 +193,7 @@ pub async fn update_room_with_topic(
             let hosts:Vec<_>=Membership::for_room(tx.conn(),room.id)?.into_iter().filter(|m|m.stage_role==Some(StageRole::Host)).collect();
             if !hosts.iter().any(|m|ids.contains(&m.user_id)) && let Some(removed)=hosts.iter().find(|m|!ids.contains(&m.user_id)) {
                 let user=User::find(tx.conn(),removed.user_id)?;
-                return Ok(Err((room,vec![format!("Promote another host before removing {}",user.name)])));
+                return Ok(Err((room,vec![format!("Promote another host before removing {}",user.display_name())])));
             }
         }
         let preview_icon=icon.as_ref().unwrap_or(&room.icon_name);
@@ -214,7 +214,7 @@ pub async fn update_room_with_topic(
         let added:Vec<_>=after.iter().filter(|id|!before.contains(id)).copied().collect();
         let removed:Vec<_>=before.iter().filter(|id|!after.contains(id)).copied().collect();
         if !added.is_empty() || !removed.is_empty() {
-            let names=|ids:&[i64]| -> campfire_db::Result<Vec<String>> {Ok(User::where_ids(tx.conn(),ids)?.into_iter().map(|u|u.name).collect())};
+            let names=|ids:&[i64]| -> campfire_db::Result<Vec<String>> {Ok(User::where_ids(tx.conn(),ids)?.into_iter().map(|u|u.display_name().to_owned()).collect())};
             AuditLog::record(tx,NewAuditLog{action:"room.membership.change".into(),target:Some((&room).into()),changes:Some(json!({"granted":names(&added)?,"revoked":names(&removed)?})),..Default::default()},&audit)?;
         }
         Ok(Ok(room))

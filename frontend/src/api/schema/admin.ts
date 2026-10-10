@@ -45,6 +45,9 @@ export const Workspace = Schema.Struct({
   restrictRoomCreationToAdministrators: Schema.Boolean,
   uploadLimitBytes: Schema.Int,
   version: Schema.String,
+  description: Schema.String,
+  vanitySlug: Schema.NullOr(Schema.String),
+  vanityUrl: Schema.NullOr(Schema.String),
 });
 
 export type Workspace = typeof Workspace.Type;
@@ -56,6 +59,8 @@ export const UpdateWorkspace = Schema.Struct({
   name: Schema.NullOr(Schema.String),
   restrictRoomCreationToAdministrators: Schema.NullOr(Schema.Boolean),
   uploadLimitBytes: Schema.NullOr(Schema.Int),
+  description: Schema.NullOr(Schema.String),
+  vanitySlug: Schema.NullOr(Schema.String),
 });
 
 export type UpdateWorkspace = typeof UpdateWorkspace.Type;

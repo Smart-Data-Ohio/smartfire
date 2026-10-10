@@ -27,6 +27,94 @@ fn create_new_user(t: &TestDb) -> User {
 }
 
 #[test]
+fn profile_identity_normalizes_counts_unicode_and_clears_to_the_account_name() {
+    let t = TestDb::new();
+    let original = user(&t, "david");
+    let mut changed = original.clone();
+    let changed = t.write(move |tx| {
+        changed.update(tx, UserChanges {
+            pronouns: Some(Some(format!("  {}  ", "é".repeat(40)))),
+            nickname: Some(Some(format!("  {}  ", "名".repeat(32)))),
+            ..Default::default()
+        })?;
+        Ok(changed)
+    });
+    assert_eq!(changed.pronouns.as_deref(), Some("é".repeat(40).as_str()));
+    assert_eq!(changed.display_name(), "名".repeat(32));
+    assert_eq!(changed.name, original.name);
+    assert_eq!(changed, user(&t, "david"));
+    let cleared = t.write(move |tx| {
+        let mut changed = changed;
+        changed.update(tx, UserChanges {
+            pronouns: Some(Some("  ".into())), nickname: Some(None), ..Default::default()
+        })?;
+        Ok(changed)
+    });
+    assert_eq!(cleared.pronouns, None);
+    assert_eq!(cleared.nickname, None);
+    assert_eq!(cleared.display_name(), original.name);
+}
+
+#[test]
+fn profile_identity_rejects_controls_and_long_values_without_partial_writes() {
+    let t = TestDb::new();
+    let before = user(&t, "david");
+    for (pronouns, nickname) in [
+        (Some("é".repeat(41)), None), (None, Some("名".repeat(33))),
+        (Some("they\nthem".into()), None), (None, Some("\tNick".into())),
+        (None, Some("Nick\u{7f}".into())), (Some("\u{85}".into()), None),
+    ] {
+        let mut changed = before.clone();
+        let error = t.try_write(move |tx| changed.update(tx, UserChanges {
+            name: Some("should not save".into()),
+            pronouns: pronouns.map(Some), nickname: nickname.map(Some), ..Default::default()
+        })).unwrap_err();
+        assert!(matches!(error, crate::Error::RecordInvalid(_)));
+        assert_eq!(user(&t, "david"), before);
+    }
+}
+
+#[test]
+fn profile_identity_creation_uses_the_same_validation() {
+    let t = TestDb::new();
+    let created = t.write(|tx| User::create(tx, NewUser {
+        name: "Account name".into(), pronouns: Some("  she/her  ".into()),
+        nickname: Some("  Nick  ".into()), ..Default::default()
+    }));
+    assert_eq!(created.display_name(), "Nick");
+    assert_eq!(created.pronouns.as_deref(), Some("she/her"));
+    assert!(matches!(t.try_write(|tx| User::create(tx, NewUser {
+        name: "Account name".into(), nickname: Some("bad\nname".into()), ..Default::default()
+    })), Err(crate::Error::RecordInvalid(_))));
+}
+
+#[test]
+fn profile_identity_is_used_in_push_titles_and_mention_picker_queries() {
+    let t = TestDb::new();
+    let mut author = user(&t, "david");
+    let author = t.write(move |tx| {
+        author.update(tx, UserChanges {
+            nickname: Some(Some("Nickname".into())), ..Default::default()
+        })?;
+        Ok(author)
+    });
+    t.read(|conn| {
+        let message = Message::by_creator(conn, author.id)?.remove(0);
+        let mut room = Room::find(conn, message.room_id)?;
+        let text = crate::rich_text::BasicRichText;
+        let shared = PushSubscription::payload_for(conn, &text, &room, &message)?;
+        assert!(shared.body.starts_with("Nickname: "));
+        room.room_type = RoomType::Direct;
+        let direct = PushSubscription::payload_for(conn, &text, &room, &message)?;
+        assert_eq!(direct.title, "Nickname");
+        let (matches, _) = crate::autocomplete_users::page(conn, None, Some("Nickname"), 0, 20)?;
+        assert_eq!(matches.iter().map(|user| user.id).collect::<Vec<_>>(), [author.id]);
+        assert_eq!(crate::autocomplete_users::count(conn, None, Some("Nickname"))?, 1);
+        Ok(())
+    });
+}
+
+#[test]
 fn user_revisions_keep_rails_stamps_for_same_clock_ban_unban_with_stale_snapshots() {
     let t = TestDb::new();
     t.clock.travel_to(t.now());

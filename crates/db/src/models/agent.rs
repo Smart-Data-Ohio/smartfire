@@ -589,8 +589,8 @@ impl Agent {
         Ok(match owner {
             None => "no owner recorded".into(),
             Some(owner) => match self.kind {
-                AgentKind::Personal => format!("Personal agent of {}", owner.name),
-                AgentKind::Workspace => format!("Workspace agent, managed by {}", owner.name),
+                AgentKind::Personal => format!("Personal agent of {}", owner.display_name()),
+                AgentKind::Workspace => format!("Workspace agent, managed by {}", owner.display_name()),
             },
         })
     }

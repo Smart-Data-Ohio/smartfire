@@ -33,7 +33,7 @@ pub fn card(conn: &Connection, viewer: i64, id: i64, now: Timestamp) -> Result<O
 
 fn load(conn: &Connection, viewer: i64, id: Option<i64>, now: Timestamp) -> Result<Vec<Person>> {
     let mut stmt = conn.prepare(
-        "SELECT u.*, a.id AS agent_id,a.owner_id AS agent_owner_id,owner.name AS agent_owner_name,
+        &format!("SELECT u.*, a.id AS agent_id,a.owner_id AS agent_owner_id,{},
          a.suspended_at AS agent_suspended_at,a.last_seen_at AS agent_last_seen_at,
          EXISTS(SELECT 1 FROM user_stars s WHERE s.user_id=:viewer AND s.starred_user_id=u.id) AS starred,
          EXISTS(SELECT 1 FROM workspace_presence_leases l JOIN sessions s ON s.id=l.session_id
@@ -43,7 +43,7 @@ fn load(conn: &Connection, viewer: i64, id: Option<i64>, now: Timestamp) -> Resu
            AND (l.last_active_at IS NULL OR l.last_active_at>=:cutoff)) AS active_lease
          FROM users u LEFT JOIN agents a ON a.user_id=u.id LEFT JOIN users owner ON owner.id=a.owner_id
          WHERE (:id IS NOT NULL AND u.id=:id) OR (:id IS NULL AND u.status=0 AND u.id!=:viewer)
-         ORDER BY LOWER(u.name)",
+         ORDER BY LOWER(u.name)", User::projection("owner", "owner_")),
     )?;
     let rows = stmt.query_map(
         named_params! {
@@ -58,7 +58,9 @@ fn load(conn: &Connection, viewer: i64, id: Option<i64>, now: Timestamp) -> Resu
                     Ok::<_, rusqlite::Error>(AgentIdentity {
                         id,
                         owner_id: row.get("agent_owner_id")?,
-                        owner_name: row.get("agent_owner_name")?,
+                        owner_name: if row.get::<_, Option<i64>>("owner_id")?.is_some() {
+                            Some(User::from_prefixed_row(row, "owner_")?.display_name().to_owned())
+                        } else { None },
                     })
                 })
                 .transpose()?;

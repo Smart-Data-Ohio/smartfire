@@ -180,7 +180,7 @@ pub async fn create_handoff(c: &mut Ctx) -> Result {
                 Ok(handoff) => Ok(Ok((
                     thread,
                     handoff,
-                    User::find(tx.conn(), receiver.user_id)?.name,
+                    User::find(tx.conn(), receiver.user_id)?.display_name().to_owned(),
                 ))),
                 Err(campfire_db::Error::RecordInvalid(errors)) => Ok(Err(
                     campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and "),

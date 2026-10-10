@@ -116,7 +116,7 @@ pub async fn revise_members(c: &Ctx, room: &Room, grantee_ids: Vec<i64>) -> Resu
                         users
                             .iter()
                             .find(|user| user.id == *id)
-                            .map(|user| user.name.clone())
+                            .map(|user| user.display_name().to_owned())
                     })
                     .collect::<Vec<_>>()
             };

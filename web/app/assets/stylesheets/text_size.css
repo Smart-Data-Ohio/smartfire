@@ -1,8 +1,0 @@
-/* Text size preference, set server-side as data-text-size on <html>.
-   Almost every size in the app is in rem, so scaling the root scales the
-   whole interface together. Percentages stack on the browser's own
-   default, so an OS or browser accessibility size still applies. */
-:root[data-text-size="smaller"] { font-size: 87.5%; }
-:root[data-text-size="small"] { font-size: 93.75%; }
-:root[data-text-size="large"] { font-size: 106.25%; }
-:root[data-text-size="larger"] { font-size: 112.5%; }

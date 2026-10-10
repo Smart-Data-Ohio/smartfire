@@ -1228,7 +1228,7 @@ impl ChannelThread {
         let creator = message.creator(conn)?;
         let body = format!(
             "{}: {}",
-            creator.name,
+            creator.display_name(),
             message.plain_text_body(conn, rich_text)?
         );
         let path = format!(

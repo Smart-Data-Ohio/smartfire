@@ -3,4 +3,12 @@
 /**
  * `PATCH /api/v1/admin/workspace` (`accounts#update`). `null` leaves a key as it is.
  */
-export type UpdateWorkspace = { name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null, };
+export type UpdateWorkspace = { name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null,
+/**
+ * An empty string clears the description; null leaves it unchanged.
+ */
+description: string | null,
+/**
+ * An empty string removes the alias; null leaves it unchanged.
+ */
+vanitySlug: string | null, };

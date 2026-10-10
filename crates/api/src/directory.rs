@@ -223,7 +223,7 @@ async fn post_direct_members(c: &mut Ctx) -> Result {
             let added = updated.add_direct_members(tx, &users, actor)?;
             added
                 .iter()
-                .map(|id| User::find(tx.conn(), *id).map(|user| user.name))
+                .map(|id| User::find(tx.conn(), *id).map(|user| user.display_name().to_owned()))
                 .collect::<campfire_db::Result<Vec<_>>>()
         })
         .await;

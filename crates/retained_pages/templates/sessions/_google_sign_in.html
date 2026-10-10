@@ -1,7 +1,7 @@
 {% import "auth/_macros.html" as auth %}<div class="auth-stack">
   <p class="auth-divider">or</p>
 
-  {% filter button_to_form(h::routes::session_google().as_str(), h::attrs().method("post").class("button auth-wide auth-google").data("variant", "secondary").data("size", "lg"), h::attrs().class("auth-button-form").data("turbo", false)) %}
+  {% filter button_to_form(h::routes::session_google().as_str(), h::attrs().method("post").class("button auth-wide auth-google").data("variant", "secondary").data("size", "lg"), h::attrs().class("auth-button-form")) %}
     {% call auth::google() %}
     Sign in with Google
 {% endfilter %}

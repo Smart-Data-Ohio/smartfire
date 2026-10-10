@@ -50,6 +50,9 @@ fn the_workspace_and_its_writes() {
             restrict_room_creation_to_administrators: false,
             upload_limit_bytes: 104_857_600,
             version: "2.0.0".into(),
+            description: "Our community".into(),
+            vanity_slug: Some("smart-data".into()),
+            vanity_url: Some("https://chat.example/join/smart-data".into()),
         },
         json!({
             "name": "Smart Data",
@@ -62,7 +65,10 @@ fn the_workspace_and_its_writes() {
             "canAdminister": true,
             "restrictRoomCreationToAdministrators": false,
             "uploadLimitBytes": 104857600,
-            "version": "2.0.0"
+            "version": "2.0.0",
+            "description": "Our community",
+            "vanitySlug": "smart-data",
+            "vanityUrl": "https://chat.example/join/smart-data"
         }),
     );
     assert_wire(
@@ -70,8 +76,10 @@ fn the_workspace_and_its_writes() {
             name: None,
             restrict_room_creation_to_administrators: Some(true),
             upload_limit_bytes: None,
+            description: None,
+            vanity_slug: None,
         },
-        json!({ "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null }),
+        json!({ "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "description": null, "vanitySlug": null }),
     );
     assert_wire(
         &UpdateLogo {
