@@ -288,7 +288,13 @@ pub async fn challenge_show_json(c: &mut Ctx) -> Result {
 }
 
 async fn challenge_show_response(c: &mut Ctx, mode: ResponseMode) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "two_factor/challenges#show",
+        Before::default().allow_unauthenticated_access(),
+        mode,
+    )
+    .await?;
     pending(c, mode).await?;
     no_store(c);
     render_challenge(c, StatusCode::OK, mode).await
@@ -303,7 +309,13 @@ pub async fn challenge_create_json(c: &mut Ctx) -> Result {
 }
 
 async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "two_factor/challenges#create",
+        Before::default().allow_unauthenticated_access(),
+        mode,
+    )
+    .await?;
     let body = if mode == ResponseMode::Json {
         Some(auth::body::<campfire_api_types::ChallengeSubmission>(c).await)
     } else {

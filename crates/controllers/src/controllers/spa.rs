@@ -65,17 +65,27 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
     if let Some(route) = signed_out_route(c.request.path()) {
-        concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-        if !concerns::restore_authentication(c).await? {
-            let boot = load_signed_out_boot(c).await?;
-            let nonce = c.content_security_policy_nonce();
-            let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
-            c.no_store();
-            return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+        let endpoint = match route {
+            SignedOutRoute::SignIn => "sessions#new",
+            SignedOutRoute::Transfer => "sessions/transfers#show",
+            SignedOutRoute::Challenge => "two_factor/challenges#show",
+        };
+        auth::before_actions(
+            c,
+            endpoint,
+            Before::default().allow_unauthenticated_access(),
+            auth::ResponseMode::Html,
+        ).await?;
+        // Only the retained challenge restores authentication. The public sign-in and transfer
+        // forms leave an existing session and its saved return destination alone.
+        if route == SignedOutRoute::Challenge && concerns::restore_authentication(c).await? {
+            return c.redirect_to(&c.url_for("/"));
         }
-        // Only the retained challenge redirects a signed-in visitor. Sign-in and transfer GETs
-        // accept one, so those routes use the normal authenticated boot instead.
-        if route == SignedOutRoute::Challenge { return c.redirect_to(&c.url_for("/")); }
+        let boot = load_signed_out_boot(c).await?;
+        let nonce = c.content_security_policy_nonce();
+        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
+        c.no_store();
+        return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
     } else {
         concerns::before_actions(c, Before::default()).await?;
     }
