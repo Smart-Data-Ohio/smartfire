@@ -49,4 +49,4 @@ use campfire_app::{app, huddle, integrations, net, security};
 #[cfg(any(test, feature = "test-support"))]
 use campfire_app::test_support;
 use campfire_channels::channels;
-use campfire_web::{authentication, concerns, messaging, rich_text};
+use campfire_runtime::{authentication, concerns, messaging, rich_text};

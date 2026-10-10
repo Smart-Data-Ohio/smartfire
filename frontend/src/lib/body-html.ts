@@ -9,7 +9,7 @@
  * isn't here. Both go inert: the link is dropped and the button becomes a plain `<span>` that
  * keeps its class (the chip's look) and the name.
  */
-const MENTION_BLOCK = /<div class="mention([^"]*)"([^>]*)>([\s\S]*?)<\/div>/g;
+const MENTION_BLOCK = /<(div|span) class="mention([^"]*)"([^>]*)>([\s\S]*?)<\/\1>/g;
 
 const AVATAR_LINK = /<a\b[^>]*class="[^"]*\bavatar\b[^"]*"[^>]*>[\s\S]*?<\/a>\s*/g;
 
@@ -23,10 +23,10 @@ function inertMention(contents: string): string {
 
 /** `bodyHtml` with every mention inline and inert, ready for `innerHTML`. */
 export function inlineMentions(html: string): string {
-  return html.includes('<div class="mention')
+  return html.includes('<div class="mention') || html.includes('<span class="mention')
     ? html.replace(
         MENTION_BLOCK,
-        (_match, classes: string, attributes: string, contents: string) =>
+        (_match, _tag: string, classes: string, attributes: string, contents: string) =>
           `<span class="mention${classes}"${attributes}>${inertMention(contents)}</span>`,
       )
     : html;

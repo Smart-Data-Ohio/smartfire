@@ -4,6 +4,7 @@
  */
 import type { EmojiChoice } from "../../lib/emoji/recent.ts";
 import { recordRecentEmoji } from "../../lib/emoji/recent.ts";
+import { htmlPlainText, messagePlainText } from "../../lib/spoiler-text.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { store } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
@@ -26,20 +27,17 @@ export function permalink(message: MessageDTO): string {
   return new URL(`${import.meta.env.BASE_URL}${path}`, window.location.origin).href;
 }
 
-/** The message as plain text: its Markdown when known, else the rendered body's text. */
+/**
+ * The message as plain text for a quote, reply chip, or forward/delete preview: its Markdown, or
+ * when that might hold a spoiler, its rendered body's text with each spoiler as the word "spoiler".
+ */
 export function plainText(message: MessageDTO): string {
-  if (message.markdownSource !== null) {
-    return message.markdownSource;
-  }
-
-  return htmlText(message.bodyHtml);
+  return messagePlainText(message.markdownSource, message.bodyHtml);
 }
 
 /** The text content of server-rendered HTML (parsed inert: nothing runs or loads). */
 export function htmlText(html: string): string {
-  const document = new DOMParser().parseFromString(html, "text/html");
-
-  return (document.body.textContent ?? "").replace(/\s+\n/g, "\n").trim();
+  return htmlPlainText(html);
 }
 
 function copy(text: string, done: string): void {

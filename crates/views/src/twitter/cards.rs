@@ -1,62 +1,32 @@
 //! Plain X card facts. Rendering uses the request's assets and time zone.
+pub use campfire_presentation::twitter::cards::*;
+
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-use serde::Deserialize;
 use serde_json::Value;
-
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
-#[serde(default)]
-pub struct Card {
-    pub post_id: String,
-    pub view_url: String,
-    pub display_name: String,
-    pub display_handle: Option<String>,
-    pub profile_url: Option<String>,
-    pub author_avatar_url: Option<String>,
-    pub text: Option<String>,
-    pub posted_at: Option<jiff::Timestamp>,
-    pub replies: Option<i64>,
-    pub reposts: Option<i64>,
-    pub likes: Option<i64>,
-    #[serde(deserialize_with = "media_or_empty")]
-    pub media: Vec<Value>,
-    pub quote: Option<Value>,
-    pub fetched_at: Option<jiff::Timestamp>,
-    pub fetch_error: Option<String>,
-    pub logo_url: Option<String>,
+pub trait CardRendering {
+    fn render(&self, ctx: &ViewContext) -> String;
+    fn avatar(&self, ctx: &ViewContext) -> Option<h::Html>;
+    fn link(&self, label: &str, url: &str, class: &str) -> h::Html;
+    fn view_link(&self) -> h::Html;
+    fn name_link(&self) -> h::Html;
+    fn handle_link(&self, handle: &str) -> h::Html;
+    fn logo(&self, ctx: &ViewContext) -> h::Html;
+    fn media_link(&self, item: &Value) -> h::Html;
+    fn media_image(&self, ctx: &ViewContext, item: &Value) -> h::Html;
+    fn quote_author(&self, quote: &Value) -> h::Html;
+    fn quote_header(&self, quote: &Value) -> h::Html;
+    fn quote_text(quote: &Value) -> h::Html;
+    fn time(&self, ctx: &ViewContext, at: &jiff::Timestamp) -> h::Html;
 }
-fn media_or_empty<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<Value>, D::Error> {
-    Ok(Option::<Vec<Value>>::deserialize(deserializer)?.unwrap_or_default())
-}
-fn present(value: Option<&str>) -> Option<&str> {
-    value.filter(|s| !h::is_blank(s))
-}
-fn text(value: &Value) -> String {
-    match value {
-        Value::Null => String::new(),
-        Value::String(s) => s.clone(),
-        _ => value.to_string(),
-    }
-}
-impl Card {
-    pub fn render(&self, ctx: &ViewContext) -> String {
+impl CardRendering for Card {
+    fn render(&self, ctx: &ViewContext) -> String {
         format!(
             "{}\n",
             CardPartial { ctx, card: self }
                 .render()
                 .expect("X card renders")
         )
-    }
-    fn error(&self) -> bool {
-        present(self.fetch_error.as_deref()).is_some()
-    }
-    fn handle(&self) -> Option<&str> {
-        present(self.display_handle.as_deref())
-    }
-    fn body(&self) -> Option<&str> {
-        present(self.text.as_deref())
     }
     fn avatar(&self, ctx: &ViewContext) -> Option<h::Html> {
         present(self.author_avatar_url.as_deref()).map(|url| {
@@ -113,12 +83,6 @@ impl Card {
             })
             .unwrap_or_else(h::empty)
     }
-    fn media(&self) -> &[Value] {
-        &self.media[..self.media.len().min(4)]
-    }
-    fn photo(item: &Value) -> bool {
-        item["type"] == "photo"
-    }
     fn media_link(&self, item: &Value) -> h::Html {
         let (class, label) = if Self::photo(item) {
             ("x-post-card__media-link", "View post on X")
@@ -154,15 +118,6 @@ impl Card {
             }
         }
         h::image_tag(ctx, text(url), attrs)
-    }
-    fn quote(&self) -> Option<&Value> {
-        self.quote.as_ref().filter(|q| match q {
-            Value::Null | Value::Bool(false) => false,
-            Value::String(s) => !h::is_blank(s),
-            Value::Array(a) => !a.is_empty(),
-            Value::Object(o) => !o.is_empty(),
-            _ => true,
-        })
     }
     fn quote_author(&self, quote: &Value) -> h::Html {
         let mut author = String::new();
@@ -206,41 +161,6 @@ impl Card {
     }
 }
 
-/// Rails number_to_human: round to three significant digits before choosing K/M/B.
-pub fn compact_count(number: &i64) -> String {
-    let number = *number;
-    let magnitude = i128::from(number).abs();
-    let digits = magnitude.to_string().len() as u32;
-    let quantum = 10_i128.pow(digits.saturating_sub(3));
-    let rounded = (magnitude + quantum / 2) / quantum * quantum;
-    let power = if rounded >= 1_000_000_000 {
-        9
-    } else if rounded >= 1_000_000 {
-        6
-    } else if rounded >= 1_000 {
-        3
-    } else {
-        0
-    };
-    let divisor = 10_i128.pow(power);
-    let mut value = (rounded / divisor).to_string();
-    let remainder = rounded % divisor;
-    if remainder != 0 {
-        value.push('.');
-        value
-            .push_str(format!("{remainder:0width$}", width = power as usize).trim_end_matches('0'));
-    }
-    format!(
-        "{}{value}{}",
-        if number < 0 { "-" } else { "" },
-        match power {
-            3 => "K",
-            6 => "M",
-            9 => "B",
-            _ => "",
-        }
-    )
-}
 #[derive(Template)]
 #[template(path = "twitter/posts/_card.html")]
 struct CardPartial<'a> {

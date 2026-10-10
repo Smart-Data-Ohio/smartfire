@@ -17,8 +17,8 @@ use campfire_db::{
     WorkHandoff, WorkThreadEvent, WorkThreadLink,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_web::controllers::presenters::Presenter;
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::presenters::Presenter;
+use campfire_runtime::context::db_error;
 use rails_compat::Secrets;
 
 use crate::agents::human;
@@ -306,7 +306,7 @@ fn history_entry(record: WorkThreadEvent) -> Option<api::WorkHistoryEntry> {
         metadata[key].as_i64().unwrap_or_else(|| {
             metadata[key]
                 .as_str()
-                .and_then(campfire_web::concerns::cast_integer)
+                .and_then(campfire_runtime::concerns::cast_integer)
                 .unwrap_or(0)
         })
     };
@@ -349,7 +349,7 @@ fn result_html(
     let presenter = Presenter::new(conn, app, None);
     let resolver = presenter.resolver();
     let html =
-        campfire_web::rich_text::markdown_presentation(conn, &body, &resolver.render_context(None))
+        campfire_runtime::rich_text::markdown_presentation(conn, &body, &resolver.render_context(None))
             .map_err(campfire_db::Error::Other)?;
     Ok(dto::inline_mentions(&html))
 }
@@ -440,7 +440,7 @@ pub(crate) fn owner_candidates(
 async fn list_work(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     // `visible_work_threads` lists nothing for a bot, as the classic page shows it.
-    let viewer = campfire_web::concerns::require_current_user(c)?.clone();
+    let viewer = campfire_runtime::concerns::require_current_user(c)?.clone();
     // `work_threads#index`: an unknown or missing state is `open`.
     let state = match c.param_str("state").unwrap_or_default() {
         state @ ("all" | "done" | "agents" | "boards") => state.to_string(),

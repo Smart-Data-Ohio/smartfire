@@ -28,3 +28,5 @@ pub fn publish(app: &App, event: &MessageCreated) -> anyhow::Result<()> {
     })?;
     Ok(())
 }
+
+use campfire_web::controllers::presenters::Rendering;

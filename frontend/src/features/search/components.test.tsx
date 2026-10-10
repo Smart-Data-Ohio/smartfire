@@ -214,6 +214,48 @@ describe("SearchResults", () => {
     await user.click(screen.getByRole("button", { name: "Load more messages" }));
     expect(results.loadMore).toHaveBeenCalledOnce();
   });
+
+  it("conceals a spoiler in a hit and reveals it without following the card", async () => {
+    const user = userEvent.setup();
+
+    const hit = messageFixture(12, {
+      roomId: 4,
+      bodyHtml: '<p>Friday <span class="spoiler" data-spoiler="">the launch is secret</span></p>',
+      createdAt: "2026-10-06T15:00:00.000Z",
+    });
+
+    const results = view({
+      messages: [hit],
+      conversations: {
+        "4:": {
+          roomId: 4,
+          threadId: null,
+          roomKind: "open",
+          roomName: "general",
+          roomIconName: null,
+          threadName: null,
+        },
+      },
+    });
+
+    await renderRouted(() => (
+      <SearchResults results={results} words={["launch", "Friday"]} now={NOW} onQuery={vi.fn()} />
+    ));
+
+    const messages = screen.getByRole("region", { name: "Messages" });
+
+    expect(messages.querySelector("mark.search-mark")?.textContent).toBe("Friday");
+    expect(messages.querySelector(".spoiler mark")).toBeNull();
+
+    const spoiler = within(messages).getByRole("button", { name: "Spoiler, activate to reveal" });
+
+    expect(spoiler.textContent).toBe("the launch is secret");
+
+    await user.click(spoiler);
+
+    expect(spoiler.hasAttribute("data-revealed")).toBe(true);
+    expect(spoiler.textContent).toBe("the launch is secret");
+  });
 });
 
 /** A search field owning its value, as the page and header use it. */

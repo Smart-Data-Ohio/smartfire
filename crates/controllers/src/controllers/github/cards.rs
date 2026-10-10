@@ -73,3 +73,5 @@ pub async fn show(c: &mut Ctx) -> Result {
     })?;
     Ok(c.html(html))
 }
+
+use campfire_web::controllers::presenters::{ view_context::LayoutRendering};

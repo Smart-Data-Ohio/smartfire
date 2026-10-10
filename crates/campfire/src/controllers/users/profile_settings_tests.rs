@@ -154,7 +154,7 @@ async fn appearance_partial_matches_all_pinned_rails_bytes() {
     let vectors: serde_json::Value =
         serde_json::from_str(include_str!("../../../../../vectors/users_appearance.json")).unwrap();
     let catalogue: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../views/src/users/profile_time_zones.json"
+        "../../../../presentation/src/users/profile_time_zones.json"
     ))
     .unwrap();
     assert_eq!(catalogue, vectors["choices"]);

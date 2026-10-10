@@ -27,7 +27,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::JSON])?;
     let body = present(c, move |presenter| {
         let messages = messages.iter().map(|m| presenter.agent_message_payload(m)).collect::<campfire_db::Result<Vec<_>>>()?;
-        Ok(campfire_views::helpers::to_rails_json(&messages))
+        Ok(campfire_presentation::helpers::to_rails_json(&messages))
     })
     .await?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))

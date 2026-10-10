@@ -258,3 +258,5 @@ async fn round2_connection_fragments_load_real_credentials_without_rendering_tok
         }
     }
 }
+
+use campfire_views::rendering::*;

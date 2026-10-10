@@ -627,7 +627,7 @@ async fn spa_workspace_branding_animated_sources_and_png_stills() {
 async fn branding_slots_are_free() {
     tokio::time::timeout(std::time::Duration::from_secs(3), async {
         loop {
-            let (available, capacity) = campfire_web::active_storage::branding_permits();
+            let (available, capacity) = campfire_runtime::active_storage::branding_permits();
             if available == capacity {
                 assert_eq!(available, capacity);
                 return;
@@ -668,8 +668,8 @@ async fn spa_workspace_branding_blocked_codec_does_not_take_attachment_slots() {
     .await
     .unwrap();
     let reached = blocked.reached.load(Ordering::Relaxed);
-    let during = campfire_web::active_storage::media_permits();
-    let branding_during = campfire_web::active_storage::branding_permits();
+    let during = campfire_runtime::active_storage::media_permits();
+    let branding_during = campfire_runtime::active_storage::branding_permits();
     // An ordinary, uncached Active Storage representation still uses the shared media pool.
     let (_, attachment_id) =
         upload_bytes(&a, &png(64, 64, false), "attachment.png", "image/png").await;
@@ -689,7 +689,7 @@ async fn spa_workspace_branding_blocked_codec_does_not_take_attachment_slots() {
         &campfire_storage::Variation::resize_to_limit(32, 32, Some("png")),
     );
     let thumbnail = tokio::time::timeout(Duration::from_secs(1), admin.get(&url)).await;
-    let after = campfire_web::active_storage::media_permits();
+    let after = campfire_runtime::active_storage::media_permits();
     // Release before asserting: fail-first runs cannot leave a blocking task behind.
     drop(blocked);
     branding_slots_are_free().await;
@@ -743,7 +743,7 @@ async fn spa_workspace_branding_full_pool_times_out_and_recovers_after_blocked_c
     .await
     .unwrap();
     let first_reached = blocked.reached.load(Ordering::Relaxed);
-    let branding_during = campfire_web::active_storage::branding_permits();
+    let branding_during = campfire_runtime::active_storage::branding_permits();
     let (second_signed, second_id) =
         upload_bytes(&a, &animated_gif(), "queued.gif", "image/gif").await;
     let second_key = a
@@ -819,7 +819,7 @@ async fn spa_workspace_branding_cancellation_after_pixel_progress_releases_slot(
     let returned = stopped.clone();
     let result = tokio::time::timeout(
         Duration::from_secs(2),
-        campfire_web::active_storage::processed_branding_variant_with_deadline(
+        campfire_runtime::active_storage::processed_branding_variant_with_deadline(
             &a.booted.app,
             blob.clone(),
             campfire_storage::Variation::resize_to_limit(2048, 2048, Some("png")),

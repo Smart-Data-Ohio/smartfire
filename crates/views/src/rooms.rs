@@ -11,7 +11,7 @@ pub mod edit_sections;
 pub mod boards;
 pub mod board_automations;
 
-mod header;
+pub mod header;
 pub use header::{HeaderIdentity, header_identity};
 
 use askama::Template;
@@ -22,60 +22,12 @@ use crate::ViewContext;
 use crate::helpers as h;
 use crate::layouts::Page;
 use crate::messages::support::epoch_ms;
-use crate::messages::{MessageItem, RoomKind, UserView, room_dom_id};
-
-/// `Rooms::Direct#direct_display_name`: named rooms keep their name; unnamed
-/// groups preview three first names. The caller supplies ordered other members.
-pub fn room_display_name(name: Option<&str>, direct: bool, other_member_names: &[String], for_user_name: Option<&str>) -> String {
-    if direct {
-        if let Some(name) = h::presence(name) { return name.to_owned(); }
-        match other_member_names {
-            [] => for_user_name.unwrap_or_default().to_owned(),
-            [name] => name.clone(),
-            names => {
-                let firsts = names.iter().take(3).map(|name| {
-                    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
-                        .find(|s| !s.is_empty()).unwrap_or_default()
-                }).collect::<Vec<_>>().join(", ");
-                let remaining = names.len().saturating_sub(3);
-                if remaining > 0 { format!("{firsts} +{remaining}") } else { firsts }
-            }
-        }
-    } else {
-        name.unwrap_or_default().to_string()
-    }
+use crate::messages::{MessageItem, RoomKind, UserView};
+pub trait RoomViewRendering {
+    fn header_html(&self, ctx: &ViewContext) -> h::Html;
 }
-
-/// `mention_prompt_tag(room)`'s `src`: `autocompletable_users_path(room_id: room.id)`.
-pub fn mention_prompt_src(room_id: i64) -> String {
-    format!(
-        "{}?room_id={room_id}",
-        campfire_routes::autocompletable_users()
-    )
-}
-
-/// A persisted room.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct RoomView {
-    #[serde(default = "default_involvement")]
-    pub involvement: String,
-    pub id: i64,
-    pub kind: RoomKind,
-    pub name: Option<String>,
-    /// `room_display_name(room)` for `Current.user`.
-    pub display_name: String,
-    #[serde(default)]
-    pub header: Option<HeaderIdentity>,
-}
-
-impl RoomView {
-    pub fn is_board(&self) -> bool { self.kind == RoomKind::Board }
-    pub fn is_stage(&self) -> bool {
-        self.header
-            .as_ref()
-            .is_some_and(|h| h.param_key == "rooms_stage")
-    }
-    pub fn header_html(&self, ctx: &ViewContext) -> h::Html {
+impl RoomViewRendering for RoomView {
+    fn header_html(&self, ctx: &ViewContext) -> h::Html {
         let fallback;
         let header = match &self.header {
             Some(header) => header,
@@ -98,72 +50,6 @@ impl RoomView {
         };
         header_identity(ctx, header)
     }
-    pub fn dom_id(&self, prefix: &str) -> String {
-        self.header.as_ref().map_or_else(
-            || room_dom_id(self.kind, self.id, prefix),
-            |header| format!("{prefix}_{}_{}", header.param_key, self.id),
-        )
-    }
-
-    pub fn is_direct(&self) -> bool {
-        self.kind.is_direct()
-    }
-
-    /// `edit_polymorphic_path(room)`: `/rooms/opens/1/edit` and so on.
-    pub fn edit_path(&self) -> String {
-        if self.is_board() {
-            return format!("/rooms/boards/{}/edit", self.id);
-        }
-        match self.kind {
-            RoomKind::Open => campfire_routes::edit_rooms_open(self.id),
-            RoomKind::Closed => campfire_routes::edit_rooms_closed(self.id),
-            RoomKind::Direct => campfire_routes::edit_rooms_direct(self.id),
-            RoomKind::Voice => campfire_routes::edit_rooms_voice(self.id),
-            RoomKind::Stage => campfire_routes::edit_rooms_stage(self.id),
-            RoomKind::Board => campfire_routes::edit_rooms_board(self.id),
-        }
-    }
-
-    /// "Ping" for direct rooms, "room" otherwise.
-    pub fn noun(&self) -> &'static str {
-        if self.is_direct() { "Ping" } else { "room" }
-    }
-}
-
-/// What `rooms/show` shows.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct ShowView {
-    #[serde(default)]
-    pub navigation: Option<navigation::Navigation>,
-    #[serde(default)]
-    pub shell: ShellComponents,
-    #[serde(default)]
-    pub scroll_to_unread_divider: Option<bool>,
-    #[serde(default)]
-    pub jump_to_unread_url: Option<String>,
-    #[serde(default)]
-    pub unread_divider_message_id: Option<i64>,
-    #[serde(default)]
-    pub unread_count: i64,
-    /// Position resolved from domain message IDs before building cached message fragments.
-    #[serde(default)]
-    pub unread_divider_index: Option<usize>,
-    pub room: RoomView,
-    /// `room.updated_at`, the refresh controller's `loaded_at`.
-    pub updated_at: Timestamp,
-    /// `Current.user`, for the client-side message template.
-    pub user: UserView,
-    pub messages: Vec<MessageItem>,
-    /// `@room == Room.original && !@room.messages.paged?` (`rooms/show/_invitation`).
-    pub invitation: bool,
-    /// `Current.account.join_code`, for the invitation's join link.
-    #[serde(default)]
-    pub join_code: String,
-    /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
-    pub messages_stream_name: String,
-    /// Other active human DM members, including currently off members so each live stream is mounted.
-    #[serde(default)]
-    pub ooo_notice_members: Vec<crate::users::statuses::OooNoticeMember>,
 }
 
 /// `rooms/show`.
@@ -250,15 +136,6 @@ impl MemberPanel<'_> {
     }
 }
 
-/// `Membership#involvement`.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct InvolvementView {
-    pub room_id: i64,
-    pub kind: RoomKind,
-    /// "mentions", "everything", "nothing" or "invisible".
-    pub involvement: String,
-}
-
 /// `rooms/involvements/show`.
 #[derive(Template)]
 #[template(path = "rooms/involvements/show.html")]
@@ -276,17 +153,6 @@ impl InvolvementShow<'_> {
         };
         h::button_to_change_involvement(self.ctx, &room, &self.involvement.involvement)
     }
-}
-
-/// What `rooms/refreshes/show` streams: messages created and updated since the client loaded.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct RefreshView {
-    pub room_id: i64,
-    pub room_kind: RoomKind,
-    pub new_messages: Vec<MessageItem>,
-    pub updated_messages: Vec<MessageItem>,
-    #[serde(default)]
-    pub pins: Option<crate::pins::List>,
 }
 
 /// `rooms/refreshes/show.turbo_stream`.
@@ -319,32 +185,6 @@ impl RefreshShow<'_> {
             .expect("owner pin list renders"),
         )
     }
-}
-
-/// The room being created or edited by the open and closed room forms. `id` is `None` for a
-/// new record.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
-pub struct FormRoom {
-    pub id: Option<i64>,
-    pub name: Option<String>,
-    #[serde(default)]
-    pub icon_name: Option<String>,
-    #[serde(default)]
-    pub icon: Option<h::AvatarIcon>,
-    #[serde(default)]
-    pub errors: Vec<String>,
-    #[serde(default)]
-    pub error_attributes: Vec<String>,
-    #[serde(default)]
-    pub inbound_email: Option<InboundEmailView>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct InboundEmailView {
-    pub id: i64,
-    pub emailable: bool,
-    pub enabled: bool,
-    pub address: Option<String>,
 }
 
 #[derive(Template)]
@@ -382,28 +222,6 @@ impl InboundEmailSection<'_> {
     }
 }
 
-/// `rooms/opens/{new,edit}`.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct OpenFormView {
-    pub room: FormRoom,
-    /// `Current.user.can_administer?(room)`: administrators, the creator, or a new room.
-    pub can_administer: bool,
-    /// `User.active.ordered`.
-    pub users: Vec<UserView>,
-}
-
-/// `rooms/closeds/{new,edit}`.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct ClosedFormView {
-    pub room: FormRoom,
-    pub can_administer: bool,
-    pub current_user_id: i64,
-    /// Active users with access (none for a new room).
-    pub selected_users: Vec<UserView>,
-    /// The other active users.
-    pub unselected_users: Vec<UserView>,
-}
-
 #[derive(Template)]
 #[template(path = "rooms/opens/_user.html")]
 struct OpenFormUser<'a> {
@@ -419,9 +237,12 @@ struct ClosedFormUser<'a> {
     user: &'a UserView,
     selected: bool,
 }
-impl OpenFormView {
+pub trait OpenFormViewRendering {
+    fn user_list(&self, ctx: &ViewContext) -> h::Html;
+}
+impl OpenFormViewRendering for OpenFormView {
     /// Rails collection rendering indents the first partial only, then concatenates bytes.
-    pub fn user_list(&self, ctx: &ViewContext) -> h::Html {
+    fn user_list(&self, ctx: &ViewContext) -> h::Html {
         h::raw(
             self.users
                 .iter()
@@ -438,11 +259,17 @@ impl OpenFormView {
         )
     }
 }
-impl ClosedFormView {
-    pub fn selected_list(&self, ctx: &ViewContext) -> h::Html {
+
+pub trait ClosedFormViewRendering {
+    fn selected_list(&self, ctx: &ViewContext) -> h::Html;
+    fn unselected_list(&self, ctx: &ViewContext) -> h::Html;
+    fn user_list(&self, ctx: &ViewContext, users: &[UserView], selected: bool) -> h::Html;
+}
+impl ClosedFormViewRendering for ClosedFormView {
+    fn selected_list(&self, ctx: &ViewContext) -> h::Html {
         self.user_list(ctx, &self.selected_users, true)
     }
-    pub fn unselected_list(&self, ctx: &ViewContext) -> h::Html {
+    fn unselected_list(&self, ctx: &ViewContext) -> h::Html {
         self.user_list(ctx, &self.unselected_users, false)
     }
     fn user_list(&self, ctx: &ViewContext, users: &[UserView], selected: bool) -> h::Html {
@@ -527,8 +354,10 @@ impl Page for ClosedsEdit<'_> {
         ))
     }
 }
-
-impl FormRoom {
+pub trait FormRoomRendering {
+    fn inbound_email_html(&self, ctx: &ViewContext, can_administer: &bool) -> h::Html;
+}
+impl FormRoomRendering for FormRoom {
     fn inbound_email_html(&self, ctx: &ViewContext, can_administer: &bool) -> h::Html {
         self.inbound_email
             .as_ref()
@@ -545,21 +374,6 @@ impl FormRoom {
             })
             .unwrap_or_else(h::empty)
     }
-    /// `form_with model: room`'s action for an open or closed room.
-    fn action(&self, kind: RoomKind) -> String {
-        match (self.id, kind) {
-            (Some(id), RoomKind::Board) => campfire_routes::rooms_board(id),
-            (None, RoomKind::Board) => campfire_routes::rooms_boards(),
-            (Some(id), RoomKind::Open) => campfire_routes::rooms_open(id),
-            (Some(id), _) => campfire_routes::rooms_closed(id),
-            (None, RoomKind::Open) => campfire_routes::rooms_opens(),
-            (None, _) => campfire_routes::rooms_closeds(),
-        }
-    }
-
-    fn display_name(&self) -> &str {
-        self.name.as_deref().unwrap_or_default()
-    }
 }
 
 /// `rooms/directs/new`.
@@ -568,13 +382,6 @@ impl FormRoom {
 pub struct DirectsNew<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub users: &'a [DirectPickerUser],
-}
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct DirectPickerUser {
-    pub user: UserView,
-    pub bot: bool,
-    pub agent: bool,
-    pub starred: bool,
 }
 impl DirectsNew<'_> {
     fn multi_select_bar(&self) -> h::Html {
@@ -587,26 +394,6 @@ impl DirectsNew<'_> {
 }
 
 impl Page for DirectsNew<'_> {}
-
-/// `rooms/directs/edit`.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct DirectEditView {
-    pub room_id: i64,
-    #[serde(default)]
-    pub name: Option<String>,
-    #[serde(default)]
-    pub group_capable: bool,
-    #[serde(default)]
-    pub administrator: bool,
-    #[serde(default)]
-    pub candidates: Vec<UserView>,
-    #[serde(default)]
-    pub error_attributes: Vec<String>,
-    /// `room_display_name(@room)` for `Current.user`.
-    pub display_name: String,
-    /// `@room.users.many? ? @room.users.without(Current.user) : @room.users`.
-    pub users: Vec<UserView>,
-}
 
 #[derive(Template)]
 #[template(path = "rooms/directs/edit.html", blocks = ["head", "content"])]
@@ -728,27 +515,6 @@ mod filters {
         Ok(Html::from(askama::filters::Safe(layout.render()?)))
     }
 }
-
-fn default_involvement() -> String {
-    "mentions".into()
-}
-/// Trusted output supplied by WS8b-m (and WS13/WS17 for configured header/OOO children).
-/// These fragments are page inputs, never a shared fragment cache or broadcast payload.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
-pub struct ShellComponents {
-    #[serde(default)]
-    pub pins_count: i64,
-    #[serde(default)]
-    pub thread_panel_name: Option<String>,
-    pub pins_panel: String,
-    pub thread_panel: String,
-    pub huddle_header: String,
-    pub ooo_notices: String,
-    pub poll_builder: String,
-    pub message_template: Option<String>,
-    pub composer: Option<String>,
-    pub message_list: Option<String>,
-}
 /// Stable WS8b-m entry point. Until its list adapter lands, an empty collection emits zero
 /// bytes, exactly as Rails' `render partial: "messages/message", collection: []` does.
 pub fn room_message_list(ctx: &ViewContext, show: &ShowView) -> h::Html {
@@ -816,4 +582,54 @@ impl JoinPage<'_> {
             "Join channel",
         )
     }
+}
+pub use campfire_presentation::rooms::*;
+
+use crate::rendering::*;
+
+/// What `rooms/show` shows.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct ShowView {
+    #[serde(default)]
+    pub navigation: Option<navigation::Navigation>,
+    #[serde(default)]
+    pub shell: ShellComponents,
+    #[serde(default)]
+    pub scroll_to_unread_divider: Option<bool>,
+    #[serde(default)]
+    pub jump_to_unread_url: Option<String>,
+    #[serde(default)]
+    pub unread_divider_message_id: Option<i64>,
+    #[serde(default)]
+    pub unread_count: i64,
+    /// Position resolved from domain message IDs before building cached message fragments.
+    #[serde(default)]
+    pub unread_divider_index: Option<usize>,
+    pub room: RoomView,
+    /// `room.updated_at`, the refresh controller's `loaded_at`.
+    pub updated_at: Timestamp,
+    /// `Current.user`, for the client-side message template.
+    pub user: UserView,
+    pub messages: Vec<MessageItem>,
+    /// `@room == Room.original && !@room.messages.paged?` (`rooms/show/_invitation`).
+    pub invitation: bool,
+    /// `Current.account.join_code`, for the invitation's join link.
+    #[serde(default)]
+    pub join_code: String,
+    /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
+    pub messages_stream_name: String,
+    /// Other active human DM members, including currently off members so each live stream is mounted.
+    #[serde(default)]
+    pub ooo_notice_members: Vec<crate::users::statuses::OooNoticeMember>,
+}
+
+/// What `rooms/refreshes/show` streams: messages created and updated since the client loaded.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct RefreshView {
+    pub room_id: i64,
+    pub room_kind: RoomKind,
+    pub new_messages: Vec<MessageItem>,
+    pub updated_messages: Vec<MessageItem>,
+    #[serde(default)]
+    pub pins: Option<crate::pins::List>,
 }

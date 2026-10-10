@@ -602,3 +602,5 @@ async fn administrator_can_delete_another_authors_ordinary_root_message() {
     assert_eq!(app.david().write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"))).await.status,StatusCode::OK);
     assert!(app.db().read(move|conn|Message::find_by_id(conn,id)).await.unwrap().is_none());
 }
+
+use campfire_web::controllers::presenters::Rendering;

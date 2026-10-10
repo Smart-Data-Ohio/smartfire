@@ -443,3 +443,5 @@ async fn zone_cache_timestamp_components_match_rails_across_dst_and_fractional_z
         assert_rails_collection_keys(&app, case).await;
     }
 }
+
+use campfire_web::controllers::presenters::MessageCache;

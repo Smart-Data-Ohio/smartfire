@@ -11,7 +11,7 @@ use campfire_db::models::user::presentation;
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action};
 use campfire_people::controllers::qr_code;
 use campfire_people::controllers::users::{bans, find_user};
-use campfire_web::controllers::presenters;
+use campfire_runtime::presenters;
 
 use crate::{admin, dto};
 
@@ -80,7 +80,7 @@ async fn profile(c: &mut Ctx) -> Result {
 async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
     let now = c.app().db.env().now();
     let secrets = c.app().secrets.clone();
-    let zone = presenters::view_context::time_zone(c).await?;
+    let zone = campfire_runtime::request_context::time_zone(c).await?;
     let viewer_id = viewer.id;
     let administrator = viewer.can_administer(None, false);
     #[cfg(feature = "test-support")]
