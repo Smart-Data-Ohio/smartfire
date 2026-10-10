@@ -12,6 +12,7 @@ import {
   type TextEdit,
   toggleWrap,
 } from "../composer/markdown-keys.ts";
+import { messageFiles } from "./message-files.ts";
 
 interface MessageEditorProps {
   readonly message: MessageDTO;
@@ -171,7 +172,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
       original: original ?? "",
       removedIds: removedDrive,
       remainingDrive: remaining.length,
-      hasAttachment: message.attachment !== null,
+      hasAttachment: messageFiles(message).length > 0,
     });
 
     if (plan.kind === "close") {

@@ -35,7 +35,7 @@ import {
   topicOf,
   touched,
 } from "./model.ts";
-import { checkMarkdown } from "./posting.ts";
+import { checkMarkdown, filesOf } from "./posting.ts";
 import type { Threads } from "./threads.ts";
 
 /** A boost is at most this many characters. */
@@ -117,7 +117,7 @@ export function createMessages(
 
     const markdown = checkMarkdown(
       stringField(body, "markdownSource"),
-      current.attachment !== null || cards.some((card) => card.kind === "drive"),
+      filesOf(current).length > 0 || cards.some((card) => card.kind === "drive"),
     );
 
     const updatedAt = touched(ctx.now(), current.updatedAt);
@@ -128,7 +128,7 @@ export function createMessages(
       bodyHtml: renderMarkdown(markdown, ctx.mentionables()),
       markdownSource: markdown,
       cards,
-      sound: current.attachment === null ? mockSound(markdown) : null,
+      sound: filesOf(current).length === 0 ? mockSound(markdown) : null,
       editedAt: changed ? updatedAt : current.editedAt,
       updatedAt,
     };
