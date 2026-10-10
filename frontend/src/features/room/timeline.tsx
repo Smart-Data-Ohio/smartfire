@@ -41,8 +41,8 @@ const LIVE_WINDOW_MS = 8000;
 
 /**
  * Virtua measures the rows at the end before a smooth scroll starts, and drops the scroll when
- * they aren't measured within 150 ms (a busy main thread). Unmoved this long, the jump finishes
- * at once instead.
+ * they aren't measured within 150 ms of the last measurement (a busy main thread). Unmoved this
+ * long after the list last changed size, the jump finishes at once instead.
  */
 const SMOOTH_START_MS = 200;
 
@@ -646,7 +646,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   /**
    * Scrolls to the last row: smoothly, unless motion is reduced. A smooth scroll that hasn't
-   * started by `SMOOTH_START_MS` was dropped, and the list goes to the end at once.
+   * started `SMOOTH_START_MS` after the rows stopped measuring was dropped, and the list goes to
+   * the end at once. Timed from the call alone, a slow measurement would cut short a smooth
+   * scroll that Virtua had only just started.
    */
   const scrollToEnd = () => {
     const list = listRef.current;
@@ -666,13 +668,20 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     scrollList(items.length - 1, { align: "end", smooth: true });
 
     const from = list.scrollOffset;
-    const started = performance.now();
+    let size = list.scrollSize;
+    let started = performance.now();
 
     const check = () => {
       const current = listRef.current;
 
       if (current === null || current.scrollOffset !== from) {
         return;
+      }
+
+      // Rows measured since: Virtua's wait starts over, and so does this one.
+      if (current.scrollSize !== size) {
+        size = current.scrollSize;
+        started = performance.now();
       }
 
       if (performance.now() - started < SMOOTH_START_MS) {
