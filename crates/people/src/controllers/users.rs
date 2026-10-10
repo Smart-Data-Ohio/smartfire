@@ -16,6 +16,7 @@ pub mod tours;
 pub mod sessions;
 
 use campfire_db::{Account, NewUser, User};
+use campfire_db::models::workspace_invite::{InviteState, WorkspaceInvite};
 use campfire_kit::{Ctx, Error, ParamMap, Result, StatusCode, format, halt, permit_keys};
 
 use super::presenters::attachments::{self, Assignment, Record};
@@ -28,15 +29,48 @@ use crate::concerns::{self, Before, cast_integer};
 pub async fn new(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
     let account = verify_join_code(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let help_contact = c.app().db.read(presenters::accounts::help_contact).await.map_err(Error::internal)?;
-    let join_code = account.join_code;
-    retained_page!(c, StatusCode::OK, |ctx| campfire_retained::users::New { ctx, join_code: join_code.clone(), help_contact: help_contact.clone() }).await
+    join_page(c, StatusCode::OK, campfire_routes::join(&account.join_code), None).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
     verify_join_code(c).await?;
+    create_user(c, None).await
+}
+
+pub async fn invite_new(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
+    verify_invite(c).await?;
+    join_page(c, StatusCode::OK, c.request.path().to_owned(), None).await
+}
+
+pub async fn invite_create(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
+    verify_invite(c).await?;
+    create_user(c, Some(c.param_str("token").unwrap_or_default().to_owned())).await
+}
+
+async fn join_page(c: &mut Ctx, status: StatusCode, join_path: String, invite_error: Option<&'static str>) -> Result {
+    c.respond_to(&[&format::HTML])?;
+    c.no_store();
+    let help_contact = c.app().db.read(presenters::accounts::help_contact).await.map_err(Error::internal)?;
+    retained_page!(c, status, |ctx| campfire_retained::users::New { ctx, join_path: join_path.clone(), help_contact: help_contact.clone(), invite_error }).await
+}
+
+async fn verify_invite(c: &mut Ctx) -> Result<()> {
+    let token = c.param_str("token").unwrap_or_default().to_owned();
+    let invite = c.app().db.read(move |conn| WorkspaceInvite::find_by_token(conn, &token)).await.map_err(Error::internal)?;
+    let (status, reason) = match invite.map(|invite| invite.state(campfire_db::Timestamp::from_jiff(c.now()))) {
+        Some(InviteState::Active) => return Ok(()),
+        Some(InviteState::Expired) => (StatusCode::GONE, "It has expired."),
+        Some(InviteState::Exhausted) => (StatusCode::GONE, "All its uses have been taken."),
+        Some(InviteState::Revoked) => (StatusCode::GONE, "It has been revoked."),
+        None => (StatusCode::NOT_FOUND, "The invite could not be found."),
+    };
+    halt(join_page(c, status, String::new(), Some(reason)).await?)
+}
+
+async fn create_user(c: &mut Ctx, invite_token: Option<String>) -> Result {
     let params = user_params(c)?;
     let email_address = params.get("email_address").and_then(|p| p.to_s());
     let attributes = NewUser {
@@ -53,16 +87,24 @@ pub async fn create(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let user = User::create(tx, attributes)?;
+            let user = match invite_token {
+                Some(token) => WorkspaceInvite::redeem(tx, &token, attributes)?,
+                None => Some(User::create(tx, attributes)?),
+            };
+            let Some(user) = user else { return Ok(None) };
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)?;
-            Ok(user)
+            Ok(Some(user))
         })
         .await;
     match result {
-        Ok(user) => {
+        Ok(Some(user)) => {
             concerns::start_new_session_for(c, user).await?;
             let root = c.url_for(&campfire_routes::root());
             c.redirect_to(&root)
+        }
+        Ok(None) => {
+            verify_invite(c).await?;
+            Err(Error::NotFound)
         }
         // rescue ActiveRecord::RecordNotUnique: `redirect_to new_session_url(email_address: user_params[:email_address])`
         Err(error) if presenters::accounts::is_record_not_unique(&error) => {

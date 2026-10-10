@@ -297,6 +297,7 @@ fn router(app: &App, kit: Kit) -> Router {
         .merge(controllers::pwa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
         .merge(controllers::spa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
         .route("/account/banner", axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)))
+        .route("/invite/{token}", axum::routing::get(campfire_kit::action(controllers::users::invite_new)).post(campfire_kit::action(controllers::users::invite_create)))
         .merge(if app.config.spa_enabled { campfire_api::routes(app) } else { Router::new() })
         // Authenticate and verify the signed byte limit before receiving the upload.
         .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::streamed_action(dispatch_with_fragment_cache)).fallback(campfire_kit::action(dispatch_with_fragment_cache)))

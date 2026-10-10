@@ -132,9 +132,10 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
 }
 
 fn tables(conn: &Connection) -> Vec<String> {
+    // Workspace invites have no table in the frozen Rails schema.
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'ar_internal_metadata' ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'workspace_invites') ORDER BY name",
         [],
         |r| r.get(0),
     )

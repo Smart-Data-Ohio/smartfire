@@ -8,14 +8,22 @@
   <header class="auth-header">
     {{ h::image_tag(ctx, &ctx.account.logo_url, h::attrs().alt("").class("auth-logo").size(48)) }}
     <h1 class="auth-title">Join {{ ctx.account.name }}</h1>
+    {% if invite_error.is_some() %}
+    <p class="auth-lede" role="alert">This invite is no longer valid.</p>
+    {% else %}
     <p class="auth-lede">Create your account to start chatting.</p>
+    {% endif %}
   </header>
 
-{% let form = h::form_with(h::routes::join(join_code)).model("user").class("auth-form") %}  {% filter form_with(form) %}
+{% if let Some(reason) = invite_error %}
+  <p class="auth-note">{{ reason }} Ask a workspace administrator for a new invite.</p>
+{% else %}
+{% let form = h::form_with(join_path).model("user").class("auth-form") %}  {% filter form_with(form) %}
 {% let avatar_label = "Upload avatar" %}{% include "auth/_signup_fields.html" %}
 
     {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit"), "Create account") }}
 {% endfilter %}
+{% endif %}
   <p class="auth-note">Already have an account? {{ h::link_to_text("Sign in", &h::routes::new_session(), h::attrs()) }}</p>
 </main>
 

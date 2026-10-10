@@ -33,6 +33,7 @@ mod events;
 mod fizzy;
 mod huddle;
 mod join;
+mod invites;
 mod me;
 mod message;
 mod organize;
@@ -135,6 +136,7 @@ pub use huddle::{
     HuddleRoleChanged, ModerateHuddle,
 };
 pub use join::{OpenRoomPreview, RoomJoin};
+pub use invites::{CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator, WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState};
 pub use me::{
     ChatSounds, DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize,
     Theme, VoiceMode,
