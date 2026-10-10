@@ -12,6 +12,7 @@ import {
 
 type Landing =
   | { readonly status: "working" }
+  | { readonly status: "restored" }
   | { readonly status: "refused"; readonly message: string }
   | { readonly status: "failed"; readonly message: string };
 
@@ -56,9 +57,12 @@ export function TransferPage({ transferId }: { readonly transferId: string }) {
     if (sent.current !== transferId) consume(transferId);
   }, [transferId]);
 
-  // Back from the app restores the "Signing you in" state; send the link again for its answer
-  // (signed in, or now used up), as the retained page's form can be submitted again.
-  useRestoredFromCache(() => consume(transferId));
+  // Back from the app restores the "Signing you in" state. The link is still good and each use
+  // is another session, so it isn't sent again by itself (the retained page's form submits once,
+  // on load); the page offers to continue instead.
+  useRestoredFromCache(() =>
+    setLanding((current) => (current.status === "working" ? { status: "restored" } : current)),
+  );
 
   useEffect(() => {
     document.title = landing.status === "working" ? "Smartfire" : "Sign-in link";
@@ -72,6 +76,32 @@ export function TransferPage({ transferId }: { readonly transferId: string }) {
           <Spinner />
           One moment…
         </p>
+      </AuthScreen>
+    );
+  }
+
+  if (landing.status === "restored") {
+    return (
+      <AuthScreen labelledBy={titleId}>
+        <AuthHeader titleId={titleId} title="Sign-in link" logoUrl={logoUrl} />
+        <div className="auth-view-stack">
+          <Button
+            variant="primary"
+            size="lg"
+            className="auth-view-wide"
+            onClick={() => consume(transferId)}
+          >
+            Continue
+          </Button>
+          <Link
+            to="/session/new"
+            className="button auth-view-wide"
+            data-variant="secondary"
+            data-size="lg"
+          >
+            Go to sign in
+          </Link>
+        </div>
       </AuthScreen>
     );
   }

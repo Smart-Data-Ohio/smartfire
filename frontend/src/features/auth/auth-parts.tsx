@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useCallback, useEffect, useEffectEvent, useState } from "react";
+import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import {
   type AuthNext,
   auth,
@@ -119,6 +120,10 @@ export function AuthScreen({
   readonly labelledBy: string;
   readonly busy?: boolean;
 }) {
+  // The view fills the visible viewport, which an overlaid (iOS) keyboard shrinks while viewport
+  // units hold, so it follows the keyboard as the shell does.
+  useKeyboardInset();
+
   return (
     <div className="auth-view">
       <main className="auth-view-card" aria-labelledby={labelledBy} aria-busy={busy || undefined}>

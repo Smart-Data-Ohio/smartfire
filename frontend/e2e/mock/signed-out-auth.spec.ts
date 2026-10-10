@@ -16,6 +16,7 @@ import {
   expectNoHorizontalOverflow,
   matrix,
   shot as save,
+  simulateKeyboard,
   THEMES,
   type Theme,
   test,
@@ -211,3 +212,35 @@ for (const theme of THEMES) {
     await (await popup).close();
   });
 }
+
+test("fits the auth view above an overlaid phone keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await configure(page.request, { google: true });
+  await open(page, "session/new", "light");
+
+  const view = page.locator(".auth-view");
+  const help = page.getByRole("link", { name: MOCK_TWO_FACTOR_EMAIL });
+  const height = async () => (await view.boundingBox())?.height ?? Number.NaN;
+
+  expect(await height()).toBe(844);
+
+  // iOS: the keyboard shrinks the visual viewport while viewport units hold.
+  await page.getByLabel("Password", { exact: true }).focus();
+  await simulateKeyboard(page, 340);
+  expect(await height()).toBe(504);
+
+  await page.mouse.move(195, 250);
+  await page.mouse.wheel(0, 2000);
+  await expect
+    .poll(async () => {
+      const box = await help.boundingBox();
+
+      return box === null ? Number.NaN : box.y + box.height;
+    })
+    .toBeLessThanOrEqual(504);
+  await shot(page, "signed-out-sign-in-keyboard", "light");
+
+  await simulateKeyboard(page, 0);
+  await page.getByLabel("Password", { exact: true }).blur();
+  await expect.poll(height).toBe(844);
+});

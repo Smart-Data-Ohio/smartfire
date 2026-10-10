@@ -1,4 +1,5 @@
 import { act, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   INVALID_TRANSFER,
@@ -6,6 +7,7 @@ import {
   MOCK_TRANSFER_TWO_FACTOR_ID,
   SIGNED_IN_LOCATION,
 } from "../../../mock/s2/sign-in.ts";
+import { auth } from "../../sync/auth.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
 import { pageExit } from "./auth-navigation.ts";
 import { renderAuth, resetSignIn } from "./testing.tsx";
@@ -52,11 +54,21 @@ it("goes on to the challenge when the link's account has a second step", async (
   expect(assign).not.toHaveBeenCalled();
 });
 
-it("sends the link again when Back restores the page from the back/forward cache", async () => {
+it("doesn't send the link again when Back restores the page, but offers to", async () => {
+  const transfers = vi.spyOn(auth, "transfer");
+
   await renderAuth(`/app/session/transfers/${MOCK_TRANSFER_ID}`);
   await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
 
   act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
 
+  const again = await screen.findByRole("button", { name: "Continue" });
+
+  expect(transfers).toHaveBeenCalledTimes(1);
+  expect(assign).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("link", { name: "Go to sign in" })).toBeTruthy();
+
+  await userEvent.setup().click(again);
   await waitFor(() => expect(assign).toHaveBeenCalledTimes(2));
+  expect(transfers).toHaveBeenCalledTimes(2);
 });
