@@ -29,13 +29,28 @@
 
   /* ── Filters ───────────────────────────────────────────────────────────── */
 
+  .search-sort {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+  }
+
+  .search-sort .input {
+    width: auto;
+    min-height: 28px;
+    padding: var(--space-1) var(--space-2);
+  }
+
   .search-filters {
     display: flex;
+    flex-wrap: wrap;
     flex-shrink: 0;
     align-items: center;
     gap: var(--space-1-5);
     min-height: 44px;
-    padding: 0 var(--space-5) var(--space-2);
+    padding: var(--space-2) var(--space-5);
     overflow-x: auto;
     box-shadow: 0 1px 0 var(--border);
     scrollbar-width: none;

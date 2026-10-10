@@ -381,3 +381,17 @@ describe("recent searches", () => {
     );
   });
 });
+
+it("searches by stable author ID and returns an oldest-first display page", async () => {
+  const { server } = harness();
+  const reply = await get<SearchResults>(server, searchPath("from_id:2 sort:oldest"));
+
+  expect(reply.messages.length).toBeGreaterThan(0);
+  expect(reply.messages.every((message) => message.creatorId === 2)).toBe(true);
+  expect(reply.chips.map((chip) => chip.operator)).toEqual(["from_id", "sort"]);
+  const display = [...reply.messages].reverse();
+
+  expect(display.map((message) => message.createdAt)).toEqual(
+    display.map((message) => message.createdAt).toSorted(),
+  );
+});

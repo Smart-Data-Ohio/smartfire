@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { SearchChip } from "../../gen/SearchChip.ts";
+import type { SearchSort } from "../../gen/SearchSort.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { searchKey } from "../../store/search.ts";
 import { useRecentSearches, useSearchResults } from "../../store/search-hooks.ts";
@@ -14,17 +15,22 @@ import { useAnnouncer } from "../destinations/live-region.tsx";
 import { type RowParts, useKeepRowFocus } from "../destinations/row-focus.ts";
 import { useNow } from "../threads/use-now.ts";
 import { chipLabel, resultsAnnouncement } from "./format.ts";
-import { appendToken, textWords } from "./query.ts";
+import { appendToken, setFilter, textWords } from "./query.ts";
 import { SearchBox } from "./search-box.tsx";
 import { visibleSearchInput } from "./search-hotkey.tsx";
 import { isEditable } from "./search-keys.ts";
 import { SearchResults, SearchState } from "./search-results.tsx";
 import { OPERATOR_HINTS } from "./typeahead.ts";
+import { useSuggestible } from "./use-suggestible.ts";
 import "./search.css";
 
 const CHIP_ICON = {
   from: "at",
   in: "hash",
+  from_id: "at",
+  in_id: "hash",
+  mentions: "at",
+  sort: "chevron-down",
   has: "paperclip",
   is: "thread",
   before: "calendar-clock",
@@ -35,6 +41,11 @@ const CHIP_ICON = {
 /** Filters one click adds; the others put their operator in the field to pick a value. */
 const TOGGLES = [
   { token: "has:file", operator: "has", value: "file", label: "Files", icon: "file" },
+  { token: "has:image", operator: "has", value: "image", label: "Images", icon: "image" },
+  { token: "has:audio", operator: "has", value: "audio", label: "Audio", icon: "file" },
+  { token: "has:video", operator: "has", value: "video", label: "Video", icon: "file" },
+  { token: "has:mention", operator: "has", value: "mention", label: "Mentions", icon: "at" },
+  { token: "mentions:me", operator: "mentions", value: "me", label: "Mentions me", icon: "at" },
   { token: "has:link", operator: "has", value: "link", label: "Links", icon: "link" },
   { token: "has:pin", operator: "has", value: "pin", label: "Pinned", icon: "pin" },
   { token: "is:thread", operator: "is", value: "true", label: "In threads", icon: "thread" },
@@ -47,14 +58,20 @@ const TOGGLES = [
 }[];
 
 const PICKERS = [
-  { token: "from:", label: "From", icon: "at" },
-  { token: "in:", label: "In", icon: "hash" },
+  { token: "from_id:", label: "From", icon: "at" },
+  { token: "in_id:", label: "In", icon: "hash" },
   { token: "after:", label: "Date", icon: "calendar-clock" },
 ] as const satisfies readonly {
   readonly token: string;
   readonly label: string;
   readonly icon: IconName;
 }[];
+
+const SORTS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "relevance", label: "Relevance" },
+] as const satisfies readonly { readonly value: SearchSort; readonly label: string }[];
 
 interface FilterBarProps {
   readonly query: string;
@@ -79,6 +96,20 @@ const FILTER_PARTS: RowParts = {
 /** The query's filters as removable chips, then pills that add the common ones. */
 function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProps) {
   const barRef = useRef<HTMLDivElement | null>(null);
+  const items = useSuggestible(true, true);
+  const sort = chips.findLast((chip) => chip.operator === "sort")?.value ?? "newest";
+
+  const label = (chip: SearchChip) => {
+    const item = items.find((item) =>
+      chip.operator === "from_id"
+        ? item.kind === "person" && String(item.userId) === chip.value
+        : chip.operator === "in_id" && item.kind === "room" && String(item.roomId) === chip.value,
+    );
+
+    return item === undefined
+      ? chipLabel(chip)
+      : `${chip.operator === "from_id" ? "From" : "In"}: ${item.label}`;
+  };
 
   useKeepRowFocus(barRef, FILTER_PARTS);
 
@@ -96,15 +127,15 @@ function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProp
           data-filter-item
         >
           <Icon name={CHIP_ICON[chip.operator]} size={14} className="search-chip-icon" />
-          <span className="search-chip-label">{chipLabel(chip)}</span>
+          <span className="search-chip-label">{label(chip)}</span>
           <IconButton
             icon="x"
-            label={`Remove ${chipLabel(chip)}`}
+            label={`Remove ${label(chip)}`}
             size="sm"
             className="search-chip-remove"
             tooltipPlacement="bottom"
             onClick={() => {
-              announce(`Removed the ${chipLabel(chip)} filter`);
+              announce(`Removed the ${label(chip)} filter`);
               onQuery(chip.removeQuery);
             }}
           />
@@ -124,6 +155,24 @@ function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProp
           </Button>
         </span>
       ))}
+      <label className="search-sort">
+        Sort
+        <select
+          className="input"
+          value={sort}
+          onChange={(event) => {
+            const picked = SORTS.find((choice) => choice.value === event.target.value);
+
+            if (picked !== undefined) onQuery(setFilter(query, "sort", picked.value));
+          }}
+        >
+          {SORTS.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+      </label>
       {toggles.map((toggle) => (
         <span key={toggle.token} className="search-filter-item" data-filter-item>
           <Button
@@ -380,15 +429,13 @@ export function SearchPage() {
           onClick={() => void navigate({ to: "/" })}
         />
       </header>
-      {query === "" ? null : (
-        <FilterBar
-          query={query}
-          chips={chips}
-          onQuery={run}
-          onCompose={compose}
-          announce={announce}
-        />
-      )}
+      <FilterBar
+        query={query}
+        chips={chips}
+        onQuery={run}
+        onCompose={compose}
+        announce={announce}
+      />
       {/* The results list takes ↑/↓ (and j/k) between its links; it's a scroll region, not a widget. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys only move focus between the links inside */}
       <div className="search-scroll" tabIndex={-1} onKeyDown={moveFocus}>

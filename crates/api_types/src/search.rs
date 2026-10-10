@@ -6,8 +6,8 @@
 //! searches of `Search` (`crates/db/src/models/search.rs`, from `app/models/search.rb`). See
 //! also `docs/search.md`.
 //!
-//! What search covers is what the classic page covers: messages (full-text, newest first, no
-//! relevance ranking) and, on the first page, matching board posts, work threads and events.
+//! Search covers messages and, on the first page, matching board posts, work threads and events.
+//! Messages default to newest first; oldest and FTS5 relevance ordering are also available.
 //! There are no people, room or file results on the server:
 //! - **people and rooms** come from the quick switcher's [`crate::Switcher`], matched on the
 //!   client;
@@ -22,6 +22,44 @@ use ts_rs::TS;
 
 use crate::{ConversationName, MessageDTO, RoomKind, Timestamp, User};
 
+/// Typed `GET /search` parameters alongside `q` and `before`. Each `has` value must hold;
+/// encode the list as comma-separated values. IDs survive author and channel renames.
+/// IDs and sort replace their equivalent ID/sort tokens in `q`; other filters intersect.
+/// `mentionsMe` uses the authenticated viewer's ID.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SearchFilters {
+    pub author_id: Option<i64>,
+    pub channel_id: Option<i64>,
+    pub has: Vec<SearchMedia>,
+    pub mentions_me: bool,
+    pub sort: SearchSort,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum SearchMedia {
+    Mention,
+    File,
+    Image,
+    Link,
+    Audio,
+    Video,
+    Pin,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum SearchSort {
+    #[default]
+    Newest,
+    Oldest,
+    Relevance,
+}
+
 /// `GET /api/v1/search?q=&before=`: one page of results (`searches#index`). Doesn't record the
 /// query; the client posts [`RecordSearch`] to `/api/v1/search/recents` when the person submits
 /// it.
@@ -30,7 +68,11 @@ use crate::{ConversationName, MessageDTO, RoomKind, Timestamp, User};
 /// - `from:name` (`@` optional): messages by anyone whose name contains it, case-insensitively.
 /// - `in:room` (`#` optional): messages in rooms whose name contains it (direct messages never
 ///   match).
-/// - `has:link`, `has:file`, `has:image`, `has:pin`: each must hold.
+/// - `from_id:ID`, `in_id:ID`: exact author/channel IDs, preserved through renames.
+/// - `has:link`, `has:file`, `has:image`, `has:audio`, `has:video`, `has:mention`, `has:pin`:
+///   each must hold. Media types come from current uploaded blobs, not Drive metadata.
+/// - `mentions:me`: the current body contains a mention attachment for the viewer's ID.
+/// - `sort:newest`, `sort:oldest`, `sort:relevance`: last wins; relevance without text uses newest.
 /// - `before:YYYY-MM-DD`, `after:YYYY-MM-DD` (strictly after that day), `on:YYYY-MM-DD`: days in
 ///   the viewer's time zone; the last of each wins.
 /// - `is:thread`: replies in threads only.
@@ -48,8 +90,9 @@ use crate::{ConversationName, MessageDTO, RoomKind, Timestamp, User};
 /// A `q` over 500 characters, or with more than 10 `from:` or more than 10 `in:` values, is a
 /// 422 (`ApiError::Validation` on `q`). New: the classic page has no such limits.
 ///
-/// `before` is the previous page's `nextCursor`: keyset paging on `(createdAt, id)`, newest
-/// first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on
+/// `before` is the previous page's `nextCursor`: keyset paging on the selected sort, 40 a page.
+/// Relevance uses FTS5 rank, with timestamp and ID tie breakers. A cursor that doesn't decode
+/// or names a different sort is a 422 (`ApiError::Validation` on
 /// `before`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -60,24 +103,24 @@ pub struct SearchResults {
     pub query: String,
     /// One per operator that parsed, in the order written: the filter chips.
     pub chips: Vec<SearchChip>,
-    /// The matching messages on this page, oldest first (the page is the newest 40 older than
-    /// the cursor). Root messages and thread replies alike; a reply's `threadId` says which
-    /// thread.
+    /// Matching messages in reverse display order, preserving the existing wire convention.
+    /// The SPA reverses each page to display the requested sort. Root messages and thread
+    /// replies alike; a reply's `threadId` says which thread.
     pub messages: Vec<MessageDTO>,
     /// The messages' creators, once each.
     pub users: Vec<User>,
     /// The rooms and threads the messages and section rows are in.
     pub conversations: Vec<ConversationName>,
-    /// Pass as `before` for the next (older) page; `null` when no older match exists.
+    /// Pass as `before` for the next page; `null` when no further match exists.
     ///
-    /// Opaque to the client: it encodes the oldest message here by `(createdAt, id)`, and the
-    /// next page holds the matches strictly older than that. So it stays valid when that message
-    /// is deleted or leaves the viewer's reach. New: the classic cursor is the message id, and
-    /// a vanished one is a 404.
+    /// Opaque to the client: the last display row's sort key. Newest/oldest cursors remain
+    /// valid if that message is deleted or leaves the viewer's reach. Relevance ranks may
+    /// change when the indexed corpus changes.
     pub next_cursor: Option<String>,
     /// First page only, and only when `q` has words: up to 10 of each kind whose name (title or
-    /// description, for events) contains every word. Narrowed by `in:` but not by the other
-    /// operators. Kinds with no matches are left out, so this is often empty.
+    /// description, for events) contains every word. Narrowed by `in:` and `in_id:`. Author-ID,
+    /// mention, audio and video filters omit these non-message hits. Other legacy operators
+    /// preserve their original section behavior. Kinds with no matches are left out.
     pub sections: Vec<SearchSection>,
 }
 
@@ -104,6 +147,12 @@ pub struct SearchChip {
 pub enum SearchOperator {
     From,
     In,
+    #[serde(rename = "from_id")]
+    FromId,
+    #[serde(rename = "in_id")]
+    InId,
+    Mentions,
+    Sort,
     Has,
     Before,
     After,

@@ -14,7 +14,11 @@ import type { User } from "./User";
  * - `from:name` (`@` optional): messages by anyone whose name contains it, case-insensitively.
  * - `in:room` (`#` optional): messages in rooms whose name contains it (direct messages never
  *   match).
- * - `has:link`, `has:file`, `has:image`, `has:pin`: each must hold.
+ * - `from_id:ID`, `in_id:ID`: exact author/channel IDs, preserved through renames.
+ * - `has:link`, `has:file`, `has:image`, `has:audio`, `has:video`, `has:mention`, `has:pin`:
+ *   each must hold. Media types come from current uploaded blobs, not Drive metadata.
+ * - `mentions:me`: the current body contains a mention attachment for the viewer's ID.
+ * - `sort:newest`, `sort:oldest`, `sort:relevance`: last wins; relevance without text uses newest.
  * - `before:YYYY-MM-DD`, `after:YYYY-MM-DD` (strictly after that day), `on:YYYY-MM-DD`: days in
  *   the viewer's time zone; the last of each wins.
  * - `is:thread`: replies in threads only.
@@ -32,8 +36,9 @@ import type { User } from "./User";
  * A `q` over 500 characters, or with more than 10 `from:` or more than 10 `in:` values, is a
  * 422 (`ApiError::Validation` on `q`). New: the classic page has no such limits.
  *
- * `before` is the previous page's `nextCursor`: keyset paging on `(createdAt, id)`, newest
- * first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on
+ * `before` is the previous page's `nextCursor`: keyset paging on the selected sort, 40 a page.
+ * Relevance uses FTS5 rank, with timestamp and ID tie breakers. A cursor that doesn't decode
+ * or names a different sort is a 422 (`ApiError::Validation` on
  * `before`).
  */
 export type SearchResults = {
@@ -47,9 +52,9 @@ query: string,
  */
 chips: Array<SearchChip>,
 /**
- * The matching messages on this page, oldest first (the page is the newest 40 older than
- * the cursor). Root messages and thread replies alike; a reply's `threadId` says which
- * thread.
+ * Matching messages in reverse display order, preserving the existing wire convention.
+ * The SPA reverses each page to display the requested sort. Root messages and thread
+ * replies alike; a reply's `threadId` says which thread.
  */
 messages: Array<MessageDTO>,
 /**
@@ -61,17 +66,17 @@ users: Array<User>,
  */
 conversations: Array<ConversationName>,
 /**
- * Pass as `before` for the next (older) page; `null` when no older match exists.
+ * Pass as `before` for the next page; `null` when no further match exists.
  *
- * Opaque to the client: it encodes the oldest message here by `(createdAt, id)`, and the
- * next page holds the matches strictly older than that. So it stays valid when that message
- * is deleted or leaves the viewer's reach. New: the classic cursor is the message id, and
- * a vanished one is a 404.
+ * Opaque to the client: the last display row's sort key. Newest/oldest cursors remain
+ * valid if that message is deleted or leaves the viewer's reach. Relevance ranks may
+ * change when the indexed corpus changes.
  */
 nextCursor: string | null,
 /**
  * First page only, and only when `q` has words: up to 10 of each kind whose name (title or
- * description, for events) contains every word. Narrowed by `in:` but not by the other
- * operators. Kinds with no matches are left out, so this is often empty.
+ * description, for events) contains every word. Narrowed by `in:` and `in_id:`. Author-ID,
+ * mention, audio and video filters omit these non-message hits. Other legacy operators
+ * preserve their original section behavior. Kinds with no matches are left out.
  */
 sections: Array<SearchSection>, };

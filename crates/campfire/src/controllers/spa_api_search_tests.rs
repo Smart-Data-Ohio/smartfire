@@ -472,3 +472,125 @@ async fn hostile_and_oversized_queries_answer_cleanly() {
         assert_eq!(validation(&reply).1, ["query"], "{q}");
     }
 }
+
+#[tokio::test]
+async fn typed_search_filters_preserve_ids_visibility_and_sort() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let first = post(&mut david, DESIGNERS, 200, "typedneedle first").await;
+    let second = post(&mut david, DESIGNERS, 201, "typedneedle second").await;
+    post(&mut kevin, DESIGNERS, 202, "typedneedle someone else").await;
+    post(&mut david, ALL_TALK, 203, "typedneedle hidden").await;
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE users SET name='Renamed person' WHERE id=?", [DAVID])?;
+            tx.conn().execute(
+                "UPDATE rooms SET name='Renamed channel' WHERE id=?",
+                [DESIGNERS],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let results: api::SearchResults = parse(
+        &david
+            .send(get(&format!(
+                "/api/v1/search?q=typedneedle&authorId={DAVID}&channelId={DESIGNERS}&sort=oldest"
+            )))
+            .await,
+    );
+    // The wire page is reverse display order, as with the existing newest-first pages.
+    assert_eq!(ids(&results), [second.id, first.id]);
+    assert_eq!(results.chips.len(), 3);
+    let hidden: api::SearchResults = parse(
+        &kevin
+            .send(get(&format!(
+                "/api/v1/search?q=typedneedle&authorId={DAVID}&channelId={ALL_TALK}&sort=relevance"
+            )))
+            .await,
+    );
+    assert!(hidden.messages.is_empty() && hidden.sections.is_empty());
+    for params in [
+        "authorId=bad",
+        "channelId=-1",
+        "sort=bogus",
+        "has=bogus",
+        "mentionsMe=bogus",
+    ] {
+        let reply = david
+            .send(get(&format!("/api/v1/search?q=typedneedle&{params}")))
+            .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{params}: {}",
+            reply.text()
+        );
+    }
+}
+
+#[tokio::test]
+async fn search_mentions_use_persisted_user_identity_and_current_body() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mine = post(
+        &mut david,
+        DESIGNERS,
+        210,
+        &format!("typedmention <@{DAVID}> https://example.com"),
+    )
+    .await;
+    post(
+        &mut david,
+        DESIGNERS,
+        211,
+        &format!("typedmention <@{KEVIN}>"),
+    )
+    .await;
+    post(
+        &mut david,
+        ALL_TALK,
+        212,
+        &format!("typedmention <@{DAVID}>"),
+    )
+    .await;
+    let results: api::SearchResults = parse(
+        &david
+            .send(get(
+                "/api/v1/search?q=typedmention&mentionsMe=true&has=mention,link",
+            ))
+            .await,
+    );
+    assert_eq!(ids(&results), [mine.id]);
+    let theirs: api::SearchResults = parse(
+        &kevin
+            .send(get("/api/v1/search?q=typedmention&mentionsMe=true"))
+            .await,
+    );
+    assert_eq!(theirs.messages.len(), 1);
+    assert_eq!(theirs.messages[0].room_id, DESIGNERS);
+    a.db()
+        .write(move |tx| {
+            campfire_db::Message::find(tx.conn(), mine.id)?.update(
+                tx,
+                campfire_db::MessageChanges {
+                    markdown_source: Some("typedmention removed".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let current: api::SearchResults = parse(
+        &david
+            .send(get(&format!(
+                "/api/v1/search?q=typedmention&mentionsMe=true&channelId={DESIGNERS}"
+            )))
+            .await,
+    );
+    assert!(current.messages.is_empty());
+}

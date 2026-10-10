@@ -12,7 +12,7 @@ use rusqlite::types::Value;
 use serde::Serialize;
 use std::sync::LazyLock;
 static OPERATORS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?:^|[ \t\n\x0b\x0c\r])((from|in|has|before|after|on|is):([^ \t\n\x0b\x0c\r]+))")
+    Regex::new(r"(?:^|[ \t\n\x0b\x0c\r])((from_id|in_id|mentions|sort|from|in|has|before|after|on|is):([^ \t\n\x0b\x0c\r]+))")
         .unwrap()
 });
 mod word_ranges;
@@ -46,6 +46,10 @@ pub struct SearchQuery {
     pub text: String,
     pub from_names: Vec<String>,
     pub in_rooms: Vec<String>,
+    pub author_ids: Vec<i64>,
+    pub channel_ids: Vec<i64>,
+    pub mentions_me: bool,
+    pub sort: SearchSort,
     pub has_values: Vec<String>,
     pub before_date: Option<Date>,
     pub after_date: Option<Date>,
@@ -53,6 +57,27 @@ pub struct SearchQuery {
     pub thread_only: bool,
     pub chips: Vec<Chip>,
 }
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SearchSort {
+    #[default]
+    Newest,
+    Oldest,
+    Relevance,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SearchCursor {
+    pub created_at: Timestamp,
+    pub id: i64,
+    pub rank: Option<f64>,
+}
+
+#[derive(Debug)]
+pub struct SortedSearchPage {
+    pub page: SearchPage,
+    pub next: Option<SearchCursor>,
+}
+
 #[derive(Debug)]
 pub struct SearchPage {
     pub messages: Vec<Message>,
@@ -104,9 +129,21 @@ impl SearchQuery {
                         Some(value.to_string())
                     }
                 }
+                "from_id" | "in_id" => value
+                    .parse::<i64>()
+                    .ok()
+                    .filter(|id| (1..=9_007_199_254_740_991).contains(id))
+                    .map(|id| id.to_string()),
+                "mentions" => value.eq_ignore_ascii_case("me").then(|| "me".into()),
+                "sort" => {
+                    let value = value.to_lowercase();
+                    ["newest", "oldest", "relevance"]
+                        .contains(&value.as_str())
+                        .then_some(value)
+                }
                 "has" => {
                     let value = value.to_lowercase();
-                    ["link", "file", "image", "pin"]
+                    ["link", "file", "image", "pin", "mention", "audio", "video"]
                         .contains(&value.as_str())
                         .then_some(value)
                 }
@@ -123,6 +160,16 @@ impl SearchQuery {
             match name {
                 "from" => q.from_names.push(cleaned.clone()),
                 "in" => q.in_rooms.push(cleaned.clone()),
+                "from_id" => q.author_ids.push(cleaned.parse().unwrap()),
+                "in_id" => q.channel_ids.push(cleaned.parse().unwrap()),
+                "mentions" => q.mentions_me = true,
+                "sort" => {
+                    q.sort = match cleaned.as_str() {
+                        "oldest" => SearchSort::Oldest,
+                        "relevance" => SearchSort::Relevance,
+                        _ => SearchSort::Newest,
+                    }
+                }
                 "has" => {
                     if !q.has_values.contains(&cleaned) {
                         q.has_values.push(cleaned.clone())
@@ -154,6 +201,9 @@ impl SearchQuery {
     pub fn filters(&self) -> bool {
         !self.from_names.is_empty()
             || !self.in_rooms.is_empty()
+            || !self.author_ids.is_empty()
+            || !self.channel_ids.is_empty()
+            || self.mentions_me
             || !self.has_values.is_empty()
             || self.before_date.is_some()
             || self.after_date.is_some()
@@ -199,11 +249,26 @@ impl SearchQuery {
                 values.extend(names.iter().map(|s| Value::from(like(s))));
             }
         }
+        for (ids, column) in [
+            (&self.author_ids, "creator_id"),
+            (&self.channel_ids, "room_id"),
+        ] {
+            if !ids.is_empty() {
+                sql.push_str(&format!(
+                    " AND messages.{column} IN ({})",
+                    crate::sql::placeholders(ids.len())
+                ));
+                values.extend(ids.iter().copied().map(Value::from));
+            }
+        }
         for has in &self.has_values {
             sql.push_str(match has.as_str(){
    "link"=>" AND EXISTS (SELECT 1 FROM action_text_rich_texts rt WHERE rt.record_type='Message' AND rt.record_id=messages.id AND rt.name='body' AND (rt.body LIKE '%href=%' OR rt.body LIKE '%http://%' OR rt.body LIKE '%https://%'))",
    "file"=>" AND (EXISTS (SELECT 1 FROM active_storage_attachments a WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name='attachment') OR EXISTS (SELECT 1 FROM drive_attachments d WHERE d.message_id=messages.id))",
    "image"=>" AND EXISTS (SELECT 1 FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name='attachment' AND b.content_type LIKE 'image/%')",
+   "mention"=>" AND EXISTS (SELECT 1 FROM action_text_rich_texts rt WHERE rt.record_type='Message' AND rt.record_id=messages.id AND rt.name='body' AND search_mentions(rt.body,0))",
+   "audio"=>" AND EXISTS (SELECT 1 FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name='attachment' AND b.content_type LIKE 'audio/%')",
+   "video"=>" AND EXISTS (SELECT 1 FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name='attachment' AND b.content_type LIKE 'video/%')",
    "pin"=>" AND EXISTS (SELECT 1 FROM message_pins p WHERE p.message_id=messages.id)",_=>unreachable!(),
   });
         }
@@ -279,47 +344,129 @@ impl SearchQuery {
         zone: TimeZone,
         after: Option<(Timestamp, i64)>,
     ) -> Result<SearchPage> {
+        Ok(self
+            .messages_for_user_sorted(
+                conn,
+                user,
+                zone,
+                after.map(|(created_at, id)| SearchCursor {
+                    created_at,
+                    id,
+                    rank: None,
+                }),
+            )?
+            .page)
+    }
+
+    /// Keyset paging in the requested order. The wire page is reversed, as with classic
+    /// newest-first search; the SPA reverses it into display order.
+    pub fn messages_for_user_sorted(
+        &self,
+        conn: &Connection,
+        user: i64,
+        zone: TimeZone,
+        after: Option<SearchCursor>,
+    ) -> Result<SortedSearchPage> {
         if self.blank_query() {
-            return Ok(SearchPage {
-                messages: vec![],
-                has_more: false,
+            return Ok(SortedSearchPage {
+                page: SearchPage {
+                    messages: vec![],
+                    has_more: false,
+                },
+                next: None,
             });
+        }
+        if self.mentions_me || self.has_values.iter().any(|has| has == "mention") {
+            register_mentions(conn)?;
         }
         let (mut sql, mut values) = self.sql(&zone)?;
         sql.push_str(" AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)");
         values.push(user.into());
-        if let Some((created_at, id)) = after {
-            sql.push_str(" AND (messages.created_at,messages.id)<(?,?)");
-            values.extend([created_at.to_db().into(), id.into()]);
+        if self.mentions_me {
+            sql.push_str(" AND EXISTS (SELECT 1 FROM action_text_rich_texts rt WHERE rt.record_type='Message' AND rt.record_id=messages.id AND rt.name='body' AND search_mentions(rt.body,?))");
+            values.push(user.into());
         }
-        sql.push_str(" ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?");
+        let ranked = self.sort == SearchSort::Relevance && self.match_expression().is_some();
+        let rank = if ranked { "idx.rank" } else { "0.0" };
+        sql = sql.replacen(
+            "SELECT messages.*",
+            &format!("SELECT messages.id,messages.created_at,{rank} AS search_rank"),
+            1,
+        );
+        if let Some(key) = after {
+            if ranked {
+                sql.push_str(" AND (idx.rank > ? OR (idx.rank = ? AND (messages.created_at,messages.id)<(?,?)))");
+                let rank = key
+                    .rank
+                    .ok_or_else(|| crate::Error::Other("missing relevance cursor rank".into()))?;
+                values.extend([
+                    rank.into(),
+                    rank.into(),
+                    key.created_at.to_db().into(),
+                    key.id.into(),
+                ]);
+            } else {
+                sql.push_str(if self.sort == SearchSort::Oldest {
+                    " AND (messages.created_at,messages.id)>(?,?)"
+                } else {
+                    " AND (messages.created_at,messages.id)<(?,?)"
+                });
+                values.extend([key.created_at.to_db().into(), key.id.into()]);
+            }
+        }
+        sql.push_str(if ranked {
+            " ORDER BY idx.rank ASC,messages.created_at DESC,messages.id DESC LIMIT ?"
+        } else if self.sort == SearchSort::Oldest {
+            " ORDER BY messages.created_at ASC,messages.id ASC LIMIT ?"
+        } else {
+            " ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?"
+        });
         values.push((super::message::PAGE_SIZE + 1).into());
-        let mut ids: Vec<i64> = query_all(
-            conn,
-            &sql.replacen("SELECT messages.*", "SELECT messages.id", 1),
-            rusqlite::params_from_iter(values),
-            |row| row.get(0),
-        )?;
-        let has_more = ids.len() > super::message::PAGE_SIZE as usize;
-        ids.truncate(super::message::PAGE_SIZE as usize);
-        let messages = if ids.is_empty() {
+        let mut keys: Vec<SearchCursor> =
+            query_all(conn, &sql, rusqlite::params_from_iter(values), |row| {
+                Ok(SearchCursor {
+                    id: row.get(0)?,
+                    created_at: row.get(1)?,
+                    rank: if ranked { Some(row.get(2)?) } else { None },
+                })
+            })?;
+        let has_more = keys.len() > super::message::PAGE_SIZE as usize;
+        keys.truncate(super::message::PAGE_SIZE as usize);
+        let next = keys.last().copied().filter(|_| has_more);
+        let messages = if keys.is_empty() {
             vec![]
         } else {
-            query_all(
+            let mut by_id = query_all(
                 conn,
                 &format!(
-                    "SELECT * FROM messages WHERE id IN ({}) ORDER BY created_at ASC,id ASC",
-                    crate::sql::placeholders(ids.len())
+                    "SELECT * FROM messages WHERE id IN ({})",
+                    crate::sql::placeholders(keys.len())
                 ),
-                rusqlite::params_from_iter(ids),
+                rusqlite::params_from_iter(keys.iter().map(|key| key.id)),
                 Message::from_row,
             )?
+            .into_iter()
+            .map(|message| (message.id, message))
+            .collect::<std::collections::HashMap<_, _>>();
+            keys.iter()
+                .rev()
+                .filter_map(|key| by_id.remove(&key.id))
+                .collect()
         };
-        Ok(SearchPage { messages, has_more })
+        Ok(SortedSearchPage {
+            page: SearchPage { messages, has_more },
+            next,
+        })
     }
     pub fn messages_in_room(&self, conn: &Connection, room: i64) -> Result<Vec<Message>> {
         if self.blank_query() {
             return Ok(vec![]);
+        }
+        if self.mentions_me {
+            return Ok(vec![]);
+        }
+        if self.has_values.iter().any(|has| has == "mention") {
+            register_mentions(conn)?;
         }
         let (mut sql, mut values) = self.sql(&TimeZone::UTC)?;
         sql.push_str(" AND messages.room_id=? ORDER BY messages.created_at ASC,messages.id ASC");
@@ -352,7 +499,14 @@ pub struct SearchSectionRecord {
 }
 impl SearchQuery {
     pub fn sections_for_user(&self, conn: &Connection, user: i64) -> Result<Vec<SearchSection>> {
-        if self.text_tokens().is_empty() {
+        if self.text_tokens().is_empty()
+            || !self.author_ids.is_empty()
+            || self.mentions_me
+            || self
+                .has_values
+                .iter()
+                .any(|has| ["mention", "audio", "video"].contains(&has.as_str()))
+        {
             return Ok(vec![]);
         }
         let mut sections = vec![];
@@ -390,6 +544,13 @@ impl SearchQuery {
                 sql.push(')');
                 values.extend(self.in_rooms.iter().map(|name| Value::from(like(name))));
             }
+            if !self.channel_ids.is_empty() {
+                sql.push_str(&format!(
+                    " AND rooms.id IN ({})",
+                    crate::sql::placeholders(self.channel_ids.len())
+                ));
+                values.extend(self.channel_ids.iter().copied().map(Value::from));
+            }
             for token in self.text_tokens() {
                 if events {
                     sql.push_str(" AND (LOWER(rec.title) LIKE ? ESCAPE '\\' OR LOWER(rec.description) LIKE ? ESCAPE '\\')");
@@ -419,6 +580,34 @@ impl SearchQuery {
         }
         Ok(sections)
     }
+}
+
+/// Persisted mention attachments contain their user identity, independent of display names.
+fn register_mentions(conn: &Connection) -> Result<()> {
+    use campfire_richtext::{attachables::MENTION_CONTENT_TYPE, dom::Dom};
+    use rusqlite::functions::FunctionFlags;
+    conn.create_scalar_function(
+        "search_mentions",
+        2,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            let html = ctx.get::<String>(0)?;
+            let user = ctx.get::<i64>(1)?;
+            let mut dom = Dom::new();
+            let root = dom
+                .parse_fragment(&html)
+                .map_err(|error| rusqlite::Error::UserFunctionError(Box::new(error)))?;
+            Ok(dom.descendants(root).into_iter().any(|node| {
+                dom.local_name(node) == Some("action-text-attachment")
+                    && dom.attr(node, "content-type") == Some(MENTION_CONTENT_TYPE)
+                    && dom
+                        .attr(node, "sgid")
+                        .and_then(crate::rich_text::user_id_from_sgid)
+                        .is_some_and(|id| user == 0 || id == user)
+            }))
+        },
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -17,6 +17,7 @@ import type { SearchSectionRow } from "../../src/gen/SearchSectionRow.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
 import { noContent, ok, validation } from "../http.ts";
 import { type Json, stringField } from "../json.ts";
+import { mentionsUser } from "../markdown.ts";
 import { VIEWER_TIME_ZONE } from "../s2/composer.ts";
 import { type Route, route, type S2Context } from "../s2/context.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
@@ -112,11 +113,16 @@ export interface ParsedSearch {
   readonly filters: SearchFilters;
 }
 
-const OPERATORS = /(?:^|[ \t\n\v\f\r])((from|in|has|before|after|on|is):([^ \t\n\v\f\r]+))/gu;
+const OPERATORS =
+  /(?:^|[ \t\n\v\f\r])((from_id|in_id|mentions|sort|from|in|has|before|after|on|is):([^ \t\n\v\f\r]+))/gu;
 
 const OPERATOR_NAMES: readonly SearchOperator[] = [
   "from",
   "in",
+  "from_id",
+  "in_id",
+  "mentions",
+  "sort",
   "has",
   "before",
   "after",
@@ -124,7 +130,7 @@ const OPERATOR_NAMES: readonly SearchOperator[] = [
   "is",
 ];
 
-const HAS_VALUES = ["link", "file", "image", "pin"];
+const HAS_VALUES = ["link", "file", "image", "pin", "mention", "audio", "video"];
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 
@@ -161,6 +167,15 @@ function cleanValue(operator: SearchOperator, value: string): string | null {
       return trimmed.trim() === "" ? null : trimmed;
     }
 
+    case "from_id":
+    case "in_id":
+      return /^[1-9]\d*$/u.test(value) && Number.isSafeInteger(Number(value)) ? value : null;
+    case "mentions":
+      return value.toLowerCase() === "me" ? "me" : null;
+    case "sort":
+      return ["newest", "oldest", "relevance"].includes(value.toLowerCase())
+        ? value.toLowerCase()
+        : null;
     case "has": {
       const lower = value.toLowerCase();
 
@@ -308,14 +323,15 @@ function containsFolded(haystack: string | null, needle: string): boolean {
 // --- the cursor ---
 
 /** The opaque cursor: base64url of `<createdAt>|<id>`. */
-export function encodeCursor(message: Pick<MessageDTO, "createdAt" | "id">): string {
-  return btoa(`${message.createdAt}|${message.id}`)
+export function encodeCursor(message: Pick<MessageDTO, "createdAt" | "id">, rank?: number): string {
+  return btoa(`${message.createdAt}|${message.id}${rank === undefined ? "" : `|${rank}`}`)
     .replace(/\+/gu, "-")
     .replace(/\//gu, "_")
     .replace(/=+$/u, "");
 }
 
 interface Cursor {
+  readonly rank?: number;
   readonly createdAt: string;
   readonly id: number;
 }
@@ -328,11 +344,15 @@ export function decodeCursor(cursor: string): Cursor | null {
   const text = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, "="));
   const [createdAt = "", id = "", ...rest] = text.split("|");
 
-  if (rest.length > 0 || !/^\d+$/u.test(id) || Number.isNaN(Date.parse(createdAt))) {
+  if (rest.length > 1 || !/^\d+$/u.test(id) || Number.isNaN(Date.parse(createdAt))) {
     return null;
   }
 
-  return { createdAt, id: Number(id) };
+  const rank = rest[0] === undefined ? undefined : Number(rest[0]);
+
+  if (rank !== undefined && !Number.isFinite(rank)) return null;
+
+  return rank === undefined ? { createdAt, id: Number(id) } : { createdAt, id: Number(id), rank };
 }
 
 function newerFirst(a: { createdAt: string; id: number }, b: { createdAt: string; id: number }) {
@@ -421,6 +441,22 @@ export function createSearch(ctx: S2Context): Search {
     const keep = (message: MessageDTO): boolean => {
       if (message.systemNote) return false;
 
+      const ids = (operator: SearchOperator) =>
+        parsed.chips.filter((chip) => chip.operator === operator).map((chip) => Number(chip.value));
+
+      const authorIds = ids("from_id");
+      const channelIds = ids("in_id");
+
+      if (authorIds.length > 0 && !authorIds.includes(message.creatorId)) return false;
+
+      if (channelIds.length > 0 && !channelIds.includes(message.roomId)) return false;
+
+      if (
+        parsed.chips.some((chip) => chip.operator === "mentions") &&
+        !mentionsUser(message.bodyHtml, VIEWER_ID)
+      )
+        return false;
+
       if (authors !== null && !authors.has(message.creatorId)) return false;
 
       if (filters.threadOnly && message.threadId === null) return false;
@@ -448,6 +484,13 @@ export function createSearch(ctx: S2Context): Search {
           return false;
         }
 
+        if (has === "mention" && !message.bodyHtml.includes("application/vnd.campfire.mention"))
+          return false;
+
+        if (has === "audio" && !message.attachment?.contentType.startsWith("audio/")) return false;
+
+        if (has === "video" && !message.attachment?.contentType.startsWith("video/")) return false;
+
         if (has === "pin" && !world.pins.has(message.id)) return false;
       }
 
@@ -466,7 +509,16 @@ export function createSearch(ctx: S2Context): Search {
   const sectionRows = (parsed: ParsedSearch): SearchSection[] => {
     const tokens = textTokens(parsed.text);
 
-    if (tokens.length === 0) return [];
+    if (
+      tokens.length === 0 ||
+      parsed.chips.some(
+        (chip) =>
+          chip.operator === "from_id" ||
+          chip.operator === "mentions" ||
+          (chip.operator === "has" && ["mention", "audio", "video"].includes(chip.value)),
+      )
+    )
+      return [];
 
     const { builtAt } = stateOf();
     const world = ctx.world();
@@ -557,7 +609,18 @@ export function createSearch(ctx: S2Context): Search {
       { kind: "events", rows: sorted(events) },
     ];
 
-    return sections.filter((section) => section.rows.length > 0);
+    const channelIds = parsed.chips
+      .filter((chip) => chip.operator === "in_id")
+      .map((chip) => Number(chip.value));
+
+    return sections.flatMap((section) => {
+      const rows =
+        channelIds.length === 0
+          ? section.rows
+          : section.rows.filter((row) => channelIds.includes(row.roomId));
+
+      return rows.length === 0 ? [] : [{ ...section, rows }];
+    });
   };
 
   /** What each row calls its room and thread, once per pair. */
@@ -612,7 +675,11 @@ export function createSearch(ctx: S2Context): Search {
     }
 
     const parsed = parseSearchQuery(raw);
-    const blank = textTokens(parsed.text).length === 0 && !hasFilters(parsed.filters);
+
+    const blank =
+      textTokens(parsed.text).length === 0 &&
+      !hasFilters(parsed.filters) &&
+      !parsed.chips.some((chip) => ["from_id", "in_id", "mentions"].includes(chip.operator));
 
     if (blank) {
       return {
@@ -626,8 +693,35 @@ export function createSearch(ctx: S2Context): Search {
       };
     }
 
+    const sort = parsed.chips.findLast((chip) => chip.operator === "sort")?.value ?? "newest";
+    const matched = matches(parsed);
+    const terms = textTokens(parsed.text).map(stem);
+
+    const ranks = new Map(
+      matched.map((message) => {
+        const words = textTokens(plainText(message.bodyHtml)).map(stem);
+        const count = words.filter((word) => terms.includes(word)).length;
+
+        return [message.id, count / Math.max(1, words.length)];
+      }),
+    );
+
+    const order = (a: Cursor, b: Cursor) => {
+      if (sort === "oldest") return -newerFirst(a, b);
+
+      if (sort === "relevance" && terms.length > 0) {
+        const score = (b.rank ?? ranks.get(b.id) ?? 0) - (a.rank ?? ranks.get(a.id) ?? 0);
+
+        if (score !== 0) return score;
+      }
+
+      return newerFirst(a, b);
+    };
+
+    matched.sort(order);
+
     const older =
-      cursor === null ? matches(parsed) : matches(parsed).filter((m) => newerFirst(m, cursor) > 0);
+      cursor === null ? matched : matched.filter((message) => order(message, cursor) > 0);
 
     const page = older.slice(0, SEARCH_PAGE_SIZE);
     const oldest = page.at(-1);
@@ -640,7 +734,9 @@ export function createSearch(ctx: S2Context): Search {
       users: ctx.usersFor(page.map((message) => message.creatorId)),
       conversations: conversationsFor(page, sections),
       nextCursor:
-        older.length > SEARCH_PAGE_SIZE && oldest !== undefined ? encodeCursor(oldest) : null,
+        older.length > SEARCH_PAGE_SIZE && oldest !== undefined
+          ? encodeCursor(oldest, sort === "relevance" ? ranks.get(oldest.id) : undefined)
+          : null,
       sections,
     };
   };
