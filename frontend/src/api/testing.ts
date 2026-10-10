@@ -88,6 +88,7 @@ export const meFixture: Me = {
   user: userFixture(7, "Ada Lovelace"),
   emailAddress: "ada@example.com",
   preferences: {
+    settingsRevision: 0,
     theme: "system",
     textSize: "default",
     timeZone: "America/New_York",
@@ -95,6 +96,7 @@ export const meFixture: Me = {
     tourCompleted: true,
     voiceMode: "push_to_talk",
     pushToTalkKey: "`",
+    appearancePreferences: null,
   },
   presenceSetting: "auto",
   doNotDisturb: { enabled: false, until: null },

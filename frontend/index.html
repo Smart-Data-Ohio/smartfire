@@ -52,6 +52,8 @@
         }
 
         const boot = read(document.getElementById("boot")?.textContent);
+        const personal = boot.appearancePreferences?.version === 1 ? boot.appearancePreferences : {};
+        const choice = (key, allowed, fallback) => allowed.includes(device[key]) ? device[key] : allowed.includes(personal[key]) ? personal[key] : fallback;
         const pin = device.themeOverride;
         const theme = pin === "light" || pin === "dark" || pin === "system" ? pin : boot.theme;
         root.style.setProperty("color-scheme", theme === "light" || theme === "dark" ? theme : "light dark");
@@ -65,23 +67,31 @@
         root.dataset.textSize = ["smaller", "small", "large", "larger"].includes(boot.textSize)
           ? boot.textSize
           : "default";
-        if (device.density === "compact") root.dataset.density = "compact";
-        if (device.motion === "reduce" || device.motion === "full") root.dataset.motion = device.motion;
+        const density = choice("density", ["comfortable", "compact"], "comfortable");
+        const motion = choice("motion", ["system", "reduce", "full"], "system");
+        if (density === "compact") root.dataset.density = "compact";
+        if (motion !== "system") root.dataset.motion = motion;
         // Exactly src/lib/appearance.ts's FONTS; anything else in storage is ignored there too.
-        if (["system", "atkinson", "serif", "mono"].includes(device.font)) {
-          root.dataset.font = device.font;
-          root.style.setProperty("--font-sans", `var(--font-preset-${device.font})`);
+        const font = choice("font", ["inter", "system", "atkinson", "serif", "mono"], "inter");
+        if (font !== "inter") {
+          root.dataset.font = font;
+          root.style.setProperty("--font-sans", `var(--font-preset-${font})`);
           root.style.setProperty("--font-features", "normal");
         }
 
         // A colour palette, by name: its tokens are built in here from src/lib/palette.ts
         // (vite.config.ts), the values the SPA sets when it starts. Nothing stored is applied.
         const presets = {/*palettes*/};
-        const palette = device.palette;
+        const palette = choice("palette", ["smartfire", "graphite", "ocean", "forest", "ember", "rose"], "smartfire");
 
         if (typeof palette === "string" && Object.hasOwn(presets, palette)) {
           root.dataset.palette = palette;
           for (const [name, value] of Object.entries(presets[palette])) root.style.setProperty(name, value);
+        }
+        if (!Object.hasOwn(device, "palette") && personal.tokens && typeof personal.tokens === "object") {
+          for (const [name, value] of Object.entries(personal.tokens)) {
+            if (name.startsWith("--") && typeof value === "string") root.style.setProperty(name, value);
+          }
         }
       })();
     </script>

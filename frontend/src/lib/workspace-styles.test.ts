@@ -88,6 +88,7 @@ describe("workspace styles", () => {
       serviceWorkerUrl: null,
       version: "test",
       revision: null,
+      appearancePreferences: null,
     });
     const stop = followWorkspaceStyles();
 

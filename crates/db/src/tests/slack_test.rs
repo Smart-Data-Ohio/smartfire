@@ -213,8 +213,10 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                         );
                         continue;
                     }
-                    // Port-only counter for the SPA activity badge that Rails doesn't have.
-                    if table == "users" && column == "activity_revision" {
+                    // Port-only user preferences and activity counter that Rails doesn't have.
+                    if table == "users"
+                        && matches!(column.as_str(), "activity_revision" | "appearance_preferences")
+                    {
                         continue;
                     }
                     // Port-only read boundary for the sidebar's thread pings.

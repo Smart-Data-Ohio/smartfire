@@ -24,7 +24,7 @@ import {
 } from "../store/organize.ts";
 import { mutations, store } from "../store/store.ts";
 import { withRowTicket } from "./row-ticket.ts";
-import { applySettingsSnapshot } from "./settings-snapshot.ts";
+import { applySettingsSnapshot, settingsEpoch } from "./settings-snapshot.ts";
 
 /** One server change at a time, in order. */
 const lock = Semaphore.makeUnsafe(1);
@@ -402,7 +402,11 @@ export const setInvolvement = Effect.fn("organize.setInvolvement")(function* (
   yield* pending(
     memberships({ [roomId]: patch }),
     withRowTicket((since) =>
-      Effect.map(api.updateInvolvement(roomId, involvement), (change) => {
+      Effect.gen(function* () {
+        const epoch = settingsEpoch();
+        const change = yield* api.updateInvolvement(roomId, involvement);
+
+        if (settingsEpoch() !== epoch) return;
         applySettingsSnapshot(change.settings);
         mutations.setMembership(change.membership, since);
       }),
