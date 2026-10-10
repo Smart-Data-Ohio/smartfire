@@ -28,6 +28,9 @@ use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKi
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
+use campfire_api_types::{SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
+use campfire_people::controllers::{auth, sessions, two_factor};
+use campfire_spa::{SignedOutRoute, signed_out_route};
 
 /// The SPA routes. `immutable_cache_control` is the policy for digest-stamped assets.
 pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
@@ -49,11 +52,30 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/app/", axum::routing::get(campfire_kit::action(show)))
         .route("/app/{*path}", axum::routing::get(page))
         .route("/api/v1/boot", axum::routing::get(campfire_kit::action(boot)))
+        .route("/api/v1/session/boot", axum::routing::get(campfire_kit::action(signed_out_boot)))
+        .route("/api/v1/session", axum::routing::post(campfire_kit::unparsed_action(sessions::create_json)).delete(campfire_kit::unparsed_action(sessions::destroy_json)))
+        .route("/api/v1/session/google", axum::routing::post(campfire_kit::action(super::google_sign_in::create_json)))
+        .route("/api/v1/session/transfers/{id}", axum::routing::put(campfire_kit::action(sessions::transfers::update_json)))
+        .route("/api/v1/two_factor/challenge", axum::routing::get(campfire_kit::action(two_factor::challenge_show_json)).post(campfire_kit::unparsed_action(two_factor::challenge_create_json)))
 }
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    if let Some(route) = signed_out_route(c.request.path()) {
+        concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+        if !concerns::restore_authentication(c).await? {
+            let boot = load_signed_out_boot(c).await?;
+            let nonce = c.content_security_policy_nonce();
+            let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
+            c.no_store();
+            return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+        }
+        // Only the retained challenge redirects a signed-in visitor. Sign-in and transfer GETs
+        // accept one, so those routes use the normal authenticated boot instead.
+        if route == SignedOutRoute::Challenge { return c.redirect_to(&c.url_for("/")); }
+    } else {
+        concerns::before_actions(c, Before::default()).await?;
+    }
     let mut boot = load_boot(c).await?;
     let flash = c.flash();
     boot.flash = flash.notice().map(|message| BootFlash { kind: FlashKind::Notice, message: message.to_owned() })
@@ -63,6 +85,34 @@ pub async fn show(c: &mut Ctx) -> Result {
     let nonce = c.content_security_policy_nonce();
     let html = campfire_spa::render_shell(&boot, &csrf_token, nonce.as_deref());
     Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html))
+}
+
+/// Public authentication inputs and a fresh CSRF token for the signed-out client.
+pub async fn signed_out_boot(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    let boot = load_signed_out_boot(c).await?;
+    auth::json(c, StatusCode::OK, &boot)
+}
+
+async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
+    let (account, first_run_pending) = c.app().db.read(|conn| {
+        Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?))
+    }).await.map_err(Error::internal)?;
+    let logo_url = match &account {
+        Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
+        None => None,
+    };
+    Ok(SignedOutBoot {
+        kind: SignedOut::SignedOut,
+        workspace: SignInWorkspace {
+            name: account.as_ref().map(|account| account.name.clone()),
+            logo_url,
+            description: account.map(|account| account.settings().description().to_owned()).unwrap_or_default(),
+        },
+        sign_in_methods: SignInMethods { password: true, google: c.app().google.sign_in().config.configured() },
+        first_run_pending,
+        csrf_token: c.authenticity_tokens().global(),
+    })
 }
 
 /// `GET /api/v1/boot`. Signed out, a JSON request gets an empty 401 and a page navigation the

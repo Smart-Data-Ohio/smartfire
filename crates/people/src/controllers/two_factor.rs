@@ -1,4 +1,5 @@
 //! `app/controllers/two_factor`: domain writes are transactional; page rendering stays separate.
+use super::auth::{self, ResponseMode};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
 use crate::controllers::presenters::page::retained_page;
@@ -195,6 +196,15 @@ async fn render_backups(
 
 /// Shared password/transfer/WS14 Google first-factor seam. Pending state grants no session.
 pub async fn begin_session_for(c: &mut Ctx, user: User, method: &str) -> Result {
+    begin_session_response(c, user, method, ResponseMode::Html).await
+}
+
+pub async fn begin_session_response(
+    c: &mut Ctx,
+    user: User,
+    method: &str,
+    mode: ResponseMode,
+) -> Result {
     let return_url = concerns::post_authenticating_url(c).await?;
     let user_id = user.id;
     let enabled = c
@@ -222,14 +232,14 @@ pub async fn begin_session_for(c: &mut Ctx, user: User, method: &str) -> Result 
             c.session()
                 .insert(concerns::session_keys::RETURN_TO_KEY, return_url);
             concerns::session_keys::stash_two_factor_pending(c.session(), user_id, method, now);
-            return c.redirect_to(&c.url_for("/two_factor_challenge"));
+            return mode.challenge(c);
         }
     } else {
         concerns::start_new_session_for(c, user.clone()).await?;
         sign_in_audit(c, user, method.into(), None).await?;
     }
     let return_url = concerns::post_authentication_destination(c, return_url).await?;
-    c.redirect_to(&return_url)
+    mode.signed_in(c, &return_url)
 }
 fn user_enabled(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<bool> {
     Ok(TwoFactorCredential::for_user(conn, user_id)?.is_some_and(|v| v.enabled()))
@@ -249,10 +259,10 @@ async fn sign_in_audit(
         .await
         .map_err(Error::internal)
 }
-async fn pending(c: &mut Ctx) -> Result<User> {
+async fn pending(c: &mut Ctx, mode: ResponseMode) -> Result<User> {
     concerns::restore_authentication(c).await?;
     if concerns::signed_in(c) {
-        return halt(c.redirect_to(&c.url_for("/"))?);
+        return halt(mode.navigate(c, &c.url_for("/"))?);
     }
     if let Some(user) = concerns::two_factor_pending_user(c).await? {
         let id = user.id;
@@ -266,16 +276,39 @@ async fn pending(c: &mut Ctx) -> Result<User> {
         }
     }
     concerns::session_keys::clear_two_factor_pending(c.session());
-    halt(c.redirect_to(&c.url_for("/session/new"))?)
+    halt(mode.navigate(c, &c.url_for("/session/new"))?)
 }
 pub async fn challenge_show(c: &mut Ctx) -> Result {
+    challenge_show_response(c, ResponseMode::Html).await
+}
+
+pub async fn challenge_show_json(c: &mut Ctx) -> Result {
+    let result = challenge_show_response(c, ResponseMode::Json).await;
+    auth::complete(c, result)
+}
+
+async fn challenge_show_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-    pending(c).await?;
+    pending(c, mode).await?;
     no_store(c);
-    render_challenge(c, StatusCode::OK).await
+    render_challenge(c, StatusCode::OK, mode).await
 }
 pub async fn challenge_create(c: &mut Ctx) -> Result {
+    challenge_create_response(c, ResponseMode::Html).await
+}
+
+pub async fn challenge_create_json(c: &mut Ctx) -> Result {
+    let result = challenge_create_response(c, ResponseMode::Json).await;
+    auth::complete(c, result)
+}
+
+async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    let body = if mode == ResponseMode::Json {
+        Some(auth::body::<campfire_api_types::ChallengeSubmission>(c).await)
+    } else {
+        None
+    };
     let now = c.now();
     let id = concerns::session_keys::two_factor_pending_user_id(c.session(), now);
     if limited(c, "two_factor/challenges", "per-user", id)? {
@@ -302,9 +335,17 @@ pub async fn challenge_create(c: &mut Ctx) -> Result {
             .map_err(Error::internal)?;
         c.flash()
             .now("alert", "Too many attempts. Try again in a few minutes.");
-        return render_challenge(c, StatusCode::TOO_MANY_REQUESTS).await;
+        return render_challenge(c, StatusCode::TOO_MANY_REQUESTS, mode).await;
     }
-    let user = pending(c).await?;
+    let user = pending(c, mode).await?;
+    if let Some(body) = body {
+        let body = body?;
+        c.params.insert("code", campfire_kit::Param::Str(body.code));
+        c.params.insert(
+            "remember_device",
+            campfire_kit::Param::Str(if body.remember_device { "1" } else { "0" }.into()),
+        );
+    }
     no_store(c);
     let user_id = user.id;
     let code = scalar(c, "code");
@@ -333,7 +374,7 @@ pub async fn challenge_create(c: &mut Ctx) -> Result {
     match outcome {
         crate::authentication::Challenge::Gone => {
             concerns::session_keys::clear_two_factor_pending(c.session());
-            c.redirect_to(&c.url_for("/session/new"))
+            mode.navigate(c, &c.url_for("/session/new"))
         }
         crate::authentication::Challenge::Accepted(factor) => {
             concerns::session_keys::clear_two_factor_pending(c.session());
@@ -343,14 +384,14 @@ pub async fn challenge_create(c: &mut Ctx) -> Result {
             }
             sign_in_audit(c, user, method, Some(factor)).await?;
             let location = concerns::post_authenticating_url(c).await?;
-            c.redirect_to(&location)
+            mode.signed_in(c, &location)
         }
         crate::authentication::Challenge::Wrong => {
             c.flash().now(
                 "alert",
                 "That code didn't work. Check your authenticator app or try a backup code.",
             );
-            render_challenge(c, StatusCode::UNPROCESSABLE_ENTITY).await
+            render_challenge(c, StatusCode::UNPROCESSABLE_ENTITY, mode).await
         }
         crate::authentication::Challenge::Locked(minutes) => {
             c.flash().now(
@@ -360,11 +401,24 @@ pub async fn challenge_create(c: &mut Ctx) -> Result {
                     if minutes == 1 { "minute" } else { "minutes" }
                 ),
             );
-            render_challenge(c, StatusCode::TOO_MANY_REQUESTS).await
+            render_challenge(c, StatusCode::TOO_MANY_REQUESTS, mode).await
         }
     }
 }
-async fn render_challenge(c: &mut Ctx, status: StatusCode) -> Result {
+async fn render_challenge(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Result {
+    if mode == ResponseMode::Json {
+        let alert = c.flash().alert().map(str::to_owned);
+        return match alert {
+            Some(message) => auth::field_error(c, status, "code", &message),
+            None => auth::json(
+                c,
+                status,
+                &campfire_api_types::AuthResponse::SecondFactorRequired {
+                    challenge: auth::challenge_state(),
+                },
+            ),
+        };
+    }
     c.respond_to(&[&format::HTML])?;
     retained_page!(c, status, |ctx| two_factor::Challenge { ctx }).await
 }

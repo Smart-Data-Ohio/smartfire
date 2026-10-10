@@ -53,6 +53,9 @@ select another UI. Unknown routes show the SPA's not-found page.
 
 When changing the map, update the router and run `pnpm gen`; `src/router.test.ts` checks agreement.
 
+The reserved signed-out shell routes and JSON session contracts are documented in
+[`docs/signed-out-auth.md`](../docs/signed-out-auth.md). They add no auth UI or navigation links.
+
 ## URL cutover contract
 
 [`crates/spa/compat/urls.json`](../crates/spa/compat/urls.json) pins incoming navigation URLs,

@@ -4,6 +4,7 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientError from "effect/http/HttpClientError";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
+import { passwordSignIn, submitChallenge } from "./auth-endpoints.ts";
 import { readBoot } from "./boot.ts";
 import { ApiClient, ApiConfig, Navigation } from "./client.ts";
 import { markRead, me, messages, room } from "./endpoints.ts";
@@ -396,6 +397,75 @@ describe("readBoot", () => {
         ["/api/v1/boot", null],
         ["/api/v1/rooms/12/read", "boot-token"],
       ]);
+    }).pipe(Effect.provide(layer));
+  });
+});
+
+describe("auth response statuses", () => {
+  it.effect("keeps credential failures on the sign-in flow instead of navigating on 401", () => {
+    const error = { kind: "error", fieldErrors: { base: ["Too many requests or unauthorized."] } };
+    const { layer, seen, navigations } = harness(() => json(401, error));
+
+    return Effect.gen(function* () {
+      const client = yield* ApiClient;
+      yield* client.setCsrfToken("signed-out-token");
+      expect(
+        yield* passwordSignIn({ emailAddress: "unknown@example.com", password: "wrong" }),
+      ).toEqual(error);
+      expect(seen[0]?.csrf).toBe("signed-out-token");
+      expect(navigations).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect(
+    "refreshes signed-out CSRF and retries once without treating a bad code as stale",
+    () => {
+      const error = { kind: "error", fieldErrors: { code: ["That code didn't work."] } };
+
+      const { layer, seen, navigations } = harness((request, index) => {
+        if (request.url.pathname === "/api/v1/session/boot") {
+          return json(200, { csrfToken: "fresh-signed-out-token" });
+        }
+
+        return index === 0 ? { status: 422, body: "" } : json(422, error);
+      });
+
+      return Effect.gen(function* () {
+        const client = yield* ApiClient;
+        yield* client.setCsrfToken("stale-token");
+        expect(yield* submitChallenge({ code: "invalid", rememberDevice: false })).toEqual(error);
+        expect(seen.map((request) => request.url.pathname)).toEqual([
+          "/api/v1/two_factor/challenge",
+          "/api/v1/session/boot",
+          "/api/v1/two_factor/challenge",
+        ]);
+        expect(seen[2]?.csrf).toBe("fresh-signed-out-token");
+        expect(navigations).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    },
+  );
+});
+
+describe("auth token bootstrap", () => {
+  it.effect("gets a public CSRF token before the first signed-out write", () => {
+    const { layer, seen } = harness((request) =>
+      request.method === "GET"
+        ? json(200, { csrfToken: "public-token" })
+        : json(200, {
+            kind: "secondFactorRequired",
+            challenge: { methods: ["totp", "recoveryCode"], rememberDevice: true },
+          }),
+    );
+
+    return Effect.gen(function* () {
+      expect(
+        (yield* passwordSignIn({ emailAddress: "ada@example.com", password: "secret" })).kind,
+      ).toBe("secondFactorRequired");
+      expect(seen.map((request) => request.url.pathname)).toEqual([
+        "/api/v1/session/boot",
+        "/api/v1/session",
+      ]);
+      expect(seen[1]?.csrf).toBe("public-token");
     }).pipe(Effect.provide(layer));
   });
 });

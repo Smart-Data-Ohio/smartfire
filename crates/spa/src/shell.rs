@@ -2,6 +2,7 @@
 
 use crate::boot::{Boot, script_json};
 use crate::embedded;
+use serde::Serialize;
 
 /// Where Vite's `index.html` (and the stub) want the request's tags.
 const PLACEHOLDER: &str = "<!--boot-->";
@@ -15,6 +16,15 @@ pub fn render_shell(boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>) -> S
 }
 
 pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>) -> String {
+    render_boot(template, boot, csrf_token, csp_nonce, boot.custom_styles.as_deref())
+}
+
+/// Signed-out boot has its own DTO and carries no authenticated workspace or user facts.
+pub fn render_signed_out_shell(boot: &campfire_api_types::SignedOutBoot, csp_nonce: Option<&str>) -> String {
+    render_boot(embedded::INDEX_HTML, boot, &boot.csrf_token, csp_nonce, None)
+}
+
+fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonce: Option<&str>, custom_styles: Option<&str>) -> String {
     let nonce = csp_nonce.map(|nonce| format!(" nonce=\"{}\"", escape(nonce))).unwrap_or_default();
     let mut tags = format!(
         "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"{}\" />\n",
@@ -37,7 +47,7 @@ pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: O
             None => format!("{tags}\n{page}"),
         },
     };
-    match boot.custom_styles.as_deref().filter(|styles| !styles.is_empty()) {
+    match custom_styles.filter(|styles| !styles.is_empty()) {
         Some(styles) => {
             // Classic puts workspace CSS after its sheets, unlayered. Escape only HTML's
             // style end tags, preserving CSS operators; style-src allows inline CSS, no nonce.
