@@ -7,7 +7,7 @@ import { Effect } from "effect";
 import type { CreateRoomCategory } from "../gen/CreateRoomCategory.ts";
 import type { FavoriteList } from "../gen/FavoriteList.ts";
 import type { Involvement } from "../gen/Involvement.ts";
-import type { Membership } from "../gen/Membership.ts";
+import type { InvolvementChange } from "../gen/InvolvementChange.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
 import type { RoomCategoryList } from "../gen/RoomCategoryList.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
@@ -15,9 +15,9 @@ import type { UpdateRoomCategory } from "../gen/UpdateRoomCategory.ts";
 import { call, noContent } from "./call.ts";
 import {
   FavoriteList as FavoriteListSchema,
+  InvolvementChange as InvolvementChangeSchema,
   RoomCategoryList as RoomCategoryListSchema,
 } from "./schema/organize.ts";
-import { Membership as MembershipSchema } from "./schema/room.ts";
 import {
   RoomCategory as RoomCategorySchema,
   SidebarRow as SidebarRowSchema,
@@ -99,13 +99,13 @@ export const moveFavorite = Effect.fn("api.moveFavorite")(function* (
   );
 });
 
-/** `PUT /rooms/:id/involvement`: the viewer's notification level; answers the membership. */
+/** `PUT /rooms/:id/involvement`: the membership and revised settings. */
 export const updateInvolvement = Effect.fn("api.updateInvolvement")(function* (
   roomId: number,
   involvement: Involvement,
 ) {
   return yield* call(
     { method: "PUT", path: `/rooms/${roomId}/involvement`, body: { involvement } },
-    wire<Membership>(MembershipSchema),
+    wire<InvolvementChange>(InvolvementChangeSchema),
   );
 });

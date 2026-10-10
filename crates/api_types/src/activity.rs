@@ -232,6 +232,8 @@ pub struct ActivityList {
     /// Per-user server revision of this count. Ignore counts from older revisions.
     #[ts(type = "number")]
     pub unread_revision: i64,
+    /// The injected server clock used for this count, in UTC with nanoseconds.
+    pub evaluated_at: String,
     /// Pass as `before` for the next page; `null` when this is the last. Set only when an older
     /// row exists past this page (the server reads 101), unlike the classic `next_cursor`,
     /// which is set on any full page.
@@ -248,7 +250,7 @@ pub struct ActivityList {
 
 /// `GET /api/v1/activity/unread_count` (`activity_items#unread_count`, `no-store`): the badge.
 /// Unread means neither read nor handled; every type counts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ActivityUnreadCount {
@@ -256,6 +258,8 @@ pub struct ActivityUnreadCount {
     /// Per-user server revision of this count. Ignore counts from older revisions.
     #[ts(type = "number")]
     pub unread_revision: i64,
+    /// The injected server clock used for this count, in UTC with nanoseconds.
+    pub evaluated_at: String,
 }
 
 /// `PATCH /api/v1/activity/:id`: apply one of the classic state actions, replacing the classic
@@ -334,12 +338,14 @@ pub struct ActivityItemChanged {
     /// Per-user server revision of this count. Ignore counts from older revisions.
     #[ts(type = "number")]
     pub unread_revision: i64,
+    /// The injected server clock used for this count, in UTC with nanoseconds.
+    pub evaluated_at: String,
 }
 
 /// The `activity.removed` event on the owner's `user` topic: an item went with its source
 /// (unsaving a message deletes its reminder items, cancelling a scheduled message its drop
 /// item). New: the classic inbox only drops these on reload.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ActivityItemRemoved {
@@ -348,4 +354,6 @@ pub struct ActivityItemRemoved {
     /// Per-user server revision of this count. Ignore counts from older revisions.
     #[ts(type = "number")]
     pub unread_revision: i64,
+    /// The injected server clock used for this count, in UTC with nanoseconds.
+    pub evaluated_at: String,
 }

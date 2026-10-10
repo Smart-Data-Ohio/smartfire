@@ -5,6 +5,7 @@
  */
 import type { Involvement } from "../gen/Involvement.ts";
 import type { Membership, RoomCategory, SidebarRow } from "./model.ts";
+import { notificationRow } from "./notification-preferences.ts";
 import { categoryTouchedSince, isStale, touchedSince } from "./row-touches.ts";
 import type { SidebarState, State } from "./state.ts";
 
@@ -113,7 +114,11 @@ const views = new WeakMap<SidebarState, SidebarState>();
 export function organizedSidebar(sidebar: SidebarState): SidebarState {
   const { memberships, categories } = sidebar.overlay;
 
-  if (Object.keys(memberships).length === 0 && Object.keys(categories).length === 0) {
+  if (
+    sidebar.notificationPreferences === undefined &&
+    Object.keys(memberships).length === 0 &&
+    Object.keys(categories).length === 0
+  ) {
     return sidebar;
   }
 
@@ -125,7 +130,12 @@ export function organizedSidebar(sidebar: SidebarState): SidebarState {
 
   const view: SidebarState = {
     ...sidebar,
-    rows: patchedRows(sidebar.rows, memberships),
+    rows: Object.fromEntries(
+      Object.entries(patchedRows(sidebar.rows, memberships)).map(([id, row]) => [
+        id,
+        notificationRow(row, sidebar.notificationPreferences, sidebar.notificationClock ?? 0),
+      ]),
+    ),
     categories: patchedCategories(sidebar.categories, categories),
   };
 

@@ -54,6 +54,7 @@ fn run(number: i64) {
                     let recipient = UserStatusSettings::find(conn, user)?;
                     let membership = Membership::find(conn, member)?;
                     Ok(NotificationPolicy {
+                        room_id: None,
                         recipient: Some(&recipient), kind: NotificationKind::HuddleJoin,
                         room_involvement: Some(membership.involvement), thread_involvement: None,
                         mentioned: false, reply_to_recipient: false, keyword_matched: false,

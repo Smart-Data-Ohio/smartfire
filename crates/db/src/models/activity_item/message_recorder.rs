@@ -126,6 +126,7 @@ pub fn candidates(
             continue;
         }
         let policy = NotificationPolicy {
+            room_id: Some(message.room_id),
             recipient: settings.get(&id),
             kind: if message.thread_id.is_some() {
                 NotificationKind::ThreadMessage

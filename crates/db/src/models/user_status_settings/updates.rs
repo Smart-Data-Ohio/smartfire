@@ -35,7 +35,7 @@ impl UserStatusSettings {
         let affected = if active {
             tx.conn().execute("UPDATE users SET ooo_broadcast=1,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=1)", rusqlite::params![revision,self.user.id])?
         } else {
-            tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)", rusqlite::params![revision,self.user.id,now])?
+            tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=?,activity_revision=activity_revision+1 WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)", rusqlite::params![revision,self.user.id,now])?
         };
         Ok(affected == 1)
     }

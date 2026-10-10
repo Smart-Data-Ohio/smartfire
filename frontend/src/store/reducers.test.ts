@@ -285,6 +285,8 @@ describe("typing", () => {
 
 describe("sidebar counts", () => {
   const row: SidebarRow = {
+    revision: 0,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     room: {
       id: ROOM,
       kind: "open",

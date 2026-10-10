@@ -38,6 +38,10 @@ fn ok<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
     parse(reply)
 }
 
+fn involvement(reply: &Reply) -> api::Membership {
+    ok::<api::InvolvementChange>(reply).membership
+}
+
 fn fields(reply: &Reply) -> Vec<String> {
     assert_eq!(
         reply.status,
@@ -288,7 +292,7 @@ async fn favourites_count_only_shown_ones_and_tell_the_other_tabs() {
 
     // Hide Quiet Corner, the second favourite.
     let hide = format!("/api/v1/rooms/{QUIET_CORNER}/involvement");
-    let hidden: api::Membership = ok(&send(
+    let hidden: api::Membership = involvement(&send(
         &mut david,
         Method::PUT,
         &hide,
@@ -474,7 +478,7 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     sync.welcome().await;
     let path = format!("/api/v1/rooms/{ALL_TALK}/involvement");
 
-    let muted: api::Membership = ok(&send(
+    let muted: api::Membership = involvement(&send(
         &mut david,
         Method::PUT,
         &path,
@@ -491,7 +495,7 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     .await;
 
     // Hidden, then back.
-    ok::<api::Membership>(
+    ok::<api::InvolvementChange>(
         &send(
             &mut david,
             Method::PUT,
@@ -505,7 +509,7 @@ async fn involvement_answers_the_membership_and_mutes_read() {
         |_| false,
     )
     .await;
-    let back: api::Membership = ok(&send(
+    let back: api::Membership = involvement(&send(
         &mut david,
         Method::PUT,
         &path,
@@ -516,7 +520,7 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     sync.until(row_of(ALL_TALK), |_| false).await;
 
     // Muting a room that's already read changes no unread state: no `room.read`, just the row.
-    ok::<api::Membership>(
+    ok::<api::InvolvementChange>(
         &send(
             &mut david,
             Method::PUT,
@@ -533,7 +537,7 @@ async fn involvement_answers_the_membership_and_mutes_read() {
 
     // Any level for any kind of room; an unknown one is a 422; not a member, a 404.
     let direct = format!("/api/v1/rooms/{DIRECT_DAVID_JASON}/involvement");
-    let hidden: api::Membership = ok(&send(
+    let hidden: api::Membership = involvement(&send(
         &mut david,
         Method::PUT,
         &direct,
@@ -615,7 +619,7 @@ async fn another_persons_tab_hears_none_of_davids_organising() {
     ok::<api::SidebarRow>(&david.write(Req::new(Method::POST, &favorite)).await);
     davids.until(row_of(QUIET_CORNER), |_| false).await;
     let involvement = format!("/api/v1/rooms/{QUIET_CORNER}/involvement");
-    ok::<api::Membership>(
+    ok::<api::InvolvementChange>(
         &send(
             &mut david,
             Method::PUT,
@@ -885,12 +889,12 @@ async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
 
     // Unread when looked up, read by another tab before the write: nothing to clear.
     set_unread(true).await.unwrap();
-    let muted: api::Membership = ok(&mute_while_unread_changes(&a, &mut david, false).await);
+    let muted: api::Membership = involvement(&mute_while_unread_changes(&a, &mut david, false).await);
     assert_eq!(muted.unread_at, None);
     sync.until(muted_row, room_read).await;
     // Unmuting publishes the row again; no `room.read` arrives before it either.
     let path = format!("/api/v1/rooms/{ALL_TALK}/involvement");
-    ok::<api::Membership>(
+    ok::<api::InvolvementChange>(
         &send(
             &mut david,
             Method::PUT,
@@ -907,7 +911,7 @@ async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
 
     // Read when looked up, unread again before the write: the mute clears it, and says so.
     set_unread(false).await.unwrap();
-    let muted: api::Membership = ok(&mute_while_unread_changes(&a, &mut david, true).await);
+    let muted: api::Membership = involvement(&mute_while_unread_changes(&a, &mut david, true).await);
     assert_eq!(muted.unread_at, None);
     both(&mut sync, room_read, muted_row).await;
     server.abort();

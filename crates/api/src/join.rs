@@ -68,7 +68,7 @@ async fn join_room(c: &mut Ctx) -> Result {
             let detail = dto::room_detail(conn, &secrets, &viewer, &room, &membership, now)?;
             // `None` for an invisible involvement: that membership has no sidebar row.
             // Classic still redirects into the room, so the detail is the whole answer.
-            let row = dto::sidebar_row(conn, &room, &membership)?;
+            let row = dto::sidebar_row(conn, &room, &membership, now)?;
             Ok(Some(api::RoomJoin { detail, row }))
         })
         .await

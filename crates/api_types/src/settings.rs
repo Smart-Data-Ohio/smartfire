@@ -20,6 +20,10 @@ use crate::{Involvement, PresenceSetting, TextSize, Theme, Timestamp, VoiceMode}
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Settings {
+    /// Monotonic, persisted ordering for every settings response.
+    pub revision: i64,
+    /// The injected server clock used for expiry-dependent fields, in UTC with nanoseconds.
+    pub evaluated_at: String,
     pub profile: ProfileSettings,
     pub appearance: AppearanceSettings,
     pub notifications: NotificationSettings,
@@ -193,12 +197,44 @@ pub struct UpdateAppearance {
     pub time_zone: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum NotificationLevel { Everything, Mentions, Nothing }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RoomNotificationUpdate {
+    pub room_id: i64,
+    /// Null inherits the account default.
+    pub level: Option<NotificationLevel>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum RoomMuteDuration { Minutes15, Hour1, Hours8, Hours24, Forever, Off }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RoomMuteUpdate {
+    pub room_id: i64,
+    pub duration: RoomMuteDuration,
+}
+
 /// Do not disturb, quiet hours, meetings, out of office, keyword alerts and the activity inbox
 /// switches (the notifications form and the profile form's inbox switches).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct NotificationSettings {
+    pub default_notification_level: NotificationLevel,
+    /// An entry with null inherits; rooms without entries keep their membership setting.
+    pub room_notification_levels: BTreeMap<String, Option<NotificationLevel>>,
+    /// Null means indefinite; expired deadlines read as unmuted.
+    pub room_mute_until: BTreeMap<String, Option<String>>,
     /// Manual DND (until turned off); quiet hours and meetings are separate.
     pub dnd_enabled: bool,
     pub quiet_hours_enabled: bool,
@@ -241,6 +277,9 @@ pub struct InboxSwitch {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateNotifications {
+    pub default_notification_level: Option<NotificationLevel>,
+    pub room_notification: Option<RoomNotificationUpdate>,
+    pub room_mute: Option<RoomMuteUpdate>,
     pub dnd_enabled: Option<bool>,
     pub quiet_hours_enabled: Option<bool>,
     /// `"HH:MM"`; `""` clears it.

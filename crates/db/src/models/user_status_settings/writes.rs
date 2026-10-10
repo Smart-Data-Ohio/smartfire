@@ -64,7 +64,7 @@ pub fn replace_keyword_alerts(tx: &mut Tx<'_>, user_id: i64, lines: &[String]) -
         for phrase in phrases {
             KeywordAlert::create(tx, user_id, &phrase)?;
         }
-        Ok(())
+        crate::models::user::profile_settings::bump_revision(tx, user_id)
     })
     .map_err(|error| match error {
         crate::Error::RecordInvalid(errors) => {
@@ -192,6 +192,7 @@ impl UserStatusSettings {
             .map(|(key, _)| format!("{key}=?"))
             .collect::<Vec<_>>();
         columns.push("updated_at=?".into());
+        columns.push("activity_revision=activity_revision+1".into());
         let mut values = changes
             .into_iter()
             .map(|(_, value)| value)

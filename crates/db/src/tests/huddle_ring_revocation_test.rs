@@ -16,6 +16,68 @@ fn review_direct_setup(db: &TestDb) -> (i64, i64, i64) {
     })
 }
 
+fn inherit_nothing(db: &TestDb, room: i64, recipient: i64, inbox: bool) {
+    db.write(move |tx| {
+        Membership::find_by_room_and_user(tx.conn(), room, recipient)?.unwrap()
+            .update_involvement(tx, Some(crate::Involvement::Everything))?;
+        crate::models::user::profile_settings::update(tx, recipient, crate::models::user::profile_settings::Changes {
+            inbox_preferences: Some(serde_json::json!({
+                "huddle_invitations": inbox,
+                "default_notification_level": "nothing",
+                "room_notification_levels": {room.to_string(): null}
+            })),
+            ..Default::default()
+        })
+    });
+}
+
+#[test]
+fn a9_inherited_nothing_suppresses_huddle_items_and_banners() {
+    use crate::models::huddle_invitations::RingRequest;
+    for inbox in [true, false] {
+        let db = TestDb::new();
+        let (room, membership, session) = review_direct_setup(&db);
+        let recipient = crate::fixtures::identify("jason");
+        inherit_nothing(&db, room, recipient, inbox);
+        db.sink.take();
+        db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+        assert_eq!(db.read(move |c| Ok(c.query_row(
+            "SELECT count(*) FROM activity_items WHERE user_id=? AND event_type='huddle_started'",
+            [recipient], |r| r.get::<_, i64>(0)
+        )?)), 0);
+        let events = db.sink.take();
+        assert!(!events.iter().filter_map(|e| e.as_job::<RingRequest>()).any(|r| r.recipient_id == recipient));
+        assert!(!events.iter().any(|e| matches!(e.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable { payload, .. }) if payload.get("huddleInvitation").is_some())));
+    }
+}
+
+#[test]
+fn a9_inherited_nothing_suppresses_already_queued_huddle_rings() {
+    use crate::models::huddle_invitations::{RingRequest, publish_ring, publish_ring_with_policy};
+    for inbox in [true, false] {
+        let db = TestDb::new();
+        let (room, membership, session) = review_direct_setup(&db);
+        let recipient = crate::fixtures::identify("jason");
+        if !inbox {
+            db.write(move |tx| Ok(tx.conn().execute(
+                "UPDATE users SET inbox_preferences=? WHERE id=?",
+                rusqlite::params![r#"{"huddle_invitations":false}"#, recipient]
+            )?));
+        }
+        db.sink.take();
+        db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+        let request = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>())
+            .find(|r| r.recipient_id == recipient).unwrap();
+        inherit_nothing(&db, room, recipient, inbox);
+        db.sink.take();
+        db.write(move |tx| {
+            publish_ring_with_policy(tx, &request, None)?;
+            publish_ring(tx, &request, true)
+        });
+        assert!(!db.sink.take().iter().any(|e| e.as_broadcast().is_some()));
+    }
+}
+
 #[test]
 fn ws13b_review_queued_ring_does_not_leak_after_recipient_removal() {
     use crate::models::huddle_invitations::{RingRequest, publish_ring_with_policy};

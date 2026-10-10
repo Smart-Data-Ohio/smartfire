@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Exit, Fiber } from "effect";
 import { TestClock } from "effect/testing";
+import { createMockServer } from "../../mock/server.ts";
 import { Conflict, NetworkError, Validation } from "../api/errors.ts";
 import {
   FakeApi,
@@ -570,6 +571,14 @@ describe("organize actions", () => {
       seed();
       mutations.setRoomDetail(roomDetailFixture(1), beginRoomRequest());
 
+      const server = createMockServer({ simulate: false });
+
+      const settings = yield* Effect.promise(() =>
+        server.handle({ method: "GET", path: "/api/v1/settings" }),
+      );
+
+      server.dispose();
+
       const fake = yield* FakeApi;
       let during: string | undefined;
 
@@ -592,7 +601,10 @@ describe("organize actions", () => {
         // Muting marks the room read: it shows read at once too.
         unreadDuring = view().rows[1]?.membership.unreadAt;
 
-        return Effect.succeed({ ...general.membership, involvement: "muted" });
+        return Effect.succeed({
+          membership: { ...general.membership, involvement: "muted" },
+          settings: settings.json,
+        });
       });
 
       yield* organize.setInvolvement(1, "muted");

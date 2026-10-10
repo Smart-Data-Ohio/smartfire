@@ -28,6 +28,10 @@ unreadCount: number,
  */
 unreadRevision: number,
 /**
+ * The injected server clock used for this count, in UTC with nanoseconds.
+ */
+evaluatedAt: string,
+/**
  * Pass as `before` for the next page; `null` when this is the last. Set only when an older
  * row exists past this page (the server reads 101), unlike the classic `next_cursor`,
  * which is set on any full page.

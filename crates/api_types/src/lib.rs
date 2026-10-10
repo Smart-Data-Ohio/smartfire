@@ -143,8 +143,8 @@ pub use message::{
     MessageSource, SoundPresentation, UpdateMessage,
 };
 pub use organize::{
-    AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,
-    RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
+    AssignRoomCategory, CreateRoomCategory, FavoriteList, InvolvementChange, MoveFavorite,
+    ReorderRoomCategories, RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
 pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
@@ -166,7 +166,7 @@ pub use search::{
 pub use settings::{
     AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, CreatePushSubscription, DndAllowedPerson,
     GoogleIntegration, InboxSwitch,
-    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
+    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, NotificationLevel, RoomNotificationUpdate, RoomMuteDuration, RoomMuteUpdate, OooPreset,
     ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
     RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
     TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,

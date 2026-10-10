@@ -90,7 +90,7 @@ async fn snapshot(db: &Database, json_columns: Value) -> Value {
                         if table == "users" && column == "activity_revision" {
                             continue;
                         }
-                        let v = match row.get::<_, SqlValue>(i)? {
+                        let mut v = match row.get::<_, SqlValue>(i)? {
                             SqlValue::Null => Value::Null,
                             SqlValue::Integer(v) => json!(v),
                             SqlValue::Real(v) => json!(v),
@@ -105,6 +105,11 @@ async fn snapshot(db: &Database, json_columns: Value) -> Value {
                                 panic!("unexpected binary field in Slack fixture: {table}.{column}")
                             }
                         };
+                        if table == "users" && column == "inbox_preferences"
+                            && let Some(preferences) = v.as_object_mut()
+                        {
+                            preferences.remove("settings_revision");
+                        }
                         value[column] = v;
                     }
                     Ok(value)
