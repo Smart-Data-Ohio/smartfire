@@ -118,8 +118,8 @@ pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
 pub use drive::{
-    DriveApprovedRecipient, DriveFile, DriveFileList, DriveRecipient, DriveRecipientList,
-    DriveShare, DriveShareResult, ShareDriveFile, ValidateDriveRecipients,
+    DriveApprovedRecipient, DriveFile, DriveFileList, DrivePickerConfig, DriveRecipient,
+    DriveRecipientList, DriveShare, DriveShareResult, ShareDriveFile, ValidateDriveRecipients,
 };
 pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse};

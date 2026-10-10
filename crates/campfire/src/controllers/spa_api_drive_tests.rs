@@ -50,7 +50,17 @@ async fn attachment_ids(app: &TestApp, message_id: i64) -> Vec<String> {
 
 async fn app() -> Option<(TestApp, Arc<Recorded>)> {
     let clock = Arc::new(campfire_kit::FrozenClock::new(seed_clock().now()));
-    let app = TestApp::boot_seed_with_env("default", clock, &[("SPA_ENABLED", "1")]).await?;
+    let app = TestApp::boot_seed_with_env(
+        "default",
+        clock,
+        &[
+            ("SPA_ENABLED", "1"),
+            ("GOOGLE_CLIENT_ID", "picker-client"),
+            ("GOOGLE_PICKER_API_KEY", "picker-key"),
+            ("GOOGLE_CLOUD_PROJECT_NUMBER", "123456789"),
+        ],
+    )
+    .await?;
     let recorded = Recorded::new(vec![]);
     google_api_tests::install(&app, recorded.clone()).await;
     app.booted.app.google.drive().install_picker(true);
@@ -80,6 +90,55 @@ fn drive_card(message: &api::MessageDTO) -> Option<&api::DriveFileCard> {
         api::MessageCard::Drive(file) => Some(file),
         _ => None,
     })
+}
+
+#[tokio::test]
+async fn drive_picker_config_is_public_only_and_requires_a_connected_viewer() {
+    let Some((app, recorded)) = app().await else {
+        return;
+    };
+    let path = "/api/v1/drive/picker";
+    let mut guest = app.anonymous();
+    let missing = guest.send(get(path)).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert!(missing.body.is_empty());
+
+    let mut david = app.sign_in(DAVID).await;
+    let missing = david.send(get(path)).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert!(missing.body.is_empty());
+    grant(&app, DAVID).await;
+    let response = david.send(get(path)).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert_eq!(response.header("cache-control"), Some("no-store"));
+    assert_eq!(
+        response.json(),
+        json!({
+            "clientId": "picker-client", "apiKey": "picker-key", "projectNumber": "123456789"
+        })
+    );
+    assert!(recorded.calls.lock().unwrap().is_empty());
+    let mut jason = app.sign_in(JASON).await;
+    assert_eq!(jason.send(get(path)).await.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn drive_picker_without_configuration_is_an_empty_404() {
+    let clock = Arc::new(campfire_kit::FrozenClock::new(seed_clock().now()));
+    let Some(app) = TestApp::boot_seed_with_env(
+        "default",
+        clock,
+        &[("SPA_ENABLED", "1"), ("GOOGLE_PICKER_API_KEY", "")],
+    )
+    .await
+    else {
+        return;
+    };
+    grant(&app, DAVID).await;
+    let mut david = app.sign_in(DAVID).await;
+    let missing = david.send(get("/api/v1/drive/picker")).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert!(missing.body.is_empty());
 }
 
 #[tokio::test]

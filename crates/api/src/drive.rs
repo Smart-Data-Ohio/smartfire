@@ -21,6 +21,10 @@ use crate::endpoints::{before_actions, body, set_room};
 use crate::error::{fail, validation};
 
 endpoint!(
+    /// `GET /api/v1/drive/picker`
+    picker => picker_config
+);
+endpoint!(
     /// `GET /api/v1/drive/files`
     search => search_files
 );
@@ -112,6 +116,30 @@ fn query_term(c: &Ctx) -> String {
         .chars()
         .take(100)
         .collect()
+}
+
+async fn picker_config(c: &mut Ctx) -> Result {
+    concerns::before_actions(
+        c,
+        concerns::Before::default().allow_unauthenticated_access(),
+    )
+    .await?;
+    let _ = concerns::restore_authentication(c).await?;
+    c.set_header("Cache-Control", "no-store");
+    let Some(config) = c.app().config.google_picker.clone() else {
+        return empty(c, StatusCode::NOT_FOUND);
+    };
+    if drive_account(c).await?.is_none() {
+        return empty(c, StatusCode::NOT_FOUND);
+    }
+    c.json(
+        StatusCode::OK,
+        &api::DrivePickerConfig {
+            client_id: config.client_id,
+            api_key: config.api_key,
+            project_number: config.project_number,
+        },
+    )
 }
 
 async fn search_files(c: &mut Ctx) -> Result {

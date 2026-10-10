@@ -2,16 +2,22 @@
 import { Effect } from "effect";
 import type { DriveFile } from "../gen/DriveFile.ts";
 import type { DriveFileList } from "../gen/DriveFileList.ts";
+import type { DrivePickerConfig } from "../gen/DrivePickerConfig.ts";
 import type { DriveRecipientList } from "../gen/DriveRecipientList.ts";
 import type { DriveShare } from "../gen/DriveShare.ts";
 import { call, get } from "./call.ts";
 import {
   DriveFileList as DriveFileListSchema,
   DriveFile as DriveFileSchema,
+  DrivePickerConfig as DrivePickerConfigSchema,
   DriveRecipientList as DriveRecipientListSchema,
   DriveShare as DriveShareSchema,
 } from "./schema/drive.ts";
 import { wire } from "./wire.ts";
+
+export const drivePickerConfig = Effect.fn("api.drivePickerConfig")(function* () {
+  return yield* call(get("/drive/picker"), wire<DrivePickerConfig>(DrivePickerConfigSchema));
+});
 
 /** `GET /drive/files?q=`: the viewer's files, recent first, filtered by name. */
 export const searchDriveFiles = Effect.fn("api.searchDriveFiles")(function* (query: string) {

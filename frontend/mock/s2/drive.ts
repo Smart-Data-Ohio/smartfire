@@ -4,6 +4,7 @@
  */
 import type { DriveFile } from "../../src/gen/DriveFile.ts";
 import type { DriveFileList } from "../../src/gen/DriveFileList.ts";
+import type { DrivePickerConfig } from "../../src/gen/DrivePickerConfig.ts";
 import type { DriveRecipient } from "../../src/gen/DriveRecipient.ts";
 import type { DriveRecipientList } from "../../src/gen/DriveRecipientList.ts";
 import type { DriveShare } from "../../src/gen/DriveShare.ts";
@@ -36,6 +37,22 @@ const RECIPIENTS: readonly DriveRecipient[] = [
   { id: USER_IDS.jonah, name: "Jonah Lindqvist", email: "jonah@37signals.com" },
 ];
 
+export function pickerFiles(): DriveFileList {
+  return {
+    files: [
+      ...FILES,
+      {
+        id: "3ExistingDriveFile",
+        name: "Existing private plan",
+        kind: "document",
+        modifiedAt: null,
+        owner: "Maya Okafor",
+        url: "https://drive.google.com/open?id=3ExistingDriveFile",
+      },
+    ],
+  };
+}
+
 function listed(query: string): DriveFileList {
   const term = query.trim().toLowerCase();
 
@@ -47,6 +64,15 @@ function listed(query: string): DriveFileList {
 export function createDrive() {
   return {
     routes: [
+      route("GET", /^\/drive\/picker$/, () => {
+        const config: DrivePickerConfig = {
+          clientId: "mock-client",
+          apiKey: "mock-key",
+          projectNumber: "123456",
+        };
+
+        return ok(config);
+      }),
       route("GET", /^\/drive\/files$/, (request) => ok(listed(request.query.get("q") ?? ""))),
       route("GET", /^\/rooms\/(\d+)\/drive\/recipients$/, () => {
         const body: DriveRecipientList = { recipients: [...RECIPIENTS] };

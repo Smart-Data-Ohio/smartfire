@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DriveShare } from "../../gen/DriveShare.ts";
+import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
 import { DRIVE_SEARCH_DEBOUNCE_MS } from "./drive-picker.ts";
@@ -31,6 +32,13 @@ const partial: DriveShare = {
     { recipient: jonah, status: "failed", reason: "denied" },
   ],
 };
+
+beforeEach(() => {
+  vi.spyOn(actions.drive, "preparePicker").mockResolvedValue({
+    choose: async () => null,
+    dispose: () => {},
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -164,5 +172,92 @@ describe("a grant in flight", () => {
         }),
       ]);
     });
+  });
+});
+
+describe("Google Picker", () => {
+  it("reviews a file that the stored grant's search cannot find", async () => {
+    vi.spyOn(actions.drive, "search").mockResolvedValue({ files: [] });
+    vi.spyOn(actions.drive, "recipients").mockResolvedValue({ recipients: [maya] });
+
+    const choose = vi.fn(async () => ({
+      id: file.id,
+      name: file.name,
+      kind: file.kind,
+      url: file.url,
+    }));
+
+    const dispose = vi.fn();
+    vi.mocked(actions.drive.preparePicker).mockResolvedValue({ choose, dispose });
+    const attached = vi.fn();
+    const user = userEvent.setup();
+
+    const view = render(
+      <DrivePicker
+        roomId={1}
+        attachedFileIds={[]}
+        open
+        onOpenChange={() => {}}
+        onAttach={attached}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Choose from Google Drive" }));
+    await screen.findByRole("dialog", { name: "Share a Drive file" });
+    expect(choose).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("option")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Attach only" }));
+    expect(attached).toHaveBeenCalledExactlyOnceWith({
+      id: file.id,
+      name: file.name,
+      kind: file.kind,
+      url: file.url,
+    });
+    view.unmount();
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
+  it("keeps Enable Drive previews when Picker config returns the empty 404", async () => {
+    vi.spyOn(actions.drive, "search").mockResolvedValue({ files: [] });
+    vi.mocked(actions.drive.preparePicker).mockRejectedValue(new ActionError("NotFound", "404"));
+    render(picker(true));
+    expect(await screen.findByRole("button", { name: "Enable Drive previews" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Choose from Google Drive" })).toBeNull();
+  });
+});
+
+describe("recipient loading", () => {
+  it("shows a load failure and retries before enabling sharing", async () => {
+    vi.spyOn(actions.drive, "search").mockResolvedValue({ files: [file] });
+    const first = Promise.withResolvers<{ recipients: (typeof maya)[] }>();
+
+    const load = vi
+      .spyOn(actions.drive, "recipients")
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValue({ recipients: [maya] });
+
+    const share = vi.spyOn(actions.drive, "share").mockResolvedValue({ ...partial, results: [] });
+    const user = userEvent.setup();
+    render(picker(true));
+    await user.click(await screen.findByRole("option", { name: /Q4 roadmap/ }));
+    expect(screen.getByText("Loading recipients…")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Grant view access and attach" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    await act(async () => first.reject(new ActionError("NetworkError", "Connection lost")));
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      expect.stringContaining("Couldn't load recipients: Connection lost"),
+    );
+    expect(share).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(await screen.findByRole("checkbox", { name: /Maya Okafor/ }));
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Grant view access and attach" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

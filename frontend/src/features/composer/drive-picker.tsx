@@ -1,15 +1,15 @@
 import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { DriveFile } from "../../gen/DriveFile.ts";
-import type { DriveRecipient } from "../../gen/DriveRecipient.ts";
 import type { DriveShare } from "../../gen/DriveShare.ts";
 import { postClassicForm } from "../../lib/classic-form.ts";
-import type { ActionError } from "../../sync/run.ts";
+import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { BrandMark } from "../cards/brand-marks.tsx";
+import { useLoad } from "../events/use-load.ts";
 import {
   CONFIRMATION_MESSAGE,
   closedShareToast,
@@ -35,6 +35,14 @@ interface DrivePickerProps {
   readonly onOpenChange: (open: boolean) => void;
   readonly onAttach: (file: DrivePick) => void;
 }
+
+type PickerLoad =
+  | { readonly status: "loading" }
+  | {
+      readonly status: "ready";
+      readonly session: Awaited<ReturnType<typeof actions.drive.preparePicker>>;
+    }
+  | { readonly status: "error"; readonly message: string; readonly disconnected: boolean };
 
 function pickOf(file: DriveFile): DrivePick | null {
   if (file.id === null) {
@@ -62,7 +70,18 @@ export function DrivePicker({
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<ActionError | null>(null);
   const [review, setReview] = useState<DrivePick | null>(null);
-  const [recipients, setRecipients] = useState<readonly DriveRecipient[]>([]);
+
+  const recipientLoad = useLoad(review === null ? "" : `${roomId}:${review.id}`, () =>
+    review === null
+      ? Promise.resolve([])
+      : actions.drive.recipients(roomId).then((list) => list.recipients),
+  );
+
+  const recipients = recipientLoad.state.status === "ready" ? recipientLoad.state.value : [];
+  const [pickerLoad, setPickerLoad] = useState<PickerLoad>({ status: "loading" });
+  const [pickerTries, setPickerTries] = useState(0);
+  const [picking, setPicking] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const [granting, setGranting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -74,6 +93,41 @@ export function DrivePicker({
   const grantingRef = useRef(false);
 
   reviewRef.current = review;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pickerTries requests another preparation after a load failure
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    let session: Awaited<ReturnType<typeof actions.drive.preparePicker>> | null = null;
+    setPickerLoad({ status: "loading" });
+    setPickerError(null);
+    setPicking(false);
+    void actions.drive.preparePicker().then(
+      (ready) => {
+        if (cancelled) {
+          ready.dispose();
+
+          return;
+        }
+
+        session = ready;
+        setPickerLoad({ status: "ready", session: ready });
+      },
+      (failure: Error) => {
+        if (cancelled) return;
+        setPickerLoad({
+          status: "error",
+          message: failure.message,
+          disconnected: failure instanceof ActionError && driveDisconnected(failure),
+        });
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      session?.dispose();
+    };
+  }, [open, pickerTries]);
 
   useEffect(() => {
     if (open) {
@@ -137,7 +191,10 @@ export function DrivePicker({
       );
     }, delay);
 
-    return () => window.clearTimeout(handle);
+    return () => {
+      window.clearTimeout(handle);
+      request.current += 1;
+    };
   }, [open, query]);
 
   const close = () => onOpenChange(false);
@@ -160,12 +217,24 @@ export function DrivePicker({
   const choose = (file: DrivePick) => {
     setReview(file);
     setChosen(new Set());
-    setRecipients([]);
     setNotice(null);
     setReport(null);
-    void actions.drive.recipients(roomId).then(
-      (list) => setRecipients(list.recipients),
-      () => setRecipients([]),
+  };
+
+  const chooseFromGoogle = () => {
+    if (pickerLoad.status !== "ready" || picking) return;
+    setPicking(true);
+    setPickerError(null);
+    void pickerLoad.session.choose().then(
+      (file) => {
+        setPicking(false);
+
+        if (file !== null) choose(file);
+      },
+      (failure: Error) => {
+        setPicking(false);
+        setPickerError(failure.message);
+      },
     );
   };
 
@@ -181,7 +250,7 @@ export function DrivePicker({
   };
 
   const grantAccess = () => {
-    if (review === null || grantingRef.current) {
+    if (review === null || grantingRef.current || recipientLoad.state.status !== "ready") {
       return;
     }
 
@@ -221,7 +290,7 @@ export function DrivePicker({
           const changed = new Set(share.changedIds.map(String));
           const live = new Set(share.recipients.map((member) => String(member.id)));
 
-          setRecipients(share.recipients);
+          recipientLoad.begin().land(share.recipients);
           setChosen(
             (current) => new Set([...current].filter((id) => live.has(id) && !changed.has(id))),
           );
@@ -297,7 +366,10 @@ export function DrivePicker({
     }
   };
 
-  const disconnected = error !== null && driveDisconnected(error);
+  const disconnected =
+    (error !== null && driveDisconnected(error)) ||
+    (pickerLoad.status === "error" && pickerLoad.disconnected);
+
   const status = searching ? "Searching Drive…" : driveSearchStatus(error, files.length);
   const attachOnlyKind = review?.kind === "folder" || review?.kind === "shortcut";
   const kindNotice = attachOnlyKind ? shareBlockedMessage(review.kind) : null;
@@ -306,6 +378,27 @@ export function DrivePicker({
     <>
       {open ? (
         <div className="drive-picker" role="dialog" aria-label="Find a Drive file">
+          {!disconnected && pickerLoad.status === "loading" ? (
+            <p role="status" aria-busy="true">
+              Loading Google Drive…
+            </p>
+          ) : null}
+          {!disconnected && pickerLoad.status === "error" ? (
+            <div role="alert">
+              <p>{pickerLoad.message}</p>
+              <Button onClick={() => setPickerTries((tries) => tries + 1)}>Retry</Button>
+            </div>
+          ) : null}
+          {!disconnected && pickerLoad.status === "ready" ? (
+            <Button
+              onClick={chooseFromGoogle}
+              disabled={picking || review !== null}
+              loading={picking}
+            >
+              Choose from Google Drive
+            </Button>
+          ) : null}
+          {pickerError === null ? null : <p role="alert">{pickerError}</p>}
           <div className="drive-picker-bar">
             <input
               className="drive-picker-search"
@@ -407,7 +500,11 @@ export function DrivePicker({
               <Button
                 type="button"
                 variant="primary"
-                disabled={!grantEnabled(chosen.size, review?.kind ?? "file") || granting}
+                disabled={
+                  recipientLoad.state.status !== "ready" ||
+                  !grantEnabled(chosen.size, review?.kind ?? "file") ||
+                  granting
+                }
                 loading={granting}
                 loadingLabel="Granting"
                 onClick={grantAccess}
@@ -447,6 +544,19 @@ export function DrivePicker({
             ))}
           </ul>
         )}
+        {recipientLoad.state.status === "loading" ? (
+          <p role="status" aria-busy="true">
+            Loading recipients…
+          </p>
+        ) : null}
+        {recipientLoad.state.status === "error" ? (
+          <div role="alert">
+            <p>Couldn't load recipients: {recipientLoad.state.message}</p>
+            <Button variant="secondary" size="sm" icon="refresh-cw" onClick={recipientLoad.reload}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
         <ul className="drive-recipients">
           {recipients.map((member) => (
             <li key={member.id}>

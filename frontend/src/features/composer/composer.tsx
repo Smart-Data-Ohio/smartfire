@@ -970,17 +970,13 @@ export function Composer({
             open={driveOpen}
             onOpenChange={setDriveOpen}
             onAttach={(file) => {
-              const result = attachDriveFile(driveFiles, file);
+              setDriveFiles((current) => {
+                const result = attachDriveFile(current, file);
 
-              if (result.status === "full") {
-                toast({ title: "Up to 10 Drive files per message" });
+                if (result.status === "full") toast({ title: "Up to 10 Drive files per message" });
 
-                return;
-              }
-
-              if (result.status === "attached") {
-                setDriveFiles(result.files);
-              }
+                return result.files;
+              });
             }}
           />
           {usage === null ? null : (

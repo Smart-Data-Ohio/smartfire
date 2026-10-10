@@ -2,9 +2,15 @@ import { type Effect, Layer, ManagedRuntime } from "effect";
 import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
-import { driveRecipients, searchDriveFiles, shareDriveFile } from "../api/drive-endpoints.ts";
+import {
+  drivePickerConfig,
+  driveRecipients,
+  searchDriveFiles,
+  shareDriveFile,
+} from "../api/drive-endpoints.ts";
 import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
+import { prepareGooglePicker } from "../api/google-picker.ts";
 import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
@@ -576,6 +582,7 @@ export const actions = {
   },
   messages,
   drive: {
+    preparePicker: async () => prepareGooglePicker(await runAction(drivePickerConfig())),
     search: (query: string): Promise<DriveFileList> => runAction(searchDriveFiles(query)),
     recipients: (roomId: number): Promise<DriveRecipientList> => runAction(driveRecipients(roomId)),
     share: (

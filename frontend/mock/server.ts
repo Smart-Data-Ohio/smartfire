@@ -45,7 +45,7 @@ import { createBots } from "./s2/bots.ts";
 import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
-import { createDrive } from "./s2/drive.ts";
+import { createDrive, pickerFiles } from "./s2/drive.ts";
 import { createMessages } from "./s2/messages.ts";
 import {
   buildMessage,
@@ -1371,6 +1371,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         };
       }
 
+      case "drive-picker-files":
+        return { status: 200, json: pickerFiles() };
       case "fizzy":
         return { status: 200, json: fizzy.control(body) };
       case "cards":

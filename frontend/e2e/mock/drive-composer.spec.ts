@@ -156,6 +156,55 @@ test.describe("phone", () => {
 test.describe("desktop", () => {
   test.use({ viewport: DESKTOP });
 
+  test("Picker reaches an existing file outside the stored app grant", async ({ page }) => {
+    const googleRequests: string[] = [];
+    page.on("request", (request) => {
+      if (/^https:\/\/(apis|accounts)\.google\.com\//.test(request.url()))
+        googleRequests.push(request.url());
+    });
+    const search = await openDrive(page);
+    await search.fill("private");
+    await expect(page.getByText("No files found")).toBeVisible();
+    await page.getByRole("button", { name: "Choose from Google Drive" }).click();
+    await page
+      .getByRole("dialog", { name: "Choose a Drive file" })
+      .getByRole("button", { name: "Existing private plan" })
+      .click();
+    await page.getByRole("button", { name: "Attach only" }).click();
+    await expect(page.getByRole("button", { name: "Remove Existing private plan" })).toBeVisible();
+    await page.getByRole("textbox", { name: "Message #general" }).fill("Chosen in Picker");
+    await page.getByRole("button", { name: "Send message" }).click();
+    const row = page.locator("[data-message-row]", { hasText: "Chosen in Picker" });
+    await expect(row.getByRole("link", { name: /Google Drive file/ })).toHaveAttribute(
+      "href",
+      "https://drive.google.com/open?id=3ExistingDriveFile",
+    );
+    await expect(page.getByRole("button", { name: "Remove Existing private plan" })).toHaveCount(0);
+    expect(googleRequests).toEqual([]);
+  });
+
+  test("recipient failures show an error and retry restores sharing", async ({ page }) => {
+    let attempts = 0;
+    await page.route("**/api/v1/rooms/*/drive/recipients", async (route) => {
+      attempts += 1;
+
+      if (attempts === 1) await route.fulfill({ status: 503, body: "Unavailable" });
+      else await route.continue();
+    });
+    const dialog = await reviewRoadmap(page);
+    await expect(dialog.getByRole("alert")).toContainText("Couldn't load recipients");
+    await expect(
+      dialog.getByRole("button", { name: "Grant view access and attach" }),
+    ).toBeDisabled();
+    await dialog.getByRole("button", { name: "Retry" }).click();
+    await dialog.getByRole("checkbox", { name: /Maya Okafor/ }).check();
+    await expect(
+      dialog.getByRole("button", { name: "Grant view access and attach" }),
+    ).toBeEnabled();
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
+    expect(attempts).toBe(2);
+  });
+
   test("search attaches a Drive file", async ({ page }) => {
     const search = await openDrive(page);
 

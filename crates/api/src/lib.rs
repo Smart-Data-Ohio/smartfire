@@ -264,6 +264,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/message_links/{reference_id}/card",
             get(action(cards::quote_card)),
         )
+        .route("/api/v1/drive/picker", get(action(drive::picker)))
         .route("/api/v1/drive/files", get(action(drive::search)))
         .route("/api/v1/drive/files/{file_id}", get(action(drive::show)))
         .route(

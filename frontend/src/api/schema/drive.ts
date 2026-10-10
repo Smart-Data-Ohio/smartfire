@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { DriveFile as GeneratedDriveFile } from "../../gen/DriveFile.ts";
 import type { DriveFileList as GeneratedDriveFileList } from "../../gen/DriveFileList.ts";
+import type { DrivePickerConfig as GeneratedDrivePickerConfig } from "../../gen/DrivePickerConfig.ts";
 import type { DriveRecipient as GeneratedDriveRecipient } from "../../gen/DriveRecipient.ts";
 import type { DriveRecipientList as GeneratedDriveRecipientList } from "../../gen/DriveRecipientList.ts";
 import type { DriveShare as GeneratedDriveShare } from "../../gen/DriveShare.ts";
@@ -10,6 +11,16 @@ import { UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 
 const nullable = Schema.NullOr(Schema.String);
+
+export const DrivePickerConfig = Schema.Struct({
+  clientId: Schema.String,
+  apiKey: Schema.String,
+  projectNumber: Schema.String,
+});
+
+export type DrivePickerConfigPin = Assert<
+  Pinned<typeof DrivePickerConfig, GeneratedDrivePickerConfig>
+>;
 
 export const DriveFile = Schema.Struct({
   id: nullable,
