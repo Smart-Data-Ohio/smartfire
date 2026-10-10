@@ -3,7 +3,9 @@ import type { Poll } from "./Poll";
 
 /**
  * `GET /api/v1/rooms/:roomId/polls/:id` (`rooms/polls#show`), and the reply to
- * [`VotePoll`]: the poll with the viewer's own choice.
+ * [`VotePoll`] or `POST /api/v1/rooms/:roomId/polls/:id/end`: the poll with the viewer's own
+ * choice. Ending requires the author or an administrator (403), closes voting immediately,
+ * and publishes `poll.updated` to the conversation. Repeated endings leave `closedAt` unchanged.
  */
 export type PollResults = { poll: Poll,
 /**

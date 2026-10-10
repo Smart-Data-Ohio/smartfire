@@ -375,6 +375,16 @@ describe("reading polls", () => {
     expect(settleVote(state, 40, second, null).cards.pendingVotes[40]).toBeUndefined();
   });
 
+  it("shows final server counts when a close arrives during a pending vote", () => {
+    const ended = poll(at(20), [1, 2], { closed: true, closedAt: at(20) });
+    const view = pollView(ended, undefined, [401], ME, 0);
+    expect(view.closed).toBe(true);
+    expect(view.poll.totalVotes).toBe(3);
+    expect(view.poll.options.map((option) => option.votes)).toEqual([1, 2]);
+    expect(view.myOptionIds).toEqual([]);
+    expect(view.pending).toBe(false);
+  });
+
   it("keeps the newer ballot when an older one arrives", () => {
     const state = applyBallot(initialState, 40, [401], at(20));
 

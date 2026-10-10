@@ -697,7 +697,7 @@ export function pollView(
   const server = viewerChoice(poll, ballot, viewerId);
   const closed = pollClosed(poll, now);
 
-  if (pending === undefined) {
+  if (pending === undefined || closed) {
     return { poll, myOptionIds: server, pending: false, closed };
   }
 

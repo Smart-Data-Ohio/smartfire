@@ -277,6 +277,7 @@ function LoadError({ retrying, onRetry }: LoadErrorProps) {
  */
 export function PollCard({ message, poll }: { readonly message: MessageDTO; readonly poll: Poll }) {
   const viewerId = useViewerId() ?? 0;
+  const administrator = useStore((state) => state.me?.user.role === "administrator");
   const now = useNow();
   const ballot = useStore((state) => state.cards.ballots[poll.id]);
   const pending = useStore((state) => state.cards.pendingVotes[poll.id]);
@@ -284,6 +285,7 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
   const [changing, setChanging] = useState(false);
   const [retried, setRetried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [ending, setEnding] = useState(false);
   const [focusNext, setFocusNext] = useState<FocusTarget | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
   const { announce, region } = useAnnouncer();
@@ -374,6 +376,24 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
     setFocusNext("choices");
   };
 
+  const end = () => {
+    setEnding(true);
+    setFailure(null);
+    actions.cards.endPoll(message.roomId, poll.id).then(
+      () => {
+        setEnding(false);
+        const landed = store.getState().messages[message.id]?.poll ?? poll;
+        announce(`Poll ended. Final results: ${resultsText(landed)}.`);
+      },
+      (error: Error) => {
+        setEnding(false);
+        const text = `Couldn't end this poll. ${error.message}`;
+        setFailure(text);
+        announce(text);
+      },
+    );
+  };
+
   const cancel = () => {
     setChanging(false);
     setFocusNext("change");
@@ -444,14 +464,29 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
           {view.poll.totalVotes === 1 ? "vote" : "votes"}
           {view.closed ? " · Final results" : voted && !choosing ? " · You voted" : null}
         </span>
-        {!view.closed && voted && !choosing ? (
+        {!view.closed ? (
           <span className="poll-footer-actions">
-            <Button variant="ghost" size="sm" data-poll-change="" onClick={change}>
-              Change vote
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => vote([])}>
-              Retract
-            </Button>
+            {voted && !choosing ? (
+              <>
+                <Button variant="ghost" size="sm" data-poll-change="" onClick={change}>
+                  Change vote
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => vote([])}>
+                  Retract
+                </Button>
+              </>
+            ) : null}
+            {viewerId === message.creatorId || administrator ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={ending}
+                loadingLabel="Ending"
+                onClick={end}
+              >
+                End poll now
+              </Button>
+            ) : null}
           </span>
         ) : null}
       </footer>

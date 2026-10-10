@@ -27,7 +27,7 @@ anonymous: boolean,
  */
 closesAt: string | null,
 /**
- * When the periodic closer stamped it closed; `null` until then.
+ * When the author, administrator or periodic closer stamped it closed; `null` until then.
  */
 closedAt: string | null,
 /**

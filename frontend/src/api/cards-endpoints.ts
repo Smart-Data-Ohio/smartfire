@@ -79,6 +79,14 @@ export const votePoll = Effect.fn("api.votePoll")(function* (
   );
 });
 
+/** `POST /rooms/:roomId/polls/:id/end`: author or administrator closes voting. */
+export const endPoll = Effect.fn("api.endPoll")(function* (roomId: number, pollId: number) {
+  return yield* call(
+    { method: "POST", path: `/rooms/${roomId}/polls/${pollId}/end`, body: {} },
+    wire<PollResults>(PollResultsSchema),
+  );
+});
+
 /** `GET /rooms/:roomId/events/:id/attendance`: the viewer's response and the counts. */
 export const eventAttendance = Effect.fn("api.eventAttendance")(function* (
   roomId: number,

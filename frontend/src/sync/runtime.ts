@@ -446,6 +446,8 @@ const cards = {
   /** Sends the viewer's whole ballot (`[]` takes it back); shown at once, put back if refused. */
   vote: (roomId: number, pollId: number, optionIds: readonly number[]): Promise<void> =>
     runAction(cardActions.vote(roomId, pollId, optionIds)),
+  endPoll: (roomId: number, pollId: number): Promise<void> =>
+    runAction(cardActions.endPoll(roomId, pollId)),
   /** Posts a question with its poll; a retry with the same `clientMessageId` posts nothing new. */
   createPoll: (roomId: number, body: CreatePoll): Promise<MessageDTO> =>
     runAction(cardActions.createPoll(roomId, body)),
