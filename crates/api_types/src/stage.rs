@@ -35,6 +35,9 @@ pub enum StreamQuality {
     P1080Fps15,
     #[serde(rename = "1080p30")]
     P1080Fps30,
+    /// Motion-first: games and video at full HD and 60 frames a second.
+    #[serde(rename = "1080p60")]
+    P1080Fps60,
 }
 
 /// The stage's live stream (`Stream.live_for_room`).

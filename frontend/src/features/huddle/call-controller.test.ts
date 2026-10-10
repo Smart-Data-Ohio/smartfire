@@ -563,6 +563,113 @@ describe("call state", () => {
     await controller.leave();
   });
 
+  it("an ordinary share starts at the picked quality, 1080p15 until one is picked", async () => {
+    localStorage.clear();
+
+    const { controller, transports } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const [transport] = transports;
+
+    if (transport === undefined) {
+      throw new Error("no transport");
+    }
+
+    await controller.toggleScreenShare();
+    expect(transport.screenQuality).toBe("1080p15");
+    await controller.toggleScreenShare();
+
+    controller.setShareQuality("1080p60");
+    await controller.toggleScreenShare();
+    expect(callStore.getState().snapshot.screenSharing).toBe(true);
+    expect(transport.screenQuality).toBe("1080p60");
+    await controller.leave();
+    localStorage.clear();
+  });
+
+  it("an ordinary share uses the picked quality when storage writes fail", async () => {
+    localStorage.clear();
+
+    const { controller, transports } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const [transport] = transports;
+
+    if (transport === undefined) {
+      throw new Error("no transport");
+    }
+
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      controller.setShareQuality("1080p60");
+    } finally {
+      setItem.mockRestore();
+    }
+
+    await controller.toggleScreenShare();
+    expect(callStore.getState().snapshot.screenSharing).toBe(true);
+    expect(transport.screenQuality).toBe("1080p60");
+    await controller.leave();
+    localStorage.clear();
+  });
+
+  it("going live captures and publishes at the stream's quality", async () => {
+    const { controller, transports } = harness({
+      startStream: async (_roomId, quality) => ({
+        id: 42,
+        membershipId: 70,
+        userId: 7,
+        identity: null,
+        quality,
+        startedAt: "2026-10-06T12:00:00.000Z",
+      }),
+    });
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const [transport] = transports;
+
+    if (transport === undefined) {
+      throw new Error("no transport");
+    }
+
+    const steps: string[] = [];
+    const capture = transport.captureScreen.bind(transport);
+    const publish = transport.publishScreen.bind(transport);
+
+    transport.captureScreen = (quality) => {
+      steps.push(`capture ${quality}`);
+
+      return capture(quality);
+    };
+
+    transport.publishScreen = (captured, quality) => {
+      steps.push(`publish ${quality}`);
+
+      return publish(captured, quality);
+    };
+
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getDisplayMedia: () => undefined },
+    });
+
+    try {
+      await controller.goLive(ROOM, "1080p60");
+    } finally {
+      Reflect.deleteProperty(navigator, "mediaDevices");
+    }
+
+    expect(steps).toEqual(["capture 1080p60", "publish 1080p60"]);
+    expect(callStore.getState().streaming?.quality).toBe("1080p60");
+    await controller.leave();
+  });
+
   it("a toggle cut off by a reconnect doesn't leave its control busy", async () => {
     const { controller, transports } = harness();
 

@@ -3,4 +3,4 @@
 /**
  * `stream_qualities`: the resolution and frame rate a presenter picks when going live.
  */
-export type StreamQuality = "720p15" | "1080p15" | "1080p30";
+export type StreamQuality = "720p15" | "1080p15" | "1080p30" | "1080p60";

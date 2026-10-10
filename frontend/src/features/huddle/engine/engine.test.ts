@@ -7,13 +7,16 @@ import {
   loadNoiseSuppression,
   loadParticipantMuted,
   loadParticipantVolume,
+  loadShareQuality,
   loadStreamQuality,
   PARTICIPANT_VOLUME_PREFIX,
+  SHARE_QUALITY_STORAGE_KEY,
   STREAM_QUALITY_STORAGE_KEY,
   storeDevicePreference,
   storeNoiseSuppression,
   storeParticipantMuted,
   storeParticipantVolume,
+  storeShareQuality,
 } from "./preferences.ts";
 import {
   formatConnectionStats,
@@ -187,6 +190,14 @@ describe("preferences", () => {
     expect(loadStreamQuality()).toBe("auto");
     localStorage.setItem(STREAM_QUALITY_STORAGE_KEY, "low");
     expect(loadStreamQuality()).toBe("low");
+  });
+
+  it("shares at 1080p15 until another known quality is picked", () => {
+    expect(loadShareQuality()).toBe("1080p15");
+    localStorage.setItem(SHARE_QUALITY_STORAGE_KEY, "4k60");
+    expect(loadShareQuality()).toBe("1080p15");
+    storeShareQuality("1080p60");
+    expect(loadShareQuality()).toBe("1080p60");
   });
 
   it("clamps volumes to 0–200 and reads an empty entry as 100", () => {
