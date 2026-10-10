@@ -298,7 +298,9 @@ async fn stable_user_mentions_survive_duplicate_names_renames_and_edits() {
         "{}",
         edited.body_html
     );
-    assert_eq!(mention_notifications(&a, message.id).await, [KEVIN]);
+    // Renaming Kevin makes the legacy @[Twin] token resolve to Jason on this edit.
+    assert!(edited.body_html.contains(&format!("mention--user-{JASON}")));
+    assert_eq!(mention_notifications(&a, message.id).await, [JASON, KEVIN]);
 }
 
 #[tokio::test]

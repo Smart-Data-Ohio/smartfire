@@ -166,6 +166,46 @@ fn match_rows(rows: Vec<(i64, String)>, text: &str) -> Result<Vec<i64>> {
 }
 
 impl ActivityItem {
+    /// Retained mentions keep their inbox state; only newly mentioned recipients are notified.
+    pub(crate) fn reconcile_message_mentions(
+        tx: &mut Tx<'_>,
+        message: &Message,
+        previous_mentionees: &[i64],
+    ) -> Result<()> {
+        let mentioned: Vec<i64> = message.mentionees(tx.conn(), tx.rich_text())?
+            .into_iter()
+            .map(|user| user.id)
+            .collect();
+        let removed = query_all(
+            tx.conn(),
+            "DELETE FROM activity_items WHERE source_type = 'Message' AND source_id = ? AND event_type = 'mention' AND user_id NOT IN (SELECT value FROM json_each(?)) RETURNING id, user_id",
+            rusqlite::params![message.id, serde_json::json!(mentioned).to_string()],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        if !removed.is_empty() {
+            tx.emit_after_commit(crate::Event::broadcast(&super::ActivityItemsRemoved {
+                items: removed,
+                room_id: Some(message.room_id),
+            }));
+        }
+        if mentioned.iter().any(|id| !previous_mentionees.contains(id)) {
+            for candidate in candidates(tx.conn(), tx.rich_text(), message, tx.now())?.recipients {
+                if candidate.event_type == "mention"
+                    && !previous_mentionees.contains(&candidate.user_id)
+                {
+                    Self::record(
+                        tx,
+                        candidate.user_id,
+                        super::ActivitySource::Message(message.id),
+                        "mention",
+                        true,
+                    )?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Persisted-message seam for WS11 finalize and WS12's recorder. The source caller gates
     /// streaming/importing/system notes; inbox policy deliberately does not apply push quietness.
     pub fn record_message(tx: &mut Tx<'_>, message: &Message) -> Result<Vec<Self>> {

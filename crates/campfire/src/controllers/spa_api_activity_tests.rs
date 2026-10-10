@@ -704,6 +704,194 @@ async fn post_in(
     parse(&reply)
 }
 
+async fn message_activity(
+    a: &TestApp,
+    user_id: i64,
+    message_id: i64,
+) -> Option<campfire_db::ActivityItem> {
+    a.db()
+        .read(move |conn| {
+            campfire_db::ActivityItem::find_by_user_and_source(conn, user_id, "Message", message_id)
+        })
+        .await
+        .unwrap()
+}
+
+async fn mention_count_change(sync: &mut Sync, item_id: i64, removed: bool, count: i64) {
+    let (mut activity_seen, mut row_seen) = (false, false);
+    while !(activity_seen && row_seen) {
+        let event = sync
+            .until(
+                |event| match &event.payload {
+                    api::SyncPayload::ActivityRemoved(item) => removed && item.id == item_id,
+                    api::SyncPayload::ActivityItem(changed) => {
+                        !removed && changed.item.id == item_id
+                    }
+                    api::SyncPayload::SidebarRowUpserted(row) => {
+                        row.room.id == DESIGNERS && row.mention_count == count
+                    }
+                    _ => false,
+                },
+                |_| false,
+            )
+            .await;
+        match event.payload {
+            api::SyncPayload::ActivityRemoved(item) => {
+                assert_eq!(item.unread_count, count);
+                activity_seen = true;
+            }
+            api::SyncPayload::ActivityItem(changed) => {
+                assert_eq!(changed.unread_count, count);
+                activity_seen = true;
+            }
+            api::SyncPayload::SidebarRowUpserted(row) => {
+                if removed {
+                    assert_eq!(row.notification_count, 0);
+                }
+                row_seen = true;
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[tokio::test]
+async fn mention_edits_remove_activity_and_live_counts() {
+    for token in [format!("<@{DAVID}>"), "@[David]".into()] {
+        let Some(a) = app(true).await else { return };
+        quiet_designers(&a, "mentions").await;
+        let mut david = a.sign_in(DAVID).await;
+        let mut kevin = a.sign_in(KEVIN).await;
+        let message = post_in(
+            &mut kevin,
+            DESIGNERS,
+            "remove-mention",
+            &format!("Hello {token}"),
+        )
+        .await;
+        let item = message_activity(&a, DAVID, message.id).await.unwrap();
+        assert_eq!(item.event_type, "mention");
+        let row = designers_row(&mut david).await;
+        assert_eq!((row.mention_count, row.notification_count), (1, 1));
+
+        let (addr, server) = serve(&a).await;
+        let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+        sync.welcome().await;
+        let reply = kevin
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/messages/{}", message.id),
+                &json!({"markdownSource": "Hello"}),
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert!(message_activity(&a, DAVID, message.id).await.is_none());
+        let row = designers_row(&mut david).await;
+        assert_eq!((row.mention_count, row.notification_count), (0, 0));
+        let unread: api::ActivityUnreadCount =
+            parse(&david.send(get("/api/v1/activity/unread_count")).await);
+        assert_eq!(unread.unread_count, 0);
+        mention_count_change(&mut sync, item.id, true, 0).await;
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn mention_edits_notify_only_added_user() {
+    for (kept, added) in [
+        (format!("<@{DAVID}>"), format!("<@{JASON}>")),
+        ("@[David]".into(), "@[Jason]".into()),
+    ] {
+        let Some(a) = app(true).await else { return };
+        quiet_designers(&a, "mentions").await;
+        exec(
+            &a,
+            "DELETE FROM activity_items WHERE user_id = ?",
+            vec![JASON.into()],
+        )
+        .await;
+        let mut kevin = a.sign_in(KEVIN).await;
+        let jason = a.sign_in(JASON).await;
+        let message = post_in(
+            &mut kevin,
+            DESIGNERS,
+            "add-mention",
+            &format!("Hello {kept}"),
+        )
+        .await;
+        let previous = message_activity(&a, DAVID, message.id).await.unwrap();
+        let previous = a
+            .db()
+            .write(move |tx| previous.mark_handled(tx))
+            .await
+            .unwrap();
+        assert!(message_activity(&a, JASON, message.id).await.is_none());
+
+        let (addr, server) = serve(&a).await;
+        let mut sync = Sync::connect(addr, &jason.cookie_header(), &[]).await;
+        sync.welcome().await;
+        let reply = kevin
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/messages/{}", message.id),
+                &json!({"markdownSource": format!("Hello {kept} {added} {added}")}),
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert_eq!(
+            message_activity(&a, DAVID, message.id).await,
+            Some(previous)
+        );
+        let added = message_activity(&a, JASON, message.id).await.unwrap();
+        assert_eq!(added.event_type, "mention");
+        assert!(added.unread());
+        mention_count_change(&mut sync, added.id, false, 1).await;
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn mention_edits_preserve_unchanged_activity() {
+    for (before, after) in [
+        (format!("<@{DAVID}>"), "@[David]".into()),
+        ("@[David]".into(), format!("<@{DAVID}>")),
+    ] {
+        let Some(a) = app(true).await else { return };
+        quiet_designers(&a, "mentions").await;
+        let mut kevin = a.sign_in(KEVIN).await;
+        let message = post_in(
+            &mut kevin,
+            DESIGNERS,
+            "keep-mention",
+            &format!("Hello {before}"),
+        )
+        .await;
+        let previous = message_activity(&a, DAVID, message.id).await.unwrap();
+        let previous = a
+            .db()
+            .write(move |tx| previous.mark_handled(tx))
+            .await
+            .unwrap();
+        let reply = kevin
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/messages/{}", message.id),
+                &json!({"markdownSource": format!("Hello again {after} {after}")}),
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert_eq!(
+            message_activity(&a, DAVID, message.id).await,
+            Some(previous)
+        );
+        let mut david = a.sign_in(DAVID).await;
+        assert_eq!(designers_row(&mut david).await.mention_count, 0);
+        let unread: api::ActivityUnreadCount =
+            parse(&david.send(get("/api/v1/activity/unread_count")).await);
+        assert_eq!(unread.unread_count, 0);
+    }
+}
+
 /// An active agent owned by `owner`, with a pending approval (outside any room) and a
 /// `messages` budget notice: `(approval, notice)`.
 async fn agent_sources(a: &TestApp, owner: i64) -> (i64, i64) {

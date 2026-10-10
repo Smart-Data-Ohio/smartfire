@@ -1062,6 +1062,19 @@ impl Message {
         if !(columns_changed || body.is_some() || drive_changed || self.streaming) {
             return Ok(());
         }
+        let previous_mentionees = if !self.streaming
+            && !self.system_note
+            && (references_changed || forward_note != self.forward_note)
+        {
+            Some(
+                self.mentionees(tx.conn(), tx.rich_text())?
+                    .into_iter()
+                    .map(|user| user.id)
+                    .collect::<Vec<_>>(),
+            )
+        } else {
+            None
+        };
         let streaming_updated_at = if self.streaming {
             Some(now)
         } else {
@@ -1111,6 +1124,9 @@ impl Message {
         if !self.streaming {
             self.update_in_index(tx)?;
             if references_changed { self.sync_all_references(tx)?; }
+            if let Some(previous) = previous_mentionees {
+                crate::ActivityItem::reconcile_message_mentions(tx, self, &previous)?;
+            }
         }
         Ok(())
     }
