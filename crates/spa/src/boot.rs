@@ -54,6 +54,8 @@ pub struct BootUser {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BootAccount {
+    /// Maximum bytes per uploaded file, from accounts.settings.
+    pub upload_limit_bytes: i64,
     /// `None` only before first run.
     pub name: Option<String>,
     pub logo_url: Option<String>,

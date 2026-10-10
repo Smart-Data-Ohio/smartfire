@@ -2,7 +2,8 @@
 
 /**
  * `POST /api/v1/uploads`: start a direct upload (Active Storage's
- * `POST /rails/active_storage/direct_uploads`). No size limit beyond the front proxy's.
+ * `POST /rails/active_storage/direct_uploads`). Files above the boot account's
+ * `uploadLimitBytes` receive a 422 before a blob is created.
  *
  * The flow: create the blob here, `PUT` the raw bytes to [`DirectUpload::upload_url`] with
  * `Content-Type: contentType` (204 on success; 422 when the length, type or checksum doesn't

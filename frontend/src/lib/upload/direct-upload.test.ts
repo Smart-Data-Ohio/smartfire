@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CreateUpload } from "../../gen/CreateUpload.ts";
 import type { DirectUpload } from "../../gen/DirectUpload.ts";
 import {
@@ -90,6 +90,7 @@ function harness(startReply: (body: CreateUpload) => Promise<DirectUpload>): Har
       }
     },
     deps: {
+      limitBytes: 100 * 1024 * 1024,
       hash: () => Promise.resolve("CHECKSUM=="),
       start: (body) => {
         starts.push(body);
@@ -118,6 +119,36 @@ function file(name = "photo.png", type = "image/png"): File {
 }
 
 describe("UploadTask", () => {
+  it("refuses an oversized file before hashing or creating a blob, including retries", async () => {
+    const h = harness(() => reply(1));
+    const hash = vi.fn(h.deps.hash);
+    const large = file("large.bin", "application/octet-stream");
+    Object.defineProperty(large, "size", { value: 100 * 1024 * 1024 + 1 });
+    const task = new UploadTask(large, { ...h.deps, hash }, h.onChange);
+    const done = task.start();
+    await flush();
+    h.xhrs[0]?.finish(204);
+    await done;
+
+    expect(task.snapshot.phase).toBe("failed");
+    expect(task.snapshot.error).toBe('"large.bin" exceeds the 100 MB upload limit.');
+    await task.retry();
+    expect(hash).not.toHaveBeenCalled();
+    expect(h.starts).toEqual([]);
+    expect(h.xhrs).toEqual([]);
+  });
+
+  it("accepts the exact configured limit", async () => {
+    const h = harness(() => reply(1));
+    const task = new UploadTask(file(), { ...h.deps, limitBytes: 1000 }, h.onChange);
+    const done = task.start();
+    await flush();
+    h.xhrs[0]?.finish(204);
+    await done;
+    expect(task.snapshot.phase).toBe("done");
+    expect(h.starts[0]?.byteSize).toBe(1000);
+  });
+
   it("hashes, starts the blob, PUTs the bytes with progress and ends done", async () => {
     const h = harness(() => reply(1));
     const task = new UploadTask(file(), h.deps, h.onChange);

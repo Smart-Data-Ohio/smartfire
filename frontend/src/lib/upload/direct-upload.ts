@@ -41,18 +41,35 @@ export interface XhrLike {
 
 /** What an upload needs from the outside world; the composer passes the real ones. */
 export interface UploadDeps {
+  readonly limitBytes: number;
   readonly hash: (file: Blob, signal: AbortSignal) => Promise<string>;
   readonly start: (body: CreateUpload) => Promise<DirectUpload>;
   readonly createXhr: () => XhrLike;
 }
 
 /** The browser's: WebCrypto-free MD5, `actions.messages.startUpload`, a real XHR. */
-export function browserDeps(start: (body: CreateUpload) => Promise<DirectUpload>): UploadDeps {
+export function browserDeps(
+  start: (body: CreateUpload) => Promise<DirectUpload>,
+  limitBytes: number,
+): UploadDeps {
   return {
+    limitBytes,
     hash: (file, signal) => md5Base64(file, signal),
     start,
     createXhr: () => new XMLHttpRequest(),
   };
+}
+
+export const DEFAULT_UPLOAD_LIMIT_BYTES = 100 * 1024 * 1024;
+
+export function uploadSizeError(file: File, limitBytes: number): string | null {
+  if (file.size <= limitBytes) return null;
+  const mb = 1024 * 1024;
+
+  const limit =
+    limitBytes % mb === 0 ? `${limitBytes / mb} MB` : `${limitBytes.toLocaleString()} bytes`;
+
+  return `"${file.name}" exceeds the ${limit} upload limit.`;
 }
 
 /** The MIME type the blob is declared with and the PUT sends. */
@@ -209,6 +226,9 @@ export class UploadTask {
     const contentType = contentTypeOf(file);
 
     try {
+      const sizeError = uploadSizeError(file, deps.limitBytes);
+
+      if (sizeError !== null) throw new Error(sizeError);
       this.set({ phase: "hashing", loaded: 0, error: null });
       this.checksum ??= await deps.hash(file, signal);
       signal.throwIfAborted();

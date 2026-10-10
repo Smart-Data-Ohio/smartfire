@@ -163,6 +163,7 @@ const workspaceBoot: Boot = {
     logoStillUrl: null,
     bannerUrl: null,
     bannerStillUrl: null,
+    uploadLimitBytes: 100 * 1024 * 1024,
   },
   customStyles: "body { color: red; }",
   theme: "system",

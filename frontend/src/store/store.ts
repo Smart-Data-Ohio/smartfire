@@ -262,6 +262,15 @@ export const mutations = {
     }));
   },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
+  setUploadLimit: (uploadLimitBytes: number) =>
+    apply((state) =>
+      state.boot === null
+        ? state
+        : {
+            ...state,
+            boot: { ...state.boot, account: { ...state.boot.account, uploadLimitBytes } },
+          },
+    ),
   setWorkspaceStyles: (css: string | null) => apply((state) => setWorkspaceStyles(state, css)),
   setWorkspaceBranding: (branding: WorkspaceBranding) =>
     apply((state) => setWorkspaceBranding(state, branding)),

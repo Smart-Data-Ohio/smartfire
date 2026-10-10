@@ -46,6 +46,45 @@ function NameForm({ workspace }: { readonly workspace: Workspace }) {
   );
 }
 
+function UploadLimitForm({ workspace }: { readonly workspace: Workspace }) {
+  const { replace } = useAdmin();
+  const [limit, setLimit] = useState(String(workspace.uploadLimitBytes / (1024 * 1024)));
+  const { busy, track } = useBusy();
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void track(
+      "uploads",
+      admin.updateWorkspace({ uploadLimitBytes: Number(limit) * 1024 * 1024 }).then(
+        (next) => {
+          replace(next);
+          toast({ title: "Upload limit saved", tone: "success" });
+        },
+        (error: Error) => adminFailure("Couldn't save the upload limit", error),
+      ),
+    );
+  };
+
+  return (
+    <form className="settings-form settings-inline" onSubmit={submit}>
+      <TextField
+        label="Maximum file size (MB)"
+        type="number"
+        min="1"
+        max="8589934591"
+        step="1"
+        required
+        hint="Per file. 1 MB = 1,048,576 bytes."
+        value={limit}
+        onChange={(event) => setLimit(event.target.value)}
+      />
+      <Button type="submit" variant="primary" loading={busy("uploads")} disabled={busy("uploads")}>
+        Save upload limit
+      </Button>
+    </form>
+  );
+}
+
 /** The join link, to copy or share; administrators can swap it for a new one. */
 function JoinLink() {
   const { workspace, replace } = useAdmin();
@@ -145,6 +184,14 @@ export function WorkspaceSection() {
       ) : null}
       <SettingsGroup title="Invite">
         <JoinLink />
+      </SettingsGroup>
+      <SettingsGroup
+        title="Uploads"
+        description={`Up to ${workspace.uploadLimitBytes / (1024 * 1024)} MB per file.`}
+      >
+        {workspace.canAdminister ? (
+          <UploadLimitForm key={workspace.uploadLimitBytes} workspace={workspace} />
+        ) : null}
       </SettingsGroup>
     </SettingsPage>
   );

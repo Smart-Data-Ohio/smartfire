@@ -381,9 +381,9 @@ export function Composer({
       return;
     }
 
-    const taken = attachments.add(files);
+    const overflow = attachments.add(files);
 
-    if (taken < files.length) {
+    if (overflow > 0) {
       toast({
         title: creating ? "A new thread takes one file" : `Up to ${MAX_FILES} files at a time`,
         description: creating

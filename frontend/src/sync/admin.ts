@@ -110,6 +110,7 @@ import { runAction } from "./runtime.ts";
 function branded(reply: Promise<Workspace>): Promise<Workspace> {
   return reply.then((next) => {
     mutations.setWorkspaceBranding(brandingOf(next));
+    mutations.setUploadLimit(next.uploadLimitBytes);
 
     return next;
   });
@@ -121,7 +122,12 @@ export const admin = {
   updateWorkspace: (change: Partial<UpdateWorkspace>): Promise<Workspace> =>
     branded(
       runAction(
-        updateWorkspace({ name: null, restrictRoomCreationToAdministrators: null, ...change }),
+        updateWorkspace({
+          name: null,
+          restrictRoomCreationToAdministrators: null,
+          uploadLimitBytes: null,
+          ...change,
+        }),
       ),
     ),
 
