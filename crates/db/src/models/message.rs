@@ -1677,7 +1677,7 @@ fn drive_file_ids(conn: &Connection, message_id: i64) -> Result<Vec<String>> {
     )
 }
 
-/// `forward_note_mentionees`: the note's `@[Name]` names that identify exactly one active member
+/// `forward_note_mentionees`: the note's `@[Name]` display names that identify exactly one active member
 /// of the room, as those members.
 pub fn forward_note_mentionees(conn: &Connection, room_id: i64, note: &str) -> Result<Vec<User>> {
     let mut unique = Vec::new();
@@ -1690,10 +1690,17 @@ pub fn forward_note_mentionees(conn: &Connection, room_id: i64, note: &str) -> R
         return Ok(Vec::new());
     }
     let sql = format!(
-        r#"SELECT "users".* FROM "users" INNER JOIN "memberships" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? AND "users"."status" = 0 AND "users"."name" IN (SELECT "users"."name" FROM "users" INNER JOIN "memberships" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? AND "users"."status" = 0 AND "users"."name" IN ({}) GROUP BY "users"."name" HAVING (COUNT(*) = 1))"#,
+        r#"WITH members AS (
+            SELECT users.*, COALESCE(users.nickname, users.name) AS display_name
+            FROM users INNER JOIN memberships ON users.id = memberships.user_id
+            WHERE memberships.room_id = ? AND users.status = 0
+        ) SELECT * FROM members WHERE display_name IN (
+            SELECT display_name FROM members WHERE display_name IN ({})
+            GROUP BY display_name HAVING COUNT(*) = 1
+        )"#,
         placeholders(unique.len())
     );
-    let mut values: Vec<rusqlite::types::Value> = vec![room_id.into(), room_id.into()];
+    let mut values: Vec<rusqlite::types::Value> = vec![room_id.into()];
     values.extend(unique.into_iter().map(rusqlite::types::Value::from));
     query_all(
         conn,

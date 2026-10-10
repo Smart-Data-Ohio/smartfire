@@ -343,13 +343,16 @@ export function createSettings(
     const viewer = users.get(VIEWER_ID);
 
     if (viewer !== undefined) {
-      users.set(VIEWER_ID, {
+      const user = {
         ...viewer,
         name: nickname ?? name,
         accountName: name,
         pronouns,
         updatedAt: rowTimestamp(ctx.now()),
-      });
+      };
+
+      users.set(VIEWER_ID, user);
+      ctx.publish([{ topic: "user", type: "user.updated", data: user }]);
     }
   };
 

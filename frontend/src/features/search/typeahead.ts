@@ -136,11 +136,6 @@ function operatorItem(value: string, operator: SearchOperator): TypeaheadItem {
   };
 }
 
-/** The person's first name, lowercased: what `from:@` takes (a name holds no spaces there). */
-export function fromHandle(name: string): string {
-  return fold(name.split(/\s+/u)[0] ?? name);
-}
-
 /** A channel name as `in:#` takes it (no spaces either). */
 function inHandle(name: string): string {
   return name.replace(/\s+/gu, "-").toLowerCase();
@@ -223,6 +218,7 @@ function operatorValues(
   const needle = normalizeQuery(partial);
 
   switch (operator) {
+    case "from":
     case "from_id":
       return best(source.items, needle, isPerson, VALUES_SHOWN).map((item) =>
         valueItem(value, `from_id:${item.key}`, item.label, `from_id:${item.userId}`, {
@@ -247,13 +243,6 @@ function operatorValues(
         sort.startsWith(fold(partial))
           ? [valueItem(value, `sort:${sort}`, sort, `sort:${sort}`, { icon: "chevron-down" })]
           : [],
-      );
-
-    case "from":
-      return best(source.items, needle, isPerson, VALUES_SHOWN).map((item) =>
-        valueItem(value, `from:${item.key}`, item.label, `from:@${fromHandle(item.label)}`, {
-          userId: item.userId,
-        }),
       );
 
     case "in":

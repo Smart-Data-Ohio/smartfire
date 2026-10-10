@@ -414,16 +414,23 @@ mod tests {
     #[test]
     fn appearance_migration_adds_only_a_nullable_column_on_the_previous_schema() {
         let catalog = crate::migrations::catalog();
-        let previous = crate::schema::generate(&catalog[..catalog.len()-1]).unwrap();
+        let appearance = catalog.iter().position(|migration| migration.version == "20261010150000").unwrap();
+        let previous = crate::schema::generate(&catalog[..appearance]).unwrap();
+        let manifest: Vec<&str> = crate::schema::baseline_versions()
+            .map(|version| -> &str { version })
+            .chain(catalog[..=appearance].iter().map(|migration| migration.version.as_str())).collect();
         let mut conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(&previous.schema_sql).unwrap();
         for version in previous.schema_migrations.lines() {
             conn.execute("INSERT INTO schema_migrations VALUES (?)", [version]).unwrap();
         }
         conn.execute("INSERT INTO users(id,name,theme,text_size,created_at,updated_at) VALUES(1,'Ada','dark','large','2026-10-10','2026-10-10')", []).unwrap();
-        assert_eq!(crate::migrations::migrate(&mut conn).unwrap(), ["20261010150000"]);
+        assert_eq!(crate::migrations::migrate_with(&mut conn, &manifest, &catalog[..=appearance]).unwrap(), ["20261010150000"]);
         let row: (String, String, Option<String>) = conn.query_row("SELECT theme,text_size,appearance_preferences FROM users WHERE id=1", [], |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?))).unwrap();
         assert_eq!(row, ("dark".into(), "large".into(), None));
-        assert!(crate::migrations::migrate(&mut conn).unwrap().is_empty());
+        assert!(crate::migrations::migrate_with(&mut conn, &manifest, &catalog[..=appearance]).unwrap().is_empty());
+        crate::migrations::migrate(&mut conn).unwrap();
+        let row: (String, String, Option<String>) = conn.query_row("SELECT theme,text_size,appearance_preferences FROM users WHERE id=1", [], |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?))).unwrap();
+        assert_eq!(row, ("dark".into(), "large".into(), None));
     }
 }
