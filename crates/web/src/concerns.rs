@@ -300,7 +300,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
         return Ok(());
     };
     let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
-    let screen_path = c.request.path();
+    let screen_path = screen_path(c.request.path());
     let location = if endpoint == "rooms#show" {
         let confirmed = confirmed_room_query(c, screen_path, query).await?;
         campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
@@ -316,6 +316,13 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     keep_waiting_flash(c);
     let location = c.url_for(&location);
     halt(c.redirect_to(&location)?)
+}
+
+/// `path` as the screen map spells it: the router takes `/rooms/7.html` for `/rooms/7` (the
+/// `(.:format)` suffix), so a `.html` suffix is dropped. Other suffixes (`.json`) stay, so they
+/// match no screen, and the format check would refuse them anyway.
+fn screen_path(path: &str) -> &str {
+    path.strip_suffix(".html").unwrap_or(path)
 }
 
 /// A notice or alert a classic action left for this page (`redirect_to ..., notice:`) carries on
@@ -401,11 +408,21 @@ async fn confirmed_room_query(
     }).await.map_err(Error::internal)
 }
 
-/// A browser opening a page: `Sec-Fetch-Mode: navigate`, or an `Accept` naming `text/html`. A
-/// `fetch()` or `curl` with the session cookie and `Accept: */*` isn't one, so it isn't redirected.
+/// A browser opening a page: `Sec-Fetch-Mode: navigate` to a document, or, from a client that
+/// sends no Fetch Metadata, an `Accept` naming `text/html`. A `fetch()` or `curl` with the session
+/// cookie and `Accept: */*`, or a script's `fetch()` of HTML (`Sec-Fetch-Mode: cors`), isn't one,
+/// so it isn't redirected.
 fn navigates(c: &Ctx) -> bool {
-    c.request.header("sec-fetch-mode").is_some_and(|mode| mode.eq_ignore_ascii_case("navigate"))
-        || c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
+    // A browser that sends Fetch Metadata says what the request is: only a top-level document
+    // navigation counts, whatever it accepts (a script's `fetch()` or a frame's load doesn't).
+    if let Some(mode) = c.request.header("sec-fetch-mode") {
+        let document = c
+            .request
+            .header("sec-fetch-dest")
+            .is_none_or(|dest| dest.eq_ignore_ascii_case("document"));
+        return mode.eq_ignore_ascii_case("navigate") && document;
+    }
+    c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
 }
 
 // --- VersionHeaders ----------------------------------------------------------------------------

@@ -577,6 +577,44 @@ impl TestApp {
     }
 
     fn config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
+        let mut config = Self::production_config_for(dir, extra);
+        config.spa_enabled = serves_spa(extra);
+        config
+    }
+
+    /// Boots a seed on the config production parsing gives `vars`, with nothing overwritten
+    /// afterwards: not even [`serves_spa`]'s classic page switch.
+    pub async fn boot_seed_with_production_env(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        vars: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        let seed = seed_dir(name)?;
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("db")).unwrap();
+        std::fs::copy(
+            seed.join("db/production.sqlite3"),
+            dir.path().join("db/production.sqlite3"),
+        )
+        .unwrap();
+        copy_dir(&seed.join("storage"), &dir.path().join("files"));
+        let config = Self::production_config_for(&dir, vars);
+        let intervals = crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        };
+        let booted = boot_with_services(config, clock, crate::net::Network::system(), intervals)
+            .await
+            .unwrap();
+        Some(TestApp {
+            booted,
+            _dir: dir,
+            publications: Default::default(),
+        })
+    }
+
+    /// `Config::from_lookup` over `extra` and the seed's fixed values, pointed at this copy.
+    fn production_config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
         let mut config = Config::from_lookup(|name| match name {
@@ -592,7 +630,6 @@ impl TestApp {
         .unwrap();
         // Every environment uses this private seed copy, not an empty environment-named database.
         config.storage.database = dir.path().join("db/production.sqlite3");
-        config.spa_enabled = serves_spa(extra);
         config
     }
 

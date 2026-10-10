@@ -20,6 +20,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
+import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
@@ -208,6 +209,13 @@ const newRoomRoutes = NEW_ROOM_SLUGS.map((kind) =>
     component: () => <NewRoomRoute kind={kind} />,
   }),
 );
+
+/** `/app/rooms/new/direct`: the New message picker, opened over the home screen. */
+const newDirectRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "rooms/new/direct",
+  component: NewDirectRoute,
+});
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -622,6 +630,7 @@ const routeTree = rootRoute.addChildren([
     handoffResolverRoute,
     linksResolverRoute,
     ...newRoomRoutes,
+    newDirectRoute,
     roomRoute.addChildren([
       permalinkRoute,
       fizzyCardRoute,

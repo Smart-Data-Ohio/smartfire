@@ -41,3 +41,31 @@ test("a link to a ported classic page opens in place", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}$`));
   expect(await page.evaluate(() => "stillHere" in window)).toBe(true);
 });
+
+test("the classic new direct message page opens the New message picker", async ({ page }) => {
+  await openApp(page, "rooms/new/direct");
+
+  const dialog = page.getByRole("dialog", { name: "New message" });
+
+  await expect(dialog).toBeVisible();
+  // The picker sits over the home screen; the URL doesn't stay in history.
+  await expect(page).not.toHaveURL(/rooms\/new/);
+});
+
+test("a link to the classic new direct message page opens the picker in place", async ({
+  page,
+}) => {
+  await openApp(page, "");
+  await page.evaluate(() => {
+    const link = document.createElement("a");
+
+    link.href = "/rooms/directs/new";
+    link.textContent = "classic new message";
+    document.querySelector("main")?.append(link);
+    Object.assign(window, { stillHere: true });
+  });
+  await page.getByText("classic new message").click();
+
+  await expect(page.getByRole("dialog", { name: "New message" })).toBeVisible();
+  expect(await page.evaluate(() => "stillHere" in window)).toBe(true);
+});

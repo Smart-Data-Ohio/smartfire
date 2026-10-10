@@ -341,7 +341,7 @@
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
-      "notes": "Show/index and the board-only new-post form are ported. The content partial is HTML only, so JSON is 406.",
+      "notes": "Show/index and the board-only new-post form are ported. The content partial opened as a page goes to the thread; fetched by a script it is HTML only, so JSON is 406.",
       "bookmark_notes": "Thread links and board-nudge links must keep resolving with message context.",
       "notification_notes": "Thread push links carry ?thread=:id; translate into the thread route, not a plain room route.",
       "cases": [
@@ -349,7 +349,8 @@
         {"id": "thread.show.classic", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/t/{THREAD_DESIGNERS}"}},
         {"id": "thread.board.next", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/t/{BOARD_THREAD}"}},
         {"id": "thread.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/t/{BOARD_THREAD}"}},
-        {"id": "thread.content.html", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "absent": ["{CLASSIC_SHELL}", "{SPA_BOOT}", "id=\"root\""], "markers": ["thread-panel__thread-content", "data-controller=\"thread-messages\""]}},
+        {"id": "thread.content.navigation", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/t/{THREAD_DESIGNERS}"}},
+        {"id": "thread.content.xhr", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "headers": {"x-requested-with": "XMLHttpRequest"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "absent": ["{CLASSIC_SHELL}", "{SPA_BOOT}", "id=\"root\""], "markers": ["thread-panel__thread-content", "data-controller=\"thread-messages\""]}},
         {"id": "thread.content.json500", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "headers": {"accept": "application/json"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "content_type_prefix": "application/json", "markers": ["{\"status\":406,\"error\":\"Not Acceptable\"}"]}},
         {"id": "thread.new.board", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/posts/new"}},
         {"id": "thread.new.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/posts/new"}},
@@ -382,18 +383,18 @@
       "pattern": "/rooms/directs/new, /rooms/directs/:id/edit",
       "category": "directs",
       "classic_endpoint": "rooms/directs#new",
-      "owner_today": "classic",
+      "owner_today": "both",
       "after_cutover": {"action": "alias", "target": "/r/:id (dialog)", "notes": "Open the SPA new-direct or rename/member dialog. Keep GET navigation distinct from existing writes."},
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "Unported: next users stay classic (no redirect). SPA dialog capabilities exist; only navigation is missing.",
-      "bookmark_notes": "Old form URLs still need dialog-compatible navigation.",
+      "notes": "Navigation aliases: the new page opens the New message picker (/app/rooms/new/direct); the edit page and a direct room's settings open the conversation, whose header has Add people and Rename conversation. Writes stay classic.",
+      "bookmark_notes": "Old form URLs open the picker or the conversation.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "directs.new.next.stays", "method": "GET", "path": "/rooms/directs/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}},
-        {"id": "directs.new.classic", "method": "GET", "path": "/rooms/directs/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
-        {"id": "directs.edit.next.stays", "method": "GET", "path": "/rooms/directs/{DIRECT_DJ}/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}}
+        {"id": "directs.new.next", "method": "GET", "path": "/rooms/directs/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/rooms/new/direct"}},
+        {"id": "directs.new.classic", "method": "GET", "path": "/rooms/directs/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/rooms/new/direct"}},
+        {"id": "directs.edit.next", "method": "GET", "path": "/rooms/directs/{DIRECT_DJ}/edit", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DIRECT_DJ}"}}
       ]
     },
     {
@@ -466,7 +467,7 @@
         {"id": "errors.room.settings.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
         {"id": "errors.room.settings.board.next", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
         {"id": "errors.room.settings.board.next.bypass", "method": "GET", "path": "/rooms/{BOARD_ROOM}/settings?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/settings"}},
-        {"id": "errors.room.settings.direct.next", "method": "GET", "path": "/rooms/{DIRECT_DJ}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/directs/{DIRECT_DJ}/edit"}}
+        {"id": "errors.room.settings.direct.next", "method": "GET", "path": "/rooms/{DIRECT_DJ}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DIRECT_DJ}"}}
       ]
     },
     {
@@ -556,7 +557,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "Ported screens for people and bots. The viewer's own id opens settings. The hover card is a layout-less fragment (page::bare).",
+      "notes": "Ported screens for people and bots. The viewer's own id opens settings. The hover card is a layout-less fragment (page::bare) for scripts; opened as a page it goes to the person.",
       "bookmark_notes": "Person links from mentions and the directory.",
       "notification_notes": "No producer emits these.",
       "cases": [
@@ -564,8 +565,9 @@
         {"id": "people.index.classic", "method": "GET", "path": "/users", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people"}},
         {"id": "people.show.next", "method": "GET", "path": "/users/{JASON}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
         {"id": "people.show.classic", "method": "GET", "path": "/users/{JASON}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
-        {"id": "people.card", "method": "GET", "path": "/users/{JASON}/card", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Jason"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "people.card.unknown", "method": "GET", "path": "/users/999999999/card", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
+        {"id": "people.card", "method": "GET", "path": "/users/{JASON}/card", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/people/{JASON}"}},
+        {"id": "people.card.xhr", "method": "GET", "path": "/users/{JASON}/card", "headers": {"x-requested-with": "XMLHttpRequest"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Jason"], "absent": ["{CLASSIC_SHELL}"]}},
+        {"id": "people.card.unknown", "method": "GET", "path": "/users/999999999/card", "headers": {"x-requested-with": "XMLHttpRequest"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
       ]
     },
     {
@@ -644,6 +646,7 @@
         {"id": "account.health.next", "method": "GET", "path": "/account/integrations_health", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/integrations"}},
         {"id": "account.csv.stays", "method": "GET", "path": "/account/audit_log.csv", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/csv", "markers": ["time,action,actor,target_type,target,changes,ip_address,user_agent"], "location_absent": true}, "sudo": true},
         {"id": "account.users.stream", "method": "GET", "path": "/account/users", "headers": {"accept": "text/vnd.turbo-stream.html"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/vnd.turbo-stream.html", "markers": ["turbo-stream"]}},
+        {"id": "account.users.page.navigation", "method": "GET", "path": "/account/users?page=2", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/people?page=2"}},
         {"id": "account.csv.sudo_required", "method": "GET", "path": "/account/audit_log.csv", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/sudo/new"}}
       ]
     },

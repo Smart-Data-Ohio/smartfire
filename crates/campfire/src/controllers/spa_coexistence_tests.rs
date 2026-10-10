@@ -9,7 +9,7 @@ use campfire_db::models::user::ui_preference::{self, UiPreference};
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage, Room};
 
 use crate::controllers::presenters::test_support::{
-    Browser, DAVID, JASON, KEVIN, Reply, Req, TestApp, seed_clock,
+    Browser, DAVID, DIRECT_DAVID_JASON, JASON, KEVIN, Reply, Req, TestApp, seed_clock,
 };
 
 const ORIGIN: &str = "http://campfire.test";
@@ -1026,7 +1026,7 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
 
 /// Settings and another person's profile alias, followed to the page they open: the SPA screen,
 /// whatever was chosen and with or without `?classic=1`. A direct message has no SPA settings, so
-/// its alias opens the classic direct-message edit form.
+/// its alias opens the conversation.
 #[tokio::test]
 async fn settings_and_profile_aliases_follow_through_to_the_spa() {
     let Some(a) = enabled().await else { return };
@@ -1047,8 +1047,8 @@ async fn settings_and_profile_aliases_follow_through_to_the_spa() {
             assert_eq!(path, format!("/app/r/{board}/settings"), "{label}");
             assert_page(&path, &page, false);
             let (path, page) = follow(&mut b, &format!("/rooms/{direct}/settings{query}")).await;
-            assert_eq!(path, format!("/rooms/directs/{direct}/edit"), "{label}");
-            assert_page(&path, &page, true);
+            assert_eq!(path, format!("/app/r/{direct}"), "{label}");
+            assert_page(&path, &page, false);
             let (path, page) = follow(&mut b, &format!("/users/{JASON}/profile{query}")).await;
             assert_eq!(path, format!("/app/people/{JASON}"), "{label}");
             assert_page(&path, &page, false);
@@ -1114,6 +1114,148 @@ async fn settings_and_profile_aliases_stay_classic_for_xhr_and_turbo_frames_but_
     let flashed_profile = b.get(&profile).await;
     assert_eq!(flashed_profile.location(), Some(to("/app/settings").as_str()));
     assert_shell_flash(&mut b, "/app/settings").await;
+}
+
+/// Classic pages and fragments the SPA has no screen of its own for, opened as a page: the SPA
+/// state that does the same job. A script's fetch, an XHR, a Turbo frame and JSON get what they
+/// always got.
+fn navigation_aliases(thread_room: i64, thread: i64) -> [(String, String); 9] {
+    let direct = DIRECT_DAVID_JASON;
+    [
+        // The sidebar's New message picker.
+        ("/rooms/directs/new".into(), "/app/rooms/new/direct".into()),
+        // The conversation, whose header has "Add people" and "Rename conversation".
+        (format!("/rooms/directs/{direct}/edit"), format!("/app/r/{direct}")),
+        (format!("/rooms/{direct}/settings"), format!("/app/r/{direct}")),
+        (format!("/users/{JASON}/card"), format!("/app/people/{JASON}")),
+        (format!("/users/{DAVID}/card"), "/app/settings".into()),
+        (
+            format!("/rooms/{thread_room}/threads/{thread}/content"),
+            format!("/app/r/{thread_room}/t/{thread}"),
+        ),
+        (
+            format!("/rooms/{thread_room}/threads/{thread}/messages"),
+            format!("/app/r/{thread_room}/t/{thread}"),
+        ),
+        ("/account/users".into(), "/app/admin/people".into()),
+        ("/account/users?page=2".into(), "/app/admin/people?page=2".into()),
+    ]
+}
+
+#[tokio::test]
+async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state() {
+    let Some(a) = enabled().await else { return };
+    let (thread_room, thread) = (DESIGNERS_ROOM, LAUNCH_THREAD);
+    let mut b = a.sign_in(DAVID).await;
+    for (classic, spa) in navigation_aliases(thread_room, thread) {
+        let reply = b.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+        for path in with_classic(&classic) {
+            assert_eq!(b.get(&path).await.location(), Some(to(&spa).as_str()), "{path}");
+        }
+        let navigated = b
+            .send(
+                Req::new(Method::GET, &classic)
+                    .header("accept", "*/*")
+                    .header("sec-fetch-mode", "navigate")
+                    .header("sec-fetch-dest", "document"),
+            )
+            .await;
+        assert_eq!(navigated.location(), Some(to(&spa).as_str()), "navigate {classic}");
+        let (path, page) = follow(&mut b, &classic).await;
+        assert_eq!(path, spa, "{classic}");
+        assert_page(&path, &page, false);
+    }
+}
+
+#[tokio::test]
+async fn the_new_aliases_leave_scripts_frames_and_json_alone() {
+    let Some(a) = enabled().await else { return };
+    let (thread_room, thread) = (DESIGNERS_ROOM, LAUNCH_THREAD);
+    let mut b = a.sign_in(DAVID).await;
+    for (classic, _) in navigation_aliases(thread_room, thread) {
+        let requests = [
+            ("xhr", Req::new(Method::GET, &classic).header("x-requested-with", "XMLHttpRequest")),
+            ("turbo", Req::new(Method::GET, &classic).header("turbo-frame", "alias")),
+            ("json", Req::new(Method::GET, &classic).header("accept", "application/json")),
+            // A script's fetch of the HTML: Fetch Metadata says it isn't a navigation.
+            (
+                "fetch",
+                Req::new(Method::GET, &classic)
+                    .header("accept", "text/html")
+                    .header("sec-fetch-mode", "cors")
+                    .header("sec-fetch-dest", "empty"),
+            ),
+            (
+                "iframe",
+                Req::new(Method::GET, &classic)
+                    .header("accept", "text/html")
+                    .header("sec-fetch-mode", "navigate")
+                    .header("sec-fetch-dest", "iframe"),
+            ),
+        ];
+        for (label, request) in requests {
+            let reply = b.send(request).await;
+            assert!(!redirected_to_spa(&reply), "{label} {classic}: {:?}", reply.location());
+        }
+    }
+}
+
+/// The router takes a `.html` suffix for the page itself (`/rooms/7.html` is `/rooms/7`), so the
+/// suffix is an alias too. Other formats keep their classic answer.
+#[tokio::test]
+async fn an_html_suffix_is_the_same_classic_alias() {
+    let Some(a) = enabled().await else { return };
+    let room = WATERCOOLER;
+    let mut b = a.sign_in(DAVID).await;
+    for (classic, spa) in [
+        (format!("/rooms/{room}.html"), format!("/app/r/{room}")),
+        (format!("/rooms/{room}.html?thread={LAUNCH_THREAD}&x=1"), format!("/app/r/{room}?thread={LAUNCH_THREAD}&x=1")),
+        ("/users/me/profile.html".into(), "/app/settings".into()),
+        (format!("/users/{JASON}.html"), format!("/app/people/{JASON}")),
+        ("/searches.html?q=fire".into(), "/app/search?q=fire".into()),
+        ("/rooms/directs/new.html".into(), "/app/rooms/new/direct".into()),
+        (format!("/rooms/{room}/threads.html"), format!("/app/r/{room}/threads")),
+    ] {
+        let reply = b.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+    }
+    for other in [
+        format!("/rooms/{room}.json"),
+        format!("/users/{JASON}.json"),
+        "/searches.json?q=fire".to_string(),
+    ] {
+        let reply = b.get(&other).await;
+        assert!(!redirected_to_spa(&reply), "{other}: {:?}", reply.location());
+    }
+}
+
+/// Production config parsing, untouched: with `SPA_ENABLED` absent or off, a signed-in browser
+/// still gets the SPA, and an old URL still sends it there.
+#[tokio::test]
+async fn production_config_serves_the_spa_with_spa_enabled_absent_or_off() {
+    let envs: [&[(&str, &str)]; 3] = [
+        &[],
+        &[("SPA_ENABLED", "false")],
+        &[("SPA_ENABLED", "0"), ("SPA_DEFAULT", "classic")],
+    ];
+    for env in envs {
+        let Some(a) = TestApp::boot_seed_with_production_env("default", seed_clock(), env).await
+        else {
+            return;
+        };
+        assert!(a.booted.app.config.spa_enabled, "{env:?}");
+        let mut b = a.sign_in(DAVID).await;
+        let shell = b.get("/app/").await;
+        assert_eq!(shell.status, StatusCode::OK, "{env:?}");
+        assert!(shell.text().contains(SPA_BOOT), "{env:?}");
+        let reply = b.get(&format!("/rooms/{WATERCOOLER}")).await;
+        assert_eq!(reply.location(), Some(to(&format!("/app/r/{WATERCOOLER}")).as_str()), "{env:?}");
+        let reply = b.get("/users/me/profile").await;
+        assert_eq!(reply.location(), Some(to("/app/settings").as_str()), "{env:?}");
+    }
 }
 
 #[path = "spa_coexistence_tests/auth_return.rs"]

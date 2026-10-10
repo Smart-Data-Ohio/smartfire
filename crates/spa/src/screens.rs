@@ -67,6 +67,19 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/t/:id",
         true,
     ),
+    // A thread's conversation fragment and message list, opened as a page: the thread itself.
+    screen(
+        "channel_threads#content",
+        "/rooms/:room_id/threads/:id/content",
+        "/app/r/:room_id/t/:id",
+        true,
+    ),
+    screen(
+        "channel_thread_messages#index",
+        "/rooms/:room_id/threads/:thread_id/messages",
+        "/app/r/:room_id/t/:thread_id",
+        true,
+    ),
     // S6: boards share the room and thread pages above; their new-post and automation pages are
     // distinct.
     screen(
@@ -165,10 +178,24 @@ pub const SCREENS: &[Screen] = &[
         "/app/rooms/new/board",
         true,
     ),
+    // A direct message's New message picker (the "+" by Direct messages).
+    screen(
+        "rooms/directs#new",
+        "/rooms/directs/new",
+        "/app/rooms/new/direct",
+        true,
+    ),
     // S8: a room's settings. The classic edit pages are one per kind, and a kind's form saved on
     // another kind's room would convert it, so the shared settings screen falls back to the room
-    // itself. Direct messages keep their classic edit page.
+    // itself. A direct message has no settings screen: its edit page opens the conversation,
+    // whose header has "Add people" and "Rename conversation".
     screen("rooms#show", "/rooms/:id", "/app/r/:id/settings", true),
+    screen(
+        "rooms/directs#edit",
+        "/rooms/directs/:id/edit",
+        "/app/r/:id",
+        true,
+    ),
     screen(
         "rooms/opens#edit",
         "/rooms/opens/:id/edit",
@@ -200,9 +227,9 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // `/rooms/:id/settings` is not a row here. Open, closed, voice, stage and board settings are
-    // this screen; a direct message is not (its settings URL collapses to the conversation). The
-    // controller resolves the type and sends a direct to its edit form. The rooms#show row above
-    // stays the classic fallback for `/app/r/:id/settings`.
+    // this screen; a direct message's settings URL opens the conversation. The controller
+    // resolves the type. The rooms#show row above stays the classic fallback for
+    // `/app/r/:id/settings`.
     // S8: a room's calendar, an event's page, its form and the viewer's response.
     screen(
         "rooms/events#index",
@@ -372,10 +399,19 @@ pub const SCREENS: &[Screen] = &[
         "/app/people/:user_id",
         true,
     ),
+    // A person's hover card, opened as a page: their page.
+    screen("users/cards#show", "/users/:id/card", "/app/people/:id", true),
     // S7: the workspace's account pages. The people list is the account page's lower half: it
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
     screen("accounts#edit", "/account/edit", "/app/admin/people", true),
+    // The people list's stream (any page), opened as a page: the people screen.
+    screen(
+        "accounts/users#index",
+        "/account/users",
+        "/app/admin/people",
+        true,
+    ),
     screen(
         "accounts/icons#index",
         "/account/icons",
@@ -522,6 +558,7 @@ pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String
 pub fn profile_url(endpoint: &str, path: &str, query: Option<&str>, viewer_id: i64) -> Option<String> {
     let pattern = match endpoint {
         "users#show" => "/users/:id",
+        "users/cards#show" => "/users/:id/card",
         "users/profiles#show" => "/users/:id/profile",
         "users/profiles#edit" => "/users/:id/profile/edit",
         _ => return spa_url(endpoint, path, query),

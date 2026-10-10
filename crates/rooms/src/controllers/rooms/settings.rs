@@ -1,7 +1,8 @@
 //! `GET /rooms/:room_id/settings`. The route is declared and the classic controller is not.
 //! Open, closed, voice, stage and board settings are the SPA screen. A direct message has none:
-//! its settings URL goes to the classic direct-message edit form, as do requests that aren't a
-//! signed-in navigation.
+//! a signed-in navigation to its settings opens the conversation, whose header has "Add people"
+//! and "Rename conversation". Requests that aren't a signed-in navigation go to the room's
+//! classic edit form.
 
 use campfire_db::{Room, RoomType};
 use campfire_kit::{Ctx, Result};
@@ -13,9 +14,13 @@ pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
     let query = Some(c.request.query_string().to_string()).filter(|query| !query.is_empty());
-    let spa = spa_settings(room.room_type) && concerns::coexistence_wants_spa(c).await?;
-    if spa {
-        let path = append_query(format!("/app/r/{}/settings", room.id), query.as_deref());
+    if concerns::coexistence_wants_spa(c).await? {
+        let screen = if spa_settings(room.room_type) {
+            format!("/app/r/{}/settings", room.id)
+        } else {
+            format!("/app/r/{}", room.id)
+        };
+        let path = append_query(screen, query.as_deref());
         return c.redirect_to(&c.url_for(&path));
     }
     // A waiting flash is for the edit page, which is what shows it.
@@ -24,7 +29,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     c.redirect_to(&c.url_for(&path))
 }
 
-/// Room types whose settings the SPA edits. Direct messages stay on the classic form.
+/// Room types with an SPA settings screen. A direct message's settings are its conversation.
 fn spa_settings(room_type: RoomType) -> bool {
     matches!(
         room_type,
