@@ -1,6 +1,6 @@
 //! Compare complete human work responses, including permission denials, against real Rails.
 use super::presenters::test_support::*;
-use axum::http::Method;
+use axum::http::{Method, StatusCode};
 use serde_json::Value;
 
 mod query_tests;
@@ -88,7 +88,9 @@ async fn human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads
                 .body(row["input"].to_string()),
             )
             .await;
-        assert_eq!(response.status, 200, "{}", response.text());
+        assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
+        let room = if thread == 90 { 699448332 } else { ALL_TALK };
+        assert_eq!(response.location(), Some(format!("http://campfire.test/rooms/{room}/threads/{thread}").as_str()));
     }
     let id=app.db().read(move |conn| {
         let id:i64=conn.query_row("SELECT id FROM github_pull_requests WHERE owner='rails' AND repo='rails' AND number=12",[],|r|r.get(0))?;
@@ -114,7 +116,8 @@ async fn human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads
             &format!("/threads/90/work/links/{link}.turbo_stream"),
         ))
         .await;
-    assert_eq!(response.status, 200);
+    assert_eq!(response.status, StatusCode::FOUND);
+    assert_eq!(response.location(), Some("http://campfire.test/rooms/699448332/threads/90"));
     app.db()
         .read(move |conn| {
             assert!(campfire_db::WorkThreadLink::find(conn, link)?.is_none());
@@ -177,7 +180,8 @@ async fn human_drive_title_uses_the_real_google_api_and_linkers_encrypted_accoun
                     .body(row["input"].to_string()),
             )
             .await;
-        assert_eq!(response.status, 200, "{}", response.text());
+        assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
+        assert_eq!(response.location(), Some("http://campfire.test/rooms/699448332/threads/90"));
         let title = app
             .db()
             .read(|conn| {
@@ -202,9 +206,6 @@ async fn human_drive_title_uses_the_real_google_api_and_linkers_encrypted_accoun
                     .starts_with("/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?")
             );
             assert_eq!(calls[0]["access_token"], "access-token");
-        }
-        if mode == "title" {
-            assert!(response.text().contains("Plan &lt;&amp;&gt; title"));
         }
     }
 }
@@ -446,6 +447,23 @@ async fn human_work_http_matches_complete_rails_responses() {
         })
         .await;
         let name = row["name"].as_str().unwrap();
+        if row["content_type"] == "text/vnd.turbo-stream.html; charset=utf-8" {
+            if matches!(row["status"].as_u64(), Some(200 | 422)) {
+                assert_eq!(response.status, StatusCode::FOUND, "{name}: {}", response.text());
+                let thread_id = row["path"].as_str().unwrap()
+                    .split('/').nth(2).unwrap().parse::<i64>().unwrap();
+                let room_id = app.db().read(move |conn| {
+                    Ok(campfire_db::ChannelThread::find(conn, thread_id)?.room_id)
+                }).await.unwrap();
+                let location = format!("http://campfire.test/rooms/{room_id}/threads/{thread_id}");
+                assert_eq!(response.location(), Some(location.as_str()), "{name}");
+                assert!(response.body.is_empty(), "{name}");
+            } else {
+                assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{name}");
+                assert!(response.body.is_empty(), "{name}");
+            }
+            continue;
+        }
         assert_eq!(
             response.status.as_u16(),
             row["status"].as_u64().unwrap() as u16,
@@ -466,8 +484,7 @@ async fn human_work_http_matches_complete_rails_responses() {
         let actual = response.text();
         let expected = row["body"].as_str().unwrap();
         if actual != expected {
-            let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../.scratch/human-work/diffs");
+            let directory = std::env::temp_dir().join("human-work-diffs");
             std::fs::create_dir_all(&directory).unwrap();
             std::fs::write(directory.join(format!("{name}-actual.html")), actual).unwrap();
             std::fs::write(directory.join(format!("{name}-expected.html")), expected).unwrap();

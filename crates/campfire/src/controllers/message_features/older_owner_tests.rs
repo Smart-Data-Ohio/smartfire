@@ -236,12 +236,15 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
             net.tls = crate::net::tls_config(roots);
             let reads = Arc::new(Mutex::new(None));
             let observed = reads.clone();
+            let completed = Arc::new(tokio::sync::Notify::new());
+            let completion = completed.clone();
             let mut registry = Registry::new();
             if group["kind"] == "fizzy" {
                 registry.register(
                     move |app: crate::app::App, job: fizzy::fetch::FetchJob, _: Execution| {
                         let net = net.clone();
                         let observed = observed.clone();
+                        let completion = completion.clone();
                         async move {
                             let queries = app.db.capture_read_queries();
                             let result = fizzy::fetch::fetch(
@@ -254,6 +257,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                             .await;
                             app.db.stop_capturing_read_queries();
                             *observed.lock().unwrap() = Some(queries.lock().unwrap().len());
+                            completion.notify_one();
                             result.map_err(crate::queue::discard_missing)?;
                             Ok(Outcome::Done)
                         }
@@ -264,11 +268,13 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                     move |app: crate::app::App, job: twitter::fetcher::FetchJob, _: Execution| {
                         let net = net.clone();
                         let observed = observed.clone();
+                        let completion = completion.clone();
                         async move {
                             let queries = app.db.capture_read_queries();
                             let result = twitter::fetcher::fetch(&app, &net, job.post_id).await;
                             app.db.stop_capturing_read_queries();
                             *observed.lock().unwrap() = Some(queries.lock().unwrap().len());
+                            completion.notify_one();
                             result.map_err(crate::queue::discard_missing)?;
                             Ok(Outcome::Done)
                         }
@@ -301,14 +307,16 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                 .await
                 .unwrap();
 
-        super::comparison_support::settle_jobs(&app).await;
+            // Wait until capture closes before the completion poll reads this same database.
+            tokio::time::timeout(std::time::Duration::from_secs(10), completed.notified())
+                .await.expect("owner fetch completed");
+            super::comparison_support::settle_jobs(&app).await;
             runner.shutdown(std::time::Duration::from_secs(1)).await;
             let key = format!("{} {}", group["kind"], route["status"]);
             let reads = reads.lock().unwrap().expect("owner job completed");
             println!(
-                "WS8bm2 older-owner job {key} {} references: {reads} reader reads; {} exact frames",
-                group["size"],
-                job["frames"].as_array().unwrap().len()
+                "WS8bm2 older-owner job {key} {} references: {reads} reader reads",
+                group["size"]
             );
             if let Some(previous) = counts.insert(key.clone(), reads)
                 && previous != reads
@@ -343,9 +351,9 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
     }
     assert!(
         differences.is_empty(),
-        "owner job renderer N+1: {differences:?}"
+        "owner job reader N+1: {differences:?}"
     );
     println!(
-        "WS8bm2 older-owner jobs: 12/12 durable jobs with injected owner transports; 120/120 exact frames; 12/12 recorded errors; 6/6 runtime-built auth headers; no external network"
+        "WS8bm2 older-owner jobs: 12/12 durable jobs with injected owner transports; 12/12 recorded errors; 6/6 runtime-built auth headers; no external network"
     );
 }
