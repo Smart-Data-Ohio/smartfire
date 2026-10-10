@@ -163,3 +163,5 @@ fn render_write_error(c: &mut Ctx, error: Error) -> Result {
         Ok(c.render(status, &format::JSON, serde_json::to_string(&json!({"error": text})).map_err(Error::internal)?))
     } else { Ok(c.head(status)) }
 }
+
+use campfire_web::controllers::presenters::{Rendering};

@@ -13,7 +13,7 @@ use campfire_db::models::{
 };
 use campfire_db::{Status, Timestamp};
 use campfire_kit::{Ctx, Error, Result, StatusCode, halt};
-use campfire_web::concerns;
+use campfire_runtime::concerns;
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::{Value, json};
 

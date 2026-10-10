@@ -856,3 +856,5 @@ async fn user_tokens_check_duplicates_outside_the_page_and_omit_invalid_names() 
     assert_eq!(r.json().as_array().unwrap().len(), 1);
     assert!(r.json()[0].get("mention_token").is_none());
 }
+
+use campfire_web::controllers::presenters::{Rendering};

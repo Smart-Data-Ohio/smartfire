@@ -558,3 +558,5 @@ async fn broadcast_html(client: &mut Client) -> String {
     ));
     html
 }
+
+use campfire_web::controllers::presenters::Rendering;

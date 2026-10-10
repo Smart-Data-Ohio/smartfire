@@ -5,7 +5,7 @@
 use campfire_db::{Account, Membership, Message, Room};
 #[cfg(any(test, feature = "test-support"))]
 use campfire_db::Boost;
-use campfire_kit::{Ctx, Error, Format, Result, StatusCode};
+use campfire_kit::{Ctx, Format, Result, StatusCode};
 use campfire_views::helpers as h;
 use campfire_views::layouts::{Application, FrameLayout};
 use campfire_views::{Platform, ViewContext};
@@ -13,25 +13,6 @@ use campfire_views::{Platform, ViewContext};
 use crate::app::AppState;
 use crate::cable::Partials;
 use crate::controllers::presenters::view_context::{Layout, account_summary, find_template};
-
-thread_local! {
-    static RENDER_TIME_ZONE: std::cell::RefCell<Option<campfire_views::time::Zone>> = const { std::cell::RefCell::new(None) };
-}
-
-/// `app/controllers/concerns/set_time_zone.rb` scopes the write and after-commit renderers.
-/// This contains only Time.zone; broadcasts still have no Current.user or session.
-pub struct TimeZoneGuard(Option<campfire_views::time::Zone>);
-impl Drop for TimeZoneGuard {
-    fn drop(&mut self) {
-        RENDER_TIME_ZONE.with(|zone| zone.replace(self.0.take()));
-    }
-}
-pub fn enter_time_zone(zone: campfire_views::time::Zone) -> TimeZoneGuard {
-    TimeZoneGuard(RENDER_TIME_ZONE.with(|current| current.replace(Some(zone))))
-}
-pub fn renderer_time_zone() -> campfire_views::time::Zone {
-    RENDER_TIME_ZONE.with(|zone| zone.borrow().clone().unwrap_or_else(campfire_views::time::Zone::utc))
-}
 
 /// A template that extends `layouts/application` itself (with `blocks = ["head", "content"]`):
 /// the full page, or for a Turbo-Frame request its `head` and `content` in turbo-rails' frame
@@ -131,18 +112,6 @@ pub fn render_detached<T>(app: &AppState, account: Option<&Account>, render: imp
     render_detached_at(app, account, default_renderer_base_url(app), render)
 }
 
-/// config/initializers/default_url_options.rb: APP_URL configures jobs as well as mail.
-/// ActionController's renderer supplies example.org only when no origin is configured.
-pub fn default_renderer_base_url(app: &AppState) -> &str {
-    app.config.mail.app_url.as_deref().unwrap_or("http://example.org")
-}
-
-/// `SetCurrentRequest#default_url_options` supplies the request's host, port and protocol to
-/// the detached renderer, including a nonstandard port.
-pub fn renderer_base_url(c: &Ctx) -> String {
-    c.url_for("")
-}
-
 /// [`render_detached`] during a request: URLs get the request's host through
 /// `default_url_options` (`SetCurrentRequest`), see [`renderer_base_url`].
 pub fn render_detached_at<T>(app: &AppState, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
@@ -221,10 +190,6 @@ impl Partials for Rendered {
         self.shared_room.clone().unwrap_or_default()
     }
 }
+pub use campfire_runtime::context::*;
 
-pub fn db_error(error: campfire_db::Error) -> Error {
-    match error {
-        campfire_db::Error::RecordNotFound(_) => Error::NotFound,
-        other => Error::internal(other),
-    }
-}
+use crate::controllers::presenters::{ view_context::LayoutRendering};

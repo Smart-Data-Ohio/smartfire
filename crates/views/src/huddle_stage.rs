@@ -1,73 +1,18 @@
 //! Stage fragments from app/views/rooms/stage and rooms/events/venue_live_dot.
+pub use campfire_presentation::huddle_stage::*;
+
 use crate::helpers as h;
 use askama::Template;
-use rails_compat::unicode;
-use serde::Deserialize;
-
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct Member {
-    pub id: i64,
-    pub user_id: i64,
-    pub name: String,
-    pub avatar_path: String,
-    pub administrator: bool,
-    pub role: String,
-    pub hand: Option<i64>,
-    pub muted: bool,
+pub trait StageRendering {
+    fn dom_id(&self, prefix: &str) -> String;
+    fn render(&self, partial: &str) -> String;
+    fn panel(&self, rejoin: bool) -> String;
 }
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct Live {
-    pub id: i64,
-    pub membership_id: i64,
-    pub name: String,
-    pub identity: Option<String>,
-}
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct Stage {
-    pub room_id: i64,
-    pub viewer_id: i64,
-    pub members: Vec<Member>,
-    pub live: Option<Live>,
-}
-impl Stage {
-    pub fn viewer(&self) -> &Member {
-        self.members
-            .iter()
-            .find(|m| m.id == self.viewer_id)
-            .expect("stage viewer is a member")
-    }
-    fn can_manage(&self) -> bool {
-        self.viewer().role == "host" || self.viewer().administrator
-    }
-    fn can_moderate(&self, target: &Member) -> bool {
-        target.id != self.viewer_id && (self.viewer().administrator || !target.administrator)
-    }
-    fn admin_self_unmute(&self, target: &Member) -> bool {
-        target.id == self.viewer_id && self.viewer().administrator && target.muted
-    }
-    fn group(&self, role: &str) -> Vec<&Member> {
-        let mut members = self
-            .members
-            .iter()
-            .filter(|m| m.role == role)
-            .collect::<Vec<_>>();
-        members.sort_by_key(|m| {
-            (
-                role == "listener" && m.hand.is_none(),
-                if role == "listener" {
-                    m.hand.unwrap_or(0)
-                } else {
-                    0
-                },
-                unicode::downcase(&m.name),
-            )
-        });
-        members
-    }
-    pub fn dom_id(&self, prefix: &str) -> String {
+impl StageRendering for Stage {
+    fn dom_id(&self, prefix: &str) -> String {
         h::dom_id("rooms_stage", self.room_id, Some(prefix))
     }
-    pub fn render(&self, partial: &str) -> String {
+    fn render(&self, partial: &str) -> String {
         match partial {
             "live_badge" => LiveBadge { stage: self }.render(),
             "live_dot" => LiveDot {
@@ -111,7 +56,7 @@ impl Stage {
         }
         .expect("stage template")
     }
-    pub fn panel(&self, rejoin: bool) -> String {
+    fn panel(&self, rejoin: bool) -> String {
         Panel {
             stage: self,
             rejoin,
@@ -120,6 +65,7 @@ impl Stage {
         .expect("stage panel")
     }
 }
+
 #[derive(Template)]
 #[template(path = "rooms/stage/_live_badge.html")]
 struct LiveBadge<'a> {

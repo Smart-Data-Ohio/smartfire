@@ -94,3 +94,5 @@ fn redirect_to_edit_account(c: &mut Ctx) -> Result {
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }
+
+use campfire_web::controllers::presenters::view_context::LayoutRendering;

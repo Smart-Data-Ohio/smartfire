@@ -5,8 +5,8 @@ use campfire_app::app::AppCtx;
 use campfire_db::{Membership, Room, RoomType};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_rooms::controllers::rooms::{find_joinable_open_room, join_open_room};
-use campfire_web::concerns::{self, require_current_user};
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::concerns::{self, require_current_user};
+use campfire_runtime::context::db_error;
 
 use crate::dto;
 use crate::endpoints::{before_actions, now};

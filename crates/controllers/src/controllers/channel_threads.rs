@@ -256,3 +256,5 @@ fn render_error(c: &mut Ctx, status: StatusCode, message: &str) -> Result {
 pub(super) fn render_json(c: &mut Ctx, status: StatusCode, payload: &Value) -> Result {
     Ok(c.render(status, &format::JSON, serde_json::to_string(payload).map_err(Error::internal)?))
 }
+
+use campfire_web::controllers::presenters::{Rendering, github::GithubRendering};

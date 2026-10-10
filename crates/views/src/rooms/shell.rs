@@ -2,24 +2,6 @@
 use super::RoomView;
 use crate::{ViewContext, helpers as h, messages::UserView};
 use askama::Template;
-
-#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq)]
-#[serde(default)]
-pub struct State {
-    pub unread_message_id: Option<i64>,
-    pub unread_count: i64,
-    pub unread_index: Option<usize>,
-    pub scroll_to_divider: bool,
-    pub jump_url: Option<String>,
-    pub notices: Vec<Notice>,
-}
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub struct Notice {
-    pub id: i64,
-    pub name: String,
-    pub until_date: Option<String>,
-    pub note: Option<String>,
-}
 #[derive(Template)]
 #[template(path = "messages/_template.html")]
 pub struct Pending<'a> {
@@ -135,3 +117,6 @@ pub fn jump(ctx: &ViewContext, url: Option<&str>) -> h::Html {
 pub struct NoticeLine<'a> {
     pub user: &'a Notice,
 }
+pub use campfire_presentation::rooms::shell::*;
+
+use crate::rendering::*;

@@ -26,8 +26,9 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::message_features as features;
 use campfire_messages::controllers::messages as posting;
-use campfire_web::concerns::{self, cast_integer};
-use campfire_web::controllers::presenters::{self, Presenter, page::db_error};
+use campfire_runtime::concerns::{self, cast_integer};
+use campfire_runtime::presenters::{self, Presenter};
+use campfire_runtime::context::db_error;
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::Value;
 
@@ -518,7 +519,7 @@ pub(crate) fn cards(
     Ok(cards)
 }
 
-/// `campfire_views::message_links::Card`'s facts.
+/// `campfire_presentation::message_links::Card`'s facts.
 fn quote_preview(
     presenter: &Presenter<'_>,
     source: &Message,
@@ -536,12 +537,12 @@ fn quote_preview(
         } else {
             room.name.clone().unwrap_or_default()
         },
-        excerpt: campfire_views::helpers::truncate(&presenter.plain_text_body(source)?, 200, "..."),
+        excerpt: campfire_presentation::helpers::truncate(&presenter.plain_text_body(source)?, 200, "..."),
         created_at: dto::time(source.created_at),
     })
 }
 
-/// The X card (`presenters/twitter_cards.rs`, `campfire_views::twitter::Card`): a failed fetch
+/// The X card (`presenters/twitter_cards.rs`, `campfire_presentation::twitter::Card`): a failed fetch
 /// wins over a stored one, as the classic card shows the error.
 fn x_post(post: Post) -> api::XPostCard {
     let fetch = if present(post.fetch_error.as_deref()).is_some() {
@@ -799,7 +800,7 @@ async fn show_poll(c: &mut Ctx) -> Result {
 async fn post_vote(c: &mut Ctx) -> Result {
     let (room, poll_id, viewer_id) = set_poll(c).await?;
     let api::VotePoll { option_ids } = body(c).await?;
-    let origin = presenters::page::renderer_base_url(c);
+    let origin = campfire_runtime::context::renderer_base_url(c);
     let room_id = room.id;
     #[cfg(feature = "test-support")]
     crate::test_hooks::before_poll_vote_write(poll_id).await;
@@ -1014,8 +1015,8 @@ async fn show_github_card(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &card)
 }
 
-/// `campfire_views::github::card`'s states: a failed fetch, a fetched title, or still loading.
-fn github_card_of(card: campfire_views::github::Card, thread: bool) -> api::GithubPullRequestCard {
+/// `campfire_presentation::github::card`'s states: a failed fetch, a fetched title, or still loading.
+fn github_card_of(card: campfire_presentation::github::Card, thread: bool) -> api::GithubPullRequestCard {
     if let Some(message) = present(card.fetch_error.as_deref()) {
         return api::GithubPullRequestCard::Failed { message };
     }
@@ -1127,7 +1128,7 @@ async fn show_fizzy_card(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let zone = campfire_views::time::Zone::for_user(zone.as_deref());
+    let zone = campfire_presentation::time::Zone::for_user(zone.as_deref());
     let preview = fizzy_preview(&card, cache.as_ref(), &zone);
     c.json(StatusCode::OK, &preview)
 }
@@ -1172,7 +1173,7 @@ fn https(url: &str) -> bool {
 
 /// `last_active_at` as `Time.zone.parse` reads it: an offset timestamp, or a civil date or time
 /// in the viewer's zone.
-fn fizzy_time(zone: &campfire_views::time::Zone, value: &Value) -> Option<Timestamp> {
+fn fizzy_time(zone: &campfire_presentation::time::Zone, value: &Value) -> Option<Timestamp> {
     let text = json_text(value);
     let text = text.trim();
     if let Ok(at) = text.parse::<jiff::Timestamp>() {
@@ -1189,13 +1190,13 @@ fn fizzy_time(zone: &campfire_views::time::Zone, value: &Value) -> Option<Timest
         .map(|time| Timestamp::from_jiff(time.timestamp()))
 }
 
-/// `campfire_views::fizzy_cards::Frame`'s states, in its order: not connected, a payload, Fizzy's
+/// `campfire_presentation::fizzy_cards::Frame`'s states, in its order: not connected, a payload, Fizzy's
 /// "not found", another error, else loading. A payload without a title is still loading, as the
 /// classic card shows "Loading card…".
 fn fizzy_preview(
     card: &FizzyCard,
     cache: Option<&FizzyCache>,
-    zone: &campfire_views::time::Zone,
+    zone: &campfire_presentation::time::Zone,
 ) -> api::FizzyCardPreview {
     let Some(cache) = cache else {
         return api::FizzyCardPreview::NotConnected;
@@ -1308,7 +1309,7 @@ mod tests {
             fetched_at: None,
             fetch_error: fetch_error.map(str::to_owned),
         };
-        fizzy_preview(&card, Some(&cache), &campfire_views::time::Zone::utc())
+        fizzy_preview(&card, Some(&cache), &campfire_presentation::time::Zone::utc())
     }
 
     #[test]
@@ -1319,7 +1320,7 @@ mod tests {
             number: 42,
         };
         assert_eq!(
-            fizzy_preview(&card, None, &campfire_views::time::Zone::utc()),
+            fizzy_preview(&card, None, &campfire_presentation::time::Zone::utc()),
             api::FizzyCardPreview::NotConnected
         );
         assert_eq!(fizzy(None, None), api::FizzyCardPreview::Loading);
@@ -1397,9 +1398,9 @@ mod tests {
         }
     }
 
-    fn github(card: campfire_views::github::Card, thread: bool) -> api::GithubPullRequestCard {
+    fn github(card: campfire_presentation::github::Card, thread: bool) -> api::GithubPullRequestCard {
         github_card_of(
-            campfire_views::github::Card {
+            campfire_presentation::github::Card {
                 owner: "smart-data-ohio".into(),
                 repo: "smartfire".into(),
                 number: 42,
@@ -1411,7 +1412,7 @@ mod tests {
 
     #[test]
     fn github_cards_follow_the_fetch() {
-        use campfire_views::github::{Card, File};
+        use campfire_presentation::github::{Card, File};
         assert_eq!(
             github(Card::default(), false),
             api::GithubPullRequestCard::Loading

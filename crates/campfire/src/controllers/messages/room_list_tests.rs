@@ -41,3 +41,5 @@ async fn room_list_places_unread_outside_shared_fragments_and_matches_rails_arou
         assert_eq!(campfire_cable::turbo::session_bound(&html), None);
     }
 }
+
+use campfire_web::controllers::presenters::RoomList;

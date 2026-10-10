@@ -4,29 +4,6 @@ use crate::messages::support::epoch_ms;
 use askama::Template;
 use serde::Deserialize;
 use jiff::Timestamp;
-/// What `rooms/show` shows.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct ShowView {
-    pub room: RoomView,
-    /// `room.updated_at`, the refresh controller's `loaded_at`.
-    pub updated_at: Timestamp,
-    /// `Current.user`, for the client-side message template.
-    pub user: UserView,
-    pub messages: Vec<MessageItem>,
-    /// `@room == Room.original && !@room.messages.paged?` (`rooms/show/_invitation`).
-    pub invitation: bool,
-    /// `Current.account.join_code`, for the invitation's join link.
-    #[serde(default)]
-    pub join_code: String,
-    /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
-    pub messages_stream_name: String,
-    #[serde(default)]
-    pub navigation: Option<navigation::Navigation>,
-    #[serde(default)]
-    pub thread_panel_name: Option<String>,
-    #[serde(default)]
-    pub shell: shell::State,
-}
 
 /// `rooms/show`.
 #[derive(Template)]
@@ -70,5 +47,29 @@ impl Show<'_> {
     }
 }
 
-
 mod filters { pub use crate::helpers::filters::*; }
+
+use crate::rendering::*;
+/// What `rooms/show` shows.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct ShowView {
+    pub room: RoomView,
+    /// `room.updated_at`, the refresh controller's `loaded_at`.
+    pub updated_at: Timestamp,
+    /// `Current.user`, for the client-side message template.
+    pub user: UserView,
+    pub messages: Vec<MessageItem>,
+    /// `@room == Room.original && !@room.messages.paged?` (`rooms/show/_invitation`).
+    pub invitation: bool,
+    /// `Current.account.join_code`, for the invitation's join link.
+    #[serde(default)]
+    pub join_code: String,
+    /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
+    pub messages_stream_name: String,
+    #[serde(default)]
+    pub navigation: Option<navigation::Navigation>,
+    #[serde(default)]
+    pub thread_panel_name: Option<String>,
+    #[serde(default)]
+    pub shell: shell::State,
+}

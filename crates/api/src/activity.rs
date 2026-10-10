@@ -9,9 +9,9 @@ use campfire_app::app::{AppCtx, AppState};
 use campfire_db::models::activity_item::ActivityQuery;
 use campfire_db::{ActivityItem, Connection, Timestamp, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_web::concerns;
-use campfire_web::controllers::presenters::activity as presenter;
-use campfire_web::controllers::presenters::page::db_error;
+use campfire_runtime::concerns;
+use campfire_runtime::presenters::activity as presenter;
+use campfire_runtime::context::db_error;
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now};
@@ -73,7 +73,7 @@ pub(crate) fn items(
 
 fn wire_row(
     row: &ActivityItem,
-    view: campfire_views::activity::Item,
+    view: campfire_presentation::activity::Item,
     refs: presenter::SourceRefs,
 ) -> campfire_db::Result<api::ActivityItem> {
     let occurred_at = view
@@ -173,7 +173,7 @@ async fn index_activity(c: &mut Ctx) -> Result {
     let tab = c
         .param_str("type")
         .filter(|tab| {
-            campfire_views::activity::TYPES
+            campfire_presentation::activity::TYPES
                 .iter()
                 .any(|(key, _)| key == tab)
         })

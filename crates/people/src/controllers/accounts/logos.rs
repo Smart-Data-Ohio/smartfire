@@ -51,7 +51,7 @@ pub async fn show(c: &mut Ctx) -> Result {
                 .map_err(Error::internal)?;
             if let Some(blob) = blob.filter(|blob| blob.is_variable()) {
                 let timeout = campfire_storage::branding::processing_timeout(&blob);
-                campfire_web::active_storage::processed_branding_variant_with_deadline(
+                campfire_runtime::active_storage::processed_branding_variant_with_deadline(
                     c.app(),
                     blob,
                     Variation::resize_to_limit(size, size, Some("png")),

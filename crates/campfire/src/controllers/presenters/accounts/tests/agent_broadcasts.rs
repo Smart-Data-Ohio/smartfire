@@ -949,3 +949,5 @@ async fn thread_step_callback_renders_ordered_steps_and_updates_over_live_socket
     socket.close(None).await.unwrap();
     server.abort();
 }
+
+use campfire_web::controllers::presenters::Rendering;

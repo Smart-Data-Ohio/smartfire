@@ -93,3 +93,5 @@ async fn panel(c: &mut Ctx, room_id: i64, member_id: i64) -> Result {
     })
     .await
 }
+
+use campfire_views::rendering::*;

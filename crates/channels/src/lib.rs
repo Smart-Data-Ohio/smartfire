@@ -9,4 +9,5 @@ pub mod jobs;
 
 // The app and web layers, under the paths this code used inside the campfire crate.
 use campfire_app::{app, cable, huddle, integrations, net, queue};
-use campfire_web::{active_storage, concerns, controllers, mail, messaging};
+use campfire_runtime::{active_storage, concerns, messaging};
+use campfire_web::{controllers, mail};

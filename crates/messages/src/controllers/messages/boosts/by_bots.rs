@@ -39,7 +39,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let body = present(c, move |presenter| {
         let mut payload=serde_json::to_value(presenter.boost_json(&boost,&message,&base_url)?).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
         payload["booster"]=crate::controllers::presenters::message_payload::user(presenter, &presenter.user(boost.booster_id)?, &base_url)?;
-        Ok(campfire_views::helpers::to_rails_json(&payload))
+        Ok(campfire_presentation::helpers::to_rails_json(&payload))
     }).await?;
     Ok(c.render(StatusCode::CREATED, &format::JSON, body))
 }

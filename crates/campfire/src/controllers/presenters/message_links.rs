@@ -1,5 +1,8 @@
 //! Native child partials for the complete room compositor. Cross-room quotes remain
 //! viewer-authorized lazy frames; the cached parent carries no private source data.
+use campfire_views::rendering::*;
+use campfire_web::controllers::presenters::Rendering;
+
 use super::Presenter;
 use campfire_db::{Message, Result, Room, User};
 

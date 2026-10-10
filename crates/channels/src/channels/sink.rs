@@ -10,6 +10,8 @@
 //! Broadcasts that controllers and jobs make go through [`super::Broadcasts`] directly; this is
 //! only for the ones the database layer emits, which can't render or reach the cable server.
 
+use campfire_web::controllers::presenters::{Rendering};
+
 use campfire_cable::turbo::{Action, Target};
 use campfire_db::{Broadcast, BroadcastRequest, Event, RoomRemovalBroadcast};
 

@@ -20,7 +20,7 @@ use campfire_controllers::controllers::slack::{
 };
 use campfire_db::{Timestamp, User, models::slack_import::SlackImport};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
-use campfire_views::slack::{RunData, SetupData, conversation_type, target_value};
+use campfire_presentation::slack::{RunData, SetupData, conversation_type, target_value};
 use serde_json::Value;
 
 use crate::admin::{administrator, body, refusal, require_sudo, viewer};

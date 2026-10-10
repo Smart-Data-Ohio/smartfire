@@ -1,85 +1,13 @@
 //! The message-owned composer. Feature owners supply the schedule control and Drive availability.
-use super::{RoomKind, room_dom_id};
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Deserialize)]
-pub enum DriveFlow {
-    #[default]
-    None,
-    Share,
-    Metadata,
+pub trait FactsRendering {
+    fn form(&self) -> h::FormWith;
+    fn text_area(&self) -> h::Html;
+    fn send_button(&self, ctx: &ViewContext) -> h::Html;
 }
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct Thread {
-    pub id: i64,
-    pub name: String,
-}
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
-pub struct Facts {
-    pub room_id: i64,
-    pub room_kind: RoomKind,
-    /// `Room.model_name.param_key`; the legacy room kind collapses Voice/Stage/Board.
-    #[serde(default)]
-    pub room_param_key: Option<String>,
-    pub room_name: String,
-    pub thread: Option<Thread>,
-    /// The complete registry and ordered room agent-command names, supplied by the presenter.
-    pub slash_commands: Vec<String>,
-    pub drive: DriveFlow,
-}
-impl Facts {
-    pub fn thread_value(&self) -> String {
-        self.thread
-            .as_ref()
-            .map(|thread| thread.id.to_string())
-            .unwrap_or_default()
-    }
-    pub fn scoped_id(&self, prefix: &str, room_default: &str) -> String {
-        self.thread.as_ref().map_or_else(
-            || room_default.into(),
-            |thread| format!("{prefix}_channel_thread_{}", thread.id),
-        )
-    }
-    pub fn composer_frame_id(&self) -> String {
-        self.scoped_id("composer_frame", "composer-frame")
-    }
-    pub fn attach_menu_id(&self) -> String {
-        self.scoped_id("attach_menu", "attach-menu")
-    }
-    pub fn reply_notify_id(&self) -> String {
-        let room_id = self.room_param_key.as_ref().map_or_else(
-            || room_dom_id(self.room_kind, self.room_id, "reply_notify"),
-            |key| format!("reply_notify_{key}_{}", self.room_id),
-        );
-        self.scoped_id("reply_notify", &room_id)
-    }
-    pub fn drive_available(&self) -> bool {
-        self.drive != DriveFlow::None
-    }
-    pub fn drive_share(&self) -> bool {
-        self.drive == DriveFlow::Share
-    }
-    pub fn drive_metadata(&self) -> bool {
-        self.drive == DriveFlow::Metadata
-    }
-    pub fn message_path(&self) -> String {
-        self.thread.as_ref().map_or_else(
-            || format!("/rooms/{}/messages", self.room_id),
-            |thread| format!("/rooms/{}/threads/{}/messages", self.room_id, thread.id),
-        )
-    }
-    pub fn slash_list_path(&self) -> String {
-        format!(
-            "/autocompletable/slash_commands?room_id={}{}",
-            self.room_id,
-            self.thread
-                .as_ref()
-                .map(|thread| format!("&thread_id={}", thread.id))
-                .unwrap_or_default()
-        )
-    }
-    pub fn form(&self) -> h::FormWith {
+impl FactsRendering for Facts {
+    fn form(&self) -> h::FormWith {
         let mut form = h::form_with(self.message_path()).model("message").id(self.scoped_id("composer", "composer"))
             .class("margin-block flex-item-grow contain")
             .data("controller", "composer drop-target")
@@ -105,7 +33,7 @@ impl Facts {
                 self.slash_list_path(),
             )
     }
-    pub fn text_area(&self) -> h::Html {
+    fn text_area(&self) -> h::Html {
         self.form().text_area("markdown_source", None, h::attrs().rows(1).maxlength(50_000).class("composer__textarea input")
             .placeholder(self.thread.as_ref().map_or_else(|| format!("Message #{}", self.room_name), |thread| format!("Reply in {}", thread.name)))
             .role("combobox").aria("multiline", "true").aria("label", if self.thread.is_some() {"Write a thread reply"} else {"Write a message"})
@@ -117,7 +45,7 @@ impl Facts {
             .data("markdown_autocomplete_slash_commands_url_value", self.slash_list_path())
             .data("markdown_editor_target", "source").data("composer_target", "markdown").data("suggestion_results_placement", "above"))
     }
-    pub fn send_button(&self, ctx: &ViewContext) -> h::Html {
+    fn send_button(&self, ctx: &ViewContext) -> h::Html {
         let content = format!(
             "\n                {}\n                <span class=\"for-screen-reader\">{}</span>\n",
             h::image_tag(ctx, "arrow-up.svg", h::attrs().size(17).aria_hidden()),
@@ -157,3 +85,4 @@ pub struct FooterComposer<'a> {
     pub facts: &'a Facts,
     pub scheduled_control: &'a h::Html,
 }
+pub use campfire_presentation::messages::composer::*;

@@ -2309,3 +2309,5 @@ async fn cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery
     let jobs_after=f.app.db.read(|c|Ok(c.prepare("SELECT arguments FROM background_jobs WHERE job_class='Github::DeliverSubscriptionEventJob'")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)).await.unwrap();
     assert_eq!(jobs_after, jobs_before); // WS15g-022 replay no jobs
 }
+
+use campfire_web::controllers::presenters::{ MessageCache};

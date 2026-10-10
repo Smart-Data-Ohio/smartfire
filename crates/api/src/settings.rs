@@ -21,11 +21,11 @@ use campfire_people::controllers::{
     qr_code, two_factor,
     users::push_subscriptions::{self, test_notifications},
 };
-use campfire_web::authentication;
-use campfire_web::concerns::{self, Authentication, Before, current_session};
-use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
-use campfire_web::controllers::presenters::page::db_error;
-use campfire_web::controllers::presenters::{self, profile_sections};
+use campfire_runtime::authentication;
+use campfire_runtime::concerns::{self, Authentication, Before, current_session};
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
+use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::{self, profile_sections};
 use serde::de::DeserializeOwned;
 
 use crate::dto::time;
@@ -345,7 +345,7 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                 .time_zone
                 .as_deref()
                 .and_then(profile_settings::zone_identifier),
-            time_zones: campfire_views::users::profile_time_zones()
+            time_zones: campfire_presentation::users::profile_time_zones()
                 .iter()
                 .map(|(label, value)| api::TimeZoneChoice {
                     label: label.clone(),
@@ -1190,7 +1190,7 @@ async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettin
         has_password: presenters::accounts::profile_has_password(user),
         devices: data.devices.iter().map(|device| api::RememberedDevice {
             id: device.id,
-            description: campfire_views::two_factor::device_description(device),
+            description: campfire_presentation::two_factor::device_description(device),
             ip_address: device.ip_address.clone(),
             last_used_at: device.last_used_at
                 .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
@@ -1198,7 +1198,7 @@ async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettin
     })
 }
 
-fn account_membership(row: campfire_views::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
+fn account_membership(row: campfire_presentation::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
     // The presenter supplies the classic involvement name. A missing one (NULL, which the classic
     // row shows as "") stays `None`: no mention reaches it, so it isn't `mentions`.
     let involvement = if row.involvement.is_empty() {

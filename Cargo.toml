@@ -21,6 +21,8 @@ campfire_cable    = { path = "crates/cable" }
 campfire_assets   = { path = "crates/assets" }
 campfire_static_assets = { path = "crates/static_assets" }
 campfire_view_kit = { path = "crates/view_kit" }
+campfire_presentation = { path = "crates/presentation" }
+campfire_runtime = { path = "crates/runtime" }
 campfire_views    = { path = "crates/views" }
 campfire_retained = { path = "crates/retained_pages" }
 campfire_jobs     = { path = "crates/jobs" }

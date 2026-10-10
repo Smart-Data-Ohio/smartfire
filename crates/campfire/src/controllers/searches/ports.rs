@@ -1100,3 +1100,5 @@ async fn preloaded_complete_messages_match_rails_and_lazy_presenter() {
         .await
         .unwrap();
 }
+
+use campfire_web::controllers::presenters::{Rendering,  MessageCache};
