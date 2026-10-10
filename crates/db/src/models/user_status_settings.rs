@@ -182,6 +182,7 @@ impl UserStatusSettings {
             meeting_cache: None,
             original_attributes: Vec::new(),
         };
+        user.notification_preferences.settings_revision = row.get("activity_revision")?;
         user.original_attributes = user.attributes();
         Ok(user)
     }

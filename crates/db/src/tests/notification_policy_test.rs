@@ -14,6 +14,44 @@ fn instant(s: &str) -> Timestamp {
 }
 
 #[test]
+fn a9_profile_and_status_saves_keep_legacy_preferences_and_write_once() {
+    use crate::models::notification_policy::NotificationPreferences;
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"agent_work":"0"}).to_string(), id("david")])?;
+        Ok(())
+    });
+    let mut previous = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    for status_save in [false, true] {
+        let updates = t.write(move |tx| {
+            let before = tx.conn().total_changes();
+            if status_save {
+                let mut status = UserStatusSettings::find(tx.conn(), id("david"))?;
+                status.dnd_enabled = !status.dnd_enabled;
+                status.save(tx)?;
+            } else {
+                profile_settings::update(tx, id("david"), Changes {
+                    theme: Some("dark".into()),
+                    ..Default::default()
+                })?;
+            }
+            Ok(tx.conn().total_changes() - before)
+        });
+        assert_eq!(updates, 1, "status_save={status_save}");
+        let preferences = t.read(|conn| {
+            let raw: String = conn.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?;
+            Ok(serde_json::from_str::<Value>(&raw).unwrap())
+        });
+        assert_eq!(preferences, json!({"agent_work":"0"}));
+        let revision = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+        assert!(revision > previous);
+        assert_eq!(t.read(|conn| UserStatusSettings::find(conn, id("david"))).notification_preferences.settings_revision, revision);
+        previous = revision;
+    }
+}
+
+#[test]
 fn a9_room_choices_advance_revision_even_when_only_inheritance_changes() {
     use crate::models::notification_policy::NotificationPreferences;
     use crate::models::user::profile_settings::{self, Changes};
@@ -263,7 +301,7 @@ fn a9_notification_preferences_extend_and_preserve_legacy_keys() {
     });
     let raw: String = t.read(|c| Ok(c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?));
     let value: Value = serde_json::from_str(&raw).unwrap();
-    assert_eq!(value, json!({"settings_revision":1,"agent_work":"0","custom_legacy":true,"default_notification_level":"mentions","room_notification_levels":{"1":null},"room_mute_until":{"1":"2030-01-01T00:00:00Z"}}));
+    assert_eq!(value, json!({"agent_work":"0","custom_legacy":true,"default_notification_level":"mentions","room_notification_levels":{"1":null},"room_mute_until":{"1":"2030-01-01T00:00:00Z"}}));
 }
 
 #[test]
@@ -280,9 +318,10 @@ fn a9_preference_writes_advance_settings_and_activity_revisions() {
             let raw: String = c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?;
             Ok(serde_json::from_str(&raw).unwrap())
         });
-        assert_eq!(value["settings_revision"], revision);
+        assert_eq!(value, json!({"default_notification_level":"nothing"}));
         let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
-        assert!(after.revision > before.revision);
+        assert_eq!(after.revision, before.revision + revision);
+        assert_eq!(t.read(|c| crate::models::notification_policy::NotificationPreferences::load(c, id("david"))).settings_revision, after.revision);
     }
 }
 
@@ -290,6 +329,7 @@ fn a9_preference_writes_advance_settings_and_activity_revisions() {
 fn a9_clearing_preferences_keeps_the_settings_revision_monotonic() {
     use crate::models::user::profile_settings::{self, Changes};
     let t = TestDb::new();
+    let before = t.read(|c| crate::models::notification_policy::NotificationPreferences::load(c, id("david"))).settings_revision;
     for preferences in [json!({"default_notification_level":"nothing"}), Value::Null] {
         t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
             inbox_preferences: Some(preferences),
@@ -297,10 +337,11 @@ fn a9_clearing_preferences_keeps_the_settings_revision_monotonic() {
         }));
     }
     let revision: i64 = t.read(|c| Ok(c.query_row(
-        "SELECT json_extract(inbox_preferences, '$.settings_revision') FROM users WHERE id=?",
+        "SELECT activity_revision FROM users WHERE id=?",
         [id("david")], |r| r.get(0)
     )?));
-    assert_eq!(revision, 2);
+    assert_eq!(revision, before + 2);
+    assert_eq!(t.read(|c| crate::models::notification_policy::NotificationPreferences::load(c, id("david"))).settings_revision, revision);
 }
 
 #[test]

@@ -57,6 +57,7 @@ impl NotificationLevel {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NotificationPreferences {
+    #[serde(skip_serializing)]
     pub settings_revision: i64,
     pub default_notification_level: NotificationLevel,
     pub room_notification_levels: BTreeMap<i64, Option<NotificationLevel>>,
@@ -67,12 +68,14 @@ pub struct NotificationPreferences {
 
 impl NotificationPreferences {
     pub fn load(conn: &Connection, user_id: i64) -> Result<Self> {
-        let raw: Option<String> = conn.query_row(
-            "SELECT inbox_preferences FROM users WHERE id=?",
+        let (raw, revision): (Option<String>, i64) = conn.query_row(
+            "SELECT inbox_preferences,activity_revision FROM users WHERE id=?",
             [user_id],
-            |r| r.get(0),
+            |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
-        Ok(Self::parse(raw.as_deref()))
+        let mut preferences = Self::parse(raw.as_deref());
+        preferences.settings_revision = revision;
+        Ok(preferences)
     }
 
     pub fn parse(raw: Option<&str>) -> Self {

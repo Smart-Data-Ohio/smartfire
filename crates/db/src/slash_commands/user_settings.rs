@@ -185,8 +185,8 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
         .collect::<Vec<_>>()
         .join(",");
     tx.conn().execute(
-        &format!("UPDATE users SET {assignments},updated_at=? WHERE id=?"),
+        &format!("UPDATE users SET {assignments},updated_at=?,activity_revision=activity_revision+1 WHERE id=?"),
         rusqlite::params_from_iter(values),
     )?;
-    crate::models::user::profile_settings::bump_revision(tx, user)
+    Ok(())
 }

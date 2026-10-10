@@ -135,27 +135,12 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
     Ok(())
 }
 
-/// Advance within the settings write transaction; request bodies cannot assign this revision.
+/// Settings and notification counts share the persisted activity counter. Keep ordering
+/// metadata out of the legacy preferences JSON; request bodies cannot assign the counter.
 pub fn bump_revision(tx: &Tx<'_>, user: i64) -> Result<()> {
-    let raw: Option<String> = tx.conn().query_row(
-        "SELECT inbox_preferences FROM users WHERE id=?",
-        [user],
-        |r| r.get(0),
-    )?;
-    let mut preferences = raw
-        .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
-        .and_then(|value| value.as_object().cloned())
-        .unwrap_or_default();
-    let revision = preferences
-        .get("settings_revision")
-        .and_then(Value::as_i64)
-        .unwrap_or(0)
-        .checked_add(1)
-        .ok_or_else(|| crate::Error::Other("settings revision exhausted".into()))?;
-    preferences.insert("settings_revision".into(), Value::from(revision));
     tx.conn().execute(
-        "UPDATE users SET inbox_preferences=?,activity_revision=activity_revision+1 WHERE id=?",
-        rusqlite::params![Value::Object(preferences).to_string(), user],
+        "UPDATE users SET activity_revision=activity_revision+1 WHERE id=?",
+        [user],
     )?;
     Ok(())
 }

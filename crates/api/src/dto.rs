@@ -1676,7 +1676,11 @@ mod tests {
         for one_room in [false, true] {
             let sql = format!("EXPLAIN QUERY PLAN {}", notification_counts_sql(one_room));
             let mut statement = conn.prepare(&sql).unwrap();
-            let params: &[i64] = if one_room { &[1, 2] } else { &[1] };
+            let now = Timestamp::parse_db("2035-01-01T12:00:00Z").unwrap();
+            let mut params = vec![rusqlite::types::Value::Integer(1), rusqlite::types::Value::Text(now.to_db())];
+            if one_room {
+                params.push(rusqlite::types::Value::Integer(2));
+            }
             let plan: Vec<String> = statement
                 .query_map(rusqlite::params_from_iter(params), |row| row.get::<_, String>(3))
                 .unwrap()
@@ -1695,6 +1699,7 @@ mod tests {
                     || text.contains("SEARCH m USING COVERING INDEX index_messages_on_room_thread_created"),
                 "one_room={one_room}:\n{text}"
             );
+            assert!(super::notification_counts(&conn, 1, one_room.then_some(2), now).unwrap().is_empty());
         }
     }
 

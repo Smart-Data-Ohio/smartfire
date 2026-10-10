@@ -1508,7 +1508,7 @@ async fn a9_every_settings_write_advances_a_persisted_revision() {
         let read = b.send(get("/api/v1/settings")).await;
         assert_eq!(parse::<serde_json::Value>(&read)["revision"], revision);
         let persisted = app.booted.app.db.read(|conn| {
-            Ok(conn.query_row("SELECT json_extract(inbox_preferences, '$.settings_revision') FROM users WHERE id=?", [DAVID], |r| r.get::<_, i64>(0))?)
+            Ok(conn.query_row("SELECT activity_revision FROM users WHERE id=?", [DAVID], |r| r.get::<_, i64>(0))?)
         }).await.unwrap();
         assert_eq!(persisted, revision);
         let count = b.send(get("/api/v1/activity/unread_count")).await;

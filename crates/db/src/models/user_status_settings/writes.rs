@@ -192,6 +192,7 @@ impl UserStatusSettings {
             .map(|(key, _)| format!("{key}=?"))
             .collect::<Vec<_>>();
         columns.push("updated_at=?".into());
+        columns.push("activity_revision=activity_revision+1".into());
         let mut values = changes
             .into_iter()
             .map(|(_, value)| value)
@@ -203,7 +204,6 @@ impl UserStatusSettings {
             &format!("UPDATE users SET {} WHERE id=?", columns.join(",")),
             rusqlite::params_from_iter(values),
         )?;
-        crate::models::user::profile_settings::bump_revision(tx, self.user.id)?;
         *self = Self::find(tx.conn(), self.user.id)?;
         Ok(())
     }
