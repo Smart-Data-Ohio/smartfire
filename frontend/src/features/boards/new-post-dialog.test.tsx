@@ -19,6 +19,9 @@ function installUploads(pending = false) {
     ownerCandidates: [],
     tagSuggestions: [],
     users: [],
+    tags: [],
+    tagsRequired: false,
+    defaultBoardTagId: null,
   });
   vi.spyOn(actions.messages, "startUpload").mockImplementation(async (body) => ({
     signedId: `signed-${body.filename}`,
@@ -109,6 +112,9 @@ describe("the new-post dialog", () => {
       ownerCandidates: [],
       tagSuggestions: [],
       users: [],
+      tags: [],
+      tagsRequired: false,
+      defaultBoardTagId: null,
     });
 
     const create = vi
@@ -173,6 +179,9 @@ describe("the new-post dialog", () => {
       ownerCandidates: [],
       tagSuggestions: [],
       users: [],
+      tags: [],
+      tagsRequired: false,
+      defaultBoardTagId: null,
     });
     const start = vi.spyOn(actions.messages, "startUpload");
     const large = new File(["bytes"], "large.bin");
