@@ -42,7 +42,7 @@ pub mod session;
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;
 
-pub use adapter::{ActionFn, OriginalMethod, RequestId, action, app, delete, get, patch, post, put, spooled_action, unparsed_action};
+pub use adapter::{ActionFn, OriginalMethod, RequestId, action, app, delete, get, patch, post, put, spooled_action, streamed_action, unparsed_action};
 pub use app::{Kit, KitConfig};
 pub use clock::{Clock, FrozenClock, SharedClock, SystemClock};
 pub use cookies::{Cookie, CookieJar, SameSite};

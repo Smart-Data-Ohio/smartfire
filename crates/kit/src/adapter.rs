@@ -58,6 +58,7 @@ enum BodyParser {
     Buffered,
     Unparsed,
     Spooled,
+    Streaming,
 }
 
 /// A request-specific JSON cast, after the ordinary body-size bound. Forms and
@@ -97,6 +98,15 @@ where
     F: for<'a> ActionFn<'a> + Clone,
 {
     ActionHandler { action: f, body_parser: BodyParser::Spooled, json_body_parser: None }
+}
+
+/// An upload whose action authenticates and chooses a byte limit before spooling its body
+/// with [`Ctx::spool_body`].
+pub fn streamed_action<F>(f: F) -> ActionHandler<F>
+where
+    F: for<'a> ActionFn<'a> + Clone,
+{
+    ActionHandler { action: f, body_parser: BodyParser::Streaming, json_body_parser: None }
 }
 
 #[doc(hidden)]
@@ -144,15 +154,23 @@ where
         raw.iter().map(|(k, v)| (k.to_string(), Param::Str(v.to_string()))).collect::<ParamMap>()
     });
     let original_method = parts.extensions.get::<OriginalMethod>().map(|m| m.0.clone()).unwrap_or(parts.method.clone());
+    let body_limit = [kit.config().max_body_bytes, parts.extensions.get::<body::RequestBodyLimit>().map(|limit| limit.0)]
+        .into_iter().flatten().min();
     // DiskController's session gate precedes formatted JSON parsing. Rack form
     // parsing still happens before that gate; keep its malformed-body precedence.
     let defer_spooled_params = matches!(body_parser, BodyParser::Spooled)
         && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON);
     let mut unread = None;
+    let mut streaming = None;
+    let file_limits = parts.extensions.get::<body::MultipartFileLimits>().cloned().unwrap_or_default();
     let mut parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
+        None if matches!(body_parser, BodyParser::Streaming) => {
+            streaming = Some(body);
+            Ok(ParsedBody::empty())
+        }
         None if !matches!(body_parser, BodyParser::Buffered) => {
-            match body::validate_unparsed(body, kit.config().max_body_bytes).await {
+            match body::validate_unparsed(body, body_limit).await {
                 Ok(mut body) => {
                     let parsed = if matches!(body_parser, BodyParser::Spooled) && !defer_spooled_params {
                         body::parse_spooled(&parts.headers, body.as_mut()).await
@@ -165,7 +183,7 @@ where
                 Err(error) => Err(error),
             }
         }
-        None => body::parse(&original_method, &parts.headers, body, kit.config().max_body_bytes).await,
+        None => body::parse_with_file_limits(&original_method, &parts.headers, body, body_limit, &file_limits).await,
     };
     if let Some(parser) = json_body_parser
         && let Ok(parsed) = &mut parsed
@@ -205,6 +223,9 @@ where
     );
     if let Some(body) = unread {
         ctx.leave_body_unread(body);
+    }
+    if let Some(body) = streaming {
+        ctx.leave_body_streaming(body);
     }
     if defer_spooled_params {
         ctx.defer_spooled_params();
@@ -357,10 +378,13 @@ async fn method_override(
             .contains(&media),
     };
     let (mut parts, body) = req.into_parts();
+    let body_limit = [kit.config().max_body_bytes, parts.extensions.get::<body::RequestBodyLimit>().map(|limit| limit.0)]
+        .into_iter().flatten().min();
     // Only form data can carry `_method`, so other bodies (JSON, a raw upload) are left for the
     // action to read, rather than parsed here for every POST, before routing.
     let (parsed, from_param, body) = if form_data {
-        let parsed = match body::parse(&Method::POST, &parts.headers, body, kit.config().max_body_bytes).await {
+        let file_limits = parts.extensions.get::<body::MultipartFileLimits>().cloned().unwrap_or_default();
+        let parsed = match body::parse_with_file_limits(&Method::POST, &parts.headers, body, body_limit, &file_limits).await {
             Ok(parsed) => parsed,
             Err(error) => {
                 let mut response = axum::response::Response::new(AxumBody::empty());

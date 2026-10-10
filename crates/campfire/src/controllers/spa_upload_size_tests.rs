@@ -2,12 +2,407 @@ use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 
 use super::api_tests::{app, get, json_body};
-use crate::controllers::presenters::test_support::{DAVID, KEVIN};
+use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, KEVIN, Req};
 
 const MB: i64 = 1024 * 1024;
 
+#[tokio::test]
+async fn upload_size_put_without_content_length_stops_before_spooling_101_mb() {
+    use axum::body::Body;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    use tower::ServiceExt;
+
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let source = tempfile::NamedTempFile::new().unwrap();
+    source.as_file().set_len(101 * MB as u64).unwrap();
+    let checksum = campfire_storage::key::checksum_file(source.path()).unwrap();
+    let mut metadata = upload(0);
+    metadata["checksum"] = json!(checksum);
+    let created = david
+        .write(json_body(Method::POST, "/api/v1/uploads", &metadata))
+        .await;
+    assert_eq!(created.status, StatusCode::CREATED);
+    let signed: campfire_api_types::DirectUpload = serde_json::from_slice(&created.body).unwrap();
+    let read = Arc::new(AtomicUsize::new(0));
+    let polled = read.clone();
+    let chunks = futures_util::stream::iter((0..1616).map(move |_| {
+        polled.fetch_add(1, Ordering::SeqCst);
+        Ok::<_, std::io::Error>(bytes::Bytes::from_static(&[0; 64 * 1024]))
+    }));
+    let request = axum::http::Request::builder()
+        .method(Method::PUT)
+        .uri(&signed.upload_url)
+        .version(axum::http::Version::HTTP_2)
+        .header("host", "campfire.test")
+        .header("cookie", david.cookie_header())
+        .header("content-type", "application/octet-stream")
+        .body(Body::from_stream(chunks))
+        .unwrap();
+    let reply = a.booted.router.clone().oneshot(request).await.unwrap();
+    assert_eq!(reply.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    assert_eq!(
+        read.load(Ordering::SeqCst),
+        1,
+        "read past the declared size + 1"
+    );
+    let key: String = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT key FROM active_storage_blobs ORDER BY id DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert!(!a.booted.app.storage.service.exist(&key));
+}
+
+#[tokio::test]
+async fn upload_size_put_requires_actual_bytes_to_equal_the_declaration() {
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    for (declared, length, expected) in [
+        (3, Some("3"), StatusCode::PAYLOAD_TOO_LARGE),
+        (5, Some("5"), StatusCode::UNPROCESSABLE_ENTITY),
+        (4, None, StatusCode::NO_CONTENT),
+    ] {
+        let mut metadata = upload(declared);
+        metadata["checksum"] = json!(campfire_storage::key::checksum(b"xxxx"));
+        let created = david
+            .write(json_body(Method::POST, "/api/v1/uploads", &metadata))
+            .await;
+        let signed: campfire_api_types::DirectUpload =
+            serde_json::from_slice(&created.body).unwrap();
+        let mut put = Req::new(Method::PUT, &signed.upload_url)
+            .header("content-type", "application/octet-stream")
+            .body("xxxx");
+        if let Some(length) = length {
+            put = put.header("content-length", length);
+        }
+        assert_eq!(
+            david.send(put).await.status,
+            expected,
+            "declared {declared}, header {length:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn upload_size_put_stores_all_received_form_bytes() {
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let mut metadata = upload(3);
+    metadata["checksum"] = json!(campfire_storage::key::checksum(b"a=1"));
+    metadata["contentType"] = json!("application/x-www-form-urlencoded");
+    let created = david
+        .write(json_body(Method::POST, "/api/v1/uploads", &metadata))
+        .await;
+    let signed: campfire_api_types::DirectUpload = serde_json::from_slice(&created.body).unwrap();
+    let reply = david
+        .send(
+            Req::new(Method::PUT, &signed.upload_url)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("content-length", "3")
+                .body("a=1"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT);
+    let key: String = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT key FROM active_storage_blobs ORDER BY id DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        std::fs::read(a.booted.app.storage.service.path_for(&key)).unwrap(),
+        b"a=1"
+    );
+}
+
+#[tokio::test]
+async fn upload_size_http2_rejects_a_101_mb_put_without_content_length() {
+    use axum::body::Body;
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let source = tempfile::NamedTempFile::new().unwrap();
+    source.as_file().set_len(101 * MB as u64).unwrap();
+    let mut metadata = upload(0);
+    metadata["checksum"] = json!(campfire_storage::key::checksum_file(source.path()).unwrap());
+    let created = david
+        .write(json_body(Method::POST, "/api/v1/uploads", &metadata))
+        .await;
+    let signed: campfire_api_types::DirectUpload = serde_json::from_slice(&created.body).unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let (stop, stopped) = tokio::sync::oneshot::channel();
+    let router = a.booted.router.clone();
+    let server = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = stopped.await;
+            })
+            .await
+            .unwrap();
+    });
+    let socket = tokio::net::TcpStream::connect(addr).await.unwrap();
+    let (mut sender, connection) = hyper::client::conn::http2::handshake(
+        hyper_util::rt::TokioExecutor::new(),
+        hyper_util::rt::TokioIo::new(socket),
+    )
+    .await
+    .unwrap();
+    let connection = tokio::spawn(connection);
+    let chunks = futures_util::stream::iter(
+        (0..1616).map(|_| Ok::<_, std::io::Error>(bytes::Bytes::from_static(&[0; 64 * 1024]))),
+    );
+    let request = axum::http::Request::builder()
+        .method(Method::PUT)
+        .uri(format!("http://{addr}{}", signed.upload_url))
+        .header("cookie", david.cookie_header())
+        .header("content-type", "application/octet-stream")
+        .body(Body::from_stream(chunks))
+        .unwrap();
+    assert!(!request.headers().contains_key("content-length"));
+    let reply = tokio::time::timeout(
+        std::time::Duration::from_secs(20),
+        sender.send_request(request),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    let status = reply.status();
+    drop(reply);
+    drop(sender);
+    connection.abort();
+    let _ = stop.send(());
+    server.await.unwrap();
+    assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn upload_size_multipart_enforces_icon_and_branding_limits_before_staging() {
+    use axum::body::Body;
+    use futures_util::StreamExt;
+    use tower::ServiceExt;
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let csrf = david.authenticity_token().await;
+    for (field, limit) in [
+        ("workspace_icon[image]", 256 * 1024),
+        ("account[logo]", 10 * MB),
+        ("account[banner]", 10 * MB),
+    ] {
+        let prefix = bytes::Bytes::from(format!(
+            "--B\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"large.png\"\r\nContent-Type: image/png\r\n\r\n"
+        ));
+        let chunks = std::iter::once(prefix)
+            .chain((0..(limit / 1024 + 1)).map(|_| bytes::Bytes::from_static(&[0; 1024])));
+        let stream = futures_util::stream::iter(chunks.map(Ok::<_, std::io::Error>))
+            .chain(futures_util::stream::pending());
+        let request = axum::http::Request::builder()
+            .method(Method::POST)
+            .uri("/account")
+            .header("host", "campfire.test")
+            .header("cookie", david.cookie_header())
+            .header("x-csrf-token", &csrf)
+            .header("content-type", "multipart/form-data; boundary=B")
+            .body(Body::from_stream(stream))
+            .unwrap();
+        let reply = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            a.booted.router.clone().oneshot(request),
+        )
+        .await;
+        assert!(
+            reply.is_ok(),
+            "{field}: waited for the oversized body to finish"
+        );
+        assert_eq!(
+            reply.unwrap().unwrap().status(),
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "{field}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn upload_size_shared_staging_rejects_a_file_length_mismatch() {
+    use crate::controllers::presenters::attachments::{Assignment, Upload};
+    let a = app(true).await.expect("restored default seed");
+    let source = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(source.path(), b"four").unwrap();
+    let file = campfire_kit::UploadedFile::new(
+        "file.txt".into(),
+        Some("text/plain".into()),
+        String::new(),
+        3,
+        source.into_temp_path(),
+    );
+    let upload =
+        Upload::from_param(Some(&campfire_kit::Param::File(std::sync::Arc::new(file)))).unwrap();
+    assert!(matches!(
+        Assignment::Create(upload).stage(&a.booted.app).await,
+        Err(campfire_kit::Error::Status(
+            StatusCode::UNPROCESSABLE_ENTITY
+        ))
+    ));
+}
+
+#[tokio::test]
+async fn upload_size_multipart_stops_reading_each_attachment_at_the_workspace_limit() {
+    use axum::body::Body;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    use tower::ServiceExt;
+
+    let a = app(true).await.expect("restored default seed");
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE accounts SET settings = ?",
+                [r#"{"upload_limit_bytes":1024}"#],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let csrf = david.authenticity_token().await;
+    for field in [
+        "message[attachment]",
+        "attachment",
+        "channel_thread[message][attachment]",
+    ] {
+        let read = Arc::new(AtomicUsize::new(0));
+        let polled = read.clone();
+        let prefix = bytes::Bytes::from(format!(
+            "--B\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"large.bin\"\r\nContent-Type: application/octet-stream\r\n\r\n"
+        ));
+        let chunks = std::iter::once(prefix)
+            .chain((0..100).map(|_| bytes::Bytes::from_static(&[0; 1024])))
+            .chain(std::iter::once(bytes::Bytes::from_static(b"\r\n--B--\r\n")));
+        let stream = futures_util::stream::iter(chunks.map(move |chunk| {
+            polled.fetch_add(1, Ordering::SeqCst);
+            Ok::<_, std::io::Error>(chunk)
+        }));
+        let request = axum::http::Request::builder()
+            .method(Method::POST)
+            .uri(format!("/rooms/{ALL_TALK}/messages"))
+            .header("host", "campfire.test")
+            .header("cookie", david.cookie_header())
+            .header("x-csrf-token", &csrf)
+            .header("content-type", "multipart/form-data; boundary=B")
+            .body(Body::from_stream(stream))
+            .unwrap();
+        let reply = a.booted.router.clone().oneshot(request).await.unwrap();
+        assert_eq!(reply.status(), StatusCode::PAYLOAD_TOO_LARGE, "{field}");
+        assert!(
+            read.load(Ordering::SeqCst) <= 4,
+            "{field}: drained the oversized body"
+        );
+    }
+}
+
+#[tokio::test]
+async fn upload_size_existing_blobs_are_limited_for_messages_but_not_avatars() {
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            b"a file",
+            campfire_storage::Filename::new("file.txt"),
+            Some("text/plain"),
+        )
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed_id =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE accounts SET settings = ?",
+                [r#"{"upload_limit_bytes":4}"#],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let rejected = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &json!({"clientMessageId":"too-large", "markdownSource":"", "attachmentSignedId":signed_id}))).await;
+    assert_eq!(
+        rejected.status,
+        StatusCode::PAYLOAD_TOO_LARGE,
+        "{}",
+        rejected.text()
+    );
+    let avatar = david
+        .write(json_body(
+            Method::PUT,
+            "/api/v1/settings/avatar",
+            &json!({"signedId":signed_id}),
+        ))
+        .await;
+    assert_eq!(avatar.status, StatusCode::OK, "{}", avatar.text());
+}
+
 fn upload(size: i64) -> Value {
     json!({"filename": "large.bin", "byteSize": size, "checksum": "checksum", "contentType": "application/octet-stream"})
+}
+
+#[tokio::test]
+async fn upload_size_method_overridden_disk_put_is_bounded_before_form_parsing() {
+    use axum::body::Body;
+    use futures_util::StreamExt;
+    use tower::ServiceExt;
+    let a = app(true).await.expect("restored default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let created = david
+        .write(json_body(Method::POST, "/api/v1/uploads", &upload(0)))
+        .await;
+    let signed: campfire_api_types::DirectUpload = serde_json::from_slice(&created.body).unwrap();
+    let chunks = [bytes::Bytes::from_static(b"--B\r\nContent-Disposition: form-data; name=\"_method\"\r\n\r\nPUT\r\n--B\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"large.bin\"\r\n\r\n"), bytes::Bytes::from_static(&[0; 1024])];
+    let stream = futures_util::stream::iter(chunks.into_iter().map(Ok::<_, std::io::Error>))
+        .chain(futures_util::stream::pending());
+    let request = axum::http::Request::builder()
+        .method(Method::POST)
+        .uri(&signed.upload_url)
+        .header("host", "campfire.test")
+        .header("cookie", david.cookie_header())
+        .header("content-type", "multipart/form-data; boundary=B")
+        .body(Body::from_stream(stream))
+        .unwrap();
+    let reply = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        a.booted.router.clone().oneshot(request),
+    )
+    .await;
+    assert!(
+        reply.is_ok(),
+        "method override waited for the oversized body to finish"
+    );
+    assert_eq!(
+        reply.unwrap().unwrap().status(),
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
 }
 
 #[tokio::test]

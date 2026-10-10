@@ -31,7 +31,8 @@ async fn direct_upload_authentication_precedes_disk_params_without_changing_meta
                 .header("content-type", content_type)
                 .header("content-length", &case["byte_size"].to_string())
                 .body(base64::engine::general_purpose::STANDARD.decode(case["body_base64"].as_str().unwrap()).unwrap())).await;
-            assert_eq!(reply.status.as_u16(), case["put_status"], "{}: {}", case["name"], reply.text());
+            // Smartfire authenticates before receiving or parsing any upload bytes.
+            assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}: {}", case["name"], reply.text());
             assert_eq!(a.booted.app.storage.service.exist(blob["key"].as_str().unwrap()), case["file_exists"], "{}", case["name"]);
         } else if case["kind"] == "metadata_authentication" {
             let before: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
@@ -216,7 +217,7 @@ async fn direct_upload_corrupt_retry_matches_rails_deletion_and_recovery() {
 }
 
 #[tokio::test]
-async fn direct_upload_body_parsers_match_pinned_rails_before_storing_files() {
+async fn direct_upload_body_parsers_match_pinned_rails_and_store_the_full_body() {
     use base64::Engine;
     let a = TestApp::boot().await.expect("default seed");
     let mut browser = a.sign_in(DAVID).await;
@@ -244,6 +245,7 @@ async fn direct_upload_body_parsers_match_pinned_rails_before_storing_files() {
             body.push_str(recipe["suffix"].as_str().unwrap());
             body.into_bytes()
         };
+        let full_body_checksum = campfire_storage::key::checksum(&bytes);
         let created = browser
             .write(metadata(
                 case["byte_size"].as_i64().unwrap(),
@@ -265,9 +267,15 @@ async fn direct_upload_body_parsers_match_pinned_rails_before_storing_files() {
             request = request.header(name, value.as_str().unwrap());
         }
         let reply = browser.send(request).await;
+        // Keep the Rails parser outcomes, but verify/store the complete body rather than
+        // the suffix left behind by Rack's form parser.
+        let expected = match case["put_status"].as_u64().unwrap() {
+            204 | 422 => if full_body_checksum == case["checksum"].as_str().unwrap() { 204 } else { 422 },
+            other => other as u16,
+        };
         assert_eq!(
             reply.status.as_u16(),
-            case["put_status"],
+            expected,
             "{}: {}",
             case["name"],
             reply.text()
@@ -278,15 +286,15 @@ async fn direct_upload_body_parsers_match_pinned_rails_before_storing_files() {
             .storage
             .service
             .path_for(blob["key"].as_str().unwrap());
-        assert_eq!(path.exists(), case["file_exists"], "{}", case["name"]);
+        assert_eq!(path.exists(), expected == 204, "{}", case["name"]);
         if path.exists() {
             assert_eq!(
                 std::fs::metadata(&path).unwrap().len(),
-                case["stored_bytes"]
+                case["byte_size"]
             );
             assert_eq!(
                 campfire_storage::key::checksum_file(&path).unwrap(),
-                case["stored_checksum"]
+                case["checksum"]
             );
         }
         if path.parent().unwrap().exists() {

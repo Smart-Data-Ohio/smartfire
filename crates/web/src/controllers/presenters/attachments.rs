@@ -42,6 +42,9 @@ impl Upload {
     /// Uploads the file to storage for a blob whose row is saved next, off the async threads.
     pub async fn stage(self, app: &App) -> Result<Staged> {
         let path = self.file.path().to_path_buf();
+        if tokio::fs::metadata(&path).await.map_err(Error::internal)?.len() != self.file.size {
+            return Err(Error::Status(campfire_kit::StatusCode::UNPROCESSABLE_ENTITY));
+        }
         stage_file(app, path, Filename::new(self.filename), self.content_type).await
     }
 }
@@ -79,23 +82,62 @@ impl Assignment {
 
     /// Uploads a new file, so the save only has rows to write.
     pub async fn stage(self, app: &App) -> Result<Assignment<Staged>> {
+        self.stage_bounded(app, None).await
+    }
+
+    pub async fn stage_with_limit(self, app: &App, limit: u64) -> Result<Assignment<Staged>> {
+        self.stage_bounded(app, Some(limit)).await
+    }
+
+    async fn stage_bounded(self, app: &App, limit: Option<u64>) -> Result<Assignment<Staged>> {
         Ok(match self {
             Assignment::Unchanged => Assignment::Unchanged,
             Assignment::Delete => Assignment::Delete,
-            Assignment::Create(upload) => Assignment::Create(upload.stage(app).await?),
+            Assignment::Create(upload) => {
+                if let Some(limit) = limit {
+                    check_file_size(upload.file.path(), upload.file.size, limit).await?;
+                }
+                let staged = upload.stage(app).await?;
+                if limit.is_some_and(|limit| staged.blob().byte_size as u64 > limit) {
+                    return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
+                }
+                Assignment::Create(staged)
+            }
             Assignment::Signed(signed) => {
                 let id = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, &signed, app.clock.now())
                     .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid blob signature")))?;
                 let blob = app.db.read(move |conn| Blob::find(conn, id).map_err(storage_error)).await.map_err(Error::internal)?
                     .ok_or(Error::NotFound)?;
+                if let Some(limit) = limit {
+                    check_file_size(&app.storage.service.path_for(&blob.key), blob.byte_size as u64, limit).await?;
+                }
                 let storage = app.storage.clone();
                 let blob = tokio::task::spawn_blocking(move || storage.identify_blob(blob)).await.map_err(Error::internal)?.map_err(Error::internal)?;
                 Assignment::Existing(blob)
             }
-            Assignment::Existing(blob) => Assignment::Existing(blob),
+            Assignment::Existing(blob) => {
+                if let Some(limit) = limit {
+                    check_file_size(&app.storage.service.path_for(&blob.key), blob.byte_size as u64, limit).await?;
+                }
+                Assignment::Existing(blob)
+            }
             Assignment::Invalid => Assignment::Invalid,
         })
     }
+}
+
+async fn check_file_size(path: &std::path::Path, declared: u64, limit: u64) -> Result<()> {
+    if declared > limit {
+        return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
+    }
+    let received = tokio::fs::metadata(path).await.map_err(Error::internal)?.len();
+    if received > limit {
+        return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
+    }
+    if received != declared {
+        return Err(Error::Status(campfire_kit::StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    Ok(())
 }
 
 /// `record.<name>.attached?`'s blob: the attachment's blob, if any.

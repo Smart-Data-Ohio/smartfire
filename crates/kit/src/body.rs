@@ -28,6 +28,22 @@ pub const MULTIPART_TEXT_LIMIT: usize = 16 * 1024 * 1024;
 /// `PARSER_BYTESIZE_LIMIT`).
 pub const MULTIPART_BYTESIZE_LIMIT: u64 = 10 * 1024 * 1024 * 1024;
 
+/// A request-specific cap installed before pre-routing form parsing.
+#[derive(Clone, Copy, Debug)]
+pub struct RequestBodyLimit(pub usize);
+
+/// Per-file limits supplied before form parsing, including pre-routing method overrides.
+/// A simple field name also matches nested params ending in that field.
+#[derive(Clone, Debug, Default)]
+pub struct MultipartFileLimits(pub Vec<(String, u64)>);
+
+impl MultipartFileLimits {
+    fn for_field(&self, name: &str) -> Option<u64> {
+        self.0.iter().filter(|(field, _)| name == field || name.ends_with(&format!("[{field}]")))
+            .map(|(_, limit)| *limit).min()
+    }
+}
+
 /// The body as read: raw bytes (empty for multipart) and the params parsed from it.
 #[derive(Debug, Clone)]
 pub struct ParsedBody {
@@ -71,12 +87,22 @@ pub async fn parse(
     body: Body,
     limit: Option<usize>,
 ) -> Result<ParsedBody, BodyError> {
+    parse_with_file_limits(original_method, headers, body, limit, &MultipartFileLimits::default()).await
+}
+
+pub(crate) async fn parse_with_file_limits(
+    original_method: &Method,
+    headers: &HeaderMap,
+    body: Body,
+    limit: Option<usize>,
+    file_limits: &MultipartFileLimits,
+) -> Result<ParsedBody, BodyError> {
     let content_type = headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).filter(|ct| !ct.is_empty());
     let media = media_type(content_type);
 
     if matches!(media.as_deref(), Some("multipart/form-data" | "multipart/related" | "multipart/mixed"))
         && let Some(boundary) = content_type.and_then(|ct| multer::parse_boundary(ct).ok()) {
-            return parse_multipart(body, boundary, limit, MultipartPolicy::Buffered).await;
+            return parse_multipart(body, boundary, limit, MultipartPolicy::Buffered, file_limits).await;
         }
 
     // Everything but multipart (whose files spool to disk) is read into memory, so it's bounded
@@ -113,7 +139,7 @@ impl MultipartPolicy {
     }
 }
 
-async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, policy: MultipartPolicy) -> Result<ParsedBody, BodyError> {
+async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, policy: MultipartPolicy, file_limits: &MultipartFileLimits) -> Result<ParsedBody, BodyError> {
     let limit = limit.unwrap_or(usize::MAX).min(usize::try_from(MULTIPART_BYTESIZE_LIMIT).unwrap_or(usize::MAX));
     // Multer stops at the MIME boundary, which may precede the HTTP body's end. Keep the
     // limited stream here so even bytes multer buffers or leaves unread count toward the cap.
@@ -136,6 +162,7 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
                 return Err(ParamError::Limit("too many multipart parts".into()).into());
             }
             let part = Part::from_headers(field.headers());
+            let file_limit = file_limits.for_field(&part.name());
             // Rack's Collector counts a filename="" TempfilePart before get_data drops it.
             // Preserve the ordinary parser's pre-existing limits outside disk PUTs.
             if part.filename.is_some() && (policy == MultipartPolicy::Disk || part.filename.as_deref() != Some("")) {
@@ -147,9 +174,15 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
 
             match part.filename.as_deref() {
                 // A blank filename means no file was selected: Rack drops the part.
-                Some("") => while field.chunk().await?.is_some() {},
+                Some("") => {
+                    let mut size = 0;
+                    while let Some(chunk) = field.chunk().await? {
+                        size += chunk.len() as u64;
+                        if file_limit.is_some_and(|limit| size > limit) { return Err(Stop::TooLarge); }
+                    }
+                }
                 Some(filename) => {
-                    let (size, path) = spool(&mut field).await?;
+                    let (size, path) = spool(&mut field, file_limit).await?;
                     let upload = UploadedFile::new(filename.to_string(), part.content_type.clone(), part.head.clone(), size, path);
                     pairs.push(RawPair::file(&part.name(), upload));
                 }
@@ -270,7 +303,7 @@ impl From<multer::Error> for Stop {
 
 /// Writes a file part to a temp file (`RackMultipart...`, as Rack names them) without blocking
 /// the runtime on a slow disk, and returns its size and path.
-async fn spool(field: &mut multer::Field<'_>) -> Result<(u64, tempfile::TempPath), Stop> {
+async fn spool(field: &mut multer::Field<'_>, limit: Option<u64>) -> Result<(u64, tempfile::TempPath), Stop> {
     let io_error = |e: std::io::Error| Stop::Params(ParamError::Invalid(e.to_string()));
     let temp = tokio::task::spawn_blocking(|| tempfile::Builder::new().prefix("RackMultipart").tempfile())
         .await
@@ -281,6 +314,7 @@ async fn spool(field: &mut multer::Field<'_>) -> Result<(u64, tempfile::TempPath
     let mut size = 0u64;
     while let Some(chunk) = field.chunk().await? {
         size += chunk.len() as u64;
+        if limit.is_some_and(|limit| size > limit) { return Err(Stop::TooLarge); }
         file.write_all(&chunk).await.map_err(io_error)?;
     }
     file.flush().await.map_err(io_error)?;
@@ -492,7 +526,7 @@ mod tests {
         // DiskController's file-count limit stays a limit, not a parse error.
         let part = "--B\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"\"\r\n\r\nx\r\n";
         let body = format!("{}--B--\r\n", part.repeat(MULTIPART_FILE_LIMIT + 1)).into_bytes();
-        let parsed = parse_multipart(late_body(body), "B".into(), None, MultipartPolicy::Disk).await.unwrap();
+        let parsed = parse_multipart(late_body(body), "B".into(), None, MultipartPolicy::Disk, &MultipartFileLimits::default()).await.unwrap();
         assert!(matches!(parsed.params, Err(ParamError::Limit(_))), "{:?}", parsed.params);
     }
 
