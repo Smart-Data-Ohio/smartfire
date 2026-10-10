@@ -64,7 +64,7 @@ pub enum SearchSort {
 /// query; the client posts [`RecordSearch`] to `/api/v1/search/recents` when the person submits
 /// it.
 ///
-/// `q` is free text plus operators (`SearchQuery::parse`):
+/// `q` is free text plus operators (`SearchQuery::parse_extended`):
 /// - `from:name` (`@` optional): messages by anyone whose name contains it, case-insensitively.
 /// - `in:room` (`#` optional): messages in rooms whose name contains it (direct messages never
 ///   match).

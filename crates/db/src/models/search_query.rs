@@ -113,7 +113,17 @@ fn next_midnight(date: Date, zone: &TimeZone) -> Option<Timestamp> {
     midnight(date.checked_add(jiff::Span::new().days(1)).ok()?, zone)
 }
 impl SearchQuery {
+    /// The pinned Rails grammar, with unrecognized operators left as literal text.
     pub fn parse(raw: &str) -> Self {
+        Self::parse_with_operators(raw, false)
+    }
+
+    /// The SPA grammar adds stable IDs, mentions, audio/video filters and sorting.
+    pub fn parse_extended(raw: &str) -> Self {
+        Self::parse_with_operators(raw, true)
+    }
+
+    fn parse_with_operators(raw: &str, extended: bool) -> Self {
         let mut q = Self {
             raw: raw.into(),
             ..Default::default()
@@ -123,6 +133,9 @@ impl SearchQuery {
             let token = &captures[1];
             let name = &captures[2];
             let value = &captures[3];
+            if !extended && ["from_id", "in_id", "mentions", "sort"].contains(&name) {
+                continue;
+            }
             let cleaned = match name {
                 "from" | "in" => {
                     let value = value
@@ -149,9 +162,9 @@ impl SearchQuery {
                 }
                 "has" => {
                     let value = value.to_lowercase();
-                    ["link", "file", "image", "pin", "mention", "audio", "video"]
-                        .contains(&value.as_str())
-                        .then_some(value)
+                    (["link", "file", "image", "pin"].contains(&value.as_str())
+                        || (extended && ["mention", "audio", "video"].contains(&value.as_str())))
+                    .then_some(value)
                 }
                 "is" => value.eq_ignore_ascii_case("thread").then(|| "true".into()),
                 _ => {
@@ -631,6 +644,72 @@ fn register_mentions(conn: &Connection) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn legacy_has_operators_preserve_filters_and_literal_text() {
+        let query = SearchQuery::parse("has:LINK has:FILE has:IMAGE has:PIN has:pin hello");
+        assert_eq!(query.text, "hello");
+        assert_eq!(query.has_values, ["link", "file", "image", "pin"]);
+        assert_eq!(
+            query
+                .chips
+                .iter()
+                .map(|chip| chip.label.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "has: link",
+                "has: file",
+                "has: image",
+                "has: pin",
+                "has: pin"
+            ]
+        );
+
+        let raw = "from:@ in:# has:video has:AUDIO has:mention has:bogus is:board hello";
+        let query = SearchQuery::parse(raw);
+        assert_eq!(query.text, raw);
+        assert!(query.has_values.is_empty());
+        assert!(query.chips.is_empty());
+        assert!(!query.filters());
+    }
+
+    #[test]
+    fn extended_operators_are_literal_in_the_legacy_grammar() {
+        let raw = "from_id:1 in_id:2 mentions:me sort:oldest hello";
+        let query = SearchQuery::parse(raw);
+        assert_eq!(query.text, raw);
+        assert!(query.author_ids.is_empty());
+        assert!(query.channel_ids.is_empty());
+        assert!(!query.mentions_me);
+        assert_eq!(query.sort, SearchSort::Newest);
+        assert!(query.chips.is_empty());
+    }
+
+    #[test]
+    fn extended_grammar_keeps_legacy_and_new_operators() {
+        let query = SearchQuery::parse_extended(
+            "from:@ada in:#designers from_id:1 in_id:2 mentions:me sort:oldest \
+             has:LINK has:FILE has:IMAGE has:PIN has:MENTION has:AUDIO has:VIDEO \
+             before:2026-03-11 after:2026-03-09 on:2026-03-10 is:thread has:bogus hello",
+        );
+        assert_eq!(query.text, "has:bogus hello");
+        assert_eq!(query.from_names, ["ada"]);
+        assert_eq!(query.in_rooms, ["designers"]);
+        assert_eq!(query.author_ids, [1]);
+        assert_eq!(query.channel_ids, [2]);
+        assert!(query.mentions_me);
+        assert_eq!(query.sort, SearchSort::Oldest);
+        assert_eq!(
+            query.has_values,
+            ["link", "file", "image", "pin", "mention", "audio", "video"]
+        );
+        assert_eq!(query.before_date, Some("2026-03-11".parse().unwrap()));
+        assert_eq!(query.after_date, Some("2026-03-09".parse().unwrap()));
+        assert_eq!(query.on_date, Some("2026-03-10".parse().unwrap()));
+        assert!(query.thread_only);
+        assert_eq!(query.chips.len(), 17);
+    }
+
     #[test]
     fn word_ranges_match_the_pinned_ruby_runtime() {
         let oracle: serde_json::Value =

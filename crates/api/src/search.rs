@@ -131,7 +131,7 @@ async fn index_search(c: &mut Ctx) -> Result {
     let raw = c.param_str("q").unwrap_or_default().to_owned();
     let filters = typed_filters(c).map_err(|error| fail(c, error))?;
     let raw = filtered_query(&raw, &filters, c.param_str("sort").is_some());
-    let query = SearchQuery::parse(&raw);
+    let query = SearchQuery::parse_extended(&raw);
     let after = match c.param_str("before").filter(|raw| !raw.is_empty()) {
         None => None,
         Some(raw) => match decode_search_cursor(raw, query.sort) {
@@ -234,7 +234,7 @@ async fn create_recent(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let user_id = concerns::require_current_user(c)?.id;
     let api::RecordSearch { query } = body(c).await?;
-    let parsed = SearchQuery::parse(&query);
+    let parsed = SearchQuery::parse_extended(&query);
     if let Some(error) = bounded("query", &parsed) {
         return Err(fail(c, error));
     }
@@ -322,7 +322,7 @@ fn typed_filters(c: &Ctx) -> std::result::Result<api::SearchFilters, api::ApiErr
 /// Typed IDs and sort replace their equivalent query tokens; legacy names still intersect.
 fn filtered_query(raw: &str, filters: &api::SearchFilters, explicit_sort: bool) -> String {
     let mut raw = raw.to_owned();
-    for chip in SearchQuery::parse(&raw).chips {
+    for chip in SearchQuery::parse_extended(&raw).chips {
         let replace = (filters.author_id.is_some() && chip.token.starts_with("from_id:"))
             || (filters.channel_id.is_some() && chip.token.starts_with("in_id:"))
             || (explicit_sort && chip.token.starts_with("sort:"));
@@ -493,7 +493,8 @@ mod tests {
 
     #[test]
     fn chips_name_their_operator_and_value() {
-        let query = SearchQuery::parse("launch from:@ada, has:FILE is:thread on:2026-01-02");
+        let query =
+            SearchQuery::parse_extended("launch from:@ada, has:FILE is:thread on:2026-01-02");
         let chips = query.chips.into_iter().filter_map(chip).collect::<Vec<_>>();
         let seen = chips
             .iter()

@@ -197,7 +197,12 @@ fn stable_ids_survive_renames_and_keep_visibility() {
     let t = fixture();
     let query = format!("from_id:{} in_id:{}", id("david"), id("designers"));
     let found = t.read(|c| {
-        SearchQuery::parse(&query).messages_for_user(c, id("david"), jiff::tz::TimeZone::UTC, None)
+        SearchQuery::parse_extended(&query).messages_for_user(
+            c,
+            id("david"),
+            jiff::tz::TimeZone::UTC,
+            None,
+        )
     });
     assert!(!found.messages.is_empty(), "IDs find messages without text");
     t.write(|tx| {
@@ -212,14 +217,19 @@ fn stable_ids_survive_renames_and_keep_visibility() {
         Ok(())
     });
     let renamed = t.read(|c| {
-        SearchQuery::parse(&query).messages_for_user(c, id("david"), jiff::tz::TimeZone::UTC, None)
+        SearchQuery::parse_extended(&query).messages_for_user(
+            c,
+            id("david"),
+            jiff::tz::TimeZone::UTC,
+            None,
+        )
     });
     assert_eq!(
         found.messages.iter().map(|m| m.id).collect::<Vec<_>>(),
         renamed.messages.iter().map(|m| m.id).collect::<Vec<_>>()
     );
     let hidden = t.read(|c| {
-        SearchQuery::parse(&format!("from_id:{} in_id:{}", id("david"), id("all_talk")))
+        SearchQuery::parse_extended(&format!("from_id:{} in_id:{}", id("david"), id("all_talk")))
             .messages_for_user(c, id("kevin"), jiff::tz::TimeZone::UTC, None)
     });
     assert!(hidden.messages.is_empty());
@@ -248,7 +258,12 @@ fn mentions_filter_current_body_and_viewer_id() {
     });
     let matches = |q| {
         t.read(|c| {
-            SearchQuery::parse(q).messages_for_user(c, id("david"), jiff::tz::TimeZone::UTC, None)
+            SearchQuery::parse_extended(q).messages_for_user(
+                c,
+                id("david"),
+                jiff::tz::TimeZone::UTC,
+                None,
+            )
         })
         .messages
         .iter()
@@ -307,7 +322,12 @@ fn media_filters_use_current_blob_content_types() {
     });
     for (q, expected) in [("has:audio", "media-0"), ("has:video", "media-1")] {
         let page = t.read(|c| {
-            SearchQuery::parse(q).messages_for_user(c, id("david"), jiff::tz::TimeZone::UTC, None)
+            SearchQuery::parse_extended(q).messages_for_user(
+                c,
+                id("david"),
+                jiff::tz::TimeZone::UTC,
+                None,
+            )
         });
         assert_eq!(
             page.messages
@@ -346,7 +366,7 @@ fn oldest_and_relevance_change_display_order() {
     });
     let matches = |q| {
         t.read(|c| {
-            SearchQuery::parse(q).messages_for_user_sorted(
+            SearchQuery::parse_extended(q).messages_for_user_sorted(
                 c,
                 id("david"),
                 jiff::tz::TimeZone::UTC,
@@ -403,7 +423,7 @@ fn relevance_counts_stemmed_match_spans_then_breaks_ties_by_time_and_id() {
         Ok(ids)
     });
     let page = t.read(|c| {
-        SearchQuery::parse("run sort:relevance").messages_for_user_sorted(
+        SearchQuery::parse_extended("run sort:relevance").messages_for_user_sorted(
             c,
             id("david"),
             jiff::tz::TimeZone::UTC,
@@ -444,7 +464,7 @@ fn relevance_pages_survive_unrelated_activity_in_visible_and_private_rooms() {
             }
             Ok(ids)
         });
-        let q = SearchQuery::parse("needle sort:relevance");
+        let q = SearchQuery::parse_extended("needle sort:relevance");
         let first =
             t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, None));
         assert_eq!(first.page.messages.len(), 40);
@@ -538,7 +558,7 @@ fn relevance_pages_survive_deletion_before_and_at_the_cursor() {
         }
         Ok(ids.into_iter().rev().collect::<Vec<_>>())
     });
-    let q = SearchQuery::parse("deletionneedle sort:relevance");
+    let q = SearchQuery::parse_extended("deletionneedle sort:relevance");
     let first =
         t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, None));
     assert_eq!(
@@ -605,7 +625,7 @@ fn relevance_id_adapter_falls_back_to_newest_without_error_or_missing_results() 
         }
         Ok(ids.into_iter().rev().collect::<Vec<_>>())
     });
-    let q = SearchQuery::parse("adapterneedle sort:relevance");
+    let q = SearchQuery::parse_extended("adapterneedle sort:relevance");
     let mut before = None;
     let mut found = Vec::new();
     loop {
@@ -645,7 +665,7 @@ fn sorted_pages_do_not_repeat_ties_and_survive_cursor_deletion() {
         SearchSort::Newest,
         SearchSort::Relevance,
     ] {
-        let mut q = SearchQuery::parse("pagingrank");
+        let mut q = SearchQuery::parse_extended("pagingrank");
         q.sort = sort;
         let mut cursor = None;
         let mut found = Vec::new();
@@ -668,7 +688,7 @@ fn sorted_pages_do_not_repeat_ties_and_survive_cursor_deletion() {
         found.sort();
         assert_eq!(found, expected, "every hit exactly once with {sort:?}");
     }
-    let mut q = SearchQuery::parse("pagingrank");
+    let mut q = SearchQuery::parse_extended("pagingrank");
     q.sort = SearchSort::Oldest;
     let first =
         t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, None));
@@ -770,7 +790,7 @@ fn every_new_filter_keeps_room_and_thread_visibility() {
         "sort:oldest".into(),
         "sort:relevance".into(),
     ] {
-        let q = SearchQuery::parse(&format!("visibilityneedle {filter}"));
+        let q = SearchQuery::parse_extended(&format!("visibilityneedle {filter}"));
         let page =
             t.read(|c| q.messages_for_user_after(c, id("david"), jiff::tz::TimeZone::UTC, None));
         assert!(!page.messages.is_empty(), "positive witness for {filter}");
