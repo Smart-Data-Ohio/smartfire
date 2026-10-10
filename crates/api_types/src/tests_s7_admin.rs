@@ -48,6 +48,7 @@ fn the_workspace_and_its_writes() {
             join_url: "https://chat.example/join/abc-123".into(),
             can_administer: true,
             restrict_room_creation_to_administrators: false,
+            upload_limit_bytes: 104_857_600,
             version: "2.0.0".into(),
         },
         json!({
@@ -60,6 +61,7 @@ fn the_workspace_and_its_writes() {
             "joinUrl": "https://chat.example/join/abc-123",
             "canAdminister": true,
             "restrictRoomCreationToAdministrators": false,
+            "uploadLimitBytes": 104857600,
             "version": "2.0.0"
         }),
     );
@@ -67,8 +69,9 @@ fn the_workspace_and_its_writes() {
         &UpdateWorkspace {
             name: None,
             restrict_room_creation_to_administrators: Some(true),
+            upload_limit_bytes: None,
         },
-        json!({ "name": null, "restrictRoomCreationToAdministrators": true }),
+        json!({ "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null }),
     );
     assert_wire(
         &UpdateLogo {
@@ -154,7 +157,11 @@ fn custom_styles_and_icons() {
                 title: "Acme Corp".into(),
                 creator_name: "Ada Lovelace".into(),
                 image_url: "/icons/acme".into(),
+                animated: true,
+                still_url: "/icons/acme?still=1".into(),
             }],
+            animated_limit: 250,
+            animated_usage: 1,
         },
         json!({
             "icons": [{
@@ -162,8 +169,12 @@ fn custom_styles_and_icons() {
                 "name": "acme",
                 "title": "Acme Corp",
                 "creatorName": "Ada Lovelace",
-                "imageUrl": "/icons/acme"
-            }]
+                "imageUrl": "/icons/acme",
+                "animated": true,
+                "stillUrl": "/icons/acme?still=1"
+            }],
+            "animatedLimit": 250,
+            "animatedUsage": 1
         }),
     );
     assert_wire(

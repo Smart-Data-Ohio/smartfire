@@ -146,6 +146,15 @@ function Body({ message }: { readonly message: MessageDTO }) {
   return <BodyHtml html={message.bodyHtml} className="message-body" />;
 }
 
+function Files({ message }: { readonly message: MessageDTO }) {
+  const files = message.attachments ?? (message.attachment === null ? [] : [message.attachment]);
+
+  return files.map((attachment, index) => (
+    // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
+    <AttachmentView key={`${index}:${attachment.url}`} attachment={attachment} />
+  ));
+}
+
 /** Where a forward came from, when the source message is in the store. */
 function ForwardSource({ sourceId }: { readonly sourceId: number | null }) {
   const source = useStore((state) => (sourceId === null ? undefined : state.messages[sourceId]));
@@ -203,7 +212,7 @@ export function MessageContent({ message, trailing, inThread = false }: MessageC
           <Body message={message} />
           {trailing}
         </div>
-        {message.attachment === null ? null : <AttachmentView attachment={message.attachment} />}
+        <Files message={message} />
         {cards}
       </>
     );
@@ -229,7 +238,7 @@ export function MessageContent({ message, trailing, inThread = false }: MessageC
           <Body message={message} />
           {message.forwardNote === null ? trailing : null}
         </div>
-        {message.attachment === null ? null : <AttachmentView attachment={message.attachment} />}
+        <Files message={message} />
         {cards}
       </div>
     </>

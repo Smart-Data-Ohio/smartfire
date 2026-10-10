@@ -59,6 +59,7 @@ pub(crate) fn message() -> MessageDTO {
         forward_note: None,
         edited_at: None,
         attachment: None,
+        attachments: None,
         reactions: vec![],
         boosts: vec![],
         pinned: false,
@@ -519,6 +520,8 @@ fn membership() -> Membership {
 
 pub(crate) fn row() -> SidebarRow {
     SidebarRow {
+        revision: 0,
+        evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
         room: room(),
         membership: membership(),
         display_name: "general".into(),
@@ -632,6 +635,7 @@ fn create_message_requests_round_trip() {
             reply_to_message_id: None,
             reply_notify_author: None,
             attachment_signed_id: None,
+            attachment_signed_ids: None,
             drive_file_ids: None,
         },
         json!({
@@ -662,6 +666,8 @@ fn sidebar_round_trips() {
     assert_eq!(
         wire["rows"][0],
         json!({
+            "revision": 0,
+            "evaluatedAt": "2026-10-10T12:00:00.000000000Z",
             "room": serde_json::to_value(room()).unwrap(),
             "membership": serde_json::to_value(membership()).unwrap(),
             "displayName": "general",
@@ -787,4 +793,11 @@ fn s1_events_match_the_protocol() {
         expected["topic"] = json!("user");
         assert_wire(&event, expected);
     }
+}
+
+#[test]
+fn grouped_file_request_retains_every_signed_id() {
+    let wire = json!({"clientMessageId": "grouped", "markdownSource": "Two files", "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": null, "attachmentSignedIds": ["first", "second"]});
+    let request: CreateMessage = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(serde_json::to_value(request).unwrap(), wire);
 }

@@ -104,6 +104,7 @@ async fn forwarded_attachment_is_a_private_copy_and_failed_enqueue_removes_all_c
     let uploaded=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
         .multipart(&[("message[client_message_id]","copy-upload")],("message[attachment]","forward.txt","text/plain",b"Private copy\n"))).await;
     assert_eq!(uploaded.status,StatusCode::CREATED,"{}",uploaded.text());
+    assert!(uploaded.body.is_empty());
     let id=app.db().read(|conn|Ok(Message::find_duplicate(conn,ALL_TALK,DAVID,"copy-upload")?.unwrap().id)).await.unwrap();
     let path=format!("/messages/{id}/forwards.json");
     let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json")
@@ -137,6 +138,7 @@ async fn attachment_processing_failure_preserves_every_forward_and_thread_side_e
     let uploaded = app.david().write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
         .multipart(&[("message[client_message_id]", "processing-rollback")], ("message[attachment]", "source.txt", "text/plain", b"Forward rollback\n"))).await;
     assert_eq!(uploaded.status, StatusCode::CREATED, "{}", uploaded.text());
+    assert!(uploaded.body.is_empty());
     let source = app.db().write(move |tx| {
         let source = Message::find_duplicate(tx.conn(), ALL_TALK, DAVID, "processing-rollback")?.unwrap();
         // Put the target back into its pre-post state; a successful forward would join/reopen it.

@@ -67,6 +67,58 @@ fn settings() {
 }
 
 #[test]
+fn upload_size_policy_defaults_for_missing_or_invalid_settings() {
+    let t = TestDb::new();
+    let mut account = signal(&t);
+    assert_eq!(account.settings().upload_limit_bytes(), 104_857_600);
+    for settings in [
+        "{}",
+        "not json",
+        r#"{"upload_limit_bytes":0}"#,
+        r#"{"upload_limit_bytes":-1}"#,
+        r#"{"upload_limit_bytes":"100"}"#,
+        r#"{"upload_limit_bytes":1.5}"#,
+        r#"{"upload_limit_bytes":9007199254740992}"#,
+    ] {
+        account.settings_json = Some(settings.into());
+        assert_eq!(
+            account.settings().upload_limit_bytes(),
+            104_857_600,
+            "{settings}",
+        );
+    }
+    account.settings_json = Some(r#"{"upload_limit_bytes":131072000}"#.into());
+    assert_eq!(account.settings().upload_limit_bytes(), 131_072_000);
+}
+
+#[test]
+fn animated_emoji_policy_defaults_and_preserves_other_settings() {
+    let t = TestDb::new();
+    let mut account = signal(&t);
+    assert_eq!(account.settings().animated_emoji_limit(), 250);
+    for raw in [
+        "{}",
+        "not json",
+        r#"{"animated_emoji_limit":-1}"#,
+        r#"{"animated_emoji_limit":"1"}"#,
+        r#"{"animated_emoji_limit":1.5}"#,
+        r#"{"animated_emoji_limit":9007199254740992}"#,
+    ] {
+        account.settings_json = Some(raw.into());
+        assert_eq!(account.settings().animated_emoji_limit(), 250, "{raw}");
+    }
+    account.settings_json =
+        Some(r#"{"animated_emoji_limit":0,"upload_limit_bytes":131072000}"#.into());
+    assert_eq!(account.settings().animated_emoji_limit(), 0);
+    let mut settings = account.settings();
+    settings.assign(&[("animated_emoji_limit", "1")]).unwrap();
+    assert_eq!(settings.animated_emoji_limit(), 1);
+    assert_eq!(settings.upload_limit_bytes(), 131_072_000);
+    assert!(settings.assign(&[("animated_emoji_limit", "-1")]).is_err());
+    assert_eq!(settings.animated_emoji_limit(), 1);
+}
+
+#[test]
 fn updating_other_attributes_leaves_null_settings_alone() {
     // What Rails does: `update!(name:)` on the fixture account doesn't write settings.
     let t = TestDb::new();

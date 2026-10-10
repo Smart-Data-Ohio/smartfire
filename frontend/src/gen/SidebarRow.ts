@@ -7,7 +7,15 @@ import type { SidebarLastMessage } from "./SidebarLastMessage";
  * A room as it appears in one person's sidebar. Carried by `GET /api/v1/sidebar` and by the
  * `sidebar.row.upserted` event on that person's `user` topic.
  */
-export type SidebarRow = { room: Room,
+export type SidebarRow = {
+/**
+ * The viewer's persisted notification settings revision.
+ */
+revision: number,
+/**
+ * The injected server clock used for these counts, in UTC with nanoseconds.
+ */
+evaluatedAt: string, room: Room,
 /**
  * The viewer's membership: involvement (`muted` rows are dimmed), favourite position,
  * category and read state (`unreadAt` set means unread, shown bold).

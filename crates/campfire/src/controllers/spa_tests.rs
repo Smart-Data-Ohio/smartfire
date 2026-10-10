@@ -162,7 +162,7 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
         boot_json(&page),
         serde_json::json!({
             "user": {"id": DAVID, "name": user.name, "avatarUrl": crate::controllers::presenters::avatar_path(&a.booted.app.secrets, &user)},
-            "account": {"name": account.name, "logoUrl": null, "logoStillUrl": null, "bannerUrl": null, "bannerStillUrl": null},
+            "account": {"uploadLimitBytes": 104857600, "name": account.name, "logoUrl": null, "logoStillUrl": null, "bannerUrl": null, "bannerStillUrl": null},
             "customStyles": account.custom_styles,
             "theme": campfire_spa::theme(Some(&settings.theme)),
             "textSize": campfire_spa::text_size(Some(&settings.text_size)),

@@ -33,6 +33,8 @@ pub struct Workspace {
     pub can_administer: bool,
     /// "Must be admin to create new rooms".
     pub restrict_room_creation_to_administrators: bool,
+    /// Maximum bytes per uploaded file. Defaults to 100 MiB.
+    pub upload_limit_bytes: i64,
     /// The footer's "Smartfire version" badge text.
     pub version: String,
 }
@@ -44,6 +46,7 @@ pub struct Workspace {
 pub struct UpdateWorkspace {
     pub name: Option<String>,
     pub restrict_room_creation_to_administrators: Option<bool>,
+    pub upload_limit_bytes: Option<i64>,
 }
 
 /// `PUT /api/v1/admin/workspace/logo`: a blob uploaded with `POST /api/v1/uploads` becomes the
@@ -157,6 +160,9 @@ pub struct WorkspaceIcon {
     pub creator_name: String,
     /// `/icons/:name`.
     pub image_url: String,
+    pub animated: bool,
+    /// First-frame PNG for animated emoji, otherwise the original image URL.
+    pub still_url: String,
 }
 
 /// `GET /api/v1/admin/icons`, and the answer to adding (`POST`) or deleting
@@ -166,6 +172,9 @@ pub struct WorkspaceIcon {
 #[ts(export)]
 pub struct WorkspaceIconList {
     pub icons: Vec<WorkspaceIcon>,
+    /// Static emoji have unlimited capacity. This limit applies only to animated emoji.
+    pub animated_limit: i64,
+    pub animated_usage: i64,
 }
 
 /// `POST /api/v1/admin/icons` (`accounts/icons#create`). A refusal is `Validation` with `fields`
@@ -176,7 +185,7 @@ pub struct WorkspaceIconList {
 pub struct CreateIcon {
     pub name: String,
     pub title: String,
-    /// The uploaded SVG or PNG (`POST /api/v1/uploads`); `null` is refused as a missing image.
+    /// The uploaded SVG, PNG, GIF or WebP; `null` is refused as a missing image.
     pub signed_id: Option<String>,
 }
 

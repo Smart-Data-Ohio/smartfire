@@ -404,6 +404,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const unreadCount = unreadMessages(record).length;
 
     const row: SidebarRow = {
+      revision: world.activityRevision,
+      evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
@@ -443,7 +445,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
-      account: admin.branding(),
+      account: { ...admin.branding(), uploadLimitBytes: admin.uploadLimitBytes() },
       customStyles: admin.customStyles(),
       ...settings.appearance(),
       cableUrl: "/cable",
@@ -923,7 +925,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     postToRoom: createMessage,
   };
 
-  const uploads = createUploads(ctx);
+  const uploads = createUploads(ctx, () => admin.uploadLimitBytes());
   const admin = createAdmin(ctx, uploads);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
@@ -992,7 +994,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
-    ...createOrganize(ctx).routes,
+    ...createOrganize(ctx, settings).routes,
   ];
 
   composer.arm();

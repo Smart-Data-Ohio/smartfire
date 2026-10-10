@@ -21,7 +21,7 @@ use campfire_db::models::workspace_icon::{NewIcon, WorkspaceIcon};
 use campfire_db::{Account, Role, User};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
 use campfire_runtime::presenters::accounts::audit_logs;
-use campfire_people::controllers::accounts::icons::image_facts;
+use campfire_people::controllers::accounts::icons::{image_facts, save_image};
 use campfire_storage::branding::{self, Kind, Prepared};
 use campfire_presentation::time::Zone;
 use campfire_runtime::concerns::{self, Authentication, Before, session_keys};
@@ -298,6 +298,7 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
         restrict_room_creation_to_administrators: account
             .settings()
             .restrict_room_creation_to_administrators(),
+        upload_limit_bytes: account.settings().upload_limit_bytes(),
         version: c.app().config.app_version.clone(),
     };
     c.json(StatusCode::OK, &workspace)
@@ -306,7 +307,15 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
 async fn save_workspace(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateWorkspace = body(c).await?;
-    let settings = update
+    if let Some(bytes) = update.upload_limit_bytes
+        && !(1..=campfire_db::models::account::MAX_UPLOAD_LIMIT_BYTES).contains(&bytes)
+    {
+        return Err(fail(
+            c,
+            validation("uploadLimitBytes", "must be a positive safe integer"),
+        ));
+    }
+    let mut settings = update
         .restrict_room_creation_to_administrators
         .map(|restrict| {
             vec![(
@@ -314,6 +323,11 @@ async fn save_workspace(c: &mut Ctx) -> Result {
                 restrict.to_string(),
             )]
         });
+    if let Some(bytes) = update.upload_limit_bytes {
+        settings
+            .get_or_insert_with(Vec::new)
+            .push(("upload_limit_bytes".into(), bytes.to_string()));
+    }
     write_workspace(
         c,
         update.name,
@@ -868,22 +882,42 @@ async fn index_icons(c: &mut Ctx) -> Result {
 }
 
 async fn reply_icons(c: &mut Ctx) -> Result {
-    let icons = c
+    let list = c
         .app()
         .db
-        .read(WorkspaceIcon::ordered)
-        .await
-        .map_err(Error::internal)?
-        .into_iter()
-        .map(|icon| api::WorkspaceIcon {
-            image_url: campfire_routes::workspace_icon(&icon.name),
-            id: icon.id,
-            name: icon.name,
-            title: icon.title,
-            creator_name: icon.creator_name,
+        .read(|conn| {
+            let icons = WorkspaceIcon::ordered(conn)?
+                .into_iter()
+                .map(|icon| {
+                    let animated = WorkspaceIcon::animated_by_name(conn, &icon.name)?;
+                    let image_url = campfire_routes::workspace_icon(&icon.name);
+                    Ok(api::WorkspaceIcon {
+                        still_url: if animated {
+                            format!("{image_url}?still=1")
+                        } else {
+                            image_url.clone()
+                        },
+                        animated,
+                        image_url,
+                        id: icon.id,
+                        name: icon.name,
+                        title: icon.title,
+                        creator_name: icon.creator_name,
+                    })
+                })
+                .collect::<campfire_db::Result<Vec<_>>>()?;
+            let animated_limit = Account::first(conn)?
+                .map(|account| account.settings().animated_emoji_limit())
+                .unwrap_or(campfire_db::models::account::DEFAULT_ANIMATED_EMOJI_LIMIT);
+            Ok(api::WorkspaceIconList {
+                icons,
+                animated_limit,
+                animated_usage: WorkspaceIcon::animated_usage(conn)?,
+            })
         })
-        .collect();
-    c.json(StatusCode::OK, &api::WorkspaceIconList { icons })
+        .await
+        .map_err(Error::internal)?;
+    c.json(StatusCode::OK, &list)
 }
 
 /// `accounts/icons#create`: the icon and its image, then the audit.
@@ -911,7 +945,8 @@ async fn save_icon(c: &mut Ctx) -> Result {
         None => Assignment::Unchanged,
     };
     let assignment = image.stage(c.app()).await?;
-    let facts = image_facts(c, &assignment).await?;
+    let (facts, prepared) = image_facts(c, &assignment).await?;
+    let storage = c.app().storage.clone();
     let audit = audit_context(c)?;
     let brand = campfire_runtime::rich_text::builtin_icon(icon.name.as_deref().unwrap_or(""));
     let saved = c
@@ -920,6 +955,7 @@ async fn save_icon(c: &mut Ctx) -> Result {
         .write(move |tx| {
             let icon = icon.save(tx, brand, facts.as_ref())?;
             attachments::assign(tx, Record::workspace_icon(icon.id), "image", assignment)?;
+            save_image(tx, &storage, icon.id, prepared)?;
             Ok(icon)
         })
         .await

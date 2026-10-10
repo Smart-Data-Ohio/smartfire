@@ -15,7 +15,7 @@ import type { AgentBudgetCap as GeneratedAgentBudgetCap } from "../../gen/AgentB
 import type { UpdateActivityItem as GeneratedUpdateActivityItem } from "../../gen/UpdateActivityItem.ts";
 import { ActivityItemId, EventId, MessageId, RoomId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
-import { Timestamp } from "./time.ts";
+import { EvaluationTimestamp, Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
 /** `activity_items.event_type`: all twenty. */
@@ -159,6 +159,7 @@ export const ActivityList = Schema.Struct({
   users: Schema.Array(User),
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
+  evaluatedAt: EvaluationTimestamp,
   nextCursor: Schema.NullOr(Schema.String),
 });
 
@@ -170,6 +171,7 @@ export type ActivityListPin = Assert<Pinned<typeof ActivityList, GeneratedActivi
 export const ActivityUnreadCount = Schema.Struct({
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
+  evaluatedAt: EvaluationTimestamp,
 });
 
 export type ActivityUnreadCount = typeof ActivityUnreadCount.Type;
@@ -199,6 +201,7 @@ export const ActivityItemChanged = Schema.Struct({
   item: ActivityItem,
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
+  evaluatedAt: EvaluationTimestamp,
 });
 
 export type ActivityItemChanged = typeof ActivityItemChanged.Type;
@@ -212,6 +215,7 @@ export const ActivityItemRemoved = Schema.Struct({
   id: ActivityItemId,
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
+  evaluatedAt: EvaluationTimestamp,
 });
 
 export type ActivityItemRemoved = typeof ActivityItemRemoved.Type;

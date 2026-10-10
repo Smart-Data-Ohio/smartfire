@@ -361,7 +361,8 @@ fn ws12_generic_recorder_batch_preserves_order_duplicates_state_and_callbacks() 
         )?.unwrap().mark_handled(tx)
     });
     t.sink.take();
-    let before = t.read(move |conn| ActivityItem::unread_snapshot(conn, first));
+    let now = t.now();
+    let before = t.read(move |conn| ActivityItem::unread_snapshot(conn, first, now));
     let recipients = [
         second,
         id("jason"),
@@ -419,7 +420,7 @@ fn ws12_generic_recorder_batch_preserves_order_duplicates_state_and_callbacks() 
             ),
         ]
     );
-    let created = t.read(move |conn| ActivityItem::unread_snapshot(conn, first));
+    let created = t.read(move |conn| ActivityItem::unread_snapshot(conn, first, now));
     assert_eq!(created.revision, before.revision + 1);
 
     let repeated = t.write(move |tx| {
@@ -450,11 +451,11 @@ fn ws12_generic_recorder_batch_preserves_order_duplicates_state_and_callbacks() 
     );
     assert!(t.sink.take().is_empty());
     assert_eq!(
-        t.read(move |conn| ActivityItem::unread_snapshot(conn, first)),
+        t.read(move |conn| ActivityItem::unread_snapshot(conn, first, now)),
         created
     );
 
-    let rollback_before = t.read(|conn| ActivityItem::unread_snapshot(conn, id("jz")));
+    let rollback_before = t.read(|conn| ActivityItem::unread_snapshot(conn, id("jz"), now));
     let failed: Result<()> = t.try_write(move |tx| {
         ActivityItem::record_source_for_recipients(
             tx,
@@ -471,7 +472,7 @@ fn ws12_generic_recorder_batch_preserves_order_duplicates_state_and_callbacks() 
             .is_none()
     );
     assert_eq!(
-        t.read(|conn| ActivityItem::unread_snapshot(conn, id("jz"))),
+        t.read(|conn| ActivityItem::unread_snapshot(conn, id("jz"), now)),
         rollback_before
     );
     assert!(

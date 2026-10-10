@@ -2,6 +2,7 @@
 //! Push requests carry a payload to WS17's policy/transport seam, atomically with the notice.
 use crate::broadcasts::Broadcast;
 use crate::models::huddle_grant::{HuddleGrant, IN_CALL_WINDOW};
+use crate::models::notification_policy::NotificationPreferences;
 use crate::sql::query_all;
 use crate::{
     ActivityItem, CachedStatements, Connection, Event, Involvement, Job, Membership, Result, Room,
@@ -85,11 +86,12 @@ pub fn prepare_push(
     } else {
         "'invisible','nothing'"
     };
+    let involvement = super::notification_policy::involvement_sql("m", "u.inbox_preferences");
     // Membership.disconnected is a timestamp scope, independent of its connection counter.
     let ids: Vec<i64> = query_all(
         tx.conn(),
         &format!(
-            "SELECT s.id FROM push_subscriptions s JOIN users u ON u.id=s.user_id JOIN memberships m ON m.user_id=u.id WHERE u.id=? AND m.room_id=? AND m.involvement NOT IN ({excluded}) AND (m.connected_at IS NULL OR m.connected_at<?) ORDER BY s.id"
+            "SELECT s.id FROM push_subscriptions s JOIN users u ON u.id=s.user_id JOIN memberships m ON m.user_id=u.id WHERE u.id=? AND m.room_id=? AND {involvement} NOT IN ({excluded}) AND (m.connected_at IS NULL OR m.connected_at<?) ORDER BY s.id"
         ),
         params![
             request.recipient_id,
@@ -133,7 +135,7 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
     let viewers = if viewer_ids.is_empty() { Vec::new() } else {
         query_all(tx.conn(), &format!("SELECT users.* FROM users WHERE users.id IN ({})", vec!["?";viewer_ids.len()].join(",")), rusqlite::params_from_iter(viewer_ids), |row| {
             let preferences: Option<String> = row.get("inbox_preferences")?;
-            Ok((User::from_row(row)?, invitations_enabled_value(preferences.as_deref())))
+            Ok((User::from_row(row)?, invitations_enabled_value(preferences.as_deref()), NotificationPreferences::parse(preferences.as_deref())))
         })?
     };
     let in_call = in_call_user_ids(tx.conn(), room.id, tx.now())?;
@@ -151,14 +153,17 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
         if membership.user_id == joiner.id {
             continue;
         }
-        let Some((viewer, invitations_enabled)) = viewers.iter().find(|(u,_)|u.id == membership.user_id && u.is_active() && !u.is_bot()) else {
+        let Some((viewer, invitations_enabled, preferences)) = viewers.iter().find(|(u,_,_)|u.id == membership.user_id && u.is_active() && !u.is_bot()) else {
             continue;
         };
+        if preferences.muted(room.id, tx.now()) {
+            continue;
+        }
         let viewer_in_call = in_call.contains(&viewer.id);
         if !viewer_in_call
             && (!room.direct()
                 || matches!(
-                    membership.involvement,
+                    preferences.involvement(room.id, membership.involvement),
                     Some(Involvement::Nothing | Involvement::Invisible)
                 )
                 || rung.contains(&viewer.id))
@@ -204,7 +209,9 @@ pub fn notify_leave(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
     let members = room_users(tx.conn(), room.id)?;
     if !in_call.is_empty() {
         for id in &in_call {
-            if let Some(viewer) = human(tx.conn(), *id)? {
+            if let Some(viewer) = human(tx.conn(), *id)?
+                && !NotificationPreferences::load(tx.conn(), viewer.id)?.muted(room.id, tx.now())
+            {
                 leave_notice(tx, &room, &leaver, &viewer, &members);
             }
         }

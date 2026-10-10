@@ -46,13 +46,22 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
         .body(serde_json::to_vec(&case["params"]).unwrap());
         let response = browser.send(req).await;
         let name = case["name"].as_str().unwrap().to_owned();
+        let retired_stream = case["accept"] == "text/vnd.turbo-stream.html" && case["status"].as_u64().unwrap() < 400;
+        let expected_status = if retired_stream {
+            StatusCode::NOT_ACCEPTABLE.as_u16()
+        } else {
+            case["status"].as_u64().unwrap() as u16
+        };
         assert_eq!(
             response.status.as_u16(),
-            if case["accept"] == "text/vnd.turbo-stream.html" && case["status"].as_u64().unwrap() < 400 { 406 } else { case["status"].as_u64().unwrap() as u16 },
+            expected_status,
             "{name}: {}",
             response.text()
         );
-        if case["accept"] == "application/json" {
+        if retired_stream {
+            assert!(response.body.is_empty(), "{name}");
+            assert_eq!(response.location(), None, "{name}");
+        } else if case["accept"] == "application/json" {
             for key in ["content-type", "cache-control", "pragma", "location"] {
                 assert_eq!(response.header(key), case["headers"][key].as_str(), "{name}: {key}");
             }

@@ -49,6 +49,7 @@ const FIXED: &[&str] = &[
     "campfire_api::saved_items",
     "workspace_branding::publish",
     "sync::workspace_styles_updated",
+    "sync::settings_updated",
 ];
 
 fn read(path: &str) -> String {

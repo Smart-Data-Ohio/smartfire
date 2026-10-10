@@ -23,6 +23,8 @@ pub const SOURCE_LIMIT: usize = 50_000;
 /// `DriveAttachment::MAX_PER_MESSAGE`
 pub const DRIVE_ATTACHMENTS_PER_MESSAGE: usize = 10;
 
+pub const ATTACHMENTS_PER_MESSAGE: usize = 10;
+
 const RECORD_TYPE: &str = "Message";
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,6 +68,8 @@ pub struct NewMessage {
     pub body: Option<String>,
     /// An already-saved blob to attach as `attachment`.
     pub attachment_blob_id: Option<i64>,
+    /// Already-saved blobs for the `attachments` slot, in insertion order.
+    pub attachment_blob_ids: Vec<i64>,
     /// Posts into a thread instead of the room's root timeline.
     pub thread_id: Option<i64>,
     pub system_note: bool,
@@ -586,6 +590,10 @@ impl Message {
             Attachment::create(tx, RECORD_TYPE, id, "attachment", blob_id)?;
             touched = true;
         }
+        for &blob_id in &attributes.attachment_blob_ids {
+            Attachment::create(tx, RECORD_TYPE, id, "attachments", blob_id)?;
+            touched = true;
+        }
         for file_id in &attributes.drive_file_ids {
             tx.conn().execute_cached(
                 r#"INSERT INTO "drive_attachments" ("created_at", "file_id", "message_id") VALUES (?, ?, ?)"#,
@@ -727,8 +735,15 @@ impl Message {
         Self::validate_with_associations(conn, attributes, new_record, false)
     }
 
+    fn validate_attachment_count(count: usize, errors: &mut Errors) {
+        if count > ATTACHMENTS_PER_MESSAGE {
+            errors.add("attachments", format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"));
+        }
+    }
+
     fn validate_with_associations(conn: &Connection, attributes: &NewMessage, new_record: bool, loaded_associations: bool) -> Result<Errors> {
         let mut errors = Errors::default();
+        Self::validate_attachment_count(attributes.attachment_blob_ids.len() + usize::from(attributes.attachment_blob_id.is_some()), &mut errors);
         // `belongs_to :room` and `:creator` (required)
         if !loaded_associations && Room::find_by_id(conn, attributes.room_id)?.is_none() {
             errors.add("room", "must exist");
@@ -761,6 +776,7 @@ impl Message {
             && !attributes.streaming
             && source.trim().is_empty()
             && attributes.attachment_blob_id.is_none()
+            && attributes.attachment_blob_ids.is_empty()
             && attributes.drive_file_ids.is_empty()
         {
             errors.add("markdown_source", "can't be blank");
@@ -1028,6 +1044,9 @@ impl Message {
             body: body.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?
                 .map(|a| a.blob_id),
+            attachment_blob_ids: self.attachments(conn)?.into_iter()
+                .filter(|(attachment, _)| attachment.name == "attachments")
+                .map(|(attachment, _)| attachment.blob_id).collect(),
             thread_id: self.thread_id,
             system_note: self.system_note,
             streaming: self.streaming,
@@ -1169,18 +1188,34 @@ impl Message {
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
     /// A streaming message saves even with no attachment change (`touch_streaming_activity`).
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
+        let current = Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?;
+        let grouped_blob_ids: Vec<_> = self.attachments(tx.conn())?.into_iter()
+            .filter(|(attachment, _)| attachment.name == "attachments")
+            .map(|(attachment, _)| attachment.blob_id).collect();
+        // Retaining a grouped blob leaves the legacy slot alone, with one row per blob.
+        let retaining_grouped = blob_id.is_some_and(|id| grouped_blob_ids.contains(&id));
+        let blob_id = if retaining_grouped {
+            current.as_ref().map(|attachment| attachment.blob_id)
+        } else {
+            blob_id
+        }.filter(|id| !grouped_blob_ids.contains(id));
+        let mut errors = Errors::default();
+        Self::validate_attachment_count(grouped_blob_ids.len() + usize::from(blob_id.is_some()), &mut errors);
+        errors.into_result()?;
         self.touch_streaming_activity(tx)?;
-        if let Some(attachment) =
-            Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
-        {
+        if let Some(attachment) = current {
             if Some(attachment.blob_id) == blob_id {
-                super::message_attachment_processing::schedule(tx, self.id, attachment.blob_id);
+                if !retaining_grouped {
+                    super::message_attachment_processing::schedule(tx, self.id, attachment.blob_id);
+                }
                 return Ok(());
             }
             attachment.delete(tx)?;
-            tx.emit_after_commit(Event::PurgeBlob {
-                blob_id: attachment.blob_id,
-            });
+            if !grouped_blob_ids.contains(&attachment.blob_id) {
+                tx.emit_after_commit(Event::PurgeBlob {
+                    blob_id: attachment.blob_id,
+                });
+            }
             self.touch(tx)?;
         }
         if let Some(blob_id) = blob_id {
@@ -1236,9 +1271,7 @@ impl Message {
             r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
             params![now, now, self.id],
         )?;
-        if let Some(attachment) =
-            Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
-        {
+        for (attachment, _) in self.attachments(tx.conn())? {
             attachment.delete(tx)?;
             tx.emit_after_commit(Event::PurgeBlob {
                 blob_id: attachment.blob_id,
@@ -1366,13 +1399,21 @@ impl Message {
 
     /// The attachment and its blob, if attached.
     pub fn attachment(&self, conn: &Connection) -> Result<Option<(Attachment, Blob)>> {
-        match Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")? {
-            Some(attachment) => {
-                let blob = attachment.blob(conn)?;
-                Ok(Some((attachment, blob)))
-            }
-            None => Ok(None),
-        }
+        Ok(self.attachments(conn)?.into_iter().next())
+    }
+
+    /// Every file, including the legacy single slot, ordered by attachment id.
+    pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
+        let legacy = Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?;
+        let mut attachments = query_all(conn,
+            "SELECT * FROM active_storage_attachments WHERE record_type='Message' AND record_id=? AND name='attachments' ORDER BY id",
+            [self.id], Attachment::from_row)?;
+        attachments.extend(legacy);
+        attachments.sort_by_key(|attachment| attachment.id);
+        attachments.into_iter().map(|attachment| {
+            let blob = attachment.blob(conn)?;
+            Ok((attachment, blob))
+        }).collect()
     }
 
     /// `plain_text_body`: the body's plain text (`Markdown.plain_text` for a Markdown message),

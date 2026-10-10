@@ -12,8 +12,8 @@ import type { Person } from "../../src/gen/Person.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
-import { HttpError, notFound, ok, plainError } from "../http.ts";
-import { booleanField, type Json, stringField } from "../json.ts";
+import { HttpError, notFound, ok, plainError, validation } from "../http.ts";
+import { booleanField, intField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { PROFILE_MAX_SIZE, readProfileImage } from "./profile-image.ts";
@@ -39,6 +39,7 @@ interface State {
   banner: Image | null;
   joinCode: string;
   restrict: boolean;
+  uploadLimitBytes: number;
   css: string | null;
   icons: WorkspaceIcon[];
   nextIconId: number;
@@ -107,6 +108,7 @@ function initialState(world: World, now: number): State {
     banner: null,
     joinCode: "mock-join-code",
     restrict: false,
+    uploadLimitBytes: 100 * 1024 * 1024,
     css: null,
     icons: [
       {
@@ -115,6 +117,8 @@ function initialState(world: World, now: number): State {
         title: "Smart Data",
         creatorName: viewer,
         imageUrl: "/icons/smartdata",
+        animated: false,
+        stillUrl: "/icons/smartdata",
       },
     ],
     nextIconId: 2,
@@ -147,6 +151,7 @@ export interface AdminModule {
   readonly branding: () => WorkspaceBranding;
   readonly customStyles: () => string | null;
   readonly roomCreationRestricted: () => boolean;
+  readonly uploadLimitBytes: () => number;
   readonly hasIcon: (name: string) => boolean;
 }
 
@@ -203,6 +208,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       joinUrl: `http://127.0.0.1/join/${held.joinCode}`,
       canAdminister: true,
       restrictRoomCreationToAdministrators: held.restrict,
+      uploadLimitBytes: held.uploadLimitBytes,
       version: "2.0.0-mock",
     };
   };
@@ -320,6 +326,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     const name = stringField(body, "name");
 
     const restrict = booleanField(body, "restrictRoomCreationToAdministrators");
+    const uploadLimit = intField(body, "uploadLimitBytes");
+
+    if (uploadLimit !== null && (uploadLimit <= 0 || !Number.isSafeInteger(uploadLimit))) {
+      throw validation("uploadLimitBytes", "must be a positive safe integer");
+    }
 
     if (name !== null && name.trim() !== "" && name !== held.name) {
       audit("account.settings.change", name, "Account", `name: ${held.name} → ${name}`);
@@ -336,6 +347,8 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       );
       held.restrict = restrict;
     }
+
+    if (uploadLimit !== null) held.uploadLimitBytes = uploadLimit;
 
     return ok(workspace());
   };
@@ -430,7 +443,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     return ok({ css: held.css });
   };
 
-  const icons = () => ok({ icons: current().icons });
+  const icons = () => ok({ icons: current().icons, animatedLimit: 250, animatedUsage: 0 });
 
   const createIcon = (body: Json | undefined) => {
     const held = current();
@@ -461,6 +474,8 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
         title,
         creatorName: viewerName(),
         imageUrl: `/icons/${name}`,
+        animated: false,
+        stillUrl: `/icons/${name}`,
       },
     ].sort((a, b) => a.name.localeCompare(b.name));
     held.nextIconId += 1;
@@ -557,6 +572,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     branding,
     customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,
+    uploadLimitBytes: () => current().uploadLimitBytes,
     hasIcon: (name) => current().icons.some((icon) => icon.name === name),
     routes: [
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),

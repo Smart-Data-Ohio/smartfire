@@ -146,6 +146,7 @@ export function createActivity(ctx: S2Context): Activity {
   const unreadSnapshot = (): ActivityUnreadCount => ({
     unreadCount: unreadCount(),
     unreadRevision: ctx.world().activityRevision,
+    evaluatedAt: new Date(ctx.now()).toISOString().replace("Z", "000000Z"),
   });
 
   const itemOr404 = (id: number): ActivityItem => {

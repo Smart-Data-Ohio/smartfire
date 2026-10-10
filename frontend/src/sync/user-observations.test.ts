@@ -24,7 +24,15 @@ function captured(): User {
     role: "bot",
     hasAvatar: false,
     customStatus: { emoji: "🌴", text: "Away", expiresAt: "2026-10-07T10:00:00.000Z" },
-    avatarIcon: { name: "robot", title: "Robot", kind: "emoji", character: "🤖", imageUrl: null },
+    avatarIcon: {
+      name: "robot",
+      title: "Robot",
+      kind: "emoji",
+      character: "🤖",
+      imageUrl: null,
+      animated: false,
+      stillUrl: null,
+    },
     agent: { agentId: 9, kind: "workspace", status: "idle", suspended: false },
   };
 }
@@ -121,6 +129,8 @@ describe("user presentation observations across API requests", () => {
           kind: "emoji",
           character: "🚀",
           imageUrl: null,
+          animated: false,
+          stillUrl: null,
         },
       };
 

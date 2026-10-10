@@ -143,8 +143,8 @@ pub use message::{
     MessageSource, SoundPresentation, UpdateMessage,
 };
 pub use organize::{
-    AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,
-    RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
+    AssignRoomCategory, CreateRoomCategory, FavoriteList, InvolvementChange, MoveFavorite,
+    ReorderRoomCategories, RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
 pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
@@ -159,13 +159,14 @@ pub use room_integrations::{
 pub use room_management::{CreateRoom, RoomForm, RoomFormStageRole, RoomLeft, RoomMutation, RoomRemoved, UpdateRoom};
 pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
 pub use search::{
-    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
+    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchFilters, SearchMedia, SearchOperator,
+    SearchResults, SearchSort,
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use settings::{
     AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, CreatePushSubscription, DndAllowedPerson,
     GoogleIntegration, InboxSwitch,
-    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
+    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, NotificationLevel, RoomNotificationUpdate, RoomMuteDuration, RoomMuteUpdate, OooPreset,
     ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
     RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
     TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,

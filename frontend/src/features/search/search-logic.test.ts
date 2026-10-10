@@ -11,6 +11,7 @@ import {
   operatorPrefixes,
   partialOperator,
   replaceLastToken,
+  setFilter,
   textWords,
 } from "./query.ts";
 import { isEditable, searchShortcut } from "./search-keys.ts";
@@ -86,7 +87,7 @@ describe("query", () => {
 
   it("offers operators by prefix from two letters", () => {
     expect(operatorPrefixes("f")).toEqual([]);
-    expect(operatorPrefixes("launch fr")).toEqual(["from"]);
+    expect(operatorPrefixes("launch fr")).toEqual(["from", "from_id"]);
     expect(operatorPrefixes("ha")).toEqual(["has"]);
     expect(operatorPrefixes("from:")).toEqual([]);
   });
@@ -164,6 +165,10 @@ describe("typeahead", () => {
     expect(sections[1]?.items.map((entry) => entry.label)).toEqual([
       "from:",
       "in:",
+      "from_id:",
+      "in_id:",
+      "mentions:me",
+      "sort:",
       "has:",
       "is:thread",
       "before:",
@@ -314,10 +319,35 @@ describe("format", () => {
     expect(resultsAnnouncement({ ...base, messages: one })).toBe("1 message");
     expect(resultsAnnouncement({ ...base, messages: forty, hasMore: true })).toBe("40+ messages");
     expect(resultsAnnouncement({ ...base, messages: forty, loadingMore: true })).toBe(
-      "Loading older messages…",
+      "Loading more messages…",
     );
     expect(resultsAnnouncement({ ...base, messages: forty, moreError: "Down" })).toBe(
       "Couldn't load more results.",
     );
   });
+});
+
+describe("stable search filters", () => {
+  it("uses IDs when choosing people and channels", () => {
+    expect(flattenTypeahead(typeaheadSections("from_id:ma", SOURCE))[0]?.action).toEqual({
+      kind: "complete",
+      value: "from_id:2 ",
+    });
+    expect(flattenTypeahead(typeaheadSections("in_id:lau", SOURCE))[0]?.action).toEqual({
+      kind: "complete",
+      value: "in_id:7 ",
+    });
+  });
+  it("keeps filter values out of highlighted words", () => {
+    expect(textWords("launch from_id:2 in_id:7 mentions:me has:mention sort:oldest")).toEqual([
+      "launch",
+    ]);
+  });
+});
+
+it("replaces sort without changing ID filters or free text", () => {
+  expect(setFilter("launch from_id:2 in_id:7 sort:newest", "sort", "oldest")).toBe(
+    "launch from_id:2 in_id:7 sort:oldest",
+  );
+  expect(setFilter("from_id:2 in_id:7", "from_id", "")).toBe("in_id:7");
 });

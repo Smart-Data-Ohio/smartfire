@@ -165,12 +165,33 @@ async fn spa_api_rooms_concurrent_creation_rejects_changed_parameters() {
 
 #[tokio::test]
 async fn spa_api_rooms_creation_keys_are_viewer_scoped() {
+    async fn revisions(a: &TestApp) -> [i64; 2] {
+        a.db()
+            .read(|conn| {
+                let revision = |user| {
+                    conn.query_row(
+                        "SELECT activity_revision FROM users WHERE id=?",
+                        [user],
+                        |row| row.get(0),
+                    )
+                };
+                Ok([revision(DAVID)?, revision(KEVIN)?])
+            })
+            .await
+            .unwrap()
+    }
+
     let a = app().await.expect("frozen seeds required");
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
+    let before = revisions(&a).await;
     let body = json!({"type":"closed","clientRoomId":"shared-room-key","name":"Once","userIds":[DAVID,KEVIN]});
     let first = write(&mut david, Method::POST, "/api/v1/rooms", body.clone()).await;
+    let after_first = revisions(&a).await;
+    assert_eq!(after_first, before.map(|revision| revision + 1));
     let second = write(&mut kevin, Method::POST, "/api/v1/rooms", body.clone()).await;
+    let after_second = revisions(&a).await;
+    assert_eq!(after_second, after_first.map(|revision| revision + 1));
     assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
     assert_eq!(second.status, StatusCode::CREATED, "{}", second.text());
     let first: api::RoomMutation = parse(&first);
@@ -178,10 +199,18 @@ async fn spa_api_rooms_creation_keys_are_viewer_scoped() {
     assert_ne!(first.room.id, second.room.id);
     assert_eq!(first.room.creator_id, DAVID);
     assert_eq!(second.room.creator_id, KEVIN);
-    for (viewer, expected) in [(&mut david, first), (&mut kevin, second)] {
+    assert_eq!(first.row.as_ref().unwrap().revision, after_first[0]);
+    assert_eq!(second.row.as_ref().unwrap().revision, after_second[1]);
+    for (viewer, mut expected, revision) in [
+        (&mut david, first, after_second[0]),
+        (&mut kevin, second, after_second[1]),
+    ] {
+        // A replay reads the current viewer-wide revision, advanced by either room's membership.
+        expected.row.as_mut().unwrap().revision = revision;
         let replay = write(viewer, Method::POST, "/api/v1/rooms", body.clone()).await;
         assert_eq!(replay.status, StatusCode::OK);
         assert_eq!(parse::<api::RoomMutation>(&replay), expected);
+        assert_eq!(revisions(&a).await, after_second);
     }
 }
 

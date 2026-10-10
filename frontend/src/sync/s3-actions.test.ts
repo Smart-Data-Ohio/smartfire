@@ -102,6 +102,7 @@ function seedInbox(): void {
       users: [userFixture(2)],
       unreadCount: 5,
       unreadRevision: 1,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       nextCursor: null,
     },
     "replace",
@@ -114,6 +115,7 @@ function seedInbox(): void {
       users: [],
       unreadCount: 5,
       unreadRevision: 1,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       nextCursor: null,
     },
     "replace",
@@ -189,7 +191,12 @@ describe("activity actions", () => {
 
         expect(request.body).toEqual({ action: "handled" });
 
-        return Effect.succeed({ item: item(3, 30, "handled"), unreadCount: 9, unreadRevision: 2 });
+        return Effect.succeed({
+          item: item(3, 30, "handled"),
+          unreadCount: 9,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
       });
 
       const answered = yield* activity.setState(3, "handled");
@@ -228,6 +235,7 @@ describe("activity actions", () => {
         item: item(3, 30, "read"),
         unreadCount: 4,
         unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       });
 
       const opened = yield* activity.open(3);
@@ -252,6 +260,7 @@ describe("activity actions", () => {
                 users: [],
                 unreadCount: 2,
                 unreadRevision: 1,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                 nextCursor: null,
               }
             : {
@@ -259,6 +268,7 @@ describe("activity actions", () => {
                 users: [],
                 unreadCount: 2,
                 unreadRevision: 1,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                 nextCursor: "page-2",
               },
         ),
@@ -332,7 +342,11 @@ describe("activity actions", () => {
 
       yield* fake.route("PATCH /activity/2", () => {
         // Someone handled it elsewhere meanwhile.
-        mutations.applyActivityItem(item(2, 50, "handled"), { unreadCount: 3, unreadRevision: 2 });
+        mutations.applyActivityItem(item(2, 50, "handled"), {
+          unreadCount: 3,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
 
         return refuse();
       });
@@ -352,13 +366,18 @@ describe("activity actions", () => {
       const fake = yield* FakeApi;
 
       yield* fake.route("GET /activity", () => {
-        mutations.applyActivityItem(item(3, 50, "read"), { unreadCount: 4, unreadRevision: 2 });
+        mutations.applyActivityItem(item(3, 50, "read"), {
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
 
         return Effect.succeed({
           items: [item(3, 30), item(2, 20)],
           users: [],
           unreadCount: 5,
           unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           nextCursor: null,
         });
       });
@@ -382,6 +401,7 @@ describe("activity actions", () => {
         users: [],
         unreadCount: 2,
         unreadRevision: 1,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
         nextCursor: "page-2",
       });
       yield* activity.load("all", "unread");
@@ -392,7 +412,14 @@ describe("activity actions", () => {
         mutations.landActivityPage(
           "all",
           "unread",
-          { items: [item(4, 40)], users: [], unreadCount: 2, unreadRevision: 1, nextCursor: null },
+          {
+            items: [item(4, 40)],
+            users: [],
+            unreadCount: 2,
+            unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            nextCursor: null,
+          },
           "replace",
         );
 
@@ -401,6 +428,7 @@ describe("activity actions", () => {
           users: [],
           unreadCount: 2,
           unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           nextCursor: "page-3",
         });
       });
@@ -417,7 +445,11 @@ describe("activity actions", () => {
 
       const fake = yield* FakeApi;
 
-      yield* fake.reply("GET /activity/unread_count", { unreadCount: 12, unreadRevision: 2 });
+      yield* fake.reply("GET /activity/unread_count", {
+        unreadCount: 12,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
 
       expect(yield* activity.loadUnreadCount()).toBe(12);
       expect(store.getState().activity.unreadCount).toBe(12);
@@ -438,7 +470,12 @@ describe("activity actions", () => {
         const started = yield* Deferred.make<void>();
         const release = yield* Deferred.make<void>();
         const read = item(3, confirmation === "same-time websocket" ? 30 : 40, "read");
-        const snapshot = { unreadCount: 4, unreadRevision: 2 };
+
+        const snapshot = {
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        };
 
         expect(store.getState().activity.unreadCount).toBe(5);
         yield* fake.route("PATCH /activity/3", () =>
@@ -506,7 +543,12 @@ describe("activity actions", () => {
             Effect.andThen(
               outcome === "failure"
                 ? refuse()
-                : Effect.succeed({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+                : Effect.succeed({
+                    item: item(3, 40, "read"),
+                    unreadCount: 4,
+                    unreadRevision: 2,
+                    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+                  }),
             ),
           ),
         );
@@ -514,10 +556,18 @@ describe("activity actions", () => {
 
         yield* Deferred.await(started);
         counts.push(store.getState().activity.unreadCount);
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 4 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 6,
+          unreadRevision: 4,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* activity.loadUnreadCount();
         counts.push(store.getState().activity.unreadCount);
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 3 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 3,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* activity.loadUnreadCount();
         counts.push(store.getState().activity.unreadCount);
         yield* Deferred.succeed(release, undefined);
@@ -540,7 +590,13 @@ describe("activity actions", () => {
       expect(store.getState().activity.unreadCount).toBe(5);
       yield* fake.route("PATCH /activity/3", () => {
         expect(store.getState().activity.unreadCount).toBe(4);
-        const reply = { item: item(3, 30, "read"), unreadCount: 5, unreadRevision: 1 };
+
+        const reply = {
+          item: item(3, 30, "read"),
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        };
 
         mutations.applyActivityItem(reply.item, reply);
         expect(store.getState().activity.unreadCount).toBe(5);
@@ -564,13 +620,23 @@ describe("activity actions", () => {
       yield* fake.route("PATCH /activity/3", () =>
         Deferred.succeed(firstStarted, undefined).pipe(
           Effect.andThen(Deferred.await(firstRelease)),
-          Effect.as({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 3 }),
+          Effect.as({
+            item: item(3, 40, "read"),
+            unreadCount: 4,
+            unreadRevision: 3,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
       yield* fake.route("PATCH /activity/2", () =>
         Deferred.succeed(secondStarted, undefined).pipe(
           Effect.andThen(Deferred.await(secondRelease)),
-          Effect.as({ item: item(2, 50, "read"), unreadCount: 3, unreadRevision: 4 }),
+          Effect.as({
+            item: item(2, 50, "read"),
+            unreadCount: 3,
+            unreadRevision: 4,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
 
@@ -583,7 +649,11 @@ describe("activity actions", () => {
 
       yield* Deferred.await(secondStarted);
       expect(store.getState().activity.unreadCount).toBe(3);
-      yield* fake.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 4 });
+      yield* fake.reply("GET /activity/unread_count", {
+        unreadCount: 3,
+        unreadRevision: 4,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       yield* activity.loadUnreadCount();
       expect(store.getState().activity.unreadCount).toBe(3);
       // This page's item predates the pending read, although its count is newer.
@@ -592,11 +662,16 @@ describe("activity actions", () => {
         users: [],
         unreadCount: 5,
         unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
         nextCursor: null,
       });
       yield* activity.load("all", "read");
       expect(store.getState().activity.unreadCount).toBe(3);
-      mutations.applyActivityItem(item(3, 40, "read"), { unreadCount: 4, unreadRevision: 3 });
+      mutations.applyActivityItem(item(3, 40, "read"), {
+        unreadCount: 4,
+        unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       expect(store.getState().activity.unreadCount).toBe(3);
       expect(store.getState().activity.deferredUnread?.unreadRevision).toBe(4);
       yield* Deferred.succeed(firstRelease, undefined);
@@ -621,13 +696,23 @@ describe("activity actions", () => {
       yield* fake.route("PATCH /activity/3", () =>
         Deferred.succeed(firstStarted, undefined).pipe(
           Effect.andThen(Deferred.await(firstRelease)),
-          Effect.as({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+          Effect.as({
+            item: item(3, 40, "read"),
+            unreadCount: 4,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
       yield* fake.route("PATCH /activity/2", () =>
         Deferred.succeed(secondStarted, undefined).pipe(
           Effect.andThen(Deferred.await(secondRelease)),
-          Effect.as({ item: item(2, 50, "read"), unreadCount: 3, unreadRevision: 3 }),
+          Effect.as({
+            item: item(2, 50, "read"),
+            unreadCount: 3,
+            unreadRevision: 3,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
 
@@ -640,7 +725,11 @@ describe("activity actions", () => {
 
       yield* Deferred.await(secondStarted);
       expect(store.getState().activity.unreadCount).toBe(3);
-      yield* fake.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 3 });
+      yield* fake.reply("GET /activity/unread_count", {
+        unreadCount: 3,
+        unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       yield* activity.loadUnreadCount();
       expect(store.getState().activity.unreadCount).toBe(3);
       yield* Deferred.succeed(secondRelease, undefined);
@@ -688,7 +777,11 @@ describe("activity actions", () => {
 
           yield* Deferred.await(secondStarted);
           expect(store.getState().activity.unreadCount).toBe(3);
-          mutations.applyActivityItem(read, { unreadCount: 4, unreadRevision: 2 });
+          mutations.applyActivityItem(read, {
+            unreadCount: 4,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           expect(store.getState().activity.unreadCount).toBe(3);
           expect(store.getState().activity.serverUnread?.unreadRevision).toBe(1);
           expect(store.getState().activity.deferredUnread?.unreadRevision).toBe(2);
@@ -708,7 +801,12 @@ describe("activity actions", () => {
           yield* fake.route("PATCH /activity/3", () => {
             expect(store.getState().activity.unreadCount).toBe(3);
 
-            return Effect.succeed({ item: read, unreadCount: 4, unreadRevision: 2 });
+            return Effect.succeed({
+              item: read,
+              unreadCount: 4,
+              unreadRevision: 2,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            });
           });
           yield* activity.setState(3, "read");
           expect(store.getState().activity.unreadCount).toBe(3);
@@ -757,7 +855,11 @@ describe("activity actions", () => {
       const second = yield* Effect.forkChild(Effect.exit(activity.setState(2, "read")));
 
       yield* Deferred.await(secondStarted);
-      mutations.applyActivityItem(read, { unreadCount: 4, unreadRevision: 2 });
+      mutations.applyActivityItem(read, {
+        unreadCount: 4,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       yield* Deferred.succeed(firstRelease, undefined);
       yield* Fiber.join(first);
       const counts = [store.getState().activity.unreadCount];
@@ -765,7 +867,12 @@ describe("activity actions", () => {
       yield* fake.route("PATCH /activity/3", () => {
         counts.push(store.getState().activity.unreadCount);
 
-        return Effect.succeed({ item: read, unreadCount: 4, unreadRevision: 2 });
+        return Effect.succeed({
+          item: read,
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
       });
       yield* activity.setState(3, "read");
       counts.push(store.getState().activity.unreadCount);
@@ -811,14 +918,24 @@ describe("activity actions", () => {
         const second = yield* Effect.forkChild(Effect.exit(activity.setState(2, "read")));
 
         yield* Deferred.await(secondStarted);
-        mutations.applyActivityItem(item(3, 30, "read"), { unreadCount: 4, unreadRevision: 2 });
+        mutations.applyActivityItem(item(3, 30, "read"), {
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* Deferred.succeed(firstRelease, undefined);
         yield* Fiber.join(first);
         const counts = [store.getState().activity.unreadCount];
 
         yield* fake.route("PATCH /activity/3", () => {
           counts.push(store.getState().activity.unreadCount);
-          const reply = { item: item(3, 30), unreadCount: 5, unreadRevision: 3 };
+
+          const reply = {
+            item: item(3, 30),
+            unreadCount: 5,
+            unreadRevision: 3,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          };
 
           mutations.applyActivityItem(reply.item, reply);
           counts.push(store.getState().activity.unreadCount);
@@ -846,7 +963,12 @@ describe("activity actions", () => {
       yield* fake.route("PATCH /activity/3", () =>
         Deferred.succeed(started, undefined).pipe(
           Effect.andThen(Deferred.await(release)),
-          Effect.as({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+          Effect.as({
+            item: item(3, 40, "read"),
+            unreadCount: 4,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
       expect(store.getState().activity.unreadCount).toBe(5);
@@ -858,7 +980,12 @@ describe("activity actions", () => {
         expect(store.getState().activity.unreadCount).toBe(3);
 
         // This item's read already belongs to the installed revision; the PATCH is a no-op.
-        return Effect.succeed({ item: item(2, 20, "read"), unreadCount: 5, unreadRevision: 1 });
+        return Effect.succeed({
+          item: item(2, 20, "read"),
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
       });
       yield* activity.setState(2, "read");
       expect(store.getState().activity.unreadCount).toBe(4);
@@ -882,7 +1009,11 @@ describe("activity actions", () => {
 
       yield* Deferred.await(started);
       expect(store.getState().activity.unreadCount).toBe(4);
-      yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 3 });
+      yield* fake.reply("GET /activity/unread_count", {
+        unreadCount: 6,
+        unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       yield* activity.loadUnreadCount();
       expect(store.getState().activity.unreadCount).toBe(4);
       const refreshStarted = yield* Deferred.make<void>();
@@ -891,7 +1022,11 @@ describe("activity actions", () => {
       yield* fake.route("GET /activity/unread_count", () =>
         Deferred.succeed(refreshStarted, undefined).pipe(
           Effect.andThen(Deferred.await(refreshRelease)),
-          Effect.as({ unreadCount: 5, unreadRevision: 2 }),
+          Effect.as({
+            unreadCount: 5,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
       yield* TestClock.adjust("14999 millis");
@@ -909,6 +1044,7 @@ describe("activity actions", () => {
         item: item(3, 40, "read"),
         unreadCount: 5,
         unreadRevision: 4,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       });
       yield* activity.setState(3, "read");
       expect(store.getState().activity.unreadCount).toBe(5);
@@ -931,6 +1067,7 @@ describe("activity actions", () => {
             users: [],
             unreadCount: 43,
             unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
             nextCursor: null,
           },
           "replace",
@@ -948,6 +1085,7 @@ describe("activity actions", () => {
                 item: item(current.id, 60 + index, "handled"),
                 unreadCount: 42 - index,
                 unreadRevision: 2 + index,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               }),
             ),
           );
@@ -958,7 +1096,11 @@ describe("activity actions", () => {
           changes.push({ release, changing });
         }
 
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 41 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 3,
+          unreadRevision: 41,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* activity.loadUnreadCount();
         expect(store.getState().activity.unreadCount).toBe(3);
 
@@ -987,7 +1129,12 @@ describe("activity actions", () => {
       yield* fake.route("PATCH /activity/3", () =>
         Deferred.succeed(started, undefined).pipe(
           Effect.andThen(Deferred.await(release)),
-          Effect.as({ item: item(3, 60, "read"), unreadCount: 4, unreadRevision: 4 }),
+          Effect.as({
+            item: item(3, 60, "read"),
+            unreadCount: 4,
+            unreadRevision: 4,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
       expect(store.getState().activity.unreadCount).toBe(5);
@@ -995,12 +1142,24 @@ describe("activity actions", () => {
 
       yield* Deferred.await(started);
       expect(store.getState().activity.unreadCount).toBe(4);
-      mutations.applyActivityItem(item(3, 50), { unreadCount: 5, unreadRevision: 2 });
+      mutations.applyActivityItem(item(3, 50), {
+        unreadCount: 5,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       expect(store.getState().activity.unreadCount).toBe(4);
-      mutations.applyActivityItem(item(3, 40, "read"), { unreadCount: 5, unreadRevision: 3 });
+      mutations.applyActivityItem(item(3, 40, "read"), {
+        unreadCount: 5,
+        unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       expect(store.getState().activity.items[3]?.state).toBe("unread");
       expect(store.getState().activity.unreadCount).toBe(4);
-      mutations.applyActivityItem(item(3, 60, "read"), { unreadCount: 4, unreadRevision: 4 });
+      mutations.applyActivityItem(item(3, 60, "read"), {
+        unreadCount: 4,
+        unreadRevision: 4,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       expect(store.getState().activity.unreadCount).toBe(4);
       yield* Deferred.succeed(release, undefined);
       yield* Fiber.join(changing);
@@ -1020,7 +1179,12 @@ describe("activity actions", () => {
         yield* fake.route("PATCH /activity/3", () =>
           Deferred.succeed(started, undefined).pipe(
             Effect.andThen(Deferred.await(release)),
-            Effect.as({ item: item(3, 40, "read"), unreadCount: 5, unreadRevision: 3 }),
+            Effect.as({
+              item: item(3, 40, "read"),
+              unreadCount: 5,
+              unreadRevision: 3,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            }),
           ),
         );
         expect(store.getState().activity.unreadCount).toBe(5);
@@ -1034,13 +1198,22 @@ describe("activity actions", () => {
               seq: 1,
               topic: "user",
               type: "activity.removed",
-              data: { id: 3, unreadCount: 4, unreadRevision: 2 },
+              data: {
+                id: 3,
+                unreadCount: 4,
+                unreadRevision: 2,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             },
           ],
           0,
         );
         expect(store.getState().activity.unreadCount).toBe(4);
-        mutations.setActivityUnreadCount({ unreadCount: 5, unreadRevision: 3 });
+        mutations.setActivityUnreadCount({
+          unreadCount: 5,
+          unreadRevision: 3,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         expect(store.getState().activity.unreadCount).toBe(5);
         yield* Deferred.succeed(release, undefined);
         yield* Fiber.join(changing);
@@ -1060,7 +1233,11 @@ describe("activity actions", () => {
       yield* fake.route("GET /activity/unread_count", () =>
         Deferred.succeed(started, undefined).pipe(
           Effect.andThen(Deferred.await(release)),
-          Effect.as({ unreadCount: 10, unreadRevision: 1 }),
+          Effect.as({
+            unreadCount: 10,
+            unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
 
@@ -1070,13 +1247,21 @@ describe("activity actions", () => {
       mutations.landActivityPage(
         "all",
         "unread",
-        { items: [item(2, 20)], users: [], unreadCount: 1, unreadRevision: 2, nextCursor: null },
+        {
+          items: [item(2, 20)],
+          users: [],
+          unreadCount: 1,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          nextCursor: null,
+        },
         "replace",
       );
       yield* fake.reply("PATCH /activity/2", {
         item: item(2, 30, "handled"),
         unreadCount: 0,
         unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       });
       yield* activity.setState(2, "handled");
 
@@ -1097,9 +1282,18 @@ describe("activity actions", () => {
       const fake = yield* FakeApi;
 
       yield* fake.route("PATCH /activity/2", () => {
-        mutations.applyActivityItem(item(2, 50, "handled"), { unreadCount: 0, unreadRevision: 3 });
+        mutations.applyActivityItem(item(2, 50, "handled"), {
+          unreadCount: 0,
+          unreadRevision: 3,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
 
-        return Effect.succeed({ item: item(2, 40, "read"), unreadCount: 4, unreadRevision: 2 });
+        return Effect.succeed({
+          item: item(2, 40, "read"),
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
       });
       yield* activity.setState(2, "read");
 
@@ -1120,6 +1314,7 @@ describe("activity actions", () => {
           users: [],
           unreadCount: 2,
           unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           nextCursor: null,
         },
         "replace",
@@ -1132,13 +1327,19 @@ describe("activity actions", () => {
       yield* fake.route("PATCH /activity/3", () =>
         Deferred.succeed(started, undefined).pipe(
           Effect.andThen(Deferred.await(release)),
-          Effect.as({ item: item(3, 40, "handled"), unreadCount: 1, unreadRevision: 2 }),
+          Effect.as({
+            item: item(3, 40, "handled"),
+            unreadCount: 1,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          }),
         ),
       );
       yield* fake.reply("PATCH /activity/2", {
         item: item(2, 50, "read"),
         unreadCount: 0,
         unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       });
 
       const first = yield* Effect.forkChild(activity.setState(3, "handled"));
@@ -1168,7 +1369,11 @@ describe("activity actions", () => {
           yield* fake.route("GET /activity/unread_count", () =>
             Deferred.succeed(started, undefined).pipe(
               Effect.andThen(Deferred.await(release)),
-              Effect.as({ unreadCount: 10, unreadRevision: 2 }),
+              Effect.as({
+                unreadCount: 10,
+                unreadRevision: 2,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              }),
             ),
           );
 
@@ -1181,7 +1386,11 @@ describe("activity actions", () => {
           yield* fake.route("GET /activity/unread_count", () =>
             Deferred.succeed(newerStarted, undefined).pipe(
               Effect.andThen(Deferred.await(newerRelease)),
-              Effect.as({ unreadCount: 7, unreadRevision: 3 }),
+              Effect.as({
+                unreadCount: 7,
+                unreadRevision: 3,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              }),
             ),
           );
           const newer = yield* Effect.forkChild(activity.loadUnreadCount());
@@ -1205,11 +1414,71 @@ describe("activity actions", () => {
           expect(store.getState().activity.serverUnread).toEqual({
             unreadCount: 7,
             unreadRevision: 3,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           });
           expect(
             (yield* fake.requests).filter((request) => request.path === "/activity/unread_count"),
           ).toHaveLength(2);
         }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
+
+  for (const newerKind of ["badge", "page", "write"]) {
+    it.effect(`orders newer server counts from a ${newerKind} before an older refresh`, () =>
+      Effect.gen(function* () {
+        mutations.setActivityUnreadCount({
+          unreadCount: 0,
+          unreadRevision: 7,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
+        const fake = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({
+              unreadCount: 0,
+              unreadRevision: 7,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            }),
+          ),
+        );
+        const older = yield* Effect.forkChild(activity.loadUnreadCount());
+        yield* Deferred.await(started);
+
+        if (newerKind === "badge") {
+          yield* fake.reply("GET /activity/unread_count", {
+            unreadCount: 1,
+            unreadRevision: 8,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
+          yield* activity.loadUnreadCount();
+        } else if (newerKind === "page") {
+          yield* fake.reply("GET /activity", {
+            items: [item(3, 30)],
+            users: [],
+            nextCursor: null,
+            unreadCount: 1,
+            unreadRevision: 8,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
+          yield* activity.load("all", "unread");
+        } else {
+          yield* fake.reply("PATCH /activity/3", {
+            item: item(3, 30),
+            unreadCount: 1,
+            unreadRevision: 8,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
+          yield* activity.setState(3, "unread");
+        }
+
+        expect(store.getState().activity.unreadCount).toBe(1);
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(older);
+        expect(store.getState().activity.unreadCount).toBe(1);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
     );
   }
 
@@ -1225,18 +1494,27 @@ describe("activity actions", () => {
         yield* fake.route("GET /activity/unread_count", () =>
           Deferred.succeed(started, undefined).pipe(
             Effect.andThen(Deferred.await(release)),
-            Effect.as({ unreadCount: 6, unreadRevision: 3 }),
+            Effect.as({
+              unreadCount: 6,
+              unreadRevision: 3,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            }),
           ),
         );
         const count = yield* Effect.forkChild(activity.loadUnreadCount());
 
         yield* Deferred.await(started);
-        mutations.applyActivityItem(item(3, 50, "read"), { unreadCount: 4, unreadRevision: 2 });
+        mutations.applyActivityItem(item(3, 50, "read"), {
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* fake.reply("GET /activity", {
           items: [item(3, 30), item(2, 20)],
           users: [],
           unreadCount: 5,
           unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           nextCursor: null,
         });
         yield* activity.load("all", "unread");
@@ -1259,7 +1537,12 @@ describe("activity actions", () => {
         yield* fake.route("PATCH /activity/3", () =>
           Deferred.succeed(started, undefined).pipe(
             Effect.andThen(Deferred.await(release)),
-            Effect.as({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+            Effect.as({
+              item: item(3, 40, "read"),
+              unreadCount: 4,
+              unreadRevision: 2,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            }),
           ),
         );
         const clearing = yield* Effect.forkChild(activity.setState(3, "read"));
@@ -1274,7 +1557,12 @@ describe("activity actions", () => {
                   seq: 1,
                   topic: "user",
                   type: "activity.removed",
-                  data: { id: 2, unreadCount, unreadRevision: 3 },
+                  data: {
+                    id: 2,
+                    unreadCount,
+                    unreadRevision: 3,
+                    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+                  },
                 },
               ]
             : [
@@ -1286,6 +1574,7 @@ describe("activity actions", () => {
                     item: concurrent === "arrival" ? item(4, 50) : item(2, 50, "handled"),
                     unreadCount,
                     unreadRevision: 3,
+                    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                   },
                 },
               ],

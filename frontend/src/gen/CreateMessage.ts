@@ -33,10 +33,14 @@ replyToMessageId: number | null,
 replyNotifyAuthor: boolean | null,
 /**
  * A finished direct upload's `signedId` ([`crate::DirectUpload`]), attached as the
- * message's one file (`message[attachment]` given a signed blob id); `null` for none. Several
- * files are sent as several messages, one each, as the classic composer does.
+ * message's one legacy file (`message[attachment]` given a signed blob id); `null` for none.
  */
 attachmentSignedId: string | null,
+/**
+ * Finished direct uploads to attach as one message, in this order. At most ten, with
+ * no repeats; cannot be combined with `attachmentSignedId`. Omitted on the legacy path.
+ */
+attachmentSignedIds?: Array<string>,
 /**
  * Google Drive file ids to pin (`message[drive_file_ids][]`). Left out when there are none.
  * At most ten; an invalid id is a 422, as the classic composer is. A message may be empty

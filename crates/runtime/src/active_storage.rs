@@ -849,19 +849,23 @@ fn disk_serve(c: &mut Ctx) -> Result {
 /// `require_active_storage_authentication`.
 pub async fn disk_update(c: &mut Ctx) -> Result {
     require_active_storage_authentication(c).await?;
-    c.parse_spooled_params().await?;
     let storage = c.app().storage.clone();
     let encoded_token = c.param_str("encoded_token").unwrap_or("").to_string();
     let Some(token) = disk::decode_verified_token(&*storage.verifier, &encoded_token, c.now())
     else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
-    // Rails' DiskController passes request.body to DiskService#upload. The adapter has
-    // already validated/spooled the whole PUT, including any configured front-server limit.
-    let body = c.take_body_file().await.map_err(Error::internal)?;
+    let Ok(limit) = usize::try_from(token.content_length) else {
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
+    };
+    c.spool_body(limit).await?;
+    c.parse_spooled_params().await?;
+    let mut body = c.take_body_file().await.map_err(Error::internal)?;
     if !acceptable_content(c, &token, body.metadata().map_err(Error::internal)?.len()) {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
+    // Parameter parsing may consume form bytes. Store the entire verified upload.
+    std::io::Seek::rewind(&mut body).map_err(Error::internal)?;
     let (key, checksum) = (token.key.clone(), token.checksum.clone());
     let uploaded =
         tokio::task::spawn_blocking(move || storage.service.upload(&key, body, Some(&checksum)))
@@ -874,21 +878,20 @@ pub async fn disk_update(c: &mut Ctx) -> Result {
     }
 }
 
-/// `token[:content_type] == request.content_mime_type && token[:content_length] == request.content_length`
+/// MIME type, received length, and any declared HTTP length must match the signed declaration.
 fn acceptable_content(c: &Ctx, token: &disk::DiskToken, body_length: u64) -> bool {
     let media_type = c.request.media_type();
-    // ActionDispatch::Request#content_length measures raw_post when Transfer-Encoding
-    // is present. Otherwise an absent Content-Length becomes zero via Ruby's to_i.
     let content_length = if c.request.header("transfer-encoding").is_some() {
         i64::try_from(body_length).ok()
     } else {
         c.request
             .header("content-length")
-            .map_or(Some(0), |length| length.trim().parse::<i64>().ok())
+            .map_or_else(|| i64::try_from(body_length).ok(), |length| length.trim().parse::<i64>().ok())
     };
     token.content_type.as_deref().map(str::to_ascii_lowercase)
         == media_type.map(|m| m.to_ascii_lowercase())
         && Some(token.content_length) == content_length
+        && u64::try_from(token.content_length).ok() == Some(body_length)
 }
 
 /// `ActiveStorage::DirectUploadsController#create`, behind CSRF and
@@ -934,16 +937,26 @@ pub struct DirectUpload {
 
 /// `ActiveStorage::Blob.create_before_direct_upload!` and the blob's direct upload URL.
 pub async fn create_direct_upload(
-    c: &Ctx,
+    c: &mut Ctx,
     filename: String,
     byte_size: i64,
     checksum: String,
     content_type: Option<String>,
     mut metadata: Json,
 ) -> Result<DirectUpload> {
-    if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding"));
+    let uploader_id = match crate::concerns::current_user(c) {
+        Some(user) => user.id,
+        None => find_session_by_cookie(c).await?
+            .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?.user_id,
+    };
+    let limit = upload_limit_bytes(c.app()).await?;
+    if byte_size > limit {
+        return halt(upload_limit_response(c, limit)?);
     }
+    if let Json::Object(entries) = &mut metadata {
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
+    }
+    metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
     let now = c.now();
     let new_blob = campfire_storage::NewBlob {
@@ -973,6 +986,66 @@ pub async fn create_direct_upload(
     );
     let signed_id = paths::signed_blob_id(&*storage.verifier, blob.id, None);
     Ok(DirectUpload { blob, signed_id, path })
+}
+
+pub async fn upload_limit_bytes(app: &App) -> Result<i64> {
+    app
+        .db
+        .read(|conn| {
+            Ok(campfire_db::Account::first(conn)?.map_or(
+                campfire_db::models::account::DEFAULT_UPLOAD_LIMIT_BYTES,
+                |account| account.settings().upload_limit_bytes(),
+            ))
+        })
+        .await
+        .map_err(Error::internal)
+}
+
+/// Install file limits before the kit parses multipart bodies for method overrides or actions.
+pub async fn limit_multipart_uploads(
+    axum::extract::State(app): axum::extract::State<App>,
+    mut request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    if request.method() == axum::http::Method::POST
+        && let Some(encoded) = request.uri().path().strip_prefix("/rails/active_storage/disk/") {
+        let encoded = percent_encoding::percent_decode_str(encoded.split('.').next().unwrap_or("")).decode_utf8_lossy();
+        if let Some(token) = disk::decode_verified_token(&*app.storage.verifier, &encoded, app.clock.now())
+            && let Ok(limit) = usize::try_from(token.content_length) {
+            request.extensions_mut().insert(campfire_kit::body::RequestBodyLimit(limit));
+        }
+    }
+    let media = campfire_kit::request::media_type(request.headers().get(header::CONTENT_TYPE).and_then(|value| value.to_str().ok()));
+    if matches!(media.as_deref(), Some("multipart/form-data" | "multipart/related" | "multipart/mixed"))
+        && !request.uri().path().starts_with("/rails/active_storage/disk/") {
+        let limit = match upload_limit_bytes(&app).await {
+            Ok(limit) => limit as u64,
+            Err(error) => {
+                tracing::error!(%error, "reading multipart upload limit");
+                return axum::response::IntoResponse::into_response(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        };
+        request.extensions_mut().insert(campfire_kit::body::MultipartFileLimits(vec![
+            ("attachment".into(), limit),
+            ("workspace_icon[image]".into(), 256 * 1024),
+            ("account[logo]".into(), campfire_storage::branding::MAX_BYTES),
+            ("account[banner]".into(), campfire_storage::branding::MAX_BYTES),
+        ]));
+    }
+    next.run(request).await
+}
+
+fn upload_limit_response(c: &mut Ctx, limit: i64) -> Result<Response> {
+    let mb = 1024 * 1024;
+    let size = if limit % mb == 0 {
+        format!("{} MB", limit / mb)
+    } else {
+        format!("{limit} bytes")
+    };
+    let message = format!("File exceeds the {size} upload limit.");
+    c.json(StatusCode::UNPROCESSABLE_ENTITY, &serde_json::json!({
+        "error": {"_tag": "Validation", "message": message, "fields": {"byteSize": [message]}}
+    }))
 }
 
 /// `blob.as_json(root: false, methods: :signed_id).merge(direct_upload: { url:, headers: })`

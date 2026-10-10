@@ -13,6 +13,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { useNow } from "../threads/use-now.ts";
+import { partialOperator } from "./query.ts";
 import {
   flattenTypeahead,
   type TypeaheadItem,
@@ -187,7 +188,7 @@ export function SearchBox({
   const [activeIndex, setActiveIndex] = useState(-1);
   const now = useNow();
   const recents = useRecentSearches();
-  const items = useSuggestible(open);
+  const items = useSuggestible(open, partialOperator(value)?.operator === "from_id");
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const ownInput = useRef<HTMLInputElement | null>(null);
   const mirrorRef = useRef<HTMLDivElement | null>(null);

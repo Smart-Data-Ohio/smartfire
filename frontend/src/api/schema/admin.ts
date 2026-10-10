@@ -43,6 +43,7 @@ export const Workspace = Schema.Struct({
   joinUrl: Schema.String,
   canAdminister: Schema.Boolean,
   restrictRoomCreationToAdministrators: Schema.Boolean,
+  uploadLimitBytes: Schema.Int,
   version: Schema.String,
 });
 
@@ -54,6 +55,7 @@ export type WorkspacePin = Assert<Pinned<typeof Workspace, GeneratedWorkspace>>;
 export const UpdateWorkspace = Schema.Struct({
   name: Schema.NullOr(Schema.String),
   restrictRoomCreationToAdministrators: Schema.NullOr(Schema.Boolean),
+  uploadLimitBytes: Schema.NullOr(Schema.Int),
 });
 
 export type UpdateWorkspace = typeof UpdateWorkspace.Type;
@@ -156,6 +158,8 @@ export const WorkspaceIcon = Schema.Struct({
   title: Schema.String,
   creatorName: Schema.String,
   imageUrl: Schema.String,
+  animated: Schema.Boolean,
+  stillUrl: Schema.String,
 });
 
 export type WorkspaceIcon = typeof WorkspaceIcon.Type;
@@ -163,7 +167,11 @@ export type WorkspaceIcon = typeof WorkspaceIcon.Type;
 export type WorkspaceIconPin = Assert<Pinned<typeof WorkspaceIcon, GeneratedWorkspaceIcon>>;
 
 /** Every workspace icon. */
-export const WorkspaceIconList = Schema.Struct({ icons: Schema.Array(WorkspaceIcon) });
+export const WorkspaceIconList = Schema.Struct({
+  icons: Schema.Array(WorkspaceIcon),
+  animatedLimit: Schema.Int,
+  animatedUsage: Schema.Int,
+});
 
 export type WorkspaceIconList = typeof WorkspaceIconList.Type;
 

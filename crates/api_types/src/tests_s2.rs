@@ -214,6 +214,7 @@ fn uploads_round_trip() {
             reply_to_message_id: None,
             reply_notify_author: None,
             attachment_signed_id: Some("eyJfcmFpbHMiOnt9--abc".into()),
+            attachment_signed_ids: None,
             drive_file_ids: None,
         },
         json!({
@@ -401,6 +402,8 @@ fn autocomplete_round_trips() {
                     kind: IconKind::Emoji,
                     character: Some("🎉".into()),
                     image_url: None,
+                    animated: false,
+                    still_url: None,
                 },
                 Icon {
                     name: "shipit".into(),
@@ -408,12 +411,14 @@ fn autocomplete_round_trips() {
                     kind: IconKind::Custom,
                     character: None,
                     image_url: Some("/icons/shipit".into()),
+                    animated: true,
+                    still_url: Some("/icons/shipit?still=1".into()),
                 },
             ],
         },
         json!({"icons": [
-            {"name": "tada", "title": "Tada", "kind": "emoji", "character": "🎉", "imageUrl": null},
-            {"name": "shipit", "title": "Ship it", "kind": "custom", "character": null, "imageUrl": "/icons/shipit"},
+            {"name": "tada", "title": "Tada", "kind": "emoji", "character": "🎉", "imageUrl": null, "animated": false, "stillUrl": null},
+            {"name": "shipit", "title": "Ship it", "kind": "custom", "character": null, "imageUrl": "/icons/shipit", "animated": true, "stillUrl": "/icons/shipit?still=1"},
         ]}),
     );
     assert_wire(&IconKind::Brand, json!("brand"));
@@ -669,6 +674,7 @@ fn threads_round_trip() {
                 reply_to_message_id: None,
                 reply_notify_author: None,
                 attachment_signed_id: None,
+                attachment_signed_ids: None,
                 drive_file_ids: None,
             },
         },

@@ -49,9 +49,14 @@ describe("S7 admin schemas", () => {
       joinUrl: "https://chat.example/join/abc-123",
       canAdminister: true,
       restrictRoomCreationToAdministrators: false,
+      uploadLimitBytes: 100 * 1024 * 1024,
       version: "2.0.0",
     });
-    roundTrips(UpdateWorkspace, { name: null, restrictRoomCreationToAdministrators: true });
+    roundTrips(UpdateWorkspace, {
+      name: null,
+      restrictRoomCreationToAdministrators: true,
+      uploadLimitBytes: null,
+    });
     roundTrips(UpdateLogo, { signedId: "blob-1" });
     roundTrips(UpdateBanner, { signedId: "blob-2" });
     roundTrips(WorkspaceBranding, {
@@ -75,6 +80,8 @@ describe("S7 admin schemas", () => {
   it("round-trip custom styles and icons", () => {
     roundTrips(CustomStyles, { css: "body { color: red }" });
     roundTrips(WorkspaceIconList, {
+      animatedLimit: 250,
+      animatedUsage: 1,
       icons: [
         {
           id: 3,
@@ -82,6 +89,8 @@ describe("S7 admin schemas", () => {
           title: "Acme Corp",
           creatorName: "Ada Lovelace",
           imageUrl: "/icons/acme",
+          animated: true,
+          stillUrl: "/icons/acme?still=1",
         },
       ],
     });

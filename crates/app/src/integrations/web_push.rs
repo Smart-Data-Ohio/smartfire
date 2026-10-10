@@ -47,13 +47,13 @@ pub struct Notification {
 
 impl Notification {
     /// `subscription.notification(**payload)`: the badge is `user.memberships.unread.count`.
-    pub fn build(conn: &Connection, subscription: &PushSubscription, payload: &PushPayload) -> campfire_db::Result<Self> {
+    pub fn build(conn: &Connection, subscription: &PushSubscription, payload: &PushPayload, now: Timestamp) -> campfire_db::Result<Self> {
         Ok(Self {
             title: payload.title.clone(),
             body: payload.body.clone(),
             path: payload.path.clone(),
             tag: payload.tag.clone(),
-            badge: subscription.badge(conn)?,
+            badge: subscription.badge(conn, now)?,
             subscription: subscription.clone(),
         })
     }
@@ -231,7 +231,7 @@ pub fn push_message(pool: &Pool, conn: &Connection, rich_text: &dyn RichText, me
     subscriptions.extend(mentions);
     subscriptions.sort_by_key(|s| s.id);
     subscriptions.dedup_by_key(|s| s.id);
-    pool.queue(conn, &payload, subscriptions)?;
+    pool.queue(conn, &payload, subscriptions, now)?;
     Ok(payload)
 }
 

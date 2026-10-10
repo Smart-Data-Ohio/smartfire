@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
+import { vi } from "vitest";
 import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
 import {
   CreateMessage as CreateMessageSchema,
@@ -19,17 +20,21 @@ import {
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { Settings } from "../gen/Settings.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
 import { activityListOf } from "../store/activity.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { Boot } from "../store/model.ts";
+import { roomMuted } from "../store/notification-preferences.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
+import { notificationPreferencesFixture } from "../test/notification-fixtures.ts";
 import * as activity from "./activity-actions.ts";
 import * as boardActions from "./board-actions.ts";
+import { listenForChatSounds } from "./chat-sounds.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
@@ -37,6 +42,7 @@ import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
+import { applySettingsSnapshot } from "./settings-snapshot.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -163,6 +169,7 @@ const workspaceBoot: Boot = {
     logoStillUrl: null,
     bannerUrl: null,
     bannerStillUrl: null,
+    uploadLimitBytes: 100 * 1024 * 1024,
   },
   customStyles: "body { color: red; }",
   theme: "system",
@@ -180,6 +187,133 @@ beforeEach(() => {
   session.resetRoomVisits();
   mutations.setMe(meFixture);
   sessionStorage.clear();
+});
+
+describe("notification settings sync", () => {
+  it.effect("receives another session's mute before playing a live sound in the visible room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(0, true);
+        yield* session.openRoom(12, null);
+        yield* settle;
+
+        const snapshot: Settings = {
+          revision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          profile: {
+            userId: 7,
+            name: "Ada",
+            emailAddress: "ada@example.com",
+            bio: null,
+            avatarUrl: "/avatar.svg",
+            avatarAttached: false,
+            hasPassword: true,
+            githubLogin: null,
+            githubVerified: false,
+            bot: false,
+          },
+          appearance: { theme: "system", textSize: "default", timeZone: "UTC", timeZones: [] },
+          notifications: {
+            ...notificationPreferencesFixture,
+            roomNotificationLevels: {},
+            roomMuteUntil: { "12": "2026-10-10T12:15:00Z" },
+          },
+          status: {
+            presenceSetting: "auto",
+            customStatusEmoji: null,
+            customStatusText: null,
+            customStatusExpiresAt: null,
+            meetingStatusEnabled: false,
+            oooCalendarEnabled: false,
+            oooUntil: null,
+            oooManual: false,
+            oooNote: null,
+            calendarError: null,
+          },
+          calls: { voiceMode: "voice_activity", pushToTalkKey: null },
+          integrations: {
+            google: {
+              signInConfigured: false,
+              identityEmail: null,
+              calendarConfigured: false,
+              connected: false,
+              calendar: false,
+              drive: false,
+              email: null,
+            },
+            github: { state: "missing" },
+            githubAppConfigured: false,
+            fizzy: { state: "missing" },
+            managePath: "/users/me/profile",
+            slackImportPath: "/slack/imports",
+          },
+        };
+
+        const before = {
+          ...snapshot,
+          revision: 0,
+          notifications: { ...snapshot.notifications, roomMuteUntil: {} },
+        };
+
+        applySettingsSnapshot(before);
+        const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+        const stop = listenForChatSounds(12, () => true);
+
+        try {
+          const sound = {
+            name: "bell",
+            url: "/assets/bell.mp3",
+            presentation: { kind: "text", text: "bell" },
+          } satisfies NonNullable<MessageDTO["sound"]>;
+
+          yield* pushEvents(
+            { seq: 1, topic: "user", type: "settings.updated", data: snapshot },
+            {
+              seq: 2,
+              topic: "room:12",
+              type: "message.created",
+              data: messageFixture(100, 12, { sound }),
+            },
+          );
+          expect(play).not.toHaveBeenCalled();
+          expect(
+            roomMuted(
+              store.getState().sidebar.notificationPreferences,
+              12,
+              Date.parse(snapshot.evaluatedAt),
+            ),
+          ).toBe(true);
+          expect(applySettingsSnapshot(before).revision).toBe(1);
+
+          const expired = {
+            ...snapshot,
+            evaluatedAt: "2026-10-10T12:15:00.000000000Z",
+            notifications: { ...snapshot.notifications, roomMuteUntil: {} },
+          };
+
+          yield* pushEvents(
+            { seq: 3, topic: "user", type: "settings.updated", data: expired },
+            { seq: 4, topic: "user", type: "settings.updated", data: snapshot },
+            { seq: 5, topic: "user", type: "settings.updated", data: before },
+          );
+          expect(store.getState().sidebar.notificationPreferences?.roomMuteUntil).toEqual({});
+          expect(applySettingsSnapshot(snapshot).evaluatedAt).toBe(expired.evaluatedAt);
+          yield* pushEvents({
+            seq: 6,
+            topic: "room:12",
+            type: "message.created",
+            data: messageFixture(101, 12, { sound }),
+          });
+          expect(play).toHaveBeenCalledOnce();
+        } finally {
+          stop();
+          play.mockRestore();
+        }
+      }),
+    ),
+  );
 });
 
 describe("reconnecting", () => {
@@ -201,7 +335,11 @@ describe("reconnecting", () => {
           updatedAt: "2026-10-06T09:01:00Z",
         };
 
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* startEngine;
         yield* welcome(10, false);
         mutations.landActivityPage(
@@ -212,6 +350,7 @@ describe("reconnecting", () => {
             users: [],
             unreadCount: 5,
             unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
             nextCursor: null,
           },
           "replace",
@@ -237,7 +376,12 @@ describe("reconnecting", () => {
           seq: 11,
           topic: "user",
           type: "activity.item",
-          data: { item: read, unreadCount: 4, unreadRevision: 2 },
+          data: {
+            item: read,
+            unreadCount: 4,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          },
         });
         expect(store.getState().activity.unreadCount).toBe(3);
         yield* socket.drop;
@@ -246,7 +390,11 @@ describe("reconnecting", () => {
         expect(store.getState().activity.items[40]).toEqual(read);
 
         // The welcome abandons B's unconfirmed optimism and installs A's authoritative count.
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 4, unreadRevision: 2 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 4,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* TestClock.adjust("250 millis");
         yield* welcome(11, true);
         expect(store.getState().activity.unreadCount).toBe(4);
@@ -270,7 +418,11 @@ describe("reconnecting", () => {
         const started = yield* Deferred.make<void>();
         const cancelled = yield* Deferred.make<void>();
 
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* startEngine;
         yield* welcome(10, false);
         yield* fake.route("GET /activity/unread_count", () =>
@@ -288,7 +440,12 @@ describe("reconnecting", () => {
             seq: 11,
             topic: "user",
             type: "activity.item",
-            data: { item: activityItem, unreadCount: 6, unreadRevision: 2 },
+            data: {
+              item: activityItem,
+              unreadCount: 6,
+              unreadRevision: 2,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            },
           },
           unreadEvent(12),
         );
@@ -303,7 +460,12 @@ describe("reconnecting", () => {
           seq: 13,
           topic: "user",
           type: "activity.item",
-          data: { item: { ...activityItem, id: 41 }, unreadCount: 7, unreadRevision: 3 },
+          data: {
+            item: { ...activityItem, id: 41 },
+            unreadCount: 7,
+            unreadRevision: 3,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          },
         });
         expect(store.getState().activity.unreadCount).toBe(7);
         expect(store.getState().activity.items[41]).toBeDefined();
@@ -323,13 +485,21 @@ describe("reconnecting", () => {
             const started = yield* Deferred.make<void>();
             const release = yield* Deferred.make<void>();
 
-            yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+            yield* fake.reply("GET /activity/unread_count", {
+              unreadCount: 5,
+              unreadRevision: 1,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            });
             yield* startEngine;
             yield* welcome(10, false);
             yield* fake.route("GET /activity/unread_count", () =>
               Deferred.succeed(started, undefined).pipe(
                 Effect.andThen(Deferred.await(release)),
-                Effect.as({ unreadCount: 6, unreadRevision: 2 }),
+                Effect.as({
+                  unreadCount: 6,
+                  unreadRevision: 2,
+                  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+                }),
               ),
             );
             yield* socket.drop;
@@ -341,7 +511,12 @@ describe("reconnecting", () => {
                 seq: 12,
                 topic: "user",
                 type: "activity.item",
-                data: { item: activityItem, unreadCount: 6, unreadRevision: 2 },
+                data: {
+                  item: activityItem,
+                  unreadCount: 6,
+                  unreadRevision: 2,
+                  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+                },
               },
               unreadEvent(13),
             );
@@ -352,7 +527,12 @@ describe("reconnecting", () => {
               seq: 14,
               topic: "user",
               type: "activity.item",
-              data: { item: { ...activityItem, id: 41 }, unreadCount: 7, unreadRevision: 3 },
+              data: {
+                item: { ...activityItem, id: 41 },
+                unreadCount: 7,
+                unreadRevision: 3,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             });
             expect(store.getState().activity.unreadCount).toBe(7);
             expect(yield* Deferred.isDone(release)).toBe(false);
@@ -373,13 +553,21 @@ describe("reconnecting", () => {
         const started = yield* Deferred.make<void>();
         const release = yield* Deferred.make<void>();
 
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* startEngine;
         yield* welcome(10, false);
         yield* fake.route("GET /activity/unread_count", () =>
           Deferred.succeed(started, undefined).pipe(
             Effect.andThen(Deferred.await(release)),
-            Effect.as({ unreadCount: 9, unreadRevision: 3 }),
+            Effect.as({
+              unreadCount: 9,
+              unreadRevision: 3,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            }),
           ),
         );
         yield* socket.drop;
@@ -388,7 +576,11 @@ describe("reconnecting", () => {
         yield* Deferred.await(started);
         yield* socket.drop;
         yield* TestClock.adjust("500 millis");
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 1 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 2,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* welcome(10, false, "e2");
         expect(store.getState().activity.unreadCount).toBe(2);
         yield* Deferred.succeed(release, undefined);
@@ -398,7 +590,12 @@ describe("reconnecting", () => {
           seq: 11,
           topic: "user",
           type: "activity.item",
-          data: { item: activityItem, unreadCount: 3, unreadRevision: 2 },
+          data: {
+            item: activityItem,
+            unreadCount: 3,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          },
         });
         expect(store.getState().activity.unreadCount).toBe(3);
         expect(store.getState().activity.items[40]).toEqual(activityItem);
@@ -416,7 +613,11 @@ describe("reconnecting", () => {
           const started = yield* Deferred.make<void>();
           const release = yield* Deferred.make<void>();
 
-          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+          yield* fake.reply("GET /activity/unread_count", {
+            unreadCount: 5,
+            unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           yield* startEngine;
           yield* welcome(10, false);
           mutations.landActivityPage(
@@ -427,6 +628,7 @@ describe("reconnecting", () => {
               users: [],
               unreadCount: 5,
               unreadRevision: 1,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               nextCursor: null,
             },
             "replace",
@@ -443,6 +645,7 @@ describe("reconnecting", () => {
                 },
                 unreadCount: 4,
                 unreadRevision: 2,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               }),
             ),
           );
@@ -450,7 +653,11 @@ describe("reconnecting", () => {
 
           yield* Deferred.await(started);
           expect(store.getState().activity.unreadCount).toBe(4);
-          yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 3 });
+          yield* fake.reply("GET /activity/unread_count", {
+            unreadCount: 6,
+            unreadRevision: 3,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           yield* activity.loadUnreadCount();
           expect(store.getState().activity.unreadCount).toBe(4);
           yield* socket.drop;
@@ -462,7 +669,11 @@ describe("reconnecting", () => {
           expect(activityListOf(store.getState(), "all", "unread").stale).toBe(true);
           const versions = store.getState().activity.versions;
 
-          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+          yield* fake.reply("GET /activity/unread_count", {
+            unreadCount: 5,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           yield* activity.loadUnreadCount();
           expect(store.getState().activity.unreadCount).toBe(6);
           expect(store.getState().activity.versions).toBe(versions);
@@ -485,7 +696,11 @@ describe("reconnecting", () => {
           const started = yield* Deferred.make<void>();
           const release = yield* Deferred.make<void>();
 
-          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+          yield* fake.reply("GET /activity/unread_count", {
+            unreadCount: 5,
+            unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           yield* startEngine;
           yield* welcome(10, false);
           mutations.landActivityPage(
@@ -496,6 +711,7 @@ describe("reconnecting", () => {
               users: [],
               unreadCount: 5,
               unreadRevision: 1,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               nextCursor: null,
             },
             "replace",
@@ -515,6 +731,7 @@ describe("reconnecting", () => {
                   users: [],
                   unreadCount: 5,
                   unreadRevision: 2,
+                  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                   nextCursor: null,
                 }),
               ),
@@ -526,6 +743,7 @@ describe("reconnecting", () => {
                   item: oldItem,
                   unreadCount: 5,
                   unreadRevision: 2,
+                  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                 }),
               ),
             );
@@ -539,7 +757,11 @@ describe("reconnecting", () => {
 
           yield* Deferred.await(started);
           expect(store.getState().activity.pendingUnread).toEqual({});
-          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+          yield* fake.reply("GET /activity/unread_count", {
+            unreadCount: 5,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           yield* socket.drop;
           yield* TestClock.adjust("250 millis");
           yield* welcome(11, true);
@@ -551,6 +773,7 @@ describe("reconnecting", () => {
               item: { ...activityItem, id: 41, updatedAt: "2026-10-06T09:02:00Z" },
               unreadCount: 6,
               unreadRevision: 3,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
             },
           });
           expect(activityListOf(store.getState(), "all", "unread").ids).toEqual([41, 40]);
@@ -574,19 +797,31 @@ describe("reconnecting", () => {
         const started = yield* Deferred.make<void>();
         const release = yield* Deferred.make<void>();
 
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* startEngine;
         yield* welcome(10, false);
         yield* fake.route("GET /activity/unread_count", () =>
           Deferred.succeed(started, undefined).pipe(
             Effect.andThen(Deferred.await(release)),
-            Effect.as({ unreadCount: 6, unreadRevision: 2 }),
+            Effect.as({
+              unreadCount: 6,
+              unreadRevision: 2,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            }),
           ),
         );
         const oldRequest = yield* Effect.forkChild(activity.loadUnreadCount());
 
         yield* Deferred.await(started);
-        yield* fake.reply("GET /activity/unread_count", { unreadCount: 7, unreadRevision: 3 });
+        yield* fake.reply("GET /activity/unread_count", {
+          unreadCount: 7,
+          unreadRevision: 3,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* socket.drop;
         yield* TestClock.adjust("250 millis");
         yield* welcome(10, true);
@@ -854,7 +1089,11 @@ describe("resuming", () => {
               "GET /sidebar",
               sidebarFixture([{ ...sidebarRowFixture(12, "general"), unreadCount: 3 }]),
             );
-            yield* api.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 3 });
+            yield* api.reply("GET /activity/unread_count", {
+              unreadCount: 3,
+              unreadRevision: 3,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            });
             yield* startEngine;
             yield* welcome(40, true, "e1", 43);
 
@@ -894,11 +1133,16 @@ describe("resuming", () => {
               users: [],
               unreadCount: 2,
               unreadRevision: 2,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               nextCursor: null,
             },
             "replace",
           );
-          yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
+          yield* api.reply("GET /activity/unread_count", {
+            unreadCount: 2,
+            unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          });
           yield* startEngine;
           yield* welcome(40, true, "e1", 43);
           yield* pushEvents(
@@ -906,13 +1150,23 @@ describe("resuming", () => {
               seq: 41,
               topic: "user",
               type: "activity.item",
-              data: { item: { ...activityItem, id: 41 }, unreadCount: 3, unreadRevision: 0 },
+              data: {
+                item: { ...activityItem, id: 41 },
+                unreadCount: 3,
+                unreadRevision: 0,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             },
             {
               seq: 42,
               topic: "user",
               type: "activity.removed",
-              data: { id: 40, unreadCount: 1, unreadRevision: 1 },
+              data: {
+                id: 40,
+                unreadCount: 1,
+                unreadRevision: 1,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             },
           );
 
@@ -925,13 +1179,23 @@ describe("resuming", () => {
               seq: 44,
               topic: "user",
               type: "activity.item",
-              data: { item: { ...activityItem, id: 41 }, unreadCount: 3, unreadRevision: 3 },
+              data: {
+                item: { ...activityItem, id: 41 },
+                unreadCount: 3,
+                unreadRevision: 3,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             },
             {
               seq: 45,
               topic: "user",
               type: "activity.removed",
-              data: { id: 40, unreadCount: 2, unreadRevision: 4 },
+              data: {
+                id: 40,
+                unreadCount: 2,
+                unreadRevision: 4,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             },
           );
 
@@ -940,6 +1204,7 @@ describe("resuming", () => {
           expect(store.getState().activity.serverUnread).toEqual({
             unreadCount: 2,
             unreadRevision: 4,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           });
         }),
       );
@@ -963,6 +1228,7 @@ describe("resuming", () => {
               users: [],
               unreadCount: 1,
               unreadRevision: 1,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               nextCursor: null,
             },
             "replace",
@@ -985,6 +1251,7 @@ describe("resuming", () => {
               },
               unreadCount: 0,
               unreadRevision: 2,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
             },
           });
 
@@ -992,6 +1259,7 @@ describe("resuming", () => {
           expect(store.getState().activity.serverUnread).toEqual({
             unreadCount: 0,
             unreadRevision: 2,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
           });
         }),
       );
@@ -1008,7 +1276,11 @@ describe("resuming", () => {
             const socket = yield* MemorySocket;
 
             yield* serve([]);
-            yield* api.reply("GET /activity/unread_count", { unreadCount: 8, unreadRevision: 100 });
+            yield* api.reply("GET /activity/unread_count", {
+              unreadCount: 8,
+              unreadRevision: 100,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            });
             yield* startEngine;
             yield* welcome(10, false);
             expect(store.getState().activity.unreadCount).toBe(8);
@@ -1024,6 +1296,7 @@ describe("resuming", () => {
               yield* api.reply("GET /activity/unread_count", {
                 unreadCount: 2,
                 unreadRevision: 50,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               });
             }
 
@@ -1033,12 +1306,18 @@ describe("resuming", () => {
               seq: 1,
               topic: "user",
               type: "activity.item",
-              data: { item: activityItem, unreadCount: 3, unreadRevision: 51 },
+              data: {
+                item: activityItem,
+                unreadCount: 3,
+                unreadRevision: 51,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              },
             });
 
             expect(store.getState().activity.serverUnread).toEqual({
               unreadCount: 3,
               unreadRevision: 51,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
             });
           }),
         ),
@@ -1056,7 +1335,11 @@ describe("resuming", () => {
               const socket = yield* MemorySocket;
 
               yield* serve([]);
-              yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
+              yield* api.reply("GET /activity/unread_count", {
+                unreadCount: 2,
+                unreadRevision: 2,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              });
               yield* startEngine;
               yield* welcome(40, true, "e1", 43);
               yield* socket.drop;
@@ -1073,13 +1356,19 @@ describe("resuming", () => {
                 seq: 1,
                 topic: "user",
                 type: "activity.item",
-                data: { item: activityItem, unreadCount: 3, unreadRevision: 3 },
+                data: {
+                  item: activityItem,
+                  unreadCount: 3,
+                  unreadRevision: 3,
+                  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+                },
               });
 
               expect(store.getState().activity.items[40]).toBeDefined();
               expect(store.getState().activity.serverUnread).toEqual({
                 unreadCount: 3,
                 unreadRevision: 3,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               });
             }),
           );
@@ -1105,6 +1394,7 @@ describe("resuming", () => {
               yield* api.reply("GET /activity/unread_count", {
                 unreadCount: 8,
                 unreadRevision: 100,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               });
               yield* startEngine;
               yield* welcome(10, false);
@@ -1116,12 +1406,17 @@ describe("resuming", () => {
                   users: [],
                   unreadCount: 8,
                   unreadRevision: 100,
+                  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                   nextCursor: null,
                 },
                 "replace",
               );
 
-              const oldCount = { unreadCount: 9, unreadRevision: 101 };
+              const oldCount = {
+                unreadCount: 9,
+                unreadRevision: 101,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+              };
 
               const oldItem: ActivityItem = {
                 ...activityItem,
@@ -1162,7 +1457,11 @@ describe("resuming", () => {
               yield* api.route("GET /activity/unread_count", () =>
                 Deferred.succeed(freshStarted, undefined).pipe(
                   Effect.andThen(Deferred.await(freshRelease)),
-                  Effect.as({ unreadCount: 2, unreadRevision: 50 }),
+                  Effect.as({
+                    unreadCount: 2,
+                    unreadRevision: 50,
+                    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+                  }),
                 ),
               );
               yield* socket.drop;
@@ -1184,6 +1483,7 @@ describe("resuming", () => {
                 users: [],
                 unreadCount: 2,
                 unreadRevision: 50,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
                 nextCursor: null,
               });
               yield* activity.load("all", "unread");
@@ -1197,6 +1497,7 @@ describe("resuming", () => {
               expect(store.getState().activity.serverUnread).toEqual({
                 unreadCount: 2,
                 unreadRevision: 50,
+                evaluatedAt: "2026-10-10T12:00:00.000000000Z",
               });
             }),
           ),
@@ -2332,7 +2633,11 @@ describe("resync", () => {
         const api = yield* FakeApi;
 
         yield* serve([]);
-        yield* api.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* api.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* startEngine;
         yield* welcome(5, false);
 
@@ -2340,7 +2645,11 @@ describe("resync", () => {
 
         yield* socket.drop;
         yield* TestClock.adjust(250);
-        yield* api.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 2 });
+        yield* api.reply("GET /activity/unread_count", {
+          unreadCount: 6,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* welcome(9, true);
 
         expect((yield* api.requests).slice(before)).toEqual([
@@ -2725,6 +3034,7 @@ describe("people", () => {
           data: {
             unreadCount: 1,
             unreadRevision: 1,
+            evaluatedAt: "2026-10-10T12:00:00.000000000Z",
             item: activityItem,
           },
         });
@@ -2759,13 +3069,24 @@ describe("activity follows the room list", () => {
     const api = yield* FakeApi;
 
     yield* serve([]);
-    yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 1 });
+    yield* api.reply("GET /activity/unread_count", {
+      unreadCount: 2,
+      unreadRevision: 1,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     yield* startEngine;
     yield* welcome(0, false);
     mutations.landActivityPage(
       "all",
       "unread",
-      { items: [], users: [], unreadCount: 2, unreadRevision: 1, nextCursor: null },
+      {
+        items: [],
+        users: [],
+        unreadCount: 2,
+        unreadRevision: 1,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        nextCursor: null,
+      },
       "replace",
     );
   });
@@ -2783,7 +3104,11 @@ describe("activity follows the room list", () => {
 
         expect(unreadListStale()).toBe(false);
 
-        yield* api.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+        yield* api.reply("GET /activity/unread_count", {
+          unreadCount: 5,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        });
         yield* pushEvents(
           rowEvent(1, sidebarRowFixture(30, "design")),
           rowEvent(2, sidebarRowFixture(31, "ops")),

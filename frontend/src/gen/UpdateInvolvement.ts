@@ -4,7 +4,7 @@ import type { Involvement } from "./Involvement";
 /**
  * `PUT /api/v1/rooms/:id/involvement`: the viewer's notification level for a room
  * (`rooms/involvements#update`, `Broadcasts::involvement_change`). Answers the updated
- * [`crate::Membership`].
+ * [`InvolvementChange`], including the settings revision after clearing any inherited override.
  *
  * Any level is accepted for any room kind (an unknown one is a 422; the classic action fails
  * with a 500). The classic bell cycles direct messages through `everything`, `muted`,

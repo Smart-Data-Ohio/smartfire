@@ -58,6 +58,9 @@ pub struct Icon {
     pub character: Option<String>,
     /// Brand and custom only: the image (`/icons/:name` for custom).
     pub image_url: Option<String>,
+    pub animated: bool,
+    /// First-frame rendition for custom animation, the original for static images, or `null` for Unicode.
+    pub still_url: Option<String>,
 }
 
 /// `GET /api/v1/autocomplete/icons?query=` (`autocompletable/icons`): at most 8, ranked exact,

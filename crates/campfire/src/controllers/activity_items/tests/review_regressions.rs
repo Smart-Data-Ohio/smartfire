@@ -54,6 +54,12 @@ async fn ws11ui_review_inbox_preloads_message_sources_once_for_every_format() {
                 )
                 .await;
             t.db().stop_capturing_read_queries();
+            if accept == "text/vnd.turbo-stream.html" {
+                assert_eq!(response.status, StatusCode::NOT_ACCEPTABLE);
+                assert!(response.body.is_empty());
+                assert_eq!(table_selects(&log.lock().unwrap(), "messages"), 0);
+                continue;
+            }
             assert_eq!(response.status, StatusCode::OK, "{}", response.text());
             if accept == "application/json" {
                 assert_eq!(

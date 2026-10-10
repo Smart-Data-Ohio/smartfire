@@ -194,7 +194,7 @@ async fn start(
         }
     }
     let attachment = match assignment {
-        Some(assignment) => Some(assignment.stage(c.app()).await?),
+        Some(assignment) => Some(messages::stage_attachment(c, assignment).await?),
         None => None,
     };
     if matches!(
@@ -220,7 +220,7 @@ async fn start(
             } else {
                 let prepare = |tx: &mut campfire_db::Tx<'_>, a: &mut campfire_db::NewMessage| {
                     if let Some(attachment) = attachment {
-                        blob = messages::attachment_blob(tx, attachment)?;
+                        blob = messages::attachment_blob(tx, attachment, messages::AttachmentPolicy::SignedBlob, "attachment")?;
                         a.attachment_blob_id = blob.as_ref().map(|blob| blob.id);
                         if !in_thread && let Some(blob) = &blob {
                             crate::controllers::presenters::attachments::enqueue_analysis(tx, blob);

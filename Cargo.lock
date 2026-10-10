@@ -406,8 +406,8 @@ dependencies = [
  "campfire_spa",
  "campfire_static_assets",
  "campfire_storage",
- "campfire_views",
  "campfire_view_kit",
+ "campfire_views",
  "campfire_web",
  "flate2",
  "futures-util",
@@ -860,7 +860,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "comrak",
- "html5ever 0.35.0",
+ "html5ever",
  "rand 0.9.5",
  "regex",
  "serde",

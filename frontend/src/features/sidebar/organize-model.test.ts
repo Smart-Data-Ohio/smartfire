@@ -12,6 +12,8 @@ import type { SidebarSection } from "./sections.ts";
 
 function row(id: number, name: string, kind: RoomKind = "open", favorite: number | null = null) {
   const entry: SidebarRow = {
+    revision: 0,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     room: {
       id,
       kind,

@@ -537,7 +537,12 @@ describe("approval requests in the store", () => {
             seq: 1,
             topic: "user:1",
             type: "activity.item",
-            data: { item: requestItem(approvalStatus), unreadCount: 1, unreadRevision: 1 },
+            data: {
+              item: requestItem(approvalStatus),
+              unreadCount: 1,
+              unreadRevision: 1,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            },
           },
         ],
         NOW,

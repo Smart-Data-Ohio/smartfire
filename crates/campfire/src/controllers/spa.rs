@@ -31,6 +31,9 @@ mod api_threads_tests;
 #[path = "spa_api_composer_tests.rs"]
 mod api_composer_tests;
 #[cfg(test)]
+#[path = "spa_upload_size_tests.rs"]
+mod upload_size_tests;
+#[cfg(test)]
 #[path = "spa_api_directory_tests.rs"]
 mod api_directory_tests;
 #[cfg(test)]
@@ -87,6 +90,10 @@ mod slack_tests;
 #[cfg(test)]
 #[path = "spa_workspace_branding_tests.rs"]
 mod workspace_branding_tests;
+
+#[cfg(test)]
+#[path = "spa_animated_emoji_tests.rs"]
+mod animated_emoji_tests;
 
 #[cfg(test)]
 #[path = "spa_integrations_tests.rs"]

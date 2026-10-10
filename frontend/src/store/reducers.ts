@@ -45,6 +45,7 @@ import {
 } from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
+import { compareSnapshots } from "./snapshot-order.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
 import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
 import { receiveWorkThread } from "./work.ts";
@@ -113,8 +114,10 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
 
   for (const row of sidebar.rows) {
     if (!touchedSince(state, row.room.id, since)) {
-      rows[row.room.id] = row;
-      installed.push(row);
+      const held = state.sidebar.rows[row.room.id];
+      const next = held !== undefined && compareSnapshots(row, held) < 0 ? held : row;
+      rows[row.room.id] = next;
+      installed.push(next);
     }
   }
 
@@ -130,6 +133,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
     ...state,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
+      ...state.sidebar,
       status: "ready",
       // A row sync added that the snapshot predates takes its sorted place, as an upsert would.
       order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),
@@ -393,8 +397,11 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
   }
 
   const messages = { ...state.messages };
+  let reconciled = state;
 
   for (const message of page.messages) {
+    reconciled = removePending(reconciled, message.clientMessageId);
+
     const held = messages[message.id];
 
     if (state.tombstones[message.id] !== undefined) {
@@ -459,7 +466,7 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
 
   return {
     state: {
-      ...state,
+      ...reconciled,
       messages,
       users: mergeUserList(state.users, page.users),
       saved: mergeSavedMarks(state.saved, page),
@@ -912,6 +919,9 @@ function setTyping(state: State, topic: string, userId: number, on: boolean, now
 }
 
 function upsertRow(state: State, row: SidebarRow): State {
+  const held = state.sidebar.rows[row.room.id];
+
+  if (held !== undefined && compareSnapshots(row, held) < 0) return state;
   const rows = { ...state.sidebar.rows, [row.room.id]: row };
   const known = state.sidebar.rows[row.room.id] !== undefined;
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;

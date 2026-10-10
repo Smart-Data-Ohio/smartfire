@@ -184,7 +184,7 @@ impl ThreadMembership {
         )?;
         self.involvement = involvement;
         self.updated_at = now;
-        Ok(())
+        super::user::profile_settings::bump_revision(tx, self.user_id)
     }
 
     /// `read`: `update!(unread_at: nil)`, a no-op when already read. It also records the newest

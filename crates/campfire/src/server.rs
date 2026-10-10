@@ -168,6 +168,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     );
     let google = crate::integrations::google::State::from_config(&config);
     let agent_repositories = crate::integrations::agent_repositories::State::live(github_accounts.clone());
+    let broadcasts = channels::Broadcasts::new(cable.clone(), db.env().clock.clone());
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -175,7 +176,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         clock: clock.clone(),
         db,
         storage,
-        broadcasts: channels::Broadcasts::new(cable.clone()),
+        broadcasts,
         cable,
         jobs,
         mail,
@@ -297,13 +298,14 @@ fn router(app: &App, kit: Kit) -> Router {
         .merge(controllers::spa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
         .route("/account/banner", axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)))
         .merge(if app.config.spa_enabled { campfire_api::routes(app) } else { Router::new() })
-        // DiskController reads params before the token, but file bytes remain spooled.
-        .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::spooled_action(dispatch_with_fragment_cache)).fallback(campfire_kit::action(dispatch_with_fragment_cache)))
+        // Authenticate and verify the signed byte limit before receiving the upload.
+        .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::streamed_action(dispatch_with_fragment_cache)).fallback(campfire_kit::action(dispatch_with_fragment_cache)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
     // config.ru: `use Rack::Deflater` around the whole app.
     campfire_kit::app(routes, kit)
+        .layer(axum::middleware::from_fn_with_state(app.clone(), campfire_web::active_storage::limit_multipart_uploads))
         .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
 }
 

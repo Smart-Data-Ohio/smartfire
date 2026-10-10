@@ -278,12 +278,13 @@ fn activity_round_trips() {
             users: vec![user()],
             unread_count: 4,
             unread_revision: 17,
+            evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
             next_cursor: Some("MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ".into()),
         },
         json!({
             "items": [activity_item_wire()],
             "users": [serde_json::to_value(user()).unwrap()],
-            "unreadCount": 4, "unreadRevision": 17,
+            "unreadCount": 4, "unreadRevision": 17, "evaluatedAt": "2026-10-10T12:00:00.000000000Z",
             "nextCursor": "MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ",
         }),
     );
@@ -322,8 +323,9 @@ fn activity_round_trips() {
         &ActivityUnreadCount {
             unread_count: 4,
             unread_revision: 17,
+            evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
         },
-        json!({"unreadCount": 4, "unreadRevision": 17}),
+        json!({"unreadCount": 4, "unreadRevision": 17, "evaluatedAt": "2026-10-10T12:00:00.000000000Z"}),
     );
     assert_wire(
         &UpdateActivityItem {
@@ -345,16 +347,18 @@ fn activity_round_trips() {
             item: activity_item(),
             unread_count: 3,
             unread_revision: 17,
+            evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
         },
-        json!({"item": activity_item_wire(), "unreadCount": 3, "unreadRevision": 17}),
+        json!({"item": activity_item_wire(), "unreadCount": 3, "unreadRevision": 17, "evaluatedAt": "2026-10-10T12:00:00.000000000Z"}),
     );
     assert_wire(
         &ActivityItemRemoved {
             id: 301,
             unread_count: 2,
             unread_revision: 17,
+            evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
         },
-        json!({"id": 301, "unreadCount": 2, "unreadRevision": 17}),
+        json!({"id": 301, "unreadCount": 2, "unreadRevision": 17, "evaluatedAt": "2026-10-10T12:00:00.000000000Z"}),
     );
 }
 
@@ -991,8 +995,9 @@ fn s3_sync_events_round_trip() {
                 item: activity_item(),
                 unread_count: 3,
                 unread_revision: 17,
+            evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
             }),
-            json!({"type": "activity.item", "data": {"item": activity_item_wire(), "unreadCount": 3, "unreadRevision": 17}}),
+            json!({"type": "activity.item", "data": {"item": activity_item_wire(), "unreadCount": 3, "unreadRevision": 17, "evaluatedAt": "2026-10-10T12:00:00.000000000Z"}}),
         ),
         (
             "user",
@@ -1000,8 +1005,9 @@ fn s3_sync_events_round_trip() {
                 id: 301,
                 unread_count: 2,
                 unread_revision: 17,
+            evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
             }),
-            json!({"type": "activity.removed", "data": {"id": 301, "unreadCount": 2, "unreadRevision": 17}}),
+            json!({"type": "activity.removed", "data": {"id": 301, "unreadCount": 2, "unreadRevision": 17, "evaluatedAt": "2026-10-10T12:00:00.000000000Z"}}),
         ),
         (
             "user",

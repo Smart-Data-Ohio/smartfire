@@ -132,9 +132,10 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
     let first = app.db().read(move |conn| Message::find(conn, id)).await.unwrap();
     assert!(first.embeds_suppressed);
     let response = browser
-        .write(Req::new(Method::POST, &path).header("accept", "text/vnd.turbo-stream.html"))
+        .write(Req::new(Method::POST, &format!("{path}.json")))
         .await;
-    assert_eq!(response.status, StatusCode::NOT_ACCEPTABLE);
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.text(), "{\"embeds_suppressed\":true}");
     let second = app
         .db()
         .read(move |conn| {
@@ -145,6 +146,11 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
         .await
         .unwrap();
     assert_eq!(first.updated_at, second.updated_at, "repeat suppression doesn't touch");
+    let response = browser
+        .write(Req::new(Method::POST, &path).header("accept", "text/vnd.turbo-stream.html"))
+        .await;
+    assert_eq!(response.status, StatusCode::NOT_ACCEPTABLE);
+    assert!(response.body.is_empty());
     let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(

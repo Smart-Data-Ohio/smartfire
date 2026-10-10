@@ -197,10 +197,10 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             }
             None => None,
         };
-        let assignment = messages::attachment_assignment(&initial)?
-            .unwrap_or(Assignment::Unchanged)
-            .stage(c.app())
-            .await?;
+        let assignment = messages::stage_attachment(
+            c,
+            messages::attachment_assignment(&initial)?.unwrap_or(Assignment::Unchanged),
+        ).await?;
         if matches!(assignment, Assignment::Invalid) {
             return Err(Error::internal(anyhow::anyhow!("invalid attachment")));
         }
@@ -253,7 +253,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                             "reply_notify_author violates NOT NULL".into(),
                         ));
                     }
-                    let blob = messages::attachment_blob(tx, assignment)?;
+                    let blob = messages::attachment_blob(tx, assignment, messages::AttachmentPolicy::SignedBlob, "attachment")?;
                     let message = thread.post_message(
                         tx,
                         creator,

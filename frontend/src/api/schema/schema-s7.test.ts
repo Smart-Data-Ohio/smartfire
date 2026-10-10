@@ -24,6 +24,8 @@ import {
 
 // The wire JSON below mirrors crates/api_types/src/tests_s7.rs.
 const settingsJson = {
+  revision: 3,
+  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
   profile: {
     userId: 7,
     name: "Ada Lovelace",
@@ -43,6 +45,9 @@ const settingsJson = {
     timeZones: [{ label: "(GMT+00:00) London", value: "Europe/London" }],
   },
   notifications: {
+    defaultNotificationLevel: "everything",
+    roomNotificationLevels: {},
+    roomMuteUntil: {},
     dndEnabled: false,
     quietHoursEnabled: true,
     quietHoursStart: "22:00",
@@ -143,6 +148,9 @@ describe("S7 settings schemas", () => {
     roundTrips(UpdateAvatar, { signedId: "eyJf--1" });
     roundTrips(UpdateAppearance, { theme: "system", textSize: null, timeZone: "" });
     roundTrips(UpdateNotifications, {
+      defaultNotificationLevel: null,
+      roomNotification: null,
+      roomMute: null,
       dndEnabled: true,
       quietHoursEnabled: null,
       quietHoursStart: null,

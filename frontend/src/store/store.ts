@@ -15,6 +15,7 @@ import type { BoardListing } from "../gen/BoardListing.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
+import type { NotificationSettings } from "../gen/NotificationSettings.ts";
 import type { PinState } from "../gen/PinState.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
@@ -76,6 +77,7 @@ import {
 } from "./row-touches.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
+import { sampleServerClock, serverNow } from "./server-clock.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
 import * as work from "./work.ts";
@@ -260,9 +262,43 @@ export const mutations = {
     }));
   },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
+  setUploadLimit: (uploadLimitBytes: number) =>
+    apply((state) =>
+      state.boot === null
+        ? state
+        : {
+            ...state,
+            boot: { ...state.boot, account: { ...state.boot.account, uploadLimitBytes } },
+          },
+    ),
   setWorkspaceStyles: (css: string | null) => apply((state) => setWorkspaceStyles(state, css)),
   setWorkspaceBranding: (branding: WorkspaceBranding) =>
     apply((state) => setWorkspaceBranding(state, branding)),
+  setNotificationPreferences: (
+    notificationPreferences: NotificationSettings,
+    evaluatedAt: string,
+  ) =>
+    apply((state) => {
+      const serverClock = sampleServerClock(evaluatedAt, state.sidebar.serverClock);
+
+      return {
+        ...state,
+        sidebar: {
+          ...state.sidebar,
+          notificationPreferences,
+          serverClock,
+          notificationClock: serverClock.serverAt,
+        },
+      };
+    }),
+  tickNotificationClock: () =>
+    apply((state) => ({
+      ...state,
+      sidebar: {
+        ...state.sidebar,
+        notificationClock: serverNow(state.sidebar.serverClock),
+      },
+    })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
@@ -535,8 +571,12 @@ export const mutations = {
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
-  setActivityUnreadCount: (unread: ActivityUnreadCount, generation?: number) =>
-    apply((state) => activity.setActivityUnreadCount(state, unread, generation)),
+  setActivityUnreadCount: (
+    unread: ActivityUnreadCount,
+    generation?: number,
+    requestSequence?: number,
+  ) =>
+    apply((state) => activity.setActivityUnreadCount(state, unread, generation, requestSequence)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
   setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>

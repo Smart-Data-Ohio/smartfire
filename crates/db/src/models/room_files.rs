@@ -59,7 +59,7 @@ pub fn uploads(
     };
     let mut values = vec![Value::Integer(room_id)];
     let mut sql = format!(
-        "SELECT a.blob_id,m.id,m.thread_id,u.name,a.created_at FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name='attachment' AND m.room_id=? AND ({condition})"
+        "SELECT a.blob_id,m.id,m.thread_id,u.name,a.created_at FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND m.room_id=? AND ({condition})"
     );
     if !filename.is_empty() {
         sql.push_str(" AND LOWER(b.filename) LIKE ? ESCAPE '\\'");
