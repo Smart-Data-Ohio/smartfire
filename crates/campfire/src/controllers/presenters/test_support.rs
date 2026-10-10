@@ -129,6 +129,7 @@ pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("channel_threads", "client_post_id"),
     ("rooms", "client_room_id"),
     ("thread_memberships", "last_read_message_id"),
+    ("users", "appearance_preferences"),
 ];
 
 /// Whether `table.column` is in [`RUST_ONLY_COLUMNS`].
@@ -137,8 +138,7 @@ pub fn rust_only_column(table: &str, column: &str) -> bool {
 }
 
 /// Whether `table.column` is one of the API's per-attempt creation keys among
-/// [`RUST_ONLY_COLUMNS`], which classic paths and Slack imports never set. The others (a thread
-/// member's read position) are written by classic paths too.
+/// [`RUST_ONLY_COLUMNS`], which classic paths and Slack imports never set.
 pub fn api_creation_key_column(table: &str, column: &str) -> bool {
     matches!(
         (table, column),

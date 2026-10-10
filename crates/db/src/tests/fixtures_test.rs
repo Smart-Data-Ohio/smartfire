@@ -107,8 +107,11 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
                     true
                 }
             })
-            // Port-only counter for the SPA activity badge that Rails doesn't have.
-            .filter(|(_, name)| !(table == "users" && name.as_str() == "activity_revision"))
+            // Port-only user preferences and activity counter that Rails doesn't have.
+            .filter(|(_, name)| {
+                !(table == "users"
+                    && matches!(name.as_str(), "activity_revision" | "appearance_preferences"))
+            })
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
