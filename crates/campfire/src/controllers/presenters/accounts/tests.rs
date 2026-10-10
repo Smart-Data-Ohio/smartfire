@@ -115,7 +115,7 @@ async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, ne
         .unwrap_or_default();
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE").unwrap();
-    let config = Config::from_lookup(|key| match key {
+    let mut config = Config::from_lookup(|key| match key {
         "SECRET_KEY_BASE" => Some(secret.clone()),
         "DISABLE_SSL" => Some("true".into()),
         "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -123,6 +123,8 @@ async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, ne
         _ => None,
     })
     .unwrap();
+    // The classic pages, until they're deleted.
+    config.spa_enabled = false;
     Some(Test {
         booted: crate::server::boot_with_network(config, clock, network).await.unwrap(),
         labels,

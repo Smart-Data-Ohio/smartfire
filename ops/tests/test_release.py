@@ -79,8 +79,12 @@ if name == "docker":
         elif ".Mounts" in fmt:
             print("fixture-volume")
         elif '"once"' in fmt:
+            env = {"SECRET_KEY_BASE": "fixture"}
+            # SPA_ENABLED_VALUE=absent leaves the old switch out; another value sets it.
+            if os.environ.get("SPA_ENABLED_VALUE", "1") != "absent":
+                env["SPA_ENABLED"] = os.environ.get("SPA_ENABLED_VALUE", "1")
             print(json.dumps({"host": "fixture.invalid", "image": state["image"],
-                "env": {"SECRET_KEY_BASE": "fixture", "SPA_ENABLED": "1"}, "autoUpdate": False}))
+                "env": env, "autoUpdate": False}))
         elif fmt == "{{.Image}}":
             print("sha256:" + "9" * 64)
         else:
@@ -679,7 +683,17 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+migrated")
 
     def test_a_missing_spa_build_fails_read_only_after_health_and_preserves_writes(self):
-        results = self.host.release(SPA_STUB="1", CANDIDATE_WRITES="1")
+        self.assert_missing_spa_build_fails("1")
+
+    def test_a_missing_spa_build_fails_with_spa_enabled_absent(self):
+        # Everyone gets the SPA whatever SPA_ENABLED says, so the shell is checked anyway.
+        self.assert_missing_spa_build_fails("absent")
+
+    def test_a_missing_spa_build_fails_with_spa_enabled_false(self):
+        self.assert_missing_spa_build_fails("false")
+
+    def assert_missing_spa_build_fails(self, spa_enabled):
+        results = self.host.release(SPA_STUB="1", CANDIDATE_WRITES="1", SPA_ENABLED_VALUE=spa_enabled)
         result, _ = results["cutover"]
         self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
         self.assertIn("frontend check", result.stderr)

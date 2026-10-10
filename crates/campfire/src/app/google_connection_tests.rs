@@ -725,28 +725,8 @@ async fn spa_boot(b: &mut Browser<'_>) -> Value {
     serde_json::from_str(json).unwrap()
 }
 
-/// The classic layout's flash: its kind (an alert carries the negative background) and message.
-fn classic_flash(html: &str) -> Value {
-    let flash = html
-        .split("<div class=\"flash\"")
-        .nth(1)
-        .and_then(|rest| rest.split("<main").next())
-        .expect("the classic layout shows the flash");
-    let kind = if flash.contains("--flash-background: var(--color-negative)") {
-        "alert"
-    } else {
-        "notice"
-    };
-    let message = flash
-        .split("aria-atomic=\"true\">")
-        .nth(1)
-        .and_then(|rest| rest.split("</span>").next())
-        .expect("the flash announces its message");
-    json!({"kind": kind, "message": message})
-}
-
 #[tokio::test]
-async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_flash() {
+async fn google_connection_outcomes_return_to_the_spa_with_their_flash_whatever_was_chosen() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     for preference in [UiPreference::Classic, UiPreference::Next] {
         let a = TestApp::boot_seed_with_env(
@@ -763,10 +743,8 @@ async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_fl
             .write(move |tx| ui_preference::store(tx, DAVID, preference))
             .await
             .unwrap();
-        let destination = match preference {
-            UiPreference::Next => "http://campfire.test/app/settings/integrations",
-            _ => "http://campfire.test/users/me/profile",
-        };
+        // A stored choice no longer matters: every outcome returns to the SPA's integrations.
+        let destination = "http://campfire.test/app/settings/integrations";
         let mut b = a.sign_in(DAVID).await;
         // The successful connection goes last: the jobs it enqueues call Google too, and must not
         // take a reply recorded for a later callback.
@@ -829,12 +807,7 @@ async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_fl
             );
             assert_eq!(reply.location(), Some(destination), "{outcome}");
             let flash = json!({"kind": kind, "message": message});
-            if preference == UiPreference::Next {
-                assert_eq!(spa_boot(&mut b).await["flash"], flash, "{outcome}");
-            } else {
-                let profile = b.get("/users/me/profile").await.text();
-                assert_eq!(classic_flash(&profile), flash, "{outcome}");
-            }
+            assert_eq!(spa_boot(&mut b).await["flash"], flash, "{outcome}");
         }
         let connected = a
             .db()

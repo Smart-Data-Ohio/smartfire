@@ -116,7 +116,7 @@ async fn public_key_is_the_classic_presented_key_and_missing_or_invalid_config_i
             key.public_key.is_some(),
             vars.iter().any(|(_, value)| *value == PUBLIC_KEY)
         );
-        let classic = browser.get("/users/me/profile").await.text();
+        let classic = browser.classic_page("/users/me/profile").await.text();
         if let Some(key) = key.public_key {
             assert!(classic.contains(&format!("name=\"vapid-public-key\" content=\"{key}\"")));
         }

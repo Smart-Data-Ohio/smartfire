@@ -16,8 +16,8 @@ pub struct AppearanceData {
     pub theme_errors: Vec<String>,
     pub text_size_errors: Vec<String>,
     pub time_zone_errors: Vec<String>,
-    /// The new-UI switch, only while the SPA is served (`SPA_ENABLED`); without it the panel is
-    /// the classic one, byte for byte.
+    /// The old switch between the two UIs. Always `None` since the SPA became everyone's UI;
+    /// the panel goes with the classic pages.
     pub next_ui: Option<NextUi>,
 }
 

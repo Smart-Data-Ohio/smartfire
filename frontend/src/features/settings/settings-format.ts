@@ -268,16 +268,6 @@ export function connectionSummary(
   }
 }
 
-/** `path` with `?classic=1`, so a person who uses the new UI stays on the classic page. */
-export function classicPage(path: string, anchor = ""): string {
-  const [base, query] = path.split("?", 2);
-  const params = new URLSearchParams(query ?? "");
-
-  params.set("classic", "1");
-
-  return `${base}?${params.toString()}${anchor === "" ? "" : `#${anchor}`}`;
-}
-
 /**
  * The page after a change to `service`: only that service's connection is taken from the answer,
  * so two answers settling out of order never undo each other's service.

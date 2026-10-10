@@ -102,9 +102,7 @@ async fn play_chat_sound_messages_match_the_classic_catalog() {
                 presentation,
             })
         );
-        let classic = b
-            .send(Req::new(Method::GET, &format!("/rooms/{HQ}?classic=1")))
-            .await;
+        let classic = b.classic_page(&format!("/rooms/{HQ}")).await;
         assert!(classic.text().contains(&format!(
             "data-sound-url-value=\"{}\"",
             read.message.sound.unwrap().url
