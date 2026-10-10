@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 /// Rails PR #148 (`fix/cached-fragment-csrf`).
 pub const PRESENTATION_CACHE_VERSION: i64 = 3;
 
-/// The subset of ActiveSupport::Cache.expand_cache_key used by our view fragments.
+/// The subset of ActiveSupport::Cache.expand_cache_key used by presentation freshness validators.
 #[derive(Clone, Debug)]
 pub enum Key {
     Null,
@@ -36,10 +36,6 @@ pub fn expand(key: &Key, zone: &Zone) -> String {
             .collect::<Vec<_>>()
             .join("/"),
     }
-}
-
-pub fn fragment(template: &str, digest: &str, key: &Key, zone: &Zone) -> String {
-    format!("views/{template}:{digest}/{}", expand(key, zone))
 }
 
 #[derive(Clone, Debug, Default)]

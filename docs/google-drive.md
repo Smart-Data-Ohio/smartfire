@@ -46,9 +46,7 @@ only. **Disconnect** removes the whole connection, as before.
 ## Link shapes
 
 The server's link parser (`crates/db/src/models/google_drive_link.rs`)
-and `driveFileId`
-(`web/app/javascript/controllers/drive_link_controller.js`) recognize the same
-URL shapes; keep the two lists in sync:
+and the SPA Drive attachment flow recognize these URL shapes:
 
 - `https://docs.google.com/document/d/<id>/...`
 - `https://docs.google.com/spreadsheets/d/<id>/...`

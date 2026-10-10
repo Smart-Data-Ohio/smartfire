@@ -11,7 +11,7 @@ trap 'rm -rf -- "$inputs"' EXIT
 
 cp -a Cargo.toml Cargo.lock crates "$inputs/"
 
-# Retained auth/media/public inputs travel with crates/static_assets.
+# Retained auth/media/public inputs travel with crates/static_assets; no classic web tree is copied.
 # No vectors, fixtures, parity files, reference tools or Rails files are available.
 
 # crates/retained_pages/auth_build.rs inlines the SPA's auth stylesheet sources, which the Dockerfile copies

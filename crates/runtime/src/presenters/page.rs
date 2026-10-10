@@ -18,4 +18,4 @@ macro_rules! retained_page {
 pub use crate::retained_page;
 
 
-pub use campfire_runtime::context::*;
+pub use crate::context::*;

@@ -24,7 +24,7 @@ async fn pwa_http_bodies_preserve_installed_identity_and_current_worker() {
         for path in ["service-worker.js", "offline.html"] {
             let response = browser.get(&format!("/{path}")).await;
             assert_eq!(response.status, StatusCode::OK);
-            assert_eq!(response.body, campfire_spa::pwa::file(path, true, None).unwrap().body);
+            assert_eq!(response.body, campfire_spa::pwa::file(path, None).unwrap().body);
             if path == "offline.html" { assert_eq!(response.header("set-cookie"), None); }
         }
     }
@@ -47,7 +47,7 @@ async fn ws17_service_worker_is_served_byte_identical_to_rails() {
     assert_eq!(offline.status, StatusCode::OK);
     assert_eq!(
         offline.body,
-        campfire_spa::pwa::file("offline.html", true, None)
+        campfire_spa::pwa::file("offline.html", None)
             .unwrap()
             .body
     );
@@ -113,7 +113,7 @@ async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choic
         );
         assert_eq!(
             worker.body,
-            campfire_spa::pwa::file("service-worker.js", true, None)
+            campfire_spa::pwa::file("service-worker.js", None)
                 .unwrap()
                 .body
         );
@@ -122,7 +122,7 @@ async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choic
         assert_eq!(
             offline.content_type(),
             Some(
-                campfire_spa::pwa::file("offline.html", true, None)
+                campfire_spa::pwa::file("offline.html", None)
                     .unwrap()
                     .file
                     .content_type
@@ -131,7 +131,7 @@ async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choic
         assert_eq!(offline.header("set-cookie"), None);
         assert_eq!(
             offline.body,
-            campfire_spa::pwa::file("offline.html", true, None)
+            campfire_spa::pwa::file("offline.html", None)
                 .unwrap()
                 .body
         );

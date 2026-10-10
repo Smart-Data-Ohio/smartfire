@@ -401,7 +401,7 @@ fn messages_and_fetches_inner(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob)| *blob).collect::<Vec<_>>())
-        .map_err(campfire_web::controllers::presenters::storage_error)?;
+        .map_err(campfire_runtime::presenters::storage_error)?;
     let mut files = HashMap::<i64, Vec<(String, i64)>>::new();
     for (message_id, name, blob_id) in file_rows {
         files.entry(message_id).or_default().push((name, blob_id));

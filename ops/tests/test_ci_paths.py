@@ -70,6 +70,7 @@ class PathScopeTest(unittest.TestCase):
             ("huddle-gateway/src/index.mjs", {"test_gateway"}),
             ("deploy/huddles/runtime/server.mjs", {"test_gateway", "ops-scripts"}),
             ("ops/backup.sh", {"ops-scripts"}),
+            ("ci/with-release-inputs.sh", {"ops-scripts"}),
             ("deploy/gcp/configure.py", {"ops-scripts"}),
             (".github/workflows/frontend.yml", {"lint-actions", "ops-scripts"}),
             ("crates/db/Cargo.toml", {"dependency-audit"}),
@@ -95,7 +96,7 @@ class PathScopeTest(unittest.TestCase):
         scope = next(step for step in frontend["jobs"]["frontend"]["steps"] if step.get("id") == "scope")
         for path, expected in [("frontend/mock/vite-plugin.ts", "run=true"),
                                ("crates/spa/build.rs", "run=true"),
-                               ("crates/web/src/lib.rs", "run=false"),
+                               ("crates/runtime/src/lib.rs", "run=false"),
                                ("deploy/README.md", "run=false")]:
             head = self.commit(path)
             self.assertEqual(self.run_scope({"before": self.base, "after": head}, scope["env"]["PATTERN"]), expected)

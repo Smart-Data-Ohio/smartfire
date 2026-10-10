@@ -22,7 +22,6 @@ campfire_storage.workspace = true
 campfire_cable.workspace = true
 campfire_api_types.workspace = true
 campfire_static_assets.workspace = true
-campfire_views.workspace = true
 anyhow.workspace = true
 libc.workspace = true
 tokio.workspace = true

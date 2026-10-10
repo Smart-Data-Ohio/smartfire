@@ -32,7 +32,7 @@ mod concerns {
 }
 
 mod mail {
-    pub(crate) use campfire_web::mail::*;
+    pub(crate) use campfire_runtime::mail::*;
 
     #[cfg(test)]
     mod tests;

@@ -1,4 +1,4 @@
-//! X cards' domain policy. HTML formatting lives in campfire_views::twitter.
+//! X cards' domain policy. The SPA renders their presentation.
 pub mod fetcher;
 pub mod post;
 pub mod references;

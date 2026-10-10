@@ -65,6 +65,6 @@ The browser coverage, ported from the Rails system tests into the messaging beha
 
 The code highlighting cases in the same suite cover language aliases, exact code text and copying, plain-text fallbacks, search results, threads, theme colors, and narrow-screen scrolling.
 
-The highlighter loads lazily in a background worker, independently of channel navigation and composition. Code stays readable and copyable if highlighting is unavailable. The worker, grammars, and two themes are served locally; no code is sent to an external service. Rebuild the checked-in worker with `npm ci && npm run build` in `web/script/code-highlighter`, and run its grammar/theme checks with `npm test`. Highlight.js provides detection for unlabelled blocks; Shiki supplies the syntax tokens and colors.
+The highlighter loads lazily in a background worker, independently of channel navigation and composition. Code stays readable and copyable if highlighting is unavailable. The worker, grammars, and two themes are served locally; no code is sent to an external service. The worker builds with the React app from `frontend/src/lib/code-highlight/`; run `pnpm check` in `frontend/`. Highlight.js provides detection for unlabelled blocks; Shiki supplies the syntax tokens and colors.
 
 See [huddles.md](huddles.md) for the separately configured huddle services.

@@ -440,10 +440,13 @@ async fn signs_in_with_a_password_and_out_again() {
     let page = browser.get("/session/new").await;
     assert_eq!(page.status, StatusCode::OK);
     assert!(page.text().contains("<title>Sign in</title>"));
-    assert!(
-        page.header("link")
-            .is_some_and(|link| link.contains("rel=preload; as=style"))
-    );
+    let html = page.text();
+    let stylesheet = html.split_once("<link rel=\"stylesheet\" href=\"")
+        .expect("retained auth stylesheet").1.split('"').next().unwrap();
+    assert!(stylesheet.starts_with("/assets/auth-") && stylesheet.ends_with(".css"));
+    let css = browser.get(stylesheet).await;
+    assert_eq!(css.status, StatusCode::OK);
+    assert_eq!(css.header("content-type"), Some("text/css"));
     page.assert_form("/session");
     let signed_in = browser
         .form(

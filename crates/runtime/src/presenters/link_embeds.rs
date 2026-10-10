@@ -6,7 +6,7 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i
     if ids.is_empty() && twitter_ids.is_empty() {
         return Ok(());
     }
-    let result = app.db
+    app.db
         .write(move |tx| {
             for id in ids {
                 match crate::integrations::link_embed::Embed::find(tx.conn(), id) {
@@ -26,11 +26,7 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i
             }
             Ok(())
         })
-        .await;
-    // Collection fragments can be stored before this writer rejects a fetch job.
-    // Do not let a retry reuse that incomplete render and lose its pending requests.
-    if result.is_err() { app.fragment_cache.clear(); }
-    result
+        .await
 }
 
 /// WS8b's actions-menu seam: the HTTP endpoint also independently enforces this policy.

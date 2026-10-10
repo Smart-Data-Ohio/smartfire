@@ -85,7 +85,7 @@ release's image as MIGRATING.
 
 ## Image and release contract
 
-Build with the repository root as the context; it carries its own frontend inputs in `web/`:
+Build with the repository root as the context; it carries `frontend/` and retained inputs in `crates/static_assets/`:
 
 ```sh
 docker build -t smartfire-rust .
@@ -96,7 +96,7 @@ The image:
 - has uid/gid 1000, `/rails`, `/rails/storage/{db,files,backups}`, ports 80/443,
   `bin/boot`, and both ONCE hooks;
 - has no `HEALTHCHECK`;
-- embeds assets digested from `web/` at build time;
+- builds and embeds the React SPA and retained auth, media and public assets;
 - uses `CARGO_BUILD_JOBS` (default 4) and `CARGO_PROFILE` (default release; a
   developer can select dev, but measurements meant to represent deployment use
   release). `CARGO_CACHE_SCOPE` separates a worker's Docker target/registry caches.
@@ -191,8 +191,8 @@ A backup with migrations the image doesn't know is refused and the hook fails.
 
 Supported variables pass directly to the Rust config or front server:
 
-For production UI changes, use the deploy workflow's audited `spa_mode` input.
-See [Switch the new UI mode](../deploy/gcp/README.md#switch-the-new-ui-mode) for opt-in, default-next, and rollback.
+The SPA is always the application UI. The deploy workflow retains `spa_mode` as an ignored
+compatibility input. Rollback switches pinned images through the existing release safeguards.
 
 | Variables | Meaning |
 | --- | --- |
@@ -200,7 +200,6 @@ See [Switch the new UI mode](../deploy/gcp/README.md#switch-the-new-ui-mode) for
 | `RAILS_ENV` | database basename |
 | `DISABLE_SSL`, `RAILS_LOG_LEVEL` | SSL middleware and log level |
 | `APP_VERSION`, `GIT_REVISION` | version headers and UI |
-| `SPA_ENABLED`, `SPA_DEFAULT` | no longer read: the React UI at `/app/` is always served and is the only signed-in UI; the release script still checks the SPA shell only when `SPA_ENABLED=1` |
 | `RAILS_MAX_THREADS`, `JOB_CONCURRENCY` | reader pool and in-process job concurrency |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web Push; Rust also accepts `VAPID_SUBJECT` |
 | `ADMIN_SESSION_IDLE_TIMEOUT_DAYS` | administrator session lifetime |

@@ -1,7 +1,7 @@
 # Smartfire front end
 
-The React 19 single-page app that replaces the Hotwire UI (`web/`) screen by screen. The Rust app
-will serve the production build under `/app/`; production runs no Node.
+The React 19 application UI. The Rust app always serves its production build under `/app/`;
+production runs no Node. Authentication and public pages retain their server-rendered shell.
 
 Stack: Vite 8 (Rolldown), React 19 with the React Compiler (Babel preset), typescript@7, Effect 4
 in the data layer, Biome, the vendored anti-slop Oxlint rules, Vitest and Playwright. pnpm, with
@@ -46,22 +46,12 @@ hand in `src/api/schema/` and `src/api/errors.ts`, and each exports a
 
 ## Coexistence with the classic UI
 
-The SPA replaces the classic pages one screen at a time, and both stay reachable (`SPA_ENABLED`).
-`crates/spa/src/screens.rs` maps each classic page to its SPA URL and says whether the SPA has
-ported it; `pnpm gen` writes it to `src/gen/screens.json`, which `src/lib/screens.ts` reads.
+The SPA is the only application UI. `crates/spa/src/screens.rs` maps historic page URLs to
+SPA destinations; `pnpm gen` writes it to `src/gen/screens.json`. Old bookmarks and
+same-origin page links open the mapped SPA route. Stored UI choices and `classic=1` no longer
+select another UI. Unknown routes show the SPA's not-found page.
 
-- A person chooses a UI: "Try the new Smartfire" on the classic profile, "Switch to classic" in
-  the menu on the sidebar's user panel (both `POST /app/ui_preference`). `SPA_DEFAULT=next`
-  makes the SPA the default for everyone who hasn't chosen.
-- For people who use the SPA, a classic HTML GET of a ported screen redirects here; `?classic=1`
-  keeps them on the classic page.
-- Here, a path the router has no route for but the map names opens on its classic page with a
-  full page load (the router's not-found), and clicks on links to ported classic pages open in
-  place (`features/shell/classic-links.ts`). Board rooms open on the classic board until boards
-  are ported.
-
-Porting a screen: add its route, flip `ported` in `screens.rs` in the same PR, and run `pnpm gen`
-(`src/router.test.ts` fails until the two agree).
+When changing the map, update the router and run `pnpm gen`; `src/router.test.ts` checks agreement.
 
 ## URL cutover contract
 
@@ -73,7 +63,7 @@ still comes from the route table and screen map.
 
 Later default, root-dispatch and prefix changes should update the affected expectations in
 this JSON alongside the implementation. Keep the old incoming paths as cases, preserve their
-query context, and keep explicit classic choices and `classic=1` until classic retirement.
+query context, and retain cases proving old UI choices and `classic=1` do not bypass the SPA.
 The Rust HTTP test reads every entry from the file, so changing an expected response requires
 no test-code edit. A missing screen's eventual destination records required future work, not
 a claim that the screen exists today.

@@ -6,7 +6,7 @@ edition.workspace = true
 [features]
 # Test hooks the crates above drive in their own tests (stopping the workers, the huddle job
 # registry). Production builds don't compile them.
-test-support = ["campfire_web/test-support", "campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support"]
+test-support = ["campfire_runtime/test-support", "campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support"]
 
 [dependencies]
 campfire_api_types.workspace = true
@@ -20,9 +20,7 @@ campfire_db.workspace = true
 campfire_jobs.workspace = true
 campfire_storage.workspace = true
 campfire_cable.workspace = true
-campfire_views.workspace = true
 campfire_app.workspace = true
-campfire_web.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 axum.workspace = true
@@ -37,7 +35,7 @@ rusqlite.workspace = true
 http.workspace = true
 
 [dev-dependencies]
-campfire_web = { workspace = true, features = ["test-support"] }
+campfire_runtime = { workspace = true, features = ["test-support"] }
 campfire_app = { workspace = true, features = ["test-support"] }
 campfire_jobs = { workspace = true, features = ["test-support"] }
 campfire_cable = { workspace = true, features = ["test-support"] }
