@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { userFixture } from "../../api/testing.ts";
 import type { Thread } from "../../gen/Thread.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
@@ -206,6 +207,41 @@ describe("sending from history", () => {
     await act(async () => latest.resolve());
     expect(input).toHaveProperty("value", "");
     expect(readDraft(draftKey(ROOM, null))).toBe("");
+  });
+});
+
+describe("mention autocomplete", () => {
+  it("inserts and sends the selected ID when two people have the same name", async () => {
+    Element.prototype.scrollIntoView = () => undefined;
+    vi.spyOn(composerActions, "suggestUsers").mockResolvedValue([
+      { user: userFixture(123, "Twin"), mentionToken: "<@123>" },
+      { user: userFixture(456, "Twin"), mentionToken: "<@456>" },
+    ]);
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "Hello @tw" } });
+    const options = await screen.findAllByRole("option", { name: "Twin" });
+    const second = options[1];
+
+    expect(options).toHaveLength(2);
+
+    if (second === undefined) {
+      throw new Error("the second Twin is missing");
+    }
+
+    expect(second.getAttribute("aria-disabled")).not.toBe("true");
+    fireEvent.click(second);
+    expect(input).toHaveProperty("value", "Hello <@456> ");
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(send).toHaveBeenCalledWith(ROOM, "Hello <@456>", expect.any(Object)),
+    );
   });
 });
 

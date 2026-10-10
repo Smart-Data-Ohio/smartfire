@@ -85,7 +85,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             }
         }),
         campfire_db::models::activity_item::ActivityItemsRemoved::KIND => decode::<campfire_db::models::activity_item::ActivityItemsRemoved>(request).map(|removed| {
-            if let Some(app) = app { app.broadcasts.sync_activity_removed(removed.items); }
+            if let Some(app) = app { app.broadcasts.sync_activity_removed(removed); }
         }),
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, app, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {

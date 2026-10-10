@@ -22,7 +22,7 @@ import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
-/** An `@` suggestion: insert `mentionToken`; `null` means the name is ambiguous (disabled). */
+/** Insert the stable ID token; older servers can return `null` for unavailable mentions. */
 export const UserSuggestion = Schema.Struct({
   user: User,
   mentionToken: Schema.NullOr(Schema.String),

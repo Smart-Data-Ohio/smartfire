@@ -166,6 +166,61 @@ fn match_rows(rows: Vec<(i64, String)>, text: &str) -> Result<Vec<i64>> {
 }
 
 impl ActivityItem {
+    /// Retained mentions keep their inbox state; added mentions refresh activity without a push.
+    pub(crate) fn reconcile_message_mentions(
+        tx: &mut Tx<'_>,
+        message: &Message,
+        previous_mentionees: &[i64],
+    ) -> Result<()> {
+        let mentioned: Vec<i64> = message
+            .mentionees(tx.conn(), tx.rich_text())?
+            .into_iter()
+            .map(|user| user.id)
+            .collect();
+        let obsolete = query_all(
+            tx.conn(),
+            "SELECT * FROM activity_items WHERE source_type = 'Message' AND source_id = ? AND event_type = 'mention' AND user_id NOT IN (SELECT value FROM json_each(?))",
+            rusqlite::params![message.id, serde_json::json!(mentioned).to_string()],
+            Self::from_row,
+        )?;
+        if obsolete.is_empty() && mentioned.iter().all(|id| previous_mentionees.contains(id)) {
+            return Ok(());
+        }
+        let recipients = candidates(tx.conn(), tx.rich_text(), message, tx.now())?.recipients;
+        let mut removed = Vec::new();
+        for item in obsolete {
+            if let Some(candidate) = recipients
+                .iter()
+                .find(|candidate| candidate.user_id == item.user_id)
+            {
+                // Recompute the remaining reason without reopening activity the recipient handled.
+                tx.conn().execute(
+                    "UPDATE activity_items SET event_type=?,updated_at=? WHERE id=?",
+                    rusqlite::params![candidate.event_type, tx.now(), item.id],
+                )?;
+                Self::broadcast_change(tx, item.user_id, item.id)?;
+            } else {
+                tx.conn()
+                    .execute("DELETE FROM activity_items WHERE id=?", [item.id])?;
+                removed.push((item.id, item.user_id));
+            }
+        }
+        if !removed.is_empty() {
+            tx.emit_after_commit(crate::Event::broadcast(&super::ActivityItemsRemoved {
+                items: removed,
+                room_id: Some(message.room_id),
+            }));
+        }
+        for candidate in recipients {
+            if candidate.event_type == "mention"
+                && !previous_mentionees.contains(&candidate.user_id)
+            {
+                Self::refresh_unread(tx, candidate.user_id, "Message", message.id, "mention")?;
+            }
+        }
+        Ok(())
+    }
+
     /// Persisted-message seam for WS11 finalize and WS12's recorder. The source caller gates
     /// streaming/importing/system notes; inbox policy deliberately does not apply push quietness.
     pub fn record_message(tx: &mut Tx<'_>, message: &Message) -> Result<Vec<Self>> {

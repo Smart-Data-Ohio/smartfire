@@ -136,11 +136,6 @@ async fn create_upload(c: &mut Ctx) -> Result {
 
 // --- Autocomplete ---------------------------------------------------------------------------------
 
-/// `@[Name]` for a name only one person in scope has and the token can carry.
-fn mention_token(name: &str, unique: bool) -> Option<String> {
-    (unique && !name.contains(['[', ']', '\n', '\r'])).then(|| format!("@[{name}]"))
-}
-
 async fn index_user_suggestions(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let viewer = concerns::require_current_user(c)?.id;
@@ -161,7 +156,7 @@ async fn index_user_suggestions(c: &mut Ctx) -> Result {
                 return Ok(None);
             }
             let room = room.flatten().map(|room| room.id);
-            let (users, unique) =
+            let (users, _) =
                 autocomplete_users::page(conn, room, query.as_deref(), 0, USER_SUGGESTIONS)?;
             let ids = users.iter().map(|user| user.id).collect::<Vec<_>>();
             let settings = UserStatusSettings::for_ids(conn, &ids)?;
@@ -173,7 +168,9 @@ async fn index_user_suggestions(c: &mut Ctx) -> Result {
                         let settings = settings.get(&user.id)?;
                         Some(api::UserSuggestion {
                             user: dto::user(settings, &secrets, now, &extras),
-                            mention_token: mention_token(&user.name, unique.contains(&user.name)),
+                            mention_token: Some(campfire_richtext::markdown::user_mention_token(
+                                user.id,
+                            )),
                         })
                     })
                     .collect::<Vec<_>>(),

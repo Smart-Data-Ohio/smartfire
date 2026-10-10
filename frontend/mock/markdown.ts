@@ -1,6 +1,6 @@
 /**
  * The mock's stand-in for the server's Markdown pipeline: paragraphs, line breaks, `- ` lists,
- * fenced code, inline code, **bold**, *em*, links, @mentions (`@[Exact Name]` and the older
+ * fenced code, inline code, **bold**, *em*, links, @mentions (`<@123>`, `@[Exact Name]` and the older
  * `@name`) and `:name:` brand and workspace icons, rendered to the small, already
  * sanitized HTML subset the real `bodyHtml` uses. Everything that isn't markup is escaped.
  */
@@ -80,9 +80,11 @@ function renderText(text: string, people: readonly Mentionable[]): string {
   const hold = (html: string) => `\uE000${held.push(html) - 1}\uE001`;
 
   // A backslash escape keeps the next punctuation mark literal (`¯\_(ツ)_/¯`).
-  let out = text.replace(/\\([\\`*_[\]()#+\-.!{}])/g, (_match, char: string) =>
-    hold(escapeHtml(char)),
+  let out = text.replace(/\\(<@[1-9][0-9]*>|@\[[^[\]\r\n]+\])/g, (_match, token: string) =>
+    hold(escapeHtml(token)),
   );
+
+  out = out.replace(/\\([\\`*_[\]()#+\-.!{}])/g, (_match, char: string) => hold(escapeHtml(char)));
 
   out = out.replace(
     /\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g,
@@ -99,7 +101,13 @@ function renderText(text: string, people: readonly Mentionable[]): string {
     return html === null ? match : hold(html);
   });
 
-  // `@[Exact Name]`, what the composer inserts: a mention only when exactly one person has it.
+  out = out.replace(/<@([1-9][0-9]*)>/g, (match, id: string) => {
+    const person = people.find((person) => person.id === Number(id));
+
+    return person === undefined ? match : hold(mentionHtml(person));
+  });
+
+  // Legacy `@[Exact Name]` resolves only when exactly one person has it.
   out = out.replace(/@\[([^\]\n]+)\]/g, (match, name: string) => {
     const matches = people.filter((person) => person.name === name);
     const [person] = matches;
