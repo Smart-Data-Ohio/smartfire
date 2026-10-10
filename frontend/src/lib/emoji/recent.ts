@@ -7,7 +7,10 @@ export interface EmojiChoice {
   readonly title: string;
   /** Icons only: the image to draw. */
   readonly imageUrl: string | null;
-  /** An icon's first frame, when known: the still to show under reduced motion. */
+  /**
+   * An icon's first frame, from the current catalog. Never remembered: an icon can be deleted and
+   * an animated one uploaded under its name, so a remembered still could be the wrong image.
+   */
   readonly stillUrl?: string | null;
 }
 
@@ -34,6 +37,11 @@ const listeners = new Set<() => void>();
 
 let cache: readonly EmojiChoice[] | null = null;
 
+/** What's remembered of a pick: its content, title and image, never its still. */
+function remembered(choice: EmojiChoice): EmojiChoice {
+  return { content: choice.content, title: choice.title, imageUrl: choice.imageUrl ?? null };
+}
+
 function isChoice(value: EmojiChoice | null): value is EmojiChoice {
   return (
     value !== null &&
@@ -53,9 +61,7 @@ function read(): readonly EmojiChoice[] {
     // SAFETY: parsed from our own key; every entry is checked by isChoice before use.
     const parsed = raw === null ? [] : (JSON.parse(raw) as readonly (EmojiChoice | null)[]);
 
-    cache = Array.isArray(parsed)
-      ? parsed.filter(isChoice).map((choice) => ({ ...choice, imageUrl: choice.imageUrl ?? null }))
-      : EMPTY;
+    cache = Array.isArray(parsed) ? parsed.filter(isChoice).map(remembered) : EMPTY;
   } catch {
     cache = EMPTY;
   }
@@ -69,7 +75,10 @@ export function withRecent(
   choice: EmojiChoice,
   limit = RECENT_LIMIT,
 ): EmojiChoice[] {
-  return [choice, ...list.filter((entry) => entry.content !== choice.content)].slice(0, limit);
+  return [remembered(choice), ...list.filter((entry) => entry.content !== choice.content)].slice(
+    0,
+    limit,
+  );
 }
 
 /** Remembers a pick for the Recent tab and the quick reactions. */

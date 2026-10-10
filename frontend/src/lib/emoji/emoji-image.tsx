@@ -31,11 +31,22 @@ export function stillBodyIcons(html: string): string {
     : html;
 }
 
+/**
+ * Message HTML as it should show now: under reduced motion, its workspace icons on their first
+ * frame. Every place that inserts message HTML goes through this, `BodyHtml` or not.
+ */
+export function useMotionSafeHtml(html: string): string {
+  return useReducedMotion() ? stillBodyIcons(html) : html;
+}
+
 type EmojiImageProps = {
   readonly src: string;
-  /** The first frame when it's known (`stillUrl`); otherwise it's worked out from `src`. */
+  /**
+   * The first frame, from the server's current answer (`stillUrl`); otherwise it's worked out from
+   * `src`. Never pass a remembered one: an icon can be replaced by an animated one of its name.
+   */
   readonly still?: string | null | undefined;
-  /** Shows the known first frame while at rest, as a dense grid's cells do until active. */
+  /** Shows the first frame while at rest, as a dense grid's cells do until active. */
   readonly resting?: boolean;
 } & Omit<ComponentProps<"img">, "src">;
 
@@ -45,14 +56,6 @@ type EmojiImageProps = {
  */
 export function EmojiImage({ src, still, resting = false, alt = "", ...rest }: EmojiImageProps) {
   const reduced = useReducedMotion();
-  const known = still ?? null;
-  let shown = src;
 
-  if (reduced) {
-    shown = stillSrc(src, known);
-  } else if (resting && known !== null) {
-    shown = known;
-  }
-
-  return <img {...rest} src={shown} alt={alt} />;
+  return <img {...rest} src={reduced || resting ? stillSrc(src, still) : src} alt={alt} />;
 }

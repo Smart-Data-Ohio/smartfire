@@ -172,7 +172,7 @@ function QuickReactions({ onReact, onMore }: QuickReactionsProps) {
           {choice.imageUrl === null ? (
             <span aria-hidden="true">{choice.content}</span>
           ) : (
-            <EmojiImage src={choice.imageUrl} still={choice.stillUrl} width={24} height={24} />
+            <EmojiImage src={choice.imageUrl} width={24} height={24} />
           )}
         </MenuQuickItem>
       ))}

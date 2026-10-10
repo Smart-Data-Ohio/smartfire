@@ -51,7 +51,7 @@ export function HoverBar({
             {choice.imageUrl === null ? (
               <span aria-hidden="true">{choice.content}</span>
             ) : (
-              <EmojiImage src={choice.imageUrl} still={choice.stillUrl} width={18} height={18} />
+              <EmojiImage src={choice.imageUrl} width={18} height={18} />
             )}
           </Button>
         </Tooltip>

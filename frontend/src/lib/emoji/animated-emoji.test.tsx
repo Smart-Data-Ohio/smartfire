@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BotPicture } from "../../features/admin/bot-parts.tsx";
 import { BodyHtml } from "../../features/messages/body-html.tsx";
 import { EmojiImage, stillBodyIcons, stillSrc } from "./emoji-image.tsx";
 import EmojiPicker from "./emoji-picker.tsx";
-import type { EmojiChoice } from "./recent.ts";
+import { type EmojiChoice, recordRecentEmoji, resetRecentEmoji } from "./recent.ts";
 
 /** Whether the OS asks for reduced motion, as the stubbed `matchMedia` answers. */
 let systemReduced = false;
@@ -23,6 +24,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   delete document.documentElement.dataset.motion;
+  window.localStorage.clear();
+  resetRecentEmoji();
   vi.unstubAllGlobals();
 });
 
@@ -94,7 +97,7 @@ describe("EmojiImage", () => {
     await waitFor(() => expect(srcOf(container)).toBe("/icons/dance?still=1"));
   });
 
-  it("rests on a known still, and plays when there is none to rest on", () => {
+  it("rests on its still, worked out from a workspace icon's URL when none is named", () => {
     const { container, rerender } = render(
       <EmojiImage src="/icons/dance" still="/icons/dance?still=1" resting />,
     );
@@ -103,7 +106,28 @@ describe("EmojiImage", () => {
 
     rerender(<EmojiImage src="/icons/dance" resting />);
 
-    expect(srcOf(container)).toBe("/icons/dance");
+    expect(srcOf(container)).toBe("/icons/dance?still=1");
+
+    rerender(<EmojiImage src="/assets/icons/brands/github.svg" resting />);
+
+    expect(srcOf(container)).toBe("/assets/icons/brands/github.svg");
+  });
+});
+
+describe("a bot's icon", () => {
+  it("shows an animated workspace icon's first frame under reduced motion", () => {
+    document.documentElement.dataset.motion = "reduce";
+
+    const { container } = render(
+      <BotPicture
+        id={9}
+        name="Deploy bot"
+        avatarUrl="/users/9/avatar"
+        icon={{ kind: "image", title: "Dance", url: "/icons/dance" }}
+      />,
+    );
+
+    expect(srcOf(container)).toBe("/icons/dance?still=1");
   });
 });
 
@@ -168,6 +192,45 @@ describe("the emoji picker", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  /** The Frequently used cells, in order, once the picker has drawn them. */
+  async function recentCells(catalog: readonly EmojiChoice[]): Promise<HTMLElement[]> {
+    render(<EmojiPicker onPick={() => {}} loadCustomIcons={async () => catalog} />);
+
+    await screen.findByRole("option", { name: "Dance" });
+
+    return screen.getAllByRole("option").slice(0, 2);
+  }
+
+  it("never remembers a pick's still", () => {
+    recordRecentEmoji(DANCE);
+
+    expect(window.localStorage.getItem("smartfire:emoji-recent")).not.toContain("still");
+  });
+
+  it("shows a recent icon as the current catalog has it, not as it was picked", async () => {
+    // Picked while :dance: was a still PNG, which has since been replaced by an animated one.
+    document.documentElement.dataset.motion = "reduce";
+    window.localStorage.setItem(
+      "smartfire:emoji-recent",
+      JSON.stringify([{ ...DANCE, stillUrl: "/icons/dance" }]),
+    );
+
+    const [dance] = await recentCells([DANCE]);
+
+    expect(srcOf(dance)).toBe("/icons/dance?still=1");
+  });
+
+  it("rests a recent icon the catalog doesn't know on its worked-out still", async () => {
+    // Picks from a reaction pill carry no still, and the catalog hasn't the icons (yet).
+    recordRecentEmoji({ content: ":dance:", title: "Dance", imageUrl: "/icons/dance" });
+    recordRecentEmoji({ content: ":danceoff:", title: "Dance off", imageUrl: "/icons/danceoff" });
+
+    const [first, second] = await recentCells([]);
+
+    expect(srcOf(first)).toBe("/icons/danceoff");
+    expect(srcOf(second)).toBe("/icons/dance?still=1");
   });
 
   async function openPicker() {

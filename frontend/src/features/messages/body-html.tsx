@@ -1,8 +1,7 @@
 import { type ComponentProps, useCallback, useLayoutEffect, useRef } from "react";
 import { inlineMentions } from "../../lib/body-html.ts";
 import { enhanceCodeBlocks } from "../../lib/code-highlight/code-blocks.ts";
-import { stillBodyIcons } from "../../lib/emoji/emoji-image.tsx";
-import { useReducedMotion } from "../../motion/reduced-motion.ts";
+import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 // The message body styles, for pages outside a room (the Slack plan's samples).
 import "../room/room.css";
 import { useSpoilerReveal } from "./spoilers.ts";
@@ -30,10 +29,8 @@ type BodyHtmlProps = {
  */
 export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const reduced = useReducedMotion();
-  const inline = inlineMentions(html);
   // Switching motion inserts the markup again, so spoilers and code blocks follow `shown`.
-  const shown = reduced ? stillBodyIcons(inline) : inline;
+  const shown = useMotionSafeHtml(inlineMentions(html));
   const spoilers = useSpoilerReveal(shown);
 
   const attach = useCallback(
