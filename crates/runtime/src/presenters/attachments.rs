@@ -126,6 +126,19 @@ impl Assignment {
     }
 }
 
+/// Stage every file before entering the message's write transaction.
+pub async fn stage_many(app: &App, assignments: Vec<Assignment>) -> Result<Vec<Assignment<Staged>>> {
+    if assignments.is_empty() {
+        return Ok(Vec::new());
+    }
+    let limit = crate::active_storage::upload_limit_bytes(app).await?;
+    let mut staged = Vec::with_capacity(assignments.len());
+    for assignment in assignments {
+        staged.push(assignment.stage_with_limit(app, limit as u64).await?);
+    }
+    Ok(staged)
+}
+
 async fn check_file_size(path: &std::path::Path, declared: u64, limit: u64) -> Result<()> {
     if declared > limit {
         return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));

@@ -10,6 +10,51 @@ use std::{sync::Arc, time::Duration};
 
 const CLASS: &str = "Message::AttachmentProcessingJob";
 
+#[tokio::test]
+async fn attachment_processing_round3_grouped_slot_is_processed() {
+    let (app, _, id, blob) = setup(false).await;
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_attachments SET name='attachments' WHERE record_type='Message' AND record_id=?", [id])?;
+        campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
+        Ok(())
+    }).await.unwrap();
+    perform_queued(&app, 1).await.unwrap();
+    let storage = app.booted.app.storage.clone();
+    assert!(app.db().read(move |conn| {
+        Ok(storage.existing_preview_image(conn, &Blob::find(conn, blob).unwrap().unwrap()).unwrap().is_some())
+    }).await.unwrap(), "grouped video must receive its preview");
+    assert_eq!(state(&app, blob).await.0, None);
+}
+
+#[tokio::test]
+async fn attachment_processing_round3_completion_refreshes_both_slots() {
+    let (app, clock, id, blob) = setup(false).await;
+    let grouped = app.db().write(move |tx| {
+        let message = Message::create(tx, NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Grouped".into()),
+            client_message_id: Some("grouped-attachment-worker".into()),
+            attachment_blob_ids: vec![blob], ..Default::default()
+        })?;
+        campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
+        Ok(message.id)
+    }).await.unwrap();
+    let (mut client, server) = json_subscribe(&app).await;
+    let _server = AbortServer(server);
+    app.publications().take();
+    clock.set(app.booted.app.clock.now().checked_add(jiff::SignedDuration::from_secs(10)).unwrap());
+    perform_queued(&app, 1).await.unwrap();
+    for message in [id, grouped] {
+        client.until(move |event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(updated) if updated.id == message), |_| false).await;
+    }
+    let now = app.booted.app.clock.now();
+    app.db().read(move |conn| {
+        for message in [id, grouped] {
+            assert_eq!(Message::find(conn, message)?.updated_at.jiff(), now, "owner {message} must refresh");
+        }
+        Ok(())
+    }).await.unwrap();
+}
+
 fn oracle() -> serde_json::Value {
     serde_json::from_str(include_str!(
         "../../../../../vectors/message_attachment_processing.json"

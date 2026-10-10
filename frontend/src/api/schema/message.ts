@@ -60,6 +60,7 @@ export const MessageDTO = Schema.Struct({
   forwardNote: Schema.NullOr(Schema.String),
   editedAt: Schema.NullOr(Timestamp),
   attachment: Schema.NullOr(Attachment),
+  attachments: Schema.optionalKey(Schema.Array(Attachment)),
   reactions: Schema.Array(Reaction),
   boosts: Schema.Array(Boost),
   pinned: Schema.Boolean,
@@ -135,6 +136,7 @@ export const CreateMessage = Schema.Struct({
   replyToMessageId: Schema.NullOr(MessageId),
   replyNotifyAuthor: Schema.NullOr(Schema.Boolean),
   attachmentSignedId: Schema.NullOr(Schema.String),
+  attachmentSignedIds: Schema.optionalKey(Schema.Array(Schema.String)),
   driveFileIds: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 

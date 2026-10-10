@@ -214,6 +214,7 @@ fn uploads_round_trip() {
             reply_to_message_id: None,
             reply_notify_author: None,
             attachment_signed_id: Some("eyJfcmFpbHMiOnt9--abc".into()),
+            attachment_signed_ids: None,
             drive_file_ids: None,
         },
         json!({
@@ -673,6 +674,7 @@ fn threads_round_trip() {
                 reply_to_message_id: None,
                 reply_notify_author: None,
                 attachment_signed_id: None,
+                attachment_signed_ids: None,
                 drive_file_ids: None,
             },
         },

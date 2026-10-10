@@ -7,14 +7,14 @@ use campfire_db::{
     ChannelThread, Connection, Membership, Message, NewChannelThread, NewMessage, Room, User,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_messages::controllers::messages::attachment_blob;
+use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob};
 use campfire_runtime::presenters::attachments::{self, Assignment};
 use campfire_runtime::context::db_error;
 use rusqlite::OptionalExtension;
 
 use crate::agents::human;
 use crate::dto;
-use crate::endpoints::{before_actions, blob_exists, body, now, set_room};
+use crate::endpoints::{before_actions, blob_exists, body, grouped_signed_ids, now, require_grouped_uploads, set_room};
 use crate::error::{fail, not_found, record_invalid, validation};
 
 endpoint!(
@@ -213,6 +213,10 @@ async fn create_post(c: &mut Ctx) -> Result {
                 .as_ref()
                 .is_some_and(|id| !id.is_empty())
             || message
+                .attachment_signed_ids
+                .as_ref()
+                .is_some_and(|ids| !ids.is_empty())
+            || message
                 .drive_file_ids
                 .as_ref()
                 .is_some_and(|ids| !ids.is_empty())
@@ -289,6 +293,9 @@ async fn create_post(c: &mut Ctx) -> Result {
         .as_ref()
         .and_then(|message| message.attachment_signed_id.clone())
         .filter(|id| !id.is_empty());
+    let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), message.as_ref()
+        .and_then(|message| message.attachment_signed_ids.clone()).unwrap_or_default())?;
+    require_grouped_uploads(c, &signed_ids).await?;
     if let Some(id) = &signed_id
         && !blob_exists(c, id).await?
     {
@@ -301,6 +308,7 @@ async fn create_post(c: &mut Ctx) -> Result {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
     };
+    let files = attachments::stage_many(c.app(), signed_ids.into_iter().map(Assignment::Signed).collect()).await?;
     let message = if let Some(mut message) = message {
         message.drive_file_ids = Some(crate::drive::require_drive_file_ids(
             c,
@@ -333,11 +341,16 @@ async fn create_post(c: &mut Ctx) -> Result {
             {
                 return Ok((thread.id, false));
             }
-            let blob = attachment_blob(tx, attachment)?;
+            let blob = attachment_blob(tx, attachment, AttachmentPolicy::OwnedUpload { uploader_id: creator_id }, "attachment_signed_id")?;
+            let mut blobs = Vec::with_capacity(files.len() + 1);
+            for file in files {
+                if let Some(blob) = attachment_blob(tx, file, AttachmentPolicy::OwnedUpload { uploader_id: creator_id }, "attachment_signed_ids")? { blobs.push(blob); }
+            }
             let message = message.map(|message| NewMessage {
                 markdown_source: Some(message.markdown_source),
                 client_message_id: client_id,
                 attachment_blob_id: blob.as_ref().map(|blob| blob.id),
+                attachment_blob_ids: blobs.iter().map(|blob| blob.id).collect(),
                 reply_to_message_id: message.reply_to_message_id,
                 reply_notify_author: message.reply_notify_author,
                 drive_file_ids: message.drive_file_ids.unwrap_or_default(),
@@ -358,9 +371,8 @@ async fn create_post(c: &mut Ctx) -> Result {
                 message,
             )?;
             if let Some(opener) = &opener {
-                if let Some(blob) = &blob {
-                    attachments::enqueue_analysis(tx, blob);
-                }
+                blobs.extend(blob);
+                for blob in &blobs { attachments::enqueue_analysis(tx, blob); }
                 campfire_db::models::message_attachment_processing::schedule_message(tx, opener)?;
             }
             Ok((thread.id, true))

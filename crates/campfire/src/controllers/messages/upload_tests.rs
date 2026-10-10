@@ -63,3 +63,54 @@ async fn signed_attachment_scope_and_enqueue_rollback_preserve_existing_blob() {
         Ok(campfire_storage::Blob::find(conn,13).unwrap().unwrap())}).await.unwrap();
     assert!(!app.booted.app.storage.service.download(&blob.key).unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn signed_direct_upload_can_be_posted_twice_on_legacy_root_and_thread() {
+    let app = TestApp::boot().await.unwrap().without_job_runner().await;
+    let mut browser = app.david();
+    let thread = app.db().write(|tx| ChannelThread::create(tx, NewChannelThread {
+        room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
+    })).await.unwrap();
+    for path in [
+        format!("/rooms/{ALL_TALK}/messages"),
+        format!("/rooms/{ALL_TALK}/threads/{}/messages", thread.id),
+    ] {
+        let bytes = b"Reusable file";
+        let response = browser.write(Req::new(Method::POST, "/rails/active_storage/direct_uploads")
+            .header("content-type", "application/json")
+            .body(json!({"blob": {"filename": "reusable.txt", "byte_size": bytes.len(),
+                "content_type": "text/plain", "checksum": campfire_storage::key::checksum(bytes)}}).to_string())).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let upload = response.json();
+        let response = browser.send(Req::new(Method::PUT, upload["direct_upload"]["url"].as_str().unwrap())
+            .header("content-type", "text/plain")
+            .header("content-length", &bytes.len().to_string()).body(bytes.to_vec())).await;
+        assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+        let blob_id = upload["id"].as_i64().unwrap();
+        app.db().read(move |conn| {
+            let blob = campfire_storage::Blob::find(conn, blob_id).unwrap().unwrap();
+            assert_eq!(blob.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64), Some(DAVID));
+            Ok(())
+        }).await.unwrap();
+        let mut messages = Vec::new();
+        for index in 0..2 {
+            let client = format!("signed-reuse-{blob_id}-{index}");
+            let response = browser.write(Req::new(Method::POST, &path)
+                .header("content-type", "application/json")
+                .header("accept", "application/json")
+                .body(json!({"message": {"client_message_id": client,
+                    "attachment": upload["signed_id"]}}).to_string())).await;
+            assert_eq!(response.status, StatusCode::CREATED, "{path}, post {index}: {}", response.text());
+            messages.push(app.db().read(move |conn| {
+                let message = Message::find_duplicate(conn, ALL_TALK, DAVID, &client)?.unwrap();
+                assert_eq!(message.attachment(conn)?.unwrap().1.id, blob_id);
+                Ok(message.id)
+            }).await.unwrap());
+        }
+        assert_ne!(messages[0], messages[1]);
+        app.db().read(move |conn| {
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=? AND record_type='Message'", [blob_id], |row| row.get::<_, i64>(0))?, 2);
+            Ok(())
+        }).await.unwrap();
+    }
+}
