@@ -51,6 +51,11 @@ describe("the screen map and the router", () => {
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",
+      // The signed-out pages are outside the signed-in screen map; their retained URLs keep
+      // serving the retained pages until a later slice makes these canonical.
+      "/app/session/new",
+      "/app/two_factor/challenge",
+      "/app/session/transfers/:id",
     ]);
 
     for (const route of Object.values(router.routesById)) {

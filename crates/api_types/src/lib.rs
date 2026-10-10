@@ -57,7 +57,7 @@ mod thread;
 mod user;
 mod work;
 
-pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, TransferSignIn};
+pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInHelpContact, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, TransferSignIn};
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,

@@ -176,6 +176,8 @@ export interface AdminModule {
   readonly requireSudo: () => void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
+  /** The workspace's description, for the signed-out boot. */
+  readonly description: () => string;
   readonly customStyles: () => string | null;
   readonly roomCreationRestricted: () => boolean;
   readonly uploadLimitBytes: () => number;
@@ -674,6 +676,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     },
     requireSudo,
     branding,
+    description: () => current().description,
     customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,
     uploadLimitBytes: () => current().uploadLimitBytes,

@@ -1,4 +1,4 @@
-import { type ComponentPropsWithRef, useId, useState } from "react";
+import { type ComponentPropsWithRef, type ReactNode, useId, useState } from "react";
 import "./text-field.css";
 
 interface TextFieldProps extends Omit<ComponentPropsWithRef<"input">, "id"> {
@@ -8,9 +8,19 @@ interface TextFieldProps extends Omit<ComponentPropsWithRef<"input">, "id"> {
   readonly error?: string | undefined;
   /** Bump to shake again for the same error (a second failed submit). */
   readonly attempt?: number;
+  /** A control at the label's far end (sign-in's translation list), outside the label itself. */
+  readonly labelAccessory?: ReactNode;
 }
 
-export function TextField({ label, hint, error, attempt = 0, className, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  hint,
+  error,
+  attempt = 0,
+  labelAccessory,
+  className,
+  ...rest
+}: TextFieldProps) {
   const id = useId();
   const [seen, setSeen] = useState({ error, attempt });
   const [shaking, setShaking] = useState(false);
@@ -29,11 +39,22 @@ export function TextField({ label, hint, error, attempt = 0, className, ...rest 
   const invalid = error !== undefined && error !== "";
   const describedBy = invalid ? `${id}-error` : hint === undefined ? undefined : `${id}-hint`;
 
+  const labelElement = (
+    <label className="field-label" htmlFor={id}>
+      {label}
+    </label>
+  );
+
   return (
     <div className={`field t-input-wrap${invalid ? " is-error" : ""}`}>
-      <label className="field-label" htmlFor={id}>
-        {label}
-      </label>
+      {labelAccessory === undefined ? (
+        labelElement
+      ) : (
+        <div className="field-label-row">
+          {labelElement}
+          {labelAccessory}
+        </div>
+      )}
       <input
         {...rest}
         id={id}

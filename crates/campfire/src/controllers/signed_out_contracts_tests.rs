@@ -116,9 +116,15 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
         assert_eq!(boot["kind"], "signedOut");
         assert_eq!(
             boot["signInMethods"],
-            json!({"password":true,"google":false})
+            json!({"password":true,"google":false,"googleDomains":[]})
         );
         assert_eq!(boot["firstRunPending"], false);
+        // The retained sign-in page's help line: the first administrator and the version.
+        assert_eq!(
+            boot["helpContact"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            ["name", "emailAddress"]
+        );
+        assert!(boot["version"].is_string());
         assert_eq!(boot["workspace"]["description"], "");
         assert!(boot["workspace"]["name"].is_string());
         assert!(boot["workspace"].get("logoUrl").is_some());
@@ -139,8 +145,10 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
             [
                 "csrfToken",
                 "firstRunPending",
+                "helpContact",
                 "kind",
                 "signInMethods",
+                "version",
                 "workspace"
             ]
         );
@@ -823,6 +831,10 @@ async fn google_start_shares_the_authorization_url_flow_cookie_and_return_path()
         let boot = browser.get("/api/v1/session/boot").await;
         if json {
             assert_eq!(boot.json()["signInMethods"]["google"], true);
+            assert_eq!(
+                boot.json()["signInMethods"]["googleDomains"],
+                json!(["smartdata.net"])
+            );
         }
         outcomes.push((
             url,

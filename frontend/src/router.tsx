@@ -108,6 +108,36 @@ const shellRoute = createRoute({
   component: AppShell,
 });
 
+/**
+ * The signed-out pages, outside the shell (no boot, no socket), each in its own chunk: the server
+ * renders their URLs for a visitor without a session (crates/spa/src/signed_out.rs).
+ * `/session/new` and the other retained auth URLs still serve the retained pages; only these
+ * `/app/` paths draw the SPA ones.
+ */
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "session/new",
+  ...chunked(() =>
+    import("./features/auth/sign-in.tsx").then((module) => ({ default: module.SignInPage })),
+  ),
+});
+
+const challengeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "two_factor/challenge",
+  ...chunked(() =>
+    import("./features/auth/challenge.tsx").then((module) => ({ default: module.ChallengePage })),
+  ),
+});
+
+const transferRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "session/transfers/$transferId",
+  ...chunked(() =>
+    import("./features/auth/transfer.tsx").then((module) => ({ default: module.TransferRoute })),
+  ),
+});
+
 /** `/app/`: the last room on wide screens, the conversation list on phones. */
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -615,6 +645,9 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
+  signInRoute,
+  challengeRoute,
+  transferRoute,
   shellRoute.addChildren([
     homeRoute,
     activityRoute,
