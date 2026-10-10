@@ -13,6 +13,7 @@ import { Button, Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { type EmojiData, GROUP_LABELS, loadEmojiData } from "./data.ts";
+import { EmojiImage } from "./emoji-image.tsx";
 import {
   layoutSections,
   moveActive,
@@ -95,14 +96,22 @@ function useCustomIcons(load: EmojiPickerProps["loadCustomIcons"]): readonly Emo
   return icons;
 }
 
-function Glyph({ choice, size }: { readonly choice: EmojiChoice; readonly size: "cell" | "big" }) {
+interface GlyphProps {
+  readonly choice: EmojiChoice;
+  readonly size: "cell" | "big";
+  /** A grid cell other than the active one: an animated icon rests on its first frame. */
+  readonly resting?: boolean;
+}
+
+function Glyph({ choice, size, resting = false }: GlyphProps) {
   return choice.imageUrl === null ? (
     <span className={`emoji-glyph emoji-glyph-${size}`}>{choice.content}</span>
   ) : (
-    <img
+    <EmojiImage
       className={`emoji-image emoji-image-${size}`}
       src={choice.imageUrl}
-      alt=""
+      still={choice.stillUrl}
+      resting={resting}
       loading="lazy"
       draggable={false}
     />
@@ -142,7 +151,7 @@ function GridRow({ row, activeIndex, idFor, onHover, onPick }: GridRowProps) {
           onPointerMove={() => onHover(cell.index)}
           onClick={() => onPick(cell)}
         >
-          <Glyph choice={cell.choice} size="cell" />
+          <Glyph choice={cell.choice} size="cell" resting={cell.index !== activeIndex} />
         </div>
       ))}
     </div>

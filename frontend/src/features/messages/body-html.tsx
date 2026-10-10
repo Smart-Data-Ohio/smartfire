@@ -1,6 +1,7 @@
 import { type ComponentProps, useCallback, useLayoutEffect, useRef } from "react";
 import { inlineMentions } from "../../lib/body-html.ts";
 import { enhanceCodeBlocks } from "../../lib/code-highlight/code-blocks.ts";
+import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 // The message body styles, for pages outside a room (the Slack plan's samples).
 import "../room/room.css";
 import { useSpoilerReveal } from "./spoilers.ts";
@@ -23,10 +24,14 @@ type BodyHtmlProps = {
  * that one spoiler and does not bubble into the message row's actions. The composer preview uses
  * this same body, so spoilers there behave the same way. Spoilers bind through the same
  * `useSpoilerReveal` ref as every other place that inserts message HTML.
+ *
+ * Under reduced motion an animated workspace icon shows its first frame.
  */
 export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const spoilers = useSpoilerReveal(html);
+  // Switching motion inserts the markup again, so spoilers and code blocks follow `shown`.
+  const shown = useMotionSafeHtml(inlineMentions(html));
+  const spoilers = useSpoilerReveal(shown);
 
   const attach = useCallback(
     (node: HTMLDivElement | null) => {
@@ -40,12 +45,12 @@ export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
   useLayoutEffect(() => {
     const root = ref.current;
 
-    if (root === null || !html.includes("<pre")) {
+    if (root === null || !shown.includes("<pre")) {
       return;
     }
 
     return enhanceCodeBlocks(root);
-  }, [html]);
+  }, [shown]);
 
   return (
     <div
@@ -53,7 +58,7 @@ export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
       className={className}
       {...rest}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-      dangerouslySetInnerHTML={{ __html: inlineMentions(html) }}
+      dangerouslySetInnerHTML={{ __html: shown }}
     />
   );
 }
