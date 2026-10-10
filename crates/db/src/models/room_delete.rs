@@ -76,7 +76,7 @@ pub fn begin_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Res
         |r| r.get(0),
     )?;
     for quality in qualities {
-        if !["720p15", "1080p15", "1080p30"].contains(&quality.as_str()) {
+        if !super::stream::QUALITIES.contains(&quality.as_str()) {
             let mut e = Errors::default();
             e.add("quality", "is not included in the list");
             e.into_result()?;

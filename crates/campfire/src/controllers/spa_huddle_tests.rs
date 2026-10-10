@@ -1052,6 +1052,59 @@ async fn the_stage_answers_its_state_and_follows_roles_hands_and_streams() {
     server.abort();
 }
 
+#[tokio::test]
+async fn a_stage_goes_live_at_1080p60_and_every_viewer_reads_it_back() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let (room, _, _, speaker) = stage(&a).await;
+    let room_id = room.id;
+    let base = format!("/api/v1/rooms/{room_id}/stage");
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut jason_sync =
+        Sync::connect(addr, &jason.cookie_header(), &[format!("room:{room_id}")]).await;
+    let credentials = join(&mut kevin, room_id).await;
+    seen(&a, credentials.grant_id).await;
+
+    let reply = kevin
+        .write(send_json(
+            Method::POST,
+            &format!("{base}/stream"),
+            &json!({"quality": "1080p60"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let body: Value = parse(&reply);
+    assert_eq!(body["quality"], "1080p60");
+    let live: api::StageStream = parse(&reply);
+    assert_eq!(
+        (live.membership_id, live.quality),
+        (speaker, api::StreamQuality::P1080Fps60)
+    );
+    // Stored as the same quality string as the classic three: no migration.
+    let stored = a
+        .db()
+        .read(move |conn| campfire_db::models::stream::Stream::live_for_room(conn, room_id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.quality, "1080p60");
+
+    let event = jason_sync
+        .until(|event| stage_of(room_id)(event).filter(|stage| stage.live.is_some()))
+        .await;
+    assert_eq!(
+        event.live.map(|live| live.quality),
+        Some(api::StreamQuality::P1080Fps60)
+    );
+    let detail: api::StageDetail = parse(&jason.send(get(&base)).await);
+    assert_eq!(
+        detail.stage.live.map(|live| (live.id, live.quality)),
+        Some((live.id, api::StreamQuality::P1080Fps60))
+    );
+    server.abort();
+}
+
 /// Collects publications until none have come for half a second: the after-commit sink and the
 /// jobs have caught up.
 async fn settle(

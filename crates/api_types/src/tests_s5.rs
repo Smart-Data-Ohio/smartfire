@@ -225,6 +225,7 @@ fn stage_requests() {
         (StreamQuality::P720Fps15, "720p15"),
         (StreamQuality::P1080Fps15, "1080p15"),
         (StreamQuality::P1080Fps30, "1080p30"),
+        (StreamQuality::P1080Fps60, "1080p60"),
     ] {
         assert_wire(&StartStageStream { quality }, json!({"quality": name}));
     }
