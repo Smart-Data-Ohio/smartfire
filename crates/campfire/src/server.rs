@@ -14,16 +14,16 @@ use axum::Router;
 use axum::middleware::Next;
 use campfire_db::Database;
 use campfire_kit::exceptions::ErrorPages;
-use campfire_kit::{Ctx, Kit, KitConfig, RailsCrypto, SharedClock, SharedCrypto};
+use campfire_kit::{Kit, KitConfig, RailsCrypto, SharedClock, SharedCrypto};
 use campfire_storage::{DiskService, Storage};
-use campfire_views::fragment_cache::{FragmentCache, Scoped};
+use campfire_app::json_cache::{JsonCache, DEFAULT_MAX_BYTES};
 use rails_compat::{MessageVerifier, Secrets};
 
 use crate::config::Config;
 use crate::rich_text::AppRichText;
 use crate::{channels, controllers, jobs};
 
-use crate::app::{App, AppCtx, AppState};
+use crate::app::{App, AppState};
 use crate::controllers::presenters::agent_payload::StateExt as _;
 
 pub(crate) mod json_params;
@@ -161,7 +161,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     )));
     campfire_kit::param_filter::install(crate::security::parameter_filter());
 
-    let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
+    let json_cache = JsonCache::new(DEFAULT_MAX_BYTES);
     let web_push = crate::integrations::web_push_pool(&config, &db);
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
         db.clone(), ar_encryption.clone(), github_app.clone(), github_network,
@@ -193,17 +193,12 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         github_accounts,
         slack_network: subscription_network.clone(),
         subscription_network,
-        fragment_cache,
+        json_cache,
     });
 
     app.sudo.install_google(Arc::new(app.google.clone()));
     app.two_factor.install_google(Arc::new(app.google.clone()));
-    // The SPA's sync socket and the broadcasts' JSON twins exist only alongside `/app`.
-    if app.config.spa_enabled {
-        campfire_api::install(&app);
-    } else {
-        campfire_api::install_renderer(&app);
-    }
+    campfire_api::install(&app);
 
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
@@ -256,7 +251,7 @@ fn router(app: &App, kit: Kit) -> Router {
             .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
     };
     let dispatch = || axum::routing::any(
-        campfire_kit::action(dispatch_with_fragment_cache)
+        campfire_kit::action(controllers::dispatch)
             .json_body_parser(json_params::scoped_json_body_params),
     );
     let routes = Router::new()
@@ -292,28 +287,22 @@ fn router(app: &App, kit: Kit) -> Router {
         )
         .route("/github/webhooks", github_webhook())
         .route("/github/webhooks.{format}", github_webhook())
-        .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
-        .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
-        .merge(controllers::pwa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
-        .merge(controllers::spa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
+        .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
+        .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
+        .merge(controllers::pwa::routes(IMMUTABLE_CACHE_CONTROL))
+        .merge(controllers::spa::routes(IMMUTABLE_CACHE_CONTROL))
         .route("/account/banner", axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)))
         .route("/invite/{token}", axum::routing::get(campfire_kit::action(controllers::users::invite_new)).post(campfire_kit::action(controllers::users::invite_create)))
-        .merge(if app.config.spa_enabled { campfire_api::routes(app) } else { Router::new() })
+        .merge(campfire_api::routes(app))
         // Authenticate and verify the signed byte limit before receiving the upload.
-        .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::streamed_action(dispatch_with_fragment_cache)).fallback(campfire_kit::action(dispatch_with_fragment_cache)))
+        .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::streamed_action(controllers::dispatch)).fallback(campfire_kit::action(controllers::dispatch)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
     // config.ru: `use Rack::Deflater` around the whole app.
     campfire_kit::app(routes, kit)
-        .layer(axum::middleware::from_fn_with_state(app.clone(), campfire_web::active_storage::limit_multipart_uploads))
+        .layer(axum::middleware::from_fn_with_state(app.clone(), campfire_runtime::active_storage::limit_multipart_uploads))
         .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
-}
-
-/// The Rails route table, with the app's fragment cache current while the action runs.
-async fn dispatch_with_fragment_cache(c: &mut Ctx) -> campfire_kit::Result {
-    let cache = c.app().fragment_cache.clone();
-    Scoped::new(cache, controllers::dispatch(c)).await
 }
 
 /// `ActionDispatch::Static`: serve `public/` (including digested `/assets`) before routing.
@@ -333,8 +322,7 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
         range: header(axum::http::header::RANGE),
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
     };
-    let served = campfire_assets::serve_classic(&static_request)
-        .or_else(|| campfire_static_assets::serve(&static_request))?;
+    let served = campfire_static_assets::serve(&static_request)?;
     let immutable = immutable_asset(request.uri().path(), served.status);
     let mut response =
         axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));

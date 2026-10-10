@@ -21,6 +21,13 @@
     object-fit: contain;
   }
 
+  .room-topic-input {
+    height: auto;
+    padding-block: var(--space-2);
+    resize: vertical;
+    line-height: var(--leading-body);
+  }
+
   /* The header's name is a button to the settings, as Slack's channel name is. */
   .room-title-button {
     display: inline-flex;

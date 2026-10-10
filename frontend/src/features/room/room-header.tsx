@@ -93,10 +93,13 @@ interface TitleProps {
   readonly name: string;
   readonly iconName: string | null;
   readonly otherId: number | undefined;
+  readonly topic: string | null;
 }
 
 /** Wide screens: the glyph and name (a DM: the person and their status inline). */
-function WideTitle({ roomId, kind, name, iconName, otherId }: TitleProps) {
+function WideTitle({ roomId, kind, name, iconName, otherId, topic }: TitleProps) {
+  const { toggle } = usePaneNavigation(roomId);
+
   return (
     <div className="room-title enter-fade">
       {kind === "direct" ? (
@@ -110,20 +113,31 @@ function WideTitle({ roomId, kind, name, iconName, otherId }: TitleProps) {
           {otherId === undefined ? null : <DirectSubtitle userId={otherId} />}
         </>
       ) : (
-        // Slack's channel name button: the name opens the room's settings.
-        <Link
-          to="/r/$roomId/settings"
-          params={{ roomId }}
-          state={settingsOverState(roomId)}
-          className="room-title-button"
-          aria-label={`${name}, room settings`}
-          onPointerEnter={preloadRoomSettings}
-          onFocus={preloadRoomSettings}
-        >
-          <RoomGlyph kind={kind} iconName={iconName} size={18} className="room-title-icon" />
-          <h1 className="room-title-name">{name}</h1>
-          <Icon name="chevron-down" size={14} className="room-title-chevron" />
-        </Link>
+        <>
+          <Link
+            to="/r/$roomId/settings"
+            params={{ roomId }}
+            state={settingsOverState(roomId)}
+            className="room-title-button"
+            aria-label={`${name}, room settings`}
+            onPointerEnter={preloadRoomSettings}
+            onFocus={preloadRoomSettings}
+          >
+            <RoomGlyph kind={kind} iconName={iconName} size={18} className="room-title-icon" />
+            <h1 className="room-title-name">{name}</h1>
+            <Icon name="chevron-down" size={14} className="room-title-chevron" />
+          </Link>
+          {topic === null ? null : (
+            <button
+              type="button"
+              className="room-header-topic room-topic-button"
+              aria-label="Channel topic, About"
+              onClick={() => toggle("details")}
+            >
+              {topic}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -219,6 +233,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const kind = detail?.room.kind ?? row?.room.kind ?? null;
   const name = detail?.displayName ?? row?.displayName ?? null;
   const iconName = detail?.room.iconName ?? row?.room.iconName ?? null;
+  const topic = detail === null ? (row?.room.topic ?? null) : detail.room.topic;
   const directIds = detail?.directMemberIds ?? row?.directMemberIds ?? [];
   const otherId = kind === "direct" && directIds.length === 1 ? directIds[0] : undefined;
   // A DM's people actions for the phone's ⋯ menu (none in other rooms); wide screens show
@@ -235,9 +250,23 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
     name === null || kind === null ? (
       <Skeleton width={140} height={14} />
     ) : phone ? (
-      <PhoneTitle roomId={roomId} kind={kind} name={name} iconName={iconName} otherId={otherId} />
+      <PhoneTitle
+        roomId={roomId}
+        kind={kind}
+        name={name}
+        iconName={iconName}
+        otherId={otherId}
+        topic={topic}
+      />
     ) : (
-      <WideTitle roomId={roomId} kind={kind} name={name} iconName={iconName} otherId={otherId} />
+      <WideTitle
+        roomId={roomId}
+        kind={kind}
+        name={name}
+        iconName={iconName}
+        otherId={otherId}
+        topic={topic}
+      />
     );
 
   return (

@@ -132,6 +132,8 @@ export function ProfileSection() {
   const { settings, replace } = useSettings();
   const { profile } = settings;
   const [name, setName] = useState(profile.name);
+  const [nickname, setNickname] = useState(profile.nickname ?? "");
+  const [pronouns, setPronouns] = useState(profile.pronouns ?? "");
   const [email, setEmail] = useState(profile.emailAddress ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
@@ -146,6 +148,8 @@ export function ProfileSection() {
 
   const changed =
     name !== profile.name ||
+    nickname !== (profile.nickname ?? "") ||
+    pronouns !== (profile.pronouns ?? "") ||
     emailChanged ||
     password !== "" ||
     bio !== (profile.bio ?? "") ||
@@ -162,6 +166,8 @@ export function ProfileSection() {
         password: password === "" ? null : password,
         bio: bio === (profile.bio ?? "") ? null : bio,
         githubLogin: githubChanged ? github : null,
+        pronouns: pronouns === (profile.pronouns ?? "") ? null : pronouns,
+        nickname: nickname === (profile.nickname ?? "") ? null : nickname,
       })
       .then(
         (next) => {
@@ -170,6 +176,8 @@ export function ProfileSection() {
           setCurrentPassword("");
           setPassword("");
           setName(next.profile.name);
+          setNickname(next.profile.nickname ?? "");
+          setPronouns(next.profile.pronouns ?? "");
           setEmail(next.profile.emailAddress ?? "");
           setBio(next.profile.bio ?? "");
           setGithub(next.profile.githubLogin ?? "");
@@ -202,6 +210,25 @@ export function ProfileSection() {
           error={fieldError(fields, "name", "Name")}
           attempt={attempt}
           onChange={(event) => setName(event.target.value)}
+        />
+        <TextField
+          label="Display nickname"
+          hint="Optional. Leave blank to use your name."
+          value={nickname}
+          maxLength={32}
+          autoComplete="nickname"
+          error={fieldError(fields, "nickname", "Display nickname")}
+          attempt={attempt}
+          onChange={(event) => setNickname(event.target.value)}
+        />
+        <TextField
+          label="Pronouns"
+          value={pronouns}
+          maxLength={40}
+          placeholder="e.g. they/them"
+          error={fieldError(fields, "pronouns", "Pronouns")}
+          attempt={attempt}
+          onChange={(event) => setPronouns(event.target.value)}
         />
         <TextField
           label="Email address"

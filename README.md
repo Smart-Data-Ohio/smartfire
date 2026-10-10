@@ -29,6 +29,10 @@ Smartfire is a single Rust binary: the web app, background jobs, real-time updat
 previews and TLS all run in one process over one SQLite database, with no Redis or separate
 worker. The repository root is its Cargo workspace.
 
+Build the application UI first with `cd frontend && pnpm install --frozen-lockfile && pnpm build`.
+The server always serves the SPA under `/app/`; a Cargo-only build embeds a development stub.
+Authentication and public pages keep their server-rendered shell.
+
 To run it locally, with [rustup](https://rustup.rs) (it installs the nightly pinned in
 `rust-toolchain.toml`) and libvips and ffmpeg installed:
 

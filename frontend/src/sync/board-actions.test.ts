@@ -83,6 +83,9 @@ describe("board actions", () => {
         yield* fake.reply(`GET /rooms/${BOARD}/posts/new`, {
           ownerCandidates: [],
           tagSuggestions: [],
+          tags: [],
+          tagsRequired: false,
+          defaultBoardTagId: null,
           users: boardDetail().users,
         });
         yield* boards.postForm(BOARD);
@@ -114,6 +117,29 @@ describe("board actions", () => {
           clientPostId: input.clientId,
         });
       }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("sends all uploaded files when a post has no text brief", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`POST /rooms/${BOARD}/posts`, boardDetail());
+      yield* boards.createPost(BOARD, {
+        name: "Files",
+        status: "planned",
+        ownerId: null,
+        tags: [],
+        brief: "",
+        clientId: "0192a3b4-0000-7000-8000-00000000c1ad",
+        attachmentSignedIds: ["one", "two", "three"],
+      });
+      expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+        message: {
+          markdownSource: "",
+          attachmentSignedId: null,
+          attachmentSignedIds: ["one", "two", "three"],
+        },
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
   it.effect("applies returned work details and exposes validation fields through ActionError", () =>

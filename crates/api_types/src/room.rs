@@ -16,6 +16,7 @@ pub struct Room {
     pub creator_id: i64,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
+    pub topic: Option<String>,
 }
 
 /// `rooms.type`.

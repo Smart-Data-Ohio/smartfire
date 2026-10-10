@@ -128,8 +128,15 @@ pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
 pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("channel_threads", "client_post_id"),
     ("rooms", "client_room_id"),
+    ("rooms", "tags_required"),
+    ("rooms", "default_board_tag_id"),
+    ("rooms", "topic"),
+    ("rooms", "workspace_category_id"),
+    ("rooms", "workspace_position"),
     ("thread_memberships", "last_read_message_id"),
     ("users", "appearance_preferences"),
+    ("users", "pronouns"),
+    ("users", "nickname"),
 ];
 
 /// Whether `table.column` is in [`RUST_ONLY_COLUMNS`].

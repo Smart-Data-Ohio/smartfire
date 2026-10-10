@@ -35,7 +35,7 @@ fn with_pool(original: &App, pool: Pool) -> App {
         jobs: original.jobs.clone(),
         mail: crate::mail::State::new(original.mail.config.clone()),
         web_push: Some(pool),
-        fragment_cache: original.fragment_cache.clone(),
+        json_cache: original.json_cache.clone(),
     })
 }
 

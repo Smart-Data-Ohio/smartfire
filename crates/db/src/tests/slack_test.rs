@@ -204,6 +204,9 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
             .query_map([], |row| {
                 let mut value = json!({});
                 for (index, column) in columns.iter().enumerate() {
+                    if table == "rooms" && matches!(column.as_str(), "tags_required" | "default_board_tag_id") {
+                        continue;
+                    }
                     if (table == "rooms" && column == "client_room_id")
                         || (table == "channel_threads" && column == "client_post_id")
                     {
@@ -213,9 +216,17 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                         );
                         continue;
                     }
+                    if table == "rooms"
+                        && matches!(
+                            column.as_str(),
+                            "topic" | "workspace_category_id" | "workspace_position"
+                        )
+                    {
+                        continue;
+                    }
                     // Port-only user preferences and activity counter that Rails doesn't have.
                     if table == "users"
-                        && matches!(column.as_str(), "activity_revision" | "appearance_preferences")
+                        && matches!(column.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname")
                     {
                         continue;
                     }

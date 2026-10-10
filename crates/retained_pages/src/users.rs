@@ -11,6 +11,7 @@ use crate::sessions::HelpContact;
 pub struct New<'a> {
     pub ctx: &'a crate::Context<'a>,
     pub join_path: String,
+    pub description: String,
     pub help_contact: Option<HelpContact>,
     pub invite_error: Option<&'static str>,
 }

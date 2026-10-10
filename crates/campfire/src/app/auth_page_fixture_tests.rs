@@ -183,6 +183,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                             } else {
                                 "/invite/fixture-invite-token".into()
                             },
+                            description: "A place for R&D.".into(),
                             help_contact: None,
                             invite_error: match name {
                                 "invite-expired" => Some("It has expired."),

@@ -1,12 +1,15 @@
 # Audio and video quality assessment
 
+This assessment records earlier call-engine settings. The current SPA engine and its pinned
+pnpm dependencies are authoritative for requested capture and encoding settings.
+
 Assessed September 14, 2026 against the checked-in LiveKit client 2.22.3 and current official documentation. The [applied settings](#applied-settings-september-15-2026) section records what Smartfire now requests; the rest of this document remains the proposed order of work and does not change deploy infrastructure.
 
 ## Starting point
 
 The huddle implements microphone audio, screen video, and — since the [Camera](#camera) slice below — camera video. Camera publishing used to be intentionally absent from both the interface and authorization grants; the grant change, controls, and authorization tests from step 5 have now landed, and only the codec comparison there remains future work.
 
-Smartfire explicitly enables adaptive streams and dynacast. The pinned SDK supplies browser echo cancellation, automatic gain control, noise suppression, supported voice isolation, audio redundant encoding (RED), and simulcast defaults. Its default audio preset caps bitrate at 48 kbps. Its default screen encoder uses the 1080p/15 fps preset, capped at 2.5 Mbps. These are requested capture/encoding settings, not measured output quality or guaranteed frame rates. Sources: the installed SDK's `src/room/defaults.ts` and `src/room/track/options.ts`, rebuilt according to the [SDK guide](../web/script/livekit-client/README.md).
+Smartfire explicitly enables adaptive streams and dynacast. The pinned SDK supplies browser echo cancellation, automatic gain control, noise suppression, supported voice isolation, audio redundant encoding (RED), and simulcast defaults. Its default audio preset caps bitrate at 48 kbps. Its default screen encoder uses the 1080p/15 fps preset, capped at 2.5 Mbps. These are requested capture/encoding settings, not measured output quality or guaranteed frame rates. Sources: the installed SDK's `src/room/defaults.ts` and `src/room/track/options.ts`, rebuilt according to the [frontend guide](../frontend/README.md).
 
 Local tests establish actual media transport and decoded video. They do not establish microphone sound quality, internet reliability, readable small text, or multi-user capacity.
 
@@ -22,7 +25,7 @@ High-fidelity stereo should be an optional music/media mode. Its higher bitrate 
 
 ## Applied settings, September 15, 2026
 
-Two pieces of employee feedback moved ahead of the measurement work above: a shared screen could only be seen in the small floating panel, and the microphone carried too much background noise. The settings below are now requested by `web/app/javascript/controllers/huddle_controller.js`. They are requested capture and encoding settings, not measured output.
+Two pieces of employee feedback moved ahead of the measurement work above: a shared screen could only be seen in the small floating panel, and the microphone carried too much background noise. The settings below are now requested by `frontend/src/features/huddle/engine/`. They are requested capture and encoding settings, not measured output.
 
 **Most of what is listed here equals the pinned SDK's own defaults.** `AudioPresets.music`, `dtx: true`, `red: true`, `degradationPreference: "maintain-resolution"` for a screen share, `ScreenSharePresets.h1080fps15.encoding`, and the echo-cancellation, gain-control, and `voiceIsolation` microphone constraints are what livekit-client 2.22.3 would have used anyway (`publishDefaults` and `audioDefaults` in its `src/room/defaults.ts`). Smartfire spells them out so an SDK upgrade cannot change them silently, but writing them down changed no behavior. The genuinely new behavior is the RNNoise processor, the browser `noiseSuppression` constraint following it (off while RNNoise runs, on otherwise), `contentHint: "detail"`, the screen-share audio settings, and the viewing controls.
 
@@ -33,7 +36,7 @@ The SDK's `audioCaptureDefaults` already asked for echo cancellation, automatic 
 On top of that, Smartfire runs **RNNoise** on the microphone as a LiveKit audio `TrackProcessor`. LiveKit Cloud's Krisp filter is not licensed for a self-hosted deployment, so the model runs in the browser instead:
 
 - **Package:** [`@sapphi-red/web-noise-suppressor`](https://github.com/sapphi-red/web-noise-suppressor) 0.4.0, MIT. It was chosen over `@shiguredo/noise-suppression` (which needs Chrome-only Insertable Streams) and over raw `rnnoise-wasm` bindings (which would mean writing and maintaining the AudioWorklet here). Only its RNNoise entry points are bundled; the Speex, GTCRN and noise-gate nodes are dropped by the build.
-- **Licenses:** the wrapper is MIT. The WebAssembly it embeds is `@shiguredo/rnnoise-wasm` 2022.2.0 (Apache 2.0), which is a build of Xiph's RNNoise (BSD 3-Clause). All three are recorded in `web/vendor/javascript/livekit-client.NOTICES.txt`.
+- **Licenses:** the wrapper is MIT. The WebAssembly it embeds is `@shiguredo/rnnoise-wasm` 2022.2.0 (Apache 2.0), which is a build of Xiph's RNNoise (BSD 3-Clause). All three are recorded in `frontend/pnpm-lock.yaml` and the installed packages' license files.
 - **Size:** 1.4 KB of module JavaScript, a 64 KB worklet, and one WebAssembly binary of 153 KB (or 154 KB for the SIMD build, chosen at runtime). All are served from this origin through Propshaft; nothing is fetched from a CDN. They load only when somebody joins a huddle.
 - **Cost:** RNNoise is a small recurrent network working on 10 ms frames. It costs roughly one percent of one core on a modern laptop and runs on the AudioWorklet thread, so it does not compete with rendering. It is far cheaper than a spectral deep-learning denoiser.
 - **Sample rate:** RNNoise is trained for 48 kHz. Smartfire reuses LiveKit's `AudioContext` when it already runs at 48 kHz and otherwise opens a dedicated 48 kHz context for the processor.
@@ -64,7 +67,7 @@ Publishing uses `ScreenSharePresets.h1080fps15.encoding` (1920×1080, up to 2.5 
 
 Joining stays audio-only. The camera is off on every join, is turned on explicitly with the **Camera** toggle after Share screen, and the choice is deliberately not remembered in `localStorage`. The button keeps the stable label "Camera" with `aria-pressed` expressing whether it is on and a tooltip naming the state ("Camera on"/"Camera off"), matching the "Mute microphone" toggle. One captioned tile appears per published camera track — the local preview (muted, mirrored with CSS) plus each remote camera — and tiles disappear on unpublish or leave. Turning the camera off unpublishes the track rather than calling `setCameraEnabled(false)`, which would only mute it and keep the device claimed; unpublishing releases the camera and removes the tile on both sides. Camera and screen share may be on at the same time; mute never touches the camera; leaving stops the camera track with the rest of local media. A denied or failed camera shows "Camera wasn’t started. Allow camera access to try again." in the persistent notice (`role="alert"`) until the camera starts or the huddle is left, leaves the microphone and the huddle connected, and leaves the button retryable.
 
-**Requested.** `web/app/javascript/controllers/huddle_controller.js` `#roomOptions` now spells out the step 5 proposal:
+**Requested.** `frontend/src/features/huddle/engine/` `#roomOptions` now spells out the step 5 proposal:
 
 - Capture: `videoCaptureDefaults` with `deviceId: { ideal: "default" }` and `resolution: VideoPresets.h720.resolution` (1280×720 at 30 fps). This is the pinned SDK's own `videoDefaults` written out (`src/room/defaults.ts`), so it pins behavior against upgrades rather than changing it.
 - Encoding: `publishDefaults.videoEncoding` is `VideoPresets.h720.encoding` — a top layer of up to 1.7 Mbps at 30 fps. With capture already constrained to 720p this matches what the SDK would derive from the captured dimensions on its own.

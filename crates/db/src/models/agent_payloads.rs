@@ -170,8 +170,9 @@ pub fn build(
     let scoped = access.in_event(event.id);
     let access = &scoped;
     let (user_id,owner_id,name,owner):(i64,Option<i64>,String,Option<String>)=conn.query_row(
-        "SELECT a.user_id,a.owner_id,u.name,o.name FROM agents a JOIN users u ON u.id=a.user_id LEFT JOIN users o ON o.id=a.owner_id WHERE a.id=?",
-        [event.agent_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)))?;
+        &format!("SELECT a.user_id,a.owner_id,{},{} FROM agents a JOIN users u ON u.id=a.user_id LEFT JOIN users o ON o.id=a.owner_id WHERE a.id=?", User::projection("u", "agent_"), User::projection("o", "owner_")),
+        [event.agent_id],|r|Ok((r.get(0)?,r.get(1)?,User::from_prefixed_row(r, "agent_")?.display_name().to_owned(),
+            r.get::<_, Option<i64>>("owner_id")?.map(|_| User::from_prefixed_row(r, "owner_").map(|owner| owner.display_name().to_owned())).transpose()?)))?;
     let agent = json!({"id":event.agent_id,"name":name,"owner":owner,"delivery_id":event.id});
     let metadata = &event.metadata;
     let data = if MESSAGE_TYPES.contains(&event.event_type.as_str()) {
@@ -214,8 +215,9 @@ pub fn build(
         let actor = event
             .actor_id
             .map(|id| {
-                query_one(conn, "SELECT id,name FROM users WHERE id=?", [id], |r| {
-                    Ok(json!({"id":r.get::<_,i64>(0)?,"name":r.get::<_,String>(1)?}))
+                query_one(conn, "SELECT * FROM users WHERE id=?", [id], |r| {
+                    let user = User::from_row(r)?;
+                    Ok(json!({"id":user.id,"name":user.display_name()}))
                 })
             })
             .transpose()?
@@ -284,12 +286,11 @@ pub fn build(
 fn approval_payload(conn: &Connection, id: i64) -> Result<Option<Value>> {
     query_one(
         conn,
-        "SELECT a.id,a.status,u.name,a.decision_note FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=?",
+        &format!("SELECT a.id,a.status,a.decision_note,{} FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=?", User::projection("u", "decider_")),
         [id],
         |r| {
-            Ok(
-                json!({"approval_id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"decided_by":r.get::<_,Option<String>>(2)?,"note":r.get::<_,Option<String>>(3)?}),
-            )
+            let decider = r.get::<_, Option<i64>>("decider_id")?.map(|_| User::from_prefixed_row(r, "decider_").map(|user| user.display_name().to_owned())).transpose()?;
+            Ok(json!({"approval_id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"decided_by":decider,"note":r.get::<_,Option<String>>(2)?}))
         },
     )
 }
@@ -484,7 +485,7 @@ fn work_payload_batch(
                     _=>{},
                 }
             }
-            Ok(json!({"id":thread.id,"room_id":thread.room_id,"board_id":room.board().then_some(room.id),"board_name":if room.board(){room.name.as_deref()}else{None},"title":thread.name,"work_status":thread.work_status,"owner":owner.map(|u|json!({"id":u.id,"name":u.name,"agent":u.is_bot()})),"tags":tags.get(&thread.id).cloned().unwrap_or_default(),"result":thread.result_markdown,"result_updated_at":thread.result_updated_at.map(json_time),"run_url":thread.run_url,"url":format!("/rooms/{}?thread={}",thread.room_id,thread.id),"updated_at":json_time(thread.updated_at),"links":values}))
+            Ok(json!({"id":thread.id,"room_id":thread.room_id,"board_id":room.board().then_some(room.id),"board_name":if room.board(){room.name.as_deref()}else{None},"title":thread.name,"work_status":thread.work_status,"owner":owner.map(|u|json!({"id":u.id,"name":u.display_name(),"agent":u.is_bot()})),"tags":tags.get(&thread.id).cloned().unwrap_or_default(),"result":thread.result_markdown,"result_updated_at":thread.result_updated_at.map(json_time),"run_url":thread.run_url,"url":format!("/rooms/{}?thread={}",thread.room_id,thread.id),"updated_at":json_time(thread.updated_at),"links":values}))
         }).collect()
     };
     let payloads = render(&checked)?;

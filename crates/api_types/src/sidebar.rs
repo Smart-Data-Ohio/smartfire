@@ -33,6 +33,7 @@ pub struct Sidebar {
     /// Whether the viewer may create channels: an administrator, or anyone when the account
     /// doesn't restrict room creation to administrators.
     pub can_create_rooms: bool,
+    pub workspace_layout: crate::WorkspaceLayout,
 }
 
 /// A room as it appears in one person's sidebar. Carried by `GET /api/v1/sidebar` and by the

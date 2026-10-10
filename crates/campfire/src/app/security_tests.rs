@@ -71,6 +71,7 @@ impl Fresh {
                     role: Role::Administrator,
                     bio: None,
                     icon_name: None, bot_token_digest: None,
+                    ..Default::default()
                 };
                 User::create(tx, david)
             })
@@ -170,9 +171,13 @@ fn compared(headers: impl Fn(&str) -> Option<String>) -> Vec<(String, Option<Str
 
 async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<&str>, token: Option<&str>) -> Reply {
     let method = vector["method"].as_str().unwrap();
-    let path = vector["path"].as_str().unwrap();
+    // The vector's classic base.css is retired; retained assets keep its header contract.
+    let path = match name {
+        "asset" | "asset_head" => campfire_static_assets::stylesheet_path("auth"),
+        _ => vector["path"].as_str().unwrap().to_string(),
+    };
     let env = &vector["env"];
-    let mut builder = request(method, path);
+    let mut builder = request(method, &path);
     if let Some(accept) = env["HTTP_ACCEPT"].as_str() {
         builder = builder.header(header::ACCEPT, accept);
     }
@@ -348,7 +353,7 @@ async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
         .write(move |tx| {
             let bot = User::create(
                 tx,
-                NewUser { name: "Replier".into(), email_address: None, password_digest: None, role: Role::Bot, bio: None, icon_name: None, bot_token_digest: None },
+                NewUser { name: "Replier".into(), email_address: None, password_digest: None, role: Role::Bot, bio: None, icon_name: None, bot_token_digest: None, ..Default::default() },
             )?;
             let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Bots"), david.id, &[david.id, bot.id])?;
             let other = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Elsewhere"), david.id, &[david.id])?;

@@ -35,6 +35,8 @@ pub(crate) fn user() -> User {
         agent: None,
         created_at: "2026-09-26T12:26:46.848Z".into(),
         updated_at: "2026-10-06T09:15:00.123456Z".into(),
+        account_name: "Ada Lovelace".into(),
+        pronouns: None,
     }
 }
 
@@ -90,6 +92,8 @@ fn user_is_camel_case_with_explicit_nulls() {
             "agent": null,
             "createdAt": "2026-09-26T12:26:46.848Z",
             "updatedAt": "2026-10-06T09:15:00.123456Z",
+            "accountName": "Ada Lovelace",
+            "pronouns": null,
         }),
     );
 }
@@ -186,6 +190,7 @@ fn room_and_membership_round_trip() {
         creator_id: 7,
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
+        topic: None,
     };
     assert_wire(
         &room,
@@ -197,6 +202,7 @@ fn room_and_membership_round_trip() {
             "creatorId": 7,
             "createdAt": "2026-01-01T00:00:00.000Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
+            "topic": null,
         }),
     );
     for (kind, wire) in [
@@ -505,6 +511,7 @@ fn room() -> Room {
         creator_id: 7,
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
+        topic: None,
     }
 }
 
@@ -665,6 +672,7 @@ fn sidebar_round_trips() {
         users: vec![user()],
         direct_placeholder_user_ids: vec![7],
         can_create_rooms: true,
+        workspace_layout: crate::WorkspaceLayout { categories: vec![], rooms: vec![] },
     };
     let wire = serde_json::to_value(&sidebar).unwrap();
     assert_eq!(

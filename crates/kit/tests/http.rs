@@ -7,7 +7,7 @@ use campfire_kit::exceptions::ErrorPages;
 use axum::body::Body as AxumBody;
 use axum::extract::ConnectInfo;
 use axum::http::{Request as HttpRequest, header};
-use campfire_kit::format::{HTML, JSON, TURBO_STREAM};
+use campfire_kit::format::{HTML, JSON};
 use campfire_kit::{
     Cookie, Ctx, ExpiresIn, Freshness, Kit, KitConfig, Redirect, Result, SendOptions, StatusCode, action, front, halt, testing,
 };
@@ -161,10 +161,8 @@ async fn admin(c: &mut Ctx) -> Result {
 }
 
 async fn messages(c: &mut Ctx) -> Result {
-    let format = c.respond_to(&[&HTML, &TURBO_STREAM, &JSON])?;
-    if format == &TURBO_STREAM {
-        Ok(c.turbo_stream("<turbo-stream action=\"append\"></turbo-stream>"))
-    } else if format == &JSON {
+    let format = c.respond_to(&[&HTML, &JSON])?;
+    if format == &JSON {
         c.json(StatusCode::OK, &json!([]))
     } else {
         Ok(c.render(StatusCode::OK, &HTML, "<p>messages</p>"))
@@ -774,7 +772,8 @@ async fn respond_to_negotiates_like_rails() {
 
     let turbo = "text/vnd.turbo-stream.html, text/html, application/xhtml+xml";
     let stream = send(&app, post("/messages").header(header::ACCEPT, turbo).body(AxumBody::empty()).unwrap()).await;
-    assert_eq!(stream.header("content-type"), Some("text/vnd.turbo-stream.html; charset=utf-8"));
+    assert_eq!(stream.header("content-type"), Some("text/html; charset=utf-8"));
+    assert_eq!(stream.text(), "<p>messages</p>");
 
     let json = send(&app, get("/messages.json").body(AxumBody::empty()).unwrap()).await;
     assert_eq!(json.header("content-type"), Some("application/json; charset=utf-8"));

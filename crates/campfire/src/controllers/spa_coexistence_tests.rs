@@ -1251,7 +1251,6 @@ async fn production_config_serves_the_spa_with_spa_enabled_absent_or_off() {
         else {
             return;
         };
-        assert!(a.booted.app.config.spa_enabled, "{env:?}");
         let mut b = a.sign_in(DAVID).await;
         let shell = b.get("/app/").await;
         assert_eq!(shell.status, StatusCode::OK, "{env:?}");

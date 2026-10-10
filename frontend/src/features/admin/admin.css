@@ -3,6 +3,11 @@
  * how they fit a phone: stacked people rows, the tables as cards.
  */
 @layer app {
+  .workspace-about p {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   .admin-icon-image {
     flex-shrink: 0;
     border-radius: var(--radius-md);

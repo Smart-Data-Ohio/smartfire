@@ -107,14 +107,13 @@ and `crates/controllers/src/controllers/google_connections.rs`):
   defaults (default response headers, forgery protection, production
   `force_ssl`) still apply. Non-HTML formats answer 404, so no JSON or
   private data is reachable; HEAD works; pages carry no `noindex`.
-- The `layouts/public` template (`crates/views/templates/layouts/public.html`)
+- The `layouts/public` template (`crates/retained_pages/templates/layouts/public.html`)
   is a minimal standalone layout: no
   importmap/JS, no Turbo/Action Cable/PWA/private meta tags, no
   signed-in user state, and no CSRF meta tags (emitting one would create a
   session cookie). Zoom stays enabled. Analytics and Google scripts are
   absent.
-- `web/app/assets/stylesheets/public.css` is self-contained and scoped under
-  `body.public`, so the app's `:all` bundle gains no global side effects.
+- The retained public shell uses the auth stylesheet compiled from `frontend/src/auth/`.
   Light/dark follows `prefers-color-scheme`; keyboard focus is visible;
   `prefers-reduced-motion` disables transitions.
 - The sign-in page links About/Privacy/Terms below the panel, beside the

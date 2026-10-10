@@ -128,7 +128,7 @@ fn present_approval(
 ) -> Approval {
     Approval {
         id: approval.id,
-        bot_name: bot.name.clone(),
+        bot_name: bot.display_name().to_owned(),
         avatar_url: super::super::user_summary(secrets, bot).avatar_path,
         room_name: approval
             .room_id
@@ -141,7 +141,7 @@ fn present_approval(
         decided_by: approval
             .decided_by_id
             .and_then(|id| associations.users.get(&id))
-            .map(|user| user.name.clone()),
+            .map(|user| user.display_name().to_owned()),
         decision_note: present(approval.decision_note.clone()),
         github_login: present(approval.github_login.clone()),
         fizzy_user_name: present(approval.fizzy_user_name.clone()),
@@ -242,7 +242,7 @@ fn present_event(
         actor_name: event
             .actor_id
             .and_then(|id| associations.users.get(&id))
-            .map(|user| user.name.clone()),
+            .map(|user| user.display_name().to_owned()),
         message_id: event.message_id,
         hop: event.hop(),
         detail: present(event.detail),

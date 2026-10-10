@@ -63,8 +63,8 @@ pub fn for_messages(
                         organizer_name: users
                             .get(&e.organizer_id)
                             .ok_or(campfire_db::Error::RecordNotFound("User"))?
-                            .name
-                            .clone(),
+                            .display_name()
+                            .to_owned(),
                         starts_at: calendar_time(e.starts_at),
                         ends_at: e.ends_at.map(calendar_time),
                         time_zone: e.time_zone.clone(),
@@ -97,7 +97,7 @@ pub fn room_name(conn: &Connection, room: &Room, user: &User) -> Result<String> 
         room.users(conn)?
             .into_iter()
             .filter(|u| u.id != user.id)
-            .map(|u| u.name)
+            .map(|u| u.display_name().to_owned())
             .collect()
     } else {
         Vec::new()
@@ -106,7 +106,7 @@ pub fn room_name(conn: &Connection, room: &Room, user: &User) -> Result<String> 
         room.name.as_deref(),
         room.direct(),
         &names,
-        Some(&user.name),
+        Some(user.display_name()),
     ))
 }
 pub fn page_event(
@@ -120,17 +120,17 @@ pub fn page_event(
         let member=exists(conn,"SELECT 1 FROM memberships WHERE room_id=? AND user_id=?",rusqlite::params![id,user.id])?;
         let stage=room.room_type==campfire_db::RoomType::Stage;
         // WS13 reader seam: only the current stream, never historical rows.
-        let live_user=if stage {query_one(conn,"SELECT u.name FROM streams s JOIN users u ON u.id=s.user_id WHERE s.room_id=? AND s.ended_at IS NULL LIMIT 1",[id],|r|r.get(0))?}else{None};
+        let live_user=if stage {query_one(conn,"SELECT u.* FROM streams s JOIN users u ON u.id=s.user_id WHERE s.room_id=? AND s.ended_at IS NULL LIMIT 1",[id],|r|Ok(User::from_row(r)?.display_name().to_owned()))?}else{None};
         Ok(VenueView{id,name:room.name.unwrap_or_default(),stage,member,live_user})
     }).transpose()?;
     let attendances = query_all(
         conn,
-        "SELECT u.name,a.response FROM event_attendances a JOIN users u ON u.id=a.user_id WHERE a.event_id=? ORDER BY a.response,a.id",
+        "SELECT u.*,a.response FROM event_attendances a JOIN users u ON u.id=a.user_id WHERE a.event_id=? ORDER BY a.response,a.id",
         [e.id],
         |r| {
             Ok(AttendeeView {
-                name: r.get(0)?,
-                response: r.get(1)?,
+                name: User::from_row(r)?.display_name().to_owned(),
+                response: r.get("response")?,
             })
         },
     )?;
@@ -145,7 +145,7 @@ pub fn page_event(
             id: e.id,
             room_id: e.room_id,
             title: e.title.clone(),
-            organizer_name: User::find(conn, e.organizer_id)?.name,
+            organizer_name: User::find(conn, e.organizer_id)?.display_name().to_owned(),
             starts_at: calendar_time(e.starts_at),
             ends_at: e.ends_at.map(calendar_time),
             time_zone: e.time_zone.clone(),

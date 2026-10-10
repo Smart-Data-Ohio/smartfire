@@ -29,7 +29,8 @@ use crate::concerns::{self, Before, cast_integer};
 pub async fn new(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
     let account = verify_join_code(c).await?;
-    join_page(c, StatusCode::OK, campfire_routes::join(&account.join_code), None).await
+    let description = account.settings().description().to_string();
+    join_page(c, StatusCode::OK, campfire_routes::join(&account.join_code), description, None).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -41,7 +42,15 @@ pub async fn create(c: &mut Ctx) -> Result {
 pub async fn invite_new(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
     verify_invite(c).await?;
-    join_page(c, StatusCode::OK, c.request.path().to_owned(), None).await
+    let description = c
+        .app()
+        .db
+        .read(Account::first)
+        .await
+        .map_err(Error::internal)?
+        .map(|account| account.settings().description().to_string())
+        .unwrap_or_default();
+    join_page(c, StatusCode::OK, c.request.path().to_owned(), description, None).await
 }
 
 pub async fn invite_create(c: &mut Ctx) -> Result {
@@ -50,11 +59,17 @@ pub async fn invite_create(c: &mut Ctx) -> Result {
     create_user(c, Some(c.param_str("token").unwrap_or_default().to_owned())).await
 }
 
-async fn join_page(c: &mut Ctx, status: StatusCode, join_path: String, invite_error: Option<&'static str>) -> Result {
+async fn join_page(c: &mut Ctx, status: StatusCode, join_path: String, description: String, invite_error: Option<&'static str>) -> Result {
     c.respond_to(&[&format::HTML])?;
     c.no_store();
     let help_contact = c.app().db.read(presenters::accounts::help_contact).await.map_err(Error::internal)?;
-    retained_page!(c, status, |ctx| campfire_retained::users::New { ctx, join_path: join_path.clone(), help_contact: help_contact.clone(), invite_error }).await
+    retained_page!(c, status, |ctx| campfire_retained::users::New {
+        ctx,
+        join_path: join_path.clone(),
+        description: description.clone(),
+        help_contact: help_contact.clone(),
+        invite_error
+    }).await
 }
 
 async fn verify_invite(c: &mut Ctx) -> Result<()> {
@@ -67,7 +82,7 @@ async fn verify_invite(c: &mut Ctx) -> Result<()> {
         Some(InviteState::Revoked) => (StatusCode::GONE, "It has been revoked."),
         None => (StatusCode::NOT_FOUND, "The invite could not be found."),
     };
-    halt(join_page(c, status, String::new(), Some(reason)).await?)
+    halt(join_page(c, status, String::new(), String::new(), Some(reason)).await?)
 }
 
 async fn create_user(c: &mut Ctx, invite_token: Option<String>) -> Result {
@@ -134,7 +149,11 @@ async fn verify_join_code(c: &mut Ctx) -> Result<Account> {
         .map_err(Error::internal)?
         // `Current.account.join_code` on nil raises NoMethodError.
         .ok_or_else(|| Error::internal(anyhow::anyhow!("undefined method 'join_code' for nil")))?;
-    if c.param_str("join_code") != Some(account.join_code.as_str()) {
+    let settings = account.settings();
+    let valid = c
+        .param_str("join_code")
+        .is_some_and(|code| code == account.join_code || settings.vanity_slug() == Some(code));
+    if !valid {
         return halt(c.head(StatusCode::NOT_FOUND));
     }
     Ok(account)

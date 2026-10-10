@@ -5,6 +5,7 @@
  */
 import { Effect, Result } from "effect";
 import * as api from "../api/thread-endpoints.ts";
+import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
@@ -173,12 +174,13 @@ export const loadNewer = Effect.fn("threads.loadNewer")(function* (threadId: num
 function threadMessage(
   options: {
     readonly attachmentSignedId?: string | null;
+    readonly attachmentSignedIds?: readonly string[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
   },
   markdown: string,
 ) {
-  const message = {
+  const message: CreateMessage = {
     clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
     markdownSource: markdown,
     replyToMessageId: null,
@@ -186,13 +188,19 @@ function threadMessage(
     attachmentSignedId: options.attachmentSignedId ?? null,
   };
 
-  const driveFileIds = options.driveFileIds;
+  const attachmentSignedIds = options.attachmentSignedIds;
 
-  if (driveFileIds === undefined || driveFileIds.length === 0) {
-    return message;
+  if (attachmentSignedIds !== undefined && attachmentSignedIds.length > 0) {
+    message.attachmentSignedIds = [...attachmentSignedIds];
   }
 
-  return { ...message, driveFileIds: [...driveFileIds] };
+  const driveFileIds = options.driveFileIds;
+
+  if (driveFileIds !== undefined && driveFileIds.length > 0) {
+    message.driveFileIds = [...driveFileIds];
+  }
+
+  return message;
 }
 
 /**
@@ -207,6 +215,7 @@ export const create = Effect.fn("threads.create")(function* (
   options: {
     readonly name?: string | null;
     readonly attachmentSignedId?: string | null;
+    readonly attachmentSignedIds?: readonly string[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
   } = {},

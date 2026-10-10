@@ -38,6 +38,7 @@ export const RoomForm = Schema.Struct({
   groupCapable: Schema.Boolean,
   defaultInvolvement: Involvement,
   stageRoles: Schema.Array(RoomFormStageRole),
+  topic: Schema.NullOr(Schema.String),
 });
 
 export type RoomFormPin = Assert<Pinned<typeof RoomForm, GeneratedRoomForm>>;
@@ -64,6 +65,7 @@ export type CreateRoomPin = Assert<Pinned<typeof CreateRoom, GeneratedCreateRoom
 const updateFields = {
   name: Schema.optionalKey(Schema.NullOr(Schema.String)),
   iconName: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  topic: Schema.optionalKey(Schema.NullOr(Schema.String)),
 };
 
 /** Omitted name/icon retain their values; null clears them. Members replace the full list. */

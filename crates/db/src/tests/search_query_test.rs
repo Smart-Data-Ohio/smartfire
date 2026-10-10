@@ -160,6 +160,23 @@ fn sqlite_operators_match_rails_and_hide_inaccessible_deleted_rooms() {
         assert_eq!(json!(clients), row["clients"], "{row}");
     }
 }
+
+#[test]
+fn stable_author_filters_find_messages_across_nickname_and_account_name_changes() {
+    let t = super::channel_thread_test::frozen();
+    let message = t.write(|tx| Message::create(tx, NewMessage {
+        room_id: id("designers"), creator_id: id("jason"),
+        body: Some("stable-nickname-probe".into()), ..Default::default()
+    }));
+    for (name, nickname) in [("Account Example", "NickExample"), ("Renamed account", "OtherNick")] {
+        t.write(move |tx| crate::User::find(tx.conn(), id("jason"))?.update(tx, crate::UserChanges {
+            name: Some(name.into()), nickname: Some(Some(nickname.into())), ..Default::default()
+        }));
+        let query = SearchQuery::parse_extended(&format!("stable-nickname-probe from_id:{}", id("jason")));
+        let page = t.read(|conn| query.messages_for_user(conn, id("david"), jiff::tz::TimeZone::UTC, None));
+        assert_eq!(page.messages.iter().map(|row| row.id).collect::<Vec<_>>(), [message.id]);
+    }
+}
 #[test]
 fn cursor_windows_match_rails_without_repeating_same_timestamp_rows() {
     let t = fixture();

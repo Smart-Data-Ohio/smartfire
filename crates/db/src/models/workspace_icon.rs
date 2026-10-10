@@ -143,22 +143,22 @@ impl WorkspaceIcon {
             name: r.get("name")?,
             title: r.get("title")?,
             creator_id: r.get("creator_id")?,
-            creator_name: r.get("creator_name")?,
+            creator_name: crate::User::from_prefixed_row(r, "creator_")?.display_name().to_owned(),
             created_at: r.get("created_at")?,
             updated_at: r.get("updated_at")?,
         })
     }
     pub fn ordered(conn: &Connection) -> Result<Vec<Self>> {
-        let mut s=conn.prepare("SELECT workspace_icons.*,users.name AS creator_name FROM workspace_icons JOIN users ON users.id=creator_id ORDER BY workspace_icons.name")?;
+        let mut s=conn.prepare(&format!("SELECT workspace_icons.*,{} FROM workspace_icons JOIN users ON users.id=creator_id ORDER BY workspace_icons.name", crate::User::projection("users", "creator_")))?;
         Ok(s.query_map([], Self::row)?
             .collect::<rusqlite::Result<_>>()?)
     }
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        conn.query_row("SELECT workspace_icons.*,users.name AS creator_name FROM workspace_icons JOIN users ON users.id=creator_id WHERE workspace_icons.id=?",[id],Self::row).map_err(|e|if e==rusqlite::Error::QueryReturnedNoRows {crate::Error::RecordNotFound("WorkspaceIcon")} else {e.into()})
+        conn.query_row(&format!("SELECT workspace_icons.*,{} FROM workspace_icons JOIN users ON users.id=creator_id WHERE workspace_icons.id=?", crate::User::projection("users", "creator_")),[id],Self::row).map_err(|e|if e==rusqlite::Error::QueryReturnedNoRows {crate::Error::RecordNotFound("WorkspaceIcon")} else {e.into()})
     }
     pub fn find_by_name(conn: &Connection, name: &str) -> Result<Option<Self>> {
         use rusqlite::OptionalExtension;
-        Ok(conn.query_row("SELECT workspace_icons.*,users.name AS creator_name FROM workspace_icons JOIN users ON users.id=creator_id WHERE workspace_icons.name=?",[name],Self::row).optional()?)
+        Ok(conn.query_row(&format!("SELECT workspace_icons.*,{} FROM workspace_icons JOIN users ON users.id=creator_id WHERE workspace_icons.name=?", crate::User::projection("users", "creator_")),[name],Self::row).optional()?)
     }
     pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
         tx.conn()

@@ -136,6 +136,7 @@ export function createRoomManagement(
       groupCapable: capable,
       defaultInvolvement: direct ? "everything" : "mentions",
       stageRoles: [...roles].map(([userId, role]) => ({ userId, role })),
+      topic: record?.room.topic ?? null,
     };
   };
 
@@ -149,6 +150,7 @@ export function createRoomManagement(
       type === "open" ? ["type", "name", "iconName"] : ["type", "name", "iconName", "userIds"];
 
     if (creating) keys.push("clientRoomId");
+    else keys.push("topic");
 
     if (Object.keys(body).some((key) => !keys.includes(key)))
       throw validation("base", "Unknown room field");
@@ -173,6 +175,7 @@ export function createRoomManagement(
       hasRemainingIds: Array.isArray(raw) && raw.length > 0,
       name: nullableString(body, "name", creating),
       iconName: nullableString(body, "iconName", creating),
+      topic: creating ? undefined : nullableString(body, "topic", false),
     };
   };
 
@@ -278,6 +281,7 @@ export function createRoomManagement(
         creatorId: VIEWER_ID,
         createdAt,
         updatedAt: createdAt,
+        topic: null,
       },
       memberIds,
       membership: {
@@ -312,6 +316,10 @@ export function createRoomManagement(
     if (!canEdit(record)) throw forbidden();
     const input = parse(body, false);
     const oldType = record.room.kind;
+    const topic = input.topic === undefined ? record.room.topic : input.topic?.trim() || null;
+
+    if (topic !== null && Array.from(topic).length > 1024)
+      throw validation("topic", "is too long (maximum is 1024 characters)");
 
     if (
       !(
@@ -351,6 +359,7 @@ export function createRoomManagement(
       name: input.name === undefined ? record.room.name : input.name,
       iconName,
       updatedAt: timestamp(Math.max(ctx.now(), Date.parse(record.room.updatedAt) + 1)),
+      topic,
     };
     record.memberIds =
       input.type === "open"

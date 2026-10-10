@@ -39,7 +39,7 @@ pub fn root_path() -> String {
 }
 
 /// `Cache-Control` for an embedded file whose name isn't content-hashed: the public files'
-/// policy (`campfire_assets`), so a fix reaches clients within a minute.
+/// policy (`campfire_static_assets`), so a fix reaches clients within a minute.
 pub const REVALIDATE_CACHE_CONTROL: &str = "public, max-age=60, stale-while-revalidate=300";
 
 /// Whether a real dist was embedded, rather than the stub.

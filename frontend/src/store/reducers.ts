@@ -14,6 +14,7 @@ import {
   invalidateGithub,
   reconcileMessage,
 } from "./cards.ts";
+import { updateConversationRoom } from "./conversations.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
@@ -155,6 +156,10 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
       order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),
       rows,
       categories: replyCategories(state, sidebar.categories, since),
+      workspaceLayout:
+        state.sidebar.workspaceLayoutTouchedAt > since
+          ? state.sidebar.workspaceLayout
+          : sidebar.workspaceLayout,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
@@ -261,22 +266,30 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
   const roomId = detail.room.id;
   const timeline = timelineOf(state, roomId);
 
-  return {
-    ...state,
-    users: mergeUserList(state.users, detail.users),
-    rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
-    timelines: {
-      ...state.timelines,
-      [roomId]:
-        timeline.status === "ready"
-          ? timeline
-          : {
-              ...timeline,
-              unreadFromId: detail.unread?.firstUnreadMessageId ?? null,
-              unreadCount: detail.unread?.count ?? 0,
-            },
+  return updateConversationRoom(
+    {
+      ...state,
+      users: mergeUserList(state.users, detail.users),
+      rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
+      timelines: {
+        ...state.timelines,
+        [roomId]:
+          timeline.status === "ready"
+            ? timeline
+            : {
+                ...timeline,
+                unreadFromId: detail.unread?.firstUnreadMessageId ?? null,
+                unreadCount: detail.unread?.count ?? 0,
+              },
+      },
     },
-  };
+    {
+      roomId,
+      roomName: detail.displayName,
+      roomKind: detail.room.kind,
+      roomIconName: detail.room.iconName,
+    },
+  );
 }
 
 /**
@@ -943,14 +956,22 @@ function upsertRow(state: State, row: SidebarRow): State {
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;
 
   return setDetailRow(
-    {
-      ...state,
-      sidebar: {
-        ...state.sidebar,
-        rows,
-        order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+    updateConversationRoom(
+      {
+        ...state,
+        sidebar: {
+          ...state.sidebar,
+          rows,
+          order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+        },
       },
-    },
+      {
+        roomId: row.room.id,
+        roomName: row.displayName,
+        roomKind: row.room.kind,
+        roomIconName: row.room.iconName,
+      },
+    ),
     row,
   );
 }
@@ -1001,15 +1022,31 @@ export function setRoomUnavailable(state: State, roomId: number, keepRow = false
 }
 
 function removeRow(state: State, roomId: number): State {
-  if (state.sidebar.rows[roomId] === undefined) {
+  const workspaceRooms = state.sidebar.workspaceLayout.rooms.filter(
+    (room) => room.roomId !== roomId,
+  );
+
+  if (
+    state.sidebar.rows[roomId] === undefined &&
+    workspaceRooms.length === state.sidebar.workspaceLayout.rooms.length
+  ) {
     return state;
   }
 
   const { [roomId]: _gone, ...rows } = state.sidebar.rows;
+  const layoutChanged = workspaceRooms.length !== state.sidebar.workspaceLayout.rooms.length;
+  const clock = layoutChanged ? state.rowTouches.clock + 1 : state.rowTouches.clock;
 
   return {
     ...state,
-    sidebar: { ...state.sidebar, rows, order: state.sidebar.order.filter((id) => id !== roomId) },
+    rowTouches: { ...state.rowTouches, clock },
+    sidebar: {
+      ...state.sidebar,
+      rows,
+      order: state.sidebar.order.filter((id) => id !== roomId),
+      workspaceLayout: { ...state.sidebar.workspaceLayout, rooms: workspaceRooms },
+      workspaceLayoutTouchedAt: layoutChanged ? clock : state.sidebar.workspaceLayoutTouchedAt,
+    },
   };
 }
 
@@ -1068,6 +1105,9 @@ export function applyEvents(
 
   for (const event of events) {
     switch (event.type) {
+      case "user.updated":
+        next = mergeUsers(next, [event.data]);
+        break;
       case "message.created":
         next = stopTypingFor(receiveMessage(next, event.data), event.topic, event.data.creatorId);
         break;
@@ -1144,6 +1184,17 @@ export function applyEvents(
         break;
       case "sidebar.row.removed":
         next = removeRow(next, event.data.roomId);
+        break;
+      case "workspace.layout.updated":
+        next = {
+          ...next,
+          rowTouches: { ...next.rowTouches, clock: next.rowTouches.clock + 1 },
+          sidebar: {
+            ...next.sidebar,
+            workspaceLayout: event.data,
+            workspaceLayoutTouchedAt: next.rowTouches.clock + 1,
+          },
+        };
         break;
       case "sidebar.category.upserted":
         next = upsertCategory(next, event.data);

@@ -27,6 +27,7 @@ const PRIMITIVES: &[&str] = &[
     "sync_activity_stream",
     "sync_activity_item",
     "sync_organized",
+    "sync_workspace_organized",
     "sync_activity_removed",
     "sync_scheduled",
     "sync_agent_status",

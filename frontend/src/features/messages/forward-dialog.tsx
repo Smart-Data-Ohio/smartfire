@@ -13,6 +13,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { plainText } from "./commands.ts";
 import { filterDestinations, MAX_FORWARDS, targetKey } from "./forward-targets.ts";
+import { fileSummary, messageFiles } from "./message-files.ts";
 
 interface ForwardDialogProps {
   readonly message: MessageDTO;
@@ -36,7 +37,8 @@ function Preview({ message }: { readonly message: MessageDTO }) {
     <figure className="forward-preview">
       <figcaption className="forward-preview-author">{author}</figcaption>
       <p className="forward-preview-text">
-        {text === "" ? (message.attachment?.filename ?? "Attachment") : text}
+        {text === "" ? fileSummary(message) : text}
+        {text !== "" && messageFiles(message).length > 1 ? ` · ${fileSummary(message)}` : null}
       </p>
     </figure>
   );

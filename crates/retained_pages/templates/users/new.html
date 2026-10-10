@@ -11,6 +11,7 @@
     {% if invite_error.is_some() %}
     <p class="auth-lede" role="alert">This invite is no longer valid.</p>
     {% else %}
+    {% if !description.is_empty() %}<p class="auth-lede">{{ description }}</p>{% endif %}
     <p class="auth-lede">Create your account to start chatting.</p>
     {% endif %}
   </header>

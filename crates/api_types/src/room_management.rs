@@ -35,6 +35,7 @@ pub struct RoomForm {
     pub group_capable: bool,
     pub default_involvement: Involvement,
     pub stage_roles: Vec<RoomFormStageRole>,
+    pub topic: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -222,6 +223,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         icon_name: Option<Option<String>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        topic: Option<Option<String>>,
     },
     Closed {
         #[ts(optional)]
@@ -231,6 +235,9 @@ pub enum UpdateRoom {
         #[serde(skip_serializing_if = "Option::is_none")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        topic: Option<Option<String>>,
     },
     Voice {
         #[ts(optional)]
@@ -240,6 +247,9 @@ pub enum UpdateRoom {
         #[serde(skip_serializing_if = "Option::is_none")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        topic: Option<Option<String>>,
     },
     Stage {
         #[ts(optional)]
@@ -249,6 +259,9 @@ pub enum UpdateRoom {
         #[serde(skip_serializing_if = "Option::is_none")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        topic: Option<Option<String>>,
     },
     Board {
         #[ts(optional)]
@@ -258,6 +271,9 @@ pub enum UpdateRoom {
         #[serde(skip_serializing_if = "Option::is_none")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        topic: Option<Option<String>>,
     },
 }
 
@@ -274,6 +290,8 @@ enum UpdateRoomFields {
         name: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         icon_name: Option<Option<String>>,
+        #[serde(default, deserialize_with = "present")]
+        topic: Option<Option<String>>,
     },
     Closed {
         #[serde(default, deserialize_with = "present")]
@@ -281,6 +299,8 @@ enum UpdateRoomFields {
         #[serde(default, deserialize_with = "present")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[serde(default, deserialize_with = "present")]
+        topic: Option<Option<String>>,
     },
     Voice {
         #[serde(default, deserialize_with = "present")]
@@ -288,6 +308,8 @@ enum UpdateRoomFields {
         #[serde(default, deserialize_with = "present")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[serde(default, deserialize_with = "present")]
+        topic: Option<Option<String>>,
     },
     Stage {
         #[serde(default, deserialize_with = "present")]
@@ -295,6 +317,8 @@ enum UpdateRoomFields {
         #[serde(default, deserialize_with = "present")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[serde(default, deserialize_with = "present")]
+        topic: Option<Option<String>>,
     },
     Board {
         #[serde(default, deserialize_with = "present")]
@@ -302,48 +326,66 @@ enum UpdateRoomFields {
         #[serde(default, deserialize_with = "present")]
         icon_name: Option<Option<String>>,
         user_ids: Vec<i64>,
+        #[serde(default, deserialize_with = "present")]
+        topic: Option<Option<String>>,
     },
 }
 
 impl<'de> Deserialize<'de> for UpdateRoom {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Ok(match UpdateRoomFields::deserialize(deserializer)? {
-            UpdateRoomFields::Open { name, icon_name } => Self::Open { name, icon_name },
+            UpdateRoomFields::Open {
+                name,
+                icon_name,
+                topic,
+            } => Self::Open {
+                name,
+                icon_name,
+                topic,
+            },
             UpdateRoomFields::Closed {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             } => Self::Closed {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             },
             UpdateRoomFields::Voice {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             } => Self::Voice {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             },
             UpdateRoomFields::Stage {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             } => Self::Stage {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             },
             UpdateRoomFields::Board {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             } => Self::Board {
                 name,
                 icon_name,
                 user_ids,
+                topic,
             },
         })
     }
@@ -424,7 +466,8 @@ mod tests {
                 }
                 if let Some(value) = value {
                     input["name"] = value.clone();
-                    input["iconName"] = value;
+                    input["iconName"] = value.clone();
+                    input["topic"] = value;
                 }
                 let update: UpdateRoom = serde_json::from_value(input.clone()).unwrap();
                 assert_eq!(serde_json::to_value(update).unwrap(), input);

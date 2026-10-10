@@ -206,6 +206,8 @@ const appearanceSettings: Settings = {
     githubLogin: null,
     githubVerified: false,
     bot: false,
+    pronouns: null,
+    nickname: null,
   },
   appearance: {
     theme: "system",
@@ -1247,6 +1249,98 @@ describe("resuming", () => {
       );
     }),
   );
+  it.effect("keeps a visibility-filtered layout when reconnect replay predates its snapshot", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          const layout = {
+            categories: [{ id: 9, name: "Team", position: 0 }],
+            rooms: [{ roomId: 12, workspaceCategoryId: 9, position: 0 }],
+          };
+
+          yield* serve([]);
+          mutations.loadSidebar(
+            { ...sidebarFixture([sidebarRowFixture(12, "general")]), workspaceLayout: layout },
+            sidebarRowClock(),
+          );
+          yield* api.reply("GET /sidebar", sidebarFixture([]));
+          yield* startEngine;
+          yield* welcome(40, true, "e1", 42);
+          expect(store.getState().sidebar.workspaceLayout).toEqual({ categories: [], rooms: [] });
+
+          yield* pushEvents(
+            { seq: 41, topic: "user", type: "workspace.layout.updated", data: layout },
+            { seq: 42, topic: "user", type: "sidebar.row.removed", data: { roomId: 12 } },
+          );
+
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          expect(store.getState().sidebar.workspaceLayout).toEqual({ categories: [], rooms: [] });
+          expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
+            JSON.stringify({ epoch: "e1", seq: 42 }),
+          );
+
+          yield* pushEvents({
+            seq: 43,
+            topic: "user",
+            type: "workspace.layout.updated",
+            data: { ...layout, rooms: [] },
+          });
+          expect(store.getState().sidebar.workspaceLayout).toEqual({ ...layout, rooms: [] });
+        }),
+      );
+    }),
+  );
+
+  it.effect("applies replayed layout events when the covering sidebar refresh fails", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          const layoutA = {
+            categories: [{ id: 9, name: "Team", position: 0 }],
+            rooms: [{ roomId: 12, workspaceCategoryId: 9, position: 0 }],
+          };
+
+          const layoutB = {
+            categories: [{ id: 9, name: "Team", position: 0 }],
+            rooms: [],
+          };
+
+          yield* serve([]);
+          mutations.loadSidebar(
+            { ...sidebarFixture([sidebarRowFixture(12, "general")]), workspaceLayout: layoutA },
+            sidebarRowClock(),
+          );
+          // The covering snapshot never installs, so replayed layout events must still apply.
+          yield* api.route("GET /sidebar", () =>
+            Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
+          );
+          yield* startEngine;
+          yield* welcome(40, true, "e1", 41);
+
+          yield* pushEvents({
+            seq: 41,
+            topic: "user",
+            type: "workspace.layout.updated",
+            data: layoutB,
+          });
+
+          expect(store.getState().sidebar.workspaceLayout).toEqual(layoutB);
+          expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
+            JSON.stringify({ epoch: "e1", seq: 41 }),
+          );
+        }),
+      );
+    }),
+  );
+
   it.effect("doesn't count replayed unreads twice on a sidebar loaded after a reload", () =>
     Effect.gen(function* () {
       sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));

@@ -4,8 +4,13 @@ import type { BoardListing as GeneratedBoardListing } from "../../gen/BoardListi
 import type { BoardOwnerOption as GeneratedBoardOwnerOption } from "../../gen/BoardOwnerOption.ts";
 import type { BoardPostForm as GeneratedBoardPostForm } from "../../gen/BoardPostForm.ts";
 import type { BoardStatusFilter as GeneratedBoardStatusFilter } from "../../gen/BoardStatusFilter.ts";
+import type { BoardTag as GeneratedBoardTag } from "../../gen/BoardTag.ts";
+import type { BoardTagCatalog as GeneratedBoardTagCatalog } from "../../gen/BoardTagCatalog.ts";
 import type { BoardTagCount as GeneratedBoardTagCount } from "../../gen/BoardTagCount.ts";
 import type { CreateBoardPost as GeneratedCreateBoardPost } from "../../gen/CreateBoardPost.ts";
+import type { ReorderBoardTags as GeneratedReorderBoardTags } from "../../gen/ReorderBoardTags.ts";
+import type { SaveBoardTag as GeneratedSaveBoardTag } from "../../gen/SaveBoardTag.ts";
+import type { UpdateBoardTagPolicy as GeneratedUpdateBoardTagPolicy } from "../../gen/UpdateBoardTagPolicy.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { CreateMessage } from "./message.ts";
 import type { Assert, Pinned } from "./pin.ts";
@@ -41,6 +46,56 @@ export type BoardDigest = typeof BoardDigest.Type;
 
 export type BoardDigestPin = Assert<Pinned<typeof BoardDigest, GeneratedBoardDigest>>;
 
+export const BoardTag = Schema.Struct({
+  id: Schema.Int,
+  name: Schema.String,
+  emoji: Schema.NullOr(Schema.String),
+  position: Schema.Int,
+});
+
+export type BoardTag = typeof BoardTag.Type;
+
+export type BoardTagPin = Assert<Pinned<typeof BoardTag, GeneratedBoardTag>>;
+
+export const BoardTagCatalog = Schema.Struct({
+  roomId: RoomId,
+  tags: Schema.Array(BoardTag),
+  tagsRequired: Schema.Boolean,
+  defaultBoardTagId: Schema.NullOr(Schema.Int),
+});
+
+export type BoardTagCatalog = typeof BoardTagCatalog.Type;
+
+export type BoardTagCatalogPin = Assert<Pinned<typeof BoardTagCatalog, GeneratedBoardTagCatalog>>;
+
+export const SaveBoardTag = Schema.Struct({
+  name: Schema.String,
+  emoji: Schema.NullOr(Schema.String),
+});
+
+export type SaveBoardTag = typeof SaveBoardTag.Type;
+
+export type SaveBoardTagPin = Assert<Pinned<typeof SaveBoardTag, GeneratedSaveBoardTag>>;
+
+export const ReorderBoardTags = Schema.Struct({ tagIds: Schema.Array(Schema.Int) });
+
+export type ReorderBoardTags = typeof ReorderBoardTags.Type;
+
+export type ReorderBoardTagsPin = Assert<
+  Pinned<typeof ReorderBoardTags, GeneratedReorderBoardTags>
+>;
+
+export const UpdateBoardTagPolicy = Schema.Struct({
+  tagsRequired: Schema.Boolean,
+  defaultBoardTagId: Schema.NullOr(Schema.Int),
+});
+
+export type UpdateBoardTagPolicy = typeof UpdateBoardTagPolicy.Type;
+
+export type UpdateBoardTagPolicyPin = Assert<
+  Pinned<typeof UpdateBoardTagPolicy, GeneratedUpdateBoardTagPolicy>
+>;
+
 /** The server's cumulative window: page n holds the first n × 50 matches. */
 export const BoardListing = Schema.Struct({
   roomId: RoomId,
@@ -56,6 +111,9 @@ export const BoardListing = Schema.Struct({
   digest: Schema.NullOr(BoardDigest),
   canAdminister: Schema.Boolean,
   users: Schema.Array(User),
+  tags: Schema.Array(BoardTag),
+  tagsRequired: Schema.Boolean,
+  defaultBoardTagId: Schema.NullOr(Schema.Int),
 });
 
 export type BoardListing = typeof BoardListing.Type;
@@ -66,6 +124,9 @@ export const BoardPostForm = Schema.Struct({
   ownerCandidates: Schema.Array(WorkOwnerCandidate),
   tagSuggestions: Schema.Array(Schema.String),
   users: Schema.Array(User),
+  tags: Schema.Array(BoardTag),
+  tagsRequired: Schema.Boolean,
+  defaultBoardTagId: Schema.NullOr(Schema.Int),
 });
 
 export type BoardPostForm = typeof BoardPostForm.Type;

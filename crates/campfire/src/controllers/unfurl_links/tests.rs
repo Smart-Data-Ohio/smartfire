@@ -36,7 +36,7 @@ async fn ws15e_composer_http_skips_special_cards_before_dns() {
     let kit=campfire_kit::Kit::new(campfire_kit::KitConfig::production(true),Arc::new(campfire_kit::RailsCrypto::new(app.booted.app.secrets.clone())),seed_clock(),app.booted.app.clone());
     let methods=campfire_kit::get(action.clone()).merge(campfire_kit::post(action.clone()));
     let routes=axum::Router::new().route("/{*path}",methods).route("/",campfire_kit::get(action));
-    app.booted.router=campfire_kit::app(routes.merge(crate::controllers::spa::routes(true, "max-age=31536000, immutable")),kit);
+    app.booted.router=campfire_kit::app(routes.merge(crate::controllers::spa::routes("max-age=31536000, immutable")),kit);
     let request = |url: &str| Req::new(Method::POST, "/unfurl_link").form(&[("url", url)]);
     assert_eq!(
         app.anonymous()

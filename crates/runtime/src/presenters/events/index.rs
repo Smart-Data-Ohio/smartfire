@@ -38,9 +38,9 @@ impl Facts {
         let mut live_names = HashMap::new();
         for (rid, name) in query_all(
             conn,
-            "SELECT s.room_id,u.name FROM streams s JOIN users u ON u.id=s.user_id WHERE s.ended_at IS NULL AND s.room_id IN (SELECT value FROM json_each(?)) ORDER BY s.id",
+            "SELECT s.room_id AS live_room_id,u.* FROM streams s JOIN users u ON u.id=s.user_id WHERE s.ended_at IS NULL AND s.room_id IN (SELECT value FROM json_each(?)) ORDER BY s.id",
             [encoded_venues],
-            |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)),
+            |r| Ok((r.get::<_, i64>("live_room_id")?, User::from_row(r)?.display_name().to_owned())),
         )? {
             live_names.entry(rid).or_insert(name);
         }
@@ -71,14 +71,14 @@ impl Facts {
         // only the displayed names use the same inner-join semantics as show.
         for (eid, uid, response, name) in query_all(
             conn,
-            "SELECT a.event_id,a.user_id,a.response,u.name FROM event_attendances a LEFT JOIN users u ON u.id=a.user_id WHERE a.event_id IN (SELECT value FROM json_each(?)) ORDER BY a.response,a.id",
+            "SELECT a.event_id,a.user_id,a.response,u.* FROM event_attendances a LEFT JOIN users u ON u.id=a.user_id WHERE a.event_id IN (SELECT value FROM json_each(?)) ORDER BY a.response,a.id",
             [&encoded],
             |r| {
                 Ok((
                     r.get::<_, i64>(0)?,
                     r.get::<_, i64>(1)?,
                     r.get::<_, String>(2)?,
-                    r.get::<_, Option<String>>(3)?,
+                    if r.get::<_, Option<i64>>("id")?.is_some() { Some(User::from_row(r)?.display_name().to_owned()) } else { None },
                 ))
             },
         )? {
@@ -152,8 +152,8 @@ impl Facts {
                     .organizers
                     .get(&e.organizer_id)
                     .ok_or(campfire_db::Error::RecordNotFound("User"))?
-                    .name
-                    .clone(),
+                    .display_name()
+                    .to_owned(),
                 starts_at: super::calendar_time(e.starts_at),
                 ends_at: e.ends_at.map(super::calendar_time),
                 time_zone: e.time_zone.clone(),

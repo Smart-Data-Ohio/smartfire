@@ -1,5 +1,5 @@
 //! The single-page app's server side: the `/api/v1` JSON endpoints and the `/api/v1/sync`
-//! socket. Mounted (with `/app`) only when `SPA_ENABLED` is set.
+//! socket. Always mounted alongside `/app`.
 //!
 //! The wire types are `campfire_api_types`'. The socket's protocol, replay ring and batching
 //! are `campfire_cable::sync`; the JSON twins of the classic broadcasts are published from
@@ -173,6 +173,23 @@ pub fn routes(app: &AppState) -> Router<Kit> {
                 .delete(action(message_actions::unsave)),
         )
         .route(
+            "/api/v1/workspace_categories",
+            post(unparsed_action(organize::create_workspace_category)),
+        )
+        .route(
+            "/api/v1/workspace_categories/order",
+            put(unparsed_action(organize::order_workspace_categories)),
+        )
+        .route(
+            "/api/v1/workspace_categories/{category_id}",
+            patch(unparsed_action(organize::update_workspace_category))
+                .delete(action(organize::destroy_workspace_category)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/workspace_category",
+            put(unparsed_action(organize::move_workspace_room)),
+        )
+        .route(
             "/api/v1/room_categories",
             post(unparsed_action(organize::create_category)),
         )
@@ -310,7 +327,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/threads",
             get(action(threads::threads)).post(unparsed_action(threads::create)),
         )
-        .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)))
+        .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)).patch(unparsed_action(boards::update_policy)))
+        .route("/api/v1/rooms/{room_id}/board/tags", get(action(boards::catalog)).post(unparsed_action(boards::create_tag)))
+        .route("/api/v1/rooms/{room_id}/board/tags/order", put(unparsed_action(boards::reorder_tags)))
+        .route("/api/v1/rooms/{room_id}/board/tags/{id}", patch(unparsed_action(boards::update_tag)).delete(action(boards::destroy_tag)))
         .route(
             "/api/v1/rooms/{room_id}/automations",
             get(action(board_automations::show)),

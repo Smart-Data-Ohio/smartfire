@@ -1802,6 +1802,7 @@ async fn poll_media_rejects_non_images_and_oversize_uploads() {
 #[tokio::test]
 async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purge() {
     let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
     let staged = a.booted.app.storage.stage_bytes(
         include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
         campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
@@ -1819,10 +1820,12 @@ async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purg
     let message_id = message["id"].as_i64().unwrap();
     let original = message["poll"]["options"][0]["media"]["url"].as_str().unwrap();
     let still = message["poll"]["options"][0]["media"]["stillUrl"].as_str().unwrap();
+    let mut media_urls = Vec::new();
     for url in [original, still] {
         let permitted = author.send(get(url)).await;
         assert_eq!(permitted.header("cache-control"), Some("private, no-store"));
         let disk = permitted.location().unwrap();
+        media_urls.push(disk.to_owned());
         assert_eq!(other.send(get(url)).await.status, StatusCode::NOT_FOUND);
         assert_eq!(other.send(get(disk)).await.status, StatusCode::NOT_FOUND);
         let bytes = author.send(get(disk)).await;
@@ -1845,6 +1848,8 @@ async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purg
     let variant_response = author.send(get(&variant_url)).await;
     assert_eq!(variant_response.header("cache-control"), Some("private, no-store"));
     let variant_disk = variant_response.location().unwrap().to_owned();
+    media_urls.extend([original.to_owned(), still.to_owned(), variant_url.clone(), variant_disk.clone()]);
+    media_urls.extend([original, still, &variant_url].map(|url| url.replace("/redirect/", "/proxy/")));
     assert_eq!(other.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND);
     let app = a.booted.app.clone();
     let payload = a.db().read(move |conn| {
@@ -1853,13 +1858,82 @@ async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purg
     assert_eq!(payload["options"][0]["media"], message["poll"]["options"][0]["media"]);
     assert_eq!(payload["options"][1]["media"]["content"], "👩🏽‍💻");
     a.db().write(move |tx| campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx)).await.unwrap();
-    assert_eq!(author.send(get(original)).await.status, StatusCode::NOT_FOUND);
-    crate::active_storage::purge(&a.booted.app, blob_id).await.unwrap();
-    // The still's purge job can run later than its original's job.
-    assert_eq!(author.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(author.send(get(&variant_disk)).await.status, StatusCode::NOT_FOUND);
+    let detached = a.db().read(move |conn| {
+        assert!(!conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [blob_id], |row| row.get::<_, bool>(0))?);
+        Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().unwrap())
+    }).await.unwrap();
+    assert!(a.booted.app.storage.service.path_for(&detached.key).exists(), "blob/file purge remains deferred");
+    let mut anonymous = a.anonymous();
+    for browser in [&mut author, &mut other, &mut anonymous] {
+        for url in &media_urls {
+            assert_eq!(browser.send(get(url)).await.status, StatusCode::NOT_FOUND, "deleted poll media {url}");
+        }
+    }
+    let (reached, reached_here) = tokio::sync::oneshot::channel();
+    let (go, go_here) = std::sync::mpsc::channel();
+    crate::active_storage::test_hooks::after_blob_lookup(detached.key, move || {
+        reached.send(()).unwrap();
+        go_here.recv_timeout(std::time::Duration::from_secs(30)).unwrap();
+    });
+    // Purge commits between the URL's blob lookup and its authorization read.
+    let (response, ()) = tokio::join!(author.send(get(original)), async {
+        reached_here.await.unwrap();
+        crate::active_storage::purge(&a.booted.app, blob_id).await.unwrap();
+        go.send(()).unwrap();
+    });
+    assert_eq!(response.status, StatusCode::NOT_FOUND, "purging a loaded blob must not make it public");
+    for url in &media_urls {
+        assert_eq!(author.send(get(url)).await.status, StatusCode::NOT_FOUND);
+    }
+    crate::active_storage::purge(&a.booted.app, variant).await.unwrap();
+    assert_eq!(author.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND, "still URL still resolves after its purge");
+    assert_eq!(author.send(get(&variant_disk)).await.status, StatusCode::NOT_FOUND, "still disk URL still resolves after its purge");
     let exists = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_some())).await.unwrap();
     assert!(!exists);
+}
+
+#[tokio::test]
+async fn poll_media_disk_urls_deny_files_after_the_blob_row_is_purged() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let signed = super::admin_tests::upload(&a, "poll.png").await;
+    let blob_id = campfire_storage::paths::verify_signed_blob_id(&*a.booted.app.storage.verifier, &signed, a.booted.app.clock.now()).unwrap();
+    let blob = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().unwrap())).await.unwrap();
+    let path = a.booted.app.storage.service.path_for(&blob.key);
+    let mut author = a.sign_in(DAVID).await;
+    let mut other = a.sign_in(KEVIN).await;
+    let mut anonymous = a.anonymous();
+    let mut body = poll_body("poll-media-file-purge", &["Image", "None"]);
+    body["optionMedia"] = json!([{ "signedId": signed }, null]);
+    let reply = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_PETS}/polls"), body).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: Value = parse(&reply);
+    let message_id = message["id"].as_i64().unwrap();
+    let original = message["poll"]["options"][0]["media"]["url"].as_str().unwrap();
+    let redirect = author.send(get(original)).await;
+    let disk = redirect.location().unwrap();
+    assert_eq!(author.send(get(disk)).await.status, StatusCode::OK);
+    a.db().write(move |tx| {
+        campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx)
+    }).await.unwrap();
+    let (reached, reached_here) = tokio::sync::oneshot::channel();
+    let (go, go_here) = std::sync::mpsc::channel();
+    crate::active_storage::test_hooks::before_file_deletion(blob.key, move || {
+        reached.send(()).unwrap();
+        go_here.recv_timeout(std::time::Duration::from_secs(30)).unwrap();
+    });
+    let (purged, ()) = tokio::join!(crate::active_storage::purge(&a.booted.app, blob_id), async {
+        reached_here.await.unwrap();
+        assert!(path.exists(), "file deletion is still pending");
+        let exists = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_some())).await.unwrap();
+        assert!(!exists, "the blob row's deletion has committed");
+        for browser in [&mut author, &mut other, &mut anonymous] {
+            assert_eq!(browser.send(get(disk)).await.status, StatusCode::NOT_FOUND, "a purged blob's file must not be served");
+        }
+        go.send(()).unwrap();
+    });
+    purged.unwrap();
+    assert!(!path.exists());
 }
 
 #[tokio::test]

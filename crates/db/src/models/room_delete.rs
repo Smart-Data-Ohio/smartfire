@@ -57,6 +57,7 @@ pub fn begin_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Res
         "UPDATE rooms SET deleted_at=?,direct_member_key=NULL,updated_at=? WHERE id=?",
         params![tx.now(), tx.now(), room.id],
     )?;
+    crate::WorkspaceCategory::remove_room_from_layout(tx, room.id, false)?;
     crate::ActivityItem::emit_hidden_in_room(tx, room.id, None)?;
     ScheduledMessage::emit_pending_in_room(tx, room.id, None)?;
     tx.conn()
@@ -244,7 +245,7 @@ pub async fn perform_with_config(db: &Database, room_id: i64, config: HuddleConf
     }
     db.write(move |tx| {
         if let Some(room) = Room::find_by_id(tx.conn(), room_id)?.filter(Room::deleted) {
-            finish_destroy(tx, &room, &config)?;
+            finish_destroy(tx, &room, &config, false)?;
         }
         Ok(())
     })
@@ -268,9 +269,14 @@ pub(crate) fn destroy(tx: &mut Tx<'_>, room: &Room, importing: bool) -> Result<(
             }
         }
     }
-    finish_destroy(tx, room, &HuddleConfig::from_env())
+    finish_destroy(tx, room, &HuddleConfig::from_env(), importing)
 }
-fn finish_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Result<()> {
+fn finish_destroy(
+    tx: &mut Tx<'_>,
+    room: &Room,
+    config: &HuddleConfig,
+    importing: bool,
+) -> Result<()> {
     // Room's before_destroy callbacks still run even after begin_destroy; cleanup creation
     // is idempotent. Keep the captured remote room name when unlinking grants.
     revoke_huddle_grants(tx, room.id, config)?;
@@ -323,6 +329,7 @@ fn finish_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Result
             .execute_cached("DELETE FROM streams WHERE room_id=?", [room.id])?;
     }
     tx.conn().execute_cached("DELETE FROM github_pull_request_threads WHERE room_id=?", [room.id])?;
+    crate::WorkspaceCategory::remove_room_from_layout(tx, room.id, importing)?;
     tx.conn()
         .execute_cached("DELETE FROM rooms WHERE id=?", [room.id])?;
     Ok(())

@@ -89,6 +89,8 @@ function user(id: number): User {
     agent: null,
     createdAt: at(0),
     updatedAt: at(0),
+    accountName: `Person ${id}`,
+    pronouns: null,
   };
 }
 

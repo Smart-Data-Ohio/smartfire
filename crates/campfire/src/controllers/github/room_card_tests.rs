@@ -23,7 +23,6 @@ async fn github_room_refresh_claims_dedupe_many_messages_and_different_viewers()
             tx.conn().execute("INSERT INTO memberships (room_id,user_id,created_at,updated_at) VALUES (815,812,?,?)",params![tx.now(),tx.now()])?;
             Ok(campfire_db::Session::start_with(tx,812,campfire_db::NewSession{two_factor_verified:true,..Default::default()})?.token)
         }).await.unwrap();
-        fresh.app.fragment_cache.clear();
         assert_eq!(fetch_count(&fresh).await, 0);
         let (status, _, _body) = request(&fresh, "GET", "/api/v1/rooms/815/messages", Value::Null, json!({})).await;
         assert_eq!(status, 200);

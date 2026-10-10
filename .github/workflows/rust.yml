@@ -2,7 +2,7 @@ name: Rust
 
 # The Rust workspace at the repository root: clippy, binary build and tests, in the toolchain stage
 # of the Dockerfile (the same libvips and ffmpeg builds as its image, so the storage vectors' byte
-# checks run rather than skip). The app reads only its own inputs: web/ and fixtures/, and the seeds
+# checks run rather than skip). The app reads only its own inputs: crates/ and fixtures/, and the seeds
 # and recordings the original Rails app built once, which are committed and frozen.
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
@@ -148,7 +148,7 @@ jobs:
           import os
           import subprocess
 
-          RUST_DIRS = (b"crates/", b"ci/", b"web/", b"fixtures/", b"vectors/", b"parity/",
+          RUST_DIRS = (b"crates/", b"ci/", b"fixtures/", b"vectors/", b"parity/",
                        b"test-support/", b".cargo/", b".config/",
                        b".github/actions/rust-setup/", b"frontend/src/gen/",
                        b"frontend/src/auth/", b"frontend/src/styles/", b"frontend/src/motion/",

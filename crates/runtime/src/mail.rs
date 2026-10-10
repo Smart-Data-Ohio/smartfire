@@ -1,7 +1,7 @@
 //! App adapter for campfire_mail. WS9 emits its typed notification jobs; WS5/WS8 install the
 //! shared Markdown renderer; WS11 installs webhook fanout. Mail owns neither trigger.
 use crate::app::{App, AppCtx};
-use campfire_db::{Attachment, Message, Timestamp, User};
+use campfire_db::{Attachment, Message, Room, Timestamp, User};
 use campfire_jobs::{JobError, JobResult, Outcome};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
 use campfire_mail::{
@@ -13,11 +13,11 @@ use campfire_mail::{
 use rusqlite::OptionalExtension;
 
 pub use crate::state::mail::State;
-pub fn register(registry: &mut crate::queue::Registry, publish: Publish) {
+pub fn register(registry: &mut crate::queue::Registry) {
     registry.register(delivery);
     registry.register(routing);
     registry.register(incineration);
-    registry.register(move |app, job, execution| message_created(app, job, execution, publish));
+    registry.register(message_created);
 }
 pub async fn relay(c: &mut Ctx) -> Result {
     match campfire_mail::config::relay_auth(&c.app().mail.config, c.request.header("authorization"))
@@ -128,9 +128,7 @@ async fn incineration(app: App, job: IncinerationJob, _: campfire_jobs::Executio
         .await?;
     Ok(Outcome::Done)
 }
-pub type Publish = fn(&campfire_db::Connection, &App, &Message) -> campfire_db::Result<crate::presenters::RenderRefreshes>;
-
-pub async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execution, publish: Publish) -> JobResult {
+pub async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execution) -> JobResult {
     let message = app
         .db
         .read(move |conn| Message::find(conn, job.message_id))
@@ -176,4 +174,20 @@ pub async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Ex
         app.db.write(move |tx| fanout(tx, &message)).await?;
     }
     Ok(Outcome::Done)
+}
+
+fn publish(
+    conn: &campfire_db::Connection,
+    app: &App,
+    message: &Message,
+) -> campfire_db::Result<crate::presenters::RenderRefreshes> {
+    let room = Room::find(conn, message.room_id)?;
+    let refreshes = crate::presenters::broadcast_refreshes(conn, app, message)?;
+    app.broadcasts.message_create(
+        conn,
+        &room,
+        message,
+        &*app.db.env().rich_text,
+    )?;
+    Ok(refreshes)
 }

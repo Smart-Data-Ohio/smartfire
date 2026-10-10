@@ -113,6 +113,7 @@ export default function RoomSettingsDialog({
   const formId = useId();
   const tabsId = useId();
   const panelId = useId();
+  const topicId = useId();
   const nameRef = useRef<HTMLInputElement | null>(null);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -192,7 +193,12 @@ export default function RoomSettingsDialog({
 
         setLoad({ status: "ready", form });
         setKind(managed(form) ?? "open");
-        setDraft({ name: form.name ?? "", iconName: form.iconName, userIds: form.userIds });
+        setDraft({
+          name: form.name ?? "",
+          iconName: form.iconName,
+          userIds: form.userIds,
+          topic: form.topic ?? "",
+        });
       },
       (failure: Error) => {
         if (live) setLoad({ status: "error", message: failure.message });
@@ -209,6 +215,8 @@ export default function RoomSettingsDialog({
   membershipForm.current = form;
   const readOnly = form === null || !form.canSubmit;
   const dirty = form !== null && isDirty(form, kind, draft);
+  const topicCount = Array.from(draft.topic ?? "").length;
+  const topicTooLong = Array.from((draft.topic ?? "").trim()).length > 1024;
   const noun = NOUN[kind];
   const members = hasMemberList(kind);
   const emailable = kind !== "board";
@@ -353,7 +361,7 @@ export default function RoomSettingsDialog({
   };
 
   const save = () => {
-    if (form === null || readOnly || busy || !dirty || memberSync !== "idle") {
+    if (form === null || readOnly || busy || !dirty || topicTooLong || memberSync !== "idle") {
       return;
     }
 
@@ -434,7 +442,7 @@ export default function RoomSettingsDialog({
         type="submit"
         form={formId}
         variant="primary"
-        disabled={!dirty || memberSync !== "idle"}
+        disabled={!dirty || topicTooLong || memberSync !== "idle"}
         loading={busy}
         loadingLabel="Saving…"
       >
@@ -469,6 +477,29 @@ export default function RoomSettingsDialog({
             attempt={attempt}
             onChange={(event) => edit({ name: event.target.value })}
           />
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor={topicId}>
+            Topic
+          </label>
+          <textarea
+            id={topicId}
+            className="input room-topic-input"
+            rows={4}
+            value={draft.topic ?? ""}
+            disabled={readOnly}
+            aria-describedby={`${topicId}-count`}
+            aria-invalid={topicTooLong || undefined}
+            onChange={(event) => edit({ topic: event.target.value })}
+          />
+          <p className="field-hint" id={`${topicId}-count`}>
+            {topicCount} / 1024
+          </p>
+          {topicTooLong ? (
+            <p className="field-error" role="alert">
+              Topic must be 1024 characters or fewer.
+            </p>
+          ) : null}
         </div>
         {canConvert ? (
           <div className="room-privacy">

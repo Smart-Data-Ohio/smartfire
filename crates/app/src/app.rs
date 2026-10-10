@@ -6,7 +6,7 @@ use std::sync::Arc;
 use campfire_db::Database;
 use campfire_kit::{Ctx, SharedClock};
 use campfire_storage::Storage;
-use campfire_views::fragment_cache::FragmentCache;
+use crate::json_cache::JsonCache;
 use rails_compat::Secrets;
 
 use crate::config::Config;
@@ -39,9 +39,8 @@ pub struct AppState {
     pub github_read: crate::integrations::github::client::ReadClient,
     pub subscription_network: crate::net::Network,
     pub slack_network: crate::net::Network,
-    /// `Rails.cache` for view fragments (`cache message do`), current during every request
-    /// and every render outside one.
-    pub fragment_cache: Arc<FragmentCache>,
+    /// Bounded cache for legacy JSON serializers.
+    pub json_cache: Arc<JsonCache>,
 }
 
 impl AppState {
@@ -80,7 +79,7 @@ impl AppState {
             github_read: self.github_read.clone(),
             subscription_network: self.subscription_network.clone(),
             slack_network: self.slack_network.clone(),
-            fragment_cache: self.fragment_cache.clone(),
+            json_cache: self.json_cache.clone(),
         })
     }
 

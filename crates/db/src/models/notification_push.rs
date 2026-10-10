@@ -107,7 +107,7 @@ impl EventReminderSource {
     pub fn payload(&self, conn: &Connection, now: Timestamp) -> Result<PushPayload> {
         let room = Room::find(conn, self.room_id)?;
         let title = if room.direct() {
-            User::find(conn, self.organizer_id)?.name
+            User::find(conn, self.organizer_id)?.display_name().to_owned()
         } else {
             room.name.unwrap_or_default()
         };

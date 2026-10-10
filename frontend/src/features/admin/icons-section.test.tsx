@@ -20,6 +20,9 @@ const workspace: Workspace = {
   restrictRoomCreationToAdministrators: false,
   uploadLimitBytes: 100 * 1024 * 1024,
   version: "test",
+  description: "",
+  vanitySlug: null,
+  vanityUrl: null,
 };
 
 const LIST: WorkspaceIconList = {

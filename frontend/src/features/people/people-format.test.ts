@@ -25,6 +25,8 @@ function user(id: number, role: User["role"], agent = false): User {
     agent: agent ? { agentId: id, kind: "workspace", status: "idle", suspended: false } : null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000000Z",
+    accountName: `User ${id}`,
+    pronouns: null,
   };
 }
 

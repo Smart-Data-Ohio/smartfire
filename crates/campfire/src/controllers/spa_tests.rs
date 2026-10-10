@@ -446,7 +446,7 @@ async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_sh
     for path in ["service-worker.js", "offline.html"] {
         let reply = a.anonymous().get(&format!("/app/{path}")).await;
         let root = a.anonymous().get(&format!("/{path}")).await;
-        let file = campfire_spa::pwa::file(path, true, None).unwrap();
+        let file = campfire_spa::pwa::file(path, None).unwrap();
         assert_eq!(reply.status, StatusCode::OK);
         assert_eq!(reply.content_type(), Some(file.file.content_type));
         assert_eq!(reply.body, root.body, "older bundles use the same root resource");

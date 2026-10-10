@@ -6,9 +6,7 @@
 pub mod boosts;
 pub mod pins;
 pub mod by_bots;
-pub mod rendered {
-    pub use campfire_web::controllers::messages::rendered::*;
-}
+pub mod rendered;
 pub use crate::controllers::presenters::message_payload as payload;
 pub use crate::controllers::presenters::message_freshness as freshness;
 
@@ -413,7 +411,7 @@ pub async fn stage_attachment(c: &Ctx, assignment: Assignment) -> Result<Assignm
     if matches!(assignment, Assignment::Unchanged | Assignment::Delete | Assignment::Invalid) {
         return assignment.stage(c.app()).await;
     }
-    let limit = campfire_web::active_storage::upload_limit_bytes(c.app()).await?;
+    let limit = campfire_runtime::active_storage::upload_limit_bytes(c.app()).await?;
     assignment.stage_with_limit(c.app(), limit as u64).await
 }
 
@@ -814,8 +812,7 @@ pub async fn present<T: Send + 'static>(
             presenter.cache_base_url = Some(cache_base_url);
             presenter.current_user_id = Some(current_user_id);
             presenter.use_viewer_zone(current_user_id)?;
-            // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            let value = campfire_app::cache::with(&app.fragment_cache, || f(&presenter))?;
+            let value = f(&presenter)?;
             Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_render_refreshes()))
         })
         .await

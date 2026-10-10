@@ -84,8 +84,8 @@ pub use agents::{
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use board::{
-    BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTagCount,
-    CreateBoardPost,
+    BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTag,
+    BoardTagCatalog, BoardTagCount, CreateBoardPost, ReorderBoardTags, SaveBoardTag, UpdateBoardTagPolicy,
 };
 pub use board_automations::{
     BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
@@ -148,6 +148,8 @@ pub use message::{
 pub use organize::{
     AssignRoomCategory, CreateRoomCategory, FavoriteList, InvolvementChange, MoveFavorite,
     ReorderRoomCategories, RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
+    MoveWorkspaceRoom, ReorderWorkspaceCategories, WorkspaceCategory, WorkspaceLayout,
+    WorkspaceRoomPosition, WriteWorkspaceCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
 pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};

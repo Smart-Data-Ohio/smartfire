@@ -4,36 +4,15 @@ Every broadcast our Rails app makes, with the workstream that owns it and where 
 Later waves port a domain by making its rows `ported`, without changing the frames: action, target,
 stream and partial must stay exactly as listed here.
 
-## How to broadcast from Rust
+## Current JSON publication
 
-- **Named methods.** Use `campfire::channels::Broadcasts` (`app.broadcasts`), whose methods are named
-  after the Ruby ones (`message_create`, `involvement_change`, ...). Where a domain has no named
-  method yet, use its primitives: `append`, `prepend`, `replace`, `update`, `remove`, `turbo` (for
-  `maintain_scroll`), and `channel` (for `ActionCable.server.broadcast` to a channel's own stream).
-- **Streams.** Name them with `broadcasts::Stream`: `record(gid, suffix)` for `[record, :suffix]`,
-  `rooms()`, `user_rooms(id)`, `user_status(id)`, `ooo_notice(id)`, `room_messages(room)`,
-  `thread_messages(id)`, and `conversation(room, message)` for `message.conversation`
-  (`thread || room`). Targets use the `dom_id` helpers in the same module (`room_dom_id`,
-  `message_dom_id`, `thread_dom_id`), which match `ActionView::RecordIdentifier`.
-- **Rendering.** Render through `campfire_views`, or pass HTML that the domain owner has rendered
-  (the `Partials` trait, or a `&str`).
-- **Session-bound content.** Broadcast HTML is rendered once and sent to many users, so it must
-  carry nothing session-bound. `campfire_cable::turbo::broadcast_stream_to` refuses (logs, returns
-  0) any HTML with an `authenticity_token` field, a `csrf-token`/`csrf-param` meta tag, or a
-  non-empty `nonce`. That matches our Rails, where `ApplicationController.render` emits no token
-  and a nil nonce. The guard parses element attributes, so ordinary text such as `nonce="example"` is broadcast. `Broadcasts::turbo` also rejects actual unresolved WS4 token slots using the renderer's process-specific marker. Current-user state is up to the renderer: never render with a viewer.
-- **Model callbacks.** A model in `campfire_db` can't reach the cable, so it emits
-  `Event::Broadcast(BroadcastRequest)` from `after_commit`. Define a `#[derive(Serialize,
-  Deserialize)]` struct implementing `campfire_db::Broadcast` (its `KIND` names the Ruby method),
-  emit `Event::broadcast(&value)`, and add a `KIND` arm to `campfire::channels::sink::broadcast`.
-  The app's `Jobs` sink delivers it on the writer thread in commit order, before any
-  `DisconnectUser` emitted after it (see `RoomRemovalBroadcast`).
-- **Processes.** Rails broadcasts from five processes (web, resque workers, `periodic`,
-  `huddle_reconciler`, and gateway-triggered jobs) and relays them through Redis. The port runs all
-  of those in the one process, so every path calls the same `Broadcasts`, which is the hub the
-  sockets subscribe to. `channels::tests::hub_test` covers a booted app: a model callback through
-  the `Jobs` sink, work on the job runner, and sign-out through the controller. Periodic tasks and
-  the reconciler, when they land (WS3, WS13), use `app.broadcasts` the same way.
+Use `campfire_app::cable::Broadcasts` for domain events. `campfire_api::install` always
+installs the JSON renderer and sync socket at boot. Model callbacks enqueue typed broadcast
+requests after commit; `campfire_channels::channels::sink` publishes them in commit order,
+preserving viewer scope, unread changes and delete-before-disconnect ordering.
+Action Cable framing and authentication remain; HTML stream publication is retired.
+
+The census below records the former Rails producers for provenance, not current renderer APIs.
 
 ## States
 
