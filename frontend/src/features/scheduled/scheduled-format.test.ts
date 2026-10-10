@@ -50,8 +50,10 @@ describe("markdownExcerpt", () => {
     expect(markdownExcerpt("**Ship** it\n\n> _today_")).toBe("Ship it today");
   });
 
-  it("replaces a spoiler with the word and leaves one in code", () => {
+  it("replaces a spoiler with the word, and hides more rather than less", () => {
     expect(markdownExcerpt("see ||the ending|| now")).toBe("see spoiler now");
-    expect(markdownExcerpt("use `||the ending||` here")).toContain("||the ending||");
+    expect(markdownExcerpt("||outer ||SECRET|| tail||")).toBe("spoiler");
+    expect(markdownExcerpt("\\`||SECRET||\\` tail")).toBe("\\spoiler\\ tail");
+    expect(markdownExcerpt("use `||the ending||` here")).toBe("use spoiler here");
   });
 });

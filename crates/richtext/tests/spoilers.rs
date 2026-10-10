@@ -168,3 +168,15 @@ fn presentation_keeps_the_spoiler_and_drops_anything_else_new() {
     assert!(!safe.contains("style"), "{safe}");
     assert!(!safe.contains("script"), "{safe}");
 }
+
+#[test]
+fn a_spoiler_inside_a_spoiler_joins_the_outer_one() {
+    // One level only. Inner markers don't open a second spoiler or reveal the words between them.
+    let spoiler = "<span class=\"spoiler\" data-spoiler=\"\">";
+    assert_eq!(render("||outer ||SECRET|| tail||"), format!("<p>{spoiler}outer SECRET tail</span></p>\n"));
+    assert_eq!(
+        render("||a **||b||** c||"),
+        format!("<p>{spoiler}a <strong>b</strong> c</span></p>\n")
+    );
+    assert_eq!(preview("||outer ||SECRET|| tail||"), "spoiler");
+}

@@ -205,10 +205,12 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
         }
         // Comrak's spoiler extension emits `<span class="spoiler">`. `data-spoiler` is the only
         // new attribute, and the SPA and plain-text previews key off it. Escaped-character spans
-        // are not spoilers: unwrap them so they don't appear in stored HTML.
+        // are not spoilers: unwrap them so they don't appear in stored HTML. Spoilers nest one
+        // level only: a spoiler inside another is unwrapped, so `||a ||b|| c||` hides all three.
         if dom.local_name(node) == Some("span") {
             let spoiler = dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
-            if spoiler {
+            let nested = spoiler && dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+            if spoiler && !nested {
                 dom.set_attr(node, "data-spoiler", "");
             } else if dom.parent(node).is_some() {
                 for child in dom.children(node).to_vec() {

@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { htmlPlainText, redactMarkdownSpoilers } from "../../lib/spoiler-text.ts";
+import { messagePlainText } from "../../lib/spoiler-text.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -15,7 +15,7 @@ import { ThreadSkeleton } from "./thread-timeline.tsx";
 
 /** A thread's default name, as the server makes it: the parent's first line, up to 100 characters. */
 export function defaultThreadName(markdown: string | null, bodyHtml: string): string {
-  const source = markdown !== null ? redactMarkdownSpoilers(markdown) : htmlPlainText(bodyHtml);
+  const source = messagePlainText(markdown, bodyHtml);
 
   const line = source
     .split("\n")
