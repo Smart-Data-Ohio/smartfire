@@ -55,6 +55,7 @@ export type { UserPresence } from "../gen/UserPresence.ts";
  */
 export interface Boot {
   readonly user: { readonly id: number; readonly name: string; readonly avatarUrl: string };
+  readonly customStyles: string | null;
   /**
    * The workspace: its name (`null` only before first run), and its logo and banner images when
    * an administrator has uploaded them (`null` falls back to initials and the plain header). An

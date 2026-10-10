@@ -17,6 +17,7 @@ fn main() {
     }
     let boot = Boot {
         user: BootUser { id: 1, name: "Riel St. Amand".into(), avatar_url: "/avatar.svg".into() },
+        custom_styles: None,
         account: BootAccount {
             name: Some("Smart Data".into()),
             logo_url: None,

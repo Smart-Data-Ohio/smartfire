@@ -108,36 +108,11 @@
     /* Icon swap: the recipe's 0.25, softened by its blur, so the new glyph blooms in place. */
     --scale-icon-swap: 0.25;
   }
+}
 
-  @media (prefers-reduced-motion: reduce) {
-    :root:not([data-motion="full"]) {
-      --duration-micro: 80ms;
-      --duration-small: 80ms;
-      --duration-small-exit: 80ms;
-      --duration-medium: 80ms;
-      --duration-medium-exit: 80ms;
-      --duration-large: 80ms;
-      --duration-large-exit: 80ms;
-      --duration-spring: 80ms;
-      --duration-stagger: 0ms;
-      --ease-spring: var(--ease-enter);
-      --ease-spring-soft: var(--ease-enter);
-      --distance-micro: 0px;
-      --distance-rise: 0px;
-      --distance-pane: 0px;
-      --distance-toast: 0px;
-      --blur-small: 0px;
-      --scale-press: 1;
-      --scale-surface: 1;
-      --scale-menu: 1;
-      --scale-menu-exit: 1;
-      --scale-tooltip: 1;
-      --scale-chip: 1;
-      --scale-icon-swap: 1;
-    }
-  }
-
-  :root[data-motion="reduce"] {
+/* Keep device and OS reduction above workspace :root duration and distance defaults. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) {
     --duration-micro: 80ms;
     --duration-small: 80ms;
     --duration-small-exit: 80ms;
@@ -162,4 +137,30 @@
     --scale-chip: 1;
     --scale-icon-swap: 1;
   }
+}
+
+:root[data-motion="reduce"] {
+  --duration-micro: 80ms;
+  --duration-small: 80ms;
+  --duration-small-exit: 80ms;
+  --duration-medium: 80ms;
+  --duration-medium-exit: 80ms;
+  --duration-large: 80ms;
+  --duration-large-exit: 80ms;
+  --duration-spring: 80ms;
+  --duration-stagger: 0ms;
+  --ease-spring: var(--ease-enter);
+  --ease-spring-soft: var(--ease-enter);
+  --distance-micro: 0px;
+  --distance-rise: 0px;
+  --distance-pane: 0px;
+  --distance-toast: 0px;
+  --blur-small: 0px;
+  --scale-press: 1;
+  --scale-surface: 1;
+  --scale-menu: 1;
+  --scale-menu-exit: 1;
+  --scale-tooltip: 1;
+  --scale-chip: 1;
+  --scale-icon-swap: 1;
 }

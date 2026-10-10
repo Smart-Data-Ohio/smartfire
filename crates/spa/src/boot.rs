@@ -9,6 +9,8 @@ use serde::Serialize;
 pub struct Boot {
     pub user: BootUser,
     pub account: BootAccount,
+    /// Workspace CSS, also rendered as the classic layout's custom style element.
+    pub custom_styles: Option<String>,
     /// `<html data-theme>`: "light", "dark" or "system" ([`theme`]).
     pub theme: &'static str,
     /// `<html data-text-size>`: "smaller" to "larger" ([`text_size`]).

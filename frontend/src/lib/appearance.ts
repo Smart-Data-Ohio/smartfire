@@ -87,7 +87,12 @@ let current: Appearance = DEFAULTS;
 const listeners = new Set<() => void>();
 
 function writeAttributes(appearance: Appearance): void {
-  const { dataset } = document.documentElement;
+  const root = document.documentElement;
+  const { dataset } = root;
+  root.style.setProperty(
+    "color-scheme",
+    appearance.theme === "system" ? "light dark" : appearance.theme,
+  );
 
   if (appearance.theme === "system") {
     delete dataset.theme;
@@ -113,8 +118,12 @@ function writeAttributes(appearance: Appearance): void {
 
   if (appearance.font === "inter") {
     delete dataset.font;
+    root.style.removeProperty("--font-sans");
+    root.style.removeProperty("--font-features");
   } else {
     dataset.font = appearance.font;
+    root.style.setProperty("--font-sans", `var(--font-preset-${appearance.font})`);
+    root.style.setProperty("--font-features", "normal");
   }
 
   writePalette(appearance.palette);

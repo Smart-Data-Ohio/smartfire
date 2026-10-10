@@ -41,7 +41,9 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     // Rails update! and all save callbacks return before auditing the changed styles.
+    let css = account.custom_styles.clone();
     c.app().db.write(move |tx| crate::account_security::styles_changed(tx, &before, &account, &audit)).await.map_err(Error::internal)?;
+    campfire_app::cable::sync::workspace_styles_updated(&c.app().cable, css);
     let location = c.url_for(&campfire_routes::edit_account_custom_styles());
     c.redirect_to_with(&location, Redirect { notice: Some("✓".into()), ..Redirect::default() })
 }

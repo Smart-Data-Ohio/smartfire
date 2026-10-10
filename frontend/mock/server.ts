@@ -443,6 +443,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
       account: admin.branding(),
+      customStyles: admin.customStyles(),
       ...settings.appearance(),
       cableUrl: "/cable",
       serviceWorkerUrl: null,

@@ -10,6 +10,7 @@ import type { Assert, Pinned } from "./pin.ts";
  */
 export const Boot = Schema.Struct({
   user: Schema.Struct({ id: Schema.Int, name: Schema.String, avatarUrl: Schema.String }),
+  customStyles: Schema.NullOr(Schema.String),
   account: Schema.Struct({
     name: Schema.NullOr(Schema.String),
     logoUrl: Schema.NullOr(Schema.String),
