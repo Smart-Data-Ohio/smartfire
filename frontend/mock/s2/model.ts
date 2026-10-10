@@ -167,6 +167,8 @@ export interface MessageDraft {
   readonly replyToMessageId: number | null;
   readonly streaming: boolean;
   readonly attachment: Attachment | null;
+  /** A grouped message's files, in order (`attachment` is the first); absent on the legacy path. */
+  readonly attachments?: readonly Attachment[];
   readonly action: boolean;
   readonly systemNote: boolean;
   readonly forward: ForwardOrigin | null;
@@ -201,7 +203,7 @@ export function buildMessage(
   createdAt: string,
   people: readonly Mentionable[],
 ): MessageDTO {
-  return {
+  const message: MessageDTO = {
     id,
     roomId,
     threadId,
@@ -234,6 +236,10 @@ export function buildMessage(
     createdAt,
     updatedAt: createdAt,
   };
+
+  return draft.attachments === undefined
+    ? message
+    : { ...message, attachments: [...draft.attachments] };
 }
 
 /** RFC 3339 with milliseconds and `Z`. */
