@@ -5,6 +5,7 @@ import type { MessageCard } from "../gen/MessageCard.ts";
 import type { Poll } from "../gen/Poll.ts";
 import {
   applyBallot,
+  applyPollResults,
   githubKey,
   needsFetch,
   PREVIEW_TTL_MS,
@@ -313,6 +314,102 @@ describe("poll and card events", () => {
 
     expect(echoed.messages[1]?.markdownSource).toBe("Edited");
     expect(echoed.messages[1]?.poll?.totalVotes).toBe(7);
+  });
+});
+
+describe("closed poll ordering", () => {
+  const message = messageFixture(1, ROOM, { poll: poll(at(10), [1, 0]) });
+  const ended = poll(at(20), [1, 0], { closed: true, closedAt: at(20) });
+  const state = applyPollResults(seeded(message), { poll: ended, myOptionIds: [] });
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when a delayed vote response arrives with asOf %s",
+    (asOf) => {
+      const sent = [402];
+      const pending = setPendingVote(seeded(message), ended.id, sent);
+      const closed = applyPollResults(pending, { poll: ended, myOptionIds: [] });
+
+      const settled = settleVote(closed, ended.id, sent, {
+        poll: poll(asOf, [1, 1]),
+        myOptionIds: sent,
+      });
+
+      expect(settled.messages[1]?.poll).toEqual(ended);
+      expect(settled.cards.pendingVotes[ended.id]).toBeUndefined();
+    },
+  );
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when results or a message page refetch arrives with asOf %s",
+    (asOf) => {
+      const open = poll(asOf, [1, 1]);
+      const results = applyPollResults(state, { poll: open, myOptionIds: [402] });
+
+      const page = applyPage(
+        state,
+        ROOM,
+        pageFixture([{ ...message, poll: open, updatedAt: at(30) }]),
+        "refresh",
+      );
+
+      expect(results.messages[1]?.poll).toEqual(ended);
+      expect(page.messages[1]?.poll).toEqual(ended);
+    },
+  );
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when a delayed poll sync update arrives with asOf %s",
+    (asOf) => {
+      const synced = events(seeded(message), [
+        {
+          type: "poll.updated",
+          seq: 1,
+          topic: `room:${ROOM}`,
+          data: { roomId: ROOM, threadId: null, poll: ended },
+        },
+        {
+          type: "poll.updated",
+          seq: 2,
+          topic: `room:${ROOM}`,
+          data: { roomId: ROOM, threadId: null, poll: poll(asOf, [1, 1]) },
+        },
+      ]);
+
+      expect(synced.messages[1]?.poll).toEqual(ended);
+    },
+  );
+
+  it.each([at(19), at(20), at(21)])(
+    "keeps final counts when a delayed message sync update arrives with asOf %s",
+    (asOf) => {
+      const synced = events(state, [
+        {
+          type: "message.updated",
+          seq: 1,
+          topic: `room:${ROOM}`,
+          data: { ...message, poll: poll(asOf, [1, 1]), updatedAt: at(30) },
+        },
+      ]);
+
+      expect(synced.messages[1]?.poll).toEqual(ended);
+      expect(synced.messages[1]?.updatedAt).toBe(at(30));
+    },
+  );
+
+  it.each([at(19), at(20)])("ignores a closed snapshot with asOf %s", (asOf) => {
+    const results = applyPollResults(state, {
+      poll: poll(asOf, [1, 1], { closed: true, closedAt: at(20) }),
+      myOptionIds: [],
+    });
+
+    expect(results.messages[1]?.poll).toEqual(ended);
+  });
+
+  it("updates final counts from a newer closed snapshot", () => {
+    const newer = poll(at(21), [1, 1], { closed: true, closedAt: at(20) });
+    const results = applyPollResults(state, { poll: newer, myOptionIds: [] });
+
+    expect(results.messages[1]?.poll).toEqual(newer);
   });
 });
 
