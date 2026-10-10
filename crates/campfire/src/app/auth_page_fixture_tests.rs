@@ -24,8 +24,8 @@ fn shell(
 }
 
 fn asset(logical: &str) -> Vec<u8> {
-    let path = campfire_assets::asset_path(logical);
-    campfire_assets::serve(&campfire_assets::StaticRequest {
+    let path = campfire_static_assets::asset_path(logical);
+    campfire_static_assets::serve(&campfire_static_assets::StaticRequest {
         method: "GET",
         path: &path,
         ..Default::default()
@@ -37,8 +37,8 @@ fn asset(logical: &str) -> Vec<u8> {
 
 fn local_html(mut html: String, files: &mut BTreeMap<String, Vec<u8>>) -> String {
     // Use the exact fingerprinted URLs produced by the asset owner, with local copies.
-    for (logical, _) in campfire_assets::manifest() {
-        let url = campfire_assets::asset_path(logical);
+    for (logical, _) in campfire_static_assets::manifest() {
+        let url = campfire_static_assets::asset_path(logical);
         if html.contains(&url) {
             let relative = match *logical {
                 "auth.css" => "auth.css".to_string(),
@@ -92,12 +92,12 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
         .collect::<Vec<_>>();
     let mut files = BTreeMap::new();
     let mut css = String::from_utf8(asset("auth.css")).unwrap();
-    for (logical, _) in campfire_assets::manifest()
+    for (logical, _) in campfire_static_assets::manifest()
         .iter()
         .filter(|(logical, _)| logical.starts_with("fonts/"))
     {
         css = css.replace(
-            &campfire_assets::asset_path(logical),
+            &campfire_static_assets::asset_path(logical),
             &format!("./{logical}"),
         );
         files.insert(logical.to_string(), asset(logical));

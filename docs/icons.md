@@ -38,7 +38,7 @@ shares its reaction chip. The eight quick reactions are unchanged.
 ## Adding an icon
 
 1. Copy the `<slug>.svg` from the pinned Simple Icons release (see below) into
-   `web/app/assets/images/icons/brands/`, unmodified.
+   `crates/static_assets/media/images/icons/brands/`, unmodified.
 2. Add a `name`, `file`, and `title` entry to
    `crates/app/vendor/icons.yml`, plus any `aliases`. Names are
    lowercase `[a-z0-9_]+`. Add the name and its aliases to
@@ -155,7 +155,7 @@ the `message_payload` creator and room hashes.
 ## License
 
 The SVGs come from two sources; see
-`web/app/assets/images/icons/brands/LICENSE.md` for provenance. Twenty-seven are
+`crates/static_assets/media/images/icons/brands/LICENSE.md` for provenance. Twenty-seven are
 from [Simple Icons](https://github.com/simple-icons/simple-icons), vendored
 from version **15.22.0** of the `simple-icons` npm package under the
 [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
@@ -164,6 +164,6 @@ The other six (`microsoft`, `azure`, `aws`, `xai`, `grok`, `deepseek`) are the
 monochrome files from version **1.95.0** of the `@lobehub/icons-static-svg`
 npm package, published under the
 [MIT license](https://github.com/lobehub/lobe-icons) by LobeHub; see
-`web/app/assets/images/icons/brands/LICENSE-lobehub.md`. Amazon (retail) exists in
+`crates/static_assets/media/images/icons/brands/LICENSE-lobehub.md`. Amazon (retail) exists in
 neither source and has no icon. The depicted logos remain trademarks of their
 respective owners.

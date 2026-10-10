@@ -1,6 +1,3 @@
-reference:app/assets/emoji
-reference:app/assets/images
-reference:app/assets/sounds
 reference:app/assets/stylesheets
 reference:app/javascript
 reference:vendor/javascript

@@ -3,8 +3,8 @@
 //!
 //! Their shell, templates and request context live here so deleting the classic layout,
 //! import map and stylesheet set does not require editing these pages. Token and font
-//! files stay in `frontend/src` and `crates/assets/auth`; [`auth_build`] (compiled by the
-//! assets build) turns them into the same `auth.css` / `auth.js` the digest pipeline serves.
+//! files stay in `frontend/src` and `crates/static_assets/auth`; [`auth_build`] (compiled by the
+//! static assets build) turns them into the same `auth.css` / `auth.js` the digest pipeline serves.
 
 pub mod first_runs;
 pub mod helpers;

@@ -150,7 +150,7 @@ pub fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
 /// Icons.image_url_for: Propshaft resolves brand assets; custom image URLs are already paths.
 fn image_icon_url(icon: AvatarIcon) -> Option<String> {
     match icon {
-        AvatarIcon::Image { brand: true, url, .. } => Some(campfire_assets::asset_path(&url)),
+        AvatarIcon::Image { brand: true, url, .. } => Some(campfire_static_assets::asset_path(&url)),
         AvatarIcon::Image { url, .. } => Some(url),
         _ => None,
     }

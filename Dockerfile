@@ -8,8 +8,8 @@
 #
 #   docker build -t campfire-rust --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
 #
-# The build context is the repository root, including web/, the port's copy of the Rails app's assets and public/
-# files that the binary embeds. Runtime hooks live in this tree and honor the storage overrides.
+# The build context is the repository root. crates/static_assets holds retained auth/media/public
+# inputs; web/ still holds the classic browser bundles. Runtime hooks live in this tree and honor the storage overrides.
 #
 # Media: variants and video posters must be byte-identical to the reference's, so libvips and
 # ffmpeg are built from the same Debian trixie source packages the reference image ships
@@ -167,12 +167,10 @@ ARG CARGO_CACHE_SCOPE=campfire-rust
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates crates
-# crates/assets/build.rs digests and embeds web/'s assets and public/ at build time: only those
-# parts of web/ come in (build.rs leaves out a stray public/assets precompile).
+# Retained static inputs come with crates/. Only classic browser inputs still come from web/.
 COPY web/app/assets web/app/assets
 COPY web/app/javascript web/app/javascript
 COPY web/vendor/javascript web/vendor/javascript
-COPY web/public web/public
 COPY web/config/importmap.rb web/config/importmap.rb
 COPY web/config/initializers/assets.rb web/config/initializers/assets.rb
 # crates/spa/build.rs embeds the SPA built above (and fails the build if SPA_DIST has none).
