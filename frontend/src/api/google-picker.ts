@@ -12,6 +12,8 @@ const TokenReply = Schema.Struct({
   error: Schema.optional(Schema.String),
 });
 
+const DriveAccount = Schema.Struct({ user: Schema.Struct({ emailAddress: Schema.String }) });
+
 const PickerReply = Schema.Struct({
   action: Schema.String,
   docs: Schema.optional(
@@ -52,6 +54,8 @@ interface GoogleOAuth {
     client_id: string;
     scope: string;
     include_granted_scopes: boolean;
+    login_hint?: string;
+    hint?: string;
     callback: (reply: typeof TokenReply.Type) => void;
     error_callback: (failure: { type: string }) => void;
   }): { requestAccessToken(config: { prompt: string }): void };
@@ -157,11 +161,26 @@ function loadGoogle(): Promise<void> {
   return scripts;
 }
 
+async function tokenEmail(token: string, signal: AbortSignal): Promise<string> {
+  const response = await fetch(
+    "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
+    { headers: { Authorization: `Bearer ${token}` }, signal },
+  );
+
+  if (!response.ok) throw new Error("Drive account lookup failed");
+  const account = Schema.decodeUnknownSync(DriveAccount)(await response.json());
+  const email = account.user.emailAddress.trim();
+
+  if (!email) throw new Error("Drive account email is missing");
+
+  return email;
+}
+
 export async function prepareGooglePicker(config: DrivePickerConfig): Promise<PickerSession> {
   if (import.meta.env.MODE === "mock") {
     const mock = await import("../../mock/google-picker.ts");
 
-    return mock.preparePicker();
+    return mock.preparePicker(config);
   }
 
   await loadGoogle();
@@ -189,7 +208,13 @@ export async function prepareGooglePicker(config: DrivePickerConfig): Promise<Pi
           return;
         }
 
+        const controller = new AbortController();
+        let settled = false;
+
         const finish = (file: DrivePick | null) => {
+          if (settled) return;
+          settled = true;
+          controller.abort();
           hide();
           cancel = () => {};
 
@@ -197,6 +222,9 @@ export async function prepareGooglePicker(config: DrivePickerConfig): Promise<Pi
         };
 
         const fail = (message: string) => {
+          if (settled) return;
+          settled = true;
+          controller.abort();
           hide();
           cancel = () => {};
 
@@ -206,18 +234,18 @@ export async function prepareGooglePicker(config: DrivePickerConfig): Promise<Pi
         cancel = () => finish(null);
 
         try {
-          const client = oauth.initTokenClient({
+          const tokenConfig: Parameters<GoogleOAuth["initTokenClient"]>[0] = {
             client_id: config.clientId,
             scope: DRIVE_SCOPE,
             include_granted_scopes: false,
             error_callback: (error) => {
-              if (disposed) return;
+              if (disposed || settled) return;
 
               if (CANCEL_CODES.has(error.type)) finish(null);
               else fail("Google authorization failed. Try again.");
             },
-            callback: (response) => {
-              if (disposed) return;
+            callback: async (response) => {
+              if (disposed || settled) return;
 
               try {
                 const token = Schema.decodeUnknownSync(TokenReply)(response);
@@ -238,6 +266,29 @@ export async function prepareGooglePicker(config: DrivePickerConfig): Promise<Pi
                   return;
                 }
 
+                if (config.accountEmail) {
+                  let email: string;
+
+                  try {
+                    email = await tokenEmail(token.access_token, controller.signal);
+                  } catch {
+                    if (!disposed && !settled)
+                      fail("The Google account could not be verified. Try again.");
+
+                    return;
+                  }
+
+                  if (disposed || settled) return;
+
+                  if (email.toLowerCase() !== config.accountEmail.trim().toLowerCase()) {
+                    fail(
+                      `Pick files from ${config.accountEmail}, the Google account connected to Smartfire`,
+                    );
+
+                    return;
+                  }
+                }
+
                 const view = new api.DocsView(api.ViewId.DOCS)
                   .setIncludeFolders(true)
                   .setSelectFolderEnabled(false)
@@ -252,7 +303,7 @@ export async function prepareGooglePicker(config: DrivePickerConfig): Promise<Pi
                   .setOrigin(window.location.origin)
                   .setTitle("Choose a Drive file")
                   .setCallback((reply) => {
-                    if (disposed) return;
+                    if (disposed || settled) return;
 
                     try {
                       const data = Schema.decodeUnknownSync(PickerReply)(reply);
@@ -288,7 +339,14 @@ export async function prepareGooglePicker(config: DrivePickerConfig): Promise<Pi
                 fail("The Drive window could not be opened. Try again.");
               }
             },
-          });
+          };
+
+          if (config.accountEmail) {
+            tokenConfig.login_hint = config.accountEmail;
+            tokenConfig.hint = config.accountEmail;
+          }
+
+          const client = oauth.initTokenClient(tokenConfig);
 
           client.requestAccessToken({ prompt: "" });
         } catch {

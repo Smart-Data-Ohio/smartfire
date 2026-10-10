@@ -10,6 +10,7 @@ describe("Drive Picker mock", () => {
       clientId: "mock-client",
       apiKey: "mock-key",
       projectNumber: "123456",
+      accountEmail: "maya@37signals.com",
     });
     const search = await get<DriveFileList>(server, "/api/v1/drive/files?q=private");
     const picker = await get<DriveFileList>(server, "/__mock/drive-picker-files");

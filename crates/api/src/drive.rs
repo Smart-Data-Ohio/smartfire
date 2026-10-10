@@ -129,15 +129,16 @@ async fn picker_config(c: &mut Ctx) -> Result {
     let Some(config) = c.app().config.google_picker.clone() else {
         return empty(c, StatusCode::NOT_FOUND);
     };
-    if drive_account(c).await?.is_none() {
+    let Some(account) = drive_account(c).await? else {
         return empty(c, StatusCode::NOT_FOUND);
-    }
+    };
     c.json(
         StatusCode::OK,
         &api::DrivePickerConfig {
             client_id: config.client_id,
             api_key: config.api_key,
             project_number: config.project_number,
+            account_email: (!account.email.trim().is_empty()).then_some(account.email),
         },
     )
 }

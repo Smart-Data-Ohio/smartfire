@@ -1,17 +1,33 @@
+import { Schema } from "effect";
+import { DriveFileList } from "../src/api/schema/drive.ts";
 import type { DrivePick } from "../src/features/composer/drive-picker.ts";
-import type { DriveFileList } from "../src/gen/DriveFileList.ts";
+import type { DrivePickerConfig } from "../src/gen/DrivePickerConfig.ts";
+
+const PickerFiles = Schema.Struct({ ...DriveFileList.fields, accountEmail: Schema.String });
 
 /** Local substitute for the external Picker; its catalog includes files search cannot see. */
-export async function preparePicker() {
+export async function preparePicker(config: DrivePickerConfig) {
   const response = await fetch("/__mock/drive-picker-files");
-  // SAFETY: this mock-only endpoint returns the generated DriveFileList shape.
-  const list = (await response.json()) as DriveFileList;
+  const list = Schema.decodeUnknownSync(PickerFiles)(await response.json());
   let dialog: HTMLDialogElement | null = null;
   let cancel = () => {};
 
   return {
     choose: () =>
-      new Promise<DrivePick | null>((resolve) => {
+      new Promise<DrivePick | null>((resolve, reject) => {
+        if (
+          config.accountEmail &&
+          list.accountEmail.toLowerCase() !== config.accountEmail.trim().toLowerCase()
+        ) {
+          reject(
+            new Error(
+              `Pick files from ${config.accountEmail}, the Google account connected to Smartfire`,
+            ),
+          );
+
+          return;
+        }
+
         dialog = document.createElement("dialog");
         dialog.setAttribute("aria-label", "Choose a Drive file");
         cancel = () => {

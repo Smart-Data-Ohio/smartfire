@@ -37,8 +37,9 @@ const RECIPIENTS: readonly DriveRecipient[] = [
   { id: USER_IDS.jonah, name: "Jonah Lindqvist", email: "jonah@37signals.com" },
 ];
 
-export function pickerFiles(): DriveFileList {
+export function pickerFiles(): DriveFileList & { accountEmail: string } {
   return {
+    accountEmail: "maya@37signals.com",
     files: [
       ...FILES,
       {
@@ -69,6 +70,7 @@ export function createDrive() {
           clientId: "mock-client",
           apiKey: "mock-key",
           projectNumber: "123456",
+          accountEmail: "maya@37signals.com",
         };
 
         return ok(config);

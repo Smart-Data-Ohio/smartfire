@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// Public configuration used by classic's Google Picker. Tokens come from browser GIS.
+/// Picker configuration for the connected viewer. Tokens come from browser GIS.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -13,6 +13,7 @@ pub struct DrivePickerConfig {
     pub client_id: String,
     pub api_key: String,
     pub project_number: String,
+    pub account_email: Option<String>,
 }
 
 /// One file from `GET /api/v1/drive/files` or `GET /api/v1/drive/files/:id`. The same fields the

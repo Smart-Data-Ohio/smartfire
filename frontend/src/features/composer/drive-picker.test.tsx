@@ -224,6 +224,37 @@ describe("Google Picker", () => {
     expect(await screen.findByRole("button", { name: "Enable Drive previews" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Choose from Google Drive" })).toBeNull();
   });
+
+  it("shows an account mismatch inline and never enters file review", async () => {
+    vi.spyOn(actions.drive, "search").mockResolvedValue({ files: [] });
+
+    const choose = vi
+      .fn()
+      .mockRejectedValue(
+        new Error("Pick files from maya@37signals.com, the Google account connected to Smartfire"),
+      );
+
+    vi.mocked(actions.drive.preparePicker).mockResolvedValue({ choose, dispose: () => {} });
+    const attached = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <DrivePicker
+        roomId={1}
+        attachedFileIds={[]}
+        open
+        onOpenChange={() => {}}
+        onAttach={attached}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Choose from Google Drive" }));
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Pick files from maya@37signals.com, the Google account connected to Smartfire",
+    );
+    expect(screen.queryByRole("dialog", { name: "Share a Drive file" })).toBeNull();
+    expect(attached).not.toHaveBeenCalled();
+  });
 });
 
 describe("recipient loading", () => {

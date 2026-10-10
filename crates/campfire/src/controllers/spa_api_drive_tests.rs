@@ -93,7 +93,7 @@ fn drive_card(message: &api::MessageDTO) -> Option<&api::DriveFileCard> {
 }
 
 #[tokio::test]
-async fn drive_picker_config_is_public_only_and_requires_a_connected_viewer() {
+async fn drive_picker_config_identifies_the_connected_viewer_without_exposing_tokens() {
     let Some((app, recorded)) = app().await else {
         return;
     };
@@ -114,12 +114,55 @@ async fn drive_picker_config_is_public_only_and_requires_a_connected_viewer() {
     assert_eq!(
         response.json(),
         json!({
-            "clientId": "picker-client", "apiKey": "picker-key", "projectNumber": "123456789"
+            "clientId": "picker-client", "apiKey": "picker-key", "projectNumber": "123456789",
+            "accountEmail": "david@gmail.test"
         })
     );
     assert!(recorded.calls.lock().unwrap().is_empty());
     let mut jason = app.sign_in(JASON).await;
     assert_eq!(jason.send(get(path)).await.status, StatusCode::NOT_FOUND);
+    grant(&app, JASON).await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE google_accounts SET email = ? WHERE user_id = ?",
+                ("jason@gmail.test", JASON),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        jason.send(get(path)).await.json()["accountEmail"],
+        "jason@gmail.test"
+    );
+    assert_eq!(
+        david.send(get(path)).await.json()["accountEmail"],
+        "david@gmail.test"
+    );
+}
+
+#[tokio::test]
+async fn drive_picker_config_without_a_saved_email_allows_the_legacy_picker() {
+    let Some((app, recorded)) = app().await else {
+        return;
+    };
+    grant(&app, DAVID).await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE google_accounts SET email = ' ' WHERE user_id = ?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = app.sign_in(DAVID).await;
+    let response = david.send(get("/api/v1/drive/picker")).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.json()["accountEmail"], Value::Null);
+    assert!(recorded.calls.lock().unwrap().is_empty());
 }
 
 #[tokio::test]

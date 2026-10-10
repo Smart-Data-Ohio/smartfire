@@ -16,6 +16,7 @@ export const DrivePickerConfig = Schema.Struct({
   clientId: Schema.String,
   apiKey: Schema.String,
   projectNumber: Schema.String,
+  accountEmail: nullable,
 });
 
 export type DrivePickerConfigPin = Assert<
