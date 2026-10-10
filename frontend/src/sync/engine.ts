@@ -97,6 +97,7 @@ const SNAPSHOT_EVENTS: ReadonlySet<SyncEvent["type"]> = new Set([
   "room.read",
   "sidebar.row.upserted",
   "sidebar.row.removed",
+  "workspace.layout.updated",
   "activity.item",
   "activity.removed",
 ]);

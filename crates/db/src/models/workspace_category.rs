@@ -206,6 +206,34 @@ impl WorkspaceCategory {
             room_position,
         )
     }
+
+    /// Compacts the room's group in the deletion transaction before publishing its new layout.
+    pub(crate) fn remove_room_from_layout(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        importing: bool,
+    ) -> Result<()> {
+        let Some(room) = query_one(
+            tx.conn(),
+            "SELECT id, workspace_category_id, workspace_position FROM rooms WHERE id = ? AND type != 'Rooms::Direct'",
+            [room_id],
+            room_position,
+        )? else {
+            return Ok(());
+        };
+        if room.position.is_some() {
+            let ids = Self::rooms(tx.conn(), room.workspace_category_id)?
+                .iter()
+                .map(|row| row.room_id)
+                .filter(|id| *id != room_id)
+                .collect::<Vec<_>>();
+            write_rooms(tx, room.workspace_category_id, &ids)?;
+        }
+        if !importing {
+            tx.emit_after_commit(Event::broadcast(&WorkspaceOrganized));
+        }
+        Ok(())
+    }
 }
 
 fn room_position(row: &Row<'_>) -> rusqlite::Result<WorkspaceRoomPosition> {

@@ -651,16 +651,24 @@ pub(crate) fn workspace_layout(
     conn: &Connection,
     user_id: i64,
 ) -> campfire_db::Result<api::WorkspaceLayout> {
+    let viewer = campfire_db::User::find(conn, user_id)?;
+    let rooms = campfire_db::WorkspaceCategory::visible_rooms(conn, user_id)?;
     Ok(api::WorkspaceLayout {
         categories: campfire_db::WorkspaceCategory::ordered(conn)?
             .into_iter()
+            .filter(|category| {
+                viewer.is_administrator()
+                    || rooms
+                        .iter()
+                        .any(|room| room.workspace_category_id == Some(category.id))
+            })
             .map(|row| api::WorkspaceCategory {
                 id: row.id,
                 name: row.name,
                 position: row.position,
             })
             .collect(),
-        rooms: campfire_db::WorkspaceCategory::visible_rooms(conn, user_id)?
+        rooms: rooms
             .into_iter()
             .map(|row| api::WorkspaceRoomPosition {
                 room_id: row.room_id,

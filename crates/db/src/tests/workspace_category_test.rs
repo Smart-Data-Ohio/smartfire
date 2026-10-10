@@ -1,6 +1,6 @@
 use super::channel_thread_test::frozen;
 use super::*;
-use crate::{Error, Membership, RoomCategory, WorkspaceCategory};
+use crate::{Error, Membership, Room, RoomCategory, WorkspaceCategory};
 
 fn placements(t: &TestDb, category_id: Option<i64>) -> Vec<(i64, Option<i64>)> {
     t.read(move |conn| WorkspaceCategory::rooms(conn, category_id))
@@ -234,4 +234,108 @@ fn deleting_workspace_categories_compacts_the_remaining_order() {
             .collect::<Vec<_>>(),
         [(first.id, 0), (third.id, 1)]
     );
+}
+
+fn deleting_room_compacts_workspace_positions(soft: bool) {
+    for categorized in [true, false] {
+        let t = frozen();
+        let category = if categorized {
+            Some(t.write(|tx| WorkspaceCategory::create(tx, "Team")).id)
+        } else {
+            None
+        };
+        for room in ["hq", "pets", "designers"] {
+            t.write(move |tx| WorkspaceCategory::move_room(tx, id(room), category, i64::MAX));
+        }
+        let before = placements(&t, category);
+        let expected = before
+            .iter()
+            .filter(|(room, _)| *room != id("pets"))
+            .enumerate()
+            .map(|(position, (room, _))| (*room, Some(position as i64)))
+            .collect::<Vec<_>>();
+        t.sink.take();
+        t.write(move |tx| {
+            let room = Room::find(tx.conn(), id("pets"))?;
+            if soft {
+                room.begin_destroy(tx)
+            } else {
+                room.destroy(tx)
+            }
+        });
+        assert_eq!(placements(&t, category), expected);
+        assert!(t.sink.events().iter().any(|event| matches!(event, Event::Broadcast(request) if request.kind == "WorkspaceCategory#sync_organized")));
+    }
+}
+
+#[test]
+fn workspace_room_soft_deletion_compacts_positions_and_publishes() {
+    deleting_room_compacts_workspace_positions(true);
+}
+
+#[test]
+fn workspace_room_destruction_compacts_positions_and_publishes() {
+    deleting_room_compacts_workspace_positions(false);
+}
+
+#[test]
+fn workspace_room_deletion_rolls_back_when_compaction_fails() {
+    for soft in [true, false] {
+        let t = frozen();
+        let category = t.write(|tx| WorkspaceCategory::create(tx, "Team"));
+        for room in ["hq", "pets", "designers"] {
+            t.write(move |tx| {
+                WorkspaceCategory::move_room(tx, id(room), Some(category.id), i64::MAX)
+            });
+        }
+        let before = placements(&t, Some(category.id));
+        t.write(|tx| {
+            tx.conn().execute_batch("CREATE TRIGGER reject_workspace_compaction BEFORE UPDATE OF workspace_position ON rooms WHEN NEW.workspace_position != OLD.workspace_position BEGIN SELECT RAISE(ABORT, 'compaction failed'); END")?;
+            Ok(())
+        });
+        t.sink.take();
+        assert!(
+            t.try_write(move |tx| {
+                let room = Room::find(tx.conn(), id("pets"))?;
+                if soft {
+                    room.begin_destroy(tx)
+                } else {
+                    room.destroy(tx)
+                }
+            })
+            .is_err()
+        );
+        assert_eq!(placements(&t, Some(category.id)), before);
+        assert!(!t.read(|conn| Room::find(conn, id("pets"))).deleted());
+        assert!(t.sink.events().is_empty());
+    }
+}
+
+#[test]
+fn workspace_membership_visibility_changes_publish_layout() {
+    let t = frozen();
+    let mut membership = t
+        .read(|conn| Membership::find_by_room_and_user(conn, id("hq"), id("david")))
+        .unwrap();
+    for involvement in [
+        Some(crate::Involvement::Invisible),
+        Some(crate::Involvement::Everything),
+        None,
+        Some(crate::Involvement::Muted),
+    ] {
+        t.sink.take();
+        membership = t.write(move |tx| {
+            membership.update_involvement(tx, involvement)?;
+            Ok(membership)
+        });
+        assert_eq!(t.sink.events().iter().filter(|event| matches!(event, Event::Broadcast(request) if request.kind == "WorkspaceCategory#sync_organized")).count(), 1);
+    }
+    for involvement in [crate::Involvement::Everything, crate::Involvement::Mentions] {
+        t.sink.take();
+        membership = t.write(move |tx| {
+            membership.update_involvement(tx, involvement)?;
+            Ok(membership)
+        });
+        assert!(!t.sink.events().iter().any(|event| matches!(event, Event::Broadcast(request) if request.kind == "WorkspaceCategory#sync_organized")));
+    }
 }
