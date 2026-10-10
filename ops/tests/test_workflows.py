@@ -190,7 +190,7 @@ class WorkflowTest(unittest.TestCase):
         e2e = frontend["jobs"]["e2e"]
         self.assertTrue(e2e["name"].startswith("Frontend e2e ("), e2e["name"])
         self.assertEqual(e2e["if"], "needs.frontend.outputs.run == 'true'")
-        self.assertEqual(e2e["strategy"]["matrix"]["shard"], [1, 2, 3])
+        self.assertEqual(e2e["strategy"]["matrix"]["shard"], [1, 2, 3, 4])
         self.assertEqual(frontend["permissions"], {})
         self.assertGreater(audit_actions(frontend), 0)
         # The only CI build of crates/spa against a real dist: the job builds one and embeds it.
