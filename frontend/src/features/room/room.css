@@ -565,8 +565,18 @@
       background-color var(--duration-small) var(--ease-enter);
   }
 
+  /* Everything inside a covered spoiler is hidden whatever its own rules say: a mention chip's
+     colours and background, a custom emoji image, a link's underline. Those rules come later
+     with the same specificity, so this one is important. The bar behind stays painted. */
   .message-body .spoiler:not([data-revealed]) * {
-    color: transparent;
+    /* biome-ignore lint/complexity/noImportantStyles: a descendant's own rule must not show it */
+    visibility: hidden !important;
+  }
+
+  .message-body .spoiler:not([data-revealed]) *::before,
+  .message-body .spoiler:not([data-revealed]) *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: a descendant's own rule must not show it */
+    visibility: hidden !important;
   }
 
   .message-body .spoiler:focus-visible {
@@ -581,10 +591,15 @@
     user-select: text;
   }
 
+  /* The OS setting, unless Appearance asks for full motion; or Appearance's own reduce. */
   @media (prefers-reduced-motion: reduce) {
-    .message-body .spoiler {
+    :root:not([data-motion="full"]) .message-body .spoiler {
       transition: none;
     }
+  }
+
+  :root[data-motion="reduce"] .message-body .spoiler {
+    transition: none;
   }
 
   .message-body code {
