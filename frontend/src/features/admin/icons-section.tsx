@@ -1,10 +1,13 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceIcon } from "../../gen/WorkspaceIcon.ts";
+import type { WorkspaceIconList } from "../../gen/WorkspaceIconList.ts";
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { admin } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { forgetCustomIcons } from "../messages/commands.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import {
   FieldError,
@@ -13,7 +16,12 @@ import {
   SettingsPage,
   useBusy,
 } from "../settings/settings-parts.tsx";
-import { ICON_NAME_HINT } from "./admin-format.ts";
+import {
+  animatedCapacity,
+  ICON_FILE_TYPES,
+  ICON_NAME_HINT,
+  iconFileError,
+} from "./admin-format.ts";
 import {
   AdministratorsOnly,
   adminFailure,
@@ -25,7 +33,7 @@ import {
 type Load =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
-  | { readonly status: "ready"; readonly icons: readonly WorkspaceIcon[] };
+  | ({ readonly status: "ready" } & WorkspaceIconList);
 
 type Fields = Readonly<Record<string, readonly string[]>>;
 
@@ -41,8 +49,17 @@ function elsewhere(fields: Fields): string | undefined {
   return messages.length === 0 ? undefined : messages.join(" ");
 }
 
-/** The upload form: name, title and the file, saved together as the classic form does. */
-function NewIcon({ onSaved }: { readonly onSaved: (icons: readonly WorkspaceIcon[]) => void }) {
+interface NewIconProps {
+  readonly onSaved: (list: WorkspaceIconList) => void;
+  /** A refused upload: the counts may have moved (another administrator's upload, say). */
+  readonly onRefused: () => void;
+}
+
+/**
+ * The upload form: name, title and the file, saved together as the classic form does. A refusal
+ * shows under its field: an animated file past the workspace's limit under the file.
+ */
+function NewIcon({ onSaved, onRefused }: NewIconProps) {
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -63,8 +80,8 @@ function NewIcon({ onSaved }: { readonly onSaved: (icons: readonly WorkspaceIcon
     void track(
       "create",
       save().then(
-        ({ icons }) => {
-          onSaved(icons);
+        (list) => {
+          onSaved(list);
           setName("");
           setTitle("");
           setFile(null);
@@ -80,6 +97,7 @@ function NewIcon({ onSaved }: { readonly onSaved: (icons: readonly WorkspaceIcon
 
           if (Object.keys(named).length > 0) {
             setFields(named);
+            onRefused();
           } else {
             adminFailure("Couldn't upload the icon", error);
           }
@@ -121,13 +139,14 @@ function NewIcon({ onSaved }: { readonly onSaved: (icons: readonly WorkspaceIcon
           id="admin-icon-file"
           className="input"
           type="file"
-          accept="image/svg+xml,image/png"
+          accept={ICON_FILE_TYPES}
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
         <p className="settings-hint text-faint">
-          SVG or square PNG (at least 64px), at most 256 KB
+          SVG or square PNG (at least 64px), or an animated GIF or WebP (at most 512px), at most 256
+          KB
         </p>
-        <FieldError message={first("image")} />
+        <FieldError message={iconFileError(first("image"))} />
       </div>
       <div className="settings-actions">
         <Button
@@ -146,7 +165,9 @@ function NewIcon({ onSaved }: { readonly onSaved: (icons: readonly WorkspaceIcon
 
 /**
  * Workspace icons: the `:shortcodes:` members can use in messages and reactions. Upload one (name,
- * title, SVG or PNG) or delete one; a deleted icon's messages show the literal shortcode.
+ * title, SVG, PNG, GIF or WebP) or delete one; a deleted icon's messages show the literal
+ * shortcode. Animated icons play here (their first frame under reduced motion) and count against
+ * the workspace's animated limit, shown as usage of limit; static icons are unlimited.
  */
 export function IconsSection() {
   const { workspace } = useAdmin();
@@ -157,7 +178,7 @@ export function IconsSection() {
 
   const fetchIcons = useCallback(() => {
     admin.icons().then(
-      ({ icons }) => setLoad({ status: "ready", icons }),
+      (list) => setLoad({ status: "ready", ...list }),
       (error: Error) => setLoad({ status: "error", message: error.message }),
     );
   }, []);
@@ -175,7 +196,11 @@ export function IconsSection() {
     fetchIcons();
   };
 
-  const shown = (icons: readonly WorkspaceIcon[]) => setLoad({ status: "ready", icons });
+  // After a write: the picker's icons are stale too.
+  const shown = (list: WorkspaceIconList) => {
+    forgetCustomIcons();
+    setLoad({ status: "ready", ...list });
+  };
 
   const destroy = () => {
     const icon = doomed;
@@ -189,9 +214,9 @@ export function IconsSection() {
     void track(
       `icon-${icon.id}`,
       admin.destroyIcon(icon.id).then(
-        ({ icons }) => {
+        (list) => {
           // The deleted row was where the dialog handed focus back; the next row takes it.
-          shown(icons);
+          shown(list);
         },
         (error: Error) => adminFailure(`Couldn't delete :${icon.name}:`, error),
       ),
@@ -203,13 +228,20 @@ export function IconsSection() {
       title="Workspace icons"
       description={
         <>
-          Upload SVG or PNG icons members can use as <code>:shortcodes:</code> in messages and
-          reactions.
+          Upload SVG, PNG, GIF or WebP icons members can use as <code>:shortcodes:</code> in
+          messages and reactions.
         </>
       }
     >
-      <SettingsGroup title="Upload an icon">
-        <NewIcon onSaved={shown} />
+      <SettingsGroup
+        title="Upload an icon"
+        description={
+          load.status === "ready"
+            ? animatedCapacity(load.animatedUsage, load.animatedLimit)
+            : undefined
+        }
+      >
+        <NewIcon onSaved={shown} onRefused={fetchIcons} />
       </SettingsGroup>
       <SettingsGroup title="Icons">
         <div ref={container} tabIndex={-1} className="admin-focus-root">
@@ -222,10 +254,10 @@ export function IconsSection() {
             <ul className="settings-list">
               {load.icons.map((icon) => (
                 <li key={icon.id} className="settings-list-row" data-row={icon.id} tabIndex={-1}>
-                  <img
+                  <EmojiImage
                     className="admin-icon-image"
                     src={icon.imageUrl}
-                    alt=""
+                    still={icon.stillUrl}
                     width={32}
                     height={32}
                     loading="lazy"
@@ -233,6 +265,7 @@ export function IconsSection() {
                   <span className="settings-list-main">
                     <strong>
                       {icon.title} <code>:{icon.name}:</code>
+                      {icon.animated ? <span className="settings-badge">Animated</span> : null}
                     </strong>
                     <span className="text-faint">Uploaded by {icon.creatorName}</span>
                   </span>
