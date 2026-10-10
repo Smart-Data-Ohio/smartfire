@@ -9,12 +9,6 @@ use campfire_kit::{Ctx, Error, Result};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
 
-/// The former paginated people-list endpoint resolves to SPA administration.
-pub async fn index(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    c.redirect_to(&c.url_for("/app/admin/people"))
-}
-
 /// `@user.update(role: params.require(:user)[:role].presence_in(%w[ member administrator ]) || "member")`
 pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;

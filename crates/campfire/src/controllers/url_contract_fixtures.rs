@@ -181,6 +181,15 @@ impl FixtureContext {
     pub async fn prepare(&self, app: &TestApp) -> BTreeMap<String, String> {
         let mut out = BTreeMap::new();
         match self.profile.as_str() {
+            "no_rooms" => {
+                app.db()
+                    .write(|tx| {
+                        tx.conn().execute("DELETE FROM memberships WHERE user_id=?", [DAVID])?;
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+            }
             "api" => self.prepare_api(app, &mut out).await,
             "slack_apply" => self.prepare_slack_apply(app, &mut out).await,
             "slack_undo" => self.prepare_slack_undo(app, &mut out).await,

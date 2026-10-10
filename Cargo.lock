@@ -406,6 +406,7 @@ dependencies = [
  "campfire_spa",
  "campfire_static_assets",
  "campfire_storage",
+ "campfire_view_kit",
  "campfire_views",
  "campfire_web",
  "flate2",

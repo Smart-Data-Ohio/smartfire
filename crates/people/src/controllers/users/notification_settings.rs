@@ -54,7 +54,6 @@ pub async fn update(c: &mut Ctx) -> Result {
         user.reconcile_dnd_timer(c.app().db.env().now());
     }
     let keywords = raw.get("keyword_alerts").map(keyword_lines).transpose()?;
-    let submitted = user.clone();
     let result = c
         .app()
         .db
@@ -80,10 +79,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                 },
             )
         }
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            super::profiles::render_settings(c, StatusCode::UNPROCESSABLE_ENTITY, submitted, errors)
-                .await
-        }
+        Err(campfire_db::Error::RecordInvalid(_)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
         Err(error) => Err(Error::internal(error)),
     }
 }

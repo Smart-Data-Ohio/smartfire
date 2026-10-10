@@ -3,9 +3,9 @@ use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::{
     message_features as features,
-    presenters::{Presenter, page},
+    presenters::page,
 };
-use campfire_db::{ChannelThread, Message, NewScheduledMessage, Room, ScheduledMessage, User};
+use campfire_db::{ChannelThread, Message, NewScheduledMessage, ScheduledMessage};
 use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format, permit_keys};
 
 const BUSY: &str = "That message is sending right now; try again in a moment.";
@@ -64,7 +64,7 @@ enum ParseTimeError {
 }
 fn send_time(
     raw: &str,
-    zone: &campfire_views::time::Zone,
+    zone: &campfire_presentation::time::Zone,
     now: jiff::Timestamp,
 ) -> std::result::Result<campfire_db::Timestamp, ParseTimeError> {
     match features::parse_time_checked(raw, zone, now) {
@@ -74,147 +74,6 @@ fn send_time(
             ParseTimeError::Invalid(message["ArgumentError: ".len()..].into()),
         ),
         Err(error) => Err(ParseTimeError::Exception(error)),
-    }
-}
-pub async fn index(c: &mut Ctx) -> Result {
-    prepare(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let user_id = require_current_user(c)?.id;
-    let zone = super::presenters::view_context::time_zone(c).await?;
-    let app = c.app().clone();
-    let (upcoming, stranded, past) = c
-        .app()
-        .db
-        .read(move |conn| {
-            let viewer = User::find(conn, user_id)?;
-            let mut presenter = Presenter::new(conn, &app, None);
-            presenter.render_zone = zone;
-            let pending = ScheduledMessage::owned_by(conn, user_id, false)?;
-            let history = ScheduledMessage::owned_by(conn, user_id, true)?;
-            let rows = pending.iter().chain(&history).collect::<Vec<_>>();
-            let rooms = Room::for_ids(
-                conn,
-                &rows.iter().map(|row| row.room_id).collect::<Vec<_>>(),
-            )?;
-            let names = Room::display_names_for(conn, &rooms, Some(&viewer))?;
-            let threads = ChannelThread::for_ids(
-                conn,
-                &rows
-                    .iter()
-                    .filter_map(|row| row.thread_id)
-                    .collect::<Vec<_>>(),
-            )?
-            .into_iter()
-            .map(|thread| (thread.id, thread.name))
-            .collect::<std::collections::HashMap<_, _>>();
-            let messages = Message::for_ids(
-                conn,
-                &rows
-                    .iter()
-                    .filter_map(|row| row.sent_message_id)
-                    .collect::<Vec<_>>(),
-            )?
-            .into_iter()
-            .map(|message| (message.id, campfire_db::message_pin::message_path(&message)))
-            .collect::<std::collections::HashMap<_, _>>();
-            let sendable = ScheduledMessage::sendable_ids(conn, &pending)?;
-            let render = |row: &ScheduledMessage| -> campfire_db::Result<_> {
-                let name = names
-                    .get(&row.room_id)
-                    .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-                let thread = row
-                    .thread_id
-                    .map(|id| {
-                        threads
-                            .get(&id)
-                            .cloned()
-                            .ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))
-                    })
-                    .transpose()?;
-                let message_path = row
-                    .sent_message_id
-                    .and_then(|id| messages.get(&id).cloned());
-                Ok(view_loaded(
-                    &presenter,
-                    row,
-                    name.clone(),
-                    thread,
-                    message_path,
-                ))
-            };
-            let mut upcoming = Vec::new();
-            let mut stranded = Vec::new();
-            for row in &pending {
-                let view = render(row)?;
-                if sendable.contains(&row.id) {
-                    upcoming.push(view)
-                } else {
-                    stranded.push(view)
-                }
-            }
-            let past = history
-                .iter()
-                .map(render)
-                .collect::<campfire_db::Result<Vec<_>>>()?;
-            Ok((upcoming, stranded, past))
-        })
-        .await
-        .map_err(page::db_error)?;
-    page::framed_page!(c, StatusCode::OK, |ctx| {
-        campfire_views::scheduled_messages::Index {
-            ctx,
-            upcoming: &upcoming,
-            stranded: &stranded,
-            past: &past,
-        }
-    })
-    .await
-}
-#[cfg(any(test, feature = "test-support"))]
-pub fn view(
-    presenter: &Presenter<'_>,
-    conn: &campfire_db::Connection,
-    viewer: &User,
-    row: &ScheduledMessage,
-) -> campfire_db::Result<campfire_views::scheduled_messages::Item> {
-    let room_name = presenter.room_display_name(&Room::find(conn, row.room_id)?, Some(viewer))?;
-    let thread_name = row
-        .thread_id
-        .map(|id| ChannelThread::find(conn, id).map(|thread| thread.name))
-        .transpose()?;
-    let message_path = row
-        .sent_message_id
-        .map(|id| Message::find_by_id(conn, id))
-        .transpose()?
-        .flatten()
-        .as_ref()
-        .map(campfire_db::message_pin::message_path);
-    Ok(view_loaded(
-        presenter,
-        row,
-        room_name,
-        thread_name,
-        message_path,
-    ))
-}
-fn view_loaded(
-    presenter: &Presenter<'_>,
-    row: &ScheduledMessage,
-    room_name: String,
-    thread_name: Option<String>,
-    message_path: Option<String>,
-) -> campfire_views::scheduled_messages::Item {
-    let zone = &presenter.render_zone;
-    campfire_views::scheduled_messages::Item {
-        id: row.id,
-        room_name,
-        thread_name,
-        // The excerpt hides spoilers as the SPA's scheduled list does.
-        body: campfire_richtext::markdown::redacted_excerpt(&row.markdown_source),
-        send_at: features::html_datetime(row.send_at, zone),
-        send_value: rails_compat::datetime::format(row.send_at, zone.tz(), "%Y-%m-%dT%H:%M"),
-        sent_at: row.sent_at.map(|at| features::html_datetime(at, zone)),
-        message_path,
     }
 }
 pub async fn create(c: &mut Ctx) -> Result {

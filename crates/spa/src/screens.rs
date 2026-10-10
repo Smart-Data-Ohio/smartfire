@@ -384,6 +384,11 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings/devices",
         true,
     ),
+    screen("users/sidebars#show", "/users/me/sidebar", "/app/", true),
+    screen("users/sidebars#show", "/users/:user_id/sidebar", "/app/", true),
+    screen("users/statuses#edit", "/users/:user_id/status/edit", "/app/settings/status", true),
+    screen("users/sessions#index", "/users/:user_id/sessions", "/app/settings/sessions", true),
+    screen("users/push_subscriptions#index", "/users/:user_id/push_subscriptions", "/app/settings/devices", true),
     // S7: the people directory and a person's page.
     screen("users#index", "/users", "/app/people", true),
     screen("users#show", "/users/:id", "/app/people/:id", true),
@@ -486,6 +491,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/admin/slack/runs/:id",
         true,
     ),
+    screen("accounts/slack_import_runs#status", "/account/slack_import/runs/:id/status", "/app/admin/slack/runs/:id", true),
     screen(
         "accounts/slack_import_runs#plan",
         "/account/slack_import/runs/:id/plan",
@@ -504,6 +510,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings/slack/:id",
         true,
     ),
+    screen("slack/imports#status", "/slack/imports/:id/status", "/app/settings/slack/:id", true),
 ];
 
 /// A room-query id the server has checked: it belongs to that room, and the viewer can see it.

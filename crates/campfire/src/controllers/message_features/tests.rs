@@ -139,7 +139,7 @@ async fn pins_require_reachable_messages_and_rooms() {
         );
     }
     assert_eq!(
-        kevin.get(&format!("/rooms/{ALL_TALK}/pins")).await.status,
+        kevin.classic_page(&format!("/rooms/{ALL_TALK}/pins")).await.status,
         StatusCode::NOT_FOUND
     );
 }
@@ -200,52 +200,6 @@ async fn oracle_fixture() -> (TestApp, Vec<i64>) {
         .unwrap();
     assert_eq!(json!(ids), oracle()["poll_ids"]);
     (app, ids)
-}
-
-async fn render_poll(app: &TestApp, id: i64, error: Option<String>) -> String {
-    let runtime = app.booted.app.clone();
-    app.db()
-        .read(move |conn| {
-            let view = super::poll_view(conn, &runtime, id, error)?;
-            let account = campfire_db::Account::first(conn)?;
-            Ok(crate::controllers::presenters::page::render_detached_at(
-                &runtime,
-                account.as_ref(),
-                "http://campfire.test",
-                |ctx| campfire_views::messages::parts::poll(ctx, &view).0,
-            ))
-        })
-        .await
-        .unwrap()
-}
-
-#[tokio::test]
-async fn poll_partials_match_rails_open_voted_anonymous_closed_and_error_bytes() {
-    let (app, ids) = oracle_fixture().await;
-    for (index, row) in oracle()["html"].as_array().unwrap().iter().enumerate() {
-        if index > 0 {
-            let id = ids[row["index"].as_u64().unwrap() as usize];
-            app.db()
-                .write(move |tx| {
-                    let mut poll = Poll::find(tx.conn(), id)?;
-                    if index == 3 {
-                        poll.close(tx, tx.now())?;
-                    } else if index < 3 {
-                        poll.cast_vote(tx, DAVID, &[poll.options(tx.conn())?[0].id])?;
-                    }
-                    Ok(())
-                })
-                .await
-                .unwrap();
-        }
-        let id = ids[row["index"].as_u64().unwrap() as usize];
-        let html = render_poll(&app, id, row["error"].as_str().map(str::to_owned)).await;
-        assert_eq!(html, row["html"].as_str().unwrap(), "state {index}");
-        assert!(!html.contains("authenticity_token") && !html.contains("nonce=\""));
-        if row["index"] == 1 {
-            assert!(!html.contains(&format!("data-voter-ids=\"{DAVID}")));
-        }
-    }
 }
 
 async fn ballot_states(app: &TestApp, ids: &[i64]) {
@@ -330,7 +284,7 @@ async fn poll_http_matches_real_rails_responses_and_transactional_create_errors(
 #[test]
 fn builder_dates_match_rails_zones_and_dst_gap_fold() {
     for row in oracle()["dates"].as_array().unwrap() {
-        let zone = campfire_views::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let zone = campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let time = super::parse_time(
             row["raw"].as_str().unwrap(),
             &zone,
@@ -508,91 +462,6 @@ async fn poll_creation_rolls_back_when_the_durable_job_insert_is_rejected() {
 }
 
 #[tokio::test]
-async fn pin_partials_match_rails_list_count_badge_frame_and_empty_bytes() {
-    use askama::Template;
-    let (app, ids) = oracle_fixture().await;
-    let message_id = app
-        .db()
-        .read(move |conn| Ok(Poll::find(conn, ids[0])?.message_id))
-        .await
-        .unwrap();
-    app.db()
-        .write(move |tx| {
-            let message = Message::find(tx.conn(), message_id)?;
-            campfire_db::MessagePin::create(tx, &message, ALL_TALK, DAVID)?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    for empty in [false, true] {
-        if empty {
-            app.db()
-                .write(move |tx| {
-                    campfire_db::MessagePin::find_by_message(tx.conn(), message_id)?
-                        .unwrap()
-                        .unpin(tx)
-                })
-                .await
-                .unwrap();
-        }
-        let runtime = app.booted.app.clone();
-        let actual = app.db().read(move |conn| {
-            let room = campfire_db::Room::find(conn, ALL_TALK)?;
-            let list = crate::controllers::rooms::pins::list(conn, &runtime, &room)?;
-            let message = Message::find(conn, message_id)?;
-            let message = campfire_views::pins::Badge::new(
-                message.client_message_id,
-                campfire_db::MessagePin::pinned(conn, message_id)?,
-            );
-            let account = campfire_db::Account::first(conn)?;
-            crate::controllers::presenters::page::render_detached_at(&runtime, account.as_ref(), "http://campfire.test", |ctx| {
-                Ok(json!({
-                    "list": campfire_views::pins::ListPartial { ctx, list: &list }.render().unwrap(),
-                    "count": campfire_views::pins::CountPartial { room_id: ALL_TALK, room_param_key: list.room_param_key.clone(), count: list.pins.len() as i64 }.render().unwrap(),
-                    "badge": campfire_views::pins::BadgePartial { ctx, message: &message }.render().unwrap(),
-                    "index": campfire_views::pins::Index { ctx, list: &list }.render().unwrap(),
-                }))
-            })
-        }).await.unwrap();
-        let expected = &oracle()["pin_html"];
-        assert_eq!(
-            actual["list"],
-            expected[if empty { "empty_list" } else { "list" }]
-        );
-        assert_eq!(
-            actual["badge"],
-            expected[if empty { "hidden_badge" } else { "badge" }]
-        );
-        assert!(
-            !actual["list"]
-                .as_str()
-                .unwrap()
-                .contains("authenticity_token")
-        );
-        if !empty {
-            assert_eq!(actual["count"], expected["count"]);
-            assert_eq!(actual["index"], expected["index"]);
-        }
-    }
-    let mut david = app.david();
-    let reply = david
-        .send(
-            Req::new(Method::GET, &format!("/rooms/{ALL_TALK}/pins")).header(
-                "turbo-frame",
-                &format!("pins_frame_rooms_closed_{ALL_TALK}"),
-            ),
-        )
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert!(reply.text().contains("No pinned messages yet"));
-    assert!(reply.text().contains(&format!(
-        "<turbo-frame id=\"pins_frame_rooms_closed_{ALL_TALK}\">"
-    )));
-}
-
-
-
-#[tokio::test]
 async fn pins_enforce_the_cap_but_repinning_a_full_room_succeeds() {
     let (app, poll, _) = fixture().await;
     let (message, first) = app
@@ -703,7 +572,7 @@ async fn ballots_replace_and_retract_in_json_and_reject_foreign_rooms_and_odd_sh
 }
 
 #[tokio::test]
-async fn boards_reject_root_polls_and_pin_lists_keep_their_sti_dom_identity() {
+async fn boards_reject_root_polls() {
     let app = TestApp::boot().await.expect("WS8bm2 requires default seed");
     let board = app
         .db()
@@ -727,14 +596,8 @@ async fn boards_reject_root_polls_and_pin_lists_keep_their_sti_dom_identity() {
         ))
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
-    let reply = david.get(&format!("/rooms/{}/pins", board.id)).await;
-    assert_eq!(reply.status, StatusCode::OK);
-    assert!(
-        reply
-            .text()
-            .contains(&format!("id=\"pins_list_rooms_board_{}\"", board.id))
-    );
 }
+
 
 #[tokio::test]
 async fn a_zone_local_multiple_anonymous_poll_shows_only_each_viewers_ballot() {
@@ -795,49 +658,4 @@ async fn a_zone_local_multiple_anonymous_poll_shows_only_each_viewers_ballot() {
     for option in payload["options"].as_array().unwrap() {
         assert_eq!(option["voted"], true);
     }
-}
-
-#[tokio::test]
-async fn pins_list_orders_newest_first_and_keeps_thread_jump_links() {
-    let (app, id, _) = fixture().await;
-    let (root, reply) = app
-        .db()
-        .write(move |tx| {
-            let root = Message::find(tx.conn(), Poll::find(tx.conn(), id)?.message_id)?;
-            let thread = campfire_db::ChannelThread::create(
-                tx,
-                campfire_db::NewChannelThread {
-                    room_id: ALL_TALK,
-                    creator_id: DAVID,
-                    parent_message_id: Some(root.id),
-                    name: Some("Lunch replies".into()),
-                    ..Default::default()
-                },
-            )?;
-            let reply = Message::create(
-                tx,
-                NewMessage {
-                    room_id: ALL_TALK,
-                    creator_id: JASON,
-                    thread_id: Some(thread.id),
-                    markdown_source: Some("Thread pin".into()),
-                    ..Default::default()
-                },
-            )?;
-            campfire_db::MessagePin::create(tx, &root, ALL_TALK, DAVID)?;
-            campfire_db::MessagePin::create(tx, &reply, ALL_TALK, JASON)?;
-            Ok((root, reply))
-        })
-        .await
-        .unwrap();
-    let body = app
-        .david()
-        .get(&format!("/rooms/{ALL_TALK}/pins"))
-        .await
-        .text();
-    assert!(body.find("Thread pin").unwrap() < body.find("Lunch?").unwrap());
-    let url = campfire_db::message_pin::message_path(&reply).replace('&', "&amp;");
-    assert!(body.contains(&format!("href=\"http://campfire.test{url}\"")));
-    assert!(body.contains(&format!("action=\"/messages/{}/pin\"", root.id)));
-    assert!(body.contains("Pinned by Jason") && body.contains("Pinned by David"));
 }

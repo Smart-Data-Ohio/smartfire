@@ -45,16 +45,10 @@ impl Fresh {
         subscription_network: crate::net::Network,
     ) -> Self {
         let (server, network) = fake(routes).await;
-        let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
-        std::fs::create_dir_all(&scratch).unwrap();
-        let dir = tempfile::tempdir_in(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g"),
-        )
-        .unwrap();
+        let dir = tempfile::tempdir().unwrap();
         let secret: Value =
             serde_json::from_str(include_str!("../../../../../vectors/github.json")).unwrap();
-        let mut config = Config::from_lookup(|key| match key {
+        let config = Config::from_lookup(|key| match key {
             "SECRET_KEY_BASE" => secret["secret_key_base"].as_str().map(str::to_owned),
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
@@ -62,8 +56,6 @@ impl Fresh {
             _ => None,
         })
         .unwrap();
-        // Cases without the SPA test the classic pages, until they're deleted.
-        config.spa_enabled = case["spa_enabled"].as_bool().unwrap_or(false);
         let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),
         ));
@@ -160,9 +152,8 @@ impl Fresh {
         let content = response
             .headers()
             .get("content-type")
-            .unwrap()
-            .to_str()
-            .unwrap()
+            .map(|value| value.to_str().unwrap())
+            .unwrap_or("")
             .to_owned();
         let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
             .await
@@ -193,41 +184,6 @@ async fn github_viewer_card_security_checks_membership_and_exact_context_before_
         assert!(fresh.server.received().is_empty(), "{name}");
     }
 }
-#[tokio::test]
-async fn github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails() {
-    for case in cases().as_array().unwrap() {
-        let fresh = Fresh::new(case).await;
-        for expected in case["responses"].as_array().unwrap() {
-            let (status, body, content) = fresh.request(case).await;
-            assert_eq!(status, expected["status"], "{}", case["name"]);
-            if status == 200 {
-                assert_eq!(body, expected["body"], "{}", case["name"]);
-                assert_eq!(content, expected["content_type"], "{}", case["name"]);
-            } else {
-                assert!(!body.contains("Secret title"));
-            }
-        }
-        assert_eq!(
-            fresh.server.received().len(),
-            case["requests"].as_array().unwrap().len(),
-            "{}",
-            case["name"]
-        );
-        let disconnected = fresh
-            .app
-            .db
-            .read(|conn| Ok(Account::for_user(conn, 811)?.and_then(|a| a.disconnected_reason)))
-            .await
-            .unwrap();
-        assert_eq!(
-            serde_json::to_value(disconnected).unwrap(),
-            case["disconnected"],
-            "{}",
-            case["name"]
-        );
-    }
-}
-
 // Independent review regressions: these assertions also compile against 1325b624.
 #[tokio::test]
 async fn review_required_github_routes_reach_authenticated_handlers() {
@@ -254,8 +210,8 @@ async fn review_required_github_routes_reach_authenticated_handlers() {
         ("DELETE", "/github/connection", 302),
         (
             "GET",
-            "/rooms/815/github/pull_request_write_actions/816",
-            200,
+            "/rooms/815/github/pull_request_write_actions/816?message_id=818",
+            302,
         ),
         ("POST", "/rooms/815/github/pull_request_comments", 422),
         ("POST", "/rooms/815/agents/github/pull_request_actions", 403),
@@ -294,7 +250,7 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/rooms/815")
+                    .uri("/api/v1/rooms/815/messages")
                     .header("Host", "example.org")
                     .header("Cookie", &fresh.cookie)
                     .body(Body::empty())
@@ -303,14 +259,14 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
             .await
             .unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        let html = String::from_utf8(
+        let _html = String::from_utf8(
             axum::body::to_bytes(response.into_body(), 1024 * 1024)
                 .await
                 .unwrap()
                 .to_vec(),
         )
         .unwrap();
-        assert!(html.contains("github-pr-card"));
+
         let jobs:i64=fresh.app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get(0))?)).await.unwrap();
         assert_eq!(jobs, 1, "stale rendered PR must enqueue once as Rails does");
     }
@@ -322,7 +278,7 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
         .clone()
         .oneshot(
             Request::builder()
-                .uri("/rooms/815")
+                .uri("/api/v1/rooms/815/messages")
                 .header("Host", "example.org")
                 .header("Cookie", &fresh.cookie)
                 .body(Body::empty())
@@ -338,7 +294,8 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
             .to_vec(),
     )
     .unwrap();
-    assert!(html.contains("Secret title"));
+    let payload: Value = serde_json::from_str(&html).unwrap();
+    assert_eq!(payload["messages"][0]["cards"][0]["data"]["pullRequestId"], 816);
     fresh
         .app
         .db
@@ -372,12 +329,12 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
         let f = &fresh;
         async move {
             let path = if i % 2 == 0 {
-                "/rooms/815/messages/818"
+                "/api/v1/messages/818"
             } else {
                 "/rooms/815/refresh"
             };
             let accept = if i % 2 == 0 {
-                "text/html"
+                "application/json"
             } else {
                 "text/vnd.turbo-stream.html"
             };
@@ -400,7 +357,8 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
                 let bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
                     .await
                     .unwrap();
-                assert!(String::from_utf8_lossy(&bytes).contains("Secret title"), "{path}");
+                let payload: Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(payload["message"]["cards"][0]["data"]["pullRequestId"], 816, "{path}");
             } else {
                 assert_eq!(response.status().as_u16(), 302, "{path}");
                 assert!(response.headers()["location"].to_str().unwrap().ends_with("/rooms/815"));
@@ -456,7 +414,7 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
             let message=campfire_db::Message::find(conn,id)?;
             assert_eq!(message.body_html(conn)?.as_deref(),row["saved_body"].as_str(),"{}/body",row["name"]);
             assert_eq!(message.embeds_suppressed,row["suppressed"].as_bool().unwrap());
-            assert_eq!(message.edited_at.map(|t|campfire_views::messages::support::json_time(t.jiff())),row["edited_at"].as_str().map(str::to_owned));
+            assert_eq!(message.edited_at.map(|t|campfire_presentation::messages::support::json_time(t.jiff())),row["edited_at"].as_str().map(str::to_owned));
             let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;
             assert_eq!(claim.is_some(),row["claimed"].as_bool().unwrap(),"{}/claim",row["name"]);
             assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,row["fetch_jobs"].as_i64().unwrap(),"{}/jobs",row["name"]);

@@ -24,7 +24,7 @@ async fn work_json_read_growth_meets_rails_and_preserves_complete_responses() {
         let app = fixture(row).await;
         let mut browser = app.david();
         browser.authenticity_token().await;
-        assert_eq!(browser.get("/work?state=all").await.status, 200);
+        assert_eq!(browser.get("/work?state=all").await.status, 302);
         let log = app.db().capture_read_queries();
         let response = browser.get(row["path"].as_str().unwrap()).await;
         app.db().stop_capturing_read_queries();

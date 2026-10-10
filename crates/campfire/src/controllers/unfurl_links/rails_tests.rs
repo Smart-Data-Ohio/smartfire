@@ -86,7 +86,8 @@ async fn setup(
             "/{*path}",
             campfire_kit::get(action.clone()).merge(campfire_kit::post(action.clone())),
         )
-        .route("/", campfire_kit::get(action));
+        .route("/", campfire_kit::get(action))
+        .merge(crate::controllers::spa::routes(true, "max-age=31536000, immutable"));
     app.booted.router = campfire_kit::app(routes, kit);
     (app, server, resolver, missing)
 }

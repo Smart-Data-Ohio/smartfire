@@ -91,14 +91,6 @@ async fn run(name: &str) {
     );
 }
 #[tokio::test]
-async fn original_meeting_unreachable_notice() {
-    run("meeting_error").await;
-}
-#[tokio::test]
-async fn original_connected_david_gmail_email() {
-    run("connected_email").await;
-}
-#[tokio::test]
 async fn original_email_change_with_current_password_marks_now() {
     run("email_change").await;
 }

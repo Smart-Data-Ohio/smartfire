@@ -3,15 +3,14 @@ use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, head, require_current_user};
 use crate::controllers::{
     messages,
-    presenters::{board_posts, page, page::db_error},
+    presenters::page::db_error,
 };
 use campfire_db::{Agent, ChannelThread, HandoffPackage, Room, User, WorkHandoff};
 use campfire_kit::{Ctx, Param, Result, StatusCode, format, halt};
-use campfire_views::work_threads as views;
 use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 pub mod links;
-pub use links::{create as create_link, destroy as destroy_link, index as links_index};
+pub use links::{create as create_link, destroy as destroy_link};
 
 // ActiveRecord integer predicates, including ArrayHandler's single-value recursion.
 // Multi-value arrays cast each member, without flattening nested collections.
@@ -114,16 +113,9 @@ pub async fn index(c: &mut Ctx) -> Result {
         }).await?;
         return super::channel_threads::render_json(c, StatusCode::OK, &payload);
     }
-    let rows = messages::present(c, move |p| {
-        super::presenters::work_threads::rows(p, &threads, &viewer)
-    }).await?;
-    page::framed_page!(c, StatusCode::OK, |ctx| views::Index {
-        ctx,
-        state: &state,
-        rows: &rows
-    })
-    .await
+    campfire_runtime::navigation::redirect(c).await
 }
+
 
 /// The controller's ordered before-actions: thread, human room access, tracking, sender rights.
 pub(super) async fn scope(c: &mut Ctx, manager: bool) -> Result<(Room, ChannelThread)> {
@@ -159,34 +151,6 @@ pub(super) async fn scope(c: &mut Ctx, manager: bool) -> Result<(Room, ChannelTh
     }
     Ok((room, thread))
 }
-pub async fn new_handoff(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let (_, thread) = scope(c, true).await?;
-    c.no_store(); c.set_header("pragma", "no-cache");
-    handoff_form(c, StatusCode::OK, thread, None).await
-}
-async fn handoff_form(
-    c: &mut Ctx,
-    status: StatusCode,
-    thread: ChannelThread,
-    error: Option<String>,
-) -> Result {
-    let handoff = messages::present(c, move |p| {
-        Ok(views::Handoff {
-            id: thread.id,
-            room_id: thread.room_id,
-            name: thread.name.clone(),
-            receivers: WorkHandoff::receivers_for(p.conn, &thread)?,
-            error,
-        })
-    })
-    .await?;
-    page::framed_page!(c, status, |ctx| views::NewHandoff {
-        ctx,
-        handoff: &handoff
-    })
-    .await
-}
 pub async fn create_handoff(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (_, mut thread) = scope(c, true).await?;
@@ -219,7 +183,7 @@ pub async fn create_handoff(c: &mut Ctx) -> Result {
                     User::find(tx.conn(), receiver.user_id)?.name,
                 ))),
                 Err(campfire_db::Error::RecordInvalid(errors)) => Ok(Err(
-                    campfire_views::helpers::to_sentence(&errors.full_messages(), " and "),
+                    campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and "),
                 )),
                 Err(error) => Err(error),
             }
@@ -254,7 +218,7 @@ pub async fn create_handoff(c: &mut Ctx) -> Result {
         .set_notice(format!("Work handed off to {receiver}."));
     c.redirect_to(&format!("/rooms/{}/threads/{}", thread.room_id, thread.id))
 }
-async fn handoff_invalid(c: &mut Ctx, thread: ChannelThread, error: String) -> Result {
+async fn handoff_invalid(c: &mut Ctx, _thread: ChannelThread, error: String) -> Result {
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         super::channel_threads::render_json(
             c,
@@ -262,7 +226,7 @@ async fn handoff_invalid(c: &mut Ctx, thread: ChannelThread, error: String) -> R
             &json!({"error":error}),
         )
     } else {
-        handoff_form(c, StatusCode::UNPROCESSABLE_ENTITY, thread, Some(error)).await
+        Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
     }
 }
 fn scalar(c: &Ctx, key: &str) -> String {

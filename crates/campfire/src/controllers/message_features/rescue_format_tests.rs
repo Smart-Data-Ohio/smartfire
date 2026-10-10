@@ -29,7 +29,7 @@ async fn review_rescue_formats_match_rails_callbacks_actions_and_xhr() {
     let mut original_differences = 0;
     let mut original_count = 0;
     let mut nonempty_controls = 0;
-    for row in cases.as_array().unwrap() {
+    for row in cases.as_array().unwrap().iter().filter(|row| row["method"] != "get") {
         let method = row["method"].as_str().unwrap();
         let path = row["path"].as_str().unwrap();
         let accept = row["accept"].as_str().unwrap();

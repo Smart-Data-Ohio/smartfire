@@ -50,7 +50,7 @@ pub async fn role(c: &mut Ctx) -> Result {
             return Ok(c.render_as(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "text/plain; charset=utf-8",
-                campfire_views::helpers::to_sentence(&error.full_messages(), " and "),
+                campfire_presentation::helpers::to_sentence(&error.full_messages(), " and "),
             ));
         }
         Err(error) => return Err(db_error(error)),

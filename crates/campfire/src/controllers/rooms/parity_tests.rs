@@ -95,9 +95,9 @@ async fn parity_room_scoped_endpoints_reject_deleted_rooms_even_with_membership(
         .await
         .unwrap();
     let mut david = app.david();
-    let reply = david.get(&format!("/rooms/{ALL_TALK}/involvement")).await;
+    let reply = david.classic_page(&format!("/rooms/{ALL_TALK}/involvement")).await;
     assert_eq!(reply.status, StatusCode::NOT_FOUND);
-    let reply = david.get(&format!("/rooms/{ALL_TALK}")).await;
+    let reply = david.classic_page(&format!("/rooms/{ALL_TALK}")).await;
     assert_eq!(reply.location(), Some("http://campfire.test/"));
 }
 
@@ -169,7 +169,7 @@ async fn parity_closed_and_direct_nonmembers_cannot_mutate_or_read_settings() {
     let app = app().await;
     let mut kevin = app.sign_in(KEVIN).await;
     for id in [ALL_TALK, DIRECT_DAVID_JASON] {
-        let reply = kevin.get(&format!("/rooms/{id}/involvement")).await;
+        let reply = kevin.classic_page(&format!("/rooms/{id}/involvement")).await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND);
         let reply = kevin
             .write(Req::new(Method::DELETE, &format!("/rooms/{id}.json")))
@@ -178,7 +178,7 @@ async fn parity_closed_and_direct_nonmembers_cannot_mutate_or_read_settings() {
     }
     for path in ["/account/custom_styles/edit"] {
         assert_eq!(
-            kevin.get(path).await.status,
+            kevin.classic_page(path).await.status,
             StatusCode::FORBIDDEN,
             "{path}"
         );
@@ -860,56 +860,45 @@ async fn parity_category_name_uses_active_model_string_cast() {
 }
 
 #[tokio::test]
-async fn unread_shell_facts_match_rails_pointer_cases() {
-    let app=TestApp::boot_frozen().await.expect("seed required");
-    let cases:Vec<serde_json::Value>=serde_json::from_str(include_str!("../../../../../vectors/room_shell_unread.json")).unwrap();
-    for case in cases {
-        let name=case["name"].as_str().unwrap().to_string();
-        let stamp=case["unread_at"].as_str().map(|t|campfire_db::Timestamp::from_jiff(t.parse::<jiff::Timestamp>().unwrap()));
-        let pointer=case["last_read_message_id"].as_i64();
-        app.db().write(move |tx| { tx.conn().execute("UPDATE memberships SET unread_at=?,last_read_message_id=? WHERE room_id=486777696 AND user_id=127326141",rusqlite::params![stamp,pointer])?;Ok(()) }).await.unwrap();
-        let result=app.db().read(|conn| {
-            let membership=campfire_db::Membership::find_by_room_and_user(conn,486777696,127326141)?.unwrap();
-            let messages=crate::controllers::presenters::room_shell::find_messages(conn,486777696,None)?;
-            crate::controllers::presenters::room_shell::unread_divider(conn,&membership,&messages)
-        }).await.unwrap();
-        assert_eq!(result.message_id,case["divider"].as_i64(),"{name}");
-        assert_eq!(result.count,case["count"].as_i64().unwrap(),"{name}");
-        assert_eq!(result.scroll,case["scroll"].as_bool(),"{name}");
-        assert_eq!(result.jump_url.as_deref(),case["jump_url"].as_str(),"{name}");
-    }
-}
-
-#[tokio::test]
-async fn review_unread_divider_render_and_cached_page_match_rails() {
-    let app=TestApp::boot_frozen().await.expect("seed required");
-    let cases:Vec<serde_json::Value>=serde_json::from_str(include_str!("../../../../../vectors/room_shell_unread.json")).unwrap();
-    for case in cases {
-        let stamp=case["unread_at"].as_str().map(|t|campfire_db::Timestamp::from_jiff(t.parse::<jiff::Timestamp>().unwrap()));
-        let pointer=case["last_read_message_id"].as_i64();
-        app.db().write(move |tx| {tx.conn().execute("UPDATE memberships SET unread_at=?,last_read_message_id=? WHERE room_id=486777696 AND user_id=127326141",rusqlite::params![stamp,pointer])?;Ok(())}).await.unwrap();
-        // The second page exercises shared message-cache hits. Counts and the divider remain viewer-local.
-        for _ in 0..2 {
-            let response=app.david().get("/rooms/486777696").await;
-            assert_eq!(serde_json::json!(response.status.as_u16()),case["status"]);
-            let html=response.text();
-            assert_eq!(html.contains("data-messages-scroll-to-divider-value=\"true\""),case["scroll_flag"].as_bool().unwrap(),"{}",case["name"]);
-            assert_eq!(html.contains("id=\"unread-divider\""),case["divider_html"].is_string(),"{}: divider must exist when Rails renders it",case["name"]);
-            assert_eq!(html.contains("id=\"jump-to-unread\""),case["jump_button"].as_bool().unwrap());
-            if let Some(jump)=case["jump_html"].as_str() {assert!(html.contains(jump),"{}: exact Rails jump control bytes",case["name"]);}
-            if let Some(expected)=case["divider_html"].as_str() {
-                let start=html.find("<div id=\"unread-divider\"").unwrap();
-                let end=start+html[start..].find("</div>\n").unwrap()+7;
-                let before=&html[..start];
-                let prefix=&before[before.trim_end().len()..];
-                let suffix=&html[end..][..html[end..].len()-html[end..].trim_start().len()];
-                assert_eq!(prefix,case["prefix_whitespace"].as_str().unwrap(),"{}: Rails divider prefix bytes",case["name"]);
-                assert_eq!(suffix,case["suffix_whitespace"].as_str().unwrap(),"{}: Rails divider suffix bytes",case["name"]);
-                assert_eq!(&html[start..end],expected,"{}: exact Rails partial bytes",case["name"]);
-                let following=format!("id=\"{}\"",case["following"].as_str().unwrap());
-                assert!(html[end..].trim_start().starts_with(&format!("<div {following}")),"{}: divider directly precedes the first unread message",case["name"]);
-                if let Some(previous)=case["preceding"].as_str() {assert!(html[..start].contains(&format!("id=\"{previous}\"")));}
-            }
+async fn unread_facts_keep_tuple_boundaries_deleted_pointers_and_off_page_counts() {
+    let app = TestApp::boot_frozen().await.expect("seed required");
+    let room = app.db().write(|tx| {
+        let room = Room::create_for(tx, RoomType::Closed, Some("Unread boundary"), DAVID, &[DAVID])?;
+        for id in 10000..10008 {
+            tx.conn().execute("INSERT INTO messages(id,room_id,creator_id,client_message_id,created_at,updated_at) VALUES(?,?,?,?,'2026-03-02 15:00:00','2026-03-02 15:00:00')", rusqlite::params![id, room.id, DAVID, format!("unread-{id}")])?;
         }
+        Ok(room.id)
+    }).await.unwrap();
+    for (pointer, expected) in [(10001, (10002, 6)), (10002, (10003, 5))] {
+        app.db().write(move |tx| {
+            tx.conn().execute("UPDATE memberships SET unread_at='2026-03-02 15:00:00',last_read_message_id=? WHERE room_id=? AND user_id=?", (pointer, room, DAVID))?;
+            Ok(())
+        }).await.unwrap();
+        let found = app.db().read(move |conn| {
+            let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+            crate::controllers::presenters::room_unread::first_unread(conn, &membership)
+        }).await.unwrap();
+        assert_eq!(found, Some(expected));
     }
+    app.db().write(move |tx| {
+        for id in 10008..10138 {
+            tx.conn().execute("INSERT INTO messages(id,room_id,creator_id,client_message_id,created_at,updated_at) VALUES(?,?,?,?,'2026-03-02 15:00:00','2026-03-02 15:00:00')", rusqlite::params![id, room, DAVID, format!("unread-{id}")])?;
+        }
+        tx.conn().execute("DELETE FROM messages WHERE id=10002", [])?;
+        Ok(())
+    }).await.unwrap();
+    let found = app.db().read(move |conn| {
+        let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+        crate::controllers::presenters::room_unread::first_unread(conn, &membership)
+    }).await.unwrap();
+    assert_eq!(found, Some((10003, 135)));
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=NULL WHERE room_id=? AND user_id=?", (room, DAVID))?;
+        Ok(())
+    }).await.unwrap();
+    let found = app.db().read(move |conn| {
+        let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+        crate::controllers::presenters::room_unread::first_unread(conn, &membership)
+    }).await.unwrap();
+    assert_eq!(found, None);
 }

@@ -18,17 +18,13 @@ pub mod board_automations;
 pub mod directs;
 pub mod events;
 pub mod favorites;
-pub mod files;
 pub mod inbound_email_addresses;
 pub mod involvements;
 pub mod members;
-pub mod message_links;
 pub mod opens;
 pub mod operations;
-pub mod pins;
 pub mod polls;
 pub mod reads;
-pub mod refreshes;
 
 pub mod settings;
 pub mod slash_commands;
@@ -38,7 +34,7 @@ use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::page::{self, db_error};
+use crate::controllers::presenters::page::db_error;
 
 /// `room_scope`: which of `Current.user.rooms` a controller may act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,42 +64,6 @@ impl Scope {
 }
 
 // --- Actions ------------------------------------------------------------------------------------
-
-/// `index`: `redirect_to room_url(Current.user.rooms.last)` (inherited by the room-type
-/// controllers). With no rooms, `room_url(nil)` raises.
-pub async fn index(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let user_id = require_current_user(c)?.id;
-    let room = c
-        .app()
-        .db
-        .read(move |conn| Room::last_for_user(conn, user_id))
-        .await
-        .map_err(db_error)?;
-    let Some(room) = room else {
-        return Err(Error::internal(anyhow::anyhow!(
-            "No route matches room_url(nil)"
-        )));
-    };
-    let url = c.url_for(&campfire_routes::room(room.id));
-    c.redirect_to(&url)
-}
-
-/// `show`, also `GET /rooms/:room_id/@:message_id`.
-pub async fn show(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let (room, join_preview) = set_room_for_show(c, Scope::All).await?;
-    concerns::remember_last_room_visited(c, room.id);
-    if join_preview {
-        return page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::JoinPage {
-            ctx,
-            id: room.id,
-            name: room.name.as_deref().unwrap_or_default()
-        })
-        .await;
-    }
-    render_show(c, room).await
-}
 
 /// `join`: open rooms can be rejoined by link; creation restrictions do not restrict joins.
 pub async fn join(c: &mut Ctx) -> Result {
@@ -317,7 +277,7 @@ pub async fn find_joinable_open_room(c: &Ctx, id: i64) -> Result<Option<Room>> {
 
 /// Rails only falls back to an open-room preview for show, including the redirecting
 /// open/closed namespace actions. Edit, destroy and leave remain membership-scoped.
-pub(super) async fn set_room_for_show(c: &mut Ctx, scope: Scope) -> Result<(Room, bool)> {
+pub async fn set_room_for_show(c: &mut Ctx, scope: Scope) -> Result<(Room, bool)> {
     let user_id = require_current_user(c)?.id;
     let id = c
         .param_str("room_id")
@@ -458,59 +418,6 @@ fn room_string_param(c: &Ctx, attribute: &str) -> Result<Option<Option<String>>>
     }))
 }
 
-/// Room form facts, including an attempted invalid value rather than reloading the
-/// persisted record. Icon preview data comes through the existing presenter resolver.
-pub(super) async fn form_room(
-    c: &Ctx,
-    id: Option<i64>,
-    name: Option<String>,
-    icon_name: Option<String>,
-    errors: campfire_db::Errors,
-) -> Result<campfire_views::rooms::FormRoom> {
-    let icon_name = Room::normalize_icon_name(icon_name.as_deref());
-    let lookup_name = icon_name.clone();
-    let domain = c.app().mail.config.domain.clone();
-    let (icon, inbound_email) = c
-        .app()
-        .db
-        .read(move |conn| {
-            let icon = super::presenters::accounts::resolve_room_icon(conn, lookup_name.as_deref());
-            let inbound_email = if let Some(id) = id {
-                let room = Room::find(conn, id)?;
-                let address = domain
-                    .as_ref()
-                    .zip(room.inbound_email_token.as_ref())
-                    .filter(|(_, token)| !token.chars().all(char::is_whitespace))
-                    .filter(|_| room.emailable())
-                    .map(|(domain, token)| format!("room-{token}@{domain}"));
-                Some(campfire_views::rooms::InboundEmailView {
-                    id,
-                    emailable: room.emailable(),
-                    enabled: domain.is_some(),
-                    address,
-                })
-            } else {
-                None
-            };
-            Ok((icon, inbound_email))
-        })
-        .await
-        .map_err(db_error)?;
-    Ok(campfire_views::rooms::FormRoom {
-        id,
-        name,
-        icon_name,
-        icon,
-        inbound_email,
-        errors: errors.full_messages(),
-        error_attributes: errors
-            .0
-            .iter()
-            .map(|(attribute, _)| (*attribute).to_string())
-            .collect(),
-    })
-}
-
 /// `params.fetch(:user_ids, [])` as ids `User.where(id:)` can match.
 pub(crate) fn user_ids_param(c: &Ctx) -> Vec<i64> {
     c.param("user_ids")
@@ -561,57 +468,6 @@ pub(crate) fn existing_user_ids(
         .collect())
 }
 
-/// `rooms/show` with `find_messages`: the page around `params[:message_id]`, else the last page.
-async fn render_show(c: &mut Ctx, room: Room) -> Result {
-    if room.board() { return boards::render_index(c, room).await; }
-    let app = c.app().clone();
-    let user = require_current_user(c)?.clone();
-    let message_id = c.param_str("message_id").and_then(cast_integer);
-    let request_host = Some(c.request.host());
-    let cache_base_url = c.url_for("");
-    let native = c
-        .app()
-        .db
-        .read(move |conn| {
-            super::presenters::room_native::load(
-                conn,
-                &app,
-                &room,
-                &user,
-                message_id,
-                request_host,
-                cache_base_url,
-            )
-        })
-        .await
-        .map_err(db_error)?;
-    let super::presenters::room_native::NativePage {
-        show,
-        composer,
-        link_fetches: fetches,
-        twitter_fetches,
-        github_refreshes: refreshes,
-    } = native;
-    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
-    let response = super::presenters::view_context::page_or_frame(
-        c,
-        StatusCode::OK,
-        |ctx| super::presenters::room_native::render(ctx, &show, &composer, false),
-        |ctx| super::presenters::room_native::render(ctx, &show, &composer, true),
-    )
-    .await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(
-        &c.app().fragment_cache,
-        &show.messages,
-        &c.url_for(""),
-    );
-    Ok(response.with_cached_fragments(fragments))
-}
-
-pub(crate) use crate::controllers::presenters::call_navigation;
 
 pub mod call_channels;
 

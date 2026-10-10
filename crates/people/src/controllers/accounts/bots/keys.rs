@@ -3,11 +3,9 @@
 use campfire_db::User;
 use campfire_db::models::audit_log::{AuditLog, Context, NewAuditLog, Target};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_views::accounts;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, require_current_user};
-use crate::controllers::presenters::page::framed_page;
 
 /// Reset requires sudo, audits the rotation, and displays the key once without caching it.
 pub async fn update(c: &mut Ctx) -> Result {
@@ -15,17 +13,12 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::ensure_can_administer(c)?;
     concerns::sudo::require_sudo_mode(c)?;
     let bot = super::find_active_bot(c, "bot_id").await?;
-    let name = bot.name.clone();
     let key = reset_key(c, bot).await?;
     c.set_header("cache-control", "no-store");
     c.set_header("pragma", "no-cache");
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotKey {
-        ctx,
-        bot_name: &name,
-        bot_key: &key
-    })
-    .await
+    c.json(StatusCode::OK, &serde_json::json!({"bot_key": key}))
 }
+
 
 /// `update`'s writes once the gates passed: a new key, then the audit. Answers the key.
 pub async fn reset_key(c: &Ctx, bot: User) -> Result<String> {

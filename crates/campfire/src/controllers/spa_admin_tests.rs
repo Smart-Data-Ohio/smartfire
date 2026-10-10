@@ -362,20 +362,20 @@ pub(super) fn audits(outcome: &Outcome) -> String {
 // --- The gates ---------------------------------------------------------------------------------
 
 #[tokio::test]
-async fn admin_exists_only_with_the_spa() {
+async fn admin_exists_without_flags() {
     let clock = crate::controllers::presenters::test_support::seed_clock();
     let Some(a) = TestApp::boot_seed_with_env("default", clock, &[]).await else {
         return;
     };
     let mut b = a.sign_in(DAVID).await;
-    let unknown = b.send(get("/no-such-page")).await.status;
+
     for path in [
         "/api/v1/admin/workspace",
         "/api/v1/admin/people",
         "/api/v1/admin/audit_log",
         "/api/v1/admin/integrations_health",
     ] {
-        assert_eq!(b.send(get(path)).await.status, unknown, "{path}");
+        assert_eq!(b.send(get(path)).await.status, StatusCode::OK, "{path}");
     }
 }
 
@@ -856,11 +856,7 @@ async fn people_list_as_the_account_page_does() {
             .any(|person| person.you && person.id == DAVID)
     );
 
-    // Everyone listed is on the classic page too.
-    let html = b.classic_page("/account/edit").await.text();
-    for person in &page.people {
-        assert!(html.contains(&person.name), "{}", person.name);
-    }
+
 }
 
 #[tokio::test]
@@ -1070,9 +1066,7 @@ async fn a_two_step_reset_refuses_as_the_classic_page_does() {
             ))
             .await;
         assert!(classic.status.is_redirection(), "{}", classic.status);
-        let page = b.classic_page(classic.location().unwrap()).await.text();
-        let escaped = alert.replace('\'', "&#39;");
-        assert!(page.contains(&escaped), "{alert}");
+        assert_eq!(b.flash()["alert"], alert);
     }
     for id in [BENDER, RITA] {
         let reply = write(
@@ -1362,14 +1356,7 @@ async fn the_audit_log_filters_as_the_classic_page_does() {
     );
     assert!(filtered.export_url.contains("action=user.role.change"));
 
-    // The classic page lists the same rows for the same filter.
-    let html = b
-        .classic_page("/account/audit_log?action=user.role.change&target_type=User")
-        .await
-        .text();
-    for entry in &filtered.entries {
-        assert!(html.contains(&entry.action));
-    }
+
 }
 
 #[tokio::test]
@@ -1382,7 +1369,4 @@ async fn integrations_health_reads_for_administrators() {
     let health: api::IntegrationsHealth = parse(&reply);
     assert!(health.github.connected >= 0);
     assert!(health.agent_delivery.pending >= 0);
-    // The classic page renders from the same snapshot.
-    let page = b.classic_page("/account/integrations_health").await;
-    assert_eq!(page.status, StatusCode::OK);
 }

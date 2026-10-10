@@ -4,55 +4,15 @@ use crate::{
     concerns::{self, Before},
     controllers::presenters::{
         attachments::{self, Assignment, Record},
-        page::{db_error, framed_page},
+        page::db_error,
     },
 };
 use campfire_db::{
-    Errors,
     models::audit_log::{AuditLog, NewAuditLog, Target},
     models::workspace_icon::{ImageFacts, NewIcon, WorkspaceIcon},
 };
-use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, format, permit_keys};
-use campfire_views::accounts::icons as views;
+use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, permit_keys};
 
-pub async fn index(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    concerns::ensure_can_administer(c)?;
-    render(c, StatusCode::OK, NewIcon::default(), Errors::default()).await
-}
-async fn render(c: &mut Ctx, status: StatusCode, icon: NewIcon, errors: Errors) -> Result {
-    c.respond_to(&[&format::HTML])?;
-    let icons = c
-        .app()
-        .db
-        .read(WorkspaceIcon::ordered)
-        .await
-        .map_err(Error::internal)?
-        .into_iter()
-        .map(|i| views::Icon {
-            id: i.id,
-            name: i.name,
-            title: i.title,
-            creator_name: i.creator_name,
-        })
-        .collect::<Vec<_>>();
-    let icon = views::Form {
-        name: icon.name,
-        title: icon.title,
-        invalid_fields: ["name", "title", "image"]
-            .into_iter()
-            .filter(|f| !errors.on(f).is_empty())
-            .map(str::to_owned)
-            .collect(),
-        errors: errors.full_messages(),
-    };
-    framed_page!(c, status, |ctx| views::Index {
-        ctx,
-        icons: icons.clone(),
-        icon: icon.clone()
-    })
-    .await
-}
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
@@ -118,9 +78,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 },
             )
         }
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            render(c, StatusCode::UNPROCESSABLE_ENTITY, icon, errors).await
-        }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
         Err(error) => Err(Error::internal(error)),
     }
 }

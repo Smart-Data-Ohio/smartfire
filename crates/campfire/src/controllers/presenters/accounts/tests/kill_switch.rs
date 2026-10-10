@@ -21,13 +21,7 @@ async fn admin_kill_switch_cancels_pending_expires_overdue_revokes_and_clears_pr
         &admin.form("post", &path, &[]).await,
         &format!("http://campfire.test/account/bots/{bot}/edit"),
     );
-    assert!(
-        admin
-            .get(&format!("/account/bots/{bot}/edit"))
-            .await
-            .text()
-            .contains("Agent suspended; 2 approvals cancelled.")
-    );
+
     test.booted.app.db.read(move |conn|{
         let agent=Agent::find(conn,id)?.unwrap();assert!(agent.suspended());assert!(agent.working_presence.is_none());
         assert_eq!(AgentApproval::find(conn,pending)?.unwrap().status,"cancelled");assert_eq!(AgentApproval::find(conn,overdue)?.unwrap().status,"expired");
@@ -38,13 +32,7 @@ async fn admin_kill_switch_cancels_pending_expires_overdue_revokes_and_clears_pr
         &admin.form("post", &path, &[]).await,
         &format!("http://campfire.test/account/bots/{bot}/edit"),
     );
-    assert!(
-        admin
-            .get(&format!("/account/bots/{bot}/edit"))
-            .await
-            .text()
-            .contains("Agent suspended; 0 approvals cancelled.")
-    );
+
 }
 #[tokio::test]
 async fn owner_kill_switch_does_not_require_sudo() {

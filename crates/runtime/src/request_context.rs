@@ -3,39 +3,24 @@
 
 use campfire_db::{Account, User};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode, format};
-use campfire_view_kit::helpers::request_forgery::{self, RequestSecrets};
-use campfire_presentation::layouts::{Chrome, UserPreferences};
+use campfire_presentation::layouts::UserPreferences;
 use campfire_presentation::time::Zone;
 use campfire_presentation::{AccountSummary, CurrentUser, Platform};
+use campfire_view_kit::helpers::request_forgery::{self, RequestSecrets};
 
 use crate::app::AppCtx;
 use crate::concerns;
 
-/// Everything the layout needs, loaded before rendering.
-#[derive(Clone)]
-pub struct RenderedSettings(pub campfire_db::UserStatusSettings);
-
+/// Facts read by retained authentication and public pages.
 #[derive(Debug, Clone)]
 pub struct RequestContext {
     pub current_user: Option<CurrentUser>,
     pub account: AccountSummary,
     pub custom_styles: Option<String>,
     pub platform: Platform,
-    pub last_room_visited_id: Option<i64>,
-    pub vapid_public_key: Option<String>,
     pub app_version: String,
-    /// `Time.zone` for the request (`SetTimeZone`).
-    pub time_zone: Zone,
-    /// The layout's chrome from other domains. Only what this crate can answer yet is filled in;
-    /// see `campfire_presentation::layouts::Chrome` for the owners.
-    pub chrome: Chrome,
+    pub chrome: campfire_retained::Chrome,
 }
-
-/// These templates never call `link_back_to_last_room_visited`. Leave its input
-/// unloaded, as Rails does; templates that use it retain the normal room lookup.
-#[derive(Clone)]
-struct UnusedRoomBackLink;
-pub fn omit_unused_room_back_link(c: &mut Ctx) { c.set_current(UnusedRoomBackLink); }
 
 /// Reuse the zone already carried by the authenticated row; no association reload.
 pub async fn time_zone(c: &Ctx) -> Result<Zone> {
@@ -50,31 +35,40 @@ pub async fn time_zone(c: &Ctx) -> Result<Zone> {
     // Write/error paths have no authentication preload. Only SetTimeZone's
     // scalar is needed here; associations belong to the eventual layout load.
     let id = user.id;
-    let zone: Option<String> = c.app().db.read(move |conn| {
-        Ok(conn.query_row("SELECT time_zone FROM users WHERE id=?", [id], |row| row.get(0))?)
-    }).await.map_err(Error::internal)?;
+    let zone: Option<String> = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok(
+                conn.query_row("SELECT time_zone FROM users WHERE id=?", [id], |row| {
+                    row.get(0)
+                })?,
+            )
+        })
+        .await
+        .map_err(Error::internal)?;
     Ok(Zone::for_user(zone.as_deref()))
 }
 impl RequestContext {
-    /// `Current.account`, `Current.user`, `last_room_visited` and the platform. With no account
-    /// yet (first run) the account summary is blank: the pages that reference the account raise
-    /// in Rails then, the others don't read it.
     pub async fn load(c: &Ctx) -> Result<Self> {
         let app = c.app();
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let now = c.now();
-        let loaded = c.current::<crate::presenters::layout_preferences::LoadedPreferences>().filter(|loaded| Some(loaded.user_id) == user_id).cloned();
-        let (account, has_logo, mut preferences, mut chrome) = app
+        let loaded = c
+            .current::<crate::presenters::layout_preferences::LoadedPreferences>()
+            .filter(|loaded| Some(loaded.user_id) == user_id)
+            .cloned();
+        let (account, has_logo, preferences) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
                 let has_logo = match &account {
-                    Some(account) => {
-                        crate::presenters::attachments::attached_blob(conn, "Account", account.id, "logo")?
-                            .is_some()
-                    }
+                    Some(account) => crate::presenters::attachments::attached_blob(
+                        conn, "Account", account.id, "logo",
+                    )?
+                    .is_some(),
                     None => false,
                 };
                 let preferences = match user_id {
@@ -84,73 +78,49 @@ impl RequestContext {
                     },
                     None => UserPreferences::default(),
                 };
-                Ok((account, has_logo, preferences, chrome(conn, user_id)?))
+                Ok((account, has_logo, preferences))
             })
             .await
             .map_err(Error::internal)?;
-        let last_room_visited_id = if user.is_some() && c.current::<UnusedRoomBackLink>().is_none() {
-            concerns::last_room_visited(c).await?.map(|room| room.id)
-        } else {
-            None
-        };
-
         let time_zone = Zone::for_user(preferences.time_zone.as_deref());
-        if let Some(RenderedSettings(settings)) = c.current::<RenderedSettings>()
-            && Some(settings.user.id) == user_id
-        {
-            apply_settings_preferences(
-                &mut preferences,
-                settings,
-                campfire_db::Timestamp::from_jiff(now),
-            );
-        }
         let current_user = user.as_ref().map(|user| CurrentUser {
             preferences,
             ..current_user(&secrets, user)
         });
-        chrome.google_picker = user.as_ref().and(app.config.google_picker.clone());
-        chrome.test_environment = app.config.environment == "test";
-        chrome.service_worker_auto_register = !chrome.test_environment
+        let test_environment = app.config.environment == "test";
+        let service_worker_auto_register = !test_environment
             || c.cookies
                 .get("enable_service_worker")
                 .is_some_and(|value| !campfire_richtext::ruby::is_blank(value));
-        // Without the SPA the layout stays the Rails layout, and its scripts register the classic
-        // worker as Rails does; with it, the head names the worker for the effective UI.
-        chrome.service_worker_url = if app.config.spa_enabled {
-            Some(concerns::service_worker_url(concerns::effective_ui(c).await?))
-        } else {
-            None
-        };
-        chrome.huddle_configured = app.config.huddle.configured();
-        chrome.global_search_query = if c.request.path().starts_with("/searches") {
-            crate::controllers::presenters::params::display_query(c)
+        let service_worker_url = if app.config.spa_enabled {
+            Some(concerns::service_worker_url(
+                concerns::effective_ui(c).await?,
+            ))
         } else {
             None
         };
         let mut summary = account_summary(account.as_ref(), has_logo);
         summary.logo_url = crate::presenters::accounts::fresh_account_logo_path_in_zone(
-            account.as_ref(), None, &time_zone,
+            account.as_ref(),
+            None,
+            &time_zone,
         );
         Ok(Self {
             current_user,
             account: summary,
             custom_styles: account.and_then(|account| account.custom_styles),
             platform: crate::presenters::accounts::platform(c),
-            last_room_visited_id,
-            vapid_public_key: app.vapid_public_key(),
             app_version: app.config.app_version.clone(),
-            time_zone,
-            chrome,
+            chrome: campfire_retained::Chrome {
+                service_worker_auto_register,
+                service_worker_url,
+            },
         })
     }
 }
 
 impl RequestContext {
-
-    /// A retained page: the same request secrets, flash sweep and account data as [`Self::render`],
-    /// without building an import map or putting the classic stylesheet tags on the context.
-    /// The response still uses [`Self::page`] when it is a full document, so the stylesheet
-    /// preload `Link` header sign-in already sends stays put.
+    /// Render retained HTML with the request's CSRF/CSP secrets and lazy flash sweep.
     pub fn render_retained(
         &self,
         c: &mut Ctx,
@@ -161,7 +131,7 @@ impl RequestContext {
             csp_nonce: c.content_security_policy_nonce(),
         };
         #[cfg(any(test, feature = "test-support"))]
-        let secrets = crate::presenters::render_secrets::fixed_render_secrets().unwrap_or(secrets);
+        let secrets = crate::request_secrets::fixed_render_secrets().unwrap_or(secrets);
         let flash = c.peek_flash();
         let asset_path = |path: &str| campfire_static_assets::asset_path(path);
         let ctx = campfire_retained::Context {
@@ -224,30 +194,6 @@ pub fn user_preferences(
     crate::presenters::layout_preferences::for_user(conn, user_id, now)
 }
 
-/// Icons.client_icon_names and the viewer's ten ordered recent searches. WS14g's Picker,
-/// WS13's huddle configuration and WS8b-m's searches-controller query remain flagged inputs.
-pub fn chrome(
-    conn: &campfire_db::Connection,
-    user_id: Option<i64>,
-) -> campfire_db::Result<Chrome> {
-    let mut chrome = Chrome {
-        service_worker_auto_register: true,
-        brand_icon_names: crate::presenters::client_icon_names(conn)?,
-        ..Chrome::default()
-    };
-    if let Some(id) = user_id {
-        chrome.recent_searches = campfire_db::Search::ordered_for_user(conn, id)?
-            .into_iter()
-            .take(10)
-            .map(|search| campfire_presentation::layouts::RecentSearch {
-                id: search.id,
-                query: search.query,
-            })
-            .collect();
-    }
-    Ok(chrome)
-}
-
 /// `Current.account` for the layout: its name, `fresh_account_logo_path` and whether a logo is
 /// attached.
 pub fn account_summary(account: Option<&Account>, has_logo: bool) -> AccountSummary {
@@ -266,58 +212,6 @@ pub fn account_summary(account: Option<&Account>, has_logo: bool) -> AccountSumm
 /// whatever the `Accept` header preferred.
 pub fn find_template(c: &mut Ctx, template: campfire_kit::Format) -> Result<()> {
     c.respond_to(&[template]).map(|_| ())
-}
-
-fn apply_settings_preferences(
-    preferences: &mut UserPreferences,
-    settings: &campfire_db::UserStatusSettings,
-    now: campfire_db::Timestamp,
-) {
-    preferences.theme = Some(settings.theme.clone());
-    preferences.text_size = Some(settings.text_size.clone());
-    preferences.time_zone = settings.time_zone.clone();
-    preferences.time_zone_explicit = settings.time_zone_explicit;
-    let mut sounds = campfire_presentation::layouts::NotificationSounds {
-        muted: settings.manual_dnd_active(now) || settings.presence_setting == "dnd",
-        quiet_hours: settings
-            .quiet_hours_enabled
-            .then(|| {
-                settings
-                    .quiet_hours_start_minute
-                    .zip(settings.quiet_hours_end_minute)
-            })
-            .flatten(),
-        ..Default::default()
-    };
-    if settings.meeting_dnd_enabled && settings.meeting_status_enabled {
-        sounds.meeting_quiet = settings
-            .meeting_cache
-            .as_ref()
-            .map(|cache| cache.quiet_window_epochs(now))
-            .unwrap_or_default();
-    }
-    if !settings.ooo_notify_enabled {
-        if settings.manual_ooo_active(now) {
-            sounds
-                .ooo_quiet
-                .push((0, settings.ooo_until.unwrap().jiff().as_second()));
-        }
-        if settings.ooo_calendar_enabled {
-            sounds.ooo_quiet.extend(
-                settings
-                    .meeting_cache
-                    .as_ref()
-                    .map(|cache| cache.ooo_window_epochs(now))
-                    .unwrap_or_default(),
-            );
-        }
-    }
-    preferences.notification_sounds = sounds;
-}
-
-#[cfg(any(test, feature = "test-support"))]
-pub fn user_preferences_at(conn: &campfire_db::Connection, user_id: i64, now: campfire_db::Timestamp) -> campfire_db::Result<UserPreferences> {
-    user_preferences(conn,user_id,now.jiff())
 }
 
 /// [`retained_page_or_frame`] for a retained page. Full documents still send the stylesheet preload
@@ -360,9 +254,18 @@ pub async fn retained_document(
 }
 impl RequestContext {
     pub fn page(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {
-        let links = &campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")]).preload_links;
-        let existing = c.headers.get("link").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-        c.set_header("link", &campfire_assets::append_preload_links(&existing, links));
+        let links = &campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")])
+            .preload_links;
+        let existing = c
+            .headers
+            .get("link")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        c.set_header(
+            "link",
+            &campfire_assets::append_preload_links(&existing, links),
+        );
         c.render(status, &format::HTML, html)
     }
     pub fn frame(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {

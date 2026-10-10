@@ -79,6 +79,7 @@ endpoint!(
 /// and enqueued on the writer after the read ([`Fetches::request`]).
 #[derive(Default)]
 pub(crate) struct Fetches {
+    pub(crate) render_refreshes: campfire_runtime::presenters::RenderRefreshes,
     links: BTreeSet<i64>,
     posts: BTreeSet<i64>,
     pull_requests: BTreeSet<i64>,
@@ -110,6 +111,7 @@ impl Fetches {
     /// read, and the next read asks again.
     pub(crate) async fn request(self, app: &App) {
         let Fetches {
+            render_refreshes,
             links,
             posts,
             pull_requests,
@@ -123,6 +125,7 @@ impl Fetches {
         {
             tracing::warn!(%error, "card fetches not requested");
         }
+        campfire_runtime::presenters::refresh_after_render(&app.db, render_refreshes).await;
         pull_requests::refresh_after_render(&app.db, pull_requests.into_iter().collect()).await;
     }
 }

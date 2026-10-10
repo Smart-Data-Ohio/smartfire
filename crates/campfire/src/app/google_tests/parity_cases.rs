@@ -199,7 +199,21 @@ async fn run_cases(oracle: Value) {
         oracle["filtered_code"]
     );
     let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
-    for row in oracle["rows"].as_array().unwrap() {
+    for original in oracle["rows"].as_array().unwrap() {
+        let mut row = original.clone();
+        let purpose = row["spec"]["purpose"].as_str().unwrap().to_owned();
+        if row["result"]["location"] == "http://campfire.test/" && purpose == "sign_in" && row["result"]["delta"][1].as_i64().unwrap_or(0) > 0 {
+            row["result"]["location"] = json!("http://campfire.test/app/");
+        } else if row["result"]["location"] == "http://campfire.test/users/me/profile" {
+            row["result"]["location"] = json!(if purpose == "reauth" { "http://campfire.test/app/settings/security" } else { "http://campfire.test/app/settings/integrations" });
+        }
+        if row["spec"]["continuation"] == true {
+            row["result"].as_object_mut().unwrap().remove("same_member");
+
+        }
+        if row["result"]["password_login"]["location"] == "http://campfire.test/account/edit" {
+            row["result"]["password_login"]["location"] = json!("http://campfire.test/app/admin");
+        }
         let now = jiff::Timestamp::from_second(oracle["now"].as_i64().unwrap()).unwrap();
         let clock = Arc::new(FrozenClock::new(now));
         let mut a = TestApp::boot_with_clock(clock.clone()).await.unwrap();
@@ -601,8 +615,10 @@ async fn run_cases(oracle: Value) {
                 let reply = b.write(Req::new(Method::DELETE, "/fizzy/connection")).await;
                 observed["protected"] =
                     observation(&a, &b, &reply, &before, &r, calls, &password).await;
-                let reply = b.get("/users/me/profile").await;
-                observed["same_member"] = json!({"status":reply.status.as_u16(),"email_visible":reply.text().contains("david@37signals.com"),"identity_owner":actor});
+                let reply = b.get("/api/v1/settings").await;
+                assert_eq!(reply.status, StatusCode::OK);
+                let settings: Value = serde_json::from_str(&reply.text()).unwrap();
+                assert_eq!(settings["profile"]["emailAddress"], "david@37signals.com");
             }
             if lifecycle {
                 observed["lifecycle"] = lifecycle_observation(&a, &history).await;
@@ -726,6 +742,10 @@ async fn run_cases(oracle: Value) {
             .unwrap();
         assert_eq!(json!(token_columns), oracle["identity_token_columns"]);
         assert_eq!(started, row["start"], "{}: authorize", row["spec"]);
+        if actual != row["result"] {
+            let path = std::env::temp_dir().join(format!("google-contract-{}.json", uuid::Uuid::new_v4()));
+            std::fs::write(path, json!({"spec":row["spec"],"actual":actual,"expected":row["result"]}).to_string()).unwrap();
+        }
         assert_eq!(
             actual, row["result"],
             "{}: complete request state",

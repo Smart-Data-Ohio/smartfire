@@ -63,7 +63,7 @@ async fn challenge_first_factor_grants_no_session_and_totp_starts_verified_sessi
     let ok = b
         .write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
         .await;
-    assert_eq!(ok.location(), Some("http://campfire.test/"));
+    assert_eq!(ok.location(), Some("http://campfire.test/app/"));
     a.db().read(move |c| {
         let created = Session::for_user(c,DAVID)?.into_iter().filter(|s| !before_ids.contains(&s.id)).collect::<Vec<_>>();
         assert_eq!(created.len(), 1);
@@ -100,7 +100,7 @@ async fn challenge_backup_is_single_use_and_locked_attempts_spend_nothing() {
         b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &codes[0])]))
             .await
             .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     b.write(Req::new(Method::DELETE, "/session")).await;
     assert_eq!(
@@ -383,7 +383,7 @@ async fn challenge_lockouts_escalate_refresh_one_item_and_limits_block_across_ip
         b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
             .await
             .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     a.db()
         .read(move |c| {
@@ -424,7 +424,7 @@ async fn remembered_cookie_is_secure_and_revocation_restores_challenge() {
                 .form(&[("code", &code), ("remember_device", "1")]),
         )
         .await;
-    assert_eq!(result.location(), Some("https://campfire.test/"));
+    assert_eq!(result.location(), Some("https://campfire.test/app/"));
     let cookie = result
         .headers
         .get_all("set-cookie")
@@ -449,7 +449,7 @@ async fn remembered_cookie_is_secure_and_revocation_restores_challenge() {
                 ]),
         )
         .await;
-    assert_eq!(result.location(), Some("https://campfire.test/"));
+    assert_eq!(result.location(), Some("https://campfire.test/app/"));
     assert_eq!(
         b.write(
             Req::new(Method::DELETE, "/two_factor_remembered_devices")
@@ -567,7 +567,7 @@ async fn google_step_up_seam_checks_owner_subject_freshness_and_consumes_once() 
         assert_eq!(response.status(), StatusCode::FOUND);
         assert_eq!(
             response.headers()["location"],
-            "http://campfire.test/users/me/profile"
+            "http://campfire.test/app/settings/security"
         );
         let state_cookie = response
             .headers()
@@ -628,7 +628,7 @@ async fn self_service_limits_and_google_unavailability_are_enforced() {
         .await;
     assert_eq!(
         result.location(),
-        Some("http://campfire.test/users/me/profile")
+        Some("http://campfire.test/app/settings/security")
     );
     for n in 0..10 {
         assert_eq!(
@@ -667,7 +667,7 @@ async fn self_service_limits_and_google_unavailability_are_enforced() {
 }
 
 #[tokio::test]
-async fn profile_renders_live_devices_and_reauthentication_forms() {
+async fn account_json_lists_only_live_devices_and_reauthentication_options() {
     let a = app().await;
     prepare(&a).await;
     let (live, _) = a
@@ -691,25 +691,15 @@ async fn profile_renders_live_devices_and_reauthentication_forms() {
         .await
         .unwrap();
     let mut b = a.sign_in(DAVID).await;
-    let page = b.get("/users/me/profile").await;
+    let page = b.get("/api/v1/settings/account").await;
     assert_eq!(page.status, StatusCode::OK);
-    assert!(
-        page.text()
-            .contains(&format!("id=\"two_factor_remembered_device_{}\"", live.id))
-    );
-    assert!(!page.text().contains(&format!(
-        "id=\"two_factor_remembered_device_{}\"",
-        expired.id
-    )));
-    for form in [
-        "new_backup_codes",
-        "disable_two_factor",
-        "revoke_all_devices",
-    ] {
-        assert!(page.text().contains(&format!("id=\"{form}\"")));
-    }
-    assert!(page.text().contains("name=\"reauth\""));
-    assert!(!page.text().contains("Confirm with Google"));
+    let payload: serde_json::Value = serde_json::from_str(&page.text()).unwrap();
+    let panel = &payload["twoFactor"];
+    let devices = panel["devices"].as_array().unwrap();
+    assert!(devices.iter().any(|device| device["id"] == live.id));
+    assert!(!devices.iter().any(|device| device["id"] == expired.id));
+    assert_eq!(panel["google"], false);
+    assert_eq!(panel["hasPassword"], true);
 }
 
 #[tokio::test]

@@ -18,29 +18,16 @@ mod profile_page_tests;
 #[cfg(test)]
 mod joining_tests;
 
-#[cfg(test)]
-mod profile_sections_tests;
 
 #[cfg(test)]
 mod status_popup_tests;
 
 #[cfg(test)]
-mod profile_security_tests;
-
-#[cfg(test)]
 mod ban_lifecycle_tests;
 
-#[cfg(test)]
-mod layout_preferences_tests;
 
-#[cfg(test)]
-mod profile_effective_ooo_tests;
 
-#[cfg(test)]
-mod agent_profile_tests;
 
-#[cfg(test)]
-mod fizzy_profile_tests;
 
 #[cfg(test)]
 mod stars_tests;
@@ -48,8 +35,6 @@ mod stars_tests;
 #[cfg(test)]
 mod cutover_receipts_tests;
 
-#[cfg(test)]
-mod sidebar_original_tests;
 
 #[cfg(test)]
 mod profile_gap_original_tests;
@@ -60,8 +45,8 @@ pub(crate) mod avatars {
 
     #[path = "../avatar_image_tests.rs"]
     mod avatar_image_tests;
-    mod tests;
     mod original_tests;
+    mod tests;
 }
 
 #[cfg(test)]
@@ -99,22 +84,15 @@ pub(crate) mod push_subscriptions {
     mod ws17_tests;
 
     pub(crate) mod test_notifications {
-        pub(crate) use campfire_people::controllers::users::push_subscriptions::test_notifications::*;
         use campfire_db::models::push_subscription::TestNotificationJob;
+        pub(crate) use campfire_people::controllers::users::push_subscriptions::test_notifications::*;
+
 
         mod tests;
-    }
+}
 }
 
-#[cfg(test)]
-pub(crate) mod sidebars {
-    pub(crate) use campfire_people::controllers::users::sidebars::*;
 
-    #[path = "../sidebars_tests.rs"]
-    mod tests;
-    #[path = "tests.rs"]
-    mod composition_tests;
-}
 
 #[cfg(test)]
 pub(crate) mod statuses {
