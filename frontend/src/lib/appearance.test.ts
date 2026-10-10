@@ -200,6 +200,72 @@ describe("restoreAppearance", () => {
 });
 
 describe("applyAccountAppearance", () => {
+  it("keeps failed device edits through later edits and merges another tab's stored choices", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ palette: "ocean" }));
+    const a = await load();
+    a.restoreAppearance();
+
+    const writes = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      a.setPalette("ember");
+      a.setThemeOverride("light");
+      a.setFont("mono");
+      expect(a.appearanceSnapshot()).toMatchObject({
+        palette: "ember",
+        theme: "light",
+        font: "mono",
+      });
+      writes.mockRestore();
+      localStorage.setItem(KEY, JSON.stringify({ palette: "ocean", motion: "reduce" }));
+      window.dispatchEvent(new StorageEvent("storage", { key: KEY, storageArea: localStorage }));
+      expect(a.appearanceSnapshot()).toMatchObject({
+        palette: "ember",
+        theme: "light",
+        font: "mono",
+        motion: "reduce",
+      });
+      a.setDensity("compact");
+      expect(stored()).toMatchObject({
+        palette: "ember",
+        themeOverride: "light",
+        font: "mono",
+        motion: "reduce",
+        density: "compact",
+      });
+      localStorage.setItem(KEY, JSON.stringify({ palette: "forest" }));
+      window.dispatchEvent(new StorageEvent("storage", { key: KEY, storageArea: localStorage }));
+      expect(a.appearanceSnapshot().palette).toBe("forest");
+    } finally {
+      writes.mockRestore();
+    }
+  });
+
+  it("keeps an unsaved override removal instead of restoring the stale pin", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ palette: "ember", themeOverride: "light" }));
+    const a = await load();
+    a.restoreAppearance();
+
+    const writes = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      a.setPersonalAppearanceOverride(false);
+      a.setThemeOverride(null);
+      a.setFont("mono");
+      expect(a.appearanceSnapshot()).toMatchObject({
+        palette: "smartfire",
+        theme: "system",
+        font: "mono",
+      });
+    } finally {
+      writes.mockRestore();
+    }
+  });
+
   it("keeps tab A's Ember pin after tab B's account save finishes and A reloads", async () => {
     const a = await load();
     const b = await load();

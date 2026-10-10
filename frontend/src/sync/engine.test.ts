@@ -42,7 +42,7 @@ import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
-import { applySettingsSnapshot } from "./settings-snapshot.ts";
+import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -184,10 +184,160 @@ const workspaceBoot: Boot = {
 const timelineIds = (roomId: number) => store.getState().timelines[roomId]?.ids;
 
 beforeEach(() => {
+  beginSettingsEpoch();
   mutations.reset();
   session.resetRoomVisits();
   mutations.setMe(meFixture);
   sessionStorage.clear();
+});
+
+const appearanceSettings: Settings = {
+  revision: 1,
+  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+  profile: {
+    userId: 7,
+    name: "Ada",
+    emailAddress: "ada@example.com",
+    bio: null,
+    avatarUrl: "/avatar.svg",
+    avatarAttached: false,
+    hasPassword: true,
+    githubLogin: null,
+    githubVerified: false,
+    bot: false,
+  },
+  appearance: {
+    theme: "system",
+    textSize: "default",
+    timeZone: "UTC",
+    timeZones: [],
+    appearancePreferences: null,
+  },
+  notifications: {
+    ...notificationPreferencesFixture,
+    roomNotificationLevels: {},
+    roomMuteUntil: { "12": "2026-10-10T12:15:00Z" },
+  },
+  status: {
+    presenceSetting: "auto",
+    customStatusEmoji: null,
+    customStatusText: null,
+    customStatusExpiresAt: null,
+    meetingStatusEnabled: false,
+    oooCalendarEnabled: false,
+    oooUntil: null,
+    oooManual: false,
+    oooNote: null,
+    calendarError: null,
+  },
+  calls: { voiceMode: "voice_activity", pushToTalkKey: null },
+  integrations: {
+    google: {
+      signInConfigured: false,
+      identityEmail: null,
+      calendarConfigured: false,
+      connected: false,
+      calendar: false,
+      drive: false,
+      email: null,
+    },
+    github: { state: "missing" },
+    githubAppConfigured: false,
+    fizzy: { state: "missing" },
+    managePath: "/users/me/profile",
+    slackImportPath: "/slack/imports",
+  },
+};
+
+describe("appearance epoch ordering", () => {
+  it.effect("preserves appearance ordering when reconnecting to the same server epoch", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* pushEvents({
+          seq: 11,
+          topic: "user",
+          type: "settings.updated",
+          data: {
+            ...appearanceSettings,
+            revision: 100,
+            appearance: { ...appearanceSettings.appearance, theme: "dark" },
+          },
+        });
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(11, true);
+        yield* pushEvents({
+          seq: 12,
+          topic: "user",
+          type: "settings.updated",
+          data: {
+            ...appearanceSettings,
+            revision: 1,
+            appearance: { ...appearanceSettings.appearance, theme: "light" },
+          },
+        });
+        expect(store.getState().me?.preferences).toMatchObject({
+          settingsRevision: 100,
+          theme: "dark",
+        });
+      }),
+    ),
+  );
+
+  it.effect("accepts lower appearance revisions after a server restore", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* pushEvents({
+          seq: 11,
+          topic: "user",
+          type: "settings.updated",
+          data: {
+            ...appearanceSettings,
+            revision: 100,
+            appearance: {
+              ...appearanceSettings.appearance,
+              theme: "dark",
+              appearancePreferences: { version: 1, palette: "forest" },
+            },
+          },
+        });
+        expect(store.getState().me?.preferences.settingsRevision).toBe(100);
+
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(0, false, "restored");
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "settings.updated",
+          data: {
+            ...appearanceSettings,
+            revision: 1,
+            appearance: {
+              ...appearanceSettings.appearance,
+              theme: "light",
+              appearancePreferences: { version: 1, palette: "ocean" },
+            },
+          },
+        });
+
+        expect(store.getState().me?.preferences).toMatchObject({
+          settingsRevision: 1,
+          theme: "light",
+          appearancePreferences: { version: 1, palette: "ocean" },
+        });
+      }),
+    ),
+  );
 });
 
 describe("notification settings sync", () => {
@@ -200,63 +350,7 @@ describe("notification settings sync", () => {
         yield* session.openRoom(12, null);
         yield* settle;
 
-        const snapshot: Settings = {
-          revision: 1,
-          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
-          profile: {
-            userId: 7,
-            name: "Ada",
-            emailAddress: "ada@example.com",
-            bio: null,
-            avatarUrl: "/avatar.svg",
-            avatarAttached: false,
-            hasPassword: true,
-            githubLogin: null,
-            githubVerified: false,
-            bot: false,
-          },
-          appearance: {
-            theme: "system",
-            textSize: "default",
-            timeZone: "UTC",
-            timeZones: [],
-            appearancePreferences: null,
-          },
-          notifications: {
-            ...notificationPreferencesFixture,
-            roomNotificationLevels: {},
-            roomMuteUntil: { "12": "2026-10-10T12:15:00Z" },
-          },
-          status: {
-            presenceSetting: "auto",
-            customStatusEmoji: null,
-            customStatusText: null,
-            customStatusExpiresAt: null,
-            meetingStatusEnabled: false,
-            oooCalendarEnabled: false,
-            oooUntil: null,
-            oooManual: false,
-            oooNote: null,
-            calendarError: null,
-          },
-          calls: { voiceMode: "voice_activity", pushToTalkKey: null },
-          integrations: {
-            google: {
-              signInConfigured: false,
-              identityEmail: null,
-              calendarConfigured: false,
-              connected: false,
-              calendar: false,
-              drive: false,
-              email: null,
-            },
-            github: { state: "missing" },
-            githubAppConfigured: false,
-            fizzy: { state: "missing" },
-            managePath: "/users/me/profile",
-            slackImportPath: "/slack/imports",
-          },
-        };
+        const snapshot = appearanceSettings;
 
         const before = {
           ...snapshot,

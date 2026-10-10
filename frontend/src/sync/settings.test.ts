@@ -3,6 +3,7 @@ import { SEED_IDS } from "../../mock/server.ts";
 import { me, sidebar } from "../api/endpoints.ts";
 import { Validation } from "../api/errors.ts";
 import { updateAppearance } from "../api/settings-endpoints.ts";
+import { meFixture } from "../api/testing.ts";
 import type { AppearancePreferences } from "../gen/AppearancePreferences.ts";
 import {
   appearanceSnapshot,
@@ -24,7 +25,7 @@ import {
   saveAccountPersonalAppearance,
   settings,
 } from "./settings.ts";
-import { applySettingsSnapshot } from "./settings-snapshot.ts";
+import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { emitResync } from "./signals.ts";
 
 const network = installMockNetwork();
@@ -42,6 +43,7 @@ afterAll(() => {
 
 afterEach(() => {
   intercept = fetch;
+  beginSettingsEpoch();
   mutations.reset();
 });
 
@@ -170,6 +172,128 @@ it("keeps Forest when an Ocean save's held me response arrives after a settings.
   } finally {
     gate.release();
     stop();
+  }
+});
+
+it.each(["load", "save"])(
+  "drops a held settings %s response from the previous server epoch",
+  async (kind) => {
+    await personalAccount({ version: 1, palette: "forest" });
+    const before = await settings.load();
+    const started = held<void>();
+    const gate = held<void>();
+    intercept = async (input, init) => {
+      const response = await fetch(input, init);
+
+      if (String(input).endsWith(kind === "load" ? "/settings" : "/settings/appearance")) {
+        started.release();
+        await gate.promise;
+
+        return new Response(JSON.stringify({ ...before, revision: 100 }));
+      }
+
+      return response;
+    };
+
+    const old =
+      kind === "load" ? settings.load() : saveAccountPersonalAppearance({ palette: "ember" });
+
+    const rejected = expect(old).rejects.toThrow("The server restarted");
+
+    try {
+      await started.promise;
+      beginSettingsEpoch();
+      applySettingsSnapshot({
+        ...before,
+        revision: 1,
+        appearance: {
+          ...before.appearance,
+          theme: "light",
+          appearancePreferences: { version: 1, palette: "ocean" },
+        },
+      });
+      gate.release();
+      await rejected;
+      expect(appearanceSnapshot()).toMatchObject({ accountTheme: "light", palette: "ocean" });
+      expect(store.getState().me?.preferences).toMatchObject({
+        settingsRevision: 1,
+        theme: "light",
+        appearancePreferences: { version: 1, palette: "ocean" },
+      });
+    } finally {
+      gate.release();
+      intercept = fetch;
+    }
+  },
+);
+
+it("drops a held me refresh from the previous server epoch", async () => {
+  await personalAccount({ version: 1 });
+  const before = await settings.load();
+  const started = held<void>();
+  const gate = held<void>();
+  const released = held<void>();
+  intercept = async (input, init) => {
+    const response = await fetch(input, init);
+
+    if (String(input).endsWith("/me")) {
+      started.release();
+      await gate.promise;
+      released.release();
+
+      return new Response(
+        JSON.stringify({
+          ...meFixture,
+          user: {
+            ...meFixture.user,
+            id: before.profile.userId,
+            name: "Old epoch",
+            updatedAt: "2026-10-10T12:00:00.000000Z",
+          },
+          preferences: {
+            ...meFixture.preferences,
+            settingsRevision: 100,
+            theme: "dark",
+            appearancePreferences: { version: 1, palette: "forest" },
+          },
+        }),
+      );
+    }
+
+    return response;
+  };
+
+  try {
+    await settings.updateAppearance({ theme: "dark" });
+    await started.promise;
+    const viewer = store.getState().me?.user;
+    beginSettingsEpoch();
+    applySettingsSnapshot({
+      ...before,
+      revision: 1,
+      appearance: {
+        ...before.appearance,
+        theme: "light",
+        appearancePreferences: { version: 1, palette: "ocean" },
+      },
+    });
+    gate.release();
+    await released.promise;
+    await vi.waitFor(() =>
+      expect(store.getState().me?.preferences).toMatchObject({
+        settingsRevision: 1,
+        theme: "light",
+      }),
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(store.getState().me?.user).toEqual(viewer);
+    expect(store.getState().me?.preferences).toMatchObject({
+      settingsRevision: 1,
+      theme: "light",
+      appearancePreferences: { version: 1, palette: "ocean" },
+    });
+  } finally {
+    gate.release();
   }
 });
 

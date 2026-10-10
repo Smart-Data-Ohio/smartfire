@@ -5,6 +5,27 @@ import { mutations, store } from "../store/store.ts";
 
 let latestSettings: Settings | null = null;
 
+let epoch = 0;
+
+export function settingsEpoch(): number {
+  return epoch;
+}
+
+/** A server restart can restore older revisions; responses already in flight belong to its predecessor. */
+export function beginSettingsEpoch(): void {
+  epoch += 1;
+  latestSettings = null;
+  store.setState((state) => ({
+    me:
+      state.me === null
+        ? null
+        : {
+            ...state.me,
+            preferences: { ...state.me.preferences, settingsRevision: 0 },
+          },
+  }));
+}
+
 /** Settings pages and membership writes share the same server revision ordering. */
 export function applySettingsSnapshot(next: Settings): Settings {
   if (

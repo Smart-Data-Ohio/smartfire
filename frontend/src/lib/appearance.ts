@@ -95,6 +95,8 @@ let accountPreferences: AppearancePreferences | null = null;
 
 let overrides: Partial<PersonalAppearance> = {};
 
+let unsavedOverrides: DeviceChange = {};
+
 export type { PersonalAppearance };
 
 let appliedTokens: readonly string[] = [];
@@ -247,11 +249,20 @@ function textFields(json: string): Map<string, string> {
 }
 
 function readStored(): Map<string, string> {
+  let saved: Map<string, string>;
+
   try {
-    return textFields(localStorage.getItem(STORAGE_KEY) ?? "null");
+    saved = textFields(localStorage.getItem(STORAGE_KEY) ?? "null");
   } catch {
-    return new Map();
+    saved = new Map();
   }
+
+  for (const [key, value] of Object.entries(unsavedOverrides)) {
+    if (value === null) saved.delete(key);
+    else saved.set(key, value);
+  }
+
+  return saved;
 }
 
 function applyDeviceOverrides(saved: Map<string, string>): void {
@@ -295,8 +306,10 @@ function changeDeviceOverrides(change: DeviceChange): void {
       STORAGE_KEY,
       JSON.stringify({ themeOverride: current.themeOverride, ...overrides }),
     );
+    unsavedOverrides = {};
   } catch {
-    // Storage can be unavailable (private windows, quota); the choice still applies to this tab.
+    // Keep failed edits, including removals, over stale storage and other tabs' changes.
+    unsavedOverrides = { ...unsavedOverrides, ...change };
   }
 }
 
