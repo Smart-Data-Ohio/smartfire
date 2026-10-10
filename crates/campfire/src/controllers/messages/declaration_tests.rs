@@ -41,7 +41,7 @@ async fn root_edit_markers_match_rails_for_noops_attachments_formatting_reaction
         crate::integrations::github::pull_requests::update(tx,pr.id,&[("private",rusqlite::types::Value::Integer(0)),("title",rusqlite::types::Value::Text("Fetched".into())),("fetched_at",rusqlite::types::Value::Text(tx.now().to_db()))])?;
         Ok(())
     }).await.unwrap();
-    let source=ids[4];assert_eq!(viewer.write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{source}.turbo_stream"))).await.status,StatusCode::OK);
+    let source=ids[4];assert_eq!(viewer.write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{source}.turbo_stream"))).await.status,StatusCode::NO_CONTENT);
     for (key,id) in [("reaction_edited",ids[0]),("fetch_edited",ids[6]),("reply_edited",ids[5])] {
         assert_eq!(app.db().read(move|conn|Ok(Message::find(conn,id)?.edited_at.map(|t|campfire_views::messages::support::json_time(t.jiff())))).await.unwrap(),oracle()[key].as_str().map(str::to_owned));
         let page=viewer.get(&format!("/rooms/{ALL_TALK}/messages/{id}")).await;assert_eq!(page.status,StatusCode::OK);assert!(!page.text().contains("class=\"message__edited\""));

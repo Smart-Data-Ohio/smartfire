@@ -7,7 +7,13 @@ import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
 import { applyAgentStatus, applyAgentSteps } from "./agents.ts";
 import { applyApprovalUpdated, approvalRequested } from "./approvals.ts";
-import { applyMessageCards, applyPoll, applyPollBallot, reconcileMessage } from "./cards.ts";
+import {
+  applyMessageCards,
+  applyPoll,
+  applyPollBallot,
+  invalidateGithub,
+  reconcileMessage,
+} from "./cards.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
@@ -1142,6 +1148,9 @@ export function applyEvents(
         break;
       case "poll.ballot":
         next = applyPollBallot(next, event.data);
+        break;
+      case "thread.github.updated":
+        next = invalidateGithub(next, event.data.pullRequestId);
         break;
       case "message.cards":
         next = applyMessageCards(next, event.data);

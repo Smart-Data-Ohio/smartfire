@@ -99,18 +99,7 @@ impl StarToggle {
     }
 }
 
-/// The controller response is session-bound and is never a cable broadcast.
-pub fn star_stream(user_id: i64, starred: bool) -> askama::Result<String> {
-    let html = StarToggle { user_id, starred }.render()?;
-    Ok(h::content_tag(
-        "turbo-stream",
-        h::attrs()
-            .attr("action", "replace")
-            .attr("target", format!("star_user_{user_id}")),
-        &h::content_tag("template", h::attrs(), &html).0,
-    )
-    .0)
-}
+
 
 #[derive(Template)]
 #[template(path="users/index.html",blocks=["head","content","nav","sidebar"])]

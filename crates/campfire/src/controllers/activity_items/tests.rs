@@ -50,13 +50,22 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
         .body(serde_json::to_vec(&case["params"]).unwrap());
         let response = browser.send(req).await;
         let name = case["name"].as_str().unwrap().to_owned();
+        let retired_stream = case["accept"] == "text/vnd.turbo-stream.html";
+        let expected_status = if retired_stream {
+            StatusCode::NOT_ACCEPTABLE.as_u16()
+        } else {
+            case["status"].as_u64().unwrap() as u16
+        };
         assert_eq!(
             response.status.as_u16(),
-            case["status"].as_u64().unwrap() as u16,
+            expected_status,
             "{name}: {}",
             response.text()
         );
-        if response.status != StatusCode::NOT_FOUND {
+        if retired_stream {
+            assert!(response.body.is_empty(), "{name}");
+            assert_eq!(response.location(), None, "{name}");
+        } else if response.status != StatusCode::NOT_FOUND {
             for key in ["content-type", "cache-control", "pragma", "location"] {
                 assert_eq!(
                     response.header(key),
@@ -67,8 +76,7 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
             let body = page_bytes(&response.text());
             let expected = page_bytes(case["body"].as_str().unwrap());
             if body != expected {
-                let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .join("../../target/ws11ui-inbox-diffs");
+                let directory = std::env::temp_dir().join("ws11ui-inbox-diffs");
                 std::fs::create_dir_all(&directory).unwrap();
                 let file = format!("{}.txt", name.replace(['/', '?', ' ', '\"'], "_"));
                 std::fs::write(directory.join(format!("actual-{file}")), &body).unwrap();

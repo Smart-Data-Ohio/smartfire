@@ -13,22 +13,16 @@ async fn fixture(test: &TestApp, kind: RoomType, users: &[i64]) -> Room {
         .unwrap()
 }
 async fn drain(test: &TestApp, client: &mut Socket, user: i64) -> Vec<String> {
-    test.booted.app.broadcasts.replace(
-        &crate::channels::broadcasts::Stream::user_rooms(user),
-        "ws13_channel_barrier",
-        "",
-    );
+    test.booted.app.broadcasts.channel(&format!("user_{user}_reads"), &serde_json::json!({"barrier": true}));
     let mut frames = Vec::new();
     loop {
         let frame = next(client).await;
-        let html = frame["message"].as_str().unwrap();
-        if html.contains("target=\"ws13_channel_barrier\"") {
-            break;
-        }
-        frames.push(html.to_owned());
+        if frame["message"]["barrier"] == true { break; }
+        frames.push(frame["message"].to_string());
     }
     frames
 }
+
 #[tokio::test]
 async fn call_channel_members_and_outsiders_cannot_edit_read_messages_or_receive_denial_frames() {
     for (kind, namespace) in [(RoomType::Stage, "stages"), (RoomType::Voice, "voices")] {
@@ -324,76 +318,4 @@ async fn stage_channel_page_and_edit_render_with_no_hosts() {
     assert!(response.text().contains("Hosts · 0"));
     let response = browser.get(&format!("/rooms/stages/{room_id}/edit")).await;
     assert_eq!(response.status, StatusCode::OK);
-}
-#[tokio::test]
-async fn stage_channel_icon_update_replaces_exact_member_rows_and_headers_and_no_outsider_frames() {
-    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
-        return;
-    };
-    let room = fixture(&test, RoomType::Stage, &[DAVID, JASON]).await;
-    let room_id = room.id;
-    let listener = crate::channels::tests::support::bind_listener().await;
-    let addr = listener.local_addr().unwrap();
-    let (stop, stopping) = tokio::sync::oneshot::channel();
-    let router = test.booted.router.clone();
-    let serving = tokio::spawn(async move {
-        axum::serve(listener, router)
-            .with_graceful_shutdown(async {
-                let _ = stopping.await;
-            })
-            .await
-            .unwrap()
-    });
-    let mut creator = socket(&test, addr, DAVID).await;
-    let mut member = socket(&test, addr, JASON).await;
-    let mut outsider = socket(&test, addr, KEVIN).await;
-    let mut browser = test.sign_in(DAVID).await;
-    let response = browser
-        .write(
-            Req::new(Method::PUT, &format!("/rooms/stages/{room_id}")).form(&[
-                ("room[name]", "Town Hall"),
-                ("room[icon_name]", ":openai:"),
-                ("user_ids[]", &DAVID.to_string()),
-                ("user_ids[]", &JASON.to_string()),
-            ]),
-        )
-        .await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(
-        response.location(),
-        Some(format!("http://campfire.test/rooms/{room_id}").as_str())
-    );
-    assert_eq!(
-        test.db()
-            .read(move |c| Room::find(c, room_id))
-            .await
-            .unwrap()
-            .icon_name
-            .as_deref(),
-        Some("openai")
-    );
-    let icon = "/assets/icons/brands/openai-a0bb8578.svg";
-    for (frames, user) in [(&mut creator, DAVID), (&mut member, JASON)] {
-        let frames = drain(&test, frames, user).await;
-        assert_eq!(frames.len(), 2, "{frames:?}");
-        for (html, target) in frames.iter().zip([
-            format!("list_rooms_stage_{room_id}"),
-            format!("header_rooms_stage_{room_id}"),
-        ]) {
-            assert!(html.contains("action=\"replace\""));
-            assert!(html.contains(&format!("target=\"{target}\"")));
-            assert!(html.contains(&format!("src=\"{icon}\"")));
-            assert!(html.contains("class=\"icon-avatar icon-avatar--brand"));
-            if target.starts_with("list_") {
-                assert!(html.contains("sidebar-item__icon--custom"));
-                assert!(html.contains("stage-room"));
-            }
-        }
-    }
-    assert!(drain(&test, &mut outsider, KEVIN).await.is_empty());
-    creator.close(None).await.unwrap();
-    member.close(None).await.unwrap();
-    outsider.close(None).await.unwrap();
-    let _ = stop.send(());
-    serving.await.unwrap();
 }

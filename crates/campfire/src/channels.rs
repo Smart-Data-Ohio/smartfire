@@ -9,17 +9,11 @@ mod huddle_effects_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 
-#[cfg(test)]
-pub(crate) mod message_features {
-    pub(crate) use campfire_channels::channels::message_features::*;
 
-    mod tests;
-}
 
 #[cfg(test)]
 pub(crate) mod sink {
     pub(crate) use campfire_channels::channels::sink::*;
 
-    mod stream_tests;
     mod stream_remaining_cases;
 }

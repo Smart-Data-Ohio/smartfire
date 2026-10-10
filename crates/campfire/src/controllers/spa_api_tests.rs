@@ -18,9 +18,9 @@ use crate::controllers::presenters::test_support::{
 
 /// Rooms in the seed: HQ holds David and Kevin (and no messages); All Talk holds David and 131
 /// messages; All Pets holds David but not Kevin.
-pub(super) const ALL_PETS: i64 = 104393281;
+pub(crate) const ALL_PETS: i64 = 104393281;
 
-pub(super) async fn app(enabled: bool) -> Option<TestApp> {
+pub(crate) async fn app(enabled: bool) -> Option<TestApp> {
     let env: &[(&str, &str)] = if enabled {
         &[("SPA_ENABLED", "1")]
     } else {
@@ -29,22 +29,22 @@ pub(super) async fn app(enabled: bool) -> Option<TestApp> {
     TestApp::boot_seed_with_env("default", seed_clock(), env).await
 }
 
-pub(super) fn get(path: &str) -> Req {
+pub(crate) fn get(path: &str) -> Req {
     Req::new(Method::GET, path).header("accept", "application/json")
 }
 
-pub(super) fn json_body(method: Method, path: &str, body: &Value) -> Req {
+pub(crate) fn json_body(method: Method, path: &str, body: &Value) -> Req {
     Req::new(method, path)
         .header("accept", "application/json")
         .header("content-type", "application/json")
         .body(body.to_string())
 }
 
-pub(super) fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
+pub(crate) fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
     serde_json::from_slice(&reply.body).unwrap_or_else(|error| panic!("{error}: {}", reply.text()))
 }
 
-pub(super) fn tag(reply: &Reply) -> String {
+pub(crate) fn tag(reply: &Reply) -> String {
     let envelope: api::ApiErrorResponse = parse(reply);
     let value = serde_json::to_value(&envelope.error).unwrap();
     value["_tag"].as_str().unwrap().to_string()
@@ -382,13 +382,11 @@ async fn signed_out_and_forged_requests_get_the_envelope() {
 #[tokio::test]
 async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
     let Some(a) = app(true).await else { return };
-    // A classic page following All Talk, so its stream's publications are recorded.
-    let (_client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
+    // A live viewer receives the committed message over JSON sync.
+    let (mut sync, cable) =
+        crate::controllers::messages::attachment_processing_tests::json_subscribe(&a).await;
     let mut b = a.sign_in(DAVID).await;
     b.authenticity_token().await;
-    let capture = a.publications();
-    capture.take();
 
     let first = post(&mut b, ALL_TALK, "0199b3c4-api-1", "Hello **there**").await;
     assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
@@ -408,17 +406,13 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
     );
     assert_eq!(created.markdown_source.as_deref(), Some("Hello **there**"));
 
-    // The classic pages still get the Turbo append of the rendered message.
-    let frames = capture.take();
-    assert!(
-        frames.iter().any(|(stream, frame)| {
-            let html = serde_json::from_str::<String>(frame).unwrap_or_default();
-            stream.ends_with(":messages")
-                && html.starts_with(r#"<turbo-stream action="append""#)
-                && html.contains(&format!(r#"data-message-id="{}""#, created.id))
-        }),
-        "{frames:?}"
-    );
+    let received = sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == created.id),
+        |_| false,
+    ).await;
+    let api::SyncPayload::MessageCreated(message) = received.payload else { panic!("message.created") };
+    assert_eq!(message.body_html, created.body_html);
+    assert_eq!(message.client_message_id, "0199b3c4-api-1");
 
     let again = post(&mut b, ALL_TALK, "0199b3c4-api-1", "Hello **there**").await;
     assert_eq!(again.status, StatusCode::OK);
@@ -471,7 +465,7 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
 }
 
 /// A message in All Talk with reactions: Jason's 💯.
-pub(super) const BOOSTED: i64 = 136976342;
+pub(crate) const BOOSTED: i64 = 136976342;
 
 #[tokio::test]
 async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
@@ -710,7 +704,7 @@ async fn reads_and_unreads_answer_the_read_state() {
 
 // --- The sync socket ---------------------------------------------------------------------------
 
-pub(super) struct Sync {
+pub(crate) struct Sync {
     socket: tokio_tungstenite::WebSocketStream<
         tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
     >,
@@ -719,12 +713,12 @@ pub(super) struct Sync {
 }
 
 impl Sync {
-    pub(super) async fn connect(addr: SocketAddr, cookie: &str, topics: &[String]) -> Self {
+    pub(crate) async fn connect(addr: SocketAddr, cookie: &str, topics: &[String]) -> Self {
         Self::open(addr, cookie, topics, Value::Null).await
     }
 
     /// Connects and says hello, resuming from `resume` (`{epoch, seq}` or null).
-    pub(super) async fn open(
+    pub(crate) async fn open(
         addr: SocketAddr,
         cookie: &str,
         topics: &[String],
@@ -760,7 +754,7 @@ impl Sync {
     }
 
     /// The next server frame, `None` once the socket closes.
-    pub(super) async fn next(&mut self) -> Option<api::ServerFrame> {
+    pub(crate) async fn next(&mut self) -> Option<api::ServerFrame> {
         loop {
             let message = tokio::time::timeout(Duration::from_secs(10), self.socket.next())
                 .await
@@ -778,7 +772,7 @@ impl Sync {
         }
     }
 
-    pub(super) async fn welcome(&mut self) {
+    pub(crate) async fn welcome(&mut self) {
         assert!(matches!(
             self.next().await,
             Some(api::ServerFrame::Welcome { resumed: false, .. })
@@ -786,7 +780,7 @@ impl Sync {
     }
 
     /// Events until one matches, failing on anything `forbidden` matches first.
-    pub(super) async fn until(
+    pub(crate) async fn until(
         &mut self,
         wanted: impl Fn(&api::SyncEvent) -> bool,
         forbidden: impl Fn(&api::SyncEvent) -> bool,
@@ -807,7 +801,7 @@ impl Sync {
     }
 }
 
-pub(super) async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
+pub(crate) async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let router = a.booted.router.clone();
@@ -817,7 +811,7 @@ pub(super) async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<(
     )
 }
 
-pub(super) fn created_in(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
+pub(crate) fn created_in(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
     move |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.room_id == room_id)
 }
 
@@ -838,7 +832,7 @@ async fn a_classic_post_reaches_the_sync_socket_and_an_api_post_too() {
                 .body(json!({"message": {"markdown_source": "From the classic page", "client_message_id": "classic-1"}}).to_string()),
         )
         .await;
-    assert_eq!(classic.status, StatusCode::OK, "{}", classic.text());
+    assert_eq!(classic.status, StatusCode::CREATED, "{}", classic.text());
     let event = sync.until(created_in(HQ), |_| false).await;
     assert_eq!(event.topic, format!("room:{HQ}"));
     let api::SyncPayload::MessageCreated(message) = event.payload else {
@@ -1032,7 +1026,7 @@ async fn a_cursor_on_a_deleted_message_still_pages() {
             &format!("/rooms/{ALL_TALK}/messages/{}.turbo_stream", ids[1]),
         ))
         .await;
-    assert_eq!(deleted.status, StatusCode::OK, "{}", deleted.text());
+    assert_eq!(deleted.status, StatusCode::NO_CONTENT, "{}", deleted.text());
 
     let older = b_page(&mut david, &format!("before={}", ids[1])).await;
     assert_eq!(
@@ -1379,140 +1373,4 @@ async fn a_database_unread_carries_its_message_and_mention() {
     );
     cable.abort();
     server.abort();
-}
-
-/// The classic frames (stream, payload) for one run of message create, edit and remove, and a
-/// read and unread, with or without the SPA and a sync socket open.
-async fn classic_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    for channel in ["UnreadRoomsChannel", "ReadRoomsChannel"] {
-        let identifier = crate::channels::tests::support::identifier(json!({ "channel": channel }));
-        client.confirm(&identifier).await;
-    }
-    let mut david = a.sign_in(DAVID).await;
-    let mut jason = a.sign_in(JASON).await;
-    david.authenticity_token().await;
-    jason.authenticity_token().await;
-    let (_sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let mut sync =
-            Sync::connect(addr, &david.cookie_header(), &[format!("room:{ALL_TALK}")]).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
-
-    let created = jason
-        .write(
-            Req::new(
-                Method::POST,
-                &format!("/rooms/{ALL_TALK}/messages.turbo_stream"),
-            )
-            .form(&[
-                ("message[markdown_source]", "**Parity**"),
-                ("message[client_message_id]", "parity-1"),
-            ]),
-        )
-        .await;
-    assert_eq!(created.status, StatusCode::OK, "{}", created.text());
-    let id = a
-        .db()
-        .read(|conn| {
-            Ok(conn.query_row(
-                "SELECT id FROM messages WHERE client_message_id = 'parity-1'",
-                [],
-                |row| row.get::<_, i64>(0),
-            )?)
-        })
-        .await
-        .unwrap();
-    let edited = jason
-        .write(
-            Req::new(
-                Method::PATCH,
-                &format!("/rooms/{ALL_TALK}/messages/{id}.json"),
-            )
-            .header("content-type", "application/json")
-            .body(json!({"message": {"markdown_source": "## Edited"}}).to_string()),
-        )
-        .await;
-    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
-    let removed = jason
-        .write(Req::new(
-            Method::DELETE,
-            &format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"),
-        ))
-        .await;
-    assert_eq!(removed.status, StatusCode::OK, "{}", removed.text());
-    let read = david
-        .write(
-            Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/read"))
-                .header("accept", "application/json"),
-        )
-        .await;
-    assert_eq!(read.status, StatusCode::OK, "{}", read.text());
-    let unread = david
-        .write(
-            Req::new(
-                Method::DELETE,
-                &format!("/rooms/{ALL_TALK}/read?message_id={BOOSTED}"),
-            )
-            .header("accept", "application/json"),
-        )
-        .await;
-    assert_eq!(unread.status, StatusCode::OK, "{}", unread.text());
-
-    // Some frames go out after the response (the after-commit sink): wait for them to settle.
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    cable.abort();
-    if let Some(server) = server {
-        server.abort();
-    }
-    Some(frames)
-}
-
-#[tokio::test]
-async fn the_classic_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (classic_frames(false).await, classic_frames(true).await) else {
-        return;
-    };
-    let kinds = |stream: &str, needle: &str| {
-        off.iter()
-            .any(|(s, frame)| s.ends_with(stream) && frame.contains(needle))
-    };
-    assert!(
-        kinds(":messages", "action=\\\"append\\\""),
-        "a create: {off:?}"
-    );
-    assert!(
-        kinds(":messages", "action=\\\"replace\\\""),
-        "an edit: {off:?}"
-    );
-    assert!(
-        kinds(":messages", "action=\\\"remove\\\""),
-        "a remove: {off:?}"
-    );
-    assert!(kinds("_unreads", "roomId"), "an unread: {off:?}");
-    assert!(kinds("_reads", "room_id"), "a read: {off:?}");
-    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
-    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
-        assert_eq!(off, on, "frame {index}");
-    }
 }

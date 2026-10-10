@@ -4,7 +4,6 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use campfire_cable::turbo::StreamsChannel;
 use campfire_cable::{
     Authenticate, Channel, ChannelResult, Config, ConnectRequest, EmptyChannel, Identified, Params,
     Server, Subscription,
@@ -100,13 +99,13 @@ impl Channel<User> for RoomChannel {
                 // internal disconnect are ready together when it returns to select!.
                 for i in 0..70 {
                     sub.broadcast_to(&[self.room.as_ref().unwrap()], &i);
-                    sub.server().broadcast_remove_to(&["rooms"], &format!("room_{i}"));
+                    sub.server().broadcast("rooms", &serde_json::json!({"removed": i}));
                 }
                 let reconnect = data["reconnect"].as_bool().unwrap();
                 sub.server().disconnect(&sub.current_user().connection_identifier(), reconnect);
                 // A later publication must not extend the drain past the disconnect.
                 sub.broadcast_to(&[self.room.as_ref().unwrap()], &"after disconnect");
-                sub.server().broadcast_remove_to(&["rooms"], "after_disconnect");
+                sub.server().broadcast("rooms", &"after_disconnect");
             }
             _ => return Ok(false),
         }
@@ -130,10 +129,7 @@ pub async fn start(config: Config) -> TestServer {
             log: room_log.clone(),
         })
         .channel("HeartbeatChannel", || EmptyChannel)
-        .channel("Turbo::StreamsChannel", || {
-            StreamsChannel::with_test_verifier()
-                .guarded_by(|name| name.split_once(':').map(|(_, s)| s) == Some("messages"))
-        })
+        .channel("RoomsChannel", || RoomsChannel)
         .build();
 
     let listener = bind_listener().await;
@@ -176,21 +172,7 @@ pub fn test_config() -> Config {
     }
 }
 
-trait TestVerifier {
-    fn with_test_verifier() -> Self;
-}
 
-/// Signed names in tests are `signed(<name>)`.
-impl TestVerifier for StreamsChannel {
-    fn with_test_verifier() -> Self {
-        StreamsChannel::with_verifier(|signed| {
-            signed
-                .strip_prefix("signed(")
-                .and_then(|s| s.strip_suffix(')'))
-                .map(str::to_string)
-        })
-    }
-}
 
 pub type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -307,4 +289,13 @@ pub enum Frame {
     Close(Option<(u16, String)>),
     Error(String),
     End,
+}
+
+struct RoomsChannel;
+#[async_trait::async_trait]
+impl Channel<User> for RoomsChannel {
+    async fn subscribed(&mut self, sub: &mut Subscription<User>) -> ChannelResult {
+        sub.stream_from("rooms");
+        Ok(())
+    }
 }

@@ -23,7 +23,8 @@ async fn net()->(FakeServer,Network) {
 }
 async fn post(app:&TestApp,input:&Value)->i64 {
     let response=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream")).header("content-type","application/json").body(json!({"message":input}).to_string())).await;
-    assert_eq!(response.status,StatusCode::OK,"{}",response.text());
+    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
+    assert!(response.body.is_empty());
     let client=input["client_message_id"].as_str().unwrap().to_owned();
     app.db().read(move|conn|Ok(Message::find_duplicate(conn,ALL_TALK,DAVID,&client)?.unwrap().id)).await.unwrap()
 }
@@ -35,8 +36,8 @@ async fn rich_text_and_markdown_root_mentions_enqueue_exactly_one_agent_job_and_
     for row in oracle()["rows"].as_array().unwrap() {
         let input=&row["input"];
         let response=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream")).header("content-type","application/json").body(json!({"message":input}).to_string())).await;
-        assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16);
-        if response.text()!=row["body"].as_str().unwrap(){rails_mismatch(&response.text(),row["body"].as_str().unwrap(),"root bot mention");}
+        assert_eq!(response.status,StatusCode::CREATED);
+        assert!(response.body.is_empty());
         let jobs=app.db().read(|conn|Ok((conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Agent::DeliveryJob'",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Bot::WebhookJob'",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
         assert_eq!(jobs.0-previous,row["delivery"].as_i64().unwrap());assert_eq!(jobs.1,row["legacy"].as_i64().unwrap());previous=jobs.0;
     }

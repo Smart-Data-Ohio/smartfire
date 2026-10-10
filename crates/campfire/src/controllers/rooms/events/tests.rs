@@ -383,7 +383,7 @@ async fn event_cards_refresh_after_an_event_edit_through_the_message_cache() {
         message.client_message_id
     )));
     assert!(html.contains(&format!("response_for_message_{}_event_{id}", message.id)));
-    assert!(campfire_cable::turbo::session_bound(&html).is_none());
+
 }
 
 #[tokio::test]

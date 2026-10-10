@@ -356,11 +356,22 @@ pub(crate) fn messages_and_fetches(
     app: &AppState,
     messages: &[Message],
 ) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
+    messages_and_fetches_inner(conn, app, messages, false)
+}
+
+pub(crate) fn digest_messages(conn: &Connection, app: &AppState, messages: &[Message]) -> Result<Vec<api::MessageDTO>> {
+    Ok(messages_and_fetches_inner(conn, app, messages, true)?.0)
+}
+
+fn messages_and_fetches_inner(
+    conn: &Connection, app: &AppState, messages: &[Message], preload: bool,
+) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
     // When the read began: orders the polls and cards against `poll.updated` and
     // `message.cards` (`Poll::as_of`, `MessageDTO::cards_as_of`).
     let now = app.db.env().now();
     let as_of = time(now);
     let presenter = Presenter::new(conn, app, None);
+    let presenter = if preload { presenter.preload_payload(messages)? } else { presenter };
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
     let mut polls = crate::cards::polls(conn, &ids, now)?;
     let mut fetches = crate::cards::Fetches::default();
@@ -413,6 +424,7 @@ pub(crate) fn messages_and_fetches(
                 streaming: message.streaming,
                 embeds_suppressed: message.embeds_suppressed,
                 reply_to_message_id: message.reply_to_message_id,
+                reply_target_deleted_at: message.reply_target_deleted_at.map(time),
                 forwarded_from_message_id: message.forwarded_from_message_id,
                 forwarded_at: message.forwarded_at.map(time),
                 forward_note: present(message.forward_note.as_deref()),

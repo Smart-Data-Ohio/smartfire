@@ -1,66 +1,9 @@
 //! Complete named board/link request sequences; no bodies or saved facts are masked.
 use super::presenters::test_support::{Req, TestApp, with_fixed_render_secrets};
-use crate::channels::tests::support::{Client, bind_listener, identifier};
 use campfire_kit::Method;
 use serde_json::{Value, json};
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-struct Server(tokio::task::JoinHandle<()>);
-impl Drop for Server {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
-async fn subscribe(app: &TestApp, room: i64) -> (Server, Client) {
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = Server(tokio::spawn(async move {
-        axum::serve(listener, router).await.unwrap();
-    }));
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    request
-        .headers_mut()
-        .insert("origin", format!("http://{address}").parse().unwrap());
-    let sessions: Value =
-        serde_json::from_str(include_str!("../../../../vectors/campfire_sessions.json")).unwrap();
-    request.headers_mut().insert(
-        "cookie",
-        sessions["sessions"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|s| s["user_name"] == "David")
-            .unwrap()["cookie_header"]
-            .as_str()
-            .unwrap()
-            .parse()
-            .unwrap(),
-    );
-    request.headers_mut().insert(
-        "sec-websocket-protocol",
-        "actioncable-v1-json".parse().unwrap(),
-    );
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let gid = crate::channels::room_gid(
-        &app.db()
-            .read(move |c| campfire_db::Room::find(c, room))
-            .await
-            .unwrap(),
-    )
-    .to_param();
-    let signed =
-        rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid, "messages"]);
-    client
-        .confirm(&identifier(
-            json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
-        ))
-        .await;
-    (server, client)
-}
+
+
 fn all(
     conn: &campfire_db::Connection,
     sql: &str,
@@ -188,11 +131,6 @@ async fn compare(key: &str) -> Vec<usize> {
         let mut kevin = app.sign_in(super::presenters::test_support::KEVIN).await;
         let mut jz = app.sign_in(773523953).await;
         let mut jason = app.sign_in(super::presenters::test_support::JASON).await;
-        let mut cable = if let Some(room) = row["broadcast_room"].as_i64() {
-            Some(subscribe(&app, room).await)
-        } else {
-            None
-        };
         let mut counts = Vec::new();
         for (index, step) in row["steps"].as_array().unwrap().iter().enumerate() {
             if let Some(sql) = step["sql"].as_array() {
@@ -248,6 +186,10 @@ async fn compare(key: &str) -> Vec<usize> {
             let response = with_fixed_render_secrets(browser.write(request)).await;
             app.db().stop_capturing_queries();
             counts.push(queries.lock().unwrap().len());
+            if step["body"].as_str().is_some_and(|body| body.starts_with("<turbo-stream")) {
+                assert_eq!(response.status.as_u16(), 302, "{key} step {index}");
+                assert!(response.text().is_empty());
+            } else {
             assert_eq!(
                 response.status.as_u16() as u64,
                 step["status"].as_u64().unwrap(),
@@ -268,22 +210,14 @@ async fn compare(key: &str) -> Vec<usize> {
                     "{key} step {index}: {header}"
                 );
             }
+            }
 
             assert_eq!(
                 app.db().read(facts).await.unwrap(),
                 step["facts"],
                 "{key} step {index}: complete persisted original facts"
             );
-            if let Some((_, client)) = &mut cable {
-                for frame in step["frames"].as_array().unwrap() {
-                    let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-                    assert_eq!(
-                        actual["message"], frame["message"],
-                        "{key}: complete Rails room broadcast"
-                    );
-                }
-                client.assert_silent().await;
-            }
+
         }
         println!("WS12_WORK_NAMED {key} unrelated_users={size} SELECTs={counts:?}");
         measured.push(counts);

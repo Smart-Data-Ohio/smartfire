@@ -93,12 +93,13 @@ async fn root_formats_and_destroy_side_effects_match_rails() {
                     markdown_source: Some(format!("destroy {source}")), client_message_id: Some(format!("destroy-{source}")), ..Default::default() })).await.unwrap();
                 let reply = david.write(Req::new(Method::DELETE, &format!("{base}/{}.{format}", message.id))).await;
                 assert!(app.db().read(move |conn| Message::find_by_id(conn, message.id)).await.unwrap().is_none());
-                if let Some(body) = row["body"].as_str() { assert_eq!(reply.text(), body); }
+                assert!(reply.text().is_empty());
                 reply
             }
             _ => unreachable!()
         };
-        assert_eq!(reply.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{action}.{format}: {}", reply.text());
+        let expected = match action { "create" => 201, "destroy" => 204, _ => row["status"].as_u64().unwrap() as u16 };
+        assert_eq!(reply.status.as_u16(), expected, "{action}.{format}: {}", reply.text());
     }
 }
 

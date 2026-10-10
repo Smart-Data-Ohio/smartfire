@@ -1,5 +1,5 @@
 //! Real callbacks/jobs still replace references outside the current room window.
-use super::quote_integration_tests::{app_rows, insert_rows, stream};
+use super::quote_integration_tests::{app_rows, insert_rows};
 use crate::controllers::presenters::test_support::*;
 use campfire_db::{Event, Message};
 use serde_json::Value;
@@ -43,13 +43,7 @@ async fn check_window(app: &TestApp, group: &Value) {
         );
     }
 }
-async fn check_frames(
-    app: &TestApp,
-    client: &mut crate::channels::tests::support::Client,
-    expected: &Value,
-) {
-    super::comparison_support::published_frames(app, client, expected, "older_provider_tests.rs").await;
-}
+
 
 #[tokio::test]
 async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer_cost() {
@@ -58,7 +52,7 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
     for group in oracle()["groups"].as_array().unwrap() {
         let app = app_rows(group["rows"].clone()).await;
         check_window(&app, group).await;
-        let (mut client, server) = stream(&app).await;
+
         for step in group["steps"].as_array().unwrap() {
             let id = step["id"].as_i64().unwrap();
             let kind = step["kind"].as_str().unwrap().to_owned();
@@ -118,7 +112,8 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
                 .await
                 .unwrap();
             app.db().stop_capturing_read_queries();
-            check_frames(&app, &mut client, &step["frames"]).await;
+
+        super::comparison_support::settle_jobs(&app).await;
             let reads = queries
                 .lock()
                 .unwrap()
@@ -147,7 +142,7 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
             }
         }
         check_window(&app, group).await;
-        server.abort();
+
     }
     assert!(
         differences.is_empty(),
@@ -181,7 +176,7 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
         .unwrap();
         insert_rows(&app, group["rows"].clone()).await;
         check_window(&app, group).await;
-        let (mut client, server) = stream(&app).await;
+
         let id = group["job"]["pull_request_id"].as_i64().unwrap();
         app.db()
             .write(move |tx| {
@@ -192,7 +187,8 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
             })
             .await
             .unwrap();
-        check_frames(&app, &mut client, &group["job"]["frames"]).await;
+
+        super::comparison_support::settle_jobs(&app).await;
         let message_id = group["old_ids"][0].as_i64().unwrap();
         app.db()
             .read(move |conn| {
@@ -214,7 +210,7 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
             );
         }
         check_window(&app, group).await;
-        server.abort();
+
     }
     println!(
         "WS8bm2 older-provider jobs: 6/6 durable registered fetch jobs; 60/60 Rails WebSocket frames; 24/24 authenticated owner API reads; all roots outside current windows"

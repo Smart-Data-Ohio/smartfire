@@ -155,37 +155,7 @@ impl InvolvementShow<'_> {
     }
 }
 
-/// `rooms/refreshes/show.turbo_stream`.
-#[derive(Template)]
-#[template(path = "rooms/refreshes/show.turbo_stream.html")]
-pub struct RefreshShow<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub refresh: &'a RefreshView,
-}
 
-impl RefreshShow<'_> {
-    fn pins_count(&self, list: &crate::pins::List) -> h::Html {
-        h::raw(
-            crate::pins::CountPartial {
-                room_id: list.room_id,
-                room_param_key: list.room_param_key.clone(),
-                count: list.pins.len() as i64,
-            }
-            .render()
-            .expect("owner pin count renders"),
-        )
-    }
-    fn pins_list(&self, list: &crate::pins::List) -> h::Html {
-        h::raw(
-            crate::pins::ListPartial {
-                ctx: self.ctx,
-                list,
-            }
-            .render()
-            .expect("owner pin list renders"),
-        )
-    }
-}
 
 #[derive(Template)]
 #[template(path = "rooms/inbound_email_addresses/_section.html")]
@@ -621,15 +591,4 @@ pub struct ShowView {
     /// Other active human DM members, including currently off members so each live stream is mounted.
     #[serde(default)]
     pub ooo_notice_members: Vec<crate::users::statuses::OooNoticeMember>,
-}
-
-/// What `rooms/refreshes/show` streams: messages created and updated since the client loaded.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct RefreshView {
-    pub room_id: i64,
-    pub room_kind: RoomKind,
-    pub new_messages: Vec<MessageItem>,
-    pub updated_messages: Vec<MessageItem>,
-    #[serde(default)]
-    pub pins: Option<crate::pins::List>,
 }

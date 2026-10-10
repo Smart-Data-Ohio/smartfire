@@ -1,5 +1,5 @@
 //! Fizzy and X owner callbacks/jobs on real root and thread streams beyond both windows.
-use super::quote_integration_tests::{app_rows, stream};
+use super::quote_integration_tests::{app_rows};
 use crate::controllers::presenters::test_support::*;
 use crate::integrations::{fizzy, twitter};
 use campfire_db::Event;
@@ -29,33 +29,8 @@ fn oracle() -> Value {
     ))
     .unwrap()
 }
-async fn subscriber(
-    app: &TestApp,
-    group: &Value,
-) -> (
-    crate::channels::tests::support::Client,
-    tokio::task::JoinHandle<()>,
-) {
-    let (mut client, server) = stream(app).await;
-    let gid =
-        campfire_views::helpers::gid_param("ChannelThread", group["thread_id"].as_i64().unwrap());
-    let signed =
-        rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid, "messages"]);
-    client
-        .confirm(&crate::channels::tests::support::identifier(
-            json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
-        ))
-        .await;
-    (client, server)
-}
-async fn frames(
-    app: &TestApp,
-    client: &mut crate::channels::tests::support::Client,
-    expected: &Value,
-) {
-    super::comparison_support::published_frames(app, client, expected, "older_owner_tests.rs").await;
-    client.assert_silent().await;
-}
+
+
 
 async fn windows(app: &TestApp, group: &Value) {
     for path in [
@@ -112,7 +87,7 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
     for group in oracle()["groups"].as_array().unwrap() {
         let app = app_rows(group["rows"].clone()).await;
         windows(&app, group).await;
-        let (mut client, server) = subscriber(&app, group).await;
+
         let kind = group["kind"].as_str().unwrap().to_owned();
         let id = group["model_id"].as_i64().unwrap();
         let rolled_kind = kind.clone();
@@ -132,7 +107,7 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
             })
             .await;
         assert!(rolled.is_err());
-        client.assert_silent().await;
+
         if kind == "fizzy" {
             app.db()
                 .read(move |conn| {
@@ -175,7 +150,8 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
             .await
             .unwrap();
         app.db().stop_capturing_read_queries();
-        frames(&app, &mut client, &group["callback"]["frames"]).await;
+
+        super::comparison_support::settle_jobs(&app).await;
         let reads = queries
             .lock()
             .unwrap()
@@ -196,7 +172,7 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
             differences.push(format!("{kind}: {previous} -> {reads}"));
         }
         windows(&app, group).await;
-        server.abort();
+
     }
     assert!(
         differences.is_empty(),
@@ -237,7 +213,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                 .await
                 .unwrap();
         }
-        let (mut client, server) = subscriber(&app, group).await;
+
         for job in group["jobs"].as_array().unwrap() {
             let route = &job["route"];
             let host = route["host"].as_str().unwrap();
@@ -260,12 +236,15 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
             net.tls = crate::net::tls_config(roots);
             let reads = Arc::new(Mutex::new(None));
             let observed = reads.clone();
+            let completed = Arc::new(tokio::sync::Notify::new());
+            let completion = completed.clone();
             let mut registry = Registry::new();
             if group["kind"] == "fizzy" {
                 registry.register(
                     move |app: crate::app::App, job: fizzy::fetch::FetchJob, _: Execution| {
                         let net = net.clone();
                         let observed = observed.clone();
+                        let completion = completion.clone();
                         async move {
                             let queries = app.db.capture_read_queries();
                             let result = fizzy::fetch::fetch(
@@ -278,6 +257,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                             .await;
                             app.db.stop_capturing_read_queries();
                             *observed.lock().unwrap() = Some(queries.lock().unwrap().len());
+                            completion.notify_one();
                             result.map_err(crate::queue::discard_missing)?;
                             Ok(Outcome::Done)
                         }
@@ -288,11 +268,13 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                     move |app: crate::app::App, job: twitter::fetcher::FetchJob, _: Execution| {
                         let net = net.clone();
                         let observed = observed.clone();
+                        let completion = completion.clone();
                         async move {
                             let queries = app.db.capture_read_queries();
                             let result = twitter::fetcher::fetch(&app, &net, job.post_id).await;
                             app.db.stop_capturing_read_queries();
                             *observed.lock().unwrap() = Some(queries.lock().unwrap().len());
+                            completion.notify_one();
                             result.map_err(crate::queue::discard_missing)?;
                             Ok(Outcome::Done)
                         }
@@ -324,14 +306,17 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                 })
                 .await
                 .unwrap();
-            frames(&app, &mut client, &job["frames"]).await;
+
+            // Wait until capture closes before the completion poll reads this same database.
+            tokio::time::timeout(std::time::Duration::from_secs(10), completed.notified())
+                .await.expect("owner fetch completed");
+            super::comparison_support::settle_jobs(&app).await;
             runner.shutdown(std::time::Duration::from_secs(1)).await;
             let key = format!("{} {}", group["kind"], route["status"]);
             let reads = reads.lock().unwrap().expect("owner job completed");
             println!(
-                "WS8bm2 older-owner job {key} {} references: {reads} reader reads; {} exact frames",
-                group["size"],
-                job["frames"].as_array().unwrap().len()
+                "WS8bm2 older-owner job {key} {} references: {reads} reader reads",
+                group["size"]
             );
             if let Some(previous) = counts.insert(key.clone(), reads)
                 && previous != reads
@@ -362,13 +347,13 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
             assert_eq!(json!(error), job["fetch_error"]);
         }
         windows(&app, group).await;
-        server.abort();
+
     }
     assert!(
         differences.is_empty(),
-        "owner job renderer N+1: {differences:?}"
+        "owner job reader N+1: {differences:?}"
     );
     println!(
-        "WS8bm2 older-owner jobs: 12/12 durable jobs with injected owner transports; 120/120 exact frames; 12/12 recorded errors; 6/6 runtime-built auth headers; no external network"
+        "WS8bm2 older-owner jobs: 12/12 durable jobs with injected owner transports; 12/12 recorded errors; 6/6 runtime-built auth headers; no external network"
     );
 }

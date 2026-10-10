@@ -105,11 +105,7 @@ async fn board_route(name: &str) {
     } else {
         Some(snapshot(&app).await)
     };
-    let mut cable = if deleted {
-        None
-    } else {
-        Some(super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await)
-    };
+
     let accept = match case["format"].as_str().unwrap() {
         "json" => "application/json",
         "turbo_stream" => "text/vnd.turbo-stream.html, text/html",
@@ -153,8 +149,6 @@ async fn board_route(name: &str) {
             before,
             "{name}: domain or queue rows changed"
         );
-        let (mut client, _server) = cable.take().unwrap();
-        client.assert_silent().await;
         let state = app.db().read(move |conn| {
             let room = Room::find(conn, id)?;
             let audit = conn.query_row("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs WHERE action='room.destroy' AND target_id=? ORDER BY id DESC LIMIT 1", [id], |row| Ok(json!({"action":row.get::<_,String>(0)?,"actor_id":row.get::<_,i64>(1)?,"target_type":row.get::<_,String>(2)?,"target_id":row.get::<_,i64>(3)?,"target_label":row.get::<_,String>(4)?,"details":serde_json::from_str::<serde_json::Value>(&row.get::<_,String>(5)?).unwrap()}))).optional()?;

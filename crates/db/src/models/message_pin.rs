@@ -4,7 +4,7 @@
 use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 
-use crate::broadcasts::{Broadcast, Partial, message_dom_id, room_dom_id, room_messages};
+use crate::broadcasts::{Broadcast};
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
 use crate::events::Event;
@@ -106,12 +106,7 @@ impl MessagePin {
         }
         let pin = Self::create(tx, message, message.room_id, pinner_id)?;
         if let Some(note) = pin.post_pin_note(tx, message)? {
-            let room = Room::find(tx.conn(), note.room_id)?;
-            tx.emit_after_commit(Event::broadcast(&Broadcast::append(
-                room_messages(&room),
-                room_dom_id(&room, Some("messages")),
-                Partial::Message { message_id: note.id },
-            )));
+                        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: note.id }));
         }
         Ok(Ok(pin))
     }
@@ -178,15 +173,7 @@ impl MessagePin {
     /// `after_commit on: [create, destroy]`, in declaration order: `broadcast_pin_change`, then
     /// `stamp_room_pins_changed`.
     fn after_change_commit(&self, tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-        let room = Room::find(tx.conn(), self.room_id)?;
-        let streamables = room_messages(&room);
-        for (target, partial) in [
-            (message_dom_id(message, Some("pin_badge")), Partial::PinBadge { message_id: message.id }),
-            (room_dom_id(&room, Some("pins_count")), Partial::PinsCount { room_id: room.id }),
-            (room_dom_id(&room, Some("pins_list")), Partial::PinsList { room_id: room.id }),
-        ] {
-            tx.emit_after_commit(Event::broadcast(&Broadcast::replace_keeping_scroll(streamables.clone(), target, partial)));
-        }
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessagePinned { message_id: message.id }));
         let (room_id, message_id) = (self.room_id, self.message_id);
         tx.after_commit(move |tx| Self::stamp_room_pins_changed(tx, room_id, message_id));
         Ok(())

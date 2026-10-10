@@ -6,7 +6,7 @@ use crate::controllers::messages::present;
 use crate::controllers::presenters::page::db_error;
 use askama::Template;
 use campfire_db::{Search, search_query::SearchQuery};
-use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format};
+use campfire_kit::{Ctx, Error, Param, Result, StatusCode};
 use campfire_views::searches::{Index, IndexView, search_path};
 
 fn parsed(c: &Ctx) -> SearchQuery {
@@ -29,8 +29,6 @@ pub async fn index(c: &mut Ctx) -> Result {
     } else {
         None
     };
-    let stream =
-        older && *c.respond_to(&[&format::HTML, &format::TURBO_STREAM])? == format::TURBO_STREAM;
     let zone = super::message_features::user_zone(c).await?;
     let dbq = q.clone();
     let (window, sections, recent_searches) = c
@@ -89,13 +87,6 @@ pub async fn index(c: &mut Ctx) -> Result {
             .collect(),
         sections: sections.into_iter().map(section_view).collect(),
     };
-    if stream {
-        let layout = super::presenters::view_context::Layout::load(c).await?;
-        let body = layout.render(c, |ctx| {
-            campfire_views::searches::Older { ctx, index: &index }.render()
-        })?;
-        return Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, body));
-    }
     let response = super::presenters::view_context::page_or_frame_in_any_format(
         c,
         StatusCode::OK,
@@ -138,20 +129,14 @@ pub async fn create(c: &mut Ctx) -> Result {
 }
 pub async fn clear(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let stream = *c.respond_to(&[&format::HTML, &format::TURBO_STREAM])? == format::TURBO_STREAM;
+    c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::TURBO_STREAM])?;
     let user_id = require_current_user(c)?.id;
     c.app()
         .db
         .write(move |tx| Search::destroy_all_for_user(tx, user_id))
         .await
         .map_err(db_error)?;
-    if stream {
-        let layout = super::presenters::view_context::Layout::load(c).await?;
-        let body = layout.render(c, |ctx| campfire_views::searches::Clear { ctx }.render())?;
-        Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, body))
-    } else {
-        super::message_features::redirect(c, &campfire_routes::searches(), None, None, true, None)
-    }
+    super::message_features::redirect(c, &campfire_routes::searches(), None, None, true, None)
 }
 // The existing root presenter/partial remains owned by WS8b-m. Supply search's
 // show_room_icon local only on a cache miss; a shared fragment hit stays unchanged.
@@ -207,4 +192,4 @@ pub fn section_view(
     }
 }
 
-use campfire_web::controllers::presenters::{Rendering, view_context::LayoutRendering};
+use campfire_web::controllers::presenters::{Rendering};

@@ -54,6 +54,7 @@ export const MessageDTO = Schema.Struct({
   streaming: Schema.Boolean,
   embedsSuppressed: Schema.Boolean,
   replyToMessageId: Schema.NullOr(MessageId),
+  replyTargetDeletedAt: Schema.optionalKey(Schema.NullOr(Timestamp)),
   forwardedFromMessageId: Schema.NullOr(MessageId),
   forwardedAt: Schema.NullOr(Timestamp),
   forwardNote: Schema.NullOr(Schema.String),

@@ -12,7 +12,7 @@ pub fn list(
     let records = MessagePin::ordered_for_room(conn, room.id)?;
     if records.is_empty() {
         return Ok(campfire_presentation::pins::List { room_id: room.id,
-            room_param_key: campfire_db::broadcasts::room_param_key(room.room_type), pins: vec![] });
+            room_param_key: crate::presenters::accounts::room_param_key(room.room_type).to_string(), pins: vec![] });
     }
     let ids: Vec<_> = records.iter().map(|pin|pin.message_id).collect();
     let messages = Message::for_ids(conn,&ids)?;
@@ -41,7 +41,7 @@ pub fn list(
         .collect::<campfire_db::Result<_>>()?;
     Ok(campfire_presentation::pins::List {
         room_id: room.id,
-        room_param_key: campfire_db::broadcasts::room_param_key(room.room_type),
+        room_param_key: crate::presenters::accounts::room_param_key(room.room_type).to_string(),
         pins,
     })
 }

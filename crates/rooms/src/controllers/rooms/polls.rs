@@ -146,12 +146,10 @@ pub async fn vote(c: &mut Ctx) -> Result {
     let ids = ballot(c.param("option_ids"))?;
     let user_id = require_current_user(c)?.id;
     let voted = poll.clone();
-    let origin = crate::controllers::presenters::page::renderer_base_url(c);
     if let Err(error) = c
         .app()
         .db
-        .write_scoped(
-            move || crate::channels::message_features::origin(&origin),
+        .write(
             move |tx| voted.clone().cast_vote(tx, user_id, &ids),
         )
         .await
@@ -159,9 +157,8 @@ pub async fn vote(c: &mut Ctx) -> Result {
     {
         return invalid(c, room.id, error, Some(poll)).await;
     }
-    match c.respond_to(&[&format::TURBO_STREAM, &format::JSON, &format::HTML])? {
+    match c.respond_to(&[&format::JSON, &format::HTML])? {
         f if *f == format::JSON => payload(c, poll, StatusCode::OK).await,
-        f if *f == format::TURBO_STREAM => card_response(c, poll.id, None, StatusCode::OK).await,
         _ => features::redirect(c, &campfire_routes::room(room.id), None, None, false, None),
     }
 }
@@ -207,7 +204,7 @@ async fn payload(c: &mut Ctx, poll: Poll, status: StatusCode) -> Result {
     c.json(status, &value)
 }
 
-async fn invalid(c: &mut Ctx, room_id: i64, error: Error, poll: Option<Poll>) -> Result {
+async fn invalid(c: &mut Ctx, room_id: i64, error: Error, _poll: Option<Poll>) -> Result {
     let Error::Internal(inner) = error else {
         return Err(error);
     };
@@ -218,25 +215,12 @@ async fn invalid(c: &mut Ctx, room_id: i64, error: Error, poll: Option<Poll>) ->
     };
     let errors = errors.clone();
     let message = features::sentence(&errors);
-    let formats = if poll.is_some() {
-        vec![&format::TURBO_STREAM, &format::JSON, &format::HTML]
-    } else {
-        vec![&format::HTML, &format::JSON]
-    };
+    let formats = vec![&format::JSON, &format::HTML];
     match c.respond_to(&formats)? {
         f if *f == format::JSON => c.json(
             StatusCode::UNPROCESSABLE_ENTITY,
             &features::errors_json(&errors),
         ),
-        f if *f == format::TURBO_STREAM => {
-            card_response(
-                c,
-                poll.unwrap().id,
-                Some(message),
-                StatusCode::UNPROCESSABLE_ENTITY,
-            )
-            .await
-        }
         _ => features::redirect(
             c,
             &campfire_routes::room(room_id),
@@ -246,23 +230,4 @@ async fn invalid(c: &mut Ctx, room_id: i64, error: Error, poll: Option<Poll>) ->
             None,
         ),
     }
-}
-
-async fn card_response(c: &mut Ctx, id: i64, error: Option<String>, status: StatusCode) -> Result {
-    let app = c.app().clone();
-    let view = c
-        .app()
-        .db
-        .read(move |conn| features::poll_view(conn, &app, id, error))
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::page::bare(c, status, &format::TURBO_STREAM, |ctx| {
-        Ok(campfire_cable::turbo::action_tag(
-            campfire_cable::turbo::Action::Replace,
-            campfire_cable::turbo::Target::Target(&format!("card_poll_{id}")),
-            Some(campfire_views::messages::parts::poll(ctx, &view).0.as_str()),
-            &[],
-        ))
-    })
-    .await
 }

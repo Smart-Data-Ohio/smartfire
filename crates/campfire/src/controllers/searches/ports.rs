@@ -136,7 +136,7 @@ async fn clear_does_not_run_the_search() {
     assert_eq!(r.location(), Some("http://campfire.test/searches"));
 }
 #[tokio::test]
-async fn clear_answers_turbo_with_streams_that_empty_header_and_page_recents() {
+async fn clear_redirects_after_deleting_only_the_viewers_recents() {
     let app = app().await;
     record(&app, "hello").await;
     let r = app
@@ -146,18 +146,9 @@ async fn clear_answers_turbo_with_streams_that_empty_header_and_page_recents() {
                 .header("accept", "text/vnd.turbo-stream.html"),
         )
         .await;
-    assert_eq!(r.status, StatusCode::OK);
-    assert_eq!(
-        r.headers["content-type"],
-        "text/vnd.turbo-stream.html; charset=utf-8"
-    );
-    for t in ["global-search-recents", "search-recents"] {
-        assert!(
-            r.text()
-                .contains(&format!("action=\"update\" target=\"{t}\""))
-        );
-    }
-    assert!(r.text().contains("No recent searches yet."));
+    assert_eq!(r.status, StatusCode::FOUND);
+    assert_eq!(r.location(), Some("http://campfire.test/searches"));
+    assert!(r.text().is_empty());
     assert!(history(&app).await.is_empty());
 }
 #[tokio::test]
@@ -272,17 +263,11 @@ async fn results_page_through_load_older_results_with_same_timestamp() {
         )
         .await;
     assert_eq!(count(&r), 5);
-    assert!(
-        r.text()
-            .contains("action=\"prepend\" target=\"search-results\"")
-    );
+
     assert!(r.text().contains("needlepaging number 00"));
     assert!(r.text().contains("needlepaging number 04"));
     assert!(!r.text().contains("needlepaging number 44"));
-    assert!(
-        r.text()
-            .contains("action=\"remove\" target=\"load_older_results\"")
-    );
+
 }
 #[tokio::test]
 async fn an_older_window_renders_as_a_page_without_javascript() {
@@ -548,13 +533,7 @@ async fn search_parser_chips_and_empty_page_match_pinned_rails_bytes() {
         },
     );
     assert_eq!(actual, oracle()["empty"].as_str().unwrap());
-    let actual = crate::controllers::presenters::page::render_detached_at(
-        &app.booted.app,
-        None,
-        "http://campfire.test",
-        |ctx| campfire_views::searches::Clear { ctx }.render().unwrap(),
-    );
-    assert_eq!(actual, oracle()["clear"].as_str().unwrap());
+
 }
 #[tokio::test]
 async fn on_narrows_results_to_that_day_in_the_users_zone_including_dst_and_missing_days() {
@@ -804,28 +783,7 @@ async fn search_sections_load_older_and_older_stream_match_pinned_rails_bytes() 
         .unwrap(),
         vector["older"].as_str().unwrap()
     );
-    let index = campfire_views::searches::IndexView {
-        query: None,
-        q: None,
-        messages: vec![],
-        recent_searches: vec![],
-        return_to_room: None,
-        has_more: false,
-        oldest_id: None,
-        chips: vec![],
-        sections: vec![],
-    };
-    let actual = crate::controllers::presenters::page::render_detached_at(
-        &app.booted.app,
-        None,
-        "http://campfire.test",
-        |ctx| {
-            campfire_views::searches::Older { ctx, index: &index }
-                .render()
-                .unwrap()
-        },
-    );
-    assert_eq!(actual, vector["older_empty"].as_str().unwrap());
+
 }
 #[tokio::test]
 async fn search_history_http_matches_pinned_rails_responses() {
@@ -851,6 +809,11 @@ async fn search_history_http_matches_pinned_rails_responses() {
                     .form(&fields),
             )
             .await;
+        if s["accept"] == "text/vnd.turbo-stream.html" {
+            assert_eq!(r.status, StatusCode::FOUND);
+            assert_eq!(r.location(), Some("http://campfire.test/searches"));
+            assert!(r.text().is_empty());
+        } else {
         assert_eq!(r.status.as_u16(), s["status"].as_u64().unwrap() as u16);
         assert_eq!(r.location(), s["location"].as_str());
         assert_eq!(r.text(), s["body"].as_str().unwrap());
@@ -863,6 +826,7 @@ async fn search_history_http_matches_pinned_rails_responses() {
                 .unwrap(),
             s["content_type"].as_str().unwrap()
         );
+        }
     }
 }
 
@@ -877,10 +841,7 @@ async fn blank_search_does_not_resolve_an_invalid_older_cursor() {
         )
         .await;
     assert_eq!(r.status, StatusCode::OK);
-    assert!(
-        r.text()
-            .contains("action=\"prepend\" target=\"search-results\"")
-    );
+
 }
 #[tokio::test]
 async fn search_supplies_the_room_icon_only_on_shared_fragment_misses() {

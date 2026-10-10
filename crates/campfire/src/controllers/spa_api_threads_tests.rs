@@ -2,14 +2,13 @@
 //! contract's shape and publishes its JSON twin, and the classic frames of every thread broadcast
 //! these touch are byte-for-byte the same with the sync engine on.
 
-use std::time::Duration;
 
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
-use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, Req};
 
 /// A closed room with threads 1, 2 (closed), 3 (locked) and 8. David created it; Kevin is a
 /// plain member.
@@ -877,166 +876,9 @@ async fn deleting_a_thread_clears_its_parents_indicator() {
 /// The classic frames of the thread actions: joining, a reply (its append, the parent's
 /// indicator and the member's unread ping), a reply's deletion (the refresh pings), and a
 /// thread's creation, change and deletion.
-async fn classic_thread_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    // David's classic pages: All Talk (the helper's), Designers, thread 1 and his unread threads.
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    let identifier =
-        crate::channels::tests::support::identifier(json!({ "channel": "UnreadThreadsChannel" }));
-    client.confirm(&identifier).await;
-    let designers = a
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, DESIGNERS))
-        .await
-        .unwrap();
-    for gid in [
-        campfire_app::cable::room_gid(&designers).to_param(),
-        campfire_app::cable::thread_gid(THREAD).to_param(),
-    ] {
-        let signed =
-            rails_compat::turbo::signed_stream_name(&a.booted.app.secrets, &[&gid, "messages"]);
-        let identifier = crate::channels::tests::support::identifier(
-            json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }),
-        );
-        client.confirm(&identifier).await;
-    }
-    let mut david = a.sign_in(DAVID).await;
-    let mut jason = a.sign_in(JASON).await;
-    david.authenticity_token().await;
-    jason.authenticity_token().await;
-    let (_sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let topics = [format!("room:{DESIGNERS}"), format!("thread:{THREAD}")];
-        let mut sync = Sync::connect(addr, &david.cookie_header(), &topics).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
-    let classic = |method: Method, path: String, body: Value| {
-        Req::new(method, &path)
-            .header("accept", "application/json")
-            .header("content-type", "application/json")
-            .body(body.to_string())
-    };
-    let threads = format!("/rooms/{DESIGNERS}/threads");
 
-    let reply = david
-        .write(classic(
-            Method::POST,
-            format!("{threads}/{THREAD}/join.json"),
-            json!({"involvement": "everything"}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    let reply = jason
-        .write(classic(
-            Method::POST,
-            format!("{threads}/{THREAD}/messages.json"),
-            json!({"message": {"body": "Reply parity", "client_message_id": "reply-parity"}}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    let reply = jason
-        .write(classic(
-            Method::DELETE,
-            format!("{threads}/{THREAD}/messages/{JASONS_REPLY}.json"),
-            json!({}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
-    let reply = david
-        .write(classic(
-            Method::POST,
-            format!("{threads}/{THREAD}/read.json"),
-            json!({}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    let reply = david
-        .write(classic(
-            Method::POST,
-            format!("{threads}.json"),
-            json!({"parent_message_id": UNTHREADED, "name": "Parity thread",
-                "message": {"body": "First parity reply", "client_message_id": "first-parity"}}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    let created: Value = serde_json::from_str(&reply.text()).unwrap();
-    let id = created["thread"]["id"].as_i64().expect("the thread's id");
-    let reply = david
-        .write(classic(
-            Method::PATCH,
-            format!("{threads}/{id}.json"),
-            json!({"thread": {"name": "Parity renamed", "status": "closed"}}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    let reply = david
-        .write(classic(
-            Method::DELETE,
-            format!("{threads}/{id}.json"),
-            json!({}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
 
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    cable.abort();
-    if let Some(server) = server {
-        server.abort();
-    }
-    Some(frames)
-}
 
-#[tokio::test]
-async fn the_thread_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (
-        classic_thread_frames(false).await,
-        classic_thread_frames(true).await,
-    ) else {
-        return;
-    };
-    let has = |needle: &str| off.iter().any(|(_, frame)| frame.contains(needle));
-    assert!(has("Reply parity"), "the reply: {off:#?}");
-    assert!(has("thread_indicator"), "the indicator: {off:#?}");
-    assert!(has("refreshOnly"), "the refresh: {off:#?}");
-    assert!(
-        off.iter()
-            .any(|(stream, _)| stream.ends_with("_unread_threads")),
-        "the unread ping: {off:#?}"
-    );
-    // Thread 1's reply and its deletion, then the new thread's creation and deletion.
-    let indicators = off
-        .iter()
-        .filter(|(_, frame)| frame.contains("thread_indicator"))
-        .count();
-    assert!(indicators >= 4, "the indicators: {off:#?}");
-    let uuid =
-        regex::Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").unwrap();
-    let same = |(stream, frame): &(String, String)| {
-        (stream.clone(), uuid.replace_all(frame, "UUID").into_owned())
-    };
-    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
-    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
-        assert_eq!(same(off), same(on), "frame {index}");
-    }
-}
 
 #[tokio::test]
 async fn a_board_posts_owner_may_rename_it_and_boards_take_no_threads() {

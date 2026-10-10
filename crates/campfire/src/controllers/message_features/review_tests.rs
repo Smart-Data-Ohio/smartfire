@@ -1,7 +1,7 @@
 //! PR #191 regressions: real HTTP, production cache keys and request-free cable delivery.
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
-use campfire_db::{Message, NewMessage, NewScheduledMessage, ScheduledMessage};
+use campfire_db::{Message, NewMessage};
 use serde_json::Value;
 
 #[tokio::test]
@@ -192,87 +192,4 @@ async fn review_role_room_http_matrix_matches_rails() {
         differences.len()
     );
     assert!(differences.is_empty(), "{}", differences.join("\n"));
-}
-
-#[tokio::test]
-async fn review_timer_scheduled_send_uses_configured_origin() {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let app = TestApp::boot_frozen_with_env(&[("APP_URL", "https://scheduled.test:8443")])
-        .await
-        .unwrap()
-        .without_job_runner()
-        .await;
-    let scheduled = app
-        .db()
-        .write(|tx| {
-            ScheduledMessage::create(
-                tx,
-                NewScheduledMessage {
-                    user_id: DAVID,
-                    room_id: ALL_TALK,
-                    thread_id: None,
-                    reply_to_message_id: None,
-                    markdown_source: "Request-free scheduled origin".into(),
-                    send_at: campfire_db::Timestamp::from_jiff(
-                        "2026-03-02T17:00:00Z".parse().unwrap(),
-                    ),
-                },
-            )
-        })
-        .await
-        .unwrap();
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    request
-        .headers_mut()
-        .insert("host", "campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("origin", "http://campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("cookie", david_cookie().parse().unwrap());
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let room = app
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, ALL_TALK))
-        .await
-        .unwrap();
-    let stream = rails_compat::turbo::signed_stream_name(
-        &app.booted.app.secrets,
-        &[&crate::channels::room_gid(&room).to_param(), "messages"],
-    );
-    client
-        .confirm(&identifier(
-            serde_json::json!({"channel":"RoomMessagesChannel","signed_stream_name":stream}),
-        ))
-        .await;
-    app.db()
-        .write(move |tx| {
-            tx.conn().execute(
-                "UPDATE scheduled_messages SET send_at=? WHERE id=?",
-                (tx.now(), scheduled.id),
-            )?;
-            ScheduledMessage::dispatch(tx, scheduled.id, tx.now(), false)
-        })
-        .await
-        .unwrap();
-    let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
-    server.abort();
-    let html = frame["message"].as_str().unwrap();
-    assert!(html.contains("Request-free scheduled origin"), "{html}");
-    assert!(
-        html.contains("https://scheduled.test:8443/rooms/"),
-        "{html}"
-    );
-    assert!(!html.contains("example.org"), "{html}");
-    println!("WS8bm2 timer scheduled send: configured HTTPS origin and port delivered over cable");
 }

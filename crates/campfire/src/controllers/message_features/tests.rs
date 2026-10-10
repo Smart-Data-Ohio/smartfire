@@ -590,125 +590,7 @@ async fn pin_partials_match_rails_list_count_badge_frame_and_empty_bytes() {
     )));
 }
 
-#[tokio::test]
-async fn poll_and_pin_frames_reach_a_real_websocket_without_session_values() {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let (app, ids) = oracle_fixture().await;
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut ws = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    ws.headers_mut()
-        .insert("host", "campfire.test".parse().unwrap());
-    ws.headers_mut()
-        .insert("origin", "http://campfire.test".parse().unwrap());
-    ws.headers_mut()
-        .insert("cookie", david_cookie().parse().unwrap());
-    let (socket, _) = tokio_tungstenite::connect_async(ws).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let room = app
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, ALL_TALK))
-        .await
-        .unwrap();
-    let stream = rails_compat::turbo::signed_stream_name(
-        &app.booted.app.secrets,
-        &[&crate::channels::room_gid(&room).to_param(), "messages"],
-    );
-    client
-        .confirm(&identifier(
-            json!({"channel":"RoomMessagesChannel", "signed_stream_name":stream}),
-        ))
-        .await;
-    let id = ids[0];
-    let (message, option) = app
-        .db()
-        .read(move |conn| {
-            let poll = Poll::find(conn, id)?;
-            Ok((poll.message_id, poll.options(conn)?[0].id))
-        })
-        .await
-        .unwrap();
-    let mut david = app.david();
-    let reply = david
-        .write(request(
-            Method::POST,
-            &format!("/rooms/{ALL_TALK}/polls/{id}/vote"),
-            json!({"option_ids":[option]}),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::OK);
-    let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-    assert_eq!(
-        frame["message"],
-        format!(
-            "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"card_poll_{id}\"><template>{}</template></turbo-stream>",
-            oracle()["html"][1]["html"].as_str().unwrap()
-        )
-    );
-    assert_eq!(
-        david
-            .write(request(
-                Method::POST,
-                &format!("/messages/{message}/pin"),
-                json!({})
-            ))
-            .await
-            .status,
-        StatusCode::CREATED
-    );
-    for key in ["badge", "count", "list"] {
-        let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-        let html = frame["message"].as_str().unwrap();
-        let expected = oracle()["pin_html"][key].as_str().unwrap().to_owned();
-        assert!(
-            html.contains(&format!("<template>{expected}</template>")),
-            "{key}: {html}"
-        );
-        assert!(!html.contains("authenticity_token") && !html.contains("nonce=\""));
-    }
-    let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-    let html = frame["message"].as_str().unwrap();
-    assert!(
-        html.contains("action=\"append\"") && html.contains("message--system-note"),
-        "{html}"
-    );
-    assert_eq!(
-        david
-            .write(request(
-                Method::DELETE,
-                &format!("/messages/{message}/pin"),
-                json!({})
-            ))
-            .await
-            .status,
-        StatusCode::OK
-    );
-    for key in ["hidden_badge", "empty_count", "empty_list"] {
-        let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-        let html = frame["message"].as_str().unwrap();
-        let expected = if key == "empty_count" {
-            oracle()["pin_html"]["count"]
-                .as_str()
-                .unwrap()
-                .replace("1 pinned", "0 pinned")
-                .replace(">1<", ">0<")
-        } else {
-            oracle()["pin_html"][key].as_str().unwrap().to_owned()
-        };
-        assert!(
-            html.contains(&format!("<template>{expected}</template>")),
-            "{key}: {html}"
-        );
-    }
-    client.assert_silent().await;
-    server.abort();
-}
+
 
 #[tokio::test]
 async fn pins_enforce_the_cap_but_repinning_a_full_room_succeeds() {
@@ -762,7 +644,7 @@ async fn pins_enforce_the_cap_but_repinning_a_full_room_succeeds() {
 }
 
 #[tokio::test]
-async fn ballots_replace_and_retract_in_turbo_and_reject_foreign_rooms_and_odd_shapes() {
+async fn ballots_replace_and_retract_in_json_and_reject_foreign_rooms_and_odd_shapes() {
     let (app, id, option) = fixture().await;
     let mut david = app.david();
     assert_eq!(
@@ -776,19 +658,16 @@ async fn ballots_replace_and_retract_in_turbo_and_reject_foreign_rooms_and_odd_s
     let reply = david
         .write(
             Req::new(Method::POST, &path)
-                .header("accept", "text/vnd.turbo-stream.html")
+                .header("accept", "application/json")
                 .form(&[("option_ids[]", &option.to_string())]),
         )
         .await;
     assert_eq!(reply.status, StatusCode::OK);
-    assert!(reply.text().starts_with(&format!(
-        "<turbo-stream action=\"replace\" target=\"card_poll_{id}\">"
-    )));
-    assert!(reply.text().contains("1 · 100%"));
+    assert_eq!(reply.json()["total_votes"], 1);
     let reply = david
         .write(
             Req::new(Method::POST, &path)
-                .header("accept", "text/vnd.turbo-stream.html")
+                .header("accept", "application/json")
                 .form(&[("option_ids[]", "0")]),
         )
         .await;
@@ -961,142 +840,4 @@ async fn pins_list_orders_newest_first_and_keeps_thread_jump_links() {
     assert!(body.contains(&format!("href=\"http://campfire.test{url}\"")));
     assert!(body.contains(&format!("action=\"/messages/{}/pin\"", root.id)));
     assert!(body.contains("Pinned by Jason") && body.contains("Pinned by David"));
-}
-
-#[tokio::test]
-async fn registered_periodic_poll_closing_reaches_a_real_socket_once() {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use crate::jobs::periodic::{PeriodicIntervals, periodic};
-    use std::{sync::Arc, time::Duration};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-
-    let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let app = TestApp::boot_with_test_clock(clock.clone())
-        .await
-        .expect("WS8bm2 requires the default parity seed")
-        .without_job_runner()
-        .await;
-    let id = app
-        .db()
-        .write(|tx| {
-            let message = Message::create(
-                tx,
-                NewMessage {
-                    room_id: ALL_TALK,
-                    creator_id: DAVID,
-                    markdown_source: Some("Periodic close socket proof".into()),
-                    ..Default::default()
-                },
-            )?;
-            let poll = Poll::create_for_message(
-                tx,
-                &message,
-                NewPoll {
-                    labels: vec!["A".into(), "B".into()],
-                    closes_at: Some(tx.now().since(jiff::SignedDuration::from_secs(10))),
-                    ..Default::default()
-                },
-            )?;
-            Ok(poll.id)
-        })
-        .await
-        .unwrap();
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    for (name, value) in [
-        ("host", "campfire.test".to_owned()),
-        ("origin", "http://campfire.test".to_owned()),
-        ("cookie", david_cookie()),
-    ] {
-        request.headers_mut().insert(name, value.parse().unwrap());
-    }
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let room = app
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, ALL_TALK))
-        .await
-        .unwrap();
-    let stream = rails_compat::turbo::signed_stream_name(
-        &app.booted.app.secrets,
-        &[&crate::channels::room_gid(&room).to_param(), "messages"],
-    );
-    let subscription =
-        identifier(json!({"channel":"RoomMessagesChannel", "signed_stream_name":stream}));
-    client.confirm(&subscription).await;
-
-    // Drive the production scheduler with an injected clock, never a sleep.
-    let mut loop_ = periodic(PeriodicIntervals {
-        reminders: Duration::from_secs(30),
-        retention: Duration::from_secs(86_400),
-    });
-    let before = app.db().env().now();
-    assert!(
-        loop_
-            .tick(app.booted.app.clone(), before)
-            .await
-            .contains(&"poll closing")
-    );
-    assert!(
-        app.db()
-            .read(move |conn| Poll::find(conn, id))
-            .await
-            .unwrap()
-            .closed_at
-            .is_none()
-    );
-    client.assert_silent().await;
-
-    let due = before.since(jiff::SignedDuration::from_secs(30));
-    clock.set(due.jiff());
-    assert!(
-        loop_
-            .tick(app.booted.app.clone(), due)
-            .await
-            .contains(&"poll closing")
-    );
-    let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-    assert_eq!(frame["identifier"], subscription);
-    let html = frame["message"].as_str().unwrap();
-    assert!(
-        html.contains(&format!("action=\"replace\" target=\"card_poll_{id}\"")),
-        "{html}"
-    );
-    assert!(html.contains("Closed"), "{html}");
-    assert!(
-        !html.contains("<form")
-            && !html.contains("authenticity_token")
-            && !html.contains("nonce=\"")
-    );
-    assert_eq!(
-        app.db()
-            .read(move |conn| Poll::find(conn, id))
-            .await
-            .unwrap()
-            .closed_at,
-        Some(due)
-    );
-
-    let again = due.since(jiff::SignedDuration::from_secs(30));
-    clock.set(again.jiff());
-    loop_.tick(app.booted.app.clone(), again).await;
-    assert_eq!(
-        app.db()
-            .read(move |conn| Poll::find(conn, id))
-            .await
-            .unwrap()
-            .closed_at,
-        Some(due)
-    );
-    client.assert_silent().await;
-    server.abort();
-    println!(
-        "WS8bm2 periodic poll runtime: registered task, before/due/idempotent ticks and real socket delivery passed"
-    );
 }

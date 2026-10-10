@@ -118,7 +118,7 @@ async fn no_more_thread_updates(
     let reply = browser
         .write(
             Req::new(Method::POST, &path)
-                .header("accept", "text/vnd.turbo-stream.html")
+                .header("accept", "application/json")
                 .header("content-type", "application/json")
                 .body(
                     json!({"message": {"markdown_source": marker, "client_message_id": marker}})
@@ -126,7 +126,7 @@ async fn no_more_thread_updates(
                 ),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     sync.until(
         |event| {
             matches!(&event.payload, api::SyncPayload::MessageCreated(message)
@@ -1371,123 +1371,9 @@ async fn overlapping_api_work_and_classic_rename_cannot_publish_a_stale_snapshot
 
 /// The classic frames of a board post's work change through `channel_threads#update`: its rows
 /// and its column, and the `thread.updated` beside them when the sync engine is on.
-async fn classic_board_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    let board = a
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, BOARD))
-        .await
-        .unwrap();
-    let gid = campfire_app::cable::room_gid(&board).to_param();
-    let signed =
-        rails_compat::turbo::signed_stream_name(&a.booted.app.secrets, &[&gid, "messages"]);
-    let identifier = crate::channels::tests::support::identifier(
-        json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }),
-    );
-    client.confirm(&identifier).await;
-    let mut david = a.sign_in(DAVID).await;
-    david.authenticity_token().await;
-    let (sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let mut sync = Sync::connect(addr, &david.cookie_header(), &board_topics()).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
 
-    let reply = david
-        .write(
-            crate::controllers::presenters::test_support::Req::new(
-                Method::PATCH,
-                &format!("/rooms/{BOARD}/threads/{PLANNED_POST}"),
-            )
-            .header("accept", "text/html")
-            .form(&[("thread[work_status]", "blocked")]),
-        )
-        .await;
-    assert!(reply.status.is_redirection(), "{}", reply.text());
-    let link = a
-        .db()
-        .write(|tx| {
-            WorkThreadLink::create(
-                tx,
-                NewWorkThreadLink {
-                    channel_thread_id: PLANNED_POST,
-                    created_by_id: DAVID,
-                    kind: Some("drive_file".into()),
-                    url: Some("https://docs.google.com/document/d/2".into()),
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .unwrap();
-    assert_eq!(link.channel_thread_id, PLANNED_POST);
 
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    if let Some(mut sync) = sync {
-        // The post's new status, then its link: each a `thread.updated`.
-        sync.until(thread_updated(PLANNED_POST), |_| false).await;
-        let event = sync.until(thread_updated(PLANNED_POST), |_| false).await;
-        let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
-            unreachable!()
-        };
-        let work = thread.work.unwrap();
-        assert_eq!(work.status, api::WorkStatus::Blocked);
-        assert_eq!(work.links.len(), 1);
-        no_more_thread_updates(
-            &a,
-            &mut david,
-            &mut sync,
-            BOARD,
-            PLANNED_POST,
-            "board-frame-marker",
-        )
-        .await;
-    }
-    cable.abort();
-    if let Some(server) = server {
-        server.abort();
-    }
-    Some(frames)
-}
 
-#[tokio::test]
-async fn the_board_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (
-        classic_board_frames(false).await,
-        classic_board_frames(true).await,
-    ) else {
-        return;
-    };
-    let has = |needle: &str| off.iter().any(|(_, frame)| frame.contains(needle));
-    assert!(
-        has(&format!("board_row_channel_thread_{PLANNED_POST}")),
-        "the post's row: {off:#?}"
-    );
-    assert!(has("board_column_blocked"), "its new column: {off:#?}");
-    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
-    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
-        assert_eq!(off, on, "frame {index}");
-    }
-}
 
 #[tokio::test]
 async fn thread_updates_waiting_on_a_thread_hold_no_readers() {

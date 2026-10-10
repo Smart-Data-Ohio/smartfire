@@ -1,12 +1,12 @@
 //! Rails Rooms::BoardsController: board-only scope, explicit memberships, and room audits.
 
 use campfire_db::{Room, RoomType, User};
-use campfire_kit::{Ctx, Error, Result, StatusCode};
+use campfire_kit::{Ctx, Result, StatusCode};
 use campfire_views::rooms::{ClosedFormView, FormRoom};
 
 use super::{
     Scope, ensure_can_administer, ensure_permission_to_create_rooms, redirect_to_room,
-    render_shared_room, room_icon_param, room_name_param, set_room, user_ids_param,
+    room_icon_param, room_name_param, set_room, user_ids_param,
 };
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, require_current_user};
@@ -197,49 +197,15 @@ pub async fn update(c: &mut Ctx) -> Result {
 /// `broadcast_create_room` / `broadcast_update_room`: the shared-room partial, rendered once, to
 /// every member's own rooms stream.
 async fn broadcast_to_members(c: &mut Ctx, room: &Room, update: bool) -> Result<()> {
-    // The fork renders these partials through the request's lookup context. With no HTML
-    // format available (including JSON and Turbo-only requests), Rails raises MissingTemplate
-    // after the domain and audit commits, before publishing any controller row/header.
-    let formats = c.formats()?;
-    if !formats.contains(&&campfire_kit::format::HTML)
-        && !formats.contains(&&campfire_kit::format::ALL)
-    {
-        return Err(Error::internal(anyhow::anyhow!(
-            "Missing partial users/sidebars/rooms/board for requested format"
-        )));
-    }
     broadcast(c, room, update).await
 }
 
 pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
-    let partials = render_shared_room(c, room).await?;
-    let header = if update {
-        Some(super::render_shared_header(c, room).await?)
-    } else {
-        None
-    };
     let (broadcasts, room) = (c.app().broadcasts.clone(), room.clone());
-    c.app()
-        .db
-        .read(move |conn| {
-            if update {
-                broadcasts.closed_room_update(conn, &room, &partials, header.as_deref())
-            } else {
-                {
-                    use crate::channels::broadcasts::{Partials, Stream};
-                    let html = partials.shared_room(&room);
-                    for user_id in room.user_ids(conn)? {
-                        broadcasts.prepend(&Stream::user_rooms(user_id), "board_rooms", &html);
-                    }
-                    for membership in room.memberships(conn)? {
-                        broadcasts.sync_membership_row(membership.id);
-                    }
-                    Ok(())
-                }
-            }
-        })
-        .await
-        .map_err(db_error)
+    c.app().db.read(move |conn| {
+        if update { broadcasts.closed_room_update(conn, &room) }
+        else { broadcasts.closed_room_create(conn, &room) }
+    }).await.map_err(db_error)
 }
 
 pub(crate) async fn render_index(c: &mut Ctx, room: Room) -> Result {

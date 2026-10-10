@@ -308,28 +308,6 @@ async fn github_notifier_queue_failure_rolls_back_post_and_keeps_claim_as_rails(
 #[tokio::test]
 async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames() {
     use campfire_kit::Crypto;
-    use futures_util::{SinkExt, StreamExt};
-    use tokio::net::TcpStream;
-    use tokio_tungstenite::{
-        MaybeTlsStream, WebSocketStream,
-        tungstenite::{Message as WsMessage, client::IntoClientRequest},
-    };
-    async fn frame(socket: &mut WebSocketStream<MaybeTlsStream<TcpStream>>) -> Value {
-        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
-        loop {
-            let next = tokio::time::timeout_at(deadline, socket.next())
-                .await
-                .unwrap()
-                .unwrap()
-                .unwrap();
-            if let WsMessage::Text(text) = next {
-                let value: Value = serde_json::from_str(&text).unwrap();
-                if value["type"] != "ping" {
-                    return value;
-                }
-            }
-        }
-    }
     for name in ["opened", "thread_review"] {
         let case = vectors()["cases"]
             .as_array()
@@ -348,6 +326,7 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             "SECRET_KEY_BASE" => Some(secret["secret_key_base"].as_str().unwrap().into()),
             "CAMPFIRE_STORAGE_PATH" => Some(directory.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
+            "SPA_ENABLED" => Some("1".into()),
             _ => None,
         })
         .unwrap();
@@ -382,51 +361,13 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             .replace('+', "%2B")
             .replace('/', "%2F")
             .replace('=', "%3D");
-        let mut listener = None;
-        for port in 51500..=51549 {
-            if let Ok(bound) =
-                tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await
-            {
-                listener = Some(bound);
-                break;
-            }
-        }
-        let listener = listener.expect("ws15g port available");
-        let address = listener.local_addr().unwrap();
-        let router = booted.app.cable.router::<()>("/cable");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let router = booted.app.cable.sync_router::<()>(campfire_api::SYNC_PATH);
         let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-        let mut request = format!("ws://{address}/cable")
-            .into_client_request()
-            .unwrap();
-        request
-            .headers_mut()
-            .insert("origin", format!("http://{address}").parse().unwrap());
-        request
-            .headers_mut()
-            .insert("cookie", format!("session_token={cookie}").parse().unwrap());
-        request.headers_mut().insert(
-            "sec-websocket-protocol",
-            "actioncable-v1-json".parse().unwrap(),
-        );
-        let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-        assert_eq!(frame(&mut socket).await, json!({"type":"welcome"}));
-        let model = if name == "opened" {
-            "Rooms::Closed"
-        } else {
-            "ChannelThread"
-        };
-        let id = if name == "opened" { 815 } else { 817 };
-        let gid = rails_compat::global_id::GlobalId::new(model, id).to_param();
-        let identifier=json!({"channel":"RoomMessagesChannel","signed_stream_name":rails_compat::turbo::signed_stream_name(&booted.app.secrets,&[&gid,"messages"])}).to_string();
-        socket
-            .send(WsMessage::Text(
-                json!({"command":"subscribe","identifier":identifier})
-                    .to_string()
-                    .into(),
-            ))
-            .await
-            .unwrap();
-        assert_eq!(frame(&mut socket).await["type"], "confirm_subscription");
+        let topic = if name == "opened" { "room:815" } else { "thread:817" };
+        let mut socket = crate::controllers::spa::api_tests::Sync::connect(addr, &format!("session_token={cookie}"), &[topic.into()]).await;
+        socket.welcome().await;
         let payload = case["deliveries"][0][1].clone();
         booted
             .app
@@ -442,27 +383,10 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             })
             .await
             .unwrap();
-        let received = frame(&mut socket).await;
-        assert_eq!(received["identifier"], identifier);
-        let html = received["message"].as_str().unwrap();
-        assert!(html.contains("action=\"append\""), "{html}");
-        assert!(
-            html.contains(if name == "opened" {
-                "target=\"messages_rooms_closed_815\""
-            } else {
-                "target=\"messages_channel_thread_817\""
-            }),
-            "{html}"
-        );
-        assert!(
-            html.contains(if name == "opened" {
-                "opened pull request"
-            } else {
-                "requested a review"
-            }),
-            "{html}"
-        );
-        assert!(campfire_cable::turbo::session_bound(html).is_none());
+        let received = socket.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageCreated(message) if message.room_id == 815), |_| false).await;
+        assert_eq!(received.topic, topic);
+        let campfire_api_types::SyncPayload::MessageCreated(message) = received.payload else { unreachable!() };
+        assert!(message.body_html.contains(if name == "opened" { "opened pull request" } else { "requested a review" }));
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
         loop {
             let jobs = booted
@@ -480,7 +404,6 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             assert!(tokio::time::Instant::now() < deadline, "{jobs:?}");
             tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         }
-        socket.close(None).await.unwrap();
         serving.abort();
         booted
             .jobs

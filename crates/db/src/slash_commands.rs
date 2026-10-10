@@ -1,6 +1,6 @@
 //! Chat commands from app/services/slash_commands, including registered agent invocations.
 //! Call in the request's write transaction; the HTTP membership boundary belongs to WS8b.
-use crate::broadcasts::{self, Broadcast, Partial};
+use crate::broadcasts::{Broadcast};
 use crate::{
     ChannelThread, Error, Errors, Event, Membership, Message, NewMessage, Result, Room, SavedItem,
     Timestamp, Tx,
@@ -523,18 +523,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
     };
     // Slash messages have no attachment assignment: both process_attachment calls are no-ops.
     let room = Room::find(tx.conn(), message.room_id)?;
-    let target = if let Some(thread) = message.thread_id {
-        broadcasts::dom_id("channel_thread", thread, Some("messages"))
-    } else {
-        broadcasts::room_dom_id(&room, Some("messages"))
-    };
-    tx.emit_after_commit(Event::broadcast(&Broadcast::append(
-        broadcasts::conversation_messages(tx.conn(), &message)?,
-        target,
-        Partial::Message {
-            message_id: message.id,
-        },
-    )));
+    tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
     if message.thread_id.is_none() {
         let mentioned = message
             .mentionees(tx.conn(), tx.rich_text())?
