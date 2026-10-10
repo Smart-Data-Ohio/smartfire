@@ -19,6 +19,7 @@ use crate::error::{fail, not_found, validation};
 
 /// The most ids `GET /users` and `GET /presence` look up.
 const MAX_IDS: usize = 100;
+const MAX_MESSAGE_FILES: usize = 10;
 /// The largest request body read: a message at `SOURCE_LIMIT` characters, four bytes each,
 /// escaped, with room to spare.
 pub(crate) const BODY_LIMIT: usize = 1 << 20;
@@ -283,9 +284,18 @@ async fn post_message(c: &mut Ctx) -> Result {
     let signed_id = input
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
+    let signed_ids = grouped_signed_ids(
+        c,
+        signed_id.as_deref(),
+        input.attachment_signed_ids.unwrap_or_default(),
+    )?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
-    if signed_id.is_none() && drive_file_ids.is_empty() && input.markdown_source.trim().is_empty() {
+    if signed_id.is_none()
+        && signed_ids.is_empty()
+        && drive_file_ids.is_empty()
+        && input.markdown_source.trim().is_empty()
+    {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     let (room_id, creator_id) = (room.id, concerns::require_current_user(c)?.id);
@@ -332,12 +342,14 @@ async fn post_message(c: &mut Ctx) -> Result {
                     validation("attachmentSignedId", "isn't a finished upload"),
                 ));
             }
+            require_grouped_uploads(c, &signed_ids).await?;
             let markdown_source =
                 Some(input.markdown_source).filter(|source| !source.trim().is_empty());
             let attributes = MessageParams {
                 markdown_source,
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),
+                attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
                 reply_notify_author: input.reply_notify_author,
@@ -365,6 +377,80 @@ async fn post_message(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     c.json(status, &dto)
+}
+
+pub(crate) fn grouped_signed_ids(
+    c: &mut Ctx,
+    single: Option<&str>,
+    ids: Vec<String>,
+) -> Result<Vec<String>> {
+    if ids.len() > MAX_MESSAGE_FILES {
+        return Err(fail(
+            c,
+            validation("attachmentSignedIds", "has too many files (maximum is 10)"),
+        ));
+    }
+    if single.is_some() && !ids.is_empty() {
+        return Err(fail(
+            c,
+            validation(
+                "attachmentSignedIds",
+                "cannot be combined with attachmentSignedId",
+            ),
+        ));
+    }
+    Ok(ids)
+}
+
+pub(crate) async fn require_grouped_uploads(c: &mut Ctx, signed_ids: &[String]) -> Result<()> {
+    if signed_ids.is_empty() {
+        return Ok(());
+    }
+    let app = c.app();
+    let mut ids = Vec::with_capacity(signed_ids.len());
+    for signed_id in signed_ids {
+        let Some(id) = campfire_storage::paths::verify_signed_blob_id(
+            &*app.storage.verifier,
+            signed_id,
+            app.clock.now(),
+        ) else {
+            return Err(fail(
+                c,
+                validation("attachmentSignedIds", "includes an invalid upload"),
+            ));
+        };
+        if ids.contains(&id) {
+            return Err(fail(
+                c,
+                validation("attachmentSignedIds", "includes a duplicate file"),
+            ));
+        }
+        ids.push(id);
+    }
+    let storage = app.storage.clone();
+    let finished = app
+        .db
+        .read(move |conn| {
+            let blobs = campfire_storage::Blob::find_many(conn, &ids)
+                .map_err(campfire_web::controllers::presenters::storage_error)?;
+            Ok(ids.iter().all(|id| {
+                blobs
+                    .get(id)
+                    .is_some_and(|blob| storage.service.exist(&blob.key))
+            }))
+        })
+        .await
+        .map_err(db_error)?;
+    if !finished {
+        return Err(fail(
+            c,
+            validation(
+                "attachmentSignedIds",
+                "includes an upload that isn't finished",
+            ),
+        ));
+    }
+    Ok(())
 }
 
 /// The blob a direct upload's signed id names exists (`ActiveStorage::Blob.find_signed`).

@@ -52,7 +52,7 @@ pub fn defer(tx: &Tx<'_>, blob_id: i64, token: &str) -> Result<()> {
 }
 
 pub fn owns(conn: &Connection, message_id: i64, blob_id: i64) -> Result<bool> {
-    Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='Message' AND name='attachment' AND record_id=? AND blob_id=?)", params![message_id, blob_id], |r| r.get(0))?)
+    Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id=? AND blob_id=?)", params![message_id, blob_id], |r| r.get(0))?)
 }
 
 /// `ActiveRecord.after_all_transactions_commit`: scheduling cannot fail the committed post.
@@ -87,7 +87,7 @@ pub fn schedule(tx: &mut Tx<'_>, message_id: i64, blob_id: i64) {
 }
 
 pub fn schedule_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-    if let Some((_, blob)) = message.attachment(tx.conn())? {
+    for (_, blob) in message.attachments(tx.conn())? {
         schedule(tx, message.id, blob.id);
     }
     Ok(())

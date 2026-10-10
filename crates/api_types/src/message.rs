@@ -54,6 +54,12 @@ pub struct MessageDTO {
     pub edited_at: Option<Timestamp>,
     /// The one attached file (`has_one_attached :attachment`); `null` for none.
     pub attachment: Option<Attachment>,
+    /// Files from the `attachments` slot, plus any legacy `attachment`, in attachment-id
+    /// order. Omitted for legacy single-file messages to preserve their JSON shape.
+    /// `attachment` remains the first file for clients that don't read this list yet.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachments: Option<Vec<Attachment>>,
     /// Emoji and icon reactions grouped by content, in order of first reaction
     /// (`boosts ORDER BY created_at`). Empty when there are none.
     pub reactions: Vec<Reaction>,
@@ -190,15 +196,20 @@ pub struct CreateMessage {
     pub client_message_id: String,
     /// The Markdown source, rendered by the server's pipeline into `bodyHtml`. Up to
     /// `Message::SOURCE_LIMIT` (50 000) characters. May be empty only with an attachment.
+    #[serde(default)]
     pub markdown_source: String,
     /// The message this one replies to, on the same timeline; `null` for none.
     pub reply_to_message_id: Option<i64>,
     /// Whether the replied-to author is notified; `null` keeps the default (true).
     pub reply_notify_author: Option<bool>,
     /// A finished direct upload's `signedId` ([`crate::DirectUpload`]), attached as the
-    /// message's one file (`message[attachment]` given a signed blob id); `null` for none. Several
-    /// files are sent as several messages, one each, as the classic composer does.
+    /// message's one legacy file (`message[attachment]` given a signed blob id); `null` for none.
     pub attachment_signed_id: Option<String>,
+    /// Finished direct uploads to attach as one message, in this order. At most ten, with
+    /// no repeats; cannot be combined with `attachmentSignedId`. Omitted on the legacy path.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_signed_ids: Option<Vec<String>>,
     /// Google Drive file ids to pin (`message[drive_file_ids][]`). Left out when there are none.
     /// At most ten; an invalid id is a 422, as the classic composer is. A message may be empty
     /// of Markdown when it carries one of these or a file.

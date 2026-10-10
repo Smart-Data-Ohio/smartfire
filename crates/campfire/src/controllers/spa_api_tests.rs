@@ -16,6 +16,9 @@ use crate::controllers::presenters::test_support::{
     ALL_TALK, Browser, DAVID, HQ, JASON, KEVIN, Reply, Req, TestApp, seed_clock,
 };
 
+#[path = "spa_api_grouped_files_tests.rs"]
+mod grouped_files_tests;
+
 /// Rooms in the seed: HQ holds David and Kevin (and no messages); All Talk holds David and 131
 /// messages; All Pets holds David but not Kevin.
 pub(super) const ALL_PETS: i64 = 104393281;

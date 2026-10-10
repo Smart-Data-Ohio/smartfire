@@ -373,25 +373,32 @@ pub(crate) fn messages_and_fetches(
     )?
     .into_iter()
     .collect();
-    let blobs: HashMap<i64, (Option<String>, i64)> = ids_query(
+    let file_rows: Vec<(i64, String, i64)> = ids_query(
         conn,
-        r#"SELECT "active_storage_attachments"."record_id", "active_storage_blobs"."content_type", "active_storage_blobs"."byte_size" FROM "active_storage_attachments" INNER JOIN "active_storage_blobs" ON "active_storage_blobs"."id" = "active_storage_attachments"."blob_id" WHERE "active_storage_attachments"."record_type" = 'Message' AND "active_storage_attachments"."name" = 'attachment' AND "active_storage_attachments"."record_id" IN ({})"#,
+        r#"SELECT record_id, name, blob_id FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
         &ids,
-        |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))),
-    )?
-    .into_iter()
-    .collect();
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+    let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob)| *blob).collect::<Vec<_>>())
+        .map_err(campfire_web::controllers::presenters::storage_error)?;
+    let mut files = HashMap::<i64, Vec<(String, i64)>>::new();
+    for (message_id, name, blob_id) in file_rows {
+        files.entry(message_id).or_default().push((name, blob_id));
+    }
     let threads = thread_indicators(conn, messages)?;
     let mut steps = message_steps(conn, &ids)?;
     messages
         .iter()
         .map(|message| {
-            let attachment = match blobs.get(&message.id) {
-                Some((content_type, byte_size)) => presenter
-                    .attachment(message)?
-                    .map(|view| attachment(view, content_type.as_deref(), *byte_size)),
-                None => None,
-            };
+            let rows = files.get(&message.id).map_or(&[][..], Vec::as_slice);
+            let mut attachments = Vec::with_capacity(rows.len());
+            for (_, blob_id) in rows {
+                if let Some(blob) = blobs.get(blob_id) {
+                    attachments.push(attachment(presenter.attachment_blob(message, blob)?, blob.content_type.as_deref(), blob.byte_size));
+                }
+            }
+            let attachment = attachments.first().cloned();
+            let attachments = rows.iter().any(|(name, _)| name == "attachments").then_some(attachments);
             let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
             let sound = if attachment.is_none() {
                 campfire_db::message::sound_in(&presenter.plain_text_body(message)?)
@@ -418,6 +425,7 @@ pub(crate) fn messages_and_fetches(
                 forward_note: present(message.forward_note.as_deref()),
                 edited_at: message.edited_at.map(time),
                 attachment,
+                attachments,
                 reactions,
                 boosts,
                 pinned: pinned.contains(&message.id),
@@ -1632,9 +1640,7 @@ fn room_file_rows(
         else {
             continue;
         };
-        let Some(view) = presenter.attachment(message)? else {
-            continue;
-        };
+        let view = presenter.attachment_blob(message, blob)?;
         files.push(api::RoomFile {
             message_id: message.id,
             thread_id: row.thread_id,

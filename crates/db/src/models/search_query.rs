@@ -202,8 +202,8 @@ impl SearchQuery {
         for has in &self.has_values {
             sql.push_str(match has.as_str(){
    "link"=>" AND EXISTS (SELECT 1 FROM action_text_rich_texts rt WHERE rt.record_type='Message' AND rt.record_id=messages.id AND rt.name='body' AND (rt.body LIKE '%href=%' OR rt.body LIKE '%http://%' OR rt.body LIKE '%https://%'))",
-   "file"=>" AND (EXISTS (SELECT 1 FROM active_storage_attachments a WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name='attachment') OR EXISTS (SELECT 1 FROM drive_attachments d WHERE d.message_id=messages.id))",
-   "image"=>" AND EXISTS (SELECT 1 FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name='attachment' AND b.content_type LIKE 'image/%')",
+   "file"=>" AND (EXISTS (SELECT 1 FROM active_storage_attachments a WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name IN ('attachment','attachments')) OR EXISTS (SELECT 1 FROM drive_attachments d WHERE d.message_id=messages.id))",
+   "image"=>" AND EXISTS (SELECT 1 FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id WHERE a.record_type='Message' AND a.record_id=messages.id AND a.name IN ('attachment','attachments') AND b.content_type LIKE 'image/%')",
    "pin"=>" AND EXISTS (SELECT 1 FROM message_pins p WHERE p.message_id=messages.id)",_=>unreachable!(),
   });
         }

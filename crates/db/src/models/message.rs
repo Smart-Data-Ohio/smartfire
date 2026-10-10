@@ -66,6 +66,8 @@ pub struct NewMessage {
     pub body: Option<String>,
     /// An already-saved blob to attach as `attachment`.
     pub attachment_blob_id: Option<i64>,
+    /// Already-saved blobs for the `attachments` slot, in insertion order.
+    pub attachment_blob_ids: Vec<i64>,
     /// Posts into a thread instead of the room's root timeline.
     pub thread_id: Option<i64>,
     pub system_note: bool,
@@ -586,6 +588,10 @@ impl Message {
             Attachment::create(tx, RECORD_TYPE, id, "attachment", blob_id)?;
             touched = true;
         }
+        for &blob_id in &attributes.attachment_blob_ids {
+            Attachment::create(tx, RECORD_TYPE, id, "attachments", blob_id)?;
+            touched = true;
+        }
         for file_id in &attributes.drive_file_ids {
             tx.conn().execute_cached(
                 r#"INSERT INTO "drive_attachments" ("created_at", "file_id", "message_id") VALUES (?, ?, ?)"#,
@@ -761,6 +767,7 @@ impl Message {
             && !attributes.streaming
             && source.trim().is_empty()
             && attributes.attachment_blob_id.is_none()
+            && attributes.attachment_blob_ids.is_empty()
             && attributes.drive_file_ids.is_empty()
         {
             errors.add("markdown_source", "can't be blank");
@@ -1028,6 +1035,9 @@ impl Message {
             body: body.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?
                 .map(|a| a.blob_id),
+            attachment_blob_ids: self.attachments(conn)?.into_iter()
+                .filter(|(attachment, _)| attachment.name == "attachments")
+                .map(|(attachment, _)| attachment.blob_id).collect(),
             thread_id: self.thread_id,
             system_note: self.system_note,
             streaming: self.streaming,
@@ -1236,9 +1246,7 @@ impl Message {
             r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
             params![now, now, self.id],
         )?;
-        if let Some(attachment) =
-            Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
-        {
+        for (attachment, _) in self.attachments(tx.conn())? {
             attachment.delete(tx)?;
             tx.emit_after_commit(Event::PurgeBlob {
                 blob_id: attachment.blob_id,
@@ -1366,13 +1374,18 @@ impl Message {
 
     /// The attachment and its blob, if attached.
     pub fn attachment(&self, conn: &Connection) -> Result<Option<(Attachment, Blob)>> {
-        match Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")? {
-            Some(attachment) => {
-                let blob = attachment.blob(conn)?;
-                Ok(Some((attachment, blob)))
-            }
-            None => Ok(None),
-        }
+        Ok(self.attachments(conn)?.into_iter().next())
+    }
+
+    /// Every file, including the legacy single slot, ordered by attachment id.
+    pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
+        let attachments = query_all(conn,
+            "SELECT * FROM active_storage_attachments WHERE record_type='Message' AND record_id=? AND name IN ('attachment','attachments') ORDER BY id",
+            [self.id], Attachment::from_row)?;
+        attachments.into_iter().map(|attachment| {
+            let blob = attachment.blob(conn)?;
+            Ok((attachment, blob))
+        }).collect()
     }
 
     /// `plain_text_body`: the body's plain text (`Markdown.plain_text` for a Markdown message),

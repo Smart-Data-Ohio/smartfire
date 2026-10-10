@@ -266,6 +266,7 @@ pub struct MessageParams {
     pub markdown_source: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
+    pub attachments: Vec<Assignment>,
     pub client_message_id: Option<String>,
     pub reply_to_message_id: Option<i64>,
     pub reply_notify_author: Option<bool>,
@@ -542,6 +543,7 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
+    let files = attachments::stage_many(c.app(), attributes.attachments).await?;
     let storage = c.app().storage.clone();
     let outcome = c
         .app()
@@ -568,15 +570,18 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
             })?;
             ThreadMembership::join(tx, thread.id, creator_id)?;
             let blob = attachment_blob(tx, attachment)?;
+            let files = attachment_blobs(tx, files)?;
             let message = thread.post_message(tx, creator_id, NewMessage {
                 markdown_source: attributes.markdown_source,
                 client_message_id: attributes.client_message_id,
                 attachment_blob_id: blob.as_ref().map(|blob| blob.id),
+                attachment_blob_ids: files.iter().map(|blob| blob.id).collect(),
                 reply_to_message_id: attributes.reply_to_message_id,
                 reply_notify_author: attributes.reply_notify_author,
                 ..Default::default()
             })?;
             if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
+            for blob in &files { attachments::enqueue_analysis(tx, blob); }
             crate::messaging::process_message_attachment(tx, storage, &message)?;
             Ok(ThreadOutcome::Created(thread, message))
         })
@@ -613,12 +618,13 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
+    let files = attachments::stage_many(c.app(), attributes.attachments).await?;
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
     let storage = c.app().storage.clone();
-    let (message, blob) = c
+    let (message, blobs) = c
         .app()
         .db
         .write(move |tx| {
@@ -626,17 +632,18 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                 && let Some(client_message_id) = attributes.client_message_id.as_deref()
                 && let Some(duplicate) = Message::find_duplicate(tx.conn(), room_id, creator_id, client_message_id)?
             {
-                return Ok((PostingOutcome::Replay(duplicate), None));
+                return Ok((PostingOutcome::Replay(duplicate), Vec::new()));
             }
             if agent_policy {
                 match campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, creator_id, room_id, attributes.client_message_id.as_deref(), &attributes.client_message_lookup)? {
-                    Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), None)),
-                    Some(PostingCheck::Budget(payload)) => return Ok((PostingOutcome::Budget(payload), None)),
+                    Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), Vec::new())),
+                    Some(PostingCheck::Budget(payload)) => return Ok((PostingOutcome::Budget(payload), Vec::new())),
                     Some(PostingCheck::Allowed) => {},
                     None => attributes.client_message_id = None,
                 }
             }
             let blob = attachment_blob(tx, attachment)?;
+            let mut files = attachment_blobs(tx, files)?;
             let attributes = NewMessage {
                     room_id,
                     creator_id,
@@ -647,24 +654,26 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     drive_file_ids: attributes.drive_file_ids,
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
+                    attachment_blob_ids: files.iter().map(|blob| blob.id).collect(),
                     ..Default::default()
                 };
+            files.extend(blob);
             let message = if let Some(mut thread) = thread {
                     let message = thread.post_message(tx, creator_id, attributes)?;
-                    if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
+                    for blob in &files { attachments::enqueue_analysis(tx, blob); }
                     crate::messaging::process_message_attachment(tx, storage, &message)?;
-                    return Ok((PostingOutcome::Created(message), None));
+                    return Ok((PostingOutcome::Created(message), Vec::new()));
                 } else {
                     let message = Message::create(tx, attributes)?;
                     deliver_webhooks_to_bots(tx, &room, &message)?;
                     message
                 };
-            if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
-            Ok((PostingOutcome::Created(message), blob))
+            for blob in &files { attachments::enqueue_analysis(tx, blob); }
+            Ok((PostingOutcome::Created(message), files))
         })
         .await
         .map_err(db_error)?;
-    if let Some(blob) = blob {
+    for blob in blobs {
         process_attachment(c.app(), blob).await?;
     }
     match message {
@@ -685,6 +694,10 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
         Assignment::Unchanged | Assignment::Delete => Ok(None),
         Assignment::Signed(_) | Assignment::Invalid => Err(campfire_db::Error::Other("invalid attachment".into())),
     }
+}
+
+fn attachment_blobs(tx: &mut campfire_db::Tx<'_>, assignments: Vec<Assignment<Staged>>) -> campfire_db::Result<Vec<Blob>> {
+    assignments.into_iter().filter_map(|assignment| attachment_blob(tx, assignment).transpose()).collect()
 }
 
 /// Assigning something that isn't an upload, a signed blob id, nil or "".

@@ -98,6 +98,15 @@ impl Assignment {
     }
 }
 
+/// Stage every file before entering the message's write transaction.
+pub async fn stage_many(app: &App, assignments: Vec<Assignment>) -> Result<Vec<Assignment<Staged>>> {
+    let mut staged = Vec::with_capacity(assignments.len());
+    for assignment in assignments {
+        staged.push(assignment.stage(app).await?);
+    }
+    Ok(staged)
+}
+
 /// `record.<name>.attached?`'s blob: the attachment's blob, if any.
 pub fn attached_blob(conn: &Connection, record_type: &str, record_id: i64, name: &str) -> campfire_db::Result<Option<Blob>> {
     Blob::attached(conn, record_type, record_id, name).map_err(storage_error)

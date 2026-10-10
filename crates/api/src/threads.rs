@@ -16,7 +16,7 @@ use campfire_web::controllers::presenters::attachments::Assignment;
 use campfire_web::controllers::presenters::page::db_error;
 
 use crate::dto;
-use crate::endpoints::{before_actions, blob_exists, body, message_page, now, set_room};
+use crate::endpoints::{before_actions, blob_exists, body, grouped_signed_ids, message_page, now, require_grouped_uploads, set_room};
 use crate::error::{fail, not_found, validation};
 
 endpoint!(
@@ -196,9 +196,10 @@ async fn message_params(
     let signed_id = input
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
+    let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), input.attachment_signed_ids.unwrap_or_default())?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
-    if signed_id.is_none() && drive_file_ids.is_empty() && input.markdown_source.trim().is_empty() {
+    if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.markdown_source.trim().is_empty() {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     if let Some(reply_to) = input.reply_to_message_id {
@@ -229,9 +230,11 @@ async fn message_params(
             validation("attachmentSignedId", "isn't a finished upload"),
         ));
     }
+    require_grouped_uploads(c, &signed_ids).await?;
     Ok(MessageParams {
         markdown_source: Some(input.markdown_source).filter(|source| !source.trim().is_empty()),
         attachment: signed_id.map(Assignment::Signed),
+        attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
         client_message_id: Some(client_message_id),
         reply_to_message_id: input.reply_to_message_id,
         reply_notify_author: input.reply_notify_author,
