@@ -267,6 +267,8 @@ pub struct MessageParams {
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub attachments: Vec<Assignment>,
+    /// SPA posts claim owned, unattached direct uploads in the message transaction.
+    pub claim_uploads: bool,
     pub client_message_id: Option<String>,
     pub reply_to_message_id: Option<i64>,
     pub reply_notify_author: Option<bool>,
@@ -569,8 +571,12 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
                 ..Default::default()
             })?;
             ThreadMembership::join(tx, thread.id, creator_id)?;
-            let blob = attachment_blob(tx, attachment)?;
-            let files = attachment_blobs(tx, files)?;
+            let upload_owner = attributes.claim_uploads.then_some(creator_id);
+            let blob = match upload_owner {
+                Some(owner) => claim_attachment_blob(tx, attachment, owner, "attachment_signed_id")?,
+                None => attachment_blob(tx, attachment)?,
+            };
+            let files = attachment_blobs(tx, files, upload_owner)?;
             let message = thread.post_message(tx, creator_id, NewMessage {
                 markdown_source: attributes.markdown_source,
                 client_message_id: attributes.client_message_id,
@@ -642,8 +648,12 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     None => attributes.client_message_id = None,
                 }
             }
-            let blob = attachment_blob(tx, attachment)?;
-            let mut files = attachment_blobs(tx, files)?;
+            let upload_owner = attributes.claim_uploads.then_some(creator_id);
+            let blob = match upload_owner {
+                Some(owner) => claim_attachment_blob(tx, attachment, owner, "attachment_signed_id")?,
+                None => attachment_blob(tx, attachment)?,
+            };
+            let mut files = attachment_blobs(tx, files, upload_owner)?;
             let attributes = NewMessage {
                     room_id,
                     creator_id,
@@ -696,8 +706,33 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
     }
 }
 
-fn attachment_blobs(tx: &mut campfire_db::Tx<'_>, assignments: Vec<Assignment<Staged>>) -> campfire_db::Result<Vec<Blob>> {
-    assignments.into_iter().filter_map(|assignment| attachment_blob(tx, assignment).transpose()).collect()
+/// The caller inserts the attachment in this same BEGIN IMMEDIATE transaction. Another
+/// message writer cannot pass the unattached check until this claim commits or rolls back.
+pub fn claim_attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>, creator_id: i64, attribute: &'static str) -> campfire_db::Result<Option<Blob>> {
+    if let Assignment::Existing(blob) = &assignment {
+        let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?
+            .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+        let owner = current.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64);
+        let attached: bool = tx.conn().query_row(
+            "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)",
+            [blob.id], |row| row.get(0),
+        )?;
+        let mut errors = campfire_db::Errors::default();
+        if owner != Some(creator_id) {
+            errors.add(attribute, "includes an upload that isn't yours");
+        } else if attached {
+            errors.add(attribute, "includes an upload that is already attached");
+        }
+        errors.into_result()?;
+    }
+    attachment_blob(tx, assignment)
+}
+
+fn attachment_blobs(tx: &mut campfire_db::Tx<'_>, assignments: Vec<Assignment<Staged>>, upload_owner: Option<i64>) -> campfire_db::Result<Vec<Blob>> {
+    assignments.into_iter().filter_map(|assignment| match upload_owner {
+        Some(owner) => claim_attachment_blob(tx, assignment, owner, "attachment_signed_ids").transpose(),
+        None => attachment_blob(tx, assignment).transpose(),
+    }).collect()
 }
 
 /// Assigning something that isn't an upload, a signed blob id, nil or "".

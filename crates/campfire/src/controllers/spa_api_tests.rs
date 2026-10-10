@@ -584,23 +584,17 @@ async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
 async fn posting_attaches_a_direct_upload() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
-    let staged = a
-        .booted
-        .app
-        .storage
-        .stage_bytes(
-            b"meeting notes",
-            campfire_storage::Filename::new("notes.txt"),
-            Some("text/plain"),
-        )
-        .unwrap();
-    let blob = a
-        .db()
-        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
-        .await
-        .unwrap();
-    let signed_id =
-        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let reply = b.write(json_body(Method::POST, "/api/v1/uploads", &json!({
+        "filename": "notes.txt", "byteSize": 13, "contentType": "text/plain",
+        "checksum": campfire_storage::key::checksum(b"meeting notes"),
+    }))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let upload: api::DirectUpload = parse(&reply);
+    let reply = b.send(Req::new(Method::PUT, &upload.upload_url)
+        .header("content-type", "text/plain").header("content-length", "13")
+        .body("meeting notes")).await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    let signed_id = upload.signed_id;
     let body = |client_message_id: &str, signed_id: Option<&str>| json!({"clientMessageId": client_message_id, "markdownSource": "", "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id});
     let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
 
