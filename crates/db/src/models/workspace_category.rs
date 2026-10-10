@@ -218,9 +218,13 @@ impl WorkspaceCategory {
             "SELECT id, workspace_category_id, workspace_position FROM rooms WHERE id = ? AND type != 'Rooms::Direct'",
             [room_id],
             room_position,
-        )? else {
+        )?
+        else {
             return Ok(());
         };
+        if room.workspace_category_id.is_none() && room.position.is_none() {
+            return Ok(());
+        }
         if room.position.is_some() {
             let ids = Self::rooms(tx.conn(), room.workspace_category_id)?
                 .iter()

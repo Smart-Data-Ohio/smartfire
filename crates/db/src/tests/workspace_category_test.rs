@@ -313,7 +313,19 @@ fn workspace_room_deletion_rolls_back_when_compaction_fails() {
 
 #[test]
 fn workspace_membership_visibility_changes_publish_layout() {
+    for categorized in [true, false] {
+        membership_visibility_changes_publish_layout(categorized);
+    }
+}
+
+fn membership_visibility_changes_publish_layout(categorized: bool) {
     let t = frozen();
+    let category = if categorized {
+        Some(t.write(|tx| WorkspaceCategory::create(tx, "Team")).id)
+    } else {
+        None
+    };
+    t.write(move |tx| WorkspaceCategory::move_room(tx, id("hq"), category, 0));
     let mut membership = t
         .read(|conn| Membership::find_by_room_and_user(conn, id("hq"), id("david")))
         .unwrap();
@@ -337,5 +349,81 @@ fn workspace_membership_visibility_changes_publish_layout() {
             Ok(membership)
         });
         assert!(!t.sink.events().iter().any(|event| matches!(event, Event::Broadcast(request) if request.kind == "WorkspaceCategory#sync_organized")));
+    }
+}
+
+#[test]
+fn workspace_unplaced_membership_visibility_changes_do_not_publish_layout() {
+    let t = frozen();
+    let mut membership = t
+        .read(|conn| Membership::find_by_room_and_user(conn, id("hq"), id("david")))
+        .unwrap();
+    for involvement in [
+        Some(crate::Involvement::Invisible),
+        Some(crate::Involvement::Everything),
+        None,
+        Some(crate::Involvement::Muted),
+    ] {
+        t.sink.take();
+        membership = t.write(move |tx| {
+            membership.update_involvement(tx, involvement)?;
+            Ok(membership)
+        });
+        assert_eq!(membership.involvement, involvement);
+        assert!(t.sink.events().is_empty());
+    }
+}
+
+#[test]
+fn workspace_unplaced_room_deletion_does_not_publish_layout_or_change_positions() {
+    for soft in [true, false] {
+        let t = frozen();
+        t.write(|tx| WorkspaceCategory::move_room(tx, id("hq"), None, 0));
+        let room =
+            t.write(|tx| Room::create(tx, crate::RoomType::Open, Some("Unplaced"), id("david")));
+        let expected = placements(&t, None)
+            .into_iter()
+            .filter(|(id, _)| *id != room.id)
+            .collect::<Vec<_>>();
+        t.sink.take();
+        t.write(move |tx| {
+            if soft {
+                room.begin_destroy(tx)
+            } else {
+                room.destroy(tx)
+            }
+        });
+        assert_eq!(placements(&t, None), expected);
+        assert!(!t.sink.events().iter().any(|event| matches!(event, Event::Broadcast(request) if request.kind == "WorkspaceCategory#sync_organized")));
+    }
+}
+
+#[test]
+fn workspace_imported_room_destruction_compacts_positions_without_broadcasting() {
+    for categorized in [true, false] {
+        let t = frozen();
+        let category = if categorized {
+            Some(t.write(|tx| WorkspaceCategory::create(tx, "Team")).id)
+        } else {
+            None
+        };
+        for room in ["hq", "pets", "designers"] {
+            t.write(move |tx| WorkspaceCategory::move_room(tx, id(room), category, i64::MAX));
+        }
+        let expected = placements(&t, category)
+            .into_iter()
+            .filter(|(room, _)| *room != id("pets"))
+            .enumerate()
+            .map(|(position, (room, _))| (room, Some(position as i64)))
+            .collect::<Vec<_>>();
+        t.sink.take();
+        t.write(|tx| Room::find(tx.conn(), id("pets"))?.destroy_imported(tx));
+        assert_eq!(placements(&t, category), expected);
+        assert!(
+            !t.sink
+                .events()
+                .iter()
+                .any(|event| matches!(event, Event::Broadcast(_)))
+        );
     }
 }

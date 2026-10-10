@@ -514,7 +514,11 @@ impl Membership {
             level.is_some_and(|level| level != Involvement::Invisible)
         };
         if visible(self.involvement) != visible(involvement)
-            && !Room::find(tx.conn(), self.room_id)?.direct()
+            && sql::exists(
+                tx.conn(),
+                "SELECT 1 FROM rooms WHERE id = ? AND type != 'Rooms::Direct' AND deleted_at IS NULL AND (workspace_category_id IS NOT NULL OR workspace_position IS NOT NULL)",
+                [self.room_id],
+            )?
         {
             tx.emit_after_commit(Event::broadcast(&super::workspace_category::WorkspaceOrganized));
         }
