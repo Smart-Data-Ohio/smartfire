@@ -3,6 +3,7 @@
  * slash commands (listed and run, mirroring the Rust registry), Markdown preview and scheduled
  * messages, which a timer on the scheduler posts when they fall due.
  */
+import type { Icon } from "../../src/gen/Icon.ts";
 import type { IconList } from "../../src/gen/IconList.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePreview } from "../../src/gen/MessagePreview.ts";
@@ -160,13 +161,15 @@ export const SCHEDULED_PAGE_SIZE = 50;
 
 /**
  * Creates the composer module. `save` sets a reminder on a message (`/remind`); `hooks` hear
- * about dropped and cancelled scheduled messages.
+ * about dropped and cancelled scheduled messages; `uploadedIcons` are the workspace icons added
+ * in admin, listed and suggested with the fixtures.
  */
 export function createComposer(
   ctx: S2Context,
   threads: Threads,
   save: (messageId: number, remindAt: string) => void,
   hooks: ScheduledHooks = NO_HOOKS,
+  uploadedIcons: () => readonly Icon[] = () => [],
 ): Composer {
   const timers = new Map<number, number>();
 
@@ -197,7 +200,7 @@ export function createComposer(
   };
 
   const iconSuggestions = (query: URLSearchParams): IconList => ({
-    icons: searchIcons(query.get("query") ?? ""),
+    icons: searchIcons(query.get("query") ?? "", uploadedIcons()),
   });
 
   // --- slash commands ---
@@ -872,7 +875,7 @@ export function createComposer(
     routes: [
       route("GET", /^\/autocomplete\/users$/, (request) => ok(userSuggestions(request.query))),
       route("GET", /^\/autocomplete\/icons$/, (request) => ok(iconSuggestions(request.query))),
-      route("GET", /^\/icons$/, () => ok({ icons: imageIcons() })),
+      route("GET", /^\/icons$/, () => ok({ icons: imageIcons(uploadedIcons()) })),
       route("GET", /^\/rooms\/(\d+)\/slash_commands$/, (request) =>
         ok(commands(firstId(request), request.query)),
       ),

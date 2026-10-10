@@ -7,6 +7,7 @@
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { AuditLogEntry } from "../../src/gen/AuditLogEntry.ts";
 import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
+import type { Icon } from "../../src/gen/Icon.ts";
 import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
 import type { Person } from "../../src/gen/Person.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
@@ -16,8 +17,9 @@ import { HttpError, notFound, ok, plainError, validation } from "../http.ts";
 import { booleanField, intField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
+import { customIcon } from "./emoji.ts";
 import { PROFILE_MAX_SIZE, readProfileImage } from "./profile-image.ts";
-import type { Uploads } from "./uploads.ts";
+import type { UploadedIconFile, Uploads } from "./uploads.ts";
 
 /** Facts about a person only administrators see. */
 interface Private {
@@ -42,6 +44,10 @@ interface State {
   uploadLimitBytes: number;
   css: string | null;
   icons: WorkspaceIcon[];
+  /** The signed id of each uploaded icon's file, by name (the seeded icon has none). */
+  iconFiles: Map<string, string>;
+  /** How many animated icons the workspace may hold (`animated_emoji_limit`). */
+  animatedIconLimit: number;
   nextIconId: number;
   removed: Set<number>;
   people: Map<number, Private>;
@@ -70,6 +76,20 @@ const ICON_NAME = /^[a-z0-9_]{2,32}$/;
 const PROFILE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
 const PROFILE_MAX_BYTES = 10 * 1024 * 1024;
+
+/** What a workspace icon may be: still SVG or PNG, or a GIF or WebP that may move. */
+const ICON_TYPES = new Set(["image/svg+xml", "image/png", "image/gif", "image/webp"]);
+
+const ICON_MAX_BYTES = 256 * 1024;
+
+/** The server's default `animated_emoji_limit`. */
+const ANIMATED_ICON_LIMIT = 250;
+
+/** An icon upload's file as checked: the server's refusal, if any, and whether it moves. */
+interface IconImage {
+  readonly error?: string;
+  readonly animated: boolean;
+}
 
 /** The wire tag of a refused change (plain data here: Effect stays out of the mock). */
 const VALIDATION: ApiError["_tag"] = "Validation";
@@ -121,6 +141,8 @@ function initialState(world: World, now: number): State {
         stillUrl: "/icons/smartdata",
       },
     ],
+    iconFiles: new Map(),
+    animatedIconLimit: ANIMATED_ICON_LIMIT,
     nextIconId: 2,
     removed: new Set(),
     people,
@@ -153,6 +175,12 @@ export interface AdminModule {
   readonly roomCreationRestricted: () => boolean;
   readonly uploadLimitBytes: () => number;
   readonly hasIcon: (name: string) => boolean;
+  /** The icons uploaded here, as `:name:` resolves them in reactions and the picker. */
+  readonly uploadedIcons: () => readonly Icon[];
+  /** An uploaded icon's file, for `/icons/:name`; `null` for any other name. */
+  readonly iconFile: (name: string) => UploadedIconFile | null;
+  /** Sets how many animated icons the workspace may hold, as `accounts.settings` does. */
+  setAnimatedIconLimit(limit: number): void;
 }
 
 /** Creates the admin module. */
@@ -443,7 +471,48 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     return ok({ css: held.css });
   };
 
-  const icons = () => ok({ icons: current().icons, animatedLimit: 250, animatedUsage: 0 });
+  const icons = () => {
+    const held = current();
+
+    return ok({
+      icons: held.icons,
+      animatedLimit: held.animatedIconLimit,
+      animatedUsage: held.icons.filter((icon) => icon.animated).length,
+    });
+  };
+
+  /**
+   * The uploaded file's refusal as the server words it (type, size, then the animated limit), and
+   * whether it moves: a GIF or WebP with more than one frame.
+   */
+  const iconImage = (signedId: string): IconImage => {
+    const held = current();
+    const attachment = uploads.attachment(signedId);
+
+    if (!ICON_TYPES.has(attachment.contentType)) {
+      return { error: "must be an SVG, PNG, GIF or WebP image", animated: false };
+    }
+
+    if (attachment.byteSize > ICON_MAX_BYTES) {
+      return { error: "must be smaller than 256 KB", animated: false };
+    }
+
+    const bytes = ctx.world().blobs.get(signedId)?.bytes ?? new Uint8Array();
+
+    const animated =
+      attachment.contentType !== "image/svg+xml" && readProfileImage(bytes)?.animated === true;
+
+    const usage = held.icons.filter((icon) => icon.animated).length;
+
+    if (animated && usage >= held.animatedIconLimit) {
+      return {
+        error: `animated emoji capacity reached (limit: ${held.animatedIconLimit})`,
+        animated,
+      };
+    }
+
+    return { animated };
+  };
 
   const createIcon = (body: Json | undefined) => {
     const held = current();
@@ -454,18 +523,25 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     if (!ICON_NAME.test(name)) {
       fields.name = ["Name must be 2–32 lowercase letters, numbers or underscores"];
-    } else if (held.icons.some((icon) => icon.name === name)) {
+    } else if (held.icons.some((icon) => icon.name === name) || customIcon(name) !== undefined) {
       fields.name = ["Name has already been taken"];
     }
 
     if (title === "") fields.title = ["Title can't be blank"];
 
-    if (signedId === null) fields.image = ["Image must be attached"];
+    const image = signedId === null ? null : iconImage(signedId);
 
-    if (Object.keys(fields).length > 0) throw invalid(fields);
+    if (image === null) {
+      fields.image = ["Image must be attached"];
+    } else if (image.error !== undefined) {
+      fields.image = [image.error];
+    }
 
-    if (signedId !== null) uploads.attachment(signedId);
+    if (Object.keys(fields).length > 0 || signedId === null) throw invalid(fields);
 
+    const animated = image?.animated ?? false;
+
+    held.iconFiles.set(name, signedId);
     held.icons = [
       ...held.icons,
       {
@@ -474,8 +550,8 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
         title,
         creatorName: viewerName(),
         imageUrl: `/icons/${name}`,
-        animated: false,
-        stillUrl: `/icons/${name}`,
+        animated,
+        stillUrl: animated ? `/icons/${name}?still=1` : `/icons/${name}`,
       },
     ].sort((a, b) => a.name.localeCompare(b.name));
     held.nextIconId += 1;
@@ -491,6 +567,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     if (icon === undefined) throw notFound();
 
     held.icons = held.icons.filter((each) => each.id !== id);
+    held.iconFiles.delete(icon.name);
     audit("workspace_icon.destroy", `:${icon.name}:`, "WorkspaceIcon", `name: ${icon.name}`);
 
     return icons();
@@ -574,6 +651,35 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     roomCreationRestricted: () => current().restrict,
     uploadLimitBytes: () => current().uploadLimitBytes,
     hasIcon: (name) => current().icons.some((icon) => icon.name === name),
+    uploadedIcons: () => {
+      const held = current();
+
+      return held.icons
+        .filter((icon) => held.iconFiles.has(icon.name))
+        .map((icon) => ({
+          name: icon.name,
+          title: icon.title,
+          kind: "custom",
+          character: null,
+          imageUrl: icon.imageUrl,
+          animated: icon.animated,
+          stillUrl: icon.stillUrl,
+        }));
+    },
+    iconFile: (name) => {
+      const held = current();
+      const signedId = held.iconFiles.get(name);
+      const blob = signedId === undefined ? undefined : ctx.world().blobs.get(signedId);
+
+      if (blob === undefined || blob.bytes === null) return null;
+
+      const animated = held.icons.some((icon) => icon.name === name && icon.animated);
+
+      return { bytes: blob.bytes, contentType: blob.contentType, animated };
+    },
+    setAnimatedIconLimit: (limit) => {
+      current().animatedIconLimit = limit;
+    },
     routes: [
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
