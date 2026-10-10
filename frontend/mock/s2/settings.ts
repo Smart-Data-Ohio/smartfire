@@ -23,6 +23,7 @@ import {
   isBoolean,
   isRecord,
   type Json,
+  parseJson,
   stringArrayField,
   stringField,
 } from "../json.ts";
@@ -36,6 +37,18 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 
 const DAY_MS = 24 * HOUR_MS;
+
+function mergeAppearance(previous: Json, patch: Json | undefined): Json {
+  if (!isRecord(patch)) return previous;
+  const next = { ...(isRecord(previous) ? previous : { version: 1 }) };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null && key !== "version") delete next[key];
+    else next[key] = value;
+  }
+
+  return next;
+}
 
 /** The viewer's password in the mock, for the email change check. */
 export const MOCK_PASSWORD = "secret123456";
@@ -113,6 +126,7 @@ function initialState(world: World, now: number): State {
         textSize: "default",
         timeZone: VIEWER_TIME_ZONE,
         timeZones: TIME_ZONES,
+        appearancePreferences: null,
       },
       notifications: {
         defaultNotificationLevel: "everything",
@@ -209,8 +223,13 @@ function initialState(world: World, now: number): State {
 /** The settings module. */
 export interface SettingsModule {
   readonly routes: readonly Route[];
+  readonly revision: () => number;
   /** The viewer's saved theme and text size, which boot and `/me` carry. */
-  readonly appearance: () => { readonly theme: Theme; readonly textSize: TextSize };
+  readonly appearance: () => {
+    readonly theme: Theme;
+    readonly textSize: TextSize;
+    readonly appearancePreferences: Json;
+  };
   readonly explicitRoomNotification: (roomId: number, changed: boolean) => Settings;
 }
 
@@ -291,8 +310,10 @@ export function createSettings(
 
     held.settings = { ...change(held.settings), revision: held.settings.revision + 1 };
     ctx.world().activityRevision++;
+    const snapshot = page();
+    ctx.publish([{ topic: "user", type: "settings.updated", data: snapshot }]);
 
-    return ok(page());
+    return ok(snapshot);
   };
 
   const renameViewer = (name: string) => {
@@ -373,6 +394,10 @@ export function createSettings(
           theme: themes.find((value) => value === theme) ?? held.appearance.theme,
           textSize: sizes.find((value) => value === textSize) ?? held.appearance.textSize,
           timeZone: changedTo(zone, held.appearance.timeZone),
+          appearancePreferences: mergeAppearance(
+            held.appearance.appearancePreferences,
+            given(body, "appearancePreferences"),
+          ),
         },
       };
     });
@@ -785,10 +810,15 @@ export function createSettings(
 
       return page();
     },
+    revision: () => current().settings.revision,
     appearance: () => {
-      const { theme, textSize } = current().settings.appearance;
+      const { theme, textSize, appearancePreferences } = current().settings.appearance;
 
-      return { theme, textSize };
+      return {
+        theme,
+        textSize,
+        appearancePreferences: parseJson(JSON.stringify(appearancePreferences)) ?? null,
+      };
     },
     routes: [
       route("GET", /^\/settings$/, () => ok(page())),

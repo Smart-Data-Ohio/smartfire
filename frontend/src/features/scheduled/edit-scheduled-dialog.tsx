@@ -4,6 +4,9 @@ import type { UpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { toast } from "../../ui/toast-store.ts";
+import { AttachmentTray } from "../composer/attachments/attachment-tray.tsx";
+import { MAX_FILES, useAttachments } from "../composer/attachments/use-attachments.ts";
 import {
   customTimeProblem,
   fromLocalInput,
@@ -13,6 +16,7 @@ import {
 } from "../composer/schedule/presets.ts";
 import { useNow } from "../threads/use-now.ts";
 import { ReplyTargetPicker } from "./reply-target-picker.tsx";
+import { ScheduledFiles } from "./scheduled-files.tsx";
 
 /** What the dialog saves: only the fields that changed (a missing one keeps its value). */
 export type ScheduledEdit = UpdateScheduledMessage;
@@ -73,6 +77,9 @@ interface EditFormProps {
 
 function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const textId = useId();
+  const filesId = useId();
+  const [kept, setKept] = useState(item.attachments);
+  const uploads = useAttachments(MAX_FILES - kept.length);
   const [text, setText] = useState(item.markdownSource);
   const [when, setWhen] = useState(() => toLocalInput(new Date(item.sendAt)));
   const [replyTo, setReplyTo] = useState(item.replyToMessageId);
@@ -92,7 +99,10 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
   const textChanged = text !== item.markdownSource;
   const replyChanged = replyTo !== item.replyToMessageId;
-  const dirty = text !== start.text || when !== start.when || replyTo !== start.replyTo;
+  const filesChanged = kept.length !== item.attachments.length || uploads.files.length > 0;
+
+  const dirty =
+    text !== start.text || when !== start.when || replyTo !== start.replyTo || filesChanged;
 
   useEffect(() => onDirty(dirty), [dirty, onDirty]);
 
@@ -101,8 +111,14 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (text.trim() === "") {
+    if (text.trim() === "" && kept.length === 0 && uploads.files.length === 0) {
       setError("The message can't be empty.");
+
+      return;
+    }
+
+    if (!uploads.ready) {
+      setError("Wait for the files to upload, or retry failed uploads.");
 
       return;
     }
@@ -116,7 +132,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
       return;
     }
 
-    if (!textChanged && !timeChanged && !replyChanged) {
+    if (!textChanged && !timeChanged && !replyChanged && !filesChanged) {
       onClose();
 
       return;
@@ -136,6 +152,15 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
 
     if (replyChanged) {
       edit.replyToMessageId = replyTo;
+    }
+
+    if (filesChanged) {
+      edit.attachmentSignedIds = [
+        ...kept.map((file) => file.signedId),
+        ...uploads.files.flatMap((file) =>
+          file.snapshot.signedId === null ? [] : [file.snapshot.signedId],
+        ),
+      ];
     }
 
     setBusy(true);
@@ -171,6 +196,35 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
             {error}
           </p>
         )}
+      </div>
+      <div>
+        <ScheduledFiles
+          files={kept}
+          onRemove={(signedId) =>
+            setKept((files) => files.filter((file) => file.signedId !== signedId))
+          }
+        />
+        <AttachmentTray files={uploads.files} onRemove={uploads.remove} onRetry={uploads.retry} />
+        <label htmlFor={filesId} className="scheduled-edit-label">
+          Add files
+        </label>
+        <input
+          id={filesId}
+          type="file"
+          multiple
+          disabled={busy || kept.length + uploads.files.length >= MAX_FILES}
+          onChange={(event) => {
+            const overflow = uploads.add(Array.from(event.target.files ?? []));
+
+            if (overflow > 0)
+              toast({
+                title: "Too many files",
+                description: `A message can carry up to ${MAX_FILES} files.`,
+                tone: "danger",
+              });
+            event.target.value = "";
+          }}
+        />
       </div>
       <div>
         {replyTo === null ? null : (
@@ -234,7 +288,13 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" loading={busy} loadingLabel="Saving">
+        <Button
+          type="submit"
+          variant="primary"
+          loading={busy}
+          loadingLabel="Saving"
+          disabled={!uploads.ready}
+        >
           Save changes
         </Button>
       </div>

@@ -46,7 +46,7 @@
                     "message": "Effect stays in src/api and src/sync. Call the plain async functions in src/sync/runtime.ts (actions) instead."
                   },
                   {
-                    "group": ["**/api/**", "!**/api/testing.ts"],
+                    "group": ["**/api/**", "!**/api/testing.ts", "!**/api/schema/appearance.ts"],
                     "message": "React code doesn't call endpoints. Add a plain async function to actions in src/sync/runtime.ts (or a facade module in src/sync) and call that."
                   },
                   {

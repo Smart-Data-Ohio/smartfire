@@ -87,6 +87,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             .get("inbox_preferences")
             .filter(|p| !p.is_null())
             .map(|p| p.to_json()),
+        ..Default::default()
     };
     // Rails checks the raw request before strong parameters discard non-scalars.
     let email_changing = c

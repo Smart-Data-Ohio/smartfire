@@ -2,6 +2,8 @@
 //! Searchable; Broadcasts belong to the app, except the thread indicator and quote cards, which
 //! are emitted as [`Event::Broadcast`]).
 
+use std::fmt::Write;
+
 use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
@@ -1416,13 +1418,31 @@ impl Message {
         }).collect()
     }
 
-    /// `plain_text_body`: the body's plain text (`Markdown.plain_text` for a Markdown message),
-    /// else the attachment's filename, else ""; a forward note goes first, a blank line between.
-    pub fn plain_text_body(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<String> {
-        self.plain_text_body_from_html(conn, rich_text, self.body_html(conn)?.as_deref())
+    pub fn attachment_summary(&self, conn: &Connection) -> Result<String> {
+        Ok(self.filenames(conn)?.join(", "))
     }
 
-    fn plain_text_body_from_html(&self, conn: &Connection, rich_text: &dyn RichText, html: Option<&str>) -> Result<String> {
+    fn filenames(&self, conn: &Connection) -> Result<Vec<String>> {
+        Ok(self.attachments(conn)?.into_iter()
+            .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
+            .collect())
+    }
+
+    /// `plain_text_body`: the body's plain text (`Markdown.plain_text` for a Markdown message),
+    /// else the attachment filenames, else ""; a forward note goes first, a blank line between.
+    pub fn plain_text_body(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<String> {
+        self.plain_text_body_from_html(conn, rich_text, self.body_html(conn)?.as_deref(), None)
+    }
+
+    /// `plain_text_body` for a push notification: the same text, except that a file-only
+    /// message's filenames are bounded by `NOTIFICATION_FILENAME_BYTES` (web push rejects a
+    /// record over 4096 bytes, so a long list would deliver nothing).
+    pub fn notification_text(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<String> {
+        self.plain_text_body_from_html(conn, rich_text, self.body_html(conn)?.as_deref(), Some(NOTIFICATION_FILENAME_BYTES))
+    }
+
+    /// `budget`: `Some` bounds a file-only summary by `bounded_filenames`; `None` keeps every name.
+    fn plain_text_body_from_html(&self, conn: &Connection, rich_text: &dyn RichText, html: Option<&str>, budget: Option<usize>) -> Result<String> {
         let mut text = String::new();
         if let Some(html) = html {
             let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
@@ -1437,10 +1457,10 @@ impl Message {
             };
         }
         if text.trim().is_empty() {
-            text = self
-                .attachment(conn)?
-                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
-                .unwrap_or_default();
+            text = match budget {
+                Some(budget) => bounded_filenames(&self.filenames(conn)?, budget),
+                None => self.attachment_summary(conn)?,
+            };
         }
         Ok(
             match self
@@ -1607,7 +1627,7 @@ impl Message {
         if phase == crate::callbacks::Phase::MessageEventReferences {
             match body {
                 Some(body) => {
-                    let plain = self.plain_text_body_from_html(tx.conn(), tx.rich_text(), Some(body))?;
+                    let plain = self.plain_text_body_from_html(tx.conn(), tx.rich_text(), Some(body), None)?;
                     crate::models::calendar_event::references::sync_from_plain_text(tx, self, &plain)?;
                 }
                 None => crate::models::calendar_event::references::sync(tx, self)?,
@@ -1731,6 +1751,53 @@ pub fn valid_drive_file_id(id: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
+/// The bytes a file-only push notification's filenames may take: web push caps a record at 4096.
+pub const NOTIFICATION_FILENAME_BYTES: usize = 1000;
+
+/// Joins `names` with ", " while they fit in `budget` bytes, then says how many were left out
+/// ("and N more files"). A single name over the budget is cut on a character boundary and
+/// marked "…".
+pub fn bounded_filenames(names: &[String], budget: usize) -> String {
+    let mut out = String::new();
+
+    for (index, name) in names.iter().enumerate() {
+        let separator = if index == 0 { "" } else { ", " };
+
+        if out.len() + separator.len() + name.len() <= budget {
+            out.push_str(separator);
+            out.push_str(name);
+
+            continue;
+        }
+
+        let rest = if index == 0 {
+            let mut cut = budget.saturating_sub('…'.len_utf8()).min(name.len());
+
+            while !name.is_char_boundary(cut) {
+                cut -= 1;
+            }
+
+            out.push_str(&name[..cut]);
+            out.push('…');
+
+            names.len() - 1
+        } else {
+            names.len() - index
+        };
+
+        if rest > 0 {
+            let noun = if rest == 1 { "file" } else { "files" };
+
+            // Writing to a String cannot fail.
+            let _ = write!(out, ", and {rest} more {noun}");
+        }
+
+        break;
+    }
+
+    out
+}
+
 /// `plain_text_body.match(/\A\/play (?<name>\w+)\z/)` then `Sound.find_by_name`.
 pub fn sound_in(plain_text: &str) -> Option<&'static Sound> {
     let name = plain_text.strip_prefix("/play ")?;
@@ -1750,4 +1817,37 @@ fn remove_from_index(tx: &Tx<'_>, id: i64) -> Result<()> {
 fn reversed<T>(mut rows: Vec<T>) -> Vec<T> {
     rows.reverse();
     rows
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn file_only_summary_bounds_long_cjk_filenames_under_the_push_budget() {
+        let names: Vec<String> = (0..10).map(|i| format!("{}-{i}.txt", "漢".repeat(150))).collect();
+
+        let summary = bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES);
+
+        assert!(summary.len() <= NOTIFICATION_FILENAME_BYTES + 32, "{} bytes", summary.len());
+        assert!(summary.starts_with(&names[0]));
+        assert!(summary.ends_with(", and 8 more files"), "{summary}");
+    }
+
+    #[test]
+    fn short_file_list_is_joined_in_full() {
+        let names = vec!["a.txt".to_string(), "b.txt".to_string()];
+
+        assert_eq!(bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES), "a.txt, b.txt");
+    }
+
+    #[test]
+    fn one_overlong_filename_is_cut_on_a_character_boundary() {
+        let names = vec!["漢".repeat(400)];
+
+        let summary = bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES);
+
+        assert!(summary.len() <= NOTIFICATION_FILENAME_BYTES, "{} bytes", summary.len());
+        assert!(summary.ends_with('…'));
+    }
 }

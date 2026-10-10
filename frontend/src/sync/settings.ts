@@ -6,6 +6,7 @@
  */
 
 import { me, sidebar } from "../api/endpoints.ts";
+import { personalAppearance } from "../api/schema/appearance.ts";
 import {
   accountSettings,
   connectService,
@@ -48,8 +49,11 @@ import type { UpdateNotifications } from "../gen/UpdateNotifications.ts";
 import type { UpdateProfile } from "../gen/UpdateProfile.ts";
 import type { UpdateStatus } from "../gen/UpdateStatus.ts";
 import {
+  accountPreferencesSnapshot,
   appearanceSnapshot,
   applyAccountAppearance,
+  type PersonalAppearance,
+  showAccountPreferences,
   showAccountTheme,
   type ThemePreference,
 } from "../lib/appearance.ts";
@@ -58,7 +62,7 @@ import type { State } from "../store/state.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { loadUnreadCount } from "./activity-actions.ts";
 import { runAction } from "./runtime.ts";
-import { applySettingsSnapshot } from "./settings-snapshot.ts";
+import { applySettingsSnapshot, settingsEpoch } from "./settings-snapshot.ts";
 import { onResync } from "./signals.ts";
 
 export {
@@ -79,7 +83,7 @@ const UNCHANGED = {
     bio: null,
     githubLogin: null,
   },
-  appearance: { theme: null, textSize: null, timeZone: null },
+  appearance: { theme: null, textSize: null, timeZone: null, appearancePreferences: null },
   calls: { voiceMode: null, pushToTalkKey: null },
   notifications: {
     defaultNotificationLevel: null,
@@ -117,7 +121,13 @@ const UNCHANGED = {
 
 /** Reloads the signed-in person; a failure leaves the store as it was (the next boot fixes it). */
 function refreshMe(): void {
-  runAction(me()).then(mutations.setMe, () => undefined);
+  const epoch = settingsEpoch();
+  runAction(me()).then(
+    (next) => {
+      if (settingsEpoch() === epoch) mutations.setMe(next);
+    },
+    () => undefined,
+  );
 }
 
 /** Runs a write, then refreshes `/me`. */
@@ -132,8 +142,15 @@ async function write<A>(run: Promise<A>): Promise<A> {
 export type { TokenService };
 
 async function settingsSnapshot(run: () => Promise<Settings>): Promise<Settings> {
+  const epoch = settingsEpoch();
+  const next = await run();
+
+  if (settingsEpoch() !== epoch) {
+    throw new Error("The server restarted while settings were loading. Try again.");
+  }
+
   // Settings screens also replace their local page with the returned snapshot.
-  return applySettingsSnapshot(await run());
+  return applySettingsSnapshot(next);
 }
 
 export const settings = {
@@ -248,7 +265,7 @@ export function followAccountAppearance(): () => void {
   let last = accountOf(store.getState());
 
   if (last !== null) {
-    applyAccountAppearance({ theme: last.theme, textSize: last.textSize });
+    applyAccountAppearance(last);
   }
 
   return store.subscribe((state) => {
@@ -259,7 +276,7 @@ export function followAccountAppearance(): () => void {
     }
 
     last = account;
-    applyAccountAppearance({ theme: account.theme, textSize: account.textSize });
+    applyAccountAppearance(account);
   });
 }
 
@@ -269,15 +286,55 @@ export function followAccountAppearance(): () => void {
  */
 export async function saveAccountTheme(theme: ThemePreference): Promise<void> {
   const before = appearanceSnapshot().accountTheme;
+  const epoch = settingsEpoch();
 
   showAccountTheme(theme);
 
   try {
     await settings.updateAppearance({ theme });
   } catch (error) {
-    showAccountTheme(before);
+    if (settingsEpoch() === epoch) showAccountTheme(before);
     throw error;
   }
+}
+
+let personalSave: Promise<void> = Promise.resolve();
+
+/** Serializes partial choices so rapid saves retain the other fields and custom tokens. */
+export function saveAccountPersonalAppearance(
+  change: {
+    readonly [Key in keyof Omit<PersonalAppearance, "version">]?: PersonalAppearance[Key] | null;
+  },
+): Promise<void> {
+  const save = personalSave.then(async () => {
+    const before = accountPreferencesSnapshot();
+    const epoch = settingsEpoch();
+    const known = personalAppearance(before);
+
+    if (before !== null && known === null)
+      throw new Error("This appearance version needs a newer Smartfire client.");
+    const fields = { ...known, version: 1, ...change };
+
+    const preferences = Object.fromEntries(
+      Object.entries(fields).filter(([, value]) => value !== null && value !== undefined),
+    );
+
+    showAccountPreferences(preferences);
+
+    try {
+      await settings.updateAppearance({ appearancePreferences: { ...change } });
+    } catch (error) {
+      if (settingsEpoch() === epoch && accountPreferencesSnapshot() === preferences) {
+        showAccountPreferences(before);
+      }
+
+      throw error;
+    }
+  });
+
+  personalSave = save.catch(() => undefined);
+
+  return save;
 }
 
 /** Refreshes missed preferences and schedules the next mute expiry. */

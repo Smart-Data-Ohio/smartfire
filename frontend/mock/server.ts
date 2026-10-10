@@ -460,6 +460,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
+      settingsRevision: settings.revision(),
       ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
@@ -953,6 +954,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     },
     scheduledInboxHooks(ctx, activity),
     () => admin.uploadedIcons(),
+    uploads,
   );
 
   const agents = createAgents(ctx, createRandom(seed * 49_979_687 + 3), () => simulation.paused());

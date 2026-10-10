@@ -207,6 +207,8 @@ pub enum AttachmentPolicy {
     SignedBlob,
     /// SPA uploads belong to the poster and can only be attached once.
     OwnedUpload { uploader_id: i64 },
+    /// Editing a scheduled draft may keep uploads already attached to that draft.
+    ScheduledUpload { uploader_id: i64, scheduled_id: i64 },
 }
 
 /// What `create_with_attachment!`/`update!` receive.
@@ -653,13 +655,17 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => {
-            if let AttachmentPolicy::OwnedUpload { uploader_id } = policy {
+            if let AttachmentPolicy::OwnedUpload { uploader_id } | AttachmentPolicy::ScheduledUpload { uploader_id, .. } = policy {
                 let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?
                     .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
                 let owner = current.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64);
+                let scheduled_id = match policy {
+                    AttachmentPolicy::ScheduledUpload { scheduled_id, .. } => Some(scheduled_id),
+                    _ => None,
+                };
                 let attached: bool = tx.conn().query_row(
-                    "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)",
-                    [blob.id], |row| row.get(0),
+                    "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND (?2 IS NULL OR record_type!='ScheduledMessage' OR record_id!=?2 OR name!='attachments'))",
+                    (blob.id, scheduled_id), |row| row.get(0),
                 )?;
                 let mut errors = campfire_db::Errors::default();
                 if owner != Some(uploader_id) {

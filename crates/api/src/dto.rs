@@ -556,7 +556,7 @@ pub(crate) fn ids_query<T>(
 }
 
 /// `AttachmentView` with its blob's type and size.
-fn attachment(
+pub(crate) fn attachment(
     view: campfire_presentation::messages::AttachmentView,
     content_type: Option<&str>,
     byte_size: i64,
@@ -1273,6 +1273,7 @@ pub fn me(
         ),
         email_address: viewer.email_address.clone(),
         preferences: api::Preferences {
+            settings_revision: settings.notification_preferences.settings_revision,
             theme: match settings.theme.as_str() {
                 "light" => api::Theme::Light,
                 "dark" => api::Theme::Dark,
@@ -1294,6 +1295,7 @@ pub fn me(
             },
             push_to_talk_key: present(push_to_talk_key.as_deref())
                 .unwrap_or_else(|| "`".to_string()),
+            appearance_preferences: campfire_db::models::user::profile_settings::appearance(conn, viewer.id)?.appearance_preferences.map(api::AppearancePreferences),
         },
         presence_setting: match settings.presence_setting.as_str() {
             "dnd" => api::PresenceSetting::Dnd,

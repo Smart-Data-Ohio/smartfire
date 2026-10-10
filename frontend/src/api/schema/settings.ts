@@ -80,6 +80,7 @@ export const AppearanceSettings = Schema.Struct({
   textSize: TextSize,
   timeZone: Schema.NullOr(Schema.String),
   timeZones: Schema.Array(TimeZoneChoice),
+  appearancePreferences: Schema.Json,
 });
 
 export type AppearanceSettings = typeof AppearanceSettings.Type;
@@ -263,6 +264,7 @@ export const UpdateAppearance = Schema.Struct({
   theme: Schema.NullOr(Theme),
   textSize: Schema.NullOr(TextSize),
   timeZone: Schema.NullOr(Schema.String),
+  appearancePreferences: Schema.Json,
 });
 
 export type UpdateAppearance = typeof UpdateAppearance.Type;

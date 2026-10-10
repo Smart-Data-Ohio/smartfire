@@ -30,6 +30,7 @@ export const Boot = Schema.Struct({
       Schema.Struct({ kind: Schema.Literals(["notice", "alert"]), message: Schema.String }),
     ),
   ),
+  appearancePreferences: Schema.Json,
 });
 
 export type BootPin = Assert<Pinned<typeof Boot, ModelBoot>>;

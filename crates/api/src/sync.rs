@@ -186,7 +186,7 @@ impl SyncRenderer for Renderer {
             conn,
             &[row],
             app.db.env().now(),
-            app.db.env().rich_text.as_ref(),
+            &app,
         )?
         .pop())
     }

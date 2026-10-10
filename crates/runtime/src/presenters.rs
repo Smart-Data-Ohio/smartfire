@@ -476,10 +476,7 @@ impl<'a> Presenter<'a> {
         // Message#plain_text_body applies these after Markdown.plain_text, including
         // attachment-only Markdown and a forward note. forwarded_markdown is not markdown?.
         if campfire_presentation::helpers::is_blank(&text) {
-            text = message
-                .attachment(self.conn)?
-                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
-                .unwrap_or_default();
+            text = message.attachment_summary(self.conn)?;
         }
         Ok(
             match message
@@ -588,21 +585,30 @@ impl<'a> Presenter<'a> {
 
     /// `message.attachment` as `Messages::AttachmentPresentation` needs it.
     pub fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
-        let blob = if let Some(data) = &self.search_preloads {
-            data.attachments.get(&message.id).cloned()
-        } else {
-            campfire_storage::Blob::attached(self.conn, "Message", message.id, "attachment")
-                .map_err(storage_error)?
-        };
+        let blob = self.message_files(message)?.blobs.into_iter().next();
         let Some(blob) = blob else { return Ok(None) };
         self.attachment_blob(message, &blob).map(Some)
     }
 
+    pub fn message_files(&self, message: &Message) -> Result<campfire_storage::blob::MessageAttachments> {
+        if let Some(data) = &self.search_preloads {
+            return Ok(data.attachments.get(&message.id).cloned().unwrap_or_default());
+        }
+        Ok(campfire_storage::Blob::attached_messages(self.conn, &[message.id])
+            .map_err(storage_error)?.remove(&message.id).unwrap_or_default())
+    }
+
     pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
+        if blob.is_video() && (blob.is_previewable() || blob.is_variable()) {
+            self.recover_attachment_preview(message, blob)?;
+        }
+        self.attachment_file(blob)
+    }
+
+    pub fn attachment_file(&self, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
         let verifier = &*self.storage.verifier;
         let preview = if blob.is_previewable() || blob.is_variable() {
             if blob.is_video() {
-                self.recover_attachment_preview(message, blob)?;
                 // `attachment.preview(format: :webp, resize_to_limit: [...])`
                 let poster = Variation::new(vec![
                     (

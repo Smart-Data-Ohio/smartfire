@@ -104,6 +104,7 @@ it("refuses files above the workspace limit before adding them to the attachment
       serviceWorkerUrl: null,
       version: "test",
       revision: null,
+      appearancePreferences: null,
     },
   });
   const start = vi.spyOn(actions.messages, "startUpload");
@@ -460,6 +461,7 @@ describe("Drive submissions", () => {
     expect(submit).toHaveBeenCalledExactlyOnceWith({
       markdown: "First reply",
       attachmentSignedId: null,
+      attachmentSignedIds: [],
       driveFileIds: ["roadmap"],
     });
     await attachDrive("Budget");
@@ -555,6 +557,32 @@ describe("several files in one send", () => {
     return input;
   }
 
+  it("hands every uploaded file to a thread-start submission", async () => {
+    landUploads();
+    const submit = vi.fn(async () => {});
+    const { container } = render(<Composer roomId={ROOM} onSubmit={submit} placeholder="Reply…" />);
+
+    fireEvent.change(picker(container), {
+      target: {
+        files: [
+          new File(["one"], "one.txt"),
+          new File(["two"], "two.txt"),
+          new File(["three"], "three.txt"),
+        ],
+      },
+    });
+    await waitFor(() => expect(container.querySelectorAll('[data-phase="done"]')).toHaveLength(3));
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Reply…" }), { key: "Enter" });
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledExactlyOnceWith({
+        markdown: "",
+        attachmentSignedId: null,
+        attachmentSignedIds: ["signed-one.txt", "signed-two.txt", "signed-three.txt"],
+        driveFileIds: [],
+      }),
+    );
+  });
+
   it("posts the text and every file as one message", async () => {
     landUploads();
     vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
@@ -640,4 +668,48 @@ describe("several files in one send", () => {
       description: "2 files weren't added. Send these, then add the rest.",
     });
   });
+});
+
+it("schedules two uploaded files in tray order without requiring text", async () => {
+  vi.spyOn(actions.messages, "startUpload").mockImplementation(async (body) => ({
+    signedId: `signed-${body.filename}`,
+    uploadUrl: "/put",
+  }));
+  vi.stubGlobal(
+    "XMLHttpRequest",
+    class {
+      status = 204;
+      upload = { onprogress: null };
+      onload: (() => void) | null = null;
+      onerror = null;
+      onabort = null;
+      open() {}
+      setRequestHeader() {}
+      abort() {}
+      send() {
+        queueMicrotask(() => this.onload?.());
+      }
+    },
+  );
+  const create = vi.spyOn(actions.scheduled, "create").mockRejectedValue(new Error("Keep draft"));
+  const { container } = render(<Composer roomId={ROOM} />);
+  const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
+
+  if (picker === null) throw new Error("no file input");
+  fireEvent.change(picker, {
+    target: { files: [new File(["one"], "one.txt"), new File(["two"], "two.txt")] },
+  });
+  await waitFor(() => expect(container.querySelectorAll('[data-phase="done"]')).toHaveLength(2));
+  fireEvent.click(screen.getByRole("button", { name: "Schedule message" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: /In 1 hour/ }));
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(
+      ROOM,
+      expect.objectContaining({
+        markdownSource: "",
+        attachmentSignedIds: ["signed-one.txt", "signed-two.txt"],
+      }),
+    ),
+  );
+  expect(screen.getByRole("button", { name: "Remove one.txt" })).toBeDefined();
 });

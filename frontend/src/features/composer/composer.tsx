@@ -67,6 +67,8 @@ export interface ComposerDraft {
   readonly markdown: string;
   /** A finished direct upload's signed id, or `null`. */
   readonly attachmentSignedId: string | null;
+  /** Grouped uploaded files in tray order; empty for the legacy single-file slot. */
+  readonly attachmentSignedIds: readonly string[];
   /** Drive files pinned on the message. Empty when there are none. */
   readonly driveFileIds: readonly string[];
 }
@@ -78,7 +80,7 @@ export interface ComposerProps {
   /**
    * Replaces the normal send (the outbox), e.g. the first reply that creates a thread. The
    * composer clears once it resolves and keeps the text if it rejects. Commands and scheduling
-   * are off here (there's no thread to run them in yet), and it takes one file.
+   * are off here (there's no thread to run them in yet).
    */
   readonly onSubmit?: (draft: ComposerDraft) => Promise<void>;
   /** Overrides "Message #general". */
@@ -218,7 +220,7 @@ export function Composer({
   const conversation = useConversationName(roomId);
   const placeholder = placeholderOverride ?? placeholderFor(conversation);
   const agentReplying = useAgentReplying(roomId);
-  const attachments = useAttachments(creating ? 1 : MAX_FILES);
+  const attachments = useAttachments(MAX_FILES);
   const [driveFiles, setDriveFiles] = useState<readonly DrivePick[]>([]);
   const [driveOpen, setDriveOpen] = useState(false);
   const scheduledHere = useScheduled(roomId, threadId, !creating);
@@ -228,6 +230,9 @@ export function Composer({
   const hasFiles = attachments.files.length > 0;
   const hasDrive = driveFiles.length > 0;
   const canSend = (hasText || hasFiles || hasDrive) && !running;
+  // A new thread's submit holds the tray: files added now would not be in the request, and the
+  // tray goes with the navigation that follows a created thread.
+  const addingLocked = creating && running;
   // An inline reply (classic's Reply): a new thread's first message never carries one.
   const reply = useReplyTarget(creating ? null : key);
 
@@ -372,10 +377,12 @@ export function Composer({
     return true;
   };
 
-  const openPicker = () => fileInputRef.current?.click();
+  const openPicker = () => {
+    if (!addingLocked) fileInputRef.current?.click();
+  };
 
   const addFiles = (files: readonly File[]) => {
-    if (files.length === 0) {
+    if (files.length === 0 || addingLocked) {
       return;
     }
 
@@ -383,19 +390,15 @@ export function Composer({
 
     if (overflow > 0) {
       toast({
-        title: creating
-          ? "A new thread takes one file"
-          : `A message holds up to ${MAX_FILES} files`,
-        description: creating
-          ? "Add the others in a reply once the thread exists."
-          : `${overflow === 1 ? "1 file wasn't" : `${overflow} files weren't`} added. Send these, then add the rest.`,
+        title: `A message holds up to ${MAX_FILES} files`,
+        description: `${overflow === 1 ? "1 file wasn't" : `${overflow} files weren't`} added. Send these, then add the rest.`,
       });
     }
 
     focusInput();
   };
 
-  const drop = useDropTarget(rootRef, addFiles, true);
+  const drop = useDropTarget(rootRef, addFiles, !addingLocked);
 
   /** Takes the room's window to the present, where a message from here lands. */
   const toPresent = () => {
@@ -631,9 +634,12 @@ export function Composer({
       submitting.current = true;
       setRunning(true);
 
+      const uploaded = fileOptions(files);
+
       void onSubmit({
         markdown,
-        attachmentSignedId: files[0]?.snapshot.signedId ?? null,
+        attachmentSignedId: uploaded.attachmentSignedId ?? null,
+        attachmentSignedIds: uploaded.attachmentSignedIds ?? [],
         driveFileIds: drive.map((file) => file.id),
       })
         .then(
@@ -686,6 +692,11 @@ export function Composer({
     const submitted = text;
     const markdown = submitted.trimEnd();
     const taken = currentReply();
+    const files = attachments.files;
+
+    if (!attachments.ready) {
+      return Promise.reject(new Error("Wait for the files to upload, or retry failed uploads."));
+    }
 
     return scheduled
       .create(roomId, {
@@ -694,11 +705,15 @@ export function Composer({
         threadId,
         // Classic's schedule menu keeps the draft's reply target too.
         replyToMessageId: taken.target?.messageId ?? null,
+        attachmentSignedIds: files.flatMap((entry) =>
+          entry.snapshot.signedId === null ? [] : [entry.snapshot.signedId],
+        ),
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
         // The reply it took, not one picked while the request was out.
         cancelReplyAt(key, taken.revision);
+        attachments.clearSent(files);
         clearSubmitted(submitted);
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
@@ -824,7 +839,8 @@ export function Composer({
 
     if (files.length > 0) {
       event.preventDefault();
-      addFiles(files.map((file) => pastedName(file)));
+
+      if (!addingLocked) addFiles(files.map((file) => pastedName(file)));
 
       return;
     }
@@ -845,7 +861,11 @@ export function Composer({
     }
   };
 
-  const scheduleBlocked = hasFiles || hasDrive ? "Files can't be scheduled" : null;
+  const scheduleBlocked = hasDrive
+    ? "Google Drive files can't be scheduled"
+    : !attachments.ready
+      ? "Wait for the files to upload"
+      : null;
 
   const plusActions: PlusAction[] = [
     {
@@ -853,6 +873,7 @@ export function Composer({
       label: "Upload a file",
       icon: "paperclip",
       shortcut: shortcutKeys("upload"),
+      disabled: addingLocked,
       onSelect: openPicker,
     },
     {
@@ -868,7 +889,7 @@ export function Composer({
       id: "schedule",
       label: "Schedule message…",
       icon: "clock",
-      disabled: !hasText || hasFiles || hasDrive,
+      disabled: !canSend || scheduleBlocked !== null,
       onSelect: () => setCustomOpen(true),
     });
   }
@@ -1047,7 +1068,7 @@ export function Composer({
       <input
         ref={fileInputRef}
         type="file"
-        multiple={!creating}
+        multiple
         hidden
         tabIndex={-1}
         aria-hidden="true"

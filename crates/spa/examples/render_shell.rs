@@ -33,6 +33,7 @@ fn main() {
         version: "test".into(),
         revision: None,
         flash: None,
+        appearance_preferences: None,
     };
     print!("{}", render_shell(&boot, "test-csrf-token", Some(nonce)));
 }
