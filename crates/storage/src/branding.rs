@@ -151,7 +151,7 @@ pub struct PreparedEmoji {
     pub still: Option<(Variation, Staged)>,
 }
 
-/// Emoji has a smaller byte/canvas/frame budget and must decode completely before acceptance.
+/// GIF/WebP emoji has a smaller byte/canvas/frame budget and must decode completely before acceptance.
 pub(crate) fn prepare_emoji(
     storage: &Storage,
     key: &str,

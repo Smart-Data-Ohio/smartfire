@@ -73,6 +73,33 @@ async fn upload(a: &TestApp, bytes: &[u8], filename: &str, content_type: &str) -
 }
 
 #[tokio::test]
+async fn static_emoji_accepts_a_1024_pixel_png_under_the_byte_limit() {
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let bytes = super::workspace_branding_tests::png(1024, 1024, false);
+    assert!(bytes.len() < 256 * 1024);
+    let signed = upload(&a, &bytes, "large_static.png", "image/png").await;
+    let reply = write(
+        &mut b,
+        Method::POST,
+        "/api/v1/admin/icons",
+        json!({"name": "large_static", "title": "Large static", "signedId": signed}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let list: Value = parse(&reply);
+    assert_eq!(list["animatedUsage"], 0);
+    let icon = &list["icons"][0];
+    assert_eq!(icon["name"], "large_static");
+    assert_eq!(icon["animated"], false);
+    assert_eq!(icon["stillUrl"], icon["imageUrl"]);
+    let original = b.get(icon["imageUrl"].as_str().unwrap()).await;
+    assert_eq!(original.status, StatusCode::OK);
+    assert_eq!(original.content_type(), Some("image/png"));
+    assert_eq!(original.body, bytes);
+}
+
+#[tokio::test]
 async fn animated_emoji_accepts_gif_and_webp_and_serves_original_and_first_frame() {
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;

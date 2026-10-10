@@ -46,22 +46,34 @@ pub fn prepare(
             return Err("could not be read".into());
         }
     }
-    if bytes.starts_with(b"\x89PNG\r\n\x1a\n")
-        || bytes.starts_with(b"GIF87a")
+    if bytes.starts_with(b"GIF87a")
         || bytes.starts_with(b"GIF89a")
         || (bytes.starts_with(b"RIFF") && bytes.get(8..12) == Some(b"WEBP"))
     {
         return crate::branding::prepare_emoji(storage, key, filename, cancel);
     }
-    if let Some(error) = svg_error(&bytes) {
-        return Err(error.into());
-    }
-    let mut metadata = Json::object();
+    let (content_type, mut metadata) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        // Static PNGs retain the original header-only checks and have no canvas maximum.
+        if let Some(error) = content_error(&path, "image/png") {
+            return Err(error);
+        }
+        (
+            "image/png",
+            crate::analyze::Analyzer::Image
+                .metadata(&path)
+                .map_err(|_| "could not be read")?,
+        )
+    } else {
+        if let Some(error) = svg_error(&bytes) {
+            return Err(error.into());
+        }
+        ("image/svg+xml", Json::object())
+    };
     metadata.set("identified", Json::Bool(true));
     metadata.set("analyzed", Json::Bool(true));
     metadata.set(ANIMATED_KEY, Json::Bool(false));
     Ok(PreparedEmoji {
-        content_type: "image/svg+xml",
+        content_type,
         metadata,
         still: None,
     })
