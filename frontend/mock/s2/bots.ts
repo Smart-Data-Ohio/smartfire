@@ -149,6 +149,8 @@ function initialState(world: World, now: number): State {
     agent: null,
     createdAt: timestamp(now),
     updatedAt: rowTimestamp(now),
+    accountName: "Deploy Bot",
+    pronouns: null,
   });
 
   return { bots, nextId: 901 };

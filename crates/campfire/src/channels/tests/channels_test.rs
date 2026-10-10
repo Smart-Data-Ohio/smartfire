@@ -175,8 +175,14 @@ async fn typing_notifications_broadcast_start_and_stop_to_the_room() {
     assert_eq!(reader.next_text().await, delivery(&typing, &start));
     assert_eq!(typist.next_text().await, delivery(&typing, &start));
 
+    app.db.write(|tx| {
+        let mut user = campfire_db::User::find(tx.conn(), id("jz"))?;
+        user.update(tx, campfire_db::UserChanges {
+            nickname: Some(Some("Jay".into())), ..Default::default()
+        })
+    }).await.unwrap();
     typist.perform(&typing, json!({ "action": "stop" })).await;
-    let stop = format!(r#"{{"action":"stop","user":{{"id":{},"name":"JZ"}}}}"#, id("jz"));
+    let stop = format!(r#"{{"action":"stop","user":{{"id":{},"name":"Jay"}}}}"#, id("jz"));
     assert_eq!(reader.next_text().await, delivery(&typing, &stop));
 
     // Not an action: nothing is sent.

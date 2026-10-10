@@ -164,7 +164,7 @@ fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest
         let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
         let Some(caller) = User::find_by_id(tx.conn(), grant.user_id)? else { return Ok(None); };
         RingRequest { recipient_id:viewer.id, sender_id:caller.id, grant_id:Some(grant.id), invited_at:request.invited_at,
-            invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""}) }
+            invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),"readPath":"","handledPath":""}) }
     };
     let grant = HuddleGrant::find_by_id(tx.conn(), current.grant_id.unwrap())?.unwrap();
     let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
@@ -198,12 +198,12 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
     let name = if room.direct() {
         let names = query_all(
             tx.conn(),
-            "SELECT users.name FROM users INNER JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id=? AND users.id!=?",
+            "SELECT users.* FROM users INNER JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id=? AND users.id!=?",
             params![room.id, viewer.id],
-            |r| r.get::<_, String>(0),
+            |r| Ok(User::from_row(r)?.display_name().to_owned()),
         )?;
         Some(match names.len() {
-            0 => viewer.name.clone(),
+            0 => viewer.display_name().to_owned(),
             1 => names[0].clone(),
             2 => format!("{} and {}", names[0], names[1]),
             n => format!("{}, and {}", names[..n - 1].join(", "), names[n - 1]),
@@ -216,7 +216,7 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
         invitation:serde_json::json!({
             "activityItemId":item.id,"eventType":item.event_type,
             "state":if item.handled_at.is_some(){"handled"}else if item.read_at.is_some(){"read"}else{"unread"},
-            "roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,
+            "roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),
             "readPath":format!("/activity/{}/read?state=read",item.id),
             "handledPath":format!("/activity/{}/handled?state=handled",item.id),
         }),
@@ -288,7 +288,7 @@ fn invite_recipient(
     if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
         let caller = User::find(tx.conn(), grant.user_id)?;
         let name = room.direct_display_name(tx.conn(), Some(recipient), None)?;
-        enqueue_ring(tx, &RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:Some(tx.now().as_microsecond()),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})})?;
+        enqueue_ring(tx, &RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:Some(tx.now().as_microsecond()),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),"readPath":"","handledPath":""})})?;
         return Ok(());
     }
     let owned = ActivityItem::find_by_user_and_source(

@@ -23,4 +23,4 @@ githubVerified: boolean,
 /**
  * Bots have no security, sessions or transfer sections.
  */
-bot: boolean, };
+bot: boolean, pronouns: string | null, nickname: string | null, };

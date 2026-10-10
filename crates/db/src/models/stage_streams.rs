@@ -21,7 +21,7 @@ fn scope(tx: &Tx<'_>, room_id: i64, user_id: i64) -> Result<Option<(Room, Member
 }
 fn conflict(tx: &Tx<'_>, room_id: i64) -> Result<Denial> {
     let name = Stream::live_for_room(tx.conn(), room_id)?
-        .map(|stream| User::find(tx.conn(), stream.user_id).map(|user| user.name))
+        .map(|stream| User::find(tx.conn(), stream.user_id).map(|user| user.display_name().to_owned()))
         .transpose()?
         .unwrap_or_else(|| "Someone".into());
     Ok(Denial::AlreadyLive(name))

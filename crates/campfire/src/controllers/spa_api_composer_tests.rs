@@ -255,7 +255,7 @@ async fn stable_user_mentions_survive_duplicate_names_renames_and_edits() {
     a.db()
         .write(|tx| {
             tx.conn().execute(
-                "UPDATE users SET name = 'Renamed <Person>', updated_at = '2026-10-09 23:59:59' WHERE id = ?",
+                "UPDATE users SET name = 'Renamed account', nickname = 'Renamed <Person>', updated_at = '2026-10-09 23:59:59' WHERE id = ?",
                 [KEVIN],
             )?;
             Ok(())

@@ -706,7 +706,7 @@ impl Message {
             User::find_by_id(tx.conn(), id)
                 .ok()
                 .flatten()
-                .map(|u| u.name)
+                .map(|u| u.display_name().to_owned())
         };
         if markdown {
             text.try_markdown_plain_text(tx.conn(), &body, &names)
@@ -968,7 +968,7 @@ impl Message {
         if *body == previous {
             return Ok(false);
         }
-        let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
+        let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.display_name().to_owned());
         let has_text = |html: &str| {
             rich_text
                 .try_to_plain_text(conn, html, &names)
@@ -1425,7 +1425,7 @@ impl Message {
     fn plain_text_body_from_html(&self, conn: &Connection, rich_text: &dyn RichText, html: Option<&str>) -> Result<String> {
         let mut text = String::new();
         if let Some(html) = html {
-            let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
+            let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.display_name().to_owned());
             text = if self.markdown() {
                 rich_text
                     .try_markdown_plain_text(conn, html, &names)

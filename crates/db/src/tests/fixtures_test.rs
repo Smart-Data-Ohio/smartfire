@@ -110,7 +110,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             // Port-only user preferences and activity counter that Rails doesn't have.
             .filter(|(_, name)| {
                 !(table == "users"
-                    && matches!(name.as_str(), "activity_revision" | "appearance_preferences"))
+                    && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname"))
             })
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();

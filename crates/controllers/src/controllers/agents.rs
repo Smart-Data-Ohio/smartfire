@@ -96,13 +96,13 @@ fn profile_payload(
 ) -> campfire_db::Result<Value> {
     let name = campfire_db::User::find_by_id(conn, agent.user_id)?
         .ok_or(campfire_db::Error::RecordNotFound("User"))?
-        .name;
+        .display_name().to_owned();
     let owner = agent
         .owner_id
         .map(|id| campfire_db::User::find_by_id(conn, id))
         .transpose()?
         .flatten()
-        .map(|user| json!({"id":user.id,"name":user.name}));
+        .map(|user| json!({"id":user.id,"name":user.display_name()}));
     let mut payload = json!({"id":agent.id,"kind":agent.kind.name(),"name":name,"user_id":agent.user_id,"owner":owner,"provider":agent.provider,"runtime":agent.runtime,"description":agent.description,"status":agent.status,"status_note":agent.status_note,"status_changed_at":agent.status_changed_at.map(json_time),"last_seen_at":agent.last_seen_at.map(json_time),"working_presence":agent.working_presence_text(now)});
     payload
         .as_object_mut()

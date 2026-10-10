@@ -111,7 +111,7 @@ function initialState(world: World, now: number): State {
       evaluatedAt: new Date(now).toISOString().replace("Z", "000000Z"),
       profile: {
         userId: VIEWER_ID,
-        name: viewer?.name ?? "You",
+        name: viewer?.accountName ?? "You",
         emailAddress: "riel@smartdata.example",
         bio: viewer?.bio ?? null,
         avatarUrl: viewer?.avatarUrl ?? "/avatar.svg",
@@ -120,6 +120,8 @@ function initialState(world: World, now: number): State {
         githubLogin: "riel",
         githubVerified: false,
         bot: false,
+        pronouns: viewer?.pronouns ?? null,
+        nickname: null,
       },
       appearance: {
         theme: "system",
@@ -247,6 +249,26 @@ function changedTo(next: string | null, held: string | null): string | null {
   return next === "" ? null : next;
 }
 
+function identityText(
+  body: Json | undefined,
+  field: string,
+  limit: number,
+  held: string | null,
+): string | null {
+  const value = stringField(body, field);
+
+  if (value === null) return held;
+
+  if (/\p{Cc}/u.test(value)) throw validation(field, "must not contain control characters");
+
+  const trimmed = value.trim();
+
+  if ([...trimmed].length > limit)
+    throw validation(field, `is too long (maximum is ${limit} characters)`);
+
+  return trimmed === "" ? null : trimmed;
+}
+
 /** `sessions#revoke_others`'s notice. */
 function signedOutNotice(count: number): string {
   if (count === 0) return "No other sessions to sign out.";
@@ -316,12 +338,18 @@ export function createSettings(
     return ok(snapshot);
   };
 
-  const renameViewer = (name: string) => {
+  const renameViewer = (name: string, nickname: string | null, pronouns: string | null) => {
     const users = ctx.world().users;
     const viewer = users.get(VIEWER_ID);
 
     if (viewer !== undefined) {
-      users.set(VIEWER_ID, { ...viewer, name, updatedAt: rowTimestamp(ctx.now()) });
+      users.set(VIEWER_ID, {
+        ...viewer,
+        name: nickname ?? name,
+        accountName: name,
+        pronouns,
+        updatedAt: rowTimestamp(ctx.now()),
+      });
     }
   };
 
@@ -329,6 +357,8 @@ export function createSettings(
     const { settings } = current();
     const name = stringField(body, "name");
     const email = stringField(body, "emailAddress");
+    const nickname = identityText(body, "nickname", 32, settings.profile.nickname);
+    const pronouns = identityText(body, "pronouns", 40, settings.profile.pronouns);
 
     if (name !== null && name.trim() === "") throw validation("name", "can't be blank");
 
@@ -348,7 +378,7 @@ export function createSettings(
 
     if (bio !== null && bio.length > 200) throw validation("bio", "is too long");
 
-    if (name !== null) renameViewer(name);
+    renameViewer(name ?? settings.profile.name, nickname, pronouns);
 
     const github = stringField(body, "githubLogin");
 
@@ -362,6 +392,8 @@ export function createSettings(
         githubLogin: held.profile.githubVerified
           ? held.profile.githubLogin
           : changedTo(github, held.profile.githubLogin),
+        pronouns,
+        nickname,
       },
     }));
   };

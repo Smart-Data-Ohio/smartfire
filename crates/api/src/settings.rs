@@ -341,6 +341,8 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
             github_login: sections.github_login.clone(),
             github_verified: sections.github_verified,
             bot: user.is_bot(),
+            pronouns: user.pronouns.clone(),
+            nickname: user.nickname.clone(),
         },
         appearance: api::AppearanceSettings {
             theme: theme(&appearance.theme),
@@ -637,6 +639,8 @@ async fn save_profile(c: &mut Ctx) -> Result {
         )
         .await?,
         bio: update.bio.map(Some),
+        pronouns: update.pronouns.map(Some),
+        nickname: update.nickname.map(Some),
         ..UserChanges::default()
     };
     let settings = profile_settings::Changes {

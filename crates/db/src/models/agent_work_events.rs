@@ -63,7 +63,7 @@ fn actor_name(tx: &Tx<'_>, actor_id: Option<i64>) -> Result<Option<String>> {
     actor_id
         .map(|id| User::find_by_id(tx.conn(), id))
         .transpose()
-        .map(|actor| actor.flatten().map(|u| u.name))
+        .map(|actor| actor.flatten().map(|u| u.display_name().to_owned()))
 }
 
 fn record(
@@ -266,7 +266,7 @@ pub(crate) fn capture_deleted(
             .map(|id| User::find_by_id(tx.conn(), id))
             .transpose()?
             .flatten()
-            .map(|u| u.name)
+            .map(|u| u.display_name().to_owned())
     );
     Ok(Some(DeletedWork { agent_id, snapshot }))
 }

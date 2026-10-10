@@ -404,7 +404,7 @@ impl AgentApproval {
                 actor_id: Some(by.id),
                 agent_approval_id: Some(self.id),
                 event_type: "approval_decided".into(),
-                metadata: json!({"approval_id":self.id,"status":self.status,"decided_by":by.name,"note":self.decision_note}),
+                metadata: json!({"approval_id":self.id,"status":self.status,"decided_by":by.display_name(),"note":self.decision_note}),
                 ..Default::default()
             },
         )?;
@@ -584,8 +584,8 @@ impl AgentApproval {
         let decided_by = self
             .decided_by_id
             .map(|id| {
-                query_one(conn, "SELECT name FROM users WHERE id=?", [id], |r| {
-                    r.get::<_, String>(0)
+                query_one(conn, "SELECT * FROM users WHERE id=?", [id], |r| {
+                    Ok(crate::User::from_row(r)?.display_name().to_owned())
                 })
             })
             .transpose()?

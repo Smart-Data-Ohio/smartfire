@@ -66,11 +66,11 @@ pub fn load(
                 let names: Vec<String> = members
                     .iter()
                     .filter(|u| u.id != user.id)
-                    .map(|u| u.name.clone())
+                    .map(|u| u.display_name().to_owned())
                     .collect();
                 let label = campfire_presentation::helpers::to_sentence(&names, " and ");
                 Some(if label.trim().is_empty() {
-                    user.name.clone()
+                    user.display_name().to_owned()
                 } else {
                     label
                 })
@@ -117,7 +117,7 @@ pub fn load(
         .into_iter()
         .map(|u| SwitcherPerson {
             id: u.id,
-            name: u.name.clone(),
+            name: u.display_name().to_owned(),
             avatar_url: format!("{base_url}{}", super::avatar_path(secrets, &u)),
             dm_url: rooms_by_user.get(&u.id).map(|id| campfire_routes::room(*id)),
             dm_room_id: rooms_by_user.get(&u.id).copied(),
