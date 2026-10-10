@@ -2011,3 +2011,65 @@ async fn poll_media_agent_downloads_follow_poll_access() {
         assert_eq!(a.anonymous().send(request(&url)).await.status, StatusCode::NOT_FOUND, "{url}");
     }
 }
+
+#[tokio::test]
+async fn poll_media_bot_key_still_honours_byte_ranges() {
+    use crate::controllers::presenters::test_support::{ALL_TALK, BENDER_KEY};
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let staged = a.booted.app.storage.stage_bytes(
+        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
+    ).unwrap();
+    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
+    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let mut author = a.sign_in(DAVID).await;
+    let mut body = poll_body("poll-bot-still-range", &["Moving", "Quiet"]);
+    body["optionMedia"] = json!([{ "signedId": signed }, null]);
+    let posted = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/polls"), body).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let posted: Value = parse(&posted);
+    let still = posted["poll"]["options"][0]["media"]["stillUrl"].as_str().unwrap();
+    let url = format!("{still}?bot_key={BENDER_KEY}");
+    let full = a.anonymous().send(get(&url)).await;
+    assert_eq!(full.status, StatusCode::OK, "{}", full.text());
+    let length = full.body.len();
+    let ranged = a.anonymous().send(get(&url).header("range", "bytes=0-7")).await;
+    assert_eq!(ranged.status, StatusCode::PARTIAL_CONTENT, "{}", ranged.text());
+    assert_eq!(ranged.body.len(), 8);
+    assert_eq!(&ranged.body[..], &full.body[..8]);
+    assert_eq!(ranged.header("content-range"), Some(format!("bytes 0-7/{length}").as_str()));
+    assert_eq!(ranged.header("content-length"), Some("8"));
+    assert_eq!(ranged.header("cache-control"), Some("private, no-store"));
+}
+
+#[tokio::test]
+async fn poll_media_bot_key_ranged_original_keeps_attachment_disposition() {
+    use crate::controllers::presenters::test_support::{ALL_TALK, BENDER_KEY};
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let staged = a.booted.app.storage.stage_bytes(
+        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
+    ).unwrap();
+    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
+    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let mut author = a.sign_in(DAVID).await;
+    let mut body = poll_body("poll-bot-original-range", &["Moving", "Quiet"]);
+    body["optionMedia"] = json!([{ "signedId": signed }, null]);
+    let posted = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/polls"), body).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let posted: Value = parse(&posted);
+    let original = posted["poll"]["options"][0]["media"]["url"].as_str().unwrap();
+    let url = format!("{original}?disposition=attachment&bot_key={BENDER_KEY}");
+    let full = a.anonymous().send(get(&url)).await;
+    assert_eq!(full.status, StatusCode::OK, "{}", full.text());
+    let full_disposition = full.header("content-disposition").unwrap().to_owned();
+    assert!(full_disposition.starts_with("attachment") && full_disposition.contains("poll.gif"), "{full_disposition}");
+    let ranged = a.anonymous().send(get(&url).header("range", "bytes=0-7")).await;
+    assert_eq!(ranged.status, StatusCode::PARTIAL_CONTENT, "{}", ranged.text());
+    assert_eq!(ranged.body.len(), 8);
+    let disposition = ranged.header("content-disposition").unwrap();
+    assert!(disposition.starts_with("attachment") && disposition.contains("poll.gif"), "{disposition}");
+    assert_eq!(disposition, full_disposition);
+}

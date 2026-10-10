@@ -106,7 +106,7 @@ pub async fn blobs_proxy(c: &mut Ctx) -> Result {
 fn proxy_blob(c: &mut Ctx, blob: &Blob) -> Result {
     let disposition = c.param_str("disposition").map(str::to_string);
     if let Some(range) = c.request.header("range").filter(|r| !r.trim().is_empty()).map(str::to_string) {
-        let response = send_blob_byte_range_data(c, blob, &range)?;
+        let response = send_blob_byte_range_data(c, blob, &range, disposition.as_deref())?;
         return Ok(if matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true))) { response.header(header::CACHE_CONTROL, "private, no-store") } else { response });
     }
     let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
@@ -127,8 +127,12 @@ pub async fn representations_redirect(c: &mut Ctx) -> Result {
     let image = set_representation(c, blob).await?;
     if restricted && crate::concerns::authenticated_by(c).skips_forgery_protection() {
         let disposition = c.param_str("disposition").map(str::to_string);
-        return Ok(send_blob_stream(c, &image, disposition.as_deref())?
-            .header(header::CACHE_CONTROL, "private, no-store"));
+        let range = c.request.header("range").filter(|r| !r.trim().is_empty()).map(str::to_string);
+        let response = match range {
+            Some(range) => send_blob_byte_range_data(c, &image, &range, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes"),
+            None => send_blob_stream(c, &image, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes"),
+        };
+        return Ok(response.header(header::CACHE_CONTROL, "private, no-store"));
     }
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
@@ -801,8 +805,8 @@ fn send_blob_stream(c: &mut Ctx, blob: &Blob, disposition: Option<&str>) -> Resu
     Ok(response)
 }
 
-/// `send_blob_byte_range_data(blob, range_header)`
-fn send_blob_byte_range_data(c: &mut Ctx, blob: &Blob, range: &str) -> Result {
+/// `send_blob_byte_range_data(blob, range_header)`, with the same disposition as `send_blob_stream`.
+fn send_blob_byte_range_data(c: &mut Ctx, blob: &Blob, range: &str, disposition: Option<&str>) -> Result {
     let storage = c.app().storage.clone();
     let size = blob.byte_size.max(0) as u64;
     let ranges = match file_server::byte_ranges(Some(range), size) {
@@ -827,7 +831,7 @@ fn send_blob_byte_range_data(c: &mut Ctx, blob: &Blob, range: &str) -> Result {
         parts.push(BodyPart::Bytes(format!("\r\n--{boundary}--\r\n").into_bytes()));
         (format!("multipart/byteranges; boundary={boundary}"), parts, None)
     };
-    let disposition = content_types::forced_disposition(blob.content_type()).unwrap_or("inline");
+    let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
     let mut response = c.send_data(
         bytes::Bytes::new(),
         SendOptions {
