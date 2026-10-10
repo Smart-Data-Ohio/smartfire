@@ -9,6 +9,7 @@ edition.workspace = true
 test-support = ["campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support", "campfire_storage/test-support"]
 
 [dependencies]
+campfire_api_types.workspace = true
 campfire_view_kit.workspace = true
 rails_compat.workspace = true
 campfire_kit.workspace = true

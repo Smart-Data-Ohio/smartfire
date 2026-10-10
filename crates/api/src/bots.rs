@@ -327,7 +327,7 @@ fn reply_key(c: &mut Ctx, bot: &User, key: String) -> Result {
 /// `accounts/bots#create`: administrators, with the password confirmed.
 async fn save_new_bot(c: &mut Ctx) -> Result {
     administrator(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let create: api::CreateBot = body(c).await?;
     let avatar = signed_upload(c, "avatar", create.avatar)?
         .stage(c.app())
@@ -369,7 +369,7 @@ async fn save_bot(c: &mut Ctx) -> Result {
     let update: api::UpdateBot = body(c).await?;
     if classic::webhook_url_changing(c, &bot, update.webhook_url.as_deref()).await? {
         concerns::ensure_can_administer(c)?;
-        require_sudo(c)?;
+        require_sudo(c).await?;
     }
     let avatar = signed_upload(c, "avatar", update.avatar)?
         .stage(c.app())
@@ -411,7 +411,7 @@ async fn kill_switch(c: &mut Ctx) -> Result {
 /// `accounts/bots/keys#update`: administrators, with the password confirmed.
 async fn new_key(c: &mut Ctx) -> Result {
     administrator(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let bot = active_bot(c).await?;
     let key = keys::reset_key(c, bot.clone()).await?;
     reply_key(c, &bot, key)
@@ -423,7 +423,7 @@ async fn new_webhook_secret(c: &mut Ctx) -> Result {
     viewer(c).await?;
     let bot = active_bot(c).await?;
     classic::ensure_can_manage_bot(c, &bot).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let id = bot.id;
     if !webhook_secrets::reset_signing_secret(c, bot).await? {
         return Err(refusal(
@@ -440,7 +440,7 @@ async fn new_webhook_secret(c: &mut Ctx) -> Result {
 async fn link_github(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let bot = active_bot(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let connect: api::ConnectGithub = body(c).await?;
     let id = bot.id;
     let (message, notice) = github_connections::connect(c, bot, &connect.access_token).await?;
@@ -460,7 +460,7 @@ async fn link_github(c: &mut Ctx) -> Result {
 async fn unlink_github(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let bot = active_bot(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let id = bot.id;
     github_connections::disconnect(c, bot).await?;
     reply_bot(c, id, Some("GitHub disconnected.".into())).await
@@ -527,7 +527,7 @@ async fn save_credential(c: &mut Ctx) -> Result {
     viewer(c).await?;
     let bot = active_bot(c).await?;
     concerns::ensure_can_administer(c)?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let agent = classic::ensure_agent(c, &bot).await?;
     let create: api::CreateCredential = body(c).await?;
     let zone = classic::viewer_zone(c).await?;
@@ -564,7 +564,7 @@ async fn delete_credential(c: &mut Ctx) -> Result {
     viewer(c).await?;
     let bot = active_bot(c).await?;
     classic::ensure_can_manage_bot(c, &bot).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let agent = classic::ensure_agent(c, &bot).await?;
     let id = path_id(c, "credential_id")?;
     if !credentials::revoke(c, &bot, agent.id, id).await? {
@@ -627,7 +627,7 @@ async fn save_grant(c: &mut Ctx) -> Result {
     let bot = active_bot(c).await?;
     classic::ensure_can_manage_bot(c, &bot).await?;
     concerns::ensure_can_administer(c)?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let agent = classic::ensure_agent(c, &bot).await?;
     let create: api::CreateGrant = body(c).await?;
     // The classic form offers only the rooms the bot is in; a room id from anywhere else
@@ -652,7 +652,7 @@ async fn delete_grant(c: &mut Ctx) -> Result {
     viewer(c).await?;
     let bot = active_bot(c).await?;
     classic::ensure_can_manage_bot(c, &bot).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let agent = classic::ensure_agent(c, &bot).await?;
     let id = path_id(c, "grant_id")?;
     if !grants::revoke(c, &bot, agent.id, id).await? {

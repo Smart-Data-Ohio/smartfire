@@ -117,10 +117,12 @@ export class ApiClient extends Context.Service<
           return yield* readSuccess(response, decode);
         }
 
-        if (request.auth === true && [400, 401, 404, 422, 429].includes(response.status)) {
+        if (request.auth === true && [400, 401, 403, 404, 422, 429].includes(response.status)) {
           return yield* readSuccess(response, decode).pipe(
             Effect.catchTag("ServerError", (error) =>
-              response.status === 422 ? readFailure(response, navigation) : Effect.fail(error),
+              [403, 422].includes(response.status)
+                ? readFailure(response, navigation)
+                : Effect.fail(error),
             ),
           );
         }

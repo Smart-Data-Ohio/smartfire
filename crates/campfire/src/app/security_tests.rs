@@ -756,7 +756,7 @@ async fn sudo_mode_stashes_the_request_until_confirmed() {
     use crate::concerns::{require_sudo_mode, session_keys};
 
     async fn guarded(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
-        require_sudo_mode(c)?;
+        require_sudo_mode(c).await?;
         Ok(c.html("done"))
     }
     async fn confirm(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {

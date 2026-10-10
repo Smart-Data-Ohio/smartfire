@@ -1,4 +1,4 @@
-//! Signed-out authentication contracts. Retained forms use the same operations and cookies.
+//! Authentication contracts. Retained forms use the same operations and cookies.
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use ts_rs::TS;
@@ -32,6 +32,51 @@ pub struct ChallengeSubmission {
 #[ts(export)]
 pub struct SignOut {
     pub push_subscription_endpoint: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum SudoSubmission {
+    Password { password: String },
+    Totp { code: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SudoMethod {
+    Password,
+    Totp,
+    Google,
+}
+
+/// The caller retains the write body; it is never echoed or stored in the cookie.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SudoRetry {
+    pub method: String,
+    pub path: String,
+    pub return_to: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SudoState {
+    pub methods: Vec<SudoMethod>,
+    pub retry: Option<SudoRetry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum SudoResponse {
+    Ready { reauthentication: SudoState },
+    Confirmed { retry: Option<SudoRetry> },
+    Navigate { location: String },
+    Error { message: String },
 }
 
 /// Credential refusals keep their HTTP status, but are next actions rather than expired sessions.
@@ -143,6 +188,56 @@ mod tests {
                 field_errors: [("code".into(), vec!["That code didn't work.".into()])].into(),
             },
             json!({"kind":"error","fieldErrors":{"code":["That code didn't work."]}}),
+        );
+    }
+
+    #[test]
+    fn sudo_requests_and_actions_round_trip() {
+        assert_wire(
+            &SudoSubmission::Password {
+                password: "secret".into(),
+            },
+            json!({"kind":"password","password":"secret"}),
+        );
+        assert_wire(
+            &SudoSubmission::Totp {
+                code: "123456".into(),
+            },
+            json!({"kind":"totp","code":"123456"}),
+        );
+        let retry = SudoRetry {
+            method: "PATCH".into(),
+            path: "/api/v1/admin/custom_styles".into(),
+            return_to: "/app/admin".into(),
+        };
+        assert_wire(
+            &SudoResponse::Ready {
+                reauthentication: SudoState {
+                    methods: vec![SudoMethod::Password, SudoMethod::Totp, SudoMethod::Google],
+                    retry: Some(retry.clone()),
+                },
+            },
+            json!({"kind":"ready","reauthentication":{"methods":["password","totp","google"],"retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}}}),
+        );
+        assert_wire(
+            &SudoResponse::Confirmed { retry: Some(retry) },
+            json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}}),
+        );
+        assert_wire(
+            &SudoResponse::Confirmed { retry: None },
+            json!({"kind":"confirmed","retry":null}),
+        );
+        assert_wire(
+            &SudoResponse::Navigate {
+                location: "https://accounts.google.com/authorize".into(),
+            },
+            json!({"kind":"navigate","location":"https://accounts.google.com/authorize"}),
+        );
+        assert_wire(
+            &SudoResponse::Error {
+                message: "Confirmation failed. Try again.".into(),
+            },
+            json!({"kind":"error","message":"Confirmation failed. Try again."}),
         );
     }
 

@@ -21,7 +21,7 @@ use crate::controllers::presenters::attachments::{self, Assignment, Record};
 /// Rails creates a workspace Agent and reveals the digest-backed key once.
 pub async fn create(c: &mut Ctx) -> Result {
     before(c).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let params = bot_params(c)?;
     let name = params.get("name").and_then(Param::to_s).ok_or_else(|| {
         Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name"))
@@ -147,7 +147,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         });
     if webhook_url_changing(c, &bot, submitted_url.as_deref()).await? {
         concerns::ensure_can_administer(c)?;
-        concerns::sudo::require_sudo_mode(c)?;
+        concerns::sudo::require_sudo_mode(c).await?;
     }
     let params = bot_params(c)?;
     let agent_changes = agent_params(c);

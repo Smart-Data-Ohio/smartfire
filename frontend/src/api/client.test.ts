@@ -16,8 +16,10 @@ import {
   NotFound,
   RateLimited,
   ServerError,
+  SudoRequired,
   Unauthorized,
 } from "./errors.ts";
+import { resumeSudo, submitSudo } from "./sudo-endpoints.ts";
 import { meFixture, roomDetailFixture } from "./testing.ts";
 import { completeTour } from "./tour-endpoints.ts";
 
@@ -129,6 +131,42 @@ afterEach(() => {
   for (const node of document.querySelectorAll('meta[name="csrf-token"], #boot')) {
     node.remove();
   }
+});
+
+describe("sudo HTTP statuses", () => {
+  it.effect("decodes credential failures and expiry without leaving the SPA", () => {
+    setCsrfMeta("held-token");
+
+    const refused = { kind: "error", message: "Confirmation failed. Try again." };
+    const expired = { kind: "ready", reauthentication: { methods: ["password"], retry: null } };
+
+    const { layer, navigations } = harness((_, index) =>
+      json(index === 0 ? 401 : 403, index === 0 ? refused : expired),
+    );
+
+    return Effect.gen(function* () {
+      expect(yield* submitSudo({ kind: "password", password: "wrong" })).toEqual(refused);
+      expect(yield* resumeSudo()).toEqual(expired);
+      expect(navigations).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("retains available methods and retry metadata on protected writes", () => {
+    const error = new SudoRequired({
+      message: "Confirm your password to continue",
+      reauthentication: {
+        methods: ["password", "totp"],
+        retry: { method: "PATCH", path: "/api/v1/admin/custom_styles", returnTo: "/app/admin" },
+      },
+    });
+
+    const { layer, navigations } = harness(() => errorReply(403, error));
+
+    return Effect.gen(function* () {
+      expect(yield* me().pipe(Effect.flip)).toEqual(error);
+      expect(navigations).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
 });
 
 describe("ApiClient", () => {

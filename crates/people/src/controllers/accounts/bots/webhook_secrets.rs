@@ -16,7 +16,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let bot = super::find_active_bot(c, "bot_id").await?;
     super::ensure_can_manage_bot(c, &bot).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let id = bot.id;
     if reset_signing_secret(c, bot).await? {
         c.flash()

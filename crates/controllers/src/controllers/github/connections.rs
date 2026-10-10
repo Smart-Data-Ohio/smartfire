@@ -69,7 +69,7 @@ async fn before(c: &mut Ctx, bot: bool) -> Result<(User, String)> {
     } else {
         concerns::require_current_user(c)?.clone()
     };
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let path = if bot {
         campfire_routes::edit_account_bot(user.id)
     } else {
@@ -146,7 +146,7 @@ async fn app_before(c: &mut Ctx) -> Result<()> {
 }
 pub async fn connect(c: &mut Ctx) -> Result {
     app_before(c).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let raw = rand::random::<[u8; 16]>()
         .iter()
         .map(|b| format!("{b:02x}"))

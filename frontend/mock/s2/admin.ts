@@ -14,7 +14,7 @@ import type { Person } from "../../src/gen/Person.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
-import { HttpError, notFound, ok, plainError, validation } from "../http.ts";
+import { HttpError, notFound, ok, validation } from "../http.ts";
 import { booleanField, intField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -96,6 +96,8 @@ interface IconImage {
 
 /** The wire tag of a refused change (plain data here: Effect stays out of the mock). */
 const VALIDATION: ApiError["_tag"] = "Validation";
+
+const SUDO_REQUIRED = "SudoRequired" satisfies ApiError["_tag"];
 
 /** The classic page's refusal, a 422 naming no field. */
 const refusal = (message: string): HttpError =>
@@ -196,7 +198,13 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
   /** `require_sudo_mode`: role changes, removal, custom styles and a new join link. */
   const requireSudo = () => {
-    if (sudoLapsed) throw plainError(403, "SudoRequired", "Confirm your password to continue");
+    if (sudoLapsed) {
+      throw new HttpError(403, {
+        _tag: SUDO_REQUIRED,
+        message: "Confirm your password to continue",
+        reauthentication: { methods: ["password"], retry: null },
+      });
+    }
   };
 
   const current = (): State => {

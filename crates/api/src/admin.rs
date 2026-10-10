@@ -7,8 +7,8 @@
 //!
 //! The password confirmation differs only in where it comes back to. Classic stashes the form
 //! post and replays it after `/sudo`; a JSON write can't be replayed as a form, so the API
-//! stashes a visit to the SPA page that asked (the referer) and answers `SudoRequired`. Once the
-//! person confirms, `/sudo` sends them back there to do it again.
+//! returns available confirmation methods and retry metadata as `SudoRequired`.
+//! The client retains the body and retries once confirmation succeeds.
 
 use axum::Router;
 use axum::routing::{delete, get, patch, post, put};
@@ -23,7 +23,7 @@ use campfire_db::{Account, Role, User};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
 use campfire_people::controllers::accounts::icons::{image_facts, save_image};
 use campfire_presentation::time::Zone;
-use campfire_runtime::concerns::{self, Authentication, Before, session_keys};
+use campfire_runtime::concerns::{self, Authentication, Before};
 use campfire_runtime::context::db_error;
 use campfire_runtime::presenters::accounts::audit_logs;
 use campfire_runtime::presenters::attachments::{self, Assignment, Record};
@@ -206,35 +206,8 @@ pub(crate) async fn administrator(c: &mut Ctx) -> Result<User> {
     Ok(user)
 }
 
-/// `require_sudo_mode`, for a JSON request: `SudoRequired`, with a visit to the SPA page that
-/// asked stashed for `/sudo` to come back to.
-pub(crate) fn require_sudo(c: &mut Ctx) -> Result<()> {
-    let now = c.now();
-    if session_keys::sudo_verified(c.session(), now) {
-        return Ok(());
-    }
-    // Only a page of the SPA: anything else the referer names comes back to its root.
-    let page = session_keys::sudo_origin_path(c.request.referer(), &c.request.host(), "/app/");
-    let page = if page.starts_with("/app/") {
-        page
-    } else {
-        "/app/".to_string()
-    };
-    session_keys::store_sudo_pending_request(
-        c.session(),
-        session_keys::SudoPendingRequest {
-            method: "GET".into(),
-            path: page.clone(),
-            params: None,
-            origin: page,
-        },
-    );
-    Err(fail(
-        c,
-        api::ApiError::SudoRequired {
-            message: "Confirm your password to continue".into(),
-        },
-    ))
+pub(crate) async fn require_sudo(c: &mut Ctx) -> Result<()> {
+    concerns::sudo::require_sudo_mode(c).await
 }
 
 /// The JSON body as `T`; anything else is a 422.
@@ -582,7 +555,7 @@ async fn detach_banner(c: &mut Ctx) -> Result {
 /// `accounts/join_codes#create`
 async fn new_join_code(c: &mut Ctx) -> Result {
     administrator(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let mut account = account(c).await?;
     let audit = audit_context(c)?;
     let account = c
@@ -691,7 +664,7 @@ async fn active_person(c: &Ctx) -> Result<User> {
 async fn change_role(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let mut user = active_person(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let update: api::UpdatePerson = body(c).await?;
     let role = match update.role {
         api::PersonRole::Administrator => Role::Administrator,
@@ -731,7 +704,7 @@ async fn change_role(c: &mut Ctx) -> Result {
 async fn deactivate_person(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let mut user = active_person(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let audit = audit_context(c)?;
     let id = user.id;
     campfire_app::integrations::google::calendar::stop_remote(c.app(), user.id)
@@ -859,7 +832,7 @@ async fn show_custom_styles(c: &mut Ctx) -> Result {
 async fn save_custom_styles(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let mut account = account(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let update: StylesUpdate = body(c).await?;
     let audit = audit_context(c)?;
     // An absent `css` changes nothing, as an absent `custom_styles` param doesn't classically.

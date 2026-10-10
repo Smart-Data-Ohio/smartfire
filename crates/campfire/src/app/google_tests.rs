@@ -64,7 +64,10 @@ async fn app() -> (TestApp, Arc<Recorded>) {
     app_with_env(&[]).await
 }
 async fn app_with_env(env: &[(&str, &str)]) -> (TestApp, Arc<Recorded>) {
-    let app = TestApp::boot_seed_with_env("default", crate::controllers::presenters::test_support::seed_clock(), env).await.expect("pinned default seed required");
+    app_with_clock(crate::controllers::presenters::test_support::seed_clock(), env).await
+}
+async fn app_with_clock(clock: campfire_kit::SharedClock, env: &[(&str, &str)]) -> (TestApp, Arc<Recorded>) {
+    let app = TestApp::boot_seed_with_env("default", clock, env).await.expect("pinned default seed required");
     let recorded = Arc::new(Recorded {
         response: Mutex::new(Err(())),
         calls: Mutex::new(vec![]),
@@ -158,6 +161,358 @@ async fn sessions(a: &TestApp) -> i64 {
         .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))?))
         .await
         .unwrap()
+}
+
+#[tokio::test]
+async fn sudo_contract_google_round_trip_resumes_json_once_with_identical_audit() {
+    let mut outcomes = Vec::new();
+    for json_mode in [false, true] {
+        let (a, r) = app_with_clock(
+            Arc::new(campfire_kit::FrozenClock::new(
+                crate::controllers::presenters::test_support::SEED_NOW
+                    .parse()
+                    .unwrap(),
+            )),
+            &[],
+        )
+        .await;
+        a.db().write(|tx| {
+            tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        let mut b = a.sign_in(DAVID).await;
+        let path = if json_mode {
+            "/api/v1/admin/workspace/join_code"
+        } else {
+            "/account/join_code"
+        };
+        let mut req =
+            Req::new(Method::POST, path).header("referer", "http://campfire.test/app/admin");
+        if json_mode {
+            req = req.header("accept", "application/json");
+        }
+        let gate = b.write(req).await;
+        assert_eq!(
+            gate.status,
+            if json_mode {
+                StatusCode::FORBIDDEN
+            } else {
+                StatusCode::FOUND
+            }
+        );
+        if json_mode {
+            assert_eq!(
+                gate.json()["error"]["reauthentication"]["methods"],
+                json!(["password", "totp", "google"])
+            );
+        }
+        let q = if json_mode {
+            let reply = b
+                .write(
+                    Req::new(Method::POST, "/api/v1/sudo/google")
+                        .header("accept", "application/json"),
+                )
+                .await;
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+            assert_eq!(reply.json()["kind"], "navigate");
+            url::Url::parse(reply.json()["location"].as_str().unwrap())
+                .unwrap()
+                .query_pairs()
+                .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                .collect()
+        } else {
+            start(&mut b, "/sudo/google").await
+        };
+        assert_eq!(q["prompt"], "login");
+        assert_eq!(q["max_age"], "0");
+        answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+        let reply = callback(&mut b, &q["state"]).await;
+        if json_mode {
+            assert_eq!(
+                reply.location(),
+                Some("http://campfire.test/app/sudo/continue")
+            );
+            let resumed = b.get("/api/v1/sudo/continue").await;
+            assert_eq!(resumed.status, StatusCode::OK, "{}", resumed.text());
+            assert_eq!(
+                resumed.json(),
+                json!({"kind":"confirmed","retry":{"method":"POST","path":path,"returnTo":"/app/admin"}})
+            );
+            assert_eq!(
+                b.get("/api/v1/sudo/continue").await.json(),
+                json!({"kind":"confirmed","retry":null})
+            );
+        } else {
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        }
+        let cookies = b.cookie_header();
+        let raw = cookies
+            .split("; ")
+            .find_map(|p| p.strip_prefix("_campfire_session="))
+            .unwrap();
+        use campfire_kit::Crypto;
+        let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
+            .decrypt_cookie(
+                "_campfire_session",
+                &rails_compat::cookies::unescape(raw),
+                a.booted.app.clock.now(),
+            )
+            .unwrap();
+        assert!(session.get("sudo_pending_request").is_none());
+        let audit = a.db().read(|conn| {
+            let mut rows = conn.prepare("SELECT action,actor_id,target_id,details,ip_address,user_agent,created_at FROM audit_logs ORDER BY id")?;
+            Ok(rows.query_map([], |r| Ok(json!([r.get::<_,String>(0)?,r.get::<_,Option<i64>>(1)?,r.get::<_,Option<i64>>(2)?,r.get::<_,Option<String>>(3)?,r.get::<_,Option<String>>(4)?,r.get::<_,Option<String>>(5)?,r.get::<_,String>(6)?])))?.collect::<rusqlite::Result<Vec<_>>>()?)
+        }).await.unwrap();
+        assert_eq!(actions(&a).await, vec!["sudo.confirm.success"]);
+        outcomes.push((session["sudo_verified_at"].clone(), audit));
+    }
+    assert_eq!(outcomes[0], outcomes[1]);
+}
+
+#[tokio::test]
+async fn sudo_contract_google_refusals_keep_pending_write_and_never_mark_confirmation() {
+    for json_mode in [false, true] {
+        let (a, r) = app_with_clock(
+            Arc::new(campfire_kit::FrozenClock::new(
+                crate::controllers::presenters::test_support::SEED_NOW
+                    .parse()
+                    .unwrap(),
+            )),
+            &[],
+        )
+        .await;
+        a.db().write(|tx| {
+            tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        for refusal in ["cancelled", "expired", "stale", "subject", "unavailable"] {
+            let mut b = a.sign_in(DAVID).await;
+            let mut gate = Req::new(
+                Method::POST,
+                if json_mode {
+                    "/api/v1/admin/workspace/join_code"
+                } else {
+                    "/account/join_code"
+                },
+            );
+            if json_mode {
+                gate = gate.header("accept", "application/json");
+            }
+            b.write(gate).await;
+            let q = if json_mode {
+                let reply = b.write(Req::new(Method::POST, "/api/v1/sudo/google")).await;
+                assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+                url::Url::parse(reply.json()["location"].as_str().unwrap())
+                    .unwrap()
+                    .query_pairs()
+                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                    .collect()
+            } else {
+                start(&mut b, "/sudo/google").await
+            };
+            let mut v = claims(
+                &a,
+                &q,
+                if refusal == "subject" {
+                    "wrong"
+                } else {
+                    "david"
+                },
+                "david@smartdata.net",
+            );
+            if refusal == "stale" {
+                v["auth_time"] = json!(a.booted.app.clock.now().as_second() - 330);
+            }
+            answer(&r, v);
+            if refusal == "unavailable" {
+                *r.response.lock().unwrap() = Err(());
+            }
+            let reply = if refusal == "cancelled" {
+                b.get(&format!(
+                    "/session/google/callback?state={}&error=access_denied",
+                    crate::controllers::presenters::test_support::encode(&q["state"])
+                ))
+                .await
+            } else {
+                callback(
+                    &mut b,
+                    if refusal == "expired" {
+                        "forged"
+                    } else {
+                        &q["state"]
+                    },
+                )
+                .await
+            };
+            assert_eq!(
+                reply.location(),
+                Some(if json_mode {
+                    "http://campfire.test/app/sudo/continue"
+                } else if refusal == "expired" {
+                    "http://campfire.test/"
+                } else {
+                    "http://campfire.test/sudo/new"
+                }),
+                "{refusal}: {}",
+                reply.text()
+            );
+            let message = match refusal {
+                "cancelled" => "Google confirmation was cancelled.",
+                "expired" => {
+                    if json_mode {
+                        "Confirmation expired. Try again."
+                    } else {
+                        ""
+                    }
+                }
+                "subject" => "That Google account is not the one linked to your account.",
+                "unavailable" => "Google is unavailable right now. Try again.",
+                _ => "Google confirmation failed. Try again.",
+            };
+            if !message.is_empty() {
+                assert_eq!(b.flash()["alert"], message);
+            }
+            use campfire_kit::Crypto;
+            let cookies = b.cookie_header();
+            let raw = cookies
+                .split("; ")
+                .find_map(|p| p.strip_prefix("_campfire_session="))
+                .unwrap();
+            let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
+                .decrypt_cookie(
+                    "_campfire_session",
+                    &rails_compat::cookies::unescape(raw),
+                    a.booted.app.clock.now(),
+                )
+                .unwrap();
+            assert!(session.get("sudo_verified_at").is_none(), "{refusal}");
+            assert!(session.get("sudo_pending_request").is_some(), "{refusal}");
+            assert!(
+                session
+                    .get(crate::integrations::google::sign_in::FLOW_SESSION_KEY)
+                    .is_none(),
+                "flow consumed"
+            );
+            if json_mode {
+                assert_eq!(
+                    b.get("/api/v1/sudo/continue").await.status,
+                    StatusCode::FORBIDDEN
+                );
+            }
+        }
+        assert_eq!(actions(&a).await, vec!["sudo.confirm.failure"]);
+    }
+}
+#[tokio::test]
+async fn sudo_contract_api_gate_keeps_retained_google_continuation() {
+    let (a, r) = app().await;
+    a.db().write(|tx| {
+        tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+        Ok(())
+    }).await.unwrap();
+    for cancelled in [true, false] {
+        let mut b = a.sign_in(DAVID).await;
+        assert_eq!(
+            b.write(
+                Req::new(Method::POST, "/api/v1/admin/workspace/join_code")
+                    .header("referer", "http://campfire.test/app/admin")
+            )
+            .await
+            .status,
+            StatusCode::FORBIDDEN
+        );
+        let q = start(&mut b, "/sudo/google").await;
+        answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+        let reply = if cancelled {
+            b.get(&format!(
+                "/session/google/callback?state={}&error=access_denied",
+                crate::controllers::presenters::test_support::encode(&q["state"])
+            ))
+            .await
+        } else {
+            callback(&mut b, &q["state"]).await
+        };
+        assert_eq!(
+            reply.location(),
+            Some(if cancelled {
+                "http://campfire.test/sudo/new"
+            } else {
+                "http://campfire.test/app/admin"
+            })
+        );
+    }
+}
+
+#[tokio::test]
+async fn sudo_contract_google_callback_rejects_changed_or_signed_out_user() {
+    for json_mode in [false, true] {
+        for signed_out in [false, true] {
+            let (a, r) = app().await;
+            a.db().write(|tx| {
+                tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+                Ok(())
+            }).await.unwrap();
+            let mut b = a.sign_in(DAVID).await;
+            b.write(Req::new(Method::POST, "/api/v1/admin/workspace/join_code"))
+                .await;
+            let q = if json_mode {
+                let reply = b.write(Req::new(Method::POST, "/api/v1/sudo/google")).await;
+                url::Url::parse(reply.json()["location"].as_str().unwrap())
+                    .unwrap()
+                    .query_pairs()
+                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                    .collect()
+            } else {
+                start(&mut b, "/sudo/google").await
+            };
+            if signed_out {
+                a.db()
+                    .write(|tx| {
+                        tx.conn()
+                            .execute("DELETE FROM sessions WHERE user_id=?", [DAVID])?;
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+            } else {
+                b.absorb_cookie_header(&a.sign_in(JASON).await.cookie_header());
+            }
+            answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+            let reply = callback(&mut b, &q["state"]).await;
+            assert_eq!(
+                reply.location(),
+                Some(if signed_out {
+                    "http://campfire.test/session/new"
+                } else if json_mode {
+                    "http://campfire.test/app/sudo/continue"
+                } else {
+                    "http://campfire.test/users/me/profile"
+                })
+            );
+            assert_eq!(b.flash()["alert"], "Confirmation expired. Try again.");
+            use campfire_kit::Crypto;
+            let cookies = b.cookie_header();
+            let raw = cookies
+                .split("; ")
+                .find_map(|p| p.strip_prefix("_campfire_session="))
+                .unwrap();
+            let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
+                .decrypt_cookie(
+                    "_campfire_session",
+                    &rails_compat::cookies::unescape(raw),
+                    a.booted.app.clock.now(),
+                )
+                .unwrap();
+            assert!(session.get("sudo_verified_at").is_none());
+            assert!(
+                session
+                    .get(crate::integrations::google::sign_in::FLOW_SESSION_KEY)
+                    .is_none()
+            );
+            assert!(r.calls.lock().unwrap().is_empty());
+            assert!(actions(&a).await.is_empty());
+        }
+    }
 }
 #[tokio::test]
 async fn provisions_then_subject_signs_in_without_repeating_link_audit() {

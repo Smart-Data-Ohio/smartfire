@@ -9,6 +9,10 @@ pub use campfire_controllers::controllers::spa::*;
 mod signed_out_contracts_tests;
 
 #[cfg(test)]
+#[path = "sudo_contracts_tests.rs"]
+mod sudo_contracts_tests;
+
+#[cfg(test)]
 #[path = "spa_tests.rs"]
 mod tests;
 
