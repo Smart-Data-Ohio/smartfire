@@ -9,7 +9,6 @@ use axum::http::{HeaderMap, StatusCode};
 
 pub const HTML_UTF8: &str = "text/html; charset=utf-8";
 pub const JSON_UTF8: &str = "application/json; charset=utf-8";
-pub const TURBO_STREAM_UTF8: &str = "text/vnd.turbo-stream.html; charset=utf-8";
 
 #[derive(Debug)]
 pub struct Response {

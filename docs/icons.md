@@ -60,10 +60,8 @@ free-text boost input offers the same `:` completions.
 
 A brand icon renders as
 `<img class="icon icon--brand" src="<digested asset path>" alt=":name:" title="<title>" draggable="false">`.
-The `.icon--brand` rule in `web/app/assets/stylesheets/icons.css` sizes it to
-`1.2em` inline, so icons scale with emoji-only messages. Simple Icons ship
-black, so the dark theme inverts them through the `--icon-filter` custom
-property defined in `web/app/assets/stylesheets/colors.css`. The presentation
+The SPA styles inline brand icons with the message body. Simple Icons ship black;
+the frontend theme controls their display. The presentation
 sanitizer rewrites each icon's `src` from the `:name:` in its alt text, so
 stored bodies keep rendering across digest changes and asset host moves, and
 drops any image that is neither a known icon nor a mention avatar.
@@ -124,17 +122,9 @@ the icon registry resolves. A workspace icon deleted
 afterwards leaves the stored name resolving to nil, and every renderer falls
 back to its default marker instead of raising.
 
-`icon_avatar_tag` in `crates/views/src/helpers/icons.rs`
-renders any resolvable icon at avatar sizes: brand and workspace icons as
-`<img>` from their existing paths with `alt` set to the icon title, emoji as
-a `<span>` glyph with an accessible name. It returns nil for an unresolvable
-name. Rooms show the icon at 24px in sidebar rows
-(`users/sidebars/rooms/_shared`, `_voice`, and `_stage`), at 32px in the room header
-(`rooms/show/_header_identity`), and at 16px next to the room name in search
-results (`messages/_message`), each in place of the plain `#` or `→` marker;
-rooms without an icon render exactly as before. Bots show the icon through
-`avatar_tag` when no picture is uploaded — an uploaded picture always wins —
-while the avatars controller keeps serving the picture or initials as today.
+`campfire_presentation::helpers` resolves icon facts and `campfire_static_assets` supplies
+builtin image URLs. React renders the room and bot avatars; an uploaded picture wins over an
+icon. The avatars controller continues serving uploaded pictures or default initials.
 
 Each room edit form and the bot edit form has an **Icon** field holding the
 shortcode, with the existing `:` icon autocomplete wired to the same

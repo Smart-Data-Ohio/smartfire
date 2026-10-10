@@ -47,10 +47,8 @@ the meeting label alike.
 
 ### Profile card integration
 
-The profile card renders status through one shared partial
-(`users/statuses/_badge`, in `crates/views/templates/`) showing the
-presence dot, presence label, and custom status text, so it never queries
-leases itself.
+The React profile card shows the presence dot, presence label and custom status text
+from the API and live presence updates; it never queries leases itself.
 
 ## Do Not Disturb and quiet hours
 

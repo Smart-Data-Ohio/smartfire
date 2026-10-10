@@ -8,6 +8,7 @@ import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { AttachmentGallery } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
+import { fileSummary, messageFiles } from "./message-files.ts";
 import { SoundMessage } from "./sound-message.tsx";
 
 /** How much of a quoted message the reply line shows before it trails off. */
@@ -18,10 +19,13 @@ export function snippet(message: MessageDTO): string {
   const text = plainText(message).replace(/\s+/g, " ");
 
   if (text === "") {
-    return message.attachment?.filename ?? "Attachment";
+    return fileSummary(message);
   }
 
-  return text.length > QUOTE_CHARS ? `${text.slice(0, QUOTE_CHARS - 1)}…` : text;
+  const summary = messageFiles(message).length > 1 ? ` · ${fileSummary(message)}` : "";
+  const chars = QUOTE_CHARS - summary.length;
+
+  return `${text.length > chars ? `${text.slice(0, chars - 1)}…` : text}${summary}`;
 }
 
 /** "Pinned" and "Saved for later", above the header, as in Slack. */
@@ -147,9 +151,7 @@ function Body({ message }: { readonly message: MessageDTO }) {
 }
 
 function Files({ message }: { readonly message: MessageDTO }) {
-  const files = message.attachments ?? (message.attachment === null ? [] : [message.attachment]);
-
-  return <AttachmentGallery attachments={files} />;
+  return <AttachmentGallery attachments={messageFiles(message)} />;
 }
 
 /** Where a forward came from, when the source message is in the store. */

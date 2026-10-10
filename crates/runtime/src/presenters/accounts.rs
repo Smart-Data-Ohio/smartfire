@@ -65,8 +65,9 @@ pub fn platform(c: &Ctx) -> Platform {
 /// `User.administrator.first`, for `accounts/_help_contact`.
 pub fn help_contact(conn: &Connection) -> campfire_db::Result<Option<HelpContact>> {
     let owner: Option<(String, Option<String>)> = conn
-        .query_row_cached(r#"SELECT "users"."name", "users"."email_address" FROM "users" WHERE "users"."role" = 1 ORDER BY "users"."id" ASC LIMIT 1"#, [], |row| {
-            Ok((row.get(0)?, row.get(1)?))
+        .query_row_cached(r#"SELECT "users".* FROM "users" WHERE "users"."role" = 1 ORDER BY "users"."id" ASC LIMIT 1"#, [], |row| {
+            let user = User::from_row(row)?;
+            Ok((user.display_name().to_owned(), user.email_address))
         })
         .map(Some)
         .or_else(no_rows)?;
@@ -247,7 +248,7 @@ pub fn bots(conn: &Connection, secrets: &Secrets, bots: &[User]) -> campfire_db:
     } else {
         User::where_ids(conn, &owner_ids)?
             .into_iter()
-            .map(|owner| (owner.id, owner.name))
+            .map(|owner| (owner.id, owner.display_name().to_owned()))
             .collect()
     };
     bots.iter()

@@ -261,9 +261,9 @@ pub fn invoke(
         },
     )?;
     let user: String = tx.conn().query_row(
-        "SELECT u.name FROM users u JOIN agents a ON a.user_id=u.id WHERE a.id=?",
+        "SELECT u.* FROM users u JOIN agents a ON a.user_id=u.id WHERE a.id=?",
         [command.agent_id],
-        |r| r.get(0),
+        |r| Ok(crate::User::from_row(r)?.display_name().to_owned()),
     )?;
     Ok(Some(crate::slash_commands::CommandResult::ephemeral(
         format!("Sent to {user}"),

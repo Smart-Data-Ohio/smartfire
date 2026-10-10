@@ -43,6 +43,6 @@ keep stable `src` attributes.
 ## Integration note
 
 [Link embed cards](link-embeds.md) still render their image directly from
-`embed.image_url` (`crates/views/templates/link_embeds/_card.html`).
+`embed.image_url` in the SPA card.
 Routing that image through `signed_path` too would close the per-viewer
 image disclosure documented in their [privacy section](link-embeds.md#privacy).

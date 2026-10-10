@@ -321,8 +321,8 @@ impl Sources {
     }
     fn user_name(&self, conn: &Connection, id: i64) -> Result<Option<String>> {
         match self.users.get(&id).or_else(|| self.actors.get(&id)) {
-            Some(user) => Ok(Some(user.name.clone())),
-            None => Ok(User::find_by_id(conn, id)?.map(|user| user.name)),
+            Some(user) => Ok(Some(user.display_name().to_owned())),
+            None => Ok(User::find_by_id(conn, id)?.map(|user| user.display_name().to_owned())),
         }
     }
     fn thread_name(&self, conn: &Connection, id: i64) -> Result<String> {
@@ -639,9 +639,9 @@ fn item_with(
             let created = notice.created_at;
             let (label, _) = budget_details(agent, &cap);
             result.created_at = Some(created.jiff());
-            result.title = format!("{} · daily {label} budget", user.name);
-            result.body = budget_body(agent, &user.name, &cap);
-            result.author = Some(user.name.clone());
+            result.title = format!("{} · daily {label} budget", user.display_name());
+            result.body = budget_body(agent, user.display_name(), &cap);
+            result.author = Some(user.display_name().to_owned());
         }
         "Event" => {
             let event = messages.event(conn, item.source_id)?;
@@ -689,7 +689,7 @@ fn item_with(
                 event
                     .actor_id
                     .and_then(|id| messages.actors.get(&id))
-                    .map(|user| user.name.clone())
+                    .map(|user| user.display_name().to_owned())
                     .unwrap_or_else(|| "Work thread".into()),
             );
             result.body = work_event_body(event);
@@ -875,7 +875,7 @@ pub fn payload_with_sources(
                 campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
                     .ok_or(campfire_db::Error::RecordNotFound("HuddleGrant"))?;
             let caller = campfire_db::User::find_by_id(conn, grant.user_id)?
-                .map(|user| user.name)
+                .map(|user| user.display_name().to_owned())
                 .unwrap_or_else(|| "Someone".into());
             source.body = if row.event_type == "huddle_missed" {
                 format!("You missed a huddle from {caller}")
@@ -929,7 +929,7 @@ pub fn payload_with_sources(
                 .get(&agent.user_id)
                 .ok_or(campfire_db::Error::RecordNotFound("User"))?;
             let cap = notice.cap.clone();
-            source.body = budget_body(agent, &user.name, &cap);
+            source.body = budget_body(agent, user.display_name(), &cap);
             source.creator_id = Some(agent.user_id);
             source.path = format!("/account/bots/{}/edit", agent.user_id);
             source.status = Some(cap);

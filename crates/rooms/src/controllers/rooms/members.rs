@@ -92,7 +92,7 @@ pub async fn index(c: &mut Ctx) -> Result {
             };
             Member {
                 id: member.user.id,
-                name: member.user.name.clone(),
+                name: member.user.display_name().to_owned(),
                 avatar_url: c.url_for(&avatar_path(&c.app().secrets, &member.user)),
                 bot: member.user.is_bot(),
                 online: presence != "offline",

@@ -433,7 +433,7 @@ pub(crate) async fn require_grouped_uploads(c: &mut Ctx, signed_ids: &[String]) 
         .db
         .read(move |conn| {
             let blobs = campfire_storage::Blob::find_many(conn, &ids)
-                .map_err(campfire_web::controllers::presenters::storage_error)?;
+                .map_err(campfire_runtime::presenters::storage_error)?;
             Ok(ids.iter().all(|id| {
                 blobs
                     .get(id)

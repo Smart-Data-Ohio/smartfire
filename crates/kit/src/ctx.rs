@@ -548,11 +548,6 @@ impl Ctx {
         self.render_as(status, &format!("{}; charset=utf-8", template.string), body)
     }
 
-    /// `render turbo_stream:` (`text/vnd.turbo-stream.html`).
-    pub fn turbo_stream(&mut self, html: impl Into<Bytes>) -> Response {
-        self.render_as(StatusCode::OK, response::TURBO_STREAM_UTF8, html)
-    }
-
     /// `render json:`
     pub fn json<T: Serialize + ?Sized>(&mut self, status: StatusCode, value: &T) -> Result<Response> {
         let body = serde_json::to_vec(value).map_err(Error::internal)?;

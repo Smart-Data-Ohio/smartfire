@@ -118,10 +118,6 @@ fn custom_fragment_keys_match_pr148_rails() {
                 "{}, {zone}",
                 row["label"]
             );
-            assert_eq!(
-                keys::fragment("messages/_message", "0123abcd", &key, &zone_model),
-                row["expanded"][zone]["fragment"].as_str().unwrap()
-            );
         }
     }
     for row in vectors["sidebar_membership"].as_array().unwrap() {

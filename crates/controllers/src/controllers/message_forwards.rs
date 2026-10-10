@@ -97,15 +97,18 @@ pub async fn destinations(c: &mut Ctx) -> Result {
         let threads = ChannelThread::for_rooms(conn, &ids)?;
         let mut direct_names = std::collections::HashMap::<i64, Vec<String>>::new();
         // One member query for every reachable direct; no per-room/thread/user lookup.
-        let mut statement = conn.prepare("SELECT memberships.room_id, users.id, users.name FROM memberships INNER JOIN users ON users.id = memberships.user_id INNER JOIN rooms ON rooms.id = memberships.room_id WHERE rooms.type = 'Rooms::Direct' AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id = ?) ORDER BY memberships.id")?;
-        for row in statement.query_map([viewer.id], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?, row.get::<_, String>(2)?)))? {
+        let mut statement = conn.prepare("SELECT memberships.room_id AS member_room_id, users.* FROM memberships INNER JOIN users ON users.id = memberships.user_id INNER JOIN rooms ON rooms.id = memberships.room_id WHERE rooms.type = 'Rooms::Direct' AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id = ?) ORDER BY memberships.id")?;
+        for row in statement.query_map([viewer.id], |row| {
+            let user = campfire_db::User::from_row(row)?;
+            Ok((row.get::<_, i64>("member_room_id")?, user.id, user.display_name().to_owned()))
+        })? {
             let (room, user, name) = row?;
             if user != viewer.id { direct_names.entry(room).or_default().push(name); }
         }
         let rows = rooms.iter().filter(|room| !room.board()).map(|room| {
             let name = if room.direct() {
                 let name = campfire_presentation::helpers::to_sentence(direct_names.get(&room.id).map_or(&[], Vec::as_slice), " and ");
-                if name.is_empty() {viewer.name.clone()} else {name}
+                if name.is_empty() {viewer.display_name().to_owned()} else {name}
             } else {room.name.clone().unwrap_or_default()};
             let threads = if room.direct() {Vec::new()} else {threads.iter().filter(|thread| thread.room_id == room.id && thread.locked_at.is_none())
                 .map(|thread| json!({"id": thread.id, "name": thread.name, "status": thread.status_in_room(room, now).name()})).collect()};

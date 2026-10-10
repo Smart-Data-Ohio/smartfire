@@ -200,8 +200,8 @@ static ASSETS: &[File] = &[
     ),
 ];
 
-/// One public worker and offline URL for both UIs. A stub build still supports installed PWAs.
-pub fn file(path: &str, spa_enabled: bool, accept_encoding: Option<&str>) -> Option<Served> {
+/// Public worker and offline URLs for the SPA. A stub build still supports installed PWAs.
+pub fn file(path: &str, accept_encoding: Option<&str>) -> Option<Served> {
     let fallback = match path {
         "service-worker.js" => &WORKER,
         "offline.html" => &OFFLINE,
@@ -210,7 +210,7 @@ pub fn file(path: &str, spa_enabled: bool, accept_encoding: Option<&str>) -> Opt
                 .map(|file| crate::serve::negotiate(file, accept_encoding));
         }
     };
-    if spa_enabled && let Some(served) = crate::file(path, accept_encoding) {
+    if let Some(served) = crate::file(path, accept_encoding) {
         return Some(served);
     }
     Some(crate::serve::negotiate(fallback, accept_encoding))
@@ -277,21 +277,17 @@ mod tests {
     #[test]
     fn pwa_fallback_and_manifest_illustrations_are_embedded_without_classic_assets() {
         for asset in ASSETS {
-            assert_eq!(file(asset.path, false, None).unwrap().body, asset.identity);
+            assert_eq!(file(asset.path, None).unwrap().body, asset.identity);
             assert!(!asset.identity.is_empty());
         }
         assert_eq!(
-            file("service-worker.js", false, None).unwrap().body,
-            SERVICE_WORKER_JS.as_bytes()
+            file("service-worker.js", None).unwrap().body,
+            crate::file("service-worker.js", None).map_or(WORKER.identity, |served| served.body)
         );
         assert_eq!(
-            file("offline.html", false, None).unwrap().body,
-            OFFLINE.identity
+            file("offline.html", None).unwrap().body,
+            crate::file("offline.html", None).map_or(OFFLINE.identity, |served| served.body)
         );
-        assert_eq!(
-            file("offline.html", true, None),
-            crate::file("offline.html", None).or_else(|| file("offline.html", false, None))
-        );
-        assert!(file("assets/no-such-image.png", true, None).is_none());
+        assert!(file("assets/no-such-image.png", None).is_none());
     }
 }

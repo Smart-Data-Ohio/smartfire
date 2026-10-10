@@ -251,7 +251,7 @@ async fn create_huddle(c: &mut Ctx) -> Result {
         config.api_key.as_deref().unwrap_or_default(),
         config.api_secret.as_deref().unwrap_or_default(),
         &livekit::Participant {
-            name: &viewer.name,
+            name: viewer.display_name(),
             identity: &grant.identity,
             room_name: &grant.room_name,
             can_publish,

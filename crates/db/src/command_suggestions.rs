@@ -28,7 +28,7 @@ pub fn for_room(
             agent: None,
         })
         .collect::<Vec<_>>();
-    let mut stmt=conn.prepare("SELECT c.name,c.description,c.takes_arguments,u.name FROM agent_slash_commands c JOIN agents a ON a.id=c.agent_id JOIN users u ON u.id=a.user_id WHERE c.room_id=? ORDER BY c.name")?;
+    let mut stmt=conn.prepare(&format!("SELECT c.name,c.description,c.takes_arguments,{} FROM agent_slash_commands c JOIN agents a ON a.id=c.agent_id JOIN users u ON u.id=a.user_id WHERE c.room_id=? ORDER BY c.name", crate::User::projection("u", "agent_")))?;
     commands.extend(
         stmt.query_map([room_id], |r| {
             let name: String = r.get(0)?;
@@ -41,7 +41,7 @@ pub fn for_room(
                     .unwrap_or_else(|| "Custom command".into()),
                 arg_hint: String::new(),
                 takes_arguments: r.get(2)?,
-                agent: r.get(3)?,
+                agent: Some(crate::User::from_prefixed_row(r, "agent_")?.display_name().to_owned()),
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?,

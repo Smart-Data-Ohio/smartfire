@@ -80,7 +80,7 @@ async fn render(c: &mut Ctx, room_id: i64, status: StatusCode) -> Result {
                 .query_map([room_id], User::from_row)?
                 .collect::<rusqlite::Result<Vec<_>>>()?;
             candidates.retain(User::is_active);
-            candidates.sort_by_key(|user| rails_compat::unicode::downcase(&user.name));
+            candidates.sort_by_key(|user| rails_compat::unicode::downcase(user.display_name()));
             let users = dto::users(
                 conn,
                 &secrets,
@@ -145,7 +145,7 @@ async fn post_tag_rule(c: &mut Ctx) -> Result {
                 input.assignee_id,
                 actor_id,
             )?;
-            let assignee = User::find(tx.conn(), rule.assignee_id)?.name;
+            let assignee = User::find(tx.conn(), rule.assignee_id)?.display_name().to_owned();
             Ok((rule, assignee))
         })
         .await;
@@ -192,7 +192,7 @@ async fn delete_tag_rule(c: &mut Ctx) -> Result {
             let Some(rule) = rule.filter(|rule| rule.room_id == room_id) else {
                 return Ok(None);
             };
-            let assignee = User::find(tx.conn(), rule.assignee_id)?.name;
+            let assignee = User::find(tx.conn(), rule.assignee_id)?.display_name().to_owned();
             rule.destroy(tx)?;
             Ok(Some((rule.tag, assignee)))
         })

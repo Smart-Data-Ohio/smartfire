@@ -294,7 +294,7 @@ impl<'a> PollContext<'a> {
         };
         query_one(
             self.conn,
-            "SELECT a.*,u.name AS decider_name FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=? AND a.agent_id=?",
+            &format!("SELECT a.*,{} FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=? AND a.agent_id=?", crate::User::projection("u", "decider_")),
             rusqlite::params![id, self.agent_id],
             |r| {
                 let expires = r.get::<_, Option<Timestamp>>("expires_at")?;
@@ -305,7 +305,8 @@ impl<'a> PollContext<'a> {
                     &status
                 };
                 let decider = r
-                    .get::<_, Option<String>>("decider_name")?
+                    .get::<_, Option<i64>>("decider_id")?
+                    .map(|_| crate::User::from_prefixed_row(r, "decider_").map(|user| user.display_name().to_owned())).transpose()?
                     .map(Value::String)
                     .or_else(|| e.metadata.get("decided_by").cloned());
                 let note = r

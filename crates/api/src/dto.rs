@@ -195,7 +195,7 @@ pub fn user(
         });
     api::User {
         id: user.id,
-        name: user.name.clone(),
+        name: user.display_name().to_owned(),
         role: match user.role {
             Role::Member => api::UserRole::Member,
             Role::Administrator => api::UserRole::Administrator,
@@ -214,6 +214,8 @@ pub fn user(
         agent: extras.agents.get(&user.id).cloned(),
         created_at: time(user.created_at),
         updated_at: row_version(user.updated_at),
+        account_name: user.name.clone(),
+        pronouns: user.pronouns.clone(),
     }
 }
 
@@ -320,6 +322,7 @@ pub fn room(room: &Room) -> api::Room {
         creator_id: room.creator_id,
         created_at: time(room.created_at),
         updated_at: time(room.updated_at),
+        topic: room.topic.clone(),
     }
 }
 
@@ -401,7 +404,7 @@ fn messages_and_fetches_inner(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob)| *blob).collect::<Vec<_>>())
-        .map_err(campfire_web::controllers::presenters::storage_error)?;
+        .map_err(campfire_runtime::presenters::storage_error)?;
     let mut files = HashMap::<i64, Vec<(String, i64)>>::new();
     for (message_id, name, blob_id) in file_rows {
         files.entry(message_id).or_default().push((name, blob_id));
@@ -857,9 +860,12 @@ pub fn message(conn: &Connection, app: &AppState, message: &Message) -> Result<a
 /// are skipped).
 fn members(conn: &Connection, room_id: i64) -> Result<Vec<(i64, String)>> {
     let mut statement = conn.prepare_cached(
-        r#"SELECT "users"."id", "users"."name" FROM "memberships" INNER JOIN "users" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? ORDER BY "memberships"."id""#,
+        r#"SELECT "users".* FROM "memberships" INNER JOIN "users" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? ORDER BY "memberships"."id""#,
     )?;
-    let rows = statement.query_map([room_id], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    let rows = statement.query_map([room_id], |row| {
+        let user = User::from_row(row)?;
+        Ok((user.id, user.display_name().to_owned()))
+    })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
@@ -1098,7 +1104,7 @@ pub fn membership_row(
     Ok(sidebar_row_with(
         room,
         membership,
-        &viewer.name,
+        viewer.display_name(),
         members.as_deref(),
         counts,
         last_message,
@@ -1138,7 +1144,7 @@ pub fn sidebar(
         let row = sidebar_row_with(
             room,
             membership,
-            &viewer.name,
+            viewer.display_name(),
             members.as_deref(),
             counts.get(&room.id).copied().unwrap_or_default(),
             last_messages.remove(&room.id),
@@ -1189,7 +1195,7 @@ pub fn room_detail(
         |row| row.get(0),
     )?;
     let direct_member_ids: Vec<i64> = if room.direct() {
-        direct_members(&members, viewer.id, &viewer.name)
+        direct_members(&members, viewer.id, viewer.display_name())
             .into_iter()
             .map(|(id, _)| id)
             .collect()
@@ -1379,7 +1385,7 @@ pub fn forward_destinations(
     let threads = campfire_db::ChannelThread::for_rooms(conn, &ids)?;
     let mut direct_names = HashMap::<i64, Vec<String>>::new();
     let mut statement = conn.prepare_cached(
-        "SELECT memberships.room_id, users.id, users.name FROM memberships \
+        "SELECT memberships.room_id AS member_room_id, users.* FROM memberships \
          INNER JOIN users ON users.id = memberships.user_id \
          INNER JOIN rooms ON rooms.id = memberships.room_id \
          WHERE rooms.type = 'Rooms::Direct' \
@@ -1387,7 +1393,8 @@ pub fn forward_destinations(
          ORDER BY memberships.id",
     )?;
     let rows = statement.query_map([viewer.id], |row| {
-        Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?, row.get::<_, String>(2)?))
+        let user = User::from_row(row)?;
+        Ok((row.get::<_, i64>("member_room_id")?, user.id, user.display_name().to_owned()))
     })?;
     for row in rows {
         let (room, user, name) = row?;
@@ -1402,7 +1409,7 @@ pub fn forward_destinations(
             let name = if room.direct() {
                 let names = direct_names.get(&room.id).map_or(&[][..], Vec::as_slice);
                 let name = campfire_presentation::helpers::to_sentence(names, " and ");
-                if name.is_empty() { viewer.name.clone() } else { name }
+                if name.is_empty() { viewer.display_name().to_owned() } else { name }
             } else {
                 room.name.clone().unwrap_or_default()
             };

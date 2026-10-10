@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
+import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
@@ -104,11 +105,39 @@ export interface BoardPostInput {
   readonly ownerId: number | null;
   readonly tags: readonly string[];
   readonly brief: string;
+  readonly attachmentSignedId?: string | null;
+  readonly attachmentSignedIds?: readonly string[];
   /**
    * The submission's retry identity (a UUID): keep it across retries of one post, so a retry after
    * a lost reply answers the post already made. The brief's message id is the same.
    */
   readonly clientId: string;
+}
+
+function postMessage(input: BoardPostInput): CreateMessage | null {
+  const attachmentSignedIds = input.attachmentSignedIds ?? [];
+
+  if (
+    input.brief.trim() === "" &&
+    input.attachmentSignedId == null &&
+    attachmentSignedIds.length === 0
+  ) {
+    return null;
+  }
+
+  const message: CreateMessage = {
+    clientMessageId: input.clientId,
+    markdownSource: input.brief,
+    replyToMessageId: null,
+    replyNotifyAuthor: null,
+    attachmentSignedId: input.attachmentSignedId ?? null,
+  };
+
+  if (attachmentSignedIds.length > 0) {
+    message.attachmentSignedIds = [...attachmentSignedIds];
+  }
+
+  return message;
 }
 
 export const createPost = Effect.fn("boards.createPost")(function* (
@@ -123,16 +152,7 @@ export const createPost = Effect.fn("boards.createPost")(function* (
       ownerId: input.ownerId,
       tags: [...input.tags],
       clientPostId: input.clientId,
-      message:
-        input.brief.trim() === ""
-          ? null
-          : {
-              clientMessageId: input.clientId,
-              markdownSource: input.brief,
-              replyToMessageId: null,
-              replyNotifyAuthor: null,
-              attachmentSignedId: null,
-            },
+      message: postMessage(input),
     }),
     (detail, since, read) => {
       mutations.loadThreadDetail(detail, since, read);

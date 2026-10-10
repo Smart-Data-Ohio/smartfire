@@ -2,7 +2,7 @@ use super::super::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use super::*;
 use campfire_db::Message;
 use campfire_db::User;
-use campfire_web::controllers::presenters::{Presenter, Result};
+use campfire_runtime::presenters::{Presenter, Result};
 use serde_json::Value;
 use std::sync::Arc;
 use campfire_db::NewMessage;

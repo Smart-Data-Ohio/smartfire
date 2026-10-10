@@ -1,7 +1,7 @@
 use super::*;
 use campfire_db::ChannelThread;
 use campfire_db::User;
-use campfire_web::controllers::presenters::Presenter;
+use campfire_runtime::presenters::Presenter;
 use serde_json::Value;
 use crate::controllers::presenters::test_support::{DAVID, KEVIN, TestApp};
 use campfire_db::{Agent, NewAgent, NewChannelThread, Room, RoomType};

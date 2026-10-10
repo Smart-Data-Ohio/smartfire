@@ -257,21 +257,9 @@ pub async fn before_actions_with_authentication(
 
 // --- The new UI ----------------------------------------------------------------------------------
 
-/// Whether this person uses the new UI: everyone does, whatever `ui_preference` once stored.
-/// Only a test of the classic pages (`Config::spa_enabled` off) says no.
-pub async fn next_ui(c: &Ctx, _user: &User) -> Result<bool> {
-    Ok(c.app().config.spa_enabled)
-}
-
-/// The UI this request uses: the SPA, unless a classic page test turned it off.
-pub async fn effective_ui(c: &Ctx) -> Result<campfire_db::models::user::ui_preference::UiPreference> {
-    use campfire_db::models::user::ui_preference::UiPreference;
-    Ok(if c.app().config.spa_enabled { UiPreference::Next } else { UiPreference::Classic })
-}
-
-/// Both UIs update the same registration at scope `/`.
-pub fn service_worker_url(_ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
-    "/service-worker.js".into()
+/// All signed-in people use the SPA, including those with an old stored UI preference.
+pub async fn next_ui(_c: &Ctx, _user: &User) -> Result<bool> {
+    Ok(true)
 }
 
 /// The SPA URL for `endpoint` at `path`.
@@ -289,8 +277,7 @@ pub fn ported_page(endpoint: &str, path: &str, query: Option<&str>) -> Option<St
 pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     use campfire_kit::format;
 
-    let config = &c.app().config;
-    if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
+    if !(c.request.is_get() || c.request.is_head()) {
         return Ok(());
     }
     if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
@@ -353,8 +340,7 @@ pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
 pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     use campfire_kit::format;
 
-    let config = &c.app().config;
-    if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
+    if !(c.request.is_get() || c.request.is_head()) {
         return Ok(false);
     }
     if c.is_turbo_frame_request() || c.request.is_xhr() {

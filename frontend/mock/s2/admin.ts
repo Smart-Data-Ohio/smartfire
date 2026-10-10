@@ -4,6 +4,7 @@
  * the world's users (bots and deactivated people left out, banned people shown, as administrators
  * see them); the admin-only facts (email, two-step sign-in, Google) live here.
  */
+import { descriptionError, vanitySlugError } from "../../src/features/admin/workspace-identity.ts";
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { AuditLogEntry } from "../../src/gen/AuditLogEntry.ts";
 import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
@@ -40,6 +41,8 @@ interface State {
   logo: Image | null;
   banner: Image | null;
   joinCode: string;
+  description: string;
+  vanitySlug: string | null;
   restrict: boolean;
   uploadLimitBytes: number;
   css: string | null;
@@ -127,6 +130,8 @@ function initialState(world: World, now: number): State {
     logo: null,
     banner: null,
     joinCode: "mock-join-code",
+    description: "",
+    vanitySlug: null,
     restrict: false,
     uploadLimitBytes: 100 * 1024 * 1024,
     css: null,
@@ -238,6 +243,9 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       restrictRoomCreationToAdministrators: held.restrict,
       uploadLimitBytes: held.uploadLimitBytes,
       version: "2.0.0-mock",
+      description: held.description,
+      vanitySlug: held.vanitySlug,
+      vanityUrl: held.vanitySlug === null ? null : `http://127.0.0.1/join/${held.vanitySlug}`,
     };
   };
 
@@ -258,7 +266,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     return {
       id,
-      name: user.name,
+      name: user.accountName,
       avatarUrl: user.avatarUrl,
       role: user.role === "administrator" ? "administrator" : "member",
       banned: user.status === "banned",
@@ -353,6 +361,21 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     const held = current();
     const name = stringField(body, "name");
 
+    const description = stringField(body, "description");
+    const vanitySlug = stringField(body, "vanitySlug");
+
+    if (description !== null) {
+      const error = descriptionError(description);
+
+      if (error !== undefined) throw validation("description", error);
+    }
+
+    if (vanitySlug !== null) {
+      const error = vanitySlugError(vanitySlug);
+
+      if (error !== undefined) throw validation("vanitySlug", error);
+    }
+
     const restrict = booleanField(body, "restrictRoomCreationToAdministrators");
     const uploadLimit = intField(body, "uploadLimitBytes");
 
@@ -377,6 +400,10 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     }
 
     if (uploadLimit !== null) held.uploadLimitBytes = uploadLimit;
+
+    if (description !== null) held.description = description.trim();
+
+    if (vanitySlug !== null) held.vanitySlug = vanitySlug.trim() === "" ? null : vanitySlug.trim();
 
     return ok(workspace());
   };

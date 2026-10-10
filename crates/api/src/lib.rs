@@ -1,5 +1,5 @@
 //! The single-page app's server side: the `/api/v1` JSON endpoints and the `/api/v1/sync`
-//! socket. Mounted (with `/app`) only when `SPA_ENABLED` is set.
+//! socket. Always mounted alongside `/app`.
 //!
 //! The wire types are `campfire_api_types`'. The socket's protocol, replay ring and batching
 //! are `campfire_cable::sync`; the JSON twins of the classic broadcasts are published from

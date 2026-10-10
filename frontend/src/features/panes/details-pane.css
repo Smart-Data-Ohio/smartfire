@@ -46,6 +46,26 @@
     font-size: var(--text-sidebar);
   }
 
+  .details-about {
+    padding-inline: var(--space-3);
+  }
+
+  .details-about > h4 {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .details-topic {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .details-topic a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
   /* A grouped list, the rows hairline-separated inside one rounded card. */
   .details-rows {
     padding: 0;

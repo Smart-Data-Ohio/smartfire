@@ -101,10 +101,11 @@ impl RichText for AppRichText {
         source: &str,
         room_id: i64,
     ) -> Result<String, String> {
-        let mut stmt=conn.prepare_cached("SELECT users.id,users.name FROM users JOIN memberships ON memberships.user_id=users.id WHERE memberships.room_id=? AND users.status=0").map_err(|e|e.to_string())?;
+        let mut stmt=conn.prepare_cached("SELECT users.* FROM users JOIN memberships ON memberships.user_id=users.id WHERE memberships.room_id=? AND users.status=0").map_err(|e|e.to_string())?;
         let members = stmt
             .query_map([room_id], |r| {
-                Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
+                let user = campfire_db::User::from_row(r)?;
+                Ok((user.id, user.display_name().to_owned()))
             })
             .map_err(|e| e.to_string())?
             .collect::<rusqlite::Result<Vec<_>>>()

@@ -137,6 +137,8 @@ pub struct ProfileSettings {
     pub github_verified: bool,
     /// Bots have no security, sessions or transfer sections.
     pub bot: bool,
+    pub pronouns: Option<String>,
+    pub nickname: Option<String>,
 }
 
 /// `PATCH /api/v1/settings/profile` (`users/profiles#update`).
@@ -153,6 +155,8 @@ pub struct UpdateProfile {
     pub password: Option<String>,
     pub bio: Option<String>,
     pub github_login: Option<String>,
+    pub pronouns: Option<String>,
+    pub nickname: Option<String>,
 }
 
 /// `PUT /api/v1/settings/avatar`: a blob uploaded with `POST /api/v1/uploads` becomes the avatar.

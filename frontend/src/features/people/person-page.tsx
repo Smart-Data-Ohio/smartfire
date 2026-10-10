@@ -439,11 +439,15 @@ export function PersonPage({
 
   const heldUser = useStore((state) => state.users[userId]);
   const title = load.status === "ready" ? newerUser(load.profile.user, heldUser).name : "Person";
+  const identity = load.status === "ready" ? newerUser(load.profile.user, heldUser) : null;
   const own = load.status === "ready" && load.profile.user.id === viewerId;
 
   return (
     <PageFrame
       title={title}
+      meta={
+        identity?.pronouns ? <span className="text-muted">{identity.pronouns}</span> : undefined
+      }
       icon="users"
       back
       tools={
@@ -455,6 +459,9 @@ export function PersonPage({
       }
     >
       <div className="people-page">
+        {identity !== null && identity.accountName !== identity.name ? (
+          <p className="text-muted">{identity.accountName}</p>
+        ) : null}
         {load.status === "loading" || bot !== null ? (
           <PaneListSkeleton rows={2} square={96} />
         ) : null}

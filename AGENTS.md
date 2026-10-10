@@ -14,39 +14,32 @@ tests pin. See `README.md` and `docs/rust-port.md` for where things stand.
   code was ported from (find it in the git history before the Rails removal).
 - **Drop-in compatible with existing data:** the same SQLite database and schema, storage layout,
   signed/encrypted cookies (so people stay signed in across releases) and environment variables.
-- Port-owned frontend changes go in `crates/assets/overrides/`, which shadows the copied Rails
-  assets by logical path (`crates/assets/OVERRIDES.md`).
+- Application UI changes go in `frontend/`; retained server pages live in `crates/retained_pages/`.
 
 ## Frontend and fixture inputs
 
 The app's static inputs live at the repository root:
 
-- `web/`, laid out like the Rails app it came from: `app/assets`, `app/javascript`,
-  `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb`, the JS
-  builders that vendor bundles into `vendor/javascript` (`script/livekit-client`,
-  `script/code-highlighter`). `crates/assets/build.rs` reads them, and the `Dockerfile` copies them.
-  The LiveKit gateway and `livekit-local` live in `huddle-gateway/`, outside this tree, so
-  retiring `web/` does not take calls with it.
+- `crates/static_assets/` owns retained auth, media and public inputs, with historical digest
+  aliases. `frontend/` owns the React UI and its browser dependencies. The LiveKit gateway and
+  `livekit-local` live in `huddle-gateway/`.
 - `fixtures/`: the Rails app's `test/fixtures`, which the tests load.
 - `test-support/`: data the tests read that reference tools once held (attachment analyzer inputs,
   agents UI cast inputs, the post-pin status files, Node test adapters).
 
-In the tests, `campfire_db::fixtures::reference_root()` is `web`, `reference_dir()` is
+In the tests, `campfire_db::fixtures::reference_root()` is `crates/static_assets`, `reference_dir()` is
 `fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")`
 maps a Rails-relative path to its copy here.
 
 ## The new front end (`frontend/`)
 
-`frontend/` is the React 19 + Effect 4 single-page app that replaces the Hotwire UI in `web/`
-screen by screen, served under `/app/`. It's a pnpm project of its own (Vite 8, typescript@7,
-Biome, the vendored anti-slop Oxlint rules, Vitest, Playwright). `crates/spa` embeds its
-`frontend/dist` build into the binary (a stub page when there's none, so cargo never needs Node;
-`SPA_DIST` names another dist), and the app serves it only with `SPA_ENABLED` set. Both UIs run
-side by side: a person opts in from the classic profile ("Try the new Smartfire") and out from
-the SPA's user menu; for people who use it, classic GETs of a screen the SPA has ported redirect
-to `/app/...` (`?classic=1` stays put), and `SPA_DEFAULT=next` makes it the UI of everyone who
-hasn't chosen. `crates/spa/src/screens.rs` is the screen map; a slice that ports a screen flips
-its row there (then `pnpm gen`). The image
+`frontend/` is the React 19 + Effect 4 application UI, served unconditionally under `/app/`.
+It's a pnpm project of its own with Vite 8, typescript@7, Biome, the vendored anti-slop Oxlint
+rules, Vitest and Playwright. `crates/spa` embeds `frontend/dist` into the binary, with a stub
+when no build exists so cargo never needs Node; `SPA_DIST` names another dist. Historic page
+GETs redirect to `/app/...` and retain authorization and query context. Legacy UI preference
+keys and UI environment switches are ignored. Retained auth and public pages stay server-rendered.
+`crates/spa/src/screens.rs` is the durable URL map; run `pnpm gen` after changing it. The image
 builds the SPA in a Node stage; the runtime image has no Node. `effect` is imported only in `src/api` and `src/sync`; Biome
 rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing frontend work. CI is
 `.github/workflows/frontend.yml` (the `Frontend` check). Commands and rules:
@@ -63,13 +56,16 @@ rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing front
 | `crates/richtext` | `campfire_richtext` | Action Text content pipeline: sanitize, attachments, autolink, plain text |
 | `crates/storage` | `campfire_storage` | Active Storage-compatible blobs, disk service, variants (libvips), previews (ffmpeg) |
 | `crates/cable` | `campfire_cable` | Action Cable protocol server, its WebSocket implementation, and in-process pub/sub |
-| `crates/assets` | `campfire_assets` | Propshaft-compatible digesting, importmap, vendored JS/CSS, port-owned overrides |
-| `crates/views` | `campfire_views` | Askama templates (at the ERB file's relative path) and view helpers |
+| `crates/presentation` | `campfire_presentation` | Template-free facts, formatting, JSON serializers and freshness keys |
+| `crates/static_assets` | `campfire_static_assets` | Retained auth, media and public bytes with historical digest aliases |
+| `crates/runtime` | `campfire_runtime` | Authentication, request support, storage adapters, mail and database presenters |
+| `crates/retained_pages` | `campfire_retained` | Retained auth and public server HTML |
+| `crates/view_kit` | `campfire_view_kit` | Shared retained HTML, form, escaping and CSRF helpers |
 | `crates/spa` | `campfire_spa` | The built SPA embedded at compile time (brotli/gzip, immutable caching), the shell and its boot JSON |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
-| `frontend/` | — | The React SPA replacing the Hotwire UI (`frontend/README.md`) |
+| `frontend/` | — | The React application UI (`frontend/README.md`) |
 | `huddle-gateway/` | — | LiveKit authorization gateway (Node) and `livekit-local` for local media |
-| `parity/` | — | Frozen test seeds (`parity/seeds`) and template coverage |
+| `parity/` | — | Frozen test seeds (`parity/seeds`) |
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 | `ci/` | — | CI scripts and verification helpers (`ci/README.md`) |

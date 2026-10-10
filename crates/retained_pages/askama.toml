@@ -1,4 +1,4 @@
-# Same ERB escaping as campfire_views, so these pages keep their bytes.
+# Retain ERB escaping so existing server pages keep their bytes.
 [[escaper]]
 path = "crate::helpers::ErbEscaper"
 extensions = ["html", "svg", "json"]

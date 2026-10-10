@@ -18,8 +18,10 @@ import {
   type ThemePreference,
   useAppearance,
 } from "../../lib/appearance.ts";
+import type { CustomTokens } from "../../lib/custom-palette.ts";
 import { saveAccountPersonalAppearance, settings as settingsActions } from "../../sync/settings.ts";
 import { AppearancePreview, FontPicker, PalettePicker } from "./appearance-presets.tsx";
+import { PaletteEditor } from "./palette-editor.tsx";
 import { type Choice, TEXT_SIZE_CHOICES, THEME_CHOICES } from "./settings-format.ts";
 import {
   SettingsGroup,
@@ -121,6 +123,12 @@ export function AppearanceSection() {
     );
   };
 
+  const saveTokens = (tokens: CustomTokens | null) =>
+    track("personal", saveAccountPersonalAppearance({ tokens })).catch((error: Error) => {
+      toastFailure("Couldn't save your colours", error);
+      throw error;
+    });
+
   return (
     <SettingsPage title="Appearance" description="How Smartfire looks and keeps time for you.">
       <SettingsGroup title="Theme and text" description="Saved to your account, for every device.">
@@ -203,6 +211,18 @@ export function AppearanceSection() {
             device.personalOverride ? setMotion(motion) : savePersonal({ motion })
           }
         />
+      </SettingsGroup>
+      <SettingsGroup
+        title="Custom palette"
+        description={
+          device.personalOverride
+            ? "This device uses its own appearance, so custom colours from your account don't show here. Switch back to your account's appearance to edit them."
+            : "Fine-tune your palette's colours. Saved to your account, for every device."
+        }
+      >
+        {device.personalOverride ? null : (
+          <PaletteEditor disabled={busy("personal")} onSave={saveTokens} />
+        )}
       </SettingsGroup>
     </SettingsPage>
   );

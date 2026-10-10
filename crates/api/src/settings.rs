@@ -341,6 +341,8 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
             github_login: sections.github_login.clone(),
             github_verified: sections.github_verified,
             bot: user.is_bot(),
+            pronouns: user.pronouns.clone(),
+            nickname: user.nickname.clone(),
         },
         appearance: api::AppearanceSettings {
             theme: theme(&appearance.theme),
@@ -587,6 +589,10 @@ async fn save_profile(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
     let update: api::UpdateProfile = body(c).await?;
     let id = user.id;
+    let identity_changing = update.name.is_some()
+        || update.nickname.is_some()
+        || update.pronouns.is_some()
+        || update.bio.is_some();
     // A linked GitHub account owns the username.
     let github_verified = c
         .app()
@@ -637,6 +643,8 @@ async fn save_profile(c: &mut Ctx) -> Result {
         )
         .await?,
         bio: update.bio.map(Some),
+        pronouns: update.pronouns.map(Some),
+        nickname: update.nickname.map(Some),
         ..UserChanges::default()
     };
     let settings = profile_settings::Changes {
@@ -656,6 +664,20 @@ async fn save_profile(c: &mut Ctx) -> Result {
         password_changing,
     )
     .await?;
+    if identity_changing {
+        let now = campfire_db::Timestamp::from_jiff(c.now());
+        let secrets = c.app().secrets.clone();
+        let (user, rooms) = c.app().db
+            .read(move |conn| {
+                let user = crate::dto::users(conn, &secrets, [id], now)?.remove(0);
+                let rooms = campfire_db::Room::for_user(conn, id)?.into_iter()
+                    .filter(campfire_db::Room::direct).collect::<Vec<_>>();
+                Ok((user, rooms))
+            })
+            .await
+            .map_err(db_error)?;
+        c.app().broadcasts.user_updated(user, &rooms);
+    }
     reply(c, id).await
 }
 

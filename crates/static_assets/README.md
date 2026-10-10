@@ -3,7 +3,7 @@
 `campfire_static_assets` embeds `public/`, `media/{images,sounds,emoji}/` and
 `auth/`. `build.rs` bundles retained auth CSS from the frontend's existing token,
 motion and font sources via `../retained_pages/auth_build.rs`. It needs no Node,
-SPA dist, `web/`, import map or classic stylesheet compiler.
+SPA dist or classic browser inputs.
 
 The API provides logical URL helpers (`asset_path`, `try_asset_path`,
 `image_path`, `audio_path`, `stylesheet_path`, `javascript_path`, `asset_url`),
@@ -11,7 +11,7 @@ The API provides logical URL helpers (`asset_path`, `try_asset_path`,
 `StaticRequest` and returns `StaticResponse`, preserving MIME, GET/HEAD, Range,
 conditional requests, encoding negotiation and the public cache policy.
 `serve_embedded`, `resolve_asset_path` and `resolve_asset_url` share those rules
-with the temporary classic adapter in `campfire_assets`. The server still adds
+for retained pages and byte endpoints. The server adds
 the existing immutable cache header and applies its existing security policies.
 
 Media digests retain the former SHA1(content + assets version `1.0`) scheme;
@@ -27,9 +27,5 @@ Brand icon licenses remain alongside their SVGs. The emoji MIT license is in
 Other original media/public/auth inputs retain the repository's MIT license,
 copied here as `MIT-LICENSE`.
 
-`campfire_assets` still builds/serves classic JS, CSS, vendored browser bundles,
-overrides and import-map/tag helpers. Its build consumes this crate's retained
-manifest/bytes to resolve classic CSS/JS references, without embedding another
-copy of retained inputs. These adapters go with the later classic deletion.
-The server tries classic files (including the combined `/assets/.manifest.json`)
-before retained files; PWA worker/manifest/offline routes remain independently owned.
+The server serves the retained manifest and bytes directly. PWA worker, manifest and
+offline routes remain independently owned by `campfire_spa`. The React UI builds with pnpm.

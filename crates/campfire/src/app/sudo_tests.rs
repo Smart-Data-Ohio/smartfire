@@ -852,7 +852,7 @@ async fn sudo_continuation_consumes_gets_and_rejects_external_paths() {
 async fn sudo_views_preserve_six_rails_form_contracts() {
     use crate::controllers::users::people_tests::retained;
     use askama::Template;
-    use campfire_views::helpers as h;
+    use campfire_view_kit::helpers as h;
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {

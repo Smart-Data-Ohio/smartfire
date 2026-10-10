@@ -18,17 +18,14 @@ campfire_db       = { path = "crates/db" }
 campfire_richtext = { path = "crates/richtext" }
 campfire_storage  = { path = "crates/storage" }
 campfire_cable    = { path = "crates/cable" }
-campfire_assets   = { path = "crates/assets" }
 campfire_static_assets = { path = "crates/static_assets" }
 campfire_view_kit = { path = "crates/view_kit" }
 campfire_presentation = { path = "crates/presentation" }
 campfire_runtime = { path = "crates/runtime" }
-campfire_views    = { path = "crates/views" }
 campfire_retained = { path = "crates/retained_pages" }
 campfire_jobs     = { path = "crates/jobs" }
 campfire_mail     = { path = "crates/mail" }
 campfire_app      = { path = "crates/app" }
-campfire_web      = { path = "crates/web" }
 campfire_spa      = { path = "crates/spa" }
 campfire_channels = { path = "crates/channels" }
 campfire_messages = { path = "crates/messages" }

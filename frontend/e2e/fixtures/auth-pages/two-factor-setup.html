@@ -38,7 +38,7 @@
     <li>Enter the 6-digit code from the app:</li>
   </ol>
 
-  <form class="auth-form" data-turbo="false" action="/two_factor_setup" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:/two_factor_setup" />
+  <form class="auth-form" action="/two_factor_setup" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:/two_factor_setup" />
     <div class="field">
       <label class="field-label" for="code">Authenticator code</label>
       <input required="required" class="input auth-code" autofocus="autofocus" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9 ]*" maxlength="10" placeholder="123 456" size="10" type="text" name="code" id="code" />

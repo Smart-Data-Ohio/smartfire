@@ -156,12 +156,14 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
     while let Some(row) = rows.next().unwrap() {
         let mut fields: Vec<(String, String)> = Vec::new();
         for (i, name) in names.iter().enumerate() {
-            if table == "rooms" && matches!(name.as_str(), "tags_required" | "default_board_tag_id") {
+            if table == "rooms"
+                && matches!(name.as_str(), "tags_required" | "default_board_tag_id" | "topic")
+            {
                 continue;
             }
             // Port-only user preferences and activity counter that Rails doesn't have.
             if table == "users"
-                && matches!(name.as_str(), "activity_revision" | "appearance_preferences")
+                && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname")
             {
                 continue;
             }

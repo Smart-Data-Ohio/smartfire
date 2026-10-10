@@ -239,6 +239,7 @@ async fn form(c: &Ctx, kind: api::RoomKind, room: Option<Room>) -> Result<api::R
                     api::Involvement::Mentions
                 },
                 stage_roles,
+                topic: room.as_ref().and_then(|room| room.topic.clone()),
             })
         })
         .await
@@ -284,33 +285,40 @@ type UpdateFields = (
     Option<Option<String>>,
     Option<Option<String>>,
     Vec<i64>,
+    Option<Option<String>>,
 );
 
 fn update_fields(input: api::UpdateRoom) -> UpdateFields {
     match input {
-        api::UpdateRoom::Open { name, icon_name } => {
-            (api::RoomKind::Open, name, icon_name, Vec::new())
-        }
+        api::UpdateRoom::Open {
+            name,
+            icon_name,
+            topic,
+        } => (api::RoomKind::Open, name, icon_name, Vec::new(), topic),
         api::UpdateRoom::Closed {
             name,
             icon_name,
             user_ids,
-        } => (api::RoomKind::Closed, name, icon_name, user_ids),
+            topic,
+        } => (api::RoomKind::Closed, name, icon_name, user_ids, topic),
         api::UpdateRoom::Voice {
             name,
             icon_name,
             user_ids,
-        } => (api::RoomKind::Voice, name, icon_name, user_ids),
+            topic,
+        } => (api::RoomKind::Voice, name, icon_name, user_ids, topic),
         api::UpdateRoom::Stage {
             name,
             icon_name,
             user_ids,
-        } => (api::RoomKind::Stage, name, icon_name, user_ids),
+            topic,
+        } => (api::RoomKind::Stage, name, icon_name, user_ids, topic),
         api::UpdateRoom::Board {
             name,
             icon_name,
             user_ids,
-        } => (api::RoomKind::Board, name, icon_name, user_ids),
+            topic,
+        } => (api::RoomKind::Board, name, icon_name, user_ids, topic),
     }
 }
 
@@ -518,7 +526,11 @@ async fn update_room(c: &mut Ctx) -> Result {
     }
     rooms::ensure_can_administer(c, &room)?;
     let input = body(c).await?;
-    let (kind, name, icon, ids) = update_fields(input);
+    let (kind, name, icon, ids, topic) = update_fields(input);
+    let topic = topic
+        .map(|value| Room::normalize_topic(value.as_deref()))
+        .transpose()
+        .map_err(db_error)?;
     let target = room_type(kind);
     if room.room_type != target
         && !(matches!(room.room_type, RoomType::Open | RoomType::Closed)
@@ -531,11 +543,14 @@ async fn update_room(c: &mut Ctx) -> Result {
     }
     let room = if matches!(kind, api::RoomKind::Voice | api::RoomKind::Stage) {
         let has_remaining_ids = !ids.is_empty();
-        match call_channels::update_room(
+        match call_channels::update_room_with_topic(
             c,
             room,
-            name,
-            icon.map(call_icon),
+            operations::RoomChanges {
+                name,
+                icon: icon.map(call_icon),
+                topic,
+            },
             ids,
             has_remaining_ids,
             false,
@@ -547,9 +562,14 @@ async fn update_room(c: &mut Ctx) -> Result {
         }
     } else {
         let target = (kind != api::RoomKind::Board).then_some(target);
-        let room = operations::update(c, room, name, icon, target)
-            .await
-            .map_err(db_error)?;
+        let room = operations::update_with_topic(
+            c,
+            room,
+            operations::RoomChanges { name, icon, topic },
+            target,
+        )
+        .await
+        .map_err(db_error)?;
         if kind != api::RoomKind::Open {
             operations::revise_members(c, &room, ids).await?;
         }

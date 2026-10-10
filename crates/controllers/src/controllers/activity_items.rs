@@ -179,7 +179,7 @@ async fn state_response(
     }
     let (state, kind) = filters(c);
     let response = c.redirect_to_with(
-        &campfire_presentation::activity::path(&state, &kind, None, false),
+        &campfire_presentation::activity::path(&state, &kind, None),
         Redirect {
             status: Some(code),
             ..Default::default()

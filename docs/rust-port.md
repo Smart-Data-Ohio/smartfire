@@ -21,10 +21,10 @@ are frozen. Retained auth, media and public inputs live in
 [`crates/static_assets/`](../crates/static_assets/README.md). Shared template-free facts and legacy JSON live in
 [`crates/presentation/`](../crates/presentation/README.md); authentication, request support,
 attachment/Markdown adapters, mail and database presenters live in
-[`crates/runtime/`](../crates/runtime/README.md). Classic stylesheets, JavaScript,
-vendored JavaScript, importmap and LiveKit builders remain in [`web/`](../web); test fixtures
-live in [`fixtures/`](../fixtures). Approved source copies are described in
-[`crates/assets/OVERRIDES.md`](../crates/assets/OVERRIDES.md). The app uses the Rails SQLite schema,
+[`crates/runtime/`](../crates/runtime/README.md). The React UI in [`frontend/`](../frontend/README.md)
+is always served under `/app/`, with JSON sync. Retained auth and public pages use
+[`crates/retained_pages/`](../crates/retained_pages). Classic application templates and browser
+bundles are deleted; fixtures live in [`fixtures/`](../fixtures). The app uses the Rails SQLite schema,
 storage layout and compatible signed/AES-GCM cookies, so existing installs keep their data and
 sessions. Boot loads an empty database's compiled schema or checks an existing database's exact
 migration set ([schema preparation](../crates/db/src/schema.rs#L103)); `campfire db-migrate` applies
@@ -36,7 +36,7 @@ These contracts supersede the imported upstream operational claims:
 
 - **CSRF and sessions:** Rails-compatible masked global and per-form authenticity tokens are
   checked and rendered in meta tags and forms, including forms opened before a runtime switch
-  ([kit CSRF](../crates/kit/src/csrf.rs#L1), [view helpers](../crates/views/src/helpers/request_forgery.rs#L113),
+  ([kit CSRF](../crates/kit/src/csrf.rs#L1), [view helpers](../crates/view_kit/src/helpers/request_forgery.rs),
   [Rails vectors](../crates/kit/tests/rails_vectors.rs)). The encrypted session holds CSRF, flash,
   return destinations and sign-in/step-up state, rather than only flash and a return URL
   ([session](../crates/kit/src/session.rs#L1), [session keys](../crates/runtime/src/concerns/session_keys.rs)).
@@ -51,15 +51,12 @@ These contracts supersede the imported upstream operational claims:
   [invalidation](../crates/app/src/integrations/web_push.rs#L115),
   [size regression](../crates/app/src/integrations/web_push/encryption.rs#L192),
   [configuration regression](../crates/app/src/config.rs#L282)).
-- **Routes, assets and rich text:** `/rooms/directs/:id` preserves Rails' inherited nil-room 500;
-  the working conversation page is `/rooms/:id`
-  ([handler](../crates/rooms/src/controllers/rooms/directs.rs#L14)). Copy-link markup uses Rails'
-  `content` value, without the removed upstream clipboard JavaScript override
-  ([asset history](../crates/assets/OVERRIDES.md#L17)). The sanitizer keeps `name` on anchors and removes
-  it elsewhere, and the current allowlists strip `style`, including highlight colors
-  ([sanitizer](../crates/richtext/src/sanitizer.rs#L244), [style regression](../crates/richtext/src/sanitizer.rs#L521)). A still-valid User SGID whose
-  row was deleted reproduces Rails' missing-user partial error; other missing attachments can
-  render ☒ ([renderer](../crates/richtext/src/attachables.rs#L364)).
+- **Routes, assets and rich text:** Historic application URLs redirect to supported SPA states,
+  preserving authorization and query context. Retained asset URLs preserve their recorded bytes.
+  The sanitizer keeps `name` on anchors and removes it elsewhere, and strips `style`, including
+  highlight colors ([sanitizer](../crates/richtext/src/sanitizer.rs)). A still-valid User SGID whose
+  row was deleted reproduces Rails' missing-user error; other missing attachments can render ☒
+  ([renderer](../crates/richtext/src/attachables.rs)).
 - **PWA manifest:** values retain Rails ERB HTML escaping, including `&amp;` in the small-logo URL;
   the former upstream JSON-escaping divergence is gone
   ([manifest](../crates/spa/src/pwa.rs), [template](../crates/spa/templates/pwa/manifest.json)).
@@ -284,6 +281,8 @@ In the order they landed:
 Against Rails, the room page went from 4.4× in the preliminary benchmark to 95× in the latest one.
 
 #### gzip and ETags from cached page parts
+
+This records the former classic renderer. Its HTML cache and page-part rendering are retired.
 
 Every response is gzipped at level 6, as Rails' `Rack::Deflater` does, and after the passes above
 that was 60–76% of the CPU on large pages. Most of a room page is cached messages, whose bytes are
