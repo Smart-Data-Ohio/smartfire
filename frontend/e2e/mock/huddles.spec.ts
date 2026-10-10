@@ -122,6 +122,26 @@ matrix("in a call: the dock and the call view", async ({ page, theme, phone }) =
   }
 });
 
+test("an ordinary screen share starts at the quality picked in call settings", async ({ page }) => {
+  await open(page, GENERAL);
+  await join(page);
+  await dock(page).getByRole("button", { name: "Call settings" }).click();
+
+  const quality = dock(page).getByLabel("Screen share quality");
+
+  await expect(quality).toHaveValue("1080p15");
+  await quality.selectOption("1080p60");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("campfire.huddle.shareQuality")))
+    .toBe("1080p60");
+  await dock(page).getByRole("button", { name: "Share your screen" }).click();
+  await expect(dock(page).getByRole("button", { name: "Stop sharing" })).toBeVisible();
+  // A running share keeps the quality it started with.
+  await expect(quality).toBeDisabled();
+  await dock(page).getByRole("button", { name: "Stop sharing" }).click();
+  await expect(quality).toBeEnabled();
+});
+
 test("joining and leaving a huddle in a channel", async ({ page }) => {
   await open(page, GENERAL);
   await expect(launcher(page)).toHaveText("Join huddle");

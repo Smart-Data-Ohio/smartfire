@@ -9,7 +9,7 @@ import type { StageMember } from "../../gen/StageMember.ts";
 import type { StageRole } from "../../gen/StageRole.ts";
 import type { StageState } from "../../gen/StageState.ts";
 
-export const STREAM_QUALITIES = ["720p15", "1080p15", "1080p30"] as const;
+export { STREAM_QUALITIES } from "./engine/screen-quality.ts";
 
 export const DEFAULT_STREAM_QUALITY = "1080p15";
 

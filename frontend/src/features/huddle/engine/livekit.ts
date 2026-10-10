@@ -16,7 +16,6 @@ import type {
   RoomOptions,
   ScreenShareCaptureOptions,
   TrackPublication,
-  VideoEncoding,
 } from "livekit-client";
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { loadForUpdate } from "../../../service-worker/update-required.ts";
@@ -28,6 +27,11 @@ import {
   noiseSuppressionSupported,
 } from "./noise.ts";
 import { loadDevicePreferences } from "./preferences.ts";
+import {
+  DEFAULT_SHARE_QUALITY,
+  screenCaptureAttempts,
+  screenPublishOptions,
+} from "./screen-quality.ts";
 import { type StatsBaseline, summarizeConnectionStats } from "./stats.ts";
 import {
   type CallParticipant,
@@ -81,18 +85,27 @@ function sinkable(context: AudioContext): context is SinkableAudioContext {
 }
 
 /**
- * Capture options for a screen share: tab audio only (capturing system audio while sharing a
- * whole screen feeds the speakers back into the call on Windows), no `resolution` (a preset's
- * resolution carries its frame rate and would cap capture too; the SDK fills in 1080p/30 and
- * skips it where it can't be constrained).
+ * Runs `capture` with each of the quality's capture attempts in turn, moving on only when the
+ * browser rejected the constraints (a cancelled picker or a publishing failure would just show a
+ * second picker). The first call runs synchronously, so a capture started in a gesture stays in it.
  */
-function screenCaptureOptions(withAudio: boolean): ScreenShareCaptureOptions {
-  return {
-    contentHint: "detail",
-    surfaceSwitching: "include",
-    systemAudio: "exclude",
-    audio: withAudio,
-  };
+function withCaptureFallback<T>(
+  quality: StreamQuality,
+  capture: (options: ScreenShareCaptureOptions) => Promise<T>,
+): Promise<T> {
+  const [first, ...rest] = screenCaptureAttempts(quality);
+
+  return rest.reduce<Promise<T>>(
+    (attempt, options) =>
+      attempt.catch((error: Error) => {
+        if (!displayMediaRejectedConstraints(error)) {
+          throw error;
+        }
+
+        return capture(options);
+      }),
+    capture(first ?? {}),
+  );
 }
 
 /** A local or remote participant's quality, as the transport reports it. */
@@ -272,11 +285,13 @@ class LiveKitTransport implements CallTransport {
   }
 
   /**
-   * Shared audio is usually music or video rather than speech, and DTX chops it, so a share
-   * publishes without DTX. Only a browser that refused to capture with these constraints is
-   * retried (video only); a publishing failure would just show a second picker.
+   * An ordinary share at `quality` (see `screen-quality.ts`). Only a browser that refused to
+   * capture with the quality's constraints is retried, with fewer of them.
    */
-  async setScreenShare(enabled: boolean): Promise<void> {
+  async setScreenShare(
+    enabled: boolean,
+    quality: StreamQuality = DEFAULT_SHARE_QUALITY,
+  ): Promise<void> {
     const local = this.#room?.localParticipant;
 
     if (local === undefined) {
@@ -289,15 +304,11 @@ class LiveKitTransport implements CallTransport {
       return;
     }
 
-    try {
-      await local.setScreenShareEnabled(true, screenCaptureOptions(true), { dtx: false });
-    } catch (error) {
-      if (!(error instanceof Error) || !displayMediaRejectedConstraints(error)) {
-        throw error;
-      }
+    const publish = screenPublishOptions(quality, this.#lk.VideoPreset);
 
-      await local.setScreenShareEnabled(true, screenCaptureOptions(false), { dtx: false });
-    }
+    await withCaptureFallback(quality, (options) =>
+      local.setScreenShareEnabled(true, options, publish),
+    );
   }
 
   /**
@@ -305,28 +316,21 @@ class LiveKitTransport implements CallTransport {
    * inside the gesture (Safari denies a getDisplayMedia that starts after a round-trip). The
    * video-only retry only runs after a constraint rejection.
    */
-  captureScreen(): Promise<CapturedScreen> {
+  captureScreen(quality: StreamQuality): Promise<CapturedScreen> {
     const local = this.#room?.localParticipant;
 
     if (local === undefined || !canShareScreen()) {
       return Promise.reject(new Error("screen-share-unavailable"));
     }
 
-    return local
-      .createScreenTracks(screenCaptureOptions(true))
-      .catch((error: Error) => {
-        if (displayMediaRejectedConstraints(error)) {
-          return local.createScreenTracks(screenCaptureOptions(false));
-        }
-
-        throw error;
-      })
-      .then((tracks) => {
+    return withCaptureFallback(quality, (options) => local.createScreenTracks(options)).then(
+      (tracks) => {
         this.#capturedSequence += 1;
         this.#captured.set(this.#capturedSequence, tracks);
 
         return { id: this.#capturedSequence };
-      });
+      },
+    );
   }
 
   /** The same publish options as an ordinary share, at the stream's encoding. */
@@ -338,11 +342,10 @@ class LiveKitTransport implements CallTransport {
       throw new Error("screen-capture-gone");
     }
 
+    const publish = screenPublishOptions(streamQuality, this.#lk.VideoPreset);
+
     for (const track of tracks) {
-      await local.publishTrack(track, {
-        dtx: false,
-        screenShareEncoding: this.#encoding(streamQuality),
-      });
+      await local.publishTrack(track, publish);
     }
 
     this.#captured.delete(captured.id);
@@ -635,19 +638,6 @@ class LiveKitTransport implements CallTransport {
     }
 
     return options;
-  }
-
-  #encoding(streamQuality: StreamQuality): VideoEncoding {
-    const presets = this.#lk.ScreenSharePresets;
-
-    switch (streamQuality) {
-      case "720p15":
-        return presets.h720fps15.encoding;
-      case "1080p30":
-        return presets.h1080fps30.encoding;
-      default:
-        return presets.h1080fps15.encoding;
-    }
   }
 
   #bind(room: Room): void {

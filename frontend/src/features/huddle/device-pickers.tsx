@@ -1,7 +1,9 @@
-import { useId } from "react";
+import { useId, useState } from "react";
+import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { audioOutputSupported, type DeviceLists, EMPTY_LABEL } from "./engine/devices.ts";
-import type { DevicePreferences } from "./engine/preferences.ts";
+import { type DevicePreferences, loadShareQuality } from "./engine/preferences.ts";
+import { knownStreamQuality, STREAM_QUALITIES } from "./engine/screen-quality.ts";
 import type { DeviceKind } from "./engine/transport.ts";
 
 const LABELS: Readonly<Record<DeviceKind, string>> = {
@@ -84,6 +86,48 @@ export function DevicePickers({ devices, selected, onSelect, cameraOptional }: D
         onSelect={onSelect}
         none={cameraOptional ? "No camera preview" : undefined}
       />
+    </div>
+  );
+}
+
+interface ShareQualityPickerProps {
+  readonly onSelect: (quality: StreamQuality) => void;
+  /** While a share runs it keeps the quality it started with. */
+  readonly sharing: boolean;
+}
+
+/** The quality an ordinary screen share starts at, laid out like the device pickers. */
+export function ShareQualityPicker({ onSelect, sharing }: ShareQualityPickerProps) {
+  const id = useId();
+  const [quality, setQuality] = useState(loadShareQuality);
+
+  return (
+    <div className="huddle-picker">
+      <label htmlFor={id} className="huddle-picker-label">
+        <Icon name="screen-share" size={14} />
+        Screen share quality
+      </label>
+      <select
+        id={id}
+        className="huddle-select"
+        value={quality}
+        disabled={sharing}
+        title={sharing ? "Stop sharing to change the quality" : undefined}
+        onChange={(event) => {
+          const next = knownStreamQuality(event.currentTarget.value);
+
+          if (next !== null) {
+            setQuality(next);
+            onSelect(next);
+          }
+        }}
+      >
+        {STREAM_QUALITIES.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

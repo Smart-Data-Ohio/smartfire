@@ -33,7 +33,7 @@ export type StageMember = typeof StageMember.Type;
 
 export type StageMemberPin = Assert<Pinned<typeof StageMember, GeneratedStageMember>>;
 
-export const StreamQuality = Schema.Literals(["720p15", "1080p15", "1080p30"]);
+export const StreamQuality = Schema.Literals(["720p15", "1080p15", "1080p30", "1080p60"]);
 
 export type StreamQuality = typeof StreamQuality.Type;
 
