@@ -21,6 +21,7 @@ import { MessageRow, PendingRow } from "./message-row.tsx";
 import {
   type CommittedEdges,
   firstMessageKey,
+  messageKey,
   prepended,
   type TimelineItem,
   timelineItems,
@@ -170,6 +171,14 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const now = Date.now();
   const items = timelineItems({ timeline, messages, pending, now });
 
+  // The row of the viewer's latest send from here: its key is the same pending and confirmed.
+  const sentKeyRef = useRef<string | null>(null);
+  const lastPending = pending.at(-1);
+
+  if (lastPending !== undefined) {
+    sentKeyRef.current = messageKey(lastPending.clientMessageId);
+  }
+
   useChatSounds(roomId, () => {
     const list = listRef.current;
     const latestIds = new Set(timeline.ids.slice(-LATEST_PAGE_MESSAGES));
@@ -240,6 +249,19 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       claimReaderRef.current();
     },
   });
+
+  // A send stays mounted while it's the last row. When the present replaces the window it was
+  // sent from, Virtua reads the new rows at the sizes the old ones had at those indices and
+  // corrects the scroll offset as it measures them; meanwhile the end can fall outside its range
+  // and the row just sent would blink out.
+  const lastIndex = items.length - 1;
+
+  const mounted =
+    lastIndex >= 0 &&
+    items[lastIndex]?.key === sentKeyRef.current &&
+    !keepMounted.includes(lastIndex)
+      ? [...keepMounted, lastIndex]
+      : keepMounted;
 
   /** Ends placement for `key`, so newer paging is allowed to follow the present. */
   const releasePlacement = (key: string) => {
@@ -716,7 +738,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             style={LIST_STYLE}
             shift={shift}
             bufferSize={600}
-            keepMounted={keepMounted}
+            keepMounted={mounted}
             onScroll={onScroll}
             onScrollCapture={(event) => {
               if (event.target === event.currentTarget)
