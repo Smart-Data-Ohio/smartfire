@@ -851,6 +851,90 @@ async fn mention_edits_notify_only_added_user() {
 }
 
 #[tokio::test]
+async fn mention_edits_promote_reply_and_demote_with_live_counts() {
+    let Some(a) = app(true).await else { return };
+    quiet_designers(&a, "mentions").await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let question = post_in(&mut david, DESIGNERS, "mention-reply-question", "Question").await;
+    let response = kevin.write(json_body(
+        Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "0199b3c4-1b-mention-reply", "markdownSource": "Answer", "replyToMessageId": question.id, "replyNotifyAuthor": true}),
+    )).await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let message: api::MessageDTO = parse(&response);
+    let before = message_activity(&a, DAVID, message.id).await.unwrap();
+    assert_eq!(before.event_type, "reply");
+    let before = a
+        .db()
+        .write(move |tx| before.mark_handled(tx))
+        .await
+        .unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let response = kevin
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", message.id),
+            &json!({"markdownSource": format!("Answer <@{DAVID}>")}),
+        ))
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let promoted = message_activity(&a, DAVID, message.id).await.unwrap();
+    assert_eq!(promoted.id, before.id);
+    assert_eq!(promoted.event_type, "mention");
+    assert!(promoted.unread());
+    mention_count_change(&mut sync, promoted.id, false, 1).await;
+
+    let response = kevin
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", message.id),
+            &json!({"markdownSource": "Answer"}),
+        ))
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let demoted = message_activity(&a, DAVID, message.id).await.unwrap();
+    assert_eq!(demoted.id, before.id);
+    assert_eq!(demoted.event_type, "reply");
+    assert!(demoted.unread());
+    let (mut item_seen, mut row_seen) = (false, false);
+    while !(item_seen && row_seen) {
+        let event = sync
+            .until(
+                |event| match &event.payload {
+                    api::SyncPayload::ActivityItem(changed) => {
+                        changed.item.id == before.id
+                            && changed.item.event_type == api::ActivityEventType::Reply
+                    }
+                    api::SyncPayload::SidebarRowUpserted(row) => {
+                        row.room.id == DESIGNERS && row.mention_count == 0
+                    }
+                    _ => false,
+                },
+                |_| false,
+            )
+            .await;
+        match event.payload {
+            api::SyncPayload::ActivityItem(changed) => {
+                assert_eq!(changed.unread_count, 1);
+                item_seen = true;
+            }
+            api::SyncPayload::SidebarRowUpserted(row) => {
+                assert_eq!(row.notification_count, 1);
+                row_seen = true;
+            }
+            _ => unreachable!(),
+        }
+    }
+    let row = designers_row(&mut david).await;
+    assert_eq!((row.mention_count, row.notification_count), (0, 1));
+    server.abort();
+}
+
+#[tokio::test]
 async fn mention_edits_preserve_unchanged_activity() {
     for (before, after) in [
         (format!("<@{DAVID}>"), "@[David]".into()),

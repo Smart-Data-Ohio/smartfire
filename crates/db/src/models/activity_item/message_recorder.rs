@@ -3,8 +3,8 @@ use crate::models::keyword_alert::matching_user_ids;
 use crate::rich_text::RichText;
 use crate::sql::{placeholders, query_all};
 use crate::{
-    ActivityItem, Involvement, Message, NotificationKind, NotificationPolicy, Result,
-    ThreadInvolvement, Timestamp, Tx, UserStatusSettings,
+    ActivityItem, ChannelThread, Involvement, Message, NotificationKind, NotificationPolicy,
+    PushSubscription, Result, ThreadInvolvement, Timestamp, Tx, UserStatusSettings,
 };
 use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
@@ -19,6 +19,63 @@ pub struct MessageCandidates {
     pub recipients: Vec<MessageCandidate>,
     /// Memberships are loaded only for root candidates or the thread's members.
     pub room_member_ids: Vec<i64>,
+}
+
+/// An edit pushes only its added mentions, using the message pusher's current policy.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MentionPushJob {
+    pub message_id: i64,
+    pub recipient_ids: Vec<i64>,
+}
+
+impl crate::Job for MentionPushJob {
+    const CLASS: &'static str = "Message::MentionPushJob";
+}
+
+impl MentionPushJob {
+    pub fn deliveries(
+        &self,
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        now: Timestamp,
+    ) -> Result<Vec<crate::models::notification_push::PushDelivery>> {
+        let Some(message) = Message::find_by_id(conn, self.message_id)? else {
+            return Ok(Vec::new());
+        };
+        if message.streaming || message.system_note {
+            return Ok(Vec::new());
+        }
+        let mentioned = message.mentionees(conn, rich_text)?;
+        let added =
+            |id| self.recipient_ids.contains(&id) && mentioned.iter().any(|user| user.id == id);
+        if let Some(thread_id) = message.thread_id {
+            Ok(ChannelThread::push_recipients_with_policy(
+                conn, rich_text, thread_id, message.id, now,
+            )?
+            .into_iter()
+            .filter(|push| added(push.user_id))
+            .map(|push| crate::models::notification_push::PushDelivery {
+                payload: push.payload,
+                subscriptions: push.subscriptions,
+            })
+            .collect())
+        } else {
+            let (payload, subscriptions, _) =
+                PushSubscription::pushes_for(conn, rich_text, &message, now)?;
+            let subscriptions: Vec<_> = subscriptions
+                .into_iter()
+                .filter(|sub| added(sub.user_id))
+                .collect();
+            Ok(if subscriptions.is_empty() {
+                Vec::new()
+            } else {
+                vec![crate::models::notification_push::PushDelivery {
+                    payload,
+                    subscriptions,
+                }]
+            })
+        }
+    }
 }
 
 pub fn candidates(
@@ -172,36 +229,59 @@ impl ActivityItem {
         message: &Message,
         previous_mentionees: &[i64],
     ) -> Result<()> {
-        let mentioned: Vec<i64> = message.mentionees(tx.conn(), tx.rich_text())?
+        let mentioned: Vec<i64> = message
+            .mentionees(tx.conn(), tx.rich_text())?
             .into_iter()
             .map(|user| user.id)
             .collect();
-        let removed = query_all(
+        let obsolete = query_all(
             tx.conn(),
-            "DELETE FROM activity_items WHERE source_type = 'Message' AND source_id = ? AND event_type = 'mention' AND user_id NOT IN (SELECT value FROM json_each(?)) RETURNING id, user_id",
+            "SELECT * FROM activity_items WHERE source_type = 'Message' AND source_id = ? AND event_type = 'mention' AND user_id NOT IN (SELECT value FROM json_each(?))",
             rusqlite::params![message.id, serde_json::json!(mentioned).to_string()],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            Self::from_row,
         )?;
+        if obsolete.is_empty() && mentioned.iter().all(|id| previous_mentionees.contains(id)) {
+            return Ok(());
+        }
+        let recipients = candidates(tx.conn(), tx.rich_text(), message, tx.now())?.recipients;
+        let mut removed = Vec::new();
+        for item in obsolete {
+            if let Some(candidate) = recipients
+                .iter()
+                .find(|candidate| candidate.user_id == item.user_id)
+            {
+                // Recompute the remaining reason without reopening activity the recipient handled.
+                tx.conn().execute(
+                    "UPDATE activity_items SET event_type=?,updated_at=? WHERE id=?",
+                    rusqlite::params![candidate.event_type, tx.now(), item.id],
+                )?;
+                Self::broadcast_change(tx, item.user_id, item.id)?;
+            } else {
+                tx.conn()
+                    .execute("DELETE FROM activity_items WHERE id=?", [item.id])?;
+                removed.push((item.id, item.user_id));
+            }
+        }
         if !removed.is_empty() {
             tx.emit_after_commit(crate::Event::broadcast(&super::ActivityItemsRemoved {
                 items: removed,
                 room_id: Some(message.room_id),
             }));
         }
-        if mentioned.iter().any(|id| !previous_mentionees.contains(id)) {
-            for candidate in candidates(tx.conn(), tx.rich_text(), message, tx.now())?.recipients {
-                if candidate.event_type == "mention"
-                    && !previous_mentionees.contains(&candidate.user_id)
-                {
-                    Self::record(
-                        tx,
-                        candidate.user_id,
-                        super::ActivitySource::Message(message.id),
-                        "mention",
-                        true,
-                    )?;
-                }
+        let mut added = Vec::new();
+        for candidate in recipients {
+            if candidate.event_type == "mention"
+                && !previous_mentionees.contains(&candidate.user_id)
+            {
+                Self::refresh_unread(tx, candidate.user_id, "Message", message.id, "mention")?;
+                added.push(candidate.user_id);
             }
+        }
+        if !added.is_empty() {
+            tx.emit_after_commit(crate::Event::job(&MentionPushJob {
+                message_id: message.id,
+                recipient_ids: added,
+            }));
         }
         Ok(())
     }
