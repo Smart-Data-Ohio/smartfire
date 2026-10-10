@@ -555,6 +555,43 @@ async fn forwards_list_destinations_copy_and_publish() {
 }
 
 #[tokio::test]
+async fn a_forwarded_spoiler_stays_hidden_after_an_edit() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let body = json!({"clientMessageId": "0199b3c4-spoiler-1", "markdownSource": "before ||SECRET||", "replyToMessageId": null, "replyNotifyAuthor": null});
+    let reply = david
+        .write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &body))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let source: api::MessageDTO = parse(&reply);
+
+    let body = json!({"note": null, "destinations": [{"roomId": HQ, "threadId": null}]});
+    let reply = david
+        .write(json_body(Method::POST, &format!("/api/v1/messages/{}/forwards", source.id), &body))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let result: api::ForwardResult = parse(&reply);
+    let [copy] = result.forwards.as_slice() else { panic!("{result:?}") };
+
+    // The copy has HTML and no Markdown: the edit box gets Markdown made from the HTML.
+    let path = format!("/api/v1/messages/{}", copy.id);
+    let editable: api::MessageSource = parse(&david.send(get(&format!("{path}/source"))).await);
+    assert_eq!(editable.markdown_source, "before ||SECRET||");
+
+    let edit = editable.markdown_source.replace("before", "after");
+    let reply = david
+        .write(json_body(Method::PATCH, &path, &json!({"markdownSource": edit})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let edited: api::MessageDTO = parse(&reply);
+    assert!(
+        edited.body_html.contains("after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span>"),
+        "{}",
+        edited.body_html
+    );
+}
+
+#[tokio::test]
 async fn a_message_reads_with_its_conversation_or_not_at_all() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

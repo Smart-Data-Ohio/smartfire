@@ -47,6 +47,7 @@ pub const MARKDOWN_ATTRIBUTES: &[&str] =
     &["align", "checked", "class", "data-spoiler", "disabled", "href", "rel", "start", "target", "title", "type"];
 pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "spoiler", "task-list-item"];
 const BLOCK_TAGS: &[&str] = &["blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "pre", "table", "tr", "ul"];
+static BLANK_LINE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\n[ \t]*\n").unwrap());
 static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]").unwrap());
 static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
 static ICON_ALT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^:([a-z0-9_]+):$").unwrap());
@@ -190,6 +191,45 @@ fn protect_mentions(source: &str) -> (String, Vec<(String, String)>, Regex) {
     protected.push_str(&source[cursor..]);
     let pattern = Regex::new(&format!("{prefix}([0-9]+)TOKEN")).unwrap();
     (protected, tokens, pattern)
+}
+
+/// Markdown with no rendered HTML (a scheduled message's source), as a preview. In each block
+/// (inline spans never cross a blank line), everything from the first `||` to the last becomes
+/// the word "spoiler". That covers every spoiler `render` could make there, whatever escapes, code
+/// spans or nesting it holds; when unsure it hides more. A block with no pair is unchanged. The
+/// SPA's `redactMarkdownSpoilers` (frontend/src/lib/spoiler-text.ts) does the same.
+pub fn redact_spoilers(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while !rest.is_empty() {
+        let (block, separator, next) = match BLANK_LINE_RE.find(rest) {
+            Some(found) => (&rest[..found.start()], found.as_str(), &rest[found.end()..]),
+            None => (rest, "", ""),
+        };
+        match (block.find("||"), block.rfind("||")) {
+            (Some(first), Some(last)) if last >= first + 2 => {
+                out.push_str(&block[..first]);
+                out.push_str("spoiler");
+                out.push_str(&block[last + 2..]);
+            }
+            _ => out.push_str(block),
+        }
+        out.push_str(separator);
+        rest = next;
+    }
+    out
+}
+
+/// A spoiler span: `data-spoiler`, or the `spoiler` class it is rendered with.
+pub fn is_spoiler(dom: &Dom, node: NodeId) -> bool {
+    dom.has_attr(node, "data-spoiler") || dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
+}
+
+/// Whether `node` hides a spoiler's words: the spoiler itself, or a link whose label holds one
+/// (`[||ending||](url "title")`). The link's URL and title would tell what the spoiler hides, so
+/// unfurls, cards and references skip both.
+pub fn conceals_spoiler(dom: &Dom, node: NodeId) -> bool {
+    is_spoiler(dom, node) || (dom.local_name(node) == Some("a") && dom.descendants(node).into_iter().any(|inner| is_spoiler(dom, inner)))
 }
 
 fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {

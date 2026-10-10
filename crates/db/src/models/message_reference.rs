@@ -76,9 +76,9 @@ pub fn non_code_text(html: &str) -> Result<String> {
     ];
     fn walk(dom: &Dom, node: NodeId, text: &mut String, hrefs: &mut Vec<String>) {
         let name = dom.local_name(node).unwrap_or("");
-        // Quote cards and GitHub references read this text. A URL inside a spoiler is still hidden.
-        let spoiler = dom.has_attr(node, "data-spoiler")
-            || dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+        // Quote cards and GitHub references read this text. A URL inside a spoiler is still hidden,
+        // as is the URL of a link whose label holds a spoiler.
+        let spoiler = campfire_richtext::markdown::conceals_spoiler(dom, node);
         if matches!(name, "code" | "pre") || spoiler {
             return;
         }
@@ -247,6 +247,14 @@ mod tests {
         assert!(text.contains("/rooms/1/@10"), "{text}");
         assert!(!text.contains("@99"), "{text}");
         assert!(!text.contains("@77"), "{text}");
+        assert_eq!(extract_message_ids(&text), vec![10]);
+    }
+
+    #[test]
+    fn a_link_whose_label_holds_a_spoiler_is_not_a_quote() {
+        let html = r#"<p><a href="/rooms/1/@10">open</a> <a href="/rooms/1/@99" title="Alice dies">see <span class="spoiler" data-spoiler="">ending</span></a></p>"#;
+        let text = non_code_text(html).unwrap();
+        assert!(!text.contains("@99"), "{text}");
         assert_eq!(extract_message_ids(&text), vec![10]);
     }
 }

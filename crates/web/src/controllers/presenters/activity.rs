@@ -734,18 +734,17 @@ fn item_with(
                 viewer,
             )?;
             result.author = messages.user_name(conn, scheduled.user_id)?;
+            // The source is Markdown with no rendered HTML: spoilers are redacted as the
+            // scheduled-message excerpts are, so the feed never shows the hidden words.
+            let excerpt = campfire_richtext::markdown::redact_spoilers(&scheduled.markdown_source);
             result.body = if let Some(reason) = scheduled
                 .drop_reason
                 .filter(|s| !campfire_richtext::ruby::is_blank(s))
             {
-                format!(
-                    "Your scheduled message was not sent ({reason}): {}",
-                    scheduled.markdown_source
-                )
+                format!("Your scheduled message was not sent ({reason}): {excerpt}")
             } else {
                 format!(
-                    "You no longer have access to this room, so your scheduled message was not sent: {}",
-                    scheduled.markdown_source
+                    "You no longer have access to this room, so your scheduled message was not sent: {excerpt}"
                 )
             };
         }

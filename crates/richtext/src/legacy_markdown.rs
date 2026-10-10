@@ -98,6 +98,9 @@ impl Renderer<'_, '_> {
             "strong" | "b" => format!("**{content}**"),
             "em" | "i" => format!("*{content}*"),
             "del" | "s" | "strike" => format!("~~{content}~~"),
+            // A forwarded snapshot keeps its spoilers through an edit: the span goes back to the
+            // `||…||` it was rendered from, so saving doesn't show the hidden words.
+            "span" if crate::markdown::is_spoiler(self.dom, node) => format!("||{content}||"),
             "code" => {
                 let text = self.dom.text_content(node);
                 let delimiter = code_delimiter(&text);

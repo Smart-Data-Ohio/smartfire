@@ -180,3 +180,55 @@ fn a_spoiler_inside_a_spoiler_joins_the_outer_one() {
     );
     assert_eq!(preview("||outer ||SECRET|| tail||"), "spoiler");
 }
+
+#[test]
+fn a_link_whose_label_holds_a_spoiler_conceals_it() {
+    let html = render(r#"[||ending||](https://example.com/alice-dies "Alice dies") and [open](https://example.com/shown)"#);
+    assert_eq!(
+        html,
+        "<p><a href=\"https://example.com/alice-dies\" title=\"Alice dies\" target=\"_blank\" rel=\"nofollow noopener noreferrer\"><span class=\"spoiler\" data-spoiler=\"\">ending</span></a> and <a href=\"https://example.com/shown\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">open</a></p>\n"
+    );
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&html).unwrap();
+    let links: Vec<_> = dom.descendants(root).into_iter().filter(|&node| dom.local_name(node) == Some("a")).collect();
+    assert!(markdown::conceals_spoiler(&dom, links[0]));
+    assert!(!markdown::conceals_spoiler(&dom, links[1]));
+}
+
+#[test]
+fn redact_spoilers_hides_from_the_first_pair_marker_to_the_last_in_each_block() {
+    // The same cases as the SPA's redactMarkdownSpoilers (frontend/src/lib/spoiler-text.test.ts).
+    for (source, redacted) in [
+        ("see ||secret words|| now", "see spoiler now"),
+        ("||@[David] is the killer||", "spoiler"),
+        ("||nope", "||nope"),
+        ("a ||| b", "a ||| b"),
+        ("||top\n\nbottom||", "||top\n\nbottom||"),
+        ("plain\n\n||secret|| end", "plain\n\nspoiler end"),
+        ("||outer ||SECRET|| tail||", "spoiler"),
+        ("\\`||SECRET||\\`", "\\`spoiler\\`"),
+        ("`||` ||SECRET|| tail", "`spoiler tail"),
+        ("```\n||SECRET||\n```", "```\nspoiler\n```"),
+        ("||one|| and ||two||", "spoiler"),
+        ("no markers at all", "no markers at all"),
+    ] {
+        assert_eq!(markdown::redact_spoilers(source), redacted, "{source:?}");
+    }
+}
+
+#[test]
+fn a_forwarded_spoiler_survives_an_edit() {
+    // A forward stores the rendered HTML with no Markdown source. Editing it starts from
+    // Markdown made from that HTML, and saving renders that Markdown again.
+    let forwarded = render("before ||SECRET||");
+    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+    let source = campfire_richtext::editable_markdown_source(&forwarded, None, &ctx).unwrap();
+    assert_eq!(source, "before ||SECRET||");
+
+    let shown = markdown::presentation(&forwarded, &ctx, &IconCatalog::default(), None).unwrap();
+    let from_shown = campfire_richtext::legacy_markdown::render(&shown, &ctx).unwrap();
+    assert_eq!(from_shown, "before ||SECRET||");
+
+    let edited = render(&source.replace("before", "after"));
+    assert_eq!(edited, "<p>after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span></p>\n");
+}

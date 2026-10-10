@@ -360,6 +360,45 @@ async fn the_inbox_pages_by_cursor() {
 }
 
 #[tokio::test]
+async fn a_dropped_scheduled_message_keeps_its_spoilers_out_of_the_inbox() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let now = a.booted.app.db.env().now();
+    a.db()
+        .write(move |tx| {
+            for (source, reason) in [("see ||SECRET one|| later", Some("its room was deleted")), ("||SECRET two|| soon", None)] {
+                let id: i64 = tx.conn().query_row(
+                    "INSERT INTO scheduled_messages (user_id, room_id, markdown_source, send_at, dropped_at, drop_reason, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                    rusqlite::params![DAVID, DESIGNERS, source, now, now, reason, now, now],
+                    |row| row.get(0),
+                )?;
+                tx.conn().execute(
+                    "INSERT INTO activity_items (user_id, source_type, source_id, event_type, created_at, updated_at) VALUES (?, 'ScheduledMessage', ?, 'scheduled_message_dropped', ?, ?)",
+                    rusqlite::params![DAVID, id, now, now],
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let page: api::ActivityList = parse(&david.send(get("/api/v1/activity")).await);
+    let mut bodies = page
+        .items
+        .iter()
+        .filter(|item| item.event_type == api::ActivityEventType::ScheduledMessageDropped)
+        .map(|item| item.source.body.clone())
+        .collect::<Vec<_>>();
+    bodies.sort();
+    assert_eq!(
+        bodies,
+        [
+            "You no longer have access to this room, so your scheduled message was not sent: spoiler soon",
+            "Your scheduled message was not sent (its room was deleted): see spoiler later",
+        ]
+    );
+}
+
+#[tokio::test]
 async fn saved_items_list_page_change_and_drop_their_reminders() {
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;

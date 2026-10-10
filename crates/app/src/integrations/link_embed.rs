@@ -61,4 +61,12 @@ mod tests {
         assert!(selected[0].url.contains("shown"), "{selected:?}");
         assert!(!selected[0].url.contains("hidden"), "{selected:?}");
     }
+
+    #[test]
+    fn a_link_whose_label_holds_a_spoiler_is_not_unfurled() {
+        let html = r#"<p><a href="https://example.com/alice-dies" title="Alice dies">see <span class="spoiler" data-spoiler="">ending</span></a> <a href="https://example.com/shown">open</a></p>"#;
+        let selected = reference_urls(html, "", "").unwrap();
+        assert_eq!(selected.len(), 1, "{selected:?}");
+        assert!(selected[0].url.contains("shown"), "{selected:?}");
+    }
 }
