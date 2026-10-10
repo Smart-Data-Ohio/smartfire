@@ -548,11 +548,6 @@ name = "campfire_assets"
 version = "0.1.0"
 dependencies = [
  "campfire_static_assets",
- "fancy-regex",
- "serde_json",
- "sha1",
- "sha2",
- "tempfile",
 ]
 
 [[package]]

@@ -1,7 +1,6 @@
 {% extends "layouts/auth.html" %}
 {% import "auth/_macros.html" as auth %}
 
-{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
 
 {% block content %}
 <main class="auth-card"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>
@@ -11,7 +10,7 @@
     <p class="auth-lede">This action needs a fresh confirmation. Confirm once and it continues.</p>
   </header>
 
-{% if password %}{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("auth-form").data("turbo", false) %}  {% filter form_with(form) %}
+{% if password %}{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("auth-form") %}  {% filter form_with(form) %}
     {{ h::hidden_field_tag("verifier", Some("password"), h::attrs()) }}
     <div class="field">
       {{ form.label("password", "Password", h::attrs().class("field-label")) }}
@@ -24,6 +23,6 @@
 {% endif %}  {% include "sudos/_totp_form.html" %}
 {% endif %}
 {% if google %}{% if password || totp %}  <p class="auth-divider">or</p>
-{% endif %}  {% filter button_to_form(h::routes::sudo_google().as_str(), h::attrs().method("post").class("button auth-wide auth-google").data("variant", "secondary").data("size", "lg"), h::attrs().class("auth-button-form").data("turbo", false)) %}{% call auth::google() %}Confirm with Google{% endfilter %}
+{% endif %}  {% filter button_to_form(h::routes::sudo_google().as_str(), h::attrs().method("post").class("button auth-wide auth-google").data("variant", "secondary").data("size", "lg"), h::attrs().class("auth-button-form")) %}{% call auth::google() %}Confirm with Google{% endfilter %}
 {% endif %}</main>
 {% endblock %}

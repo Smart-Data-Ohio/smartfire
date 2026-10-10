@@ -21,7 +21,7 @@
     <li>Enter the 6-digit code from the app:</li>
   </ol>
 
-{% let form = h::form_with("/two_factor_setup").class("auth-form").data("turbo", false) %}  {% filter form_with(form) %}
+{% let form = h::form_with("/two_factor_setup").class("auth-form") %}  {% filter form_with(form) %}
     <div class="field">
       {{ form.label("code", "Authenticator code", h::attrs().class("field-label")) }}
       {{ form.text_field("code", None, h::rejected_field(ctx, h::attrs().required(true).class("input auth-code").autofocus().autocomplete("one-time-code").attr("inputmode", "numeric").attr("pattern", "[0-9 ]*").maxlength(10).placeholder("123 456"))) }}

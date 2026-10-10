@@ -214,8 +214,7 @@ pub fn find_template(c: &mut Ctx, template: campfire_kit::Format) -> Result<()> 
     c.respond_to(&[template]).map(|_| ())
 }
 
-/// [`retained_page_or_frame`] for a retained page. Full documents still send the stylesheet preload
-/// `Link` header; the context itself does not carry those tags or an import map.
+/// Render a retained page or its frame response.
 pub async fn retained_page_or_frame(
     c: &mut Ctx,
     status: StatusCode,
@@ -254,18 +253,6 @@ pub async fn retained_document(
 }
 impl RequestContext {
     pub fn page(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {
-        let links = &campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")])
-            .preload_links;
-        let existing = c
-            .headers
-            .get("link")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("")
-            .to_string();
-        c.set_header(
-            "link",
-            &campfire_assets::append_preload_links(&existing, links),
-        );
         c.render(status, &format::HTML, html)
     }
     pub fn frame(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {

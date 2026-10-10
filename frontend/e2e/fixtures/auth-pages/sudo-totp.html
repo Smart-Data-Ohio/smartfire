@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="./auth.css">
     <script src="./auth.js"></script>
 
-    <meta name="turbo-visit-control" content="reload">
+
   </head>
   <body class="auth">
 
@@ -29,7 +29,7 @@
   </header>
 
 
-  <form class="auth-form" data-turbo="false" action="http://campfire.test/sudo" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:http://campfire.test/sudo" />
+  <form class="auth-form" action="http://campfire.test/sudo" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:http://campfire.test/sudo" />
     <input type="hidden" name="verifier" id="verifier" value="totp" />
     <div class="field">
       <label class="field-label" for="totp_code">Authenticator code</label>
