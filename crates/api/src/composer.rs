@@ -435,7 +435,7 @@ pub(crate) fn scheduled_rows(
                         } else {
                             room.name.unwrap_or_default()
                         },
-                        excerpt: campfire_views::helpers::truncate(
+                        excerpt: campfire_presentation::helpers::truncate(
                             &source.plain_text_body(conn, rich_text)?,
                             200,
                             "...",
