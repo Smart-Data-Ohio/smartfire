@@ -1416,8 +1416,14 @@ impl Message {
         }).collect()
     }
 
+    pub fn attachment_summary(&self, conn: &Connection) -> Result<String> {
+        Ok(self.attachments(conn)?.into_iter()
+            .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
+            .collect::<Vec<_>>().join(", "))
+    }
+
     /// `plain_text_body`: the body's plain text (`Markdown.plain_text` for a Markdown message),
-    /// else the attachment's filename, else ""; a forward note goes first, a blank line between.
+    /// else the attachment filenames, else ""; a forward note goes first, a blank line between.
     pub fn plain_text_body(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<String> {
         self.plain_text_body_from_html(conn, rich_text, self.body_html(conn)?.as_deref())
     }
@@ -1437,10 +1443,7 @@ impl Message {
             };
         }
         if text.trim().is_empty() {
-            text = self
-                .attachment(conn)?
-                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
-                .unwrap_or_default();
+            text = self.attachment_summary(conn)?;
         }
         Ok(
             match self

@@ -8,6 +8,7 @@ import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
+import { messageFiles } from "../messages/message-files.ts";
 import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -61,12 +62,13 @@ export function ConversationHeading({ name }: { readonly name: ConversationName 
 
 /** A compact line for the hit's file: a thumbnail or the file's icon, its name and size. */
 function HitAttachment({ message }: { readonly message: MessageDTO }) {
-  const { attachment } = message;
+  const files = messageFiles(message);
   const drive = message.cards.find((card) => card.kind === "drive");
 
-  if (attachment !== null) {
-    return (
-      <span className="search-hit-file">
+  if (files.length > 0) {
+    return files.map((attachment, index) => (
+      // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
+      <span key={`${index}:${attachment.url}`} className="search-hit-file">
         {attachment.thumbnailUrl === null ? (
           <span className="search-hit-file-icon">
             <Icon name={fileIcon(attachment.contentType)} size={16} />
@@ -84,7 +86,7 @@ function HitAttachment({ message }: { readonly message: MessageDTO }) {
         <span className="search-hit-file-name">{attachment.filename}</span>
         <span className="search-hit-file-size">{formatBytes(attachment.byteSize)}</span>
       </span>
-    );
+    ));
   }
 
   if (drive === undefined || drive.kind !== "drive") {

@@ -26,6 +26,20 @@ const navigation = Layer.mergeAll(Topics.layer, Typing.layer).pipe(
 describe("thread reply paging", () => {
   afterEach(() => mutations.reset());
 
+  it.effect("carries grouped files in a new thread's first reply", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`POST /rooms/${ROOM}/threads`, {
+        detail: threadDetailFixture(THREAD, null, null),
+        message: reply(90),
+      });
+      yield* threads.create(ROOM, 1, "", { attachmentSignedIds: ["one", "two", "three"] });
+      expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+        message: { attachmentSignedId: null, attachmentSignedIds: ["one", "two", "three"] },
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("pages forward after a window replaced around an older reply", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;

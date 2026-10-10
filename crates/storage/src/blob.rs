@@ -28,6 +28,12 @@ pub struct Blob {
     pub created_at: String,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct MessageAttachments {
+    pub grouped: bool,
+    pub blobs: Vec<Blob>,
+}
+
 /// A blob built from uploaded bytes, not yet saved (`Blob.build_after_unfurling`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct NewBlob {
@@ -158,12 +164,23 @@ impl Blob {
         Ok(conn.prepare_cached(&SQL)?.query_row(params![record_type, record_id, name], Blob::from_row).optional()?)
     }
 
-    /// WS8bm2 read seam: the same first attachment/blob lookup for a bounded message window.
-    pub fn attached_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Blob>> {
-        if ids.is_empty() { return Ok(Default::default()); }
-        let columns = BLOB_COLUMNS.split(", ").map(|c| format!("b.{c}")).collect::<Vec<_>>().join(", ");
-        let sql = format!("SELECT {columns},a.record_id FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.name='attachment' AND a.record_id IN (SELECT value FROM json_each(?)) ORDER BY a.id DESC");
-        Ok(conn.prepare(&sql)?.query_map([serde_json::json!(ids).to_string()], |r| Ok((r.get(9)?, Self::from_row(r)?)))?.collect::<rusqlite::Result<_>>()?)
+    /// Both message file slots, in attachment-id order, for a bounded message window.
+    pub fn attached_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, MessageAttachments>> {
+        let mut files = std::collections::HashMap::<i64, MessageAttachments>::new();
+        if ids.is_empty() { return Ok(files); }
+        let columns = BLOB_COLUMNS.split(", ").map(|column| format!("b.{column}")).collect::<Vec<_>>().join(", ");
+        let sql = format!("SELECT {columns},a.record_id,a.name FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND a.record_id IN (SELECT value FROM json_each(?)) ORDER BY a.id");
+        let mut statement = conn.prepare(&sql)?;
+        let rows = statement.query_map([serde_json::json!(ids).to_string()], |row| {
+            Ok((row.get::<_, i64>(9)?, row.get::<_, String>(10)?, Self::from_row(row)?))
+        })?;
+        for row in rows {
+            let (message_id, name, blob) = row?;
+            let entry = files.entry(message_id).or_default();
+            entry.grouped |= name == "attachments";
+            entry.blobs.push(blob);
+        }
+        Ok(files)
     }
 
     pub fn content_type(&self) -> &str {

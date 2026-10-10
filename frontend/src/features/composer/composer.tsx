@@ -67,6 +67,8 @@ export interface ComposerDraft {
   readonly markdown: string;
   /** A finished direct upload's signed id, or `null`. */
   readonly attachmentSignedId: string | null;
+  /** Grouped uploaded files in tray order; empty for the legacy single-file slot. */
+  readonly attachmentSignedIds: readonly string[];
   /** Drive files pinned on the message. Empty when there are none. */
   readonly driveFileIds: readonly string[];
 }
@@ -78,7 +80,7 @@ export interface ComposerProps {
   /**
    * Replaces the normal send (the outbox), e.g. the first reply that creates a thread. The
    * composer clears once it resolves and keeps the text if it rejects. Commands and scheduling
-   * are off here (there's no thread to run them in yet), and it takes one file.
+   * are off here (there's no thread to run them in yet).
    */
   readonly onSubmit?: (draft: ComposerDraft) => Promise<void>;
   /** Overrides "Message #general". */
@@ -218,7 +220,7 @@ export function Composer({
   const conversation = useConversationName(roomId);
   const placeholder = placeholderOverride ?? placeholderFor(conversation);
   const agentReplying = useAgentReplying(roomId);
-  const attachments = useAttachments(creating ? 1 : MAX_FILES);
+  const attachments = useAttachments(MAX_FILES);
   const [driveFiles, setDriveFiles] = useState<readonly DrivePick[]>([]);
   const [driveOpen, setDriveOpen] = useState(false);
   const scheduledHere = useScheduled(roomId, threadId, !creating);
@@ -383,12 +385,8 @@ export function Composer({
 
     if (overflow > 0) {
       toast({
-        title: creating
-          ? "A new thread takes one file"
-          : `A message holds up to ${MAX_FILES} files`,
-        description: creating
-          ? "Add the others in a reply once the thread exists."
-          : `${overflow === 1 ? "1 file wasn't" : `${overflow} files weren't`} added. Send these, then add the rest.`,
+        title: `A message holds up to ${MAX_FILES} files`,
+        description: `${overflow === 1 ? "1 file wasn't" : `${overflow} files weren't`} added. Send these, then add the rest.`,
       });
     }
 
@@ -631,9 +629,12 @@ export function Composer({
       submitting.current = true;
       setRunning(true);
 
+      const uploaded = fileOptions(files);
+
       void onSubmit({
         markdown,
-        attachmentSignedId: files[0]?.snapshot.signedId ?? null,
+        attachmentSignedId: uploaded.attachmentSignedId ?? null,
+        attachmentSignedIds: uploaded.attachmentSignedIds ?? [],
         driveFileIds: drive.map((file) => file.id),
       })
         .then(
@@ -1060,7 +1061,7 @@ export function Composer({
       <input
         ref={fileInputRef}
         type="file"
-        multiple={!creating}
+        multiple
         hidden
         tabIndex={-1}
         aria-hidden="true"
