@@ -16,6 +16,7 @@ import { ConversationLabel, conversationText } from "../destinations/conversatio
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
+import { messageFiles } from "../messages/message-files.ts";
 import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -122,6 +123,7 @@ export function SavedRow({
   const done = item.status === "done";
   const reminder = reminderLabel(item, now);
   const authorName = author?.name ?? UNKNOWN_NAME;
+  const files = message === null ? [] : messageFiles(message);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target instanceof HTMLElement && event.target.closest(".list-row-bar") !== null) {
@@ -227,14 +229,15 @@ export function SavedRow({
               dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
           )}
-          {message?.attachment == null && reminder === null && !done ? null : (
+          {files.length === 0 && reminder === null && !done ? null : (
             <div className="saved-chips">
-              {message?.attachment == null ? null : (
-                <span className="saved-chip">
+              {files.map((file, index) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
+                <span key={`${index}:${file.url}`} className="saved-chip">
                   <Icon name="paperclip" size={12} />
-                  <span className="saved-chip-text">{message.attachment.filename}</span>
+                  <span className="saved-chip-text">{file.filename}</span>
                 </span>
-              )}
+              ))}
               {reminder === null ? null : (
                 <span
                   className="saved-chip"

@@ -57,6 +57,15 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
     result["drive_attachments"] = files.into_iter().map(|id| json!({"file_id": id, "url": format!("https://drive.google.com/open?id={id}")})).collect::<Vec<_>>().into();
     if message.streaming { result["streaming"] = true.into(); }
     result["url"] = permalink(message, base).into();
+    let files = p.message_files(message)?;
+    if files.grouped {
+        result["attachments"] = files.blobs.iter().map(|blob| {
+            let view = p.attachment_blob(message, blob)?;
+            Ok(json!({"filename": view.filename, "url": format!("{base}{}", view.blob_path),
+                "download_url": format!("{base}{}", view.download_path),
+                "content_type": blob.content_type.as_deref().unwrap_or("application/octet-stream"), "byte_size": blob.byte_size}))
+        }).collect::<Result<Vec<_>>>()?.into();
+    }
     Ok(result)
 }
 

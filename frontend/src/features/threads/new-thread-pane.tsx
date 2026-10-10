@@ -79,6 +79,7 @@ export function NewThreadPane({
       .create(roomId, parentId, draft.markdown, {
         name: name.trim() === "" ? null : name.trim(),
         attachmentSignedId: draft.attachmentSignedId,
+        attachmentSignedIds: draft.attachmentSignedIds,
         driveFileIds: draft.driveFileIds,
         clientMessageId,
       })
