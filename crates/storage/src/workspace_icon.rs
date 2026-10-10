@@ -35,6 +35,14 @@ pub fn prepare(
     }
     let bytes = std::fs::read(&path).map_err(|_| "could not be read")?;
     if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        // libvips ignores canvases above 2048 pixels and reports the frame size, so check the raw canvas.
+        let canvas = bytes.get(6..10).ok_or("could not be read")?;
+        let (max_width, max_height) = crate::branding::Kind::Emoji.maximum_dimensions();
+        if i32::from(u16::from_le_bytes([canvas[0], canvas[1]])) > max_width
+            || i32::from(u16::from_le_bytes([canvas[2], canvas[3]])) > max_height
+        {
+            return Err(crate::branding::Kind::Emoji.dimension_message().into());
+        }
         let frames = gif_frames(&bytes).ok_or("could not be read")?;
         if frames > 100 {
             return Err("must contain at most 100 frames".into());

@@ -53,6 +53,32 @@ async fn animated_emoji_bounds_dimensions_and_frame_count() {
     }
 }
 
+#[tokio::test]
+async fn animated_gif_rejects_a_raw_canvas_above_the_emoji_limit() {
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let mut huge = GIF.to_vec();
+    huge[6..10].copy_from_slice(&[0xff; 4]);
+    let signed = upload(&a, &huge, "huge_canvas.gif", "image/gif").await;
+    let reply = write(
+        &mut b,
+        Method::POST,
+        "/api/v1/admin/icons",
+        json!({"name": "huge_canvas", "title": "Huge canvas", "signedId": signed}),
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert_eq!(
+        error(&reply)["fields"]["image"],
+        json!(["must be at most 512 × 512 pixels"])
+    );
+}
+
 async fn upload(a: &TestApp, bytes: &[u8], filename: &str, content_type: &str) -> String {
     let staged = a
         .booted
