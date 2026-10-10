@@ -15,7 +15,7 @@ use axum::routing::{delete, get, patch, post, put};
 use campfire_api_types as api;
 use campfire_app::account_security;
 use campfire_app::app::AppCtx;
-use campfire_db::models::account::{validate_description, validate_vanity_slug};
+use campfire_db::models::account::{validate_description, validate_vanity_slug_for};
 use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::models::google_identity::GoogleIdentity;
 use campfire_db::models::workspace_icon::{NewIcon, WorkspaceIcon};
@@ -311,6 +311,7 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
 async fn save_workspace(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateWorkspace = body(c).await?;
+    let current = account(c).await?;
     if let Some(bytes) = update.upload_limit_bytes
         && !(1..=campfire_db::models::account::MAX_UPLOAD_LIMIT_BYTES).contains(&bytes)
     {
@@ -329,7 +330,7 @@ async fn save_workspace(c: &mut Ctx) -> Result {
     let vanity_slug = update
         .vanity_slug
         .as_deref()
-        .map(validate_vanity_slug)
+        .map(|slug| validate_vanity_slug_for(slug, &current.join_code))
         .transpose()
         .map_err(|error| fail(c, validation("vanitySlug", &error.to_string())))?
         .map(str::to_string);

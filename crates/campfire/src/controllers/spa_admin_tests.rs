@@ -1419,6 +1419,7 @@ async fn server_identity_invalid_fields_return_clear_422_without_partial_writes(
         ("vanitySlug", "A_B".into()),
         ("vanitySlug", "-abc".into()),
         ("vanitySlug", "abc-".into()),
+        ("vanitySlug", "abcd-1234-efgh".into()),
     ] {
         let reply = write(
             &mut david,

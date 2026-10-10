@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::Account;
+use crate::models::account::{validate_vanity_slug, validate_vanity_slug_for};
 
 fn signal(t: &TestDb) -> Account {
     t.read(|c| Ok(Account::first(c)?.unwrap()))
@@ -180,6 +181,38 @@ impl Account {
         let id = self.id;
         *self = t.read(|c| Account::find(c, id));
     }
+}
+
+#[test]
+fn vanity_slug_cannot_look_like_an_invite_code() {
+    let t = TestDb::new();
+    let account = signal(&t);
+    for shaped in ["abcd-1234-efgh", "a1b2-c3d4-e5f6"] {
+        assert!(
+            validate_vanity_slug(shaped).is_err(),
+            "{shaped} has the join code shape"
+        );
+    }
+    // A slug equal to the live join code is rejected even if its shape were not generated.
+    assert!(validate_vanity_slug_for("team-room", "team-room").is_err());
+    assert!(validate_vanity_slug_for(&account.join_code, &account.join_code).is_err());
+    assert_eq!(
+        validate_vanity_slug_for("team-room", &account.join_code).unwrap(),
+        "team-room"
+    );
+    assert_eq!(validate_vanity_slug("abcd-123-efgh").unwrap(), "abcd-123-efgh");
+}
+
+#[test]
+fn join_code_reset_retires_the_old_code_and_keeps_slug_aliases_distinct() {
+    let t = TestDb::new();
+    let old = signal(&t).join_code;
+    let mut account = signal(&t);
+    t.write(move |tx| account.reset_join_code(tx));
+    let account = signal(&t);
+    assert_ne!(account.join_code, old);
+    assert!(validate_vanity_slug_for("smart-data", &account.join_code).is_ok());
+    assert!(validate_vanity_slug(&old).is_err());
 }
 
 #[test]

@@ -119,7 +119,32 @@ pub fn validate_vanity_slug(value: &str) -> Result<&str> {
     if RESERVED_VANITY_SLUGS.contains(&value) {
         return Err(Error::Other("is reserved; choose another slug".into()));
     }
+    if looks_like_join_code(value) {
+        return Err(Error::Other("can't look like an invite code".into()));
+    }
     Ok(value)
+}
+
+/// `validate_vanity_slug`, plus a check against the workspace's current join code, so a
+/// slug can never become a second way into `/join/:code` after a reset.
+pub fn validate_vanity_slug_for<'a>(value: &'a str, join_code: &str) -> Result<&'a str> {
+    let value = validate_vanity_slug(value)?;
+    if !value.is_empty() && value == join_code {
+        return Err(Error::Other("can't look like an invite code".into()));
+    }
+    Ok(value)
+}
+
+/// Whether a value has the shape of `generate_join_code`: 4-4-4 alphanumeric groups.
+fn looks_like_join_code(value: &str) -> bool {
+    value.len() == 14
+        && value.bytes().enumerate().all(|(i, c)| {
+            if i == 4 || i == 9 {
+                c == b'-'
+            } else {
+                c.is_ascii_alphanumeric()
+            }
+        })
 }
 
 impl AccountSettings {
