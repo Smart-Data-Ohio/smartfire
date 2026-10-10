@@ -42,7 +42,7 @@ async fn boot_fresh(ssl: bool) -> Fresh {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE");
-    let mut config = Config::from_lookup(|name| match name {
+    let config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE" => Some(secret.clone()),
         "DISABLE_SSL" if !ssl => Some("true".into()),
         "LIVEKIT_URL" if ssl => Some("wss://livekit.campfire.test:7880".into()),
@@ -52,7 +52,6 @@ async fn boot_fresh(ssl: bool) -> Fresh {
     })
     .unwrap();
     // The classic pages, until they're deleted.
-    config.spa_enabled = false;
     Fresh { booted: boot(config).await.unwrap(), _dir: dir }
 }
 
@@ -697,7 +696,7 @@ async fn idle_administrator_sessions_expire_when_restored() {
     assert!(app.booted.app.db.read(move |conn| Session::find_by_token(conn, &token)).await.unwrap().is_none(), "destroyed");
 
     let restored = app.send(request("GET", "/users/me/profile").header(header::COOKIE, app.session_token_cookie(&fresh)).body(Body::empty()).unwrap()).await;
-    assert_eq!(restored.status, StatusCode::OK, "{}", restored.text());
+    assert_eq!((restored.status, restored.header("location")), (StatusCode::FOUND, Some("http://campfire.test/app/settings")));
 }
 
 #[tokio::test]

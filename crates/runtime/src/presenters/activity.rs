@@ -16,8 +16,7 @@ pub struct Sources {
     threads: HashMap<i64, campfire_db::ChannelThread>,
     actors: HashMap<i64, User>,
     room_names: RefCell<HashMap<i64, String>>,
-    /// The single-page app's batch ([`Sources::load_spa`]): what the classic rows read one at a
-    /// time. Empty for the classic loads, whose lookups fall back to a query per row.
+    /// Associations batched for the SPA list by [`Sources::load_spa`].
     events: HashMap<i64, campfire_db::models::calendar_event::CalendarEvent>,
     grants: HashMap<i64, campfire_db::models::huddle_grant::HuddleGrant>,
     approvals: HashMap<i64, campfire_db::AgentApproval>,
@@ -138,7 +137,7 @@ impl Sources {
             .collect();
         Ok(sources)
     }
-    fn load_for(conn: &Connection, rows: &[ActivityItem], html: bool) -> Result<Self> {
+    fn load_for(conn: &Connection, rows: &[ActivityItem], extended: bool) -> Result<Self> {
         let session_ids: Vec<_> = rows
             .iter()
             .filter(|row| row.source_type == "Session")
@@ -219,7 +218,7 @@ impl Sources {
             .collect::<HashMap<_, _>>();
         let actor_ids = work_events
             .values()
-            .filter(|_| html)
+            .filter(|_| extended)
             .filter_map(|event| event.actor_id)
             .chain(budget_agents.values().map(|agent| agent.user_id))
             .collect::<std::collections::BTreeSet<_>>()
@@ -239,7 +238,7 @@ impl Sources {
             .chain(
                 threads
                     .values()
-                    .filter(|_| html)
+                    .filter(|_| extended)
                     .map(|thread| thread.room_id),
             )
             .collect();

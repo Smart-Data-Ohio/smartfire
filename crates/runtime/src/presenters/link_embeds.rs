@@ -53,3 +53,23 @@ pub fn can_offer_suppression(conn: &Connection, message: &Message, viewer: i64) 
         .iter()
         .any(|reference| reference.embed.usable() || reference.embed.linkedin()))
 }
+
+pub fn broadcast_updates(app: &App, embed_id: i64) -> anyhow::Result<()> {
+    let app = app.clone();
+    app.db.clone().read_blocking(move |conn| {
+        use crate::integrations::message_batches::{self, Reference};
+        let mut after = None;
+        loop {
+            let messages = message_batches::next(conn, Reference::LinkEmbed(embed_id), after)?;
+            app.broadcasts.sync_message_cards(conn, &messages);
+            if messages.len() < message_batches::SIZE { break; }
+            after = messages.last().map(|message| message.id);
+        }
+        Ok(())
+    })?;
+    Ok(())
+}
+pub fn broadcast_message(app: &App, conn: &Connection, message: &Message, _linkedin: bool) -> campfire_db::Result<()> {
+    app.broadcasts.sync_message_cards(conn, std::slice::from_ref(message));
+    Ok(())
+}

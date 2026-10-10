@@ -121,12 +121,14 @@ fn poll() -> Poll {
                 label: "Tacos".into(),
                 votes: 2,
                 voter_ids: vec![7, 8],
+                media: None,
             },
             PollOption {
                 id: 52,
                 label: "Pizza".into(),
                 votes: 1,
                 voter_ids: vec![9],
+                media: None,
             },
         ],
     }
@@ -167,6 +169,7 @@ fn scheduled() -> ScheduledMessage {
         dropped_at: Some("2026-10-07T13:55:12.000Z".into()),
         drop_reason: Some("its room was deleted".into()),
         created_at: "2026-10-06T11:00:00.000Z".into(),
+        attachments: vec![],
     }
 }
 
@@ -187,6 +190,7 @@ fn scheduled_wire() -> serde_json::Value {
         "droppedAt": "2026-10-07T13:55:12.000Z",
         "dropReason": "its room was deleted",
         "createdAt": "2026-10-06T11:00:00.000Z",
+        "attachments": [],
     })
 }
 
@@ -442,6 +446,8 @@ fn scheduled_messages_carry_their_state() {
             markdown_source: None,
             send_at: Some("2026-10-07T14:00:00.000Z".into()),
             reply_to_message_id: None,
+            attachment_signed_id: None,
+            attachment_signed_ids: None,
         },
         json!({"sendAt": "2026-10-07T14:00:00.000Z"}),
     );
@@ -628,6 +634,7 @@ fn polls_round_trip() {
             multiple: false,
             anonymous: false,
             closes_at: None,
+            option_media: None,
         },
         json!({"clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12", "threadId": null, "question": "Lunch?", "options": ["Tacos", "Pizza"], "multiple": false, "anonymous": false, "closesAt": null}),
     );

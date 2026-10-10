@@ -186,7 +186,7 @@ impl SyncRenderer for Renderer {
             conn,
             &[row],
             app.db.env().now(),
-            app.db.env().rich_text.as_ref(),
+            &app,
         )?
         .pop())
     }
@@ -278,7 +278,7 @@ impl SyncRenderer for Renderer {
         let Some(app) = self.app.upgrade() else {
             return Ok(None);
         };
-        crate::cards::poll_changed(conn, poll_id, voter_id, app.db.env().now())
+        crate::cards::poll_changed(conn, poll_id, voter_id, app.db.env().now(), &*app.storage.verifier)
     }
 
     fn message_cards(

@@ -82,86 +82,10 @@ async fn restriction(app: &TestApp) {
 }
 
 #[tokio::test]
-async fn sidebar_boards_list_between_channels_and_voice() {
-    let app = setup().await;
-    let board = fresh(&app, DAVID, &[DAVID, JZ]).await;
-    let body = app.david().get("/users/me/sidebar").await.text();
-    assert!(body.find("channels-heading").unwrap() < body.find("boards-heading").unwrap());
-    assert!(body.find("boards-heading").unwrap() < body.find("voice-heading").unwrap());
-    let row = sidebar_row(&body, board.id);
-    assert!(row.contains("board-room") && row.contains("Launch"));
-    assert!(
-        body.contains("aria-label=\"New board\"") && body.contains("href=\"/rooms/boards/new\"")
-    );
-}
-fn sidebar_row(body: &str, id: i64) -> &str {
-    let id = body.find(&format!("id=\"list_rooms_board_{id}\"")).unwrap();
-    let start = body[..id].rfind("<a ").unwrap();
-    let end = body[id..].find("</a>").unwrap() + id + 4;
-    &body[start..end]
-}
-#[tokio::test]
-async fn sidebar_board_rows_show_unread_to_other_members() {
-    let app = setup().await;
-    let board = fresh(&app, DAVID, &[DAVID, JZ]).await;
-    app.db()
-        .write(move |tx| {
-            campfire_db::ChannelThread::create(
-                tx,
-                campfire_db::NewChannelThread {
-                    room_id: board.id,
-                    creator_id: JZ,
-                    name: Some("News".into()),
-                    work_status: Some("planned".into()),
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .unwrap();
-    assert!(
-        sidebar_row(&app.david().get("/users/me/sidebar").await.text(), board.id)
-            .contains("board-room unread")
-    );
-    let body = app.sign_in(JZ).await.get("/users/me/sidebar").await.text();
-    let row = sidebar_row(&body, board.id);
-    assert!(row.contains("Launch") && !row.contains(" unread"));
-}
-#[tokio::test]
-async fn sidebar_new_board_control_follows_room_creation_permissions() {
-    let app = setup().await;
-    restriction(&app).await;
-    assert!(
-        !app.sign_in(JZ)
-            .await
-            .get("/users/me/sidebar")
-            .await
-            .text()
-            .contains("aria-label=\"New board\"")
-    );
-    assert!(
-        app.david()
-            .get("/users/me/sidebar")
-            .await
-            .text()
-            .contains("aria-label=\"New board\"")
-    );
-}
-
-#[tokio::test]
 async fn show_redirects_to_get_general_show() {
     let app = setup().await;
-    redirect(
-        &app.david().get(&format!("/rooms/boards/{BOARD}")).await,
-        BOARD,
-    );
-}
-#[tokio::test]
-async fn new_case() {
-    let app = setup().await;
-    let response = app.david().get("/rooms/boards/new").await;
-    assert_eq!(response.status, StatusCode::OK);
-    assert!(response.text().contains("New board"));
+    assert_eq!(app.david().classic_page(&format!("/rooms/boards/{BOARD}")).await.location(),
+        Some(format!("http://campfire.test/rooms/{BOARD}").as_str()));
 }
 #[tokio::test]
 async fn create_case() {
@@ -223,7 +147,7 @@ async fn create_forbidden_by_non_admin_when_account_restricts_creation_to_admins
         StatusCode::FORBIDDEN
     );
     assert_eq!(
-        browser.get("/rooms/boards/new").await.status,
+        browser.classic_page("/rooms/boards/new").await.status,
         StatusCode::FORBIDDEN
     );
     assert_eq!(
@@ -330,7 +254,7 @@ async fn remove_yourself() {
     assert_eq!(members(&app, board.id).await, vec![JASON]);
     assert_eq!(
         browser
-            .get(&format!("/rooms/{}", board.id))
+            .classic_page(&format!("/rooms/{}", board.id))
             .await
             .location(),
         Some("http://campfire.test/")
@@ -343,7 +267,7 @@ async fn non_members_cannot_see_the_board_page() {
     assert_eq!(
         app.sign_in(JZ)
             .await
-            .get(&format!("/rooms/{}", board.id))
+            .classic_page(&format!("/rooms/{}", board.id))
             .await
             .location(),
         Some("http://campfire.test/")
@@ -359,7 +283,7 @@ async fn non_members_cannot_reach_the_board_namespace() {
         format!("/rooms/boards/{}/edit", board.id),
     ] {
         assert_eq!(
-            browser.get(&path).await.location(),
+            browser.classic_page(&path).await.location(),
             Some("http://campfire.test/")
         );
     }

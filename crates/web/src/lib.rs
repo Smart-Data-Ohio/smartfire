@@ -16,7 +16,6 @@ pub mod controllers {
 }
 
 // The app layer, under the paths this code used inside the campfire crate.
-use campfire_app::{cable, integrations};
 
 mod app {
     pub(crate) use campfire_app::app::*;

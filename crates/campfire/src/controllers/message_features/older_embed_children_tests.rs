@@ -32,21 +32,16 @@ async fn queued_stale_generic_and_linkedin_children_execute_after_parent_with_fl
         let app = app_rows(group["rows"].clone()).await;
 
         for path in [
-            format!("/rooms/{QUIET_CORNER}/messages"),
+            format!("/api/v1/rooms/{QUIET_CORNER}/messages"),
             format!(
-                "/rooms/{QUIET_CORNER}/threads/{}/messages",
+                "/api/v1/threads/{}/messages",
                 group["thread_id"]
             ),
         ] {
             let response = app.david().get(&path).await;
             assert_eq!(response.status, axum::http::StatusCode::OK);
             for id in group["old_ids"].as_array().unwrap() {
-                assert!(
-                    !response
-                        .text()
-                        .contains(&format!("data-message-id=\"{id}\"")),
-                    "old reference in {path}"
-                );
+                assert!(!response.json()["messages"].as_array().unwrap().iter().any(|message| message["id"] == *id));
             }
         }
         // Window rendering may claim the unrelated provider; restore the oracle snapshot.

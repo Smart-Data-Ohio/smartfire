@@ -2,8 +2,8 @@
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::message_features as features;
-use crate::controllers::presenters::{Presenter, page};
-use campfire_db::{Message, Room, SavedItem, SavedItemChanges, User};
+use crate::controllers::presenters::page;
+use campfire_db::{SavedItem, SavedItemChanges};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 
 async fn prepare(c: &mut Ctx) -> Result<()> {
@@ -39,97 +39,6 @@ async fn accessible(c: &Ctx) -> Result<SavedItem> {
         })
         .await
         .map_err(page::db_error)
-}
-pub async fn index(c: &mut Ctx) -> Result {
-    prepare(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let user_id = require_current_user(c)?.id;
-    let status = filter(c);
-    let status_filter = status.clone();
-    let zone = super::presenters::view_context::time_zone(c).await?;
-    let app = c.app().clone();
-    let items = c
-        .app()
-        .db
-        .read(move |conn| {
-            let mut presenter = Presenter::new(conn, &app, None);
-            presenter.render_zone = zone;
-            let viewer = User::find(conn, user_id)?;
-            let items = SavedItem::accessible_to(conn, user_id)?
-                .into_iter()
-                .filter(|item| status == "all" || item.status == status)
-                .collect::<Vec<_>>();
-            let messages = Message::for_ids(
-                conn,
-                &items.iter().map(|item| item.message_id).collect::<Vec<_>>(),
-            )?;
-            let rooms = Room::for_ids(
-                conn,
-                &messages
-                    .iter()
-                    .map(|message| message.room_id)
-                    .collect::<Vec<_>>(),
-            )?;
-            let names = Room::display_names_for(conn, &rooms, Some(&viewer))?;
-            let presenter = presenter.preload_plain_text(&messages)?;
-            let messages = messages
-                .into_iter()
-                .map(|message| (message.id, message))
-                .collect::<std::collections::HashMap<_, _>>();
-            items
-                .iter()
-                .map(|item| {
-                    let message = messages
-                        .get(&item.message_id)
-                        .ok_or(campfire_db::Error::RecordNotFound("Message"))?;
-                    let name = names
-                        .get(&message.room_id)
-                        .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-                    view_loaded(&presenter, item, message, name.clone())
-                })
-                .collect::<campfire_db::Result<Vec<_>>>()
-        })
-        .await
-        .map_err(page::db_error)?;
-    page::framed_page!(c, StatusCode::OK, |ctx| {
-        campfire_views::saved_items::Index {
-            ctx,
-            items: &items,
-            status_filter: &status_filter,
-        }
-    })
-    .await
-}
-#[cfg(any(test, feature = "test-support"))]
-pub fn view(
-    presenter: &Presenter<'_>,
-    conn: &campfire_db::Connection,
-    viewer: &User,
-    item: &SavedItem,
-) -> campfire_db::Result<campfire_views::saved_items::Item> {
-    let message = Message::find(conn, item.message_id)?;
-    let room_name =
-        presenter.room_display_name(&Room::find(conn, message.room_id)?, Some(viewer))?;
-    view_loaded(presenter, item, &message, room_name)
-}
-fn view_loaded(
-    presenter: &Presenter<'_>,
-    item: &SavedItem,
-    message: &Message,
-    room_name: String,
-) -> campfire_db::Result<campfire_views::saved_items::Item> {
-    let zone = &presenter.render_zone;
-    Ok(campfire_views::saved_items::Item {
-        id: item.id,
-        status: item.status.clone(),
-        created_at: features::html_datetime(item.created_at, zone),
-        remind_at: item.remind_at.map(|at| features::html_datetime(at, zone)),
-        reminded_at: item.reminded_at.map(|at| features::html_datetime(at, zone)),
-        room_name,
-        author_name: presenter.user(message.creator_id)?.name,
-        body: campfire_views::helpers::truncate(&presenter.plain_text_body(message)?, 500, "..."),
-        message_path: campfire_db::message_pin::message_path(message),
-    })
 }
 pub async fn create(c: &mut Ctx) -> Result {
     prepare(c).await?;

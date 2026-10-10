@@ -51,7 +51,6 @@ pub mod google_sign_in;
 pub mod google_calendar;
 pub mod google_connections;
 pub mod google_drive;
-pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
@@ -68,11 +67,7 @@ pub mod presenters {
     #[cfg(test)]
     pub mod test_support;
     #[cfg(test)]
-    mod message_links;
-    #[cfg(test)]
     pub(crate) mod sql_probe;
-    #[cfg(test)]
-    mod chrome_tests;
     #[cfg(test)]
     pub(crate) mod accounts {
         pub(crate) use campfire_web::controllers::presenters::accounts::*;
@@ -106,7 +101,7 @@ pub mod presenters {
     }
     #[cfg(test)]
     pub(crate) mod twitter_cards {
-        pub(crate) use campfire_web::controllers::presenters::twitter_cards::*;
+
         mod tests;
     }
 }
@@ -115,6 +110,7 @@ mod activity_domain_tests;
 #[cfg(test)]
 mod human_work_tests;
 pub mod public_pages;
+pub mod navigation;
 pub mod pwa;
 pub mod qr_code;
 pub mod room_categories;
@@ -130,7 +126,6 @@ pub mod switchers;
 pub mod two_factor;
 pub mod unfurl_links;
 pub mod users;
-pub mod welcome;
 pub mod internal_huddle;
 #[cfg(test)]
 mod internal_huddle_tests;
@@ -241,19 +236,59 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
-        "rooms/voices#show" => arc(rooms::call_channels::show),
-        "rooms/voices#new" => arc(rooms::call_channels::new),
+        "accounts#edit"
+        | "accounts/users#index"
+        | "accounts/bots#edit"
+        | "accounts/bots#index"
+        | "accounts/bots#new"
+        | "accounts/bots/credentials#index"
+        | "accounts/bots/grants#index"
+        | "accounts/custom_styles#edit"
+        | "accounts/icons#index"
+        | "accounts/integrations_health#show"
+        | "agents/directory#index"
+        | "channel_threads#content"
+        | "channel_threads#new"
+        | "rooms#show"
+        | "rooms/board_automations#show"
+        | "rooms/boards#edit"
+        | "rooms/boards#new"
+        | "rooms/closeds#edit"
+        | "rooms/closeds#new"
+        | "rooms/directs#edit"
+        | "rooms/directs#new"
+        | "rooms/files#index"
+        | "rooms/involvements#show"
+        | "rooms/opens#edit"
+        | "rooms/opens#new"
+        | "rooms/pins#index"
+        | "rooms/stages#edit"
+        | "rooms/stages#new"
+        | "rooms/voices#edit"
+        | "rooms/voices#new"
+        | "saved_items#index"
+        | "scheduled_messages#index"
+        | "searches#index"
+        | "users#index"
+        | "users#show"
+        | "users/cards#show"
+        | "users/push_subscriptions#index"
+        | "users/sessions#index"
+        | "users/sidebars#show"
+        | "users/statuses#edit"
+        | "welcome#show"
+        | "work_threads#new_handoff" => arc(navigation::page),
+        "agents/approvals#for_agent" | "agents/events#ledger" => arc(navigation::agent_history),
+        "github/pull_request_write_actions#show" | "rooms/message_links#show" | "rooms/github/pull_request_cards#show" | "rooms/fizzy/cards#show" => arc(navigation::record),
+        "rooms/opens#show" | "rooms/closeds#show" | "rooms/directs#show" | "rooms/boards#show" | "rooms/voices#show" | "rooms/stages#show" => arc(navigation::typed_room),
+        "accounts/audit_logs#show" => arc(accounts::audit_logs::show),
+        "rooms/refreshes#show" => arc(navigation::refresh),
+        "rooms#index" | "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index" | "rooms/boards#index" | "rooms/voices#index" | "rooms/stages#index" => arc(navigation::room_index),
         "rooms/voices#create" => arc(rooms::call_channels::create),
-        "rooms/voices#edit" => arc(rooms::call_channels::edit),
         "rooms/voices#update" => arc(rooms::call_channels::update),
-        "rooms/voices#index" => arc(rooms::index),
         "rooms/voices#destroy" => arc(rooms::destroy_without_room),
-        "rooms/stages#show" => arc(rooms::call_channels::show),
-        "rooms/stages#new" => arc(rooms::call_channels::new),
         "rooms/stages#create" => arc(rooms::call_channels::create),
-        "rooms/stages#edit" => arc(rooms::call_channels::edit),
         "rooms/stages#update" => arc(rooms::call_channels::update),
-        "rooms/stages#index" => arc(rooms::index),
         "rooms/stages#destroy" => arc(rooms::destroy_without_room),
 
         "rooms/huddles#show" => arc(rooms::huddles::show),
@@ -275,7 +310,6 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "public_pages#about" => arc(public_pages::about),
         "public_pages#privacy" => arc(public_pages::privacy),
         "public_pages#terms" => arc(public_pages::terms),
-        "welcome#show" => arc(welcome::show),
         "first_runs#show" => arc(first_runs::show),
         "first_runs#create" => arc(first_runs::create),
         "sessions/transfers#show" => arc(sessions::transfers::show),
@@ -295,31 +329,29 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
-        "accounts/integrations_health#show" => arc(accounts::integrations_health::show),
         "agents/github/pull_request_actions#create" => arc(github::agent_actions::create),
         "github/pull_request_comments#create" => arc(github::writes::comment),
         "github/pull_request_reviews#create" => arc(github::writes::review),
         "github/pull_request_review_requests#create" => arc(github::writes::review_request),
-        "github/pull_request_write_actions#show" => arc(github::writes::show),
         "github/pull_request_threads#create" => arc(github::discussions::create),
-        "accounts/slack_imports#show" => arc(slack::setup::show),
+        "accounts/slack_imports#show" => arc(navigation::page),
         "accounts/slack_imports#update" => arc(slack::setup::update),
         "accounts/slack_imports#destroy" => arc(slack::setup::destroy),
         "slack/oauth#start" => arc(slack::start),
         "slack/oauth#callback" => arc(slack::callback),
-        "accounts/slack_import_runs#index" => arc(slack::runs::admin_index),
+        "accounts/slack_import_runs#index" => arc(navigation::page),
         "accounts/slack_import_runs#create" => arc(slack::runs::admin_create),
-        "accounts/slack_import_runs#show" => arc(slack::runs::admin_show),
-        "accounts/slack_import_runs#status" => arc(slack::runs::admin_status),
-        "accounts/slack_import_runs#plan" => arc(slack::runs::plan),
+        "accounts/slack_import_runs#show" => arc(navigation::page),
+        "accounts/slack_import_runs#status" => arc(navigation::page),
+        "accounts/slack_import_runs#plan" => arc(navigation::page),
         "accounts/slack_import_runs#start_import" => arc(slack::runs::start_import),
         "accounts/slack_import_runs#catch_up" => arc(slack::runs::catch_up),
         "accounts/slack_import_runs#cancel" => arc(slack::runs::admin_cancel),
         "accounts/slack_import_runs#undo" => arc(slack::runs::admin_undo),
-        "slack/imports#index" => arc(slack::runs::personal_index),
+        "slack/imports#index" => arc(navigation::page),
         "slack/imports#create" => arc(slack::runs::personal_create),
-        "slack/imports#show" => arc(slack::runs::personal_show),
-        "slack/imports#status" => arc(slack::runs::personal_status),
+        "slack/imports#show" => arc(navigation::page),
+        "slack/imports#status" => arc(navigation::page),
         "slack/imports#cancel" => arc(slack::runs::personal_cancel),
         "slack/imports#undo" => arc(slack::runs::personal_undo),
         "slack/connections#destroy" => arc(slack::disconnect),
@@ -328,14 +360,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "github/app_connections#connect" => arc(github::connections::connect),
         "github/app_connections#callback" => arc(github::connections::callback),
         "github/webhooks#create" => arc(github::webhooks::create),
-        "rooms/github/pull_request_cards#show" => arc(github::cards::show),
         "rooms/github_subscriptions#create" => arc(github::subscriptions::create),
         "rooms/github_subscriptions#update" => arc(github::subscriptions::update),
         "rooms/github_subscriptions#destroy" => arc(github::subscriptions::destroy),
-        "rooms/fizzy/cards#show" => arc(fizzy_cards::show),
         "fizzy/connections#create" => arc(fizzy_connections::create),
         "fizzy/connections#destroy" => arc(fizzy_connections::destroy),
-        "rooms/fizzy/message_cards#new" => arc(fizzy_message_cards::new),
+        "rooms/fizzy/message_cards#new" => arc(navigation::page),
         "rooms/fizzy/message_cards#create" => arc(fizzy_message_cards::create),
         "two_factor/reauthentications#create" => arc(two_factor::reauthentication_create),
         "two_factor/challenges#show" => arc(two_factor::challenge_show),
@@ -350,21 +380,15 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sudos#create" => arc(sudos::create),
         "sudos#google" => arc(sudos::google),
         "content_security_policy_reports#create" => arc(csp_reports::create),
-        "accounts/users#index" => arc(accounts::users::index),
         "accounts/users#update" => arc(accounts::users::update),
         "accounts/users#destroy" => arc(accounts::users::destroy),
         "accounts/bots/keys#update" => arc(accounts::bots::keys::update),
         "accounts/bots/webhook_secrets#create" => arc(accounts::bots::webhook_secrets::create),
-        "agents/directory#index" => arc(agents::directory::index),
         "agent_approvals#update" => arc(agent_approvals::update),
-        "agents/approvals#for_agent" => arc(agents::history::approvals),
-        "agents/events#ledger" => arc(agents::history::ledger),
-        "accounts/bots/credentials#index" => arc(accounts::bots::credentials::index),
         "accounts/bots/credentials#create" => arc(accounts::bots::credentials::create),
         "accounts/bots/credentials#destroy" => arc(accounts::bots::credentials::destroy),
         "accounts/bots/github_connections#create" => arc(accounts::bots::github_connections::create),
         "accounts/bots/github_connections#destroy" => arc(accounts::bots::github_connections::destroy),
-        "accounts/bots/grants#index" => arc(accounts::bots::grants::index),
         "accounts/bots/grants#create" => arc(accounts::bots::grants::create),
         "accounts/bots/grants#destroy" => arc(accounts::bots::grants::destroy),
         "activity_items#index" => arc(activity_items::index),
@@ -372,53 +396,39 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "activity_items#read" => arc(activity_items::read),
         "activity_items#handled" => arc(activity_items::handled),
         "activity_items#open" => arc(activity_items::open),
-        "accounts/bots#index" => arc(accounts::bots::index),
         "accounts/bots#create" => arc(accounts::bots::create),
-        "accounts/bots#new" => arc(accounts::bots::new),
-        "accounts/bots#edit" => arc(accounts::bots::edit),
         "accounts/bots#update" => arc(accounts::bots::update),
         "accounts/bots#destroy" => arc(accounts::bots::destroy),
         "accounts/bots#kill_switch" => arc(accounts::bots::kill_switch),
         "accounts/join_codes#create" => arc(accounts::join_codes::create),
-        "accounts/icons#index" => arc(accounts::icons::index),
         "accounts/icons#create" => arc(accounts::icons::create),
         "accounts/icons#destroy" => arc(accounts::icons::destroy),
         "workspace_icons#show" => arc(workspace_icons::show),
-        "accounts/audit_logs#show" => arc(accounts::audit_logs::show),
         "accounts/logos#show" => arc(accounts::logos::show),
         "accounts/logos#destroy" => arc(accounts::logos::destroy),
-        "accounts/custom_styles#edit" => arc(accounts::custom_styles::edit),
         "accounts/custom_styles#update" => arc(accounts::custom_styles::update),
-        "accounts#edit" => arc(accounts::edit),
         "accounts#update" => arc(accounts::update),
         "users#new" => arc(users::new),
-        "users#index" => arc(users::index),
-        "users/cards#show" => arc(users::cards::show),
         "users/stars#create" => arc(users::stars::create),
         "users/stars#destroy" => arc(users::stars::destroy),
         "users#create" => arc(users::create),
-        "users#show" => arc(users::show),
         "qr_code#show" => arc(qr_code::show),
         "users/avatars#show" => arc(users::avatars::show),
         "users/avatars#destroy" => arc(users::avatars::destroy),
         "users/bans#create" => arc(users::bans::create),
         "users/bans#destroy" => arc(users::bans::destroy),
-        "users/sidebars#show" => arc(users::sidebars::show),
-        "users/statuses#edit" => arc(users::statuses::edit),
-        "users/profiles#show" => arc(users::profiles::show),
+        "users/profiles#show" => arc(navigation::page),
         "users/profiles#update" => arc(users::profiles::update),
         "users/time_zones#update" => arc(users::time_zones::update),
         "users/tours#update" => arc(users::tours::update),
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }
-        "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
         "accounts/users/two_factor_resets#create" => {
             arc(accounts::users::two_factor_resets::create)
         }
-        "users/push_subscriptions#index" => arc(users::push_subscriptions::index),
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
         "users/presences#show" => arc(users::presences::show),
@@ -426,18 +436,14 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/dnd_allowances#destroy" => arc(users::dnd_allowances::destroy),
         "users/notification_settings#update" => arc(users::notification_settings::update),
         "users/statuses#update" => arc(users::statuses::update),
-        "rooms/message_links#show" => arc(rooms::message_links::show),
-        "rooms/files#index" => arc(rooms::files::index),
         "rooms/slash_commands#create" => arc(rooms::slash_commands::create),
         "autocompletable/icons#index" => arc(autocompletable::icons::index),
         "autocompletable/slash_commands#index" => arc(autocompletable::slash_commands::index),
         "autocompletable/users#index" => arc(autocompletable::users::index),
-        "scheduled_messages#index" => arc(scheduled_messages::index),
         "scheduled_messages#create" => arc(scheduled_messages::create),
         "scheduled_messages#update" => arc(scheduled_messages::update),
         "scheduled_messages#destroy" => arc(scheduled_messages::destroy),
         "scheduled_messages#send_now" => arc(scheduled_messages::send_now),
-        "saved_items#index" => arc(saved_items::index),
         "saved_items#create" => arc(saved_items::create),
         "saved_items#update" => arc(saved_items::update),
         "saved_items#destroy" => arc(saved_items::destroy),
@@ -446,19 +452,16 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/polls#vote" => arc(rooms::polls::vote),
         "messages/pins#create" => arc(messages::pins::create),
         "messages/pins#destroy" => arc(messages::pins::destroy),
-        "rooms/pins#index" => arc(rooms::pins::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
         "messages#preview" => arc(messages::preview),
         "messages#actions" => arc(messages::actions),
-        "messages#edit" => arc(messages::edit),
-        "messages#show" => arc(messages::show),
+        "messages#edit" => arc(navigation::page),
+        "messages#show" => arc(navigation::page),
         "messages#update" => arc(messages::update),
         "messages#destroy" => arc(messages::destroy),
         "channel_threads#index" => arc(channel_threads::index),
         "channel_threads#show" => arc(channel_threads::show),
-        "channel_threads#content" => arc(channel_threads::content),
-        "channel_threads#new" => arc(channel_threads::new),
         "channel_threads#create" => arc(channel_threads::create),
         "channel_threads#update" => arc(channel_threads::update),
         "channel_threads#destroy" => arc(channel_threads::destroy),
@@ -466,9 +469,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_threads#leave" => arc(channel_threads::leave),
         "channel_threads#read" => arc(channel_threads::read),
         "work_threads#index" => arc(work_threads::index),
-        "threads/work/handoffs#new" => arc(work_threads::new_handoff),
+        "threads/work/handoffs#new" => arc(navigation::page),
         "threads/work/handoffs#create" => arc(work_threads::create_handoff),
-        "threads/work/links#index" => arc(work_threads::links_index),
+        "threads/work/links#index" => arc(navigation::page),
         "threads/work/links#create" => arc(work_threads::create_link),
         "threads/work/links#destroy" => arc(work_threads::destroy_link),
         "message_forwards#create" => arc(message_forwards::create),
@@ -522,22 +525,21 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/by_bots#create" => arc(messages::by_bots::create),
         "messages/by_bots#update" => arc(messages::by_bots::update),
         "messages/by_bots#destroy" => arc(messages::by_bots::destroy),
-        "messages/boosts#index" => arc(messages::boosts::index),
+        "messages/boosts#index" => arc(navigation::page),
         "messages/boosts#create" => arc(messages::boosts::create),
-        "messages/boosts#new" => arc(messages::boosts::new),
+        "messages/boosts#new" => arc(navigation::page),
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
         "switchers#show" => arc(switchers::show),
         "rooms/members#index" => arc(rooms::members::index),
-        "rooms/events#index" => arc(rooms::events::index),
-        "rooms/events#show" => arc(rooms::events::show),
-        "rooms/events#new" => arc(rooms::events::new),
+        "rooms/events#index" => arc(navigation::page),
+        "rooms/events#show" => arc(navigation::page),
+        "rooms/events#new" => arc(navigation::page),
         "rooms/events#create" => arc(rooms::events::create),
-        "rooms/events#edit" => arc(rooms::events::edit),
+        "rooms/events#edit" => arc(navigation::page),
         "rooms/events#update" => arc(rooms::events::update),
         "rooms/events#cancel" => arc(rooms::events::cancel),
-        "rooms/events/attendances#show" => arc(rooms::events::attendance_show),
+        "rooms/events/attendances#show" => arc(navigation::page),
         "rooms/events/attendances#update" => arc(rooms::events::attendance_update),
-        "rooms/refreshes#show" => arc(rooms::refreshes::show),
         "rooms/reads#create" => arc(rooms::reads::create),
         "rooms/reads#destroy" => arc(rooms::reads::destroy),
         "room_categories#index" => arc(room_categories::index),
@@ -549,35 +551,21 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/favorites#update" => arc(rooms::favorites::update),
         "rooms/favorites#destroy" => arc(rooms::favorites::destroy),
         "rooms/inbound_email_addresses#create" => arc(rooms::inbound_email_addresses::create),
-        "rooms/involvements#show" => arc(rooms::involvements::show),
         "rooms/involvements#update" => arc(rooms::involvements::update),
-        "rooms#index" => arc(rooms::index),
-        "rooms#show" => arc(rooms::show),
         "rooms#leave" => arc(rooms::leave),
         "rooms#join" => arc(rooms::join),
         "rooms#destroy" => arc(rooms::destroy),
-        "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index" => arc(rooms::index),
         "rooms/opens#create" => arc(rooms::opens::create),
-        "rooms/opens#new" => arc(rooms::opens::new),
-        "rooms/opens#edit" => arc(rooms::opens::edit),
-        "rooms/opens#show" => arc(rooms::opens::show),
         "rooms/opens#update" => arc(rooms::opens::update),
         "rooms/opens#destroy" | "rooms/closeds#destroy" => arc(rooms::destroy_without_room),
         "rooms/closeds#create" => arc(rooms::closeds::create),
-        "rooms/closeds#new" => arc(rooms::closeds::new),
-        "rooms/closeds#edit" => arc(rooms::closeds::edit),
-        "rooms/closeds#show" => arc(rooms::closeds::show),
         "rooms/closeds#update" => arc(rooms::closeds::update),
-        "rooms/boards#index" => arc(rooms::index),
-        "rooms/boards#new" => arc(rooms::boards::new),
         "rooms/boards#create" => arc(rooms::boards::create),
-        "rooms/boards#show" => arc(rooms::boards::show),
-        "rooms/boards#edit" => arc(rooms::boards::edit),
         "rooms/boards#update" => arc(rooms::boards::update),
         "rooms/boards#destroy" => arc(rooms::boards::destroy),
         // The live router also binds this as an unparsed API webhook (app.rs).
         "google/calendar_notifications#create" => arc(google_calendar::notifications),
-        "rooms/boards/automations#show" => arc(rooms::board_automations::show),
+        "rooms/boards/automations#show" => arc(navigation::page),
         "rooms/boards/automations#create_tag_assignment" => arc(rooms::board_automations::create_tag_assignment),
         "rooms/boards/automations#destroy_tag_assignment" => arc(rooms::board_automations::destroy_tag_assignment),
         "rooms/boards/automations#update_sla_rules" => arc(rooms::board_automations::update_sla_rules),
@@ -585,11 +573,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/directs#add_members" => arc(rooms::directs::add_members),
         "rooms/directs#leave" => arc(rooms::directs::leave),
         "rooms/directs#create" => arc(rooms::directs::create),
-        "rooms/directs#new" => arc(rooms::directs::new),
-        "rooms/directs#edit" => arc(rooms::directs::edit),
-        "rooms/directs#show" => arc(rooms::directs::show),
         "rooms/directs#destroy" => arc(rooms::directs::destroy),
-        "searches#index" => arc(searches::index),
         "searches#create" => arc(searches::create),
         "searches#clear" => arc(searches::clear),
         "embeds/images#show" => arc(embeds::show),
@@ -598,9 +582,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
         "rails/health#show" => arc(health::show),
-        "turbo/native/navigation#recede" => arc(turbo_native::recede),
-        "turbo/native/navigation#resume" => arc(turbo_native::resume),
-        "turbo/native/navigation#refresh" => arc(turbo_native::refresh),
+        "turbo/native/navigation#recede" => arc(navigation::retired),
+        "turbo/native/navigation#resume" => arc(navigation::retired),
+        "turbo/native/navigation#refresh" => arc(navigation::retired),
         // `config.action_mailbox.ingress = :relay`: the other ingresses aren't configured. The
         // relay endpoint is wired to WS10 below.
         "action_mailbox/ingresses/relay/inbound_emails#create" => arc(crate::mail::relay),
@@ -653,7 +637,12 @@ pub fn recognize(method: &Method, path: &str) -> Result<Option<(&'static Route, 
     } else {
         method
     };
-    for route in routes() {
+    // Collection bookmarks take precedence over the generic /rooms/:id path.
+    let collections = routes().iter().filter(|route| matches!(route.endpoint,
+        "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index"
+        | "rooms/boards#index" | "rooms/voices#index" | "rooms/stages#index"
+    ));
+    for route in collections.chain(routes().iter()) {
         if route.verb != *verb {
             continue;
         }
@@ -685,24 +674,7 @@ fn install_path_params(c: &mut Ctx, path_params: ParamMap) {
     c.path_params = path_params;
 }
 
-/// `Journey::Router::Utils.normalize_path`: one leading slash, repeated slashes squeezed,
-/// trailing slashes dropped, percent-escapes upcased.
-pub fn normalize_path(path: &str) -> String {
-    let mut normalized = String::with_capacity(path.len() + 1);
-    for c in format!("/{path}").chars() {
-        if c == '/' && normalized.ends_with('/') {
-            continue;
-        }
-        normalized.push(c);
-    }
-    while normalized.len() > 1 && normalized.ends_with('/') {
-        normalized.pop();
-    }
-    static ESCAPE: LazyLock<Regex> = LazyLock::new(|| Regex::new("%[a-fA-F0-9]{2}").unwrap());
-    ESCAPE
-        .replace_all(&normalized, |m: &regex::Captures| m[0].to_uppercase())
-        .into_owned()
-}
+pub use campfire_runtime::navigation::normalize_path;
 
 /// `Journey::Router::Utils.unescape_uri`, then Rails' check that the parameter is valid UTF-8
 /// (`ActionController::BadRequest` otherwise).
@@ -794,23 +766,6 @@ mod health {
     }
 }
 
-/// `Turbo::Native::NavigationController` (turbo-rails)
-mod turbo_native {
-    use super::*;
-
-    pub async fn recede(c: &mut Ctx) -> Result {
-        Ok(c.html("Going back…"))
-    }
-
-    pub async fn resume(c: &mut Ctx) -> Result {
-        Ok(c.html("Staying put…"))
-    }
-
-    pub async fn refresh(c: &mut Ctx) -> Result {
-        Ok(c.html("Refreshing…"))
-    }
-}
-
 /// Action Mailbox's ingress and conductor routes, which Campfire doesn't use.
 mod mailbox {
     use super::*;
@@ -896,7 +851,15 @@ mod tests {
 
     #[test]
     fn recognizes_paths_like_rails() {
-        for sample in vectors().recognitions {
+        for mut sample in vectors().recognitions {
+            if matches!(sample.verb.as_str(), "GET" | "HEAD")
+                && let Some(kind) = sample.path.strip_prefix("/rooms/")
+                    .map(|kind| kind.split('.').next().unwrap())
+                    .filter(|kind| matches!(*kind, "opens" | "closeds" | "directs" | "boards" | "voices" | "stages"))
+            {
+                sample.endpoint = Some(format!("rooms/{kind}#index"));
+                sample.params.remove("id");
+            }
             let method = Method::from_bytes(sample.verb.as_bytes()).unwrap();
             let path = normalize_path(&sample.path);
             let recognized = recognize(&method, &path).unwrap();
@@ -1347,6 +1310,3 @@ mod ws12_inbox_remaining_tests;
 
 #[cfg(test)]
 mod ws12_work_remaining_tests;
-
-#[cfg(test)]
-mod template_coverage_tests;

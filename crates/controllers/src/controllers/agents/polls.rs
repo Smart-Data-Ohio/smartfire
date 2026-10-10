@@ -145,10 +145,11 @@ pub(super) async fn operation(
     let viewer = concerns::require_current_user(c)?.id;
     let rich_text = c.app().db.env().rich_text.clone();
     let now = campfire_db::Timestamp::from_jiff(c.now());
+    let verifier = c.app().storage.verifier.clone();
     let payload = c
         .app()
         .db
-        .read(move |conn| poll.results_payload(conn, &*rich_text, now, Some(viewer)))
+        .read(move |conn| poll.results_payload(conn, &*rich_text, now, Some(viewer), &*verifier))
         .await
         .map_err(db_error)?;
     Ok(ServiceResult::ok(

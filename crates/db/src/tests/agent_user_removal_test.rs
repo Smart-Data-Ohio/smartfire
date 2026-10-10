@@ -185,3 +185,55 @@ fn ws11_hard_user_delete_keeps_agent_command_fk_failure_atomic() {
     });
     assert!(t.sink.events().is_empty());
 }
+
+#[test]
+fn scheduled_message_files_are_purged_when_their_author_is_hard_deleted() {
+    let t = super::channel_thread_test::frozen();
+    let (user_id, scheduled_id, blob_id) = t.write(|tx| {
+        let user = User::create_email_bot(tx)?;
+        let room = Room::find(tx.conn(), id("watercooler"))?;
+        room.grant_to(tx, &[user.id])?;
+        let blob = crate::models::active_storage::Blob::create(
+            tx,
+            &crate::models::active_storage::Blob {
+                id: 0,
+                key: format!("scheduled-removal-{}", user.id),
+                filename: "plan.txt".into(),
+                content_type: Some("text/plain".into()),
+                metadata: Some("{}".into()),
+                service_name: "local".into(),
+                byte_size: 4,
+                checksum: None,
+                created_at: tx.now(),
+            },
+        )?;
+        let scheduled = crate::ScheduledMessage::create_with_attachments(
+            tx,
+            crate::NewScheduledMessage {
+                user_id: user.id,
+                room_id: room.id,
+                thread_id: None,
+                reply_to_message_id: None,
+                markdown_source: "Later".into(),
+                send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+            },
+            &[blob.id],
+        )?;
+        Ok((user.id, scheduled.id, blob.id))
+    });
+    t.sink.take();
+    t.write(move |tx| User::find_by_id(tx.conn(), user_id)?.unwrap().destroy(tx));
+    t.read(move |conn| {
+        assert!(crate::ScheduledMessage::find_by_id(conn, scheduled_id)?.is_none());
+        assert_eq!(
+            crate::sql::count(
+                conn,
+                "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=?",
+                [scheduled_id],
+            )?,
+            0
+        );
+        Ok(())
+    });
+    assert!(t.events().contains(&crate::Event::PurgeBlob { blob_id }));
+}

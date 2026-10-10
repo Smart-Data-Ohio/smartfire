@@ -4,7 +4,6 @@
 use campfire_db::Result;
 use campfire_richtext::ruby::is_blank;
 use campfire_presentation::users::*;
-use rails_compat::unicode;
 use rusqlite::{Connection, OptionalExtension};
 
 pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSections> {
@@ -41,54 +40,6 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
     fields.status.fetch_error = c.query_row("SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?", [id], |r| r.get::<_, Option<String>>(0)).optional()?.flatten().filter(|s| !is_blank(s));
     Ok(fields)
 }
-/// Submitted non-secret fields stay visible on Rails' failed-save page.
-pub fn preview(
-    fields: &mut ProfileSections,
-    changes: &campfire_db::models::user::profile_settings::Changes,
-    errors: &campfire_db::Errors,
-) {
-    if !fields.github_verified
-        && let Some(login) = &changes.github_login
-    {
-        let login = unicode::downcase(campfire_richtext::ruby::strip(login));
-        fields.github_login = (!is_blank(&login)).then_some(login);
-    }
-    if let Some(mode) = &changes.voice_mode {
-        fields.voice_mode = if matches!(mode.as_str(), "voice_activity" | "push_to_talk") {
-            mode.clone()
-        } else {
-            "voice_activity".into()
-        };
-    }
-    if let Some(key) = &changes.push_to_talk_key {
-        let key = campfire_richtext::ruby::strip(key);
-        fields.push_to_talk_key = Some(if is_blank(key) { "`" } else { key }.into());
-    }
-    if let Some(inbox) = &changes.inbox_preferences {
-        for switch in &mut fields.inbox {
-            if let Some(value) = inbox.get(&switch.key) {
-                switch.enabled = !matches!(value, serde_json::Value::Bool(false))
-                    && !matches!(value,serde_json::Value::Number(v) if v.as_i64()==Some(0))
-                    && !matches!(value,serde_json::Value::String(v) if v=="0"||v=="false");
-            }
-        }
-    }
-    fields.github_errors = errors
-        .on("github_login")
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
-    for ((attr, _), message) in errors.0.iter().zip(errors.full_messages()) {
-        if attr.starts_with("inbox_preferences")
-            || (*attr == "base" && message.starts_with("Inbox preferences "))
-        {
-            fields.inbox_errors.push(message);
-        } else if matches!(*attr, "voice_mode" | "push_to_talk_key") {
-            fields.call_errors.push(message);
-        }
-    }
-}
-
 pub fn status_fields(user: &campfire_db::UserStatusSettings, errors: &campfire_db::Errors, now: campfire_db::Timestamp) -> StatusFields {
     let mut fields = StatusFields {
         presence: user.presence_setting.clone(), emoji: user.custom_status_emoji.clone(), text: user.custom_status_text.clone(),
@@ -139,17 +90,4 @@ mod unicode_tests {
         );
     }
 
-    #[test]
-    fn unicode_parity_failed_profile_github_preview_uses_ruby_downcase() {
-        let mut fields = ProfileSections::default();
-        preview(
-            &mut fields,
-            &campfire_db::models::user::profile_settings::Changes {
-                github_login: Some(" ΟΣ ".into()),
-                ..Default::default()
-            },
-            &campfire_db::Errors::default(),
-        );
-        assert_eq!(fields.github_login.as_deref(), Some("οσ"));
-    }
 }

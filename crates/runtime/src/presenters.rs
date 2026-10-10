@@ -9,36 +9,26 @@ pub mod layout_preferences;
 pub mod pagination;
 pub mod people;
 pub mod rich_text;
-pub mod boards;
-pub mod work_threads;
 pub mod switcher;
 pub mod message_parts;
 pub mod params;
-pub mod pins;
 pub mod profile_sections;
 pub mod fizzy_profile;
-pub mod runtime_chrome;
-pub mod room_shell;
+pub mod room_unread;
 pub mod calls;
-pub mod message_cache_preloads;
-pub mod message_dependencies;
 pub mod message_payload;
 pub mod bot_input_casts;
 pub mod message_freshness;
-pub mod call_navigation;
-pub mod rooms_directory;
 pub mod github;
 pub mod events;
-pub mod board_posts;
 pub mod twitter_cards;
-pub mod sidebar_composition;
 pub mod search_preloads;
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
 use std::sync::LazyLock;
 
-use campfire_db::{Boost, Connection, Membership, Message, RichText, Room, RoomType, User};
+use campfire_db::{Boost, Connection, Message, RichText, Room, RoomType, User};
 use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
 use campfire_app::cache as fragment_cache;
@@ -51,7 +41,6 @@ use campfire_presentation::messages::{
     AttachmentPreview, AttachmentView, BoostView, MessageContent,
     RoomKind, SoundImage, SoundView, UserView,
 };
-use campfire_presentation::rooms::RoomView;
 use rails_compat::Secrets;
 use regex::Regex;
 use rusqlite::OptionalExtension;
@@ -250,7 +239,6 @@ pub struct Presenter<'a> {
     pub github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
     pub attachment_recoveries: std::rc::Rc<RefCell<BTreeSet<(i64, i64)>>>,
     users: RefCell<HashMap<i64, User>>,
-    room_names: RefCell<HashMap<i64, (Room, String)>>,
     pub render_account: RefCell<Option<Option<campfire_db::Account>>>,
     // WS8bm2 shared rendering-details seam for root and search pages.
     pub search_preloads: Option<search_preloads::Preloads>,
@@ -281,7 +269,6 @@ impl<'a> Presenter<'a> {
             github_refreshes: Default::default(),
             attachment_recoveries: Default::default(),
             users: RefCell::default(),
-            room_names: RefCell::default(),
             render_account: RefCell::default(),
             search_preloads: None,
             link_fetches: Default::default(),
@@ -330,17 +317,11 @@ impl<'a> Presenter<'a> {
             preloads: self.search_preloads.as_ref(),
         }
     }
-    pub fn preload_search(&self, messages: &[Message]) -> Result<Self> {
-        self.with_preloads(search_preloads::Preloads::load(self,messages)?,messages)
-    }
     pub fn preload_payload(&self,messages:&[Message]) -> Result<Self> {
         self.with_preloads(search_preloads::Preloads::load_payload(self,messages)?,messages)
     }
     pub fn preload_plain_text(&self,messages:&[Message]) -> Result<Self> {
         Ok(self.with_preloaded_facts(search_preloads::Preloads::load_plain_text(self,messages)?))
-    }
-    pub fn preload_broadcast(&self, messages: &[Message]) -> Result<Self> {
-        self.with_preloads(search_preloads::Preloads::load_broadcast(self, messages)?, messages)
     }
     fn with_preloads(&self,data:search_preloads::Preloads,messages:&[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
@@ -374,7 +355,6 @@ impl<'a> Presenter<'a> {
             agent_payload: self.agent_payload,
             render_zone: self.render_zone.clone(),
             users: RefCell::default(),
-            room_names: RefCell::default(),
             render_account: self.render_account.clone(),
             search_preloads: Some(data),
             link_fetches: self.link_fetches.clone(),
@@ -420,32 +400,6 @@ impl<'a> Presenter<'a> {
             .borrow_mut()
             .insert(message.id, posts.clone());
         Ok(posts)
-    }
-    pub fn link_references(
-        &self,
-        message: &Message,
-    ) -> Result<Vec<crate::integrations::link_embed::Reference>> {
-        if let Some(data) = &self.search_preloads {
-            return Ok(data
-                .link_references
-                .get(&message.id)
-                .cloned()
-                .unwrap_or_default());
-        }
-        crate::integrations::link_embed::Reference::for_message(self.conn, message)
-    }
-    pub fn fizzy_cards(
-        &self,
-        message: &Message,
-    ) -> Result<Vec<crate::integrations::fizzy::cards::Card>> {
-        if let Some(data) = &self.search_preloads {
-            return Ok(data
-                .fizzy_cards
-                .get(&message.id)
-                .cloned()
-                .unwrap_or_default());
-        }
-        crate::integrations::fizzy::cards::Card::for_message(self.conn, message.id)
     }
     pub fn request_twitter_fetch(&self, post: &crate::integrations::twitter::post::Post) {
         if post.fetch_pending() {
@@ -508,136 +462,6 @@ impl<'a> Presenter<'a> {
         })
     }
 
-    pub fn room_view(&self, room: &Room, for_user: &User) -> Result<RoomView> {
-        let header = rooms_directory::header(self.conn, room, for_user)?;
-        Ok(RoomView {
-            involvement: campfire_db::Membership::find_by_room_and_user(
-                self.conn,
-                room.id,
-                for_user.id,
-            )?
-            .and_then(|m| m.involvement)
-            .map(|i| i.name().to_string())
-            .unwrap_or_else(|| room.default_involvement().to_string()),
-            id: room.id,
-            kind: room_kind(room.room_type),
-            name: room.name.clone(),
-            display_name: header.display_name.clone(),
-            header: Some(header),
-        })
-    }
-
-    /// Inputs to the message-owned composer; Drive availability is resolved by its owner.
-    pub fn composer_facts(
-        &self,
-        room: &Room,
-        viewer: &User,
-        thread: Option<&campfire_db::ChannelThread>,
-        drive: campfire_presentation::messages::composer::DriveFlow,
-    ) -> Result<campfire_presentation::messages::composer::Facts> {
-        let mut slash_commands = campfire_db::slash_commands::registry()
-            .into_iter()
-            .map(|command| command.name)
-            .collect::<Vec<_>>();
-        slash_commands.extend(
-            self.conn
-                .prepare(
-                    "SELECT name FROM agent_slash_commands WHERE room_id = ? ORDER BY name, id",
-                )?
-                .query_map([room.id], |row| row.get::<_, String>(0))?
-                .collect::<std::result::Result<Vec<_>, _>>()?,
-        );
-        Ok(campfire_presentation::messages::composer::Facts {
-            room_id: room.id,
-            room_kind: room_kind(room.room_type),
-            room_param_key: Some(crate::presenters::accounts::room_param_key(room.room_type).to_string()),
-            room_name: self.room_display_name(room, Some(viewer))?,
-            thread: thread.map(|thread| campfire_presentation::messages::composer::Thread {
-                id: thread.id,
-                name: thread.name.clone(),
-            }),
-            slash_commands,
-            drive,
-        })
-    }
-
-    pub fn thread_steps(&self, id: i64) -> Result<Vec<campfire_presentation::messages::parts::AgentStep>> {
-        Ok(self.conn.prepare("SELECT name, status, duration_ms, input_summary, output_summary FROM agent_steps WHERE channel_thread_id = ? ORDER BY position, id")?
-            .query_map([id], |row| Ok(campfire_presentation::messages::parts::AgentStep {name: row.get(0)?, status: row.get(1)?, duration_ms: row.get(2)?, input_summary: row.get(3)?, output_summary: row.get(4)?}))?
-            .collect::<std::result::Result<Vec<_>, _>>()?)
-    }
-
-    /// Read the consent flag only. The Google owner supplies Picker configuration/availability.
-    pub fn composer_drive_flow(
-        &self,
-        viewer: &User,
-        share_picker_available: bool,
-    ) -> Result<campfire_presentation::messages::composer::DriveFlow> {
-        use campfire_presentation::messages::composer::DriveFlow;
-        if share_picker_available {
-            return Ok(DriveFlow::Share);
-        }
-        Ok(if Self::google_drive_consent(self.conn, viewer.id)? {
-            DriveFlow::Metadata
-        } else {
-            DriveFlow::None
-        })
-    }
-
-    pub fn google_drive_consent(conn: &Connection, user_id: i64) -> Result<bool> {
-        let scopes = conn
-            .query_row(
-                "SELECT scopes FROM google_accounts WHERE user_id = ? LIMIT 1",
-                [user_id],
-                |row| row.get::<_, Option<String>>(0),
-            )
-            .optional()?
-            .flatten();
-        Ok(scopes.is_some_and(|scopes| {
-            scopes
-                .split_whitespace()
-                .any(|scope| scope == "https://www.googleapis.com/auth/drive.file")
-        }))
-    }
-
-    /// `message.room` with `room_display_name(message.room, for_user: nil)`.
-    pub fn room_and_name(&self, room_id: i64) -> Result<(Room, String)> {
-        if let Some(entry) = self.room_names.borrow().get(&room_id) {
-            return Ok(entry.clone());
-        }
-        if let Some(data) = &self.search_preloads {
-            let room = data
-                .records
-                .rooms
-                .get(&room_id)
-                .cloned()
-                .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-            let name = if room.direct() {
-                room.direct_display_name(
-                    self.conn,
-                    None,
-                    Some(
-                        data.records
-                            .direct_members
-                            .get(&room_id)
-                            .map(Vec::as_slice)
-                            .unwrap_or_default(),
-                    ),
-                )?
-                .unwrap_or_default()
-            } else {
-                room.name.clone().unwrap_or_default()
-            };
-            return Ok((room, name));
-        }
-        let room = Room::find(self.conn, room_id)?;
-        let name = self.room_display_name(&room, None)?;
-        self.room_names
-            .borrow_mut()
-            .insert(room_id, (room.clone(), name.clone()));
-        Ok((room, name))
-    }
-
     pub fn plain_text_body(&self, message: &Message) -> Result<String> {
         if let Some(data) = &self.search_preloads {
             return data.plain_text(self, message);
@@ -672,177 +496,6 @@ impl<'a> Presenter<'a> {
                 None => text,
             },
         )
-    }
-
-    pub fn quote_components(
-        &self,
-        message: &Message,
-    ) -> Result<campfire_presentation::messages::MessageComponents> {
-        let data = self
-            .search_preloads
-            .as_ref()
-            .expect("rendering details loaded");
-        let references = data
-            .records
-            .quotes
-            .get(&message.id)
-            .into_iter()
-            .flatten()
-            .filter_map(|(id, source)| data.records.sources.get(source).map(|source| (*id, source)))
-            .map(|(id, source)| -> Result<_> {
-                let card = if source.room_id == message.room_id {
-                    let room = data
-                        .records
-                        .rooms
-                        .get(&source.room_id)
-                        .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-                    Some(campfire_presentation::message_links::Card {
-                        author: self.user(source.creator_id)?.name,
-                        room_label: if room.direct() {
-                            "a direct message".into()
-                        } else {
-                            room.name.clone().unwrap_or_default()
-                        },
-                        excerpt: campfire_presentation::helpers::truncate(
-                            &self.plain_text_body(source)?,
-                            200,
-                            "...",
-                        ),
-                        created_at: source.created_at.jiff(),
-                        message_path: campfire_db::message_pin::message_path(source),
-                    })
-                } else {
-                    None
-                };
-                Ok(campfire_presentation::message_links::Reference { id, card })
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(campfire_presentation::messages::MessageComponents {
-            quote_references: Some(references),
-            ..Default::default()
-        })
-    }
-
-    pub fn message_details(
-        &self,
-        message: &Message,
-    ) -> Result<campfire_presentation::messages::MessageDetails> {
-        if let Some(data) = &self.search_preloads {
-            return data.details(self, message);
-        }
-        use campfire_presentation::messages::{MessageDetails, ReplyPreview, ReplySource};
-        let pinned = self.conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM message_pins WHERE message_id = ?1)",
-            [message.id],
-            |row| row.get(0),
-        )?;
-        let reply_count: u64 = self
-            .conn
-            .query_row(
-                "SELECT messages_count FROM channel_threads WHERE parent_message_id = ?1",
-                [message.id],
-                |row| row.get(0),
-            )
-            .optional()?
-            .unwrap_or(0);
-        let drive_urls = self
-            .conn
-            .prepare("SELECT file_id FROM drive_attachments WHERE message_id = ?1 ORDER BY id")?
-            .query_map([message.id], |row| {
-                Ok(format!(
-                    "https://drive.google.com/open?id={}",
-                    row.get::<_, String>(0)?
-                ))
-            })?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        let reply =
-            if message.reply_to_message_id.is_some() || message.reply_target_deleted_at.is_some() {
-                let source = message
-                    .reply_to_message_id
-                    .map(|id| Message::find_by_id(self.conn, id))
-                    .transpose()?
-                    .flatten();
-                let source = source
-                    .map(|source| -> Result<ReplySource> {
-                        let url = if let Some(thread) = source.thread_id {
-                            campfire_routes::ROOM.path_with(
-                                &[&source.room_id],
-                                None,
-                                &[
-                                    ("thread", Some(&thread.to_string())),
-                                    ("message_id", Some(&source.id.to_string())),
-                                ],
-                            )
-                        } else {
-                            campfire_routes::room_at_message(source.room_id, source.id)
-                        };
-                        Ok(ReplySource {
-                            id: source.id,
-                            author: self.user(source.creator_id)?.name,
-                            plain_text: self.plain_text_body(&source)?,
-                            url,
-                        })
-                    })
-                    .transpose()?;
-                Some(ReplyPreview { source })
-            } else {
-                None
-            };
-        let agent_steps = self.conn.prepare("SELECT name, status, duration_ms, input_summary, output_summary FROM agent_steps WHERE message_id = ?1 ORDER BY position, id")?
-            .query_map([message.id], |row| Ok(campfire_presentation::messages::parts::AgentStep {
-                name: row.get(0)?, status: row.get(1)?, duration_ms: row.get(2)?, input_summary: row.get(3)?, output_summary: row.get(4)?,
-            }))?.collect::<std::result::Result<Vec<_>, _>>()?;
-        let poll_row = self.conn.query_row("SELECT id, anonymous, multiple, closed_at, closes_at FROM polls WHERE message_id = ?1", [message.id], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, bool>(1)?, row.get::<_, bool>(2)?, row.get::<_, Option<campfire_db::Timestamp>>(3)?, row.get::<_, Option<campfire_db::Timestamp>>(4)?))
-        }).optional()?;
-        let poll = if let Some((id, anonymous, multiple, closed_at, closes_at)) = poll_row {
-            use campfire_presentation::messages::parts::{Poll, PollOption, PollVote};
-            let options = self
-                .conn
-                .prepare(
-                    "SELECT id, label FROM poll_options WHERE poll_id = ?1 ORDER BY position, id",
-                )?
-                .query_map([id], |row| {
-                    Ok(PollOption {
-                        id: row.get(0)?,
-                        label: row.get(1)?,
-                    })
-                })?
-                .collect::<std::result::Result<Vec<_>, _>>()?;
-            let votes = self.conn.prepare("SELECT poll_option_id, user_id, users.name FROM poll_votes LEFT JOIN users ON users.id = poll_votes.user_id WHERE poll_id = ?1 ORDER BY poll_votes.id")?
-                .query_map([id], |row| Ok(PollVote { option_id: row.get(0)?, user_id: row.get(1)?, user_name: row.get(2)? }))?.collect::<std::result::Result<Vec<_>, _>>()?;
-            Some(Poll {
-                id,
-                room_id: message.room_id,
-                anonymous,
-                multiple,
-                closed: closed_at.is_some()
-                    || closes_at.is_some_and(|time| time.jiff() <= self.now),
-                closes_at: closes_at.map(|time| time.jiff()),
-                options,
-                votes,
-                vote_error: None,
-            })
-        } else {
-            None
-        };
-        Ok(MessageDetails {
-            thread_id: message.thread_id,
-            system_note: message.system_note,
-            action: message.action,
-            edited_at: message.edited_at.map(|time| time.jiff()),
-            streaming: message.streaming,
-            markdown: message.markdown_source.is_some(),
-            forwarded: message.forwarded_at.is_some(),
-            forward_note: message.forward_note.clone(),
-            pinned,
-            reply_count,
-            drive_urls,
-            reply,
-            agent_steps,
-            poll,
-            ..Default::default()
-        })
     }
 
     /// `message.boosts.ordered`.
@@ -950,10 +603,16 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
+        if blob.is_video() && (blob.is_previewable() || blob.is_variable()) {
+            self.recover_attachment_preview(message, blob)?;
+        }
+        self.attachment_file(blob)
+    }
+
+    pub fn attachment_file(&self, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
         let verifier = &*self.storage.verifier;
         let preview = if blob.is_previewable() || blob.is_variable() {
             if blob.is_video() {
-                self.recover_attachment_preview(message, blob)?;
                 // `attachment.preview(format: :webp, resize_to_limit: [...])`
                 let poster = Variation::new(vec![
                     (
@@ -1100,27 +759,6 @@ impl<'a> Presenter<'a> {
         })
     }
 
-    /// `users/sidebars/rooms/_shared` locals.
-    pub fn sidebar_room(&self, room: &Room) -> campfire_presentation::users::SidebarRoom {
-        campfire_presentation::users::SidebarRoom {
-            id: room.id,
-            param_key: accounts::room_param_key(room.room_type).to_string(),
-            name: room.name.clone().unwrap_or_default(),
-            unread: false,
-            menu: accounts::room_menu(room, None, None, 0, None),
-            icon: accounts::resolve_room_icon(self.conn, room.icon_name.as_deref()),
-            huddle_participants: None,
-        }
-    }
-
-    /// `users/sidebars/rooms/_direct` locals for `membership`.
-    pub fn sidebar_direct(
-        &self,
-        membership: &Membership,
-    ) -> Result<campfire_presentation::users::SidebarDirect> {
-        let room = Room::find(self.conn, membership.room_id)?;
-        accounts::sidebar_direct(self.conn, self.secrets, membership, &room)
-    }
 }
 
 /// A `User` row as the users views see it.
@@ -1195,8 +833,6 @@ pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> 
     crate::rich_text::client_icon_names(conn)
 }
 
-#[cfg(any(test, feature = "test-support"))]
-pub mod render_secrets;
 
 pub mod link_embeds;
 
@@ -1207,3 +843,5 @@ pub fn broadcast_refreshes(conn: &Connection, app: &AppState, message: &Message)
     presenter.remember_message_refreshes(message)?;
     Ok(presenter.take_render_refreshes())
 }
+
+pub mod fizzy_cards;

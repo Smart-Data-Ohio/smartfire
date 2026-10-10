@@ -1,48 +1,14 @@
 //! The signed-in member's session list and scoped revocation.
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
-use crate::controllers::presenters::page::framed_page;
 use campfire_db::Session;
-use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, format};
-use campfire_views::users;
+use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode};
 
 async fn before(c: &mut Ctx) -> Result<()> {
     concerns::before_actions(c, Before::default()).await?;
     c.set_header("cache-control", "no-store");
     c.set_header("pragma", "no-cache");
     Ok(())
-}
-pub async fn index(c: &mut Ctx) -> Result {
-    before(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let user = require_current_user(c)?.clone();
-    let current_id = current_session(c).expect("authenticated session").id;
-    let now = campfire_db::Timestamp::from_jiff(c.now());
-    let timeout = c.app().config.admin_session_idle_timeout;
-    let sessions = c
-        .app()
-        .db
-        .read(move |conn| crate::authentication::visible_sessions(conn, &user, timeout, now))
-        .await
-        .map_err(Error::internal)?;
-    let sessions = sessions
-        .into_iter()
-        .map(|s| users::UserSession {
-            id: s.id,
-            current: s.id == current_id,
-            description: crate::authentication::device_description(&s),
-            ip_address: s.ip_address,
-            last_active_at: s.last_active_at.jiff(),
-            created_at: s.created_at.jiff(),
-        })
-        .collect::<Vec<_>>();
-    let now = c.now();
-    framed_page!(c, StatusCode::OK, |ctx| users::SessionsIndex {
-        ctx,
-        sessions: sessions.clone(),
-        now
-    })
-    .await
 }
 pub async fn destroy(c: &mut Ctx) -> Result {
     before(c).await?;

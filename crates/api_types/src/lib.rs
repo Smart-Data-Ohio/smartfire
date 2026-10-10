@@ -108,6 +108,7 @@ pub use cards::{
     RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
 };
 pub use composer::{
+    ScheduledAttachment,
     CreateScheduledMessage, Icon, IconKind, IconList, MessagePreview, PreviewMessage,
     RunSlashCommand, ScheduledMessage, ScheduledMessageFilter, ScheduledMessageList,
     ScheduledMessageRemoved, ScheduledMessageState, SlashCommand, SlashCommandList,

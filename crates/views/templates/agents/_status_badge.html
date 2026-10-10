@@ -1,6 +1,0 @@
-<span id="status_badge_agent_{{ agent.id }}" class="agent-status">
-{% if agent.suspended %}    <span class="agent-status-badge agent-status-badge--suspended">Suspended</span>
-{% else %}    <span class="agent-status-badge agent-status-badge--{{ agent.status }}">{{ agent.status_label() }}</span>{% if let Some(note) = h::presence(agent.status_note.as_deref()) %}
-      <span class="agent-status-note">{{ note }}</span>
-{% endif %}    <span class="agent-status-since">since {{ agent.since(ctx, now) }} ago</span>
-{% endif %}</span>{{ "\n" }}

@@ -14,6 +14,7 @@ import type { GithubPullRequestCard } from "../../src/gen/GithubPullRequestCard.
 import type { MessageCard } from "../../src/gen/MessageCard.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { Poll } from "../../src/gen/Poll.ts";
+import type { PollOptionMedia } from "../../src/gen/PollOptionMedia.ts";
 import type { PollResults } from "../../src/gen/PollResults.ts";
 import type { QuotePreview } from "../../src/gen/QuotePreview.ts";
 import type { QuotePreviewResult } from "../../src/gen/QuotePreviewResult.ts";
@@ -50,6 +51,7 @@ import {
   touched,
 } from "../s2/model.ts";
 import { clientMessageIdOf } from "../s2/posting.ts";
+import { attachmentOf } from "../s2/uploads.ts";
 import {
   BOT_ID,
   ROOM_IDS,
@@ -122,7 +124,11 @@ interface PollRecord {
   readonly anonymous: boolean;
   readonly closesAt: string | null;
   closedAt: string | null;
-  readonly options: readonly { readonly id: number; readonly label: string }[];
+  readonly options: readonly {
+    readonly id: number;
+    readonly label: string;
+    readonly media?: PollOptionMedia;
+  }[];
   /** Each voter's chosen option ids. */
   readonly ballots: Map<number, readonly number[]>;
   asOf: string;
@@ -200,12 +206,16 @@ function pollOf(poll: PollRecord, now: number): Poll {
       chosen.includes(option.id) ? [userId] : [],
     );
 
-    return {
+    const result: Poll["options"][number] = {
       id: option.id,
       label: option.label,
       votes: voterIds.length,
       voterIds: poll.anonymous ? [] : voterIds.sort((a, b) => a - b),
     };
+
+    if (option.media !== undefined) result.media = option.media;
+
+    return result;
   });
 
   return {
@@ -1118,6 +1128,33 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
       throw validation("closesAt", "Closes at must be in the future");
     }
 
+    const mediaInput = field(body, "optionMedia");
+
+    const media = Array.isArray(mediaInput)
+      ? mediaInput.map((input): PollOptionMedia | undefined => {
+          if (input === null) return undefined;
+          const signedId = stringField(input, "signedId");
+          const emoji = stringField(input, "emoji");
+
+          if ((signedId === null) === (emoji === null))
+            throw validation("optionMedia", "Choose one image or emoji");
+
+          if (emoji !== null) return { kind: "emoji", content: emoji };
+          const blob = ctx.world().blobs.get(signedId ?? "");
+
+          if (
+            blob?.bytes == null ||
+            !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(blob.contentType)
+          )
+            throw validation("optionMedia", "Choose an uploaded image");
+
+          if (blob.byteSize > 100 * 1024 * 1024)
+            throw validation("optionMedia", "The image exceeds the upload limit");
+
+          return { kind: "image", url: attachmentOf(blob).url, stillUrl: null };
+        })
+      : [];
+
     const cards = state();
     const createdAt = timestamp(Math.max(ctx.now(), Date.parse(record.room.updatedAt) + 1));
     const pollId = cards.nextPollId++;
@@ -1130,7 +1167,18 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
       anonymous: booleanField(body, "anonymous") ?? false,
       closesAt,
       closedAt: null,
-      options: labels.map((label) => ({ id: cards.nextOptionId++, label })),
+      options: labels.map((label, index) => {
+        const option: Pick<Poll["options"][number], "id" | "label" | "media"> = {
+          id: cards.nextOptionId++,
+          label,
+        };
+
+        const choice = media[index];
+
+        if (choice !== undefined) option.media = choice;
+
+        return option;
+      }),
       ballots: new Map(),
       asOf: createdAt,
     };

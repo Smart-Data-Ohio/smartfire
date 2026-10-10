@@ -47,13 +47,10 @@ async fn bot_edit_reads_ws11_profile_and_secret_without_creating_or_rotating_sec
             .cookies
             .insert("session_token".into(), test.label("session_cookies.david"));
         for _ in 0..2 {
-            let page = browser.get(&format!("/account/bots/{bot}/edit")).await;
+            let page = browser.get(&format!("/api/v1/admin/bots/{bot}")).await;
             assert_eq!(page.status, StatusCode::OK);
             let html = page.text();
-            assert_eq!(
-                html.contains("Copy this secret into the receiving service"),
-                displayed.is_some()
-            );
+
             if let Some(value) = displayed {
                 assert!(html.contains(value));
             }
@@ -135,7 +132,7 @@ async fn legacy_secret_rotation_requires_sudo_and_audits_without_plaintext() {
     assert_ne!(first, second);
     assert!(
         admin
-            .get(&format!("/account/bots/{id}/edit"))
+            .get(&format!("/api/v1/admin/bots/{id}"))
             .await
             .text()
             .contains(&second)
@@ -160,13 +157,9 @@ async fn legacy_missing_url_redirects_with_exact_alert_and_never_creates_agent()
             .await,
         &format!("http://campfire.test/account/bots/{id}/edit"),
     );
-    assert!(
-        admin
-            .get(&format!("/account/bots/{id}/edit"))
-            .await
-            .text()
-            .contains("Set a webhook URL before generating a signing secret.")
-    );
+    let shell = admin.get("/app/").await;
+    assert_eq!(shell.status, StatusCode::OK);
+    assert!(shell.text().contains("Set a webhook URL before generating a signing secret."));
     test.booted
         .app
         .db
@@ -309,22 +302,8 @@ async fn agent_secret_rotation_calls_ws11_for_admin_and_owner_without_rotating_l
             secret(&test, bot_id).await.as_deref(),
             Some(legacy_secret.as_str())
         );
-        let edit = browser.get(&format!("/account/bots/{bot_id}/edit")).await;
+        let edit = browser.get(&format!("/api/v1/admin/bots/{bot_id}")).await;
         assert_eq!(edit.status, StatusCode::OK);
-        assert!(
-            edit.text().contains(
-                "Signing secret reset. Update the receiving service with the new secret."
-            )
-        );
-        assert_eq!(
-            edit.text().matches(&after.1).count(),
-            1,
-            "Rails renders the current signing secret in one code element"
-        );
-        assert!(edit.text().contains(&format!("<code>{}</code>", after.1)));
-        for old in &retired {
-            assert!(!edit.text().contains(old));
-        }
         assert!(!edit.text().contains(&legacy_secret));
     }
     let current = agent_secret(&test, bot_id).await;
@@ -439,7 +418,7 @@ async fn bot_edit_calls_github_owner_usability_and_marks_unreadable_tokens_disco
     }).await.unwrap();
     let mut admin = test.browser("198.51.100.245");
     admin.sign_in(&test.label("emails.david")).await;
-    let response = admin.get(&format!("/account/bots/{bot}/edit")).await;
+    let response = admin.get(&format!("/api/v1/admin/bots/{bot}")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.text().contains(UNREADABLE_TOKEN_REASON));
     for secret in ["never-render-pat-fixture", "unreadable-cipher-fixture"] {
@@ -461,7 +440,7 @@ async fn bot_edit_calls_github_owner_usability_and_marks_unreadable_tokens_disco
         .await
         .unwrap();
     assert_eq!(
-        admin.get(&format!("/account/bots/{bot}/edit")).await.status,
+        admin.get(&format!("/api/v1/admin/bots/{bot}")).await.status,
         StatusCode::OK
     );
     test.booted

@@ -63,9 +63,7 @@ pub(super) async fn connect_user(hub: &Hub, user_id: i64) -> Client {
 #[tokio::test]
 async fn directory_http_guards_leave_room_and_recipients_unchanged() {
     let (hub, id) = frozen_hub().await;
-    let fixture: Value = serde_json::from_str(include_str!(
-        "../../../../views/tests/golden/rooms/directory.json"
-    ))
+    let fixture: Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../test-support/legacy-contracts/rooms/directory.json")))
     .unwrap();
     let guards = &fixture["guards"];
     let mut recipient = hub.david().await;

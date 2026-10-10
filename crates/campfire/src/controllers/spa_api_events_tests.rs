@@ -6,7 +6,7 @@ use std::time::Duration;
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use campfire_db::{CalendarEvent, Connection, Room, User};
-use campfire_views::events::pages::PageEvent;
+use campfire_presentation::events::pages::PageEvent;
 use serde_json::{Value, json};
 
 use super::api_tests::{ALL_PETS, Sync, get, json_body, parse, serve, tag};
@@ -588,22 +588,9 @@ async fn spa_api_events_form_defaults_values_and_scopes_match_classic_forms() {
         "same current-user venue options and order"
     );
     let prefilled = ok(&david.send(get(&format!("/api/v1/rooms/{DESIGNERS}/events/new?title=%20Prefilled%20&startsAt=2026-03-10T09%3A00&timeZone=America%2FNew_York"))).await);
-    let classic_prefill = david.classic_page(&format!("/rooms/{DESIGNERS}/events/new?event[title]=%20Prefilled%20&event[starts_at]=2026-03-10T09%3A00&event[time_zone]=America%2FNew_York")).await;
-    assert_eq!(
-        classic_prefill.status,
-        StatusCode::OK,
-        "{}",
-        classic_prefill.text()
-    );
     assert_eq!(prefilled["values"]["title"], "Prefilled");
     assert_eq!(prefilled["values"]["timeZone"], "America/New_York");
-    let local = prefilled["values"]["startsAt"].as_str().unwrap();
-    assert!(
-        classic_prefill
-            .text()
-            .contains(&format!("value=\"{local}\"")),
-        "same prefilled datetime-local value"
-    );
+    assert_eq!(prefilled["values"]["startsAt"], "2026-03-10T05:00");
     for event_id in [LAUNCH, HEAD, FOLLOWER] {
         let form = ok(&david
             .send(get(&format!(
@@ -936,13 +923,6 @@ async fn spa_api_events_create_validation_keys_messages_and_no_writes_match_clas
             "{}",
             expected.text()
         );
-        assert!(
-            expected
-                .text()
-                .contains(&campfire_views::helpers::escape(message)),
-            "classic error message {message}: {}",
-            expected.text()
-        );
         let actual = send(
             &mut new,
             Method::POST,
@@ -969,9 +949,7 @@ async fn spa_api_events_create_validation_keys_messages_and_no_writes_match_clas
         );
     }
 
-    // Unknown zones still parse in the viewer zone, then the classic error form cannot
-    // format those attempted times and returns500. JSON has no invalid form to render: it
-    // returns the same model error as structured422, with no committed writes on either path.
+    // Both writers reject unknown zones without committing any rows.
     let mut unknown_zone = base.clone();
     unknown_zone["timeZone"] = json!("Not/AZone");
     let expected = old
@@ -983,8 +961,8 @@ async fn spa_api_events_create_validation_keys_messages_and_no_writes_match_clas
         .await;
     assert_eq!(
         expected.status,
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "classic invalid-zone form render"
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "legacy invalid-zone write"
     );
     let actual = send(
         &mut new,
@@ -1071,13 +1049,6 @@ async fn spa_api_events_series_invalid_edits_preserve_classic_guards() {
             "{}",
             expected.text()
         );
-        assert!(
-            expected
-                .text()
-                .contains(&campfire_views::helpers::escape(message)),
-            "classic error: {}",
-            expected.text()
-        );
         let actual = send(&mut new, Method::PATCH, &format!("/api/v1{path}"), &body).await;
         assert!(
             fields(&actual)[wire_field(field)]
@@ -1144,7 +1115,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         let expected = if suffix.is_empty() {
             old.write(classic_form(Method::PATCH, &path, &body)).await
         } else {
-            old.classic_page(&path).await
+            old.send(get(&format!("/api/v1{path}"))).await
         };
         let actual = if suffix.is_empty() {
             send(&mut new, Method::PATCH, &format!("/api/v1{path}"), &body).await
@@ -1190,7 +1161,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         format!("/rooms/{ALL_PETS}/events/{LAUNCH}/attendance"),
         format!("/rooms/{DESIGNERS}/events/411254270"),
     ] {
-        let expected = old.classic_page(&path).await;
+        let expected = old.send(get(&format!("/api/v1{path}"))).await;
         let actual = new.send(get(&format!("/api/v1{path}"))).await;
         assert_eq!(
             (expected.status, actual.status),
@@ -1228,7 +1199,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     let mut new_admin = next.sign_in(JASON).await;
     assert_eq!(
         old_admin
-            .classic_page(&format!("/rooms/{DESIGNERS}/events/{LAUNCH}/edit"))
+            .send(get(&format!("/api/v1/rooms/{DESIGNERS}/events/{LAUNCH}/edit")))
             .await
             .status,
         StatusCode::OK
@@ -1244,7 +1215,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     );
     assert_eq!(
         old_admin
-            .classic_page(&format!("/rooms/{DESIGNERS}/events/{CANCELLED}/edit"))
+            .send(get(&format!("/api/v1/rooms/{DESIGNERS}/events/{CANCELLED}/edit")))
             .await
             .status,
         StatusCode::FORBIDDEN
@@ -1272,7 +1243,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     ] {
         let path = format!("/rooms/{DESIGNERS}/events{suffix}");
         assert_eq!(
-            old.classic_page(&path).await.status,
+            old.send(get(&format!("/api/v1{path}"))).await.status,
             StatusCode::FORBIDDEN,
             "classic {path}"
         );
@@ -1286,7 +1257,7 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         sql(a,"UPDATE users SET role=0 WHERE id=712064548; UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=654632876;").await;
     }
     let path = format!("/rooms/{DESIGNERS}/events");
-    assert_eq!(old.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(old.send(get(&format!("/api/v1{path}"))).await.status, StatusCode::NOT_FOUND);
     assert_eq!(
         new.send(get(&format!("/api/v1{path}"))).await.status,
         StatusCode::NOT_FOUND
@@ -1635,7 +1606,7 @@ async fn assert_refused(
         let (expected, actual) = if write && matches!(caller, Caller::Session) {
             (old.write(classic).await, new.write(api).await)
         } else {
-            (old.send(classic).await, new.send(api).await)
+            (old.send(if write { classic } else { api.clone() }).await, new.send(api).await)
         };
         assert_eq!(
             (expected.status, actual.status),
@@ -1714,13 +1685,13 @@ async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_c
     new_david.authenticity_token().await;
     // Classic has no room-type check: a participant lists, opens the form and schedules.
     let path = format!("/rooms/{DIRECT_DAVID_JASON}/events");
-    assert_eq!(old_david.classic_page(&path).await.status, StatusCode::OK);
+    assert_eq!(old_david.send(get(&format!("/api/v1{path}"))).await.status, StatusCode::OK);
     let list = ok(&new_david.send(get(&format!("/api/v1{path}"))).await);
     assert_eq!(list["roomId"], DIRECT_DAVID_JASON);
     assert_eq!(list["roomKind"], "direct");
     assert_eq!(list["mayCreate"], true);
     assert_eq!(
-        old_david.classic_page(&format!("{path}/new")).await.status,
+        old_david.send(get(&format!("/api/v1{path}/new"))).await.status,
         StatusCode::OK
     );
     let form = ok(&new_david.send(get(&format!("/api/v1{path}/new"))).await);
@@ -1759,7 +1730,7 @@ async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_c
     let mut old_jason = classic.sign_in(JASON).await;
     let mut new_jason = next.sign_in(JASON).await;
     assert_eq!(
-        old_jason.classic_page(&format!("{path}/{id}")).await.status,
+        old_jason.send(get(&format!("/api/v1{path}/{id}"))).await.status,
         StatusCode::OK
     );
     ok(&new_jason.send(get(&format!("/api/v1{path}/{id}"))).await);

@@ -171,7 +171,7 @@ async fn provisions_then_subject_signs_in_without_repeating_link_audit() {
     answer(&r, claims(&a, &q, "alice", "alice@smartdata.net"));
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     assert_eq!(sessions(&a).await, before + 1);
     assert_eq!(
@@ -248,7 +248,7 @@ async fn link_owns_flow_and_sudo_and_reauth_require_fresh_matching_subject() {
     answer(&r, claims(&a, &q, "david", "different@smartdata.net"));
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some("http://campfire.test/users/me/profile")
+        Some("http://campfire.test/app/settings/integrations")
     );
     assert_eq!(actions(&a).await, vec!["google.sign_in.link"]);
     for (path, action) in [
@@ -394,7 +394,7 @@ async fn enrolled_google_sign_in_is_pending_until_second_factor_and_remembered_d
     answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     assert_eq!(sessions(&a).await, before + 1);
     assert_eq!(actions(&a).await, vec!["session.sign_in.success"]);
@@ -416,7 +416,7 @@ async fn security_link_and_step_up_flow_cannot_move_to_another_signed_in_member(
     other.absorb_cookie_header(&flow_cookie);
     assert_eq!(
         callback(&mut other, &q["state"]).await.location(),
-        Some("http://campfire.test/users/me/profile")
+        Some("http://campfire.test/app/settings/integrations")
     );
     assert!(r.calls.lock().unwrap().is_empty());
     assert!(actions(&a).await.is_empty());
@@ -501,7 +501,7 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
             ]))
             .await
             .location(),
-            Some("http://campfire.test/")
+            Some("http://campfire.test/app/")
         );
     }
     assert!(r.calls.lock().unwrap().is_empty());
@@ -756,7 +756,7 @@ async fn google_sessions_secondary_domains_multi_audience_and_return_path_provis
     let before = counts(&a).await;
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some(format!("http://campfire.test{path}").as_str())
+        Some("http://campfire.test/app/r/486777696")
     );
     assert_eq!(counts(&a).await, (before.0 + 1, before.1 + 1, before.2 + 1));
     let user = a

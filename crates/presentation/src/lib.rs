@@ -33,3 +33,5 @@ pub mod context;
 pub use context::{AccountSummary, CurrentUser, HelpContact, Platform};
 pub mod cache_keys;
 pub mod twitter;
+
+pub mod avatar;

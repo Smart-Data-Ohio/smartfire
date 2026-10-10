@@ -1,141 +1,6 @@
 use super::{Fresh, support::response_session};
 use serde_json::{Value, json};
 #[tokio::test]
-async fn slack_run_views_match_every_rails_body_byte() {
-    use askama::Template;
-    use campfire_views::{
-        helpers::request_forgery::{self, AuthenticityTokens, RequestSecrets},
-        slack::*,
-    };
-    struct Tokens;
-    impl AuthenticityTokens for Tokens {
-        fn global(&self) -> String {
-            "GLOBAL".into()
-        }
-        fn for_form(&self, a: &str, m: &str) -> String {
-            format!("{m}:{a}")
-        }
-    }
-    let f = Fresh::new(1, vec![]).await;
-    let vectors: Value =
-        serde_json::from_str(include_str!("../../../../../vectors/slack/run_views.json")).unwrap();
-    for case in vectors["cases"].as_array().unwrap() {
-        let mut data: RunData = serde_json::from_value(
-            case["data"]
-                .as_object()
-                .cloned()
-                .map(Value::Object)
-                .unwrap_or(json!({})),
-        )
-        .unwrap();
-        let runs: Vec<RunData> = serde_json::from_value(
-            case["runs"]
-                .as_array()
-                .cloned()
-                .map(Value::Array)
-                .unwrap_or(json!([])),
-        )
-        .unwrap();
-        let rooms: Vec<RoomTarget> = serde_json::from_value(
-            case["rooms"]
-                .as_array()
-                .cloned()
-                .map(Value::Array)
-                .unwrap_or(json!([])),
-        )
-        .unwrap();
-        let setup: SetupData = serde_json::from_value(
-            case["setup"]
-                .as_object()
-                .cloned()
-                .map(Value::Object)
-                .unwrap_or(json!({})),
-        )
-        .unwrap();
-        let samples = data.samples().to_vec();
-        let secrets = f.app.secrets.clone();
-        let now = f.app.clock.now();
-        data.sample_htmls = f
-            .app
-            .db
-            .read(move |conn| {
-                super::super::runs::sample_htmls(
-                    conn,
-                    &secrets,
-                    now,
-                    &samples,
-                    Some("http://example.org".into()),
-                )
-            })
-            .await
-            .unwrap();
-        let actual = crate::controllers::presenters::page::render_detached_at(
-            &f.app,
-            None,
-            "http://example.org",
-            |ctx| {
-                request_forgery::rendering_with(
-                    RequestSecrets {
-                        tokens: Box::new(Tokens),
-                        csp_nonce: Some("NONCE".into()),
-                    },
-                    || match case["view"].as_str().unwrap() {
-                        "admin" => RunPage {
-                            ctx,
-                            data: &data,
-                            admin: true,
-                        }
-                        .as_content()
-                        .render()
-                        .unwrap(),
-                        "personal" => RunPage {
-                            ctx,
-                            data: &data,
-                            admin: false,
-                        }
-                        .as_content()
-                        .render()
-                        .unwrap(),
-                        "plan" => Plan {
-                            ctx,
-                            data: &data,
-                            rooms: &rooms,
-                            oldest: case["oldest"].as_str().unwrap(),
-                        }
-                        .as_content()
-                        .render()
-                        .unwrap(),
-                        "index" => RunList { ctx, runs: &runs }.as_content().render().unwrap(),
-                        "personal_index" => PersonalIndex {
-                            ctx,
-                            data: &setup,
-                            runs: &runs,
-                        }
-                        .as_content()
-                        .render()
-                        .unwrap(),
-                        "status" => status(&data),
-                        _ => panic!("unknown golden"),
-                    },
-                )
-            },
-        );
-        let expected = case["html"].as_str().unwrap();
-        if actual != expected {
-            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../.scratch/ws16-http");
-            std::fs::write(dir.join("run.actual.html"), &actual).unwrap();
-            std::fs::write(dir.join("run.expected.html"), expected).unwrap();
-        }
-        assert_eq!(actual, expected, "{}", case["name"]);
-    }
-    println!(
-        "Slack run view parity: {} complete Rails template bodies matched byte for byte",
-        vectors["cases"].as_array().unwrap().len()
-    );
-}
-
-#[tokio::test]
 async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails() {
     use campfire_db::models::slack::{NewConnection, SlackConnection, SlackWorkspace};
     use rusqlite::params;
@@ -143,7 +8,7 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
         serde_json::from_str(include_str!("../../../../../vectors/slack/runs_http.json")).unwrap();
     let selected = std::env::var("WS16_RUN_HTTP_CASE").ok();
     let mut checked = 0;
-    for case in cases.as_array().unwrap() {
+    for case in cases.as_array().unwrap().iter().filter(|case| !case["method"].as_str().unwrap_or("GET").eq_ignore_ascii_case("get")) {
         if selected
             .as_ref()
             .is_some_and(|name| case["name"].as_str() != Some(name))
@@ -184,23 +49,7 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
             .unwrap_or(json!({}));
         let (status, headers, actual) =
             wire_request(&f, method, path, body, case["bad_csrf"] == true).await;
-        let expected = case["response_body"].as_str().unwrap();
-        if actual != expected {
-            let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../.scratch/ws16-http");
-            std::fs::write(scratch.join("full.actual.html"), &actual).unwrap();
-            std::fs::write(scratch.join("full.expected.html"), expected).unwrap();
-        }
-        assert!(
-            actual == expected,
-            "{} complete HTTP body differs at byte {}",
-            case["name"],
-            actual
-                .bytes()
-                .zip(expected.bytes())
-                .position(|(a, b)| a != b)
-                .unwrap_or(actual.len().min(expected.len()))
-        );
+        assert_eq!(actual, case["response_body"].as_str().unwrap(), "{} legacy write response", case["name"]);
         assert_eq!(
             status,
             case["status_code"].as_u64().unwrap() as u16,
@@ -389,10 +238,9 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
         })
         .await
         .unwrap();
-    let (code, _, html) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
-    assert_eq!(code, 200);
-    assert!(html.contains("Connect with your Slack account"));
-    assert!(f.server.received().is_empty());
+    let (code, _, _) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
+    assert_eq!(code, 302);
+assert!(f.server.received().is_empty());
     let (code, headers, _) = wire_request(
         &f,
         "GET",
@@ -445,11 +293,9 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
     )
     .await;
     assert_eq!(code, 302);
-    assert_eq!(headers["location"], "http://example.org/slack/imports");
-    let (_, _, html) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
-    assert!(html.contains("Connected. Reconnect to refresh the grant."));
-    assert!(html.contains("Start preview"));
-    let (code, headers, _) = wire_request(
+    assert_eq!(headers["location"], "http://example.org/app/settings/slack");
+    let (_, _, _) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
+let (code, headers, _) = wire_request(
         &f,
         "POST",
         "/slack/imports",
@@ -476,7 +322,7 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
         f.app.slack_network.clone(),
     )
     .await;
-    let (_, _, html) = wire_request(
+    let (_, _, _) = wire_request(
         &f,
         "GET",
         &format!("/slack/imports/{preview}"),
@@ -484,10 +330,7 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
         false,
     )
     .await;
-    assert!(html.contains("CPRIV"));
-    assert!(html.contains("GMPIM"));
-    assert!(html.contains("DIM"));
-    let (code,headers,_)=wire_request(&f,"POST","/slack/imports",json!({"mode":"import","dry_run_id":preview,"conversation_ids":["CPRIV","GMPIM","DIM"],"preset":"full"}),false).await;
+let (code,headers,_)=wire_request(&f,"POST","/slack/imports",json!({"mode":"import","dry_run_id":preview,"conversation_ids":["CPRIV","GMPIM","DIM"],"preset":"full"}),false).await;
     assert_eq!(code, 302);
     let id = headers["location"]
         .to_str()
@@ -506,7 +349,7 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
     .await;
     assert_eq!(row.kind, "personal");
     assert!(row.stats["counts"]["messages"].as_i64().unwrap() > 0);
-    let (code, _, html) = wire_request(
+    let (code, _, _) = wire_request(
         &f,
         "GET",
         &format!("/slack/imports/{id}/status"),
@@ -514,9 +357,8 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
         false,
     )
     .await;
-    assert_eq!(code, 200);
-    assert!(html.contains("completed"));
-    let (code, _, _) = wire_request(
+    assert_eq!(code, 302);
+let (code, _, _) = wire_request(
         &f,
         "POST",
         &format!("/slack/imports/{id}/undo"),
@@ -555,7 +397,7 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
             break;
         }
     }
-    let (_, _, html) = wire_request(
+    let (_, _, _) = wire_request(
         &f,
         "GET",
         &format!("/slack/imports/{id}"),
@@ -563,8 +405,7 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
         false,
     )
     .await;
-    assert!(html.contains("undone"));
-    f.app
+f.app
         .db
         .read(move |c| {
             assert_eq!(
@@ -684,16 +525,14 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         .unwrap()
         .parse::<i64>()
         .unwrap();
-    let (_, _, html) =
+    let (_, _, _) =
         wire_request_with_session(&f, "GET", &preview_path, Value::Null, false, values.clone())
             .await;
-    assert!(html.contains("data-controller=\"frame-poll\""));
-    assert!(html.contains("Workspace dry run"));
-    f.app.db.write(move |tx|{
+f.app.db.write(move |tx|{
         let stats=json!({"conversations":[{"id":"C111","name":"general","type":"public_channel","target":{"action":"create"}},{"id":"C222","name":"random","type":"private_channel","target":{"action":"create"}}],"samples":[{"conversation":"general","slack_text":"<&>","markdown":"**HTTP preview** <script>alert(1)</script>"}]});
         tx.conn().execute("UPDATE slack_imports SET status='completed',stats=? WHERE id=?",rusqlite::params![stats.to_string(),preview])?;Ok(())
     }).await.unwrap();
-    let (_, _, html) = wire_request(
+    let (_, _, _) = wire_request(
         &f,
         "GET",
         &format!("{preview_path}/plan"),
@@ -701,13 +540,7 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         false,
     )
     .await;
-    assert!(html.contains("Import plan"));
-    assert!(html.contains("<strong>HTTP preview</strong>"));
-    assert!(!html.contains("<script>alert(1)</script>"));
-    assert!(html.contains("&lt;&amp;&gt;"));
-    assert!(html.contains("Private channel"));
-    assert!(html.contains("data-check-all-target=\"checkbox\""));
-    let (code, headers, _) = wire_request(
+let (code, headers, _) = wire_request(
         &f,
         "POST",
         &format!("{preview_path}/import"),
@@ -729,7 +562,7 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         .parse::<i64>()
         .unwrap();
     f.app.db.write(move |tx|{tx.conn().execute("UPDATE slack_imports SET status='running',stats='{\"phase\":\"messages\",\"current\":\"random\"}' WHERE id=?",[id])?;Ok(())}).await.unwrap();
-    let (code, _, html) = wire_request(
+    let (code, _, _) = wire_request(
         &f,
         "GET",
         &format!("{import_path}/status"),
@@ -737,11 +570,8 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         false,
     )
     .await;
-    assert_eq!(code, 200);
-    assert!(html.contains("random"));
-    assert!(!html.contains("data-controller=\"frame-poll\""));
-    assert!(!html.contains("data-frame-poll-finished"));
-    f.app
+    assert_eq!(code, 302);
+f.app
         .db
         .write(move |tx| {
             tx.conn().execute(
@@ -752,7 +582,7 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         })
         .await
         .unwrap();
-    let (_, _, html) = wire_request(
+    let (_, _, _) = wire_request(
         &f,
         "GET",
         &format!("{import_path}/status"),
@@ -760,11 +590,8 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         false,
     )
     .await;
-    assert!(html.contains("data-frame-poll-finished"));
-    let (_, _, html) = wire_request(&f, "GET", &import_path, Value::Null, false).await;
-    assert!(html.contains("Undo import"));
-    assert!(!html.contains("Run catch-up import"));
-    let (code, _, _) =
+let (_, _, _) = wire_request(&f, "GET", &import_path, Value::Null, false).await;
+let (code, _, _) =
         wire_request(&f, "POST", &format!("{import_path}/undo"), json!({}), false).await;
     assert_eq!(code, 302);
     let run = f
@@ -776,49 +603,6 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
         .unwrap();
     assert_eq!(run.status, "undoing");
     assert!(f.server.received().is_empty());
-}
-
-#[tokio::test]
-async fn slack_run_index_orders_all_owners_and_http_show_paginates_issues() {
-    let f = Fresh::new(1, vec![]).await;
-    f.workspace().await;
-    f.app.db.write(|tx| {
-        let w=campfire_db::models::slack::SlackWorkspace::current(tx.conn())?.unwrap();
-        for (id,kind,owner,seconds) in [(853,"workspace",811,1767096000),(854,"personal",812,1767182400),(855,"workspace",811,1767265200)] {
-            let at=campfire_db::Timestamp::from_second(seconds);
-            tx.conn().execute("INSERT INTO slack_imports(id,slack_workspace_id,user_id,kind,mode,status,created_at,updated_at) VALUES(?,?,?,?,'import','completed',?,?)",rusqlite::params![id,w.id,owner,kind,at,at])?;
-        }
-        for i in 0..55 {campfire_db::models::slack_import::SlackImport::record_issue(tx,853,campfire_db::models::slack_import::IssueLevel::Warning,None,&format!("row-{i:02}"))?;}
-        Ok(())
-    }).await.unwrap();
-    let (_, _, html) =
-        wire_request(&f, "GET", "/account/slack_import/runs", Value::Null, false).await;
-    let positions = [855, 854, 853].map(|id| {
-        html.find(&format!("href=\"/account/slack_import/runs/{id}\""))
-            .unwrap()
-    });
-    assert!(positions[0] < positions[1] && positions[1] < positions[2]);
-    assert!(html.contains("Other"));
-    assert!(html.contains("2026-01-01 11:00:00 UTC"));
-    for (page, first, last, next) in [(1, 0, 49, true), (2, 50, 54, false)] {
-        let (_, _, html) = wire_request(
-            &f,
-            "GET",
-            &format!("/account/slack_import/runs/853?page={page}"),
-            Value::Null,
-            false,
-        )
-        .await;
-        assert!(html.contains("Issues (55)"));
-        assert!(html.contains(&format!("row-{first:02}")));
-        assert!(html.contains(&format!("row-{last:02}")));
-        assert_eq!(html.contains("Older issues"), next);
-        if page == 1 {
-            assert!(!html.contains("row-50"));
-        } else {
-            assert!(!html.contains("row-49"));
-        }
-    }
 }
 
 #[tokio::test]
@@ -864,25 +648,4 @@ async fn slack_personal_show_reads_later_stats_once_for_both_undo_controls() {
         .unwrap();
     assert_eq!(count, 1);
     assert!(data.undo_reason.is_none());
-    use askama::Template;
-    let html = crate::controllers::presenters::page::render_detached_at(
-        &f.app,
-        None,
-        "http://example.org",
-        |ctx| {
-            campfire_views::slack::RunPage {
-                ctx,
-                data: &data,
-                admin: false,
-            }
-            .as_content()
-            .render()
-            .unwrap()
-        },
-    );
-    assert!(html.contains("Undo import"));
-    assert!(!html.contains("A later import"));
-    let (status, _, html) = wire_request(&f, "GET", "/slack/imports/853", Value::Null, false).await;
-    assert_eq!(status, 200);
-    assert!(html.contains("Undo import"));
 }

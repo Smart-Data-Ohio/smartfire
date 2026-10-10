@@ -23,20 +23,17 @@ pub(super) struct Fresh {
 }
 impl Fresh {
     async fn new(role: i64, routes: Vec<Route>) -> Self {
-        Self::with_spa(role, routes, false).await
+        Self::with_spa(role, routes, true).await
     }
-    async fn with_spa(role: i64, routes: Vec<Route>, spa_enabled: bool) -> Self {
+    async fn with_spa(role: i64, routes: Vec<Route>, _spa_enabled: bool) -> Self {
         let (server, network): (FakeServer, Network) = fake(routes).await;
-        let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws16-http");
-        std::fs::create_dir_all(&scratch).unwrap();
-        let dir = tempfile::tempdir_in(scratch).unwrap();
+        let dir = tempfile::tempdir().unwrap();
         let environment = std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../parity/.env.reference"
         ))
         .unwrap();
-        let mut config = Config::from_lookup(|key| match key {
+        let config = Config::from_lookup(|key| match key {
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
             _ => environment.lines().find_map(|line| {
@@ -46,8 +43,6 @@ impl Fresh {
             }),
         })
         .unwrap();
-        // Without the SPA, the classic pages, until they're deleted.
-        config.spa_enabled = spa_enabled;
         let boot = crate::server::boot_with_network(
             config,
             Arc::new(campfire_kit::FrozenClock::new(
@@ -112,7 +107,7 @@ async fn slack_oauth_security_requires_sudo_and_consumes_invalid_state_before_ne
     }
     let (status,headers,_)=request(&f,"GET","/slack/oauth/callback?state=bogus&code=fixture-code",Value::Null,json!({"slack_oauth_state":{"state":"fixture-state","user_id":811},"slack_oauth_return_to":"/slack/imports"})).await;
     assert_eq!(status, 302);
-    assert_eq!(headers["location"], "http://example.org/slack/imports");
+    assert_eq!(headers["location"], "http://example.org/app/settings/slack");
     let session = response_session(&f, &headers);
     assert_eq!(
         session["flash"]["flashes"]["alert"],
@@ -236,7 +231,11 @@ async fn slack_connections_http_persistence_audits_and_requests_match_rails() {
         assert_eq!(status, case["status"], "{}: {html}", case["name"]);
         assert_eq!(
             headers.get("location").and_then(|h| h.to_str().ok()),
-            case["location"].as_str(),
+            case["location"].as_str().map(|location| if method == "GET" { match location {
+                "http://example.org/account/slack_import" => "http://example.org/app/admin/slack",
+                "http://example.org/slack/imports" => "http://example.org/app/settings/slack",
+                location => location,
+            } } else { location }),
             "{}",
             case["name"]
         );
@@ -285,55 +284,6 @@ async fn slack_connections_http_persistence_audits_and_requests_match_rails() {
         }
     }
 }
-#[tokio::test]
-async fn slack_setup_views_are_byte_identical_to_rails_and_write_only() {
-    use askama::Template;
-    use campfire_views::{
-        helpers::request_forgery::{self, AuthenticityTokens, RequestSecrets},
-        slack::{Setup, SetupData},
-    };
-    struct Tokens;
-    impl AuthenticityTokens for Tokens {
-        fn global(&self) -> String {
-            "GLOBAL".into()
-        }
-        fn for_form(&self, a: &str, m: &str) -> String {
-            format!("{m}:{a}")
-        }
-    }
-    let f = Fresh::new(1, vec![]).await;
-    let v: Value = serde_json::from_str(include_str!(
-        "../../../../../vectors/slack/setup_views.json"
-    ))
-    .unwrap();
-    for case in v["cases"].as_array().unwrap() {
-        let data: SetupData = serde_json::from_value(case["data"].clone()).unwrap();
-        let actual = crate::controllers::presenters::page::render_detached_at(
-            &f.app,
-            None,
-            "http://example.org",
-            |ctx| {
-                request_forgery::rendering_with(
-                    RequestSecrets {
-                        tokens: Box::new(Tokens),
-                        csp_nonce: Some("NONCE".into()),
-                    },
-                    || Setup { ctx, data: &data }.as_content().render().unwrap(),
-                )
-            },
-        );
-        let expected = case["html"].as_str().unwrap();
-        if actual != expected {
-            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../.scratch/ws16-http");
-            std::fs::write(dir.join("setup.actual.html"), &actual).unwrap();
-            std::fs::write(dir.join("setup.expected.html"), expected).unwrap();
-        }
-        assert_eq!(actual, expected, "{}", case["name"]);
-        assert!(!actual.contains("fixture-secret"));
-    }
-}
-
 #[tokio::test]
 async fn slack_oauth_replay_unique_constraint_and_setup_csrf_are_rejected() {
     use campfire_db::models::slack::{NewConnection, SlackConnection};
@@ -439,8 +389,9 @@ async fn slack_oauth_replay_unique_constraint_and_setup_csrf_are_rejected() {
         request(&member, "GET", "/account/slack_import", Value::Null, sudo())
             .await
             .0,
-        403
+        302
     );
+    assert_eq!(request(&member, "GET", "/api/v1/admin/slack", Value::Null, sudo()).await.0, 403);
     let filtered=crate::security::parameter_filter().filter(&json!({"code":"fixture-code","access_token":"fixture-user-grant","client_secret":"fixture-secret"}));
     assert_eq!(
         filtered,

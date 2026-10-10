@@ -10,7 +10,6 @@ async fn google_admin_link_controls_and_all_security_audits_match_pinned_rails()
     let v: Value =
         serde_json::from_str(include_str!("../../../../vectors/google_admin_links.json")).unwrap();
     let at: jiff::Timestamp = "2026-03-02T16:00:00Z".parse().unwrap();
-    let forms_re = regex::Regex::new(r#"<form\b[^>]*\baction="([^"]*/google_link)""#).unwrap();
     for case in v["cases"].as_array().unwrap() {
         let mut a = TestApp::boot_with_clock(Arc::new(FrozenClock::new(at)))
             .await
@@ -31,7 +30,7 @@ async fn google_admin_link_controls_and_all_security_audits_match_pinned_rails()
         let path = case["target_id"]
             .as_i64()
             .map(|id| format!("/account/users/{id}/google_link"))
-            .unwrap_or("/account/edit".into());
+            .unwrap_or("/api/v1/admin/people".into());
         let method: Method = case["spec"]["method"]
             .as_str()
             .unwrap()
@@ -41,7 +40,7 @@ async fn google_admin_link_controls_and_all_security_audits_match_pinned_rails()
         let response = if method == Method::GET {
             actor.get(&path).await
         } else {
-            actor.write(Req::new(method, &path)).await
+            actor.write(Req::new(method.clone(), &path)).await
         };
         let name = case["spec"]["name"].as_str().unwrap();
         assert_eq!(
@@ -56,10 +55,23 @@ async fn google_admin_link_controls_and_all_security_audits_match_pinned_rails()
             "{name}: destination"
         );
         let html = response.text();
-        let forms = forms_re
-            .captures_iter(&html)
-            .map(|c| c[1].to_owned())
-            .collect::<Vec<_>>();
+        // K15 retired the account HTML; the SPA exposes the same control capabilities as JSON.
+        let forms = if method == Method::GET {
+            response.json()["people"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|person| {
+                    person["banned"] == false
+                        && (person["googleIdentityEmail"].is_string()
+                            || person["offerGoogleEmailLink"] == true)
+                })
+                .map(|person| format!("/account/users/{}/google_link", person["id"]))
+                .collect::<Vec<_>>()
+        } else {
+            assert!(!html.contains("<form"));
+            Vec::new()
+        };
         assert_eq!(json!(forms), case["forms"], "{name}: complete control set");
         let kevin = case["kevin_id"].as_i64().unwrap();
         let jz = case["jz_id"].as_i64().unwrap();

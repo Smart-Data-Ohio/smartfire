@@ -11,7 +11,7 @@ use campfire_db::{
     RoomType, Snapshot, StageRole, Status, Timestamp, User, UserStatusSettings,
     WorkspacePresenceLease,
 };
-use campfire_runtime::presenters::{self, Presenter, accounts, room_shell};
+use campfire_runtime::presenters::{self, Presenter, accounts, room_unread};
 use rails_compat::Secrets;
 
 /// A [`Timestamp`] as the wire carries it: RFC 3339 in UTC with milliseconds.
@@ -383,7 +383,7 @@ fn messages_and_fetches_inner(
     let presenter = Presenter::new(conn, app, None);
     let presenter = if preload { presenter.preload_payload(messages)? } else { presenter };
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
-    let mut polls = crate::cards::polls(conn, &ids, now)?;
+    let mut polls = crate::cards::polls(conn, &ids, now, &*app.storage.verifier)?;
     let mut fetches = crate::cards::Fetches::default();
     let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
     let pinned: BTreeSet<i64> = ids_query(
@@ -461,7 +461,10 @@ fn messages_and_fetches_inner(
             })
         })
         .collect::<Result<Vec<_>>>()
-        .map(|dtos| (dtos, fetches))
+        .map(|dtos| {
+            fetches.render_refreshes = presenter.take_render_refreshes();
+            (dtos, fetches)
+        })
 }
 
 fn message_sound(sound: &campfire_db::Sound) -> api::MessageSound {
@@ -553,7 +556,7 @@ pub(crate) fn ids_query<T>(
 }
 
 /// `AttachmentView` with its blob's type and size.
-fn attachment(
+pub(crate) fn attachment(
     view: campfire_presentation::messages::AttachmentView,
     content_type: Option<&str>,
     byte_size: i64,
@@ -881,7 +884,7 @@ fn direct_members(
 /// A room's counts for the viewer, from [`notification_counts`].
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub(crate) struct RoomCounts {
-    /// Root messages in the room's unread range (`unreadCount`), as `room_shell::first_unread`
+    /// Root messages in the room's unread range (`unreadCount`), as `room_unread::first_unread`
     /// counts them.
     pub(crate) unread: i64,
     /// Unread `mention` inbox items about messages in the room (`mentionCount`).
@@ -892,7 +895,7 @@ pub(crate) struct RoomCounts {
     pub(crate) thread_notifications: i64,
 }
 
-/// Inside the room's unread range, as `room_shell::first_unread` draws it, for a message `m`
+/// Inside the room's unread range, as `room_unread::first_unread` draws it, for a message `m`
 /// against its membership's bounds `b`: the room is unread, and the message follows the last read
 /// root message (or the moment it went unread, when there's no read position to go by). The
 /// leading `created_at` bound follows from each case and lets SQLite seek
@@ -1195,7 +1198,7 @@ pub fn room_detail(
     };
     let member_preview_ids: Vec<i64> = members.iter().take(5).map(|(id, _)| *id).collect();
     let unread =
-        room_shell::first_unread(conn, membership)?.map(|(first_unread_message_id, count)| {
+        room_unread::first_unread(conn, membership)?.map(|(first_unread_message_id, count)| {
             api::UnreadDivider {
                 first_unread_message_id,
                 count,

@@ -36,9 +36,9 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
         let app = app_rows(group["rows"].clone()).await;
 
         for path in [
-            format!("/rooms/{QUIET_CORNER}/messages"),
+            format!("/api/v1/rooms/{QUIET_CORNER}/messages"),
             format!(
-                "/rooms/{QUIET_CORNER}/threads/{}/messages",
+                "/api/v1/threads/{}/messages",
                 group["thread_id"]
             ),
         ] {
@@ -48,7 +48,7 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 assert!(
                     !response
                         .text()
-                        .contains(&format!("data-message-id=\"{id}\"")),
+                        .contains(&format!("\"id\":{id}")),
                     "old reference in {path}"
                 );
             }

@@ -90,7 +90,6 @@ cases!(
     original_self_removal_active_count_and_lookup => "remove_self",
     original_member_cannot_change_admin_role => "member_role",
     original_member_cannot_remove_admin => "member_remove",
-    original_styles_edit_success => "styles_edit",
     original_styles_exact_value_is_saved => "styles",
     original_member_styles_refused => "member_styles",
     original_join_code_changes_and_redirects => "join",

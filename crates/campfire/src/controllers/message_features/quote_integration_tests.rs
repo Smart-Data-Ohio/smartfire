@@ -1,7 +1,7 @@
 //! The nine previously deferred poll/quote controller behaviors with integrated WS11 invocation.
-use crate::controllers::presenters::{Presenter, page, test_support::*};
+use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
-use campfire_db::{Message, NewMessage, NewPoll, Poll};
+use campfire_db::Message;
 use serde_json::{Value, json};
 
 fn oracle() -> Value {
@@ -41,91 +41,6 @@ pub(super) async fn insert_rows(app: &TestApp, rows: Value) {
 }
 fn id(key: &str, i: usize) -> i64 { oracle()[key][i].as_i64().unwrap() }
 
-async fn poll_card(anonymous: bool) {
-    let app = app().await;
-    app.db().write(move |tx| {
-        let message = Message::create(tx, NewMessage { room_id: ALL_TALK, creator_id:DAVID,
-            markdown_source:Some("Room poll".into()),client_message_id:Some("integration-poll".into()),..Default::default() })?;
-        let mut poll=Poll::create_for_message(tx,&message,NewPoll { labels:vec!["A".into(),"B".into()],anonymous,..Default::default() })?;
-        poll.cast_vote(tx,DAVID,&[poll.options(tx.conn())?[0].id])?;
-        Ok(())
-    }).await.unwrap();
-    let response=app.david().get(&format!("/rooms/{ALL_TALK}")).await;
-    assert_eq!(response.status,StatusCode::OK,"{}",response.text());
-    let body=response.text();
-    assert!(body.contains("data-voter-ids="));
-    let attribute=format!("data-voter-ids=\"{DAVID}\"");
-    assert_eq!(body.contains(&attribute), !anonymous, "{body}");
-}
-#[tokio::test]
-async fn anonymous_room_cards_carry_no_voter_ids() { poll_card(true).await; }
-#[tokio::test]
-async fn regular_room_cards_carry_voter_ids_for_client_marking() { poll_card(false).await; }
-
-#[tokio::test]
-async fn same_room_quote_renders_inline_and_matches_rails_container() {
-    let app=app().await;
-    let response=app.david().get(&format!("/rooms/{QUIET_CORNER}")).await;
-    assert_eq!(response.status,StatusCode::OK);
-    assert!(response.text().contains(oracle()["containers"][0]["html"].as_str().unwrap()),"{}",response.text());
-}
-#[tokio::test]
-async fn cross_room_quote_renders_lazy_without_source_facts() {
-    let app=app().await;
-    let response=app.sign_in(KEVIN).await.get(&format!("/rooms/{QUIET_CORNER}")).await;
-    assert_eq!(response.status,StatusCode::OK);
-    assert!(response.text().contains(oracle()["containers"][1]["html"].as_str().unwrap()));
-    assert!(!response.text().contains("quote integration 1"));
-}
-#[tokio::test]
-async fn two_cached_direct_room_viewers_see_the_same_neutral_quote_label() {
-    let app=app().await;
-    for user in [DAVID,JASON] {
-        let response=app.sign_in(user).await.get(&format!("/rooms/{DIRECT_DAVID_JASON}/messages")).await;
-        assert_eq!(response.status,StatusCode::OK);
-        assert!(response.text().contains(oracle()["containers"][2]["html"].as_str().unwrap()),"{}",response.text());
-        assert!(response.text().contains("in a direct message"));
-    }
-}
-#[tokio::test]
-async fn preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms() {
-    use std::sync::{Arc,atomic::{AtomicUsize,Ordering}};
-    let app=app().await;
-    let messages=app.db().write(|tx| {
-        let mut messages=vec![Message::find(tx.conn(),id("quotes",2))?];
-        for (i, peer) in [KEVIN,BENDER].into_iter().enumerate() {
-            let room=campfire_db::Room::create_for(tx,campfire_db::RoomType::Direct,None,DAVID,&[DAVID,peer])?;
-            let source=Message::create(tx,NewMessage { room_id:room.id,creator_id:DAVID,markdown_source:Some(format!("distinct DM source {i}")),client_message_id:Some(format!("distinct-source-{i}")),..Default::default() })?;
-            messages.push(Message::create(tx,NewMessage { room_id:room.id,creator_id:DAVID,markdown_source:Some(format!("see /rooms/{}/@{}",room.id,source.id)),client_message_id:Some(format!("distinct-quote-{i}")),..Default::default() })?);
-        }
-        Ok(messages)
-    }).await.unwrap();
-    let state=app.booted.app.clone();
-    app.db().read(move |conn| {
-        // Distinct room binds cannot hide behind SQLite's statement/query cache.
-        for rows in [&messages[..1], &messages[..]] {
-            let p=Presenter::new(conn,&state,None).preload_search(rows)?;
-            conn.flush_prepared_statement_cache();
-            let count=Arc::new(AtomicUsize::new(0)); let observed=count.clone();
-            conn.authorizer(Some(move |ctx:rusqlite::hooks::AuthContext<'_>| {
-                if matches!(ctx.action,rusqlite::hooks::AuthAction::Select) { observed.fetch_add(1,Ordering::SeqCst); }
-                rusqlite::hooks::Authorization::Allow
-            }));
-            for row in rows {
-                let view=p.message(row)?;
-                let html=page::render_detached_at(&state,None,"http://campfire.test",|ctx|campfire_views::message_links::cards(ctx,&view).0);
-                assert!(html.contains("message-link-cards"));
-                assert!(html.contains("in a direct message"));
-            }
-            conn.authorizer(None::<fn(rusqlite::hooks::AuthContext<'_>)->rusqlite::hooks::Authorization>);
-            assert_eq!(count.load(Ordering::SeqCst),0);
-        }
-        Ok(())
-    }).await.unwrap();
-}
-
-
-
 fn write(method:Method,path:String,body:Value) -> Req {
     Req::new(method,&path).header("content-type","application/json").body(serde_json::to_vec(&body).unwrap())
 }
@@ -152,5 +67,3 @@ async fn editing_plain_message_to_add_permalink_replaces_its_own_container() {
     app.db().read(move |conn| { assert_eq!(conn.query_row("SELECT referenced_message_id FROM message_references WHERE message_id=?",[message],|r|r.get::<_,i64>(0))?,source);Ok(()) }).await.unwrap();
 
 }
-
-use campfire_web::controllers::presenters::Rendering;

@@ -64,6 +64,7 @@ base64.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+campfire_view_kit.workspace = true
 campfire_api = { workspace = true, features = ["test-support"] }
 campfire_app = { workspace = true, features = ["test-support"] }
 campfire_web = { workspace = true, features = ["test-support"] }

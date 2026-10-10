@@ -5,17 +5,12 @@
 pub(crate) use campfire_messages::controllers::message_features::*;
 
 #[cfg(test)]
-mod search_header_tests;
-#[cfg(test)]
 mod review_229_tests;
 #[cfg(test)]
-mod list_scaling_tests;
 #[cfg(test)]
 mod extreme_range_tests;
 #[cfg(test)]
-mod private_provider_tests;
 #[cfg(test)]
-mod provider_batch_tests;
 #[cfg(test)]
 mod ws12_consumer_tests;
 #[cfg(test)]
@@ -39,27 +34,15 @@ mod reminder_tests;
 #[cfg(test)]
 mod quote_integration_tests;
 #[cfg(test)]
-mod root_cache_tests;
-#[cfg(test)]
-mod panel_tests;
-#[cfg(test)]
-mod pin_poll_scaling_tests;
-#[cfg(test)]
 mod exceptional_input_tests;
 #[cfg(test)]
 mod slash_named_tests;
 #[cfg(test)]
 mod date_tests;
 #[cfg(test)]
-mod provider_tests;
-#[cfg(test)]
-mod composer_tests;
-#[cfg(test)]
 mod older_provider_tests;
 #[cfg(test)]
 mod bounded_provider_tests;
-#[cfg(test)]
-mod mapped_provider_tests;
 #[cfg(test)]
 mod older_owner_tests;
 #[cfg(test)]
@@ -78,9 +61,5 @@ mod comparison_support;
 mod final_state_sibling_tests;
 #[cfg(test)]
 mod calendar_retry_consumer_tests;
-#[cfg(test)]
-mod container_input_tests;
-#[cfg(test)]
-mod wide_html_tests;
 #[cfg(test)]
 mod periodic_delivery_tests;

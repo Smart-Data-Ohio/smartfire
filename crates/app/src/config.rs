@@ -18,10 +18,10 @@
 //! - Not applicable: `REDIS_URL` and `WEB_CONCURRENCY` (no Redis, one process), `PORT` (Puma's;
 //!   the app listens on Thruster's `TARGET_PORT`), and `SENTRY_DSN` and `SKIP_TELEMETRY` (the app
 //!   sends no telemetry).
-//! - `CAMPFIRE_FRAGMENT_CACHE_MB`: the fragment store's limit in megabytes (default 32). The
-//!   reference caches fragments in Redis (`redis_cache_store`) with no `maxmemory`; this store is
+//! - `CAMPFIRE_FRAGMENT_CACHE_MB`: the JSON value store's limit in megabytes (default 32). The
+//!   reference caches values in Redis (`redis_cache_store`) with no `maxmemory`; this store is
 //!   in the process, so it's bounded like Rails' `MemoryStore` (default `size` 32 MB), evicting the
-//!   least recently used fragments. See `campfire_views::fragment_cache`.
+//!   least recently used values. See `campfire_views::fragment_cache`.
 //! - `SPA_ENABLED`, `SPA_DEFAULT`: no longer read. The React SPA (`crates/spa`) under `/app` is
 //!   the only UI for signed-in people, whatever they say; the deploy workflow's `spa_mode` may
 //!   still write them.

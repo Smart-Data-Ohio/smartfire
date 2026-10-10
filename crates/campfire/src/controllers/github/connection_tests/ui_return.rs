@@ -47,16 +47,9 @@ async fn github_callback_returns_to_the_spa_integrations_whatever_was_chosen_in_
                 let (status, headers, _) =
                     request(&fresh, "GET", &path, Value::Null, session).await;
                 assert_eq!(status, 302, "{outcome}");
-                // A stored choice of the classic UI is ignored; only a classic page test (the SPA
-                // off) still lands on the classic profile.
-                let destination = if enabled {
-                    "/app/settings/integrations"
-                } else {
-                    "/users/me/profile"
-                };
                 assert_eq!(
                     headers["location"],
-                    format!("http://example.org{destination}"),
+                    "http://example.org/app/settings/integrations",
                     "{outcome}"
                 );
                 let session = response_session(&fresh, &headers);

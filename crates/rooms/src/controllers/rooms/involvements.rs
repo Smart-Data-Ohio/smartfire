@@ -1,32 +1,11 @@
 //! `Rooms::InvolvementsController` (reference/app/controllers/rooms/involvements_controller.rb).
 
-use askama::Template;
 use campfire_db::{Involvement, Membership, Room};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_views::rooms::{InvolvementShow, InvolvementView};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions};
-use crate::controllers::presenters::page::{self, db_error};
-use crate::controllers::presenters::room_kind;
-
-pub async fn show(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let (membership, room) = concerns::set_room(c).await?;
-    let involvement = InvolvementView {
-        room_id: room.id,
-        kind: room_kind(room.room_type),
-        involvement: membership.involvement.map(|i| i.name().to_string()).unwrap_or_default(),
-    };
-    page::content(c, StatusCode::OK, |ctx| {
-        InvolvementShow {
-            ctx,
-            involvement: &involvement,
-        }
-        .render()
-    })
-    .await
-}
+use crate::controllers::presenters::page::db_error;
 
 pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;

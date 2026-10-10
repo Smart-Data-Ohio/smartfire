@@ -129,7 +129,7 @@ async fn enrollment_confirms_spends_step_signs_out_others_and_shows_backup_codes
         ]))
         .await
         .location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/")
     );
     assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
     let (id, secret) = setup(&a).await;
@@ -202,7 +202,7 @@ async fn enrollment_requires_authentication_and_real_csrf() {
 async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
     use crate::controllers::users::people_tests::retained;
     use askama::Template;
-    use campfire_views::{helpers as h, two_factor};
+    use campfire_views::helpers as h;
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {
@@ -213,7 +213,6 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
         }
     }
     let a = app().await;
-    let account = a.db().read(campfire_db::Account::first).await.unwrap();
     let goldens: serde_json::Value =
         serde_json::from_str(include_str!("../../../../vectors/two_factor_views.json")).unwrap();
     let qr = crate::controllers::qr_code::two_factor_svg(goldens["uri"].as_str().unwrap()).unwrap();
@@ -223,9 +222,6 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
         "challenge",
         "backups",
         "backups_signed_out",
-        "profile",
-        "profile_devices",
-        "profile_disabled",
     ] {
         let actual = h::request_forgery::rendering_with(
             h::request_forgery::RequestSecrets {
@@ -233,10 +229,9 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
                 csp_nonce: Some("NONCE".into()),
             },
             || {
-                crate::controllers::presenters::page::render_detached_at(
-                    &a.booted.app,
-                    account.as_ref(),
-                    "http://campfire.test",
+                crate::controllers::users::people_tests::render_with(
+                    &a,
+                    |_| {},
                     |ctx| match name {
                         "setup" => {
                             let ctx = retained(ctx);
@@ -256,38 +251,6 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
                                 .render()
                                 .unwrap()
                         }
-                        "profile" | "profile_devices" | "profile_disabled" => two_factor::Profile {
-                            ctx,
-                            now: "2026-03-02T16:00:00Z".parse().unwrap(),
-                            data: two_factor::ProfileData {
-                                confirmed_at: (name != "profile_disabled").then(|| {
-                                    goldens["profile_data"]["confirmed_at"]
-                                        .as_str()
-                                        .unwrap()
-                                        .parse()
-                                        .unwrap()
-                                }),
-                                devices: if name == "profile_devices" {
-                                    vec![two_factor::Device {
-                                        id: 777,
-                                        user_agent: Some("TestBrowser <&>".into()),
-                                        ip_address: Some("1.2.3.4".into()),
-                                        last_used_at: Some(
-                                            goldens["profile_data"]["last_used_at"]
-                                                .as_str()
-                                                .unwrap()
-                                                .parse()
-                                                .unwrap(),
-                                        ),
-                                    }]
-                                } else {
-                                    vec![]
-                                },
-                                google: false,
-                            },
-                        }
-                        .render()
-                        .unwrap(),
                         _ => {
                             let ctx = retained(ctx);
                             campfire_retained::two_factor::BackupCodes {
