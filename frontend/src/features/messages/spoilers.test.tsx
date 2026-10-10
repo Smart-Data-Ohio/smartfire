@@ -150,6 +150,58 @@ describe("revealing", () => {
   });
 });
 
+describe("a URL inside a spoiler", () => {
+  /** `||https://example.com/alice-dies||` as the renderer writes it, and a titled link beside it. */
+  const html =
+    "<p>" +
+    spoiler(
+      '<a href="https://example.com/alice-dies" target="_blank" rel="nofollow noopener noreferrer">' +
+        "https://example.com/alice-dies</a> " +
+        '<a href="https://example.com/bob" title="Bob dies">clue</a>',
+    ) +
+    "</p>";
+
+  it("has no URL, tooltip, link role or tab stop until its spoiler is revealed", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<BodyHtml html={html} className="message-body" />);
+    const [url, clue] = container.querySelectorAll("a");
+
+    if (url === undefined || clue === undefined) {
+      throw new Error("expected both links");
+    }
+
+    expect(container.innerHTML).not.toMatch(/\s(href|title)=/);
+    expect(screen.queryByRole("link")).toBeNull();
+
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: SPOILER_LABEL }));
+    await user.tab();
+    expect(container.contains(document.activeElement)).toBe(false);
+
+    await user.keyboard("{Shift>}{Tab}{/Shift}{Enter}");
+
+    expect(url.getAttribute("href")).toBe("https://example.com/alice-dies");
+    expect(clue.getAttribute("href")).toBe("https://example.com/bob");
+    expect(clue.getAttribute("title")).toBe("Bob dies");
+    expect(screen.getByRole("link", { name: "https://example.com/alice-dies" })).toBe(url);
+    expect(url.tabIndex).toBe(0);
+    expect(url.closest("[inert]")).toBeNull();
+  });
+
+  it("keeps the links and names around a mention and an emoji hidden until revealed", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<BodyHtml html={MENTION_AND_EMOJI} className="message-body" />);
+
+    expect(container.innerHTML).not.toMatch(/\s(href|alt)=/);
+
+    await user.click(screen.getByRole("button", { name: SPOILER_LABEL }));
+
+    expect(container.querySelector('a[href="https://example.com"]')).not.toBeNull();
+    expect(container.querySelector('img[alt=":party:"]')).not.toBeNull();
+    expect(container.querySelector("[aria-hidden]")).toBeNull();
+  });
+});
+
 describe("a link around a spoiler", () => {
   /** `[see ||ending||](https://example.com/alice-dies "Alice dies")` as the renderer writes it. */
   const html =

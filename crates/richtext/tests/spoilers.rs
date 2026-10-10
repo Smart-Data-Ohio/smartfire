@@ -1,5 +1,6 @@
 //! Discord-style `||spoiler||` text: inline only, inert in code, redacted in plain-text previews.
-use campfire_richtext::markdown::{self, IconCatalog};
+use campfire_richtext::markdown::{self, Icon, IconCatalog, RoomMember};
+use std::collections::HashMap;
 use campfire_richtext::{AttachableResolver, Content, GidLookup, MentionUser, RenderContext, SignedLookup};
 
 struct NoRecords;
@@ -252,4 +253,95 @@ fn redacted_excerpts_come_from_the_render() {
             }
         }
     }
+}
+
+
+/// Every link, image and mention in `html`, and every text holding a word of `secrets`, sits
+/// inside a spoiler span, and no `||` marker or swallowed `%7C%7C` is left over.
+fn assert_covered(html: &str, secrets: &[&str]) {
+    assert!(!html.contains("||") && !html.contains("%7C"), "{html}");
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(html).unwrap();
+    let mut spoilers = 0;
+    for node in dom.descendants(root) {
+        let inside = dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+        spoilers += usize::from(dom.has_attr(node, "data-spoiler"));
+        let tagged = matches!(dom.local_name(node), Some("a" | "img")) || dom.has_attr(node, "data-user-id");
+        let secret = dom.text(node).is_some_and(|text| secrets.iter().any(|word| text.contains(word)));
+        assert!(inside || !(tagged || secret), "{html}");
+    }
+    assert!(spoilers > 0, "{html}");
+}
+
+#[test]
+fn a_url_inside_a_spoiler_is_covered() {
+    assert_eq!(
+        render("||https://example.com/alice-dies||"),
+        "<p><span class=\"spoiler\" data-spoiler=\"\"><a href=\"https://example.com/alice-dies\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://example.com/alice-dies</a></span></p>\n"
+    );
+    let cases = [
+        ("see ||https://example.com/alice-dies|| now", "see spoiler now"),
+        ("||https://example.com/alice-dies.||", "spoiler"),
+        ("||go to https://example.com/alice-dies||!", "spoiler!"),
+        ("||https://example.com/alice-dies|| and ||https://example.com/bob-dies||", "spoiler and spoiler"),
+        ("||see www.example.com/alice-dies||", "spoiler"),
+        ("||www.example.com/alice-dies||", "spoiler"),
+        ("||<https://example.com/alice-dies>||", "spoiler"),
+        ("||alice-dies@example.com||", "spoiler"),
+        ("> ||https://example.com/alice-dies||", "spoiler"),
+        ("- one\n- ||https://example.com/alice-dies||", "one\n\nspoiler"),
+        ("> - quoted ||https://example.com/alice-dies|| list", "quoted spoiler list"),
+        ("**bold** ||https://example.com/alice-dies||", "bold spoiler"),
+        ("é ||https://example.com/alice-dies||", "é spoiler"),
+    ];
+    for (source, excerpt) in cases {
+        assert_covered(&render(source), &["alice", "bob"]);
+        assert_eq!(markdown::redacted_excerpt(source), excerpt, "{source}");
+    }
+}
+
+#[test]
+fn a_bar_inside_a_url_with_no_spoiler_is_left_alone() {
+    // Only a `||` that closes a spoiler ends the URL. Everything else renders as before.
+    for source in ["https://example.com/a||b", "see https://example.com/a||", "`||https://example.com/a||`"] {
+        let html = render(source);
+        assert!(!html.contains("data-spoiler"), "{html}");
+    }
+    assert!(render("https://example.com/a||b").contains("href=\"https://example.com/a%7C%7Cb\""));
+    let mixed = render("https://example.com/a||b and ||https://example.com/alice-dies||");
+    assert!(mixed.contains("href=\"https://example.com/a%7C%7Cb\""), "{mixed}");
+    assert!(
+        mixed.contains("<span class=\"spoiler\" data-spoiler=\"\"><a href=\"https://example.com/alice-dies\""),
+        "{mixed}"
+    );
+}
+
+#[test]
+fn mentions_and_icons_inside_a_spoiler_are_covered() {
+    let members = [RoomMember { user: david(), active: true }];
+    let icons = IconCatalog {
+        brands: HashMap::new(),
+        custom: HashMap::from([("acme".into(), Icon::Custom { name: "acme".into(), title: "Custom".into(), url: "/icons/acme".into() })]),
+    };
+    for source in [
+        "||<@1> is the killer||",
+        "||@[David] is the killer||",
+        "||:acme: is the killer||",
+        "||<@1> https://example.com/killer||",
+    ] {
+        let html = markdown::render(source, &members.as_slice(), &icons).unwrap();
+        assert_covered(&html, &["David", "killer", "acme", "Custom"]);
+        let text = markdown::plain_text(&html, &david_ctx(), &icons).unwrap();
+        assert!(text.starts_with("spoiler"), "{source}: {text}");
+        assert!(!text.contains("killer") && !text.contains("David"), "{source}: {text}");
+    }
+}
+
+#[test]
+fn many_urls_inside_spoilers_render_quickly() {
+    let source = "||https://example.com/alice-dies|| https://example.com/a||b ".repeat(400);
+    let started = std::time::Instant::now();
+    let html = render(&source);
+    assert_eq!(html.matches("data-spoiler").count(), 400);
+    assert!(started.elapsed() < std::time::Duration::from_secs(5), "{:?}", started.elapsed());
 }

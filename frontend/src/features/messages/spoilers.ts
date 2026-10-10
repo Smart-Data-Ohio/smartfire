@@ -14,8 +14,12 @@ const COVERED = "[data-spoiler]:not([data-revealed]), .spoiler:not([data-reveale
  */
 const HIDING_LINK = "a[data-spoiler-link]";
 
-/** Attributes that name an element or show a tooltip, stashed on the element until it is revealed. */
+/**
+ * Attributes that lead somewhere, name an element or show a tooltip, stashed on the element until
+ * it is revealed. With no `href`, a link can't be focused, followed, or opened in a new tab.
+ */
 const CONCEALED = [
+  ["href", "data-spoiler-href"],
   ["title", "data-spoiler-title"],
   ["aria-label", "data-spoiler-label"],
   ["aria-labelledby", "data-spoiler-labelledby"],
@@ -136,11 +140,6 @@ function concealLink(link: HTMLAnchorElement): void {
 
   link.setAttribute("data-spoiler-link", "");
 
-  if (link.hasAttribute("href")) {
-    link.setAttribute("data-spoiler-href", link.getAttribute("href") ?? "");
-    link.removeAttribute("href");
-  }
-
   for (const [name, stash] of CONCEALED) {
     if (link.hasAttribute(name)) {
       link.setAttribute(stash, link.getAttribute(name) ?? "");
@@ -157,14 +156,12 @@ function revealLink(link: Element): void {
 
   restore(link);
   link.removeAttribute("data-spoiler-link");
-
-  if (link.hasAttribute("data-spoiler-href")) {
-    link.setAttribute("href", link.getAttribute("data-spoiler-href") ?? "");
-    link.removeAttribute("data-spoiler-href");
-  }
 }
 
-/** While covered, descendants are not in the tab order or the accessibility tree, and have no tooltip. */
+/**
+ * While covered, descendants are not in the tab order or the accessibility tree, and have no URL
+ * or tooltip: a link inside (`||https://…||`, a mention chip) is no link until it is revealed.
+ */
 function conceal(spoiler: HTMLElement): void {
   for (const node of spoiler.querySelectorAll<HTMLElement>("*")) {
     node.inert = true;

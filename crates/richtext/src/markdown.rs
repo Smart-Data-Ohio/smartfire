@@ -1,9 +1,11 @@
 //! `app/models/message/markdown.rb`. Rendering is DB-free: callers supply room members,
 //! signed user attachment IDs, and the current icon catalog (including digested asset URLs).
-use std::collections::HashMap;
+use std::borrow::Cow;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::LazyLock;
 
 use comrak::Options;
+use comrak::nodes::{AstNode, NodeValue};
 use regex::Regex;
 
 use crate::attachables::{self, Attachable, MENTION_CONTENT_TYPE, MentionUser, RenderContext};
@@ -157,6 +159,7 @@ pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconReso
     options.render.r#unsafe = false;
     options.render.hardbreaks = false;
     options.render.github_pre_lang = false;
+    let protected = end_autolinks_at_spoilers(&protected, &options);
     let html = comrak::markdown_to_html(&protected, &options);
     let safe = sanitizer::sanitize(&html, &markdown_allowlist()).map_err(Error::Parse)?;
     let mut dom = Dom::new();
@@ -167,6 +170,111 @@ pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconReso
     }
     expand_shortcodes(&mut dom, root, icons);
     Ok(dom.to_html(root))
+}
+
+/// What ends a bare URL before a `||` (`AUTOLINK_BREAK`): comrak's autolinks stop at `<`, and
+/// raw HTML renders as nothing here (`unsafe` is off and the sanitizer drops the comment).
+const AUTOLINK_BREAK: &str = "<!-- -->";
+
+/// GFM autolinks run to the next space, so `||https://example.com/x||` makes the closing `||`
+/// part of the URL and the spoiler never closes: the URL would show, and unfurl. Each bare URL
+/// (or `www.` link) holding a `||` is ended just before that `||`, and the break is kept only if
+/// the parser then puts the link inside a spoiler. A URL whose `||` closes no spoiler
+/// (`https://example.com/a||b`) renders as before. Positions come from the parser's own source
+/// positions, so code spans and link destinations are never touched. Every candidate is tried at
+/// once and the ones that make no spoiler are dropped, so a message takes a few parses, not one
+/// per URL.
+fn end_autolinks_at_spoilers<'s>(source: &'s str, options: &Options) -> Cow<'s, str> {
+    if !source.contains("||") || !(source.contains("://") || source.contains("www.")) {
+        return source.into();
+    }
+    // Break offsets in `source` (just before a `||`), each with the start of the URL it ends.
+    let mut breaks = BTreeMap::<usize, usize>::new();
+    let mut rejected = BTreeSet::<usize>::new();
+    for _ in 0..8 {
+        let attempt = with_breaks(source, &breaks);
+        let arena = comrak::Arena::new();
+        let root = comrak::parse_document(&arena, &attempt, options);
+        let lines = line_starts(&attempt);
+        let mut spoilered = BTreeSet::new();
+        let mut candidates = Vec::new();
+        for node in root.descendants() {
+            let Some((at, text)) = autolink_at(node, &attempt, &lines) else {
+                continue;
+            };
+            // A link's text never holds a break: the `<` in it ends the URL.
+            let start = source_offset(at, &breaks);
+            if node.ancestors().any(|ancestor| matches!(ancestor.data().value, NodeValue::SpoileredText)) {
+                spoilered.insert(start);
+            }
+            if let Some(bar) = text.find("||") {
+                candidates.push((start + bar, start));
+            }
+        }
+        let mut changed = false;
+        breaks.retain(|_, start| {
+            let keep = spoilered.contains(start);
+            if !keep {
+                rejected.insert(*start);
+                changed = true;
+            }
+            keep
+        });
+        for (bar, start) in candidates {
+            if !rejected.contains(&start) && breaks.insert(bar, start).is_none() {
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    if breaks.is_empty() { source.into() } else { with_breaks(source, &breaks).into() }
+}
+
+/// `source` with `AUTOLINK_BREAK` inserted at each break offset.
+fn with_breaks(source: &str, breaks: &BTreeMap<usize, usize>) -> String {
+    let mut out = String::with_capacity(source.len() + breaks.len() * AUTOLINK_BREAK.len());
+    let mut cursor = 0;
+    for &at in breaks.keys() {
+        out.push_str(&source[cursor..at]);
+        out.push_str(AUTOLINK_BREAK);
+        cursor = at;
+    }
+    out.push_str(&source[cursor..]);
+    out
+}
+
+/// An offset in `with_breaks(source, breaks)`, outside any break, mapped back to `source`.
+fn source_offset(at: usize, breaks: &BTreeMap<usize, usize>) -> usize {
+    let before = breaks.keys().enumerate().take_while(|&(index, &position)| position + index * AUTOLINK_BREAK.len() < at).count();
+    at - before * AUTOLINK_BREAK.len()
+}
+
+/// A link the autolink extension made: its label is its own source text (`https://…`, or
+/// `www.…` for `http://www.…`), found at its source position. Returns that byte offset and text.
+fn autolink_at<'n>(node: &'n AstNode<'n>, source: &str, lines: &[usize]) -> Option<(usize, String)> {
+    let data = node.data();
+    let NodeValue::Link(link) = &data.value else {
+        return None;
+    };
+    let child = node.first_child()?;
+    if child.next_sibling().is_some() {
+        return None;
+    }
+    let NodeValue::Text(text) = &child.data().value else {
+        return None;
+    };
+    if link.url != text.as_ref() && link.url.strip_prefix("http://") != Some(text.as_ref()) {
+        return None;
+    }
+    let position = data.sourcepos.start;
+    let start = lines.get(position.line.checked_sub(1)?)? + position.column.checked_sub(1)?;
+    source.get(start..)?.starts_with(text.as_ref()).then(|| (start, text.to_string()))
+}
+
+fn line_starts(source: &str) -> Vec<usize> {
+    std::iter::once(0).chain(source.match_indices('\n').map(|(at, _)| at + 1)).collect()
 }
 
 pub fn mention_token(name: &str) -> Option<String> {

@@ -251,6 +251,16 @@ mod tests {
     }
 
     #[test]
+    fn a_bare_url_inside_a_spoiler_is_not_a_quote() {
+        let source = "||https://example.com/rooms/1/@99|| https://example.com/rooms/1/@10";
+        let icons = campfire_richtext::markdown::IconCatalog::default();
+        let html = campfire_richtext::markdown::render(source, &(|_: &str| None), &icons).unwrap();
+        let text = non_code_text(&html).unwrap();
+        assert!(!text.contains("@99"), "{html}");
+        assert_eq!(extract_message_ids(&text), vec![10]);
+    }
+
+    #[test]
     fn a_link_whose_label_holds_a_spoiler_is_not_a_quote() {
         let html = r#"<p><a href="/rooms/1/@10">open</a> <a href="/rooms/1/@99" title="Alice dies">see <span class="spoiler" data-spoiler="">ending</span></a></p>"#;
         let text = non_code_text(html).unwrap();
