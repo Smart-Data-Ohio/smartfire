@@ -107,7 +107,7 @@ async fn show_me(c: &mut Ctx) -> Result {
     let me = c
         .app()
         .db
-        .read(move |conn| dto::me(conn, &secrets, &viewer, last_room_id, now))
+        .read_snapshot(move |conn| dto::me(conn, &secrets, &viewer, last_room_id, now))
         .await
         .map_err(db_error)?;
     c.json(StatusCode::OK, &me)

@@ -108,6 +108,7 @@ fn me_round_trips() {
         user: user(),
         email_address: Some("ada@example.com".into()),
         preferences: Preferences {
+            settings_revision: 3,
             theme: Theme::System,
             text_size: TextSize::Default,
             time_zone: Some("America/New_York".into()),
@@ -141,6 +142,7 @@ fn me_round_trips() {
     assert_eq!(
         wire["preferences"],
         json!({
+            "settingsRevision": 3,
             "theme": "system",
             "textSize": "default",
             "timeZone": "America/New_York",

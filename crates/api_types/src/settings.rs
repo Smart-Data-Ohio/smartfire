@@ -204,6 +204,7 @@ pub struct UpdateAppearance {
     pub text_size: Option<TextSize>,
     /// `""` is "Not set (use system)".
     pub time_zone: Option<String>,
+    /// Changed fields only; omitted keys stay stored and explicit nulls clear individual keys.
     pub appearance_preferences: Option<AppearancePreferences>,
 }
 

@@ -7,7 +7,11 @@ import type { VoiceMode } from "./VoiceMode";
 /**
  * Appearance and huddle settings, already normalized the way the layouts read them.
  */
-export type Preferences = { theme: Theme, textSize: TextSize,
+export type Preferences = {
+/**
+ * The persisted per-user activity counter, shared with settings responses and live events.
+ */
+settingsRevision: number, theme: Theme, textSize: TextSize,
 /**
  * An IANA or Rails zone name; `null` when unset.
  */

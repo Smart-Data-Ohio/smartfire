@@ -57,10 +57,8 @@ pub fn appearance(conn: &rusqlite::Connection, user: i64) -> Result<Appearance> 
 /// Run inside the same writer transaction as core profile, security and attachment changes.
 /// Validation also examines unchanged settings, as User#save does in Rails.
 pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
-    let appearance = changes.appearance_preferences.map(|value| -> Result<String> {
-        validate_appearance(&value)?;
-        Ok(serde_json::to_string(&value).expect("JSON appearance"))
-    }).transpose()?;
+    let appearance = changes.appearance_preferences
+        .map(|patch| merge_appearance(tx, user, patch)).transpose()?;
     let mut attrs = Map::new();
     for (key, value) in [
         ("theme", changes.theme),
@@ -147,6 +145,25 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
     Ok(())
 }
 
+fn merge_appearance(tx: &Tx<'_>, user: i64, patch: Value) -> Result<String> {
+    let patch = patch.as_object()
+        .ok_or_else(|| appearance_error("must be a JSON object".into()))?;
+    let previous = appearance(tx.conn(), user)?.appearance_preferences
+        .unwrap_or_else(|| serde_json::json!({"version":1}));
+    let preserved = previous.as_object().cloned().unwrap_or_default();
+    let mut merged = preserved.clone();
+    for (key, value) in patch {
+        if value.is_null() && key != "version" {
+            merged.remove(key);
+        } else {
+            merged.insert(key.clone(), value.clone());
+        }
+    }
+    let merged = Value::Object(merged);
+    validate_appearance_preserving(&merged, &preserved)?;
+    Ok(serde_json::to_string(&merged).expect("JSON appearance"))
+}
+
 /// Settings and notification counts share the persisted activity counter. Keep ordering
 /// metadata out of the legacy preferences JSON; request bodies cannot assign the counter.
 pub fn bump_revision(tx: &Tx<'_>, user: i64) -> Result<()> {
@@ -224,11 +241,17 @@ pub const APPEARANCE_TOKENS: &[&str] = &[
 
 /// Opaque future versions round-trip; this build validates every v1 key before writing.
 pub fn validate_appearance(value: &Value) -> Result<()> {
-    let reject = |message: String| {
-        let mut errors = crate::Errors::default();
-        errors.add("appearance_preferences", message);
-        crate::Error::RecordInvalid(errors)
-    };
+    validate_appearance_preserving(value, &Map::new())
+}
+
+fn appearance_error(message: String) -> crate::Error {
+    let mut errors = crate::Errors::default();
+    errors.add("appearance_preferences", message);
+    crate::Error::RecordInvalid(errors)
+}
+
+fn validate_appearance_preserving(value: &Value, preserved: &Map<String, Value>) -> Result<()> {
+    let reject = appearance_error;
     if value.to_string().len() > 8192 {
         return Err(reject("must be at most 8192 bytes".into()));
     }
@@ -256,6 +279,7 @@ pub fn validate_appearance(value: &Value) -> Result<()> {
                 }
                 continue;
             }
+            _ if preserved.get(key) == Some(value) => continue,
             _ => return Err(reject(format!("key {key} is not allowed in version 1"))),
         };
         if !value.as_str().is_some_and(|value| options.contains(&value)) {
@@ -302,15 +326,59 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn appearance_round_trips_v1_and_opaque_versions_without_changing_legacy_columns() {
+    fn appearance_partial_updates_keep_other_fields_and_clear_explicit_nulls() {
         let t = TestDb::new();
         let user = id("david");
-        assert!(t.read(move |conn| appearance(conn, user)).appearance_preferences.is_none());
-        let before = t.read(move |conn| appearance(conn, user));
+        for preferences in [json!({"version":1,"palette":"ocean"}), json!({"version":1,"font":"mono"})] {
+            t.write(move |tx| update(tx, user, Changes { appearance_preferences: Some(preferences), ..Default::default() }));
+        }
+        assert_eq!(t.read(move |conn| appearance(conn, user)).appearance_preferences, Some(json!({"version":1,"palette":"ocean","font":"mono"})));
+        t.write(move |tx| update(tx, user, Changes { appearance_preferences: Some(json!({"palette":null})), ..Default::default() }));
+        assert_eq!(t.read(move |conn| appearance(conn, user)).appearance_preferences, Some(json!({"version":1,"font":"mono"})));
+    }
+
+    #[test]
+    fn appearance_partial_updates_preserve_unknown_and_future_fields() {
+        let t = TestDb::new();
+        let user = id("david");
+        for version in [1, 42] {
+            t.write(move |tx| {
+                tx.conn().execute("UPDATE users SET appearance_preferences=? WHERE id=?", rusqlite::params![json!({"version":version,"future":{"keep":[1,2,3]},"palette":"ocean"}).to_string(), user])?;
+                update(tx, user, Changes { appearance_preferences: Some(json!({"font":"mono"})), ..Default::default() })
+            });
+            assert_eq!(t.read(move |conn| appearance(conn, user)).appearance_preferences, Some(json!({"version":version,"future":{"keep":[1,2,3]},"palette":"ocean","font":"mono"})));
+        }
+    }
+
+    #[test]
+    fn appearance_partial_updates_validate_the_merged_size_and_roll_back() {
+        let t = TestDb::new();
+        let user = id("david");
+        let before = json!({"version":42,"future":"x".repeat(8150)});
+        let stored = before.clone();
+        t.write(move |tx| update(tx, user, Changes { appearance_preferences: Some(stored), ..Default::default() }));
+        let result = t.try_write(move |tx| update(tx, user, Changes {
+            theme: Some("dark".into()),
+            appearance_preferences: Some(json!({"another":"y".repeat(100)})),
+            ..Default::default()
+        }));
+        let Err(crate::Error::RecordInvalid(errors)) = result else { panic!("merged size must be rejected") };
+        assert!(format!("{errors:?}").contains("8192"));
+        let after = t.read(move |conn| appearance(conn, user));
+        assert_eq!(after.appearance_preferences, Some(before));
+        assert_eq!(after.theme, "system");
+    }
+
+    #[test]
+    fn appearance_round_trips_v1_and_opaque_versions_without_changing_legacy_columns() {
+        let user = id("david");
         for preferences in [
             json!({"version":1,"palette":"rose","font":"mono","density":"compact","motion":"reduce","tokens":{"--accent":"#abcd","--text":"rgba(10, 20, 30, 0.5)"}}),
             json!({"version":42,"future":{"nested":[true,null,"keep"]}}),
         ] {
+            let t = TestDb::new();
+            assert!(t.read(move |conn| appearance(conn, user)).appearance_preferences.is_none());
+            let before = t.read(move |conn| appearance(conn, user));
             let expected = preferences.clone();
             t.write(move |tx| update(tx, user, Changes { appearance_preferences: Some(preferences), ..Default::default() }));
             let after = t.read(move |conn| appearance(conn, user));

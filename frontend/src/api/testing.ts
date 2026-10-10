@@ -88,6 +88,7 @@ export const meFixture: Me = {
   user: userFixture(7, "Ada Lovelace"),
   emailAddress: "ada@example.com",
   preferences: {
+    settingsRevision: 0,
     theme: "system",
     textSize: "default",
     timeZone: "America/New_York",

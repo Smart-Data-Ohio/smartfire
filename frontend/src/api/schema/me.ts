@@ -31,6 +31,7 @@ export const PresenceSetting = Schema.Literals(["auto", "dnd", "invisible"]);
 export type PresenceSettingPin = Assert<Pinned<typeof PresenceSetting, GeneratedPresenceSetting>>;
 
 export const Preferences = Schema.Struct({
+  settingsRevision: Schema.Int,
   theme: Theme,
   textSize: TextSize,
   timeZone: Schema.NullOr(Schema.String),

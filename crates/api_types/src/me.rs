@@ -41,6 +41,8 @@ pub struct ChatSounds {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Preferences {
+    /// The persisted per-user activity counter, shared with settings responses and live events.
+    pub settings_revision: i64,
     pub theme: Theme,
     pub text_size: TextSize,
     /// An IANA or Rails zone name; `null` when unset.

@@ -21,7 +21,7 @@ test("a personal palette saves to the account, syncs to another page and survive
   const response = await saved;
   expect(response.ok()).toBe(true);
   expect(response.request().postDataJSON()).toMatchObject({
-    appearancePreferences: { version: 1, palette: "ocean" },
+    appearancePreferences: { palette: "ocean" },
   });
   await expect(other.locator("html")).toHaveAttribute("data-palette", "ocean");
   await page.evaluate(() => localStorage.removeItem("smartfire.appearance"));
@@ -34,7 +34,7 @@ test("a personal palette saves to the account, syncs to another page and survive
     .getByRole("radio", { name: "Ember" })
     .check();
   await expect(page.locator("html")).toHaveAttribute("data-palette", "ember");
-  await expect(other.locator("html")).toHaveAttribute("data-palette", "ocean");
+  await expect(other.locator("html")).toHaveAttribute("data-palette", "ember");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-palette", "ember");
   await page.getByLabel("Personal appearance on this device").selectOption("account");

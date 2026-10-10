@@ -54,6 +54,13 @@ import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
 export { compareMessages };
 
 export function setMe(state: State, me: Me): State {
+  if (
+    state.me?.user.id === me.user.id &&
+    state.me.preferences.settingsRevision > me.preferences.settingsRevision
+  ) {
+    return state;
+  }
+
   return { ...state, me, users: mergeUserList(state.users, [me.user]) };
 }
 

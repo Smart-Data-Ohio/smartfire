@@ -1270,6 +1270,7 @@ pub fn me(
         ),
         email_address: viewer.email_address.clone(),
         preferences: api::Preferences {
+            settings_revision: settings.notification_preferences.settings_revision,
             theme: match settings.theme.as_str() {
                 "light" => api::Theme::Light,
                 "dark" => api::Theme::Dark,

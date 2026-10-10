@@ -199,19 +199,7 @@ function writePalette(palette: PalettePreset): void {
   }
 }
 
-function store(appearance: Appearance): void {
-  const { themeOverride } = appearance;
-
-  try {
-    // The palette by name only: index.html carries every palette's tokens. Whatever else an
-    // earlier version stored (a palette's tokens, an account's theme) goes with this write.
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ themeOverride, ...overrides }));
-  } catch {
-    // Storage can be unavailable (private windows, quota); the choice still applies to this tab.
-  }
-}
-
-/** Shows `next` (the theme on screen recomputed), remembers it, and tells the hooks. */
+/** Shows `next` (the theme on screen recomputed) and tells the hooks. */
 function commit(next: Omit<Appearance, "theme">): void {
   const account = personalAppearance(accountPreferences);
   current = {
@@ -224,7 +212,6 @@ function commit(next: Omit<Appearance, "theme">): void {
     personalOverride: Object.keys(overrides).length > 0,
   };
   writeAttributes(current);
-  store(current);
 
   for (const listener of listeners) {
     listener();
@@ -267,6 +254,58 @@ function readStored(): Map<string, string> {
   }
 }
 
+function applyDeviceOverrides(saved: Map<string, string>): void {
+  overrides = {};
+  const palette = pick(PALETTE_VALUES, saved.get("palette"));
+  const font = pick(FONTS, saved.get("font"));
+  const density = pick(DENSITIES, saved.get("density"));
+  const motion = pick(MOTIONS, saved.get("motion"));
+
+  if (palette !== null) overrides = { ...overrides, palette };
+
+  if (font !== null) overrides = { ...overrides, font };
+
+  if (density !== null) overrides = { ...overrides, density };
+
+  if (motion !== null) overrides = { ...overrides, motion };
+
+  commit({ ...current, themeOverride: pick(THEMES, saved.get("themeOverride")) });
+}
+
+type DeviceChange = {
+  readonly themeOverride?: ThemePreference | null;
+  readonly palette?: PalettePreset | null;
+  readonly font?: FontPreset | null;
+  readonly density?: DensityPreference | null;
+  readonly motion?: MotionPreference | null;
+};
+
+function changeDeviceOverrides(change: DeviceChange): void {
+  const saved = readStored();
+
+  for (const [key, value] of Object.entries(change)) {
+    if (value === null) saved.delete(key);
+    else saved.set(key, value);
+  }
+
+  applyDeviceOverrides(saved);
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ themeOverride: current.themeOverride, ...overrides }),
+    );
+  } catch {
+    // Storage can be unavailable (private windows, quota); the choice still applies to this tab.
+  }
+}
+
+window.addEventListener("storage", (event) => {
+  if (event.storageArea === localStorage && (event.key === STORAGE_KEY || event.key === null)) {
+    applyDeviceOverrides(readStored());
+  }
+});
+
 /** The account's theme and size in the shell's inline boot JSON, when it has one. */
 function readInlineBoot(): Partial<AccountAppearance> {
   const text = document.getElementById("boot")?.textContent;
@@ -288,26 +327,12 @@ export function restoreAppearance(): void {
   const saved = readStored();
   const boot = readInlineBoot();
   accountPreferences = boot.appearancePreferences ?? null;
-  overrides = {};
-  const palette = pick(PALETTE_VALUES, saved.get("palette"));
-  const font = pick(FONTS, saved.get("font"));
-  const density = pick(DENSITIES, saved.get("density"));
-  const motion = pick(MOTIONS, saved.get("motion"));
-
-  if (palette !== null) overrides = { ...overrides, palette };
-
-  if (font !== null) overrides = { ...overrides, font };
-
-  if (density !== null) overrides = { ...overrides, density };
-
-  if (motion !== null) overrides = { ...overrides, motion };
-
-  commit({
+  current = {
     ...DEFAULTS,
-    themeOverride: pick(THEMES, saved.get("themeOverride")),
     accountTheme: boot.theme ?? "system",
     textSize: boot.textSize ?? "default",
-  });
+  };
+  applyDeviceOverrides(saved);
 }
 
 /**
@@ -337,15 +362,16 @@ export function showAccountPreferences(preferences: AppearancePreferences | null
 }
 
 export function setPersonalAppearanceOverride(enabled: boolean): void {
-  overrides = enabled
+  const change = enabled
     ? {
         palette: current.palette,
         font: current.font,
         density: current.density,
         motion: current.motion,
       }
-    : {};
-  transition(() => commit(current));
+    : { palette: null, font: null, density: null, motion: null };
+
+  transition(() => changeDeviceOverrides(change));
 }
 
 /** A theme the person just chose for their account: shown at once, cross-fading. */
@@ -360,28 +386,24 @@ export function showTextSize(textSize: TextSize): void {
 
 /** Pins `theme` on this device over the account's, or (`null`) follows the account again. */
 export function setThemeOverride(theme: ThemePreference | null): void {
-  transition(() => commit({ ...current, themeOverride: theme }));
+  transition(() => changeDeviceOverrides({ themeOverride: theme }));
 }
 
 export function setDensity(density: DensityPreference): void {
-  overrides = { ...overrides, density };
-  commit({ ...current, density });
+  changeDeviceOverrides({ density });
 }
 
 export function setMotion(motion: MotionPreference): void {
-  overrides = { ...overrides, motion };
-  commit({ ...current, motion });
+  changeDeviceOverrides({ motion });
 }
 
 /** Paints this device in `palette`, cross-fading like a theme change. */
 export function setPalette(palette: PalettePreset): void {
-  overrides = { ...overrides, palette };
-  transition(() => commit({ ...current, palette }));
+  transition(() => changeDeviceOverrides({ palette }));
 }
 
 export function setFont(font: FontPreset): void {
-  overrides = { ...overrides, font };
-  commit({ ...current, font });
+  changeDeviceOverrides({ font });
 }
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";

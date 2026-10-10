@@ -10,4 +10,8 @@ export type UpdateAppearance = { theme: Theme | null, textSize: TextSize | null,
 /**
  * `""` is "Not set (use system)".
  */
-timeZone: string | null, appearancePreferences: AppearancePreferences | null, };
+timeZone: string | null,
+/**
+ * Changed fields only; omitted keys stay stored and explicit nulls clear individual keys.
+ */
+appearancePreferences: AppearancePreferences | null, };

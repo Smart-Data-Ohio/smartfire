@@ -38,6 +38,18 @@ const HOUR_MS = 60 * MINUTE_MS;
 
 const DAY_MS = 24 * HOUR_MS;
 
+function mergeAppearance(previous: Json, patch: Json | undefined): Json {
+  if (!isRecord(patch)) return previous;
+  const next = { ...(isRecord(previous) ? previous : { version: 1 }) };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null && key !== "version") delete next[key];
+    else next[key] = value;
+  }
+
+  return next;
+}
+
 /** The viewer's password in the mock, for the email change check. */
 export const MOCK_PASSWORD = "secret123456";
 
@@ -211,6 +223,7 @@ function initialState(world: World, now: number): State {
 /** The settings module. */
 export interface SettingsModule {
   readonly routes: readonly Route[];
+  readonly revision: () => number;
   /** The viewer's saved theme and text size, which boot and `/me` carry. */
   readonly appearance: () => {
     readonly theme: Theme;
@@ -381,8 +394,10 @@ export function createSettings(
           theme: themes.find((value) => value === theme) ?? held.appearance.theme,
           textSize: sizes.find((value) => value === textSize) ?? held.appearance.textSize,
           timeZone: changedTo(zone, held.appearance.timeZone),
-          appearancePreferences:
-            given(body, "appearancePreferences") ?? held.appearance.appearancePreferences,
+          appearancePreferences: mergeAppearance(
+            held.appearance.appearancePreferences,
+            given(body, "appearancePreferences"),
+          ),
         },
       };
     });
@@ -795,6 +810,7 @@ export function createSettings(
 
       return page();
     },
+    revision: () => current().settings.revision,
     appearance: () => {
       const { theme, textSize, appearancePreferences } = current().settings.appearance;
 

@@ -288,7 +288,9 @@ let personalSave: Promise<void> = Promise.resolve();
 
 /** Serializes partial choices so rapid saves retain the other fields and custom tokens. */
 export function saveAccountPersonalAppearance(
-  change: Partial<Omit<PersonalAppearance, "version">>,
+  change: {
+    readonly [Key in keyof Omit<PersonalAppearance, "version">]?: PersonalAppearance[Key] | null;
+  },
 ): Promise<void> {
   const save = personalSave.then(async () => {
     const before = accountPreferencesSnapshot();
@@ -296,14 +298,18 @@ export function saveAccountPersonalAppearance(
 
     if (before !== null && known === null)
       throw new Error("This appearance version needs a newer Smartfire client.");
-    const preferences: PersonalAppearance = { ...known, version: 1, ...change };
+    const fields = { ...known, version: 1, ...change };
+
+    const preferences = Object.fromEntries(
+      Object.entries(fields).filter(([, value]) => value !== null && value !== undefined),
+    );
+
     showAccountPreferences(preferences);
 
     try {
-      const next = await settings.updateAppearance({ appearancePreferences: { ...preferences } });
-      showAccountPreferences(next.appearance.appearancePreferences);
+      await settings.updateAppearance({ appearancePreferences: { ...change } });
     } catch (error) {
-      showAccountPreferences(before);
+      if (accountPreferencesSnapshot() === preferences) showAccountPreferences(before);
       throw error;
     }
   });

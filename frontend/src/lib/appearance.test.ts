@@ -200,7 +200,73 @@ describe("restoreAppearance", () => {
 });
 
 describe("applyAccountAppearance", () => {
-  it("shows the account's theme and size, and remembers them for the next start", async () => {
+  it("keeps tab A's Ember pin after tab B's account save finishes and A reloads", async () => {
+    const a = await load();
+    const b = await load();
+    a.restoreAppearance();
+    b.restoreAppearance();
+    a.setPalette("ember");
+    b.applyAccountAppearance({
+      theme: "dark",
+      textSize: "default",
+      appearancePreferences: { version: 1, palette: "ocean" },
+    });
+    const reloaded = await load();
+    reloaded.restoreAppearance();
+    expect(reloaded.appearanceSnapshot().palette).toBe("ember");
+  });
+
+  it("changes only the requested override after reading another tab's choices", async () => {
+    const a = await load();
+    const b = await load();
+    a.restoreAppearance();
+    b.restoreAppearance();
+    a.setPalette("ember");
+    a.setThemeOverride("light");
+    b.setFont("mono");
+    expect(stored()).toMatchObject({ palette: "ember", themeOverride: "light", font: "mono" });
+    a.setMotion("reduce");
+    expect(stored()).toMatchObject({
+      palette: "ember",
+      themeOverride: "light",
+      font: "mono",
+      motion: "reduce",
+    });
+  });
+
+  it("applies other tabs' storage changes and clears without writing back", async () => {
+    const b = await load();
+    b.restoreAppearance();
+    b.applyAccountAppearance({
+      theme: "dark",
+      textSize: "default",
+      appearancePreferences: { version: 1, palette: "ocean" },
+    });
+    const writes = vi.spyOn(Storage.prototype, "setItem");
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ palette: "ember", font: "mono", themeOverride: "light" }),
+    );
+    writes.mockClear();
+    window.dispatchEvent(new StorageEvent("storage", { key: KEY, storageArea: localStorage }));
+    expect(b.appearanceSnapshot()).toMatchObject({
+      palette: "ember",
+      font: "mono",
+      theme: "light",
+    });
+    expect(writes).not.toHaveBeenCalled();
+    localStorage.clear();
+    window.dispatchEvent(new StorageEvent("storage", { key: null, storageArea: localStorage }));
+    expect(b.appearanceSnapshot()).toMatchObject({
+      palette: "ocean",
+      font: "inter",
+      theme: "dark",
+    });
+    expect(writes).not.toHaveBeenCalled();
+    writes.mockRestore();
+  });
+
+  it("shows the account's theme and size without writing device storage", async () => {
     const { applyAccountAppearance } = await load();
 
     applyAccountAppearance({ theme: "dark", textSize: "smaller" });
@@ -209,9 +275,7 @@ describe("applyAccountAppearance", () => {
     expect(html().dataset.textSize).toBe("smaller");
     // Only this device's own choices are stored: the classic pages read the pin, and the next
     // person to sign in on this browser must not inherit this account's theme.
-    expect(stored()).toEqual({
-      themeOverride: null,
-    });
+    expect(localStorage.getItem(KEY)).toBeNull();
   });
 
   it("leaves a device's pinned theme on screen", async () => {

@@ -82,12 +82,12 @@ const APPEARANCE: &[&str] = &["theme", "textSize", "timeZone"];
 
 #[tokio::test]
 async fn personal_appearance_round_trips_through_settings_boot_and_me() {
-    let Some(a) = app().await else { return };
-    let mut b = a.sign_in(DAVID).await;
     for preferences in [
         json!({"version":1,"palette":"ocean","font":"serif","density":"compact","motion":"reduce","tokens":{"--accent":"#123abc","--bg-app":"rgb(10, 20, 30)"}}),
         json!({"version":7,"future":{"keep":[1,2,3]},"palette":"future"}),
     ] {
+        let Some(a) = app().await else { panic!("restored default seed required") };
+        let mut b = a.sign_in(DAVID).await;
         let reply = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":preferences})).await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
         let settings: Value = parse(&reply);
@@ -107,7 +107,7 @@ async fn personal_appearance_rejects_invalid_inputs_without_changing_the_account
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;
     for preferences in [
-        json!([]), json!({"palette":"ocean"}), json!({"version":0}),
+        json!([]), json!({"version":0}), json!({"version":null}),
         json!({"version":1,"palette":"unknown"}), json!({"version":1,"font":"unknown"}),
         json!({"version":1,"density":"tiny"}), json!({"version":1,"motion":true}),
         json!({"version":1,"other":1}), json!({"version":1,"tokens":{"--font-sans":"#123456"}}),
@@ -122,6 +122,28 @@ async fn personal_appearance_rejects_invalid_inputs_without_changing_the_account
         assert_eq!(me["preferences"]["theme"], "system");
         assert!(me["preferences"]["appearancePreferences"].is_null());
     }
+}
+
+#[tokio::test]
+async fn personal_appearance_partial_writes_merge_and_share_the_me_revision() {
+    let Some(a) = app().await else { panic!("restored default seed required") };
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    let palette = write(&mut first, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":{"palette":"ocean"}})).await;
+    assert_eq!(palette.status, StatusCode::OK, "{}", palette.text());
+    let palette: api::Settings = parse(&palette);
+    let font = write(&mut second, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":{"font":"mono"}})).await;
+    assert_eq!(font.status, StatusCode::OK, "{}", font.text());
+    let font: api::Settings = parse(&font);
+    assert!(font.revision > palette.revision);
+    assert_eq!(font.appearance.appearance_preferences.unwrap().0, json!({"version":1,"palette":"ocean","font":"mono"}));
+    let me: api::Me = parse(&first.send(get("/api/v1/me")).await);
+    assert_eq!(me.preferences.settings_revision, font.revision);
+    assert_eq!(me.preferences.appearance_preferences.unwrap().0, json!({"version":1,"palette":"ocean","font":"mono"}));
+    let cleared = write(&mut first, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":{"palette":null}})).await;
+    assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+    let cleared: api::Settings = parse(&cleared);
+    assert_eq!(cleared.appearance.appearance_preferences.unwrap().0, json!({"version":1,"font":"mono"}));
 }
 
 #[tokio::test]

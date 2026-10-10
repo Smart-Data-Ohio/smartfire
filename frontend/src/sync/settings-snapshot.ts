@@ -14,11 +14,15 @@ export function applySettingsSnapshot(next: Settings): Settings {
     latestSettings = next;
     const held = store.getState().me;
 
-    if (held?.user.id === next.profile.userId) {
+    if (
+      held?.user.id === next.profile.userId &&
+      next.revision >= held.preferences.settingsRevision
+    ) {
       mutations.setMe({
         ...held,
         preferences: {
           ...held.preferences,
+          settingsRevision: next.revision,
           theme: next.appearance.theme,
           textSize: next.appearance.textSize,
           appearancePreferences: next.appearance.appearancePreferences,
