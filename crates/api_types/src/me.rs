@@ -50,6 +50,7 @@ pub struct Preferences {
     pub tour_completed: bool,
     pub voice_mode: VoiceMode,
     pub push_to_talk_key: String,
+    pub appearance_preferences: Option<crate::AppearancePreferences>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

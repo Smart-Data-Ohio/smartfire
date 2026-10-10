@@ -1,11 +1,5 @@
 import { type CSSProperties, useId } from "react";
-import {
-  type FontPreset,
-  type PalettePreset,
-  setFont,
-  setPalette,
-  useAppearance,
-} from "../../lib/appearance.ts";
+import { type FontPreset, type PalettePreset, useAppearance } from "../../lib/appearance.ts";
 import { DEFAULT_PALETTE_TOKENS, PALETTES, paletteTokens } from "../../lib/palette.ts";
 
 interface FontChoice {
@@ -32,7 +26,13 @@ function swatchStyle(palette: PalettePreset): CSSProperties {
 }
 
 /** The colour palettes, each a radio drawn as a small picture of the app in its colours. */
-export function PalettePicker() {
+export function PalettePicker({
+  onChange,
+  disabled,
+}: {
+  readonly onChange: (palette: PalettePreset) => void;
+  readonly disabled: boolean;
+}) {
   const { palette } = useAppearance();
   const name = useId();
 
@@ -48,7 +48,8 @@ export function PalettePicker() {
               name={name}
               value={choice.value}
               checked={palette === choice.value}
-              onChange={() => setPalette(choice.value)}
+              disabled={disabled}
+              onChange={() => onChange(choice.value)}
             />
             <span className="palette-swatch-art" style={swatchStyle(choice.value)} aria-hidden>
               <span className="palette-swatch-rail" />
@@ -67,7 +68,13 @@ export function PalettePicker() {
 }
 
 /** The fonts, each label set in its own face. */
-export function FontPicker() {
+export function FontPicker({
+  onChange,
+  disabled,
+}: {
+  readonly onChange: (font: FontPreset) => void;
+  readonly disabled: boolean;
+}) {
   const { font } = useAppearance();
   const name = useId();
 
@@ -82,7 +89,8 @@ export function FontPicker() {
               name={name}
               value={choice.value}
               checked={font === choice.value}
-              onChange={() => setFont(choice.value)}
+              disabled={disabled}
+              onChange={() => onChange(choice.value)}
             />
             <span style={{ fontFamily: `var(--font-preset-${choice.value})` }}>{choice.label}</span>
           </label>

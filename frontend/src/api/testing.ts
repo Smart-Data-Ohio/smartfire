@@ -95,6 +95,7 @@ export const meFixture: Me = {
     tourCompleted: true,
     voiceMode: "push_to_talk",
     pushToTalkKey: "`",
+    appearancePreferences: null,
   },
   presenceSetting: "auto",
   doNotDisturb: { enabled: false, until: null },

@@ -79,6 +79,70 @@ const PROFILE: &[&str] = &[
     "githubLogin",
 ];
 const APPEARANCE: &[&str] = &["theme", "textSize", "timeZone"];
+
+#[tokio::test]
+async fn personal_appearance_round_trips_through_settings_boot_and_me() {
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    for preferences in [
+        json!({"version":1,"palette":"ocean","font":"serif","density":"compact","motion":"reduce","tokens":{"--accent":"#123abc","--bg-app":"rgb(10, 20, 30)"}}),
+        json!({"version":7,"future":{"keep":[1,2,3]},"palette":"future"}),
+    ] {
+        let reply = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":preferences})).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let settings: Value = parse(&reply);
+        assert_eq!(settings["appearance"]["appearancePreferences"], preferences);
+        let me: Value = parse(&b.send(get("/api/v1/me")).await);
+        assert_eq!(me["preferences"]["appearancePreferences"], preferences);
+        let boot: Value = parse(&b.send(get("/api/v1/boot")).await);
+        assert_eq!(boot["appearancePreferences"], preferences);
+        let unchanged = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark"})).await;
+        let settings: Value = parse(&unchanged);
+        assert_eq!(settings["appearance"]["appearancePreferences"], preferences);
+    }
+}
+
+#[tokio::test]
+async fn personal_appearance_rejects_invalid_inputs_without_changing_the_account() {
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    for preferences in [
+        json!([]), json!({"palette":"ocean"}), json!({"version":0}),
+        json!({"version":1,"palette":"unknown"}), json!({"version":1,"font":"unknown"}),
+        json!({"version":1,"density":"tiny"}), json!({"version":1,"motion":true}),
+        json!({"version":1,"other":1}), json!({"version":1,"tokens":{"--font-sans":"#123456"}}),
+        json!({"version":1,"tokens":{"--accent":"url(https://example.com)"}}),
+        json!({"version":1,"tokens":{"--accent":"rgb(999, 0, 0)"}}),
+        json!({"version":99,"future":"x".repeat(8193)}),
+    ] {
+        let reply = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark","appearancePreferences":preferences})).await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert!(reply.text().contains("appearancePreferences"), "{}", reply.text());
+        let me: Value = parse(&b.send(get("/api/v1/me")).await);
+        assert_eq!(me["preferences"]["theme"], "system");
+        assert!(me["preferences"]["appearancePreferences"].is_null());
+    }
+}
+
+#[tokio::test]
+async fn personal_appearance_writes_reach_another_user_session() {
+    let Some(a) = app().await else { panic!("restored default seed required") };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = a.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut phone = a.sign_in(DAVID).await;
+    let desktop = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &desktop.cookie_header()).await;
+    let preferences = json!({"version":1,"palette":"ocean","font":"serif"});
+    let response = write(&mut phone, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":preferences})).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let event = sync.until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_))).await;
+    assert_eq!(event.topic, "user");
+    let api::SyncPayload::SettingsUpdated(settings) = event.payload else { unreachable!() };
+    assert_eq!(settings.appearance.appearance_preferences.unwrap().0, preferences);
+    server.abort();
+}
 const CALLS: &[&str] = &["voiceMode", "pushToTalkKey"];
 const NOTIFICATIONS: &[&str] = &[
     "dndEnabled",

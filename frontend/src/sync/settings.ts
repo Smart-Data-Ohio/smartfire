@@ -6,6 +6,7 @@
  */
 
 import { me, sidebar } from "../api/endpoints.ts";
+import { personalAppearance } from "../api/schema/appearance.ts";
 import {
   accountSettings,
   connectService,
@@ -48,8 +49,11 @@ import type { UpdateNotifications } from "../gen/UpdateNotifications.ts";
 import type { UpdateProfile } from "../gen/UpdateProfile.ts";
 import type { UpdateStatus } from "../gen/UpdateStatus.ts";
 import {
+  accountPreferencesSnapshot,
   appearanceSnapshot,
   applyAccountAppearance,
+  type PersonalAppearance,
+  showAccountPreferences,
   showAccountTheme,
   type ThemePreference,
 } from "../lib/appearance.ts";
@@ -79,7 +83,7 @@ const UNCHANGED = {
     bio: null,
     githubLogin: null,
   },
-  appearance: { theme: null, textSize: null, timeZone: null },
+  appearance: { theme: null, textSize: null, timeZone: null, appearancePreferences: null },
   calls: { voiceMode: null, pushToTalkKey: null },
   notifications: {
     defaultNotificationLevel: null,
@@ -248,7 +252,7 @@ export function followAccountAppearance(): () => void {
   let last = accountOf(store.getState());
 
   if (last !== null) {
-    applyAccountAppearance({ theme: last.theme, textSize: last.textSize });
+    applyAccountAppearance(last);
   }
 
   return store.subscribe((state) => {
@@ -259,7 +263,7 @@ export function followAccountAppearance(): () => void {
     }
 
     last = account;
-    applyAccountAppearance({ theme: account.theme, textSize: account.textSize });
+    applyAccountAppearance(account);
   });
 }
 
@@ -278,6 +282,35 @@ export async function saveAccountTheme(theme: ThemePreference): Promise<void> {
     showAccountTheme(before);
     throw error;
   }
+}
+
+let personalSave: Promise<void> = Promise.resolve();
+
+/** Serializes partial choices so rapid saves retain the other fields and custom tokens. */
+export function saveAccountPersonalAppearance(
+  change: Partial<Omit<PersonalAppearance, "version">>,
+): Promise<void> {
+  const save = personalSave.then(async () => {
+    const before = accountPreferencesSnapshot();
+    const known = personalAppearance(before);
+
+    if (before !== null && known === null)
+      throw new Error("This appearance version needs a newer Smartfire client.");
+    const preferences: PersonalAppearance = { ...known, version: 1, ...change };
+    showAccountPreferences(preferences);
+
+    try {
+      const next = await settings.updateAppearance({ appearancePreferences: { ...preferences } });
+      showAccountPreferences(next.appearance.appearancePreferences);
+    } catch (error) {
+      showAccountPreferences(before);
+      throw error;
+    }
+  });
+
+  personalSave = save.catch(() => undefined);
+
+  return save;
 }
 
 /** Refreshes missed preferences and schedules the next mute expiry. */

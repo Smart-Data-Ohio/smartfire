@@ -178,6 +178,7 @@ const workspaceBoot: Boot = {
   serviceWorkerUrl: null,
   version: "test",
   revision: null,
+  appearancePreferences: null,
 };
 
 const timelineIds = (roomId: number) => store.getState().timelines[roomId]?.ids;
@@ -214,7 +215,13 @@ describe("notification settings sync", () => {
             githubVerified: false,
             bot: false,
           },
-          appearance: { theme: "system", textSize: "default", timeZone: "UTC", timeZones: [] },
+          appearance: {
+            theme: "system",
+            textSize: "default",
+            timeZone: "UTC",
+            timeZones: [],
+            appearancePreferences: null,
+          },
           notifications: {
             ...notificationPreferencesFixture,
             roomNotificationLevels: {},

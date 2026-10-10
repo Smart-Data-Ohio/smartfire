@@ -22,6 +22,7 @@ fn boot() -> Boot {
         service_worker_url: Some("/service-worker.js".into()),
         version: "1.2.3".into(),
         flash: None,
+        appearance_preferences: None,
         revision: Some("0123abc".into()),
     }
 }
@@ -336,6 +337,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
             "serviceWorkerUrl": "/service-worker.js",
             "version": "1.2.3",
             "revision": "0123abc",
+            "appearancePreferences": null,
         })
     );
 

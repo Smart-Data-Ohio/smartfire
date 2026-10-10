@@ -104,6 +104,7 @@ it("refuses files above the workspace limit before adding them to the attachment
       serviceWorkerUrl: null,
       version: "test",
       revision: null,
+      appearancePreferences: null,
     },
   });
   const start = vi.spyOn(actions.messages, "startUpload");

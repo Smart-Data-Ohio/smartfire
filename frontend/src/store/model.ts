@@ -3,6 +3,7 @@
  * validated by the pinned Effect Schemas in src/api, plus the client-only shapes below. Timestamps
  * stay RFC 3339 strings: the server's fixed `YYYY-MM-DDTHH:MM:SS.mmmZ` form sorts as text.
  */
+import type { AppearancePreferences } from "../gen/AppearancePreferences.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
@@ -80,6 +81,7 @@ export interface Boot {
    * toast; the shell consumes it from the session when it renders the page.
    */
   readonly flash?: { readonly kind: "notice" | "alert"; readonly message: string } | null;
+  readonly appearancePreferences: AppearancePreferences | null;
 }
 
 /** The sync socket's state, for the connection banner. */

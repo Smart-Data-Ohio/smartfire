@@ -1,6 +1,14 @@
 import { afterAll, afterEach, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../mock/server.ts";
 import { me, sidebar } from "../api/endpoints.ts";
+import { Validation } from "../api/errors.ts";
+import {
+  appearanceSnapshot,
+  applyAccountAppearance,
+  restoreAppearance,
+  setPalette,
+  setPersonalAppearanceOverride,
+} from "../lib/appearance.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
 import { organizedSidebar } from "../store/organize.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
@@ -8,7 +16,11 @@ import { installMockNetwork } from "../test/mock-network.ts";
 import * as activity from "./activity-actions.ts";
 import { setInvolvement } from "./organize-actions.ts";
 import { runAction } from "./runtime.ts";
-import { followNotificationPreferences, settings } from "./settings.ts";
+import {
+  followNotificationPreferences,
+  saveAccountPersonalAppearance,
+  settings,
+} from "./settings.ts";
 import { emitResync } from "./signals.ts";
 
 const network = installMockNetwork();
@@ -27,6 +39,79 @@ afterAll(() => {
 afterEach(() => {
   intercept = fetch;
   mutations.reset();
+});
+
+async function personalAccount(
+  preferences: NonNullable<
+    Parameters<typeof settings.updateAppearance>[0]["appearancePreferences"]
+  >,
+) {
+  localStorage.clear();
+  restoreAppearance();
+  await settings.updateAppearance({ appearancePreferences: preferences });
+  const account = await runAction(me());
+  mutations.setMe(account);
+  applyAccountAppearance(account.preferences);
+}
+
+it("saves personal choices while keeping semantic tokens and a device override", async () => {
+  await personalAccount({ version: 1, palette: "rose", tokens: { "--accent": "#123abc" } });
+  setPalette("ember");
+  await saveAccountPersonalAppearance({ palette: "ocean", font: "mono" });
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    palette: "ocean",
+    font: "mono",
+    tokens: { "--accent": "#123abc" },
+  });
+  expect(appearanceSnapshot()).toMatchObject({ palette: "ember", font: "mono" });
+  setPersonalAppearanceOverride(false);
+  expect(appearanceSnapshot().palette).toBe("ocean");
+  expect(document.documentElement.style.getPropertyValue("--accent")).toBe("#123abc");
+});
+
+it("serializes rapid personal saves without losing earlier choices", async () => {
+  await personalAccount({ version: 1 });
+  await Promise.all([
+    saveAccountPersonalAppearance({ palette: "forest" }),
+    saveAccountPersonalAppearance({ font: "serif", density: "compact", motion: "reduce" }),
+  ]);
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    palette: "forest",
+    font: "serif",
+    density: "compact",
+    motion: "reduce",
+  });
+});
+
+it("restores the previous account appearance after a rejected save", async () => {
+  await personalAccount({ version: 1, palette: "ocean" });
+  intercept = async (input, init) =>
+    String(input).endsWith("/settings/appearance")
+      ? new Response(
+          JSON.stringify({
+            error: new Validation({
+              message: "Appearance rejected",
+              fields: { appearancePreferences: ["not allowed"] },
+            }),
+          }),
+          { status: 422, headers: { "content-type": "application/json" } },
+        )
+      : fetch(input, init);
+  await expect(saveAccountPersonalAppearance({ palette: "rose" })).rejects.toMatchObject({
+    message: "Appearance rejected",
+  });
+  expect(appearanceSnapshot().palette).toBe("ocean");
+});
+
+it("leaves a newer appearance version intact rather than replacing it with v1", async () => {
+  const future = { version: 99, future: { retain: [1, 2, 3] } };
+  await personalAccount(future);
+  await expect(saveAccountPersonalAppearance({ palette: "rose" })).rejects.toThrow(
+    "newer Smartfire client",
+  );
+  expect((await settings.load()).appearance.appearancePreferences).toEqual(future);
 });
 
 function held<A>() {

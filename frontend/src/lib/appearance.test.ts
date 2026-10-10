@@ -52,6 +52,48 @@ afterEach(() => {
 });
 
 describe("restoreAppearance", () => {
+  it("loads personal account preferences without storing them as device overrides", async () => {
+    inlineBoot("dark", "default");
+    const boot = document.getElementById("boot");
+
+    if (boot === null) throw new Error("missing boot");
+    boot.textContent = JSON.stringify({
+      theme: "dark",
+      textSize: "default",
+      appearancePreferences: {
+        version: 1,
+        palette: "ocean",
+        font: "serif",
+        density: "compact",
+        motion: "reduce",
+      },
+    });
+    const { restoreAppearance, appearanceSnapshot } = await load();
+    restoreAppearance();
+    expect(appearanceSnapshot()).toMatchObject({
+      palette: "ocean",
+      font: "serif",
+      density: "compact",
+      motion: "reduce",
+    });
+    expect(stored()).not.toHaveProperty("palette", "ocean");
+  });
+
+  it("keeps an explicit device palette over the account preference", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ palette: "ember" }));
+    inlineBoot("system", "default");
+    const boot = document.getElementById("boot");
+
+    if (boot === null) throw new Error("missing boot");
+    boot.textContent = JSON.stringify({
+      theme: "system",
+      textSize: "default",
+      appearancePreferences: { version: 1, palette: "ocean", font: "serif" },
+    });
+    const { restoreAppearance, appearanceSnapshot } = await load();
+    restoreAppearance();
+    expect(appearanceSnapshot()).toMatchObject({ palette: "ember", font: "serif" });
+  });
   it("applies the account's theme and text size from the inline boot before the first render", async () => {
     inlineBoot("dark", "larger");
     const { restoreAppearance } = await load();
@@ -169,10 +211,6 @@ describe("applyAccountAppearance", () => {
     // person to sign in on this browser must not inherit this account's theme.
     expect(stored()).toEqual({
       themeOverride: null,
-      density: "comfortable",
-      motion: "system",
-      palette: "smartfire",
-      font: "inter",
     });
   });
 
@@ -185,10 +223,6 @@ describe("applyAccountAppearance", () => {
     expect(html().dataset.theme).toBe("light");
     expect(stored()).toEqual({
       themeOverride: "light",
-      density: "comfortable",
-      motion: "system",
-      palette: "smartfire",
-      font: "inter",
     });
   });
 });

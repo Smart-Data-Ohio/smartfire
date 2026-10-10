@@ -112,6 +112,7 @@ describe("DTO schemas", () => {
       preferences: {
         theme: "system",
         textSize: "default",
+        appearancePreferences: null,
         timeZone: "America/New_York",
         timeZoneExplicit: false,
         tourCompleted: true,

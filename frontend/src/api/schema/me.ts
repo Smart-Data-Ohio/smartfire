@@ -38,6 +38,7 @@ export const Preferences = Schema.Struct({
   tourCompleted: Schema.Boolean,
   voiceMode: VoiceMode,
   pushToTalkKey: Schema.String,
+  appearancePreferences: Schema.Json,
 });
 
 export type PreferencesPin = Assert<Pinned<typeof Preferences, GeneratedPreferences>>;

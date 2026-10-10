@@ -115,6 +115,7 @@ fn me_round_trips() {
             tour_completed: true,
             voice_mode: VoiceMode::PushToTalk,
             push_to_talk_key: "`".into(),
+            appearance_preferences: None,
         },
         presence_setting: PresenceSetting::Dnd,
         do_not_disturb: DoNotDisturb {
@@ -147,6 +148,7 @@ fn me_round_trips() {
             "tourCompleted": true,
             "voiceMode": "push_to_talk",
             "pushToTalkKey": "`",
+            "appearancePreferences": null,
         })
     );
     assert_eq!(wire["presenceSetting"], "dnd");

@@ -164,8 +164,15 @@ pub struct UpdateAvatar {
     pub signed_id: String,
 }
 
-/// Theme, text size and time zone (stored on the account, so every device shares them). Density
-/// and reduced motion are per device and stay in the browser.
+/// JSON remains lossless across clients that understand different appearance versions.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct AppearancePreferences(
+    #[ts(type = "null | boolean | number | string | ReadonlyArray<AppearancePreferences> | { [key: string]: AppearancePreferences }")]
+    pub serde_json::Value,
+);
+
+/// Account appearance and time zone. Explicit device overrides stay in the browser.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -176,6 +183,8 @@ pub struct AppearanceSettings {
     pub time_zone: Option<String>,
     /// The classic select's choices, in its order.
     pub time_zones: Vec<TimeZoneChoice>,
+    /// Versioned personal appearance; newer documents are kept opaque.
+    pub appearance_preferences: Option<AppearancePreferences>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -195,6 +204,7 @@ pub struct UpdateAppearance {
     pub text_size: Option<TextSize>,
     /// `""` is "Not set (use system)".
     pub time_zone: Option<String>,
+    pub appearance_preferences: Option<AppearancePreferences>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
