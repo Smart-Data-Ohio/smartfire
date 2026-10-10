@@ -4,12 +4,11 @@
 //! (create the bot's message, process an attachment, `broadcast_create`).
 
 use anyhow::{Context as _, anyhow};
-use campfire_db::{Message, NewMessage, PushSubscription, Room, User, Webhook};
-use campfire_db::models::activity_item::message_recorder::MentionPushJob;
+use campfire_db::{Message, NewMessage, Room, User, Webhook};
 use campfire_jobs::{Execution, JobResult, Outcome};
 use campfire_views::messages as views;
 
-use crate::integrations::webhook::{self, WebhookReply};
+use crate::integrations::{web_push, webhook::{self, WebhookReply}};
 use crate::net::Network;
 use crate::app::App;
 use crate::controllers::presenters::page::{self, Rendered};
@@ -33,25 +32,19 @@ pub fn register_jobs(registry: &mut Registry) {
 
 /// `Room::PushMessageJob#perform(room, message)`: `Room::MessagePusher.new(room:, message:).push`,
 /// unless Web Push is off. A room or message that's gone discards the job.
-async fn push_message(app: App, job: PushMessageJob, execution: Execution) -> JobResult {
+async fn push_message(app: App, job: PushMessageJob, _: Execution) -> JobResult {
     let Some(pool) = app.web_push.clone() else { return Ok(Outcome::Done) };
     let PushMessageJob { room_id, message_id } = job;
-    let db = app.db.clone();
-    app.db
-        .write(move |tx| {
-            // Serialize recipient selection and pool handoff with mention edits.
-            Room::find(tx.conn(), room_id)?;
-            let message = Message::find(tx.conn(), message_id)?;
-            let excluded = MentionPushJob::original_push_exclusions(tx.conn(), execution.id)?;
-            let (payload, mut subscriptions, mentions) = PushSubscription::pushes_for(
-                tx.conn(), &*db.env().rich_text, &message, tx.now(),
-            )?;
-            subscriptions.extend(mentions);
-            subscriptions.retain(|sub| !excluded.contains(&sub.user_id));
-            pool.queue(tx.conn(), &payload, subscriptions)
+    let message = app
+        .db
+        .read(move |conn| {
+            Room::find(conn, room_id)?;
+            Message::find(conn, message_id)
         })
         .await
         .map_err(discard_missing)?;
+    let db = app.db.clone();
+    app.db.read(move |conn| web_push::push_message(&pool, conn, &*db.env().rich_text, &message, db.env().now()).map(|_| ())).await?;
     Ok(Outcome::Done)
 }
 

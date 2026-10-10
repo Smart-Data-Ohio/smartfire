@@ -2,7 +2,6 @@
 use super::Registry;
 use crate::app::App;
 use campfire_db::{ChannelThread, SavedItem};
-use campfire_db::models::activity_item::message_recorder::MentionPushJob;
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome};
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +33,6 @@ impl JobKind for TestNotification {
 
 pub(super) fn register(registry: &mut Registry) {
     registry.register(thread_message);
-    registry.register(message_mentions);
     registry.register(saved_reminder);
     registry.register(test_notification);
     registry.register(event_reminder);
@@ -69,24 +67,21 @@ async fn test_notification(app: App, job: TestNotification, _: Execution) -> Job
     Ok(Outcome::Done)
 }
 
-async fn thread_message(app: App, job: ThreadMessage, execution: Execution) -> JobResult {
+async fn thread_message(app: App, job: ThreadMessage, _: Execution) -> JobResult {
     let Some(pool) = app.web_push.clone() else {
         return Ok(Outcome::Done);
     };
     let db = app.db.clone();
     app.db
-        .write(move |tx| {
-            let excluded = MentionPushJob::original_push_exclusions(tx.conn(), execution.id)?;
+        .read(move |conn| {
             for push in ChannelThread::push_recipients_with_policy(
-                tx.conn(),
+                conn,
                 &*db.env().rich_text,
                 job.0.thread_id,
                 job.0.message_id,
-                tx.now(),
+                db.env().now(),
             )? {
-                if !excluded.contains(&push.user_id) {
-                    pool.queue(tx.conn(), &push.payload, push.subscriptions)?;
-                }
+                pool.queue(conn, &push.payload, push.subscriptions)?;
             }
             Ok(())
         })
@@ -127,10 +122,6 @@ macro_rules! source_job {
     };
 }
 source_job!(
-    MessageMentions,
-    campfire_db::models::activity_item::message_recorder::MentionPushJob
-);
-source_job!(
     EventReminder,
     campfire_db::models::notification_push::EventReminderJob
 );
@@ -150,25 +141,6 @@ source_job!(
     HuddlePush,
     campfire_db::models::notification_push::HuddlePushRequest
 );
-
-async fn message_mentions(app: App, job: MessageMentions, _: Execution) -> JobResult {
-    let Some(pool) = app.web_push.clone() else {
-        return Ok(Outcome::Done);
-    };
-    let db = app.db.clone();
-    app.db
-        .read(move |conn| {
-            for push in job
-                .0
-                .deliveries(conn, &*db.env().rich_text, db.env().now())?
-            {
-                pool.queue(conn, &push.payload, push.subscriptions)?;
-            }
-            Ok(())
-        })
-        .await?;
-    Ok(Outcome::Done)
-}
 
 async fn huddle_push_request(app: App, job: HuddlePush, _: Execution) -> JobResult {
     app.db

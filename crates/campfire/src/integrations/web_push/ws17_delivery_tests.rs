@@ -39,17 +39,43 @@ fn with_pool(original: &App, pool: Pool) -> App {
     })
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn mention_edits_and_pending_original_jobs_deliver_each_recipient_once() {
+async fn deliver_original_message_push(app: &App, pool: &Pool, class: &'static str) {
+    app.db.write(move |tx| {
+        assert_eq!(tx.conn().execute(
+            "UPDATE background_jobs SET run_at=? WHERE job_class=?",
+            rusqlite::params![tx.now(), class],
+        )?, 1);
+        Ok(())
+    }).await.unwrap();
+    let runner = campfire_jobs::start(
+        app.db.clone(),
+        app.jobs.queue.clone(),
+        crate::jobs::registry(),
+        app.clone(),
+        crate::queue::runner_config(&app.config),
+    );
+    app.jobs.queue.wake(class);
+    wait_for_jobs_and_deliveries(&app.db, pool, &[class]).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
+async fn message_push_jobs(db: &campfire_db::Database) -> Vec<(String, String)> {
+    db.read(|conn| {
+        let mut statement = conn.prepare_cached(
+            "SELECT job_class,arguments FROM background_jobs WHERE job_class IN ('Room::PushMessageJob','ChannelThread::PushMessageJob','Message::MentionPushJob') ORDER BY id",
+        )?;
+        let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+    }).await.unwrap()
+}
+
+async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
     use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN};
     use campfire_db::{
         ActivityItem, ChannelThread, Message, MessageChanges, NewChannelThread, NewMessage,
         ThreadInvolvement, ThreadMembership,
     };
-    for (threaded, promoted, edit_first) in [
-        (false, false, false), (false, false, true), (false, true, false), (false, true, true),
-        (true, false, false), (true, false, true), (true, true, false), (true, true, true),
-    ] {
+    for (threaded, promoted) in [(false, false), (false, true), (true, false), (true, true)] {
         let test = TestApp::boot_frozen()
             .await
             .expect("mention edits require seeded app tests");
@@ -91,73 +117,102 @@ async fn mention_edits_and_pending_original_jobs_deliver_each_recipient_once() {
             Ok(message)
         }).await.unwrap();
         let message_id = message.id;
-        db.write(move |tx| {
-            let mut message = message;
-            message.edit(
-                tx,
-                MessageChanges {
-                    markdown_source: Some(format!("Answer <@{JASON}> <@{DAVID}>")),
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .unwrap();
-        let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
-        let app = with_pool(&original, pool.clone());
         let original_class = if threaded { "ChannelThread::PushMessageJob" } else { "Room::PushMessageJob" };
-        let classes = if edit_first { ["Message::MentionPushJob", original_class] } else { [original_class, "Message::MentionPushJob"] };
+        let jobs = message_push_jobs(&db).await;
+        let arguments = if let Some(thread_id) = message.thread_id {
+            serde_json::json!({"thread_id": thread_id, "message_id": message_id})
+        } else {
+            serde_json::json!({"room_id": message.room_id, "message_id": message_id})
+        };
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].0, original_class);
+        assert_eq!(serde_json::from_str::<Value>(&jobs[0].1).unwrap(), arguments);
         db.write(|tx| {
             tx.conn().execute("UPDATE background_jobs SET run_at='2099-01-01 00:00:00'", [])?;
             Ok(())
         }).await.unwrap();
-        let runner = campfire_jobs::start(
-            db.clone(),
-            app.jobs.queue.clone(),
-            crate::jobs::registry(),
-            app.clone(),
-            crate::queue::runner_config(&app.config),
-        );
-        for class in classes {
-            db.write(move |tx| {
-                assert_eq!(tx.conn().execute("UPDATE background_jobs SET run_at=? WHERE job_class=?", rusqlite::params![tx.now(), class])?, 1);
-                Ok(())
-            }).await.unwrap();
-            app.jobs.queue.wake(class);
-            wait_for_jobs_and_deliveries(&db, &pool, &[class]).await;
+        let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
+        let app = with_pool(&original, pool.clone());
+        if original_delivered {
+            deliver_original_message_push(&app, &pool, original_class).await;
+            assert_eq!(service.server.received().len(), 2 + usize::from(promoted));
         }
-        runner.shutdown(Duration::from_secs(5)).await;
+        let jobs_before_edit = message_push_jobs(&db).await;
+        for &mentioned in edits {
+            let (before, unread) = db.read(move |conn| Ok((
+                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
+                ActivityItem::unread_snapshot(conn, DAVID)?,
+            ))).await.unwrap();
+            db.write(move |tx| {
+                let mut message = Message::find(tx.conn(), message_id)?;
+                message.edit(tx, MessageChanges {
+                    markdown_source: Some(if mentioned {
+                        format!("Answer <@{JASON}> <@{DAVID}>")
+                    } else {
+                        format!("Answer <@{JASON}>")
+                    }),
+                    ..Default::default()
+                })
+            }).await.unwrap();
+            let (activity, after) = db.read(move |conn| Ok((
+                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
+                ActivityItem::unread_snapshot(conn, DAVID)?,
+            ))).await.unwrap();
+            if mentioned || promoted {
+                let activity = activity.unwrap();
+                assert_eq!(activity.event_type, if mentioned { "mention" } else if threaded { "thread_activity" } else { "reply" });
+                assert!(activity.unread());
+                if let Some(before) = &before { assert_eq!(activity.id, before.id); }
+            } else {
+                assert!(activity.is_none());
+            }
+            let was_unread = before.is_some_and(|item| item.unread());
+            assert_eq!(after.count, unread.count + i64::from(mentioned || promoted) - i64::from(was_unread));
+            assert!(after.revision > unread.revision);
+            assert_eq!(message_push_jobs(&db).await, jobs_before_edit, "edits must not enqueue or modify pushes");
+        }
+        if !original_delivered {
+            deliver_original_message_push(&app, &pool, original_class).await;
+        }
+        assert!(message_push_jobs(&db).await.is_empty());
         pool.shutdown().await;
         let requests = service.server.received();
-        assert_eq!(
-            requests.len(),
-            3,
-            "original and edit pushes must not overlap, threaded={threaded}, promoted={promoted}, edit_first={edit_first}"
-        );
-        for endpoint in ["/fcm/send/abc", "/fcm/send/123", "/fcm/send/456"] {
-            assert_eq!(requests.iter().filter(|request| request.target == endpoint).count(), 1);
+        let david_pushed = promoted || (!original_delivered && *edits.last().unwrap());
+        assert_eq!(requests.len(), 2 + usize::from(david_pushed), "threaded={threaded}, promoted={promoted}, edits={edits:?}");
+        for (endpoint, count) in [("/fcm/send/abc", usize::from(david_pushed)), ("/fcm/send/123", 1), ("/fcm/send/456", 1)] {
+            assert_eq!(requests.iter().filter(|request| request.target == endpoint).count(), count, "{endpoint}");
         }
         for request in requests {
             let delivered: Value = serde_json::from_str(&receiver.open(&request.body)).unwrap();
             if threaded {
                 assert_eq!(delivered["title"], "Mention edits");
-                assert!(
-                    delivered["options"]["data"]["path"]
-                        .as_str()
-                        .unwrap()
-                        .contains(&format!("message_id={message_id}"))
-                );
+                assert!(delivered["options"]["data"]["path"].as_str().unwrap().contains(&format!("message_id={message_id}")));
             } else {
                 assert_eq!(delivered["options"]["data"]["path"], "/rooms/654632876");
             }
-            assert!(
-                delivered["options"]["body"]
-                    .as_str()
-                    .unwrap()
-                    .contains("Answer")
-            );
+            assert!(delivered["options"]["body"].as_str().unwrap().contains("Answer"));
         }
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_after_original_delivery_update_activity_without_pushes() {
+    mention_edit_delivery(&[true], true).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_before_original_delivery_push_added_recipient_once() {
+    mention_edit_delivery(&[true], false).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_add_then_remove_preserve_follower_and_reply_pushes() {
+    mention_edit_delivery(&[true, false], false).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mention_edits_add_remove_readd_push_recipient_once() {
+    mention_edit_delivery(&[true, false, true], false).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]

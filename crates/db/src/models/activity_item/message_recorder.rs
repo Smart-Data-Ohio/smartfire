@@ -3,8 +3,8 @@ use crate::models::keyword_alert::matching_user_ids;
 use crate::rich_text::RichText;
 use crate::sql::{placeholders, query_all};
 use crate::{
-    ActivityItem, ChannelThread, Involvement, Message, NotificationKind, NotificationPolicy,
-    PushSubscription, Result, ThreadInvolvement, Timestamp, Tx, UserStatusSettings,
+    ActivityItem, Involvement, Message, NotificationKind, NotificationPolicy, Result,
+    ThreadInvolvement, Timestamp, Tx, UserStatusSettings,
 };
 use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
@@ -19,94 +19,6 @@ pub struct MessageCandidates {
     pub recipients: Vec<MessageCandidate>,
     /// Memberships are loaded only for root candidates or the thread's members.
     pub room_member_ids: Vec<i64>,
-}
-
-/// An edit pushes only its added mentions, using the message pusher's current policy.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct MentionPushJob {
-    pub message_id: i64,
-    pub recipient_ids: Vec<i64>,
-}
-
-impl crate::Job for MentionPushJob {
-    const CLASS: &'static str = "Message::MentionPushJob";
-}
-
-impl MentionPushJob {
-    /// Reload edit-owned recipients even when the original job was claimed before the edit.
-    pub fn original_push_exclusions(conn: &Connection, job_id: i64) -> Result<Vec<i64>> {
-        query_all(
-            conn,
-            "SELECT value FROM json_each(COALESCE((SELECT node.value FROM background_jobs job, json_tree(job.arguments) node WHERE job.id=? AND node.key='mention_push_recipient_ids'), '[]'))",
-            [job_id],
-            |row| row.get(0),
-        )
-    }
-
-    fn exclude_from_original_push(tx: &Tx<'_>, message_id: i64, added: &[i64]) -> Result<()> {
-        // json_tree also finds the arguments inside the job runner's retry envelope.
-        let jobs: Vec<(i64, String)> = query_all(
-            tx.conn(),
-            "SELECT job.id,node.path FROM background_jobs job, json_tree(job.arguments) node WHERE job.job_class IN ('Room::PushMessageJob','ChannelThread::PushMessageJob') AND node.key='message_id' AND node.atom=?",
-            [message_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )?;
-        for (job_id, path) in jobs {
-            let mut excluded = Self::original_push_exclusions(tx.conn(), job_id)?;
-            excluded.extend_from_slice(added);
-            excluded.sort_unstable();
-            excluded.dedup();
-            tx.conn().execute(
-                "UPDATE background_jobs SET arguments=json_set(arguments, ?, json(?)),updated_at=? WHERE id=?",
-                rusqlite::params![format!("{path}.mention_push_recipient_ids"), serde_json::json!(excluded).to_string(), tx.now(), job_id],
-            )?;
-        }
-        Ok(())
-    }
-
-    pub fn deliveries(
-        &self,
-        conn: &Connection,
-        rich_text: &dyn RichText,
-        now: Timestamp,
-    ) -> Result<Vec<crate::models::notification_push::PushDelivery>> {
-        let Some(message) = Message::find_by_id(conn, self.message_id)? else {
-            return Ok(Vec::new());
-        };
-        if message.streaming || message.system_note {
-            return Ok(Vec::new());
-        }
-        let mentioned = message.mentionees(conn, rich_text)?;
-        let added =
-            |id| self.recipient_ids.contains(&id) && mentioned.iter().any(|user| user.id == id);
-        if let Some(thread_id) = message.thread_id {
-            Ok(ChannelThread::push_recipients_with_policy(
-                conn, rich_text, thread_id, message.id, now,
-            )?
-            .into_iter()
-            .filter(|push| added(push.user_id))
-            .map(|push| crate::models::notification_push::PushDelivery {
-                payload: push.payload,
-                subscriptions: push.subscriptions,
-            })
-            .collect())
-        } else {
-            let (payload, subscriptions, _) =
-                PushSubscription::pushes_for(conn, rich_text, &message, now)?;
-            let subscriptions: Vec<_> = subscriptions
-                .into_iter()
-                .filter(|sub| added(sub.user_id))
-                .collect();
-            Ok(if subscriptions.is_empty() {
-                Vec::new()
-            } else {
-                vec![crate::models::notification_push::PushDelivery {
-                    payload,
-                    subscriptions,
-                }]
-            })
-        }
-    }
 }
 
 pub fn candidates(
@@ -254,7 +166,7 @@ fn match_rows(rows: Vec<(i64, String)>, text: &str) -> Result<Vec<i64>> {
 }
 
 impl ActivityItem {
-    /// Retained mentions keep their inbox state; only newly mentioned recipients are notified.
+    /// Retained mentions keep their inbox state; added mentions refresh activity without a push.
     pub(crate) fn reconcile_message_mentions(
         tx: &mut Tx<'_>,
         message: &Message,
@@ -299,26 +211,12 @@ impl ActivityItem {
                 room_id: Some(message.room_id),
             }));
         }
-        let mut added = Vec::new();
         for candidate in recipients {
             if candidate.event_type == "mention"
                 && !previous_mentionees.contains(&candidate.user_id)
             {
-                let previous = Self::find_by_user_and_source(
-                    tx.conn(), candidate.user_id, "Message", message.id,
-                )?;
                 Self::refresh_unread(tx, candidate.user_id, "Message", message.id, "mention")?;
-                if previous.is_none_or(|item| item.event_type != "mention") {
-                    added.push(candidate.user_id);
-                }
             }
-        }
-        if !added.is_empty() {
-            MentionPushJob::exclude_from_original_push(tx, message.id, &added)?;
-            tx.emit_after_commit(crate::Event::job(&MentionPushJob {
-                message_id: message.id,
-                recipient_ids: added,
-            }));
         }
         Ok(())
     }

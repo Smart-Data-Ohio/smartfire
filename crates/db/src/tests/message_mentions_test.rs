@@ -1,6 +1,5 @@
 use super::channel_thread_test::frozen;
 use super::*;
-use crate::models::activity_item::message_recorder::MentionPushJob;
 use crate::rich_text::mention_attachment_for;
 use crate::{
     ActivityItem, ChannelThread, KeywordAlert, Message, MessageChanges, NewChannelThread,
@@ -102,18 +101,19 @@ fn assert_update(t: &TestDb, item: &ActivityItem) {
     assert!(!t.events().iter().any(|event| matches!(event, Event::Broadcast(request) if request.kind == "ActivityItem#sync_removed")));
 }
 
-fn mention_job(t: &TestDb) -> MentionPushJob {
-    let jobs: Vec<_> = t
-        .events()
-        .iter()
-        .filter_map(|event| event.as_job::<MentionPushJob>())
-        .collect();
-    assert_eq!(jobs.len(), 1);
-    jobs.into_iter().next().unwrap()
+fn assert_no_push(t: &TestDb) {
+    assert!(
+        !t.events().iter().any(|event| match event {
+            Event::PushMessage { .. } => true,
+            Event::Job(job) => job.class.contains("Push"),
+            _ => false,
+        }),
+        "mention edits must not enqueue pushes"
+    );
 }
 
 #[test]
-fn mention_edits_reserve_recipients_on_claimed_original_jobs_and_retries() {
+fn mention_edits_leave_claimed_original_jobs_and_retries_unchanged() {
     for event_type in ["reply", "thread_activity"] {
         for retry in [false, true] {
             let t = frozen();
@@ -139,36 +139,29 @@ fn mention_edits_reserve_recipients_on_claimed_original_jobs_and_retries() {
                     |row| row.get(0),
                 )?)
             });
-            t.sink.take();
-            edit(&t, &message, true);
-            assert_eq!(mention_job(&t).recipient_ids, [id("david")]);
-            assert_eq!(
-                t.read(|conn| MentionPushJob::original_push_exclusions(conn, job_id)),
-                [id("david")]
-            );
-            let recipients = serde_json::json!([id("david")]);
-            if retry {
-                arguments["_campfire_retry_metadata_v1"]["arguments"]["mention_push_recipient_ids"] = recipients;
-            } else {
-                arguments["mention_push_recipient_ids"] = recipients;
+            let mut message = message;
+            for mention in [true, false, true] {
+                t.sink.take();
+                message = edit(&t, &message, mention);
+                assert_no_push(&t);
+                let stored: String = t.read(|conn| {
+                    Ok(conn.query_row(
+                        "SELECT arguments FROM background_jobs WHERE id=? AND status='running'",
+                        [job_id],
+                        |row| row.get(0),
+                    )?)
+                });
+                assert_eq!(
+                    serde_json::from_str::<serde_json::Value>(&stored).unwrap(),
+                    arguments
+                );
             }
-            let stored: String = t.read(|conn| {
-                Ok(conn.query_row(
-                    "SELECT arguments FROM background_jobs WHERE id=? AND status='running'",
-                    [job_id],
-                    |row| row.get(0),
-                )?)
-            });
-            assert_eq!(
-                serde_json::from_str::<serde_json::Value>(&stored).unwrap(),
-                arguments
-            );
         }
     }
 }
 
 #[test]
-fn mention_edits_promote_existing_activity_and_only_notify_added_recipients() {
+fn mention_edits_promote_existing_activity_and_only_refresh_added_recipients() {
     for event_type in ["reply", "thread_activity", "keyword_alert"] {
         for previous_state in ["unread", "read", "handled"] {
             let t = frozen();
@@ -192,19 +185,7 @@ fn mention_edits_promote_existing_activity_and_only_notify_added_recipients() {
             assert_eq!(after.count, unread.count + i64::from(!before.unread()));
             assert!(after.revision > unread.revision);
             assert_update(&t, &promoted);
-            let job = mention_job(&t);
-            assert_eq!(job.message_id, message.id);
-            assert_eq!(job.recipient_ids, [id("david")]);
-            let pushes = t.read(|conn| job.deliveries(conn, &BasicRichText, t.now()));
-            assert_eq!(pushes.len(), 1);
-            assert_eq!(
-                pushes[0]
-                    .subscriptions
-                    .iter()
-                    .map(|sub| sub.user_id)
-                    .collect::<Vec<_>>(),
-                [id("david")]
-            );
+            assert_no_push(&t);
             t.sink.take();
             t.travel(1);
             let mut again = message.clone();
@@ -224,11 +205,7 @@ fn mention_edits_promote_existing_activity_and_only_notify_added_recipients() {
             assert_eq!(item(&t, &message, "david"), promoted);
             assert_eq!(item(&t, &message, "jason"), kept);
             assert!(!t.events().iter().any(|event| matches!(event.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable { stream, .. }) if stream.ends_with("_activity"))));
-            assert!(
-                !t.events()
-                    .iter()
-                    .any(|event| event.as_job::<MentionPushJob>().is_some())
-            );
+            assert_no_push(&t);
         }
     }
 }
@@ -262,11 +239,7 @@ fn mention_edits_demote_promoted_activity_preserving_current_state() {
                 unread.count
             );
             assert_update(&t, &demoted);
-            assert!(
-                !t.events()
-                    .iter()
-                    .any(|event| event.as_job::<MentionPushJob>().is_some())
-            );
+            assert_no_push(&t);
         }
     }
 }
@@ -275,9 +248,10 @@ fn mention_edits_demote_promoted_activity_preserving_current_state() {
 fn mention_edits_remove_activity_when_its_keyword_no_longer_applies() {
     let t = frozen();
     let message = message(&t, "keyword_alert");
+    t.sink.take();
     let mut message = edit(&t, &message, true);
     let mention = item(&t, &message, "david");
-    let job = mention_job(&t);
+    assert_no_push(&t);
     t.sink.take();
     t.write(move |tx| {
         message.edit(
@@ -297,35 +271,22 @@ fn mention_edits_remove_activity_when_its_keyword_no_longer_applies() {
         ))
         .is_none()
     );
-    assert!(
-        t.read(|conn| job.deliveries(conn, &BasicRichText, t.now()))
-            .is_empty()
-    );
+    assert_no_push(&t);
 }
 
 #[test]
-fn mention_edits_push_uses_current_room_and_thread_policy() {
+fn mention_edits_refresh_activity_even_when_push_is_suppressed() {
     for event_type in ["reply", "thread_activity"] {
         let t = frozen();
         let message = message(&t, event_type);
-        t.sink.take();
-        let message = edit(&t, &message, true);
-        let job = mention_job(&t);
         t.write(|tx| {
             tx.conn()
                 .execute("UPDATE users SET dnd_enabled=1 WHERE id=?", [id("david")])?;
             Ok(())
         });
-        assert!(
-            t.read(|conn| job.deliveries(conn, &BasicRichText, t.now()))
-                .is_empty()
-        );
+        t.sink.take();
+        let message = edit(&t, &message, true);
         assert!(item(&t, &message, "david").unread());
-        t.write(|tx| crate::DndAllowedUser::create(tx, id("david"), id("jz")));
-        assert_eq!(
-            t.read(|conn| job.deliveries(conn, &BasicRichText, t.now()))
-                .len(),
-            1
-        );
+        assert_no_push(&t);
     }
 }
