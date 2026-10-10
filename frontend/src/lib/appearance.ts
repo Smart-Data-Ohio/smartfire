@@ -59,6 +59,8 @@ export interface Appearance {
   readonly palette: PalettePreset;
   readonly font: FontPreset;
   readonly personalOverride: boolean;
+  /** The account's custom palette colours (`appearancePreferences.tokens`), saved or not shown. */
+  readonly customTokens: Readonly<Record<string, string>>;
 }
 
 const STORAGE_KEY = "smartfire.appearance";
@@ -87,6 +89,7 @@ const DEFAULTS: Appearance = {
   palette: "smartfire",
   font: "inter",
   personalOverride: false,
+  customTokens: {},
 };
 
 let current: Appearance = DEFAULTS;
@@ -100,6 +103,9 @@ let unsavedOverrides: DeviceChange = {};
 export type { PersonalAppearance };
 
 let appliedTokens: readonly string[] = [];
+
+/** Colours the palette editor is trying out, shown over the account's until saved or dropped. */
+let previewTokens: Readonly<Record<string, string>> | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -144,17 +150,41 @@ function writeAttributes(appearance: Appearance): void {
   }
 
   writePalette(appearance.palette);
+  writeCustomTokens();
+}
+
+/**
+ * Sets the custom palette's colours on <html> over the palette's: the editor's preview while it
+ * has one, else the account's. A palette chosen on this device leaves both out.
+ */
+function writeCustomTokens(): void {
+  const root = document.documentElement;
+  const palette = paletteTokens(current.palette);
 
   for (const name of appliedTokens) {
-    if (!PALETTE_TOKEN_NAMES.includes(name)) root.style.removeProperty(name);
+    const preset = palette.get(name);
+
+    if (preset !== undefined) root.style.setProperty(name, preset);
+    else root.style.removeProperty(name);
   }
 
   const tokens =
-    overrides.palette === undefined ? (personalAppearance(accountPreferences)?.tokens ?? {}) : {};
+    overrides.palette === undefined
+      ? (previewTokens ?? personalAppearance(accountPreferences)?.tokens ?? {})
+      : {};
 
   appliedTokens = Object.keys(tokens);
 
   for (const [name, value] of Object.entries(tokens)) root.style.setProperty(name, value);
+}
+
+/**
+ * Shows `tokens` as the custom palette on this device while the editor tries them out, without
+ * saving them; `null` goes back to the account's.
+ */
+export function previewCustomTokens(tokens: Readonly<Record<string, string>> | null): void {
+  previewTokens = tokens;
+  writeCustomTokens();
 }
 
 /**
@@ -212,6 +242,7 @@ function commit(next: Omit<Appearance, "theme">): void {
     density: overrides.density ?? account?.density ?? DEFAULTS.density,
     motion: overrides.motion ?? account?.motion ?? DEFAULTS.motion,
     personalOverride: Object.keys(overrides).length > 0,
+    customTokens: account?.tokens ?? DEFAULTS.customTokens,
   };
   writeAttributes(current);
 

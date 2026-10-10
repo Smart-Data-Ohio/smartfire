@@ -474,3 +474,65 @@ describe("palette and font", () => {
     expect(appearanceSnapshot()).toMatchObject({ palette: "smartfire", font: "inter" });
   });
 });
+
+describe("custom palette colours", () => {
+  const account = (tokens?: Readonly<Record<string, string>>) => ({
+    theme: "system" as const,
+    textSize: "default" as const,
+    appearancePreferences: { version: 1, palette: "ocean", ...(tokens && { tokens }) },
+  });
+
+  it("shows the account's colours over its palette and reports them", async () => {
+    const { applyAccountAppearance, appearanceSnapshot } = await load();
+    const { paletteTokens } = await import("./palette.ts");
+
+    applyAccountAppearance(account({ "--accent-solid": "#123abc", "--mention-bg": "#fff0c0" }));
+
+    expect(html().style.getPropertyValue("--accent-solid")).toBe("#123abc");
+    expect(html().style.getPropertyValue("--mention-bg")).toBe("#fff0c0");
+    expect(html().style.getPropertyValue("--bg-pane")).toBe(
+      paletteTokens("ocean").get("--bg-pane"),
+    );
+    expect(appearanceSnapshot().customTokens).toEqual({
+      "--accent-solid": "#123abc",
+      "--mention-bg": "#fff0c0",
+    });
+  });
+
+  it("previews edits over the account's colours, and drops them back to the preset or account", async () => {
+    const { applyAccountAppearance, previewCustomTokens, appearanceSnapshot } = await load();
+    const { paletteTokens } = await import("./palette.ts");
+    const style = html().style;
+
+    applyAccountAppearance(account({ "--accent-solid": "#123abc" }));
+    previewCustomTokens({ "--accent-solid": "#ff0000", "--danger": "#aa0000" });
+
+    expect(style.getPropertyValue("--accent-solid")).toBe("#ff0000");
+    expect(style.getPropertyValue("--danger")).toBe("#aa0000");
+    // A preview is not saved: the account's own colours are unchanged.
+    expect(appearanceSnapshot().customTokens).toEqual({ "--accent-solid": "#123abc" });
+
+    // Reset to the preset: palette tokens go back to the palette's, others to the stylesheet's.
+    previewCustomTokens({});
+    expect(style.getPropertyValue("--accent-solid")).toBe(
+      paletteTokens("ocean").get("--accent-solid"),
+    );
+    expect(style.getPropertyValue("--danger")).toBe("");
+
+    previewCustomTokens(null);
+    expect(style.getPropertyValue("--accent-solid")).toBe("#123abc");
+  });
+
+  it("keeps a palette chosen on this device over the account's colours and any preview", async () => {
+    const { applyAccountAppearance, previewCustomTokens, setPalette } = await load();
+    const { paletteTokens } = await import("./palette.ts");
+
+    applyAccountAppearance(account({ "--accent-solid": "#123abc" }));
+    setPalette("ember");
+    previewCustomTokens({ "--accent-solid": "#ff0000" });
+
+    expect(html().style.getPropertyValue("--accent-solid")).toBe(
+      paletteTokens("ember").get("--accent-solid"),
+    );
+  });
+});

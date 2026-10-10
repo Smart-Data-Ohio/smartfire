@@ -12,6 +12,7 @@ import {
   parseOklch,
   type Rgb,
 } from "../lib/color.ts";
+import { PALETTE_FIELDS, STYLESHEET_COLOURS } from "../lib/custom-palette.ts";
 import { DEFAULT_PALETTE_TOKENS, PALETTES, paletteTokens } from "../lib/palette.ts";
 import { AVATAR_HUES } from "../ui/avatar-palette.ts";
 
@@ -250,6 +251,16 @@ describe("design tokens", () => {
     // The palette picker paints Smartfire's swatch with these, whatever palette is on the page.
     for (const [name, value] of DEFAULT_PALETTE_TOKENS) {
       expect(value, name).toBe(TOKENS.get(name));
+    }
+  });
+
+  it("knows the stylesheet's colour for every token the palette editor offers", () => {
+    // The custom palette editor starts Smartfire's colours from these.
+    expect([...STYLESHEET_COLOURS.keys()]).toEqual(PALETTE_FIELDS.map((field) => field.token));
+
+    for (const [name, [light, dark]] of STYLESHEET_COLOURS) {
+      expect(light, `${name} (light)`).toBe(resolve(`var(${name})`, "light"));
+      expect(dark, `${name} (dark)`).toBe(resolve(`var(${name})`, "dark"));
     }
   });
 
