@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MOCK_TOTP } from "../../../mock/s2/account.ts";
@@ -103,6 +103,24 @@ it("sends remember-device with the code", async () => {
 
   await waitFor(() => expect(assign).toHaveBeenCalledWith(SIGNED_IN_LOCATION));
   expect(verify).toHaveBeenCalledWith(MOCK_TOTP, true);
+});
+
+it("takes a code again once Back restores the page from the back/forward cache", async () => {
+  const verify = vi.spyOn(auth, "verify");
+  const user = userEvent.setup();
+
+  await renderAuth("/app/two_factor/challenge");
+  await enter(MOCK_TOTP);
+  await waitFor(() => expect(assign).toHaveBeenCalledWith(SIGNED_IN_LOCATION));
+
+  // Still leaving: another press sends nothing.
+  await user.click(screen.getByRole("button", { name: /^Sign in$/ }));
+  expect(verify).toHaveBeenCalledTimes(1);
+
+  act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+  await enter(MOCK_TOTP);
+
+  await waitFor(() => expect(verify).toHaveBeenCalledTimes(2));
 });
 
 it("sends a visitor with nothing pending back to sign in", async () => {

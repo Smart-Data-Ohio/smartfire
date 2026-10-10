@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MOCK_PASSWORD } from "../../../mock/s2/settings.ts";
@@ -8,6 +8,7 @@ import {
   SIGN_IN_REJECTION,
   SIGNED_IN_LOCATION,
 } from "../../../mock/s2/sign-in.ts";
+import { auth } from "../../sync/auth.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
 import { FIRST_RUN_PATH, pageExit } from "./auth-navigation.ts";
 import { domainSentence } from "./sign-in.tsx";
@@ -166,6 +167,28 @@ describe("password sign-in", () => {
     expect(router.pathname()).toBe("/two_factor/challenge");
     expect(assign).not.toHaveBeenCalled();
   });
+});
+
+it("can sign in again once Back restores the page from the back/forward cache", async () => {
+  const user = userEvent.setup();
+
+  await resetSignIn(network, { google: true });
+  await renderAuth("/app/session/new");
+  await user.click(await screen.findByRole("button", { name: "Sign in with Google" }));
+  await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+
+  const signIns = vi.spyOn(auth, "signIn");
+
+  // Still leaving for Google: a second sign-in waits, and so it does after an ordinary pageshow.
+  act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: false })));
+  await signIn(MOCK_PLAIN_EMAIL, MOCK_PASSWORD);
+  expect(signIns).not.toHaveBeenCalled();
+
+  act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+  await user.click(screen.getByRole("button", { name: /^Sign in$/ }));
+
+  await waitFor(() => expect(assign).toHaveBeenLastCalledWith(SIGNED_IN_LOCATION));
+  expect(signIns).toHaveBeenCalledTimes(1);
 });
 
 it("hands a fresh install to first run", async () => {

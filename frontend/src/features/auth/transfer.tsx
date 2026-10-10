@@ -2,7 +2,13 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
 import { type AuthNext, auth, inlineSignedOutBoot } from "../../sync/auth.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
-import { AuthHeader, AuthScreen, refusalMessage, useFollowNext } from "./auth-parts.tsx";
+import {
+  AuthHeader,
+  AuthScreen,
+  refusalMessage,
+  useFollowNext,
+  useRestoredFromCache,
+} from "./auth-parts.tsx";
 
 type Landing =
   | { readonly status: "working" }
@@ -49,6 +55,10 @@ export function TransferPage({ transferId }: { readonly transferId: string }) {
   useEffect(() => {
     if (sent.current !== transferId) consume(transferId);
   }, [transferId]);
+
+  // Back from the app restores the "Signing you in" state; send the link again for its answer
+  // (signed in, or now used up), as the retained page's form can be submitted again.
+  useRestoredFromCache(() => consume(transferId));
 
   useEffect(() => {
     document.title = landing.status === "working" ? "Smartfire" : "Sign-in link";

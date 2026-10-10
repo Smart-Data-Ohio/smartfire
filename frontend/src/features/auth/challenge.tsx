@@ -9,6 +9,7 @@ import {
   refusalMessage,
   useDocumentTitle,
   useFollowNext,
+  useRestoredFromCache,
 } from "./auth-parts.tsx";
 
 type Method = "totp" | "recoveryCode";
@@ -48,6 +49,8 @@ export function ChallengePage() {
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  useRestoredFromCache(() => setBusy(false));
 
   useDocumentTitle("Two-step sign-in");
 

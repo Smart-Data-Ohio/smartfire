@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useEffectEvent, useState } from "react";
 import {
   type AuthNext,
   auth,
@@ -127,6 +127,25 @@ export function AuthScreen({
       {below}
     </div>
   );
+}
+
+/**
+ * Calls `restored` when the browser brings the page back from its back/forward cache (Back after
+ * leaving for Google or the app), so a form left busy by the departure can be used again, as the
+ * retained auth.js clears its submitting forms on `pageshow`.
+ */
+export function useRestoredFromCache(restored: () => void): void {
+  const onRestore = useEffectEvent(restored);
+
+  useEffect(() => {
+    const show = (event: PageTransitionEvent) => {
+      if (event.persisted) onRestore();
+    };
+
+    window.addEventListener("pageshow", show);
+
+    return () => window.removeEventListener("pageshow", show);
+  }, []);
 }
 
 /** The card's header: the workspace's logo when there is one, a title, a line or two under it. */

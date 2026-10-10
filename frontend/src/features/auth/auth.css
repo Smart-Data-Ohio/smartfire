@@ -5,15 +5,33 @@
  */
 
 @layer app {
+  /* Its own scroll container over the visible viewport: the app's stylesheet locks the body for
+     the shell, and a phone keyboard or a short window leaves the card taller than the screen. The
+     auto margins centre the page while it fits and let it scroll from the top once it doesn't. */
   .auth-view {
+    position: fixed;
+    inset: var(--viewport-top-inset) 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: var(--space-6);
-    min-height: 100dvh;
+    height: var(--viewport-height);
     padding: calc(var(--space-10) + var(--safe-top)) calc(var(--space-4) + var(--safe-right))
       calc(var(--space-10) + var(--safe-bottom)) calc(var(--space-4) + var(--safe-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .auth-view > * {
+    flex-shrink: 0;
+  }
+
+  .auth-view > :first-child {
+    margin-block-start: auto;
+  }
+
+  .auth-view > :last-child {
+    margin-block-end: auto;
   }
 
   .auth-view-card {
@@ -36,8 +54,11 @@
   }
 
   @media (width < 720px) {
+    .auth-view > :first-child {
+      margin-block-start: 0;
+    }
+
     .auth-view {
-      justify-content: flex-start;
       padding: calc(var(--space-4) + var(--safe-top)) calc(var(--space-3) + var(--safe-right))
         calc(var(--space-8) + var(--safe-bottom)) calc(var(--space-3) + var(--safe-left));
     }

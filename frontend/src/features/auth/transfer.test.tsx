@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   INVALID_TRANSFER,
@@ -50,4 +50,13 @@ it("goes on to the challenge when the link's account has a second step", async (
   expect(await screen.findByRole("textbox", { name: "Authenticator code" })).toBeTruthy();
   expect(router.pathname()).toBe("/two_factor/challenge");
   expect(assign).not.toHaveBeenCalled();
+});
+
+it("sends the link again when Back restores the page from the back/forward cache", async () => {
+  await renderAuth(`/app/session/transfers/${MOCK_TRANSFER_ID}`);
+  await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+
+  act(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+
+  await waitFor(() => expect(assign).toHaveBeenCalledTimes(2));
 });

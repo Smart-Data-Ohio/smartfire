@@ -12,6 +12,7 @@ import {
   TranslateButton,
   useDocumentTitle,
   useFollowNext,
+  useRestoredFromCache,
   useSignedOutBoot,
 } from "./auth-parts.tsx";
 import { EMAIL_TRANSLATIONS, PASSWORD_TRANSLATIONS } from "./translations.ts";
@@ -69,6 +70,8 @@ function SignInForm({ boot }: { readonly boot: SignedOutBootData }) {
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState<Busy>(null);
 
+  useRestoredFromCache(() => setBusy(null));
+
   const refuse = (message: string) => {
     setError(message);
     setAttempt((count) => count + 1);
@@ -84,7 +87,8 @@ function SignInForm({ boot }: { readonly boot: SignedOutBootData }) {
       return;
     }
 
-    // Busy stays on while the page leaves, so a second press can't send it again.
+    // Busy stays on while the page leaves, so a second press can't send it again; a page restored
+    // from the back/forward cache clears it.
     follow(next);
   };
 

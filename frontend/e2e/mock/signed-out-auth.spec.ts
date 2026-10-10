@@ -11,7 +11,15 @@ import {
   SIGN_IN_REJECTION,
   WRONG_CODE,
 } from "../../mock/s2/sign-in.ts";
-import { expect, expectNoHorizontalOverflow, matrix, shot as save, type Theme } from "./support.ts";
+import {
+  expect,
+  expectNoHorizontalOverflow,
+  matrix,
+  shot as save,
+  THEMES,
+  type Theme,
+  test,
+} from "./support.ts";
 
 /**
  * The SPA's signed-out pages (slice 45) at their reserved `/app/` paths: sign-in, the second
@@ -175,3 +183,31 @@ matrix("sends a challenge with nothing pending back to sign in", async ({ page, 
   await page.waitForURL(/\/app\/session\/new$/);
   await expect(page.getByRole("textbox", { name: "Email address" })).toBeVisible();
 });
+
+for (const theme of THEMES) {
+  test(`scrolls a short phone screen to the last control (${theme})`, async ({ page }) => {
+    // A 390 px phone with its keyboard up leaves about 500 px; the app's body lock is the shell's.
+    await page.setViewportSize({ width: 390, height: 500 });
+    await configure(page.request, { google: true });
+    await open(page, "session/new", theme);
+
+    const help = page.getByRole("link", { name: MOCK_TWO_FACTOR_EMAIL });
+    const terms = page.getByRole("link", { name: "Terms of Service" });
+
+    await expect(help).not.toBeInViewport();
+
+    // The wheel, as a person scrolls: no programmatic scrollIntoView.
+    await page.mouse.move(195, 250);
+    await page.mouse.wheel(0, 2000);
+    await expect(help).toBeInViewport({ ratio: 1 });
+    await expect(terms).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: "Sign in with Google" })).toBeInViewport();
+    await expectNoHorizontalOverflow(page);
+    await shot(page, "signed-out-sign-in-scrolled", theme);
+
+    const popup = page.waitForEvent("popup");
+
+    await terms.click();
+    await (await popup).close();
+  });
+}
