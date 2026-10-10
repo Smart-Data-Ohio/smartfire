@@ -238,6 +238,89 @@ function refreshPreview(id: number): void {
 }
 
 describe("polls", () => {
+  it("lets an administrator end another person's poll and shows final results", async () => {
+    const user = userEvent.setup();
+    await renderCards(messages.pollOpen);
+    const card = screen.getByRole("region", { name: "Poll" });
+    await user.click(within(card).getByRole("button", { name: "End poll now" }));
+    await waitFor(() => expect(within(card).getByText("Closed")).toBeTruthy());
+    expect(within(card).getByRole("contentinfo").textContent).toContain("Final results");
+    expect(within(card).queryByRole("radio")).toBeNull();
+    expect(within(card).queryByRole("button", { name: "End poll now" })).toBeNull();
+    expect(total(card)).toBe("4 votes");
+
+    const results: PollResults = await (
+      await fetch(`/api/v1/rooms/${ROOM}/polls/${polls.open}`)
+    ).json();
+
+    expect(results.poll.closedAt).not.toBeNull();
+    expect(results.myOptionIds).toEqual([]);
+  });
+
+  it("lets a member end their own poll", async () => {
+    const me = store.getState().me;
+
+    if (me === null) throw new Error("expected viewer");
+    mutations.setMe({ ...me, user: { ...me.user, role: "member" } });
+
+    const response = await fetch(`/api/v1/rooms/${ROOM}/polls`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        clientMessageId: "own-poll",
+        question: "Lunch?",
+        options: ["Pizza", "Tacos"],
+        multiple: false,
+        anonymous: false,
+        closesAt: null,
+      }),
+    });
+
+    const posted: MessageDTO = await response.json();
+    mutations.receiveMessage(posted);
+    await renderCards(posted.id);
+    await userEvent.setup().click(screen.getByRole("button", { name: "End poll now" }));
+    await screen.findByText("Closed");
+    expect(screen.getByRole("contentinfo").textContent).toContain("Final results");
+  });
+
+  it("hides End poll now from other members and on closed polls", async () => {
+    const me = store.getState().me;
+
+    if (me === null) throw new Error("expected viewer");
+    expect(held(messages.pollOpen).creatorId).not.toBe(me.user.id);
+    mutations.setMe({ ...me, user: { ...me.user, role: "member" } });
+    const rendered = await renderCards(messages.pollOpen);
+    expect(screen.queryByRole("button", { name: "End poll now" })).toBeNull();
+    rendered.view.unmount();
+    mutations.setMe(me);
+    await renderCards(messages.pollClosed);
+    expect(screen.queryByRole("button", { name: "End poll now" })).toBeNull();
+  });
+
+  it("keeps voting open and reports a refused end request", async () => {
+    const allow = refuse(
+      (method, path) => method === "POST" && path.endsWith("/end"),
+      "Permission changed",
+    );
+
+    try {
+      await renderCards(messages.pollOpen);
+      await userEvent.setup().click(screen.getByRole("button", { name: "End poll now" }));
+      await waitFor(() =>
+        expect(screen.getByRole("status").textContent).toBe(
+          "Couldn't end this poll. Permission changed",
+        ),
+      );
+      expect(screen.getByRole("radio", { name: "Tacos" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "End poll now" }).hasAttribute("disabled")).toBe(
+        false,
+      );
+    } finally {
+      allow();
+    }
+  });
+
   it("votes from a radio group, then changes and takes the vote back", async () => {
     const user = userEvent.setup();
 

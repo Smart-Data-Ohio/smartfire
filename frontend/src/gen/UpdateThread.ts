@@ -2,15 +2,19 @@
 import type { ThreadStatus } from "./ThreadStatus";
 
 /**
- * `PATCH /api/v1/threads/:id` (`channel_threads#update`): rename, close, reopen, lock or
- * unlock, as [`ThreadPermissions`] allow (403 otherwise). `null` leaves a field alone. Answers
- * the [`ThreadDetail`] and publishes `thread.updated`.
+ * `PATCH /api/v1/threads/:id` (`channel_threads#update`): rename, change the auto-archive
+ * duration, close, reopen, lock or unlock, as [`ThreadPermissions`] allow (403 otherwise).
+ * `null` leaves a field alone. Answers the [`ThreadDetail`] and publishes `thread.updated`.
  */
 export type UpdateThread = {
 /**
  * 1 to 100 characters.
  */
 name: string | null,
+/**
+ * Idle this long, an active thread reads as closed: 60, 1440, 4320 or 10080.
+ */
+autoArchiveAfterMinutes: number | null,
 /**
  * `closed` closes, `locked` locks, `active` reopens or unlocks.
  */

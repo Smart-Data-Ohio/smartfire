@@ -485,6 +485,7 @@ describe("S3 DTO schemas", () => {
     });
     roundTrips(CreatePoll, {
       clientMessageId: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12",
+      threadId: 7,
       question: "Lunch?",
       options: ["Tacos", "Pizza"],
       multiple: false,

@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve};
 use crate::controllers::presenters::test_support::{
-    Browser, DAVID, HQ, KEVIN, Reply, Req, TestApp,
+    Browser, DAVID, HQ, JASON, KEVIN, Reply, Req, TestApp,
 };
 
 /// The seed's card fixtures, all in Designers (David, Jason and Kevin are members; Kevin isn't
@@ -75,6 +75,193 @@ async fn vote(b: &mut Browser<'_>, room_id: i64, poll_id: i64, option_ids: &[i64
         json!({ "optionIds": option_ids }),
     )
     .await
+}
+
+async fn end_poll(b: &mut Browser<'_>, room_id: i64, poll_id: i64) -> Reply {
+    send(
+        b,
+        Method::POST,
+        &format!("/api/v1/rooms/{room_id}/polls/{poll_id}/end"),
+        json!({}),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn parity_poll_author_and_admin_can_end_once_and_stop_voting() {
+    let Some(a) = app(true).await else { return };
+    sql(&a, "UPDATE users SET role = 0 WHERE id = ?", vec![JASON]).await;
+    let mut author = a.sign_in(KEVIN).await;
+    let mut admin = a.sign_in(DAVID).await;
+    let mut other = a.sign_in(JASON).await;
+    for actor in [KEVIN, DAVID] {
+        let reply = send(
+            &mut author,
+            Method::POST,
+            &format!("/api/v1/rooms/{HQ}/polls"),
+            poll_body(&format!("end-{actor}"), &["Yes", "No"]),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let poll = parse::<api::MessageDTO>(&reply).poll.unwrap();
+        let choice = poll.options[0].id;
+        ok::<api::PollResults>(&vote(&mut author, HQ, poll.id, &[choice]).await);
+        let denied = end_poll(&mut other, HQ, poll.id).await;
+        assert_eq!(denied.status, StatusCode::FORBIDDEN, "{}", denied.text());
+        let open: api::PollResults = ok(&author
+            .send(get(&format!("/api/v1/rooms/{HQ}/polls/{}", poll.id)))
+            .await);
+        assert!(!open.poll.closed);
+        let ended: api::PollResults = ok(&end_poll(
+            if actor == KEVIN {
+                &mut author
+            } else {
+                &mut admin
+            },
+            HQ,
+            poll.id,
+        )
+        .await);
+        assert!(ended.poll.closed && ended.poll.closed_at.is_some());
+        assert_eq!(ended.poll.total_votes, 1);
+        let again: api::PollResults = ok(&end_poll(&mut author, HQ, poll.id).await);
+        assert_eq!(again.poll.closed_at, ended.poll.closed_at);
+        assert_eq!(counts(&again.poll), counts(&ended.poll));
+        assert_eq!(fields(&vote(&mut author, HQ, poll.id, &[]).await), ["poll"]);
+        assert_eq!(
+            end_poll(&mut other, HQ, poll.id).await.status,
+            StatusCode::FORBIDDEN
+        );
+    }
+    let before: api::PollResults = ok(&admin
+        .send(get(&format!(
+            "/api/v1/rooms/{DESIGNERS}/polls/{CLOSED_POLL}"
+        )))
+        .await);
+    let already: api::PollResults = ok(&end_poll(&mut admin, DESIGNERS, CLOSED_POLL).await);
+    assert_eq!(already.poll.closed_at, before.poll.closed_at);
+    assert_eq!(
+        end_poll(&mut admin, HQ, OPEN_POLL).await.status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        end_poll(&mut author, ALL_PETS, OPEN_POLL).await.status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn parity_poll_thread_creation_and_end_reach_live_viewers() {
+    for threaded in [false, true] {
+        let Some(a) = app(true).await else { return };
+        let thread_id = if threaded {
+            Some(
+                a.db()
+                    .write(|tx| {
+                        Ok(campfire_db::ChannelThread::create(
+                            tx,
+                            campfire_db::NewChannelThread {
+                                room_id: DESIGNERS,
+                                creator_id: DAVID,
+                                name: Some("Poll thread".into()),
+                                ..Default::default()
+                            },
+                        )?
+                        .id)
+                    })
+                    .await
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
+        let topic =
+            thread_id.map_or_else(|| format!("room:{DESIGNERS}"), |id| format!("thread:{id}"));
+        let (addr, server) = serve(&a).await;
+        let mut david = a.sign_in(DAVID).await;
+        let mut kevin = a.sign_in(KEVIN).await;
+        let mut sync =
+            Sync::connect(addr, &kevin.cookie_header(), std::slice::from_ref(&topic)).await;
+        sync.welcome().await;
+        let mut body = poll_body("thread-poll", &["Yes", "No"]);
+        body["threadId"] = json!(thread_id);
+        body["anonymous"] = json!(true);
+        let reply = send(
+            &mut david,
+            Method::POST,
+            &format!("/api/v1/rooms/{DESIGNERS}/polls"),
+            body.clone(),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let posted: api::MessageDTO = parse(&reply);
+        assert_eq!(posted.thread_id, thread_id);
+        let poll = posted.poll.unwrap();
+        let event = sync.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == posted.id), |_| false).await;
+        assert_eq!(event.topic, topic);
+        let again: api::MessageDTO = ok(&send(
+            &mut david,
+            Method::POST,
+            &format!("/api/v1/rooms/{DESIGNERS}/polls"),
+            body,
+        )
+        .await);
+        assert_eq!(again.id, posted.id);
+        ok::<api::PollResults>(&vote(&mut david, DESIGNERS, poll.id, &[poll.options[0].id]).await);
+        sync.until(poll_updated(poll.id), any_ballot).await;
+        let ended: api::PollResults = ok(&end_poll(&mut david, DESIGNERS, poll.id).await);
+        let event = sync.until(|event| matches!(&event.payload, api::SyncPayload::PollUpdated(updated) if updated.poll.id == poll.id && updated.poll.closed), any_ballot).await;
+        assert_eq!(event.topic, topic);
+        let api::SyncPayload::PollUpdated(updated) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!((updated.room_id, updated.thread_id), (DESIGNERS, thread_id));
+        assert_eq!(counts(&updated.poll), [(1, vec![]), (0, vec![])]);
+        assert_eq!(updated.poll.closed_at, ended.poll.closed_at);
+        let final_results: api::PollResults = ok(&kevin
+            .send(get(&format!("/api/v1/rooms/{DESIGNERS}/polls/{}", poll.id)))
+            .await);
+        assert!(final_results.poll.closed && final_results.my_option_ids.is_empty());
+        assert_eq!(
+            fields(&vote(&mut kevin, DESIGNERS, poll.id, &[poll.options[1].id]).await),
+            ["poll"]
+        );
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn parity_poll_rejects_locked_closed_and_foreign_threads_without_posting() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    for (thread_id, room_id, status) in [
+        (3, DESIGNERS, StatusCode::FORBIDDEN),
+        (2, DESIGNERS, StatusCode::FORBIDDEN),
+        (1, HQ, StatusCode::NOT_FOUND),
+        (99999999, DESIGNERS, StatusCode::NOT_FOUND),
+    ] {
+        let client_id = format!("denied-thread-{thread_id}-{room_id}");
+        let mut body = poll_body(&client_id, &["Yes", "No"]);
+        body["threadId"] = json!(thread_id);
+        let reply = send(
+            &mut david,
+            Method::POST,
+            &format!("/api/v1/rooms/{room_id}/polls"),
+            body,
+        )
+        .await;
+        assert_eq!(reply.status, status, "{}", reply.text());
+        a.db()
+            .read(move |conn| {
+                assert!(
+                    campfire_db::Message::find_duplicate(conn, room_id, DAVID, &client_id)?
+                        .is_none()
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
 }
 
 async fn message(b: &mut Browser<'_>, id: i64) -> api::MessageDTO {

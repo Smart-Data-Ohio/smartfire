@@ -334,9 +334,31 @@ async fn update_thread(c: &mut Ctx) -> Result {
             ));
         }
     }
+    if let Some(minutes) = input.auto_archive_after_minutes
+        && !campfire_db::models::channel_thread::AUTO_ARCHIVE_OPTIONS.contains(&minutes)
+    {
+        return Err(fail(
+            c,
+            validation(
+                "autoArchiveAfterMinutes",
+                "must be one of 60, 1440, 4320 or 10080",
+            ),
+        ));
+    }
     let (thread_id, board) = (thread.id, room.board());
+    // Boards never auto-archive (`status_in_room`, `stale`), so a duration saved on a post would do nothing.
+    if board && input.auto_archive_after_minutes.is_some() {
+        return Err(fail(
+            c,
+            validation(
+                "autoArchiveAfterMinutes",
+                "can't be set on a board post, which never auto-archives",
+            ),
+        ));
+    }
     // An empty body changes nothing, so nothing is published.
-    let changes = input.name.is_some() || input.status.is_some();
+    let changes =
+        input.name.is_some() || input.auto_archive_after_minutes.is_some() || input.status.is_some();
     let actor = viewer.clone();
     let result = c
         .app()
@@ -346,13 +368,15 @@ async fn update_thread(c: &mut Ctx) -> Result {
             // `channel_threads#update`'s permissions, read in its write.
             let settings = thread.settings_manageable_by(tx.conn(), &actor)?;
             let moderator = thread.manageable_by(tx.conn(), &actor)?;
-            // A board post's name is work metadata: its owner may change it too.
+            // A board post's name and auto-archive duration are work metadata: its owner may
+            // change them too.
             let rename = if board {
                 thread.work_manageable_by(tx.conn(), &actor)?
             } else {
                 settings
             };
-            let allowed = (input.name.is_none() || rename)
+            let allowed = ((input.name.is_none() && input.auto_archive_after_minutes.is_none())
+                || rename)
                 && match input.status {
                     None => true,
                     Some(api::ThreadStatus::Closed) => {
@@ -374,8 +398,13 @@ async fn update_thread(c: &mut Ctx) -> Result {
             if !allowed {
                 return Err(campfire_db::Error::Other(FORBIDDEN_UPDATE.into()));
             }
-            if input.name.is_some() {
-                thread.update_metadata(tx, input.name.as_deref(), None, None)?;
+            if input.name.is_some() || input.auto_archive_after_minutes.is_some() {
+                thread.update_metadata(
+                    tx,
+                    input.name.as_deref(),
+                    input.auto_archive_after_minutes,
+                    None,
+                )?;
             }
             match input.status {
                 Some(api::ThreadStatus::Closed) => thread.close(tx)?,

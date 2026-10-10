@@ -68,7 +68,7 @@ export const createThread = Effect.fn("api.createThread")(function* (
   );
 });
 
-/** `PATCH /threads/:id`: rename, close, reopen, lock or unlock. */
+/** `PATCH /threads/:id`: rename, set the auto-archive duration, close, reopen, lock or unlock. */
 export const updateThread = Effect.fn("api.updateThread")(function* (
   threadId: number,
   body: UpdateThread,

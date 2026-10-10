@@ -188,15 +188,17 @@ pub struct ThreadCreated {
     pub message: MessageDTO,
 }
 
-/// `PATCH /api/v1/threads/:id` (`channel_threads#update`): rename, close, reopen, lock or
-/// unlock, as [`ThreadPermissions`] allow (403 otherwise). `null` leaves a field alone. Answers
-/// the [`ThreadDetail`] and publishes `thread.updated`.
+/// `PATCH /api/v1/threads/:id` (`channel_threads#update`): rename, change the auto-archive
+/// duration, close, reopen, lock or unlock, as [`ThreadPermissions`] allow (403 otherwise).
+/// `null` leaves a field alone. Answers the [`ThreadDetail`] and publishes `thread.updated`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateThread {
     /// 1 to 100 characters.
     pub name: Option<String>,
+    /// Idle this long, an active thread reads as closed: 60, 1440, 4320 or 10080.
+    pub auto_archive_after_minutes: Option<i64>,
     /// `closed` closes, `locked` locks, `active` reopens or unlocks.
     pub status: Option<ThreadStatus>,
 }

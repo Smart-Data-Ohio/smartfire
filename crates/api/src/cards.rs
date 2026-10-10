@@ -20,8 +20,8 @@ use campfire_channels::channels::message_features::origin as renderer_origin;
 use campfire_db::models::calendar_event::attendance::RESPONSES;
 use campfire_db::models::poll::{LABEL_LIMIT, MAX_OPTIONS, MIN_OPTIONS};
 use campfire_db::{
-    CalendarEvent, Connection, Message, NewMessage, NewPoll, Poll, Room, Timestamp, User,
-    message_quote,
+    CalendarEvent, ChannelThread, Connection, Message, NewMessage, NewPoll, Poll, Room, Timestamp,
+    User, message_quote,
 };
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::message_features as features;
@@ -47,6 +47,10 @@ endpoint!(
 endpoint!(
     /// `POST /api/v1/rooms/:room_id/polls/:poll_id/vote`
     vote => post_vote
+);
+endpoint!(
+    /// `POST /api/v1/rooms/:room_id/polls/:poll_id/end`
+    end_poll => post_end_poll
 );
 endpoint!(
     /// `GET /api/v1/rooms/:room_id/events/:event_id/attendance`
@@ -667,6 +671,12 @@ async fn post_poll(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     if let Some(message) = duplicate {
+        if message.thread_id != input.thread_id {
+            return Err(fail(
+                c,
+                validation("clientMessageId", "is already used in another conversation"),
+            ));
+        }
         return render_message(c, message, StatusCode::OK).await;
     }
     #[cfg(feature = "test-support")]
@@ -726,32 +736,60 @@ async fn post_poll(c: &mut Ctx) -> Result {
         closes_at,
     };
     let posted_room = room.clone();
-    let (message, created) = c
+    let outcome = c
         .app()
         .db
         .write(move |tx| {
             if let Some(message) =
                 Message::find_duplicate(tx.conn(), room_id, creator_id, &client_message_id)?
             {
-                return Ok((message, false));
+                return Ok(if message.thread_id == input.thread_id {
+                    Ok((message, false))
+                } else {
+                    Err(validation(
+                        "clientMessageId",
+                        "is already used in another conversation",
+                    ))
+                });
             }
+            let thread = match input.thread_id {
+                Some(id) => {
+                    let Some(thread) = ChannelThread::find_by_id(tx.conn(), id)? else {
+                        return Ok(Err(not_found()));
+                    };
+                    if thread.room_id != room_id {
+                        return Ok(Err(not_found()));
+                    }
+                    if thread.status_in_room(&posted_room, tx.now())
+                        != campfire_db::channel_thread::ThreadStatus::Active
+                    {
+                        return Ok(Err(api::ApiError::Forbidden {
+                            message: "This thread is closed or locked".into(),
+                        }));
+                    }
+                    Some(thread)
+                }
+                None => None,
+            };
             // `rooms/polls#create`: the question, its poll and the bots' webhooks in one write.
-            let message = Message::create(
-                tx,
-                NewMessage {
-                    room_id,
-                    creator_id,
-                    client_message_id: Some(client_message_id),
-                    markdown_source: Some(question),
-                    ..Default::default()
-                },
-            )?;
+            let attributes = NewMessage {
+                room_id,
+                creator_id,
+                client_message_id: Some(client_message_id),
+                markdown_source: Some(question),
+                ..Default::default()
+            };
+            let message = match thread {
+                Some(mut thread) => thread.post_message(tx, creator_id, attributes)?,
+                None => Message::create(tx, attributes)?,
+            };
             Poll::create_for_message(tx, &message, poll)?;
             posting::deliver_webhooks_to_bots(tx, &posted_room, &message)?;
-            Ok((message, true))
+            Ok(Ok((message, true)))
         })
         .await
         .map_err(db_error)?;
+    let (message, created) = outcome.map_err(|error| fail(c, error))?;
     if !created {
         return render_message(c, message, StatusCode::OK).await;
     }
@@ -836,6 +874,36 @@ async fn post_vote(c: &mut Ctx) -> Result {
                     return Ok(Err(validation("optionIds", "can name only one option")));
                 }
                 poll.cast_vote(tx, viewer_id, &ids)?;
+                poll_results(tx.conn(), &poll, viewer_id, tx.now()).map(Ok)
+            },
+        )
+        .await
+        .map_err(db_error)?;
+    match outcome {
+        Ok(results) => c.json(StatusCode::OK, &results),
+        Err(error) => Err(fail(c, error)),
+    }
+}
+
+async fn post_end_poll(c: &mut Ctx) -> Result {
+    let (room, poll_id, viewer_id) = set_poll(c).await?;
+    let origin = presenters::page::renderer_base_url(c);
+    let outcome = c
+        .app()
+        .db
+        .write_scoped(
+            move || renderer_origin(&origin),
+            move |tx| {
+                let mut poll = Poll::find_in_room(tx.conn(), room.id, poll_id)?;
+                let message = Message::find(tx.conn(), poll.message_id)?;
+                let viewer = User::find(tx.conn(), viewer_id)?;
+                if message.creator_id != viewer_id && !viewer.is_administrator() {
+                    return Ok(Err(api::ApiError::Forbidden {
+                        message: "Only the poll author or an administrator can end this poll"
+                            .into(),
+                    }));
+                }
+                poll.close(tx, tx.now())?;
                 poll_results(tx.conn(), &poll, viewer_id, tx.now()).map(Ok)
             },
         )

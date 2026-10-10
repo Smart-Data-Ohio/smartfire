@@ -75,6 +75,11 @@ export const vote = Effect.fn("cards.vote")(function* (
   cardMutations.settleVote(pollId, sent, results);
 });
 
+/** Ends voting and applies final results through the same reducer as votes and live updates. */
+export const endPoll = Effect.fn("cards.endPoll")(function* (roomId: number, pollId: number) {
+  cardMutations.applyPollResults(yield* api.endPoll(roomId, pollId));
+});
+
 /**
  * Posts a question with its poll. Pass the same `clientMessageId` on a retry: the server answers
  * the question it already made. The question joins the timeline like any sent message.
