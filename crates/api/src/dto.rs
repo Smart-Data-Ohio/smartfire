@@ -383,7 +383,7 @@ fn messages_and_fetches_inner(
     let presenter = Presenter::new(conn, app, None);
     let presenter = if preload { presenter.preload_payload(messages)? } else { presenter };
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
-    let mut polls = crate::cards::polls(conn, &ids, now)?;
+    let mut polls = crate::cards::polls(conn, &ids, now, &*app.storage.verifier)?;
     let mut fetches = crate::cards::Fetches::default();
     let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
     let pinned: BTreeSet<i64> = ids_query(

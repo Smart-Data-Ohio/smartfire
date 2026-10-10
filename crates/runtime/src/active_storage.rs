@@ -1,7 +1,9 @@
 //! The Active Storage endpoints (`activestorage/config/routes.rb`) over `campfire_storage`, as the
 //! engine's controllers serve them, plus `ActiveStorage::Blob#purge` for the purge job.
 //!
-//! Downloads stay public behind signed URLs; the disk `PUT` and direct uploads require a
+//! Poll option media additionally requires membership in its room and uses private, uncached
+//! responses, including stills and disk redirects. Other downloads stay public behind signed
+//! URLs; the disk `PUT` and direct uploads require a
 //! Campfire session (`reference/config/initializers/active_storage_authentication.rb`). The disk
 //! service's `show` gets `Cache-Control: max-age=3600, public`
 //! (`reference/config/initializers/active_storage.rb`). These controllers inherit from
@@ -85,7 +87,9 @@ pub async fn blobs_redirect(c: &mut Ctx) -> Result {
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
     let url = blob_url(c, &blob, disposition.as_deref());
-    c.redirect_to_with(&url, campfire_kit::Redirect { allow_other_host: true, ..Default::default() })
+    let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
+    let response = c.redirect_to_with(&url, campfire_kit::Redirect { allow_other_host: true, ..Default::default() })?;
+    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
 }
 
 /// `ActiveStorage::Blobs::ProxyController#show`
@@ -94,13 +98,15 @@ pub async fn blobs_proxy(c: &mut Ctx) -> Result {
     let blob = set_blob(c).await?;
     let disposition = c.param_str("disposition").map(str::to_string);
     if let Some(range) = c.request.header("range").filter(|r| !r.trim().is_empty()).map(str::to_string) {
-        return send_blob_byte_range_data(c, &blob, &range);
+        let response = send_blob_byte_range_data(c, &blob, &range)?;
+        return Ok(if matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true))) { response.header(header::CACHE_CONTROL, "private, no-store") } else { response });
     }
-    if let Some(not_modified) = http_cache_forever(c) {
+    let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
+    if !restricted && let Some(not_modified) = http_cache_forever(c) {
         return Ok(not_modified);
     }
-    let response = send_blob_stream(c, &blob, disposition.as_deref())?;
-    Ok(response.header(header::ACCEPT_RANGES, "bytes"))
+    let response = send_blob_stream(c, &blob, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes");
+    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
 }
 
 // --- Representations -------------------------------------------------------------------------------
@@ -109,23 +115,27 @@ pub async fn blobs_proxy(c: &mut Ctx) -> Result {
 pub async fn representations_redirect(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     let blob = set_blob(c).await?;
+    let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
     let image = set_representation(c, blob).await?;
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
     let url = blob_url(c, &image, disposition.as_deref());
-    c.redirect_to_with(&url, campfire_kit::Redirect { allow_other_host: true, ..Default::default() })
+    let response = c.redirect_to_with(&url, campfire_kit::Redirect { allow_other_host: true, ..Default::default() })?;
+    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
 }
 
 /// `ActiveStorage::Representations::ProxyController#show`
 pub async fn representations_proxy(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     let blob = set_blob(c).await?;
+    let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
     let image = set_representation(c, blob).await?;
-    if let Some(not_modified) = http_cache_forever(c) {
+    if !restricted && let Some(not_modified) = http_cache_forever(c) {
         return Ok(not_modified);
     }
     let disposition = c.param_str("disposition").map(str::to_string);
-    send_blob_stream(c, &image, disposition.as_deref())
+    let response = send_blob_stream(c, &image, disposition.as_deref())?;
+    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
 }
 
 /// `ActiveStorage::SetBlob#set_blob`: `Blob.find_signed!(params[:signed_blob_id] || params[:signed_id])`.
@@ -136,12 +146,67 @@ async fn set_blob(c: &mut Ctx) -> Result<Blob> {
     let Some(blob_id) = paths::verify_signed_blob_id(&*storage.verifier, &signed_id, c.now()) else {
         return halt(head(StatusCode::NOT_FOUND));
     };
-    c.app()
+    let mut blob = c.app()
         .db
         .read(move |conn| Blob::find(conn, blob_id).map_err(storage_error))
         .await
         .map_err(Error::internal)?
-        .ok_or(Error::NotFound)
+        .ok_or(Error::NotFound)?;
+    if authorize_poll_media(c, blob_id).await? {
+        blob.metadata.set("poll_media", Json::Bool(true));
+    }
+    Ok(blob)
+}
+
+/// Follow still/variant images back to their original, including redirected disk URLs.
+async fn authorize_poll_media(c: &Ctx, blob_id: i64) -> Result<bool> {
+    let (restricted, rooms) = c.app().db.read(move |conn| {
+        let mut roots = conn.prepare_cached(
+            "WITH RECURSIVE roots(id) AS (
+                VALUES (?1)
+                UNION SELECT v.blob_id FROM active_storage_attachments a
+                    JOIN active_storage_variant_records v ON v.id=a.record_id
+                    JOIN roots r ON r.id=a.blob_id
+                    WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image'
+             ) SELECT b.id, json_extract(b.metadata, '$.poll_media') = 1 FROM roots r JOIN active_storage_blobs b ON b.id=r.id"
+        )?;
+        let blobs = roots.query_map([blob_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<bool>>(1)?.unwrap_or(false))))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut restricted = false;
+        let mut rooms = Vec::new();
+        for (id, marked) in blobs {
+            restricted |= marked;
+            let mut statement = conn.prepare_cached(
+                "SELECT m.room_id FROM active_storage_attachments a
+                 JOIN poll_options o ON o.id=a.record_id JOIN polls p ON p.id=o.poll_id
+                 JOIN messages m ON m.id=p.message_id
+                 WHERE a.blob_id=? AND a.record_type='PollOption' AND a.name='media'"
+            )?;
+            let found = statement.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            restricted |= !found.is_empty();
+            rooms.extend(found);
+            if marked {
+                let mut statement = conn.prepare_cached("SELECT m.room_id FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.blob_id=? AND a.record_type='Message'")?;
+                rooms.extend(statement.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
+            }
+        }
+        Ok((restricted, rooms))
+    }).await.map_err(Error::internal)?;
+    if !restricted { return Ok(false); }
+    let session = find_session_by_cookie(c).await?.ok_or(Error::NotFound)?;
+    let user_id = session.user_id;
+    let verified = session.two_factor_verified();
+    let allowed = c.app().db.read(move |conn| {
+        let user = campfire_db::User::find(conn, user_id)?;
+        if !user.is_active() || (!verified && user.requires_two_factor()) { return Ok(false); }
+        for room in rooms {
+            if conn.query_row("SELECT EXISTS(SELECT 1 FROM memberships WHERE room_id=? AND user_id=?)", params![room, user_id], |r| r.get::<_, bool>(0))? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }).await.map_err(Error::internal)?;
+    if !allowed { return Err(Error::NotFound); }
+    Ok(true)
 }
 
 /// `set_representation`: `@blob.representation(params[:variation_key]).processed`. A bad
@@ -814,8 +879,18 @@ fn stream_parts(parts: Vec<BodyPart>) -> impl futures_util::Stream<Item = std::i
 
 /// `ActiveStorage::DiskController#show`, plus the initializer's `after_action` cache header.
 pub async fn disk_show(c: &mut Ctx) -> Result {
+    let encoded = c.param_str("encoded_key").unwrap_or("");
+    let Some(key) = disk::decode_verified_key(&*c.app().storage.verifier, encoded, c.now()) else { return Ok(c.head(StatusCode::NOT_FOUND)); };
+    let blob_id = c.app().db.read(move |conn| {
+        use rusqlite::OptionalExtension;
+        Ok(conn.query_row("SELECT id FROM active_storage_blobs WHERE key=?", [key.key], |r| r.get::<_, i64>(0)).optional()?)
+    }).await.map_err(Error::internal)?;
+    let restricted = match blob_id {
+        Some(id) => authorize_poll_media(c, id).await?,
+        None => false,
+    };
     let response = disk_serve(c)?;
-    Ok(response.header(header::CACHE_CONTROL, "max-age=3600, public"))
+    Ok(response.header(header::CACHE_CONTROL, if restricted { "private, no-store" } else { "max-age=3600, public" }))
 }
 
 fn disk_serve(c: &mut Ctx) -> Result {
@@ -954,7 +1029,7 @@ pub async fn create_direct_upload(
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_") && !key.starts_with("poll_"));
     }
     metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
@@ -1130,6 +1205,15 @@ pub async fn purge(app: &App, blob_id: i64) -> anyhow::Result<()> {
             }
             // has_one_attached :preview_image (dependent: :destroy on the attachment)
             dependents.extend(destroy_attachment(conn, "ActiveStorage::Blob", blob_id, "preview_image")?);
+            // Stills keep the room restriction after their source association is removed.
+            if matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true))) {
+                for dependent in &dependents {
+                    if let Some(mut image) = Blob::find(conn, *dependent).map_err(storage_error)? {
+                        image.metadata.set("poll_media", Json::Bool(true));
+                        image.update_metadata(conn, image.metadata.clone()).map_err(storage_error)?;
+                    }
+                }
+            }
             conn.execute_cached("DELETE FROM active_storage_blobs WHERE id = ?1", [blob_id])?;
             // after_destroy_commit :purge_dependent_blob_later
             for dependent in &dependents {

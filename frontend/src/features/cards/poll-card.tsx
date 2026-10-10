@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { AnimatedNumber } from "../../motion/animated-number.tsx";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { pollView } from "../../store/cards.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { store, useStore } from "../../store/store.ts";
@@ -19,6 +20,39 @@ import { closesLabel, percent } from "./format.ts";
 type Poll = NonNullable<MessageDTO["poll"]>;
 
 type PollOption = Poll["options"][number];
+
+function OptionLabel({ option }: { readonly option: PollOption }) {
+  const reduced = useReducedMotion();
+  const media = option.media;
+
+  const custom =
+    media?.kind === "emoji" && media.content.startsWith(":") && media.content.endsWith(":")
+      ? media.content.slice(1, -1)
+      : null;
+
+  return (
+    <span className="poll-option-content">
+      {media?.kind === "image" ? (
+        <img
+          className="poll-option-image"
+          src={reduced ? (media.stillUrl ?? media.url) : media.url}
+          alt={option.label}
+          loading="lazy"
+        />
+      ) : null}
+      {media?.kind === "emoji" ? (
+        <span className="poll-option-emoji" aria-hidden="true">
+          {custom === null ? (
+            media.content
+          ) : (
+            <img src={`/icons/${encodeURIComponent(custom)}${reduced ? "?still=1" : ""}`} alt="" />
+          )}
+        </span>
+      ) : null}
+      <span>{option.label}</span>
+    </span>
+  );
+}
 
 /** The most voters an option shows as faces. */
 const FACES = 3;
@@ -137,7 +171,9 @@ function ResultRow({ option, total, mine, leading, anonymous }: ResultRowProps) 
       />
       <span className="poll-result-label">
         {mine ? <Icon name="circle-check" size={14} className="poll-mine" /> : null}
-        <span className="poll-result-text">{option.label}</span>
+        <span className="poll-result-text">
+          <OptionLabel option={option} />
+        </span>
         {mine ? <span className="visually-hidden">(your vote)</span> : null}
       </span>
       <span className="poll-result-figures">
@@ -198,7 +234,7 @@ function ChoiceList({ poll, initial, onVote, onCancel }: ChoiceListProps) {
             <div key={option.id} className="poll-option" data-checkbox="">
               <Checkbox
                 checked={picked.includes(option.id)}
-                label={option.label}
+                label={<OptionLabel option={option} />}
                 onCheckedChange={(checked) => pick(option.id, checked)}
               />
             </div>
@@ -214,7 +250,9 @@ function ChoiceList({ poll, initial, onVote, onCancel }: ChoiceListProps) {
                   onChange={() => pick(option.id, true)}
                 />
               </span>
-              <span className="poll-option-label">{option.label}</span>
+              <span className="poll-option-label">
+                <OptionLabel option={option} />
+              </span>
             </label>
           ),
         )}

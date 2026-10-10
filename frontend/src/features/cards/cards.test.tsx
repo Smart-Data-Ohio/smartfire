@@ -30,6 +30,7 @@ import {
   resetGithubDrafts,
 } from "./github-drafts.ts";
 import MessageCards from "./message-cards.tsx";
+import { PollCard } from "./poll-card.tsx";
 
 // The cards render against the in-memory mock backend (mock/s3/cards.ts) through stubbed fetch:
 // the per-viewer previews, votes and responses go through the real actions.
@@ -1329,4 +1330,74 @@ describe("creating a poll", () => {
       server.handle = handle;
     }
   });
+});
+
+it("uploads one image per poll option and offers the shared emoji picker", async () => {
+  const user = userEvent.setup();
+  render(<CreatePollDialog roomId={ROOM} open onOpenChange={() => undefined} />);
+  const dialog = screen.getByRole("dialog", { name: "Create a poll" });
+  expect(within(dialog).getByRole("button", { name: "Emoji for option 1" })).toBeTruthy();
+  expect(within(dialog).getByLabelText("Image for option 2")).toBeTruthy();
+
+  const png = Uint8Array.from(
+    atob(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==",
+    ),
+    (c) => c.charCodeAt(0),
+  );
+
+  await user.upload(
+    within(dialog).getByLabelText("Image for option 2"),
+    new File([png], "pizza.png", { type: "image/png" }),
+  );
+  await user.type(within(dialog).getByRole("textbox", { name: "Question" }), "Lunch media?");
+  await user.type(within(dialog).getByRole("textbox", { name: "Option 1" }), "Taco");
+  await user.type(within(dialog).getByRole("textbox", { name: "Option 2" }), "Pizza");
+  await user.click(within(dialog).getByRole("button", { name: "Post poll" }));
+  await waitFor(() =>
+    expect(
+      Object.values(store.getState().messages).find((m) => m.markdownSource === "Lunch media?")
+        ?.poll?.options[1]?.media,
+    ).toMatchObject({ kind: "image" }),
+  );
+  expect(
+    Object.values(store.getState().messages).find((m) => m.markdownSource === "Lunch media?")?.poll
+      ?.options[1]?.media,
+  ).toMatchObject({ kind: "image", url: expect.stringContaining("/rails/active_storage/") });
+});
+
+it("shows option images and inline emoji in choices and final results, using stills under reduced motion", async () => {
+  const message = held(messages.pollOpen);
+  const original = message.poll;
+
+  if (original === null) throw new Error("expected seeded poll");
+
+  const poll = {
+    ...original,
+    options: original.options.map((option, index) => ({
+      ...option,
+      media:
+        index === 0
+          ? ({ kind: "image", url: "/poll.gif", stillUrl: "/poll.png" } as const)
+          : ({ kind: "emoji", content: "🌮" } as const),
+    })),
+  };
+
+  document.documentElement.dataset.motion = "reduce";
+  const view = render(<PollCard message={message} poll={{ ...poll, closed: true }} />);
+  expect(screen.getByRole("img", { name: poll.options[0]?.label ?? "" }).getAttribute("src")).toBe(
+    "/poll.png",
+  );
+  expect(screen.getAllByText("🌮")).toHaveLength(poll.options.length - 1);
+  view.rerender(
+    <PollCard
+      message={message}
+      poll={{ ...poll, options: poll.options.map((o) => ({ ...o, voterIds: [] })) }}
+    />,
+  );
+  expect(screen.getByRole("img", { name: poll.options[0]?.label ?? "" }).getAttribute("src")).toBe(
+    "/poll.png",
+  );
+  expect(screen.getAllByText("🌮")).toHaveLength(poll.options.length - 1);
+  delete document.documentElement.dataset.motion;
 });
