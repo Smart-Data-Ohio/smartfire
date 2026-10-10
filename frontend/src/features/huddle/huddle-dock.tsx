@@ -17,7 +17,7 @@ import { usePhoneLayout } from "../panes/use-right-pane.ts";
 import { callController } from "./call-controller.ts";
 import { type CallPhase, livePhase, useCall } from "./call-store.ts";
 import { useCallViewCovers, useCallViewNavigation } from "./call-view-cover.ts";
-import { DevicePickers, MeterBar } from "./device-pickers.tsx";
+import { DevicePickers, MeterBar, ShareQualityPicker } from "./device-pickers.tsx";
 import { formatConnectionStats } from "./engine/stats.ts";
 import type { ConnectionQuality } from "./engine/transport.ts";
 import "./huddle.css";
@@ -99,6 +99,8 @@ function SettingsPanel() {
   const statsOpen = useCall((state) => state.statsOpen);
   const stats = useCall((state) => state.stats);
   const meter = useCall((state) => state.meter);
+  const sharing = useCall((state) => state.snapshot.screenSharing);
+  const canPublish = useCall((state) => state.canPublish);
   const formatted = stats === null ? null : formatConnectionStats(stats);
 
   return (
@@ -110,6 +112,12 @@ function SettingsPanel() {
         cameraOptional={false}
       />
       <MeterBar level={meter} label="Microphone level" />
+      {canPublish ? (
+        <ShareQualityPicker
+          sharing={sharing}
+          onSelect={(quality) => callController.setShareQuality(quality)}
+        />
+      ) : null}
       {noise.available ? (
         <Toggle
           checked={noise.enabled}
