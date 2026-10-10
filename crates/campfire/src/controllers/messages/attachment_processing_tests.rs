@@ -10,16 +10,6 @@ use std::{sync::Arc, time::Duration};
 
 const CLASS: &str = "Message::AttachmentProcessingJob";
 
-/// Give a pinned seed file the state of a fresh direct upload before a request test.
-pub(crate) async fn fixture_upload(app: &TestApp, blob_id: i64, uploader_id: i64) {
-    app.db().write(move |tx| {
-        tx.conn().execute("DELETE FROM active_storage_attachments WHERE blob_id=?", [blob_id])?;
-        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.uploader_id',?) WHERE id=?",
-            [uploader_id, blob_id])?;
-        Ok(())
-    }).await.unwrap();
-}
-
 #[tokio::test]
 async fn attachment_processing_round3_grouped_slot_is_processed() {
     let (app, _, id, blob) = setup(false).await;
@@ -779,7 +769,6 @@ async fn attachment_processing_replacements_cover_room_thread_multipart_and_dire
                     ),
                 );
             } else {
-                fixture_upload(&app, blob, DAVID).await;
                 let signed = campfire_storage::paths::signed_blob_id(
                     &*app.booted.app.storage.verifier,
                     blob,
@@ -987,7 +976,6 @@ async fn attachment_processing_agent_root_processes_before_its_create_broadcast(
         }).await.unwrap();
         let (_client, server) = subscribe(&app).await;
         app.publications().take();
-        fixture_upload(&app, blob, BENDER).await;
         let signed = campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob, None);
         let response = app.anonymous().send(
             Req::new(axum::http::Method::POST, &format!("/rooms/{ALL_TALK}/agents/messages"))

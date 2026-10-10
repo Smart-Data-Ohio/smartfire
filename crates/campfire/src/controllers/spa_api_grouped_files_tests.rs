@@ -61,11 +61,11 @@ async fn legacy_attachment_edit(thread: bool, grouped: bool) {
     }).await.unwrap();
     let before = write_counts(&a).await;
     let reply = david.write(json_body(Method::PATCH, &path,
-        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Rejected"}}))).await;
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Shared"}}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(write_counts(&a).await, before);
     a.db().read(move |conn| {
-        assert_eq!(campfire_db::Message::find(conn, message.id)?.markdown_source.as_deref(), Some("Changed"));
+        assert_eq!(campfire_db::Message::find(conn, message.id)?.markdown_source.as_deref(), Some("Shared"));
         Ok(())
     }).await.unwrap();
 }
@@ -226,7 +226,7 @@ async fn grouped_files_round4_bot_edit_enforces_total_limit() {
     legacy_attachment_edit_limit(false, true).await;
 }
 
-async fn legacy_attachment_claims(thread: bool, edit: bool) {
+async fn legacy_attachment_reuse(thread: bool, edit: bool) {
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
     let mut david = a.sign_in(DAVID).await;
     let foreign = upload(&mut a.sign_in(KEVIN).await, "foreign.txt").await;
@@ -255,18 +255,20 @@ async fn legacy_attachment_claims(thread: bool, edit: bool) {
     );
     let path = if edit { format!("{base}/{message_id}") } else { base };
     let method = if edit { Method::PATCH } else { Method::POST };
-    let before = write_counts(&a).await;
     for file in [&foreign, &used] {
+        let file_id = blob_id(&a, file);
+        let client = format!("legacy-reuse-{file_id}");
         let reply = david.write(Req::new(method.clone(), &path)
             .header("accept", if !edit && !thread { "text/vnd.turbo-stream.html" } else { "application/json" })
             .header("content-type", "application/json")
-            .body(json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}).to_string())).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {}", reply.text());
-        assert_eq!(write_counts(&a).await, before);
+            .body(json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed", "client_message_id": client}}).to_string())).await;
+        assert_eq!(reply.status, if thread && !edit { StatusCode::CREATED } else { StatusCode::OK }, "{path}: {}", reply.text());
         a.db().read(move |conn| {
-            let message = campfire_db::Message::find(conn, message_id)?;
-            assert_eq!(message.markdown_source.as_deref(), Some("Keep me"));
-            assert!(message.attachments(conn)?.is_empty());
+            let saved = campfire_db::Message::find_duplicate(conn, ALL_TALK, DAVID, &client)?.unwrap();
+            assert_eq!(saved.attachment(conn)?.unwrap().1.id, file_id);
+            assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
+            assert_eq!(saved.thread_id, thread_id);
+            if edit { assert_eq!(saved.id, message_id); }
             Ok(())
         }).await.unwrap();
     }
@@ -282,26 +284,26 @@ async fn legacy_attachment_claims(thread: bool, edit: bool) {
 }
 
 #[tokio::test]
-async fn grouped_files_round3_legacy_room_posts_claim_uploads() {
-    legacy_attachment_claims(false, false).await;
+async fn grouped_files_round3_legacy_room_posts_reuse_signed_blobs() {
+    legacy_attachment_reuse(false, false).await;
 }
 
 #[tokio::test]
-async fn grouped_files_round3_legacy_thread_posts_claim_uploads() {
-    legacy_attachment_claims(true, false).await;
+async fn grouped_files_round3_legacy_thread_posts_reuse_signed_blobs() {
+    legacy_attachment_reuse(true, false).await;
 }
 
 #[tokio::test]
-async fn grouped_files_round3_legacy_room_edits_claim_uploads() {
-    legacy_attachment_claims(false, true).await;
+async fn grouped_files_round3_legacy_room_edits_reuse_signed_blobs() {
+    legacy_attachment_reuse(false, true).await;
 }
 
 #[tokio::test]
-async fn grouped_files_round3_legacy_thread_edits_claim_uploads() {
-    legacy_attachment_claims(true, true).await;
+async fn grouped_files_round3_legacy_thread_edits_reuse_signed_blobs() {
+    legacy_attachment_reuse(true, true).await;
 }
 
-async fn agent_attachment_claims(bot_key: bool, thread: bool) {
+async fn agent_attachment_reuse(bot_key: bool, thread: bool) {
     use crate::controllers::agent_http_tests::{AGENT, SECRET, initialize};
     use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
@@ -328,35 +330,36 @@ async fn agent_attachment_claims(bot_key: bool, thread: bool) {
         })?.id)).await.unwrap())
     } else { None };
     let mut client = a.anonymous();
-    for (file, status) in [(&foreign, StatusCode::UNPROCESSABLE_ENTITY), (&owned, StatusCode::CREATED), (&owned, StatusCode::UNPROCESSABLE_ENTITY)] {
+    for file in [&foreign, &owned, &owned] {
         let before = write_counts(&a).await;
         let body = if bot_key { json!({"attachment": file.signed_id}) }
             else { json!({"thread_id": thread_id, "message": {"attachment": file.signed_id}}) };
         let mut request = json_body(Method::POST, &path, &body);
         if !bot_key { request = request.header("authorization", &format!("Bearer {SECRET}")); }
         let reply = client.send(request).await;
-        assert_eq!(reply.status, status, "{path}: {}", reply.text());
-        if !status.is_success() { assert_eq!(write_counts(&a).await, before); }
+        assert_eq!(reply.status, StatusCode::CREATED, "{path}: {}", reply.text());
+        let after = write_counts(&a).await;
+        assert_eq!(after, (before.0 + 1, before.1, before.2 + 1));
     }
 }
 
 #[tokio::test]
-async fn grouped_files_round3_bot_posts_claim_uploads() {
-    agent_attachment_claims(true, false).await;
+async fn grouped_files_round3_bot_posts_reuse_signed_blobs() {
+    agent_attachment_reuse(true, false).await;
 }
 
 #[tokio::test]
-async fn grouped_files_round3_agent_token_posts_claim_uploads() {
-    agent_attachment_claims(false, false).await;
+async fn grouped_files_round3_agent_token_posts_reuse_signed_blobs() {
+    agent_attachment_reuse(false, false).await;
 }
 
 #[tokio::test]
-async fn grouped_files_round3_agent_token_thread_posts_claim_uploads() {
-    agent_attachment_claims(false, true).await;
+async fn grouped_files_round3_agent_token_thread_posts_reuse_signed_blobs() {
+    agent_attachment_reuse(false, true).await;
 }
 
 #[tokio::test]
-async fn grouped_files_round3_bot_edits_claim_uploads() {
+async fn grouped_files_round3_bot_edits_reuse_signed_blobs() {
     use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
     let mut david = a.sign_in(DAVID).await;
@@ -368,24 +371,25 @@ async fn grouped_files_round3_bot_edits_claim_uploads() {
     let reply = a.anonymous().send(json_body(Method::PATCH,
         &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{}", message.id),
         &json!({"attachment": file.signed_id}))).await;
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
-    assert_eq!(write_counts(&a).await, before);
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(write_counts(&a).await, (before.0, before.1, before.2 + 1));
+    let file_id = blob_id(&a, &file);
     a.db().read(move |conn| {
-        assert!(campfire_db::Message::find(conn, message.id)?.attachments(conn)?.is_empty());
+        assert_eq!(campfire_db::Message::find(conn, message.id)?.attachment(conn)?.unwrap().1.id, file_id);
         Ok(())
     }).await.unwrap();
 }
 
 #[tokio::test]
-async fn grouped_files_round3_legacy_thread_openers_claim_uploads() {
+async fn grouped_files_round3_legacy_thread_openers_accept_signed_blobs() {
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
     let file = upload(&mut a.sign_in(KEVIN).await, "foreign.txt").await;
     let before = write_counts(&a).await;
     let reply = a.sign_in(DAVID).await.write(json_body(Method::POST,
         &format!("/rooms/{ALL_TALK}/threads"),
         &json!({"channel_thread": {"name": "Files"}, "message": {"attachment": file.signed_id}}))).await;
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
-    assert_eq!(write_counts(&a).await, before, "the rejected opener must roll back its thread");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    assert_eq!(write_counts(&a).await, (before.0 + 1, before.1 + 1, before.2 + 1));
 }
 
 #[tokio::test]

@@ -6,7 +6,7 @@ use campfire_db::{Message, Room, Timeline};
 use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permit_keys};
 
 use super::{
-    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
+    AttachmentPolicy, MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
     ensure_can_administer, find_paged_messages, present, set_message, update_message,
 };
 use crate::app::AppCtx;
@@ -156,9 +156,9 @@ fn ensure_body_or_attachment_present(c: &mut Ctx) -> Result<()> {
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     if c.params.get("attachment").is_some_and(|p| !p.is_null()) {
         let permitted = c.params.permit(&permit_keys(&["attachment"]));
-        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, attachment_policy: AttachmentPolicy::SignedBlob, ..MessageParams::default() })
     } else {
-        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), attachment_policy: AttachmentPolicy::SignedBlob, ..MessageParams::default() })
     }
 }
 

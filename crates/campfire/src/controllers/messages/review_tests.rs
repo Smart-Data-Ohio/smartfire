@@ -19,13 +19,6 @@ fn oracle_row(name: &str) -> Value {
         .clone()
 }
 
-// Uploader provenance is a Rust contract absent from the frozen Rails media vectors.
-fn rails_upload_metadata(blob: &campfire_storage::Blob) -> Value {
-    let mut metadata: Value = serde_json::from_str(&blob.metadata.encode()).unwrap();
-    metadata.as_object_mut().unwrap().remove("uploader_id");
-    metadata
-}
-
 fn assert_response(response: &Reply, row: &Value) {
     assert_eq!(
         response.status.as_u16(),
@@ -85,7 +78,6 @@ async fn missing_thread_original_fails_in_job_after_post_and_reopen_commit() {
         .write(move |tx| ChannelThread::find(tx.conn(), id)?.close(tx))
         .await
         .unwrap();
-    super::attachment_processing_tests::fixture_upload(&app, 1, DAVID).await;
     let blob = app
         .db()
         .read(|c| Ok(campfire_storage::Blob::find(c, 1).unwrap().unwrap()))
@@ -266,7 +258,6 @@ async fn review_boolean_client_retry_matches_rails_one_row() {
 #[tokio::test]
 async fn review_signed_initial_thread_attachment_matches_rails() {
     let app = app().await;
-    super::attachment_processing_tests::fixture_upload(&app, 13, DAVID).await;
     let signed =
         campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, 13, None);
     let response=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/threads.json")).header("content-type","application/json").header("accept","application/json").body(json!({"thread":{"name":"Signed initial"},"message":{"client_message_id":"review-initial","attachment":signed}}).to_string())).await;
@@ -371,7 +362,6 @@ async fn scalar_retry_paths_match_rails_bytes_and_rows() {
 #[tokio::test]
 async fn initial_jpeg_after_commit_matches_rails() {
     let app = app().await;
-    super::attachment_processing_tests::fixture_upload(&app, 1, DAVID).await;
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/thread-upload-coverage.json"
     ))
@@ -481,7 +471,6 @@ async fn human_attachment_edits_enqueue_atomically_on_roots_and_threads() {
                     .write(move |tx| super::save_staged(tx, staged))
                     .await
                     .unwrap();
-                super::attachment_processing_tests::fixture_upload(&app, blob.id, DAVID).await;
                 let capability = campfire_storage::paths::signed_blob_id(
                     &*app.booted.app.storage.verifier,
                     blob.id,
@@ -544,9 +533,6 @@ async fn initial_attachment_capability_and_media_matrix_matches_rails() {
         )))
         .await
         .unwrap().without_job_runner().await;
-        if let Some(blob) = row["attachment"]["id"].as_i64() {
-            super::attachment_processing_tests::fixture_upload(&app, blob, DAVID).await;
-        }
         let before = app
             .db()
             .read(|c| {
@@ -587,7 +573,7 @@ async fn initial_attachment_capability_and_media_matrix_matches_rails() {
             let attachment=c.query_row("SELECT id FROM messages WHERE id>? ORDER BY id LIMIT 1",[before.0],|r|r.get::<_,i64>(0)).ok().map(|id|{
                 let blob=campfire_storage::Blob::attached(c,"Message",id,"attachment").unwrap().unwrap();
                 let note=Message::find(c,id)?.forward_note;
-                Ok::<_,campfire_db::Error>((json!({"id":blob.id,"metadata":rails_upload_metadata(&blob)}),note))
+                Ok::<_,campfire_db::Error>((json!({"id":blob.id,"metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap()}),note))
             }).transpose()?;
             Ok((clients,threads,attachment))
         }).await.unwrap();
@@ -608,14 +594,13 @@ async fn initial_attachment_capability_and_media_matrix_matches_rails() {
 }
 
 #[tokio::test]
-async fn jpeg_uploads_preserve_variants_and_refuse_signed_reuse() {
+async fn jpeg_new_and_reused_variants_match_rails_rows_files_and_lifecycle() {
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/jpeg-boundary.json"
     ))
     .unwrap();
     for row in oracle["rows"].as_array().unwrap() {
         let app = app().await;
-        super::attachment_processing_tests::fixture_upload(&app, 1, DAVID).await;
         app.db().write(|tx| {
             tx.conn().execute_batch("CREATE TRIGGER hold_variant_analysis AFTER INSERT ON background_jobs WHEN NEW.job_class='ActiveStorage::AnalyzeJob' BEGIN UPDATE background_jobs SET run_at='2099-01-01 00:00:00' WHERE id=NEW.id; END;")?;
             Ok(())
@@ -639,7 +624,7 @@ async fn jpeg_uploads_preserve_variants_and_refuse_signed_reuse() {
             .await
             .unwrap();
         let mut browser = app.david();
-        for (index, input) in row["responses"].as_array().unwrap().iter().enumerate() {
+        for input in row["responses"].as_array().unwrap() {
             let response = browser
                 .write(
                     Req::new(Method::POST, row["path"].as_str().unwrap())
@@ -647,14 +632,6 @@ async fn jpeg_uploads_preserve_variants_and_refuse_signed_reuse() {
                         .body(input["input"].to_string()),
                 )
                 .await;
-            if index > 0 {
-                assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
-                if !response.body.is_empty() {
-                    assert!(response.text().contains("already attached"), "{}", response.text());
-                }
-                assert_eq!(app.db().read(move |conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages WHERE id>?", [last], |row| row.get::<_, i64>(0))?)).await.unwrap(), 1);
-                continue;
-            }
             assert_response(&response, input);
             let (mut state,original,variants)=app.db().read(move |c| {
                 let count=c.query_row("SELECT COUNT(*) FROM messages WHERE id>?",[last],|r|r.get::<_,i64>(0))?;
@@ -682,7 +659,7 @@ async fn jpeg_uploads_preserve_variants_and_refuse_signed_reuse() {
         }
     }
     println!(
-        "WS8bm JPEG boundaries: fresh uploads match Rails; signed reuse refused without another message"
+        "WS8bm JPEG boundaries: 6 Rails responses byte-identical; root success; initial/reply committed with processing pending; root variants remain usable"
     );
 }
 
@@ -690,7 +667,6 @@ async fn jpeg_uploads_preserve_variants_and_refuse_signed_reuse() {
 async fn variant_analysis_jobs_share_the_representation_transaction() {
     for kind in ["root", "initial", "reply"] {
         let app = app().await;
-        super::attachment_processing_tests::fixture_upload(&app, 1, DAVID).await;
         let id = if kind == "reply" {
             Some(thread(&app).await)
         } else {

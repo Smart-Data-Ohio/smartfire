@@ -28,9 +28,7 @@ pub(super) async fn fresh_source(app: &TestApp, seed_id: i64) -> i64 {
                     source.content_type.as_deref(),
                 )
                 .unwrap();
-            let mut blob = staged.insert(tx.conn(), tx.now().jiff()).unwrap();
-            blob.metadata.set("uploader_id", campfire_storage::Json::Int(super::presenters::test_support::BENDER));
-            blob.update_metadata(tx.conn(), blob.metadata.clone()).unwrap();
+            let blob = staged.insert(tx.conn(), tx.now().jiff()).unwrap();
             crate::active_storage::keep_after_commit(tx, staged);
             Ok(blob.id)
         })
@@ -85,13 +83,7 @@ async fn pr192_r3_fresh_video_retains_preview_and_variant_files() {
         "../../../../vectors/agent_review192r3_attachment.json"
     ))
     .unwrap();
-    let mut case = vector["cases"][0].clone();
-    case["state"]["source_metadata"]["uploader_id"] = json!(super::presenters::test_support::BENDER);
-    for blob in case["state"]["blobs"].as_array_mut().unwrap() {
-        if blob["attributes"]["id"] == source {
-            blob["attributes"]["metadata"]["uploader_id"] = json!(super::presenters::test_support::BENDER);
-        }
-    }
+    let case = &vector["cases"][0];
     let reply = app
         .anonymous()
         .send(post(&app, source, "pr192-r3-fresh-video"))
@@ -150,22 +142,16 @@ async fn pr192_r3_reused_video_variant_keeps_the_same_usable_file() {
     };
     let first = app.db().read(snapshot(app.booted.app.storage.clone())).await.unwrap();
     let reply = app.anonymous().send(post(&app, source, "pr192-video-second")).await;
-    assert_eq!(reply.status.as_u16(), 422, "{}", reply.text());
-    assert!(reply.text().contains("already attached"));
-    app.db().write(move |tx| {
-        let message = campfire_db::Message::find_duplicate(tx.conn(), 486777696, super::presenters::test_support::BENDER, "pr192-video-first")?.unwrap();
-        campfire_db::models::message_attachment_processing::schedule(tx, message.id, source);
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
     super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
     let files = variant_files(&app, source).await;
-    assert_eq!(files, first_files, "a refused claim and worker retry must keep the existing variant record and file");
+    assert_eq!(files, first_files, "the second post must keep the existing variant record and file");
     assert_eq!(app.db().read(snapshot(app.booted.app.storage.clone())).await.unwrap(), first,
-        "reprocessing must retain the original JPEG/WebP identities and bytes");
+        "reposting must retain the original JPEG/WebP identities and bytes");
     assert_eq!(
         files.len(),
         1,
-        "reprocessing must reuse the original variant record"
+        "reposting must reuse the original variant record"
     );
     assert!(
         files[0].1 && files[0].2 > 0,

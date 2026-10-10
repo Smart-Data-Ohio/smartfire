@@ -1404,9 +1404,12 @@ impl Message {
 
     /// Every file, including the legacy single slot, ordered by attachment id.
     pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
-        let attachments = query_all(conn,
-            "SELECT * FROM active_storage_attachments WHERE record_type='Message' AND record_id=? AND name IN ('attachment','attachments') ORDER BY id",
+        let legacy = Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?;
+        let mut attachments = query_all(conn,
+            "SELECT * FROM active_storage_attachments WHERE record_type='Message' AND record_id=? AND name='attachments' ORDER BY id",
             [self.id], Attachment::from_row)?;
+        attachments.extend(legacy);
+        attachments.sort_by_key(|attachment| attachment.id);
         attachments.into_iter().map(|attachment| {
             let blob = attachment.blob(conn)?;
             Ok((attachment, blob))

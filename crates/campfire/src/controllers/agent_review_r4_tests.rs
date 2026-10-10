@@ -314,9 +314,9 @@ async fn pr192_r4_late_media_failures_preserve_posts_but_precommit_job_failure_r
 async fn pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files() {
     let app = closed_thread().await;
     let source = fresh_source(&app, 1).await;
-    for (client, status) in [("pr192-r4-jpeg-first", 201), ("pr192-r4-jpeg-reuse", 422)] {
+    for client in ["pr192-r4-jpeg-first", "pr192-r4-jpeg-reuse"] {
         let reply = app.anonymous().send(post(&app, source, client)).await;
-        assert_eq!(reply.status.as_u16(), status, "{}", reply.text());
+        assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
     }
     let blob = app
         .db()
@@ -355,8 +355,8 @@ async fn pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files() {
         })
         .await
         .unwrap();
-    assert_eq!(counts, (1, 1));
+    assert_eq!(counts, (2, 1));
     println!(
-        "PR192_R4_JPEG reuse_statuses=201/422 messages=1 variants=1 missing_file_serving=empty_404"
+        "PR192_R4_JPEG reuse_statuses=201/201 messages=2 variants=1 missing_file_serving=empty_404"
     );
 }

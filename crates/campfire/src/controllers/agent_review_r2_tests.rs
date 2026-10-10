@@ -320,9 +320,7 @@ async fn pr192_r2_fresh_jpeg_approved_status_and_committed_state() {
         "../../../../vectors/agent_review192r2_attachment.json"
     ))
     .unwrap();
-    super::messages::attachment_processing_tests::fixture_upload(&app, 1, BOT).await;
-    let mut case = vector["cases"][0].clone();
-    case["state"]["source_metadata"]["uploader_id"] = json!(BOT);
+    let case = &vector["cases"][0];
     let reply = app
         .anonymous()
         .send(

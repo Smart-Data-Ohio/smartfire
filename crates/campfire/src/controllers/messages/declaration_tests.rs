@@ -28,23 +28,7 @@ async fn root_edit_markers_match_rails_for_noops_attachments_formatting_reaction
     for row in oracle()["rows"].as_array().unwrap() {
         clock.set(row["time"].as_str().unwrap().parse().unwrap());
         let id=ids[row["index"].as_u64().unwrap() as usize];
-        let request = Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/messages/{id}.json"));
-        let request = if row["input"].get("attachment").is_some() {
-            let storage = app.booted.app.storage.clone();
-            let (filename, content_type, bytes) = app.db().read(move |conn| {
-                let blob = campfire_storage::Blob::find(conn, 13).unwrap().unwrap();
-                Ok((blob.filename.to_string(), blob.content_type.unwrap(), storage.service.download(&blob.key).unwrap()))
-            }).await.unwrap();
-            let fields = row["input"].as_object().unwrap().iter()
-                .filter(|(name, _)| name.as_str() != "attachment")
-                .filter_map(|(name, value)| value.as_str().map(|value| (format!("message[{name}]"), value)))
-                .collect::<Vec<_>>();
-            let fields = fields.iter().map(|(name, value)| (name.as_str(), *value)).collect::<Vec<_>>();
-            request.multipart(&fields, ("message[attachment]", &filename, &content_type, &bytes))
-        } else {
-            request.header("content-type", "application/json").body(serde_json::json!({"message":row["input"]}).to_string())
-        };
-        let response = viewer.write(request).await;
+        let response=viewer.write(Req::new(Method::PATCH,&format!("/rooms/{ALL_TALK}/messages/{id}.json")).header("content-type","application/json").body(serde_json::json!({"message":row["input"]}).to_string())).await;
         assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{}: {}",row["name"],response.text());
         if response.text()!=row["body"].as_str().unwrap(){rails_mismatch(&response.text(),row["body"].as_str().unwrap(),row["name"].as_str().unwrap());}
         let (edited,updated,body)=app.db().read(move|conn|{let m=Message::find(conn,id)?;Ok((m.edited_at.map(|t|campfire_views::messages::support::json_time(t.jiff())),campfire_views::messages::support::json_time(m.updated_at.jiff()),m.body_html(conn)?.unwrap_or_default()))}).await.unwrap();

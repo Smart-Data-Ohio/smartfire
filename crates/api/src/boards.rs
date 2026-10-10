@@ -7,7 +7,7 @@ use campfire_db::{
     ChannelThread, Connection, Membership, Message, NewChannelThread, NewMessage, Room, User,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_messages::controllers::messages::attachment_blob;
+use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob};
 use campfire_runtime::presenters::attachments::{self, Assignment};
 use campfire_runtime::context::db_error;
 use rusqlite::OptionalExtension;
@@ -341,10 +341,10 @@ async fn create_post(c: &mut Ctx) -> Result {
             {
                 return Ok((thread.id, false));
             }
-            let blob = attachment_blob(tx, attachment, creator_id, "attachment_signed_id", true)?;
+            let blob = attachment_blob(tx, attachment, AttachmentPolicy::OwnedUpload { uploader_id: creator_id }, "attachment_signed_id")?;
             let mut blobs = Vec::with_capacity(files.len() + 1);
             for file in files {
-                if let Some(blob) = attachment_blob(tx, file, creator_id, "attachment_signed_ids", true)? { blobs.push(blob); }
+                if let Some(blob) = attachment_blob(tx, file, AttachmentPolicy::OwnedUpload { uploader_id: creator_id }, "attachment_signed_ids")? { blobs.push(blob); }
             }
             let message = message.map(|message| NewMessage {
                 markdown_source: Some(message.markdown_source),

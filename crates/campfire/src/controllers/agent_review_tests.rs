@@ -268,7 +268,6 @@ pub(super) fn stored_files(app: &TestApp) -> Vec<std::path::PathBuf> {
 #[tokio::test]
 async fn pr192_failed_thread_attachment_preserves_post_reopen_and_retry_job() {
     let app = setup().await.without_job_runner().await;
-    super::messages::attachment_processing_tests::fixture_upload(&app, 1, BOT).await;
     app.db().write(|tx| {
         tx.conn().execute_batch("INSERT INTO channel_threads(id,name,room_id,creator_id,work_owner_id,work_status,closed_at,last_activity_at,created_at,updated_at) VALUES(1900700020,'Review',486777696,394959859,394959859,'in_progress','2026-03-01 16:00:00','2026-03-01 16:00:00','2026-03-01 16:00:00','2026-03-01 16:00:00'); CREATE TRIGGER review_reject_variant BEFORE INSERT ON active_storage_variant_records BEGIN SELECT RAISE(ABORT,'review variant failure'); END")?;
         Ok(())
