@@ -47,6 +47,9 @@ pub const MARKDOWN_ATTRIBUTES: &[&str] =
     &["align", "checked", "class", "data-spoiler", "disabled", "href", "rel", "start", "target", "title", "type"];
 pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "spoiler", "task-list-item"];
 const BLOCK_TAGS: &[&str] = &["blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "pre", "table", "tr", "ul"];
+/// A link reference definition (`[label]: url "title"`), with a title on the next line.
+static DEFINITION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?m)^ {0,3}\[(?:[^\]\\\n]|\\.)+\]:[^\n]*(?:\n[ \t]*["'(][^\n]*)?"#).unwrap());
 static BLANK_LINE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\n[ \t]*\n").unwrap());
 static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]").unwrap());
 static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
@@ -196,28 +199,99 @@ fn protect_mentions(source: &str) -> (String, Vec<(String, String)>, Regex) {
 /// Markdown with no rendered HTML (a scheduled message's source), as a preview. In each block
 /// (inline spans never cross a blank line), everything from the first `||` to the last becomes
 /// the word "spoiler". That covers every spoiler `render` could make there, whatever escapes, code
-/// spans or nesting it holds; when unsure it hides more. A block with no pair is unchanged. The
-/// SPA's `redactMarkdownSpoilers` (frontend/src/lib/spoiler-text.ts) does the same.
+/// spans or nesting it holds; when unsure it hides more. A link or image whose label holds one is
+/// hidden whole, URL and title too, and so is every reference definition. A block with no pair is
+/// unchanged. The SPA's `redactMarkdownSpoilers` (frontend/src/lib/spoiler-text.ts) does the same.
 pub fn redact_spoilers(source: &str) -> String {
-    let mut out = String::with_capacity(source.len());
-    let mut rest = source;
-    while !rest.is_empty() {
-        let (block, separator, next) = match BLANK_LINE_RE.find(rest) {
-            Some(found) => (&rest[..found.start()], found.as_str(), &rest[found.end()..]),
-            None => (rest, "", ""),
-        };
-        match (block.find("||"), block.rfind("||")) {
-            (Some(first), Some(last)) if last >= first + 2 => {
-                out.push_str(&block[..first]);
-                out.push_str("spoiler");
-                out.push_str(&block[last + 2..]);
-            }
-            _ => out.push_str(block),
-        }
-        out.push_str(separator);
-        rest = next;
+    if split_blocks(source).iter().all(|&block| redact_block(block).is_none()) {
+        return source.to_owned();
     }
-    out
+    let source = DEFINITION_RE.replace_all(source, "spoiler");
+    split_blocks(&source).into_iter().map(|block| redact_block(block).unwrap_or_else(|| block.to_owned())).collect()
+}
+
+/// The blocks of `source` and the blank lines between them, in order, so joining them gives it back.
+fn split_blocks(source: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut cursor = 0;
+    for found in BLANK_LINE_RE.find_iter(source) {
+        parts.push(&source[cursor..found.start()]);
+        parts.push(found.as_str());
+        cursor = found.end();
+    }
+    parts.push(&source[cursor..]);
+    parts
+}
+
+/// One block's preview, or `None` with no `||` pair: from the first `||` to the last becomes
+/// "spoiler", widened to the whole of any link or image whose label holds that span (its `[`, and
+/// its `(url "title")` or `[ref]`). Every byte looked at is ASCII, so the slices stay on chars.
+fn redact_block(block: &str) -> Option<String> {
+    let bytes = block.as_bytes();
+    let first = block.find("||")?;
+    let last = block.rfind("||")?;
+    if last < first + 2 {
+        return None;
+    }
+    // Back to the outermost `[` (or `![`) still open where the spoiler starts.
+    let mut start = first;
+    let mut depth = 0usize;
+    for index in (0..first).rev() {
+        match bytes[index] {
+            b']' => depth += 1,
+            b'[' if depth == 0 => start = if index > 0 && bytes[index - 1] == b'!' { index - 1 } else { index },
+            b'[' => depth -= 1,
+            _ => {}
+        }
+    }
+    // On past each `]` that closes such a label, and the destination or reference after it.
+    let mut end = last + 2;
+    let mut depth = 0usize;
+    let mut index = end;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'[' => depth += 1,
+            b']' if depth > 0 => depth -= 1,
+            b']' => {
+                end = link_end(bytes, index + 1);
+                index = end;
+                continue;
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+    Some(format!("{}spoiler{}", &block[..start], &block[end..]))
+}
+
+/// The index just past the destination of the link whose label ends at `at` - 1.
+fn link_end(bytes: &[u8], at: usize) -> usize {
+    match bytes.get(at) {
+        Some(b'[') => bytes[at..].iter().position(|&byte| byte == b']').map_or(bytes.len(), |close| at + close + 1),
+        Some(b'(') => {
+            let (mut depth, mut quote) = (0usize, None);
+            for (index, &byte) in bytes.iter().enumerate().skip(at) {
+                match (quote, byte) {
+                    (Some(open), _) => {
+                        if byte == open {
+                            quote = None;
+                        }
+                    }
+                    (None, b'"' | b'\'') => quote = Some(byte),
+                    (None, b'(') => depth += 1,
+                    (None, b')') => {
+                        depth -= 1;
+                        if depth == 0 {
+                            return index + 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            bytes.len()
+        }
+        _ => at,
+    }
 }
 
 /// A spoiler span: `data-spoiler`, or the `spoiler` class it is rendered with.

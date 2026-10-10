@@ -232,3 +232,29 @@ fn a_forwarded_spoiler_survives_an_edit() {
     let edited = render(&source.replace("before", "after"));
     assert_eq!(edited, "<p>after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span></p>\n");
 }
+
+#[test]
+fn redact_spoilers_hides_the_whole_link_when_its_label_holds_a_spoiler() {
+    // The same table as LINK_CASES in frontend/src/lib/spoiler-text.test.ts.
+    for (source, redacted) in [
+        (r#"[||Alice dies||](https://example.com/alice-dies "Alice dies")"#, "spoiler"),
+        (r#"see [the ||end||](https://example.com/a "t") now"#, "see spoiler now"),
+        (r#"[||x||](https://example.com/a "a) b") after"#, "spoiler after"),
+        ("[||x||](<https://example.com/alice dies>) after", "spoiler after"),
+        (
+            "read [||Alice dies||][ending] now\n\n[ending]: https://example.com/alice-dies \"Alice dies\"",
+            "read spoiler now\n\nspoiler",
+        ),
+        ("[||Alice dies||] now\n\n[||Alice dies||]: https://example.com/alice-dies", "spoiler now\n\nspoiler"),
+        ("[||x||][r]\n\n[r]: https://example.com/a\n  \"Alice dies\"", "spoiler\n\nspoiler"),
+        (r#"![||Alice dies||](https://example.com/alice.png "Alice dies") end"#, "spoiler end"),
+        ("[![||x||](https://example.com/i.png)](https://example.com/alice-dies)", "spoiler"),
+        ("||Alice dies|| <https://example.com/shown>", "spoiler <https://example.com/shown>"),
+        ("<https://example.com/||alice||>", "<https://example.com/spoiler>"),
+        ("||<https://example.com/alice-dies>||", "spoiler"),
+        ("[a](https://example.com/b) ||x|| [c](https://example.com/d)", "[a](https://example.com/b) spoiler [c](https://example.com/d)"),
+        ("[a][r] and no spoiler\n\n[r]: https://example.com/shown", "[a][r] and no spoiler\n\n[r]: https://example.com/shown"),
+    ] {
+        assert_eq!(markdown::redact_spoilers(source), redacted, "{source:?}");
+    }
+}

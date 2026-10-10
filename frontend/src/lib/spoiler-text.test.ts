@@ -7,6 +7,36 @@ import { htmlPlainText, messagePlainText, redactMarkdownSpoilers } from "./spoil
 /** A spoiler span as crates/richtext renders it. */
 const spoiler = (words: string) => `<span class="spoiler" data-spoiler="">${words}</span>`;
 
+/** Links, images and references around spoilers. crates/richtext/tests/spoilers.rs has the same table. */
+const LINK_CASES: readonly (readonly [string, string])[] = [
+  ['[||Alice dies||](https://example.com/alice-dies "Alice dies")', "spoiler"],
+  ['see [the ||end||](https://example.com/a "t") now', "see spoiler now"],
+  ['[||x||](https://example.com/a "a) b") after', "spoiler after"],
+  ["[||x||](<https://example.com/alice dies>) after", "spoiler after"],
+  [
+    'read [||Alice dies||][ending] now\n\n[ending]: https://example.com/alice-dies "Alice dies"',
+    "read spoiler now\n\nspoiler",
+  ],
+  [
+    "[||Alice dies||] now\n\n[||Alice dies||]: https://example.com/alice-dies",
+    "spoiler now\n\nspoiler",
+  ],
+  ['[||x||][r]\n\n[r]: https://example.com/a\n  "Alice dies"', "spoiler\n\nspoiler"],
+  ['![||Alice dies||](https://example.com/alice.png "Alice dies") end', "spoiler end"],
+  ["[![||x||](https://example.com/i.png)](https://example.com/alice-dies)", "spoiler"],
+  ["||Alice dies|| <https://example.com/shown>", "spoiler <https://example.com/shown>"],
+  ["<https://example.com/||alice||>", "<https://example.com/spoiler>"],
+  ["||<https://example.com/alice-dies>||", "spoiler"],
+  [
+    "[a](https://example.com/b) ||x|| [c](https://example.com/d)",
+    "[a](https://example.com/b) spoiler [c](https://example.com/d)",
+  ],
+  [
+    "[a][r] and no spoiler\n\n[r]: https://example.com/shown",
+    "[a][r] and no spoiler\n\n[r]: https://example.com/shown",
+  ],
+];
+
 describe("redactMarkdownSpoilers", () => {
   it("replaces a closed spoiler and leaves unpaired markers", () => {
     expect(redactMarkdownSpoilers("see ||secret words|| now")).toBe("see spoiler now");
@@ -33,6 +63,12 @@ describe("redactMarkdownSpoilers", () => {
     expect(redactMarkdownSpoilers("`||` ||SECRET|| tail")).toBe("`spoiler tail");
     expect(redactMarkdownSpoilers("\\||a|| ||SECRET||")).toBe("\\spoiler");
     expect(redactMarkdownSpoilers("```\n||SECRET||\n```")).toBe("```\nspoiler\n```");
+  });
+
+  it("hides the whole link, URL and title, when its label holds a spoiler", () => {
+    for (const [source, redacted] of LINK_CASES) {
+      expect(redactMarkdownSpoilers(source), source).toBe(redacted);
+    }
   });
 
   it("hides two spoilers and what sits between them", () => {
