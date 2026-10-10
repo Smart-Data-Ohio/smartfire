@@ -4,15 +4,15 @@ import type { RememberedDevice } from "./RememberedDevice";
 /**
  * The classic two-step sign-in panel.
  */
-export type TwoFactorSettings = { 
+export type TwoFactorSettings = {
 /**
  * When it was turned on; `None` means not set up.
  */
-confirmedAt: string | null, 
+confirmedAt: string | null,
 /**
  * The account can "Confirm with Google" instead of a code (`data.google` in the partial).
  */
-google: boolean, 
+google: boolean,
 /**
  * The account has a password (decides the classic alert wording).
  */

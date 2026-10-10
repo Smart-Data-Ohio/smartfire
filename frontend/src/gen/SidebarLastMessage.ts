@@ -3,7 +3,7 @@
 /**
  * A direct room's newest root message (system notes aside), as its sidebar row previews it.
  */
-export type SidebarLastMessage = { creatorId: number, 
+export type SidebarLastMessage = { creatorId: number,
 /**
  * The message's plain text (its search-index body), cut to 140 characters.
  */

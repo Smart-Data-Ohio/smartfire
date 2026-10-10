@@ -4,7 +4,7 @@
  * `GET /api/v1/activity/unread_count` (`activity_items#unread_count`, `no-store`): the badge.
  * Unread means neither read nor handled; every type counts.
  */
-export type ActivityUnreadCount = { unreadCount: number, 
+export type ActivityUnreadCount = { unreadCount: number,
 /**
  * Per-user server revision of this count. Ignore counts from older revisions.
  */

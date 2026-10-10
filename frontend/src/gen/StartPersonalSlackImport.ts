@@ -5,7 +5,7 @@ import type { SlackRunMode } from "./SlackRunMode";
  * `POST /api/v1/slack/imports` (`slack/imports#create`): a preview, or an import of a
  * completed preview's checked conversations.
  */
-export type StartPersonalSlackImport = { mode: SlackRunMode, 
+export type StartPersonalSlackImport = { mode: SlackRunMode,
 /**
  * The preview an import comes from.
  */

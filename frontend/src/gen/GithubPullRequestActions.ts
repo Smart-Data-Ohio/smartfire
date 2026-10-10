@@ -13,7 +13,7 @@ import type { GithubPullRequestStatus } from "./GithubPullRequestStatus";
  *
  * 404 unless that membership and thread mapping exist.
  */
-export type GithubPullRequestActions = { 
+export type GithubPullRequestActions = {
 /**
  * The viewer's GitHub login when an account is linked, including one whose token was rejected.
  */

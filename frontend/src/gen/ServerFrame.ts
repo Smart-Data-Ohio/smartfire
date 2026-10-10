@@ -4,11 +4,11 @@ import type { SyncEvent } from "./SyncEvent";
 /**
  * A frame the server sends.
  */
-export type ServerFrame = { "t": "welcome", epoch: string, 
+export type ServerFrame = { "t": "welcome", epoch: string,
 /**
  * The client's starting cursor. On resume this stays at its last acknowledged event.
  */
-seq: number, resumed: boolean, 
+seq: number, resumed: boolean,
 /**
  * Events through this ring head are reconnect replay, not live arrivals.
  */

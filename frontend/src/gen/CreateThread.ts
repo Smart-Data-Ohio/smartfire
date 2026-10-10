@@ -11,7 +11,7 @@ import type { CreateMessage } from "./CreateMessage";
  * root timeline is a 404. A `clientMessageId` that an earlier message outside a thread already
  * used is a 422 on `clientMessageId`.
  */
-export type CreateThread = { parentMessageId: number, 
+export type CreateThread = { parentMessageId: number,
 /**
  * `null` takes the default from the parent's first line.
  */

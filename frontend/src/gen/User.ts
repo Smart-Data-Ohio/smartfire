@@ -8,33 +8,33 @@ import type { UserStatus } from "./UserStatus";
 /**
  * A person or bot as every viewer sees them: the directory entry and profile card.
  */
-export type User = { id: number, name: string, role: UserRole, status: UserStatus, bio: string | null, 
+export type User = { id: number, name: string, role: UserRole, status: UserStatus, bio: string | null,
 /**
  * The avatar image path, versioned so a changed avatar gets a new URL. Always set: without
  * an uploaded picture it draws the classic initials (or a bot's icon) as an SVG.
  */
-avatarUrl: string, 
+avatarUrl: string,
 /**
  * Whether the person uploaded a picture (`has_one_attached :avatar`). When `false`, the
  * client may draw its own initials tile instead of loading `avatarUrl`.
  */
-hasAvatar: boolean, 
+hasAvatar: boolean,
 /**
  * `null` when unset or expired.
  */
-customStatus: CustomStatus | null, 
+customStatus: CustomStatus | null,
 /**
  * A bot without an uploaded avatar shows this icon instead of `avatarUrl`'s default
  * (`users.icon_name`, resolved as the classic presenters do: a brand logo, else a workspace
  * icon, else the built-in icon or emoji of that name). `null` for people, for a bot with an
  * uploaded avatar, and for a name that resolves to nothing.
  */
-avatarIcon: Icon | null, 
+avatarIcon: Icon | null,
 /**
  * Set for an agent (a bot with an `agents` row); `null` for people and for bots without
  * one, which the classic pages label "Bot". Kept current by `agent.status`.
  */
-agent: AgentBadge | null, createdAt: string, 
+agent: AgentBadge | null, createdAt: string,
 /**
  * `users.updated_at`: moves on every change to the users row, including status changes
  * from bans and unbans. UTC with exactly six fractional digits and a `Z` suffix, for example

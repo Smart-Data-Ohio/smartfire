@@ -6,7 +6,7 @@ import type { ThreadIndicator } from "./ThreadIndicator";
  * streaming, or the thread was deleted (the JSON twin of the `thread_indicator_message_*`
  * replace). Replaces the parent message's `thread`.
  */
-export type ThreadIndicatorChanged = { roomId: number, parentMessageId: number, 
+export type ThreadIndicatorChanged = { roomId: number, parentMessageId: number,
 /**
  * `null` when the thread was deleted.
  */

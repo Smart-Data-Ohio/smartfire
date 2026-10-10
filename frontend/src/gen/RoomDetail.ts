@@ -8,38 +8,38 @@ import type { User } from "./User";
  * `GET /api/v1/rooms/:id`: a room the viewer belongs to, with what its header and timeline need
  * before the first page of messages. 404 when the viewer has no membership (`set_room`).
  */
-export type RoomDetail = { room: Room, 
+export type RoomDetail = { room: Room,
 /**
  * The viewer's own membership.
  */
-membership: Membership, 
+membership: Membership,
 /**
  * What the header shows: the room's name, or for a direct message its other members'
  * names (`room_display_name(room, for_user:)`).
  */
-displayName: string, 
+displayName: string,
 /**
  * `memberships.count` for the room.
  */
-memberCount: number, 
+memberCount: number,
 /**
  * `MessagePin::count_for_room`.
  */
-pinsCount: number, 
+pinsCount: number,
 /**
  * Direct messages only: the other members in membership order, or just the viewer for a
  * note-to-self. Empty for every other kind.
  */
-directMemberIds: Array<number>, 
+directMemberIds: Array<number>,
 /**
  * Up to 5 members for the header's avatar stack, in membership order (oldest first),
  * viewer included. Every id here and in `directMemberIds` has its entry in `users`.
  */
-memberPreviewIds: Array<number>, 
+memberPreviewIds: Array<number>,
 /**
  * The people `directMemberIds` and `memberPreviewIds` name.
  */
-users: Array<User>, 
+users: Array<User>,
 /**
  * Where the unread divider goes (`unread_divider`); `null` when the room is read.
  */

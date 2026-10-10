@@ -5,7 +5,7 @@ import type { ThreadMembership } from "./ThreadMembership";
 /**
  * One row of the thread list: the thread and the viewer's membership in it.
  */
-export type ThreadSummary = { thread: Thread, 
+export type ThreadSummary = { thread: Thread,
 /**
  * `null` when the viewer isn't a member.
  */

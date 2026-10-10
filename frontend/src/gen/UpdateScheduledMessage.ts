@@ -21,7 +21,7 @@
  * again in a moment."). Any of the three on one that isn't the viewer's or isn't pending is a
  * 404.
  */
-export type UpdateScheduledMessage = { markdownSource?: string, sendAt?: string, 
+export type UpdateScheduledMessage = { markdownSource?: string, sendAt?: string,
 /**
  * Omit to keep the target; null clears it. A target must be visible in the same stream.
  */

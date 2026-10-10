@@ -6,21 +6,21 @@ import type { InboxSwitch } from "./InboxSwitch";
  * Do not disturb, quiet hours, meetings, out of office, keyword alerts and the activity inbox
  * switches (the notifications form and the profile form's inbox switches).
  */
-export type NotificationSettings = { 
+export type NotificationSettings = {
 /**
  * Manual DND (until turned off); quiet hours and meetings are separate.
  */
-dndEnabled: boolean, quietHoursEnabled: boolean, 
+dndEnabled: boolean, quietHoursEnabled: boolean,
 /**
  * `"HH:MM"` in the person's zone; `null` when unset.
  */
-quietHoursStart: string | null, quietHoursEnd: string | null, meetingDndEnabled: boolean, oooNotifyEnabled: boolean, 
+quietHoursStart: string | null, quietHoursEnd: string | null, meetingDndEnabled: boolean, oooNotifyEnabled: boolean,
 /**
  * People whose messages still get through DND (starred), by name. Starring is
  * `POST /api/v1/settings/dnd_allowances/:user_id` and unstarring `DELETE` (active people
  * other than you); both answer with the settings.
  */
-allowedPeople: Array<DndAllowedPerson>, 
+allowedPeople: Array<DndAllowedPerson>,
 /**
  * One word or phrase each, up to 20.
  */
