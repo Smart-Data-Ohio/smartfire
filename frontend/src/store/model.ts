@@ -67,6 +67,7 @@ export interface Boot {
     readonly logoStillUrl: string | null;
     readonly bannerUrl: string | null;
     readonly bannerStillUrl: string | null;
+    readonly uploadLimitBytes: number;
   };
   readonly theme: "system" | "light" | "dark";
   readonly textSize: "smaller" | "small" | "default" | "large" | "larger";

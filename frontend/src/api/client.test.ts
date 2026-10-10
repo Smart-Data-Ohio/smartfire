@@ -47,6 +47,7 @@ const bootJson = {
     logoStillUrl: null,
     bannerUrl: null,
     bannerStillUrl: null,
+    uploadLimitBytes: 100 * 1024 * 1024,
   },
   theme: "dark",
   textSize: "default",

@@ -74,8 +74,12 @@ const DAY_MS = 86_400_000;
 /** Each operator as the "Narrow your search" list explains it. */
 export const OPERATOR_HINTS = {
   from: { token: "from:", label: "From a person", icon: "at" },
+  from_id: { token: "from_id:", label: "From a person", icon: "at" },
+  in_id: { token: "in_id:", label: "In a channel", icon: "hash" },
+  mentions: { token: "mentions:me", label: "Mentions you", icon: "at" },
+  sort: { token: "sort:", label: "Result order", icon: "chevron-down" },
   in: { token: "in:", label: "In a channel", icon: "hash" },
-  has: { token: "has:", label: "Has a link, file, image or pin", icon: "paperclip" },
+  has: { token: "has:", label: "Has media, links, mentions or pins", icon: "paperclip" },
   is: { token: "is:thread", label: "Only replies in threads", icon: "thread" },
   before: { token: "before:", label: "Before a date", icon: "calendar-clock" },
   after: { token: "after:", label: "After a date", icon: "calendar-clock" },
@@ -89,6 +93,9 @@ const HAS_VALUES = [
   { value: "link", label: "Links", icon: "link" },
   { value: "file", label: "Files", icon: "file" },
   { value: "image", label: "Images", icon: "image" },
+  { value: "mention", label: "Mentions", icon: "at" },
+  { value: "audio", label: "Audio", icon: "file" },
+  { value: "video", label: "Video", icon: "file" },
   { value: "pin", label: "Pinned messages", icon: "pin" },
 ] as const satisfies readonly {
   readonly value: string;
@@ -216,6 +223,32 @@ function operatorValues(
   const needle = normalizeQuery(partial);
 
   switch (operator) {
+    case "from_id":
+      return best(source.items, needle, isPerson, VALUES_SHOWN).map((item) =>
+        valueItem(value, `from_id:${item.key}`, item.label, `from_id:${item.userId}`, {
+          userId: item.userId,
+        }),
+      );
+
+    case "in_id":
+      return best(source.items, needle, isChannel, VALUES_SHOWN).map((item) =>
+        valueItem(value, `in_id:${item.key}`, item.label, `in_id:${item.roomId}`, {
+          roomKind: item.roomKind,
+        }),
+      );
+
+    case "mentions":
+      return "me".startsWith(fold(partial))
+        ? [valueItem(value, "mentions:me", "Mentions you", "mentions:me", { icon: "at" })]
+        : [];
+
+    case "sort":
+      return ["newest", "oldest", "relevance"].flatMap((sort) =>
+        sort.startsWith(fold(partial))
+          ? [valueItem(value, `sort:${sort}`, sort, `sort:${sort}`, { icon: "chevron-down" })]
+          : [],
+      );
+
     case "from":
       return best(source.items, needle, isPerson, VALUES_SHOWN).map((item) =>
         valueItem(value, `from:${item.key}`, item.label, `from:@${fromHandle(item.label)}`, {
@@ -254,6 +287,10 @@ function operatorValues(
 const VALUE_TITLES = {
   from: "From",
   in: "In",
+  from_id: "From",
+  in_id: "In",
+  mentions: "Mentions",
+  sort: "Sort",
   has: "Has",
   is: "Only",
   before: "Before",

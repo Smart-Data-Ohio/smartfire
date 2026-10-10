@@ -114,11 +114,16 @@ fn review_unicode_connector_phrases_match_rails_in_sqlite() {
     let t = super::channel_thread_test::frozen();
     t.write(|tx| {
         for (client, body) in [("adjacent", "a b"), ("separated", "a x b")] {
-            Message::create(tx, NewMessage {
-                room_id: id("designers"), creator_id: id("david"),
-                body: Some(body.into()), client_message_id: Some(client.into()),
-                ..Default::default()
-            })?;
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("designers"),
+                    creator_id: id("david"),
+                    body: Some(body.into()),
+                    client_message_id: Some(client.into()),
+                    ..Default::default()
+                },
+            )?;
         }
         Ok(())
     });
@@ -127,8 +132,18 @@ fn review_unicode_connector_phrases_match_rails_in_sqlite() {
         let q = SearchQuery::parse(row["raw"].as_str().unwrap());
         assert_eq!(json!(q.text_tokens()), row["tokens"], "{row}");
         assert_eq!(json!(q.match_expression()), row["expression"], "{row}");
-        let page = t.read(|conn| q.messages_for_user(conn, id("david"), jiff::tz::TimeZone::UTC, None));
-        assert_eq!(json!(page.messages.iter().map(|m| &m.client_message_id).collect::<Vec<_>>()), row["clients"], "{row}");
+        let page =
+            t.read(|conn| q.messages_for_user(conn, id("david"), jiff::tz::TimeZone::UTC, None));
+        assert_eq!(
+            json!(
+                page.messages
+                    .iter()
+                    .map(|m| &m.client_message_id)
+                    .collect::<Vec<_>>()
+            ),
+            row["clients"],
+            "{row}"
+        );
     }
 }
 #[test]
@@ -174,5 +189,616 @@ fn cursor_windows_match_rails_without_repeating_same_timestamp_rows() {
             .collect();
         assert_eq!(json!({"clients":clients,"has_more":page.has_more}), *row);
         before = page.messages.first().map(|m| m.id);
+    }
+}
+
+#[test]
+fn stable_ids_survive_renames_and_keep_visibility() {
+    let t = fixture();
+    let query = format!("from_id:{} in_id:{}", id("david"), id("designers"));
+    let found = t.read(|c| {
+        SearchQuery::parse_extended(&query).messages_for_user(
+            c,
+            id("david"),
+            jiff::tz::TimeZone::UTC,
+            None,
+        )
+    });
+    assert!(!found.messages.is_empty(), "IDs find messages without text");
+    t.write(|tx| {
+        tx.conn().execute(
+            "UPDATE users SET name='Renamed author' WHERE id=?",
+            [id("david")],
+        )?;
+        tx.conn().execute(
+            "UPDATE rooms SET name='Renamed channel' WHERE id=?",
+            [id("designers")],
+        )?;
+        Ok(())
+    });
+    let renamed = t.read(|c| {
+        SearchQuery::parse_extended(&query).messages_for_user(
+            c,
+            id("david"),
+            jiff::tz::TimeZone::UTC,
+            None,
+        )
+    });
+    assert_eq!(
+        found.messages.iter().map(|m| m.id).collect::<Vec<_>>(),
+        renamed.messages.iter().map(|m| m.id).collect::<Vec<_>>()
+    );
+    let hidden = t.read(|c| {
+        SearchQuery::parse_extended(&format!("from_id:{} in_id:{}", id("david"), id("all_talk")))
+            .messages_for_user(c, id("kevin"), jiff::tz::TimeZone::UTC, None)
+    });
+    assert!(hidden.messages.is_empty());
+}
+
+#[test]
+fn mentions_filter_current_body_and_viewer_id() {
+    let t = fixture();
+    let (mine, other) = t.write(|tx| {
+        let mut make = |target, client: &str| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("designers"),
+                    creator_id: id("david"),
+                    body: Some(crate::rich_text::mention_attachment_for(target)),
+                    client_message_id: Some(client.into()),
+                    ..Default::default()
+                },
+            )
+        };
+        Ok((
+            make(id("david"), "mention-me")?.id,
+            make(id("kevin"), "mention-other")?.id,
+        ))
+    });
+    let matches = |q| {
+        t.read(|c| {
+            SearchQuery::parse_extended(q).messages_for_user(
+                c,
+                id("david"),
+                jiff::tz::TimeZone::UTC,
+                None,
+            )
+        })
+        .messages
+        .iter()
+        .map(|m| m.id)
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(matches("has:mention"), vec![mine, other]);
+    assert_eq!(matches("mentions:me"), vec![mine]);
+    t.write(move |tx| {
+        Message::find(tx.conn(), mine)?.update(
+            tx,
+            crate::MessageChanges {
+                body: Some("Mention removed".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok(())
+    });
+    assert!(
+        matches("mentions:me").is_empty(),
+        "does not search stale notification rows"
+    );
+}
+
+#[test]
+fn media_filters_use_current_blob_content_types() {
+    let t = fixture();
+    t.write(|tx| {
+        for (n, content_type) in [(0, "audio/ogg"), (1, "video/mp4"), (2, "application/pdf")] {
+            let blob = Blob::create(
+                tx,
+                &Blob {
+                    id: 0,
+                    key: format!("search-media-{n}"),
+                    filename: format!("media-{n}"),
+                    content_type: Some(content_type.into()),
+                    metadata: None,
+                    service_name: "local".into(),
+                    byte_size: 1,
+                    checksum: None,
+                    created_at: tx.now(),
+                },
+            )?;
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("designers"),
+                    creator_id: id("david"),
+                    attachment_blob_id: Some(blob.id),
+                    client_message_id: Some(format!("media-{n}")),
+                    ..Default::default()
+                },
+            )?;
+        }
+        Ok(())
+    });
+    for (q, expected) in [("has:audio", "media-0"), ("has:video", "media-1")] {
+        let page = t.read(|c| {
+            SearchQuery::parse_extended(q).messages_for_user(
+                c,
+                id("david"),
+                jiff::tz::TimeZone::UTC,
+                None,
+            )
+        });
+        assert_eq!(
+            page.messages
+                .iter()
+                .map(|m| m.client_message_id.as_str())
+                .collect::<Vec<_>>(),
+            [expected]
+        );
+    }
+}
+
+#[test]
+fn oldest_and_relevance_change_display_order() {
+    let t = fixture();
+    let (strong, weak) = t.write(|tx| {
+        let mut make = |body: &str, client: &str| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("designers"),
+                    creator_id: id("david"),
+                    body: Some(body.into()),
+                    client_message_id: Some(client.into()),
+                    ..Default::default()
+                },
+            )
+        };
+        Ok((
+            make("rankneedle rankneedle rankneedle", "rank-strong")?.id,
+            make(
+                "rankneedle surrounded by many unrelated words that dilute this result",
+                "rank-weak",
+            )?
+            .id,
+        ))
+    });
+    let matches = |q| {
+        t.read(|c| {
+            SearchQuery::parse_extended(q).messages_for_user_sorted(
+                c,
+                id("david"),
+                jiff::tz::TimeZone::UTC,
+                None,
+            )
+        })
+        .page
+        .messages
+        .iter()
+        .map(|m| m.id)
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(matches("rankneedle sort:oldest"), [weak, strong]);
+    assert_eq!(matches("rankneedle sort:relevance"), [weak, strong]);
+    assert_eq!(matches("rankneedle sort:newest"), [strong, weak]);
+}
+
+#[test]
+fn relevance_counts_stemmed_match_spans_then_breaks_ties_by_time_and_id() {
+    let t = TestDb::with_clock(
+        TestClock::frozen_at(Timestamp::parse_db("2026-03-10 12:00:00").unwrap()),
+        4,
+    );
+    let expected = t.write(|tx| {
+        let mut ids = Vec::new();
+        for (n, body) in [
+            "run",
+            "a run with padding",
+            "run padded",
+            "run run",
+            "Running RUN runs padding padding",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            ids.push(
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: id("designers"),
+                        creator_id: id("david"),
+                        body: Some(body.into()),
+                        client_message_id: Some(format!("span-{n}")),
+                        ..Default::default()
+                    },
+                )?
+                .id,
+            );
+        }
+        tx.conn().execute(
+            "UPDATE messages SET created_at='2026-03-09 12:00:00' WHERE id IN (?,?)",
+            [ids[0], ids[4]],
+        )?;
+        Ok(ids)
+    });
+    let page = t.read(|c| {
+        SearchQuery::parse_extended("run sort:relevance").messages_for_user_sorted(
+            c,
+            id("david"),
+            jiff::tz::TimeZone::UTC,
+            None,
+        )
+    });
+    assert_eq!(
+        page.page.messages.iter().map(|m| m.id).collect::<Vec<_>>(),
+        expected
+    );
+    assert!(page.next.is_none());
+}
+
+#[test]
+fn relevance_pages_survive_unrelated_activity_in_visible_and_private_rooms() {
+    for private in [false, true] {
+        let t = TestDb::new();
+        let expected = t.write(|tx| {
+            let mut ids = Vec::new();
+            for n in 0..85 {
+                ids.push(
+                    Message::create(
+                        tx,
+                        NewMessage {
+                            room_id: id("designers"),
+                            creator_id: id("david"),
+                            body: Some(if n < 45 {
+                                "needle".into()
+                            } else {
+                                "needle needle needle padding padding".into()
+                            }),
+                            client_message_id: Some(format!("relevance-{n}")),
+                            ..Default::default()
+                        },
+                    )?
+                    .id,
+                );
+            }
+            Ok(ids)
+        });
+        let q = SearchQuery::parse_extended("needle sort:relevance");
+        let first =
+            t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, None));
+        assert_eq!(first.page.messages.len(), 40);
+        // Freeze the original order before activity can change FTS corpus statistics.
+        let mut original = first
+            .page
+            .messages
+            .iter()
+            .rev()
+            .map(|m| m.id)
+            .collect::<Vec<_>>();
+        let mut cursor = first.next;
+        while let Some(after) = cursor {
+            let page = t.read(|c| {
+                q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, Some(after))
+            });
+            original.extend(page.page.messages.iter().rev().map(|m| m.id));
+            cursor = page.next;
+        }
+        t.write(move |tx| {
+            let room = if private {
+                Room::create_for(
+                    tx,
+                    RoomType::Closed,
+                    Some("Private activity"),
+                    id("kevin"),
+                    &[id("kevin")],
+                )?
+                .id
+            } else {
+                id("pets")
+            };
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: room,
+                    creator_id: id("kevin"),
+                    body: Some("unrelated ".repeat(20)),
+                    client_message_id: Some("unrelated-activity".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok(())
+        });
+        let second = t.read(|c| {
+            q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, first.next)
+        });
+        assert_eq!(second.page.messages.len(), 40, "private={private}");
+        let third = t.read(|c| {
+            q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, second.next)
+        });
+        assert_eq!(third.page.messages.len(), 5);
+        assert!(third.next.is_none());
+        let found = [first.page, second.page, third.page]
+            .into_iter()
+            .flat_map(|page| page.messages.into_iter().rev().map(|m| m.id))
+            .collect::<Vec<_>>();
+        assert_eq!(found, original, "unchanged match order, private={private}");
+        let mut unique = found;
+        unique.sort_unstable();
+        unique.dedup();
+        assert_eq!(
+            unique, expected,
+            "every hit exactly once, private={private}"
+        );
+    }
+}
+
+#[test]
+fn relevance_pages_survive_deletion_before_and_at_the_cursor() {
+    let t = TestDb::with_clock(
+        TestClock::frozen_at(Timestamp::parse_db("2026-03-10 12:00:00").unwrap()),
+        4,
+    );
+    let expected = t.write(|tx| {
+        let mut ids = Vec::new();
+        for n in 0..85 {
+            ids.push(
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: id("designers"),
+                        creator_id: id("david"),
+                        body: Some("deletionneedle".into()),
+                        client_message_id: Some(format!("deletion-{n}")),
+                        ..Default::default()
+                    },
+                )?
+                .id,
+            );
+        }
+        Ok(ids.into_iter().rev().collect::<Vec<_>>())
+    });
+    let q = SearchQuery::parse_extended("deletionneedle sort:relevance");
+    let first =
+        t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, None));
+    assert_eq!(
+        first
+            .page
+            .messages
+            .iter()
+            .rev()
+            .map(|m| m.id)
+            .collect::<Vec<_>>(),
+        expected[..40]
+    );
+    let (first_id, cursor_id) = (expected[0], expected[39]);
+    t.write(move |tx| {
+        Message::find(tx.conn(), first_id)?.destroy(tx)?;
+        Message::find(tx.conn(), cursor_id)?.destroy(tx)
+    });
+    let second =
+        t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, first.next));
+    assert_eq!(
+        second
+            .page
+            .messages
+            .iter()
+            .rev()
+            .map(|m| m.id)
+            .collect::<Vec<_>>(),
+        expected[40..80]
+    );
+    let third = t
+        .read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, second.next));
+    assert_eq!(
+        third
+            .page
+            .messages
+            .iter()
+            .rev()
+            .map(|m| m.id)
+            .collect::<Vec<_>>(),
+        expected[80..]
+    );
+    assert!(third.next.is_none());
+}
+
+#[test]
+fn relevance_id_adapter_falls_back_to_newest_without_error_or_missing_results() {
+    let t = TestDb::new();
+    let expected = t.write(|tx| {
+        let mut ids = Vec::new();
+        for n in 0..85 {
+            ids.push(
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: id("designers"),
+                        creator_id: id("david"),
+                        body: Some(format!("adapterneedle {}", "padding ".repeat(n % 3))),
+                        client_message_id: Some(format!("adapter-{n}")),
+                        ..Default::default()
+                    },
+                )?
+                .id,
+            );
+        }
+        Ok(ids.into_iter().rev().collect::<Vec<_>>())
+    });
+    let q = SearchQuery::parse_extended("adapterneedle sort:relevance");
+    let mut before = None;
+    let mut found = Vec::new();
+    loop {
+        let page = t.read(|c| q.messages_for_user(c, id("david"), jiff::tz::TimeZone::UTC, before));
+        before = page.messages.first().map(|m| m.id);
+        found.extend(page.messages.into_iter().rev().map(|m| m.id));
+        if !page.has_more {
+            break;
+        }
+    }
+    assert_eq!(found, expected);
+}
+
+#[test]
+fn sorted_pages_do_not_repeat_ties_and_survive_cursor_deletion() {
+    use crate::models::search_query::SearchSort;
+    let t = fixture();
+    let expected = t.write(|tx| {
+        let mut ids = Vec::new();
+        for n in 0..85 {
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("designers"),
+                    creator_id: id("david"),
+                    body: Some(format!("pagingrank {}", "padding ".repeat(n % 3))),
+                    client_message_id: Some(format!("sorted-{n}")),
+                    ..Default::default()
+                },
+            )?;
+            ids.push(message.id);
+        }
+        Ok(ids)
+    });
+    for sort in [
+        SearchSort::Oldest,
+        SearchSort::Newest,
+        SearchSort::Relevance,
+    ] {
+        let mut q = SearchQuery::parse_extended("pagingrank");
+        q.sort = sort;
+        let mut cursor = None;
+        let mut found = Vec::new();
+        loop {
+            let page = t.read(|c| {
+                q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, cursor)
+            });
+            found.extend(page.page.messages.iter().rev().map(|m| m.id));
+            cursor = page.next;
+            if cursor.is_none() {
+                break;
+            }
+        }
+        if sort == SearchSort::Oldest {
+            assert_eq!(found, expected);
+        }
+        if sort == SearchSort::Newest {
+            assert_eq!(found, expected.iter().rev().copied().collect::<Vec<_>>());
+        }
+        found.sort();
+        assert_eq!(found, expected, "every hit exactly once with {sort:?}");
+    }
+    let mut q = SearchQuery::parse_extended("pagingrank");
+    q.sort = SearchSort::Oldest;
+    let first =
+        t.read(|c| q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, None));
+    let cursor = first.next.unwrap();
+    let crate::models::search_query::SearchCursor::Message { id: cursor_id, .. } = cursor else {
+        panic!("oldest uses a message cursor")
+    };
+    t.write(move |tx| Message::find(tx.conn(), cursor_id)?.destroy(tx));
+    let next = t.read(|c| {
+        q.messages_for_user_sorted(c, id("david"), jiff::tz::TimeZone::UTC, Some(cursor))
+    });
+    assert_eq!(
+        next.page
+            .messages
+            .iter()
+            .rev()
+            .map(|m| m.id)
+            .collect::<Vec<_>>(),
+        expected[40..80]
+    );
+}
+
+#[test]
+fn every_new_filter_keeps_room_and_thread_visibility() {
+    let t = fixture();
+    t.write(|tx| {
+        let hidden = Room::create_for(
+            tx,
+            RoomType::Closed,
+            Some("Filter private"),
+            id("kevin"),
+            &[id("kevin")],
+        )?;
+        let deleted = Room::create_for(
+            tx,
+            RoomType::Closed,
+            Some("Filter deleted"),
+            id("david"),
+            &[id("david")],
+        )?;
+        for room in [id("designers"), hidden.id, deleted.id] {
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: room,
+                    creator_id: id("david"),
+                    name: Some("Visibility thread".into()),
+                    ..Default::default()
+                },
+            )?;
+            for (n, content_type) in [(0, "image/png"), (1, "audio/ogg"), (2, "video/mp4")] {
+                let blob = Blob::create(
+                    tx,
+                    &Blob {
+                        id: 0,
+                        key: format!("filter-{room}-{n}"),
+                        filename: "filter".into(),
+                        content_type: Some(content_type.into()),
+                        metadata: None,
+                        service_name: "local".into(),
+                        byte_size: 1,
+                        checksum: None,
+                        created_at: tx.now(),
+                    },
+                )?;
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: room,
+                        creator_id: id("david"),
+                        thread_id: Some(thread.id),
+                        body: Some(format!(
+                            "visibilityneedle <a href=\"https://example.com\">link</a>{}",
+                            crate::rich_text::mention_attachment_for(id("david"))
+                        )),
+                        attachment_blob_id: Some(blob.id),
+                        client_message_id: Some(format!("filter-{room}-{n}")),
+                        ..Default::default()
+                    },
+                )?;
+            }
+        }
+        tx.conn().execute(
+            "UPDATE rooms SET deleted_at=? WHERE id=?",
+            rusqlite::params![tx.now(), deleted.id],
+        )?;
+        Ok(())
+    });
+    for filter in [
+        format!("from_id:{}", id("david")),
+        format!("in_id:{}", id("designers")),
+        "mentions:me".into(),
+        "has:mention".into(),
+        "has:file".into(),
+        "has:image".into(),
+        "has:link".into(),
+        "has:audio".into(),
+        "has:video".into(),
+        "sort:oldest".into(),
+        "sort:relevance".into(),
+    ] {
+        let q = SearchQuery::parse_extended(&format!("visibilityneedle {filter}"));
+        let page =
+            t.read(|c| q.messages_for_user_after(c, id("david"), jiff::tz::TimeZone::UTC, None));
+        assert!(!page.messages.is_empty(), "positive witness for {filter}");
+        assert!(
+            page.messages
+                .iter()
+                .all(|m| m.room_id == id("designers") && m.thread_id.is_some()),
+            "{filter}"
+        );
     }
 }

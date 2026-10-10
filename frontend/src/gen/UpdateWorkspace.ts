@@ -3,4 +3,4 @@
 /**
  * `PATCH /api/v1/admin/workspace` (`accounts#update`). `null` leaves a key as it is.
  */
-export type UpdateWorkspace = { name: string | null, restrictRoomCreationToAdministrators: boolean | null, };
+export type UpdateWorkspace = { name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null, };
