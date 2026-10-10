@@ -205,7 +205,7 @@ function ThreadMenu({
           Rename {noun}…
         </MenuItem>
       ) : null}
-      {permissions?.canRename === true ? (
+      {permissions?.canRename === true && noun !== "post" ? (
         <MenuItem icon="timer" detail={autoArchiveLabel(autoArchive)} onSelect={onAutoArchive}>
           Auto-archive after…
         </MenuItem>

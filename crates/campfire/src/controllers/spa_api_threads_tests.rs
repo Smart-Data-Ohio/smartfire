@@ -672,6 +672,66 @@ async fn setting_the_auto_archive_duration_answers_and_publishes() {
     server.abort();
 }
 
+/// A board never auto-archives, so its post refuses a duration, even from its owner, and keeps
+/// the stored one. Other fields in later updates still save.
+#[tokio::test]
+async fn a_board_post_refuses_an_auto_archive_duration() {
+    let Some(a) = app(true).await else { return };
+    let (_addr, server) = serve(&a).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "INSERT INTO memberships (room_id, user_id, created_at, updated_at) VALUES (?, ?, '2026-03-02 15:00:00', '2026-03-02 15:00:00')",
+                [BOARD, KEVIN],
+            )?;
+            tx.conn().execute(
+                "UPDATE channel_threads SET work_owner_id = ? WHERE id = ?",
+                [KEVIN, BOARD_THREAD],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let path = format!("/api/v1/threads/{BOARD_THREAD}");
+    let before: api::ThreadDetail = parse(&kevin.send(get(&path)).await);
+    assert!(before.permissions.can_rename, "{before:?}");
+    let stored = before.thread.auto_archive_after_minutes;
+    let target = if stored == 60 { 10080 } else { 60 };
+
+    let reply = kevin
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"autoArchiveAfterMinutes": target}),
+        ))
+        .await;
+    assert_eq!(
+        (reply.status, tag(&reply)),
+        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into()),
+        "{}",
+        reply.text()
+    );
+    let envelope: api::ApiErrorResponse = parse(&reply);
+    let api::ApiError::Validation { fields, .. } = envelope.error else {
+        panic!("{envelope:?}")
+    };
+    assert!(fields.contains_key("autoArchiveAfterMinutes"), "{fields:?}");
+    let after: api::ThreadDetail = parse(&kevin.send(get(&path)).await);
+    assert_eq!(after.thread.auto_archive_after_minutes, stored);
+
+    let reply = kevin
+        .write(json_body(Method::PATCH, &path, &json!({"name": "Still works"})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let renamed: api::ThreadDetail = parse(&reply);
+    assert_eq!(
+        (renamed.thread.name.as_str(), renamed.thread.auto_archive_after_minutes),
+        ("Still works", stored)
+    );
+    server.abort();
+}
+
 #[tokio::test]
 async fn changing_and_deleting_threads_answer_and_publish() {
     let Some(a) = app(true).await else { return };

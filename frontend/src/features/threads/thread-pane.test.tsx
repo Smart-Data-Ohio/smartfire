@@ -10,6 +10,8 @@ import {
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { roomDetailFixture } from "../../api/testing.ts";
+import type { RoomKind } from "../../gen/RoomKind.ts";
 import type { ThreadPermissions } from "../../gen/ThreadPermissions.ts";
 import { initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
@@ -131,6 +133,22 @@ function readyPane(threadId: number, canRename: boolean, autoArchiveAfterMinutes
   });
 }
 
+/** Room 4 loaded as a room of `kind`, so the pane knows whether its threads are board posts. */
+function roomOfKind(roomId: number, kind: RoomKind): void {
+  const detail = roomDetailFixture(roomId);
+
+  store.setState({
+    rooms: {
+      [roomId]: {
+        detail: { ...detail, room: { ...detail.room, kind } },
+        status: "ready",
+        error: null,
+        preview: null,
+      },
+    },
+  });
+}
+
 describe("ThreadPane", () => {
   it("sends a thread from another room to the room it belongs to", async () => {
     vi.spyOn(actions.threads, "open").mockResolvedValue(undefined);
@@ -198,6 +216,31 @@ describe("ThreadPane", () => {
     expect(await screen.findByText(message)).toBeTruthy();
     expect(picker.getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("offers no auto-archive change on a board post", async () => {
+    stubPane();
+    readyPane(9, true);
+    roomOfKind(4, "board");
+    const user = userEvent.setup();
+
+    await mount("/app/r/4/t/9");
+    await user.click(screen.getByRole("button", { name: "Post actions" }));
+
+    expect(screen.getByRole("menuitem", { name: /Rename post/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /Auto-archive after/ })).toBeNull();
+  });
+
+  it("offers the auto-archive change on an ordinary thread", async () => {
+    stubPane();
+    readyPane(9, true);
+    roomOfKind(4, "open");
+    const user = userEvent.setup();
+
+    await mount("/app/r/4/t/9");
+    await user.click(screen.getByRole("button", { name: "Thread actions" }));
+
+    expect(screen.getByRole("menuitem", { name: /Auto-archive after/ })).toBeTruthy();
   });
 
   it("offers no auto-archive change to a viewer who may only reply", async () => {

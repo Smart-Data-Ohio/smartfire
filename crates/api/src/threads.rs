@@ -346,6 +346,16 @@ async fn update_thread(c: &mut Ctx) -> Result {
         ));
     }
     let (thread_id, board) = (thread.id, room.board());
+    // Boards never auto-archive (`status_in_room`, `stale`), so a duration saved on a post would do nothing.
+    if board && input.auto_archive_after_minutes.is_some() {
+        return Err(fail(
+            c,
+            validation(
+                "autoArchiveAfterMinutes",
+                "can't be set on a board post, which never auto-archives",
+            ),
+        ));
+    }
     // An empty body changes nothing, so nothing is published.
     let changes =
         input.name.is_some() || input.auto_archive_after_minutes.is_some() || input.status.is_some();
