@@ -208,7 +208,7 @@ async fn ws15e_fizzy_fetch_results_are_private_and_match_failure_states() {
         .await
         .unwrap();
     let path = format!(
-        "/rooms/{ALL_TALK}/fizzy/cards/{}/card?message_id={}",
+        "/api/v1/rooms/{ALL_TALK}/fizzy/cards/{}/card?messageId={}",
         card.id, message.id
     );
     for (index, (status, body)) in [
@@ -313,16 +313,21 @@ async fn ws15e_fizzy_fetch_results_are_private_and_match_failure_states() {
             .unwrap();
         let response = app.david().get(&path).await;
         assert_eq!(response.status, axum::http::StatusCode::OK);
-        let html = response.text();
-        assert!(!html.contains("Jason only"));
+        let preview = response.json();
+        assert!(!response.text().contains("Jason only"));
         match status {
-            200 => assert!(html.contains("Private David title")),
-            403 | 404 => {
-                assert!(html.contains("Fizzy card #579"));
-                assert!(!html.contains("Connect Fizzy to preview"));
+            200 => {
+                assert_eq!(preview["state"], "loaded");
+                assert_eq!(preview["title"], "Private David title");
             }
-            500 => assert!(html.contains("Retained David title")),
-            401 => assert!(html.contains("Connect Fizzy to preview")),
+            403 | 404 => {
+                assert_eq!(preview, json!({"state": "not_found"}));
+            }
+            500 => {
+                assert_eq!(preview["state"], "loaded");
+                assert_eq!(preview["title"], "Retained David title");
+            }
+            401 => assert_eq!(preview, json!({"state": "not_connected"})),
             _ => unreachable!(),
         }
     }

@@ -1,5 +1,5 @@
 //! The profile badges of test/system/meeting_status_test.rb:7 (WS14g-269) and
-//! out_of_office_test.rb:4 (WS14g-271), over HTTP: the pages the Rails system tests visited,
+//! out_of_office_test.rb:4 (WS14g-271), over the SPA's profile and presence APIs,
 //! with Google's events list answered by the payload their WebMock stub returned.
 use super::google_api_tests::{self as google, Recorded};
 use crate::{
@@ -9,25 +9,9 @@ use crate::{
 use axum::http::Method;
 use campfire_db::{Timestamp, models::calendar_dispatch::dispatch_meetings};
 use campfire_kit::FrozenClock;
-use campfire_richtext::dom::Dom;
 use jiff::SignedDuration;
 use serde_json::json;
 use std::sync::Arc;
-
-/// The text of every element carrying `class`, as Capybara's `assert_selector(css, text:)` sees it.
-fn texts(html: &str, class: &str) -> Vec<String> {
-    let mut d = Dom::new();
-    let root = d.parse_fragment(html).unwrap();
-    d.descendants(root)
-        .into_iter()
-        .filter(|&n| d.attr(n, "class").is_some_and(|c| c.split_whitespace().any(|t| t == class)))
-        .map(|n| d.text_content(n))
-        .collect()
-}
-
-fn has(html: &str, class: &str, text: &str) -> bool {
-    texts(html, class).iter().any(|t| t.contains(text))
-}
 
 /// `timed_calendar_item` in google_calendar_test_helper.rb.
 fn item(start: jiff::Timestamp, end: jiff::Timestamp) -> serde_json::Value {
@@ -107,16 +91,19 @@ async fn ws14g_269_opting_in_shows_in_a_meeting_for_a_busy_interval_then_clears_
     assert!(calls[0]["path"].as_str().unwrap().contains("singleEvents=true"), "{calls:?}");
     dispatch_meetings(app.db(), Timestamp::from_jiff(now)).await.unwrap();
 
-    let profile = david.get(&format!("/users/{DAVID}")).await;
+    let profile = david.get(&format!("/api/v1/people/{DAVID}")).await;
     assert_eq!(profile.status, 200);
-    assert!(has(&profile.text(), "user-status-badge", "In a meeting"), "{:?}", texts(&profile.text(), "user-status-badge"));
+    assert_eq!(profile.json()["status"]["statusText"], "📅 In a meeting");
 
     // travel_to 6.minutes.from_now
     clock.advance(SignedDuration::from_mins(6));
     dispatch_meetings(app.db(), Timestamp::from_jiff(minutes(6))).await.unwrap();
-    let profile = david.get(&format!("/users/{DAVID}")).await;
+    let profile = david.get(&format!("/api/v1/people/{DAVID}")).await;
     assert_eq!(profile.status, 200);
-    assert!(!has(&profile.text(), "user-status-badge__custom", "In a meeting"));
+    assert_eq!(
+        profile.json()["status"]["statusText"],
+        serde_json::Value::Null
+    );
 }
 
 #[tokio::test]
@@ -136,18 +123,40 @@ async fn ws14g_271_out_of_office_badge_and_dm_notice_show_for_another_user_then_
         .await;
     assert!(manual_ooo().await, "OOO was not set");
 
-    let profile = david.get(&format!("/users/{DAVID}")).await;
-    assert!(has(&profile.text(), "user-status-badge", "Out of office"), "{:?}", texts(&profile.text(), "user-status-badge"));
-    let room = app.sign_in(JASON).await.get(&format!("/rooms/{DIRECT_DAVID_JASON}")).await;
-    assert!(has(&room.text(), "ooo-notice", "David is out of office"), "{:?}", texts(&room.text(), "ooo-notice"));
-    assert!(has(&room.text(), "ooo-notice", "Back soon"));
+    let profile = david.get(&format!("/api/v1/people/{DAVID}")).await;
+    assert_eq!(profile.status, 200);
+    assert_eq!(
+        profile.json()["status"]["statusText"],
+        "🌴 Out of office until March 03, 2026 — Back soon"
+    );
+    let mut jason = app.sign_in(JASON).await;
+    let room = jason
+        .get(&format!("/api/v1/rooms/{DIRECT_DAVID_JASON}"))
+        .await;
+    assert_eq!(room.status, 200);
+    assert_eq!(room.json()["directMemberIds"], json!([DAVID]));
+    let presence = jason.get(&format!("/api/v1/presence?ids={DAVID}")).await;
+    assert_eq!(presence.status, 200);
+    assert_eq!(presence.json()["presences"][0]["userId"], DAVID);
+    assert_eq!(
+        presence.json()["presences"][0]["statusText"],
+        profile.json()["status"]["statusText"]
+    );
 
     david
         .write(Req::new(Method::PATCH, "/users/me/status").form(&[("user[clear_ooo]", "1")]))
         .await;
     assert!(!manual_ooo().await, "OOO was not cleared");
-    let profile = david.get(&format!("/users/{DAVID}")).await;
-    assert!(!has(&profile.text(), "user-status-badge__custom", "Out of office"));
-    let room = app.sign_in(JASON).await.get(&format!("/rooms/{DIRECT_DAVID_JASON}")).await;
-    assert!(texts(&room.text(), "ooo-notice").is_empty());
+    let profile = david.get(&format!("/api/v1/people/{DAVID}")).await;
+    assert_eq!(profile.status, 200);
+    assert_eq!(
+        profile.json()["status"]["statusText"],
+        serde_json::Value::Null
+    );
+    let presence = jason.get(&format!("/api/v1/presence?ids={DAVID}")).await;
+    assert_eq!(presence.status, 200);
+    assert_eq!(
+        presence.json()["presences"][0]["statusText"],
+        serde_json::Value::Null
+    );
 }
