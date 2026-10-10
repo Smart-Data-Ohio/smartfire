@@ -30,6 +30,7 @@ pub fn stream_quality(quality: &str) -> Option<StreamQuality> {
         "720p15" => Some(StreamQuality::P720Fps15),
         "1080p15" => Some(StreamQuality::P1080Fps15),
         "1080p30" => Some(StreamQuality::P1080Fps30),
+        "1080p60" => Some(StreamQuality::P1080Fps60),
         _ => None,
     }
 }
@@ -39,6 +40,7 @@ pub fn stream_quality_name(quality: StreamQuality) -> &'static str {
         StreamQuality::P720Fps15 => "720p15",
         StreamQuality::P1080Fps15 => "1080p15",
         StreamQuality::P1080Fps30 => "1080p30",
+        StreamQuality::P1080Fps60 => "1080p60",
     }
 }
 
@@ -359,5 +361,17 @@ mod tests {
         );
         let missed = json!({"activityItemId":41,"eventType":"huddle_missed","state":"unread","roomId":3,"roomName":"Ada","callerName":"Ada","silent":false});
         assert_eq!(ring(&missed).unwrap().event, HuddleRingEvent::Missed);
+    }
+
+    #[test]
+    fn every_stored_quality_round_trips_through_the_wire() {
+        for name in campfire_db::models::stream::QUALITIES {
+            let quality =
+                stream_quality(name).unwrap_or_else(|| panic!("{name} has no wire value"));
+            assert_eq!(stream_quality_name(quality), name);
+            assert_eq!(serde_json::to_value(quality).unwrap(), json!(name));
+        }
+        assert_eq!(stream_quality("1080p60"), Some(StreamQuality::P1080Fps60));
+        assert_eq!(stream_quality("4k60"), None);
     }
 }

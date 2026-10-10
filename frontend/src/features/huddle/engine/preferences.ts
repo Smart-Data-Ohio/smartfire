@@ -3,6 +3,8 @@
  * chosen there is still chosen here. Storage can be refused (private browsing): reads fall back to
  * the defaults and writes only last for the page.
  */
+import type { StreamQuality } from "../../../gen/StreamQuality.ts";
+import { DEFAULT_SHARE_QUALITY, knownStreamQuality } from "./screen-quality.ts";
 import type { DeviceKind, ViewerQuality } from "./transport.ts";
 
 export const DEVICE_STORAGE_KEY = "campfire.huddle.devices";
@@ -10,6 +12,8 @@ export const DEVICE_STORAGE_KEY = "campfire.huddle.devices";
 export const NOISE_SUPPRESSION_STORAGE_KEY = "campfire.huddle.noiseSuppression";
 
 export const STREAM_QUALITY_STORAGE_KEY = "campfire.huddle.streamQuality";
+
+export const SHARE_QUALITY_STORAGE_KEY = "campfire.huddle.shareQuality";
 
 export const PARTICIPANT_VOLUME_PREFIX = "campfire.huddle.volume.";
 
@@ -91,6 +95,17 @@ export function loadStreamQuality(): ViewerQuality {
 
 export function storeStreamQuality(quality: ViewerQuality): void {
   write(STREAM_QUALITY_STORAGE_KEY, quality);
+}
+
+/** The quality an ordinary screen share captures and encodes at; 1080p15 until picked. */
+export function loadShareQuality(): StreamQuality {
+  const value = read(SHARE_QUALITY_STORAGE_KEY);
+
+  return knownStreamQuality(value) ?? DEFAULT_SHARE_QUALITY;
+}
+
+export function storeShareQuality(quality: StreamQuality): void {
+  write(SHARE_QUALITY_STORAGE_KEY, quality);
 }
 
 /** Someone's volume for this browser, 0–200; 100 when unset (an empty entry isn't silence). */

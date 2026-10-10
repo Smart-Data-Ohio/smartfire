@@ -107,6 +107,7 @@ describe("S5 DTO schemas", () => {
     roundTrips(LowerHand, { membershipId: null });
     roundTrips(LowerHand, { membershipId: 32 });
     roundTrips(StartStageStream, { quality: "720p15" });
+    roundTrips(StartStageStream, { quality: "1080p60" });
     roundTrips(StopStageStream, { streamId: 5 });
     roundTrips(StopStageStream, { streamId: null });
     expect(() => Schema.decodeUnknownSync(ChangeStageRole)({ role: "owner" })).toThrow();

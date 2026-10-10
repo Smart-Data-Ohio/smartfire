@@ -239,12 +239,12 @@ describe("stages", () => {
       server,
       "POST",
       path,
-      { quality: "1080p30" },
+      { quality: "1080p60" },
       201,
     );
 
     expect(stream.userId).toBe(viewer);
-    expect(stream.quality).toBe("1080p30");
+    expect(stream.quality).toBe("1080p60");
 
     await server.handle({
       method: "POST",

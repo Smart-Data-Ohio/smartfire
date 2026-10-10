@@ -129,10 +129,16 @@ export interface CallTransport {
   setMicrophone(enabled: boolean): Promise<void>;
   /** On publishes a camera track; off unpublishes it, releasing the device. */
   setCamera(enabled: boolean): Promise<void>;
-  /** An ordinary screen share (tab audio included where the browser allows). */
-  setScreenShare(enabled: boolean): Promise<void>;
-  /** Starts a screen capture; call synchronously inside the gesture (Safari requires it). */
-  captureScreen(): Promise<CapturedScreen>;
+  /**
+   * An ordinary screen share at `quality`, 1080p15 when left out (tab audio included where the
+   * browser allows).
+   */
+  setScreenShare(enabled: boolean, quality?: StreamQuality): Promise<void>;
+  /**
+   * Starts a screen capture sized for `quality`; call synchronously inside the gesture (Safari
+   * requires it).
+   */
+  captureScreen(quality: StreamQuality): Promise<CapturedScreen>;
   /** Publishes a captured screen at a stream's quality. */
   publishScreen(captured: CapturedScreen, quality: StreamQuality): Promise<void>;
   /** Stops captured tracks that won't be published. */
