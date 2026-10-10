@@ -80,6 +80,15 @@ describe("the screen map", () => {
     expect(spaUrlFor("/rooms/12", "?thread=nope&x=1")).toBe("/app/r/12?thread=nope&x=1");
   });
 
+  it("sends a thread's content message_id to the SPA's reply parameter m", () => {
+    const content = "/rooms/12/threads/9/content";
+
+    expect(spaUrlFor(content, "?message_id=123")).toBe("/app/r/12/t/9?m=123");
+    expect(spaUrlFor(content, "?message_id=abc")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor(content, "?x=1&classic=1")).toBe("/app/r/12/t/9?x=1");
+    expect(spaUrlFor(content)).toBe("/app/r/12/t/9");
+  });
+
   it("decodes room notification ids and uses the classic duplicate", () => {
     expect(spaUrlFor("/rooms/12", "?thread=%39")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("/rooms/12", "?message_id=%34")).toBe("/app/r/12/m/4");

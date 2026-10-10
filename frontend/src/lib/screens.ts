@@ -191,6 +191,43 @@ function rawKeptSearch(search: string): string {
   return kept.length === 0 ? "" : `?${kept.join("&")}`;
 }
 
+/**
+ * A thread's content fragment's `search` as the SPA's thread route reads it: `message_id` (the
+ * last value) becomes `m`, dropped when it isn't a record id. Other pairs carry over as written,
+ * less `classic`. The same rules as the server's `thread_anchor_url`.
+ */
+function threadAnchorSearch(search: string): string {
+  let anchor: string | null = null;
+  const rest: string[] = [];
+
+  for (const pair of search.replace(/^\?/, "").split("&")) {
+    if (pair === "") {
+      continue;
+    }
+
+    const eq = pair.indexOf("=");
+    const rawName = eq === -1 ? pair : pair.slice(0, eq);
+    const rawValue = eq === -1 ? "" : pair.slice(eq + 1);
+    const name = queryComponent(rawName);
+
+    if (name === "classic") {
+      continue;
+    }
+
+    if (name === "message_id") {
+      anchor = recordId(rawValue);
+
+      continue;
+    }
+
+    rest.push(pair);
+  }
+
+  const kept = anchor === null ? rest : [`m=${anchor}`, ...rest];
+
+  return kept.length === 0 ? "" : `?${kept.join("&")}`;
+}
+
 /** `search` (with or without its `?`) less any `classic` parameter, as `?...` or "". */
 function keptSearch(search: string): string {
   const params = new URLSearchParams(search);
@@ -229,6 +266,10 @@ export function spaUrlFor(path: string, search = "", viewerId?: number): string 
         }
 
         return `${filled}${rawKeptSearch(search)}`;
+      }
+
+      if (screen.endpoint === "channel_threads#content") {
+        return `${filled}${threadAnchorSearch(search)}`;
       }
 
       return `${filled}${keptSearch(search)}`;
