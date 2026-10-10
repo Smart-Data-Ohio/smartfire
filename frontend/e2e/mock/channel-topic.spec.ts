@@ -4,6 +4,83 @@ const ROOM = ROOM_IDS.launchPlanning;
 
 const TOPIC = `<b>Planning</b> https://example.com/docs.\n${"A long channel topic. ".repeat(35)}`;
 
+for (const viewport of [DESKTOP, PHONE]) {
+  test(`a 1024-character topic keeps the room name readable at ${viewport.width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await openApp(page, `r/${ROOM}/settings`);
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+    const text = "W".repeat(1024);
+
+    await dialog.getByRole("textbox", { name: "Topic" }).fill(text);
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toBeHidden();
+    const header = page.locator(".room-header");
+    const name = header.getByRole("heading", { name: "launch-planning", level: 1 });
+
+    await expect(name).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`topic-${viewport.width}.png`) });
+    expect(
+      await header
+        .locator(".room-title-name")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    expect(
+      await header.evaluate((element) => {
+        const title = element.querySelector(".room-title-button");
+        const actions = element.querySelector(".page-header-actions");
+
+        if (title === null || actions === null) throw new Error("Missing header controls");
+
+        const titleBox = title.getBoundingClientRect();
+
+        return (
+          titleBox.right <= actions.getBoundingClientRect().left &&
+          Array.from(title.children).every(
+            (child) => child.getBoundingClientRect().right <= titleBox.right,
+          ) &&
+          element.scrollWidth <= element.clientWidth
+        );
+      }),
+    ).toBe(true);
+    const topic = header.getByRole("button", { name: "Channel topic, About" });
+
+    if (viewport.width === DESKTOP.width) {
+      await expect(topic).toHaveText(text);
+      expect(
+        await topic.evaluate((element) => {
+          const title = element.parentElement?.querySelector(".room-title-button");
+
+          if (title === null || title === undefined) throw new Error("Missing room name");
+
+          return (
+            element.getBoundingClientRect().left >= title.getBoundingClientRect().right &&
+            element.scrollWidth > element.clientWidth &&
+            getComputedStyle(element).textOverflow === "ellipsis"
+          );
+        }),
+      ).toBe(true);
+      await topic.click();
+    } else {
+      await expect(topic).toHaveCount(0);
+      await header.getByRole("button", { name: "launch-planning, details" }).click();
+    }
+
+    await expect(page.getByRole("region", { name: "About" })).toContainText(text);
+    await page.screenshot({ path: testInfo.outputPath(`topic-about-${viewport.width}.png`) });
+
+    if (viewport.width === DESKTOP.width) {
+      expect(await name.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+      expect(await header.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+    }
+  });
+}
+
 test("a topic saves, truncates in the header, and updates another open client", async ({
   page,
   context,
