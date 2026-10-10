@@ -418,19 +418,8 @@ pub fn save_service_with_preparation(
 }
 
 pub fn broadcast_stream_start(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-    use crate::broadcasts::{Broadcast, Partial, conversation_messages, dom_id, room_dom_id};
-    let room = crate::Room::find(tx.conn(), message.room_id)?;
-    let target = message.thread_id.map_or_else(
-        || room_dom_id(&room, Some("messages")),
-        |id| dom_id("channel_thread", id, Some("messages")),
-    );
-    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::append(
-        conversation_messages(tx.conn(), message)?,
-        target,
-        Partial::Message {
-            message_id: message.id,
-        },
-    )));
+    use crate::broadcasts::Broadcast;
+    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
     Ok(())
 }
 

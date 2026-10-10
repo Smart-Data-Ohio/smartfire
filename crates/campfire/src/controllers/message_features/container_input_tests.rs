@@ -3,7 +3,7 @@
 //! and saved-item status writes; neither expected state nor input is mutated.
 use super::{
     comparison_support,
-    quote_integration_tests::{app_rows, stream},
+    quote_integration_tests::{app_rows},
 };
 use crate::controllers::presenters::test_support::*;
 use serde_json::{Value, json};
@@ -52,7 +52,7 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
                     .await
                     .unwrap();
             }
-            let (mut socket, server) = stream(&app).await;
+
             let mut browser = app.david();
             browser.authenticity_token().await;
             let query_log = app.db().capture_queries();
@@ -96,17 +96,7 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
                 })
                 .await
                 .unwrap();
-            comparison_support::published_frames(
-                &app,
-                &mut socket,
-                &case["frames"],
-                &format!(
-                    "container actual publications {}",
-                    case["name"].as_str().unwrap()
-                ),
-            )
-            .await;
-            socket.assert_silent().await;
+
             if case["name"] == "UTC/slash_0" {
                 let reads = warm_message_zones(&app, group).await;
                 if let Some(previous) = counts.insert("legacy warm four-zone fragments".into(), reads) {
@@ -138,7 +128,7 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
                 assert_eq!(previous, reads, "container physical read growth");
             }
             checked += 1;
-            server.abort();
+
         }
     }
     for failure in &failures {

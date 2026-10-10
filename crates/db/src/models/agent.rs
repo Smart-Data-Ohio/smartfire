@@ -1,5 +1,5 @@
 //! Agent records, live read policies, profile status and working presence. Rendering
-//! adapters own the two status replacements described by `AgentStatusChange`.
+//! adapters publish the status change described by `AgentSyncChange`.
 use crate::sql::{exists, query_all, query_one};
 use crate::{AgentGrant, Connection, Errors, Event, Result, Timestamp, Tx, User};
 use rails_compat::unicode;
@@ -148,23 +148,6 @@ pub struct ActivityCounts {
     pub suppressed: i64,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum AgentStatusTarget {
-    Badge,
-    DirectoryRow,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentStatusChange {
-    pub agent_id: i64,
-    pub target: AgentStatusTarget,
-}
-impl crate::events::Broadcast for AgentStatusChange {
-    const KIND: &'static str = "Agent#broadcast_status_change";
-}
-
-/// The agent's status, note, suspension or working presence changed. The classic app's frames
-/// are [`AgentStatusChange`]'s (status and note only); the cable sink publishes the single-page
-/// app's `agent.status` for this one, once per change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgentSyncChange {
     pub agent_id: i64,
@@ -475,14 +458,6 @@ impl Agent {
         drop(values);
         drop(sets);
         *self = Self::find(tx.conn(), self.id)?.expect("updated agent");
-        if self.status != before.status || self.status_note != before.status_note {
-            for target in [AgentStatusTarget::Badge, AgentStatusTarget::DirectoryRow] {
-                tx.emit_after_commit(Event::broadcast(&AgentStatusChange {
-                    agent_id: self.id,
-                    target,
-                }));
-            }
-        }
         if self.status != before.status
             || self.status_note != before.status_note
             || self.suspended_at != before.suspended_at

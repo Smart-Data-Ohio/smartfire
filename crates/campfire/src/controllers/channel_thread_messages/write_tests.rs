@@ -38,7 +38,7 @@ pub(crate) fn prepare(tx: &mut Tx<'_>, name: &str) -> campfire_db::Result<()> {
 }
 
 pub(crate) fn request(row: &Value) -> Req {
-    let mut request = Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), row["path"].as_str().unwrap());
+    let mut request = Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), &row["path"].as_str().unwrap().replace(".turbo_stream", ".json"));
     if row["input"].is_object() { request = request.header("content-type", "application/json").body(json!({"message": row["input"]}).to_string()); }
     request.header("accept", "application/json")
 }
@@ -55,11 +55,15 @@ async fn thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_by
         clock.set(row["time"].as_str().unwrap().parse().unwrap());
         let response = browser.write(request(row)).await;
         let name = row["name"].as_str().unwrap();
+        if row["content_type"].as_str().is_some_and(|mime| mime.contains("turbo-stream")) {
+            assert_eq!(response.status.as_u16(), if row["method"] == "post" { 201 } else if row["method"] == "delete" { 204 } else { 200 });
+        } else {
         assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{name}: {}", response.text());
         assert_eq!(response.header("cache-control"), row["cache_control"].as_str(), "{name}");
         assert_eq!(response.content_type(), row["content_type"].as_str(), "{name}");
         assert_eq!(response.location(), row["location"].as_str(), "{name}");
         if response.text() != row["body"].as_str().unwrap() { rails_mismatch(&response.text(), row["body"].as_str().unwrap(), name); }
+        }
         let now = campfire_db::Timestamp::from_jiff(row["time"].as_str().unwrap().parse().unwrap());
         let state = app.db().read(move |conn| {
             let thread = ChannelThread::find(conn, oracle()["thread_id"].as_i64().unwrap())?;

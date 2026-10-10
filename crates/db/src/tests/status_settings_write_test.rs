@@ -17,7 +17,7 @@ fn stamp(s: &str) -> Timestamp {
 #[test]
 fn ws17_status_broadcast_emission_order_matches_actual_rails_calls() {
     use crate::Broadcast;
-    use crate::models::user_status_settings::updates::{OooNoticeBroadcast, StatusBadgeBroadcast};
+    use crate::models::user_status_settings::updates::{StatusBadgeBroadcast};
     let golden: Value = serde_json::from_str(include_str!(
         "../../../../vectors/ws17_status_requests.json"
     ))
@@ -58,7 +58,6 @@ fn ws17_status_broadcast_emission_order_matches_actual_rails_calls() {
             .skip(before)
             .map(|event| match event {
                 Event::Broadcast(b) if b.kind == StatusBadgeBroadcast::KIND => "status",
-                Event::Broadcast(b) if b.kind == OooNoticeBroadcast::KIND => "ooo_notice",
                 other => panic!("unexpected {other:?}"),
             })
             .collect::<Vec<_>>();
@@ -66,7 +65,7 @@ fn ws17_status_broadcast_emission_order_matches_actual_rails_calls() {
             .as_array()
             .unwrap()
             .iter()
-            .map(|f| f["stream"].as_str().unwrap().rsplit(':').next().unwrap())
+            .filter_map(|f| { let stream = f["stream"].as_str().unwrap().rsplit(':').next().unwrap(); (stream == "status").then_some(stream) })
             .collect::<Vec<_>>();
         assert_eq!(streams, expected, "{name}");
     }

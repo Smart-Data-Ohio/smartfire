@@ -91,11 +91,7 @@ async fn perform_owned(app: App, job: AttachmentProcessingJob) -> JobResult {
                 let Some(mut message) = Message::find_by_id(tx.conn(), id)? else { continue; };
                 if !processing::owns(tx.conn(), id, job.blob_id)? { continue; }
                 message.touch(tx)?;
-                let broadcast = broadcasts::Broadcast::replace_keeping_scroll(
-                    broadcasts::conversation_messages(tx.conn(), &message)?,
-                    broadcasts::message_dom_id(&message, Some("presentation")),
-                    broadcasts::Partial::MessagePresentation { message_id: id },
-                );
+                let broadcast = broadcasts::Broadcast::MessageUpdated { message_id: id };
                 let app = app.clone();
                 // Rails calls broadcast_replace_to directly here. Ordinary model callbacks
                 // report and swallow failures, but this job must retry a failed completion.

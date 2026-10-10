@@ -6,14 +6,11 @@
 use anyhow::{Context as _, anyhow};
 use campfire_db::{Message, NewMessage, Room, User, Webhook};
 use campfire_jobs::{Execution, JobResult, Outcome};
-use campfire_views::messages as views;
 
 use crate::integrations::{web_push, webhook::{self, WebhookReply}};
 use crate::net::Network;
 use crate::app::App;
-use crate::controllers::presenters::page::{self, Rendered};
 use crate::messaging::{canonicalize_body, process_attachment, save_staged};
-use crate::controllers::presenters::Presenter;
 use crate::queue::{PushMessageJob, Registry, WebhookJob, discard_missing};
 
 /// Registers `Room::PushMessageJob` and `Bot::WebhookJob`.
@@ -154,17 +151,11 @@ pub async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyh
     let (app, room, message) = (app.clone(), room.clone(), message.clone());
     let db = app.db.clone();
     let refreshes = db.read(move |conn| {
-        let presenter = Presenter::new(conn, &app, None);
-        let view = presenter.message(&message)?;
-        let account = campfire_db::Account::first(conn)?;
-        let html = page::render_detached(&app, account.as_ref(), |ctx| views::message(ctx, &view));
-        let partials = Rendered { message: Some(html), ..Rendered::default() };
-        app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
-        Ok(presenter.take_render_refreshes())
+        let refreshes = campfire_runtime::presenters::broadcast_refreshes(conn, &app, &message)?;
+        app.broadcasts.message_create(conn, &room, &message, &*app.db.env().rich_text)?;
+        Ok(refreshes)
     })
     .await?;
     crate::controllers::presenters::refresh_after_render(&db, refreshes).await;
     Ok(())
 }
-
-use campfire_web::controllers::presenters::Rendering;

@@ -2,9 +2,8 @@
 use crate::integrations::link_embed::Reference;
 use crate::{
     app::App,
-    cable::broadcasts::{Stream, message_dom_id},
 };
-use campfire_db::{Connection, Message, Room};
+use campfire_db::{Connection, Message};
 use campfire_views::messages::{self, MessageComponents};
 
 pub fn components(
@@ -83,91 +82,23 @@ fn container_view(view: &messages::MessageView, linkedin: bool) -> String {
 }
 
 pub fn broadcast_updates(app: &App, embed_id: i64) -> anyhow::Result<()> {
-    let app2 = app.clone();
-    app.db.read_blocking(move |conn| {
-        let embed = crate::integrations::link_embed::Embed::find(conn, embed_id)?;
-        use crate::integrations::message_batches::{self, Reference as Source};
+    let app = app.clone();
+    app.db.clone().read_blocking(move |conn| {
+        use crate::integrations::message_batches::{self, Reference};
         let mut after = None;
         loop {
-            let messages = message_batches::next(conn, Source::LinkEmbed(embed_id), after)?;
-            let room_ids: Vec<_> = messages
-                .iter()
-                .map(|m| m.room_id)
-                .collect::<std::collections::BTreeSet<_>>()
-                .into_iter()
-                .collect();
-            let rooms: std::collections::HashMap<_, _> = Room::for_ids(conn, &room_ids)?
-                .into_iter()
-                .map(|r| (r.id, r))
-                .collect();
-            let visible: Vec<_> = messages
-                .iter()
-                .filter(|m| !m.embeds_suppressed)
-                .map(|m| m.id)
-                .collect();
-            let references = Reference::for_messages(conn, &visible)?;
-            for message in &messages {
-                let room = rooms
-                    .get(&message.room_id)
-                    .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-                let components = reference_components(
-                    references
-                        .get(&message.id)
-                        .map(Vec::as_slice)
-                        .unwrap_or_default(),
-                    Some(embed.linkedin()),
-                );
-                let (part, class, cards) = if embed.linkedin() {
-                    (
-                        "linkedin_cards",
-                        "linkedin-post-cards",
-                        &components.linkedin_cards,
-                    )
-                } else {
-                    (
-                        "link_embed_cards",
-                        "link-embed-cards",
-                        &components.link_embed_cards,
-                    )
-                };
-                let html = messages::cards_for_client_id(
-                    &message.client_message_id,
-                    part,
-                    class,
-                    2,
-                    cards,
-                )
-                .0;
-                app2.broadcasts.turbo(
-                    &Stream::conversation(room, message),
-                    campfire_cable::turbo::Action::Replace,
-                    &message_dom_id(message, Some(part)),
-                    Some(&html),
-                    true,
-                );
-            }
-            app2.broadcasts.sync_message_cards(conn, &messages);
-            if messages.len() < message_batches::SIZE {
-                break;
-            }
-            after = messages.last().map(|m| m.id);
+            let messages = message_batches::next(conn, Reference::LinkEmbed(embed_id), after)?;
+            app.broadcasts.sync_message_cards(conn, &messages);
+            if messages.len() < message_batches::SIZE { break; }
+            after = messages.last().map(|message| message.id);
         }
         Ok(())
     })?;
     Ok(())
 }
 
-pub fn broadcast_message(app: &App, conn: &Connection, message: &Message, linkedin: bool) -> campfire_db::Result<()> {
-    let room = Room::find(conn, message.room_id)?;
-    let part = if linkedin { "linkedin_cards" } else { "link_embed_cards" };
-    let html = container(app, conn, message, linkedin)?;
-    app.broadcasts.turbo(
-        &Stream::conversation(&room, message),
-        campfire_cable::turbo::Action::Replace,
-        &message_dom_id(message, Some(part)),
-        Some(&html),
-        true,
-    );
+pub fn broadcast_message(app: &App, conn: &Connection, message: &Message, _linkedin: bool) -> campfire_db::Result<()> {
+    app.broadcasts.sync_message_cards(conn, std::slice::from_ref(message));
     Ok(())
 }
 

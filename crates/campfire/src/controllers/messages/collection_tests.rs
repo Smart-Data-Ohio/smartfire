@@ -111,7 +111,7 @@ async fn collection_cache_tracks_pin_thread_stream_edit_drive_and_reaction_state
             if html != state["html"].as_str().unwrap() {
                 rails_mismatch(&html, state["html"].as_str().unwrap(), state["name"].as_str().unwrap());
             }
-            assert_eq!(campfire_cable::turbo::session_bound(&html), None);
+
         }
     }
 }

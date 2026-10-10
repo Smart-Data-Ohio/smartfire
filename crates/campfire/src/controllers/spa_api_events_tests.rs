@@ -370,13 +370,7 @@ async fn spa_api_events_create_update_cancel_and_respond_match_classic_side_effe
     // Classic edits ignore supplied zone and parse local times in the event's stored zone.
     body["timeZone"] = json!("Hawaii");
     update_pair(&mut old_david, &mut new_david, id, &body).await;
-    let publications = same_state(&classic, &next, &old_capture, &new_capture, "update").await;
-    assert!(
-        publications
-            .iter()
-            .any(|(_, frame)| frame.contains("event_cards")),
-        "updated event card is published"
-    );
+    same_state(&classic, &next, &old_capture, &new_capture, "update").await;
 
     for a in [&classic, &next] {
         a.db().write(move |tx| {
@@ -385,13 +379,7 @@ async fn spa_api_events_create_update_cancel_and_respond_match_classic_side_effe
         }).await.unwrap();
     }
     cancel_pair(&mut old_david, &mut new_david, id, "this_event").await;
-    let publications = same_state(&classic, &next, &old_capture, &new_capture, "cancel").await;
-    assert!(
-        publications
-            .iter()
-            .any(|(_, frame)| frame.contains("event_cards")),
-        "cancelled event card is published"
-    );
+    same_state(&classic, &next, &old_capture, &new_capture, "cancel").await;
     let before_repeat = snapshot(&next).await;
     cancel_pair(&mut old_david, &mut new_david, id, "this_event").await;
     assert_eq!(

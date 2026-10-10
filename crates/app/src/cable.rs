@@ -9,7 +9,7 @@ pub mod sync;
 use campfire_cable::{Identified, Server};
 use rails_compat::global_id::GlobalId;
 
-pub use broadcasts::{Broadcasts, Partials};
+pub use broadcasts::Broadcasts;
 
 /// The cable server, identified by `current_user`.
 pub type Cable = Server<CableUser>;

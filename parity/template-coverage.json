@@ -272,7 +272,7 @@
       "witness": {
         "oracle": "vectors/users_icons.json",
         "pointer": "/pages/0/html",
-        "needle": "<span class=\"txt-small\"><strong>Name</strong> <span class=\"txt-subtle\">lowercase letters, numbers, underscores, 2–32 characters</span></span>"
+        "needle": "<span class=\"txt-small\"><strong>Name</strong> <span class=\"txt-subtle\">lowercase letters, numbers, underscores, 2\u201332 characters</span></span>"
       }
     },
     "accounts/integrations_health/show.html": {
@@ -363,19 +363,11 @@
       }
     },
     "accounts/users/index.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "fresh_http"
-      ],
-      "branch": "17 fresh real HTTP responses: board_new/edit, human self/peer/banned/deactivated, involvement_everything/mentions/nothing, users_page_one/two (501 inserted users), missing_creator, root_create/thread_create and room_not_found; output includes recorded ActionView template traces",
-      "render_chain": [
-        "accounts/users/index.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/template_coverage_http.json",
-        "pointer": "/cases/12/body",
-        "needle": "<turbo-stream action=\"replace\" target=\"next_page_container\"><template>"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/people/src/controllers/accounts/users.rs"
+      ]
     },
     "activity_items/_item.html": {
       "status": "covered",
@@ -610,19 +602,11 @@
       "scope": "rust_production"
     },
     "channel_thread_messages/create.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "fresh_http"
-      ],
-      "branch": "thread_create: actual Turbo POST of a thread message",
-      "render_chain": [
-        "channel_thread_messages/create.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/template_coverage_http.json",
-        "pointer": "/cases/15/body",
-        "needle": "<turbo-stream action=\"append\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/channel_thread_messages.rs"
+      ]
     },
     "channel_threads/_conversation.html": {
       "status": "covered",
@@ -825,7 +809,7 @@
       "witness": {
         "oracle": "crates/views/tests/golden/core/layouts/application_member.html",
         "pointer": "",
-        "needle": "<p class=\"shortcuts-sheet__note\">Shortcuts never fire while typing, unless chorded with <kbd>Ctrl</kbd>, <kbd>⌘</kbd> or <kbd>Alt</kbd>. <kbd>Esc</kbd> closes open dialogs, menus and panels first, and marks the current room read when nothin"
+        "needle": "<p class=\"shortcuts-sheet__note\">Shortcuts never fire while typing, unless chorded with <kbd>Ctrl</kbd>, <kbd>\u2318</kbd> or <kbd>Alt</kbd>. <kbd>Esc</kbd> closes open dialogs, menus and panels first, and marks the current room read when nothin"
       }
     },
     "layouts/_lightbox.html": {
@@ -1054,7 +1038,7 @@
       "witness": {
         "oracle": "vectors/messaging/providers.json",
         "pointer": "/cases/0/html",
-        "needle": "<p class=\"github-pr-card__loading\">Loading pull request…</p>"
+        "needle": "<p class=\"github-pr-card__loading\">Loading pull request\u2026</p>"
       }
     },
     "message_providers/_linkedin.html": {
@@ -1454,34 +1438,18 @@
       }
     },
     "messages/create.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "fresh_http"
-      ],
-      "branch": "root_create: actual Turbo POST of root message",
-      "render_chain": [
-        "messages/create.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/template_coverage_http.json",
-        "pointer": "/cases/14/body",
-        "needle": "<turbo-stream action=\"append\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/messages/src/controllers/messages.rs"
+      ]
     },
     "messages/destroy.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "root_destroy"
-      ],
-      "branch": "formats destroy.turbo_stream compares exact remove stream body for actual message deletion",
-      "render_chain": [
-        "messages/destroy.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/messaging/paging.json",
-        "pointer": "/formats/11/body",
-        "needle": "<turbo-stream action=\"remove\" target=\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/messages/src/controllers/messages.rs"
+      ]
     },
     "messages/edit.html": {
       "status": "covered",
@@ -2088,7 +2056,7 @@
       "witness": {
         "oracle": "crates/views/tests/golden/event-fragments.json",
         "pointer": "/cards/0/html",
-        "needle": "<p class=\"event-card__response-loading\">Loading response…</p>"
+        "needle": "<p class=\"event-card__response-loading\">Loading response\u2026</p>"
       }
     },
     "rooms/events/_cards.html": {
@@ -2504,19 +2472,11 @@
       }
     },
     "rooms/refreshes/show.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "refresh"
-      ],
-      "branch": "actual pin-only refresh HTTP response, empty message list still emits pinned panel",
-      "render_chain": [
-        "rooms/refreshes/show.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/../crates/views/tests/golden/rooms/pin_refresh.json",
-        "pointer": "/rows/0/body",
-        "needle": "<turbo-stream action=\"replace\" target=\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/rooms/src/controllers/rooms/refreshes.rs"
+      ]
     },
     "rooms/shell/_ooo.html": {
       "status": "covered",
@@ -2764,7 +2724,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected controls",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected controls",
       "render_chain": [
         "rooms/stage/_controls.html"
       ],
@@ -2779,7 +2739,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_badge",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_badge",
       "render_chain": [
         "rooms/stage/_live_badge.html"
       ],
@@ -2794,7 +2754,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_dot",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_dot",
       "render_chain": [
         "rooms/stage/_live_dot.html"
       ],
@@ -2809,7 +2769,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected panel_body",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected panel_body",
       "render_chain": [
         "rooms/stage/_panel_body.html"
       ],
@@ -2824,7 +2784,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected role_event",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected role_event",
       "render_chain": [
         "rooms/stage/_role_event.html"
       ],
@@ -2839,7 +2799,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected roster",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected roster",
       "render_chain": [
         "rooms/stage/_roster.html"
       ],
@@ -2854,7 +2814,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected stream_event",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected stream_event",
       "render_chain": [
         "rooms/stage/_stream_event.html"
       ],
@@ -3003,7 +2963,7 @@
       "witness": {
         "oracle": "vectors/messaging/scheduled.json",
         "pointer": "/html/0/html",
-        "needle": "<span class=\"scheduled-message__time\">· Sends"
+        "needle": "<span class=\"scheduled-message__time\">\u00b7 Sends"
       }
     },
     "scheduled_messages/_past_item.html": {
@@ -3127,19 +3087,11 @@
       }
     },
     "searches/clear.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "search_empty"
-      ],
-      "branch": "explicit filter fragments, empty index and clear streams, all exact Rails bytes",
-      "render_chain": [
-        "searches/clear.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/messaging/search.json",
-        "pointer": "/clear",
-        "needle": "<turbo-stream action=\"update\" target=\"global-search-recents\"><template>"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/searches.rs"
+      ]
     },
     "searches/index.html": {
       "status": "covered",
@@ -3157,19 +3109,11 @@
       }
     },
     "searches/index.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "search_sections"
-      ],
-      "branch": "populated boards/work/events sections, next cursor and older Turbo stream exact Rails bytes",
-      "render_chain": [
-        "searches/index.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/messaging/search.json",
-        "pointer": "/older_empty",
-        "needle": "<turbo-stream action=\"remove\" target=\"load_older_results\">"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/searches.rs"
+      ]
     },
     "sessions/_google_sign_in.html": {
       "status": "covered",
@@ -3392,7 +3336,7 @@
       "witness": {
         "oracle": "vectors/auth_full_pages.json",
         "pointer": "/pages/sudo_continue",
-        "needle": "<h1 class=\"txt-large\">Confirmed — continuing</h1>"
+        "needle": "<h1 class=\"txt-large\">Confirmed \u2014 continuing</h1>"
       }
     },
     "sudos/new.html": {
@@ -3441,15 +3385,11 @@
       }
     },
     "threads/work/links/create.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "human_work"
-      ],
-      "branch": "full human work list/handoff/link HTTP matrix, populated thread rows, link summaries and invalid link forms",
-      "render_chain": [
-        "threads/work/links/create.turbo_stream.html"
-      ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/work_threads/links.rs"
+      ]
     },
     "threads/work/links/index.html": {
       "status": "covered",
@@ -3468,15 +3408,11 @@
       }
     },
     "threads/work/links/invalid.turbo_stream.html": {
-      "status": "covered",
-      "evidence": [
-        "human_work"
-      ],
-      "branch": "full human work list/handoff/link HTTP matrix, populated thread rows, link summaries and invalid link forms",
-      "render_chain": [
-        "threads/work/links/invalid.turbo_stream.html"
-      ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/work_threads/links.rs"
+      ]
     },
     "twitter/posts/_card.html": {
       "status": "covered",
@@ -3780,7 +3716,7 @@
       "witness": {
         "oracle": "vectors/users_profile_page.json",
         "pointer": "/html",
-        "needle": "<p class=\"txt-small margin-none\">With voice activity your microphone is live whenever you are unmuted. With push-to-talk it opens only while you hold the key — never while you are typing.</p>"
+        "needle": "<p class=\"txt-small margin-none\">With voice activity your microphone is live whenever you are unmuted. With push-to-talk it opens only while you hold the key \u2014 never while you are typing.</p>"
       }
     },
     "users/profiles/_integrations.html": {
@@ -4319,7 +4255,7 @@
       "evidence": [
         "status_star"
       ],
-      "branch": "real star toggle and stream bodies for active and inactive targets, viewer-specific form token",
+      "branch": "starred and unstarred toggle fragments retain exact recorded Rails bytes; the Turbo response producer is removed",
       "render_chain": [
         "users/stars/_toggle.html"
       ],
@@ -4717,7 +4653,7 @@
       "witness": {
         "oracle": "vectors/users_icons.json",
         "pointer": "/pages/0/html",
-        "needle": "<span class=\"txt-small\"><strong>Name</strong> <span class=\"txt-subtle\">lowercase letters, numbers, underscores, 2–32 characters</span></span>"
+        "needle": "<span class=\"txt-small\"><strong>Name</strong> <span class=\"txt-subtle\">lowercase letters, numbers, underscores, 2\u201332 characters</span></span>"
       }
     },
     "accounts/integrations_health/show.html.erb": {
@@ -4838,19 +4774,11 @@
       }
     },
     "accounts/users/index.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "fresh_http"
-      ],
-      "branch": "17 fresh real HTTP responses: board_new/edit, human self/peer/banned/deactivated, involvement_everything/mentions/nothing, users_page_one/two (501 inserted users), missing_creator, root_create/thread_create and room_not_found; output includes recorded ActionView template traces",
-      "render_chain": [
-        "accounts/users/index.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/template_coverage_http.json",
-        "pointer": "/cases/12/body",
-        "needle": "<turbo-stream action=\"replace\" target=\"next_page_container\"><template>"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/people/src/controllers/accounts/users.rs"
+      ]
     },
     "action_text/attachables/_opengraph_embed.html.erb": {
       "status": "covered",
@@ -4939,19 +4867,11 @@
       }
     },
     "activity_items/index.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "inbox"
-      ],
-      "branch": "index stream: real .turbo_stream GET replaces list/count/pagination; pagination stream also compared",
-      "render_chain": [
-        "activity_items/index.turbo_stream.erb"
-      ],
-      "witness": {
-        "oracle": "vectors/inbox-http.json",
-        "pointer": "/cases/44/body",
-        "needle": "<turbo-stream action=\"replace\" target=\"activity-items-list\">"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/activity_items.rs"
+      ]
     },
     "agent_approvals/_card.html.erb": {
       "status": "covered",
@@ -5133,19 +5053,11 @@
       "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
     },
     "channel_thread_messages/create.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "fresh_http"
-      ],
-      "branch": "thread_create: actual Turbo POST of a thread message",
-      "render_chain": [
-        "channel_thread_messages/create.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/template_coverage_http.json",
-        "pointer": "/cases/15/body",
-        "needle": "<turbo-stream action=\"append\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/channel_thread_messages.rs"
+      ]
     },
     "channel_thread_messages/index.html.erb": {
       "status": "covered",
@@ -5346,7 +5258,7 @@
       "witness": {
         "oracle": "vectors/github_seed_fragments.json",
         "pointer": "/thread/header",
-        "needle": "<p class=\"github-pr-write__loading\">Loading GitHub actions…</p>"
+        "needle": "<p class=\"github-pr-write__loading\">Loading GitHub actions\u2026</p>"
       }
     },
     "github/pull_requests/_write_actions.html.erb": {
@@ -5459,7 +5371,7 @@
       "witness": {
         "oracle": "crates/views/tests/golden/core/layouts/application_member.html",
         "pointer": "",
-        "needle": "<p class=\"shortcuts-sheet__note\">Shortcuts never fire while typing, unless chorded with <kbd>Ctrl</kbd>, <kbd>⌘</kbd> or <kbd>Alt</kbd>. <kbd>Esc</kbd> closes open dialogs, menus and panels first, and marks the current room read when nothin"
+        "needle": "<p class=\"shortcuts-sheet__note\">Shortcuts never fire while typing, unless chorded with <kbd>Ctrl</kbd>, <kbd>\u2318</kbd> or <kbd>Alt</kbd>. <kbd>Esc</kbd> closes open dialogs, menus and panels first, and marks the current room read when nothin"
       }
     },
     "layouts/_lightbox.html.erb": {
@@ -6023,34 +5935,18 @@
       "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
     },
     "messages/create.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "fresh_http"
-      ],
-      "branch": "root_create: actual Turbo POST of root message",
-      "render_chain": [
-        "messages/create.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/template_coverage_http.json",
-        "pointer": "/cases/14/body",
-        "needle": "<turbo-stream action=\"append\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/messages/src/controllers/messages.rs"
+      ]
     },
     "messages/destroy.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "root_destroy"
-      ],
-      "branch": "formats destroy.turbo_stream compares exact remove stream body for actual message deletion",
-      "render_chain": [
-        "messages/destroy.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/messaging/paging.json",
-        "pointer": "/formats/11/body",
-        "needle": "\"></turbo-stream>"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/messages/src/controllers/messages.rs"
+      ]
     },
     "messages/edit.html.erb": {
       "status": "covered",
@@ -6157,7 +6053,7 @@
       "witness": {
         "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
-        "needle": "<button type=\"button\" class=\"btn btn--borderless\" data-action=\"poll-builder#close\" aria-label=\"Close poll builder\">✕</button>"
+        "needle": "<button type=\"button\" class=\"btn btn--borderless\" data-action=\"poll-builder#close\" aria-label=\"Close poll builder\">\u2715</button>"
       }
     },
     "polls/_poll.html.erb": {
@@ -6502,7 +6398,7 @@
       "witness": {
         "oracle": "crates/views/tests/golden/event-fragments.json",
         "pointer": "/cards/0/html",
-        "needle": "<p class=\"event-card__response-loading\">Loading response…</p>"
+        "needle": "<p class=\"event-card__response-loading\">Loading response\u2026</p>"
       }
     },
     "rooms/events/_cards.html.erb": {
@@ -6667,7 +6563,7 @@
       "witness": {
         "oracle": "vectors/ws15e_fizzy_cards.json",
         "pointer": "/frames/1/html",
-        "needle": "<p class=\"fizzy-card__loading\">Loading Fizzy card…</p>"
+        "needle": "<p class=\"fizzy-card__loading\">Loading Fizzy card\u2026</p>"
       }
     },
     "rooms/fizzy/message_cards/new.html.erb": {
@@ -6959,19 +6855,11 @@
       }
     },
     "rooms/refreshes/show.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "refresh"
-      ],
-      "branch": "actual pin-only refresh HTTP response, empty message list still emits pinned panel",
-      "render_chain": [
-        "rooms/refreshes/show.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/../crates/views/tests/golden/rooms/pin_refresh.json",
-        "pointer": "/rows/0/body",
-        "needle": "</template></turbo-stream>\n  <turbo-stream action=\"replace\" target=\""
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/rooms/src/controllers/rooms/refreshes.rs"
+      ]
     },
     "rooms/show.html.erb": {
       "status": "covered",
@@ -7133,7 +7021,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected controls",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected controls",
       "render_chain": [
         "rooms/stage/_controls.html"
       ],
@@ -7148,7 +7036,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_badge",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_badge",
       "render_chain": [
         "rooms/stage/_live_badge.html"
       ],
@@ -7163,7 +7051,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_dot",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected live_dot",
       "render_chain": [
         "rooms/stage/_live_dot.html"
       ],
@@ -7178,7 +7066,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected panel_body",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected panel_body",
       "render_chain": [
         "rooms/stage/_panel_body.html"
       ],
@@ -7193,7 +7081,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected role_event",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected role_event",
       "render_chain": [
         "rooms/stage/_role_event.html"
       ],
@@ -7208,7 +7096,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected roster",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected roster",
       "render_chain": [
         "rooms/stage/_roster.html"
       ],
@@ -7223,7 +7111,7 @@
       "evidence": [
         "stage_fragments"
       ],
-      "branch": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected stream_event",
+      "branch": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared; selected stream_event",
       "render_chain": [
         "rooms/stage/_stream_event.html"
       ],
@@ -7372,7 +7260,7 @@
       "witness": {
         "oracle": "vectors/messaging/scheduled.json",
         "pointer": "/html/0/html",
-        "needle": "<span class=\"scheduled-message__time\">· Sends"
+        "needle": "<span class=\"scheduled-message__time\">\u00b7 Sends"
       }
     },
     "scheduled_messages/_past_item.html.erb": {
@@ -7485,19 +7373,11 @@
       }
     },
     "searches/clear.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "search_empty"
-      ],
-      "branch": "explicit filter fragments, empty index and clear streams, all exact Rails bytes",
-      "render_chain": [
-        "searches/clear.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/messaging/search.json",
-        "pointer": "/clear",
-        "needle": "</template></turbo-stream>\n<turbo-stream action=\"update\" target=\"search-recents\"><template>"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/searches.rs"
+      ]
     },
     "searches/index.html.erb": {
       "status": "covered",
@@ -7515,19 +7395,11 @@
       }
     },
     "searches/index.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "search_sections"
-      ],
-      "branch": "populated boards/work/events sections, next cursor and older Turbo stream exact Rails bytes",
-      "render_chain": [
-        "searches/index.turbo_stream.html"
-      ],
-      "witness": {
-        "oracle": "vectors/messaging/search.json",
-        "pointer": "/clear",
-        "needle": "</template></turbo-stream>"
-      }
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/searches.rs"
+      ]
     },
     "security_mailer/new_sign_in_alert.html.erb": {
       "status": "covered",
@@ -7744,7 +7616,7 @@
       "witness": {
         "oracle": "vectors/auth_full_pages.json",
         "pointer": "/pages/sudo_continue",
-        "needle": "<h1 class=\"txt-large\">Confirmed — continuing</h1>"
+        "needle": "<h1 class=\"txt-large\">Confirmed \u2014 continuing</h1>"
       }
     },
     "sudos/new.html.erb": {
@@ -7823,26 +7695,18 @@
       }
     },
     "threads/work/links/create.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "human_work"
-      ],
-      "branch": "full human work list/handoff/link HTTP matrix, populated thread rows, link summaries and invalid link forms",
-      "render_chain": [
-        "threads/work/links/create.turbo_stream.html"
-      ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/work_threads/links.rs"
+      ]
     },
     "threads/work/links/destroy.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "human_work"
-      ],
-      "branch": "Human-work full HTTP matrix: populated link boxes, status labels, delete stream and empty list guide appear in byte-compared response bodies.",
-      "render_chain": [
-        "threads/work/links/destroy.turbo_stream.erb"
-      ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/work_threads/links.rs"
+      ]
     },
     "threads/work/links/index.html.erb": {
       "status": "covered",
@@ -7861,15 +7725,11 @@
       }
     },
     "threads/work/links/invalid.turbo_stream.erb": {
-      "status": "covered",
-      "evidence": [
-        "human_work"
-      ],
-      "branch": "full human work list/handoff/link HTTP matrix, populated thread rows, link summaries and invalid link forms",
-      "render_chain": [
-        "threads/work/links/invalid.turbo_stream.html"
-      ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "status": "removed",
+      "branch": "K15 PR5 deletes this Turbo HTML producer. SPA JSON endpoints, domain publications and retained mutation side effects remain; the Rails oracle is historical.",
+      "sources": [
+        "crates/controllers/src/controllers/work_threads/links.rs"
+      ]
     },
     "twitter/posts/_card.html.erb": {
       "status": "covered",
@@ -8306,7 +8166,7 @@
       "witness": {
         "oracle": "vectors/users_profile_page.json",
         "pointer": "/html",
-        "needle": "<p class=\"txt-small margin-none\">With voice activity your microphone is live whenever you are unmuted. With push-to-talk it opens only while you hold the key — never while you are typing.</p>"
+        "needle": "<p class=\"txt-small margin-none\">With voice activity your microphone is live whenever you are unmuted. With push-to-talk it opens only while you hold the key \u2014 never while you are typing.</p>"
       }
     },
     "users/push_subscriptions/_push_subscription.html.erb": {
@@ -8516,7 +8376,7 @@
       "evidence": [
         "status_star"
       ],
-      "branch": "real star toggle and stream bodies for active and inactive targets, viewer-specific form token",
+      "branch": "starred and unstarred toggle fragments retain exact recorded Rails bytes; the Turbo response producer is removed",
       "render_chain": [
         "users/stars/_toggle.html"
       ],
@@ -9181,11 +9041,11 @@
     },
     "status_star": {
       "test_file": "crates/campfire/src/controllers/users/stars_tests.rs",
-      "test": "ws12_stars_toggle_and_stream_match_every_rails_byte",
+      "test": "ws12_stars_toggle_matches_every_rails_byte",
       "oracles": [
         "vectors/users_stars.json"
       ],
-      "scenario": "real star toggle and stream bodies for active and inactive targets, viewer-specific form token"
+      "scenario": "starred and unstarred toggle fragments retain exact recorded Rails bytes; the Turbo response producer is removed"
     },
     "initials_avatar": {
       "test_file": "crates/campfire/src/controllers/users/avatars/tests.rs",
@@ -9290,14 +9150,6 @@
         "vectors/messaging/twitter_preloads.json"
       ],
       "scenario": "populated X cards, exact cold/warm containers and numeric ordering"
-    },
-    "refresh": {
-      "test_file": "crates/campfire/src/controllers/rooms/refreshes_rails_cases.rs",
-      "test": "pin_only_refresh_matches_rails_bytes_and_request_token_ownership",
-      "oracles": [
-        "vectors/../crates/views/tests/golden/rooms/pin_refresh.json"
-      ],
-      "scenario": "actual pin-only refresh HTTP response, empty message list still emits pinned panel"
     },
     "autocomplete": {
       "test_file": "crates/campfire/src/controllers/message_features/slash_tests.rs",
@@ -9490,7 +9342,7 @@
       "oracles": [
         "crates/views/src/huddle_stage_vectors.json"
       ],
-      "scenario": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared"
+      "scenario": "50 seeded Rails stage configurations \u00d7 eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared"
     },
     "full_room": {
       "test_file": "crates/campfire/src/controllers/rooms/full_room_tests.rs",

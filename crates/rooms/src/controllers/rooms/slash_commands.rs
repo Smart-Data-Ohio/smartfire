@@ -59,14 +59,13 @@ pub async fn create(c: &mut Ctx) -> Result {
         .param("text")
         .map(features::param_string)
         .unwrap_or_default();
-    let origin = c.url_for("");
     let zone = features::user_zone(c).await?;
     let storage = c.app().storage.clone();
     let result = c
         .app()
         .db
         .write_scoped(
-            move || (crate::channels::message_features::slash_origin(&origin), crate::controllers::presenters::page::enter_time_zone(zone)),
+            move || crate::controllers::presenters::page::enter_time_zone(zone),
             move |tx| dispatch(tx, &context, &text, storage),
         )
         .await

@@ -22,8 +22,8 @@ use campfire_views::messages as views;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::attachments::{self, Assignment};
-use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::{DbResolver, Presenter, room_kind};
+use crate::controllers::presenters::page::{self, db_error};
+use crate::controllers::presenters::{DbResolver, Presenter};
 use crate::queue::{WEBHOOK_HOLD, WebhookJob};
 pub use crate::messaging::{canonicalize_body, process_attachment, save_staged};
 
@@ -81,7 +81,11 @@ async fn create_action(c: &mut Ctx) -> Result {
         Some(id) => c.app().db.read(move |conn| Message::find_duplicate(conn, room_id, creator_id, &id)).await.map_err(db_error)?,
         None => None,
     };
-    let message = if let Some(duplicate) = duplicate {
+    let _message = if let Some(duplicate) = duplicate {
+        let app = c.app().clone();
+        let message = duplicate.clone();
+        let refreshes = c.app().db.read(move |conn| campfire_runtime::presenters::broadcast_refreshes(conn, &app, &message)).await.map_err(db_error)?;
+        campfire_runtime::presenters::refresh_after_render(&c.app().db, refreshes).await;
         duplicate
     } else {
         let attributes = human_message_params_with_client_id(c, Some(&room), client_id).await?;
@@ -91,29 +95,7 @@ async fn create_action(c: &mut Ctx) -> Result {
         message
     };
 
-    // Rails renders the individual message without collection caching, in a request-less
-    // context: no CSRF tokens in its forms.
-    c.respond_to(&[&format::TURBO_STREAM])?;
-    let kind = room_kind(room.room_type);
-    let app = c.app().clone();
-    let base_url = c.url_for("");
-    let viewer_id = require_current_user(c)?.id;
-    let (html, refreshes) = c
-        .app()
-        .db
-        .read(move |conn| {
-            let mut presenter = Presenter::new(conn, &app, None);
-            presenter.use_viewer_zone(viewer_id)?;
-            let item = campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.message_item(&message))?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
-                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-            Ok((html, presenter.take_render_refreshes()))
-        })
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
-    Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, html))
+    Ok(c.head(StatusCode::CREATED))
 }
 
 pub async fn show(c: &mut Ctx) -> Result {
@@ -184,9 +166,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     ensure_can_delete(c, &message)?;
     destroy_message(c, &room, &message).await?;
 
-    c.respond_to(&[&format::TURBO_STREAM])?;
-    let view = present(c, move |presenter| presenter.message(&message)).await?;
-    page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |_| views::DestroyStream { message: &view }.render()).await
+    Ok(c.head(StatusCode::NO_CONTENT))
 }
 
 // --- Before-actions and params --------------------------------------------------------------------
@@ -400,8 +380,7 @@ async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, cha
     let id = message.id;
     let app = c.app().clone();
     let host = Some(c.request.host());
-    let origin = page::renderer_base_url(c);
-    let id = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
+    let id = c.app().db.write(move |tx| {
         if let Some(thread) = thread_id
             && campfire_db::ChannelThread::find(tx.conn(), thread)?.locked_at.is_some() {
             return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
@@ -785,8 +764,7 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
-    let origin = page::renderer_base_url(c);
-    let (replies, thread) = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
+    let (replies, thread) = c.app().db.write(move |tx| {
         let replies = tx.conn().prepare("SELECT id FROM messages WHERE reply_to_message_id = ? ORDER BY id")?
             .query_map([destroyed.id], |row| row.get::<_, i64>(0))?.collect::<std::result::Result<Vec<_>, _>>()?;
         let thread = campfire_db::ChannelThread::find_by_parent_message(tx.conn(), destroyed.id)?.map(|thread| thread.id);
@@ -804,64 +782,19 @@ pub async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<
 /// `@message.broadcast_create`: the message partial appended to the room, then the unread pings.
 pub async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
-    let base_url = page::renderer_base_url(c);
-    let viewer_id = require_current_user(c)?.id;
-    let refreshes = c.app()
-        .db
-        .read(move |conn| {
-            let mut presenter = Presenter::new(conn, &app, None);
-            presenter.use_viewer_zone(viewer_id)?;
-            let view = presenter.message(&message)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::uncached_message(ctx, &view));
-            let partials = Rendered { message: Some(html), ..Rendered::default() };
-            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
-            Ok(presenter.take_render_refreshes())
-        })
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
+    let refreshes = c.app().db.read(move |conn| {
+        let refreshes = campfire_runtime::presenters::broadcast_refreshes(conn, &app, &message)?;
+        app.broadcasts.message_create(conn, &room, &message, &*app.db.env().rich_text)?;
+        Ok(refreshes)
+    }).await.map_err(db_error)?;
+    campfire_runtime::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(())
 }
 
 /// `broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial:
 /// "messages/presentation", attributes: { maintain_scroll: true }`
 pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
-    let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
-    let base_url = page::renderer_base_url(c);
-    let refreshes = c.app()
-        .db
-        .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
-            let view = presenter.message(&message)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
-                views::PresentationPartial { ctx, message: &view }.render()
-            })
-            .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-            let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
-            app.broadcasts.message_replace(&room, &message, &partials);
-            let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
-                Ok([
-                    ("meta", views::MetaPartial {ctx, message: &view}.render()?),
-                    // Empty containers remove their old cards after an edit.
-                    ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
-                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
-                    ("message_link_cards", campfire_views::message_links::cards(ctx, &view).0),
-                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
-                    ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
-                    ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
-                ])
-            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-            for (part, html) in replacements {
-                app.broadcasts.message_part_replace(&room, &message, part, &html);
-            }
-            Ok(presenter.take_render_refreshes())
-        })
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
-    Ok(())
+    rendered::broadcast_edit(c, room, message, false).await
 }
 
 /// `deliver_webhooks_to_bots`, in the message's transaction: every active bot in a direct room,

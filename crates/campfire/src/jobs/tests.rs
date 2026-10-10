@@ -4,7 +4,6 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use campfire_channels::channels::sink::template_free_broadcast;
 use campfire_db::Job;
 use campfire_jobs::Execution;
 use campfire_jobs::JobKind;
@@ -536,7 +535,7 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_webhooks")?)).await.unwrap();
 
     let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("posted")).await;
-    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
+    assert_eq!(status, axum::http::StatusCode::CREATED, "{body}");
     assert_eq!(messages(), 1);
     let now = app.db.env().now();
     let mut queued: Vec<_> = jobs(&app).into_iter().map(|job| (job.class, job.run_at <= now)).collect();
@@ -547,7 +546,7 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     const KEEP_HELD: &str = "CREATE TRIGGER ws3_keep_webhooks_held BEFORE UPDATE OF run_at ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'release rejected'); END";
     app.db.write(|tx| Ok(tx.conn().execute_batch(KEEP_HELD)?)).await.unwrap();
     let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("held")).await;
-    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
+    assert_eq!(status, axum::http::StatusCode::CREATED, "{body}");
     assert_eq!(messages(), 2);
     let webhook = jobs(&app).into_iter().find(|job| job.class == "Bot::WebhookJob").expect("the webhook is queued");
     let held = webhook.run_at.as_microsecond() - app.db.env().now().as_microsecond();
@@ -983,26 +982,7 @@ async fn ws8_quote_refresh_does_not_wait_for_future_maintenance() {
 
 }
 
-#[test]
-fn ws8_template_free_broadcast_payloads_match_rails() {
-    use campfire_db::broadcasts::{Broadcast, Streamable};
-    let golden: serde_json::Value =
-        serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
-    for row in golden["broadcasts"].as_array().unwrap() {
-        if row["kind"] != "remove" { continue; }
-        let event = Broadcast::remove(
-            vec![Streamable::User(row["user_id"].as_i64().unwrap()), Streamable::Name("rooms".into())],
-            row["target"].as_str().unwrap().into(),
-        );
-        assert_eq!(
-            template_free_broadcast(&event),
-            Some((
-                row["stream"].as_str().unwrap().into(),
-                row["payload"].clone()
-            ))
-        );
-    }
-}
+
 
 #[test]
 fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
@@ -1027,8 +1007,8 @@ fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
         Ok(())
     }).unwrap();
     let actual: Vec<_> = sink.events().iter().filter_map(|event| match event.as_broadcast()? {
-        event @ campfire_db::broadcasts::Broadcast::Cable { .. } if event.stream_name().ends_with("_unread_threads") => {
-            let (stream, payload) = template_free_broadcast(&event).unwrap();
+        event @ campfire_db::broadcasts::Broadcast::Cable { .. } if event.channel_frame().is_some_and(|(stream, _)| stream.ends_with("_unread_threads")) => {
+            let (stream, payload) = event.channel_frame().unwrap();
             Some(serde_json::json!({"kind":"cable", "stream":stream, "payload":payload}))
         }
         _ => None,

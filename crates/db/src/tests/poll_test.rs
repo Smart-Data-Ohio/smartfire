@@ -3,7 +3,6 @@
 
 use super::channel_thread_test::{create_thread, frozen, markdown};
 use super::*;
-use crate::broadcasts::{Broadcast, Partial};
 use crate::{Error, Message, NewMessage, NewPoll, Poll, PollOption};
 
 fn labels(labels: &[&str]) -> Vec<String> {
@@ -179,13 +178,13 @@ fn close_due_stamps_and_broadcasts_due_polls_once() {
     assert_eq!(due.closed_at, Some(t.now()));
     assert_eq!(t.write(move |tx| Poll::close_due(tx, now)), Vec::<i64>::new(), "once");
 
-    let cards: Vec<_> = t.events()[from..].iter().filter_map(|e| e.as_broadcast()).collect();
-    assert_eq!(cards.len(), 1);
-    let Broadcast::Turbo(card) = &cards[0] else { panic!() };
-    assert_eq!(card.target, format!("card_poll_{}", due_poll.id));
-    assert_eq!(card.partial, Some(Partial::Poll { poll_id: due_poll.id }));
-    assert!(card.maintain_scroll);
-    assert_eq!(cards[0].stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Closed", id("watercooler")).to_param()));
+    let changes: Vec<_> = t.events()[from..].iter().filter_map(|event| {
+        if let Event::Broadcast(request) = event { request.decode::<crate::models::poll::PollChanged>().map(Result::unwrap) } else { None }
+    }).collect();
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0].poll_id, due_poll.id);
+    assert_eq!(changes[0].voter_id, None);
+
 }
 
 #[test]
@@ -257,8 +256,9 @@ fn a_thread_polls_card_broadcasts_to_the_thread() {
     let from = t.events().len();
     let first = options(&t, &poll)[0].id;
     vote(&t, &poll, "jason", vec![first]).unwrap();
-    let card = t.events()[from..].iter().find_map(|e| e.as_broadcast()).unwrap();
-    assert_eq!(card.stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("ChannelThread", thread_id).to_param()));
+    let change = t.events()[from..].iter().find_map(|event| match event { Event::Broadcast(request) => request.decode::<crate::models::poll::PollChanged>().map(Result::unwrap), _ => None }).unwrap();
+    assert_eq!(change.poll_id, poll.id);
+    assert_eq!(t.read(|conn| crate::Message::find(conn, poll.message_id)).thread_id, Some(thread_id));
 }
 
 #[test]
@@ -300,5 +300,5 @@ fn concurrent_closers_close_a_due_poll_once() {
         threads.into_iter().map(|t| t.join().unwrap()).collect()
     });
     assert_eq!(wins.iter().filter(|w| **w).count(), 1, "{wins:?}");
-    assert_eq!(t.events()[from..].iter().filter(|e| e.as_broadcast().is_some()).count(), 1);
+    assert_eq!(t.events()[from..].iter().filter(|e| matches!(e, Event::Broadcast(request) if request.decode::<crate::models::poll::PollChanged>().is_some())).count(), 1);
 }

@@ -113,7 +113,7 @@ async fn index_pages_with_conditional_gets() {
 }
 
 #[tokio::test]
-async fn create_appends_the_message_as_a_turbo_stream() {
+async fn create_commits_the_message_without_a_turbo_response() {
     let Some(app) = TestApp::boot().await else { return };
     let mut david = app.david();
     let reply = david
@@ -123,11 +123,8 @@ async fn create_appends_the_message_as_a_turbo_stream() {
                 .form(&[("message[body]", "<p>Hello <strong>there</strong></p>"), ("message[client_message_id]", "abc-123")]),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(reply.content_type(), Some("text/vnd.turbo-stream.html; charset=utf-8"));
-    assert!(reply.text().contains(r#"<turbo-stream action="append" target="messages_rooms_closed_486777696">"#), "{}", reply.text());
-    assert!(reply.text().contains(r#"id="message_abc-123""#));
-    assert!(reply.text().contains("Hello <strong>there</strong>"));
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    assert!(reply.text().is_empty());
 
     let message = messages_in(&app, ALL_TALK).await.pop().unwrap();
     assert_eq!((message.client_message_id.as_str(), message.creator_id), ("abc-123", DAVID));
@@ -147,7 +144,8 @@ async fn create_in_a_room_you_left_renders_room_not_found() {
     let missing = david.write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages")).form(&[("body", "hi")])).await;
     assert_eq!(missing.status, StatusCode::BAD_REQUEST);
     let html = david.write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages")).form(&[("message[body]", "hi")])).await;
-    assert_eq!(html.status, StatusCode::NOT_ACCEPTABLE, "only a turbo stream template");
+    assert_eq!(html.status, StatusCode::CREATED);
+    assert!(html.text().is_empty());
 }
 
 #[tokio::test]
@@ -161,9 +159,8 @@ async fn uploads_attach_and_process_the_file() {
                 .multipart(&[("message[client_message_id]", "upload-1")], ("message[attachment]", "red.png", "image/png", PNG)),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert!(reply.text().contains("/rails/active_storage/representations/redirect/"), "{}", reply.text());
-    assert!(reply.text().contains(r#"width="4" height="3""#), "analyzed dimensions: {}", reply.text());
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    assert!(reply.text().is_empty());
 
     let message = messages_in(&app, ALL_TALK).await.pop().unwrap();
     assert_eq!(message.client_message_id, "upload-1");
@@ -211,8 +208,8 @@ async fn show_edit_update_and_destroy() {
     assert_eq!(json.json()["creator"]["id"], DAVID);
 
     let destroyed = david.write(Req::new(Method::DELETE, &path).header("accept", TURBO_STREAM_ACCEPT)).await;
-    assert_eq!(destroyed.status, StatusCode::OK);
-    assert_eq!(destroyed.text().trim(), format!(r#"<turbo-stream action="remove" target="message_{}"></turbo-stream>"#, message.client_message_id));
+    assert_eq!(destroyed.status, StatusCode::NO_CONTENT);
+    assert!(destroyed.text().is_empty());
     assert!(app.db().read(move |conn| Message::find_by_id(conn, message.id)).await.unwrap().is_none());
     assert_eq!(david.get(&path).await.status, StatusCode::NOT_FOUND);
 }
@@ -343,6 +340,47 @@ async fn the_bot_api() {
     // A bot key doesn't open the rest of the app.
     let denied = bot.get(&format!("/rooms/{ALL_TALK}/messages?bot_key={BENDER_KEY}")).await;
     assert_eq!(denied.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn bot_unchanged_body_edit_refreshes_stale_pull_requests_once() {
+    let app = TestApp::boot_with_test_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        SEED_NOW.parse().unwrap(),
+    )))
+    .await
+    .expect("build the default parity seed")
+    .without_job_runner()
+    .await;
+    let base = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
+    let body = "<p>https://github.com/rails/rails/pull/3141</p>";
+    let mut bot = app.anonymous();
+    let created = bot.send(Req::new(Method::POST, &base).body(body)).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let id: i64 = created.location().unwrap().rsplit('/').next().unwrap().parse().unwrap();
+    let (pr, saved_body) = app.db().write(move |tx| {
+        let message = Message::find(tx.conn(), id)?;
+        let prs = crate::integrations::github::pull_requests::PullRequest::for_message(tx.conn(), id)?;
+        assert_eq!(prs.len(), 1);
+        let pr = prs[0].id;
+        tx.conn().execute("DELETE FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [])?;
+        tx.conn().execute("UPDATE github_pull_requests SET private=0,title='Stale cached PR',fetched_at='2000-01-01 00:00:00',fetch_requested_at=NULL WHERE id=?", [pr])?;
+        Ok((pr, message.body_html(tx.conn())?.unwrap()))
+    }).await.unwrap();
+
+    for _ in 0..2 {
+        let response = bot.send(Req::new(Method::PUT, &format!("{base}/{id}")).body(body)).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let (edited_at, jobs, requested_at) = app.db().read(move |conn| {
+            let message = Message::find(conn, id)?;
+            let jobs = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob' AND json_extract(arguments,'$.pull_request_id')=?", [pr], |row| row.get::<_, i64>(0))?;
+            let requested_at = crate::integrations::github::pull_requests::PullRequest::find(conn, pr)?.fetch_requested_at;
+            Ok((message.edited_at, jobs, requested_at))
+        }).await.unwrap();
+        assert!(edited_at.is_none(), "identical body must skip reference synchronization");
+        assert_eq!(jobs, 1, "bot edits must schedule a stale card refresh exactly once");
+        assert!(requested_at.is_some());
+    }
+    assert_eq!(app.db().read(move |conn| Message::find(conn, id)?.body_html(conn)).await.unwrap().unwrap(), saved_body);
 }
 
 #[tokio::test]

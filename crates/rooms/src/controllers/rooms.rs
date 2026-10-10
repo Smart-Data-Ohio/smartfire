@@ -33,14 +33,12 @@ pub mod refreshes;
 pub mod settings;
 pub mod slash_commands;
 
-use askama::Template;
 use campfire_db::{Account, Room, RoomType, User};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::Presenter;
-use crate::controllers::presenters::page::{self, Rendered, db_error};
+use crate::controllers::presenters::page::{self, db_error};
 
 /// `room_scope`: which of `Current.user.rooms` a controller may act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,13 +136,6 @@ pub async fn join_open_room(
         .await
         .map_err(db_error)?;
     if created {
-        let partials = render_membership_sidebar(c, &room, &membership, Some(false)).await?;
-        use crate::channels::broadcasts::{Partials, Stream};
-        c.app().broadcasts.prepend(
-            &Stream::user_rooms(user_id),
-            "shared_rooms",
-            &partials.shared_room(&room),
-        );
         let broadcasts = c.app().broadcasts.clone();
         let membership_id = membership.id;
         c.app()
@@ -568,105 +559,6 @@ pub(crate) fn existing_user_ids(
         .into_iter()
         .map(|user| user.id)
         .collect())
-}
-
-/// Renders `users/sidebars/rooms/_shared` for `room` outside a request.
-pub(crate) async fn render_shared_room(c: &Ctx, room: &Room) -> Result<Rendered> {
-    let app = c.app().clone();
-    let base_url = page::renderer_base_url(c);
-    let room = room.clone();
-    let html = c
-        .app()
-        .db
-        .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
-            let sidebar_room = presenter.sidebar_room(&room);
-            let account = Account::first(conn)?;
-            Ok(page::render_detached_at(
-                &app,
-                account.as_ref(),
-                &base_url,
-                |ctx| {
-                    campfire_views::users::SidebarSharedPartial {
-                        ctx,
-                        room: sidebar_room,
-                    }
-                    .render()
-                },
-            ))
-        })
-        .await
-        .map_err(db_error)?
-        .map_err(Error::internal)?;
-    Ok(Rendered {
-        shared_room: Some(html),
-        ..Rendered::default()
-    })
-}
-
-/// Open/closed update callbacks render this identity once outside the request, then send it
-/// globally (open) or to every retained member (closed). No per-viewer or session input.
-pub(crate) async fn render_shared_header(c: &Ctx, room: &Room) -> Result<String> {
-    let app = c.app().clone();
-    let base_url = page::renderer_base_url(c);
-    let room = room.clone();
-    c.app()
-        .db
-        .read(move |conn| {
-            let creator = User::find(conn, room.creator_id)?;
-            let header = super::presenters::rooms_directory::header(conn, &room, &creator)?;
-            let account = Account::first(conn)?;
-            Ok(page::render_detached_at(
-                &app,
-                account.as_ref(),
-                &base_url,
-                |ctx| campfire_views::rooms::header_identity(ctx, &header).0,
-            ))
-        })
-        .await
-        .map_err(db_error)
-}
-
-/// The involvement callback's row carries its recipient's membership and menu facts.
-pub(crate) async fn render_membership_sidebar(
-    c: &Ctx,
-    room: &Room,
-    membership: &campfire_db::Membership,
-    unread: Option<bool>,
-) -> Result<Rendered> {
-    let app = c.app().clone();
-    let base_url = page::renderer_base_url(c);
-    let room = room.clone();
-    let membership = membership.clone();
-    let html = c
-        .app()
-        .db
-        .read(move |conn| {
-            let viewer = User::find(conn, membership.user_id)?;
-            let mut row = Presenter::new(conn, &app, None).sidebar_room(&room);
-            row.menu = super::presenters::accounts::room_menu(
-                &room,
-                Some(&membership),
-                Some(&viewer),
-                0,
-                None,
-            );
-            row.unread = unread.unwrap_or(false);
-            let account = Account::first(conn)?;
-            Ok(page::render_detached_at(
-                &app,
-                account.as_ref(),
-                &base_url,
-                |ctx| campfire_views::users::SidebarSharedPartial { ctx, room: row }.render(),
-            ))
-        })
-        .await
-        .map_err(db_error)?
-        .map_err(Error::internal)?;
-    Ok(Rendered {
-        shared_room: Some(html),
-        ..Default::default()
-    })
 }
 
 /// `rooms/show` with `find_messages`: the page around `params[:message_id]`, else the last page.

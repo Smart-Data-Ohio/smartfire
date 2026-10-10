@@ -52,6 +52,10 @@ action: boolean,
  */
 streaming: boolean, embedsSuppressed: boolean, replyToMessageId: number | null,
 /**
+ * The reply's source was deleted; keep its tombstone when the foreign key becomes null.
+ */
+replyTargetDeletedAt?: string | null,
+/**
  * The original of a forward; `null` for an original or once the source is deleted. Where it
  * came from is viewer-relative (the viewer may not see that room), so it isn't here: the
  * "Forwarded from" header reads `GET /api/v1/messages/:id` on this id, whose 404 means the

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { RecentSearchList } from "../../src/gen/RecentSearchList.ts";
 import type { SearchResults } from "../../src/gen/SearchResults.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
-import { errorOf, expectStatus, get, harness, send } from "../s2/testing.ts";
+import { errorOf, expectStatus, get, harness, messageBody, send } from "../s2/testing.ts";
 import { ROOM_IDS, USER_IDS } from "../seed.ts";
 import {
   decodeCursor,
@@ -380,4 +381,42 @@ describe("recent searches", () => {
       SEARCH_SEED.recents.length,
     );
   });
+});
+
+it("searches by stable author ID and returns an oldest-first display page", async () => {
+  const { server } = harness();
+  const reply = await get<SearchResults>(server, searchPath("from_id:2 sort:oldest"));
+
+  expect(reply.messages.length).toBeGreaterThan(0);
+  expect(reply.messages.every((message) => message.creatorId === 2)).toBe(true);
+  expect(reply.chips.map((chip) => chip.operator)).toEqual(["from_id", "sort"]);
+  const display = [...reply.messages].reverse();
+
+  expect(display.map((message) => message.createdAt)).toEqual(
+    display.map((message) => message.createdAt).toSorted(),
+  );
+});
+
+it("orders relevance by match count without diluting it with unrelated words", async () => {
+  const { server } = harness();
+
+  const single = await expectStatus<MessageDTO>(
+    server,
+    "POST",
+    `/api/v1/rooms/${ROOM_IDS.engineering}/messages`,
+    messageBody("span-single", "spanneedle"),
+    201,
+  );
+
+  const repeated = await expectStatus<MessageDTO>(
+    server,
+    "POST",
+    `/api/v1/rooms/${ROOM_IDS.engineering}/messages`,
+    messageBody("span-repeated", "spanneedle spanneedle spanneedle padding padding"),
+    201,
+  );
+
+  const reply = await get<SearchResults>(server, searchPath("spanneedle sort:relevance"));
+
+  expect(reply.messages.map((message) => message.id)).toEqual([single.id, repeated.id]);
 });

@@ -3,33 +3,16 @@
 
 pub mod two_factor_resets;
 
-use askama::Template;
 use campfire_db::{Role, User};
-use campfire_kit::{Ctx, Error, Result, format};
-use campfire_views::accounts;
+use campfire_kit::{Ctx, Error, Result};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
-use crate::controllers::presenters::pagination::Page;
-use crate::controllers::presenters::view_context::Layout;
-use crate::controllers::presenters;
 
-/// `set_page_and_extract_portion_from User.active.ordered.without_bots, per_page: 500`,
-/// rendered as `index.turbo_stream.erb` (the only template, so other formats are 406).
+/// The former paginated people-list endpoint resolves to SPA administration.
 pub async fn index(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    c.respond_to(&[&format::TURBO_STREAM])?;
-    let users = c.app().db.read(User::active_ordered_without_bots).await.map_err(Error::internal)?;
-    let page = Page::new(c.param_str("page"), users.len() as i64, &[500]);
-    let secrets = c.app().secrets.clone();
-    let selected=page.records(&users).to_vec();
-    let users=c.app().db.read(move|conn| selected.iter().map(|user|presenters::account_user_summary(conn,&secrets,user)).collect::<campfire_db::Result<Vec<_>>>()).await.map_err(Error::internal)?;
-    let next_page = (!page.is_last()).then(|| page.next_param().to_string());
-
-    let layout = Layout::load(c).await?;
-    let html = layout.render(c, |ctx| accounts::UsersIndexTurboStream { ctx, users, next_page }.render())?;
-    page.apply_headers(c);
-    Ok(c.turbo_stream(html))
+    c.redirect_to(&c.url_for("/app/admin/people"))
 }
 
 /// `@user.update(role: params.require(:user)[:role].presence_in(%w[ member administrator ]) || "member")`
@@ -94,5 +77,3 @@ fn redirect_to_edit_account(c: &mut Ctx) -> Result {
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }
-
-use campfire_web::controllers::presenters::view_context::LayoutRendering;

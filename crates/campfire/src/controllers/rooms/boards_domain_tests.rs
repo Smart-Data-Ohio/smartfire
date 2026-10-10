@@ -1,6 +1,6 @@
 //! Rails-filter and callback vectors on the real seed, with FrozenClock and RecordingSink.
 use crate::controllers::presenters::test_support::*;
-use campfire_db::broadcasts::{Broadcast, Partial, TurboAction};
+
 use campfire_db::{ChannelThread, Database, Env, NewChannelThread, RecordingSink};
 use std::sync::Arc;
 
@@ -132,15 +132,6 @@ async fn board_queries_and_after_commit_sequences_match_rails() {
             }
         }
         assert_eq!(thread_id, step["thread_id"].as_i64().unwrap());
-        let callbacks=sink.take().into_iter().filter_map(|event| match event.as_broadcast()? {
-            Broadcast::Turbo(frame) if frame.target.starts_with("board_") => Some(serde_json::json!({"action":match frame.action {TurboAction::Prepend=>"prepend",TurboAction::Replace=>"replace",TurboAction::Remove=>"remove",_=>panic!("unexpected board action")},"target":frame.target,"column":matches!(frame.partial,Some(Partial::BoardRow{column:true,..}))})), _=>None
-        }).collect::<Vec<_>>();
-        assert_eq!(
-            serde_json::json!(callbacks),
-            step["callbacks"],
-            "{}",
-            step["name"]
-        );
         let tags = db
             .read(move |conn| {
                 Ok(campfire_db::ThreadTag::for_thread(conn, thread_id)?

@@ -53,6 +53,7 @@ pub(crate) fn message() -> MessageDTO {
         streaming: false,
         embeds_suppressed: false,
         reply_to_message_id: Some(8999),
+        reply_target_deleted_at: None,
         forwarded_from_message_id: None,
         forwarded_at: None,
         forward_note: None,

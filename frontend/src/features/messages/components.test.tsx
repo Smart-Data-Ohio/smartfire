@@ -11,6 +11,7 @@ import { mutations, store } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { editLastOwnMessage, lastEditableMessage } from "./edit-last.ts";
 import { editingId, stopEditing } from "./editing-store.ts";
+import { ReplyQuote } from "./message-content.tsx";
 import { editorKeyAction, MessageEditor } from "./message-editor.tsx";
 import { ReactionsRow } from "./reactions.tsx";
 
@@ -336,5 +337,27 @@ describe("editing in place", () => {
     expect(stopEditing()).toBe(composer);
     expect(editLastOwnMessage(999)).toBe(false);
     composer.remove();
+  });
+});
+
+describe("reply tombstones", () => {
+  it("keeps the deleted-source label after the source id becomes null", () => {
+    render(
+      <ReplyQuote
+        message={messageFixture(10, ROOM, {
+          replyToMessageId: null,
+          replyTargetDeletedAt: "2026-03-02T16:00:00.000Z",
+        })}
+      />,
+    );
+    expect(screen.getByText("Replying to a deleted message").textContent).toBe(
+      "Replying to a deleted message",
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("leaves original messages without a reply header", () => {
+    const { container } = render(<ReplyQuote message={messageFixture(10, ROOM)} />);
+    expect(container.textContent).toBe("");
   });
 });

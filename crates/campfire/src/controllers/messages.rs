@@ -31,8 +31,6 @@ mod room_list_tests;
 #[cfg(test)]
 mod github_integration_tests;
 #[cfg(test)]
-pub(crate) mod provider_tests;
-#[cfg(test)]
 pub(crate) mod drive_tests;
 #[cfg(test)]
 pub(crate) mod state_tests;

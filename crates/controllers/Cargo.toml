@@ -24,7 +24,6 @@ campfire_retained.workspace = true
 campfire_spa.workspace = true
 campfire_app.workspace = true
 campfire_web.workspace = true
-campfire_channels.workspace = true
 campfire_messages.workspace = true
 campfire_rooms.workspace = true
 campfire_people.workspace = true

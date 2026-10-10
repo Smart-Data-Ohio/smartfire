@@ -262,7 +262,7 @@ async fn legacy_attachment_reuse(thread: bool, edit: bool) {
             .header("accept", if !edit && !thread { "text/vnd.turbo-stream.html" } else { "application/json" })
             .header("content-type", "application/json")
             .body(json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed", "client_message_id": client}}).to_string())).await;
-        assert_eq!(reply.status, if thread && !edit { StatusCode::CREATED } else { StatusCode::OK }, "{path}: {}", reply.text());
+        assert_eq!(reply.status, if !edit { StatusCode::CREATED } else { StatusCode::OK }, "{path}: {}", reply.text());
         a.db().read(move |conn| {
             let saved = campfire_db::Message::find_duplicate(conn, ALL_TALK, DAVID, &client)?.unwrap();
             assert_eq!(saved.attachment(conn)?.unwrap().1.id, file_id);
@@ -657,7 +657,7 @@ async fn grouped_files_round7_legacy_signed_blobs_remain_shareable() {
         .header("accept", "text/vnd.turbo-stream.html")
         .header("content-type", "application/json")
         .body(json!({"message": {"attachment": file.signed_id}}).to_string())).await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     a.db().read(move |conn| {
         let mut query = conn.prepare("SELECT id FROM active_storage_attachments WHERE blob_id=? ORDER BY id")?;
         let ids = query.query_map([file_id], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;

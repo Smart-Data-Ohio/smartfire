@@ -2,16 +2,13 @@
 //! frame layout for Turbo-Frame requests), and partials rendered outside a request for
 //! broadcasts (`ApplicationController.render`).
 
-use campfire_db::{Account, Membership, Message, Room};
-#[cfg(any(test, feature = "test-support"))]
-use campfire_db::Boost;
+use campfire_db::Account;
 use campfire_kit::{Ctx, Format, Result, StatusCode};
 use campfire_views::helpers as h;
 use campfire_views::layouts::{Application, FrameLayout};
 use campfire_views::{Platform, ViewContext};
 
 use crate::app::AppState;
-use crate::cable::Partials;
 use crate::controllers::presenters::view_context::{Layout, account_summary, find_template};
 
 /// A template that extends `layouts/application` itself (with `blocks = ["head", "content"]`):
@@ -150,46 +147,6 @@ pub fn render_detached_in_zone<T>(app: &AppState, account: Option<&Account>, bas
     campfire_views::fragment_cache::with(&app.fragment_cache, || render(&ctx))
 }
 
-/// The broadcast partials, rendered up front by the controller (which has the view models) and
-/// handed to `channels::Broadcasts`.
-#[derive(Default)]
-pub struct Rendered {
-    pub message: Option<String>,
-    pub message_presentation: Option<String>,
-    #[cfg(any(test, feature = "test-support"))]
-    pub boost: Option<String>,
-    pub shared_room: Option<String>,
-    /// `users/sidebars/rooms/_direct`, per membership id.
-    pub direct_rooms: Vec<(i64, String)>,
-}
-
-impl Partials for Rendered {
-    fn message(&self, _: &Message) -> String {
-        self.message.clone().unwrap_or_default()
-    }
-
-    fn message_presentation(&self, _: &Message) -> String {
-        self.message_presentation.clone().unwrap_or_default()
-    }
-
-    #[cfg(any(test, feature = "test-support"))]
-    fn boost(&self, _: &Boost) -> String {
-        self.boost.clone().unwrap_or_default()
-    }
-
-    fn shared_room(&self, _: &Room) -> String {
-        self.shared_room.clone().unwrap_or_default()
-    }
-
-    fn direct_room(&self, membership: &Membership) -> String {
-        self.direct_rooms.iter().find(|(id, _)| *id == membership.id).map(|(_, html)| html.clone()).unwrap_or_default()
-    }
-
-    /// Controllers render the precise recipient membership and optional unread local before publication.
-    fn sidebar_row(&self, _: &Room, _: &Membership, _: Option<bool>) -> String {
-        self.shared_room.clone().unwrap_or_default()
-    }
-}
 pub use campfire_runtime::context::*;
 
 use crate::controllers::presenters::{ view_context::LayoutRendering};

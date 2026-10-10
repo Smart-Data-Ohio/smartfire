@@ -310,6 +310,15 @@ impl<'a> Presenter<'a> {
         self.github_refreshes.borrow_mut().insert(id);
     }
 
+    pub fn remember_message_refreshes(&self, message: &Message) -> Result<()> {
+        let now = self.app.db.env().now();
+        for pr in crate::integrations::github::pull_requests::PullRequest::for_message(self.conn, message.id)? {
+            if pr.stale(now) { self.remember_github_refresh(pr.id); }
+        }
+        let _ = self.attachment(message)?;
+        Ok(())
+    }
+
     pub fn resolver(&self) -> search_preloads::PageResolver<'_> {
         search_preloads::PageResolver {
             db: DbResolver::with_twitter_cache(
@@ -541,7 +550,7 @@ impl<'a> Presenter<'a> {
         Ok(campfire_presentation::messages::composer::Facts {
             room_id: room.id,
             room_kind: room_kind(room.room_type),
-            room_param_key: Some(campfire_db::broadcasts::room_param_key(room.room_type)),
+            room_param_key: Some(crate::presenters::accounts::room_param_key(room.room_type).to_string()),
             room_name: self.room_display_name(room, Some(viewer))?,
             thread: thread.map(|thread| campfire_presentation::messages::composer::Thread {
                 id: thread.id,
@@ -1190,3 +1199,11 @@ pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> 
 pub mod render_secrets;
 
 pub mod link_embeds;
+
+/// Refreshes formerly discovered while rendering a detached message. Publication must retain
+/// these requests even when no browser is subscribed.
+pub fn broadcast_refreshes(conn: &Connection, app: &AppState, message: &Message) -> Result<RenderRefreshes> {
+    let presenter = Presenter::new(conn, app, None);
+    presenter.remember_message_refreshes(message)?;
+    Ok(presenter.take_render_refreshes())
+}

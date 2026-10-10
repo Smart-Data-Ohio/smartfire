@@ -749,63 +749,7 @@ async fn slash_remind_rolls_back_post_save_and_index_when_job_insert_fails() {
     );
     assert_eq!(count().await.unwrap(), before);
 }
-#[tokio::test]
-async fn slash_post_reaches_a_real_websocket_once_without_session_values() {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let app = app().await;
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    request
-        .headers_mut()
-        .insert("host", "campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("origin", "http://campfire.test".parse().unwrap());
-    request
-        .headers_mut()
-        .insert("cookie", david_cookie().parse().unwrap());
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let room = app
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, ALL_TALK))
-        .await
-        .unwrap();
-    let stream = rails_compat::turbo::signed_stream_name(
-        &app.booted.app.secrets,
-        &[&crate::channels::room_gid(&room).to_param(), "messages"],
-    );
-    client
-        .confirm(&identifier(
-            serde_json::json!({"channel":"RoomMessagesChannel","signed_stream_name":stream}),
-        ))
-        .await;
-    assert_eq!(
-        slash(&mut app.david(), ALL_TALK, "/shrug Socket slash example")
-            .await
-            .status,
-        StatusCode::OK
-    );
-    let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
-    let html = frame["message"].as_str().unwrap();
-    assert!(html.starts_with("<turbo-stream action=\"append\""));
-    assert!(html.contains("Socket slash example"));
-    assert!(html.contains("http://campfire.test/"));
-    assert!(!html.contains("authenticity_token") && !html.contains("nonce=\""));
-    assert!(
-        tokio::time::timeout(std::time::Duration::from_millis(100), client.next_text())
-            .await
-            .is_err()
-    );
-    server.abort();
-}
+
 #[tokio::test]
 async fn user_tokens_check_duplicates_outside_the_page_and_omit_invalid_names() {
     let app = app().await;
