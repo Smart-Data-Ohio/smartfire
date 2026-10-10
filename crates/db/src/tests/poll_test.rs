@@ -194,7 +194,7 @@ fn results_payload_carries_counts_and_voters_unless_anonymous() {
     let options = options(&t, &poll);
     vote(&t, &poll, "david", vec![options[0].id]).unwrap();
     vote(&t, &poll, "jason", vec![options[0].id]).unwrap();
-    let payload = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), Some(id("david"))));
+    let payload = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), Some(id("david")), &campfire_storage::AppMessageVerifier::new(vec![0; 64])));
     assert_eq!(payload["question"], "Lunch?");
     assert_eq!(payload["total_votes"], 2);
     assert_eq!(payload["options"][0]["voters"], serde_json::json!(["David", "Jason"]));
@@ -211,7 +211,7 @@ fn anonymous_payloads_carry_counts_only() {
     let poll = create_poll(&t, "Lunch?", NewPoll { anonymous: true, ..Default::default() });
     let first = options(&t, &poll)[0].id;
     vote(&t, &poll, "david", vec![first]).unwrap();
-    let payload = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), Some(id("jason"))));
+    let payload = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), Some(id("jason")), &campfire_storage::AppMessageVerifier::new(vec![0; 64])));
     assert_eq!(payload["options"][0]["votes"], 1);
     assert!(payload["options"][0].get("voters").is_none());
     assert_eq!(payload["options"][0]["voted"], false);
@@ -223,7 +223,7 @@ fn question_follows_the_message_text() {
     let poll = create_poll(&t, "Lunch?", NewPoll { closes_at: Some(t.now().since(jiff::SignedDuration::from_hours(1))), ..Default::default() });
     let mut message = t.read(|c| Message::find(c, poll.message_id));
     t.write(move |tx| message.update(tx, crate::MessageChanges { markdown_source: Some("Dinner?".into()), ..Default::default() }));
-    let payload = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), None));
+    let payload = t.read(|c| poll.results_payload(c, &BasicRichText, t.now(), None, &campfire_storage::AppMessageVerifier::new(vec![0; 64])));
     assert_eq!(payload["question"], "Dinner?");
     assert_eq!(payload["closes_at"], crate::models::poll::json_time(poll.closes_at.unwrap()));
     assert!(payload["closes_at"].as_str().unwrap().ends_with('Z'));
@@ -301,4 +301,34 @@ fn concurrent_closers_close_a_due_poll_once() {
     });
     assert_eq!(wins.iter().filter(|w| **w).count(), 1, "{wins:?}");
     assert_eq!(t.events()[from..].iter().filter(|e| matches!(e, Event::Broadcast(request) if request.decode::<crate::models::poll::PollChanged>().is_some())).count(), 1);
+}
+
+
+#[test]
+fn poll_media_is_purged_when_its_option_or_message_is_deleted() {
+    for delete_message in [false, true] {
+        let t = frozen();
+        let poll = create_poll(&t, "Media?", NewPoll::default());
+        let option = options(&t, &poll)[0].clone();
+        let option_id = option.id;
+        t.write(move |tx| {
+            let blob = crate::models::active_storage::Blob::create(tx, &crate::models::active_storage::Blob {
+                id: 0, key: crate::sql::uuid(), filename: "poll.png".into(),
+                content_type: Some("image/png".into()), metadata: None,
+                service_name: "local".into(), byte_size: 1, checksum: None, created_at: tx.now(),
+            })?;
+            crate::models::active_storage::Attachment::create(tx, "PollOption", option_id, "media", blob.id)?;
+            Ok(())
+        });
+        let events = if delete_message {
+            let message = t.read(|c| Message::find(c, poll.message_id));
+            t.write(move |tx| message.destroy(tx));
+            t.events()
+        } else {
+            t.write(move |tx| option.destroy(tx));
+            t.events()
+        };
+        assert_eq!(t.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='PollOption' AND record_id=?", [option_id], |r| r.get::<_, i64>(0))?)), 0);
+        assert!(events.iter().any(|e| matches!(e, crate::Event::PurgeBlob { .. })));
+    }
 }
