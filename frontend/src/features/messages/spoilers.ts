@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { type RefCallback, useCallback } from "react";
 
 /** What a screen reader hears while the spoiler is still covered. The words stay in the DOM. */
 export const SPOILER_LABEL = "Spoiler, activate to reveal";
@@ -15,27 +15,17 @@ const CONCEALED = [
 ] as const;
 
 /**
- * Cover each spoiler and reveal that one on click, Enter, or Space. The event does not bubble
- * into the message row. Returns the cleanup for the listeners.
+ * Cover each spoiler and reveal that one on click, Enter, or Space. Only a covered spoiler takes
+ * the event, and it does not bubble into the message row. Once revealed, its links and the row
+ * get clicks and keys as usual. Returns the cleanup for the listeners.
  */
 export function bindSpoilers(root: HTMLElement): () => void {
   prepareSpoilers(root);
 
   const onClick = (event: MouseEvent) => {
-    const spoiler = spoilerElement(event.target);
+    const spoiler = hiddenSpoiler(event.target);
 
     if (spoiler === null) {
-      return;
-    }
-
-    // Enter/Space reveals on keydown, then the button's click follows. That click must not
-    // reach the message row either. A later mouse click on an open spoiler still can.
-    if (spoiler.hasAttribute("data-revealed")) {
-      if (event.detail === 0) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-
       return;
     }
 
@@ -77,24 +67,21 @@ export function bindSpoilers(root: HTMLElement): () => void {
   };
 }
 
-/** Ref for a node whose `innerHTML` is message HTML. Spoilers on it reveal the same way as a message. */
-export function useSpoilerReveal(html: string) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  // `html` is the markup React just wrote into the node. The ref object does not change with it,
-  // so the effect would otherwise keep the previous spoilers' listeners on the new markup.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: html is that inserted markup
-  useLayoutEffect(() => {
-    const root = ref.current;
-
-    if (root === null) {
-      return;
-    }
-
-    return bindSpoilers(root);
-  }, [html]);
-
-  return ref;
+/**
+ * Ref callback for the node whose `innerHTML` is message HTML (`html`). Every component that
+ * inserts message HTML uses it, so spoilers reveal the same way everywhere. It binds when the
+ * node mounts, so a node mounted again with the same markup (an edit cancelled) is covered and
+ * revealable too. When `html` changes, the callback changes with it and binds the new markup.
+ * Every spoiler span has the `spoiler` class (`[data-spoiler]` is the same span).
+ */
+export function useSpoilerReveal(html: string): RefCallback<HTMLElement> {
+  // The callback reads `html`, so the React Compiler keeps it as a dependency too. Markup with no
+  // spoiler needs no listeners.
+  return useCallback(
+    (node: HTMLElement | null) =>
+      node === null || !html.includes("spoiler") ? undefined : bindSpoilers(node),
+    [html],
+  );
 }
 
 /** Makes each still-hidden spoiler a button, and its contents neither focusable nor named. */
@@ -148,18 +135,41 @@ function spoilerElement(target: EventTarget | null): HTMLElement | null {
   return spoiler instanceof HTMLElement ? spoiler : null;
 }
 
-/** A spoiler that is still covered. */
+/**
+ * The covered spoiler `target` is in, or null. A spoiler can sit inside another (stored HTML from
+ * elsewhere): the outermost covered one is revealed first.
+ */
 function hiddenSpoiler(target: EventTarget | null): HTMLElement | null {
-  const spoiler = spoilerElement(target);
+  let found: HTMLElement | null = null;
 
-  if (spoiler === null || spoiler.hasAttribute("data-revealed")) {
-    return null;
+  for (let spoiler = spoilerElement(target); spoiler !== null; ) {
+    if (!spoiler.hasAttribute("data-revealed")) {
+      found = spoiler;
+    }
+
+    spoiler = spoilerElement(spoiler.parentElement);
   }
 
-  return spoiler;
+  return found;
 }
 
-/** Shows this spoiler's text and gives its contents their names and focus back. */
+/** Whether `node` is inside a spoiler under `spoiler` that is still covered. */
+function stillCovered(node: Element, spoiler: HTMLElement): boolean {
+  for (let parent = node.parentElement; parent !== null && parent !== spoiler; ) {
+    if (parent.matches(SPOILER) && !parent.hasAttribute("data-revealed")) {
+      return true;
+    }
+
+    parent = parent.parentElement;
+  }
+
+  return false;
+}
+
+/**
+ * Shows this spoiler's text and gives its contents their names and focus back. Contents of a
+ * spoiler inside it that is still covered stay hidden until that one is revealed.
+ */
 function reveal(spoiler: HTMLElement): void {
   spoiler.setAttribute("data-revealed", "");
   spoiler.removeAttribute("aria-label");
@@ -167,6 +177,10 @@ function reveal(spoiler: HTMLElement): void {
   spoiler.removeAttribute("tabindex");
 
   for (const node of spoiler.querySelectorAll<HTMLElement>("*")) {
+    if (stillCovered(node, spoiler)) {
+      continue;
+    }
+
     node.inert = false;
 
     if (node.hasAttribute("data-spoiler-tabindex")) {

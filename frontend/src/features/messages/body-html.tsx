@@ -1,9 +1,9 @@
-import { type ComponentProps, useLayoutEffect, useRef } from "react";
+import { type ComponentProps, useCallback, useLayoutEffect, useRef } from "react";
 import { inlineMentions } from "../../lib/body-html.ts";
 import { enhanceCodeBlocks } from "../../lib/code-highlight/code-blocks.ts";
 // The message body styles, for pages outside a room (the Slack plan's samples).
 import "../room/room.css";
-import { bindSpoilers } from "./spoilers.ts";
+import { useSpoilerReveal } from "./spoilers.ts";
 
 type BodyHtmlProps = {
   readonly html: string;
@@ -21,30 +21,35 @@ type BodyHtmlProps = {
  *
  * A `||spoiler||` starts covered. Clicking it, or Enter or Space while it is focused, reveals
  * that one spoiler and does not bubble into the message row's actions. The composer preview uses
- * this same body, so spoilers there behave the same way.
+ * this same body, so spoilers there behave the same way. Spoilers bind through the same
+ * `useSpoilerReveal` ref as every other place that inserts message HTML.
  */
 export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const spoilers = useSpoilerReveal(html);
+
+  const attach = useCallback(
+    (node: HTMLDivElement | null) => {
+      ref.current = node;
+
+      return spoilers(node);
+    },
+    [spoilers],
+  );
 
   useLayoutEffect(() => {
     const root = ref.current;
 
-    if (root === null) {
+    if (root === null || !html.includes("<pre")) {
       return;
     }
 
-    const unbind = bindSpoilers(root);
-    const removeCode = html.includes("<pre") ? enhanceCodeBlocks(root) : undefined;
-
-    return () => {
-      unbind();
-      removeCode?.();
-    };
+    return enhanceCodeBlocks(root);
   }, [html]);
 
   return (
     <div
-      ref={ref}
+      ref={attach}
       className={className}
       {...rest}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
