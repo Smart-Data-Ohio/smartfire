@@ -487,6 +487,18 @@ fn slash_commands_round_trip() {
 }
 
 #[test]
+fn scheduled_reply_edits_distinguish_omission_from_clearing() {
+    for (input, expected) in [
+        (json!({}), json!({})),
+        (json!({"replyToMessageId": null}), json!({"replyToMessageId": null})),
+        (json!({"replyToMessageId": 42}), json!({"replyToMessageId": 42})),
+    ] {
+        let edit: UpdateScheduledMessage = serde_json::from_value(input).unwrap();
+        assert_eq!(serde_json::to_value(edit).unwrap(), expected);
+    }
+}
+
+#[test]
 fn preview_and_scheduled_messages_round_trip() {
     assert_wire(
         &PreviewMessage {
@@ -518,6 +530,7 @@ fn preview_and_scheduled_messages_round_trip() {
         &UpdateScheduledMessage {
             markdown_source: Some("Standup in 10".into()),
             send_at: None,
+            reply_to_message_id: None,
         },
         json!({"markdownSource": "Standup in 10"}),
     );
@@ -528,6 +541,7 @@ fn preview_and_scheduled_messages_round_trip() {
                 room_id: 12,
                 thread_id: Some(88),
                 reply_to_message_id: None,
+                reply_target: None,
                 markdown_source: "Standup in 5".into(),
                 send_at: "2026-10-07T13:55:00.000Z".into(),
                 state: ScheduledMessageState::Pending,
@@ -546,6 +560,7 @@ fn preview_and_scheduled_messages_round_trip() {
             "roomId": 12,
             "threadId": 88,
             "replyToMessageId": null,
+            "replyTarget": null,
             "markdownSource": "Standup in 5",
             "sendAt": "2026-10-07T13:55:00.000Z",
             "state": "pending",

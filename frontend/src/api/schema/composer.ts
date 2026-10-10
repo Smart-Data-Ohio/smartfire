@@ -15,6 +15,7 @@ import type { SlashCommandResult as GeneratedSlashCommandResult } from "../../ge
 import type { UpdateScheduledMessage as GeneratedUpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
 import type { UserSuggestion as GeneratedUserSuggestion } from "../../gen/UserSuggestion.ts";
 import type { UserSuggestionList as GeneratedUserSuggestionList } from "../../gen/UserSuggestionList.ts";
+import { QuotePreview } from "./cards.ts";
 import { ConversationName } from "./conversation.ts";
 import { Icon } from "./icon.ts";
 import { MessageId, RoomId, ScheduledMessageId, ThreadId } from "./ids.ts";
@@ -133,6 +134,7 @@ export const ScheduledMessage = Schema.Struct({
   roomId: RoomId,
   threadId: Schema.NullOr(ThreadId),
   replyToMessageId: Schema.NullOr(MessageId),
+  replyTarget: Schema.NullOr(QuotePreview),
   markdownSource: Schema.String,
   sendAt: Timestamp,
   state: ScheduledMessageState,
@@ -168,6 +170,7 @@ export type CreateScheduledMessagePin = Assert<
 export const UpdateScheduledMessage = Schema.Struct({
   markdownSource: Schema.optionalKey(Schema.String),
   sendAt: Schema.optionalKey(Timestamp),
+  replyToMessageId: Schema.optionalKey(Schema.NullOr(MessageId)),
 });
 
 export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;

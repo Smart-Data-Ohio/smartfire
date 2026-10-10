@@ -253,6 +253,7 @@ function scheduled(
     roomId,
     threadId: null,
     replyToMessageId: null,
+    replyTarget: null,
     markdownSource: `Later ${id}`,
     sendAt: at(minute),
     state: "pending",

@@ -8,6 +8,7 @@ function scheduled(overrides: Partial<ScheduledMessage>): ScheduledMessage {
     roomId: 12,
     threadId: null,
     replyToMessageId: null,
+    replyTarget: null,
     markdownSource: "Hello",
     sendAt: "2026-10-07T13:00:00.000Z",
     state: "pending",
