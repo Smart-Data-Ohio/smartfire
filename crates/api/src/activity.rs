@@ -146,7 +146,7 @@ pub(crate) fn changed(
     let Some(item) = items(conn, app, viewer, std::slice::from_ref(&row))?.pop() else {
         return Ok(None);
     };
-    let unread = ActivityItem::unread_snapshot(conn, viewer.id)?;
+    let unread = ActivityItem::unread_snapshot(conn, viewer.id, app.db.env().now())?;
     Ok(Some(api::ActivityItemChanged {
         item,
         unread_count: unread.count,
@@ -223,7 +223,7 @@ async fn index_activity(c: &mut Ctx) -> Result {
                 .iter()
                 .filter_map(|item| item.source.creator_id)
                 .collect::<std::collections::BTreeSet<_>>();
-            let unread = ActivityItem::unread_snapshot(conn, viewer.id)?;
+            let unread = ActivityItem::unread_snapshot(conn, viewer.id, now)?;
             Ok(api::ActivityList {
                 users: dto::users(conn, &app.secrets, creators, now)?,
                 unread_count: unread.count,
@@ -241,10 +241,11 @@ async fn show_unread_count(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     no_store(c);
     let viewer = concerns::require_current_user(c)?.clone();
+    let now = now(c);
     let unread = c
         .app()
         .db
-        .read(move |conn| ActivityItem::unread_snapshot(conn, viewer.id))
+        .read(move |conn| ActivityItem::unread_snapshot(conn, viewer.id, now))
         .await
         .map_err(db_error)?;
     c.json(

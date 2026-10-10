@@ -902,6 +902,7 @@ pub(crate) fn notification_counts(
     conn: &Connection,
     user_id: i64,
     room_id: Option<i64>,
+    now: Timestamp,
 ) -> Result<HashMap<i64, RoomCounts>> {
     let mut statement = conn.prepare_cached(&notification_counts_sql(room_id.is_some()))?;
     let map = |row: &rusqlite::Row<'_>| {
@@ -916,20 +917,20 @@ pub(crate) fn notification_counts(
         ))
     };
     let rows = match room_id {
-        Some(room_id) => statement.query_map(rusqlite::params![user_id, room_id], map)?,
-        None => statement.query_map(rusqlite::params![user_id], map)?,
+        Some(room_id) => statement.query_map(rusqlite::params![user_id, now, room_id], map)?,
+        None => statement.query_map(rusqlite::params![user_id, now], map)?,
     };
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// The counts statement: `?1` is the viewer, `?2` the one room when `one_room`. `roots` and
+/// The counts statement: `?1` is the viewer, `?2` is now, `?3` the one room when `one_room`. `roots` and
 /// `pinged` are materialized, each read once through its own index (the room's unread range on
 /// `index_messages_on_room_thread_created`, the viewer's unread pings on
 /// `index_activity_items_on_unread_message_pings`); inlined, SQLite would walk the room's whole
 /// history by `room_id` to find them.
 fn notification_counts_sql(one_room: bool) -> String {
     let only = |column: &str| match one_room {
-        true => format!(r#" AND {column} = ?2"#),
+        true => format!(r#" AND {column} = ?3"#),
         false => String::new(),
     };
     let sql = format!(
@@ -939,7 +940,7 @@ fn notification_counts_sql(one_room: bool) -> String {
     );
     let preferences = "(SELECT inbox_preferences FROM users WHERE id=?1)";
     let effective = campfire_db::models::notification_policy::involvement_sql("ms", preferences);
-    let unmuted = campfire_db::models::notification_policy::unmuted_sql("ms.room_id", preferences);
+    let unmuted = campfire_db::models::notification_policy::unmuted_sql("ms.room_id", preferences, "?2");
     sql.replace(r#""ms"."involvement", "ms"."unread_at""#, &format!(r#"({effective}) AS "involvement", "ms"."unread_at""#))
         .replace(r#""ms"."involvement""#, &format!("({effective})"))
         .replace(r#"WHERE "ms"."user_id" = ?1"#, &format!(r#"WHERE "ms"."user_id" = ?1 AND {unmuted}"#))
@@ -1028,11 +1029,12 @@ pub fn sidebar_row(
     conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
+    now: Timestamp,
 ) -> Result<Option<api::SidebarRow>> {
     if !visible(room, membership) {
         return Ok(None);
     }
-    membership_row(conn, room, membership).map(Some)
+    membership_row(conn, room, membership, now).map(Some)
 }
 
 /// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
@@ -1041,6 +1043,7 @@ pub fn membership_row(
     conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
+    now: Timestamp,
 ) -> Result<api::SidebarRow> {
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
@@ -1048,7 +1051,7 @@ pub fn membership_row(
     } else {
         None
     };
-    let counts = notification_counts(conn, membership.user_id, Some(room.id))?
+    let counts = notification_counts(conn, membership.user_id, Some(room.id), now)?
         .remove(&room.id)
         .unwrap_or_default();
     let last_message = if room.direct() {
@@ -1079,7 +1082,7 @@ pub fn sidebar(
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
     #[cfg(feature = "test-support")]
     crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
-    let counts = notification_counts(conn, viewer.id, None)?;
+    let counts = notification_counts(conn, viewer.id, None, now)?;
     let direct_ids: Vec<i64> = all
         .iter()
         .filter(|(_, room)| room.direct())

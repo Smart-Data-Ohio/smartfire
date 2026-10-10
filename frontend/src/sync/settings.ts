@@ -128,10 +128,16 @@ async function write<A>(run: Promise<A>): Promise<A> {
 
 export type { TokenService };
 
+let notificationWriteVersion = 0;
+
 export const settings = {
   load: async (): Promise<Settings> => {
+    const version = notificationWriteVersion;
     const next = await runAction(loadSettings());
-    mutations.setNotificationPreferences(next.notifications);
+
+    if (version === notificationWriteVersion) {
+      mutations.setNotificationPreferences(next.notifications);
+    }
 
     return next;
   },
@@ -154,6 +160,7 @@ export const settings = {
       runAction(updateNotifications({ ...UNCHANGED.notifications, ...change })),
     );
 
+    notificationWriteVersion += 1;
     mutations.setNotificationPreferences(next.notifications);
 
     return next;

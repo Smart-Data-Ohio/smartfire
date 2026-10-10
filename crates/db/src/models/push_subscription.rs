@@ -208,8 +208,8 @@ impl PushSubscription {
     }
 
     /// The badge for a notification: `user.memberships.unread.count`.
-    pub fn badge(&self, conn: &Connection) -> Result<i64> {
-        Membership::unread_count(conn, self.user_id)
+    pub fn badge(&self, conn: &Connection, now: Timestamp) -> Result<i64> {
+        Membership::unread_count(conn, self.user_id, now)
     }
 
     /// Validations: endpoint present, then `validate_endpoint_url`. `resolve` is

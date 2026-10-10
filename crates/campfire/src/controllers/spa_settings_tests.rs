@@ -1305,3 +1305,124 @@ async fn a9_notification_default_mute_and_membership_scope() {
     .await;
     assert_eq!(denied.status, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
+    async fn push_badge(app: &TestApp) -> i64 {
+        let now = app.booted.app.db.env().now();
+        app.booted
+            .app
+            .db
+            .read(move |conn| {
+                let subscription = campfire_db::PushSubscription::new(
+                    DAVID,
+                    Some("https://fcm.googleapis.com/fcm/send/a9"),
+                    None,
+                    None,
+                    None,
+                );
+                let payload = campfire_db::PushPayload::new(
+                    "Mute expiry".into(),
+                    "Badge".into(),
+                    "/app".into(),
+                    None,
+                );
+                let notification = campfire_app::integrations::web_push::Notification::build(
+                    conn,
+                    &subscription,
+                    &payload,
+                    now,
+                )?;
+                Ok(notification.badge)
+            })
+            .await
+            .unwrap()
+    }
+
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        "2035-01-01T12:00:00Z".parse().unwrap(),
+    ));
+    let app = TestApp::boot_seed_with_env("default", clock.clone(), &[("SPA_ENABLED", "1")])
+        .await
+        .expect("restored default seed required");
+    let mut browser = app.sign_in(DAVID).await;
+    let (room, message) = app.booted.app.db.write(|tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=NULL WHERE user_id=?", [DAVID])?;
+        tx.conn().execute("DELETE FROM activity_items WHERE user_id=?", [DAVID])?;
+        let (room, message, created_at): (i64,i64,campfire_db::Timestamp) = tx.conn().query_row("SELECT m.room_id,m.id,m.created_at FROM messages m JOIN memberships ms ON ms.room_id=m.room_id WHERE ms.user_id=? AND m.thread_id IS NULL AND m.creator_id!=? AND NOT m.system_note LIMIT 1", [DAVID,DAVID], |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?)))?;
+        tx.conn().execute("UPDATE memberships SET involvement='everything', unread_at=?,last_read_message_id=NULL WHERE user_id=? AND room_id=?", rusqlite::params![created_at,DAVID,room])?;
+        campfire_db::ActivityItem::refresh_unread(tx, DAVID, "Message", message, "mention")?;
+        Ok((room, message))
+    }).await.unwrap();
+    let before = parse::<api::Sidebar>(&browser.send(get("/api/v1/sidebar")).await);
+    let before = before
+        .rows
+        .iter()
+        .find(|row| row.room.id == room)
+        .unwrap()
+        .notification_count;
+    assert!(before > 0, "message {message} contributes a notification");
+    assert_eq!(push_badge(&app).await, 1);
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(
+            &browser.send(get("/api/v1/activity/unread_count")).await
+        )
+        .unread_count,
+        1
+    );
+    let muted = write(
+        &mut browser,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":room,"duration":"minutes15"}}),
+    )
+    .await;
+    assert_eq!(muted.status, StatusCode::OK, "{}", muted.text());
+    assert_eq!(push_badge(&app).await, 0);
+    let favorite_path = format!("/api/v1/rooms/{room}/favorite");
+    let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
+    assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());
+    assert_eq!(parse::<api::SidebarRow>(&favorite).notification_count, 0);
+    let sidebar = parse::<api::Sidebar>(&browser.send(get("/api/v1/sidebar")).await);
+    assert_eq!(
+        sidebar
+            .rows
+            .iter()
+            .find(|row| row.room.id == room)
+            .unwrap()
+            .notification_count,
+        0
+    );
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(
+            &browser.send(get("/api/v1/activity/unread_count")).await
+        )
+        .unread_count,
+        0
+    );
+    clock.advance(jiff::SignedDuration::from_secs(900));
+    assert_eq!(push_badge(&app).await, 1);
+    let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
+    assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());
+    assert_eq!(
+        parse::<api::SidebarRow>(&favorite).notification_count,
+        before
+    );
+    let sidebar = parse::<api::Sidebar>(&browser.send(get("/api/v1/sidebar")).await);
+    assert_eq!(
+        sidebar
+            .rows
+            .iter()
+            .find(|row| row.room.id == room)
+            .unwrap()
+            .notification_count,
+        before
+    );
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(
+            &browser.send(get("/api/v1/activity/unread_count")).await
+        )
+        .unread_count,
+        1
+    );
+}

@@ -88,3 +88,99 @@ fn pending_invitation_generations_emit_one_rails_retry_in_either_drain_order() {
         }
     }
 }
+
+#[test]
+fn a9_room_mutes_suppress_huddle_invitations_until_expiry() {
+    for banner_only in [false, true] {
+        for mute in ["membership", "forever", "minutes15"] {
+            let db = TestDb::new();
+            db.clock
+                .travel_to(Timestamp::parse_db("2035-01-01 12:00:00").unwrap());
+            let caller = crate::fixtures::identify("david");
+            let recipient = crate::fixtures::identify("jason");
+            let room = crate::fixtures::identify("david_and_jason");
+            let (session, member) = db.write(move |tx| {
+                let until = if mute == "forever" { Value::Null } else { serde_json::json!(tx.now().since(jiff::SignedDuration::from_secs(900)).jiff()) };
+                let mut preferences = serde_json::json!({"huddle_invitations": !banner_only});
+                if mute == "membership" {
+                    tx.conn().execute("UPDATE memberships SET involvement='nothing' WHERE room_id=? AND user_id=?", rusqlite::params![room,recipient])?;
+                } else {
+                    preferences["room_mute_until"] = serde_json::json!({room.to_string(): until});
+                }
+                tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![preferences.to_string(),recipient])?;
+                Ok((Session::start(tx, caller, None, None)?.id, Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap().id))
+            });
+            let config = || HuddleConfig {
+                api_secret: Some("a9-huddle-fixture".into()),
+                admin_configured: false,
+            };
+            db.sink.take();
+            db.write(move |tx| HuddleGrant::issue(tx, session, member, room, &config()));
+            assert!(
+                frames(&db.sink.take(), recipient).is_empty(),
+                "{mute}, banner_only={banner_only}"
+            );
+            assert_eq!(db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE user_id=? AND source_type='HuddleGrant'", [recipient], |row| row.get::<_,i64>(0))?)), 0);
+            if mute == "minutes15" {
+                db.travel(900);
+                db.write(move |tx| HuddleGrant::issue(tx, session, member, room, &config()));
+                assert_eq!(
+                    frames(&db.sink.take(), recipient).len(),
+                    1,
+                    "invitation resumes at expiry"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn a9_a_mute_suppresses_an_already_queued_huddle_invitation() {
+    let db = TestDb::new();
+    let caller = crate::fixtures::identify("david");
+    let recipient = crate::fixtures::identify("jason");
+    let room = crate::fixtures::identify("david_and_jason");
+    let (session, member) = db.write(move |tx| {
+        Ok((
+            Session::start(tx, caller, None, None)?.id,
+            Membership::find_by_room_and_user(tx.conn(), room, caller)?
+                .unwrap()
+                .id,
+        ))
+    });
+    db.sink.take();
+    db.write(move |tx| {
+        HuddleGrant::issue(
+            tx,
+            session,
+            member,
+            room,
+            &HuddleConfig {
+                api_secret: Some("a9-huddle-fixture".into()),
+                admin_configured: false,
+            },
+        )
+    });
+    let request = db
+        .sink
+        .take()
+        .iter()
+        .find_map(|event| {
+            event
+                .as_job::<RingRequest>()
+                .filter(|request| request.recipient_id == recipient)
+        })
+        .unwrap();
+    db.write(move |tx| {
+        let until = tx.now().since(jiff::SignedDuration::from_secs(900)).jiff();
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            rusqlite::params![
+                serde_json::json!({"room_mute_until":{room.to_string():until}}).to_string(),
+                recipient
+            ],
+        )?;
+        crate::models::huddle_invitations::publish_ring_with_policy(tx, &request, None)
+    });
+    assert!(frames(&db.sink.take(), recipient).is_empty());
+}

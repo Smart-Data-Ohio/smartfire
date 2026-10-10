@@ -128,10 +128,10 @@ pub fn involvement_sql(membership: &str, preferences: &str) -> String {
     )
 }
 
-pub fn unmuted_sql(room: &str, preferences: &str) -> String {
+pub fn unmuted_sql(room: &str, preferences: &str, now: &str) -> String {
     let path = format!("'$.room_mute_until.\"' || {room} || '\"'");
     format!(
-        "(COALESCE(json_type({preferences}, {path}), '') != 'null' AND (json_type({preferences}, {path}) IS NULL OR julianday(json_extract({preferences}, {path})) <= julianday('now')))"
+        "(COALESCE(json_type({preferences}, {path}), '') != 'null' AND (json_type({preferences}, {path}) IS NULL OR julianday(json_extract({preferences}, {path})) <= julianday({now})))"
     )
 }
 

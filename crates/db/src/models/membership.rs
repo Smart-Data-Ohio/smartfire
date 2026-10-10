@@ -324,11 +324,7 @@ impl Membership {
     }
 
     /// `user.memberships.unread.count`: the push badge.
-    pub fn unread_count(conn: &Connection, user_id: i64) -> Result<i64> {
-        Self::unread_count_at(conn, user_id, Timestamp::from_jiff(jiff::Timestamp::now()))
-    }
-
-    pub fn unread_count_at(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
+    pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
         let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
         let rooms: Vec<i64> = sql::query_all(conn,
             "SELECT room_id FROM memberships WHERE user_id=? AND unread_at IS NOT NULL",

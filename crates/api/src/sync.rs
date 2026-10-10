@@ -99,9 +99,12 @@ impl SyncRenderer for Renderer {
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<api::SidebarRow>> {
-        let row = dto::sidebar_row(conn, room, membership);
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let row = dto::sidebar_row(conn, room, membership, app.db.env().now());
         #[cfg(feature = "test-support")]
-        if let Some(app) = self.app.upgrade() {
+        {
             crate::test_hooks::after_sidebar_snapshot(app.db.path(), room.id);
             if crate::test_hooks::read_after_sidebar_snapshot(app.db.path(), room.id) {
                 campfire_app::cable::sync::room_read(&app.cable, membership.user_id, room.id);
@@ -148,6 +151,17 @@ impl SyncRenderer for Renderer {
             return Ok(None);
         };
         crate::activity::changed(conn, &app, &viewer, item_id)
+    }
+
+    fn activity_unread_count(
+        &self,
+        conn: &Connection,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<campfire_db::models::activity_item::ActivityUnread>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        campfire_db::ActivityItem::unread_snapshot(conn, user_id, app.db.env().now()).map(Some)
     }
 
     fn scheduled_message(

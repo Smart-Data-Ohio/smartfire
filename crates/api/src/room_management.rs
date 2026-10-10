@@ -590,7 +590,7 @@ async fn mutation(c: &Ctx, room: Room) -> Result<api::RoomMutation> {
                         &membership,
                         now,
                     )?),
-                    dto::sidebar_row(conn, &room, &membership)?,
+                    dto::sidebar_row(conn, &room, &membership, now)?,
                 ),
                 _ => (None, None),
             };

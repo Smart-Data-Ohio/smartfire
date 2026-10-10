@@ -44,6 +44,10 @@ pub fn publish_queued_ring(tx: &mut Tx<'_>, id: i64) -> Result<()> {
 /// The next callback supersedes legacy pending frames for this caller/room,
 /// across banner and item forms. Dedupe never calls this function.
 fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
+    if request.invitation["eventType"] == "huddle_started" && request.invitation["state"] == "unread" {
+        let room = request.invitation["roomId"].as_i64().ok_or_else(|| crate::Error::Other("huddle invitation has no room".into()))?;
+        if UserStatusSettings::find(tx.conn(), request.recipient_id)?.notification_preferences.muted(room, tx.now()) { return Ok(()); }
+    }
     let item = request.invitation["activityItemId"].as_i64().unwrap_or_default();
     tx.conn().execute_cached(
         "UPDATE background_jobs SET arguments=json_set(arguments,'$.superseded',1) WHERE job_class=? AND json_extract(arguments,'$.recipient_id')=? AND json_extract(arguments,'$.invitation.roomId')=? AND (json_extract(arguments,'$.invitation.activityItemId')=? AND ?!=0 OR json_extract(arguments,'$.sender_id')=?)",
@@ -157,6 +161,7 @@ fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest
     if current.invitation["eventType"] == "huddle_started" && current.invitation["state"] == "unread" {
         if room.deleted_at.is_some() { return Ok(None); }
         if matches!(member.involvement, Some(crate::Involvement::Nothing | crate::Involvement::Invisible)) { return Ok(None); }
+        if UserStatusSettings::find(tx.conn(), viewer.id)?.notification_preferences.muted(room.id, tx.now()) { return Ok(None); }
         // Group rings belong to the call: another live participant keeps them
         // going after the starter leaves (HuddleGrant#others_in_call?).
         if grant.revoked() && !tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL AND last_seen_at>?)",params![room.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))? { return Ok(None); }
@@ -261,6 +266,9 @@ fn invite_recipient(
     recipient: &User,
     dedup: Timestamp,
 ) -> Result<()> {
+    if UserStatusSettings::find(tx.conn(), recipient.id)?.notification_preferences.muted(room.id, tx.now()) {
+        return Ok(());
+    }
     let in_call = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND user_id=? AND last_seen_at>?)",params![room.id,recipient.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))?;
     let recent = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM activity_items ai JOIN huddle_grants g ON g.id=ai.source_id WHERE ai.source_type='HuddleGrant' AND ai.event_type IN ('huddle_started','huddle_missed') AND ai.user_id=? AND g.room_id=? AND ai.created_at>=?)",params![recipient.id,room.id,dedup],|r|r.get::<_,bool>(0))?;
     if in_call || recent {

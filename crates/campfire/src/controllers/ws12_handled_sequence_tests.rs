@@ -57,12 +57,14 @@ async fn ws12_handled_unhandled_unread_http_sequence_matches_rails() {
             actual, step["state"],
             "{name}: retained read timestamp and complete persisted state"
         );
+        let now = app.db().env().now();
         let count = app
             .db()
-            .read(|conn| {
+            .read(move |conn| {
                 campfire_db::ActivityItem::unread_count(
                     conn,
                     &campfire_db::User::find(conn, DAVID)?,
+                    now,
                 )
             })
             .await

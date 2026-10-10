@@ -56,6 +56,12 @@ pub trait SyncRenderer: Send + Sync + 'static {
         user_id: i64,
         item_id: i64,
     ) -> campfire_db::Result<Option<campfire_api_types::ActivityItemChanged>>;
+    /// The viewer's badge at the application clock, read after an activity removal.
+    fn activity_unread_count(
+        &self,
+        conn: &Connection,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<campfire_db::models::activity_item::ActivityUnread>>;
     /// The scheduled message as `GET /api/v1/scheduled_messages` lists it; `Ok(None)` when it's
     /// gone.
     fn scheduled_message(
@@ -733,15 +739,16 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i
     if items.is_empty() {
         return;
     }
+    let render = renderer.clone();
     let server = server.downgrade();
     renderer.defer(Box::new(move |conn| {
         let Some(server) = server.upgrade() else {
             return;
         };
         for (id, user_id) in items {
-            let count = campfire_db::ActivityItem::unread_snapshot(conn, user_id);
+            let count = render.activity_unread_count(conn, user_id);
             match count {
-                Ok(unread) => send(
+                Ok(Some(unread)) => send(
                     &server,
                     Audience::User(user_id),
                     &SyncPayload::ActivityRemoved(campfire_api_types::ActivityItemRemoved {
@@ -751,6 +758,7 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i
                     }),
                     |publication| publication,
                 ),
+                Ok(None) => (),
                 Err(error) => tracing::warn!(%error, id, "sync: activity count not read"),
             }
         }

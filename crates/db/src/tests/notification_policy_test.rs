@@ -189,7 +189,7 @@ fn a9_muted_rooms_do_not_contribute_to_push_badges() {
         tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"room_mute_until":mutes}).to_string(), id("david")])?;
         Ok(())
     });
-    assert_eq!(t.read(|c| crate::Membership::unread_count(c, id("david"))), 0);
+    assert_eq!(t.read(|c| crate::Membership::unread_count(c, id("david"), t.now())), 0);
 }
 
 #[test]
@@ -232,15 +232,100 @@ fn a9_existing_activity_badges_follow_mute_at_read_time() {
         crate::ActivityItem::refresh_unread(tx, id("david"), "Message", message.id, "mention")?;
         Ok(message.room_id)
     });
-    let before = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david")));
+    let before = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
     assert!(before.count > 0);
     for (until, muted) in [(json!(null), true), (json!("2030-01-01T00:00:00Z"), true), (json!("2020-01-01T00:00:00Z"), false)] {
         t.write(move |tx| {
             tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"room_mute_until": {room.to_string(): until}}).to_string(), id("david")])?;
             Ok(())
         });
-        let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david")));
+        let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
         assert_eq!(after.count, if muted {before.count - 1} else {before.count});
         assert_eq!(after.revision, before.revision);
     }
+}
+
+#[test]
+fn a9_activity_badges_expire_at_the_injected_clock() {
+    let t = TestDb::new();
+    t.clock.travel_to(instant("2035-01-01T12:00:00Z"));
+    let room = t.write(|tx| {
+        tx.conn()
+            .execute("DELETE FROM activity_items WHERE user_id=?", [id("david")])?;
+        let message = crate::Message::find(tx.conn(), id("first"))?;
+        crate::ActivityItem::refresh_unread(tx, id("david"), "Message", message.id, "mention")?;
+        let until = tx.now().since(jiff::SignedDuration::from_secs(900)).jiff();
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            rusqlite::params![
+                json!({"room_mute_until": {message.room_id.to_string(): until}}).to_string(),
+                id("david")
+            ],
+        )?;
+        Ok(message.room_id)
+    });
+    assert!(
+        t.read(|c| UserStatusSettings::find(c, id("david")))
+            .notification_preferences
+            .muted(room, t.now())
+    );
+    assert_eq!(
+        t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()))
+            .count,
+        0
+    );
+    t.travel(900);
+    assert!(
+        !t.read(|c| UserStatusSettings::find(c, id("david")))
+            .notification_preferences
+            .muted(room, t.now())
+    );
+    assert_eq!(
+        t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()))
+            .count,
+        1
+    );
+    assert_eq!(
+        t.read(|c| crate::ActivityItem::unread_count(
+            c,
+            &crate::User::find(c, id("david"))?,
+            t.now()
+        )),
+        1
+    );
+}
+
+#[test]
+fn a9_push_badges_expire_at_the_injected_clock() {
+    let t = TestDb::new();
+    t.clock.travel_to(instant("2035-01-01T12:00:00Z"));
+    t.write(|tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=NULL WHERE user_id=?",
+            [id("david")],
+        )?;
+        let room = crate::Message::find(tx.conn(), id("first"))?.room_id;
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=? WHERE user_id=? AND room_id=?",
+            rusqlite::params![tx.now(), id("david"), room],
+        )?;
+        let until = tx.now().since(jiff::SignedDuration::from_secs(900)).jiff();
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            rusqlite::params![
+                json!({"room_mute_until": {room.to_string(): until}}).to_string(),
+                id("david")
+            ],
+        )?;
+        Ok(())
+    });
+    assert_eq!(
+        t.read(|c| crate::Membership::unread_count(c, id("david"), t.now())),
+        0
+    );
+    t.travel(900);
+    assert_eq!(
+        t.read(|c| crate::Membership::unread_count(c, id("david"), t.now())),
+        1
+    );
 }

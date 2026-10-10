@@ -46,6 +46,7 @@ async fn test_notification(app: App, job: TestNotification, _: Execution) -> Job
     let Some(pool) = app.web_push.clone() else {
         return Ok(Outcome::Done);
     };
+    let now = app.db.env().now();
     app.db
         .read(move |conn| {
             let subscription =
@@ -61,7 +62,7 @@ async fn test_notification(app: App, job: TestNotification, _: Execution) -> Job
                 job.0.path,
                 Some("test-notification".into()),
             );
-            pool.queue(conn, &payload, vec![subscription])
+            pool.queue(conn, &payload, vec![subscription], now)
         })
         .await?;
     Ok(Outcome::Done)
@@ -74,14 +75,15 @@ async fn thread_message(app: App, job: ThreadMessage, _: Execution) -> JobResult
     let db = app.db.clone();
     app.db
         .read(move |conn| {
+            let now = db.env().now();
             for push in ChannelThread::push_recipients_with_policy(
                 conn,
                 &*db.env().rich_text,
                 job.0.thread_id,
                 job.0.message_id,
-                db.env().now(),
+                now,
             )? {
-                pool.queue(conn, &push.payload, push.subscriptions)?;
+                pool.queue(conn, &push.payload, push.subscriptions, now)?;
             }
             Ok(())
         })
@@ -96,13 +98,14 @@ async fn saved_reminder(app: App, job: SavedReminder, _: Execution) -> JobResult
     let db = app.db.clone();
     app.db
         .read(move |conn| {
+            let now = db.env().now();
             if let Some(push) = SavedItem::reminder_push_with_policy(
                 conn,
                 &*db.env().rich_text,
                 job.0.saved_item_id,
-                db.env().now(),
+                now,
             )? {
-                pool.queue(conn, &push.payload, push.subscriptions)?;
+                pool.queue(conn, &push.payload, push.subscriptions, now)?;
             }
             Ok(())
         })
@@ -165,7 +168,7 @@ async fn event_reminder(app: App, job: EventReminder, _: Execution) -> JobResult
                 job.0.event_id,
                 now,
             )? {
-                pool.queue(conn, &push.payload, push.subscriptions)?;
+                pool.queue(conn, &push.payload, push.subscriptions, now)?;
             }
             Ok(())
         })
@@ -183,7 +186,7 @@ async fn board_nudge(app: App, job: BoardNudge, _: Execution) -> JobResult {
             if let Some(push) =
                 campfire_db::models::notification_push::board_nudge_push(conn, job.0.nudge_id, now)?
             {
-                pool.queue(conn, &push.payload, push.subscriptions)?;
+                pool.queue(conn, &push.payload, push.subscriptions, now)?;
             }
             Ok(())
         })
@@ -195,6 +198,7 @@ async fn huddle_delivery(app: App, payload: campfire_db::PushPayload, ids: Vec<i
     let Some(pool) = app.web_push.clone() else {
         return Ok(Outcome::Done);
     };
+    let now = app.db.env().now();
     // The source adapter already checked policy and, for joins, committed its throttle with
     // this job. Preserve that decision/payload; Pool builds the current unread badge at run.
     app.db
@@ -203,6 +207,7 @@ async fn huddle_delivery(app: App, payload: campfire_db::PushPayload, ids: Vec<i
                 conn,
                 &payload,
                 campfire_db::PushSubscription::for_ids(conn, &ids)?,
+                now,
             )
         })
         .await?;

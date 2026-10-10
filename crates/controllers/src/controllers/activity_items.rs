@@ -62,7 +62,7 @@ pub async fn index(c: &mut Ctx) -> Result {
                     limit: Some(100),
                 },
             )?;
-            let unread = ActivityItem::unread_count(conn, &viewer)? as usize;
+            let unread = ActivityItem::unread_count(conn, &viewer, app.db.env().now())? as usize;
             let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
             let sources = if json {
                 activity::Sources::load_json(conn, &rows)?
@@ -162,10 +162,11 @@ pub async fn index(c: &mut Ctx) -> Result {
 pub async fn unread_count(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let viewer = concerns::require_current_user(c)?.clone();
+    let now = c.app().db.env().now();
     let count = c
         .app()
         .db
-        .read(move |conn| ActivityItem::unread_count(conn, &viewer))
+        .read(move |conn| ActivityItem::unread_count(conn, &viewer, now))
         .await
         .map_err(Error::internal)?;
     let mut response = c.json(StatusCode::OK, &serde_json::json!({"unread_count":count}))?;
