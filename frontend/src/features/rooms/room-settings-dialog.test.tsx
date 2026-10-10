@@ -46,6 +46,7 @@ function boardForm(patch: Partial<RoomForm> = {}): RoomForm {
     groupCapable: false,
     defaultInvolvement: "mentions",
     stageRoles: [],
+    topic: null,
     ...patch,
   };
 }
@@ -166,6 +167,7 @@ describe("board settings", () => {
         creatorId: 1,
         createdAt: "2026-03-02T16:00:00Z",
         updatedAt: "2026-03-02T16:00:00Z",
+        topic: null,
       },
       detail: null,
       row: null,
@@ -249,6 +251,7 @@ function savedRoom(name: string) {
       creatorId: 1,
       createdAt: "2026-03-02T16:00:00Z",
       updatedAt: "2026-03-02T16:00:00Z",
+      topic: null,
     },
     detail: null,
     row: null,
@@ -635,5 +638,58 @@ describe("room integration membership", () => {
     });
     expect(screen.getByText(/room-bbbb/)).toBeTruthy();
     expect(screen.queryByText(/No email address yet/)).toBeNull();
+  });
+});
+
+describe("channel topic settings", () => {
+  it("loads a textarea, counts Unicode characters, and saves a topic-only edit", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(closedForm({ topic: "Current topic" }));
+
+    const update = vi
+      .spyOn(actions.rooms, "update")
+      .mockRejectedValue(new ActionError("ServerError", "held"));
+
+    const user = userEvent.setup();
+    await mount(CLOSED);
+    const field = await screen.findByRole("textbox", { name: "Topic" });
+    expect(field.tagName).toBe("TEXTAREA");
+    expect(field.getAttribute("value") ?? field.textContent).toBe("Current topic");
+    expect(screen.getByText("13 / 1024")).toBeTruthy();
+    await user.clear(field);
+    await user.type(field, "  🦀 Planning  ");
+    expect(screen.getByText("14 / 1024")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(update).toHaveBeenCalledWith(CLOSED, {
+      type: "closed",
+      userIds: [1, 2],
+      topic: "🦀 Planning",
+    });
+  });
+
+  it("allows 1024 Unicode characters and blocks a topic beyond the limit", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(closedForm());
+    const user = userEvent.setup();
+    await mount(CLOSED);
+    const field = await screen.findByRole("textbox", { name: "Topic" });
+    await user.click(field);
+    await user.paste("🦀".repeat(1024));
+    expect(screen.getByText("1024 / 1024")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(
+      false,
+    );
+    await user.paste("x");
+    expect(screen.getByText("1025 / 1024")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(
+      true,
+    );
+  });
+
+  it("keeps the topic read-only for someone who cannot edit the name", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(
+      closedForm({ canSubmit: false, topic: "Read me" }),
+    );
+    await mount(CLOSED);
+    const field = await screen.findByRole("textbox", { name: "Topic" });
+    expect(field.hasAttribute("disabled")).toBe(true);
   });
 });

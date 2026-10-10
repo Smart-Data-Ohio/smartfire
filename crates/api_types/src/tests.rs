@@ -190,6 +190,7 @@ fn room_and_membership_round_trip() {
         creator_id: 7,
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
+        topic: None,
     };
     assert_wire(
         &room,
@@ -201,6 +202,7 @@ fn room_and_membership_round_trip() {
             "creatorId": 7,
             "createdAt": "2026-01-01T00:00:00.000Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
+            "topic": null,
         }),
     );
     for (kind, wire) in [
@@ -509,6 +511,7 @@ fn room() -> Room {
         creator_id: 7,
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
+        topic: None,
     }
 }
 

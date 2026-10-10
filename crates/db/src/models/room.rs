@@ -93,6 +93,7 @@ pub struct Room {
     pub pins_changed_at: Option<Timestamp>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
+    pub topic: Option<String>,
 }
 
 /// `user.rooms`: `has_many :rooms, -> { alive }, through: :memberships` (`app/models/user.rb`).
@@ -116,12 +117,13 @@ impl Room {
             pins_changed_at: row.get("pins_changed_at")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
+            topic: row.get("topic")?,
         })
     }
 
     /// The room's columns as `r_<column>`, for a join that reads its rows with
     /// [`Room::from_prefixed_row`].
-    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at"#;
+    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic"#;
 
     pub(crate) fn from_prefixed_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -137,6 +139,7 @@ impl Room {
             pins_changed_at: row.get("r_pins_changed_at")?,
             created_at: row.get("r_created_at")?,
             updated_at: row.get("r_updated_at")?,
+            topic: row.get("r_topic")?,
         })
     }
 
@@ -541,6 +544,30 @@ impl Room {
             tx.conn().execute_cached("UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?", params![icon_name, self.updated_at, self.id])?;
             self.icon_name = icon_name;
         }
+        Ok(())
+    }
+
+    pub fn normalize_topic(topic: Option<&str>) -> Result<Option<String>> {
+        let topic = topic.unwrap_or_default().trim();
+        if topic.chars().count() > 1024 {
+            let mut errors = Errors::default();
+            errors.add("topic", "is too long (maximum is 1024 characters)");
+            return Err(crate::Error::RecordInvalid(errors));
+        }
+        Ok((!topic.is_empty()).then(|| topic.to_string()))
+    }
+
+    pub fn update_topic(&mut self, tx: &mut Tx<'_>, topic: Option<&str>) -> Result<()> {
+        let topic = Self::normalize_topic(topic)?;
+        if topic == self.topic {
+            return Ok(());
+        }
+        self.updated_at = tx.now();
+        tx.conn().execute_cached(
+            "UPDATE rooms SET topic=?,updated_at=? WHERE id=?",
+            params![topic, self.updated_at, self.id],
+        )?;
+        self.topic = topic;
         Ok(())
     }
 

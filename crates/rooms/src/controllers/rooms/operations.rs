@@ -4,6 +4,12 @@ use crate::controllers::presenters::page::db_error;
 use campfire_db::{Room, RoomType, User};
 use campfire_kit::{Ctx, Result};
 
+pub struct RoomChanges {
+    pub name: Option<Option<String>>,
+    pub icon: Option<Option<String>>,
+    pub topic: Option<Option<String>>,
+}
+
 pub async fn create(
     c: &Ctx,
     kind: RoomType,
@@ -40,17 +46,39 @@ pub async fn update(
     icon: Option<Option<String>>,
     kind: Option<RoomType>,
 ) -> campfire_db::Result<Room> {
+    update_with_topic(
+        c,
+        room,
+        RoomChanges {
+            name,
+            icon,
+            topic: None,
+        },
+        kind,
+    )
+    .await
+}
+
+pub async fn update_with_topic(
+    c: &Ctx,
+    room: Room,
+    changes: RoomChanges,
+    kind: Option<RoomType>,
+) -> campfire_db::Result<Room> {
     c.app()
         .db
         .write(move |tx| {
-            let mut room = room;
+            let mut room = Room::find(tx.conn(), room.id)?;
             room.update_with_icon(
                 tx,
-                name.as_ref().map(|n| n.as_deref()),
+                changes.name.as_ref().map(|n| n.as_deref()),
                 kind,
-                icon.as_ref().map(|i| i.as_deref()),
+                changes.icon.as_ref().map(|i| i.as_deref()),
                 crate::rich_text::room_icon_resolves,
             )?;
+            if let Some(topic) = changes.topic {
+                room.update_topic(tx, topic.as_deref())?;
+            }
             Ok(room)
         })
         .await

@@ -125,6 +125,7 @@ export function sidebarRowFixture(
       creatorId: 7,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
+      topic: null,
     },
     membership: {
       id: roomId * 10,

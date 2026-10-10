@@ -549,3 +549,47 @@ fn receiving_advances_the_read_pointer_of_live_members_and_the_author() {
     assert!(kevin.unread());
     assert_ne!(kevin.last_read_message_id, Some(message.id), "disconnected keeps its boundary");
 }
+
+#[test]
+fn room_topic_trims_clears_and_counts_unicode_characters() {
+    assert_eq!(
+        Room::normalize_topic(Some(" \n Team <b>plans</b> \t"))
+            .unwrap()
+            .as_deref(),
+        Some("Team <b>plans</b>")
+    );
+    for blank in [None, Some(""), Some(" \n\t ")] {
+        assert_eq!(Room::normalize_topic(blank).unwrap(), None);
+    }
+    let limit = "🦀".repeat(1024);
+    assert_eq!(Room::normalize_topic(Some(&limit)).unwrap(), Some(limit));
+    let error = Room::normalize_topic(Some(&"界".repeat(1025))).unwrap_err();
+    let crate::Error::RecordInvalid(errors) = error else {
+        panic!("expected validation")
+    };
+    assert_eq!(
+        errors.on("topic"),
+        ["is too long (maximum is 1024 characters)"]
+    );
+}
+
+#[test]
+fn room_topic_round_trips_and_invalid_updates_preserve_the_room() {
+    let t = TestDb::new();
+    let room_id = id("pets");
+    t.write(move |tx| {
+        Room::find(tx.conn(), room_id)?.update_topic(tx, Some("  Planning\nhttps://example.com  "))
+    });
+    assert_eq!(
+        t.read(|c| Room::find(c, room_id)).topic.as_deref(),
+        Some("Planning\nhttps://example.com")
+    );
+    let before = t.read(|c| Room::find(c, room_id));
+    let failure = t.db.write_blocking(move |tx| {
+        Room::find(tx.conn(), room_id)?.update_topic(tx, Some(&"x".repeat(1025)))
+    });
+    assert!(matches!(failure, Err(crate::Error::RecordInvalid(_))));
+    assert_eq!(t.read(|c| Room::find(c, room_id)), before);
+    t.write(move |tx| Room::find(tx.conn(), room_id)?.update_topic(tx, Some("  ")));
+    assert_eq!(t.read(|c| Room::find(c, room_id)).topic, None);
+}
