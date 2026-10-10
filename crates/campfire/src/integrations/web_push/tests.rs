@@ -425,7 +425,7 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
         slack_network: Network::system(),
         subscription_network: original.subscription_network.clone(),config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),
         db:db.clone(),storage:original.storage.clone(),cable:original.cable.clone(),broadcasts:original.broadcasts.clone(),
-        jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),fragment_cache:original.fragment_cache.clone(),
+        jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),json_cache:original.json_cache.clone(),
     });
     let thread_id = db.write(|tx| {
         let thread=ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("WS17 pushes".into()),..Default::default()})?;
@@ -517,7 +517,7 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
         slack_network: Network::system(),
         subscription_network: original.subscription_network.clone(),config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),
         db:db.clone(),storage:original.storage.clone(),cable:original.cable.clone(),broadcasts:original.broadcasts.clone(),
-        jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),fragment_cache:original.fragment_cache.clone(),
+        jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),json_cache:original.json_cache.clone(),
     });
     let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::queue::runner_config(&app.config));
     wait_for_jobs_and_deliveries(&db, &pool, &["Push::Subscription::TestNotificationJob"]).await;

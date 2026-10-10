@@ -453,7 +453,7 @@ pub(crate) fn scheduled_rows(
                         room_id: source.room_id,
                         thread_id: source.thread_id,
                         creator_id: source.creator_id,
-                        author_name: author.name,
+                        author_name: author.display_name().to_owned(),
                         room_label: if room.direct() {
                             "a direct message".into()
                         } else {

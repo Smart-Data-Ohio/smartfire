@@ -1090,7 +1090,7 @@ async fn spa_api_rooms_management_changes_publish_refreshes_to_the_real_sync_soc
         };
         assert_eq!(row.refresh_room, Some(true));
         assert_eq!(row.room.name.as_deref(), Some("API room"));
-        let mut body = json!({"type":name,"name":"Live edit"});
+        let mut body = json!({"type":name,"name":"Live edit","topic":" Live topic "});
         if name != "open" {
             body["userIds"] = json!([DAVID, JASON]);
         }
@@ -1107,6 +1107,16 @@ async fn spa_api_rooms_management_changes_publish_refreshes_to_the_real_sync_soc
             unreachable!()
         };
         assert_eq!(row.refresh_room, Some(true));
+        assert_eq!(serde_json::to_value(&row.room).unwrap()["topic"], json!("Live topic"));
+        let mut body = json!({"type":name,"topic":"Topic only"});
+        if name != "open" { body["userIds"] = json!([DAVID,JASON]); }
+        let reply = write(&mut david, Method::PATCH, &format!("/api/v1/rooms/{id}"), body).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let event=sync.until(|event| matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == id && row.room.topic.as_deref() == Some("Topic only")), |_| false).await;
+        let api::SyncPayload::SidebarRowUpserted(row) = event.payload else { unreachable!() };
+        assert_eq!(row.refresh_room, Some(true));
+        assert_eq!(row.room.name.as_deref(), Some("Live edit"));
+
         let reply = write(
             &mut david,
             Method::DELETE,
@@ -1238,4 +1248,79 @@ async fn spa_api_board_settings_authorization_and_validation() {
         StatusCode::NOT_FOUND,
         "leaving the board removes it from a member"
     );
+}
+
+#[tokio::test]
+async fn spa_api_room_topics_round_trip_validate_and_reuse_name_permissions() {
+    let a = app().await.expect("frozen seeds required");
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut member = a.sign_in(LOU).await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for kind in ["open", "closed", "board", "voice", "stage"] {
+        let created = created(&mut kevin, kind, &[KEVIN, LOU, DAVID]).await;
+        let path = format!("/api/v1/rooms/{}", created.room.id);
+        let mut body =
+            json!({"type":kind,"topic":"  Plans <b>literally</b>\nhttps://example.com  "});
+        if kind != "open" {
+            body["userIds"] = json!([KEVIN, LOU, DAVID]);
+        }
+        super::admin_tests::settle(&capture).await;
+        let before = dump(&a).await;
+        let denied = write(&mut member, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(denied.status, StatusCode::FORBIDDEN);
+        assert_eq!(dump(&a).await, before);
+        assert_eq!(
+            parse::<Value>(&kevin.send(get(&path)).await)["room"]["topic"],
+            json!(null)
+        );
+        assert!(super::admin_tests::settle(&capture).await.is_empty());
+        let saved = write(&mut kevin, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+        let expected = json!("Plans <b>literally</b>\nhttps://example.com");
+        assert_eq!(parse::<Value>(&saved)["room"]["topic"], expected);
+        assert_eq!(
+            parse::<Value>(&kevin.send(get(&path)).await)["room"]["topic"],
+            expected
+        );
+        assert_eq!(
+            parse::<Value>(&kevin.send(get(&format!("{path}/edit"))).await)["topic"],
+            expected
+        );
+        body.as_object_mut().unwrap().remove("topic");
+        let omitted = write(&mut kevin, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(parse::<Value>(&omitted)["room"]["topic"], expected);
+        super::admin_tests::settle(&capture).await;
+        let before = dump(&a).await;
+        body["name"] = json!("Must not persist");
+        body["topic"] = json!("界".repeat(1025));
+        let invalid = write(&mut kevin, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(
+            invalid.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            invalid.text()
+        );
+        assert_eq!(
+            error(&invalid)["fields"]["topic"],
+            json!(["is too long (maximum is 1024 characters)"])
+        );
+        assert_eq!(dump(&a).await, before);
+        assert_eq!(
+            parse::<Value>(&kevin.send(get(&path)).await)["room"]["topic"],
+            expected
+        );
+        assert!(super::admin_tests::settle(&capture).await.is_empty());
+        body.as_object_mut().unwrap().remove("name");
+        body["topic"] = json!("🦀".repeat(1024));
+        let limit = write(&mut david, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(limit.status, StatusCode::OK, "{}", limit.text());
+        assert_eq!(parse::<Value>(&limit)["room"]["topic"], body["topic"]);
+        for blank in [json!(" \n "), json!(null)] {
+            body["topic"] = blank;
+            let cleared = write(&mut david, Method::PATCH, &path, body.clone()).await;
+            assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+            assert_eq!(parse::<Value>(&cleared)["room"]["topic"], json!(null));
+        }
+    }
 }

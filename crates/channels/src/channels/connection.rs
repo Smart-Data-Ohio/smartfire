@@ -62,7 +62,7 @@ impl Authenticate<CableUser> for SessionAuthenticator {
         if user.requires_two_factor() && !session.two_factor_verified() {
             return None;
         }
-        Some(CableUser { id: user.id, name: user.name, role: user.role, status: user.status, session_id: session.id })
+        Some(CableUser { id: user.id, name: user.display_name().to_owned(), role: user.role, status: user.status, session_id: session.id })
     }
 }
 
@@ -90,7 +90,7 @@ mod tests {
     /// A session for a new user, last active `idle` seconds ago.
     async fn session(db: &Database, role: Role, idle: i64) -> Session {
         db.write(move |tx| {
-            let attributes = NewUser { name: format!("{role:?} {idle}"), email_address: None, password_digest: None, role, bio: None, icon_name: None, bot_token_digest: None };
+            let attributes = NewUser { name: format!("{role:?} {idle}"), email_address: None, password_digest: None, role, bio: None, icon_name: None, bot_token_digest: None, ..Default::default() };
             let user = User::create(tx, attributes)?;
             let attributes = NewSession { user_agent: Some("test"), ip_address: Some("8.8.8.8"), two_factor_verified: true, ..Default::default() };
             let session = Session::start_with(tx, user.id, attributes)?;

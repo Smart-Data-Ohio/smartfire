@@ -19,7 +19,7 @@ use regex::Regex;
 const LAYERS: &[(&str, &[&str])] = &[
     // `campfire_app`'s modules that still hold tests here (the rest are `use`s of campfire_app).
     ("app", &["app", "huddle", "integrations"]),
-    // `campfire_web`'s mirrors here, which hold tests of theirs.
+    // `campfire_runtime`'s mirrors here, which hold tests of theirs.
     ("web", &["concerns", "controllers::presenters", "mail"]),
     // `campfire_channels`'s mirrors here, which hold tests of theirs.
     ("channels", &["channels", "jobs"]),

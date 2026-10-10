@@ -453,7 +453,7 @@ pub fn form_view(
     FormData {
         room_name: source.room_name.clone(),
         plain: source.plain.clone(),
-        creator: source.creator.name.clone(),
+        creator: source.creator.display_name().to_owned(),
         connected: source.token.is_some(),
         boards,
         title,

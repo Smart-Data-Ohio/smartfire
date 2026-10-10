@@ -1,5 +1,4 @@
 //! Embedded assets shared by retained pages, APIs and persisted rich text.
-//! The classic browser bundles remain in `campfire_assets` until their callers are removed.
 
 mod helpers;
 mod serve;

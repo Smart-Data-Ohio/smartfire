@@ -274,6 +274,42 @@ fn copied_body_mentions_do_not_notify_while_a_new_forward_note_can() {
 // The rest of `normalize_destinations`.
 
 #[test]
+fn forward_note_nicknames_notify_the_unique_active_member() {
+    let t = frozen();
+    let source = source(&t);
+    t.write(|tx| {
+        crate::User::find(tx.conn(), id("jason"))?.update(tx, crate::UserChanges {
+            nickname: Some(Some("NickExample".into())), ..Default::default()
+        })?;
+        tx.conn().execute_batch("DELETE FROM activity_items; UPDATE memberships SET involvement='mentions'; UPDATE users SET dnd_enabled=0,quiet_hours_enabled=0,ooo_until=NULL")?;
+        Ok(())
+    });
+    let forwarded = forward_one(&t, &source, "watercooler", Some("@[NickExample] @[NickExample] please review"));
+    assert_eq!(t.read(|c| forwarded.mentionees(c, &BasicRichText)).iter().map(|user| user.id).collect::<Vec<_>>(), [id("jason")]);
+    let item = t.read(|c| crate::ActivityItem::find_by_user_and_source(c, id("jason"), "Message", forwarded.id)).unwrap();
+    assert_eq!(item.event_type, "mention");
+}
+
+#[test]
+fn forward_note_display_names_reject_collisions_and_ignore_inactive_nonmembers() {
+    let t = frozen();
+    t.write(|tx| {
+        crate::User::find(tx.conn(), id("david"))?.update(tx, crate::UserChanges {
+            nickname: Some(Some("Jason".into())), ..Default::default()
+        })?;
+        Ok(())
+    });
+    assert!(t.read(|c| crate::models::message::forward_note_mentionees(c, id("watercooler"), "@[Jason]")).is_empty());
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET status=1 WHERE id=?", [id("david")])?;
+        tx.conn().execute("DELETE FROM memberships WHERE user_id=? AND room_id=?", rusqlite::params![id("kevin"), id("watercooler")])?;
+        tx.conn().execute("UPDATE users SET nickname='Jason' WHERE id=?", [id("kevin")])?;
+        Ok(())
+    });
+    assert_eq!(t.read(|c| crate::models::message::forward_note_mentionees(c, id("watercooler"), "@[Jason]")).iter().map(|user| user.id).collect::<Vec<_>>(), [id("jason")]);
+}
+
+#[test]
 fn refuses_empty_excess_foreign_duplicate_and_unavailable_destinations() {
     let t = frozen();
     let source = source(&t);

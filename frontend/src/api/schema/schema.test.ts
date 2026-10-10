@@ -24,6 +24,8 @@ const userJson = {
   agent: null,
   createdAt: "2026-09-26T12:26:46.848Z",
   updatedAt: "2026-09-26T12:26:46.848000Z",
+  accountName: "Ada Lovelace",
+  pronouns: null,
 } as const;
 
 const messageJson = {
@@ -65,6 +67,7 @@ const roomJson = {
   creatorId: 7,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
+  topic: null,
 } as const;
 
 const membershipJson = {

@@ -59,7 +59,7 @@ pub fn uploads(
     };
     let mut values = vec![Value::Integer(room_id)];
     let mut sql = format!(
-        "SELECT a.blob_id,m.id,m.thread_id,u.name,a.created_at FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND m.room_id=? AND ({condition})"
+        "SELECT a.blob_id,m.id AS file_message_id,m.thread_id,a.created_at AS file_created_at,u.* FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND m.room_id=? AND ({condition})"
     );
     if !filename.is_empty() {
         sql.push_str(" AND LOWER(b.filename) LIKE ? ESCAPE '\\'");
@@ -76,14 +76,14 @@ pub fn uploads(
         .query_map(rusqlite::params_from_iter(values), |r| {
             Ok(Upload {
                 blob_id: r.get(0)?,
-                message_id: r.get(1)?,
+                message_id: r.get("file_message_id")?,
                 thread_id: r.get(2)?,
-                creator_name: r.get(3)?,
-                created_at: r.get(4)?,
+                creator_name: crate::User::from_row(r)?.display_name().to_owned(),
+                created_at: r.get("file_created_at")?,
             })
         })?
         .collect::<rusqlite::Result<_>>()?)
 }
 pub fn drives(conn: &Connection, room_id: i64, size: i64) -> Result<Vec<Drive>> {
-    Ok(conn.prepare("SELECT d.file_id,m.id,m.thread_id,u.name,d.created_at FROM drive_attachments d JOIN messages m ON m.id=d.message_id JOIN users u ON u.id=m.creator_id WHERE m.room_id=? ORDER BY d.created_at DESC,d.id DESC LIMIT ?")?.query_map(params![room_id,size+1],|r|Ok(Drive{file_id:r.get(0)?,message_id:r.get(1)?,thread_id:r.get(2)?,creator_name:r.get(3)?,created_at:r.get(4)?}))?.collect::<rusqlite::Result<_>>()?)
+    Ok(conn.prepare("SELECT d.file_id,m.id AS file_message_id,m.thread_id,d.created_at AS file_created_at,u.* FROM drive_attachments d JOIN messages m ON m.id=d.message_id JOIN users u ON u.id=m.creator_id WHERE m.room_id=? ORDER BY d.created_at DESC,d.id DESC LIMIT ?")?.query_map(params![room_id,size+1],|r|Ok(Drive{file_id:r.get(0)?,message_id:r.get("file_message_id")?,thread_id:r.get(2)?,creator_name:crate::User::from_row(r)?.display_name().to_owned(),created_at:r.get("file_created_at")?}))?.collect::<rusqlite::Result<_>>()?)
 }

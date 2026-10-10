@@ -44,6 +44,8 @@ export const User = Schema.Struct({
   createdAt: Timestamp,
   /** `users.updated_at`, to the microsecond: of two copies of a user, the client keeps the later. */
   updatedAt: RowTimestamp,
+  accountName: Schema.String,
+  pronouns: Schema.NullOr(Schema.String),
 });
 
 export type User = typeof User.Type;

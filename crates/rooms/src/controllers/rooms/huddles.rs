@@ -112,7 +112,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         config.api_key.as_deref().unwrap(),
         config.api_secret.as_deref().unwrap(),
         &livekit::Participant {
-            name: &concerns::require_current_user(c)?.name,
+            name: concerns::require_current_user(c)?.display_name(),
             identity: &grant.identity,
             room_name: &grant.room_name,
             can_publish: livekit::can_publish(
@@ -126,7 +126,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &json!({"url":config.public_url,"token":token,"room":room_json(c,&room).await?,"identity":grant.identity,"grant_id":grant.id}))
 }
 fn participant(c: &Ctx, user: &User, identities: Vec<String>) -> Value {
-    json!({"id":user.id,"name":user.name,"avatar_url":c.url_for(&presenters::avatar_path(&c.app().secrets,user)),"identities":identities})
+    json!({"id":user.id,"name":user.display_name(),"avatar_url":c.url_for(&presenters::avatar_path(&c.app().secrets,user)),"identities":identities})
 }
 pub async fn participants(c: &mut Ctx) -> Result {
     before(c).await?;

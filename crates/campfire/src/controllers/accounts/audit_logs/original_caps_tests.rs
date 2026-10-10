@@ -40,7 +40,7 @@ async fn run(name: &str, limit: i64) {
                 campfire_kit::get(action.clone()).merge(campfire_kit::post(action.clone())),
             )
             .route("/", campfire_kit::get(action))
-            .merge(crate::controllers::spa::routes(true, "public, max-age=31536000")),
+            .merge(crate::controllers::spa::routes("public, max-age=31536000")),
         kit,
     );
     let oracle: Value = serde_json::from_str(include_str!(

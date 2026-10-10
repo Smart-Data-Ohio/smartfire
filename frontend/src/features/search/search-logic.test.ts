@@ -15,7 +15,7 @@ import {
   textWords,
 } from "./query.ts";
 import { isEditable, searchShortcut } from "./search-keys.ts";
-import { flattenTypeahead, fromHandle, typeaheadSections } from "./typeahead.ts";
+import { flattenTypeahead, typeaheadSections } from "./typeahead.ts";
 
 const NOW = new Date(2026, 9, 6, 12, 0).getTime();
 
@@ -153,6 +153,23 @@ describe("highlight", () => {
 });
 
 describe("typeahead", () => {
+  it("selects a nickname by stable author ID, including duplicate display names", () => {
+    const source = {
+      ...SOURCE,
+      items: [
+        item({ key: "person:2", kind: "person", label: "NickExample", userId: 2 }),
+        item({ key: "person:6", kind: "person", label: "NickExample", userId: 6 }),
+      ],
+    };
+
+    const suggestions = flattenTypeahead(typeaheadSections("launch from:nick", source));
+
+    expect(suggestions.map((suggestion) => suggestion.action)).toEqual([
+      { kind: "complete", value: "launch from_id:2 " },
+      { kind: "complete", value: "launch from_id:6 " },
+    ]);
+  });
+
   it("shows recent searches and the operators while the field is empty", () => {
     const sections = typeaheadSections("", SOURCE);
 
@@ -199,8 +216,8 @@ describe("typeahead", () => {
     const from = flattenTypeahead(typeaheadSections("launch from:ma", SOURCE));
 
     expect(from.map((entry) => entry.action)).toEqual([
-      { kind: "complete", value: "launch from:@maya " },
-      { kind: "complete", value: "launch from:@priya " },
+      { kind: "complete", value: "launch from_id:2 " },
+      { kind: "complete", value: "launch from_id:6 " },
     ]);
 
     const into = flattenTypeahead(typeaheadSections("in:lau", SOURCE));
@@ -221,10 +238,6 @@ describe("typeahead", () => {
     ]);
 
     expect(flattenTypeahead(typeaheadSections("is:", SOURCE))[0]?.detail).toBe("is:thread");
-  });
-
-  it("names people by their first name for from:", () => {
-    expect(fromHandle("Lucía Fernández")).toBe("lucia");
   });
 });
 

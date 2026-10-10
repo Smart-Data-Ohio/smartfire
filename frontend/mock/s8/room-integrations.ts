@@ -181,6 +181,8 @@ export function createRoomIntegrations(ctx: S2Context): RoomIntegrations {
       agent: null,
       createdAt: timestamp(now),
       updatedAt: rowTimestamp(now),
+      accountName: "GitHub",
+      pronouns: null,
     };
 
     world.users.set(GITHUB_BOT_ID, bot);

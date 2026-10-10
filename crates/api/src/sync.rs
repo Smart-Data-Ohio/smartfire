@@ -532,9 +532,13 @@ impl SyncSession for Session {
             return;
         };
         let user_id = self.user.id;
-        let Ok(Some(room)) = app
+        let Ok(Some((room, name))) = app
             .db
-            .read(move |conn| conversation.room(conn, user_id))
+            .read(move |conn| {
+                let Some(room) = conversation.room(conn, user_id)? else { return Ok(None) };
+                let name = campfire_db::User::find(conn, user_id)?.display_name().to_owned();
+                Ok(Some((room, name)))
+            })
             .await
         else {
             return;
@@ -545,7 +549,7 @@ impl SyncSession for Session {
         };
         let payload = serde_json::json!({
             "action": if on { "start" } else { "stop" },
-            "user": { "id": self.user.id, "name": self.user.name },
+            "user": { "id": self.user.id, "name": name },
         });
         app.cable
             .broadcast_to("TypingNotificationsChannel", &[&gid.to_param()], &payload);

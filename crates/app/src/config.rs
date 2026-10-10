@@ -18,13 +18,8 @@
 //! - Not applicable: `REDIS_URL` and `WEB_CONCURRENCY` (no Redis, one process), `PORT` (Puma's;
 //!   the app listens on Thruster's `TARGET_PORT`), and `SENTRY_DSN` and `SKIP_TELEMETRY` (the app
 //!   sends no telemetry).
-//! - `CAMPFIRE_FRAGMENT_CACHE_MB`: the JSON value store's limit in megabytes (default 32). The
-//!   reference caches values in Redis (`redis_cache_store`) with no `maxmemory`; this store is
-//!   in the process, so it's bounded like Rails' `MemoryStore` (default `size` 32 MB), evicting the
-//!   least recently used values. See `campfire_views::fragment_cache`.
 //! - `SPA_ENABLED`, `SPA_DEFAULT`: no longer read. The React SPA (`crates/spa`) under `/app` is
-//!   the only UI for signed-in people, whatever they say; the deploy workflow's `spa_mode` may
-//!   still write them.
+//!   the only UI for signed-in people. Legacy deployments may still supply either variable.
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -53,8 +48,6 @@ pub struct Config {
     pub db_readers: usize,
     pub job_concurrency: usize,
     pub log_level: String,
-    /// The fragment store's limit in bytes (`CAMPFIRE_FRAGMENT_CACHE_MB`).
-    pub fragment_cache_bytes: usize,
     pub mail: campfire_mail::config::Config,
     /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
     pub livekit_url: Option<String>,
@@ -70,10 +63,6 @@ pub struct Config {
     pub sign_in_google_domains: Vec<String>,
     /// Shared provider configuration from the same injected environment lookup.
     pub google_client: crate::integrations::google::api::Config,
-    /// The React SPA under `/app` (`controllers::spa`), and every ported classic page sending a
-    /// signed-in navigation there. Always `true` from the environment (`SPA_ENABLED` isn't read).
-    /// Only tests of the classic pages, which stay compiled until they're deleted, turn it off.
-    pub spa_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -171,8 +160,6 @@ impl Config {
             db_readers: number("RAILS_MAX_THREADS", 5)?.max(1),
             job_concurrency: number("JOB_CONCURRENCY", 2)?.max(1),
             log_level: present("RAILS_LOG_LEVEL").unwrap_or_else(|| "info".into()),
-            fragment_cache_bytes: number("CAMPFIRE_FRAGMENT_CACHE_MB", campfire_views::fragment_cache::DEFAULT_MAX_BYTES >> 20)?
-                .saturating_mul(1 << 20),
             livekit_url: get("LIVEKIT_URL"),
             huddle: crate::huddle::Config::from_lookup(&get),
             huddles_configured: crate::huddle_readiness::huddles_configured(&get),
@@ -185,7 +172,6 @@ impl Config {
                 client_secret: get("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
             },
-            spa_enabled: true,
         })
     }
 }
@@ -228,7 +214,6 @@ mod tests {
         assert_eq!(config.storage.database, PathBuf::from("storage/db/production.sqlite3"));
         assert_eq!(config.storage.files, PathBuf::from("storage/files"));
         assert_eq!(config.storage.backup_file(), PathBuf::from("storage/backups/production.sqlite3"));
-        assert_eq!(config.fragment_cache_bytes, 32 * 1024 * 1024);
     }
 
     #[test]
@@ -244,13 +229,6 @@ mod tests {
         assert_eq!(explicit.storage.database, PathBuf::from("/db/renamed.sqlite3"));
         assert_eq!(explicit.storage.files, PathBuf::from("/files"));
         assert_eq!(explicit.storage.backup_file(), PathBuf::from("/snapshots/renamed.sqlite3"));
-    }
-
-    #[test]
-    fn fragment_cache_size_in_megabytes() {
-        let bytes = config(&[("SECRET_KEY_BASE", "abc"), ("CAMPFIRE_FRAGMENT_CACHE_MB", "64")]).unwrap().fragment_cache_bytes;
-        assert_eq!(bytes, 64 * 1024 * 1024);
-        assert!(config(&[("SECRET_KEY_BASE", "abc"), ("CAMPFIRE_FRAGMENT_CACHE_MB", "lots")]).is_err());
     }
 
     #[test]
@@ -282,11 +260,11 @@ mod tests {
 
     #[test]
     fn the_spa_is_on_whatever_the_old_switches_say() {
-        let enabled = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).unwrap().spa_enabled;
-        assert!(enabled(&[]));
-        for value in ["0", "false", "off", "", "1"] {
-            for default in ["classic", "next", ""] {
-                assert!(enabled(&[("SPA_ENABLED", value), ("SPA_DEFAULT", default)]), "{value:?}/{default:?}");
+        let accepts = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).is_ok();
+        assert!(accepts(&[]));
+        for value in ["0", "false", "off", "", "1", "garbage"] {
+            for default in ["classic", "next", "", "garbage"] {
+                assert!(accepts(&[("SPA_ENABLED", value), ("SPA_DEFAULT", default)]), "{value:?}/{default:?}");
             }
         }
     }

@@ -435,7 +435,7 @@ fn classic_detail(
     user: &User,
     event: &CalendarEvent,
 ) -> campfire_db::Result<Value> {
-    let show = campfire_web::controllers::presenters::events::show(conn, room, user, event)?;
+    let show = campfire_runtime::presenters::events::show(conn, room, user, event)?;
     let row = &show.event;
     Ok(json!({
         "roomId":room.id,"roomName":show.room_name,"event":classic_row(conn,row)?,
@@ -478,7 +478,7 @@ async fn spa_api_events_list_and_details_match_every_classic_presenter_fact() {
         let expected = a.db().read(move |conn| {
             let room = Room::find(conn, DESIGNERS)?;
             let user = User::find(conn, user_id)?;
-            let view = campfire_web::controllers::presenters::events::index(conn,&room,&user,now)?;
+            let view = campfire_runtime::presenters::events::index(conn,&room,&user,now)?;
             Ok(json!({
                 "roomId":DESIGNERS,"roomName":view.room_name,"roomKind":"closed","mayCreate":true,
                 "upcoming":view.upcoming.iter().map(|row|classic_row(conn,row)).collect::<campfire_db::Result<Vec<_>>>()?,
@@ -579,7 +579,7 @@ async fn spa_api_events_form_defaults_values_and_scopes_match_classic_forms() {
     assert_eq!(new["scopeOptions"], json!([]));
     let expected_venues = a.db().read(|conn| {
         let values = campfire_db::NewCalendarEvent {room_id:DESIGNERS,organizer_id:DAVID,time_zone:"UTC".into(),..Default::default()};
-        let view = campfire_web::controllers::presenters::events::form(conn,&Room::find(conn,DESIGNERS)?,&User::find(conn,DAVID)?,&values,None,&Default::default(),None)?;
+        let view = campfire_runtime::presenters::events::form(conn,&Room::find(conn,DESIGNERS)?,&User::find(conn,DAVID)?,&values,None,&Default::default(),None)?;
         Ok(view.venues.into_iter().map(|venue|json!({"roomId":venue.id,"name":venue.name,"kind":if venue.stage {"stage"} else {"voice"}})).collect::<Vec<_>>())
     }).await.unwrap();
     assert_eq!(
@@ -604,7 +604,7 @@ async fn spa_api_events_form_defaults_values_and_scopes_match_classic_forms() {
                 starts_at:Some(event.starts_at),ends_at:event.ends_at,time_zone:event.time_zone.clone(),venue_room_id:event.venue_room_id,
                 recurrence_rule:event.recurrence_rule.clone(),recurrence_until:event.recurrence_until,meet_link_requested:event.meet_link_requested,
             };
-            let view=campfire_web::controllers::presenters::events::form(conn,&Room::find(conn,DESIGNERS)?,&User::find(conn,DAVID)?,&attributes,Some(&event),&Default::default(),Some(event.title.clone()))?;
+            let view=campfire_runtime::presenters::events::form(conn,&Room::find(conn,DESIGNERS)?,&User::find(conn,DAVID)?,&attributes,Some(&event),&Default::default(),Some(event.title.clone()))?;
             Ok(json!({
                 "title":view.title,"description":view.description,"startsAt":view.starts_at,"endsAt":view.ends_at,"timeZone":view.time_zone,
                 "venueRoomId":view.venue_room_id,"recurrenceRule":view.recurrence_rule,"recurrenceUntil":view.recurrence_until,

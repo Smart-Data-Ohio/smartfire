@@ -214,13 +214,16 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                         continue;
                     }
                     if table == "rooms"
-                        && matches!(column.as_str(), "workspace_category_id" | "workspace_position")
+                        && matches!(
+                            column.as_str(),
+                            "topic" | "workspace_category_id" | "workspace_position"
+                        )
                     {
                         continue;
                     }
                     // Port-only user preferences and activity counter that Rails doesn't have.
                     if table == "users"
-                        && matches!(column.as_str(), "activity_revision" | "appearance_preferences")
+                        && matches!(column.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname")
                     {
                         continue;
                     }

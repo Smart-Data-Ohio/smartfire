@@ -29,7 +29,7 @@ pub const TYPES: [(&str, &str); 9] = [
     ("reminders", "Reminders"),
     ("security", "Security"),
 ];
-pub fn path(filter: &str, kind: &str, before: Option<i64>, stream: bool) -> String {
+pub fn path(filter: &str, kind: &str, before: Option<i64>) -> String {
     use h::url::{Param, with_query};
     let mut params = vec![
         ("status", Param::One(filter.into())),
@@ -38,12 +38,5 @@ pub fn path(filter: &str, kind: &str, before: Option<i64>, stream: bool) -> Stri
     if let Some(before) = before {
         params.push(("before", Param::One(before.to_string())));
     }
-    with_query(
-        if stream {
-            "/activity.turbo_stream"
-        } else {
-            "/activity"
-        },
-        params,
-    )
+    with_query("/activity", params)
 }

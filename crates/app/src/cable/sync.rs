@@ -215,6 +215,7 @@ impl RendererSlot {
 /// cable sink handles (its type's path, as the sink names it, without `campfire_db::models::`,
 /// `campfire_db::` or `crate::integrations::`).
 pub const TWINS: &[(&str, &[&str])] = &[
+    ("Broadcasts::user_updated", &["user.updated", "sidebar.row.upserted"]),
     ("workspace_branding::publish", &["workspace.updated"]),
     ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
     ("sync::settings_updated", &["settings.updated"]),
@@ -1711,6 +1712,17 @@ pub fn settings_updated(server: &Cable, settings: campfire_api_types::Settings) 
         &SyncPayload::SettingsUpdated(Box::new(settings)),
         |publication| publication,
     );
+}
+
+pub fn user_updated(server: &Cable, user: campfire_api_types::User) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let user_id = user.id;
+    send(server, Audience::Everyone, &SyncPayload::UserUpdated(user), |publication| SyncPublication {
+        coalesce: Some(format!("user:{user_id}")),
+        ..publication
+    });
 }
 
 /// The twin of a status badge update (`StatusBadgeBroadcast`), whose presence is the badge's

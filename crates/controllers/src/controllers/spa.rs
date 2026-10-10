@@ -1,5 +1,5 @@
 //! The React SPA under `/app` (`crates/spa` embeds the build): the only UI for signed-in people.
-//! Always mounted in a running app (`Config::spa_enabled`); only classic page tests leave it off.
+//! Always mounted with the JSON API and sync socket.
 //!
 //! - `GET /app/assets/*`: Vite's content-hashed files, cached as immutable, in the client's best
 //!   encoding (brotli, gzip or the file itself). Public, like `/assets`, with the classic pages'
@@ -29,12 +29,8 @@ use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
 
-/// The SPA's routes when `enabled`, none otherwise. `immutable_cache_control` is the policy the
-/// app gives digest-stamped `/assets`.
-pub fn routes(enabled: bool, immutable_cache_control: &'static str) -> Router<Kit> {
-    if !enabled {
-        return Router::new();
-    }
+/// The SPA routes. `immutable_cache_control` is the policy for digest-stamped assets.
+pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
     let assets = move |State(kit): State<Kit>, request: Request| async move {
         match file_response(&kit, &request, immutable_cache_control) {
             Some(response) => response,
@@ -102,7 +98,7 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         None => None,
     };
     Ok(Boot {
-        user: BootUser { id: user.id, name: user.name, avatar_url },
+        user: BootUser { id: user.id, name: user.display_name().to_owned(), avatar_url },
         custom_styles: account.as_ref().and_then(|account| account.custom_styles.clone()),
         account: BootAccount {
             upload_limit_bytes: account.as_ref().map_or(

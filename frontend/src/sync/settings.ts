@@ -82,6 +82,8 @@ const UNCHANGED = {
     password: null,
     bio: null,
     githubLogin: null,
+    pronouns: null,
+    nickname: null,
   },
   appearance: { theme: null, textSize: null, timeZone: null, appearancePreferences: null },
   calls: { voiceMode: null, pushToTalkKey: null },

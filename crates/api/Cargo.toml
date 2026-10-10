@@ -4,7 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 # The single-page app's JSON API (`/api/v1`) and its sync socket's session (`/api/v1/sync`),
-# built on campfire_web's before-actions, campfire_messages' create path and campfire_app's
+# built on campfire_runtime's before-actions, campfire_messages' create path and campfire_app's
 # broadcasts. The wire types are campfire_api_types'; the socket protocol is campfire_cable's
 # `sync` module.
 
@@ -29,7 +29,6 @@ campfire_messages.workspace = true
 campfire_richtext.workspace = true
 campfire_rooms.workspace = true
 campfire_storage.workspace = true
-campfire_web.workspace = true
 rails_compat.workspace = true
 async-trait.workspace = true
 axum.workspace = true

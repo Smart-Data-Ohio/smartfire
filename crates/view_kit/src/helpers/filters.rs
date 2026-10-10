@@ -1,4 +1,4 @@
-//! Askama filter blocks shared by both shells. Classic-only blocks stay in `campfire_views`.
+//! Askama filter blocks for retained server pages.
 
 use std::fmt::Display;
 

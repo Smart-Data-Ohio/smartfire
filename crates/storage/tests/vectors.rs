@@ -309,12 +309,34 @@ fn blob_reads_and_metadata_writes_preserve_rails_processing_columns() {
     assert_eq!(Blob::find_by_key(&conn, &blob.key).unwrap(), Some(blob.clone()));
     assert_eq!(Blob::find_many(&conn, &[id]).unwrap()[&id], blob);
     assert_eq!(Blob::attached(&conn, "Message", 42, "attachment").unwrap(), Some(blob.clone()));
-    assert_eq!(Blob::attached_messages(&conn, &[42]).unwrap()[&42], blob);
+    let files = Blob::attached_messages(&conn, &[42]).unwrap();
+    assert!(!files[&42].grouped);
+    assert_eq!(files[&42].blobs, [blob.clone()]);
     let mut metadata = blob.metadata.clone();
     metadata.set("analyzed", Json::Bool(true));
     blob.update_metadata(&conn, metadata).unwrap();
     assert_eq!(Blob::find(&conn, id).unwrap(), Some(blob));
     assert_eq!(processing_state(), lease);
+}
+
+#[test]
+fn grouped_message_files_read_both_slots_in_attachment_order() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let first = campfire_storage::blob::NewBlob::unfurl(
+        b"first", Filename::new("first.txt"), Some("text/plain"), "local", false,
+    ).insert(&conn, now()).unwrap();
+    let second = campfire_storage::blob::NewBlob::unfurl(
+        b"second", Filename::new("second.txt"), Some("text/plain"), "local", false,
+    ).insert(&conn, now()).unwrap();
+    campfire_storage::blob::insert_attachment(&conn, "attachments", "Message", 42, second.id, now()).unwrap();
+    campfire_storage::blob::insert_attachment(&conn, "attachment", "Message", 42, first.id, now()).unwrap();
+    campfire_storage::blob::insert_attachment(&conn, "attachments", "Message", 43, first.id, now()).unwrap();
+    let files = Blob::attached_messages(&conn, &[42]).unwrap();
+    assert_eq!(files.len(), 1);
+    assert!(files[&42].grouped);
+    assert_eq!(files[&42].blobs, [second, first]);
+    assert!(Blob::attached_messages(&conn, &[]).unwrap().is_empty());
 }
 
 struct Comparison {

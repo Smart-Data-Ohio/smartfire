@@ -948,7 +948,177 @@ async fn grouped_files_are_kept_by_thread_and_board_openers() {
             page["messages"][0]["attachments"][1]["filename"],
             "second.txt"
         );
+        let before = write_counts(&a).await;
+        let retry = b.write(json_body(Method::POST, path, &body)).await;
+        assert_eq!(retry.status, StatusCode::OK, "{}", retry.text());
+        assert_eq!(write_counts(&a).await, before);
+        a.db().read(move |conn| {
+            let thread = campfire_db::ChannelThread::find(conn, thread_id)?;
+            assert_eq!(thread.message_count(conn)?, 1);
+            let files: i64 = conn.query_row("SELECT COUNT(*) FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.record_type='Message' AND m.thread_id=? AND a.name='attachments'", [thread_id], |row| row.get(0))?;
+            assert_eq!(files, 2);
+            Ok(())
+        }).await.unwrap();
     }
+}
+
+#[tokio::test]
+async fn grouped_files_followups_files_pins_saved_and_search_keep_every_file() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let first = upload(&mut david, "first-grouped.txt").await;
+    let second = upload(&mut david, "second-grouped.txt").await;
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        &json!({"clientMessageId": "grouped-readers", "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    let id = message.id;
+    let files: api::FileList = parse(&david.send(get(&format!("/api/v1/rooms/{ALL_TALK}/files"))).await);
+    let mut names = files.files.iter().filter(|file| file.message_id == id)
+        .map(|file| file.attachment.filename.as_str()).collect::<Vec<_>>();
+    names.sort_unstable();
+    assert_eq!(names, ["first-grouped.txt", "second-grouped.txt"]);
+    let pinned = david.write(json_body(Method::POST, &format!("/api/v1/messages/{id}/pin"), &json!({}))).await;
+    assert_eq!(pinned.status, StatusCode::CREATED, "{}", pinned.text());
+    let saved = david.write(json_body(Method::POST, "/api/v1/saved", &json!({"messageId": id}))).await;
+    assert_eq!(saved.status, StatusCode::CREATED, "{}", saved.text());
+    let saved_id = parse::<api::SavedItem>(&saved).id;
+    let activity_id = a.db().write(move |tx| {
+        Ok(tx.conn().query_row("INSERT INTO activity_items (user_id,source_type,source_id,event_type,created_at,updated_at) VALUES (?,'Message',?,'mention',?,?) RETURNING id",
+            rusqlite::params![DAVID, id, tx.now(), tx.now()], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    let activity: api::ActivityList = parse(&david.send(get("/api/v1/activity")).await);
+    assert_eq!(activity.items.iter().find(|item| item.id == activity_id).unwrap().source.body,
+        "second-grouped.txt, first-grouped.txt");
+    for path in [format!("/api/v1/rooms/{ALL_TALK}/pins"), "/api/v1/saved".into(),
+        format!("/api/v1/search?q=has:file%20in_id:{ALL_TALK}"),
+        format!("/api/v1/search?q=first-grouped%20in_id:{ALL_TALK}")] {
+        let reply = david.send(get(&path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+        let page: Value = parse(&reply);
+        let row = page["messages"].as_array().unwrap().iter().find(|row| row["id"] == id)
+            .unwrap_or_else(|| panic!("grouped message missing from {path}: {page}"));
+        assert_eq!(row["attachments"], serde_json::to_value(&message.attachments).unwrap(), "{path}");
+    }
+    let rich_text = a.booted.app.db.env().rich_text.clone();
+    a.db().read(move |conn| {
+        let message = campfire_db::Message::find(conn, id)?;
+        assert_eq!(message.plain_text_body(conn, &*rich_text)?, "second-grouped.txt, first-grouped.txt");
+        let room = campfire_db::Room::find(conn, ALL_TALK)?;
+        let push = campfire_db::PushSubscription::payload_for(conn, &*rich_text, &room, &message)?;
+        assert_eq!(push.body, "David: second-grouped.txt, first-grouped.txt");
+        let reminder = campfire_db::SavedItem::reminder_push(conn, &*rich_text, saved_id, &|_| true)?.unwrap();
+        assert_eq!(reminder.payload.body, "Reminder: second-grouped.txt, first-grouped.txt");
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn grouped_files_followups_bot_json_keeps_every_file_and_appends_fields() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let first = upload(&mut david, "first-bot.txt").await;
+    let second = upload(&mut david, "second-bot.txt").await;
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        &json!({"clientMessageId": "grouped-bot-json", "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id = parse::<api::MessageDTO>(&reply).id;
+    for path in [format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages"),
+        format!("/rooms/{ALL_TALK}/messages/{id}.json")] {
+        let reply = if path.ends_with(".json") {
+            david.write(json_body(Method::PATCH, &path, &json!({"message": {"markdown_source": ""}}))).await
+        }
+            else { a.anonymous().send(get(&path)).await };
+        assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+        let data: Value = parse(&reply);
+        let message = if path.ends_with(".json") { &data }
+            else { data.as_array().unwrap().iter().find(|row| row["id"] == id).unwrap() };
+        assert_eq!(message["body"]["plain_text"], "second-bot.txt, first-bot.txt");
+        assert_eq!(message["attachments"].as_array().unwrap().len(), 2);
+        assert_eq!(message["attachments"][0]["filename"], "second-bot.txt");
+        assert_eq!(message["attachments"][1]["filename"], "first-bot.txt");
+        for file in message["attachments"].as_array().unwrap() {
+            assert_eq!(file["content_type"], "text/plain");
+            assert_eq!(file["byte_size"], 5);
+            assert!(file["url"].as_str().unwrap().contains("/rails/active_storage/blobs/redirect/"));
+            assert!(file["download_url"].as_str().unwrap().ends_with("?disposition=attachment"));
+        }
+        assert_eq!(message.as_object().unwrap().keys().next_back().map(String::as_str), Some("attachments"));
+    }
+    let app = a.booted.app.clone();
+    a.db().read(move |conn| {
+        let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+        presenter.current_user_id = Some(DAVID);
+        presenter.cache_base_url = Some("https://payload.test".into());
+        let message = campfire_db::Message::find(conn, id)?;
+        let preloaded = presenter.preload_payload(std::slice::from_ref(&message))?;
+        let single = presenter.agent_message_payload(&message)?;
+        assert_eq!(preloaded.agent_message_payload(&message)?, single);
+        assert_eq!(preloaded.attachment(&message)?.unwrap().filename, "second-bot.txt");
+        assert_eq!(presenter.preload_plain_text(std::slice::from_ref(&message))?.plain_text_body(&message)?,
+            "second-bot.txt, first-bot.txt");
+        Ok(())
+    }).await.unwrap();
+    let captioned = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"),
+        &json!({"markdownSource": "A caption"}))).await;
+    assert_eq!(captioned.status, StatusCode::OK, "{}", captioned.text());
+    let app = a.booted.app.clone();
+    a.db().read(move |conn| {
+        let presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+        let message = campfire_db::Message::find(conn, id)?;
+        assert_eq!(message.plain_text_body(conn, &*app.db.env().rich_text)?, "A caption");
+        assert_eq!(presenter.plain_text_body(&message)?, "A caption");
+        assert_eq!(presenter.preload_plain_text(std::slice::from_ref(&message))?.plain_text_body(&message)?, "A caption");
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn grouped_files_followups_delete_purges_every_file_and_cleans_readers() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let first = upload(&mut david, "purge-first.txt").await;
+    let second = upload(&mut david, "purge-second.txt").await;
+    let file_ids = [blob_id(&a, &first), blob_id(&a, &second)];
+    let file_keys = a.db().read(move |conn| {
+        file_ids.iter().map(|id| campfire_db::Blob::find(conn, *id).map(|blob| blob.key))
+            .collect::<campfire_db::Result<Vec<_>>>()
+    }).await.unwrap();
+    assert!(file_keys.iter().all(|key| a.booted.app.storage.service.exist(key)));
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        &json!({"clientMessageId": "grouped-purge", "attachmentSignedIds": [first.signed_id, second.signed_id]}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id = parse::<api::MessageDTO>(&reply).id;
+    let pinned = david.write(json_body(Method::POST, &format!("/api/v1/messages/{id}/pin"), &json!({}))).await;
+    assert_eq!(pinned.status, StatusCode::CREATED, "{}", pinned.text());
+    let saved = david.write(json_body(Method::POST, "/api/v1/saved", &json!({"messageId": id}))).await;
+    assert_eq!(saved.status, StatusCode::CREATED, "{}", saved.text());
+    let deleted = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{id}"), &json!({}))).await;
+    assert_eq!(deleted.status, StatusCode::NO_CONTENT, "{}", deleted.text());
+    a.db().read(move |conn| {
+        for table in ["message_pins", "saved_items"] {
+            let count: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table} WHERE message_id=?"), [id], |row| row.get(0))?;
+            assert_eq!(count, 0, "{table}");
+        }
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='Message' AND record_id=?", [id], |row| row.get(0))?;
+        assert_eq!(count, 0);
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='ActiveStorage::PurgeJob'", [], |row| row.get(0))?;
+        assert_eq!(count, 2);
+        Ok(())
+    }).await.unwrap();
+    for file_id in file_ids {
+        crate::active_storage::purge(&a.booted.app, file_id).await.unwrap();
+    }
+    assert!(file_keys.iter().all(|key| !a.booted.app.storage.service.exist(key)));
+    a.db().read(move |conn| {
+        for file_id in file_ids {
+            assert!(campfire_storage::Blob::find(conn, file_id).unwrap().is_none());
+        }
+        Ok(())
+    }).await.unwrap();
+    let files: api::FileList = parse(&david.send(get(&format!("/api/v1/rooms/{ALL_TALK}/files?filename=purge"))).await);
+    assert!(files.files.is_empty());
 }
 
 #[tokio::test]

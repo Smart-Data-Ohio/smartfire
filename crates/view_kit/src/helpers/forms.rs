@@ -118,7 +118,7 @@ impl FormWith {
         self
     }
 
-    /// `auto_submit_form_with` (`FormsHelper`): prepends the auto-submit Stimulus controller.
+    /// Retained auth.js submits this form when its fields change.
     pub fn auto_submit(mut self) -> Self {
         let existing = self.data.get_str("data-controller").unwrap_or_default();
         let controller = format!("auto-submit {existing}").trim().to_string();

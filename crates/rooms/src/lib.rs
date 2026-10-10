@@ -10,7 +10,7 @@ pub mod controllers {
 
     // The layers below, under the paths this code names them by.
     pub(crate) use campfire_messages::controllers::{message_features, messages};
-    pub(crate) use campfire_web::controllers::presenters;
+    pub(crate) use campfire_runtime::presenters;
 }
 
 // The app, web and channels layers, under the paths this code used inside the campfire crate.

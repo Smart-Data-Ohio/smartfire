@@ -1,7 +1,6 @@
-//! Shared view helpers for the classic templates and the retained pages.
+//! HTML helpers for retained server pages.
 //!
-//! This crate has no templates and no layouts. Deleting the classic stylesheet set, import map,
-//! or `campfire_views` templates does not require editing the pages that stay server-rendered.
+//! This crate has no templates or layouts. Retained pages use their own assets and shells.
 
 pub mod flash;
 pub mod helpers;

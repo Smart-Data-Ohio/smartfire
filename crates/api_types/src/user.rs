@@ -35,6 +35,9 @@ pub struct User {
     /// `2026-10-07T10:15:00.123456Z`. String order equals time order; clients keep whichever copy
     /// of a user has the later value. Whole-second and millisecond rows are padded with zeros.
     pub updated_at: Timestamp,
+    /// The legal/account name; `name` is the shared display name.
+    pub account_name: String,
+    pub pronouns: Option<String>,
 }
 
 /// `users.role`.

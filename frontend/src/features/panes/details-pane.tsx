@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import type { RoomKind } from "../../gen/RoomKind.ts";
 import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
@@ -12,6 +12,7 @@ import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { preloadRoomSettings, settingsOverState } from "../rooms/room-settings-host.tsx";
+import { RoomTopic } from "../rooms/room-topic.tsx";
 import { useNotificationTarget } from "../sidebar/notifications-button.tsx";
 import { NotificationItems } from "../sidebar/room-menu.tsx";
 import { PaneFrame, RoomName } from "./pane-frame.tsx";
@@ -133,6 +134,7 @@ function ProfileRow({ userId }: { readonly userId: number }) {
  * profile.
  */
 export function DetailsPane({ roomId }: { readonly roomId: number }) {
+  const aboutId = useId();
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
   const { push } = usePaneNavigation(roomId);
   const direct = useDirectActions(roomId);
@@ -171,6 +173,14 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
             {isDirect ? KIND_LABELS[kind] : `${KIND_LABELS[kind]} · ${members}`}
           </p>
         </div>
+        {isDirect || detail.room.topic === null ? null : (
+          <section className="details-about" aria-labelledby={aboutId}>
+            <h4 id={aboutId}>About</h4>
+            <p className="details-topic">
+              <RoomTopic topic={detail.room.topic} />
+            </p>
+          </section>
+        )}
         <ul className="details-rows" aria-label="About this conversation">
           {otherId === undefined ? null : <ProfileRow userId={otherId} />}
           <NotificationsRow roomId={roomId} />

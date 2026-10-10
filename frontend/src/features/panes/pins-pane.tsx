@@ -11,6 +11,7 @@ import { SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { BodyHtml } from "../messages/body-html.tsx";
+import { messageFiles } from "../messages/message-files.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -87,9 +88,12 @@ function PinCard({ entry, now, onJump, onUnpin }: PinCardProps) {
         </span>
       </header>
       <BodyHtml html={message.bodyHtml} className="pin-card-body message-body" />
-      {message.attachment === null ? null : (
-        <p className="pin-card-file">{message.attachment.filename}</p>
-      )}
+      {messageFiles(message).map((file, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
+        <p key={`${index}:${file.url}`} className="pin-card-file">
+          {file.filename}
+        </p>
+      ))}
       <footer className="pin-card-footer">
         Pinned by {pinner?.name ?? UNKNOWN_NAME} · {timeAgo(pin.pinnedAt, now)}
       </footer>

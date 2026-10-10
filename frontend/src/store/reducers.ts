@@ -14,6 +14,7 @@ import {
   invalidateGithub,
   reconcileMessage,
 } from "./cards.ts";
+import { updateConversationRoom } from "./conversations.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
@@ -265,22 +266,30 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
   const roomId = detail.room.id;
   const timeline = timelineOf(state, roomId);
 
-  return {
-    ...state,
-    users: mergeUserList(state.users, detail.users),
-    rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
-    timelines: {
-      ...state.timelines,
-      [roomId]:
-        timeline.status === "ready"
-          ? timeline
-          : {
-              ...timeline,
-              unreadFromId: detail.unread?.firstUnreadMessageId ?? null,
-              unreadCount: detail.unread?.count ?? 0,
-            },
+  return updateConversationRoom(
+    {
+      ...state,
+      users: mergeUserList(state.users, detail.users),
+      rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
+      timelines: {
+        ...state.timelines,
+        [roomId]:
+          timeline.status === "ready"
+            ? timeline
+            : {
+                ...timeline,
+                unreadFromId: detail.unread?.firstUnreadMessageId ?? null,
+                unreadCount: detail.unread?.count ?? 0,
+              },
+      },
     },
-  };
+    {
+      roomId,
+      roomName: detail.displayName,
+      roomKind: detail.room.kind,
+      roomIconName: detail.room.iconName,
+    },
+  );
 }
 
 /**
@@ -947,14 +956,22 @@ function upsertRow(state: State, row: SidebarRow): State {
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;
 
   return setDetailRow(
-    {
-      ...state,
-      sidebar: {
-        ...state.sidebar,
-        rows,
-        order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+    updateConversationRoom(
+      {
+        ...state,
+        sidebar: {
+          ...state.sidebar,
+          rows,
+          order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+        },
       },
-    },
+      {
+        roomId: row.room.id,
+        roomName: row.displayName,
+        roomKind: row.room.kind,
+        roomIconName: row.room.iconName,
+      },
+    ),
     row,
   );
 }
@@ -1088,6 +1105,9 @@ export function applyEvents(
 
   for (const event of events) {
     switch (event.type) {
+      case "user.updated":
+        next = mergeUsers(next, [event.data]);
+        break;
       case "message.created":
         next = stopTypingFor(receiveMessage(next, event.data), event.topic, event.data.creatorId);
         break;

@@ -25,7 +25,7 @@ fn before() -> Before {
 pub async fn service_worker(c: &mut Ctx) -> Result {
     concerns::before_actions(c, before()).await?;
     c.respond_to(&[&format::JS])?;
-    let served = pwa::file("service-worker.js", c.app().config.spa_enabled, None)
+    let served = pwa::file("service-worker.js", None)
         .expect("PWA fallback worker");
     c.set_header("cache-control", "no-cache, no-transform");
     c.set_header("service-worker-allowed", "/");
@@ -49,7 +49,7 @@ pub async fn spa_manifest(c: &mut Ctx) -> Result {
 }
 
 /// The offline shell and manifest illustrations do not need sessions or classic assets.
-pub fn routes(spa_enabled: bool, immutable_cache_control: &'static str) -> Router<Kit> {
+pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
     let files = move |State(kit): State<Kit>, request: Request| async move {
         let path = request
             .uri()
@@ -61,12 +61,12 @@ pub fn routes(spa_enabled: bool, immutable_cache_control: &'static str) -> Route
             .headers()
             .get("accept-encoding")
             .and_then(|value| value.to_str().ok());
-        match pwa::file(path, spa_enabled, encoding) {
+        match pwa::file(path, encoding) {
             Some(served) => {
                 let mut response =
                     super::spa::served_response(&kit, served, immutable_cache_control);
                 if path == "offline.html"
-                    && (!spa_enabled || campfire_spa::file(path, None).is_none())
+                    && campfire_spa::file(path, None).is_none()
                 {
                     // The original standalone shell has inline retry/reconnect scripts and,
                     // like ActionDispatch::Static, needs no request's nonce policy.
@@ -89,8 +89,6 @@ pub fn routes(spa_enabled: bool, immutable_cache_control: &'static str) -> Route
 }
 
 async fn render_manifest(c: &mut Ctx) -> Result {
-    let spa = concerns::effective_ui(c).await?
-        == campfire_db::models::user::ui_preference::UiPreference::Next;
     let account = c
         .app()
         .db
@@ -111,18 +109,8 @@ async fn render_manifest(c: &mut Ctx) -> Result {
         logo_path: campfire_routes::fresh_account_logo(version.as_deref(), None),
         base_url: c.url_for(""),
         root: "/",
-        new_room_url: if spa {
-            campfire_spa::screens::spa_url("rooms/opens#new", "/rooms/opens/new", None)
-                .unwrap_or_else(|| "/rooms/opens/new".into())
-        } else {
-            "rooms/opens/new".into()
-        },
-        profile_url: if spa {
-            campfire_spa::screens::spa_url("users/profiles#show", "/users/me/profile", None)
-                .unwrap_or_else(|| "/users/me/profile".into())
-        } else {
-            "/users/me/profile".into()
-        },
+        new_room_url: "/app/rooms/new/open".into(),
+        profile_url: "/app/settings".into(),
         asset_path: &pwa::asset_path,
     };
     let body = manifest.render().map_err(Error::internal)?;

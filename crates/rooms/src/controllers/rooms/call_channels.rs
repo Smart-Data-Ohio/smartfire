@@ -160,6 +160,30 @@ pub async fn update_room(
     has_remaining_ids: bool,
     blank_only: bool,
 ) -> Result<UpdateOutcome> {
+    update_room_with_topic(
+        c,
+        room,
+        super::operations::RoomChanges {
+            name,
+            icon,
+            topic: None,
+        },
+        ids,
+        has_remaining_ids,
+        blank_only,
+    )
+    .await
+}
+
+pub async fn update_room_with_topic(
+    c: &Ctx,
+    room: Room,
+    changes: super::operations::RoomChanges,
+    ids: Vec<i64>,
+    has_remaining_ids: bool,
+    blank_only: bool,
+) -> Result<UpdateOutcome> {
+    let super::operations::RoomChanges { name, icon, topic } = changes;
     let app = c.app().clone();
     let audit = audit_context(c)?;
     c.app().db.write(move |tx| {
@@ -169,7 +193,7 @@ pub async fn update_room(
             let hosts:Vec<_>=Membership::for_room(tx.conn(),room.id)?.into_iter().filter(|m|m.stage_role==Some(StageRole::Host)).collect();
             if !hosts.iter().any(|m|ids.contains(&m.user_id)) && let Some(removed)=hosts.iter().find(|m|!ids.contains(&m.user_id)) {
                 let user=User::find(tx.conn(),removed.user_id)?;
-                return Ok(Err((room,vec![format!("Promote another host before removing {}",user.name)])));
+                return Ok(Err((room,vec![format!("Promote another host before removing {}",user.display_name())])));
             }
         }
         let preview_icon=icon.as_ref().unwrap_or(&room.icon_name);
@@ -180,6 +204,7 @@ pub async fn update_room(
         }
         room.update(tx,name.as_ref().map(|n|n.as_deref()),None)?;
         if let Some(icon)=icon && icon != room.icon_name {tx.conn().execute_cached("UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?",rusqlite::params![icon,tx.now(),room.id])?;room.reload(tx.conn())?;}
+        if let Some(topic)=topic { room.update_topic(tx,topic.as_deref())?; }
         let before=room.user_ids(tx.conn())?;
         let granted=existing_user_ids(tx.conn(),&ids)?;
         let revoked:Vec<_>=before.iter().filter(|id|!blank_only && !ids.contains(id)).copied().collect();
@@ -189,7 +214,7 @@ pub async fn update_room(
         let added:Vec<_>=after.iter().filter(|id|!before.contains(id)).copied().collect();
         let removed:Vec<_>=before.iter().filter(|id|!after.contains(id)).copied().collect();
         if !added.is_empty() || !removed.is_empty() {
-            let names=|ids:&[i64]| -> campfire_db::Result<Vec<String>> {Ok(User::where_ids(tx.conn(),ids)?.into_iter().map(|u|u.name).collect())};
+            let names=|ids:&[i64]| -> campfire_db::Result<Vec<String>> {Ok(User::where_ids(tx.conn(),ids)?.into_iter().map(|u|u.display_name().to_owned()).collect())};
             AuditLog::record(tx,NewAuditLog{action:"room.membership.change".into(),target:Some((&room).into()),changes:Some(json!({"granted":names(&added)?,"revoked":names(&removed)?})),..Default::default()},&audit)?;
         }
         Ok(Ok(room))

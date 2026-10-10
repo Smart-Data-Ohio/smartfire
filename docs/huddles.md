@@ -40,7 +40,7 @@ and connection-race tests run on relevant PRs. The `start` and `gateway` command
 run the private server or gateway separately for diagnosis. Use `serve` for
 normal operation so a LiveKit process cannot outlive gateway enforcement.
 
-Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../web/script/livekit-client/README.md) when updating its pinned version.
+Smartfire builds LiveKit from the pinned pnpm dependency in `frontend/package.json`. Its call engine lives in `frontend/src/features/huddle/engine/`; run `pnpm check` after SDK changes.
 
 ## Behavior and access control
 

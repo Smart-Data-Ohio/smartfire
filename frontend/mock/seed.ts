@@ -330,6 +330,8 @@ function seedUsers(now: number): Map<number, User> {
           : null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
       updatedAt: rowTimestamp(now - person.joinedDaysAgo * DAY),
+      accountName: person.name,
+      pronouns: null,
     });
   }
 
@@ -829,6 +831,7 @@ export function seedWorld(now: number, random: Random): World {
         creatorId: seed.kind === "direct" ? VIEWER_ID : USER_IDS.priya,
         createdAt,
         updatedAt: newest === undefined ? createdAt : newest.createdAt,
+        topic: null,
       },
       memberIds: [...seed.memberIds],
       membership,

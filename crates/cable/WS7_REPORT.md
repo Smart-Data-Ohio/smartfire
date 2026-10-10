@@ -1,3 +1,5 @@
+This is a historical WS7 report. The classic renderer and HTML stream paths described below are retired.
+
 # WS7: cable, channels and broadcasts
 
 Status: **review fixes complete; full brief acceptance remains partial for domain and HTML/pixel parity**. Branch `rust/ws7-cable`. Earlier review implementation commits `5f56e8aa` and `e1d041e6`; the foreign-content fix was `da75e109`. The conservative-backstop implementation was `782466b9`; this follow-up fixes Astra's round-five quadratic source-scan finding without changing the detection policy. Merged `origin/main` (`d2b21210`, including WS3, final WS4 #150, WS5 and Rails #148) in `a8ec54aef7dea0596b524df2fb6272c31a474bc9`. Reference pin `fec615be`; the private image is `ws7-reference:fec615be`. Push authorized by the user; no PR.

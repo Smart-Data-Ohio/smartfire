@@ -113,6 +113,9 @@ pub enum SyncPayload {
     /// same revision and evaluation time as the settings write's response.
     #[serde(rename = "settings.updated")]
     SettingsUpdated(Box<crate::Settings>),
+    /// On every signed-in person's `user` topic: a public profile identity changed.
+    #[serde(rename = "user.updated")]
+    UserUpdated(crate::User),
     /// On everyone's `user` topic: the workspace name or images changed.
     #[serde(rename = "workspace.updated")]
     WorkspaceUpdated(WorkspaceBranding),

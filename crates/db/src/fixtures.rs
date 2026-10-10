@@ -36,11 +36,9 @@ pub fn identify(label: &str) -> i64 {
     i64::from(crc32fast::hash(label.as_bytes()) % MAX_ID)
 }
 
-/// The app's static inputs: `web/`, laid out like the Rails app they came from
-/// (`app/assets`, `app/javascript`, `vendor/javascript`, `config/importmap.rb`,
-/// `script/livekit-client`, ...).
+/// Retained static inputs copied from the Rails app.
 pub fn reference_root() -> PathBuf {
-    workspace_root().join("web")
+    workspace_root().join("crates/static_assets")
 }
 
 /// The fixtures, the Rails app's `test/fixtures`: `fixtures/`.
@@ -49,7 +47,7 @@ pub fn reference_dir() -> PathBuf {
 }
 
 /// A file named by its path in the Rails app (public/media now live in static_assets) (`public/500.html`,
-/// `test/fixtures/files/earth.png`, `script/livekit-client/package.json`), in the port's copy.
+/// `test/fixtures/files/earth.png`), in the port's copy.
 pub fn reference_path(path: &str) -> PathBuf {
     if let Some(fixture) = path.strip_prefix("test/fixtures/") {
         reference_dir().join(fixture)

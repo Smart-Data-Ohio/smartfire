@@ -548,6 +548,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         creatorId: USER_IDS.priya,
         createdAt,
         updatedAt: createdAt,
+        topic: null,
       },
       memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
       membership: {

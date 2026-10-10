@@ -16,12 +16,9 @@ campfire_mail.workspace = true
 campfire_richtext.workspace = true
 campfire_storage.workspace = true
 campfire_cable.workspace = true
-campfire_assets.workspace = true
 campfire_static_assets.workspace = true
-campfire_views.workspace = true
 campfire_retained.workspace = true
 campfire_app.workspace = true
-campfire_web.workspace = true
 campfire_channels.workspace = true
 campfire_messages.workspace = true
 campfire_rooms.workspace = true
@@ -67,7 +64,7 @@ uuid.workspace = true
 campfire_view_kit.workspace = true
 campfire_api = { workspace = true, features = ["test-support"] }
 campfire_app = { workspace = true, features = ["test-support"] }
-campfire_web = { workspace = true, features = ["test-support"] }
+campfire_runtime = { workspace = true, features = ["test-support"] }
 campfire_channels = { workspace = true, features = ["test-support"] }
 campfire_people = { workspace = true, features = ["test-support"] }
 campfire_controllers = { workspace = true, features = ["test-support"] }

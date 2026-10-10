@@ -23,19 +23,19 @@ pub fn display_name(
         .iter()
         .filter(|u| for_user.is_none_or(|f| f.id != u.id))
         .collect();
-    list.sort_by_key(|u| unicode::downcase(&u.name));
+    list.sort_by_key(|u| unicode::downcase(u.display_name()));
     display_ordered_members(for_user, &list)
 }
 fn display_ordered_members(for_user: Option<&User>, list: &[&User]) -> Option<String> {
     match list.len() {
-        0 => for_user.map(|u| u.name.clone()),
-        1 => Some(list[0].name.clone()),
+        0 => for_user.map(|u| u.display_name().to_owned()),
+        1 => Some(list[0].display_name().to_owned()),
         n => {
             let names = list
                 .iter()
                 .take(3)
                 .map(|u| {
-                    u.name
+                    u.display_name()
                         .split([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
                         .find(|part| !part.is_empty())
                         .unwrap_or("")
@@ -174,7 +174,7 @@ impl Room {
         }
         let names: Vec<_> = fresh
             .iter()
-            .map(|id| User::find(tx.conn(), *id).map(|u| u.name))
+            .map(|id| User::find(tx.conn(), *id).map(|u| u.display_name().to_owned()))
             .collect::<Result<_>>()?;
         self.grant_to(tx, &fresh)?;
         self.direct_note(
