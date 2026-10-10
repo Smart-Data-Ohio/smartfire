@@ -1,6 +1,17 @@
 import { afterAll, afterEach, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../mock/server.ts";
 import { me, sidebar } from "../api/endpoints.ts";
+import { Validation } from "../api/errors.ts";
+import { updateAppearance } from "../api/settings-endpoints.ts";
+import { meFixture } from "../api/testing.ts";
+import type { AppearancePreferences } from "../gen/AppearancePreferences.ts";
+import {
+  appearanceSnapshot,
+  applyAccountAppearance,
+  restoreAppearance,
+  setPalette,
+  setPersonalAppearanceOverride,
+} from "../lib/appearance.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
 import { organizedSidebar } from "../store/organize.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
@@ -8,7 +19,13 @@ import { installMockNetwork } from "../test/mock-network.ts";
 import * as activity from "./activity-actions.ts";
 import { setInvolvement } from "./organize-actions.ts";
 import { runAction } from "./runtime.ts";
-import { followNotificationPreferences, settings } from "./settings.ts";
+import {
+  followAccountAppearance,
+  followNotificationPreferences,
+  saveAccountPersonalAppearance,
+  settings,
+} from "./settings.ts";
+import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { emitResync } from "./signals.ts";
 
 const network = installMockNetwork();
@@ -26,7 +43,314 @@ afterAll(() => {
 
 afterEach(() => {
   intercept = fetch;
+  beginSettingsEpoch();
   mutations.reset();
+});
+
+async function personalAccount(
+  preferences: Extract<
+    NonNullable<Parameters<typeof settings.updateAppearance>[0]["appearancePreferences"]>,
+    Readonly<Record<string, AppearancePreferences>>
+  >,
+) {
+  localStorage.clear();
+  restoreAppearance();
+  await settings.updateAppearance({
+    appearancePreferences: {
+      palette: null,
+      font: null,
+      density: null,
+      motion: null,
+      tokens: null,
+      ...preferences,
+    },
+  });
+  const account = await runAction(me());
+  mutations.setMe(account);
+  applyAccountAppearance(account.preferences);
+}
+
+it("saves personal choices while keeping semantic tokens and a device override", async () => {
+  await personalAccount({ version: 1, palette: "rose", tokens: { "--accent": "#123abc" } });
+  setPalette("ember");
+  await saveAccountPersonalAppearance({ palette: "ocean", font: "mono" });
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    palette: "ocean",
+    font: "mono",
+    tokens: { "--accent": "#123abc" },
+  });
+  expect(appearanceSnapshot()).toMatchObject({ palette: "ember", font: "mono" });
+  setPersonalAppearanceOverride(false);
+  expect(appearanceSnapshot().palette).toBe("ocean");
+  expect(document.documentElement.style.getPropertyValue("--accent")).toBe("#123abc");
+});
+
+it("serializes rapid personal saves without losing earlier choices", async () => {
+  await personalAccount({ version: 1 });
+  await Promise.all([
+    saveAccountPersonalAppearance({ palette: "forest" }),
+    saveAccountPersonalAppearance({ font: "serif", density: "compact", motion: "reduce" }),
+  ]);
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    palette: "forest",
+    font: "serif",
+    density: "compact",
+    motion: "reduce",
+  });
+});
+
+it("sends only changed personal fields, including explicit clears", async () => {
+  await personalAccount({ version: 1, palette: "ocean", font: "serif" });
+  const bodies: unknown[] = [];
+  intercept = async (input, init) => {
+    if (String(input).endsWith("/settings/appearance") && init?.body !== undefined) {
+      bodies.push(await new Response(init.body).json());
+    }
+
+    return fetch(input, init);
+  };
+
+  await saveAccountPersonalAppearance({ font: "mono" });
+  await saveAccountPersonalAppearance({ palette: null });
+  expect(bodies).toEqual([
+    { theme: null, textSize: null, timeZone: null, appearancePreferences: { font: "mono" } },
+    { theme: null, textSize: null, timeZone: null, appearancePreferences: { palette: null } },
+  ]);
+  expect((await settings.load()).appearance.appearancePreferences).toEqual({
+    version: 1,
+    font: "mono",
+  });
+});
+
+it("keeps Forest when an Ocean save's held me response arrives after a settings.updated event", async () => {
+  await personalAccount({ version: 1 });
+  const started = held<void>();
+  const gate = held<void>();
+  const released = held<void>();
+  intercept = async (input, init) => {
+    const response = await fetch(input, init);
+
+    if (String(input).endsWith("/me")) {
+      started.release();
+      await gate.promise;
+      released.release();
+    }
+
+    return response;
+  };
+
+  const stop = followAccountAppearance();
+
+  try {
+    await saveAccountPersonalAppearance({ palette: "ocean" });
+    await started.promise;
+
+    const event = {
+      type: "settings.updated",
+      data: await runAction(
+        updateAppearance({
+          theme: null,
+          textSize: null,
+          timeZone: null,
+          appearancePreferences: { palette: "forest" },
+        }),
+      ),
+    };
+
+    applySettingsSnapshot(event.data);
+    expect(appearanceSnapshot().palette).toBe("forest");
+    gate.release();
+    await released.promise;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(appearanceSnapshot().palette).toBe("forest");
+    expect(store.getState().me?.preferences.appearancePreferences).toEqual({
+      version: 1,
+      palette: "forest",
+    });
+  } finally {
+    gate.release();
+    stop();
+  }
+});
+
+it.each(["load", "save"])(
+  "drops a held settings %s response from the previous server epoch",
+  async (kind) => {
+    await personalAccount({ version: 1, palette: "forest" });
+    const before = await settings.load();
+    const started = held<void>();
+    const gate = held<void>();
+    intercept = async (input, init) => {
+      const response = await fetch(input, init);
+
+      if (String(input).endsWith(kind === "load" ? "/settings" : "/settings/appearance")) {
+        started.release();
+        await gate.promise;
+
+        return new Response(JSON.stringify({ ...before, revision: 100 }));
+      }
+
+      return response;
+    };
+
+    const old =
+      kind === "load" ? settings.load() : saveAccountPersonalAppearance({ palette: "ember" });
+
+    const rejected = expect(old).rejects.toThrow("The server restarted");
+
+    try {
+      await started.promise;
+      beginSettingsEpoch();
+      applySettingsSnapshot({
+        ...before,
+        revision: 1,
+        appearance: {
+          ...before.appearance,
+          theme: "light",
+          appearancePreferences: { version: 1, palette: "ocean" },
+        },
+      });
+      gate.release();
+      await rejected;
+      expect(appearanceSnapshot()).toMatchObject({ accountTheme: "light", palette: "ocean" });
+      expect(store.getState().me?.preferences).toMatchObject({
+        settingsRevision: 1,
+        theme: "light",
+        appearancePreferences: { version: 1, palette: "ocean" },
+      });
+    } finally {
+      gate.release();
+      intercept = fetch;
+    }
+  },
+);
+
+it("drops a held me refresh from the previous server epoch", async () => {
+  await personalAccount({ version: 1 });
+  const before = await settings.load();
+  const started = held<void>();
+  const gate = held<void>();
+  const released = held<void>();
+  intercept = async (input, init) => {
+    const response = await fetch(input, init);
+
+    if (String(input).endsWith("/me")) {
+      started.release();
+      await gate.promise;
+      released.release();
+
+      return new Response(
+        JSON.stringify({
+          ...meFixture,
+          user: {
+            ...meFixture.user,
+            id: before.profile.userId,
+            name: "Old epoch",
+            updatedAt: "2026-10-10T12:00:00.000000Z",
+          },
+          preferences: {
+            ...meFixture.preferences,
+            settingsRevision: 100,
+            theme: "dark",
+            appearancePreferences: { version: 1, palette: "forest" },
+          },
+        }),
+      );
+    }
+
+    return response;
+  };
+
+  try {
+    await settings.updateAppearance({ theme: "dark" });
+    await started.promise;
+    const viewer = store.getState().me?.user;
+    beginSettingsEpoch();
+    applySettingsSnapshot({
+      ...before,
+      revision: 1,
+      appearance: {
+        ...before.appearance,
+        theme: "light",
+        appearancePreferences: { version: 1, palette: "ocean" },
+      },
+    });
+    gate.release();
+    await released.promise;
+    await vi.waitFor(() =>
+      expect(store.getState().me?.preferences).toMatchObject({
+        settingsRevision: 1,
+        theme: "light",
+      }),
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(store.getState().me?.user).toEqual(viewer);
+    expect(store.getState().me?.preferences).toMatchObject({
+      settingsRevision: 1,
+      theme: "light",
+      appearancePreferences: { version: 1, palette: "ocean" },
+    });
+  } finally {
+    gate.release();
+  }
+});
+
+it("restores the previous account appearance after a rejected save", async () => {
+  await personalAccount({ version: 1, palette: "ocean" });
+  intercept = async (input, init) =>
+    String(input).endsWith("/settings/appearance")
+      ? new Response(
+          JSON.stringify({
+            error: new Validation({
+              message: "Appearance rejected",
+              fields: { appearancePreferences: ["not allowed"] },
+            }),
+          }),
+          { status: 422, headers: { "content-type": "application/json" } },
+        )
+      : fetch(input, init);
+  await expect(saveAccountPersonalAppearance({ palette: "rose" })).rejects.toMatchObject({
+    message: "Appearance rejected",
+  });
+  expect(appearanceSnapshot().palette).toBe("ocean");
+});
+
+it("ignores an older settings.updated event after applying a newer me response", async () => {
+  await personalAccount({ version: 1, palette: "ocean" });
+  const older = await settings.load();
+  const stop = followAccountAppearance();
+
+  try {
+    await runAction(
+      updateAppearance({
+        theme: null,
+        textSize: null,
+        timeZone: null,
+        appearancePreferences: { palette: "forest" },
+      }),
+    );
+    mutations.setMe(await runAction(me()));
+    expect(appearanceSnapshot().palette).toBe("forest");
+    applySettingsSnapshot(older);
+    expect(appearanceSnapshot().palette).toBe("forest");
+    expect(store.getState().me?.preferences.appearancePreferences).toEqual({
+      version: 1,
+      palette: "forest",
+    });
+  } finally {
+    stop();
+  }
+});
+
+it("leaves a newer appearance version intact rather than replacing it with v1", async () => {
+  const future = { version: 99, future: { retain: [1, 2, 3] } };
+  await personalAccount(future);
+  await expect(saveAccountPersonalAppearance({ palette: "rose" })).rejects.toThrow(
+    "newer Smartfire client",
+  );
+  expect((await settings.load()).appearance.appearancePreferences).toEqual(future);
 });
 
 function held<A>() {

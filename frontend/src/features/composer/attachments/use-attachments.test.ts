@@ -137,6 +137,7 @@ describe("the attachment tray", () => {
         serviceWorkerUrl: null,
         version: "test",
         revision: null,
+        appearancePreferences: null,
       },
     });
 

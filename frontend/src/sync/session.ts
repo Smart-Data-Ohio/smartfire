@@ -40,6 +40,7 @@ import {
   roomRevision,
 } from "./room-refresh.ts";
 import { rowTicket, withRowTicket } from "./row-ticket.ts";
+import { settingsEpoch } from "./settings-snapshot.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -119,7 +120,10 @@ function presenceIds(data: Sidebar): readonly number[] {
  */
 export const start = Effect.fn("session.start")(function* () {
   mutations.setBoot(yield* readBoot());
-  mutations.setMe(yield* me());
+  const epoch = settingsEpoch();
+  const account = yield* me();
+
+  if (settingsEpoch() === epoch) mutations.setMe(account);
   mutations.setSidebarLoading();
 
   const loaded = yield* withRowTicket((since) =>

@@ -7,14 +7,18 @@ import {
   showTextSize as applyTextSize,
   type DensityPreference,
   type MotionPreference,
+  type PersonalAppearance,
   setDensity,
+  setFont,
   setMotion,
+  setPalette,
+  setPersonalAppearanceOverride,
   setThemeOverride,
   showAccountTheme,
   type ThemePreference,
   useAppearance,
 } from "../../lib/appearance.ts";
-import { settings as settingsActions } from "../../sync/settings.ts";
+import { saveAccountPersonalAppearance, settings as settingsActions } from "../../sync/settings.ts";
 import { AppearancePreview, FontPicker, PalettePicker } from "./appearance-presets.tsx";
 import { type Choice, TEXT_SIZE_CHOICES, THEME_CHOICES } from "./settings-format.ts";
 import {
@@ -51,7 +55,7 @@ const DEVICE_THEME_CHOICES: readonly Choice<DeviceTheme>[] = [
 /**
  * Appearance: the account's theme, text size and time zone (saved for every device, as the
  * classic page saves them), then this device's own theme pin, colour palette, font, density and
- * motion. Choosing a theme or size shows it at once here too.
+ * motion overrides. Personal appearance follows the account until this device overrides it.
  */
 export function AppearanceSection() {
   const { settings, replace } = useSettings();
@@ -111,6 +115,12 @@ export function AppearanceSection() {
     ...appearance.timeZones,
   ];
 
+  const savePersonal = (change: Partial<Omit<PersonalAppearance, "version">>) => {
+    void track("personal", saveAccountPersonalAppearance(change)).catch((error: Error) =>
+      toastFailure("Couldn't save your appearance", error),
+    );
+  };
+
   return (
     <SettingsPage title="Appearance" description="How Smartfire looks and keeps time for you.">
       <SettingsGroup title="Theme and text" description="Saved to your account, for every device.">
@@ -146,20 +156,52 @@ export function AppearanceSection() {
           hint="Pin a theme here without changing it on your other devices."
           onChange={(choice: DeviceTheme) => setThemeOverride(choice === "account" ? null : choice)}
         />
-        <PalettePicker />
-        <FontPicker />
+      </SettingsGroup>
+      <SettingsGroup
+        title="Personal appearance"
+        description={
+          device.personalOverride
+            ? "Only this browser remembers these."
+            : "Saved to your account, for every device."
+        }
+      >
+        <SettingsSelect
+          label="Personal appearance on this device"
+          value={device.personalOverride ? "device" : "account"}
+          choices={[
+            { value: "account", label: "Use my account's appearance" },
+            { value: "device", label: "Override on this device" },
+          ]}
+          onChange={(value) => setPersonalAppearanceOverride(value === "device")}
+        />
+        <PalettePicker
+          disabled={busy("personal")}
+          onChange={(palette) =>
+            device.personalOverride ? setPalette(palette) : savePersonal({ palette })
+          }
+        />
+        <FontPicker
+          disabled={busy("personal")}
+          onChange={(font) => (device.personalOverride ? setFont(font) : savePersonal({ font }))}
+        />
         <AppearancePreview />
         <SettingsRadios
           label="Density"
           value={device.density}
           choices={DENSITY_CHOICES}
-          onChange={setDensity}
+          disabled={busy("personal")}
+          onChange={(density) =>
+            device.personalOverride ? setDensity(density) : savePersonal({ density })
+          }
         />
         <SettingsRadios
           label="Motion"
           value={device.motion}
           choices={MOTION_CHOICES}
-          onChange={setMotion}
+          disabled={busy("personal")}
+          onChange={(motion) =>
+            device.personalOverride ? setMotion(motion) : savePersonal({ motion })
+          }
         />
       </SettingsGroup>
     </SettingsPage>

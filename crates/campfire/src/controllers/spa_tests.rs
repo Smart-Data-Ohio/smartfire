@@ -166,6 +166,7 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
             "customStyles": account.custom_styles,
             "theme": campfire_spa::theme(Some(&settings.theme)),
             "textSize": campfire_spa::text_size(Some(&settings.text_size)),
+            "appearancePreferences": null,
             "cableUrl": "/cable",
             "serviceWorkerUrl": "/service-worker.js",
             "version": "parity",

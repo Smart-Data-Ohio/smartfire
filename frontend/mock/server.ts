@@ -460,6 +460,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
+      settingsRevision: settings.revision(),
       ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
