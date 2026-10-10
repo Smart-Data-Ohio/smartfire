@@ -19,11 +19,11 @@ use campfire_people::controllers::accounts::bots::{
     self as classic, BotUpdate, NewBot, credentials, github_connections, grants, keys,
     webhook_secrets,
 };
-use campfire_views::accounts::bot_access::{CAPABILITIES, CredentialExpiry};
-use campfire_views::helpers::AvatarIcon;
-use campfire_web::concerns;
-use campfire_web::controllers::presenters::attachments::Assignment;
-use campfire_web::controllers::presenters::{self, accounts as account_presenters};
+use campfire_presentation::accounts::bot_access::{CAPABILITIES, CredentialExpiry};
+use campfire_presentation::helpers::AvatarIcon;
+use campfire_runtime::concerns;
+use campfire_runtime::presenters::attachments::Assignment;
+use campfire_runtime::presenters::{self, accounts as account_presenters};
 use serde_json::json;
 
 use crate::admin::{administrator, body, refusal, require_sudo, viewer};
@@ -235,8 +235,8 @@ async fn index_bots(c: &mut Ctx) -> Result {
                         api::BotRoom {
                             id: room.id,
                             name: room.name,
-                            message_command: campfire_views::helpers::curl_text_line(&url),
-                            attachment_command: campfire_views::helpers::curl_upload_line(&url),
+                            message_command: campfire_presentation::helpers::curl_text_line(&url),
+                            attachment_command: campfire_presentation::helpers::curl_upload_line(&url),
                         }
                     })
                     .collect(),
@@ -316,7 +316,7 @@ fn reply_key(c: &mut Ctx, bot: &User, key: String) -> Result {
         &api::BotKey {
             id: bot.id,
             name: bot.name.clone(),
-            example_command: campfire_views::helpers::curl_text_line(&url),
+            example_command: campfire_presentation::helpers::curl_text_line(&url),
             key,
         },
     )
@@ -532,7 +532,7 @@ async fn save_credential(c: &mut Ctx) -> Result {
     let create: api::CreateCredential = body(c).await?;
     let zone = classic::viewer_zone(c).await?;
     let raw = create.expires_at.map(Param::Str);
-    let expires_at = campfire_web::controllers::presenters::bot_input_casts::datetime(
+    let expires_at = campfire_runtime::presenters::bot_input_casts::datetime(
         raw.as_ref(),
         &zone,
         Timestamp::from_jiff(c.now()),

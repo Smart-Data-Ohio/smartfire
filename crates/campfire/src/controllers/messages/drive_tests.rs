@@ -157,3 +157,5 @@ async fn persisted_drive_attachments_reach_the_message_http_response() {
     assert_eq!(html.matches("class=\"drive-attachments\"").count(), 1);
     assert_eq!(html.matches("class=\"drive-attachment\"").count(), 2);
 }
+
+use campfire_web::controllers::presenters::{Rendering};

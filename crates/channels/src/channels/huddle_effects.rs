@@ -224,3 +224,6 @@ pub(crate) fn stage_ended_note(app:&App,message_id:i64)->anyhow::Result<()> {
     }
     Ok(())
 }
+
+use campfire_views::rendering::*;
+use campfire_web::controllers::presenters::{Rendering};

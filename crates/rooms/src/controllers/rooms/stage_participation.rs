@@ -164,3 +164,5 @@ async fn respond(c: &mut Ctx, room_id: i64, member_id: i64, partial: &str, targe
     })
     .await
 }
+
+use campfire_views::rendering::*;

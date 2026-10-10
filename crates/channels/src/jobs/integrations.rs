@@ -48,7 +48,6 @@ async fn push_message(app: App, job: PushMessageJob, _: Execution) -> JobResult 
     Ok(Outcome::Done)
 }
 
-
 /// `Bot::WebhookJob#perform(bot, message)`: `bot.deliver_webhook(message)`, i.e.
 /// `webhook.deliver(message)`, then the reply.
 async fn deliver_webhook(app: App, job: WebhookJob, _: Execution) -> JobResult {
@@ -167,3 +166,5 @@ pub async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyh
     crate::controllers::presenters::refresh_after_render(&db, refreshes).await;
     Ok(())
 }
+
+use campfire_web::controllers::presenters::Rendering;

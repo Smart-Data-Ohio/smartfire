@@ -9,6 +9,8 @@ edition.workspace = true
 test-support = ["campfire_app/test-support"]
 
 [dependencies]
+campfire_runtime.workspace = true
+campfire_presentation.workspace = true
 rails_compat.workspace = true
 campfire_kit.workspace = true
 campfire_routes.workspace = true

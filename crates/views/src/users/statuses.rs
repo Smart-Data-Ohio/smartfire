@@ -1,7 +1,6 @@
 //! Session-free facts for the status badge and DM OOO line.
 use crate::helpers::{self as h, filters};
 use askama::Template;
-use serde::Deserialize;
 
 #[derive(Template)]
 #[template(path = "users/statuses/_badge.html")]
@@ -39,17 +38,10 @@ pub struct OooNotice<'a> {
     pub until_date: Option<&'a str>,
     pub note: Option<&'a str>,
 }
-
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct OooNoticeMember {
-    pub id: i64,
-    pub name: String,
-    pub visible: bool,
-    pub until_date: Option<String>,
-    pub note: Option<String>,
-    pub stream_name: String,
+pub trait OooNoticeMemberRendering {
+    fn line(&self) -> h::Html;
 }
-impl OooNoticeMember {
+impl OooNoticeMemberRendering for OooNoticeMember {
     fn line(&self) -> h::Html {
         h::raw(
             OooNotice {
@@ -70,17 +62,11 @@ pub struct OooNotices<'a> {
     pub direct: bool,
     pub members: &'a [OooNoticeMember],
 }
-
-#[derive(Debug, Clone)]
-pub struct ProfileStatus {
-    pub user_id: i64,
-    pub stream_name: String,
-    pub presence: String,
-    pub status_text: Option<String>,
-    pub dnd_allowed: bool,
+pub trait ProfileStatusRendering {
+    fn badge(&self) -> h::Html;
 }
-impl ProfileStatus {
-    pub fn badge(&self) -> h::Html {
+impl ProfileStatusRendering for ProfileStatus {
+    fn badge(&self) -> h::Html {
         h::raw(
             StatusBadge {
                 presence: &self.presence,
@@ -104,3 +90,4 @@ pub struct DndAllowance<'a> {
     pub ctx: &'a crate::ViewContext<'a>,
     pub status: &'a ProfileStatus,
 }
+pub use campfire_presentation::users::statuses::*;

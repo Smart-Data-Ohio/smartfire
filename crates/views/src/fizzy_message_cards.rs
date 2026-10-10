@@ -5,22 +5,10 @@ use crate::{
     layouts::Page,
 };
 use askama::Template;
-use serde_json::Value;
-pub struct FormView {
-    pub back_path: String,
-    pub action: String,
-    pub room_name: String,
-    pub plain: String,
-    pub creator: String,
-    pub connected: bool,
-    pub boards: Value,
-    pub board_id: String,
-    pub title: String,
-    pub description: String,
-    pub user_name: String,
-    pub account_name: String,
+pub trait FormViewRendering {
+    fn options(&self) -> h::Html;
 }
-impl FormView {
+impl FormViewRendering for FormView {
     fn options(&self) -> h::Html {
         let mut html = String::from("<option value=\"\">Choose a board</option>\n");
         if let Some(boards) = self.boards.as_array() {
@@ -44,10 +32,8 @@ impl FormView {
         }
         h::raw(html)
     }
-    fn excerpt(&self) -> String {
-        campfire_richtext::ruby::truncate(&self.plain, 280, "...")
-    }
 }
+
 #[derive(Template)]
 #[template(path="rooms/fizzy/message_cards/new.html",blocks=["head","content"])]
 pub struct New<'a> {
@@ -65,3 +51,4 @@ impl Page for New<'_> {
         true
     }
 }
+pub use campfire_presentation::fizzy_message_cards::*;

@@ -11,25 +11,15 @@ pub mod google;
 pub mod sidebar;
 pub mod sidebar_composition;
 pub use sidebar::*;
-mod summary;
+pub mod summary;
 pub use summary::*;
-mod people;
+pub mod people;
 pub use people::*;
-mod settings;
+pub mod settings;
 pub use settings::*;
-mod appearance;
+pub mod appearance;
 pub mod statuses;
 pub use appearance::*;
-
-#[derive(Clone)]
-pub struct UserSession {
-    pub id: i64,
-    pub current: bool,
-    pub description: String,
-    pub ip_address: Option<String>,
-    pub last_active_at: jiff::Timestamp,
-    pub created_at: jiff::Timestamp,
-}
 #[derive(Template)]
 #[template(path="users/sessions/index.html",blocks=["head","nav","content"])]
 pub struct SessionsIndex<'a> {
@@ -140,21 +130,6 @@ pub struct BanButton<'a> {
     pub user: UserSummary,
 }
 
-/// A user as `users/_mention` and the autocompletable views see it.
-#[derive(Clone, Debug, Default)]
-pub struct MentionUser {
-    pub user: UserSummary,
-    /// `user.attachable_sgid`.
-    pub attachable_sgid: String,
-}
-
-impl std::ops::Deref for MentionUser {
-    type Target = UserSummary;
-    fn deref(&self) -> &UserSummary {
-        &self.user
-    }
-}
-
 /// `users/_mention.html.erb`: the mention attachment's HTML.
 #[derive(Template)]
 #[template(path = "users/_mention.html")]
@@ -178,21 +153,11 @@ pub struct AvatarSvg {
     /// `User#initials`.
     pub initials: String,
 }
-
-/// A membership row on the profile (`users/profiles/_membership`).
-#[derive(Clone, Debug)]
-pub struct ProfileMembership {
-    pub room_id: i64,
-    /// "rooms_open", "rooms_closed" or "rooms_direct".
-    pub room_param_key: String,
-    /// `room_display_name(membership.room)`.
-    pub room_display_name: String,
-    pub involvement: String,
-    pub direct: bool,
+pub trait ProfileMembershipRendering {
+    fn involvement_room(&self) -> h::InvolvementRoom<'_>;
 }
-
-impl ProfileMembership {
-    pub fn involvement_room(&self) -> h::InvolvementRoom<'_> {
+impl ProfileMembershipRendering for ProfileMembership {
+    fn involvement_room(&self) -> h::InvolvementRoom<'_> {
         h::InvolvementRoom {
             id: self.room_id,
             param_key: &self.room_param_key,
@@ -277,16 +242,6 @@ pub struct Transfer<'a> {
     pub transfer_id: String,
 }
 
-/// A `Push::Subscription`, with its user agent parsed (`UserAgent.parse`).
-#[derive(Clone, Debug)]
-pub struct PushSubscription {
-    pub id: i64,
-    pub endpoint: String,
-    pub browser: String,
-    pub version: String,
-    pub platform: String,
-}
-
 /// `users/push_subscriptions/index.html.erb`.
 #[derive(Template)]
 #[template(path = "users/push_subscriptions/index.html", blocks = ["head", "content"])]
@@ -301,7 +256,7 @@ impl Page for PushSubscriptionsIndex<'_> {
     }
 }
 
-mod profile_sections;
+pub mod profile_sections;
 pub use profile_sections::*;
 
 mod status_popup;
@@ -318,3 +273,6 @@ pub struct SidebarCalls<'a> {
 #[derive(Template)]
 #[template(path = "users/sidebars/_workspace_destinations.html")]
 pub struct WorkspaceDestinations<'a> { pub ctx: &'a ViewContext<'a> }
+pub use campfire_presentation::users::*;
+
+use crate::rendering::*;

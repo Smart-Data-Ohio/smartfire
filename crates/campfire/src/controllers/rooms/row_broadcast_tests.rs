@@ -1,3 +1,4 @@
+use campfire_views::rendering::{UsersSidebarCompositionRowRendering, RoomsNavigationNavigationRendering};
 use super::call_channel_broadcast_tests::{Socket, next, socket};
 use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, TestApp};
 use campfire_db::{Room, RoomType};

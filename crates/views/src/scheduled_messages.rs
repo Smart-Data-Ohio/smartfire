@@ -5,24 +5,21 @@ use crate::{
     layouts::Page,
 };
 use askama::Template;
-pub struct Item {
-    pub id: i64,
-    pub room_name: String,
-    pub thread_name: Option<String>,
-    pub body: String,
-    pub send_at: String,
-    pub send_value: String,
-    pub sent_at: Option<String>,
-    pub message_path: Option<String>,
+pub trait ItemRendering {
+    fn form(&self) -> h::FormWith;
+    fn time(&self, _ctx: &ViewContext, past: bool) -> h::Html;
+    fn send_field(&self, _ctx: &ViewContext) -> h::Html;
+    fn submit(&self) -> h::Html;
+    fn action(&self, send: bool) -> h::Html;
 }
-impl Item {
-    pub fn form(&self) -> h::FormWith {
+impl ItemRendering for Item {
+    fn form(&self) -> h::FormWith {
         h::form_with(campfire_routes::scheduled_message(self.id))
             .model("scheduled_message")
             .method("patch")
             .class("scheduled-message__form")
     }
-    pub fn time(&self, _ctx: &ViewContext, past: bool) -> h::Html {
+    fn time(&self, _ctx: &ViewContext, past: bool) -> h::Html {
         crate::time::local_datetime_tag_iso(
             if past {
                 self.sent_at.as_deref().expect("sent row")
@@ -34,7 +31,7 @@ impl Item {
             "",
         )
     }
-    pub fn send_field(&self, _ctx: &ViewContext) -> h::Html {
+    fn send_field(&self, _ctx: &ViewContext) -> h::Html {
         self.form().text_field(
             "send_at",
             None,
@@ -44,7 +41,7 @@ impl Item {
                 .type_("datetime-local"),
         )
     }
-    pub fn submit(&self) -> h::Html {
+    fn submit(&self) -> h::Html {
         h::legacy_tag(
             "input",
             h::attrs()
@@ -55,7 +52,7 @@ impl Item {
                 .data("disable_with", "Save"),
         )
     }
-    pub fn action(&self, send: bool) -> h::Html {
+    fn action(&self, send: bool) -> h::Html {
         h::button_to_form(
             &if send {
                 campfire_routes::send_now_scheduled_message(self.id)
@@ -69,10 +66,8 @@ impl Item {
             if send { "Send now" } else { "Cancel" },
         )
     }
-    pub fn excerpt(&self) -> String {
-        h::truncate(&self.body, 500, "...")
-    }
 }
+
 #[derive(Template)]
 #[template(path = "scheduled_messages/_item.html")]
 pub struct ItemPartial<'a> {
@@ -162,3 +157,4 @@ impl ComposerButton<'_> {
         )
     }
 }
+pub use campfire_presentation::scheduled_messages::*;

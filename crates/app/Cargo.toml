@@ -9,6 +9,7 @@ edition.workspace = true
 test-support = ["dep:rcgen", "tokio/test-util", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support"]
 
 [dependencies]
+campfire_presentation.workspace = true
 caseless.workspace = true
 rails_compat.workspace = true
 campfire_kit.workspace = true

@@ -9,10 +9,10 @@ use campfire_db::models::forwarder::{self, Destination};
 use campfire_db::{Boost, ChannelThread, Message, MessagePin, Room, SavedItem};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as classic, boosts};
-use campfire_web::concerns;
+use campfire_runtime::concerns;
 use campfire_web::controllers::messages::rendered;
-use campfire_web::controllers::presenters::page::{self, db_error};
-use campfire_web::messaging::ForwarderCopier;
+use campfire_runtime::context::{self as page, db_error};
+use campfire_runtime::messaging::ForwarderCopier;
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now, set_room};
@@ -302,11 +302,11 @@ async fn post_boost(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let presenter =
-                campfire_web::controllers::presenters::Presenter::new(tx.conn(), &app, None);
+                campfire_runtime::presenters::Presenter::new(tx.conn(), &app, None);
             let content =
-                campfire_views::messages::reactions::resolve_content(&content, &presenter);
+                campfire_presentation::messages::reactions::resolve_content(&content, &presenter);
             let reaction =
-                campfire_views::messages::reactions::resolve(&content, &presenter).is_some();
+                campfire_presentation::messages::reactions::resolve(&content, &presenter).is_some();
             Boost::toggle_reaction(tx, message_id, booster_id, &content, reaction)
         })
         .await
@@ -602,7 +602,7 @@ async fn create_forwards(c: &mut Ctx) -> Result {
         .collect();
     let note = input
         .note
-        .filter(|note| !campfire_views::helpers::is_blank(note));
+        .filter(|note| !campfire_presentation::helpers::is_blank(note));
     let copier = ForwarderCopier::new(c.app().storage.clone());
     let creator = concerns::require_current_user(c)?.id;
     let results = c

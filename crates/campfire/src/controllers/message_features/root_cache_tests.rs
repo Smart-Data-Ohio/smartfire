@@ -269,3 +269,5 @@ async fn private_provider_frames_render_without_provider_secrets() {
         .await
         .unwrap();
 }
+
+use campfire_web::controllers::presenters::{Rendering, MessageCache};

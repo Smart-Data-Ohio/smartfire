@@ -1,21 +1,6 @@
 //! Viewer-authorized quote frame and viewer-neutral card facts supplied by controllers.
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub struct Card {
-    pub author: String,
-    pub room_label: String,
-    pub excerpt: String,
-    pub created_at: jiff::Timestamp,
-    pub message_path: String,
-}
-/// WS8bm2 root integration: only same-room sources carry inline facts. Cross-room
-/// references stay lazy and the existing frame endpoint performs viewer authorization.
-#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
-pub struct Reference {
-    pub id: i64,
-    pub card: Option<Card>,
-}
 
 pub fn cards(ctx: &ViewContext, message: &crate::messages::MessageView) -> h::Html {
     let Some(references) = &message.components.quote_references else {
@@ -35,8 +20,14 @@ pub fn cards(ctx: &ViewContext, message: &crate::messages::MessageView) -> h::Ht
     }
     crate::messages::cards(message, "message_link_cards", "message-link-cards", 0, &bodies)
 }
-impl Card {
-    pub fn datetime(&self, ctx: &ViewContext) -> h::Html {
+pub trait CardRendering {
+    fn datetime(&self, ctx: &ViewContext) -> h::Html;
+
+    fn html(&self, ctx: &ViewContext) -> String;
+}
+
+impl CardRendering for Card {
+    fn datetime(&self, ctx: &ViewContext) -> h::Html {
         crate::time::local_datetime_tag(
             &ctx.time_zone,
             self.created_at,
@@ -45,7 +36,10 @@ impl Card {
             "",
         )
     }
+ fn html(&self,ctx:&ViewContext) -> String {CardPartial{ctx,card:self}.render().expect("quote renders")}
+
 }
+
 #[derive(Template)]
 #[template(path = "messages/message_links/_card.html")]
 pub struct CardPartial<'a> {
@@ -80,10 +74,8 @@ impl Frame<'_> {
         )
     }
 }
-
-/// Origin placeholder used only by detached fixture renders.
-pub const ORIGIN_SLOT: &str = "http://campfire.test";
 pub fn lazy(id: i64, room_id: i64) -> String {
     h::turbo_frame_tag(&format!("message_link_card_message_reference_{id}"),Some(&format!("/rooms/{room_id}/message_links/{id}")),None,h::attrs().attr("loading","lazy").class("message-link-frame"),"").0
 }
-impl Card { pub fn html(&self,ctx:&ViewContext) -> String {CardPartial{ctx,card:self}.render().expect("quote renders")} }
+
+pub use campfire_presentation::message_links::*;
