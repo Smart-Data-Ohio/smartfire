@@ -657,8 +657,8 @@ async fn start_rust(fixtures: &Fixtures, dir: &Path) -> Target {
         origin: format!("http://{addr}"),
         fixtures: fixtures.clone(),
         rust: Some(RustApp {
+            broadcasts: Broadcasts::new(server, db.env().clock.clone()),
             db,
-            broadcasts: Broadcasts::new(server),
         }),
         quiet: Duration::from_millis(100),
     }

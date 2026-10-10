@@ -101,7 +101,7 @@ pub async fn start() -> TestApp {
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
     TestApp {
-        broadcasts: Broadcasts::new(server.clone()),
+        broadcasts: Broadcasts::new(server.clone(), db.env().clock.clone()),
         db,
         server,
         secrets,

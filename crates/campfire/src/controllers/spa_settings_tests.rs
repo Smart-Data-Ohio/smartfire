@@ -14,7 +14,7 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest as _;
 
 use crate::controllers::presenters::test_support::{
-    Browser, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
+    ALL_TALK, Browser, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
 };
 
 /// David's password in the seed.
@@ -1523,6 +1523,145 @@ async fn a9_every_settings_write_advances_a_persisted_revision() {
     assert_eq!(parse::<api::Settings>(&read).revision, revision);
     let count = b.send(get("/api/v1/activity/unread_count")).await;
     assert_eq!(parse::<api::ActivityUnreadCount>(&count).unread_revision, activity_revision);
+}
+
+async fn notification_delivery_app() -> (TestApp, Arc<campfire_kit::clock::FrozenClock>) {
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        SEED_NOW.parse().unwrap(),
+    ));
+    let app = TestApp::boot_seed_with_env("default", clock.clone(), &[("SPA_ENABLED", "1")])
+        .await
+        .expect("restored default seed required")
+        .without_job_runner()
+        .await;
+    (app, clock)
+}
+
+async fn assert_room_notification_delivery(
+    app: &TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    browser: &mut Browser<'_>,
+    source: &str,
+    expected: (bool, i64),
+) {
+    app.db()
+        .write(|tx| {
+            let mut membership = campfire_db::Membership::find_by_room_and_user(
+                tx.conn(), ALL_TALK, DAVID,
+            )?.unwrap();
+            membership.read(tx)?;
+            tx.conn().execute(
+                "UPDATE memberships SET connected_at=NULL WHERE id=?",
+                [membership.id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let source = source.to_owned();
+    let message = app.db().write(move |tx| {
+        campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK,
+            creator_id: JASON,
+            markdown_source: Some(source),
+            ..Default::default()
+        })
+    }).await.unwrap();
+    let broadcasts = app.booted.app.broadcasts.clone();
+    let rich_text = app.db().env().rich_text.clone();
+    app.db().read(move |conn| {
+        let room = campfire_db::Room::find(conn, ALL_TALK)?;
+        broadcasts.unread_room(conn, &room, &message, &*rich_text)
+    }).await.unwrap();
+
+    let unreads = crate::channels::tests::support::identifier(
+        json!({"channel":"UnreadRoomsChannel"}),
+    );
+    let receipt = tokio::time::timeout(Duration::from_secs(1), client.next_text()).await.ok();
+    if let Some(receipt) = &receipt {
+        assert_eq!(*receipt, crate::channels::tests::support::delivery(
+            &unreads, &format!(r#"{{"roomId":{ALL_TALK}}}"#),
+        ));
+    }
+    client.assert_silent().await;
+    let unread = app.db().read(|conn| {
+        Ok(campfire_db::Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)?
+            .unwrap().unread())
+    }).await.unwrap();
+    // Read through the API again, as a reload does, rather than reusing the settings response.
+    let sidebar: api::Sidebar = parse(&browser.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == ALL_TALK).unwrap();
+    assert_eq!((unread, receipt.is_some(), row.notification_count),
+        (expected.0, expected.0, expected.1));
+}
+
+async fn inherited_notification_delivery(stored: &str, default: &str, notifications: i64) {
+    let (app, _) = notification_delivery_app().await;
+    let mut browser = app.sign_in(DAVID).await;
+    let response = write(&mut browser, Method::PUT,
+        &format!("/api/v1/rooms/{ALL_TALK}/involvement"),
+        json!({"involvement":stored}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let response = write(&mut browser, Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"defaultNotificationLevel":default,
+            "roomNotification":{"roomId":ALL_TALK,"level":null}}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let (mut client, server) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&app).await;
+    client.confirm(&crate::channels::tests::support::identifier(
+        json!({"channel":"UnreadRoomsChannel"}),
+    )).await;
+    assert_room_notification_delivery(&app, &mut client, &mut browser,
+        "An ordinary message without a mention", (true, notifications)).await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_muted_to_default_all() {
+    inherited_notification_delivery("muted", "everything", 1).await;
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_muted_to_default_mentions() {
+    inherited_notification_delivery("muted", "mentions", 0).await;
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_all_to_default_no_notifications() {
+    // No notifications retains unread markers, unlike a timed or indefinite room mute.
+    inherited_notification_delivery("everything", "nothing", 0).await;
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_resumes_at_timed_mute_expiry() {
+    let (app, clock) = notification_delivery_app().await;
+    let mut browser = app.sign_in(DAVID).await;
+    let response = write(&mut browser, Method::PUT,
+        &format!("/api/v1/rooms/{ALL_TALK}/involvement"),
+        json!({"involvement":"muted"}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let response = write(&mut browser, Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"defaultNotificationLevel":"everything",
+            "roomNotification":{"roomId":ALL_TALK,"level":null},
+            "roomMute":{"roomId":ALL_TALK,"duration":"minutes15"}}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let (mut client, server) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&app).await;
+    client.confirm(&crate::channels::tests::support::identifier(
+        json!({"channel":"UnreadRoomsChannel"}),
+    )).await;
+    assert_room_notification_delivery(&app, &mut client, &mut browser,
+        &format!("A muted mention of <@{DAVID}>"), (false, 0)).await;
+    clock.advance(jiff::SignedDuration::from_secs(900));
+    assert_room_notification_delivery(&app, &mut client, &mut browser,
+        "The first ordinary message after expiry", (true, 1)).await;
+    server.abort();
 }
 
 #[tokio::test]

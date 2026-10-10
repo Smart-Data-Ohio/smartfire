@@ -169,6 +169,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     );
     let google = crate::integrations::google::State::from_config(&config);
     let agent_repositories = crate::integrations::agent_repositories::State::live(github_accounts.clone());
+    let broadcasts = channels::Broadcasts::new(cable.clone(), db.env().clock.clone());
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -176,7 +177,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         clock: clock.clone(),
         db,
         storage,
-        broadcasts: channels::Broadcasts::new(cable.clone()),
+        broadcasts,
         cable,
         jobs,
         mail,

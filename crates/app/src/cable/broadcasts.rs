@@ -19,7 +19,7 @@
 use campfire_cable::turbo::{Action, Target};
 use campfire_db::models::activity_item::ActivityItemsRemoved;
 use campfire_db::rich_text::RichText;
-use campfire_db::{Connection, Involvement, Membership, Message, Room};
+use campfire_db::{Connection, Involvement, Membership, Message, Room, UserStatusSettings};
 #[cfg(any(test, feature = "test-support"))]
 use campfire_db::Boost;
 use rails_compat::global_id::GlobalId;
@@ -172,13 +172,15 @@ pub fn read_room(server: &Cable, user_id: i64, room_id: i64) -> usize {
 pub struct Broadcasts {
     server: Cable,
     sync: RendererSlot,
+    clock: std::sync::Arc<dyn campfire_db::Clock>,
 }
 
 impl Broadcasts {
-    pub fn new(server: Cable) -> Self {
+    pub fn new(server: Cable, clock: std::sync::Arc<dyn campfire_db::Clock>) -> Self {
         Self {
             server,
             sync: RendererSlot::default(),
+            clock,
         }
     }
 
@@ -441,7 +443,7 @@ impl Broadcasts {
     }
 
     /// `broadcast_unread_room`: `{ roomId: }` to each member's `user_<id>_unreads`, leaving out
-    /// muted members the message doesn't mention (`unread_user_ids`).
+    /// active room mutes and legacy muted members the message doesn't mention (`unread_user_ids`).
     pub fn unread_room(
         &self,
         conn: &Connection,
@@ -454,7 +456,7 @@ impl Broadcasts {
             #[serde(rename = "roomId")]
             room_id: i64,
         }
-        let user_ids = unread_user_ids(conn, room, message, rich_text)?;
+        let user_ids = unread_user_ids(conn, room, message, rich_text, self.clock.now())?;
         for &user_id in &user_ids {
             self.channel(
                 &unread_rooms_stream_name(user_id),
@@ -744,16 +746,26 @@ impl Broadcasts {
     }
 }
 
-/// `unread_user_ids`: every member, except that when any is muted, muted members the message
-/// doesn't mention are left out.
+/// `unread_user_ids`: resolve the effective room policy before filtering active room mutes
+/// and legacy muted members the message doesn't mention.
 fn unread_user_ids(
     conn: &Connection,
     room: &Room,
     message: &Message,
     rich_text: &dyn RichText,
+    now: campfire_db::Timestamp,
 ) -> campfire_db::Result<Vec<i64>> {
-    let memberships = Membership::for_room(conn, room.id)?;
-    let muted = |membership: &Membership| membership.involvement == Some(Involvement::Muted);
+    let mut memberships = Membership::for_room(conn, room.id)?;
+    let ids = memberships.iter().map(|membership| membership.user_id).collect::<Vec<_>>();
+    let users = UserStatusSettings::for_ids(conn, &ids)?;
+    memberships.retain(|membership| !users.get(&membership.user_id).is_some_and(|user| {
+        user.notification_preferences.muted(room.id, now)
+    }));
+    let muted = |membership: &Membership| {
+        users.get(&membership.user_id)
+            .map(|user| user.notification_preferences.involvement(room.id, membership.involvement))
+            .unwrap_or(membership.involvement) == Some(Involvement::Muted)
+    };
     if !memberships.iter().any(muted) {
         return Ok(memberships
             .iter()
