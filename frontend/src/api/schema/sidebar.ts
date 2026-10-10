@@ -7,7 +7,7 @@ import type { SidebarRowRemoved as GeneratedSidebarRowRemoved } from "../../gen/
 import { RoomCategoryId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Membership, Room } from "./room.ts";
-import { Timestamp } from "./time.ts";
+import { EvaluationTimestamp, Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
 /** A direct room's newest root message, previewed under its row on phones. */
@@ -23,6 +23,8 @@ export type SidebarLastMessagePin = Assert<
 
 /** A room as it appears in one person's sidebar, with its unread, mention and notification counts. */
 export const SidebarRow = Schema.Struct({
+  revision: Schema.Int,
+  evaluatedAt: EvaluationTimestamp,
   room: Room,
   membership: Membership,
   displayName: Schema.String,

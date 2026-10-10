@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
-use campfire_db::{Connection, PushPayload, PushSubscription};
+use campfire_db::{Connection, PushPayload, PushSubscription, Timestamp};
 use tokio::sync::{Notify, Semaphore};
 
 use super::{Notification, VapidConfig};
@@ -84,10 +84,10 @@ impl Pool {
 
     /// `queue(payload, subscriptions)`: in id order (`find_each`), each subscription's
     /// notification is built here (counting its badge) and delivered on the pool.
-    pub fn queue(&self, conn: &Connection, payload: &PushPayload, mut subscriptions: Vec<PushSubscription>) -> campfire_db::Result<()> {
+    pub fn queue(&self, conn: &Connection, payload: &PushPayload, mut subscriptions: Vec<PushSubscription>, now: Timestamp) -> campfire_db::Result<()> {
         subscriptions.sort_by_key(|s| s.id);
         for subscription in &subscriptions {
-            self.deliver_later(Notification::build(conn, subscription, payload)?);
+            self.deliver_later(Notification::build(conn, subscription, payload, now)?);
         }
         Ok(())
     }

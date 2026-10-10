@@ -135,7 +135,14 @@ function activityPage(
   nextCursor: string | null = null,
   unreadRevision = 1,
 ): ActivityList {
-  return { items: [...items], users: [user(2)], unreadCount, unreadRevision, nextCursor };
+  return {
+    items: [...items],
+    users: [user(2)],
+    unreadCount,
+    unreadRevision,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    nextCursor,
+  };
 }
 
 /** The inbox with Unread, Read and Handled loaded in All, and Unread loaded in Mentions. */
@@ -374,7 +381,12 @@ describe("the activity inbox", () => {
     const next = events(state, {
       topic: "user",
       type: "activity.item",
-      data: { item: handled, unreadCount: 2, unreadRevision: 2 },
+      data: {
+        item: handled,
+        unreadCount: 2,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      },
     });
 
     expect(ids(next, "all", "unread")).toEqual([5, 4]);
@@ -388,6 +400,7 @@ describe("the activity inbox", () => {
     const next = applyActivityItem(inbox(), item(6, 59, "huddle_started"), {
       unreadCount: 4,
       unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     });
 
     expect(ids(next, "all", "unread")).toEqual([6, 5, 4, 3]);
@@ -429,8 +442,13 @@ describe("the activity inbox", () => {
     state = applyActivityItem(state, item(5, 50, "mention", "read"), {
       unreadCount: 2,
       unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     });
-    state = setActivityUnreadCount(state, { unreadCount: 8, unreadRevision: 5 });
+    state = setActivityUnreadCount(state, {
+      unreadCount: 8,
+      unreadRevision: 5,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     const reply = item(5, 60, "mention", "handled");
 
     state = endActivityChange(state, {
@@ -438,7 +456,7 @@ describe("the activity inbox", () => {
       token: 1,
       optimistic,
       settled: reply,
-      unread: { unreadCount: 2, unreadRevision: 3 },
+      unread: { unreadCount: 2, unreadRevision: 3, evaluatedAt: "2026-10-10T12:00:00.000000000Z" },
     });
     expect(state.activity.items[5]).toEqual(reply);
     expect(state.activity.unreadCount).toBe(8);
@@ -452,7 +470,11 @@ describe("the activity inbox", () => {
     state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
     const read = item(5, 50, "mention", "read");
 
-    state = applyActivityItem(state, read, { unreadCount: 2, unreadRevision: 2 });
+    state = applyActivityItem(state, read, {
+      unreadCount: 2,
+      unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     state = endActivityChange(state, {
       generation: state.activity.generation,
       token: 1,
@@ -466,9 +488,14 @@ describe("the activity inbox", () => {
     state = applyActivityItem(state, item(5, 50, "mention", "handled"), {
       unreadCount: 2,
       unreadRevision: 3,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     });
     expect(state.activity.unreadCount).toBe(1);
-    state = applyActivityItem(state, before, { unreadCount: 3, unreadRevision: 4 });
+    state = applyActivityItem(state, before, {
+      unreadCount: 3,
+      unreadRevision: 4,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     expect(state.activity.pendingUnread[1]?.delta).toBe(-1);
     expect(state.activity.pendingUnread[3]?.delta).toBe(1);
     expect(state.activity.unreadCount).toBe(2);
@@ -493,14 +520,20 @@ describe("the activity inbox", () => {
       state = applyActivityItem(state, item(5, 50, "mention", "read"), {
         unreadCount: 2,
         unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       });
       const latest = item(5, 50, "mention", latestState);
       const unreadCount = latestState === "unread" ? 3 : 2;
 
-      state = applyActivityItem(state, latest, { unreadCount, unreadRevision: 3 });
+      state = applyActivityItem(state, latest, {
+        unreadCount,
+        unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      });
       state = applyActivityItem(state, item(5, 50, "mention", "read"), {
         unreadCount: 2,
         unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       });
       state = endActivityChange(state, {
         generation: state.activity.generation,
@@ -526,6 +559,7 @@ describe("the activity inbox", () => {
     const next = applyActivityItem(state, item(2, 20, "mention", "read"), {
       unreadCount: 0,
       unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     });
 
     expect(ids(next, "all", "read")).toEqual([5]);
@@ -537,14 +571,26 @@ describe("the activity inbox", () => {
     const read = item(3, 30, "mention", "read");
 
     expect(
-      applyActivityItem(state, read, { unreadCount: 11, unreadRevision: 2 }).activity.unreadCount,
+      applyActivityItem(state, read, {
+        unreadCount: 11,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }).activity.unreadCount,
     ).toBe(11);
     expect(applyActivityItem(state, read, null).activity.unreadCount).toBe(3);
     expect(
-      setActivityUnreadCount(state, { unreadCount: 3, unreadRevision: 2 }).activity.unreadCount,
+      setActivityUnreadCount(state, {
+        unreadCount: 3,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }).activity.unreadCount,
     ).toBe(3);
     expect(
-      setActivityUnreadCount(state, { unreadCount: 0, unreadRevision: 2 }).activity.unreadCount,
+      setActivityUnreadCount(state, {
+        unreadCount: 0,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }).activity.unreadCount,
     ).toBe(0);
   });
 
@@ -552,7 +598,12 @@ describe("the activity inbox", () => {
     const next = events(inbox(), {
       topic: "user",
       type: "activity.removed",
-      data: { id: 5, unreadCount: 2, unreadRevision: 2 },
+      data: {
+        id: 5,
+        unreadCount: 2,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      },
     });
 
     expect(next.activity.items[5]).toBeUndefined();
@@ -563,23 +614,53 @@ describe("the activity inbox", () => {
 
   it("invalidates a delayed count even when removal of an unseen item leaves the count unchanged", () => {
     const state = inbox();
-    const next = removeActivityItem(state, 999, { unreadCount: 3, unreadRevision: 2 });
+
+    const next = removeActivityItem(state, 999, {
+      unreadCount: 3,
+      unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
     expect(
-      setActivityUnreadCount(next, { unreadCount: 10, unreadRevision: 1 }).activity.unreadCount,
+      setActivityUnreadCount(next, {
+        unreadCount: 10,
+        unreadRevision: 1,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }).activity.unreadCount,
     ).toBe(3);
   });
 
   it("accepts revision zero first and ignores equal or older count snapshots", () => {
-    const first = setActivityUnreadCount(initialState, { unreadCount: 2, unreadRevision: 0 });
-    const newer = setActivityUnreadCount(first, { unreadCount: 4, unreadRevision: 3 });
+    const first = setActivityUnreadCount(initialState, {
+      unreadCount: 2,
+      unreadRevision: 0,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
-    expect(first.activity.serverUnread).toEqual({ unreadCount: 2, unreadRevision: 0 });
+    const newer = setActivityUnreadCount(first, {
+      unreadCount: 4,
+      unreadRevision: 3,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
+
+    expect(first.activity.serverUnread).toEqual({
+      unreadCount: 2,
+      unreadRevision: 0,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     expect(
-      setActivityUnreadCount(newer, { unreadCount: 0, unreadRevision: 3 }).activity.unreadCount,
+      setActivityUnreadCount(newer, {
+        unreadCount: 0,
+        unreadRevision: 3,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }).activity.unreadCount,
     ).toBe(4);
     expect(
-      setActivityUnreadCount(newer, { unreadCount: 9, unreadRevision: 2 }).activity.unreadCount,
+      setActivityUnreadCount(newer, {
+        unreadCount: 9,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }).activity.unreadCount,
     ).toBe(4);
   });
 
@@ -587,9 +668,20 @@ describe("the activity inbox", () => {
     const before = item(3, 30);
 
     const optimistic = nextActivityItem(before, "read", at(55));
-    const held = setActivityUnreadCount(inbox(), { unreadCount: 8, unreadRevision: 100 });
+
+    const held = setActivityUnreadCount(inbox(), {
+      unreadCount: 8,
+      unreadRevision: 100,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
+
     const pending = showActivityChange(held, optimistic, 1, -1);
-    const queued = setActivityUnreadCount(pending, { unreadCount: 7, unreadRevision: 101 });
+
+    const queued = setActivityUnreadCount(pending, {
+      unreadCount: 7,
+      unreadRevision: 101,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
     expect(queued.activity.unreadCount).toBe(7);
 
@@ -598,14 +690,19 @@ describe("the activity inbox", () => {
     expect(restored.activity.deferredUnread).toBeNull();
 
     const nextPending = showActivityChange(restored, optimistic, 2, -1);
-    const nextQueued = setActivityUnreadCount(nextPending, { unreadCount: 2, unreadRevision: 50 });
+
+    const nextQueued = setActivityUnreadCount(nextPending, {
+      unreadCount: 2,
+      unreadRevision: 50,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
     const settled = endActivityChange(nextQueued, {
       generation: restored.activity.generation,
       token: 2,
       optimistic,
       settled: optimistic,
-      unread: { unreadCount: 1, unreadRevision: 49 },
+      unread: { unreadCount: 1, unreadRevision: 49, evaluatedAt: "2026-10-10T12:00:00.000000000Z" },
     });
 
     expect(settled.activity.unreadCount).toBe(2);
@@ -616,7 +713,12 @@ describe("the activity inbox", () => {
   it("keeps a newer count when an old page lands, without invalidating a newer GET", () => {
     const state = inbox();
     const start = activityLoadStart(state, "all", "unread");
-    const newer = setActivityUnreadCount(state, { unreadCount: 4, unreadRevision: 2 });
+
+    const newer = setActivityUnreadCount(state, {
+      unreadCount: 4,
+      unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
     const paged = landActivityPage(
       newer,
@@ -627,9 +729,17 @@ describe("the activity inbox", () => {
       start,
     );
 
-    const refreshed = setActivityUnreadCount(paged, { unreadCount: 5, unreadRevision: 3 });
+    const refreshed = setActivityUnreadCount(paged, {
+      unreadCount: 5,
+      unreadRevision: 3,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
-    expect(paged.activity.serverUnread).toEqual({ unreadCount: 4, unreadRevision: 2 });
+    expect(paged.activity.serverUnread).toEqual({
+      unreadCount: 4,
+      unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     expect(refreshed.activity.unreadCount).toBe(5);
   });
 
@@ -653,19 +763,33 @@ describe("the activity inbox", () => {
   });
 
   it("ignores conflicting equal or older websocket counts independently of item timestamps", () => {
-    const state = setActivityUnreadCount(inbox(), { unreadCount: 4, unreadRevision: 3 });
+    const state = setActivityUnreadCount(inbox(), {
+      unreadCount: 4,
+      unreadRevision: 3,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
     const changed = events(
       state,
       {
         topic: "user",
         type: "activity.item",
-        data: { item: item(3, 59, "mention", "read"), unreadCount: 0, unreadRevision: 2 },
+        data: {
+          item: item(3, 59, "mention", "read"),
+          unreadCount: 0,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        },
       },
       {
         topic: "user",
         type: "activity.removed",
-        data: { id: 5, unreadCount: 9, unreadRevision: 3 },
+        data: {
+          id: 5,
+          unreadCount: 9,
+          unreadRevision: 3,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        },
       },
     );
 

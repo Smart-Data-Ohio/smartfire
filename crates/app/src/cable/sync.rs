@@ -59,6 +59,12 @@ pub trait SyncRenderer: Send + Sync + 'static {
         user_id: i64,
         item_id: i64,
     ) -> campfire_db::Result<Option<campfire_api_types::ActivityItemChanged>>;
+    /// The viewer's badge at the application clock, read after an activity removal.
+    fn activity_unread_count(
+        &self,
+        conn: &Connection,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<campfire_db::models::activity_item::ActivityUnread>>;
     /// The scheduled message as `GET /api/v1/scheduled_messages` lists it; `Ok(None)` when it's
     /// gone.
     fn scheduled_message(
@@ -201,6 +207,7 @@ impl RendererSlot {
 pub const TWINS: &[(&str, &[&str])] = &[
     ("workspace_branding::publish", &["workspace.updated"]),
     ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
+    ("sync::settings_updated", &["settings.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -735,24 +742,27 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
     if items.is_empty() {
         return;
     }
+    let render = renderer.clone();
     let (server, slot) = (server.downgrade(), slot.clone());
     renderer.defer(Box::new(move |conn| {
         let Some(server) = server.upgrade() else {
             return;
         };
         for (id, user_id) in items {
-            let count = campfire_db::ActivityItem::unread_snapshot(conn, user_id);
+            let count = render.activity_unread_count(conn, user_id);
             match count {
-                Ok(unread) => send(
+                Ok(Some(unread)) => send(
                     &server,
                     Audience::User(user_id),
                     &SyncPayload::ActivityRemoved(campfire_api_types::ActivityItemRemoved {
                         id,
                         unread_count: unread.count,
                         unread_revision: unread.revision,
+                        evaluated_at: unread.evaluated_at.to_evaluation_time(),
                     }),
                     |publication| publication,
                 ),
+                Ok(None) => (),
                 Err(error) => tracing::warn!(%error, id, "sync: activity count not read"),
             }
             if let Some(room_id) = removed.room_id {
@@ -1676,6 +1686,19 @@ pub fn workspace_styles_updated(server: &Cable, css: Option<String>) {
         Audience::Everyone,
         &SyncPayload::WorkspaceStylesUpdated(CustomStyles { css }),
         |publication| SyncPublication { coalesce: Some("workspace.styles".into()), ..publication },
+    );
+}
+
+/// Called after a settings write commits, with the snapshot returned to the writer.
+pub fn settings_updated(server: &Cable, settings: campfire_api_types::Settings) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::User(settings.profile.user_id),
+        &SyncPayload::SettingsUpdated(Box::new(settings)),
+        |publication| publication,
     );
 }
 

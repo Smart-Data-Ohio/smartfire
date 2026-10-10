@@ -14,3 +14,8 @@ export const Timestamp = Schema.DateTimeUtcFromString;
 export const RowTimestamp = Schema.String.pipe(
   Schema.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/)),
 );
+
+/** The injected server clock used to evaluate a snapshot, in UTC with nanoseconds. */
+export const EvaluationTimestamp = Schema.String.pipe(
+  Schema.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}Z$/)),
+);

@@ -2,6 +2,7 @@
  * The sidebar's organising commands, as the menus, drags and fields call them: each runs the
  * optimistic action and turns a refusal into a toast (the change has already been put back).
  */
+
 import type { Involvement } from "../../gen/Involvement.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
 import type { RoomSlot } from "../../store/organize.ts";

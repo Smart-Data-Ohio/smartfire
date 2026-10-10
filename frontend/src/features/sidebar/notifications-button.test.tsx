@@ -125,3 +125,9 @@ describe("the notification menu URL", () => {
     expect(setInvolvement).toHaveBeenCalledWith(4, "nothing");
   });
 });
+
+it("offers inherited notifications and the room mute durations", async () => {
+  await mount();
+  expect(screen.queryByRole("menuitemradio", { name: /Use account default/ })).not.toBeNull();
+  expect(screen.queryByRole("menuitem", { name: /Mute for/ })).not.toBeNull();
+});

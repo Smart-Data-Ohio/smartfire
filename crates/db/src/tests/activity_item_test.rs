@@ -199,7 +199,8 @@ fn ws12_activity_stale_huddle_unhandle_broadcast_uses_its_updated_snapshot() {
 }
 
 fn unread_snapshot(t: &TestDb, user: i64) -> crate::models::activity_item::ActivityUnread {
-    t.read(move |conn| ActivityItem::unread_snapshot(conn, user))
+    let now = t.now();
+    t.read(move |conn| ActivityItem::unread_snapshot(conn, user, now))
 }
 
 #[test]
@@ -347,16 +348,17 @@ fn activity_unread_snapshot_keeps_count_and_revision_in_the_same_sqlite_snapshot
     assert!(queries[0].starts_with("SELECT "));
     drop(queries);
     let db = t.db.clone();
+    let now = t.now();
     let during = t.read(move |conn| {
         let snapshot = conn.unchecked_transaction()?;
-        let first = ActivityItem::unread_snapshot(&snapshot, user)?;
+        let first = ActivityItem::unread_snapshot(&snapshot, user, now)?;
         assert_eq!(first, before);
         db.write_blocking(move |tx| {
             tx.conn()
                 .execute("DELETE FROM activity_items WHERE id=?", [item.id])?;
             Ok(())
         })?;
-        ActivityItem::unread_snapshot(&snapshot, user)
+        ActivityItem::unread_snapshot(&snapshot, user, now)
     });
     assert_eq!(during, before);
     let after = unread_snapshot(&t, user);

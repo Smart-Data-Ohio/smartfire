@@ -100,6 +100,7 @@ impl KeywordAlert {
         let id = tx.conn().query_row_cached(
             "INSERT INTO keyword_alerts (user_id, phrase, created_at, updated_at) VALUES (?, ?, ?, ?) RETURNING id",
             params![user_id, phrase, tx.now(), tx.now()], |r| r.get(0))?;
+        super::user::profile_settings::bump_revision(tx, user_id)?;
         Self::find(tx.conn(), id)
     }
 
@@ -111,14 +112,18 @@ impl KeywordAlert {
                 "UPDATE keyword_alerts SET phrase = ?, updated_at = ? WHERE id = ?",
                 params![phrase, tx.now(), self.id],
             )?;
+            super::user::profile_settings::bump_revision(tx, self.user_id)?;
             *self = Self::find(tx.conn(), self.id)?;
         }
         Ok(())
     }
 
     pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
-        tx.conn()
+        let removed = tx.conn()
             .execute_cached("DELETE FROM keyword_alerts WHERE id = ?", [self.id])?;
+        if removed != 0 {
+            super::user::profile_settings::bump_revision(tx, self.user_id)?;
+        }
         Ok(())
     }
 }

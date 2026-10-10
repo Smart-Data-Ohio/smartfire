@@ -170,7 +170,7 @@ fn mention_edits_promote_existing_activity_and_only_refresh_added_recipients() {
             assert_eq!(before.event_type, event_type);
             let before = state(&t, before, previous_state);
             let kept = state(&t, item(&t, &message, "jason"), "handled");
-            let unread = t.read(|conn| ActivityItem::unread_snapshot(conn, id("david")));
+            let unread = t.read(|conn| ActivityItem::unread_snapshot(conn, id("david"), t.now()));
             t.sink.take();
             t.travel(1);
             let message = edit(&t, &message, true);
@@ -181,7 +181,7 @@ fn mention_edits_promote_existing_activity_and_only_refresh_added_recipients() {
             assert_eq!(promoted.event_type, "mention");
             assert!(promoted.unread());
             assert_eq!(item(&t, &message, "jason"), kept);
-            let after = t.read(|conn| ActivityItem::unread_snapshot(conn, id("david")));
+            let after = t.read(|conn| ActivityItem::unread_snapshot(conn, id("david"), t.now()));
             assert_eq!(after.count, unread.count + i64::from(!before.unread()));
             assert!(after.revision > unread.revision);
             assert_update(&t, &promoted);
@@ -219,7 +219,7 @@ fn mention_edits_demote_promoted_activity_preserving_current_state() {
             let message = edit(&t, &message, true);
             let mention = state(&t, item(&t, &message, "david"), current_state);
             let kept = item(&t, &message, "jason");
-            let unread = t.read(|conn| ActivityItem::unread_snapshot(conn, id("david")));
+            let unread = t.read(|conn| ActivityItem::unread_snapshot(conn, id("david"), t.now()));
             t.sink.take();
             t.travel(1);
             let message = edit(&t, &message, false);
@@ -234,7 +234,7 @@ fn mention_edits_demote_promoted_activity_preserving_current_state() {
             );
             assert_eq!(item(&t, &message, "jason"), kept);
             assert_eq!(
-                t.read(|conn| ActivityItem::unread_snapshot(conn, id("david")))
+                t.read(|conn| ActivityItem::unread_snapshot(conn, id("david"), t.now()))
                     .count,
                 unread.count
             );

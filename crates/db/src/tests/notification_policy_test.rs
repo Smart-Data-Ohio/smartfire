@@ -14,6 +14,131 @@ fn instant(s: &str) -> Timestamp {
 }
 
 #[test]
+fn a9_profile_and_status_saves_keep_legacy_preferences_and_write_once() {
+    use crate::models::notification_policy::NotificationPreferences;
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"agent_work":"0"}).to_string(), id("david")])?;
+        Ok(())
+    });
+    let mut previous = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    for status_save in [false, true] {
+        let updates = t.write(move |tx| {
+            let before = tx.conn().total_changes();
+            if status_save {
+                let mut status = UserStatusSettings::find(tx.conn(), id("david"))?;
+                status.dnd_enabled = !status.dnd_enabled;
+                status.save(tx)?;
+            } else {
+                profile_settings::update(tx, id("david"), Changes {
+                    theme: Some("dark".into()),
+                    ..Default::default()
+                })?;
+            }
+            Ok(tx.conn().total_changes() - before)
+        });
+        assert_eq!(updates, 1, "status_save={status_save}");
+        let preferences = t.read(|conn| {
+            let raw: String = conn.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?;
+            Ok(serde_json::from_str::<Value>(&raw).unwrap())
+        });
+        assert_eq!(preferences, json!({"agent_work":"0"}));
+        let revision = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+        assert!(revision > previous);
+        assert_eq!(t.read(|conn| UserStatusSettings::find(conn, id("david"))).notification_preferences.settings_revision, revision);
+        previous = revision;
+    }
+}
+
+#[test]
+fn a9_room_choices_advance_revision_even_when_only_inheritance_changes() {
+    use crate::models::notification_policy::NotificationPreferences;
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    let room = t.read(|conn| crate::Membership::find(conn, id("david_watercooler"))).room_id;
+    t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
+        inbox_preferences: Some(json!({"default_notification_level":"nothing", "room_notification_levels":{room.to_string():null}})),
+        ..Default::default()
+    }));
+    let mut previous = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    for level in [Involvement::Everything, Involvement::Mentions, Involvement::Nothing, Involvement::Muted, Involvement::Invisible] {
+        t.write(move |tx| crate::Membership::find(tx.conn(), id("david_watercooler"))?.update_involvement(tx, level));
+        let preferences = t.read(|conn| NotificationPreferences::load(conn, id("david")));
+        assert!(preferences.settings_revision > previous, "{level:?} did not advance settings revision");
+        assert!(!preferences.room_notification_levels.contains_key(&room));
+        previous = preferences.settings_revision;
+    }
+    t.write(|tx| crate::Membership::find(tx.conn(), id("david_watercooler"))?.update_involvement(tx, Involvement::Invisible));
+    assert_eq!(t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision, previous);
+}
+
+#[test]
+fn a9_notification_writers_advance_revision_outside_the_settings_api() {
+    use crate::models::notification_policy::NotificationPreferences;
+    let t = TestDb::new();
+    let revision = |t: &TestDb| t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    let mut previous = revision(&t);
+    t.write(|tx| {
+        let mut status = UserStatusSettings::find(tx.conn(), id("david"))?;
+        status.dnd_enabled = !status.dnd_enabled;
+        status.save(tx)
+    });
+    assert!(revision(&t) > previous, "status save did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| crate::slash_commands::user_settings::update(tx, id("david"), json!({"presence_setting":"dnd"})));
+    assert!(revision(&t) > previous, "slash setting did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| {
+        crate::models::user_status_settings::replace_keyword_alerts(tx, id("david"), &["revision witness".into()])
+    });
+    assert!(revision(&t) > previous, "keywords did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| {
+        crate::DndAllowedUser::remove(tx, id("david"), id("kevin"))?;
+        crate::DndAllowedUser::create(tx, id("david"), id("kevin"))?;
+        Ok(())
+    });
+    assert!(revision(&t) > previous, "DND allowance did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| {
+        crate::DndAllowedUser::remove(tx, id("david"), id("kevin"))?;
+        Ok(())
+    });
+    assert!(revision(&t) > previous, "DND allowance removal did not advance revision");
+}
+
+#[test]
+fn a9_direct_keyword_writers_advance_revision() {
+    use crate::models::notification_policy::NotificationPreferences;
+    let t = TestDb::new();
+    let revision = |t: &TestDb| t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    let mut previous = revision(&t);
+    let keyword = t.write(|tx| crate::KeywordAlert::create(tx, id("david"), "revision witness"));
+    assert!(revision(&t) > previous, "keyword creation did not advance revision");
+    previous = revision(&t);
+    let keyword = t.write(move |tx| {
+        let mut keyword = keyword;
+        keyword.update(tx, "revision changed")?;
+        Ok(keyword)
+    });
+    assert!(revision(&t) > previous, "keyword update did not advance revision");
+    previous = revision(&t);
+    t.write(move |tx| keyword.destroy(tx));
+    assert!(revision(&t) > previous, "keyword removal did not advance revision");
+}
+
+#[test]
+fn a9_calendar_notification_state_advances_revision() {
+    use crate::models::notification_policy::NotificationPreferences;
+    let t = TestDb::new();
+    let before = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    t.write(|tx| crate::models::google_meeting_cache::complete(tx, id("david"), Some(json!([])), Some(json!([])), Some("revision witness".into()), tx.now()));
+    let after = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    assert!(after > before, "calendar notification state did not advance revision");
+}
+
+#[test]
 fn ws17_policy_matches_rails_combinations() {
     let t = TestDb::new();
     let mut user = t.read(|conn| {
@@ -25,6 +150,7 @@ fn ws17_policy_matches_rails_combinations() {
     for row in vectors["policies"].as_array().unwrap() {
         user.dnd_enabled = row["quiet"].as_bool().unwrap();
         let policy = NotificationPolicy {
+            room_id: None,
             recipient: Some(&user),
             kind: match row["kind"].as_str().unwrap() {
                 "room_message" => NotificationKind::RoomMessage,
@@ -87,6 +213,7 @@ fn ws17_status_readers_match_rails_times_zones_and_dst() {
         });
         let now = instant(row["now"].as_str().unwrap());
         let policy = NotificationPolicy {
+            room_id: None,
             recipient: Some(&user),
             kind: NotificationKind::Reminder,
             room_involvement: None,
@@ -138,6 +265,7 @@ fn ws17_allowed_sender_bypasses_dnd_but_stars_alone_do_not() {
             .unwrap())
     });
     let policy = |u| NotificationPolicy {
+        room_id: None,
         recipient: u,
         kind: NotificationKind::Huddle,
         room_involvement: None,
@@ -158,4 +286,211 @@ fn ws17_allowed_sender_bypasses_dnd_but_stars_alone_do_not() {
     p.room_involvement = Some(Some(Involvement::Everything));
     assert!(p.push()); // Rails gates inbox activity, not push, by active human.
     assert_eq!(p.inbox_event_type(), None);
+}
+
+#[test]
+fn a9_notification_preferences_extend_and_preserve_legacy_keys() {
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"agent_work":"0","custom_legacy":true}).to_string(), id("david")])?;
+        profile_settings::update(tx, id("david"), Changes {
+            inbox_preferences: Some(json!({"default_notification_level":"mentions", "room_notification_levels":{"1":null}, "room_mute_until":{"1":"2030-01-01T00:00:00Z"}})),
+            ..Default::default()
+        })
+    });
+    let raw: String = t.read(|c| Ok(c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?));
+    let value: Value = serde_json::from_str(&raw).unwrap();
+    assert_eq!(value, json!({"agent_work":"0","custom_legacy":true,"default_notification_level":"mentions","room_notification_levels":{"1":null},"room_mute_until":{"1":"2030-01-01T00:00:00Z"}}));
+}
+
+#[test]
+fn a9_preference_writes_advance_settings_and_activity_revisions() {
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    let before = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
+    for revision in 1..=2 {
+        t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
+            inbox_preferences: Some(json!({"default_notification_level":"nothing", "settings_revision":0})),
+            ..Default::default()
+        }));
+        let value: Value = t.read(|c| {
+            let raw: String = c.query_row("SELECT inbox_preferences FROM users WHERE id=?", [id("david")], |r| r.get(0))?;
+            Ok(serde_json::from_str(&raw).unwrap())
+        });
+        assert_eq!(value, json!({"default_notification_level":"nothing"}));
+        let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
+        assert_eq!(after.revision, before.revision + revision);
+        assert_eq!(t.read(|c| crate::models::notification_policy::NotificationPreferences::load(c, id("david"))).settings_revision, after.revision);
+    }
+}
+
+#[test]
+fn a9_clearing_preferences_keeps_the_settings_revision_monotonic() {
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    let before = t.read(|c| crate::models::notification_policy::NotificationPreferences::load(c, id("david"))).settings_revision;
+    for preferences in [json!({"default_notification_level":"nothing"}), Value::Null] {
+        t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
+            inbox_preferences: Some(preferences),
+            ..Default::default()
+        }));
+    }
+    let revision: i64 = t.read(|c| Ok(c.query_row(
+        "SELECT activity_revision FROM users WHERE id=?",
+        [id("david")], |r| r.get(0)
+    )?));
+    assert_eq!(revision, before + 2);
+    assert_eq!(t.read(|c| crate::models::notification_policy::NotificationPreferences::load(c, id("david"))).settings_revision, revision);
+}
+
+#[test]
+fn a9_muted_rooms_do_not_contribute_to_push_badges() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=? WHERE user_id=?", rusqlite::params![tx.now(), id("david")])?;
+        let rooms: Vec<i64> = crate::sql::query_all(tx.conn(), "SELECT room_id FROM memberships WHERE user_id=?", [id("david")], |r| r.get(0))?;
+        let mutes: serde_json::Map<String,Value> = rooms.into_iter().map(|id| (id.to_string(), Value::Null)).collect();
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"room_mute_until":mutes}).to_string(), id("david")])?;
+        Ok(())
+    });
+    assert_eq!(t.read(|c| crate::Membership::unread_count(c, id("david"), t.now())), 0);
+}
+
+#[test]
+fn a9_inheritance_override_and_mute_expiry_resolve_at_delivery() {
+    use crate::models::notification_policy::{NotificationLevel, NotificationPreferences};
+    let t = TestDb::new();
+    let mut user = t.read(|c| UserStatusSettings::find(c, id("david")));
+    let now = instant("2026-10-10T12:00:00Z");
+    let end = now.since(jiff::SignedDuration::from_secs(900));
+    let mut preferences = NotificationPreferences::parse(Some(r#"{"agent_work":"0","default_notification_level":"mentions","room_notification_levels":{"1":null,"2":"everything"},"room_mute_until":{"1":"2026-10-10T12:15:00Z","3":null}}"#));
+    assert_eq!(preferences.involvement(1, Some(Involvement::Everything)), Some(Involvement::Mentions));
+    assert_eq!(preferences.involvement(2, Some(Involvement::Nothing)), Some(Involvement::Everything));
+    preferences.default_notification_level = NotificationLevel::Everything;
+    user.notification_preferences = preferences;
+    let mut policy = NotificationPolicy {
+        room_id: Some(1), recipient: Some(&user), kind: NotificationKind::RoomMessage,
+        room_involvement: Some(Some(Involvement::Mentions)), thread_involvement: None,
+        mentioned: true, reply_to_recipient: true, keyword_matched: true, dnd_exception: true, now,
+    };
+    assert!(!policy.push());
+    assert!(!policy.sound());
+    assert_eq!(policy.inbox_event_type(), None);
+    policy.now = end;
+    assert!(policy.push());
+    assert_eq!(policy.inbox_event_type(), Some("mention"));
+    policy.mentioned = false;
+    policy.reply_to_recipient = false;
+    assert!(policy.push(), "inherited all-messages default takes effect after expiry");
+    policy.room_id = Some(3);
+    assert!(!policy.push(), "indefinite mute has no deadline");
+    assert_eq!(serde_json::to_value(&user.notification_preferences).unwrap()["agent_work"], "0");
+}
+
+
+#[test]
+fn a9_existing_activity_badges_follow_mute_at_read_time() {
+    let t = TestDb::new();
+    let room = t.write(|tx| {
+        let message = crate::Message::find(tx.conn(), id("first"))?;
+        crate::ActivityItem::refresh_unread(tx, id("david"), "Message", message.id, "mention")?;
+        Ok(message.room_id)
+    });
+    let before = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
+    assert!(before.count > 0);
+    for (until, muted) in [(json!(null), true), (json!("2030-01-01T00:00:00Z"), true), (json!("2020-01-01T00:00:00Z"), false)] {
+        t.write(move |tx| {
+            tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?", rusqlite::params![json!({"room_mute_until": {room.to_string(): until}}).to_string(), id("david")])?;
+            Ok(())
+        });
+        let after = t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()));
+        assert_eq!(after.count, if muted {before.count - 1} else {before.count});
+        assert_eq!(after.revision, before.revision);
+    }
+}
+
+#[test]
+fn a9_activity_badges_expire_at_the_injected_clock() {
+    let t = TestDb::new();
+    t.clock.travel_to(instant("2035-01-01T12:00:00Z"));
+    let room = t.write(|tx| {
+        tx.conn()
+            .execute("DELETE FROM activity_items WHERE user_id=?", [id("david")])?;
+        let message = crate::Message::find(tx.conn(), id("first"))?;
+        crate::ActivityItem::refresh_unread(tx, id("david"), "Message", message.id, "mention")?;
+        let until = tx.now().since(jiff::SignedDuration::from_secs(900)).jiff();
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            rusqlite::params![
+                json!({"room_mute_until": {message.room_id.to_string(): until}}).to_string(),
+                id("david")
+            ],
+        )?;
+        Ok(message.room_id)
+    });
+    assert!(
+        t.read(|c| UserStatusSettings::find(c, id("david")))
+            .notification_preferences
+            .muted(room, t.now())
+    );
+    assert_eq!(
+        t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()))
+            .count,
+        0
+    );
+    t.travel(900);
+    assert!(
+        !t.read(|c| UserStatusSettings::find(c, id("david")))
+            .notification_preferences
+            .muted(room, t.now())
+    );
+    assert_eq!(
+        t.read(|c| crate::ActivityItem::unread_snapshot(c, id("david"), t.now()))
+            .count,
+        1
+    );
+    assert_eq!(
+        t.read(|c| crate::ActivityItem::unread_count(
+            c,
+            &crate::User::find(c, id("david"))?,
+            t.now()
+        )),
+        1
+    );
+}
+
+#[test]
+fn a9_push_badges_expire_at_the_injected_clock() {
+    let t = TestDb::new();
+    t.clock.travel_to(instant("2035-01-01T12:00:00Z"));
+    t.write(|tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=NULL WHERE user_id=?",
+            [id("david")],
+        )?;
+        let room = crate::Message::find(tx.conn(), id("first"))?.room_id;
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=? WHERE user_id=? AND room_id=?",
+            rusqlite::params![tx.now(), id("david"), room],
+        )?;
+        let until = tx.now().since(jiff::SignedDuration::from_secs(900)).jiff();
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            rusqlite::params![
+                json!({"room_mute_until": {room.to_string(): until}}).to_string(),
+                id("david")
+            ],
+        )?;
+        Ok(())
+    });
+    assert_eq!(
+        t.read(|c| crate::Membership::unread_count(c, id("david"), t.now())),
+        0
+    );
+    t.travel(900);
+    assert_eq!(
+        t.read(|c| crate::Membership::unread_count(c, id("david"), t.now())),
+        1
+    );
 }
