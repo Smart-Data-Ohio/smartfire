@@ -387,8 +387,11 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
   }
 
   const messages = { ...state.messages };
+  let reconciled = state;
 
   for (const message of page.messages) {
+    reconciled = removePending(reconciled, message.clientMessageId);
+
     const held = messages[message.id];
 
     if (state.tombstones[message.id] !== undefined) {
@@ -453,7 +456,7 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
 
   return {
     state: {
-      ...state,
+      ...reconciled,
       messages,
       users: mergeUserList(state.users, page.users),
       saved: mergeSavedMarks(state.saved, page),

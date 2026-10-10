@@ -9,6 +9,7 @@ import {
   pageFixture,
   roomDetailFixture,
 } from "../api/testing.ts";
+import { timelineItems } from "../features/room/timeline-items.ts";
 import { mutations, store } from "../store/store.ts";
 import { SyncLink } from "./link.ts";
 import { Outbox } from "./outbox.ts";
@@ -131,6 +132,86 @@ describe("sends during a room load", () => {
         expect(store.getState().timelines[ROOM]?.ids).toEqual([9]);
         expect(store.getState().timelines[ROOM]?.after).toBeNull();
       }).pipe(Effect.provide(navigation)),
+    );
+  }
+
+  for (const opening of [
+    { name: "permalink", focus: 5 },
+    { name: "first unread", focus: null },
+  ]) {
+    it.effect(
+      `the latest-page fallback from ${opening.name} reconciles a saved send before acknowledgment`,
+      () =>
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+          const saved = yield* Deferred.make<void>();
+          const acknowledge = yield* Deferred.make<void>();
+          const confirmed = messageFixture(9, ROOM, { clientMessageId: "new-send" });
+
+          mutations.setMe(meFixture);
+          yield* api.route(`POST /rooms/${ROOM}/messages`, () =>
+            Deferred.succeed(saved, undefined).pipe(
+              Effect.andThen(Deferred.await(acknowledge)),
+              Effect.as(confirmed),
+            ),
+          );
+
+          const { started, release } = yield* holdFirstPage;
+
+          yield* api.route(`GET /rooms/${ROOM}/messages`, (request) =>
+            request.query?.around === "5"
+              ? Deferred.succeed(started, undefined).pipe(
+                  Effect.andThen(Deferred.await(release)),
+                  Effect.as(pageFixture([note(4), note(5), note(6)], 3, 6)),
+                )
+              : Effect.succeed(pageFixture([confirmed], 8, null)),
+          );
+
+          const openingRoom = yield* Effect.forkChild(session.openRoom(ROOM, opening.focus));
+
+          yield* Deferred.await(started);
+          yield* session.send(ROOM, "new send", { clientMessageId: "new-send" });
+          yield* Deferred.await(saved);
+          expect(store.getState().pending["new-send"]?.state).toBe("sending");
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(openingRoom);
+
+          const rows = () => {
+            const state = store.getState();
+            const timeline = state.timelines[ROOM];
+
+            if (timeline === undefined) throw new Error("The room timeline did not load");
+
+            return timelineItems({
+              timeline,
+              messages: state.messages,
+              pending: Object.values(state.pending),
+              now: Date.parse(confirmed.createdAt),
+            })
+              .filter((item) => item.kind === "message" || item.kind === "pending")
+              .map((item) => ({ kind: item.kind, key: item.key }));
+          };
+
+          expect(rows()).toEqual([{ kind: "message", key: "c-new-send" }]);
+          expect(store.getState().pending["new-send"]).toBeUndefined();
+          expect(store.getState().pendingByRoom[ROOM]).toEqual([]);
+          expect(store.getState().timelines[ROOM]?.after).toBeNull();
+          expect(
+            (yield* api.requests)
+              .filter(
+                (request) => request.method === "GET" && request.path === `/rooms/${ROOM}/messages`,
+              )
+              .map((request) => request.query?.around ?? null),
+          ).toEqual(["5", null]);
+
+          yield* Deferred.succeed(acknowledge, undefined);
+          yield* TestClock.adjust("1 millis");
+          mutations.applyEvents(
+            [{ seq: 1, topic: `room:${ROOM}`, type: "message.created", data: confirmed }],
+            Date.parse(confirmed.createdAt),
+          );
+          expect(rows()).toEqual([{ kind: "message", key: "c-new-send" }]);
+        }).pipe(Effect.provide(navigation)),
     );
   }
 
