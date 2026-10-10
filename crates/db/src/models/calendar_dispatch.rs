@@ -111,11 +111,6 @@ async fn dispatch(db: &Database, now: Timestamp, kind: Kind) -> Result<DispatchS
         // retained (update_all does not reload associations or refresh the user attributes).
         db.write(move |tx| {
             UserStatusSettings::announce_badges_for(tx, &flips)?;
-            if matches!(kind, Kind::Ooo) {
-                for user in flips {
-                    user.announce_ooo_notice(tx);
-                }
-            }
             Ok(())
         })
         .await?;

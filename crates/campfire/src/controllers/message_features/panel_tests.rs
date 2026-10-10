@@ -17,7 +17,7 @@ async fn empty_and_populated_pin_panels_match_rails_and_mount_with_sti_targets()
                 let room=campfire_db::Room::find(conn,room_id)?;
                 Ok(page::render_detached_at(&state,None,"http://campfire.test",|ctx|
                     campfire_views::pins::PanelPartial { ctx,room_id,
-                        room_param_key:&campfire_db::broadcasts::room_param_key(room.room_type),count }
+                        room_param_key:crate::controllers::presenters::accounts::room_param_key(room.room_type),count }
                         .render().unwrap()))
             }).await.unwrap();
             assert_eq!(rendered,expected);

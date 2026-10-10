@@ -54,7 +54,11 @@ fn validate(map: &Value) -> Result<(), String> {
         let entries = map[key]
             .as_object()
             .ok_or_else(|| format!("missing {key} map"))?;
-        let actual: BTreeSet<_> = entries.keys().cloned().collect();
+        let actual: BTreeSet<_> = entries
+            .iter()
+            .filter(|(_, entry)| key != "templates" || entry["status"] != "removed")
+            .map(|(name, _)| name.clone())
+            .collect();
         let expected = match directory {
             Some(directory) => files(&resolve(directory)),
             None if actual.len() == RAILS_TEMPLATES => actual.clone(),
@@ -88,7 +92,17 @@ fn validate(map: &Value) -> Result<(), String> {
                         }
                     }
                 }
-                Some("not_reachable") => {
+                Some("removed") | Some("not_reachable") => {
+                    if entry["status"] == "removed" {
+                        if !name.contains(".turbo_stream.") {
+                            return Err(format!("{name}: removed disposition is only for retired Turbo templates"));
+                        }
+                        if key == "templates"
+                            && resolve(&format!("crates/views/templates/{name}")).exists()
+                        {
+                            return Err(format!("{name}: removed template still exists"));
+                        }
+                    }
                     let sources = entry["sources"]
                         .as_array()
                         .filter(|paths| !paths.is_empty())
@@ -101,7 +115,7 @@ fn validate(map: &Value) -> Result<(), String> {
                         }
                     }
                 }
-                _ => return Err(format!("{name}: no covered or not_reachable disposition")),
+                _ => return Err(format!("{name}: no covered, removed or not_reachable disposition")),
             }
             if entry["status"] == "covered" {
                 if let Some(witness) = entry.get("witness") {
@@ -232,7 +246,7 @@ fn every_template_has_a_behavioral_receipt_or_reachability_disposition() {
     let map = map();
     validate(&map).unwrap();
     println!(
-        "Template coverage: {} Rust files, {} Rails declarations, {} behavioral receipts",
+        "Template coverage: {} Rust dispositions, {} Rails declarations, {} behavioral receipts",
         map["templates"].as_object().unwrap().len(),
         map["rails_templates"].as_object().unwrap().len(),
         map["evidence"].as_object().unwrap().len()
@@ -241,6 +255,19 @@ fn every_template_has_a_behavioral_receipt_or_reachability_disposition() {
 
 #[test]
 fn coverage_guard_rejects_missing_templates_and_unproven_receipts() {
+    let mut stale = map();
+    let removed = stale["templates"]
+        .as_object_mut().unwrap().iter_mut()
+        .find(|(_, entry)| entry["status"] == "removed").unwrap();
+    removed.1["status"] = serde_json::json!("covered");
+    let removed_name = removed.0.clone();
+    let error = validate(&stale).unwrap_err();
+    assert!(error.contains("stale") && error.contains(&removed_name));
+
+    let mut unsupported = map();
+    unsupported["rails_templates"]["users/show.html.erb"]["status"] = serde_json::json!("removed");
+    assert!(validate(&unsupported).unwrap_err().contains("only for retired Turbo templates"));
+
     let mut missing = map();
     let name = missing["templates"]
         .as_object()

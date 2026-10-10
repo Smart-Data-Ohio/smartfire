@@ -221,5 +221,5 @@ fn notes_are_literal_quiet_and_directory_events_are_per_member() {
         .iter()
         .filter(|e| e.as_broadcast().is_some())
         .count();
-    assert_eq!(broadcast_count, 9);
+    assert_eq!(broadcast_count, 5);
 }

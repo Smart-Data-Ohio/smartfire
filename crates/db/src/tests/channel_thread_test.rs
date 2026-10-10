@@ -3,7 +3,7 @@
 //! lifecycle, `receive`, the stale sweep, thread memberships).
 
 use super::*;
-use crate::broadcasts::{Broadcast, Partial, TurboAction};
+use crate::broadcasts::{Broadcast};
 use crate::models::channel_thread::{PushMessageJob, thread_base_push};
 use crate::{
     ChannelThread, Error, Involvement, Membership, Message, NewChannelThread, NewMessage, Room, RoomType, ThreadInvolvement,
@@ -56,12 +56,9 @@ fn indicators(t: &TestDb, from: usize) -> Vec<(String, i64)> {
     t.events()[from..]
         .iter()
         .filter_map(|event| match event.as_broadcast()? {
-            Broadcast::Turbo(stream) if stream.action == TurboAction::Replace => match stream.partial {
-                Some(Partial::ThreadIndicator { reply_count, .. }) => {
-                    assert!(stream.maintain_scroll);
-                    Some((stream.target.clone(), reply_count))
-                }
-                _ => None,
+            Broadcast::ThreadIndicator { message_id, reply_count } => {
+                let parent = t.read(|conn| Message::find(conn, message_id));
+                Some((format!("thread_indicator_message_{}", parent.client_message_id), reply_count))
             },
             _ => None,
         })
@@ -210,8 +207,7 @@ fn a_posted_reply_broadcasts_the_parents_indicator_with_the_new_count() {
     let from = c.t.events().len();
     post_reply(&c.t, c.thread.id, "jz", "First");
     assert_eq!(indicators(&c.t, from), vec![(indicator_target(&c.parent), 1)]);
-    let broadcast = c.t.events()[from..].iter().find_map(|e| e.as_broadcast().filter(|b| b.target().is_some())).unwrap();
-    assert_eq!(broadcast.stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Closed", id("designers")).to_param()));
+    assert_eq!(c.parent.room_id, id("designers"));
 }
 
 #[test]

@@ -7,11 +7,11 @@ use std::time::Duration;
 
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
-use serde_json::{Value, json};
+use serde_json::json;
 
 use super::api_tests::{ALL_PETS, Sync, app, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, DIRECT_DAVID_JASON, JASON, KEVIN, Reply, Req, TestApp,
+    BENDER, DAVID, DIRECT_DAVID_JASON, JASON, KEVIN, Reply,
 };
 
 /// A closed room of David, Jason, Kevin, JZ, Mallory (banned) and Deploy Bot, with five files.
@@ -454,153 +454,4 @@ async fn a_new_message_upserts_each_unread_members_row() {
     )
     .await;
     server.abort();
-}
-
-/// The classic frames of a message post and of growing, renaming and opening direct rooms.
-async fn classic_directory_frames(spa: bool) -> Option<Vec<(String, String)>> {
-    use crate::controllers::presenters::test_support::SEED_NOW;
-    use campfire_kit::clock::FrozenClock;
-    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
-    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
-    // David's classic pages: All Talk (the helper's), Designers, the group, his rooms list and
-    // his unreads.
-    let (mut client, cable) =
-        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
-    let designers = a
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, DESIGNERS))
-        .await
-        .unwrap();
-    let secrets = &a.booted.app.secrets;
-    let group = a
-        .db()
-        .read(|conn| campfire_db::Room::find(conn, GROUP))
-        .await
-        .unwrap();
-    let messages = |room: &campfire_db::Room| {
-        rails_compat::turbo::signed_stream_name(
-            secrets,
-            &[&campfire_app::cable::room_gid(room).to_param(), "messages"],
-        )
-    };
-    let rooms = rails_compat::turbo::signed_stream_name(
-        secrets,
-        &[&crate::channels::user_gid(DAVID).to_param(), "rooms"],
-    );
-    for identifier in [
-        json!({ "channel": "RoomMessagesChannel", "signed_stream_name": messages(&designers) }),
-        json!({ "channel": "RoomMessagesChannel", "signed_stream_name": messages(&group) }),
-        json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": rooms }),
-        json!({ "channel": "UnreadRoomsChannel" }),
-    ] {
-        client
-            .confirm(&crate::channels::tests::support::identifier(identifier))
-            .await;
-    }
-    let mut david = a.sign_in(DAVID).await;
-    let mut jason = a.sign_in(JASON).await;
-    david.authenticity_token().await;
-    jason.authenticity_token().await;
-    let (_sync, server) = if spa {
-        let (addr, server) = serve(&a).await;
-        let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
-        sync.welcome().await;
-        (Some(sync), Some(server))
-    } else {
-        (None, None)
-    };
-    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
-    let capture = a.publications();
-    capture.take();
-    let classic = |method: Method, path: String, body: Value| {
-        Req::new(method, &path)
-            .header("accept", "application/json")
-            .header("content-type", "application/json")
-            .body(body.to_string())
-    };
-
-    // Jason posts, so David's unreads get the ping.
-    let reply = jason
-        .write(
-            Req::new(
-                Method::POST,
-                &format!("/rooms/{DESIGNERS}/messages.turbo_stream"),
-            )
-            .form(&[
-                ("message[markdown_source]", "Row parity"),
-                ("message[client_message_id]", "row-parity"),
-            ]),
-        )
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    let reply = david
-        .write(classic(
-            Method::POST,
-            format!("/rooms/directs/{GROUP}/add_members"),
-            json!({"user_ids": [LONELY_LOU]}),
-        ))
-        .await;
-    assert!(reply.status.is_redirection(), "{}", reply.text());
-    let reply = david
-        .write(classic(
-            Method::PATCH,
-            format!("/rooms/directs/{GROUP}"),
-            json!({"room": {"name": "Parity crew"}}),
-        ))
-        .await;
-    assert!(reply.status.is_redirection(), "{}", reply.text());
-    let reply = david
-        .write(classic(
-            Method::POST,
-            "/rooms/directs".into(),
-            json!({"user_ids": [NEW_MEMBER]}),
-        ))
-        .await;
-    assert!(reply.status.is_redirection(), "{}", reply.text());
-
-    let mut frames = Vec::new();
-    let mut quiet = 0;
-    while quiet < 10 {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let more = capture.take();
-        quiet = if more.is_empty() { quiet + 1 } else { 0 };
-        frames.extend(more);
-    }
-    if let Some(server) = server {
-        server.abort();
-    }
-    cable.abort();
-    drop(client);
-    Some(frames)
-}
-
-#[tokio::test]
-async fn the_directory_frames_are_the_same_with_the_sync_engine_on() {
-    let (Some(off), Some(on)) = (
-        classic_directory_frames(false).await,
-        classic_directory_frames(true).await,
-    ) else {
-        return;
-    };
-    let has = |needle: &str| off.iter().any(|(_, frame)| frame.contains(needle));
-    assert!(has("Row parity"), "the message: {off:#?}");
-    assert!(has("Parity crew"), "the rename: {off:#?}");
-    assert!(
-        has("added Lonely Lou to the group"),
-        "the added note: {off:#?}"
-    );
-    assert!(
-        off.iter().any(|(stream, _)| stream.ends_with("_unreads")),
-        "the unread ping: {off:#?}"
-    );
-    let uuid =
-        regex::Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").unwrap();
-    let same = |(stream, frame): &(String, String)| {
-        (stream.clone(), uuid.replace_all(frame, "UUID").into_owned())
-    };
-    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
-    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
-        assert_eq!(same(off), same(on), "frame {index}");
-    }
 }

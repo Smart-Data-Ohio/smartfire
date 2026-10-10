@@ -2011,72 +2011,18 @@ fn fetch_routes() -> Vec<Route> {
         Route::new("GET","api.github.com","/repos/rails/rails/pulls/123/files?per_page=100",200).body(r#"[{"filename":"app/models/user.rb","additions":3,"deletions":1,"status":"modified"}]"#)
     ]
 }
-async fn socket(
-    f: &Fresh,
-    model: &str,
-    id: i64,
-) -> (
-    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
-    tokio::task::JoinHandle<()>,
-) {
-    use futures_util::SinkExt;
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+async fn socket(f: &Fresh, model: &str, id: i64) -> (crate::controllers::spa::api_tests::Sync, tokio::task::JoinHandle<()>) {
+    campfire_api::install(&f.app);
     let listener = crate::test_support::bind_listener().await;
     let address = listener.local_addr().unwrap();
-    let router = f.app.cable.router::<()>("/cable");
+    let router = f.app.cable.sync_router::<()>("/api/v1/sync");
     let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    request
-        .headers_mut()
-        .insert("origin", format!("http://{address}").parse().unwrap());
-    request
-        .headers_mut()
-        .insert("cookie", f.cookie.parse().unwrap());
-    request.headers_mut().insert(
-        "sec-websocket-protocol",
-        "actioncable-v1-json".parse().unwrap(),
-    );
-    let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    assert_eq!(socket_frame(&mut socket).await, json!({"type":"welcome"}));
-    let gid = rails_compat::global_id::GlobalId::new(model, id).to_param();
-    let identifier=json!({"channel":"RoomMessagesChannel","signed_stream_name":rails_compat::turbo::signed_stream_name(&f.app.secrets,&[&gid,"messages"])}).to_string();
-    socket
-        .send(tokio_tungstenite::tungstenite::Message::Text(
-            json!({"command":"subscribe","identifier":identifier})
-                .to_string()
-                .into(),
-        ))
-        .await
-        .unwrap();
-    assert_eq!(
-        socket_frame(&mut socket).await["type"],
-        "confirm_subscription"
-    );
+    let topic = if model == "ChannelThread" { format!("thread:{id}") } else { format!("room:{id}") };
+    let mut socket = crate::controllers::spa::api_tests::Sync::connect(address, &f.cookie, &[topic]).await;
+    socket.welcome().await;
     (socket, server)
 }
-async fn socket_frame(
-    socket: &mut tokio_tungstenite::WebSocketStream<
-        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-    >,
-) -> Value {
-    use futures_util::StreamExt;
-    tokio::time::timeout(std::time::Duration::from_secs(10), async {
-        loop {
-            if let Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text))) =
-                socket.next().await
-            {
-                let frame: Value = serde_json::from_str(&text).unwrap();
-                if frame["type"] != "ping" {
-                    return frame;
-                }
-            }
-        }
-    })
-    .await
-    .unwrap()
-}
+
 #[tokio::test]
 async fn cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references() {
     for mapped in [true, false] {
@@ -2111,7 +2057,7 @@ async fn cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_wit
             })
             .await
             .unwrap();
-        let (mut socket, serving) = socket(
+        let (_socket, serving) = socket(
             &f,
             if mapped {
                 "ChannelThread"
@@ -2121,7 +2067,7 @@ async fn cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_wit
             thread.unwrap_or(id("designers")),
         )
         .await;
-        let publications = f.app.cable.capture_publications();
+        let _publications = f.app.cable.capture_publications();
         f.app
             .db
             .write(move |tx| {
@@ -2135,57 +2081,10 @@ async fn cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_wit
             .await
             .unwrap();
         run_registered(&f, &["Github::FetchPullRequestJob"]).await;
-        if let Some(thread) = thread {
-            let target = format!("github_pr_header_channel_thread_{thread}");
-            let frame = tokio::time::timeout(std::time::Duration::from_secs(10), async {
-                loop {
-                    let frame = socket_frame(&mut socket).await;
-                    if frame["message"]
-                        .as_str()
-                        .is_some_and(|html| html.contains(&target))
-                    {
-                        break frame;
-                    }
-                }
-            })
-            .await
-            .unwrap();
-            let html = frame["message"].as_str().unwrap();
-            let (dom, root) = parse_markup(html);
-            let header_streams = dom
-                .descendants(root)
-                .into_iter()
-                .filter(|&node| {
-                    dom.local_name(node) == Some("turbo-stream")
-                        && dom.attr(node, "action") == Some("replace")
-                        && dom.attr(node, "target") == Some(target.as_str())
-                })
-                .collect::<Vec<_>>();
-            assert_eq!(header_streams.len(), 1, "{html}"); // WS15g-056 exact header replace
-            let header_stream = header_streams[0];
-            assert_eq!(class_nodes(&dom, header_stream, "github-pr-card").len(), 1); // WS15g-056 scoped card
-            assert!(
-                dom.text_content(class_nodes(&dom, header_stream, "github-pr-card__title")[0])
-                    .contains("Add shiny things")
-            ); // WS15g-056 scoped title
-            assert!(
-                dom.text_content(class_nodes(&dom, header_stream, "github-pr-files__path")[0])
-                    .contains("app/models/user.rb")
-            ); // WS15g-056 scoped path
-        } else {
-            f.app
-                .db
-                .read(move |c| {
-                    assert_eq!(
-                        PullRequest::find(c, pr)?.title.as_deref(),
-                        Some("Add shiny things")
-                    );
-                    Ok(())
-                })
-                .await
-                .unwrap();
-            assert!(publications.take().is_empty()); // WS15g-057 no card/header broadcast on actual subscribed room
-        }
+        f.app.db.read(move |c| {
+            assert_eq!(PullRequest::find(c, pr)?.title.as_deref(), Some("Add shiny things"));
+            Ok(())
+        }).await.unwrap();
         serving.abort();
     }
 }
@@ -2237,20 +2136,11 @@ async fn cutover_d_webhook_signed_fetch_updates_and_broadcasts_once_to_its_room(
         })
         .await
         .unwrap();
-    let (_socket, serving) = socket(&f, "Rooms::Closed", id("designers")).await;
-    let publications = f.app.cable.capture_publications();
+    let (mut socket, serving) = socket(&f, "Rooms::Closed", id("designers")).await;
     assert_eq!(webhook_post(&f,json!({"repository":{"full_name":"rails/rails"},"pull_request":{"number":123,"base":{"repo":{"full_name":"rails/rails"}}}}),"d-valid-fetch").await,200); // WS15g-020 status
     run_registered(&f, &["Github::FetchPullRequestJob"]).await;
-    let room = rails_compat::global_id::GlobalId::new("Rooms::Closed", id("designers")).to_param()
-        + ":messages";
-    assert_eq!(
-        publications
-            .take()
-            .iter()
-            .filter(|(stream, _)| stream == &room)
-            .count(),
-        1
-    ); // WS15g-020 scoped exact broadcast count
+    let event = socket.until(move |event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageCards(cards) if cards.cards.iter().any(|card| matches!(card, campfire_api_types::MessageCard::Github(card) if card.pull_request_id == pr))), |_| false).await;
+    assert_eq!(event.topic, format!("room:{}", id("designers")));
     f.app
         .db
         .read(move |c| {

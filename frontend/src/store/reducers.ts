@@ -7,7 +7,13 @@ import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
 import { applyAgentStatus, applyAgentSteps } from "./agents.ts";
 import { applyApprovalUpdated, approvalRequested } from "./approvals.ts";
-import { applyMessageCards, applyPoll, applyPollBallot, reconcileMessage } from "./cards.ts";
+import {
+  applyMessageCards,
+  applyPoll,
+  applyPollBallot,
+  invalidateGithub,
+  reconcileMessage,
+} from "./cards.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
@@ -387,8 +393,11 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
   }
 
   const messages = { ...state.messages };
+  let reconciled = state;
 
   for (const message of page.messages) {
+    reconciled = removePending(reconciled, message.clientMessageId);
+
     const held = messages[message.id];
 
     if (state.tombstones[message.id] !== undefined) {
@@ -453,7 +462,7 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
 
   return {
     state: {
-      ...state,
+      ...reconciled,
       messages,
       users: mergeUserList(state.users, page.users),
       saved: mergeSavedMarks(state.saved, page),
@@ -1142,6 +1151,9 @@ export function applyEvents(
         break;
       case "poll.ballot":
         next = applyPollBallot(next, event.data);
+        break;
+      case "thread.github.updated":
+        next = invalidateGithub(next, event.data.pullRequestId);
         break;
       case "message.cards":
         next = applyMessageCards(next, event.data);

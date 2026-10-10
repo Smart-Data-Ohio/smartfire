@@ -395,14 +395,16 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
                 )
                 .await
                 .unwrap();
-            assert_eq!(response.status().as_u16(), 200, "{path}");
-            let bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
-                .await
-                .unwrap();
-            assert!(
-                String::from_utf8_lossy(&bytes).contains("Secret title"),
-                "{path}"
-            );
+            if i % 2 == 0 {
+                assert_eq!(response.status().as_u16(), 200, "{path}");
+                let bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+                    .await
+                    .unwrap();
+                assert!(String::from_utf8_lossy(&bytes).contains("Secret title"), "{path}");
+            } else {
+                assert_eq!(response.status().as_u16(), 302, "{path}");
+                assert!(response.headers()["location"].to_str().unwrap().ends_with("/rooms/815"));
+            }
         }
     }));
     requests.await;
@@ -478,5 +480,37 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
         assert_eq!(status, 302, "{path}");
         fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
     }
+    assert!(fresh.server.received().is_empty());
+}
+
+#[tokio::test]
+async fn deleting_a_reply_source_retains_idle_pr_fetches_for_its_tombstones() {
+    let fresh = Fresh::new(&json!({"private": false})).await;
+    assert!(!fresh.app.cable.sync_wanted());
+    fresh.app.db.write(|tx| {
+        let now = tx.now();
+        tx.conn().execute("INSERT INTO github_pull_requests (id,owner,repo,number,title,state,private,created_at,updated_at) VALUES (826,'rails','rails',13,'Second card','open',0,?,?)", params![now, now])?;
+        for (message, pr) in [(819, 826), (829, 816)] {
+            tx.conn().execute("INSERT INTO messages (id,room_id,creator_id,client_message_id,reply_to_message_id,created_at,updated_at) VALUES (?,815,811,?,818,?,?)", params![message, format!("quoted-card-{message}"), now, now])?;
+            tx.conn().execute("INSERT INTO github_pull_request_references (github_pull_request_id,message_id,created_at,updated_at) VALUES (?,?,?,?)", params![pr, message, now, now])?;
+        }
+        tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL")?;
+        Ok(())
+    }).await.unwrap();
+    let (status, _, body) = super::test_support::request(
+        &fresh, "DELETE", "/rooms/815/messages/818", json!({}), json!({}),
+    ).await;
+    assert_eq!(status, 204, "{body}");
+    fresh.app.db.read(|conn| {
+        for id in [819, 829] {
+            let reply = campfire_db::Message::find(conn, id)?;
+            assert_eq!(reply.reply_to_message_id, None);
+            assert!(reply.reply_target_deleted_at.is_some());
+        }
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM github_pull_requests WHERE fetch_requested_at IS NOT NULL", [], |row| row.get::<_, i64>(0))?, 2);
+        let jobs = conn.prepare("SELECT json_extract(arguments,'$.pull_request_id') FROM background_jobs WHERE job_class='Github::FetchPullRequestJob' ORDER BY id")?.query_map([], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        assert_eq!(jobs, vec![816, 826]);
+        Ok(())
+    }).await.unwrap();
     assert!(fresh.server.received().is_empty());
 }

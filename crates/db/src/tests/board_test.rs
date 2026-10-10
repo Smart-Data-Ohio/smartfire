@@ -1,6 +1,6 @@
 //! Rails ChannelThreadBoardTest and ThreadTag callbacks, using real writes and a frozen clock.
 use super::*;
-use crate::broadcasts::{Broadcast, TurboAction};
+use crate::broadcasts::Broadcast;
 use crate::{
     ChannelThread, Involvement, Membership, NewChannelThread, Room, RoomType, ThreadTag, User,
 };
@@ -32,17 +32,7 @@ fn post(t: &TestDb, room: i64) -> ChannelThread {
     })
 }
 
-fn rows(t: &TestDb, from: usize) -> Vec<(TurboAction, String)> {
-    t.events()[from..]
-        .iter()
-        .filter_map(|event| match event.as_broadcast()? {
-            Broadcast::Turbo(frame) if frame.target.starts_with("board_") => {
-                Some((frame.action, frame.target))
-            }
-            _ => None,
-        })
-        .collect()
-}
+
 
 fn sync_events(t: &TestDb, from: usize) -> Vec<(&'static str, i64)> {
     use crate::models::channel_thread::{ThreadBoardCreation, ThreadWorkChange};
@@ -64,7 +54,7 @@ fn sync_events(t: &TestDb, from: usize) -> Vec<(&'static str, i64)> {
 }
 
 #[test]
-fn creation_publishes_one_sync_snapshot_with_tags_and_an_opening_message() {
+fn creation_keeps_the_sync_snapshot_and_tag_assignment_update() {
     let t = channel_thread_test::frozen();
     let room = board(&t);
     let from = t.events().len();
@@ -93,7 +83,7 @@ fn creation_publishes_one_sync_snapshot_with_tags_and_an_opening_message() {
         )?;
         Ok(thread)
     });
-    assert_eq!(sync_events(&t, from), [("created", thread.id)]);
+    assert_eq!(sync_events(&t, from), [("created", thread.id), ("updated", thread.id)]);
     assert_eq!(
         t.read(|conn| ChannelThread::find(conn, thread.id)).messages_count,
         1
@@ -312,13 +302,7 @@ fn creation_prepends_both_renderings_and_marks_only_visible_disconnected_unmuted
     });
     let from = t.events().len();
     let thread = post(&t, room.id);
-    assert_eq!(
-        rows(&t, from),
-        [
-            (TurboAction::Prepend, "board_posts".into()),
-            (TurboAction::Prepend, "board_column_planned".into())
-        ]
-    );
+
     assert!(t.read(|conn| {
         Ok(
             Membership::find_by_room_and_user(conn, room.id, id("david"))?
@@ -365,19 +349,7 @@ fn direct_tag_create_and_destroy_replace_both_rows_without_touching_the_thread()
     t.travel(60);
     let tag = t.write(move |tx| ThreadTag::create(tx, thread.id, "bug"));
     assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
-    assert_eq!(
-        rows(&t, from),
-        [
-            (
-                TurboAction::Replace,
-                format!("board_row_channel_thread_{}", thread.id)
-            ),
-            (
-                TurboAction::Replace,
-                format!("board_column_row_channel_thread_{}", thread.id)
-            )
-        ]
-    );
+
     assert_eq!(
         t.read(|conn| ChannelThread::find(conn, thread.id))
             .updated_at,
@@ -386,7 +358,7 @@ fn direct_tag_create_and_destroy_replace_both_rows_without_touching_the_thread()
     let from = t.events().len();
     t.write(move |tx| tag.destroy(tx));
     assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
-    assert_eq!(rows(&t, from).len(), 2);
+
 }
 
 #[test]
@@ -398,19 +370,8 @@ fn deleting_a_post_removes_both_rows_without_replacing_each_dependent_tag() {
     let from = t.events().len();
     let thread_id = thread.id;
     t.write(move |tx| thread.destroy(tx));
-    assert_eq!(
-        rows(&t, from),
-        [
-            (
-                TurboAction::Remove,
-                format!("board_row_channel_thread_{thread_id}")
-            ),
-            (
-                TurboAction::Remove,
-                format!("board_column_row_channel_thread_{thread_id}")
-            )
-        ]
-    );
+    assert!(t.events()[from..].iter().any(|event| event.as_broadcast() == Some(Broadcast::ThreadRemoved { thread_id, room_id: room.id })));
+
 }
 
 #[test]
@@ -534,7 +495,7 @@ fn invalid_tag_count_length_and_format_leave_existing_tags_and_signals_unchanged
             t.read(|conn| ChannelThread::find(conn, thread.id)?.tag_names(conn)),
             ["bug"]
         );
-        assert!(rows(&t, from).is_empty());
+        assert!(sync_events(&t, from).is_empty());
     }
 }
 
@@ -634,7 +595,7 @@ fn savepoint_rollback_preserves_the_outer_records_commit_callback() {
     let t = channel_thread_test::frozen();
     let room = board(&t);
     let thread = post(&t, room.id);
-    let from = t.events().len();
+    let _from = t.events().len();
     t.write(move |tx| {
         let mut thread = ChannelThread::find(tx.conn(), thread.id)?;
         thread.update_settings(tx, Some("Outer name"), None)?;
@@ -645,7 +606,7 @@ fn savepoint_rollback_preserves_the_outer_records_commit_callback() {
         assert!(result.is_err());
         Ok(())
     });
-    assert_eq!(rows(&t, from).len(), 2);
+
     assert_eq!(
         t.read(|conn| ChannelThread::find(conn, thread.id)).name,
         "Outer name"

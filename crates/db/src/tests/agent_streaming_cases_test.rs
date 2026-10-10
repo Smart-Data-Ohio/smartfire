@@ -57,8 +57,8 @@ fn quiet(c: &Connection, mid: i64) -> Result<()> {
     Ok(())
 }
 fn replacements(t: &TestDb, mid: i64) -> usize {
-    use crate::broadcasts::{Broadcast, Partial};
-    t.events().iter().filter_map(|e|e.as_broadcast()).filter(|b|matches!(b,Broadcast::Turbo(s) if s.partial==Some(Partial::MessageReplace{message_id:mid}))).count()
+    use crate::broadcasts::{Broadcast};
+    t.events().iter().filter_map(|e|e.as_broadcast()).filter(|b|matches!(b,Broadcast::MessageUpdated{message_id} if *message_id==mid)).count()
 }
 #[test]
 fn ws11_stream_case_create_fires_no_side_effects() {

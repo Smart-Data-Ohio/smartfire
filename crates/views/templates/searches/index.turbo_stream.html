@@ -1,4 +1,0 @@
-<turbo-stream action="prepend" target="search-results"><template>{% for message in index.messages %}{{ crate::messages::cached_message_item(ctx,message) }}{% endfor %}</template></turbo-stream>
-{% if index.has_more %}  <turbo-stream action="replace" target="load_older_results"><template>{{ index.older() }}</template></turbo-stream>
-{% else %}  <turbo-stream action="remove" target="load_older_results"></turbo-stream>
-{% endif %}

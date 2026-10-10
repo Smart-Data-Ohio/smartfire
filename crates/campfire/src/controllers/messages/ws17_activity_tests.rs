@@ -34,7 +34,7 @@ async fn ws17_keyword_http_records_inbox_during_dnd_and_mention_wins() {
                     .form(&[("message[body]", body.as_str())]),
             )
             .await;
-        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let message = app
             .db()
             .read(|c| Ok(Message::last(c)?.unwrap()))

@@ -1,5 +1,5 @@
 //! Rooms::Stage::{Roles,Hands}Controller policies and committed render descriptions.
-use super::huddle_effects::{RoleEvent, StagePanel, StageRoster};
+use super::huddle_effects::{RoleEvent, StageRoster};
 use super::{room_delete::HuddleConfig, stream::Stream};
 use crate::{Event, Membership, Result, Room, StageRole, Tx, User};
 
@@ -62,10 +62,6 @@ pub fn change_role(
         Stream::end_for_membership(tx, room_id, target.id)?;
     }
     tx.emit_after_commit(Event::broadcast(&StageRoster { room_id }));
-    tx.emit_after_commit(Event::broadcast(&StagePanel {
-        room_id,
-        membership_id: target.id,
-    }));
     if (before == Some(StageRole::Listener)) != (role == StageRole::Listener) {
         tx.emit_after_commit(Event::broadcast(&RoleEvent {
             room_id,

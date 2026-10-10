@@ -453,18 +453,12 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 pub async fn send_now(c: &mut Ctx) -> Result {
     prepare(c).await?;
     let initial = pending(c).await?;
-    let origin = page::renderer_base_url(c);
     let zone = features::user_zone(c).await?;
     let (sent, row) = c
         .app()
         .db
         .write_scoped(
-            move || {
-                (
-                    crate::channels::message_features::origin(&origin),
-                    page::enter_time_zone(zone),
-                )
-            },
+            move || page::enter_time_zone(zone),
             move |tx| {
                 let sent = ScheduledMessage::dispatch(tx, initial.id, tx.now(), true)?;
                 Ok((sent, ScheduledMessage::find(tx.conn(), initial.id)?))

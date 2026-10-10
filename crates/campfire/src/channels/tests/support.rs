@@ -20,7 +20,6 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::cable::Partials;
 use crate::channels::{self, Broadcasts, Cable, Deps, sink};
 
 pub use crate::test_support::{WAIT, bind_listener, eventually, wait};
@@ -81,7 +80,6 @@ pub async fn start() -> TestApp {
     let secrets = Arc::new(Secrets::new(SECRET_KEY_BASE));
     let deps = Deps {
         db: db.clone(),
-        secrets: secrets.clone(),
         crypto: Arc::new(RailsCrypto::new(secrets.clone())),
         clock: Arc::new(SystemClock),
         admin_session_idle_timeout: crate::config::admin_session_idle_timeout(None),
@@ -237,10 +235,6 @@ impl TestApp {
         Client { socket }
     }
 
-    pub fn signed_stream_name(&self, streamables: &[&str]) -> String {
-        rails_compat::turbo::signed_stream_name(&self.secrets, streamables)
-    }
-
     pub async fn room(&self, label: &str) -> Room {
         let room_id = id(label);
         self.db
@@ -310,12 +304,12 @@ impl TestApp {
             .unwrap();
     }
 
-    /// `message.broadcast_create` with [`FakePartials`].
-    pub async fn message_create(&self, room: &Room, message: &Message) {
+    /// Unread fanout through the fixture cable server.
+    pub async fn unread_room(&self, room: &Room, message: &Message) {
         let (broadcasts, room, message) = (self.broadcasts.clone(), room.clone(), message.clone());
         self.db
             .read(move |conn| {
-                broadcasts.message_create(conn, &room, &message, &FakePartials, &BasicRichText)
+                broadcasts.unread_room(conn, &room, &message, &BasicRichText)
             })
             .await
             .unwrap();
@@ -386,33 +380,6 @@ async fn lease_inspection_retains_its_snapshot_during_unsubscribe() {
     assert_eq!(snapshot[0].id, lease.id);
     assert_eq!(snapshot[0].connection_id, lease.connection_id);
     assert!(app.leases().await.is_empty());
-}
-
-/// Stand-in partials that name what they render, so frames show which partial and record.
-pub struct FakePartials;
-
-impl Partials for FakePartials {
-    fn message(&self, message: &Message) -> String {
-        format!(
-            r#"<div id="message_{}">message {}</div>"#,
-            message.client_message_id, message.id
-        )
-    }
-    fn message_presentation(&self, message: &Message) -> String {
-        format!("<div>presentation {} & more</div>", message.id)
-    }
-    fn boost(&self, boost: &Boost) -> String {
-        format!("<div>boost {}</div>", boost.id)
-    }
-    fn shared_room(&self, room: &Room) -> String {
-        format!("<li>shared {}</li>", room.id)
-    }
-    fn direct_room(&self, membership: &Membership) -> String {
-        format!("<li>direct {}</li>", membership.id)
-    }
-    fn sidebar_row(&self, room: &Room, _membership: &Membership, unread: Option<bool>) -> String {
-        format!("<li>row {} unread {unread:?}</li>", room.id)
-    }
 }
 
 pub fn identifier(value: Value) -> String {

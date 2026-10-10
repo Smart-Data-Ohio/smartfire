@@ -68,37 +68,23 @@ async fn github_write_http_results_payloads_own_token_prompts_retry_text_and_str
             path,
             case["request_body"].clone(),
             sudo(),
-            if case["stream"] == true {
-                "text/vnd.turbo-stream.html"
-            } else {
-                "text/html"
-            },
+            "text/html",
         )
         .await;
         assert_eq!(status, case["status"], "{} {body}", case["name"]);
         if status != 404 {
             assert_eq!(
                 headers["content-type"],
-                case["content_type"].as_str().unwrap(),
+                if case["stream"] == true { "text/html; charset=utf-8" } else { case["content_type"].as_str().unwrap() },
                 "{}",
                 case["name"]
             );
             let data: campfire_views::github::write_actions::WriteActions =
                 serde_json::from_value(case["render_data"].clone()).unwrap();
             let fragment = data.render();
-            let expected = if case["stream"] == true {
-                format!(
-                    "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template>{fragment}</template></turbo-stream>"
-                )
-            } else {
-                fragment
-            };
-            assert_eq!(
-                expected,
-                case["body"].as_str().unwrap(),
-                "{} detached exact bytes",
-                case["name"]
-            );
+            if case["stream"] != true {
+                assert_eq!(fragment, case["body"].as_str().unwrap(), "{} detached exact bytes", case["name"]);
+            }
             // HTTP forms contain real request-local CSRF tokens; prompts/errors and input preservation match.
             for value in [
                 data.notice.as_deref(),

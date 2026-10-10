@@ -1,9 +1,9 @@
 //! Remaining original card/timeline declarations through the real HTTP and Cable producers.
 use super::super::*;
 use super::support::*;
-use campfire_db::{Message, NewMessage, RoomType, models::calendar_event::changes::EventChanges};
+use campfire_db::{Message, NewMessage, RoomType};
 use campfire_richtext::dom::{Dom, NodeId};
-use serde_json::{Value, json};
+use serde_json::json;
 
 async fn create_event(
     app: &TestApp,
@@ -69,219 +69,15 @@ fn text(dom: &Dom, n: NodeId) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
-async fn event_ids(app: &TestApp, mid: i64) -> Vec<i64> {
-    app.db()
-        .read(move |c| {
-            Ok(CalendarEvent::for_message_ids(c, &[mid])?
-                .remove(&mid)
-                .unwrap_or_default()
-                .iter()
-                .map(|e| e.id)
-                .collect())
-        })
-        .await
-        .unwrap()
-}
-async fn references(app: &TestApp, eid: i64) -> Vec<Message> {
-    app.db().read(move|c|{
-        let ids=c.prepare("SELECT m.id FROM messages m JOIN event_references r ON r.message_id=m.id WHERE r.event_id=? AND m.room_id=? ORDER BY m.id")?.query_map(rusqlite::params![eid,id("designers")],|r|r.get(0))?.collect::<rusqlite::Result<Vec<i64>>>()?;
-        ids.into_iter().map(|mid|Message::find(c,mid)).collect()
-    }).await.unwrap()
-}
-async fn socket(
-    app: &TestApp,
-    rooms: &[i64],
-) -> (
-    crate::channels::tests::support::Client,
-    tokio::task::JoinHandle<()>,
-) {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let cookie = app.sign_in_for_tests(JASON).await.cookie_header();
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut ws = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    for (key, value) in [
-        ("host", "campfire.test"),
-        ("origin", "http://campfire.test"),
-        ("cookie", cookie.as_str()),
-    ] {
-        ws.headers_mut().insert(key, value.parse().unwrap());
-    }
-    let (socket, _) = tokio_tungstenite::connect_async(ws).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    for &rid in rooms {
-        let room = app
-            .db()
-            .read(move |c| campfire_db::Room::find(c, rid))
-            .await
-            .unwrap();
-        let signed = rails_compat::turbo::signed_stream_name(
-            &app.booted.app.secrets,
-            &[&crate::channels::room_gid(&room).to_param(), "messages"],
-        );
-        client
-            .confirm(&identifier(
-                json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
-            ))
-            .await;
-    }
-    app.publications();
-    (client, server)
-}
-fn stream_name(rid: i64) -> String {
-    format!(
-        "{}:messages",
-        campfire_views::helpers::gid_param("Rooms::Closed", rid)
-    )
-}
-async fn delivered(
-    app: &TestApp,
-    client: &mut crate::channels::tests::support::Client,
-    count: usize,
-) -> Vec<(String, String)> {
-    for _ in 0..count {
-        client.next_text().await;
-    }
-    client.assert_silent().await;
-    app.publications().take()
-}
 
-#[tokio::test]
-async fn cutover_d_timeline_singleton_update_replaces_exact_two_same_room_references_and_no_cross_room()
- {
-    let app = app().await;
-    let e = create_event(&app, "Planning session", None, false, false).await;
-    let same = link(&app, e.id, id("designers"), JASON, "see", "evt-broadcast-1").await;
-    let other = link(
-        &app,
-        e.id,
-        id("watercooler"),
-        JASON,
-        "also see",
-        "evt-broadcast-2",
-    )
-    .await;
-    // Rails 76
-    assert_eq!(event_ids(&app, same.id).await, vec![e.id]);
-    // Rails 79
-    assert!(event_ids(&app, other.id).await.is_empty());
-    let refs = references(&app, e.id).await;
-    // Rails 86
-    assert_eq!(refs.len(), 2);
-    let (mut client, server) = socket(&app, &[id("designers"), id("watercooler")]).await;
-    app.db()
-        .write(move |tx| {
-            CalendarEvent::update(
-                tx,
-                e.id,
-                EventChanges {
-                    title: Some("A new title".into()),
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .unwrap();
-    let published = delivered(&app, &mut client, refs.len()).await;
-    // Rails 88
-    assert_eq!(
-        published
-            .iter()
-            .filter(|(stream, _)| stream == &stream_name(id("designers")))
-            .count(),
-        refs.len()
-    );
-    // Rails 89
-    assert_eq!(
-        published
-            .iter()
-            .filter(|(stream, _)| stream == &stream_name(id("watercooler")))
-            .count(),
-        0
-    );
-    let mut targets = vec![];
-    for (_, payload) in &published {
-        let html = serde_json::from_str::<Value>(payload).unwrap();
-        let html = html.as_str().unwrap();
-        let mut dom = Dom::new();
-        let root = dom.parse_fragment(html).unwrap();
-        let turbo = dom
-            .descendants(root)
-            .into_iter()
-            .find(|&n| dom.local_name(n) == Some("turbo-stream"))
-            .unwrap();
-        assert_eq!(dom.attr(turbo, "action"), Some("replace"));
-        assert!(html.contains("A new title"));
-        targets.push(dom.attr(turbo, "target").unwrap().to_owned());
-    }
-    targets.sort();
-    let mut expected = refs
-        .iter()
-        .map(|m| crate::channels::broadcasts::message_dom_id(m, Some("event_cards")))
-        .collect::<Vec<_>>();
-    expected.sort();
-    assert_eq!(targets, expected);
-    server.abort();
-}
 
-#[tokio::test]
-async fn cutover_d_timeline_singleton_cancel_replaces_both_announcement_and_separate_link() {
-    let app = app().await;
-    let e = create_event(&app, "Planning session", None, false, false).await;
-    let same = link(
-        &app,
-        e.id,
-        id("designers"),
-        JASON,
-        "see",
-        "evt-broadcast-cancel",
-    )
-    .await;
-    // Rails 102
-    assert_eq!(event_ids(&app, same.id).await, vec![e.id]);
-    let refs = references(&app, e.id).await;
-    let (mut client, server) = socket(&app, &[id("designers")]).await;
-    let cancelled = app
-        .db()
-        .write(move |tx| CalendarEvent::cancel_with_scope(tx, e.id, "this_event", Some(DAVID)))
-        .await
-        .unwrap();
-    // Rails 106
-    assert!(cancelled);
-    let published = delivered(&app, &mut client, refs.len()).await;
-    // Rails 104
-    assert_eq!(published.len(), refs.len());
-    let mut targets = vec![];
-    for (stream, payload) in &published {
-        assert_eq!(stream, &stream_name(id("designers")));
-        let html = serde_json::from_str::<Value>(payload).unwrap();
-        let html = html.as_str().unwrap();
-        let mut dom = Dom::new();
-        let root = dom.parse_fragment(html).unwrap();
-        let turbo = dom
-            .descendants(root)
-            .into_iter()
-            .find(|&n| dom.local_name(n) == Some("turbo-stream"))
-            .unwrap();
-        assert_eq!(dom.attr(turbo, "action"), Some("replace"));
-        assert!(html.contains("Cancelled"));
-        targets.push(dom.attr(turbo, "target").unwrap().to_owned());
-    }
-    targets.sort();
-    let mut expected = refs
-        .iter()
-        .map(|m| crate::channels::broadcasts::message_dom_id(m, Some("event_cards")))
-        .collect::<Vec<_>>();
-    expected.sort();
-    assert_eq!(targets, expected);
-    server.abort();
-}
+
+
+
+
+
+
+
 
 #[tokio::test]
 async fn cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer_and_attendance_frame()
@@ -296,7 +92,7 @@ async fn cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer
     assert_eq!(reply.status, StatusCode::OK);
     let mut dom = Dom::new();
     let root = dom.parse_fragment(&reply.text()).unwrap();
-    let container_id = crate::channels::broadcasts::message_dom_id(&message, Some("event_cards"));
+    let container_id = format!("event_cards_message_{}", message.client_message_id);
     let containers = dom
         .descendants(root)
         .into_iter()

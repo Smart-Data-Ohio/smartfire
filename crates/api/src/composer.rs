@@ -4,7 +4,6 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_channels::channels::message_features::{origin as renderer_origin, slash_origin};
 use campfire_controllers::controllers::autocompletable::icons;
 use campfire_db::{
     ChannelThread, Message, NewScheduledMessage, Room, ScheduledMessage, UserStatusSettings,
@@ -303,7 +302,6 @@ async fn create_slash_command(c: &mut Ctx) -> Result {
         thread_id,
         huddles_configured: c.app().config.huddles_configured,
     };
-    let origin = c.url_for("");
     let zone = features::user_zone(c).await?;
     let storage = c.app().storage.clone();
     let text = input.text;
@@ -311,7 +309,7 @@ async fn create_slash_command(c: &mut Ctx) -> Result {
         .app()
         .db
         .write_scoped(
-            move || (slash_origin(&origin), page::enter_time_zone(zone)),
+            move || page::enter_time_zone(zone),
             move |tx| {
                 campfire_rooms::controllers::rooms::slash_commands::dispatch(
                     tx, &context, &text, storage,
@@ -689,13 +687,12 @@ async fn destroy_scheduled(c: &mut Ctx) -> Result {
 async fn send_now(c: &mut Ctx) -> Result {
     let user_id = prepare_scheduled(c).await?;
     let initial = pending(c, user_id).await?;
-    let origin = page::renderer_base_url(c);
     let zone = features::user_zone(c).await?;
     let (sent, row) = c
         .app()
         .db
         .write_scoped(
-            move || (renderer_origin(&origin), page::enter_time_zone(zone)),
+            move || page::enter_time_zone(zone),
             move |tx| {
                 let sent = ScheduledMessage::dispatch(tx, initial.id, tx.now(), true)?;
                 Ok((sent, ScheduledMessage::find(tx.conn(), initial.id)?))

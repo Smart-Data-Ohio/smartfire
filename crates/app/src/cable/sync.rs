@@ -1,13 +1,11 @@
 //! The JSON twins of the broadcasts, for the single-page app's `/api/v1/sync` socket
 //! (`campfire_cable::sync`, `frontend-plan.md` §2.5). Each broadcast point that has a twin calls
-//! in here next to its Turbo frame, which stays byte for byte what it was.
+//! here independently of HTML rendering.
 //!
-//! Twins that carry only ids are built here. Those that carry a rendered DTO (a message's
-//! `bodyHtml`, a sidebar row's label and counts) go through the [`SyncRenderer`] the server
-//! installs at boot (`campfire_api`); until one is installed, and whenever the sync engine isn't,
-//! every twin is a no-op. So is every twin while no sync socket is open
-//! ([`Cable::sync_wanted`](campfire_cable::Server::sync_wanted)): each checks that before
-//! building anything.
+//! Payloads containing message HTML or viewer facts use the [`SyncRenderer`] installed at
+//! boot. Ordinary events skip DTO work when no sync socket is open. Digest acknowledgements
+//! and attachment completion still validate their DTOs while idle, preserving retry/claim
+//! semantics independently of subscriptions.
 //!
 //! [`TWINS`] lists which broadcasts have twins and [`NOT_YET_TWINNED`] the ones still to port;
 //! a test in the server crate fails when a broadcast is in neither.
@@ -31,6 +29,10 @@ use super::Cable;
 pub trait SyncRenderer: Send + Sync + 'static {
     /// The message as `GET /api/v1/rooms/:id/messages` serves it.
     fn message(&self, conn: &Connection, message: &Message) -> Option<MessageDTO>;
+    /// A bounded group serialized from the same read snapshot.
+    fn messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<MessageDTO>> {
+        messages.iter().map(|message| self.message(conn, message)).collect()
+    }
     /// The message's reactions and boosts, as `POST /api/v1/messages/:id/boosts` answers them.
     fn reactions(&self, conn: &Connection, message: &Message) -> Option<MessageReactions>;
     /// The membership's sidebar row, or `None` when the room isn't in that sidebar (an
@@ -220,14 +222,6 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["message.updated", "sidebar.row.upserted"],
     ),
     (
-        "Broadcasts::message_part_replace",
-        &["message.updated", "sidebar.row.upserted"],
-    ),
-    (
-        "Broadcasts::message_thread_part_replace",
-        &["message.updated"],
-    ),
-    (
         "Broadcasts::message_reactions_replace",
         &["message.reactions"],
     ),
@@ -256,6 +250,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     // The joiner's new row, and every other member's row with `refreshRoom`.
     ("Broadcasts::joined_open_room", &["sidebar.row.upserted"]),
     ("broadcasts::read_room", &["room.read"]),
+    ("messages::rendered::broadcast_tombstones", &["message.updated"]),
+    ("link_embeds::broadcast_message", &["message.cards"]),
     // No classic frame: the sink publishes these for the single-page app only.
     (
         "scheduled_message::ScheduledMessageChange",
@@ -283,18 +279,9 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("link_embed::store::CardUpdate", &["message.cards"]),
     ("fizzy::cards::CardUpdate", &["message.cards"]),
     ("twitter::post::CardUpdate", &["message.cards"]),
-    ("github::pull_requests::CardUpdated", &["message.cards"]),
+    ("github::pull_requests::CardUpdated", &["message.cards", "thread.github.updated"]),
     ("TypingNotificationsChannel", &["typing"]),
-    // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
-    // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
-    // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
-    // carries the thread's new count and activity), a direct room's sidebar row
-    // (`Partial::DirectSidebar`, with the member's row), and the huddle notices and invitations on
-    // `user_<id>_huddle_notices`/`user_<id>_activity`. Board-row prepends and replaces have
-    // `ThreadBoardCreation`/`ThreadWorkChange` companions, coalesced after the commit's callbacks;
-    // row removal has `Broadcasts::thread_removed`. Its other frames (message features, room
-    // headers, polls and the other directory partials) have no twin yet. Its
-    // `ActivityChannel` frames (`user_<id>_activity`) have `activity.item`.
+    // Committed messages, pins, indicators, memberships, activity and read/unread effects.
     (
         "broadcasts::Broadcast",
         &[
@@ -324,7 +311,6 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     ("huddle_effects::StreamStopped", &["stage.stream.stopped"]),
     ("huddle_effects::StageRoster", &["stage.updated"]),
-    ("huddle_effects::StagePanel", &["stage.updated"]),
     ("huddle_effects::RoleEvent", &["huddle.role"]),
     ("huddle_effects::StageEndedNote", &["message.created"]),
     ("RoomRemovalBroadcast", &["sidebar.row.removed"]),
@@ -333,21 +319,14 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["presence"],
     ),
     ("user::lifecycle::QuietStreamFinal", &["message.updated"]),
-    // The status badge and directory row replaces on `agents:all`. Their twin is
-    // `agent::AgentSyncChange`'s `agent.status`, which the same save emits (once, not per frame).
-    ("agent::AgentStatusChange", &["agent.status"]),
-    // The message replace, or the thread's `agent_steps_channel_thread_<id>` list.
+    ("board_automations::DigestNotes", &["message.created"]),
+    ("github::notifier::MessageCreated", &["message.created", "room.unread"]),
+    // The message or its thread's agent steps.
     ("agent_step::StepParentChange", &["agent.steps"]),
 ];
 
 /// Broadcast points with no sync event yet: the SPA slices after S1 port them.
-pub const NOT_YET_TWINNED: &[&str] = &[
-    "Broadcasts::boost_create",
-    "Broadcasts::boost_remove",
-    "board_automations::DigestNotes",
-    "user_status_settings::updates::OooNoticeBroadcast",
-    "github::notifier::MessageCreated",
-];
+pub const NOT_YET_TWINNED: &[&str] = &[];
 
 /// Sync events the contract defines that no broadcast point publishes yet: none since the S3 and
 /// S4 server work. The coverage test fails when an event is in neither this list nor [`TWINS`],
@@ -415,7 +394,27 @@ pub fn message(
     );
 }
 
-/// `message.updated`, read afresh later: for broadcast points without a connection.
+/// Validate publication even without subscribers, before claims or held jobs are released.
+pub fn checked_message(server: &Cable, slot: &RendererSlot, conn: &Connection, message: &Message, created: bool) -> bool {
+    let Some(renderer) = slot.0.renderer.get() else { return false; };
+    let Some(dto) = renderer.message(conn, message) else { return false; };
+    let payload = if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
+    publish(server, Audience::Topic(message_topic(message)), &payload);
+    true
+}
+
+/// Serialize the entire batch before acknowledging any digest publication IDs.
+pub fn checked_messages(server: &Cable, slot: &RendererSlot, conn: &Connection, messages: &[Message]) -> Option<Vec<i64>> {
+    let renderer = slot.0.renderer.get()?;
+    let dtos = renderer.messages(conn, messages)?;
+    if dtos.len() != messages.len() { return None; }
+    for (message, dto) in messages.iter().zip(dtos) {
+        publish(server, Audience::Topic(message_topic(message)), &SyncPayload::MessageCreated(dto));
+    }
+    Some(messages.iter().map(|message| message.id).collect())
+}
+
+/// `message.updated`, read afresh later:
 pub fn message_updated_later(server: &Cable, slot: &RendererSlot, message_id: i64) {
     let Some(renderer) = slot.get(server) else {
         return;
