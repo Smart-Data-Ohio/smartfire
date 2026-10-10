@@ -260,25 +260,35 @@
     }
   }
 
-  /* Touch phones: remove paints a 24 px disc, and an invisible ring takes it to a 44 px target.
-     Retry on a file card is a full 44 px target too. */
+  /* Touch phones: remove is a 44 px target (the button's own box) that paints a 24 px disc around
+     its icon, and retry on a file card is a full 44 px target. The tray's gaps and padding grow so
+     a target never reaches over the next chip or past the scroller's edge. */
   @media (width < 720px) and (pointer: coarse) {
     .tray {
-      gap: var(--space-3);
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-6) var(--space-1) var(--space-3);
     }
 
     .tray-remove.button {
-      --button-height: 24px;
+      --button-height: var(--touch-target);
 
-      width: 24px;
-      top: -10px;
-      right: -10px;
+      top: -20px;
+      right: -20px;
+      width: var(--touch-target);
+      background: transparent;
+      box-shadow: none;
     }
 
-    .tray-remove.button::after {
-      position: absolute;
-      inset: calc((24px - var(--touch-target)) / 2);
-      content: "";
+    .tray-remove.button:hover {
+      background: transparent;
+    }
+
+    .tray-remove.button svg {
+      box-sizing: content-box;
+      padding: var(--space-1);
+      border-radius: var(--radius-pill);
+      background: var(--bg-raised);
+      box-shadow: var(--shadow-raised);
     }
 
     .tray-chip[data-kind="file"] .tray-retry.button {
