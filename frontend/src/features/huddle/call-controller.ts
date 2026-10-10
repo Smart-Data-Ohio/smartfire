@@ -42,11 +42,13 @@ import {
   loadNoiseSuppression,
   loadParticipantMuted,
   loadParticipantVolume,
+  loadShareQuality,
   loadStreamQuality,
   storeDevicePreference,
   storeNoiseSuppression,
   storeParticipantMuted,
   storeParticipantVolume,
+  storeShareQuality,
   storeStreamQuality,
 } from "./engine/preferences.ts";
 import {
@@ -276,6 +278,8 @@ export class CallController {
   #lastSnapshotKey = "";
   #autoExpanded: string | null = null;
   #heldRoom: number | null = null;
+  /** The ordinary screen share quality, kept here so a failed storage write can't lose the pick. */
+  #shareQuality: StreamQuality = loadShareQuality();
 
   constructor(env: CallEnvironment) {
     this.#env = env;
@@ -1707,7 +1711,7 @@ export class CallController {
     this.#setBusy("screen", true);
 
     try {
-      await transport.setScreenShare(enabling);
+      await transport.setScreenShare(enabling, this.#shareQuality);
 
       if (transport !== this.#transport) {
         await transport.setScreenShare(false).catch(() => undefined);
@@ -1777,7 +1781,7 @@ export class CallController {
     }
 
     const operation = this.#operation;
-    const capture = transport.captureScreen();
+    const capture = transport.captureScreen(quality);
     let captured: Awaited<typeof capture>;
 
     try {
@@ -1950,6 +1954,15 @@ export class CallController {
     }
 
     transport.showScreen(videoId, expanded ? { width, height } : null);
+  }
+
+  /**
+   * The quality the viewer's next ordinary screen share captures and encodes at, remembered like
+   * the other call preferences. A share already running keeps the quality it started with.
+   */
+  setShareQuality(quality: StreamQuality): void {
+    this.#shareQuality = quality;
+    storeShareQuality(quality);
   }
 
   /** The viewer's stream quality, remembered like the other call preferences. */

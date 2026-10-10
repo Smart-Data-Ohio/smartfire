@@ -156,6 +156,8 @@ test("a host goes live from the stage and stops the stream", async ({ page }) =>
   await expect(goLive).toBeDisabled();
   await page.locator(".room-header .huddle-launcher").click();
   await expect(dock(page).getByRole("status")).toContainText("Huddle active");
+  await expect(pane.getByLabel("Stream quality")).toHaveValue("1080p15");
+  await pane.getByLabel("Stream quality").selectOption("1080p60");
   await goLive.click();
   await expect(pane.locator(".stage-live")).toContainText("Riel St. Amand");
   await expect(page.locator(".call-share[data-stream]")).toHaveCount(1);

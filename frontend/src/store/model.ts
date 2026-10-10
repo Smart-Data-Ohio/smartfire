@@ -103,6 +103,13 @@ export interface PendingMessage {
   /** A finished direct upload's signed id, posted as the message's file. */
   readonly attachmentSignedId: string | null;
   readonly attachment: PendingAttachment | null;
+  /**
+   * Several finished uploads posted together as one message (`attachmentSignedIds`), in tray
+   * order; absent for none or the legacy single file above.
+   */
+  readonly attachmentSignedIds?: readonly string[];
+  /** What the pending row shows for those files, in the same order. */
+  readonly attachments?: readonly PendingAttachment[];
   /** Drive file ids pinned on the pending message; absent when there are none. */
   readonly driveFileIds?: readonly string[];
   /** The message it replies to (inline, on the same timeline), or `null`. */

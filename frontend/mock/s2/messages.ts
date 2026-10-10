@@ -6,6 +6,7 @@
 
 import type { ForwardDestinationList } from "../../src/gen/ForwardDestinationList.ts";
 import type { ForwardResult } from "../../src/gen/ForwardResult.ts";
+import type { Icon } from "../../src/gen/Icon.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessageReactions } from "../../src/gen/MessageReactions.ts";
 import type { MessageRead } from "../../src/gen/MessageRead.ts";
@@ -61,11 +62,15 @@ export type SavedHook = (
   after: SavedItem | null,
 ) => void;
 
-/** Creates the messages module. `savedChanged` hears about every saved item change. */
+/**
+ * Creates the messages module. `savedChanged` hears about every saved item change;
+ * `uploadedIcons` are the workspace icons added in admin, which react like the fixtures.
+ */
 export function createMessages(
   ctx: S2Context,
   threads: Threads,
   savedChanged: SavedHook = () => undefined,
+  uploadedIcons: () => readonly Icon[] = () => [],
 ): Messages {
   const messageOr404 = (messageId: number): MessageLocation => {
     const location = locate(ctx.world(), messageId);
@@ -263,7 +268,7 @@ export function createMessages(
       throw validation("content", `Content is too long (maximum is ${BOOST_LIMIT} characters)`);
     }
 
-    const reaction = reactionContent(content);
+    const reaction = reactionContent(content, uploadedIcons());
     const message = location.message;
 
     if (reaction === null) {

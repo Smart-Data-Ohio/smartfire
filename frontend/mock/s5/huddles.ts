@@ -38,7 +38,7 @@ export const MOCK_LIVEKIT_URL = "mock://livekit";
 
 const STAGE_ROLES: readonly StageRole[] = ["listener", "speaker", "host"];
 
-const QUALITIES: readonly StreamQuality[] = ["720p15", "1080p15", "1080p30"];
+const QUALITIES: readonly StreamQuality[] = ["720p15", "1080p15", "1080p30", "1080p60"];
 
 const MODERATIONS: readonly HuddleModeration[] = ["mute", "unmute", "disconnect"];
 

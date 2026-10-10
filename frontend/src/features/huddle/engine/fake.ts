@@ -9,6 +9,7 @@
  */
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { store } from "../../../store/store.ts";
+import { DEFAULT_SHARE_QUALITY } from "./screen-quality.ts";
 import {
   type CallParticipant,
   type CallSnapshot,
@@ -165,6 +166,8 @@ export class FakeTransport implements CallTransport {
   #captureSequence = 0;
   #videoSequence = 0;
   #failScreen: string | null = null;
+  /** The quality the latest share or stream capture asked for (what the real engine encodes). */
+  screenQuality: StreamQuality | null = null;
   #noise = false;
   readonly #startedAt = Date.now();
 
@@ -255,7 +258,10 @@ export class FakeTransport implements CallTransport {
     this.#emit({ type: "changed" });
   }
 
-  async setScreenShare(enabled: boolean): Promise<void> {
+  async setScreenShare(
+    enabled: boolean,
+    quality: StreamQuality = DEFAULT_SHARE_QUALITY,
+  ): Promise<void> {
     if (!enabled) {
       this.#endScreen();
 
@@ -263,31 +269,34 @@ export class FakeTransport implements CallTransport {
     }
 
     this.#refuseScreenIfAsked();
+    this.screenQuality = quality;
     stopVideo(this.#screen);
     this.#screen = this.#video("Your screen");
     this.#emit({ type: "changed" });
   }
 
-  captureScreen(): Promise<CapturedScreen> {
+  captureScreen(quality: StreamQuality): Promise<CapturedScreen> {
     try {
       this.#refuseScreenIfAsked();
     } catch (error) {
       return Promise.reject(error);
     }
 
+    this.screenQuality = quality;
     this.#captureSequence += 1;
     this.#captured.set(this.#captureSequence, this.#video("Your stream"));
 
     return Promise.resolve({ id: this.#captureSequence });
   }
 
-  async publishScreen(captured: CapturedScreen, _quality: StreamQuality): Promise<void> {
+  async publishScreen(captured: CapturedScreen, quality: StreamQuality): Promise<void> {
     const video = this.#captured.get(captured.id);
 
     if (video === undefined || !this.#connected) {
       throw new Error("screen-capture-gone");
     }
 
+    this.screenQuality = quality;
     this.#captured.delete(captured.id);
     stopVideo(this.#screen);
     this.#screen = video;

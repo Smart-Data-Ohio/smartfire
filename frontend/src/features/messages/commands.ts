@@ -138,7 +138,14 @@ export function loadCustomIcons(): Promise<readonly EmojiChoice[]> {
       list.flatMap((icon) =>
         icon.imageUrl === null
           ? []
-          : [{ content: `:${icon.name}:`, title: icon.title, imageUrl: icon.imageUrl }],
+          : [
+              {
+                content: `:${icon.name}:`,
+                title: icon.title,
+                imageUrl: icon.imageUrl,
+                stillUrl: icon.stillUrl,
+              },
+            ],
       ),
     (error: ActionError) => {
       iconsLoading = null;
@@ -148,4 +155,9 @@ export function loadCustomIcons(): Promise<readonly EmojiChoice[]> {
   );
 
   return iconsLoading;
+}
+
+/** Drops the fetched icons, after an administrator adds or deletes one, so the picker refetches. */
+export function forgetCustomIcons(): void {
+  iconsLoading = null;
 }

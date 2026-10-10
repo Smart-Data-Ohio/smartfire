@@ -14,10 +14,10 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
-import { iconSvg, imageSize } from "./assets.ts";
+import { animatedIconGif, iconSvg, imageSize } from "./assets.ts";
 import { type Route, route, type S2Context } from "./context.ts";
 import { base64, md5Base64 } from "./digest.ts";
-import { BRAND_ICONS, CUSTOM_ICONS } from "./emoji.ts";
+import { BRAND_ICONS, customIcon } from "./emoji.ts";
 import type { BlobRecord } from "./model.ts";
 
 /** A direct upload URL works for this long after `POST /uploads`. */
@@ -134,8 +134,19 @@ export interface Uploads {
   reset(): void;
 }
 
-/** Creates the uploads module. */
-export function createUploads(ctx: S2Context, limitBytes: () => number): Uploads {
+/** An icon uploaded in admin, as `/icons/:name` serves it. */
+export interface UploadedIconFile {
+  readonly bytes: Uint8Array;
+  readonly contentType: string;
+  readonly animated: boolean;
+}
+
+/** Creates the uploads module. `iconFile` finds an icon uploaded in admin, by name. */
+export function createUploads(
+  ctx: S2Context,
+  limitBytes: () => number,
+  iconFile: (name: string) => UploadedIconFile | null = () => null,
+): Uploads {
   let holding = false;
   let held: (() => void)[] = [];
   let throttleMs = 0;
@@ -270,22 +281,36 @@ export function createUploads(ctx: S2Context, limitBytes: () => number): Uploads
     };
   };
 
-  const serveIcon = (path: string): MockBinaryResponse => {
+  /**
+   * A brand or workspace icon's image. An animated workspace icon (the GIF fixture, or an upload
+   * that moves) answers `?still=1` with a first frame, drawn here as the icon's badge; any other
+   * icon answers it with its original, as the server does.
+   */
+  const serveIcon = (path: string, still: boolean): MockBinaryResponse => {
     const brand = /^\/assets\/icons\/brands\/([a-z0-9_]+)\.svg$/.exec(path)?.[1];
     const custom = /^\/icons\/([a-z0-9_]+)$/.exec(path)?.[1];
+    const uploaded = custom === undefined ? null : iconFile(custom);
+    const fixture = custom === undefined ? undefined : customIcon(custom);
+
+    const icon = (contentType: string, bytes: Uint8Array): MockBinaryResponse => ({
+      status: 200,
+      contentType,
+      bytes,
+      headers: { "Cache-Control": "max-age=3600" },
+    });
+
+    if (uploaded !== null && !(still && uploaded.animated)) {
+      return icon(uploaded.contentType, uploaded.bytes);
+    }
+
+    if (fixture?.animated === true && !still) return icon("image/gif", animatedIconGif());
 
     const known =
-      (brand !== undefined && BRAND_ICONS.some((icon) => icon.name === brand)) ||
-      (custom !== undefined && CUSTOM_ICONS.some((icon) => icon.name === custom));
+      (brand !== undefined && BRAND_ICONS.some((each) => each.name === brand)) ||
+      fixture !== undefined ||
+      uploaded !== null;
 
-    if (!known) return empty(404);
-
-    return {
-      status: 200,
-      contentType: "image/svg+xml",
-      bytes: iconSvg(brand ?? custom ?? ""),
-      headers: { "Cache-Control": "max-age=3600" },
-    };
+    return known ? icon("image/svg+xml", iconSvg(brand ?? custom ?? "")) : empty(404);
   };
 
   return {
@@ -324,7 +349,7 @@ export function createUploads(ctx: S2Context, limitBytes: () => number): Uploads
         return serveBlob(representation[1] ?? "", representation[2] ?? "", false);
 
       return path.startsWith("/icons/") || path.startsWith("/assets/icons/")
-        ? serveIcon(path)
+        ? serveIcon(path, url.searchParams.get("still") === "1")
         : empty(404);
     },
     attachment(signedId) {

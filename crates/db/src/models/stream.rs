@@ -3,7 +3,9 @@ use crate::sql::{query_all, query_one};
 use crate::{CachedStatements, Connection, Errors, Event, Result, Timestamp, Tx};
 use rusqlite::{Row, params};
 
-pub const QUALITIES: [&str; 3] = ["720p15", "1080p15", "1080p30"];
+/// The classic three plus 1080p60 (Discord's top streaming tier). The column is a plain string,
+/// so older rows and clients that only know the first three keep working unchanged.
+pub const QUALITIES: [&str; 4] = ["720p15", "1080p15", "1080p30", "1080p60"];
 
 #[derive(Debug, Clone)]
 pub struct Stream {
@@ -133,5 +135,19 @@ impl Stream {
             stream.end(tx, None)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn qualities_add_1080p60_and_keep_the_classic_three() {
+        for quality in ["720p15", "1080p15", "1080p30", "1080p60"] {
+            assert!(Stream::validate_quality(quality).is_ok(), "{quality}");
+        }
+        assert!(Stream::validate_quality("4k60").is_err());
+        assert!(Stream::validate_quality("1080P60").is_err());
     }
 }
