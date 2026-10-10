@@ -109,6 +109,10 @@ pub struct SyncEvent {
 #[serde(tag = "type", content = "data")]
 #[ts(export)]
 pub enum SyncPayload {
+    /// On the person's `user` topic: their settings changed in another session. Carries the
+    /// same revision and evaluation time as the settings write's response.
+    #[serde(rename = "settings.updated")]
+    SettingsUpdated(Box<crate::Settings>),
     /// On everyone's `user` topic: the workspace name or images changed.
     #[serde(rename = "workspace.updated")]
     WorkspaceUpdated(WorkspaceBranding),

@@ -292,15 +292,17 @@ fn audit_context(c: &Ctx) -> Result<Context> {
     })
 }
 
-/// The answer to a read and to every settings write: the settings as they now are.
+/// Every settings write publishes the same snapshot it returns to the writer.
 async fn reply(c: &mut Ctx, id: i64) -> Result {
     let settings = load(c, id).await?;
+    campfire_app::cable::sync::settings_updated(&c.app().cable, settings.clone());
     c.json(StatusCode::OK, &settings)
 }
 
 async fn show_settings(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    reply(c, user.id).await
+    let settings = load(c, user.id).await?;
+    c.json(StatusCode::OK, &settings)
 }
 
 /// Every section of the classic profile page, from the presenters that page renders from.

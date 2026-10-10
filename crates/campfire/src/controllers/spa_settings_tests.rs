@@ -1220,16 +1220,125 @@ impl Sync {
     }
 
     async fn until(&mut self, wanted: impl Fn(&api::SyncPayload) -> bool) -> api::SyncPayload {
+        self.until_event(wanted).await.payload
+    }
+
+    async fn until_event(&mut self, wanted: impl Fn(&api::SyncPayload) -> bool) -> api::SyncEvent {
         loop {
             if let api::ServerFrame::Batch { events } = self.next().await
                 && let Some(event) = events.into_iter().find(|event| wanted(&event.payload))
             {
-                return event.payload;
+                return event;
             }
         }
     }
 }
 
+
+#[tokio::test]
+async fn a9_notification_writes_reach_all_of_the_users_sync_sessions() {
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = a.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut phone = a.sign_in(DAVID).await;
+    let desktop = a.sign_in(DAVID).await;
+    let other_user = a.sign_in(JASON).await;
+    let mut phone_sync = Sync::connect(addr, &phone.cookie_header()).await;
+    let mut desktop_sync = Sync::connect(addr, &desktop.cookie_header()).await;
+    let mut other_sync = Sync::connect(addr, &other_user.cookie_header()).await;
+    let room_id = a
+        .db()
+        .read(|conn| Ok(campfire_db::Membership::for_user(conn, DAVID)?[0].room_id))
+        .await
+        .unwrap();
+    let mut previous = read(&mut phone).await.revision;
+
+    for body in [
+        json!({"defaultNotificationLevel":"mentions"}),
+        json!({"roomNotification":{"roomId":room_id,"level":null}}),
+        json!({"roomMute":{"roomId":room_id,"duration":"minutes15"}}),
+        json!({"roomMute":{"roomId":room_id,"duration":"off"}}),
+    ] {
+        let response = write(
+            &mut phone,
+            Method::PATCH,
+            "/api/v1/settings/notifications",
+            body,
+        )
+        .await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let saved: api::Settings = parse(&response);
+        assert!(saved.revision > previous);
+        previous = saved.revision;
+        for sync in [&mut phone_sync, &mut desktop_sync] {
+            let event = sync
+                .until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_)))
+                .await;
+            assert_eq!(event.topic, "user");
+            let api::SyncPayload::SettingsUpdated(snapshot) = event.payload else {
+                unreachable!()
+            };
+            assert_eq!(*snapshot, saved);
+        }
+    }
+    let response = write(
+        &mut phone,
+        Method::PUT,
+        &format!("/api/v1/rooms/{room_id}/involvement"),
+        json!({"involvement":"everything"}),
+    )
+    .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let saved: api::InvolvementChange = parse(&response);
+    assert!(saved.settings.revision > previous);
+    assert!(
+        !saved
+            .settings
+            .notifications
+            .room_notification_levels
+            .contains_key(&room_id.to_string())
+    );
+    for sync in [&mut phone_sync, &mut desktop_sync] {
+        let event = sync
+            .until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_)))
+            .await;
+        assert_eq!(event.topic, "user");
+        let api::SyncPayload::SettingsUpdated(snapshot) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(*snapshot, saved.settings);
+    }
+
+    // A public presence update fences all the writes above on the other user's socket.
+    let response = write(
+        &mut phone,
+        Method::PATCH,
+        "/api/v1/settings/status",
+        json!({"customStatusText":"Notification sync complete"}),
+    )
+    .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    loop {
+        if let api::ServerFrame::Batch { events } = other_sync.next().await {
+            assert!(
+                events
+                    .iter()
+                    .all(|event| !matches!(event.payload, api::SyncPayload::SettingsUpdated(_)))
+            );
+            if events.iter().any(|event| matches!(&event.payload,
+                api::SyncPayload::Presence(presence) if presence.user_id == DAVID
+                    && presence.status_text.as_deref().is_some_and(|text| text.contains("Notification sync complete"))
+            )) {
+                break;
+            }
+        }
+    }
+    server.abort();
+}
 
 #[tokio::test]
 async fn a9_notification_default_mute_and_membership_scope() {

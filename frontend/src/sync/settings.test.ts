@@ -1,6 +1,6 @@
 import { afterAll, afterEach, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../mock/server.ts";
-import { sidebar } from "../api/endpoints.ts";
+import { me, sidebar } from "../api/endpoints.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
 import { organizedSidebar } from "../store/organize.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
@@ -9,6 +9,7 @@ import * as activity from "./activity-actions.ts";
 import { setInvolvement } from "./organize-actions.ts";
 import { runAction } from "./runtime.ts";
 import { followNotificationPreferences, settings } from "./settings.ts";
+import { emitResync } from "./signals.ts";
 
 const network = installMockNetwork();
 
@@ -37,6 +38,59 @@ function held<A>() {
 
   return { promise, release };
 }
+
+it("refreshes a missed room mute on user-topic resync and rejects an older held read", async () => {
+  const roomId = SEED_IDS.rooms.general;
+  await settings.updateNotifications({ roomMute: { roomId, duration: "off" } });
+  mutations.setMe(await runAction(me()));
+  const started = held<void>();
+  const gate = held<void>();
+  let delay = true;
+  intercept = async (input, init) => {
+    const response = await fetch(input, init);
+
+    if (String(input).endsWith("/settings") && delay) {
+      delay = false;
+      started.release();
+      await gate.promise;
+    }
+
+    return response;
+  };
+
+  const stop = followNotificationPreferences();
+
+  try {
+    await started.promise;
+
+    const changed = await fetch("/api/v1/settings/notifications", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": network.server.csrfToken(),
+      },
+      body: JSON.stringify({ roomMute: { roomId, duration: "forever" } }),
+    });
+
+    expect(changed.status).toBe(200);
+    emitResync(["user"]);
+    await vi.waitFor(() =>
+      expect(roomMuted(store.getState().sidebar.notificationPreferences, roomId, Date.now())).toBe(
+        true,
+      ),
+    );
+    gate.release();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(roomMuted(store.getState().sidebar.notificationPreferences, roomId, Date.now())).toBe(
+      true,
+    );
+  } finally {
+    gate.release();
+    stop();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await settings.updateNotifications({ roomMute: { roomId, duration: "off" } });
+  }
+});
 
 it("keeps an explicit room choice when a held settings GET arrives without another fetch", async () => {
   const roomId = SEED_IDS.rooms.general;

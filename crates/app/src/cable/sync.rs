@@ -205,6 +205,7 @@ impl RendererSlot {
 pub const TWINS: &[(&str, &[&str])] = &[
     ("workspace_branding::publish", &["workspace.updated"]),
     ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
+    ("sync::settings_updated", &["settings.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -1686,6 +1687,19 @@ pub fn workspace_styles_updated(server: &Cable, css: Option<String>) {
         Audience::Everyone,
         &SyncPayload::WorkspaceStylesUpdated(CustomStyles { css }),
         |publication| SyncPublication { coalesce: Some("workspace.styles".into()), ..publication },
+    );
+}
+
+/// Called after a settings write commits, with the snapshot returned to the writer.
+pub fn settings_updated(server: &Cable, settings: campfire_api_types::Settings) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::User(settings.profile.user_id),
+        &SyncPayload::SettingsUpdated(Box::new(settings)),
+        |publication| publication,
     );
 }
 

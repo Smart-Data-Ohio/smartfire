@@ -270,6 +270,7 @@ async fn put_involvement(c: &mut Ctx) -> Result {
         campfire_app::cable::sync::room_read(&c.app().cable, membership.user_id, room.id);
     }
     let settings = crate::settings::load(c, membership.user_id).await?;
+    campfire_app::cable::sync::settings_updated(&c.app().cable, settings.clone());
     c.json(
         StatusCode::OK,
         &api::InvolvementChange {

@@ -59,6 +59,7 @@ import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { loadUnreadCount } from "./activity-actions.ts";
 import { runAction } from "./runtime.ts";
 import { applySettingsSnapshot } from "./settings-snapshot.ts";
+import { onResync } from "./signals.ts";
 
 export {
   enablePushNotifications,
@@ -279,7 +280,7 @@ export async function saveAccountTheme(theme: ThemePreference): Promise<void> {
   }
 }
 
-/** Refreshes preferences across tabs and schedules the next mute expiry. */
+/** Refreshes missed preferences and schedules the next mute expiry. */
 export function followNotificationPreferences(): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let viewerId = store.getState().me?.user.id;
@@ -342,12 +343,17 @@ export function followNotificationPreferences(): () => void {
     }
   };
 
+  const unsubscribeResync = onResync((topics) => {
+    if (topics.includes("user")) refresh();
+  });
+
   refresh();
   schedule();
   document.addEventListener("visibilitychange", visible);
 
   return () => {
     unsubscribe();
+    unsubscribeResync();
     clearTimeout(timer);
     document.removeEventListener("visibilitychange", visible);
   };

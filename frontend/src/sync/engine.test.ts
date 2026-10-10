@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
+import { vi } from "vitest";
 import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
 import {
   CreateMessage as CreateMessageSchema,
@@ -19,17 +20,21 @@ import {
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { Settings } from "../gen/Settings.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
 import { activityListOf } from "../store/activity.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { Boot } from "../store/model.ts";
+import { roomMuted } from "../store/notification-preferences.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
+import { notificationPreferencesFixture } from "../test/notification-fixtures.ts";
 import * as activity from "./activity-actions.ts";
 import * as boardActions from "./board-actions.ts";
+import { listenForChatSounds } from "./chat-sounds.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
@@ -37,6 +42,7 @@ import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
+import { applySettingsSnapshot } from "./settings-snapshot.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -181,6 +187,133 @@ beforeEach(() => {
   session.resetRoomVisits();
   mutations.setMe(meFixture);
   sessionStorage.clear();
+});
+
+describe("notification settings sync", () => {
+  it.effect("receives another session's mute before playing a live sound in the visible room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(0, true);
+        yield* session.openRoom(12, null);
+        yield* settle;
+
+        const snapshot: Settings = {
+          revision: 1,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+          profile: {
+            userId: 7,
+            name: "Ada",
+            emailAddress: "ada@example.com",
+            bio: null,
+            avatarUrl: "/avatar.svg",
+            avatarAttached: false,
+            hasPassword: true,
+            githubLogin: null,
+            githubVerified: false,
+            bot: false,
+          },
+          appearance: { theme: "system", textSize: "default", timeZone: "UTC", timeZones: [] },
+          notifications: {
+            ...notificationPreferencesFixture,
+            roomNotificationLevels: {},
+            roomMuteUntil: { "12": "2026-10-10T12:15:00Z" },
+          },
+          status: {
+            presenceSetting: "auto",
+            customStatusEmoji: null,
+            customStatusText: null,
+            customStatusExpiresAt: null,
+            meetingStatusEnabled: false,
+            oooCalendarEnabled: false,
+            oooUntil: null,
+            oooManual: false,
+            oooNote: null,
+            calendarError: null,
+          },
+          calls: { voiceMode: "voice_activity", pushToTalkKey: null },
+          integrations: {
+            google: {
+              signInConfigured: false,
+              identityEmail: null,
+              calendarConfigured: false,
+              connected: false,
+              calendar: false,
+              drive: false,
+              email: null,
+            },
+            github: { state: "missing" },
+            githubAppConfigured: false,
+            fizzy: { state: "missing" },
+            managePath: "/users/me/profile",
+            slackImportPath: "/slack/imports",
+          },
+        };
+
+        const before = {
+          ...snapshot,
+          revision: 0,
+          notifications: { ...snapshot.notifications, roomMuteUntil: {} },
+        };
+
+        applySettingsSnapshot(before);
+        const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+        const stop = listenForChatSounds(12, () => true);
+
+        try {
+          const sound = {
+            name: "bell",
+            url: "/assets/bell.mp3",
+            presentation: { kind: "text", text: "bell" },
+          } satisfies NonNullable<MessageDTO["sound"]>;
+
+          yield* pushEvents(
+            { seq: 1, topic: "user", type: "settings.updated", data: snapshot },
+            {
+              seq: 2,
+              topic: "room:12",
+              type: "message.created",
+              data: messageFixture(100, 12, { sound }),
+            },
+          );
+          expect(play).not.toHaveBeenCalled();
+          expect(
+            roomMuted(
+              store.getState().sidebar.notificationPreferences,
+              12,
+              Date.parse(snapshot.evaluatedAt),
+            ),
+          ).toBe(true);
+          expect(applySettingsSnapshot(before).revision).toBe(1);
+
+          const expired = {
+            ...snapshot,
+            evaluatedAt: "2026-10-10T12:15:00.000000000Z",
+            notifications: { ...snapshot.notifications, roomMuteUntil: {} },
+          };
+
+          yield* pushEvents(
+            { seq: 3, topic: "user", type: "settings.updated", data: expired },
+            { seq: 4, topic: "user", type: "settings.updated", data: snapshot },
+            { seq: 5, topic: "user", type: "settings.updated", data: before },
+          );
+          expect(store.getState().sidebar.notificationPreferences?.roomMuteUntil).toEqual({});
+          expect(applySettingsSnapshot(snapshot).evaluatedAt).toBe(expired.evaluatedAt);
+          yield* pushEvents({
+            seq: 6,
+            topic: "room:12",
+            type: "message.created",
+            data: messageFixture(101, 12, { sound }),
+          });
+          expect(play).toHaveBeenCalledOnce();
+        } finally {
+          stop();
+          play.mockRestore();
+        }
+      }),
+    ),
+  );
 });
 
 describe("reconnecting", () => {
