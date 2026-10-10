@@ -103,7 +103,7 @@ describe("the scheduled message editor", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "Choose reply target" }));
-    await screen.findByRole("option", {
+    await screen.findAllByRole("option", {
       name: `${page.users.find((person) => person.id === target.creatorId)?.name ?? "Someone"}: ${snippet(target)}`,
     });
     await user.selectOptions(screen.getByLabelText("Reply target"), String(target.id));

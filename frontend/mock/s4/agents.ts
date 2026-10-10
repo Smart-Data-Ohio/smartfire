@@ -404,6 +404,8 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       agent: { agentId: seed.id, kind: seed.kind, status: seed.status, suspended: seed.suspended },
       createdAt: held?.createdAt ?? iso(now - seed.createdDaysAgo * DAY),
       updatedAt: held?.updatedAt ?? rowTimestamp(now - seed.createdDaysAgo * DAY),
+      accountName: seed.name,
+      pronouns: held?.pronouns ?? null,
     };
   };
 

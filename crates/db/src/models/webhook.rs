@@ -135,7 +135,7 @@ impl Webhook {
         let body = format!(
             r#"{{"user":{{"id":{},"name":{}}},"room":{{"id":{},"name":{},"path":{}}},"message":{{"id":{},"body":{{"html":{},"plain":{}}},"path":{}}}}}"#,
             creator.id,
-            json_string(&creator.name),
+            json_string(creator.display_name()),
             room.id,
             room.name
                 .as_deref()
@@ -165,8 +165,9 @@ impl Webhook {
         let message_path = format!("{room_path}/@{}", message.id);
         let body = self.payload(conn, rich_text, message, &room_path, &message_path)?;
         let (name, owner): (String, Option<String>) = conn.query_row_cached(
-            "SELECT users.name, owners.name FROM agents JOIN users ON users.id = agents.user_id LEFT JOIN users AS owners ON owners.id = agents.owner_id WHERE agents.id = ? AND agents.user_id = ?",
-            params![agent_id, self.user_id], |row| Ok((row.get(0)?, row.get(1)?)),
+            &format!("SELECT {}, {} FROM agents JOIN users ON users.id = agents.user_id LEFT JOIN users AS owners ON owners.id = agents.owner_id WHERE agents.id = ? AND agents.user_id = ?", User::projection("users", "agent_"), User::projection("owners", "owner_")),
+            params![agent_id, self.user_id], |row| Ok((User::from_prefixed_row(row, "agent_")?.display_name().to_owned(),
+                row.get::<_, Option<i64>>("owner_id")?.map(|_| User::from_prefixed_row(row, "owner_").map(|owner| owner.display_name().to_owned())).transpose()?)),
         )?;
         let files = crate::sql::query_all(conn, "SELECT file_id FROM drive_attachments WHERE message_id = ? ORDER BY id", [message.id], |row| row.get::<_, String>(0))?;
         let attachments = files.into_iter().map(|file_id| format!(r#"{{"file_id":{},"url":{}}}"#, json_string(&file_id), json_string(&format!("https://drive.google.com/open?id={file_id}")))).collect::<Vec<_>>().join(",");

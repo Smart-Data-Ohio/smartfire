@@ -128,6 +128,8 @@ pub struct User {
     pub plain_bot_token: Option<String>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
+    pub pronouns: Option<String>,
+    pub nickname: Option<String>,
 }
 
 /// Attributes for `User.create!`.
@@ -141,6 +143,8 @@ pub struct NewUser {
     pub bio: Option<String>,
     pub icon_name: Option<String>,
     pub bot_token_digest: Option<String>,
+    pub pronouns: Option<String>,
+    pub nickname: Option<String>,
 }
 
 /// Attributes for `user.update`. `None` leaves an attribute alone.
@@ -160,11 +164,31 @@ pub struct UserChanges {
     pub email_self_changed_at: Option<Timestamp>,
     /// Administrator vouching clears the self-change marker and permits email linking.
     pub allow_google_email_link: bool,
+    pub pronouns: Option<Option<String>>,
+    pub nickname: Option<Option<String>>,
 }
 
-const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "icon_name", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
+const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "icon_name", "name", "password_digest", "role", "status", "updated_at", "pronouns", "nickname") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
+
+fn profile_text(value: Option<String>, field: &'static str, limit: usize) -> Result<Option<String>> {
+    let Some(value) = value else { return Ok(None) };
+    let mut errors = crate::Errors::default();
+    if value.chars().any(char::is_control) {
+        errors.add(field, "must not contain control characters");
+    }
+    let value = value.trim();
+    if value.chars().count() > limit {
+        errors.add(field, format!("is too long (maximum is {limit} characters)"));
+    }
+    errors.into_result()?;
+    Ok((!value.is_empty()).then(|| value.to_owned()))
+}
 
 impl User {
+    pub fn display_name(&self) -> &str {
+        self.nickname.as_deref().unwrap_or(&self.name)
+    }
+
     /// A `SELECT "users".*` row.
     pub fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Self::from_prefixed_row(row, "")
@@ -183,6 +207,8 @@ impl User {
             "bot_token_digest",
             "created_at",
             "updated_at",
+            "pronouns",
+            "nickname",
         ]
         .into_iter()
         .map(|name| format!("{table}.{name} AS {prefix}{name}"))
@@ -209,6 +235,8 @@ impl User {
             plain_bot_token: None,
             created_at: field!("created_at"),
             updated_at: field!("updated_at"),
+            pronouns: field!("pronouns"),
+            nickname: field!("nickname"),
         })
     }
 
@@ -424,6 +452,8 @@ impl User {
     }
 
     fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
+        attributes.pronouns = profile_text(attributes.pronouns, "pronouns", 40)?;
+        attributes.nickname = profile_text(attributes.nickname, "nickname", 32)?;
         attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
         icon::validate(tx.conn(), attributes.icon_name.as_deref())?.into_result()?;
         let now = tx.now();
@@ -440,7 +470,9 @@ impl User {
                 password_digest,
                 attributes.role,
                 Status::Active,
-                now
+                now,
+                attributes.pronouns,
+                attributes.nickname
             ],
             |r| r.get(0),
         )?;
@@ -500,6 +532,8 @@ impl User {
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
+        let pronouns = changes.pronouns.map(|value| profile_text(value, "pronouns", 40)).transpose()?;
+        let nickname = changes.nickname.map(|value| profile_text(value, "nickname", 32)).transpose()?;
         let plain_bot_token = self.plain_bot_token.clone();
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
@@ -524,6 +558,12 @@ impl User {
             icon::validate(tx.conn(), name.as_deref())?.into_result()?;
         }
         let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
+        if let Some(value) = pronouns.filter(|value| *value != self.pronouns) {
+            sets.push(("pronouns", Box::new(value)));
+        }
+        if let Some(value) = nickname.filter(|value| *value != self.nickname) {
+            sets.push(("nickname", Box::new(value)));
+        }
         if let Some(name) = icon.filter(|name| *name != self.icon_name) {
             self.icon_name = name.clone();
             sets.push(("icon_name", Box::new(name)));
@@ -844,7 +884,7 @@ impl User {
         });
         let mut initials = String::new();
         let mut previous_word = false;
-        for c in self.name.chars() {
+        for c in self.display_name().chars() {
             if (c.is_ascii_alphanumeric() || c == '_') && !previous_word {
                 initials.push(c);
             }
@@ -855,7 +895,7 @@ impl User {
 
     /// `[ name, bio ].compact_blank.join(" – ")`
     pub fn title(&self) -> String {
-        [Some(self.name.as_str()), self.bio.as_deref()]
+        [Some(self.display_name()), self.bio.as_deref()]
             .into_iter()
             .flatten()
             .filter(|s| !s.trim().is_empty())
@@ -934,7 +974,7 @@ impl User {
 
     /// `attachable_plain_text_representation`
     pub fn attachable_plain_text_representation(&self) -> String {
-        format!("@{}", self.name)
+        format!("@{}", self.display_name())
     }
 
     pub fn reload(&mut self, conn: &Connection) -> Result<()> {

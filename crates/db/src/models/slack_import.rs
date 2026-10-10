@@ -378,9 +378,9 @@ impl SlackImport {
                 )
             } else {
                 let name: String = conn.query_row(
-                    "SELECT name FROM users WHERE id = ?",
+                    "SELECT * FROM users WHERE id = ?",
                     [later.user_id],
-                    |r| r.get(0),
+                    |r| Ok(crate::User::from_row(r)?.display_name().to_owned()),
                 )?;
                 format!(
                     "A later import by {name} also imported some of these conversations. It has to be undone first; ask them or an administrator."

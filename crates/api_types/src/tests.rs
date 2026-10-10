@@ -35,6 +35,8 @@ pub(crate) fn user() -> User {
         agent: None,
         created_at: "2026-09-26T12:26:46.848Z".into(),
         updated_at: "2026-10-06T09:15:00.123456Z".into(),
+        account_name: "Ada Lovelace".into(),
+        pronouns: None,
     }
 }
 
@@ -90,6 +92,8 @@ fn user_is_camel_case_with_explicit_nulls() {
             "agent": null,
             "createdAt": "2026-09-26T12:26:46.848Z",
             "updatedAt": "2026-10-06T09:15:00.123456Z",
+            "accountName": "Ada Lovelace",
+            "pronouns": null,
         }),
     );
 }

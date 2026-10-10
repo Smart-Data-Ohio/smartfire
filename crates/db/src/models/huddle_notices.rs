@@ -173,7 +173,7 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
         notice(
             tx,
             viewer.id,
-            json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, &viewer.name, &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.name, "inCall":viewer_in_call, "rejoin":rejoin}),
+            json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, viewer.display_name(), &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.display_name(), "inCall":viewer_in_call, "rejoin":rejoin}),
         );
         if !viewer_in_call && *invitations_enabled {
             enqueue_huddle_push(
@@ -267,7 +267,7 @@ pub fn call_ended(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
             continue;
         }
         let viewer_name = User::find_by_id(tx.conn(), item.user_id)?
-            .map(|user| user.name)
+            .map(|user| user.display_name().to_owned())
             .unwrap_or_default();
         let state = if item.handled_at.is_some() {
             "handled"
@@ -280,7 +280,7 @@ pub fn call_ended(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
             tx,
             item.user_id,
             id,
-            json!({"activityItemId":id, "eventType":"huddle_ended", "state":state, "roomId":room.id, "roomName":display_name(&room,item.user_id,&viewer_name,&members,false), "roomPath":format!("/rooms/{}",room.id), "callerName":caller.name, "readPath":format!("/activity/{id}/read?state=read"), "handledPath":format!("/activity/{id}/handled?state=handled")}),
+            json!({"activityItemId":id, "eventType":"huddle_ended", "state":state, "roomId":room.id, "roomName":display_name(&room,item.user_id,&viewer_name,&members,false), "roomPath":format!("/rooms/{}",room.id), "callerName":caller.display_name(), "readPath":format!("/activity/{id}/read?state=read"), "handledPath":format!("/activity/{id}/handled?state=handled")}),
         );
         delivered.insert(item.user_id);
     }
@@ -309,7 +309,7 @@ pub fn call_ended(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
                 tx,
                 viewer.id,
                 0,
-                json!({"activityItemId":0, "eventType":"huddle_ended", "state":"unread", "roomId":room.id, "roomName":display_name(&room,viewer.id,&viewer.name,&members,false), "roomPath":format!("/rooms/{}",room.id), "callerName":caller.name, "readPath":"", "handledPath":""}),
+                json!({"activityItemId":0, "eventType":"huddle_ended", "state":"unread", "roomId":room.id, "roomName":display_name(&room,viewer.id,viewer.display_name(),&members,false), "roomPath":format!("/rooms/{}",room.id), "callerName":caller.display_name(), "readPath":"", "handledPath":""}),
             );
         }
     }
@@ -356,7 +356,7 @@ fn push_payload(sender: &User, room_id: i64, join: bool) -> PushPayload {
     PushPayload {
         title: format!(
             "{} {}",
-            sender.name,
+            sender.display_name(),
             if join {
                 "joined your huddle"
             } else {
@@ -384,7 +384,7 @@ fn leave_notice(tx: &mut Tx<'_>, room: &Room, leaver: &User, viewer: &User, memb
     notice(
         tx,
         viewer.id,
-        json!({"eventType":"huddle_left", "roomId":room.id, "roomName":display_name(room,viewer.id,&viewer.name,members,true), "joinerId":leaver.id, "joinerName":leaver.name}),
+        json!({"eventType":"huddle_left", "roomId":room.id, "roomName":display_name(room,viewer.id,viewer.display_name(),members,true), "joinerId":leaver.id, "joinerName":leaver.display_name()}),
     );
 }
 fn human(conn: &Connection, id: i64) -> Result<Option<User>> {
@@ -418,7 +418,7 @@ fn display_name(
     }
     let mut members = members.iter().collect::<Vec<_>>();
     if ruby_sort {
-        members.sort_by_key(|u| unicode::downcase(&u.name));
+        members.sort_by_key(|u| unicode::downcase(u.display_name()));
     }
     let others = members
         .iter()
@@ -426,14 +426,14 @@ fn display_name(
         .collect::<Vec<_>>();
     match others.len() {
         0 => viewer_name.to_string(),
-        1 => others[0].name.clone(),
+        1 => others[0].display_name().to_owned(),
         count => {
             let firsts = others
                 .iter()
                 .take(3)
                 .map(|u| {
                     // Ruby String#split without an argument recognizes ASCII whitespace.
-                    u.name
+                    u.display_name()
                         .split([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
                         .find(|part| !part.is_empty())
                         .unwrap_or("")

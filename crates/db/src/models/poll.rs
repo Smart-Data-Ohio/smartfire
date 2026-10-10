@@ -186,8 +186,8 @@ impl Poll {
     /// Standalone cards use the same ordered votes with optional voter names in one read.
     pub fn votes_with_names(&self, conn: &Connection) -> Result<Vec<(PollVote, Option<String>)>> {
         query_all(conn,
-            "SELECT poll_votes.*,users.name AS voter_name FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_votes.poll_id=? ORDER BY poll_votes.id",
-            [self.id],|r|Ok((PollVote::from_row(r)?,r.get("voter_name")?)))
+            &format!("SELECT poll_votes.*,{} FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_votes.poll_id=? ORDER BY poll_votes.id", User::projection("users", "voter_")),
+            [self.id],|r|Ok((PollVote::from_row(r)?,r.get::<_, Option<i64>>("voter_id")?.map(|_| User::from_prefixed_row(r, "voter_").map(|user| user.display_name().to_owned())).transpose()?)))
     }
 
     /// The ids of the polls `close_due!` closes at `now`: unstamped, with a closing time come.
@@ -349,8 +349,11 @@ fn voter_names(conn: &Connection, user_ids: &[i64]) -> Result<Vec<(i64, String)>
     if user_ids.is_empty() {
         return Ok(Vec::new());
     }
-    let sql = format!(r#"SELECT "users"."id", "users"."name" FROM "users" WHERE "users"."id" IN ({})"#, placeholders(user_ids.len()));
-    query_all(conn, &sql, rusqlite::params_from_iter(user_ids), |r| Ok((r.get(0)?, r.get(1)?)))
+    let sql = format!(r#"SELECT "users".* FROM "users" WHERE "users"."id" IN ({})"#, placeholders(user_ids.len()));
+    query_all(conn, &sql, rusqlite::params_from_iter(user_ids), |r| {
+        let user = User::from_row(r)?;
+        Ok((user.id, user.display_name().to_owned()))
+    })
 }
 
 /// A time as Rails' JSON encodes it: ISO 8601 in UTC with milliseconds.

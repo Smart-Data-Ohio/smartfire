@@ -61,9 +61,9 @@ fn directory_record(
     let kind_description = match record.owner {
         None => "no owner recorded".into(),
         Some(owner) if record.kind == "personal" => {
-            format!("Personal agent of {}", owner.name)
+            format!("Personal agent of {}", owner.display_name())
         }
-        Some(owner) => format!("Workspace agent, managed by {}", owner.name),
+        Some(owner) => format!("Workspace agent, managed by {}", owner.display_name()),
     };
     Ok(DirectoryAgent {
         id: record.id,

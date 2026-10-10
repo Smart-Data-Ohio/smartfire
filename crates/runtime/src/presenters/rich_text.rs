@@ -42,7 +42,7 @@ impl<'a> DbResolver<'a> {
     pub fn mention_user(&self, user: &User) -> MentionUser {
         MentionUser {
             id: user.id,
-            name: user.name.clone(),
+            name: user.display_name().to_owned(),
             title: user.title(),
             attachable_sgid: global_id::attachable_sgid(
                 self.secrets,

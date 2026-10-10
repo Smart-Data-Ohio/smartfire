@@ -68,6 +68,8 @@ export const ProfileSettings = Schema.Struct({
   githubLogin: Schema.NullOr(Schema.String),
   githubVerified: Schema.Boolean,
   bot: Schema.Boolean,
+  pronouns: Schema.NullOr(Schema.String),
+  nickname: Schema.NullOr(Schema.String),
 });
 
 export type ProfileSettings = typeof ProfileSettings.Type;
@@ -248,6 +250,8 @@ export const UpdateProfile = Schema.Struct({
   password: Schema.NullOr(Schema.String),
   bio: Schema.NullOr(Schema.String),
   githubLogin: Schema.NullOr(Schema.String),
+  pronouns: Schema.NullOr(Schema.String),
+  nickname: Schema.NullOr(Schema.String),
 });
 
 export type UpdateProfile = typeof UpdateProfile.Type;

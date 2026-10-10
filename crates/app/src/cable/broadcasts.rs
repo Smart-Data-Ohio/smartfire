@@ -42,6 +42,13 @@ impl Broadcasts {
         self.sync.install(renderer);
     }
 
+    pub fn user_updated(&self, user: campfire_api_types::User, direct_rooms: &[Room]) {
+        sync::user_updated(&self.server, user);
+        for room in direct_rooms {
+            sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
+        }
+    }
+
     /// Drains this app's deferred twins before test assertions count socket publications.
     #[cfg(feature = "test-support")]
     pub async fn settle_sync(&self) {

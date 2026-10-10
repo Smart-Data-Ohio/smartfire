@@ -3,7 +3,7 @@
 //! and `stop` re-checks the membership (and that the thread is still the room's), so a revoked
 //! member's open subscription goes quiet.
 use campfire_cable::{Channel, ChannelError, ChannelResult, Params, Subscription};
-use campfire_db::{Database, Room};
+use campfire_db::{Database, Room, User};
 use rails_compat::global_id::GlobalId;
 use serde::Serialize;
 
@@ -70,17 +70,22 @@ impl TypingNotificationsChannel {
             .db
             .read(move |conn| {
                 if Room::find_for_user(conn, user_id, room_id)?.is_none() {
-                    return Ok(false);
+                    return Ok(None);
                 }
-                match conversation {
-                    Conversation::Room => Ok(true),
-                    Conversation::Thread(thread_id) => threads::in_room(conn, room_id, thread_id),
+                let allowed = match conversation {
+                    Conversation::Room => true,
+                    Conversation::Thread(thread_id) => threads::in_room(conn, room_id, thread_id)?,
+                };
+                if allowed {
+                    Ok(Some(User::find(conn, user_id)?.display_name().to_owned()))
+                } else {
+                    Ok(None)
                 }
             })
             .await?;
-        if allowed {
+        if let Some(name) = allowed {
             let user = sub.current_user();
-            let payload = Payload { action, user: UserAttributes { id: user.id, name: &user.name } };
+            let payload = Payload { action, user: UserAttributes { id: user.id, name: &name } };
             sub.broadcast_to(&[&gid.to_param()], &payload);
             if sub.server().sync_wanted() {
                 let topic = match conversation {

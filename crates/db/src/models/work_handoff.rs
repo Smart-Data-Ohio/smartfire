@@ -173,7 +173,7 @@ impl WorkHandoff {
         for id in ids {
             let agent = Agent::find(conn, id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
             if Self::receiver_error(conn, thread, Some(&agent))?.is_none() {
-                receivers.push((User::find(conn, agent.user_id)?.name, id));
+                receivers.push((User::find(conn, agent.user_id)?.display_name().to_owned(), id));
             }
         }
         receivers.sort_by_key(|(name, _)| rails_compat::unicode::downcase(name));
@@ -183,7 +183,7 @@ impl WorkHandoff {
         let sender = User::find_by_id(conn, self.sender_id)?;
         Ok(
             json!({"id":self.id,"summary":self.summary,"links":self.links,"open_questions":self.open_questions,
-            "sender_name":sender.map(|u|u.name),"receiver_agent_id":self.receiver_agent_id}),
+            "sender_name":sender.map(|u|u.display_name().to_owned()),"receiver_agent_id":self.receiver_agent_id}),
         )
     }
 }

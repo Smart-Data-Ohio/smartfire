@@ -54,12 +54,14 @@ matrix(
     await shot(page, "search-typeahead", theme);
 
     await field(page).fill("from:");
-    await expect(suggestions(page).getByRole("option", { name: /from:@maya/ })).toBeVisible();
+    await expect(
+      suggestions(page).getByRole("option", { name: /Maya Okafor.*from_id:2/ }),
+    ).toBeVisible();
     await shot(page, "search-typeahead-operator", theme);
 
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
-    await expect(field(page)).toHaveValue(/^from:@\w+ $/);
+    await expect(field(page)).toHaveValue(/^from_id:\d+ $/);
   },
 );
 
@@ -236,4 +238,31 @@ test("ID pickers, media chips and sort survive a linked search", async ({ page }
   await expect(page.getByRole("button", { name: "Remove In: launch-planning" })).toBeVisible();
   await page.getByRole("button", { name: "Remove has: image" }).click();
   await expect(page).not.toHaveURL(/has%3Aimage/);
+});
+
+test("choosing a nickname searches the person's messages by their stable ID", async ({ page }) => {
+  await page.route("**/api/v1/switcher", async (route) => {
+    const response = await route.fetch();
+    const directory = await response.json();
+
+    for (const user of directory.users) {
+      if (user.id === 2) {
+        user.name = "NickExample";
+        user.updatedAt = new Date(Date.parse(user.updatedAt) + 1000)
+          .toISOString()
+          .replace("Z", "000Z");
+      }
+    }
+
+    await route.fulfill({ response, json: directory });
+  });
+  await open(page, "search");
+  await field(page).fill("from:nick");
+  await suggestions(page)
+    .getByRole("option", { name: /NickExample.*from_id:2/ })
+    .click();
+  await expect(field(page)).toHaveValue("from_id:2 ");
+  await field(page).press("Enter");
+  await expect(page).toHaveURL(/q=from_id%3A2/);
+  await expect(hits(page).first()).toBeVisible();
 });

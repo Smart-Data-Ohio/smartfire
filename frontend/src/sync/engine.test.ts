@@ -206,6 +206,8 @@ const appearanceSettings: Settings = {
     githubLogin: null,
     githubVerified: false,
     bot: false,
+    pronouns: null,
+    nickname: null,
   },
   appearance: {
     theme: "system",

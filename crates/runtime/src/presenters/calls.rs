@@ -20,7 +20,7 @@ pub fn row(
         .iter()
         .map(|u| campfire_presentation::huddle::Participant {
             id: u.id,
-            name: u.name.clone(),
+            name: u.display_name().to_owned(),
             avatar_path: crate::controllers::presenters::avatar_path(&app.secrets, u),
         })
         .collect()
@@ -30,7 +30,7 @@ pub fn row(
     let live = campfire_db::models::stream::Stream::live_for_room(conn, room.id)?;
     let live_name = live
         .as_ref()
-        .map(|s| User::find(conn, s.user_id).map(|u| u.name))
+        .map(|s| User::find(conn, s.user_id).map(|u| u.display_name().to_owned()))
         .transpose()?
         .unwrap_or_default();
     Ok(row_with_call_facts(app, conn, room, participants, live.is_some(), live_name))
@@ -80,7 +80,7 @@ pub fn stage_model(
             Ok(campfire_presentation::huddle_stage::Member {
                 id: m.id,
                 user_id: user.id,
-                name: user.name.clone(),
+                name: user.display_name().to_owned(),
                 avatar_path: crate::controllers::presenters::avatar_path(&app.secrets, &user),
                 administrator: user.is_administrator(),
                 role: m.stage_role.map_or(String::new(), |r| r.name().into()),
@@ -92,7 +92,7 @@ pub fn stage_model(
     let live=campfire_db::models::stream::Stream::live_for_room(conn,room_id)?.map(|stream| {
         let user=campfire_db::User::find(conn,stream.user_id)?;
         let identity=conn.query_row_cached("SELECT identity FROM huddle_grants WHERE room_id=? AND membership_id=? AND revoked_at IS NULL ORDER BY last_issued_at DESC LIMIT 1",rusqlite::params![room_id,stream.membership_id],|r|r.get(0)).optional()?;
-        Ok::<_,campfire_db::Error>(campfire_presentation::huddle_stage::Live {id:stream.id,membership_id:stream.membership_id,name:user.name,identity})
+        Ok::<_,campfire_db::Error>(campfire_presentation::huddle_stage::Live {id:stream.id,membership_id:stream.membership_id,name:user.display_name().to_owned(),identity})
     }).transpose()?;
     Ok(campfire_presentation::huddle_stage::Stage {
         room_id,

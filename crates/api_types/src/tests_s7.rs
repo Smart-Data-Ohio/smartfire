@@ -22,6 +22,8 @@ fn settings() -> Settings {
             github_login: Some("ada".into()),
             github_verified: false,
             bot: false,
+            pronouns: None,
+            nickname: None,
         },
         appearance: AppearanceSettings {
             theme: Theme::Dark,
@@ -98,7 +100,9 @@ fn settings_wire() {
                 "hasPassword": true,
                 "githubLogin": "ada",
                 "githubVerified": false,
-                "bot": false
+                "bot": false,
+                "pronouns": null,
+                "nickname": null
             },
             "appearance": {
                 "theme": "dark",
@@ -170,7 +174,9 @@ fn settings_writes_wire() {
             "currentPassword": "secret",
             "password": null,
             "bio": null,
-            "githubLogin": null
+            "githubLogin": null,
+            "pronouns": null,
+            "nickname": null
         }),
     );
     assert_wire(&UpdateAvatar { signed_id: "eyJf--1".into() }, json!({ "signedId": "eyJf--1" }));
