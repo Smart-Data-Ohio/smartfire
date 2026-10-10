@@ -6,7 +6,6 @@
 import type { Involvement } from "../../gen/Involvement.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
 import type { RoomSlot } from "../../store/organize.ts";
-import { mutations, store } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { toast } from "../../ui/toast-store.ts";
@@ -119,14 +118,6 @@ export function setInvolvement(
   actions.organize
     .setInvolvement(roomId, level)
     .then(() => {
-      const preferences = store.getState().sidebar.notificationPreferences;
-
-      if (preferences !== undefined) {
-        const roomNotificationLevels = { ...preferences.roomNotificationLevels };
-        delete roomNotificationLevels[String(roomId)];
-        mutations.setNotificationPreferences({ ...preferences, roomNotificationLevels });
-      }
-
       if (level === "invisible" && previous !== "invisible") {
         toast({
           title: `${name} is hidden from the sidebar`,

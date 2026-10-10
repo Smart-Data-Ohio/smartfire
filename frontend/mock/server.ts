@@ -994,7 +994,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
-    ...createOrganize(ctx).routes,
+    ...createOrganize(ctx, settings).routes,
   ];
 
   composer.arm();

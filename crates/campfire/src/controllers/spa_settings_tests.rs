@@ -1315,6 +1315,63 @@ async fn a9_notification_default_mute_and_membership_scope() {
 }
 
 #[tokio::test]
+async fn a9_involvement_returns_the_settings_revision_and_cleared_override() {
+    let Some(app) = app().await else {
+        panic!("restored default seed required")
+    };
+    let mut b = app.sign_in(DAVID).await;
+    let room_id = app
+        .booted
+        .app
+        .db
+        .read(|conn| Ok(campfire_db::Membership::for_user(conn, DAVID)?[0].room_id))
+        .await
+        .unwrap();
+    for involvement in ["everything", "mentions", "nothing", "muted", "invisible"] {
+        let inherited = write(
+            &mut b,
+            Method::PATCH,
+            "/api/v1/settings/notifications",
+            json!({
+                "defaultNotificationLevel": "nothing",
+                "roomNotification": { "roomId": room_id, "level": null },
+                "roomMute": { "roomId": room_id, "duration": "minutes15" }
+            }),
+        )
+        .await;
+        let before: api::Settings = parse(&inherited);
+        let response = write(
+            &mut b,
+            Method::PUT,
+            &format!("/api/v1/rooms/{room_id}/involvement"),
+            json!({ "involvement": involvement }),
+        )
+        .await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let response: Value = parse(&response);
+        let saved: api::Settings = serde_json::from_value(response["settings"].clone())
+            .expect("involvement response must carry the new settings snapshot");
+        assert!(saved.revision > before.revision);
+        assert_eq!(response["membership"]["involvement"], involvement);
+        assert!(
+            !saved
+                .notifications
+                .room_notification_levels
+                .contains_key(&room_id.to_string())
+        );
+        assert_eq!(
+            saved.notifications.default_notification_level,
+            api::NotificationLevel::Nothing
+        );
+        assert_eq!(
+            saved.notifications.room_mute_until,
+            before.notifications.room_mute_until
+        );
+        assert_eq!(saved, read(&mut b).await);
+    }
+}
+
+#[tokio::test]
 async fn a9_every_settings_write_advances_a_persisted_revision() {
     let Some(app) = app().await else { panic!("restored default seed required") };
     let mut b = app.sign_in(DAVID).await;

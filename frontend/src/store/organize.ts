@@ -133,11 +133,7 @@ export function organizedSidebar(sidebar: SidebarState): SidebarState {
     rows: Object.fromEntries(
       Object.entries(patchedRows(sidebar.rows, memberships)).map(([id, row]) => [
         id,
-        notificationRow(
-          row,
-          sidebar.notificationPreferences,
-          sidebar.notificationClock ?? Date.now(),
-        ),
+        notificationRow(row, sidebar.notificationPreferences, sidebar.notificationClock ?? 0),
       ]),
     ),
     categories: patchedCategories(sidebar.categories, categories),

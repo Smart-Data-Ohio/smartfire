@@ -304,7 +304,7 @@ async fn show_settings(c: &mut Ctx) -> Result {
 }
 
 /// Every section of the classic profile page, from the presenters that page renders from.
-async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
+pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
     let now = c.now();
     let secrets = c.app().secrets.clone();
     let (user, status, sections, appearance, avatar_attached) = c

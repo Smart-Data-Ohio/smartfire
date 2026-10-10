@@ -53,11 +53,12 @@ import {
   showAccountTheme,
   type ThemePreference,
 } from "../lib/appearance.ts";
-import { compareSnapshots } from "../store/snapshot-order.ts";
+import { serverNow } from "../store/server-clock.ts";
 import type { State } from "../store/state.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { loadUnreadCount } from "./activity-actions.ts";
 import { runAction } from "./runtime.ts";
+import { applySettingsSnapshot } from "./settings-snapshot.ts";
 
 export {
   enablePushNotifications,
@@ -129,21 +130,9 @@ async function write<A>(run: Promise<A>): Promise<A> {
 
 export type { TokenService };
 
-let latestSettings: Settings | null = null;
-
 async function settingsSnapshot(run: () => Promise<Settings>): Promise<Settings> {
-  const next = await run();
-
-  if (
-    latestSettings?.profile.userId !== next.profile.userId ||
-    compareSnapshots(next, latestSettings) >= 0
-  ) {
-    latestSettings = next;
-    mutations.setNotificationPreferences(next.notifications);
-  }
-
   // Settings screens also replace their local page with the returned snapshot.
-  return latestSettings;
+  return applySettingsSnapshot(await run());
 }
 
 export const settings = {
@@ -314,7 +303,7 @@ export function followNotificationPreferences(): () => void {
 
   const schedule = () => {
     clearTimeout(timer);
-    const now = Date.now();
+    const now = serverNow(store.getState().sidebar.serverClock);
 
     const ends = Object.values(held?.roomMuteUntil ?? {})
       .flatMap((until) => (until === null ? [] : [Date.parse(until)]))

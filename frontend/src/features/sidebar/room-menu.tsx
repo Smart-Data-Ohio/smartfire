@@ -104,7 +104,7 @@ const MUTE_DURATIONS = [
 
 export function RoomMuteItems({ roomId }: { readonly roomId: number }) {
   const preferences = useStore((state) => state.sidebar.notificationPreferences);
-  const now = useStore((state) => state.sidebar.notificationClock ?? Date.now());
+  const now = useStore((state) => state.sidebar.notificationClock ?? 0);
   const muted = roomMuted(preferences, roomId, now);
   const [busy, setBusy] = useState(false);
 
@@ -173,7 +173,7 @@ interface RoomMenuItemsProps {
 export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsProps) {
   const navigate = useNavigate();
   const preferences = useStore((state) => state.sidebar.notificationPreferences);
-  const now = useStore((state) => state.sidebar.notificationClock ?? Date.now());
+  const now = useStore((state) => state.sidebar.notificationClock ?? 0);
   const timedMute = roomMuted(preferences, row.room.id, now);
   const { favoritePosition, roomCategoryId, involvement, unreadAt } = row.membership;
   const starred = favoritePosition !== null;

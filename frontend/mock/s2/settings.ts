@@ -211,6 +211,7 @@ export interface SettingsModule {
   readonly routes: readonly Route[];
   /** The viewer's saved theme and text size, which boot and `/me` carry. */
   readonly appearance: () => { readonly theme: Theme; readonly textSize: TextSize };
+  readonly explicitRoomNotification: (roomId: number, changed: boolean) => Settings;
 }
 
 /** A value of `body[key]` when the key is present and not null. */
@@ -768,6 +769,22 @@ export function createSettings(
     }));
 
   return {
+    explicitRoomNotification: (roomId, changed) => {
+      const held = current();
+      const roomNotificationLevels = { ...held.settings.notifications.roomNotificationLevels };
+      const overridden = String(roomId) in roomNotificationLevels;
+
+      delete roomNotificationLevels[String(roomId)];
+      held.settings = {
+        ...held.settings,
+        revision: held.settings.revision + (changed || overridden ? 1 : 0),
+        notifications: { ...held.settings.notifications, roomNotificationLevels },
+      };
+
+      if (changed || overridden) ctx.world().activityRevision++;
+
+      return page();
+    },
     appearance: () => {
       const { theme, textSize } = current().settings.appearance;
 

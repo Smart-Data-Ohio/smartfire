@@ -1,5 +1,6 @@
 import type { ChatSounds } from "../gen/ChatSounds.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
+import { serverNow } from "../store/server-clock.ts";
 import { emptyTimeline } from "../store/state.ts";
 import { store } from "../store/store.ts";
 import { onSyncEvents } from "./signals.ts";
@@ -38,9 +39,9 @@ export function chatSoundsMuted(policy: ChatSounds, now: Date): boolean {
 
 /** Manual and automatic playback share classic's quiet gates, checked at the time of play. */
 export function playChatSound(url: string): void {
-  const me = store.getState().me;
+  const { me, sidebar } = store.getState();
 
-  if (me === null || chatSoundsMuted(me.chatSounds, new Date())) {
+  if (me === null || chatSoundsMuted(me.chatSounds, new Date(serverNow(sidebar.serverClock)))) {
     return;
   }
 
@@ -68,7 +69,11 @@ export function listenForChatSounds(roomId: number, viewingLatestPage: () => boo
 
       if (
         event.seq > liveAfter &&
-        !roomMuted(state.sidebar.notificationPreferences, roomId, Date.now()) &&
+        !roomMuted(
+          state.sidebar.notificationPreferences,
+          roomId,
+          serverNow(state.sidebar.serverClock),
+        ) &&
         message.sound !== null &&
         message.threadId === null &&
         message.roomId === roomId &&

@@ -31,6 +31,7 @@ import { emptyOverlay, type SidebarOverlay } from "./organize.ts";
 import { noRowTouches, type RowTouches } from "./row-touches.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
+import type { ServerClock } from "./server-clock.ts";
 import { emptyWork, type WorkSlice } from "./work.ts";
 
 /**
@@ -123,6 +124,7 @@ export interface State {
 export interface SidebarState {
   readonly notificationPreferences?: NotificationSettings;
   readonly notificationClock?: number;
+  readonly serverClock?: ServerClock;
   readonly status: LoadStatus;
   /** Room ids in the server's order (`LOWER(rooms.name)`). */
   readonly order: readonly number[];

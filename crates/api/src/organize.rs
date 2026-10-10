@@ -269,5 +269,12 @@ async fn put_involvement(c: &mut Ctx) -> Result {
         // Muting marked it read inside the write; the other tabs clear its unread state.
         campfire_app::cable::sync::room_read(&c.app().cable, membership.user_id, room.id);
     }
-    c.json(StatusCode::OK, &dto::membership(&membership))
+    let settings = crate::settings::load(c, membership.user_id).await?;
+    c.json(
+        StatusCode::OK,
+        &api::InvolvementChange {
+            membership: dto::membership(&membership),
+            settings,
+        },
+    )
 }

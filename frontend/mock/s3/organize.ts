@@ -7,6 +7,7 @@
  */
 import type { FavoriteList } from "../../src/gen/FavoriteList.ts";
 import type { Involvement } from "../../src/gen/Involvement.ts";
+import type { InvolvementChange } from "../../src/gen/InvolvementChange.ts";
 import type { Membership } from "../../src/gen/Membership.ts";
 import type { RoomCategory } from "../../src/gen/RoomCategory.ts";
 import type { RoomCategoryList } from "../../src/gen/RoomCategoryList.ts";
@@ -14,6 +15,7 @@ import type { SidebarRow } from "../../src/gen/SidebarRow.ts";
 import { conflict, type MockResponse, noContent, notFound, ok, validation } from "../http.ts";
 import { booleanField, field, intField, isNumber, type Json, stringField } from "../json.ts";
 import { type Route, route, type S2Context } from "../s2/context.ts";
+import type { SettingsModule } from "../s2/settings.ts";
 import type { RoomRecord } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
 
@@ -60,7 +62,7 @@ function validName(raw: string | null): string {
 }
 
 /** The organisation routes, over the server's world. */
-export function createOrganize(ctx: S2Context): Organize {
+export function createOrganize(ctx: S2Context, settings: SettingsModule): Organize {
   const world = () => ctx.world();
 
   const rowEvent = (record: RoomRecord): Outgoing => ({
@@ -335,9 +337,12 @@ export function createOrganize(ctx: S2Context): Organize {
 
     ctx.publish(events);
 
-    const membership: Membership = record.membership;
+    const change: InvolvementChange = {
+      membership: record.membership,
+      settings: settings.explicitRoomNotification(roomId, involvement !== before),
+    };
 
-    return ok(membership);
+    return ok(change);
   };
 
   const id = (request: { readonly ids: readonly number[] }) => request.ids[0] ?? 0;

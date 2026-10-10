@@ -77,6 +77,7 @@ import {
 } from "./row-touches.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
+import { sampleServerClock, serverNow } from "./server-clock.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
 import * as work from "./work.ts";
@@ -264,13 +265,31 @@ export const mutations = {
   setWorkspaceStyles: (css: string | null) => apply((state) => setWorkspaceStyles(state, css)),
   setWorkspaceBranding: (branding: WorkspaceBranding) =>
     apply((state) => setWorkspaceBranding(state, branding)),
-  setNotificationPreferences: (notificationPreferences: NotificationSettings) =>
+  setNotificationPreferences: (
+    notificationPreferences: NotificationSettings,
+    evaluatedAt: string,
+  ) =>
+    apply((state) => {
+      const serverClock = sampleServerClock(evaluatedAt, state.sidebar.serverClock);
+
+      return {
+        ...state,
+        sidebar: {
+          ...state.sidebar,
+          notificationPreferences,
+          serverClock,
+          notificationClock: serverClock.serverAt,
+        },
+      };
+    }),
+  tickNotificationClock: () =>
     apply((state) => ({
       ...state,
-      sidebar: { ...state.sidebar, notificationPreferences, notificationClock: Date.now() },
+      sidebar: {
+        ...state.sidebar,
+        notificationClock: serverNow(state.sidebar.serverClock),
+      },
     })),
-  tickNotificationClock: () =>
-    apply((state) => ({ ...state, sidebar: { ...state.sidebar, notificationClock: Date.now() } })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),

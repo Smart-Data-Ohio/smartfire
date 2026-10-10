@@ -143,8 +143,8 @@ pub use message::{
     MessageSource, SoundPresentation, UpdateMessage,
 };
 pub use organize::{
-    AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,
-    RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
+    AssignRoomCategory, CreateRoomCategory, FavoriteList, InvolvementChange, MoveFavorite,
+    ReorderRoomCategories, RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
 pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};

@@ -22,7 +22,7 @@ export interface NotificationTarget {
 export function useNotificationTarget(roomId: number): NotificationTarget | null {
   const row = useStore((state) => state.sidebar.rows[roomId]);
   const preferences = useStore((state) => state.sidebar.notificationPreferences);
-  const now = useStore((state) => state.sidebar.notificationClock ?? Date.now());
+  const now = useStore((state) => state.sidebar.notificationClock ?? 0);
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
   const room = row?.room ?? detail?.room;
   const level = row?.membership.involvement ?? detail?.membership.involvement;

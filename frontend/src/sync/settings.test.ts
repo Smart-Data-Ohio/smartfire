@@ -1,9 +1,12 @@
 import { afterAll, afterEach, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../mock/server.ts";
+import { sidebar } from "../api/endpoints.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
-import { mutations, store } from "../store/store.ts";
+import { organizedSidebar } from "../store/organize.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { installMockNetwork } from "../test/mock-network.ts";
 import * as activity from "./activity-actions.ts";
+import { setInvolvement } from "./organize-actions.ts";
 import { runAction } from "./runtime.ts";
 import { followNotificationPreferences, settings } from "./settings.ts";
 
@@ -34,6 +37,49 @@ function held<A>() {
 
   return { promise, release };
 }
+
+it("keeps an explicit room choice when a held settings GET arrives without another fetch", async () => {
+  const roomId = SEED_IDS.rooms.general;
+  const since = sidebarRowClock();
+
+  mutations.loadSidebar(await runAction(sidebar()), since);
+  await settings.updateNotifications({
+    defaultNotificationLevel: "nothing",
+    roomNotification: { roomId, level: null },
+  });
+  expect(organizedSidebar(store.getState().sidebar).rows[roomId]?.membership.involvement).toBe(
+    "nothing",
+  );
+  const started = held<void>();
+  const gate = held<void>();
+  intercept = async (input, init) => {
+    const response = await fetch(input, init);
+
+    if (String(input).endsWith("/settings")) {
+      started.release();
+      await gate.promise;
+    }
+
+    return response;
+  };
+
+  const older = settings.load();
+  await started.promise;
+  await runAction(setInvolvement(roomId, "everything"));
+  expect(organizedSidebar(store.getState().sidebar).rows[roomId]?.membership.involvement).toBe(
+    "everything",
+  );
+  gate.release();
+  const answered = await older;
+  expect(answered.notifications.defaultNotificationLevel).toBe("nothing");
+  expect(answered.notifications.roomNotificationLevels[String(roomId)]).toBeUndefined();
+  expect(
+    store.getState().sidebar.notificationPreferences?.roomNotificationLevels[String(roomId)],
+  ).toBeUndefined();
+  expect(organizedSidebar(store.getState().sidebar).rows[roomId]?.membership.involvement).toBe(
+    "everything",
+  );
+});
 
 it("keeps expired mutes out of settings when an earlier equal-revision GET arrives last", async () => {
   const roomId = SEED_IDS.rooms.general;

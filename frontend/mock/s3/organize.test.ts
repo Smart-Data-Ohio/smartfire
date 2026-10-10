@@ -1,11 +1,14 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { FavoriteList, RoomCategoryList } from "../../src/api/schema/organize.ts";
-import { Membership } from "../../src/api/schema/room.ts";
+import {
+  FavoriteList,
+  InvolvementChange as InvolvementChangeSchema,
+  RoomCategoryList,
+} from "../../src/api/schema/organize.ts";
 import { RoomCategory, Sidebar, SidebarRow } from "../../src/api/schema/sidebar.ts";
 import { SyncEvent } from "../../src/api/schema/sync.ts";
 import type { FavoriteList as FavoriteListType } from "../../src/gen/FavoriteList.ts";
-import type { Membership as MembershipType } from "../../src/gen/Membership.ts";
+import type { InvolvementChange } from "../../src/gen/InvolvementChange.ts";
 import type { RoomCategory as RoomCategoryType } from "../../src/gen/RoomCategory.ts";
 import type { RoomCategoryList as RoomCategoryListType } from "../../src/gen/RoomCategoryList.ts";
 import type { Sidebar as SidebarType } from "../../src/gen/Sidebar.ts";
@@ -340,7 +343,7 @@ describe("mock sidebar organisation", () => {
       const { server } = harness();
       const events = collect(server);
 
-      const membership = await expectStatus<MembershipType>(
+      const { membership } = await expectStatus<InvolvementChange>(
         server,
         "PUT",
         `/api/v1/rooms/${ROOM_IDS.design}/involvement`,
@@ -422,7 +425,7 @@ describe("mock sidebar organisation", () => {
     );
 
     decodes(
-      Membership,
+      InvolvementChangeSchema,
       (
         await send(server, "PUT", `/api/v1/rooms/${ROOM_IDS.general}/involvement`, {
           involvement: "muted",
