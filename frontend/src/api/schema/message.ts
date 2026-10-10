@@ -134,6 +134,7 @@ export const CreateMessage = Schema.Struct({
   replyToMessageId: Schema.NullOr(MessageId),
   replyNotifyAuthor: Schema.NullOr(Schema.Boolean),
   attachmentSignedId: Schema.NullOr(Schema.String),
+  driveFileIds: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 export type CreateMessage = typeof CreateMessage.Type;
@@ -141,7 +142,10 @@ export type CreateMessage = typeof CreateMessage.Type;
 export type CreateMessagePin = Assert<Pinned<typeof CreateMessage, GeneratedCreateMessage>>;
 
 /** The body of `PATCH /api/v1/messages/:id`. Always carries the Markdown. */
-export const UpdateMessage = Schema.Struct({ markdownSource: Schema.String });
+export const UpdateMessage = Schema.Struct({
+  markdownSource: Schema.String,
+  removeDriveFileIds: Schema.optionalKey(Schema.Array(Schema.String)),
+});
 
 export type UpdateMessage = typeof UpdateMessage.Type;
 

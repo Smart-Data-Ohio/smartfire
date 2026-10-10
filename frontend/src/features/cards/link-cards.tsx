@@ -105,17 +105,50 @@ export function LinkedinCard({ card }: { readonly card: LinkedinCardData }) {
 }
 
 /** A Google Drive file in the attachment slot: the file's name isn't stored, so it says what it is. */
-export function DriveChip({ card }: { readonly card: DriveFileCard }) {
-  return (
-    <a className="card drive-chip" href={card.url} target="_blank" rel="noopener noreferrer">
+export function DriveChip({
+  card,
+  name,
+  onRemove,
+}: {
+  readonly card: DriveFileCard;
+  readonly name?: string;
+  readonly onRemove?: () => void;
+}) {
+  const title = name ?? "Google Drive file";
+
+  const link = (
+    <a
+      className={onRemove === undefined ? "card drive-chip" : "drive-chip-link"}
+      href={card.url}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <span className="drive-icon" aria-hidden="true">
         <BrandMark name="drive" size={18} />
       </span>
       <span className="drive-text">
-        <span className="drive-title">Google Drive file</span>
+        <span className="drive-title">{title}</span>
         <span className="card-subtle">Open in Drive</span>
       </span>
       <Icon name="arrow-up-right" size={14} className="drive-open" />
     </a>
+  );
+
+  if (onRemove === undefined) {
+    return link;
+  }
+
+  return (
+    <span className="card drive-chip">
+      {link}
+      <button
+        type="button"
+        className="drive-remove"
+        aria-label="Remove Google Drive file"
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    </span>
   );
 }

@@ -199,19 +199,33 @@ pub struct CreateMessage {
     /// message's one file (`message[attachment]` given a signed blob id); `null` for none. Several
     /// files are sent as several messages, one each, as the classic composer does.
     pub attachment_signed_id: Option<String>,
+    /// Google Drive file ids to pin (`message[drive_file_ids][]`). Left out when there are none.
+    /// At most ten; an invalid id is a 422, as the classic composer is. A message may be empty
+    /// of Markdown when it carries one of these or a file.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub drive_file_ids: Option<Vec<String>>,
 }
 
 /// `PATCH /api/v1/messages/:id`: edit a message (`messages#update`, or
 /// `channel_thread_messages#update` for a reply). The creator only, never a system note; a reply
 /// in a locked thread is a 403. Answers the updated [`MessageDTO`] and publishes
-/// `message.updated`. `editedAt` changes only when the text does.
+/// `message.updated`. `editedAt` changes only when the text does. Drive ids named in
+/// `removeDriveFileIds` are dropped from the message (`message[drive_file_ids][]` on the classic
+/// edit form is the set that remains; this is the inverse). The creator only, same as the text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateMessage {
     /// The new Markdown, up to 50 000 characters; blank only when the message has an
-    /// attachment. Always sent: the classic update without it turns the message into rich text.
+    /// attachment or a Drive file left. Always sent: the classic update without it turns the
+    /// message into rich text.
     pub markdown_source: String,
+    /// Drive file ids to remove. Left out when the edit doesn't touch attachments. An invalid
+    /// id is a 422 (`includes an invalid file id`), as the classic edit is.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remove_drive_file_ids: Option<Vec<String>>,
 }
 
 /// `GET /api/v1/messages/:id/source`: what the edit box starts from

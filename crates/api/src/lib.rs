@@ -25,6 +25,7 @@ pub mod github;
 pub mod composer;
 mod cursor;
 pub mod directory;
+pub mod drive;
 mod dto;
 pub mod endpoints;
 pub mod events;
@@ -262,6 +263,21 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route(
             "/api/v1/rooms/{room_id}/message_links/{reference_id}/card",
             get(action(cards::quote_card)),
+        )
+        .route("/api/v1/drive/picker", get(action(drive::picker)))
+        .route("/api/v1/drive/files", get(action(drive::search)))
+        .route("/api/v1/drive/files/{file_id}", get(action(drive::show)))
+        .route(
+            "/api/v1/rooms/{room_id}/drive/recipients",
+            get(action(drive::recipients)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/drive/recipients/validate",
+            post(unparsed_action(drive::validate_recipients)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/drive/shares",
+            post(unparsed_action(drive::share)),
         )
         .route("/api/v1/search", get(action(search::index)))
         .route(

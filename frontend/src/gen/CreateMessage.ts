@@ -36,4 +36,10 @@ replyNotifyAuthor: boolean | null,
  * message's one file (`message[attachment]` given a signed blob id); `null` for none. Several
  * files are sent as several messages, one each, as the classic composer does.
  */
-attachmentSignedId: string | null, };
+attachmentSignedId: string | null,
+/**
+ * Google Drive file ids to pin (`message[drive_file_ids][]`). Left out when there are none.
+ * At most ten; an invalid id is a 422, as the classic composer is. A message may be empty
+ * of Markdown when it carries one of these or a file.
+ */
+driveFileIds?: Array<string>, };

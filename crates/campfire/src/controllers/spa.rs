@@ -120,5 +120,9 @@ mod spa_api_events_tests;
 mod api_fizzy_tests;
 
 #[cfg(test)]
+#[path = "spa_api_drive_tests.rs"]
+mod api_drive_tests;
+
+#[cfg(test)]
 #[path = "spa_tour_tests.rs"]
 mod tour_tests;

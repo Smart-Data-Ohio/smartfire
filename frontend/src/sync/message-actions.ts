@@ -19,8 +19,12 @@ const viewerId = () => {
 };
 
 /** `PATCH`es the Markdown and keeps the updated message. */
-export const edit = Effect.fn("messages.edit")(function* (messageId: number, markdown: string) {
-  const message = yield* api.updateMessage(messageId, markdown);
+export const edit = Effect.fn("messages.edit")(function* (
+  messageId: number,
+  markdown: string,
+  removeDriveFileIds?: readonly string[],
+) {
+  const message = yield* api.updateMessage(messageId, markdown, removeDriveFileIds);
 
   mutations.updateMessage(message);
 

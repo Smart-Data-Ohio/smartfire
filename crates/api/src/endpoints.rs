@@ -241,7 +241,10 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
             // The authors, and the repliers the thread indicators name, so their avatars need
             // no `GET /users`.
             let people = dtos.iter().flat_map(|message| {
-                let repliers = message.thread.iter().flat_map(|thread| thread.replier_ids.iter());
+                let repliers = message
+                    .thread
+                    .iter()
+                    .flat_map(|thread| thread.replier_ids.iter());
                 std::iter::once(message.creator_id).chain(repliers.copied())
             });
             let page = api::MessagePage {
@@ -280,7 +283,9 @@ async fn post_message(c: &mut Ctx) -> Result {
     let signed_id = input
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
-    if signed_id.is_none() && input.markdown_source.trim().is_empty() {
+    let drive_file_ids =
+        crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
+    if signed_id.is_none() && drive_file_ids.is_empty() && input.markdown_source.trim().is_empty() {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     let (room_id, creator_id) = (room.id, concerns::require_current_user(c)?.id);
@@ -336,6 +341,7 @@ async fn post_message(c: &mut Ctx) -> Result {
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
                 reply_notify_author: input.reply_notify_author,
+                drive_file_ids,
                 ..MessageParams::default()
             };
             match posting::create_or_find_message(c, &room, attributes).await? {

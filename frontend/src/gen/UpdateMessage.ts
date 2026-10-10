@@ -4,11 +4,19 @@
  * `PATCH /api/v1/messages/:id`: edit a message (`messages#update`, or
  * `channel_thread_messages#update` for a reply). The creator only, never a system note; a reply
  * in a locked thread is a 403. Answers the updated [`MessageDTO`] and publishes
- * `message.updated`. `editedAt` changes only when the text does.
+ * `message.updated`. `editedAt` changes only when the text does. Drive ids named in
+ * `removeDriveFileIds` are dropped from the message (`message[drive_file_ids][]` on the classic
+ * edit form is the set that remains; this is the inverse). The creator only, same as the text.
  */
 export type UpdateMessage = {
 /**
  * The new Markdown, up to 50 000 characters; blank only when the message has an
- * attachment. Always sent: the classic update without it turns the message into rich text.
+ * attachment or a Drive file left. Always sent: the classic update without it turns the
+ * message into rich text.
  */
-markdownSource: string, };
+markdownSource: string,
+/**
+ * Drive file ids to remove. Left out when the edit doesn't touch attachments. An invalid
+ * id is a 422 (`includes an invalid file id`), as the classic edit is.
+ */
+removeDriveFileIds?: Array<string>, };

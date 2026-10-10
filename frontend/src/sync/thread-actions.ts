@@ -169,6 +169,32 @@ export const loadNewer = Effect.fn("threads.loadNewer")(function* (threadId: num
   yield* loadPage(threadId, "newer");
 });
 
+/** The first reply of a new thread. Drive ids are sent only when the composer attached some. */
+function threadMessage(
+  options: {
+    readonly attachmentSignedId?: string | null;
+    readonly clientMessageId?: string;
+    readonly driveFileIds?: readonly string[];
+  },
+  markdown: string,
+) {
+  const message = {
+    clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
+    markdownSource: markdown,
+    replyToMessageId: null,
+    replyNotifyAuthor: null,
+    attachmentSignedId: options.attachmentSignedId ?? null,
+  };
+
+  const driveFileIds = options.driveFileIds;
+
+  if (driveFileIds === undefined || driveFileIds.length === 0) {
+    return message;
+  }
+
+  return { ...message, driveFileIds: [...driveFileIds] };
+}
+
 /**
  * Starts a thread on `parentMessageId` with its first reply; answers the new thread's id so the
  * pane can move to it. Pass the same `clientMessageId` when retrying: the server answers the
@@ -182,19 +208,14 @@ export const create = Effect.fn("threads.create")(function* (
     readonly name?: string | null;
     readonly attachmentSignedId?: string | null;
     readonly clientMessageId?: string;
+    readonly driveFileIds?: readonly string[];
   } = {},
 ) {
   const reply = yield* settled(
     api.createThread(roomId, {
       parentMessageId,
       name: options.name ?? null,
-      message: {
-        clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
-        markdownSource: markdown,
-        replyToMessageId: null,
-        replyNotifyAuthor: null,
-        attachmentSignedId: options.attachmentSignedId ?? null,
-      },
+      message: threadMessage(options, markdown),
     }),
     (previous) =>
       refetchThread(previous.detail.thread.id).pipe(

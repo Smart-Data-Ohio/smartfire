@@ -364,10 +364,18 @@ pub async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: 
     apply_human_edit(c, thread_id, message, changes, attachment, attachment_given).await
 }
 
-/// The SPA's edit (`PATCH /api/v1/messages/:id`): the classic update given only
-/// `message[markdown_source]`.
-pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Message, markdown_source: String) -> Result<Message> {
-    let changes = campfire_db::MessageChanges { markdown_source: Some(markdown_source), ..Default::default() };
+/// The SPA's edit (`PATCH /api/v1/messages/:id`): the classic update given
+/// `message[markdown_source]`, and `remove_drive_file_ids` dropped from the current set
+/// (`message[drive_file_ids][]` on the classic edit form is what remains).
+pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Message, markdown_source: String, remove_drive_file_ids: &[String]) -> Result<Message> {
+    let drive_file_ids = if remove_drive_file_ids.is_empty() {
+        None
+    } else {
+        let id = message.id;
+        let current = c.app().db.read(move |conn| Message::find(conn, id)?.drive_file_ids(conn)).await.map_err(db_error)?;
+        Some(current.into_iter().filter(|file_id| !remove_drive_file_ids.iter().any(|removed| removed == file_id)).collect())
+    };
+    let changes = campfire_db::MessageChanges { markdown_source: Some(markdown_source), drive_file_ids, ..Default::default() };
     let attachment = Assignment::Unchanged.stage(c.app()).await?;
     apply_human_edit(c, thread_id, message, changes, attachment, false).await
 }
