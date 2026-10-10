@@ -219,6 +219,131 @@ fn creating_a_blank_message_with_attachment_uses_filename_as_plain_text_body() {
     );
 }
 
+fn grouped_files_blobs(t: &TestDb) -> Vec<i64> {
+    t.write(|tx| (0..11).map(|index| {
+        Blob::create(tx, &Blob {
+            id: 0, key: format!("grouped-limit-{index}"), filename: format!("{index}.txt"),
+            content_type: Some("text/plain".into()), metadata: None, service_name: "local".into(),
+            byte_size: 5, checksum: None, created_at: tx.now(),
+        }).map(|blob| blob.id)
+    }).collect::<Result<Vec<_>>>())
+}
+
+#[test]
+fn grouped_files_round4_creates_enforce_total_across_both_slots() {
+    let t = TestDb::new();
+    let blobs = grouped_files_blobs(&t);
+    for single in [false, true] {
+        let files = blobs.clone();
+        let error = t.try_write(move |tx| Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"),
+            attachment_blob_id: single.then_some(files[0]),
+            attachment_blob_ids: files[usize::from(single)..].to_vec(),
+            ..Default::default()
+        })).unwrap_err();
+        let crate::Error::RecordInvalid(errors) = error else { panic!("{error}") };
+        assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"]);
+        let files = blobs[..10].to_vec();
+        let message = t.write(move |tx| Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"),
+            attachment_blob_id: single.then_some(files[0]),
+            attachment_blob_ids: files[usize::from(single)..].to_vec(),
+            ..Default::default()
+        }));
+        assert_eq!(t.read(move |conn| message.attachments(conn)).len(), 10);
+    }
+}
+
+#[test]
+fn grouped_files_round4_replacements_enforce_total_across_both_slots() {
+    let t = TestDb::new();
+    let blobs = grouped_files_blobs(&t);
+    let extra = blobs[10];
+    let message = t.write(move |tx| Message::create(tx, NewMessage {
+        room_id: id("hq"), creator_id: id("david"), attachment_blob_ids: blobs[..10].to_vec(),
+        ..Default::default()
+    }));
+    let mut edited = message.clone();
+    let error = t.try_write(move |tx| edited.replace_attachment(tx, Some(extra))).unwrap_err();
+    let crate::Error::RecordInvalid(errors) = error else { panic!("{error}") };
+    assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"]);
+    assert_eq!(t.read(move |conn| message.attachments(conn)).len(), 10);
+}
+
+#[test]
+fn grouped_files_round5_edits_normalize_both_attachment_slots() {
+    for (name, legacy, grouped_count, submitted, expected_legacy, succeeds) in [
+        ("keep ten grouped files", None, 10, Some(0), None, true),
+        ("keep a grouped file", None, 1, Some(0), None, true),
+        ("keep a legacy file", Some(9), 0, Some(9), Some(9), true),
+        ("keep a legacy file with nine grouped", Some(9), 9, Some(9), Some(9), true),
+        ("replace a legacy file", Some(9), 0, Some(10), Some(10), true),
+        ("replace a legacy file with nine grouped", Some(9), 9, Some(10), Some(10), true),
+        ("keep a grouped file alongside a legacy file", Some(9), 9, Some(0), Some(9), true),
+        ("add a legacy file", None, 0, Some(10), Some(10), true),
+        ("add a legacy file to nine grouped", None, 9, Some(10), Some(10), true),
+        ("reject an eleventh file", None, 10, Some(10), None, false),
+        ("remove a legacy file", Some(9), 0, None, None, true),
+        ("remove a legacy file with nine grouped", Some(9), 9, None, None, true),
+        ("remove an absent legacy file", None, 10, None, None, true),
+        ("keep a blob already in both slots", Some(0), 9, Some(0), None, true),
+        ("remove a duplicate legacy slot", Some(0), 9, None, None, true),
+        ("replace a duplicate legacy slot", Some(0), 9, Some(10), Some(10), true),
+    ] {
+        let t = TestDb::new();
+        let blobs = grouped_files_blobs(&t);
+        let files = blobs.clone();
+        let message = t.write(move |tx| Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"),
+            markdown_source: Some("Original".into()),
+            attachment_blob_id: legacy.map(|index| files[index]),
+            attachment_blob_ids: files[..grouped_count].to_vec(),
+            ..Default::default()
+        }));
+        let original = t.read(|conn| message.attachments(conn));
+        let submitted = submitted.map(|index| blobs[index]);
+        let mut edited = message.clone();
+        let result = t.try_write(move |tx| {
+            edited.replace_attachment(tx, submitted)?;
+            edited.edit(tx, crate::MessageChanges {
+                markdown_source: Some("Changed".into()), ..Default::default()
+            })
+        });
+        assert_eq!(result.is_ok(), succeeds, "{name}: {result:?}");
+        if !succeeds {
+            let crate::Error::RecordInvalid(errors) = result.unwrap_err() else { panic!("{name}") };
+            assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"], "{name}");
+        }
+        t.read(|conn| {
+            let saved = Message::find(conn, message.id)?;
+            let attachments = saved.attachments(conn)?;
+            assert_eq!(saved.markdown_source.as_deref(), Some(if succeeds { "Changed" } else { "Original" }), "{name}");
+            if succeeds {
+                let mut expected: Vec<_> = blobs[..grouped_count].iter()
+                    .map(|&blob| ("attachments", blob)).collect();
+                if let Some(index) = expected_legacy { expected.push(("attachment", blobs[index])); }
+                let mut actual: Vec<_> = attachments.iter()
+                    .map(|(attachment, blob)| (attachment.name.as_str(), blob.id)).collect();
+                actual.sort_unstable();
+                expected.sort_unstable();
+                assert_eq!(actual, expected, "{name}");
+                let grouped: Vec<_> = attachments.iter().filter(|(a, _)| a.name == "attachments").collect();
+                let original_grouped: Vec<_> = original.iter().filter(|(a, _)| a.name == "attachments").collect();
+                assert_eq!(grouped, original_grouped, "{name}");
+            } else {
+                assert_eq!(attachments, original, "{name}");
+            }
+            Ok(())
+        });
+        let purged: Vec<_> = t.events().into_iter().filter_map(|event| match event {
+            Event::PurgeBlob { blob_id } => Some(blob_id), _ => None,
+        }).collect();
+        let expected_purge: Vec<_> = legacy.filter(|&index| succeeds && legacy != expected_legacy && index >= grouped_count)
+            .map(|index| blobs[index]).into_iter().collect();
+        assert_eq!(purged, expected_purge, "{name}");
+    }
+}
+
 #[test]
 fn sound_messages() {
     let t = TestDb::new();

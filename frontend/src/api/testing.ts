@@ -111,6 +111,8 @@ export function sidebarRowFixture(
   directMemberIds: readonly number[] = [],
 ): SidebarRow {
   return {
+    revision: 0,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     room: {
       id: roomId,
       kind,

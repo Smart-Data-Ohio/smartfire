@@ -203,7 +203,7 @@ test.describe("on a 360 px touch phone", () => {
     const menu = page.getByRole("menu", { name: "Notifications", exact: true });
 
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole("menuitemradio")).toHaveCount(5);
+    await expect(menu.getByRole("menuitemradio")).toHaveCount(6);
     await page.keyboard.press("Escape");
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
 

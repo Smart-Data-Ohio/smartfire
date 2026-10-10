@@ -40,6 +40,7 @@ import {
 } from "./room-refresh.ts";
 import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { recoverResyncedRooms, roomVisitToken } from "./session.ts";
+import { applySettingsSnapshot } from "./settings-snapshot.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
@@ -636,6 +637,12 @@ export class Engine extends Context.Service<
         }
 
         const now = yield* Clock.currentTimeMillis;
+
+        for (const event of fresh) {
+          if (event.type === "settings.updated") {
+            applySettingsSnapshot(event.data);
+          }
+        }
 
         mutations.applyEvents(fresh, now);
         emitSyncEvents(fresh, yield* Ref.get(replayThrough));

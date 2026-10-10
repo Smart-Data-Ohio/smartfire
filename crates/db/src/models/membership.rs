@@ -324,12 +324,12 @@ impl Membership {
     }
 
     /// `user.memberships.unread.count`: the push badge.
-    pub fn unread_count(conn: &Connection, user_id: i64) -> Result<i64> {
-        sql::count(
-            conn,
-            r#"SELECT COUNT(*) FROM "memberships" WHERE "memberships"."user_id" = ? AND "memberships"."unread_at" IS NOT NULL"#,
-            [user_id],
-        )
+    pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
+        let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
+        let rooms: Vec<i64> = sql::query_all(conn,
+            "SELECT room_id FROM memberships WHERE user_id=? AND unread_at IS NOT NULL",
+            [user_id], |row| row.get(0))?;
+        Ok(rooms.into_iter().filter(|room| !preferences.muted(*room, now)).count() as i64)
     }
 
     /// `Membership.connected.exists?(id)`
@@ -499,7 +499,15 @@ impl Membership {
     /// `update!(involvement:)`
     pub fn update_involvement(&mut self, tx: &mut Tx<'_>, involvement: impl Into<Option<Involvement>>) -> Result<()> {
         let involvement = involvement.into();
+        let path = format!("$.room_notification_levels.\"{}\"", self.room_id);
+        let removed = tx.conn().execute(
+            "UPDATE users SET inbox_preferences=json_remove(inbox_preferences, ?) WHERE id=? AND json_type(inbox_preferences, ?) IS NOT NULL",
+            params![path, self.user_id, path],
+        )?;
         if self.involvement == involvement {
+            if removed != 0 {
+                super::user::profile_settings::bump_revision(tx, self.user_id)?;
+            }
             return Ok(());
         }
         let now = tx.now();
@@ -509,7 +517,7 @@ impl Membership {
         )?;
         self.involvement = involvement;
         self.updated_at = now;
-        Ok(())
+        super::user::profile_settings::bump_revision(tx, self.user_id)
     }
 
     /// `read`: `update!(unread_at: nil, last_read_message_id: latest_root_message_id)`, which

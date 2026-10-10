@@ -17,6 +17,7 @@ import {
   nextActivityItem,
   unreadDelta,
 } from "../store/activity.ts";
+import { beginSnapshotRequest } from "../store/request-order.ts";
 import { mutations, store } from "../store/store.ts";
 import { keyedSerial } from "./serial.ts";
 
@@ -24,7 +25,10 @@ import { keyedSerial } from "./serial.ts";
 export const load = Effect.fn("activity.load")(function* (tab: ActivityTab, status: ActivityState) {
   mutations.setActivityListLoading(tab, status, false);
 
-  const start = activityLoadStart(store.getState(), tab, status);
+  const start = {
+    ...activityLoadStart(store.getState(), tab, status),
+    requestSequence: beginSnapshotRequest(),
+  };
 
   yield* api.activityList(status, tab, null).pipe(
     Effect.tap((page) =>
@@ -57,7 +61,10 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
 
   mutations.setActivityListLoading(tab, status, true);
 
-  const start = activityLoadStart(store.getState(), tab, status);
+  const start = {
+    ...activityLoadStart(store.getState(), tab, status),
+    requestSequence: beginSnapshotRequest(),
+  };
 
   yield* api.activityList(status, tab, list.nextCursor).pipe(
     Effect.tap((page) =>
@@ -77,13 +84,14 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
   );
 });
 
-/** Refreshes the badge. Server revisions order overlapping replies. */
+/** Refreshes the badge. Request order breaks ties when only the mute policy changed. */
 export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* (
   generation = store.getState().activity.generation,
 ) {
+  const requestSequence = beginSnapshotRequest();
   const unread = yield* api.activityUnreadCount();
 
-  mutations.setActivityUnreadCount(unread, generation);
+  mutations.setActivityUnreadCount(unread, generation, requestSequence);
 
   return unread.unreadCount;
 });
@@ -143,6 +151,8 @@ const change = (
       }
 
       // A failure or interruption removes only unconfirmed badge adjustments.
+      const requestSequence = beginSnapshotRequest();
+
       const reply = yield* request(activityItemId).pipe(
         Effect.timeoutOrElse({
           duration: ACTIVITY_REQUEST_TIMEOUT,
@@ -167,6 +177,7 @@ const change = (
         optimistic,
         settled: reply.item,
         unread: reply,
+        requestSequence,
       });
 
       return reply.item;

@@ -153,12 +153,13 @@ async fn put_order(c: &mut Ctx) -> Result {
 /// The membership's row as it is now, hidden or not: the membership and its room both read in
 /// the snapshot that renders them.
 async fn row(c: &Ctx, membership_id: i64) -> Result<api::SidebarRow> {
+    let now = crate::endpoints::now(c);
     c.app()
         .db
         .read_snapshot(move |conn| {
             let membership = Membership::find(conn, membership_id)?;
             let room = membership.room(conn)?;
-            dto::membership_row(conn, &room, &membership)
+            dto::membership_row(conn, &room, &membership, now)
         })
         .await
         .map_err(db_error)
@@ -228,7 +229,7 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             membership.move_favorite_to(tx, position)?;
-            shown_favorites(&campfire_db::Snapshot::of_write(tx)?, user_id)
+            shown_favorites(&campfire_db::Snapshot::of_write(tx)?, user_id, tx.now())
         })
         .await
         .map_err(db_error)?;
@@ -239,11 +240,12 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
 fn shown_favorites(
     conn: &campfire_db::Snapshot<'_>,
     user_id: i64,
+    now: campfire_db::Timestamp,
 ) -> campfire_db::Result<Vec<api::SidebarRow>> {
     let mut rows = Vec::new();
     for membership in Membership::favorites_for_user(conn, user_id)? {
         let room = membership.room(conn)?;
-        rows.extend(dto::sidebar_row(conn, &room, &membership)?);
+        rows.extend(dto::sidebar_row(conn, &room, &membership, now)?);
     }
     Ok(rows)
 }
@@ -267,5 +269,13 @@ async fn put_involvement(c: &mut Ctx) -> Result {
         // Muting marked it read inside the write; the other tabs clear its unread state.
         campfire_app::cable::sync::room_read(&c.app().cable, membership.user_id, room.id);
     }
-    c.json(StatusCode::OK, &dto::membership(&membership))
+    let settings = crate::settings::load(c, membership.user_id).await?;
+    campfire_app::cable::sync::settings_updated(&c.app().cable, settings.clone());
+    c.json(
+        StatusCode::OK,
+        &api::InvolvementChange {
+            membership: dto::membership(&membership),
+            settings,
+        },
+    )
 }

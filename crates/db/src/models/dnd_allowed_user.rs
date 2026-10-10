@@ -49,6 +49,7 @@ impl DndAllowedUser {
         }
         errors.into_result()?;
         tx.conn().execute("INSERT INTO dnd_allowed_users (user_id,allowed_user_id,created_at,updated_at) VALUES (?,?,?,?)",params![user_id,allowed_user_id,tx.now(),tx.now()])?;
+        super::user::profile_settings::bump_revision(tx, user_id)?;
         Self::find(tx.conn(), user_id, allowed_user_id)?
             .ok_or(crate::Error::RecordNotFound("DndAllowedUser"))
     }
@@ -65,9 +66,13 @@ impl DndAllowedUser {
     }
     /// delete_all intentionally does not touch user/allowance timestamps or callbacks.
     pub fn remove(tx: &Tx<'_>, user_id: i64, allowed_user_id: i64) -> Result<usize> {
-        Ok(tx.conn().execute(
+        let removed = tx.conn().execute(
             "DELETE FROM dnd_allowed_users WHERE user_id=? AND allowed_user_id=?",
             params![user_id, allowed_user_id],
-        )?)
+        )?;
+        if removed != 0 {
+            super::user::profile_settings::bump_revision(tx, user_id)?;
+        }
+        Ok(removed)
     }
 }

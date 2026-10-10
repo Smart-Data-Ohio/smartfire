@@ -35,6 +35,7 @@ import {
   pagedStale,
   pagedWithout,
 } from "./paged-list.ts";
+import { compareSnapshots } from "./snapshot-order.ts";
 import type { State } from "./state.ts";
 
 /** What `PATCH /activity/:id` does: "unhandled" clears handled and keeps it read. */
@@ -150,23 +151,55 @@ function absorbedUnread(
   );
 }
 
+function compareCounts(incoming: ActivityUnreadCount, held: ActivityUnreadCount): number {
+  return compareSnapshots(
+    { revision: incoming.unreadRevision, evaluatedAt: incoming.evaluatedAt },
+    { revision: held.unreadRevision, evaluatedAt: held.evaluatedAt },
+  );
+}
+
+/** A response cannot confirm changes from before the newest count evaluation. */
+function acceptedCount(
+  activity: ActivitySlice,
+  unread: ActivityUnreadCount | null,
+): ActivityUnreadCount | null {
+  if (unread === null) return null;
+
+  const held =
+    activity.serverUnreadGeneration === activity.generation ? activity.serverUnread : null;
+
+  return [held, activity.deferredUnread].some(
+    (count) => count !== null && compareCounts(unread, count) < 0,
+  )
+    ? null
+    : unread;
+}
+
 /** Installs the newest snapshot only when it covers every outstanding badge adjustment. */
 function withCounts(
   activity: ActivitySlice,
   unread: ActivityUnreadCount | null,
   pendingUnread: ActivitySlice["pendingUnread"] = activity.pendingUnread,
+  requestSequence?: number,
 ): ActivitySlice {
+  unread = acceptedCount(activity, unread);
   const held = activity.serverUnread;
   let snapshot = activity.serverUnreadGeneration === activity.generation ? held : null;
   const projected = absorbedUnread(pendingUnread, snapshot?.unreadRevision ?? null);
 
-  // Equal revisions keep their first count, including a candidate still waiting for coverage.
   for (const candidate of [activity.deferredUnread, unread]) {
     if (
       candidate !== null &&
-      (snapshot === null || candidate.unreadRevision > snapshot.unreadRevision)
+      (snapshot === null ||
+        compareCounts(candidate, snapshot) > 0 ||
+        (compareCounts(candidate, snapshot) === 0 &&
+          (candidate === activity.deferredUnread || requestSequence !== undefined)))
     ) {
-      snapshot = { unreadCount: candidate.unreadCount, unreadRevision: candidate.unreadRevision };
+      snapshot = {
+        unreadCount: candidate.unreadCount,
+        unreadRevision: candidate.unreadRevision,
+        evaluatedAt: candidate.evaluatedAt,
+      };
     }
   }
 
@@ -207,11 +240,12 @@ function confirmedUnread(
   const held = activity.serverUnread;
 
   if (
+    acceptedCount(activity, unread) === null ||
     unread === null ||
     (held !== null &&
       activity.serverUnreadGeneration === activity.generation &&
-      (unread.unreadRevision < held.unreadRevision ||
-        (unread.unreadRevision === held.unreadRevision && unread.unreadCount !== held.unreadCount)))
+      (compareCounts(unread, held) < 0 ||
+        (compareCounts(unread, held) === 0 && unread.unreadCount !== held.unreadCount)))
   ) {
     return activity.pendingUnread;
   }
@@ -443,6 +477,7 @@ export function setActivityListFailed(
 export interface ActivityLoadStart {
   readonly generation: number;
   readonly activityGeneration: number;
+  readonly requestSequence?: number;
 }
 
 /** What a load of `tab` in `status` started from; pass it back to `landActivityPage`. */
@@ -477,7 +512,8 @@ export function landActivityPage(
   const counted = withCounts(
     state.activity,
     page,
-    confirmedUnread(state.activity, page, page.items),
+    confirmedUnread(state.activity, acceptedCount(state.activity, page), page.items),
+    start?.requestSequence,
   );
 
   if (!pagedCurrent(activityListOf(state, tab, status), start?.generation)) {
@@ -631,6 +667,7 @@ export interface ActivityChangeEnd {
   readonly settled: ActivityItem | null;
   /** The server's count snapshot afterwards; `null` keeps it. */
   readonly unread: ActivityUnreadCount | null;
+  readonly requestSequence?: number;
 }
 
 /**
@@ -643,9 +680,11 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     return state;
   }
 
+  const unread = acceptedCount(state.activity, end.unread);
+
   const pending =
-    end.unread !== null && end.settled !== null
-      ? confirmedUnread(state.activity, end.unread, [end.settled])
+    unread !== null && end.settled !== null
+      ? confirmedUnread(state.activity, unread, [end.settled])
       : state.activity.pendingUnread;
 
   const heldChange = pending[end.token];
@@ -691,7 +730,7 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     }
   }
 
-  return withActivity(state, withCounts(activity, end.unread, pendingUnread));
+  return withActivity(state, withCounts(activity, unread, pendingUnread, end.requestSequence));
 }
 
 /** An item went with its source (`activity.removed`): out of the store and every list. */
@@ -726,6 +765,7 @@ export function setActivityUnreadCount(
   state: State,
   unread: ActivityUnreadCount,
   generation = state.activity.generation,
+  requestSequence?: number,
 ): State {
   const activity = state.activity;
 
@@ -733,7 +773,7 @@ export function setActivityUnreadCount(
     return state;
   }
 
-  return withActivity(state, withCounts(activity, unread));
+  return withActivity(state, withCounts(activity, unread, activity.pendingUnread, requestSequence));
 }
 
 /** The server couldn't replay what was missed: every loaded list reloads when next shown. */

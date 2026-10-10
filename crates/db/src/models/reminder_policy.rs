@@ -3,6 +3,7 @@ use crate::{Connection, NotificationKind, NotificationPolicy, Result, Timestamp,
 pub fn allows(conn: &Connection, user_id: i64, now: Timestamp) -> Result<bool> {
     let users = UserStatusSettings::for_ids(conn, &[user_id])?;
     Ok(NotificationPolicy {
+        room_id: None,
         recipient: users.get(&user_id), kind: NotificationKind::Reminder,
         room_involvement: None, thread_involvement: None, mentioned: false,
         reply_to_recipient: false, keyword_matched: false, dnd_exception: false, now,

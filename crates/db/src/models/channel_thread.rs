@@ -1283,6 +1283,7 @@ impl ChannelThread {
             super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
         Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
             crate::NotificationPolicy {
+                room_id: Some(message.room_id),
                 recipient: users.get(&candidate.recipient.id),
                 kind: crate::NotificationKind::ThreadMessage,
                 room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement),

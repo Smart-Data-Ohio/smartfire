@@ -394,25 +394,32 @@ fn messages_and_fetches_inner(
     )?
     .into_iter()
     .collect();
-    let blobs: HashMap<i64, (Option<String>, i64)> = ids_query(
+    let file_rows: Vec<(i64, String, i64)> = ids_query(
         conn,
-        r#"SELECT "active_storage_attachments"."record_id", "active_storage_blobs"."content_type", "active_storage_blobs"."byte_size" FROM "active_storage_attachments" INNER JOIN "active_storage_blobs" ON "active_storage_blobs"."id" = "active_storage_attachments"."blob_id" WHERE "active_storage_attachments"."record_type" = 'Message' AND "active_storage_attachments"."name" = 'attachment' AND "active_storage_attachments"."record_id" IN ({})"#,
+        r#"SELECT record_id, name, blob_id FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
         &ids,
-        |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))),
-    )?
-    .into_iter()
-    .collect();
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+    let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob)| *blob).collect::<Vec<_>>())
+        .map_err(campfire_web::controllers::presenters::storage_error)?;
+    let mut files = HashMap::<i64, Vec<(String, i64)>>::new();
+    for (message_id, name, blob_id) in file_rows {
+        files.entry(message_id).or_default().push((name, blob_id));
+    }
     let threads = thread_indicators(conn, messages)?;
     let mut steps = message_steps(conn, &ids)?;
     messages
         .iter()
         .map(|message| {
-            let attachment = match blobs.get(&message.id) {
-                Some((content_type, byte_size)) => presenter
-                    .attachment(message)?
-                    .map(|view| attachment(view, content_type.as_deref(), *byte_size)),
-                None => None,
-            };
+            let rows = files.get(&message.id).map_or(&[][..], Vec::as_slice);
+            let mut attachments = Vec::with_capacity(rows.len());
+            for (_, blob_id) in rows {
+                if let Some(blob) = blobs.get(blob_id) {
+                    attachments.push(attachment(presenter.attachment_blob(message, blob)?, blob.content_type.as_deref(), blob.byte_size));
+                }
+            }
+            let attachment = attachments.first().cloned();
+            let attachments = rows.iter().any(|(name, _)| name == "attachments").then_some(attachments);
             let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
             let sound = if attachment.is_none() {
                 campfire_db::message::sound_in(&presenter.plain_text_body(message)?)
@@ -440,6 +447,7 @@ fn messages_and_fetches_inner(
                 forward_note: present(message.forward_note.as_deref()),
                 edited_at: message.edited_at.map(time),
                 attachment,
+                attachments,
                 reactions,
                 boosts,
                 pinned: pinned.contains(&message.id),
@@ -924,6 +932,7 @@ pub(crate) fn notification_counts(
     conn: &Connection,
     user_id: i64,
     room_id: Option<i64>,
+    now: Timestamp,
 ) -> Result<HashMap<i64, RoomCounts>> {
     let mut statement = conn.prepare_cached(&notification_counts_sql(room_id.is_some()))?;
     let map = |row: &rusqlite::Row<'_>| {
@@ -938,27 +947,34 @@ pub(crate) fn notification_counts(
         ))
     };
     let rows = match room_id {
-        Some(room_id) => statement.query_map(rusqlite::params![user_id, room_id], map)?,
-        None => statement.query_map(rusqlite::params![user_id], map)?,
+        Some(room_id) => statement.query_map(rusqlite::params![user_id, now, room_id], map)?,
+        None => statement.query_map(rusqlite::params![user_id, now], map)?,
     };
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// The counts statement: `?1` is the viewer, `?2` the one room when `one_room`. `roots` and
+/// The counts statement: `?1` is the viewer, `?2` is now, `?3` the one room when `one_room`. `roots` and
 /// `pinged` are materialized, each read once through its own index (the room's unread range on
 /// `index_messages_on_room_thread_created`, the viewer's unread pings on
 /// `index_activity_items_on_unread_message_pings`); inlined, SQLite would walk the room's whole
 /// history by `room_id` to find them.
 fn notification_counts_sql(one_room: bool) -> String {
     let only = |column: &str| match one_room {
-        true => format!(r#" AND {column} = ?2"#),
+        true => format!(r#" AND {column} = ?3"#),
         false => String::new(),
     };
-    format!(
+    let sql = format!(
         r#"WITH "bounds" AS (SELECT "ms"."room_id", "ms"."involvement", "ms"."unread_at", "ms"."last_read_message_id" AS "read_id", "read"."created_at" AS "read_created_at" FROM "memberships" "ms" LEFT JOIN "messages" "read" ON "read"."id" = "ms"."last_read_message_id" AND "read"."room_id" = "ms"."room_id" AND "read"."thread_id" IS NULL WHERE "ms"."user_id" = ?1 AND "ms"."involvement" IN ('everything', 'mentions', 'muted', 'nothing') AND "ms"."unread_at" IS NOT NULL{bounds_only}), "roots" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "b"."involvement" = 'everything' AND NOT "m"."system_note" AND "m"."creator_id" != ?1 AS "notifies" FROM "bounds" "b" INNER JOIN "messages" "m" ON "m"."room_id" = "b"."room_id" AND "m"."thread_id" IS NULL WHERE {IN_UNREAD_RANGE}), "pinged" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "m"."thread_id", "activity_items"."event_type" = 'mention' AS "mention" FROM "activity_items" INNER JOIN "messages" "m" ON "m"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ?1 AND "activity_items"."source_type" = 'Message' AND "activity_items"."read_at" IS NULL AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity'){pinged_only}), "notifying" AS (SELECT "room_id", "id", 0 AS "thread" FROM "roots" WHERE "notifies" UNION SELECT "p"."room_id", "p"."id", "p"."thread_id" IS NOT NULL FROM "pinged" "p" INNER JOIN "memberships" "ms" ON "ms"."room_id" = "p"."room_id" AND "ms"."user_id" = ?1 WHERE ("ms"."involvement" IN ('everything', 'mentions') OR ("ms"."involvement" = 'muted' AND "p"."mention")) AND CASE WHEN "p"."thread_id" IS NULL THEN "p"."id" IN (SELECT "id" FROM "roots") ELSE EXISTS (SELECT 1 FROM "thread_memberships" "tm" WHERE "tm"."thread_id" = "p"."thread_id" AND "tm"."user_id" = ?1 AND "tm"."unread_at" IS NOT NULL AND ("tm"."last_read_message_id" IS NULL OR "p"."id" > "tm"."last_read_message_id")) END) SELECT "room_id", SUM("unread"), SUM("mentions"), SUM("notifications"), SUM("threads") FROM (SELECT "room_id", 1 AS "unread", 0 AS "mentions", 0 AS "notifications", 0 AS "threads" FROM "roots" UNION ALL SELECT "room_id", 0, "mention", 0, 0 FROM "pinged" UNION ALL SELECT "room_id", 0, 0, 1, "thread" FROM "notifying") GROUP BY "room_id""#,
         bounds_only = only(r#""ms"."room_id""#),
         pinged_only = only(r#""m"."room_id""#),
-    )
+    );
+    let preferences = "(SELECT inbox_preferences FROM users WHERE id=?1)";
+    let effective = campfire_db::models::notification_policy::involvement_sql("ms", preferences);
+    let unmuted = campfire_db::models::notification_policy::unmuted_sql("ms.room_id", preferences, "?2");
+    sql.replace(r#""ms"."involvement", "ms"."unread_at""#, &format!(r#"({effective}) AS "involvement", "ms"."unread_at""#))
+        .replace(r#""ms"."involvement""#, &format!("({effective})"))
+        .replace(r#"WHERE "ms"."user_id" = ?1"#, &format!(r#"WHERE "ms"."user_id" = ?1 AND {unmuted}"#))
+        .replace(r#"WHERE ("#, &format!("WHERE {unmuted} AND ("))
 }
 
 /// Each direct room's newest root message that isn't a system note, by room: one statement,
@@ -1011,6 +1027,7 @@ fn sidebar_row_with(
     members: Option<&[(i64, String)]>,
     counts: RoomCounts,
     last_message: Option<api::SidebarLastMessage>,
+    (revision, now): (i64, Timestamp),
 ) -> api::SidebarRow {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
@@ -1024,6 +1041,8 @@ fn sidebar_row_with(
         None => (room.name.clone().unwrap_or_default(), Vec::new()),
     };
     api::SidebarRow {
+        revision,
+        evaluated_at: now.to_evaluation_time(),
         room: self::room(room),
         membership: self::membership(membership),
         display_name,
@@ -1043,11 +1062,12 @@ pub fn sidebar_row(
     conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
+    now: Timestamp,
 ) -> Result<Option<api::SidebarRow>> {
     if !visible(room, membership) {
         return Ok(None);
     }
-    membership_row(conn, room, membership).map(Some)
+    membership_row(conn, room, membership, now).map(Some)
 }
 
 /// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
@@ -1056,6 +1076,7 @@ pub fn membership_row(
     conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
+    now: Timestamp,
 ) -> Result<api::SidebarRow> {
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
@@ -1063,7 +1084,7 @@ pub fn membership_row(
     } else {
         None
     };
-    let counts = notification_counts(conn, membership.user_id, Some(room.id))?
+    let counts = notification_counts(conn, membership.user_id, Some(room.id), now)?
         .remove(&room.id)
         .unwrap_or_default();
     let last_message = if room.direct() {
@@ -1078,6 +1099,7 @@ pub fn membership_row(
         members.as_deref(),
         counts,
         last_message,
+        (campfire_db::models::notification_policy::NotificationPreferences::load(conn, membership.user_id)?.settings_revision, now),
     ))
 }
 
@@ -1094,7 +1116,8 @@ pub fn sidebar(
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
     #[cfg(feature = "test-support")]
     crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
-    let counts = notification_counts(conn, viewer.id, None)?;
+    let counts = notification_counts(conn, viewer.id, None, now)?;
+    let revision = campfire_db::models::notification_policy::NotificationPreferences::load(conn, viewer.id)?.settings_revision;
     let direct_ids: Vec<i64> = all
         .iter()
         .filter(|(_, room)| room.direct())
@@ -1116,6 +1139,7 @@ pub fn sidebar(
             members.as_deref(),
             counts.get(&room.id).copied().unwrap_or_default(),
             last_messages.remove(&room.id),
+            (revision, now),
         );
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
@@ -1654,9 +1678,7 @@ fn room_file_rows(
         else {
             continue;
         };
-        let Some(view) = presenter.attachment(message)? else {
-            continue;
-        };
+        let view = presenter.attachment_blob(message, blob)?;
         files.push(api::RoomFile {
             message_id: message.id,
             thread_id: row.thread_id,
@@ -1682,7 +1704,11 @@ mod tests {
         for one_room in [false, true] {
             let sql = format!("EXPLAIN QUERY PLAN {}", notification_counts_sql(one_room));
             let mut statement = conn.prepare(&sql).unwrap();
-            let params: &[i64] = if one_room { &[1, 2] } else { &[1] };
+            let now = Timestamp::parse_db("2035-01-01T12:00:00Z").unwrap();
+            let mut params = vec![rusqlite::types::Value::Integer(1), rusqlite::types::Value::Text(now.to_db())];
+            if one_room {
+                params.push(rusqlite::types::Value::Integer(2));
+            }
             let plan: Vec<String> = statement
                 .query_map(rusqlite::params_from_iter(params), |row| row.get::<_, String>(3))
                 .unwrap()
@@ -1701,6 +1727,7 @@ mod tests {
                     || text.contains("SEARCH m USING COVERING INDEX index_messages_on_room_thread_created"),
                 "one_room={one_room}:\n{text}"
             );
+            assert!(super::notification_counts(&conn, 1, one_room.then_some(2), now).unwrap().is_empty());
         }
     }
 

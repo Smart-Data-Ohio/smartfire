@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import type { AssignRoomCategory as GeneratedAssignRoomCategory } from "../../gen/AssignRoomCategory.ts";
 import type { CreateRoomCategory as GeneratedCreateRoomCategory } from "../../gen/CreateRoomCategory.ts";
 import type { FavoriteList as GeneratedFavoriteList } from "../../gen/FavoriteList.ts";
+import type { InvolvementChange as GeneratedInvolvementChange } from "../../gen/InvolvementChange.ts";
 import type { MoveFavorite as GeneratedMoveFavorite } from "../../gen/MoveFavorite.ts";
 import type { ReorderRoomCategories as GeneratedReorderRoomCategories } from "../../gen/ReorderRoomCategories.ts";
 import type { RoomCategoryList as GeneratedRoomCategoryList } from "../../gen/RoomCategoryList.ts";
@@ -10,7 +11,8 @@ import type { UpdateInvolvement as GeneratedUpdateInvolvement } from "../../gen/
 import type { UpdateRoomCategory as GeneratedUpdateRoomCategory } from "../../gen/UpdateRoomCategory.ts";
 import { RoomCategoryId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
-import { Involvement } from "./room.ts";
+import { Involvement, Membership } from "./room.ts";
+import { Settings } from "./settings.ts";
 import { RoomCategory, SidebarRow } from "./sidebar.ts";
 
 /** The body of `POST /api/v1/room_categories`: a name of 1 to 50 characters. */
@@ -93,4 +95,10 @@ export type UpdateInvolvement = typeof UpdateInvolvement.Type;
 
 export type UpdateInvolvementPin = Assert<
   Pinned<typeof UpdateInvolvement, GeneratedUpdateInvolvement>
+>;
+
+export const InvolvementChange = Schema.Struct({ membership: Membership, settings: Settings });
+
+export type InvolvementChangePin = Assert<
+  Pinned<typeof InvolvementChange, GeneratedInvolvementChange>
 >;

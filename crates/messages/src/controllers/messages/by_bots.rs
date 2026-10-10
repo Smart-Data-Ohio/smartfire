@@ -6,7 +6,7 @@ use campfire_db::{Message, Room, Timeline};
 use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permit_keys};
 
 use super::{
-    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
+    AttachmentPolicy, MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
     ensure_can_administer, find_paged_messages, present, set_message, update_message,
 };
 use crate::app::AppCtx;
@@ -34,6 +34,13 @@ pub async fn index(c: &mut Ctx) -> Result {
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
+    match create_action(c).await {
+        Err(error) => super::render_record_invalid(c, error),
+        result => result,
+    }
+}
+
+async fn create_action(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let room = set_room(c).await?;
     concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
@@ -83,7 +90,10 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     // MessagesController#update
     let attributes = message_params(c)?;
-    let message = update_message(c, message, attributes).await?;
+    let message = match update_message(c, message, attributes).await {
+        Ok(message) => message,
+        Err(error) => return super::render_record_invalid(c, error),
+    };
     broadcast_replace(c, &room, &message).await?;
     match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => render_show(c, message).await,
@@ -146,9 +156,9 @@ fn ensure_body_or_attachment_present(c: &mut Ctx) -> Result<()> {
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     if c.params.get("attachment").is_some_and(|p| !p.is_null()) {
         let permitted = c.params.permit(&permit_keys(&["attachment"]));
-        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, attachment_policy: AttachmentPolicy::SignedBlob, ..MessageParams::default() })
     } else {
-        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), attachment_policy: AttachmentPolicy::SignedBlob, ..MessageParams::default() })
     }
 }
 

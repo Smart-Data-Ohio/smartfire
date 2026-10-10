@@ -73,6 +73,7 @@ fn replay(name: &str) {
             }),
         };
         let policy = NotificationPolicy {
+            room_id: None,
             recipient: user.as_ref(),
             kind: call["args"]["kind"]
                 .as_str()

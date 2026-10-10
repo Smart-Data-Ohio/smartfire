@@ -404,6 +404,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const unreadCount = unreadMessages(record).length;
 
     const row: SidebarRow = {
+      revision: world.activityRevision,
+      evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
@@ -1002,7 +1004,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
-    ...createOrganize(ctx).routes,
+    ...createOrganize(ctx, settings).routes,
   ];
 
   composer.arm();

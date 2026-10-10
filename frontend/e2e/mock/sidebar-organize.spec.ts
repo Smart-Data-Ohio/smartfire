@@ -107,12 +107,17 @@ matrix("sidebar organisation", async ({ page, theme, phone }) => {
   await row(list, "design").click({ button: "right" });
   await page
     .getByRole("menu", { name: "design options" })
-    .getByRole("menuitem", { name: "Mute" })
+    .getByRole("menuitem", { name: "Notifications" })
     .click();
-  await expect(row(list, "design")).toHaveAttribute(
-    "data-state",
-    phone ? "muted" : /muted|selected/,
-  );
+  await page
+    .getByRole("menu", { name: "Notifications", exact: true })
+    .getByRole("menuitem", { name: "Mute for" })
+    .click();
+  await page
+    .getByRole("menu", { name: "Mute for", exact: true })
+    .getByRole("menuitem", { name: "Until I turn it back on" })
+    .click();
+  await expect(row(list, "design")).toHaveAttribute("data-state", "muted");
   await page.mouse.move(0, 0);
   await settledShot(page, "muted", theme);
 

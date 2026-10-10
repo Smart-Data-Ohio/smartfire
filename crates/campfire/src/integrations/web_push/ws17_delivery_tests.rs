@@ -138,10 +138,11 @@ async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
             assert_eq!(service.server.received().len(), 2 + usize::from(promoted));
         }
         let jobs_before_edit = message_push_jobs(&db).await;
+        let now = db.env().now();
         for &mentioned in edits {
             let (before, unread) = db.read(move |conn| Ok((
                 ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
-                ActivityItem::unread_snapshot(conn, DAVID)?,
+                ActivityItem::unread_snapshot(conn, DAVID, now)?,
             ))).await.unwrap();
             db.write(move |tx| {
                 let mut message = Message::find(tx.conn(), message_id)?;
@@ -156,7 +157,7 @@ async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
             }).await.unwrap();
             let (activity, after) = db.read(move |conn| Ok((
                 ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
-                ActivityItem::unread_snapshot(conn, DAVID)?,
+                ActivityItem::unread_snapshot(conn, DAVID, now)?,
             ))).await.unwrap();
             if mentioned || promoted {
                 let activity = activity.unwrap();
