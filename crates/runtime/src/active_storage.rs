@@ -84,6 +84,10 @@ pub mod test_hooks {
 pub async fn blobs_redirect(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     let blob = set_blob(c).await?;
+    if matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)))
+        && crate::concerns::authenticated_by(c).skips_forgery_protection() {
+        return proxy_blob(c, &blob);
+    }
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
     let url = blob_url(c, &blob, disposition.as_deref());
@@ -96,16 +100,20 @@ pub async fn blobs_redirect(c: &mut Ctx) -> Result {
 pub async fn blobs_proxy(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     let blob = set_blob(c).await?;
+    proxy_blob(c, &blob)
+}
+
+fn proxy_blob(c: &mut Ctx, blob: &Blob) -> Result {
     let disposition = c.param_str("disposition").map(str::to_string);
     if let Some(range) = c.request.header("range").filter(|r| !r.trim().is_empty()).map(str::to_string) {
-        let response = send_blob_byte_range_data(c, &blob, &range)?;
+        let response = send_blob_byte_range_data(c, blob, &range)?;
         return Ok(if matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true))) { response.header(header::CACHE_CONTROL, "private, no-store") } else { response });
     }
     let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
     if !restricted && let Some(not_modified) = http_cache_forever(c) {
         return Ok(not_modified);
     }
-    let response = send_blob_stream(c, &blob, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes");
+    let response = send_blob_stream(c, blob, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes");
     Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
 }
 
@@ -117,6 +125,11 @@ pub async fn representations_redirect(c: &mut Ctx) -> Result {
     let blob = set_blob(c).await?;
     let restricted = matches!(blob.metadata.get("poll_media"), Some(Json::Bool(true)));
     let image = set_representation(c, blob).await?;
+    if restricted && crate::concerns::authenticated_by(c).skips_forgery_protection() {
+        let disposition = c.param_str("disposition").map(str::to_string);
+        return Ok(send_blob_stream(c, &image, disposition.as_deref())?
+            .header(header::CACHE_CONTROL, "private, no-store"));
+    }
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
     let url = blob_url(c, &image, disposition.as_deref());
@@ -200,11 +213,17 @@ async fn authorize_poll_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
     } else {
         return Err(Error::NotFound);
     };
+    let room_scope = if crate::concerns::authenticated_by(c) == crate::concerns::AuthenticatedBy::BotReply {
+        Some(c.param_str("room_id").and_then(|room| room.parse::<i64>().ok()).ok_or(Error::NotFound)?)
+    } else {
+        None
+    };
     let allowed = c.app().db.read(move |conn| {
         let user = campfire_db::User::find(conn, user_id)?;
         if !user.is_active() || (!verified && user.requires_two_factor()) { return Ok(false); }
         for room in rooms {
-            if campfire_db::Room::find_for_user(conn, user_id, room)?.is_some()
+            if room_scope.is_none_or(|scope| scope == room)
+                && campfire_db::Room::find_for_user(conn, user_id, room)?.is_some()
                 && campfire_db::models::agent_access::capability_for_user(conn, user_id, "post_messages", room)? != Some(false) {
                 return Ok(true);
             }
@@ -1035,7 +1054,7 @@ pub async fn create_direct_upload(
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_") && !key.starts_with("poll_"));
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
     }
     metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
@@ -1052,15 +1071,7 @@ pub async fn create_direct_upload(
     let blob = c
         .app()
         .db
-        .write(move |tx| {
-            let blob = new_blob.insert(tx.conn(), now).map_err(storage_error)?;
-            // The existing purge job refuses attached blobs, so abandoned direct uploads expire.
-            tx.emit_after_commit(campfire_db::Event::job_in(
-                std::time::Duration::from_secs(24 * 60 * 60),
-                &campfire_app::queue::PurgeJob { blob_id: blob.id },
-            ));
-            Ok(blob)
-        })
+        .write(move |tx| new_blob.insert(tx.conn(), now).map_err(storage_error))
         .await
         .map_err(Error::internal)?;
 

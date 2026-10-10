@@ -22,6 +22,7 @@ import type { MessageDTO, SyncEvent } from "../../store/model.ts";
 import { mutations, store, useStore } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
+import { loadCustomIcons } from "../messages/commands.ts";
 import { CreatePollDialog, filledOptions, pollProblems } from "./create-poll-dialog.tsx";
 import {
   githubDraftCount,
@@ -1450,7 +1451,9 @@ it("gives custom poll emoji their shortcode as alternative text", () => {
   );
 });
 
-it("shows the custom emoji name when it is absent from the catalog", async () => {
+it("keeps a loaded custom emoji image when it is absent from the cached catalog", async () => {
+  const icons = await loadCustomIcons();
+  expect(icons.some((icon) => icon.content === ":deleted_party:")).toBe(false);
   const message = held(messages.pollOpen);
   const original = message.poll;
 
@@ -1471,6 +1474,14 @@ it("shows the custom emoji name when it is absent from the catalog", async () =>
     />,
   );
 
-  await screen.findByText(":deleted_party:");
-  expect(view.container.querySelector(".poll-option-emoji img")).toBeNull();
+  const image = view.container.querySelector<HTMLImageElement>(".poll-option-emoji img");
+
+  if (image === null) throw new Error("expected a custom emoji image");
+
+  await act(async () => {
+    fireEvent.load(image);
+  });
+  expect(view.container.querySelector(".poll-option-emoji img")).toBe(image);
+  expect(image.getAttribute("src")).toBe("/icons/deleted_party");
+  expect(screen.queryByText(":deleted_party:")).toBeNull();
 });
