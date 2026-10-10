@@ -150,6 +150,76 @@ describe("revealing", () => {
   });
 });
 
+describe("a link around a spoiler", () => {
+  /** `[see ||ending||](https://example.com/alice-dies "Alice dies")` as the renderer writes it. */
+  const html =
+    '<p><a href="https://example.com/alice-dies" title="Alice dies">see ' +
+    `${spoiler("ending")}</a> after</p>`;
+
+  it("has no URL, tooltip, link role or tab stop until its spoiler is revealed", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<BodyHtml html={html} className="message-body" />);
+    const link = container.querySelector("a");
+
+    if (link === null) {
+      throw new Error("expected the link");
+    }
+
+    expect(link.hasAttribute("href")).toBe(false);
+    expect(link.getAttribute("title")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: SPOILER_LABEL }));
+    await user.tab();
+    expect(container.contains(document.activeElement)).toBe(false);
+
+    await user.keyboard("{Shift>}{Tab}{/Shift}{Enter}");
+
+    expect(link.getAttribute("href")).toBe("https://example.com/alice-dies");
+    expect(link.getAttribute("title")).toBe("Alice dies");
+    expect(screen.getByRole("link", { name: "see ending" })).toBe(link);
+  });
+
+  it("reveals instead of opening when the rest of its label is clicked, then opens", async () => {
+    const user = userEvent.setup();
+    const onRow = vi.fn();
+    const clicks: boolean[] = [];
+
+    const record = (event: MouseEvent) => {
+      if (event.target instanceof HTMLAnchorElement) {
+        clicks.push(event.defaultPrevented);
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("click", record);
+
+    try {
+      const { container } = render(<BodyHtml html={html} className="message-body" />);
+      const link = container.querySelector("a");
+
+      if (link === null) {
+        throw new Error("expected the link");
+      }
+
+      container.addEventListener("click", onRow);
+      await user.click(link);
+
+      expect(container.querySelector("[data-spoiler]")?.hasAttribute("data-revealed")).toBe(true);
+      expect(onRow).not.toHaveBeenCalled();
+      expect(clicks).toEqual([]);
+
+      link.focus();
+      await user.keyboard("{Enter}");
+
+      expect(clicks).toEqual([false]);
+    } finally {
+      window.removeEventListener("click", record);
+    }
+  });
+});
+
 /** A body that unmounts and mounts again with the same HTML, as an edit that is cancelled. */
 function Toggled({ html }: { readonly html: string }) {
   const [shown, setShown] = useState(true);

@@ -5,6 +5,15 @@ export const SPOILER_LABEL = "Spoiler, activate to reveal";
 
 const SPOILER = "[data-spoiler], .spoiler";
 
+/** A spoiler that is still covered. */
+const COVERED = "[data-spoiler]:not([data-revealed]), .spoiler:not([data-revealed])";
+
+/**
+ * A link whose label holds a covered spoiler (`[||ending||](url "title")`). Its URL and title
+ * would give the words away, so it is no link at all until every spoiler in it is revealed.
+ */
+const HIDING_LINK = "a[data-spoiler-link]";
+
 /** Attributes that name an element or show a tooltip, stashed on the element until it is revealed. */
 const CONCEALED = [
   ["title", "data-spoiler-title"],
@@ -25,13 +34,25 @@ export function bindSpoilers(root: HTMLElement): () => void {
   const onClick = (event: MouseEvent) => {
     const spoiler = hiddenSpoiler(event.target);
 
-    if (spoiler === null) {
+    if (spoiler !== null) {
+      reveal(spoiler);
+      event.preventDefault();
+      event.stopPropagation();
+
       return;
     }
 
-    reveal(spoiler);
-    event.preventDefault();
-    event.stopPropagation();
+    // The rest of a hiding link's label (`see` in `[see ||ending||](url)`) reveals its spoilers.
+    const link = hidingLink(event.target);
+
+    if (link !== null) {
+      for (const covered of link.querySelectorAll<HTMLElement>(COVERED)) {
+        reveal(covered);
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -51,7 +72,7 @@ export function bindSpoilers(root: HTMLElement): () => void {
   };
 
   const onPointerDown = (event: PointerEvent) => {
-    if (hiddenSpoiler(event.target) !== null) {
+    if (hiddenSpoiler(event.target) !== null || hidingLink(event.target) !== null) {
       event.stopPropagation();
     }
   };
@@ -95,6 +116,51 @@ function prepareSpoilers(root: HTMLElement): void {
     node.setAttribute("role", "button");
     node.setAttribute("aria-label", SPOILER_LABEL);
     conceal(node);
+  }
+
+  for (const link of root.querySelectorAll("a")) {
+    if (link.querySelector(COVERED) !== null) {
+      concealLink(link);
+    }
+  }
+}
+
+/**
+ * A link around a covered spoiler loses its URL and its names until the spoiler is revealed: with
+ * no `href` it can't be focused, followed, or opened in a new tab, and has no tooltip.
+ */
+function concealLink(link: HTMLAnchorElement): void {
+  if (link.hasAttribute("data-spoiler-link")) {
+    return;
+  }
+
+  link.setAttribute("data-spoiler-link", "");
+
+  if (link.hasAttribute("href")) {
+    link.setAttribute("data-spoiler-href", link.getAttribute("href") ?? "");
+    link.removeAttribute("href");
+  }
+
+  for (const [name, stash] of CONCEALED) {
+    if (link.hasAttribute(name)) {
+      link.setAttribute(stash, link.getAttribute(name) ?? "");
+      link.removeAttribute(name);
+    }
+  }
+}
+
+/** Gives a hiding link its URL and names back, once no spoiler in it is covered. */
+function revealLink(link: Element): void {
+  if (!(link instanceof HTMLElement) || link.querySelector(COVERED) !== null) {
+    return;
+  }
+
+  restore(link);
+  link.removeAttribute("data-spoiler-link");
+
+  if (link.hasAttribute("data-spoiler-href")) {
+    link.setAttribute("href", link.getAttribute("data-spoiler-href") ?? "");
+    link.removeAttribute("data-spoiler-href");
   }
 }
 
@@ -153,8 +219,22 @@ function hiddenSpoiler(target: EventTarget | null): HTMLElement | null {
   return found;
 }
 
-/** Whether `node` is inside a spoiler under `spoiler` that is still covered. */
+/** The hiding link `target` is in, or null. */
+function hidingLink(target: EventTarget | null): HTMLElement | null {
+  const link = target instanceof Element ? target.closest(HIDING_LINK) : null;
+
+  return link instanceof HTMLElement ? link : null;
+}
+
+/**
+ * Whether `node` stays hidden when `spoiler` is revealed: it is inside a spoiler under `spoiler`
+ * that is still covered, or it is a link whose label still holds one.
+ */
 function stillCovered(node: Element, spoiler: HTMLElement): boolean {
+  if (node.matches(HIDING_LINK) && node.querySelector(COVERED) !== null) {
+    return true;
+  }
+
   for (let parent = node.parentElement; parent !== null && parent !== spoiler; ) {
     if (parent.matches(SPOILER) && !parent.hasAttribute("data-revealed")) {
       return true;
@@ -177,41 +257,56 @@ function reveal(spoiler: HTMLElement): void {
   spoiler.removeAttribute("tabindex");
 
   for (const node of spoiler.querySelectorAll<HTMLElement>("*")) {
-    if (stillCovered(node, spoiler)) {
-      continue;
+    if (!stillCovered(node, spoiler)) {
+      restore(node);
+    }
+  }
+
+  // A link around this spoiler, or inside it around another, comes back once nothing in it
+  // is covered.
+  const around = spoiler.closest(HIDING_LINK);
+
+  if (around !== null) {
+    revealLink(around);
+  }
+
+  for (const link of spoiler.querySelectorAll(HIDING_LINK)) {
+    revealLink(link);
+  }
+}
+
+/** Puts back the focus, names and accessibility that `conceal` took from `node`. */
+function restore(node: HTMLElement): void {
+  node.inert = false;
+
+  if (node.hasAttribute("data-spoiler-tabindex")) {
+    const previous = node.getAttribute("data-spoiler-tabindex") ?? "";
+
+    if (previous === "") {
+      node.removeAttribute("tabindex");
+    } else {
+      node.setAttribute("tabindex", previous);
     }
 
-    node.inert = false;
+    node.removeAttribute("data-spoiler-tabindex");
+  }
 
-    if (node.hasAttribute("data-spoiler-tabindex")) {
-      const previous = node.getAttribute("data-spoiler-tabindex") ?? "";
+  for (const [name, stash] of CONCEALED) {
+    if (node.hasAttribute(stash)) {
+      node.setAttribute(name, node.getAttribute(stash) ?? "");
+      node.removeAttribute(stash);
+    }
+  }
 
-      if (previous === "") {
-        node.removeAttribute("tabindex");
-      } else {
-        node.setAttribute("tabindex", previous);
-      }
+  if (node.hasAttribute("data-spoiler-hidden")) {
+    const previous = node.getAttribute("data-spoiler-hidden") ?? "";
 
-      node.removeAttribute("data-spoiler-tabindex");
+    if (previous === "") {
+      node.removeAttribute("aria-hidden");
+    } else {
+      node.setAttribute("aria-hidden", previous);
     }
 
-    for (const [name, stash] of CONCEALED) {
-      if (node.hasAttribute(stash)) {
-        node.setAttribute(name, node.getAttribute(stash) ?? "");
-        node.removeAttribute(stash);
-      }
-    }
-
-    if (node.hasAttribute("data-spoiler-hidden")) {
-      const previous = node.getAttribute("data-spoiler-hidden") ?? "";
-
-      if (previous === "") {
-        node.removeAttribute("aria-hidden");
-      } else {
-        node.setAttribute("aria-hidden", previous);
-      }
-
-      node.removeAttribute("data-spoiler-hidden");
-    }
+    node.removeAttribute("data-spoiler-hidden");
   }
 }

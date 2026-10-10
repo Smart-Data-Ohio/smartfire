@@ -579,6 +579,11 @@
     visibility: hidden !important;
   }
 
+  /* A link around a covered spoiler (spoilers.ts strips its URL): no underline to hint at it. */
+  .message-body a[data-spoiler-link] {
+    text-decoration: none;
+  }
+
   .message-body .spoiler:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 1px;
