@@ -72,6 +72,20 @@ Copyright (c) Paper Design, Inc., licensed under the Apache License 2.0
 (http://www.apache.org/licenses/LICENSE-2.0). Its `NOTICE` file, which
 travels with the package, gives the details.
 
+## Bundled notices for the SPA
+
+The React SPA's build copies two notice files from `frontend/public/licenses/`
+to `licenses/` in the built dist, beside the SPA's assets.
+
+- LiveKit client 2.22.3 (Apache-2.0), with its dependencies, including
+  `@sapphi-red/web-noise-suppressor` 0.4.0 (MIT). The noise suppressor's
+  RNNoise WebAssembly is a build of RNNoise (Xiph.Org, BSD-3-Clause) by
+  `@shiguredo/rnnoise-wasm` (Apache-2.0). Notices:
+  `frontend/public/licenses/livekit-client.NOTICES.txt`.
+- Shiki 4.4.3 (MIT), and Highlight.js 11.9.0 (BSD-3-Clause, language
+  detection), with their dependencies. Notices:
+  `frontend/public/licenses/code-highlighter.NOTICES.txt`.
+
 ## Other vendored code
 
 Other vendored third-party code keeps its license file beside it,
