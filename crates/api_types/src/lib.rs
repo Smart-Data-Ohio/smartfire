@@ -159,7 +159,8 @@ pub use room_integrations::{
 pub use room_management::{CreateRoom, RoomForm, RoomFormStageRole, RoomLeft, RoomMutation, RoomRemoved, UpdateRoom};
 pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
 pub use search::{
-    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
+    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchFilters, SearchMedia, SearchOperator,
+    SearchResults, SearchSort,
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use settings::{

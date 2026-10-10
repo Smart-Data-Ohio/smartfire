@@ -10,6 +10,10 @@ import type { SearchOperator } from "../../gen/SearchOperator.ts";
 export const OPERATORS: readonly SearchOperator[] = [
   "from",
   "in",
+  "from_id",
+  "in_id",
+  "mentions",
+  "sort",
   "has",
   "is",
   "before",
@@ -17,7 +21,8 @@ export const OPERATORS: readonly SearchOperator[] = [
   "on",
 ];
 
-const OPERATOR_TOKEN = /(?:^|[ \t\n\v\f\r])((?:from|in|has|before|after|on|is):[^ \t\n\v\f\r]+)/gu;
+const OPERATOR_TOKEN =
+  /(?:^|[ \t\n\v\f\r])((?:from_id|in_id|mentions|sort|from|in|has|before|after|on|is):[^ \t\n\v\f\r]+)/gu;
 
 const WORD = /[\p{L}\p{N}\p{M}_]+/gu;
 
@@ -43,7 +48,10 @@ export function lastToken(value: string): string {
 
 /** `value`'s last token, read as an operator being typed (`from:ma`), or `null`. */
 export function partialOperator(value: string): PartialOperator | null {
-  const match = /^(from|in|has|before|after|on|is):(.*)$/u.exec(lastToken(value));
+  const match = /^(from_id|in_id|mentions|sort|from|in|has|before|after|on|is):(.*)$/u.exec(
+    lastToken(value),
+  );
+
   const operator = OPERATORS.find((candidate) => candidate === match?.[1]);
 
   return operator === undefined ? null : { operator, partial: match?.[2] ?? "" };
@@ -79,4 +87,15 @@ export function isoDay(millis: number): string {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Replace a single-valued filter while preserving the rest of a linked query. */
+export function setFilter(query: string, operator: SearchOperator, value: string): string {
+  const kept = query
+    .split(/\s+/u)
+    .filter((token) => !token.startsWith(`${operator}:`))
+    .join(" ")
+    .trim();
+
+  return value === "" ? kept : appendToken(kept, `${operator}:${value}`);
 }

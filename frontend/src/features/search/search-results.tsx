@@ -147,13 +147,13 @@ function MoreSentinel({ results }: { readonly results: SearchResultsView }) {
           variant="link"
           size="sm"
           loading={results.loadingMore}
-          loadingLabel="Loading older messages…"
+          loadingLabel="Loading more messages…"
           onClick={() => {
             resumeAt.current = results.messages.length;
             results.loadMore();
           }}
         >
-          {results.moreError === null ? "Load older messages" : "Try again"}
+          {results.moreError === null ? "Load more messages" : "Try again"}
         </Button>
       </div>
     );

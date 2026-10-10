@@ -90,7 +90,7 @@ export function resultsAnnouncement(
   }
 
   if (results.loadingMore) {
-    return "Loading older messages…";
+    return "Loading more messages…";
   }
 
   if (results.moreError !== null) {

@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
 use campfire_db::models::search_query::{self, SearchQuery, SearchSection};
@@ -48,9 +49,9 @@ pub const MAX_NAME_FILTERS: usize = 10;
 fn bounded(field: &str, query: &SearchQuery) -> Option<api::ApiError> {
     let message = if query.raw.chars().count() > MAX_QUERY_CHARS {
         format!("is too long (maximum is {MAX_QUERY_CHARS} characters)")
-    } else if query.from_names.len() > MAX_NAME_FILTERS {
+    } else if query.from_names.len() + query.author_ids.len() > MAX_NAME_FILTERS {
         format!("has too many from: filters (maximum is {MAX_NAME_FILTERS})")
-    } else if query.in_rooms.len() > MAX_NAME_FILTERS {
+    } else if query.in_rooms.len() + query.channel_ids.len() > MAX_NAME_FILTERS {
         format!("has too many in: filters (maximum is {MAX_NAME_FILTERS})")
     } else {
         return None;
@@ -69,6 +70,10 @@ fn chip(chip: search_query::Chip) -> Option<api::SearchChip> {
     let operator = match operator {
         "from" => api::SearchOperator::From,
         "in" => api::SearchOperator::In,
+        "from_id" => api::SearchOperator::FromId,
+        "in_id" => api::SearchOperator::InId,
+        "mentions" => api::SearchOperator::Mentions,
+        "sort" => api::SearchOperator::Sort,
         "has" => api::SearchOperator::Has,
         "before" => api::SearchOperator::Before,
         "after" => api::SearchOperator::After,
@@ -124,14 +129,23 @@ async fn index_search(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let viewer = concerns::require_current_user(c)?.clone();
     let raw = c.param_str("q").unwrap_or_default().to_owned();
+    let filters = typed_filters(c).map_err(|error| fail(c, error))?;
+    let raw = filtered_query(&raw, &filters, c.param_str("sort").is_some());
+    let query = SearchQuery::parse_extended(&raw);
     let after = match c.param_str("before").filter(|raw| !raw.is_empty()) {
         None => None,
-        Some(raw) => match crate::cursor::decode(raw) {
+        Some(raw) => match decode_search_cursor(raw, query.sort) {
             Some(key) => Some(key),
             None => return Err(fail(c, validation("before", "is invalid"))),
         },
     };
-    let query = SearchQuery::parse(&raw);
+    if after.is_some_and(|key| {
+        matches!(key, search_query::SearchCursor::Relevance { .. })
+            != (query.sort == search_query::SearchSort::Relevance
+                && query.match_expression().is_some())
+    }) {
+        return Err(fail(c, validation("before", "is invalid")));
+    }
     if let Some(error) = bounded("q", &query) {
         return Err(fail(c, error));
     }
@@ -141,13 +155,9 @@ async fn index_search(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let page = query.messages_for_user_after(conn, viewer.id, zone, after)?;
-            // The page is oldest first; the next one starts past its oldest.
-            let next_cursor = page
-                .messages
-                .first()
-                .filter(|_| page.has_more)
-                .map(|message| crate::cursor::encode(message.created_at, message.id));
+            let sorted = query.messages_for_user_sorted(conn, viewer.id, zone, after)?;
+            let next_cursor = sorted.next.map(|key| encode_search_cursor(key, query.sort));
+            let page = sorted.page;
             let sections = if after.is_none() && !query.blank_query() {
                 query
                     .sections_for_user(conn, viewer.id)?
@@ -224,7 +234,7 @@ async fn create_recent(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let user_id = concerns::require_current_user(c)?.id;
     let api::RecordSearch { query } = body(c).await?;
-    let parsed = SearchQuery::parse(&query);
+    let parsed = SearchQuery::parse_extended(&query);
     if let Some(error) = bounded("query", &parsed) {
         return Err(fail(c, error));
     }
@@ -261,13 +271,230 @@ async fn clear_recents(c: &mut Ctx) -> Result {
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 
+fn typed_filters(c: &Ctx) -> std::result::Result<api::SearchFilters, api::ApiError> {
+    fn id(c: &Ctx, name: &str) -> std::result::Result<Option<i64>, api::ApiError> {
+        c.param_str(name)
+            .map(|raw| {
+                raw.parse::<i64>()
+                    .ok()
+                    .filter(|id| (1..=9_007_199_254_740_991).contains(id))
+                    .ok_or_else(|| validation(name, "must be a positive ID"))
+            })
+            .transpose()
+    }
+    fn value<T: serde::de::DeserializeOwned>(
+        name: &str,
+        raw: &str,
+    ) -> std::result::Result<T, api::ApiError> {
+        serde_json::from_value(serde_json::Value::String(raw.into()))
+            .map_err(|_| validation(name, "is invalid"))
+    }
+    let has = c
+        .param_str("has")
+        .filter(|raw| !raw.is_empty())
+        .map(|raw| {
+            let tokens = raw.split(',').collect::<Vec<_>>();
+            if tokens.len() > 10 {
+                return Err(validation("has", "has too many values"));
+            }
+            tokens.into_iter().map(|raw| value("has", raw)).collect()
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let mentions_me = match c.param_str("mentionsMe") {
+        None | Some("false") => false,
+        Some("true") => true,
+        _ => return Err(validation("mentionsMe", "must be true or false")),
+    };
+    Ok(api::SearchFilters {
+        author_id: id(c, "authorId")?,
+        channel_id: id(c, "channelId")?,
+        has,
+        mentions_me,
+        sort: c
+            .param_str("sort")
+            .map(|raw| value("sort", raw))
+            .transpose()?
+            .unwrap_or_default(),
+    })
+}
+
+/// Typed IDs and sort replace their equivalent query tokens; legacy names still intersect.
+fn filtered_query(raw: &str, filters: &api::SearchFilters, explicit_sort: bool) -> String {
+    let mut raw = raw.to_owned();
+    for chip in SearchQuery::parse_extended(&raw).chips {
+        let replace = (filters.author_id.is_some() && chip.token.starts_with("from_id:"))
+            || (filters.channel_id.is_some() && chip.token.starts_with("in_id:"))
+            || (explicit_sort && chip.token.starts_with("sort:"));
+        if replace {
+            raw = raw.replacen(&chip.token, "", 1);
+        }
+    }
+    let mut tokens = vec![raw];
+    if let Some(id) = filters.author_id {
+        tokens.push(format!("from_id:{id}"));
+    }
+    if let Some(id) = filters.channel_id {
+        tokens.push(format!("in_id:{id}"));
+    }
+    for has in &filters.has {
+        let value = match has {
+            api::SearchMedia::Mention => "mention",
+            api::SearchMedia::File => "file",
+            api::SearchMedia::Image => "image",
+            api::SearchMedia::Link => "link",
+            api::SearchMedia::Audio => "audio",
+            api::SearchMedia::Video => "video",
+            api::SearchMedia::Pin => "pin",
+        };
+        tokens.push(format!("has:{value}"));
+    }
+    if filters.mentions_me {
+        tokens.push("mentions:me".into());
+    }
+    if explicit_sort {
+        tokens.push(format!(
+            "sort:{}",
+            match filters.sort {
+                api::SearchSort::Newest => "newest",
+                api::SearchSort::Oldest => "oldest",
+                api::SearchSort::Relevance => "relevance",
+            }
+        ));
+    }
+    squish(&tokens.join(" "))
+}
+
+fn encode_search_cursor(key: search_query::SearchCursor, sort: search_query::SearchSort) -> String {
+    let (created_at, id) = match key {
+        search_query::SearchCursor::Message { created_at, id } => (created_at, id),
+        search_query::SearchCursor::Relevance {
+            score,
+            created_at,
+            id,
+        } => {
+            return URL_SAFE_NO_PAD
+                .encode(format!("relevance|{}|{id}|{score}", created_at.to_db()));
+        }
+    };
+    if sort == search_query::SearchSort::Newest {
+        return crate::cursor::encode(created_at, id);
+    }
+    let mode = if sort == search_query::SearchSort::Oldest {
+        "oldest"
+    } else {
+        "relevance"
+    };
+    URL_SAFE_NO_PAD.encode(format!("{mode}|{}|{id}|", created_at.to_db()))
+}
+
+fn decode_search_cursor(
+    raw: &str,
+    sort: search_query::SearchSort,
+) -> Option<search_query::SearchCursor> {
+    if sort == search_query::SearchSort::Newest {
+        let (created_at, id) = crate::cursor::decode(raw)?;
+        return Some(search_query::SearchCursor::Message { created_at, id });
+    }
+    let text = String::from_utf8(URL_SAFE_NO_PAD.decode(raw).ok()?).ok()?;
+    let parts = text.split('|').collect::<Vec<_>>();
+    if let ["relevance", at, id, score] = parts.as_slice()
+        && !score.is_empty()
+    {
+        if sort != search_query::SearchSort::Relevance {
+            return None;
+        }
+        return Some(search_query::SearchCursor::Relevance {
+            score: score.parse::<u32>().ok()?,
+            created_at: campfire_db::Timestamp::parse_db(at)?,
+            id: id.parse::<i64>().ok().filter(|id| *id > 0)?,
+        });
+    }
+    let [mode, at, id, ""] = parts.as_slice() else {
+        return None;
+    };
+    let expected = if sort == search_query::SearchSort::Oldest {
+        "oldest"
+    } else {
+        "relevance"
+    };
+    if *mode != expected {
+        return None;
+    }
+    Some(search_query::SearchCursor::Message {
+        created_at: campfire_db::Timestamp::parse_db(at)?,
+        id: id.parse().ok()?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn relevance_rejects_obsolete_offset_cursors() {
+        let cursor = URL_SAFE_NO_PAD.encode("relevance|offset|40");
+        assert_eq!(
+            decode_search_cursor(&cursor, search_query::SearchSort::Relevance),
+            None
+        );
+    }
+
+    #[test]
+    fn sorted_cursors_round_trip_and_reject_wrong_modes_and_invalid_scores() {
+        use search_query::{SearchCursor, SearchSort};
+        let created_at = campfire_db::Timestamp::parse_db("2026-10-06 12:00:00.123456").unwrap();
+        let message = SearchCursor::Message { created_at, id: 42 };
+        for (sort, key) in [
+            (SearchSort::Newest, message),
+            (SearchSort::Oldest, message),
+            (SearchSort::Relevance, message),
+            (
+                SearchSort::Relevance,
+                SearchCursor::Relevance {
+                    score: 3,
+                    created_at,
+                    id: 42,
+                },
+            ),
+        ] {
+            let cursor = encode_search_cursor(key, sort);
+            assert_eq!(decode_search_cursor(&cursor, sort), Some(key));
+            if sort != SearchSort::Newest {
+                assert_eq!(decode_search_cursor(&cursor, SearchSort::Newest), None);
+            }
+        }
+        for raw in [
+            "relevance|offset|0",
+            "relevance|offset|-1",
+            "relevance|offset|1.5",
+            "relevance|offset|4294967296",
+            "relevance|2026-10-06 12:00:00|42|-0.000123",
+            "relevance|2026-10-06 12:00:00|42|NaN",
+            "relevance|2026-10-06 12:00:00|42|1.5",
+            "relevance|2026-10-06 12:00:00|42|4294967296",
+            "relevance|2026-10-06 12:00:00|-1|3",
+            "relevance|not-a-time|42|3",
+        ] {
+            let invalid = URL_SAFE_NO_PAD.encode(raw);
+            assert_eq!(decode_search_cursor(&invalid, SearchSort::Relevance), None);
+        }
+        let relevance = encode_search_cursor(
+            SearchCursor::Relevance {
+                score: 3,
+                created_at,
+                id: 42,
+            },
+            SearchSort::Relevance,
+        );
+        assert_eq!(decode_search_cursor(&relevance, SearchSort::Oldest), None);
+        assert_eq!(decode_search_cursor("garbage", SearchSort::Oldest), None);
+    }
+
+    #[test]
     fn chips_name_their_operator_and_value() {
-        let query = SearchQuery::parse("launch from:@ada, has:FILE is:thread on:2026-01-02");
+        let query =
+            SearchQuery::parse_extended("launch from:@ada, has:FILE is:thread on:2026-01-02");
         let chips = query.chips.into_iter().filter_map(chip).collect::<Vec<_>>();
         let seen = chips
             .iter()

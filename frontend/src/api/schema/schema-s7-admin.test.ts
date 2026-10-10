@@ -49,9 +49,14 @@ describe("S7 admin schemas", () => {
       joinUrl: "https://chat.example/join/abc-123",
       canAdminister: true,
       restrictRoomCreationToAdministrators: false,
+      uploadLimitBytes: 100 * 1024 * 1024,
       version: "2.0.0",
     });
-    roundTrips(UpdateWorkspace, { name: null, restrictRoomCreationToAdministrators: true });
+    roundTrips(UpdateWorkspace, {
+      name: null,
+      restrictRoomCreationToAdministrators: true,
+      uploadLimitBytes: null,
+    });
     roundTrips(UpdateLogo, { signedId: "blob-1" });
     roundTrips(UpdateBanner, { signedId: "blob-2" });
     roundTrips(WorkspaceBranding, {
