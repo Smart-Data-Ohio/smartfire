@@ -3,7 +3,7 @@ name: Frontend
 # The required Frontend job reports on every PR and main push. It runs typecheck, lint,
 # Vitest and a production build for frontend inputs, then embeds that dist in crates/spa.
 # The mock e2e server uses Vite and the in-memory backend; it does not compile Rust.
-# Three advisory browser shards run only when those inputs change.
+# Four advisory browser shards run only when those inputs change.
 
 on:
   push:
@@ -182,7 +182,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [ 1, 2, 3 ]
+        shard: [ 1, 2, 3, 4 ]
     defaults:
       run:
         working-directory: frontend

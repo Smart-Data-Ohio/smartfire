@@ -115,6 +115,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             .filter(|(_, name)| {
                 !(table == "users"
                     && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname"))
+                    && !(table == "rooms" && matches!(name.as_str(), "tags_required" | "default_board_tag_id"))
             })
             .filter(|(_, name)| !(table == "rooms" && name.as_str() == "topic"))
             .map(|(i, name)| {
@@ -139,7 +140,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
 fn tables(conn: &Connection) -> Vec<String> {
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'workspace_categories') ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'workspace_categories') ORDER BY name",
         [],
         |r| r.get(0),
     )

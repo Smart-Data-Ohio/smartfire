@@ -346,9 +346,11 @@ impl ChannelThread {
                 attributes.parent_message_id,
             )?),
         };
-        let tag_names = attributes
-            .tag_names
-            .map(|names| normalize_tag_names(&names));
+        let tag_names = if room.board() {
+            Some(crate::BoardTagPolicy::post_tags(tx.conn(), room.id, attributes.tag_names.as_deref().unwrap_or_default())?)
+        } else {
+            attributes.tag_names.map(|names| normalize_tag_names(&names))
+        };
         let work_status = attributes.work_status.filter(|status| !status.is_empty());
         let mut thread = ChannelThread {
             id: 0,
@@ -515,7 +517,8 @@ impl ChannelThread {
                     "tags",
                     format!("must be at most {} characters", thread_tag::TAG_NAME_LIMIT),
                 );
-            } else if !thread_tag::valid_tag_name(name) {
+            } else if !thread_tag::valid_tag_name(name)
+                && !(room.board() && crate::BoardTag::canonical_name(conn, room.id, name)?.as_deref() == Some(name.as_str())) {
                 errors.add("tags", "use lowercase letters, digits, and hyphens");
             }
         }

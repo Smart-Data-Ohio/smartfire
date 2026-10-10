@@ -204,6 +204,9 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
             .query_map([], |row| {
                 let mut value = json!({});
                 for (index, column) in columns.iter().enumerate() {
+                    if table == "rooms" && matches!(column.as_str(), "tags_required" | "default_board_tag_id") {
+                        continue;
+                    }
                     if (table == "rooms" && column == "client_room_id")
                         || (table == "channel_threads" && column == "client_post_id")
                     {

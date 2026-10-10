@@ -140,10 +140,9 @@ impl ChannelThread {
             );
         }
         if !campfire_richtext::ruby::is_blank(tag) {
-            sql.push_str(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE name=?)");
-            values.push(Value::Text(rails_compat::unicode::downcase(
-                campfire_richtext::ruby::strip(tag),
-            )));
+            let names = ThreadTag::matching_names(conn, room_id, campfire_richtext::ruby::strip(tag))?;
+            sql.push_str(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE name IN (SELECT value FROM json_each(?)))");
+            values.push(Value::Text(serde_json::json!(names).to_string()));
         }
         sql.push_str(" ORDER BY last_activity_at DESC, id DESC LIMIT ?");
         values.push(Value::Integer(

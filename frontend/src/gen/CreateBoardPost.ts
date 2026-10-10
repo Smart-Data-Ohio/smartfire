@@ -15,8 +15,8 @@ import type { WorkStatus } from "./WorkStatus";
  * Errors:
  * - 404 unless the room is a board the viewer belongs to;
  * - `Validation` on `name` (blank, or past 100 characters);
- * - `Validation` on `tags` (more than 5 after normalising, one past 30 characters, or not
- *   `[a-z0-9][a-z0-9-]*` once lower-cased);
+ * - `Validation` on `tags` (more than 5 after normalising, a free-text name past 30 characters
+ *   or outside `[a-z0-9][a-z0-9-]*`, or no catalog tag when the board requires one and has no default);
  * - `Validation` on `ownerId` "must be an active human member of the parent room" (or, for an
  *   agent, "must be an active agent member of the parent room with permission to post");
  * - `Validation` on `message` (past 50,000 characters).
@@ -35,7 +35,8 @@ status: WorkStatus,
  */
 ownerId: number | null,
 /**
- * Each is stripped and lower-cased; blanks and repeats are dropped; up to 5.
+ * Catalog names resolve without case to their display label; other names are stripped
+ * and lower-cased. Blanks and repeats are dropped; up to 5 including any required default.
  */
 tags: Array<string>,
 /**

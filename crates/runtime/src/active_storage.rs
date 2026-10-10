@@ -58,6 +58,40 @@ pub mod test_hooks {
     type Hook = Box<dyn FnOnce() + Send>;
 
     static BETWEEN_ANALYSIS_READS: Mutex<Vec<(i64, Hook)>> = Mutex::new(Vec::new());
+    static AFTER_BLOB_LOOKUP: Mutex<Vec<(String, Hook)>> = Mutex::new(Vec::new());
+    static BEFORE_FILE_DELETION: Mutex<Vec<(String, Hook)>> = Mutex::new(Vec::new());
+
+    /// Pause a request after loading its blob, before the authorization read.
+    pub fn after_blob_lookup(key: String, hook: impl FnOnce() + Send + 'static) {
+        AFTER_BLOB_LOOKUP.lock().unwrap().push((key, Box::new(hook)));
+    }
+
+    pub(super) fn reached_blob_lookup(key: &str) {
+        let hook = {
+            let mut hooks = AFTER_BLOB_LOOKUP.lock().unwrap();
+            let found = hooks.iter().position(|(candidate, _)| candidate == key);
+            found.map(|index| hooks.swap_remove(index).1)
+        };
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
+
+    /// Pause purge after its database commit, while the blob's file still exists.
+    pub fn before_file_deletion(key: String, hook: impl FnOnce() + Send + 'static) {
+        BEFORE_FILE_DELETION.lock().unwrap().push((key, Box::new(hook)));
+    }
+
+    pub(super) fn reached_file_deletion(key: &str) {
+        let hook = {
+            let mut hooks = BEFORE_FILE_DELETION.lock().unwrap();
+            let found = hooks.iter().position(|(candidate, _)| candidate == key);
+            found.map(|index| hooks.swap_remove(index).1)
+        };
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
 
     /// Run `hook` once on the reader, after analysis loads blob `blob_id` and before it decides
     /// whether the blob is branding.
@@ -165,7 +199,14 @@ async fn set_blob(c: &mut Ctx) -> Result<Blob> {
     };
     let mut blob = c.app()
         .db
-        .read(move |conn| Blob::find(conn, blob_id).map_err(storage_error))
+        .read(move |conn| {
+            let blob = Blob::find(conn, blob_id).map_err(storage_error)?;
+            #[cfg(feature = "test-support")]
+            if let Some(blob) = &blob {
+                test_hooks::reached_blob_lookup(&blob.key);
+            }
+            Ok(blob)
+        })
         .await
         .map_err(Error::internal)?
         .ok_or(Error::NotFound)?;
@@ -188,6 +229,8 @@ async fn authorize_poll_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
              ) SELECT b.id, json_extract(b.metadata, '$.poll_media') = 1 FROM roots r JOIN active_storage_blobs b ON b.id=r.id"
         )?;
         let blobs = roots.query_map([blob_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<bool>>(1)?.unwrap_or(false))))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        // Purge may have committed since the URL lookup. A missing blob is never public.
+        if !blobs.iter().any(|(id, _)| *id == blob_id) { return Ok(None); }
         let mut restricted = false;
         let mut rooms = Vec::new();
         for (id, marked) in blobs {
@@ -206,8 +249,8 @@ async fn authorize_poll_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
                 rooms.extend(statement.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
             }
         }
-        Ok((restricted, rooms))
-    }).await.map_err(Error::internal)?;
+        Ok(Some((restricted, rooms)))
+    }).await.map_err(Error::internal)?.ok_or(Error::NotFound)?;
     if !restricted { return Ok(false); }
     let (user_id, verified) = if let Some(session) = find_session_by_cookie(c).await? {
         (session.user_id, session.two_factor_verified())
@@ -914,11 +957,8 @@ pub async fn disk_show(c: &mut Ctx) -> Result {
     let blob_id = c.app().db.read(move |conn| {
         use rusqlite::OptionalExtension;
         Ok(conn.query_row("SELECT id FROM active_storage_blobs WHERE key=?", [key.key], |r| r.get::<_, i64>(0)).optional()?)
-    }).await.map_err(Error::internal)?;
-    let restricted = match blob_id {
-        Some(id) => authorize_poll_media(c, id).await?,
-        None => false,
-    };
+    }).await.map_err(Error::internal)?.ok_or(Error::NotFound)?;
+    let restricted = authorize_poll_media(c, blob_id).await?;
     let response = disk_serve(c)?;
     Ok(response.header(header::CACHE_CONTROL, if restricted { "private, no-store" } else { "max-age=3600, public" }))
 }
@@ -1259,7 +1299,11 @@ pub async fn purge(app: &App, blob_id: i64) -> anyhow::Result<()> {
 }
 
 async fn delete_files(storage: Arc<Storage>, blob: Blob) -> anyhow::Result<()> {
-    tokio::task::spawn_blocking(move || storage.delete_files(&blob)).await??;
+    tokio::task::spawn_blocking(move || {
+        #[cfg(feature = "test-support")]
+        test_hooks::reached_file_deletion(&blob.key);
+        storage.delete_files(&blob)
+    }).await??;
     Ok(())
 }
 

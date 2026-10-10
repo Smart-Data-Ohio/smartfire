@@ -326,7 +326,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/threads",
             get(action(threads::threads)).post(unparsed_action(threads::create)),
         )
-        .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)))
+        .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)).patch(unparsed_action(boards::update_policy)))
+        .route("/api/v1/rooms/{room_id}/board/tags", get(action(boards::catalog)).post(unparsed_action(boards::create_tag)))
+        .route("/api/v1/rooms/{room_id}/board/tags/order", put(unparsed_action(boards::reorder_tags)))
+        .route("/api/v1/rooms/{room_id}/board/tags/{id}", patch(unparsed_action(boards::update_tag)).delete(action(boards::destroy_tag)))
         .route(
             "/api/v1/rooms/{room_id}/automations",
             get(action(board_automations::show)),

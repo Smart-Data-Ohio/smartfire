@@ -82,7 +82,7 @@ CREATE INDEX "index_memberships_on_user_id" ON "memberships" ("user_id");
 CREATE TABLE "room_categories" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "collapsed" boolean DEFAULT FALSE NOT NULL, "created_at" datetime(6) NOT NULL, "name" varchar NOT NULL, "position" integer DEFAULT 0 NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
 CREATE INDEX "index_room_categories_on_user_and_position" ON "room_categories" ("user_id", "position");
 CREATE INDEX "index_room_categories_on_user_id" ON "room_categories" ("user_id");
-CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL, "client_room_id" varchar, topic TEXT, workspace_category_id INTEGER REFERENCES workspace_categories(id) ON DELETE SET NULL, workspace_position INTEGER);
+CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL, "client_room_id" varchar, topic TEXT, workspace_category_id INTEGER REFERENCES workspace_categories(id) ON DELETE SET NULL, workspace_position INTEGER, tags_required BOOLEAN NOT NULL DEFAULT 0, default_board_tag_id INTEGER REFERENCES board_tags(id) ON DELETE SET NULL);
 CREATE UNIQUE INDEX "index_rooms_on_direct_member_key" ON "rooms" ("direct_member_key") WHERE direct_member_key IS NOT NULL AND deleted_at IS NULL;
 CREATE UNIQUE INDEX "index_rooms_on_inbound_email_token" ON "rooms" ("inbound_email_token");
 CREATE TABLE "streams" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "ended_at" datetime(6), "membership_id" integer NOT NULL, "quality" varchar NOT NULL, "room_id" integer NOT NULL, "started_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
@@ -973,3 +973,13 @@ CREATE TABLE workspace_categories (
 );
 CREATE INDEX index_workspace_categories_on_position ON workspace_categories (position);
 CREATE INDEX index_rooms_on_workspace_category_id_and_position ON rooms (workspace_category_id, workspace_position);
+CREATE TABLE board_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  emoji TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+);
+CREATE UNIQUE INDEX index_board_tags_on_room_id_and_name ON board_tags(room_id, lower(name));

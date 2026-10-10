@@ -130,7 +130,7 @@ pub use session::{NewSession, Session};
 pub use sound::Sound;
 pub use two_factor::{ChallengeFailure, TwoFactorBackupCode, TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret};
 pub use thread_membership::{ThreadInvolvement, ThreadMembership};
-pub use thread_tag::ThreadTag;
+pub use thread_tag::{BoardTag, BoardTagPolicy, ThreadTag};
 pub use user::{NewUser, PasswordDigest, Role, Status, User, UserChanges};
 pub use user_status_settings::{MeetingCache, UserStatusSettings};
 pub use notification_policy::{NotificationKind, NotificationPolicy};

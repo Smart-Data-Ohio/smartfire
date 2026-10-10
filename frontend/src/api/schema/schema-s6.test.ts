@@ -23,6 +23,9 @@ describe("S6 board schemas", () => {
       ownerCandidates: [{ userId: 7, provider: null, description: null }],
       tagSuggestions: ["api"],
       users: [userFixture(7)],
+      tags: [],
+      tagsRequired: false,
+      defaultBoardTagId: null,
     });
 
     expect(form.tagSuggestions).toEqual(["api"]);
