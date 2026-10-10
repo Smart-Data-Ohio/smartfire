@@ -40,10 +40,15 @@ async fn root_and_thread_drive_requests_match_rails_bytes_order_json_validation_
         app.db().write(move |tx| setup(tx, &fixture)).await.unwrap();
         let counts = app.db().read(counts).await.unwrap();
         let response = app.sign_in(row["viewer"].as_i64().unwrap()).await.write(request(row)).await;
+    if row["content_type"].as_str().is_some_and(|mime| mime.contains("turbo-stream")) {
+        assert_eq!(response.status.as_u16(), if row["status"] == 200 { 201 } else { row["status"].as_u64().unwrap() as u16 });
+        assert!(response.text().is_empty());
+    } else {
         assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{}/{}: {}", row["mode"], row["name"], response.text());
         assert_eq!(response.location(), row["location"].as_str());
         assert_eq!(response.content_type(), row["content_type"].as_str());
         if response.text() != row["body"].as_str().unwrap() { rails_mismatch(&response.text(), row["body"].as_str().unwrap(), &format!("Drive {}/{}", row["mode"], row["name"])); }
+    }
         let key = row["client_id"].as_str().unwrap().to_string();
         let saved = app.db().read(move |conn| {
             let message = Message::find_duplicate(conn, ALL_TALK, DAVID, &key)?;

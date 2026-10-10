@@ -136,7 +136,7 @@ export function MessageRow({
       <Gutter creatorId={message.creatorId} createdAt={message.createdAt} groupStart={header} />
       <div className="message-main">
         <MessageFlags pinned={message.pinned} saved={row.saved} />
-        <ReplyQuote replyToMessageId={message.replyToMessageId} />
+        <ReplyQuote message={message} />
         {header ? (
           <MessageHeader
             creatorId={message.creatorId}
@@ -208,7 +208,7 @@ export function PendingRow({ pending, groupStart }: PendingRowProps) {
     >
       <Gutter creatorId={pending.creatorId} createdAt={pending.createdAt} groupStart={header} />
       <div className="message-main">
-        <ReplyQuote replyToMessageId={pending.replyToMessageId} />
+        <ReplyQuote message={pending} />
         {header ? (
           <MessageHeader
             creatorId={pending.creatorId}

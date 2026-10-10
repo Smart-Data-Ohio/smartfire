@@ -3,7 +3,7 @@
 //! change durable push arguments and skip scheduled delivery; each witness is real.
 use super::{
     comparison_support,
-    quote_integration_tests::{insert_rows, stream},
+    quote_integration_tests::{insert_rows},
 };
 use crate::controllers::presenters::test_support::*;
 use serde_json::{Value, json};
@@ -41,7 +41,7 @@ async fn periodic_wide_and_due_delivery_match_rails_full_rows_jobs_and_frames() 
             })
             .await
             .unwrap();
-        let (mut socket, server) = stream(&app).await;
+
         let mut periodic =
             crate::jobs::periodic::periodic(crate::jobs::periodic::PeriodicIntervals {
                 reminders: Duration::from_secs(30),
@@ -123,14 +123,7 @@ async fn periodic_wide_and_due_delivery_match_rails_full_rows_jobs_and_frames() 
                 step["jobs"],
                 "periodic actual durable jobs differ from Rails"
             );
-            comparison_support::published_frames(
-                &app,
-                &mut socket,
-                &step["frames"],
-                "periodic actual publications",
-            )
-            .await;
-            socket.assert_silent().await;
+
             let reads = query_log.lock().unwrap().len();
             let key = format!("{}/{index}", group["kind"]);
             if let Some(previous) = counts.insert(key, reads) {
@@ -142,7 +135,7 @@ async fn periodic_wide_and_due_delivery_match_rails_full_rows_jobs_and_frames() 
             );
             ticks += 1;
         }
-        server.abort();
+
     }
     assert_eq!(ticks, 24);
     println!(

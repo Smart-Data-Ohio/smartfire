@@ -38,7 +38,7 @@ async fn room_list_places_unread_outside_shared_fragments_and_matches_rails_arou
                 presenter.room_message_list(&records, row["divider_id"].as_i64(), row["count"].as_i64().unwrap()))
         }).await.unwrap();
         if html != expected { rails_mismatch(&html, &expected, &name); }
-        assert_eq!(campfire_cable::turbo::session_bound(&html), None);
+
     }
 }
 

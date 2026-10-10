@@ -4,14 +4,13 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_channels::channels::message_features::origin as renderer_origin;
 use campfire_db::models::forwarder::{self, Destination};
 use campfire_db::{Boost, ChannelThread, Message, MessagePin, Room, SavedItem};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as classic, boosts};
 use campfire_runtime::concerns;
 use campfire_web::controllers::messages::rendered;
-use campfire_runtime::context::{self as page, db_error};
+use campfire_runtime::context::db_error;
 use campfire_runtime::messaging::ForwarderCopier;
 
 use crate::dto;
@@ -350,13 +349,11 @@ async fn create_pin(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (message, _) = reachable(c).await?;
     let pinner = concerns::require_current_user(c)?.id;
-    let origin = page::renderer_base_url(c);
     let pinning = message.clone();
     let pinned = c
         .app()
         .db
-        .write_scoped(
-            move || renderer_origin(&origin),
+        .write(
             move |tx| MessagePin::pin(tx, &pinning, pinner),
         )
         .await
@@ -376,12 +373,10 @@ async fn create_pin(c: &mut Ctx) -> Result {
 async fn delete_pin(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (message, _) = reachable(c).await?;
-    let origin = page::renderer_base_url(c);
     let message_id = message.id;
     c.app()
         .db
-        .write_scoped(
-            move || renderer_origin(&origin),
+        .write(
             move |tx| {
                 if let Some(pin) = MessagePin::find_by_message(tx.conn(), message_id)? {
                     pin.unpin(tx)?;

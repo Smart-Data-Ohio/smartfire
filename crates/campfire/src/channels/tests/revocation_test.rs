@@ -14,13 +14,10 @@ const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reco
 async fn room_channels(app: &TestApp) -> Vec<(String, String)> {
     let designers = app.room("designers").await;
     let gid = room_gid(&designers).to_param();
-    let messages = format!("{gid}:messages");
-    let signed = app.signed_stream_name(&[&gid, "messages"]);
     vec![
         (room_identifier("RoomChannel", designers.id), format!("room:{gid}")),
         (room_identifier("PresenceChannel", designers.id), format!("presence:{gid}")),
         (room_identifier("TypingNotificationsChannel", designers.id), format!("typing_notifications:{gid}")),
-        (identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed })), messages.clone()),
     ]
 }
 
@@ -75,13 +72,6 @@ async fn removing_the_membership_disconnects_and_resubscribing_is_rejected() {
     for (channel, _) in room_channels(&app).await {
         kevin.reject(&channel).await;
     }
-    // The stock channel doesn't serve the stream either.
-    let designers = app.room("designers").await;
-    let stock = identifier(json!({
-        "channel": "Turbo::StreamsChannel",
-        "signed_stream_name": app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]),
-    }));
-    kevin.reject(&stock).await;
     // Rooms kevin is still in keep working.
     kevin.confirm(&room_identifier("RoomChannel", id("bender_and_kevin"))).await;
 }

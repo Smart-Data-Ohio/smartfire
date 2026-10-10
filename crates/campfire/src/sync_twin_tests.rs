@@ -15,6 +15,9 @@ const PRIMITIVES: &[&str] = &[
     "new",
     "install_sync_renderer",
     "sync_message",
+    "sync_message_checked",
+    "sync_digest_message",
+    "sync_digest_messages",
     "sync_thread_indicator",
     "sync_unread_rows",
     "sync_membership_row",
@@ -32,12 +35,6 @@ const PRIMITIVES: &[&str] = &[
     "sync_poll",
     "sync_events_changed",
     "sync_message_cards",
-    "turbo",
-    "append",
-    "prepend",
-    "replace",
-    "update",
-    "remove",
     "channel",
 ];
 
@@ -46,6 +43,8 @@ const PRIMITIVES: &[&str] = &[
 /// app has no broadcast for them).
 const FIXED: &[&str] = &[
     "broadcasts::read_room",
+    "messages::rendered::broadcast_tombstones",
+    "link_embeds::broadcast_message",
     "TypingNotificationsChannel",
     "campfire_api::saved_items",
     "workspace_branding::publish",

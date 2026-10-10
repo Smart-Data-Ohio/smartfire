@@ -92,12 +92,27 @@ function QuoteLink({
  * The line above a reply (or one being sent): who it answers and the start of what they said,
  * linking to the original.
  */
-export function ReplyQuote({ replyToMessageId }: { readonly replyToMessageId: number | null }) {
+export function ReplyQuote({
+  message,
+}: {
+  readonly message: Pick<MessageDTO, "replyToMessageId" | "replyTargetDeletedAt">;
+}) {
+  const { replyToMessageId, replyTargetDeletedAt } = message;
+
   const source = useStore((state) =>
     replyToMessageId === null ? undefined : state.messages[replyToMessageId],
   );
 
   const author = useUser(source?.creatorId);
+
+  if (replyTargetDeletedAt != null) {
+    return (
+      <div className="message-reply">
+        <Icon name="corner-up-left" size={12} className="message-reply-icon" />
+        <span className="message-reply-missing">Replying to a deleted message</span>
+      </div>
+    );
+  }
 
   if (replyToMessageId === null) {
     return null;

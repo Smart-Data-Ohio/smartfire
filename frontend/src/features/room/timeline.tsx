@@ -21,6 +21,7 @@ import { MessageRow, PendingRow } from "./message-row.tsx";
 import {
   type CommittedEdges,
   firstMessageKey,
+  messageKey,
   prepended,
   type TimelineItem,
   timelineItems,
@@ -40,8 +41,8 @@ const LIVE_WINDOW_MS = 8000;
 
 /**
  * Virtua measures the rows at the end before a smooth scroll starts, and drops the scroll when
- * they aren't measured within 150 ms (a busy main thread). Unmoved this long, the jump finishes
- * at once instead.
+ * they aren't measured within 150 ms of the last measurement (a busy main thread). Unmoved this
+ * long after the list last changed size, the jump finishes at once instead.
  */
 const SMOOTH_START_MS = 200;
 
@@ -170,6 +171,14 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const now = Date.now();
   const items = timelineItems({ timeline, messages, pending, now });
 
+  // The row of the viewer's latest send from here: its key is the same pending and confirmed.
+  const sentKeyRef = useRef<string | null>(null);
+  const lastPending = pending.at(-1);
+
+  if (lastPending !== undefined) {
+    sentKeyRef.current = messageKey(lastPending.clientMessageId);
+  }
+
   useChatSounds(roomId, () => {
     const list = listRef.current;
     const latestIds = new Set(timeline.ids.slice(-LATEST_PAGE_MESSAGES));
@@ -240,6 +249,19 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       claimReaderRef.current();
     },
   });
+
+  // A send stays mounted while it's the last row. When the present replaces the window it was
+  // sent from, Virtua reads the new rows at the sizes the old ones had at those indices and
+  // corrects the scroll offset as it measures them; meanwhile the end can fall outside its range
+  // and the row just sent would blink out.
+  const lastIndex = items.length - 1;
+
+  const mounted =
+    lastIndex >= 0 &&
+    items[lastIndex]?.key === sentKeyRef.current &&
+    !keepMounted.includes(lastIndex)
+      ? [...keepMounted, lastIndex]
+      : keepMounted;
 
   /** Ends placement for `key`, so newer paging is allowed to follow the present. */
   const releasePlacement = (key: string) => {
@@ -624,7 +646,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   /**
    * Scrolls to the last row: smoothly, unless motion is reduced. A smooth scroll that hasn't
-   * started by `SMOOTH_START_MS` was dropped, and the list goes to the end at once.
+   * started `SMOOTH_START_MS` after the rows stopped measuring was dropped, and the list goes to
+   * the end at once. Timed from the call alone, a slow measurement would cut short a smooth
+   * scroll that Virtua had only just started.
    */
   const scrollToEnd = () => {
     const list = listRef.current;
@@ -644,13 +668,20 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     scrollList(items.length - 1, { align: "end", smooth: true });
 
     const from = list.scrollOffset;
-    const started = performance.now();
+    let size = list.scrollSize;
+    let started = performance.now();
 
     const check = () => {
       const current = listRef.current;
 
       if (current === null || current.scrollOffset !== from) {
         return;
+      }
+
+      // Rows measured since: Virtua's wait starts over, and so does this one.
+      if (current.scrollSize !== size) {
+        size = current.scrollSize;
+        started = performance.now();
       }
 
       if (performance.now() - started < SMOOTH_START_MS) {
@@ -716,7 +747,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             style={LIST_STYLE}
             shift={shift}
             bufferSize={600}
-            keepMounted={keepMounted}
+            keepMounted={mounted}
             onScroll={onScroll}
             onScrollCapture={(event) => {
               if (event.target === event.currentTarget)

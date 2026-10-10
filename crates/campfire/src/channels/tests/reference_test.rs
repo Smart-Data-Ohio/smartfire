@@ -309,7 +309,7 @@ async fn unread_rooms_an_outsider_is_not_told_about_activity_in_a_room_they_cant
     let message = app
         .create_message("bender_and_kevin", "kevin", "Private", "outsider")
         .await;
-    app.message_create(&direct, &message).await;
+    app.unread_room(&direct, &message).await;
     jz.assert_silent().await;
 }
 
@@ -324,7 +324,7 @@ async fn unread_rooms_a_member_is_told_about_activity_in_their_own_room() {
     let message = app
         .create_message("bender_and_kevin", "bender", "Private", "member")
         .await;
-    app.message_create(&direct, &message).await;
+    app.unread_room(&direct, &message).await;
     assert_eq!(
         kevin.next_text().await,
         delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, direct.id))
@@ -456,190 +456,6 @@ async fn typing_revoked_membership_stops_typing_and_prevents_reconnection() {
     kevin.unsubscribe(&thread_typing).await;
     kevin.reject(&thread_typing).await;
 }
-
-// room_messages_channel_test.rb
-
-fn room_messages(signed: impl Into<serde_json::Value>) -> String {
-    identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed.into() }))
-}
-
-fn stock_turbo(signed: impl Into<serde_json::Value>) -> String {
-    identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": signed.into() }))
-}
-
-#[tokio::test]
-async fn room_messages_a_member_may_subscribe_to_a_rooms_message_stream() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let stream = format!("{}:messages", room_gid(&designers).to_param());
-    let subscription =
-        room_messages(app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]));
-    let mut kevin = app.connect("kevin").await;
-    kevin.confirm(&subscription).await;
-    assert_has_stream(&app, &mut kevin, &subscription, &stream).await;
-}
-
-#[tokio::test]
-async fn room_messages_a_user_who_was_never_a_member_may_not_subscribe() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let mut bender = app.connect("bender").await;
-    bender
-        .reject(&room_messages(app.signed_stream_name(&[
-            &room_gid(&designers).to_param(),
-            "messages",
-        ])))
-        .await;
-}
-
-#[tokio::test]
-async fn room_messages_a_revoked_member_may_not_resubscribe_with_a_stream_name_harvested_while_a_member()
- {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let subscription =
-        room_messages(app.signed_stream_name(&[&room_gid(&designers).to_param(), "messages"]));
-    let mut kevin = app.connect("kevin").await;
-    kevin.confirm(&subscription).await;
-
-    let room = designers.clone();
-    app.db
-        .write(move |tx| room.revoke_from(tx, &[id("kevin")]))
-        .await
-        .unwrap();
-    kevin.until_closed().await;
-
-    let mut kevin = app.connect("kevin").await;
-    kevin.reject(&subscription).await;
-}
-
-#[tokio::test]
-async fn room_messages_an_unsigned_stream_name_is_rejected() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let mut kevin = app.connect("kevin").await;
-    kevin
-        .reject(&room_messages(format!(
-            "{}:messages",
-            room_gid(&designers).to_param()
-        )))
-        .await;
-}
-
-#[tokio::test]
-async fn room_messages_a_missing_stream_name_is_rejected() {
-    let app = start().await;
-    let mut kevin = app.connect("kevin").await;
-    kevin.reject(&channel("RoomMessagesChannel")).await;
-}
-
-#[tokio::test]
-async fn room_messages_a_validly_signed_stream_name_for_another_room_the_user_isnt_in_is_rejected()
-{
-    let app = start().await;
-    let hq = app.room("hq").await;
-    let mut bender = app.connect("bender").await;
-    bender
-        .reject(&room_messages(
-            app.signed_stream_name(&[&room_gid(&hq).to_param(), "messages"]),
-        ))
-        .await;
-}
-
-#[tokio::test]
-async fn room_messages_the_stock_turbo_channel_refuses_to_serve_a_room_message_stream() {
-    let app = start().await;
-    let designers = app.room("designers").await;
-    let mut kevin = app.connect("kevin").await;
-    kevin
-        .reject(&stock_turbo(app.signed_stream_name(&[
-            &room_gid(&designers).to_param(),
-            "messages",
-        ])))
-        .await;
-}
-
-#[tokio::test]
-async fn room_messages_the_stock_turbo_channel_still_serves_the_room_list_stream() {
-    let app = start().await;
-    let mut kevin = app.connect("kevin").await;
-    let rooms = stock_turbo(app.signed_stream_name(&["rooms"]));
-    kevin.confirm(&rooms).await;
-    assert_has_stream(&app, &mut kevin, &rooms, "rooms").await;
-}
-
-#[tokio::test]
-async fn thread_messages_a_parent_room_member_may_subscribe_to_a_thread_message_stream() {
-    let app = start().await;
-    let thread = app
-        .create_thread("designers", "jz", "Guarded thread stream")
-        .await;
-    let gid = thread_gid(thread).to_param();
-    let subscription = room_messages(app.signed_stream_name(&[&gid, "messages"]));
-    let mut kevin = app.connect("kevin").await;
-    kevin.confirm(&subscription).await;
-    assert_has_stream(&app, &mut kevin, &subscription, &format!("{gid}:messages")).await;
-}
-
-#[tokio::test]
-async fn thread_messages_an_outsider_may_not_subscribe_to_a_thread_message_stream() {
-    let app = start().await;
-    let thread = app
-        .create_thread("designers", "jz", "Guarded thread stream")
-        .await;
-    let mut bender = app.connect("bender").await;
-    bender
-        .reject(&room_messages(app.signed_stream_name(&[
-            &thread_gid(thread).to_param(),
-            "messages",
-        ])))
-        .await;
-}
-
-#[tokio::test]
-async fn thread_messages_a_revoked_parent_room_member_may_not_resubscribe_to_a_harvested_thread_stream()
- {
-    let app = start().await;
-    let thread = app
-        .create_thread("designers", "jz", "Guarded thread stream")
-        .await;
-    let subscription =
-        room_messages(app.signed_stream_name(&[&thread_gid(thread).to_param(), "messages"]));
-    let mut kevin = app.connect("kevin").await;
-    kevin.confirm(&subscription).await;
-
-    let designers = app.room("designers").await;
-    app.db
-        .write(move |tx| designers.revoke_from(tx, &[id("kevin")]))
-        .await
-        .unwrap();
-    kevin.until_closed().await;
-
-    let mut kevin = app.connect("kevin").await;
-    kevin.reject(&subscription).await;
-}
-
-#[tokio::test]
-async fn thread_messages_the_stock_turbo_channel_refuses_a_thread_message_stream() {
-    let app = start().await;
-    let thread = app
-        .create_thread("designers", "jz", "Stock stream guard")
-        .await;
-    let mut kevin = app.connect("kevin").await;
-    let gid = thread_gid(thread).to_param();
-    kevin
-        .reject(&stock_turbo(app.signed_stream_name(&[&gid, "messages"])))
-        .await;
-    // `<gid>:threads`, the thread list's stream, is guarded the same way.
-    kevin
-        .reject(&stock_turbo(app.signed_stream_name(&[
-            &room_gid(&app.room("designers").await).to_param(),
-            "threads",
-        ])))
-        .await;
-}
-
-// workspace_presence_channel_test.rb
 
 fn workspace_presence() -> String {
     channel("WorkspacePresenceChannel")

@@ -8,7 +8,7 @@ use campfire_views::rooms::{FormRoom, OpenFormView, OpensEdit, OpensNew};
 
 use super::{
     Scope, ensure_can_administer, ensure_permission_to_create_rooms, redirect_to_room,
-    render_shared_room, room_icon_param, room_name_param, set_room,
+    room_icon_param, room_name_param, set_room,
 };
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, require_current_user};
@@ -115,15 +115,8 @@ pub async fn update(c: &mut Ctx) -> Result {
 }
 
 pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
-    let partials = render_shared_room(c, room).await?;
-    if update {
-        let header = super::render_shared_header(c, room).await?;
-        c.app()
-            .broadcasts
-            .open_room_update(room, &partials, Some(&header));
-    } else {
-        c.app().broadcasts.open_room_create(room, &partials);
-    }
+    if update { c.app().broadcasts.open_room_update(room); }
+    else { c.app().broadcasts.open_room_create(room); }
     Ok(())
 }
 

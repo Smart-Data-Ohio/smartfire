@@ -821,25 +821,10 @@ async fn administers_the_account() {
             .contains("<style data-turbo-track=\"reload\">body { --x: 1 }</style>")
     );
 
-    // The next page of people, as a turbo stream.
-    let page = admin
-        .request(
-            Method::GET,
-            "/account/users?page=2",
-            &[("accept", "text/vnd.turbo-stream.html")],
-            None,
-        )
-        .await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(
-        page.header("content-type")
-            .unwrap()
-            .starts_with("text/vnd.turbo-stream.html")
-    );
-    assert_eq!(
-        admin.get("/account/users").await.status,
-        StatusCode::NOT_ACCEPTABLE
-    );
+    // The former pagination producer resolves to SPA administration.
+    let page = admin.request(Method::GET, "/account/users?page=2", &[("accept", "text/vnd.turbo-stream.html")], None).await;
+    assert_redirect(&page, "http://campfire.test/app/admin/people");
+    assert_redirect(&admin.get("/account/users").await, "http://campfire.test/app/admin/people");
 
     // Members can see the account but not change it.
     let mut member = test.browser("198.51.100.12");
@@ -1346,8 +1331,7 @@ fn browser_cookie_deletion_requires_real_attribute() {
 
 #[path = "tests/navigation_matrix.rs"]
 mod navigation_matrix;
-#[path = "tests/named_ui_broadcasts.rs"]
-mod named_ui_broadcasts;
+
 
 #[path = "tests/sidebar_review.rs"]
 mod sidebar_review;

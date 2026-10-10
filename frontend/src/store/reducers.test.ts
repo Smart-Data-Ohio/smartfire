@@ -94,6 +94,28 @@ describe("applyPage", () => {
     expect(older.timelines[ROOM]?.before).toBeNull();
     expect(older.timelines[ROOM]?.generation).toBe(first.timelines[ROOM]?.generation);
   });
+
+  for (const threadId of [null, 70]) {
+    it(`reconciles fetched sends in a ${threadId === null ? "room" : "thread"} and keeps unsaved sends`, () => {
+      const sent = addPending(initialState, { ...pending, threadId });
+      const unsaved = { ...pending, threadId, clientMessageId: "mine-2" };
+      const start = addPending(sent, unsaved);
+      const confirmed = message(9, 30, { clientMessageId: "mine-1", creatorId: 1, threadId });
+
+      const next =
+        threadId === null
+          ? applyPage(start, ROOM, page([confirmed]), "replace")
+          : applyThreadPage(start, threadId, page([confirmed]), "replace");
+
+      expect(next.pending).toEqual({ "mine-2": unsaved });
+      expect(threadId === null ? next.pendingByRoom[ROOM] : next.pendingByThread[threadId]).toEqual(
+        ["mine-2"],
+      );
+      expect(
+        threadId === null ? next.timelines[ROOM]?.ids : next.threadTimelines[threadId]?.ids,
+      ).toEqual([9]);
+    });
+  }
 });
 
 describe("applyPage resync", () => {

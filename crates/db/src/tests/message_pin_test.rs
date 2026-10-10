@@ -2,7 +2,7 @@
 
 use super::channel_thread_test::{create_thread, frozen, post_reply, post_root};
 use super::*;
-use crate::broadcasts::{Broadcast, Partial, TurboAction};
+use crate::broadcasts::{Broadcast};
 use crate::models::message_pin::{CapReached, MAX_PER_ROOM, message_path};
 use crate::{Error, Membership, Message, MessagePin, Room, User};
 
@@ -34,8 +34,10 @@ fn pin_count(t: &TestDb) -> i64 {
 
 /// The broadcasts to `[designers, :messages]` since event `from`.
 fn room_broadcasts(t: &TestDb, from: usize) -> Vec<Broadcast> {
-    let stream = format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Closed", id("designers")).to_param());
-    t.events()[from..].iter().filter_map(|e| e.as_broadcast()).filter(|b| b.stream_name() == stream).collect()
+    t.events()[from..].iter().filter_map(|e| e.as_broadcast()).filter(|change| match change {
+        Broadcast::MessagePinned { message_id } | Broadcast::MessageCreated { message_id } => t.read(|conn| Message::find(conn, *message_id)).room_id == id("designers"),
+        _ => false,
+    }).collect()
 }
 
 fn newest_root(t: &TestDb, room: &str) -> Message {
@@ -89,29 +91,12 @@ fn pinning_broadcasts_the_badge_count_and_panel_list() {
     let from = t.events().len();
     pin(&t, &message, "david");
     let broadcasts = room_broadcasts(&t, from);
-    assert_eq!(broadcasts.len(), 4, "{broadcasts:#?}");
-    let room_id = id("designers");
-    let replaces: Vec<(String, Partial, bool)> = broadcasts
-        .iter()
-        .filter_map(|b| match b {
-            Broadcast::Turbo(s) if s.action == TurboAction::Replace => Some((s.target.clone(), s.partial.clone().unwrap(), s.maintain_scroll)),
-            _ => None,
-        })
-        .collect();
-    assert_eq!(
-        replaces,
-        vec![
-            ("pin_badge_message_0001".to_string(), Partial::PinBadge { message_id: message.id }, true),
-            (format!("pins_count_rooms_closed_{room_id}"), Partial::PinsCount { room_id }, true),
-            (format!("pins_list_rooms_closed_{room_id}"), Partial::PinsList { room_id }, true),
-        ]
-    );
     let note = newest_root(&t, "designers");
-    // `note&.broadcast_create` runs after the transaction, so after the pin's commit callbacks.
-    let Broadcast::Turbo(append) = &broadcasts[3] else { panic!() };
-    assert_eq!(append.action, TurboAction::Append);
-    assert_eq!(append.target, format!("messages_rooms_closed_{room_id}"));
-    assert_eq!(append.partial, Some(Partial::Message { message_id: note.id }));
+    assert_eq!(broadcasts, vec![
+        Broadcast::MessagePinned { message_id: message.id },
+        Broadcast::MessageCreated { message_id: note.id },
+    ]);
+
 }
 
 #[test]
@@ -125,7 +110,7 @@ fn pin_notes_are_quiet_system_notes() {
     pin(&t, &message, "david");
     let events = &t.events()[from..];
     assert!(!events.iter().any(|e| matches!(e, Event::PushMessage { .. } | Event::Job(_))), "{events:#?}");
-    assert!(!events.iter().filter_map(|e| e.as_broadcast()).any(|b| b.stream_name().contains("unread")), "no unread broadcast");
+    assert!(!events.iter().filter_map(|e| e.as_broadcast()).any(|b| b.channel_frame().is_some_and(|(stream, _)| stream.contains("unread"))), "no unread broadcast");
     assert_eq!(unread(&t), unread_before);
     assert_eq!(t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "activity_items""#, [])), items_before);
     let note = newest_root(&t, "designers");
@@ -273,8 +258,7 @@ fn unpinning_removes_the_pin_and_broadcasts_without_a_note() {
     let from = t.events().len();
     unpin(&t, &pin);
     let broadcasts = room_broadcasts(&t, from);
-    assert_eq!(broadcasts.len(), 3);
-    assert!(broadcasts.iter().all(|b| matches!(b, Broadcast::Turbo(s) if s.action == TurboAction::Replace && s.maintain_scroll)));
+    assert_eq!(broadcasts, vec![Broadcast::MessagePinned { message_id: message.id }]);
     assert_eq!(room_message_count(&t, "designers"), before);
     assert_eq!(pin_count(&t), 0);
     assert!(!t.read(|c| MessagePin::pinned(c, message.id)));
@@ -298,7 +282,7 @@ fn destroying_the_message_destroys_its_pin() {
     t.travel(60);
     t.write(move |tx| message.destroy(tx));
     assert_eq!(t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "message_pins""#, [])), 0);
-    assert_eq!(room_broadcasts(&t, from).iter().filter(|b| b.target().is_some_and(|t| t.starts_with("pin"))).count(), 3);
+    assert_eq!(t.events()[from..].iter().filter(|e| matches!(e.as_broadcast(), Some(Broadcast::MessagePinned { message_id }) if message_id == id("first"))).count(), 1);
     assert_eq!(t.read(|c| Room::find(c, id("designers"))).pins_changed_at, Some(t.now()));
 }
 

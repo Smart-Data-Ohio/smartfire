@@ -4,7 +4,7 @@
 pub mod by_bots;
 
 use askama::Template;
-use campfire_db::{Boost, Message, Room};
+use campfire_db::{Boost, Message};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, permit_keys};
 use campfire_views::messages as views;
 
@@ -64,17 +64,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 
 /// Message#broadcast_reactions_replace, shared by human, bot and agent reactions.
 pub async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
-    let (app, id, base) = (c.app().clone(), message.id, page::renderer_base_url(c));
-    c.app().db.read(move |conn| {
-        let message = Message::find(conn, id)?;
-        let p = crate::controllers::presenters::Presenter::new(conn, &app, None);
-        let view = p.message(&message)?;
-        let account = campfire_db::Account::first(conn)?;
-        let html = page::render_detached_at(&app, account.as_ref(), &base, |ctx| views::ReactionsPartial {ctx, message: &view}.render()).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-        let room = Room::find(conn, message.room_id)?;
-        app.broadcasts.message_reactions_replace(&room, &message, &html);
-        Ok(())
-    }).await.map_err(db_error)
+    c.app().broadcasts.message_reactions_replace(message);
+    Ok(())
 }
 
 /// `Current.user.reachable_messages.find(params[:message_id])`

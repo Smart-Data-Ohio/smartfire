@@ -21,6 +21,19 @@ const resendSchedule = Schedule.min([
   Schedule.spaced("30 seconds"),
 ]);
 
+const roomSendRevisions = new Map<number, number>();
+
+/** Local root-timeline send attempts, including retries, even after their pending rows disappear. */
+export function roomSendRevision(roomId: number): number {
+  return roomSendRevisions.get(roomId) ?? 0;
+}
+
+function noteSend(pending: PendingMessage): void {
+  if (pending.threadId === null) {
+    roomSendRevisions.set(pending.roomId, roomSendRevision(pending.roomId) + 1);
+  }
+}
+
 /** Where a message goes and what it carries besides its Markdown. */
 export interface SendOptions {
   /** Reply in this thread instead of on the room's root timeline. */
@@ -151,6 +164,7 @@ export class Outbox extends Context.Service<
             ? { ...pendingBase, driveFileIds }
             : pendingBase;
 
+        noteSend(pending);
         mutations.addPending(pending);
 
         yield* FiberMap.run(inFlight, clientMessageId, deliver(pending));
@@ -165,6 +179,7 @@ export class Outbox extends Context.Service<
           return;
         }
 
+        noteSend(pending);
         mutations.setPendingState(clientMessageId, "sending", null);
 
         yield* FiberMap.run(inFlight, clientMessageId, deliver(pending));

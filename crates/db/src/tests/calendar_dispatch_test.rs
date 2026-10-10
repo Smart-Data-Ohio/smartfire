@@ -1,7 +1,7 @@
 use super::*;
 use crate::models::calendar_dispatch::{dispatch_meetings, dispatch_ooo};
 use crate::models::user_status_settings::updates::{
-    MeetingRefreshJob, OooNoticeBroadcast, StatusBadgeBroadcast,
+    MeetingRefreshJob, StatusBadgeBroadcast,
 };
 use crate::{Broadcast, MeetingCache, Timestamp, UserStatusSettings};
 use rusqlite::{
@@ -98,7 +98,6 @@ fn ws17_calendar_two_ticks_match_rails_jobs_claims_update_counts_and_emission_or
                 .iter()
                 .filter_map(|e| match e {
                     Event::Broadcast(b) if b.kind == StatusBadgeBroadcast::KIND => Some("status"),
-                    Event::Broadcast(b) if b.kind == OooNoticeBroadcast::KIND => Some("ooo_notice"),
                     Event::Broadcast(b) => panic!("unexpected {b:?}"),
                     _ => None,
                 })
@@ -107,7 +106,7 @@ fn ws17_calendar_two_ticks_match_rails_jobs_claims_update_counts_and_emission_or
                 .as_array()
                 .unwrap()
                 .iter()
-                .map(|f| f["stream"].as_str().unwrap().rsplit(':').next().unwrap())
+                .filter_map(|f| { let stream = f["stream"].as_str().unwrap().rsplit(':').next().unwrap(); (stream == "status").then_some(stream) })
                 .collect::<Vec<_>>();
             assert_eq!(streams, expected_streams, "{} emission order", row["name"]);
             let settings = t.read(|c| UserStatusSettings::find(c, id("david")));
@@ -176,7 +175,7 @@ fn ws17_concurrent_dispatchers_broadcast_each_boundary_once() {
                 .iter()
                 .filter(|e| matches!(e, Event::Broadcast(_)))
                 .count(),
-            if kind == "meeting" { 1 } else { 2 }
+            1
         );
     }
 }
@@ -215,8 +214,6 @@ fn ws17_ooo_emits_all_badges_before_all_notices_in_primary_key_order() {
         vec![
             (StatusBadgeBroadcast::KIND, ids[0]),
             (StatusBadgeBroadcast::KIND, ids[1]),
-            (OooNoticeBroadcast::KIND, ids[0]),
-            (OooNoticeBroadcast::KIND, ids[1])
         ]
     );
 }

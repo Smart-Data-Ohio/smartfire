@@ -6,7 +6,6 @@
 use rusqlite::{Connection, Row, params};
 use serde_json::json;
 
-use crate::broadcasts::{Broadcast, Partial, conversation_messages, dom_id};
 use crate::database::Tx;
 use crate::error::{Error, Errors, OptionalExt, Result};
 use crate::events::Event;
@@ -276,17 +275,7 @@ impl Poll {
     /// sync-only [`PollChanged`], for the single-page app's `poll.updated` and the voter's
     /// `poll.ballot`.
     fn broadcast_card_replace(&self, tx: &mut Tx<'_>, voter_id: Option<i64>) -> Result<()> {
-        let message = Message::find(tx.conn(), self.message_id)?;
-        let streamables = conversation_messages(tx.conn(), &message)?;
-        tx.emit_after_commit(Event::broadcast(&Broadcast::replace_keeping_scroll(
-            streamables,
-            dom_id("poll", self.id, Some("card")),
-            Partial::Poll { poll_id: self.id },
-        )));
-        tx.emit_after_commit(Event::broadcast(&PollChanged {
-            poll_id: self.id,
-            voter_id,
-        }));
+        tx.emit_after_commit(Event::broadcast(&PollChanged { poll_id: self.id, voter_id }));
         Ok(())
     }
 

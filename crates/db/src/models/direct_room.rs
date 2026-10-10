@@ -1,5 +1,5 @@
 //! `app/models/rooms/direct.rb`. HTTP selection/access and huddle-specific rendering are WS8b/WS13.
-use crate::broadcasts::{Broadcast, Partial, Streamable, TurboAction, room_dom_id, room_messages};
+use crate::broadcasts::{Broadcast};
 use crate::sql::{exists, query_all};
 use crate::{Connection, Errors, Event, Membership, Message, NewMessage, Result, Room, Tx, User};
 use campfire_richtext::ruby::{is_blank, strip};
@@ -215,51 +215,13 @@ impl Room {
                 ..Default::default()
             },
         )?;
-        tx.emit_after_commit(Event::broadcast(&Broadcast::append(
-            room_messages(self),
-            room_dom_id(self, Some("messages")),
-            Partial::Message {
-                message_id: message.id,
-            },
-        )));
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
         Ok(())
     }
-    fn direct_directory_updates(&self, tx: &mut Tx<'_>, newcomers: &[i64]) -> Result<()> {
-        let all = self.user_ids(tx.conn())?;
+    fn direct_directory_updates(&self, tx: &mut Tx<'_>, _newcomers: &[i64]) -> Result<()> {
         for membership in self.memberships(tx.conn())? {
-            let stream = vec![
-                Streamable::User(membership.user_id),
-                Streamable::Name("rooms".into()),
-            ];
-            let new = newcomers.contains(&membership.user_id);
-            let mut event = Broadcast::replace(
-                stream.clone(),
-                if new {
-                    "direct_rooms".into()
-                } else {
-                    room_dom_id(self, Some("list"))
-                },
-                Partial::DirectSidebar {
-                    membership_id: membership.id,
-                    member_ids: all
-                        .iter()
-                        .copied()
-                        .filter(|id| *id != membership.user_id)
-                        .collect(),
-                },
-            );
-            if new && let Broadcast::Turbo(ref mut frame) = event {
-                frame.action = TurboAction::Prepend;
-            }
-            tx.emit_after_commit(Event::broadcast(&event));
-            tx.emit_after_commit(Event::broadcast(&Broadcast::replace(
-                stream,
-                room_dom_id(self, Some("header")),
-                Partial::RoomHeader {
-                    room_id: self.id,
-                    for_user_id: membership.user_id,
-                },
-            )));
+            // Management rows include refreshRoom, including invisible memberships.
+            tx.emit_after_commit(Event::broadcast(&Broadcast::MembershipChanged { membership_id: membership.id }));
         }
         Ok(())
     }
