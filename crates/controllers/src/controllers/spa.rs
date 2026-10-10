@@ -105,6 +105,10 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         user: BootUser { id: user.id, name: user.name, avatar_url },
         custom_styles: account.as_ref().and_then(|account| account.custom_styles.clone()),
         account: BootAccount {
+            upload_limit_bytes: account.as_ref().map_or(
+                campfire_db::models::account::DEFAULT_UPLOAD_LIMIT_BYTES,
+                |account| account.settings().upload_limit_bytes(),
+            ),
             name: account.map(|account| account.name),
             logo_url: branding.as_ref().and_then(|branding| branding.logo_url.clone()),
             logo_still_url: branding.as_ref().and_then(|branding| branding.logo_still_url.clone()),

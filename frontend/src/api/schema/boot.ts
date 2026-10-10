@@ -17,6 +17,7 @@ export const Boot = Schema.Struct({
     logoStillUrl: Schema.NullOr(Schema.String),
     bannerUrl: Schema.NullOr(Schema.String),
     bannerStillUrl: Schema.NullOr(Schema.String),
+    uploadLimitBytes: Schema.Int,
   }),
   theme: Theme,
   textSize: TextSize,

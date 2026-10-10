@@ -48,6 +48,14 @@ pub fn settings_changed(
             json!({"before":previous,"after":current}),
         );
     }
+    let previous = before.settings().upload_limit_bytes();
+    let current = after.settings().upload_limit_bytes();
+    if previous != current {
+        changes.insert(
+            "upload_limit_bytes".into(),
+            json!({"before":previous,"after":current}),
+        );
+    }
     if before_logo != after_logo {
         changes.insert(
             "logo".into(),

@@ -1,6 +1,11 @@
 import { createContext, type ReactNode, use, useRef } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
-import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
+import {
+  browserDeps,
+  DEFAULT_UPLOAD_LIMIT_BYTES,
+  UploadTask,
+} from "../../lib/upload/direct-upload.ts";
+import { store } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -51,7 +56,14 @@ export function adminFailure(title: string, error: Error): void {
 
 /** Uploads `file` directly and answers its signed id, for a write that attaches it. */
 export async function uploaded(file: File): Promise<string> {
-  const task = new UploadTask(file, browserDeps(actions.messages.startUpload), () => undefined);
+  const task = new UploadTask(
+    file,
+    browserDeps(
+      actions.messages.startUpload,
+      store.getState().boot?.account.uploadLimitBytes ?? DEFAULT_UPLOAD_LIMIT_BYTES,
+    ),
+    () => undefined,
+  );
 
   await task.start();
 

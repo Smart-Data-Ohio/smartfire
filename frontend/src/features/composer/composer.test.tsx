@@ -6,6 +6,7 @@ import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
+import { toastSnapshot } from "../../ui/toast-store.ts";
 import { clearCommandCache } from "./autocomplete/suggestions.ts";
 import { Composer } from "./composer.tsx";
 import { draftKey, readDraft } from "./draft.ts";
@@ -82,6 +83,40 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   store.setState(initialState, true);
+});
+
+it("refuses files above the workspace limit before adding them to the attachment tray", () => {
+  store.setState({
+    boot: {
+      user: { id: 1, name: "David", avatarUrl: "/avatar" },
+      account: {
+        name: "Smartfire",
+        logoUrl: null,
+        logoStillUrl: null,
+        bannerUrl: null,
+        bannerStillUrl: null,
+        uploadLimitBytes: 1024 * 1024,
+      },
+      customStyles: null,
+      theme: "system",
+      textSize: "default",
+      cableUrl: "/cable",
+      serviceWorkerUrl: null,
+      version: "test",
+      revision: null,
+    },
+  });
+  const start = vi.spyOn(actions.messages, "startUpload");
+  const large = new File(["bytes"], "large.bin");
+  Object.defineProperty(large, "size", { value: 1024 * 1024 + 1 });
+  const { container } = render(<Composer roomId={ROOM} />);
+  const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
+
+  if (picker === null) throw new Error("no file input");
+  fireEvent.change(picker, { target: { files: [large] } });
+  expect(start).not.toHaveBeenCalled();
+  expect(screen.queryByText("large.bin")).toBeNull();
+  expect(toastSnapshot().at(-1)?.description).toBe('"large.bin" exceeds the 1 MB upload limit.');
 });
 
 describe("polls in the composer", () => {

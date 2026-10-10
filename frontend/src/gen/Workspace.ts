@@ -25,6 +25,10 @@ canAdminister: boolean,
  */
 restrictRoomCreationToAdministrators: boolean,
 /**
+ * Maximum bytes per uploaded file. Defaults to 100 MiB.
+ */
+uploadLimitBytes: number,
+/**
  * The footer's "Smartfire version" badge text.
  */
 version: string, };
