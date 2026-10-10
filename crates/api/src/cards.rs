@@ -887,7 +887,7 @@ async fn post_vote(c: &mut Ctx) -> Result {
 
 async fn post_end_poll(c: &mut Ctx) -> Result {
     let (room, poll_id, viewer_id) = set_poll(c).await?;
-    let origin = presenters::page::renderer_base_url(c);
+    let origin = campfire_runtime::context::renderer_base_url(c);
     let outcome = c
         .app()
         .db
