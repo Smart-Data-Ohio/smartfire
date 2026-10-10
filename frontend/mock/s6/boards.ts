@@ -61,6 +61,9 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
       ownerCandidates: candidates,
       tagSuggestions: tagCounts(roomId).map(({ name }) => name),
       users: ctx.usersFor(candidates.map(({ userId }) => userId)),
+      tags: [],
+      tagsRequired: false,
+      defaultBoardTagId: null,
     };
   };
 
@@ -123,6 +126,9 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
         agent: user.role === "bot" || user.agent !== null,
       })),
       tagCounts: tagCounts(roomId),
+      tags: [],
+      tagsRequired: false,
+      defaultBoardTagId: null,
       digest: room.boardDigest ?? null,
       canAdminister:
         room.room.creatorId === VIEWER_ID ||

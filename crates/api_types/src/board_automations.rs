@@ -128,8 +128,9 @@ pub struct UpdateBoardSlaTimers {
     pub blocked: Option<BoardSlaTimerInput>,
 }
 
-/// The `board.automations.changed` event on `room:<id>`: someone changed the board's tag rules or
-/// SLA timers. Every member following the room gets it (it carries nothing but the room); an open
+/// The `board.automations.changed` event on `room:<id>`: someone changed the board's tag catalog,
+/// tag policy, tag rules or SLA timers. Every member following the room gets it (it carries
+/// nothing but the room); catalog consumers refetch [`crate::BoardTagCatalog`]. An open
 /// automations pane refetches [`BoardAutomations`], which only the creator and administrators
 /// may read. New: the classic settings page doesn't stream.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

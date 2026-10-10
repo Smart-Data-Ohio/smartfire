@@ -20,6 +20,169 @@ const BLOCKED: i64 = 6;
 const DONE: i64 = 7;
 const AGENT: i64 = 773018776;
 
+#[tokio::test]
+async fn spa_api_board_catalog_crud_propagates_and_broadcasts() {
+    let a = app(true).await.expect("the frozen default seed");
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{BOARD}")]).await;
+    sync.welcome().await;
+    let path = format!("/api/v1/rooms/{BOARD}/board/tags");
+    let reply = david.write(json_body(Method::POST, &path, &json!({"name":" Rust ","emoji":"🦀"}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let catalog: Value = parse(&reply);
+    assert_eq!(catalog["tags"][0]["name"], "Rust");
+    assert_eq!(catalog["tags"][0]["emoji"], "🦀");
+    let id = catalog["tags"][0]["id"].as_i64().unwrap();
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::BoardAutomationsChanged(change) if change.room_id == BOARD), |_| false).await;
+    let reply = david.write(json_body(Method::PATCH, &format!("{path}/{id}"), &json!({"name":"Release Notes","emoji":null}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::BoardAutomationsChanged(change) if change.room_id == BOARD), |_| false).await;
+    assert_eq!(a.db().read(|conn| ChannelThread::find(conn, PLANNED)?.tag_names(conn)).await.unwrap(), ["Release Notes", "release"]);
+    let reply = david.send(get(&format!("/api/v1/rooms/{BOARD}/board"))).await;
+    let listing: Value = parse(&reply);
+    assert_eq!(listing["tags"][0]["name"], "Release Notes");
+    assert_eq!(listing["tagsRequired"], false);
+    assert_eq!(listing["defaultBoardTagId"], Value::Null);
+    assert!(listing["tagCounts"].as_array().unwrap().iter().any(|row| row["name"] == "release"));
+    let reply = david.write(json_body(Method::DELETE, &format!("{path}/{id}"), &json!({}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::BoardAutomationsChanged(change) if change.room_id == BOARD), |_| false).await;
+    assert_eq!(a.db().read(|conn| ChannelThread::find(conn, PLANNED)?.tag_names(conn)).await.unwrap(), ["release"]);
+    server.abort();
+}
+
+#[tokio::test]
+async fn spa_api_board_catalog_permissions_limits_and_reorder() {
+    let a = app(true).await.expect("the frozen default seed");
+    sql(&a, format!("UPDATE users SET role=0 WHERE id={JASON}; UPDATE rooms SET creator_id={JASON} WHERE id={BOARD}")).await;
+    a.db().write(|tx| campfire_db::Membership::create_default(tx, BOARD, KEVIN)).await.unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let path = format!("/api/v1/rooms/{BOARD}/board/tags");
+    let reply = kevin.write(json_body(Method::POST, &path, &json!({"name":"denied","emoji":null}))).await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN, "{}", reply.text());
+    for (name, message) in [(" ".to_string(), "can't be blank"), ("é".repeat(21), "is too long (maximum is 20 characters)")] {
+        let reply = jason.write(json_body(Method::POST, &path, &json!({"name":name,"emoji":null}))).await;
+        validation(&reply, "name", message);
+    }
+    let mut ids = Vec::new();
+    for i in 0..20 {
+        let reply = jason.write(json_body(Method::POST, &path, &json!({"name":format!("tag-{i}"),"emoji":null}))).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let catalog: Value = parse(&reply);
+        ids.push(catalog["tags"][i]["id"].as_i64().unwrap());
+    }
+    let reply = david.write(json_body(Method::POST, &path, &json!({"name":"overflow","emoji":null}))).await;
+    validation(&reply, "tags", "are limited to 20 per board");
+    let reply = david.write(json_body(Method::PATCH, &format!("{path}/{}", ids[1]), &json!({"name":" TAG-0 ","emoji":null}))).await;
+    validation(&reply, "name", "has already been taken");
+    let reply = david.write(json_body(Method::PUT, &format!("{path}/order"), &json!({"tagIds":[ids[0],ids[0]]}))).await;
+    validation(&reply, "tagIds", "must contain every board tag exactly once");
+    ids.reverse();
+    let reply = david.write(json_body(Method::PUT, &format!("{path}/order"), &json!({"tagIds":ids}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let catalog: Value = parse(&reply);
+    assert_eq!(catalog["tags"].as_array().unwrap().iter().map(|tag| tag["id"].as_i64().unwrap()).collect::<Vec<_>>(), ids);
+    for (method, suffix, body) in [(Method::PATCH, format!("/{}",ids[0]), json!({"name":"no","emoji":null})), (Method::DELETE, format!("/{}",ids[0]), json!({})), (Method::PUT, "/order".into(), json!({"tagIds":ids}))] {
+        let reply = kevin.write(json_body(method, &format!("{path}{suffix}"), &body)).await;
+        assert_eq!(reply.status, StatusCode::FORBIDDEN, "{}", reply.text());
+    }
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{HQ}/board/tags"), &json!({"name":"no","emoji":null}))).await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND);
+    let reply = kevin.write(json_body(Method::PATCH, &format!("/api/v1/rooms/{BOARD}/board"), &json!({"tagsRequired":true,"defaultBoardTagId":null}))).await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN);
+    let reply = kevin.send(get(&path)).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    sql(&a, format!("DELETE FROM memberships WHERE user_id={KEVIN} AND room_id={BOARD}")).await;
+    let reply = kevin.send(get(&path)).await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND);
+    let other = a.db().write(|tx| campfire_db::Room::create_for(tx, campfire_db::RoomType::Board, Some("Other board"), DAVID, &[DAVID])).await.unwrap();
+    let other_path = format!("/api/v1/rooms/{}/board", other.id);
+    let reply = david.write(json_body(Method::PATCH, &format!("{other_path}/tags/{}", ids[0]), &json!({"name":"stolen","emoji":null}))).await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND);
+    let reply = david.write(json_body(Method::PATCH, &other_path, &json!({"tagsRequired":true,"defaultBoardTagId":ids[0]}))).await;
+    validation(&reply, "defaultBoardTagId", "must belong to this board");
+}
+
+#[tokio::test]
+async fn spa_api_board_catalog_required_default_create_edit_and_legacy() {
+    let a = app(true).await.expect("the frozen default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{BOARD}/board");
+    let reply = david.write(json_body(Method::POST, &format!("{path}/tags"), &json!({"name":"Bug Report","emoji":null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let catalog: Value = parse(&reply);
+    let id = catalog["tags"][0]["id"].as_i64().unwrap();
+    let reply = david.write(json_body(Method::PATCH, &path, &json!({"tagsRequired":true,"defaultBoardTagId":null}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let create = format!("/api/v1/rooms/{BOARD}/posts");
+    for tags in [json!([]),json!(["legacy"])] {
+        let mut body = new_post("Required tag"); body["tags"] = tags;
+        let reply = david.write(json_body(Method::POST, &create, &body)).await;
+        validation(&reply, "tags", "must include a catalog tag");
+    }
+    let mut body = new_post("Curated tag"); body["tags"] = json!([" bug report ","legacy"]);
+    let reply = david.write(json_body(Method::POST, &create, &body)).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let detail: api::ThreadDetail = parse(&reply);
+    assert_eq!(detail.thread.work.unwrap().tags, ["Bug Report", "legacy"]);
+    let edit = format!("/api/v1/threads/{}/work",detail.thread.id);
+    let reply = david.write(json_body(Method::PATCH, &edit, &json!({"tags":[]}))).await;
+    validation(&reply, "tags", "must include a catalog tag");
+    // A title-only edit of an existing free-text post remains possible.
+    let reply = david.write(json_body(Method::PATCH, &format!("/api/v1/threads/{PLANNED}"), &json!({"name":"Legacy post"}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = david.write(json_body(Method::PATCH, &path, &json!({"tagsRequired":true,"defaultBoardTagId":id}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = david.write(json_body(Method::POST, &create, &new_post("Default tag"))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let detail: api::ThreadDetail = parse(&reply);
+    assert_eq!(detail.thread.work.unwrap().tags, ["Bug Report"]);
+    let reply = david.write(json_body(Method::PATCH, &edit, &json!({"tags":["legacy"]}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let detail: api::ThreadDetail = parse(&reply);
+    assert_eq!(detail.thread.work.unwrap().tags, ["Bug Report", "legacy"]);
+    let reply = david.write(json_body(Method::PATCH, &path, &json!({"tagsRequired":true,"defaultBoardTagId":-1}))).await;
+    validation(&reply, "defaultBoardTagId", "must belong to this board");
+    let reply = david.write(json_body(Method::DELETE, &format!("{path}/tags/{id}"), &json!({}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let catalog: Value = parse(&reply);
+    assert_eq!(catalog["defaultBoardTagId"], Value::Null);
+    assert_eq!(catalog["tagsRequired"], true);
+    let reply = david.write(json_body(Method::POST, &create, &new_post("Deleted default"))).await;
+    validation(&reply, "tags", "must include a catalog tag");
+}
+
+#[tokio::test]
+async fn spa_api_board_catalog_rechecks_membership_at_writer_boundary() {
+    let a = app(true).await.expect("the frozen default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let db = a.db().clone();
+    let (entered, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let blocker = tokio::spawn(async move {
+        db.write(move |tx| {
+            entered.send(()).unwrap();
+            wait.recv_timeout(Duration::from_secs(10)).unwrap();
+            tx.conn().execute("DELETE FROM memberships WHERE room_id=? AND user_id=?", [BOARD,DAVID])?;
+            Ok(())
+        }).await.unwrap();
+    });
+    ready.await.unwrap();
+    let mut request = Box::pin(david.write(json_body(Method::POST, &format!("/api/v1/rooms/{BOARD}/board/tags"), &json!({"name":"stale","emoji":null}))));
+    tokio::select! {
+        reply = &mut request => panic!("writer was held: {}", reply.text()),
+        _ = wait_for_queued_writes(&a, 1) => (),
+    }
+    release.send(()).unwrap();
+    blocker.await.unwrap();
+    let reply = request.await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND, "{}", reply.text());
+    assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM board_tags WHERE room_id=?", [BOARD], |row| row.get::<_,i64>(0))?)).await.unwrap(), 0);
+}
+
 async fn sql(a: &TestApp, statements: impl Into<String>) {
     let statements = statements.into();
     a.db()

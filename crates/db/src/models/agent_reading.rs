@@ -63,9 +63,10 @@ pub fn board_posts(
     tag: &str,
 ) -> Result<Vec<ChannelThread>> {
     let numeric_owner = super::agent_delivery::ruby_i64(&serde_json::json!(owner));
+    let names = if tag.is_empty() { Vec::new() } else { crate::ThreadTag::matching_names(conn, room, tag)? };
     query_all(
         conn,
-        "SELECT * FROM channel_threads WHERE room_id=? AND (?='all' OR (?='open' AND work_status IS NOT NULL AND work_status!='done') OR (? NOT IN ('all','open') AND work_status=?)) AND (?='' OR (?='me' AND work_owner_id=?) OR (?='agents' AND work_owner_id IN (SELECT user_id FROM agents)) OR (? NOT IN ('','me','agents') AND work_owner_id=?)) AND (?='' OR EXISTS(SELECT 1 FROM thread_tags WHERE channel_thread_id=channel_threads.id AND name=?)) ORDER BY last_activity_at DESC,id DESC LIMIT 100",
+        "SELECT * FROM channel_threads WHERE room_id=? AND (?='all' OR (?='open' AND work_status IS NOT NULL AND work_status!='done') OR (? NOT IN ('all','open') AND work_status=?)) AND (?='' OR (?='me' AND work_owner_id=?) OR (?='agents' AND work_owner_id IN (SELECT user_id FROM agents)) OR (? NOT IN ('','me','agents') AND work_owner_id=?)) AND (?='' OR EXISTS(SELECT 1 FROM thread_tags WHERE channel_thread_id=channel_threads.id AND name IN (SELECT value FROM json_each(?)))) ORDER BY last_activity_at DESC,id DESC LIMIT 100",
         params![
             room,
             status,
@@ -79,7 +80,7 @@ pub fn board_posts(
             owner,
             numeric_owner,
             tag,
-            tag
+            serde_json::json!(names).to_string()
         ],
         ChannelThread::from_row,
     )

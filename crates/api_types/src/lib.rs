@@ -86,8 +86,8 @@ pub use agents::{
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use board::{
-    BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTagCount,
-    CreateBoardPost,
+    BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTag,
+    BoardTagCatalog, BoardTagCount, CreateBoardPost, ReorderBoardTags, SaveBoardTag, UpdateBoardTagPolicy,
 };
 pub use board_automations::{
     BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
