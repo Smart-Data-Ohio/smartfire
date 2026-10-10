@@ -7,17 +7,6 @@ use crate::controllers::presenters::test_support::*;
 
 async fn app() -> TestApp { TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap() }
 
-async fn add(app: &TestApp, n: i64) {
-    app.db().write(move |tx| {
-        for i in 0..n {
-            let thread=ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:JASON,name:Some(format!("Query thread {i}")),..Default::default()})?;
-            // Different creators and owners exercise both preload paths.
-            tx.conn().execute("UPDATE channel_threads SET work_owner_id=?, work_status='planned' WHERE id=?",(if i%2==0 {DAVID}else{JASON},thread.id))?;
-        }
-        Ok(())
-    }).await.unwrap();
-}
-
 async fn queries(app: &TestApp, path: &str) -> Vec<String> {
     let mut viewer=app.david();viewer.authenticity_token().await;
     let log=app.db().capture_read_queries();
@@ -26,17 +15,6 @@ async fn queries(app: &TestApp, path: &str) -> Vec<String> {
     assert_eq!(response.status,StatusCode::OK,"{}",response.text());
     let captured=log.lock().unwrap().clone();
     assert!(!captured.is_empty());captured
-}
-
-#[tokio::test]
-async fn thread_index_query_count_stays_constant_as_threads_grow() {
-    let app=app().await;
-    add(&app,2).await;
-    let path=format!("/rooms/{ALL_TALK}/threads");
-    let small=queries(&app,&path).await;
-    add(&app,4).await;
-    let large=queries(&app,&path).await;
-    assert_eq!(small.len(),large.len(),"small {} vs large {} reader SQL\n{large:#?}",small.len(),large.len());
 }
 
 #[tokio::test]

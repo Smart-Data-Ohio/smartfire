@@ -115,22 +115,3 @@ async fn board_rooms_never_have_an_address() {
     );
     assert_eq!(token(&app, id).await, None);
 }
-#[tokio::test]
-async fn the_edit_page_shows_the_address_once_created() {
-    let (app, id) = setup(true).await;
-    let token = app
-        .db()
-        .write(move |tx| Room::find(tx.conn(), id)?.regenerate_inbound_email_token(tx))
-        .await
-        .unwrap();
-    let page = app.david().get(&format!("/rooms/closeds/{id}/edit")).await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains(&format!("room-{token}@mail.test")));
-}
-#[tokio::test]
-async fn the_edit_page_explains_the_missing_domain() {
-    let (app, id) = setup(false).await;
-    let page = app.david().get(&format!("/rooms/closeds/{id}/edit")).await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains("INBOUND_EMAIL_DOMAIN"));
-}

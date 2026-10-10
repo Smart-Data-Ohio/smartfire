@@ -1,3 +1,0 @@
-{#- reference/app/views/rooms/closeds/edit.html.erb -#}
-{% extends "rooms/layouts/_edit.html" %}
-{%- block room_form %}{% let type_change_path = h::routes::edit_rooms_open(self.room_id()) %}{% include "rooms/closeds/_form.html" %}{% endblock %}

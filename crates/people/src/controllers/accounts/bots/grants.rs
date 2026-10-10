@@ -1,22 +1,12 @@
 //! Accounts::Bots::GrantsController. Validation and revocation remain WS11 domain calls.
-use crate::controllers::presenters::page::framed_page;
 use crate::{
     app::AppCtx,
     concerns::{self, Before},
-    controllers::presenters,
 };
 use campfire_db::models::audit_log::{AuditLog, NewAuditLog, Target};
 use campfire_db::{AgentGrant, NewGrant, User};
-use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format, permit_keys};
-use campfire_views::accounts::bot_access::GrantForm;
+use campfire_kit::{Ctx, Error, Param, Result, StatusCode, permit_keys};
 
-pub async fn index(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    let bot = super::find_active_bot(c, "bot_id").await?;
-    super::ensure_can_manage_bot(c, &bot).await?;
-    let agent = super::ensure_agent(c, &bot).await?;
-    render_index(c, &bot, agent.id, GrantForm::default(), StatusCode::OK).await
-}
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let bot = super::find_active_bot(c, "bot_id").await?;
@@ -39,24 +29,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     let room_id = room
         .as_deref()
         .map(|s| crate::concerns::cast_integer(s).unwrap_or(0));
-    let form_capability = capability.clone();
     let result = grant(c, &bot, agent.id, capability, room_id).await?;
     match result {
         Ok(()) => redirect(c, bot.id),
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            render_index(
-                c,
-                &bot,
-                agent.id,
-                GrantForm {
-                    capability: Some(form_capability),
-                    room_id: room_id.map(|id| id.to_string()),
-                    errors: Some(super::error_sentence(&errors)),
-                    error_fields: errors.0.iter().map(|(f, _)| f.to_string()).collect(),
-                },
-                StatusCode::UNPROCESSABLE_ENTITY,
-            )
-            .await
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
         }
         Err(error) if error.is_record_not_unique() => redirect(c, bot.id),
         Err(error) => Err(Error::internal(error)),
@@ -179,34 +156,4 @@ fn target(id: i64, capability: &str, bot: &str) -> Target {
 }
 fn redirect(c: &mut Ctx, bot_id: i64) -> Result {
     c.redirect_to(&c.url_for(&campfire_routes::account_bot_grants(bot_id)))
-}
-async fn render_index(
-    c: &mut Ctx,
-    bot: &User,
-    agent_id: i64,
-    form: GrantForm,
-    status: StatusCode,
-) -> Result {
-    c.respond_to(&[&format::HTML])?;
-    let (bot_id, viewer) = (bot.id, concerns::require_current_user(c)?.clone());
-    let (legacy, grants, rooms) = c
-        .app()
-        .db
-        .read(move |conn| presenters::accounts::bot_access::grants(conn, agent_id, bot_id, &viewer))
-        .await
-        .map_err(Error::internal)?;
-    let bot_name = bot.name.clone();
-    presenters::view_context::omit_unused_room_back_link(c);
-    framed_page!(c, status, |ctx| {
-        campfire_views::accounts::bot_access::Grants {
-            ctx,
-            bot_id,
-            bot_name: bot_name.clone(),
-            legacy,
-            grants: grants.clone(),
-            grant: form.clone(),
-            rooms: rooms.clone(),
-        }
-    })
-    .await
 }

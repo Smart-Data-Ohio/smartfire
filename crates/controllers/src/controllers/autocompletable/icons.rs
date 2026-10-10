@@ -150,6 +150,6 @@ pub async fn index(c: &mut Ctx) -> Result {
     Ok(c.render(
         StatusCode::OK,
         &format::JSON,
-        campfire_views::helpers::to_rails_json(&icons),
+        campfire_presentation::helpers::to_rails_json(&icons),
     ))
 }

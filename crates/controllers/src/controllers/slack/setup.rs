@@ -1,11 +1,10 @@
+use campfire_presentation::slack::{RunSummary, SetupData};
 use super::*;
-use crate::controllers::presenters::page::framed_page;
 use campfire_db::{
     audit_log::{AuditLog, NewAuditLog, Target},
     models::slack::{SlackConnection, SlackWorkspace},
 };
 use campfire_kit::StatusCode;
-use campfire_views::slack::{RunSummary, Setup, SetupData};
 async fn before(c: &mut Ctx, sudo: bool) -> Result<User> {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
@@ -27,11 +26,6 @@ pub async fn data(c: &Ctx, uid: i64) -> Result<SetupData> {
     Ok(data)
 }
 use rusqlite::OptionalExtension;
-pub async fn show(c: &mut Ctx) -> Result {
-    let user = before(c, false).await?;
-    let data = data(c, user.id).await?;
-    framed_page!(c, StatusCode::OK, |ctx| Setup { ctx, data: &data }).await
-}
 pub async fn update(c: &mut Ctx) -> Result {
     let user = before(c, true).await?;
     let client_id = campfire_richtext::ruby::strip(&param(c, "client_id")).to_owned();
@@ -40,16 +34,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         .get("client_secret")
         .filter(|p| p.is_present())
         .map(|_| campfire_richtext::ruby::strip(&param(c, "client_secret")).to_owned());
-    if let Err(errors) = configure(c, &user, client_id.clone(), secret).await? {
-        let mut data = data(c, user.id).await?;
-        data.client_id = Some(client_id);
-        data.configured = false;
-        data.errors = errors;
-        return framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| Setup {
-            ctx,
-            data: &data
-        })
-        .await;
+    if let Err(_errors) = configure(c, &user, client_id.clone(), secret).await? {
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
     redirect(
         c,

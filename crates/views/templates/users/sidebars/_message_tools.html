@@ -1,8 +1,0 @@
-{% filter link_to(campfire_routes::saved_items(), h::attrs().class("sidebar-item btn").data("workspace_destination", campfire_routes::saved_items())) %}
-          {{ h::image_tag(ctx, "bookmark.svg", h::attrs().size(20).aria_hidden().class("colorize--black")) }}
-          <span class="sidebar-item__label">Saved</span>
-{% endfilter %}
-{% filter link_to(campfire_routes::scheduled_messages(), h::attrs().class("sidebar-item btn").data("workspace_destination", campfire_routes::scheduled_messages())) %}
-          {{ h::image_tag(ctx, "calendar.svg", h::attrs().size(20).aria_hidden().class("colorize--black")) }}
-          <span class="sidebar-item__label">Scheduled</span>
-{% endfilter %}

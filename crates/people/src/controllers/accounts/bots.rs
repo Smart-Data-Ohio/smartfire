@@ -1,4 +1,5 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
+use campfire_presentation::accounts;
 
 pub mod credentials;
 pub mod github_connections;
@@ -9,45 +10,13 @@ pub mod webhook_secrets;
 
 use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::{Agent, AgentChanges, AgentKind, NewAgent, NewUser, User, UserChanges};
-use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, format, permit_keys};
-use campfire_views::accounts;
+use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, permit_keys};
 use serde_json::{Value, json};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
 use crate::controllers::presenters;
 use crate::controllers::presenters::attachments::{self, Assignment, Record};
-use crate::controllers::presenters::page::framed_page;
-
-/// `@bots = User.active_bots.ordered`
-pub async fn index(c: &mut Ctx) -> Result {
-    before(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let secrets = c.app().secrets.clone();
-    let bots: Vec<_> = c
-        .app()
-        .db
-        .read(move |conn| {
-            presenters::accounts::bots(conn, &secrets, &User::active_bots_ordered(conn)?)
-        })
-        .await
-        .map_err(Error::internal)?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsIndex {
-        ctx,
-        bots: bots.clone()
-    })
-    .await
-}
-
-pub async fn new(c: &mut Ctx) -> Result {
-    before(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsNew {
-        ctx,
-        bot: accounts::BotForm::default()
-    })
-    .await
-}
 
 /// Rails creates a workspace Agent and reveals the digest-backed key once.
 pub async fn create(c: &mut Ctx) -> Result {
@@ -74,37 +43,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     .await?;
     match result {
         Ok(bot) => {
-            c.set_header("cache-control", "no-store");
+            c.no_store();
             c.set_header("pragma", "no-cache");
-            let key = bot.bot_key();
-            framed_page!(c, StatusCode::CREATED, |ctx| accounts::BotKey {
-                ctx,
-                bot_name: &bot.name,
-                bot_key: &key
-            })
-            .await
+            c.json(StatusCode::CREATED, &serde_json::json!({"bot_key": bot.bot_key()}))
         }
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            let form = accounts::BotForm {
-                name: params.get("name").and_then(Param::to_s),
-                webhook_url: params.get("webhook_url").and_then(Param::to_s),
-                icon_name: icon_attribute(&params).flatten(),
-                errors: Some(errors.to_string()),
-                error_fields: errors
-                    .0
-                    .iter()
-                    .map(|(field, _)| field.to_string())
-                    .collect(),
-                ..Default::default()
-            };
-            framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| {
-                accounts::BotsNew {
-                    ctx,
-                    bot: form.clone(),
-                }
-            })
-            .await
-        }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
         Err(error) => Err(Error::internal(error)),
     }
 }
@@ -186,21 +129,6 @@ pub async fn create_bot(c: &Ctx, new: NewBot) -> Result<campfire_db::Result<User
     .await)
 }
 
-pub async fn edit(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    let bot = set_bot(c).await?;
-    ensure_can_manage_bot(c, &bot).await?;
-    let bot_id = bot.id;
-    c.respond_to(&[&format::HTML])?;
-    let form = edit_form(c, &bot).await?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit {
-        ctx,
-        bot_id,
-        bot: form.clone()
-    })
-    .await
-}
-
 /// Authorization stays in the controller; validated writes use WS11's domain.
 pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
@@ -223,7 +151,6 @@ pub async fn update(c: &mut Ctx) -> Result {
     }
     let params = bot_params(c)?;
     let agent_changes = agent_params(c);
-    let requested_agent = agent_changes.clone();
     let avatar = Assignment::from_params(&params, "avatar")?
         .stage(c.app())
         .await?;
@@ -239,62 +166,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let result = update_bot(c, bot.clone(), update).await?;
     match result {
         Ok(()) => redirect_to_bots(c),
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            let bot = set_bot(c).await?;
-            let mut form = edit_form(c, &bot).await?;
-            if errors
-                .0
-                .iter()
-                .any(|(field, _)| matches!(*field, "name" | "icon_name" | "webhook_url"))
-            {
-                form.name = params.get("name").and_then(Param::to_s).or(form.name);
-                if let Some(icon) = icon_attribute(&params) {
-                    form.icon = c
-                        .app()
-                        .db
-                        .read({
-                            let icon = icon.clone();
-                            move |conn| {
-                                Ok(icon
-                                    .as_deref()
-                                    .and_then(|name| presenters::resolve_avatar_icon(conn, name)))
-                            }
-                        })
-                        .await
-                        .map_err(Error::internal)?;
-                    form.icon_name = icon;
-                }
-                if let Some(url) = params.get("webhook_url") {
-                    form.webhook_url = url.to_s();
-                }
-                form.errors = Some(errors.to_string());
-                form.error_fields = errors
-                    .0
-                    .iter()
-                    .map(|(field, _)| field.to_string())
-                    .collect();
-                if let Some(agent) = &mut form.agent {
-                    apply_agent_form(agent, &requested_agent);
-                }
-            } else if let Some(agent) = &mut form.agent {
-                apply_agent_form(agent, &requested_agent);
-                agent.errors = Some(errors.to_string());
-                agent.error_fields = errors
-                    .0
-                    .iter()
-                    .map(|(field, _)| field.to_string())
-                    .collect();
-            }
-            let bot_id = bot.id;
-            framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| {
-                accounts::BotsEdit {
-                    ctx,
-                    bot_id,
-                    bot: form.clone(),
-                }
-            })
-            .await
-        }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
         Err(error) => Err(Error::internal(error)),
     }
 }
@@ -590,7 +462,7 @@ pub async fn edit_form(c: &Ctx, bot: &User) -> Result<accounts::BotForm> {
         })
         .await
         .map_err(Error::internal)?;
-    let zone = campfire_views::time::Zone::for_user(zone.as_deref());
+    let zone = campfire_presentation::time::Zone::for_user(zone.as_deref());
     // `usable?` may mark an unreadable linked token disconnected. The owner
     // service performs that write outside the view reader and never returns a token.
     let id = bot.id;
@@ -649,25 +521,6 @@ fn agent_params(c: &Ctx) -> AgentChanges {
         daily_board_post_cap_before_type_cast: cap("daily_board_post_cap"),
         daily_external_action_cap_before_type_cast: cap("daily_external_action_cap"),
         ..Default::default()
-    }
-}
-
-fn apply_agent_form(form: &mut accounts::BotAgentForm, changes: &AgentChanges) {
-    macro_rules! assign { ($($field:ident),*) => {$(if let Some(value) = &changes.$field { form.$field = value.clone(); })*}; }
-    assign!(provider, runtime, description);
-    for (field, noun) in [
-        ("daily_message_cap", "messages"),
-        ("daily_board_post_cap", "board_posts"),
-        ("daily_external_action_cap", "external_actions"),
-    ] {
-        if let Some(input) = changes.budget_cap_input(field) {
-            let raw = match input.before_type_cast {
-                Value::Null => None,
-                Value::String(value) => Some(value),
-                value => Some(value.to_string()),
-            };
-            form.raw_caps.insert(noun.into(), raw);
-        }
     }
 }
 
@@ -764,10 +617,10 @@ pub async fn ensure_agent(c: &Ctx, bot: &User) -> Result<Agent> {
     Ok(agent)
 }
 pub fn error_sentence(errors: &campfire_db::Errors) -> String {
-    campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
+    campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ")
 }
 
-pub async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
+pub async fn viewer_zone(c: &Ctx) -> Result<campfire_presentation::time::Zone> {
     let id = concerns::require_current_user(c)?.id;
     let name = c
         .app()
@@ -781,5 +634,5 @@ pub async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
         })
         .await
         .map_err(Error::internal)?;
-    Ok(campfire_views::time::Zone::for_user(name.as_deref()))
+    Ok(campfire_presentation::time::Zone::for_user(name.as_deref()))
 }

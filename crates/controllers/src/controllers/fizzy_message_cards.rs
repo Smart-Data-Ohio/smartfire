@@ -4,7 +4,7 @@ use crate::{
     concerns::{self, Before, before_actions, cast_integer, require_current_user},
     controllers::{
         fizzy_connections, messages,
-        presenters::page::{self, db_error},
+        presenters::page::db_error,
     },
     integrations::{
         fizzy::{
@@ -215,77 +215,6 @@ fn classic_failure(c: &mut Ctx, source: &Source, failure: &Failure) -> Result {
         redirect(c, source, false, &message)
     }
 }
-pub async fn new(c: &mut Ctx) -> Result {
-    let source = source(c).await?;
-    let boards = if source.token.is_some() {
-        match boards(c, &source).await? {
-            Ok(boards) => boards,
-            Err(failure) => return classic_failure(c, &source, &failure),
-        }
-    } else {
-        Value::Null
-    };
-    render(c, source, boards, StatusCode::OK).await
-}
-/// The same defaults and display fields both forms use. Board names are a flat list.
-pub fn form_view(
-    c: &Ctx,
-    source: &Source,
-    boards: Value,
-) -> campfire_views::fizzy_message_cards::FormView {
-    let title = c.param_str("title").map(str::to_owned).unwrap_or_else(|| {
-        campfire_richtext::ruby::truncate(
-            campfire_richtext::ruby::strip(source.plain.lines().next().unwrap_or("")),
-            120,
-            "...",
-        )
-    });
-    let description = c
-        .param_str("description")
-        .map(str::to_owned)
-        .unwrap_or_else(|| {
-            let link = format!("Source: {}", source.link(c));
-            if campfire_richtext::ruby::is_blank(&source.plain) {
-                link
-            } else {
-                format!("{}\n\n{link}", source.plain)
-            }
-        });
-    campfire_views::fizzy_message_cards::FormView {
-        back_path: source.path(),
-        action: format!(
-            "{}/messages/{}/fizzy_cards",
-            source.path(),
-            source.message.id
-        ),
-        room_name: source.room_name.clone(),
-        plain: source.plain.clone(),
-        creator: source.creator.name.clone(),
-        connected: source.token.is_some(),
-        boards,
-        board_id: c.param_str("board_id").unwrap_or("").into(),
-        title,
-        description,
-        user_name: source
-            .account
-            .as_ref()
-            .and_then(|a| a.fizzy_user_name.clone())
-            .unwrap_or_default(),
-        account_name: source
-            .account
-            .as_ref()
-            .and_then(|a| a.account_name.clone())
-            .unwrap_or_default(),
-    }
-}
-async fn render(c: &mut Ctx, source: Source, boards: Value, status: StatusCode) -> Result {
-    let view = form_view(c, &source, boards);
-    page::framed_page!(c, status, |ctx| campfire_views::fizzy_message_cards::New {
-        ctx,
-        view: &view
-    })
-    .await
-}
 pub struct Created {
     pub number: String,
     pub url: String,
@@ -479,11 +408,66 @@ pub async fn create(c: &mut Ctx) -> Result {
             true,
             &format!("Fizzy card #{} created.", created.number),
         ),
-        Err(Failure::Invalid { boards, .. }) => {
-            c.flash().now("alert", "Choose a board and enter a title.");
-            render(c, source, boards, StatusCode::UNPROCESSABLE_ENTITY).await
-        }
+        Err(Failure::Invalid { .. }) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
         Err(failure) => classic_failure(c, &source, &failure),
+    }
+}
+
+/// Defaults and viewer metadata shared by the SPA form adapter.
+pub struct FormData {
+    pub room_name: String,
+    pub plain: String,
+    pub creator: String,
+    pub connected: bool,
+    pub boards: Value,
+    pub title: String,
+    pub description: String,
+    pub user_name: String,
+    pub account_name: String,
+}
+
+/// Authoring defaults and display fields. Board names are a flat list.
+pub fn form_view(
+    c: &Ctx,
+    source: &Source,
+    boards: Value,
+) -> FormData {
+    let title = c.param_str("title").map(str::to_owned).unwrap_or_else(|| {
+        campfire_richtext::ruby::truncate(
+            campfire_richtext::ruby::strip(source.plain.lines().next().unwrap_or("")),
+            120,
+            "...",
+        )
+    });
+    let description = c
+        .param_str("description")
+        .map(str::to_owned)
+        .unwrap_or_else(|| {
+            let link = format!("Source: {}", source.link(c));
+            if campfire_richtext::ruby::is_blank(&source.plain) {
+                link
+            } else {
+                format!("{}\n\n{link}", source.plain)
+            }
+        });
+    FormData {
+        room_name: source.room_name.clone(),
+        plain: source.plain.clone(),
+        creator: source.creator.name.clone(),
+        connected: source.token.is_some(),
+        boards,
+        title,
+        description,
+        user_name: source
+            .account
+            .as_ref()
+            .and_then(|a| a.fizzy_user_name.clone())
+            .unwrap_or_default(),
+        account_name: source
+            .account
+            .as_ref()
+            .and_then(|a| a.account_name.clone())
+            .unwrap_or_default(),
     }
 }
 

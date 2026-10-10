@@ -521,4 +521,5 @@ async fn composer_accepts_a_100_mb_video_and_retains_the_rails_bytes() {
     );
     assert_eq!(checksum, case["stored_checksum"]);
     assert_eq!(std::fs::read(path).unwrap(), bytes);
+    assert_eq!(reply.status, StatusCode::CREATED);
 }

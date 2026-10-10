@@ -209,19 +209,19 @@ async fn spa(b: &mut Browser<'_>, method: Method, path: &str, body: Value) -> ap
 }
 
 #[tokio::test]
-async fn settings_exist_only_with_the_spa() {
+async fn settings_exist_without_flags() {
     let clock = crate::controllers::presenters::test_support::seed_clock();
     let Some(a) = TestApp::boot_seed_with_env("default", clock, &[]).await else {
         return;
     };
     let mut b = a.sign_in(DAVID).await;
-    let unknown = b.send(get("/no-such-page")).await.status;
+
     for path in [
         "/api/v1/settings",
         "/api/v1/settings/sessions",
         "/api/v1/settings/push_subscriptions",
     ] {
-        assert_eq!(b.send(get(path)).await.status, unknown, "{path}");
+        assert_eq!(b.send(get(path)).await.status, StatusCode::OK, "{path}");
     }
 }
 
@@ -257,12 +257,7 @@ async fn the_settings_read_as_the_classic_profile_page_shows_them() {
     assert_eq!(settings.integrations.manage_path, "/users/me/profile");
     assert_eq!(settings.integrations.slack_import_path, "/slack/imports");
 
-    // The classic page agrees on what it can show.
-    let page = b.classic_page("/users/me/profile").await.text();
-    assert!(page.contains(&settings.profile.name), "the name");
-    for switch in &settings.notifications.inbox {
-        assert!(page.contains(&switch.label), "{}", switch.label);
-    }
+
 }
 
 #[tokio::test]
@@ -1586,6 +1581,14 @@ async fn a9_unread_delivery_resumes_at_timed_mute_expiry() {
 
 #[tokio::test]
 async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
+    async fn assert_legacy_badges(browser: &mut Browser<'_>, expected: i64) {
+        for path in ["/activity.json", "/activity/unread_count.json"] {
+            let reply = browser.send(get(path)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+            assert_eq!(parse::<Value>(&reply)["unread_count"], expected, "{path}");
+        }
+    }
+
     async fn push_badge(app: &TestApp) -> i64 {
         let now = app.booted.app.db.env().now();
         app.booted
@@ -1641,6 +1644,7 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
         .notification_count;
     assert!(before > 0, "message {message} contributes a notification");
     assert_eq!(push_badge(&app).await, 1);
+    assert_legacy_badges(&mut browser, 1).await;
     assert_eq!(
         parse::<api::ActivityUnreadCount>(
             &browser.send(get("/api/v1/activity/unread_count")).await
@@ -1661,6 +1665,7 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
     assert_eq!(settings_before["evaluatedAt"], "2035-01-01T12:00:00.000000000Z");
     assert_eq!(count_before["evaluatedAt"], settings_before["evaluatedAt"]);
     assert_eq!(push_badge(&app).await, 0);
+    assert_legacy_badges(&mut browser, 0).await;
     let favorite_path = format!("/api/v1/rooms/{room}/favorite");
     let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
     assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());
@@ -1693,6 +1698,7 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
     assert_eq!(list_after["evaluatedAt"], settings_after["evaluatedAt"]);
     assert_eq!(settings_after["notifications"]["roomMuteUntil"], json!({}));
     assert_eq!(push_badge(&app).await, 1);
+    assert_legacy_badges(&mut browser, 1).await;
     let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
     assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());
     assert_eq!(

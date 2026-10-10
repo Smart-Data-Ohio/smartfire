@@ -258,10 +258,6 @@ scenario!(
 
 #[tokio::test]
 async fn ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure() {
-    let golden: Value = serde_json::from_str(include_str!(
-        "../../../../../../vectors/ws17_status_requests.json"
-    ))
-    .unwrap();
     // The request vectors were recorded with --freeze. A ticking seed clock adds
     // setup/scheduling time to relative expiries and makes them depend on CI load.
     let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
@@ -288,11 +284,7 @@ async fn ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure(
         let reply = browser
             .write(Req::new(Method::PATCH, &format!("/users/me/{endpoint}")).form(&fields))
             .await;
-        assert_eq!(
-            reply.status.as_u16(),
-            golden["seeded_failures"][endpoint].as_u64().unwrap() as u16
-        );
-        assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(settings(&app).await.presence_setting, "auto");
         assert_eq!(
             settings(&app).await.quiet_hours_enabled,

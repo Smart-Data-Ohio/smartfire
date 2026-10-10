@@ -42,10 +42,20 @@ fn every_row_is_a_get_route_of_the_classic_table() {
 }
 
 #[test]
-fn each_row_maps_the_same_parameters_both_ways() {
+fn each_row_preserves_record_parameters_or_selects_the_viewers_settings() {
     for screen in SCREENS {
-        let classic: BTreeSet<_> = params(screen.classic).into_iter().collect();
+        let mut classic: BTreeSet<_> = params(screen.classic).into_iter().collect();
         let spa: BTreeSet<_> = params(screen.spa).into_iter().collect();
+        if [
+            "/users/:user_id/sidebar",
+            "/users/:user_id/status/edit",
+            "/users/:user_id/sessions",
+            "/users/:user_id/push_subscriptions",
+        ]
+        .contains(&screen.classic)
+        {
+            assert!(classic.remove("user_id"), "{screen:?}");
+        }
         assert_eq!(classic, spa, "{screen:?}");
         assert!(screen.spa.starts_with("/app/"), "{screen:?}");
     }
@@ -86,6 +96,49 @@ fn only_intentional_aliases_share_a_url() {
     assert_eq!(
         aliases,
         BTreeMap::from([
+            (
+                "/app/".to_string(),
+                vec![
+                    ("welcome#show", "/"),
+                    ("users/sidebars#show", "/users/me/sidebar"),
+                    ("users/sidebars#show", "/users/:user_id/sidebar"),
+                ],
+            ),
+            (
+                "/app/settings/status".to_string(),
+                vec![
+                    ("users/statuses#edit", "/users/me/status/edit"),
+                    ("users/statuses#edit", "/users/:user_id/status/edit"),
+                ],
+            ),
+            (
+                "/app/settings/sessions".to_string(),
+                vec![
+                    ("users/sessions#index", "/users/me/sessions"),
+                    ("users/sessions#index", "/users/:user_id/sessions"),
+                ],
+            ),
+            (
+                "/app/settings/devices".to_string(),
+                vec![
+                    ("users/push_subscriptions#index", "/users/me/push_subscriptions"),
+                    ("users/push_subscriptions#index", "/users/:user_id/push_subscriptions"),
+                ],
+            ),
+            (
+                "/app/admin/slack/runs/7".to_string(),
+                vec![
+                    ("accounts/slack_import_runs#show", "/account/slack_import/runs/:id"),
+                    ("accounts/slack_import_runs#status", "/account/slack_import/runs/:id/status"),
+                ],
+            ),
+            (
+                "/app/settings/slack/7".to_string(),
+                vec![
+                    ("slack/imports#show", "/slack/imports/:id"),
+                    ("slack/imports#status", "/slack/imports/:id/status"),
+                ],
+            ),
             (
                 "/app/settings".to_string(),
                 vec![
@@ -156,8 +209,7 @@ fn only_intentional_aliases_share_a_url() {
                 ],
             ),
         ]),
-        "only the message, room, thread, people, room settings and profile aliases may share \
-         SPA URLs, with their fallback first"
+        "only the listed aliases may share SPA URLs, with their canonical page first"
     );
     assert!(SCREENS.iter().all(|screen| {
         std::ptr::eq(first_for_spa(screen), screen)

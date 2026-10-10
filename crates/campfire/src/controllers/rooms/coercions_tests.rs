@@ -39,15 +39,15 @@ async fn direct_namespace_show_keeps_auth_gates_and_redirects_to_the_room() {
     let mut david=app.david();
     for (id,expected) in oracle()["shows"].as_object().unwrap() {
         let path=format!("/rooms/directs/{id}");
-        assert_eq!(app.anonymous().get(&path).await.location(),Some("http://campfire.test/session/new"));
+        assert_eq!(app.anonymous().classic_page(&path).await.location(),Some("http://campfire.test/session/new"));
         assert_eq!(app.anonymous().get(&format!("{path}?bot_key={BENDER_KEY}")).await.status,StatusCode::FORBIDDEN);
-        let reply=david.get(&path).await;
+        let reply=david.classic_page(&path).await;
         assert_eq!(reply.status.as_u16() as u64,expected["status"].as_u64().unwrap(),"{id}");
         assert_eq!(reply.location(),expected["location"].as_str(),"{id}");
     }
     // The actual page route remains scoped and working.
-    assert_eq!(david.get(&format!("/rooms/{DIRECT_DAVID_JASON}")).await.status,StatusCode::OK);
-    assert_eq!(david.get(&format!("/rooms/{DIRECT_KEVIN_BENDER}")).await.location(),Some("http://campfire.test/"));
+    assert_eq!(david.classic_page(&format!("/rooms/{DIRECT_DAVID_JASON}")).await.status,StatusCode::FOUND);
+    assert_eq!(david.classic_page(&format!("/rooms/{DIRECT_KEVIN_BENDER}")).await.location(),Some("http://campfire.test/"));
 }
 
 #[tokio::test]

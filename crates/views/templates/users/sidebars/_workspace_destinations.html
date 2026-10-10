@@ -1,9 +1,0 @@
-      <nav class="sidebar-list workspace-destinations" aria-label="Your workspace">
-        {% filter link_to("/activity", h::attrs().class("sidebar-item btn").data("workspace_destination", "/activity").data("controller", "activity-indicator").data("activity_indicator_url_value", "/activity/unread_count.json")) %}
-          {{ h::image_tag(ctx, "notification-bell-everything.svg", h::attrs().size(20).aria_hidden().class("colorize--black")) }}
-          <span class="sidebar-item__label">Activity inbox</span>
-          <span class="workspace-activity-count" data-activity-indicator-target="count" hidden></span>
-{% endfilter %}{% for destination in crate::activity::DESTINATIONS %}        {% filter link_to(destination.0, h::attrs().class("sidebar-item btn").data("workspace_destination", destination.0)) %}
-          {{ h::image_tag(ctx, destination.1, h::attrs().size(20).aria_hidden().class("colorize--black")) }}
-          <span class="sidebar-item__label">{{ destination.2 }}</span>
-{% endfilter %}{% endfor %}      </nav>{{ "\n" }}

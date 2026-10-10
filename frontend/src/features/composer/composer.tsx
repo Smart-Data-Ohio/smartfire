@@ -25,8 +25,9 @@ import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
 import { DropOverlay, useDropTarget } from "./attachments/drop-zone.tsx";
 import {
+  fileOptions,
+  MAX_FILES,
   pastedName,
-  pendingAttachment,
   type TrayFile,
   useAttachments,
 } from "./attachments/use-attachments.ts";
@@ -97,9 +98,6 @@ interface Submission {
   readonly fileIds: ReadonlySet<string>;
   readonly driveFileIds: ReadonlySet<string>;
 }
-
-/** How many files one message can carry along (the rest go as their own messages). */
-const MAX_FILES = 10;
 
 interface FormatButton {
   readonly id: ShortcutId;
@@ -385,10 +383,12 @@ export function Composer({
 
     if (overflow > 0) {
       toast({
-        title: creating ? "A new thread takes one file" : `Up to ${MAX_FILES} files at a time`,
+        title: creating
+          ? "A new thread takes one file"
+          : `A message holds up to ${MAX_FILES} files`,
         description: creating
           ? "Add the others in a reply once the thread exists."
-          : "Send these first, then add the rest.",
+          : `${overflow === 1 ? "1 file wasn't" : `${overflow} files weren't`} added. Send these, then add the rest.`,
       });
     }
 
@@ -407,10 +407,10 @@ export function Composer({
   };
 
   /**
-   * Posts the text with the first file, and each further file as its own message. Each carries
-   * the reply the submit took (`snapshot`, read before any await), as classic's text and uploads
-   * do. The chip goes with the send; a send that fails puts it back (`trackSentReply`). Only what
-   * the submit took is cleared: text typed or files added while it was out stay.
+   * Posts the text and every submitted file as one message, with the reply the submit took
+   * (`snapshot`, read before any await), as classic's text and uploads do. The chip goes with the
+   * send; a send that fails puts it back (`trackSentReply`). Only what the submit took is
+   * cleared: text typed or files added while it was out stay.
    */
   const deliver = async (
     markdown: string,
@@ -433,43 +433,23 @@ export function Composer({
         void latest;
       }
 
-      const [first, ...rest] = files;
       const target = snapshot.target;
 
       const replying =
         target === null ? null : { messageId: target.messageId, notify: target.notify };
 
-      const sentIds: string[] = [];
+      const clientMessageId = uuid7(Date.now());
+      const options = { ...fileOptions(files), threadId, reply: replying, clientMessageId };
 
-      const post = (body: string, options: NonNullable<Parameters<typeof actions.send>[2]>) => {
-        const clientMessageId = uuid7(Date.now());
-
-        sentIds.push(clientMessageId);
-        actions.send(roomId, body, { ...options, threadId, reply: replying, clientMessageId });
-      };
-
-      const attachmentOptions = {
-        attachmentSignedId: first?.snapshot.signedId ?? null,
-        attachment: first === undefined ? null : pendingAttachment(first),
-      };
-
-      const options =
-        drive.length === 0
-          ? attachmentOptions
-          : { ...attachmentOptions, driveFileIds: drive.map((file) => file.id) };
-
-      post(markdown, options);
-
-      for (const entry of rest) {
-        post("", {
-          attachmentSignedId: entry.snapshot.signedId,
-          attachment: pendingAttachment(entry),
-        });
-      }
+      actions.send(
+        roomId,
+        markdown,
+        drive.length === 0 ? options : { ...options, driveFileIds: drive.map((file) => file.id) },
+      );
 
       attachments.clearSent(files);
       clearSentDrive(drive);
-      trackSentReply(key, snapshot, sentIds);
+      trackSentReply(key, snapshot, [clientMessageId]);
       clearSubmitted(submitted);
     } finally {
       submitting.current = false;

@@ -4,39 +4,8 @@ use crate::{
     concerns::{self, Before},
 };
 use campfire_db::{Errors, UserStatusSettings};
-use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, format, permit_keys};
-use super::super::presenters::{self, page};
-use campfire_views::users;
-use askama::Template;
+use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, permit_keys};
 
-pub async fn edit(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    let id = concerns::require_current_user(c)?.id;
-    let now = c.now();
-    let fields = c
-        .app()
-        .db
-        .read(move |conn| Ok(presenters::profile_sections::load(conn, id, now)?.status))
-        .await
-        .map_err(Error::internal)?;
-    render_edit(c, StatusCode::OK, id, fields).await
-}
-async fn render_edit(
-    c: &mut Ctx,
-    status: StatusCode,
-    id: i64,
-    fields: users::StatusFields,
-) -> Result {
-    c.respond_to(&[&format::HTML])?;
-    page::bare(c, status, &format::HTML, |_| {
-        users::StatusEdit {
-            user_id: id,
-            fields: fields.clone(),
-        }
-        .render()
-    })
-    .await
-}
 pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let id = concerns::require_current_user(c)?.id;
@@ -136,9 +105,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
     }
     if !errors.is_empty() {
-        return render_rejected(c, user, errors).await;
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let submitted = user.clone();
     // Users::StatusesController#broadcast_status_change checks only STATUS_ATTRIBUTES.
     let status_changed = original_status
         != (
@@ -164,7 +132,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await;
     match saved {
         Ok(()) => after_save(c, id),
-        Err(campfire_db::Error::RecordInvalid(errors)) => render_rejected(c, submitted, errors).await,
+        Err(campfire_db::Error::RecordInvalid(_)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
         Err(error) => Err(Error::internal(error)),
     }
 }
@@ -195,14 +163,5 @@ pub fn after_save(c: &mut Ctx, id: i64) -> Result {
                 ..Default::default()
             },
         )
-    }
-}
-
-async fn render_rejected(c: &mut Ctx, user: UserStatusSettings, errors: Errors) -> Result {
-    if c.is_turbo_frame_request() {
-        let fields = presenters::profile_sections::status_fields(&user, &errors, c.app().db.env().now());
-        render_edit(c, StatusCode::UNPROCESSABLE_ENTITY, user.user.id, fields).await
-    } else {
-        super::profiles::render_settings(c, StatusCode::UNPROCESSABLE_ENTITY, user, errors).await
     }
 }

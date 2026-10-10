@@ -46,7 +46,7 @@ async fn default_initials_svg_matches_rails_bytes_and_cache_validation() {
         }).await.unwrap();
         let user = app.db().read(move |conn| User::find(conn, DAVID)).await.unwrap();
         assert_eq!(user.initials(), vector["initials"].as_str().unwrap());
-        assert_eq!(campfire_views::helpers::initials(&user.name), user.initials());
+        assert_eq!(campfire_presentation::helpers::initials(&user.name), user.initials());
         let response = browser.send(Req::new(Method::GET, &token).header("accept", "image/svg+xml")).await;
         assert_eq!(response.status, StatusCode::OK);
         assert_eq!(response.text(), vector["body"].as_str().unwrap(), "name: {}", vector["name"]);

@@ -4,8 +4,6 @@
 
 pub use campfire_rooms::controllers::rooms::*;
 
-#[cfg(test)]
-use crate::controllers::presenters::call_navigation;
 
 #[cfg(test)]
 mod call_lifecycle_tests;
@@ -58,17 +56,11 @@ mod opens_rails_cases;
 #[cfg(test)]
 mod closeds_rails_cases;
 
-#[cfg(test)]
-#[path = "rooms/ws17_ooo_tests.rs"]
-mod ws17_ooo_tests;
 
 #[cfg(test)]
 #[path = "rooms/members_rails_cases.rs"]
 mod members_rails_cases;
 
-
-#[cfg(test)]
-mod sidebars_rails_cases;
 
 #[cfg(test)]
 mod involvements_rails_cases;
@@ -98,18 +90,11 @@ mod native_integration_tests;
 #[cfg(test)]
 pub(crate) mod query_probe;
 
-#[cfg(test)]
-#[path = "rooms/owner_panel_tests.rs"]
-mod owner_panel_tests;
 
-#[cfg(test)]
-mod full_page_tests;
 
 #[cfg(test)]
 mod queue_recovery_tests;
 
-#[cfg(test)]
-mod review_cache_tests;
 
 #[cfg(test)]
 mod public_huddle_tests;
@@ -126,16 +111,11 @@ mod review_tests;
 #[cfg(test)]
 mod call_channel_declaration_tests;
 
-#[cfg(test)]
-mod call_page_tests;
 
-pub(crate) mod shell;
 
 #[cfg(test)]
 mod stream_controller_tests;
 
-#[cfg(test)]
-mod stage_page_tests;
 
 #[cfg(test)]
 mod remaining_call_tests;
@@ -143,17 +123,9 @@ mod remaining_call_tests;
 #[cfg(test)]
 mod remaining_query_tests;
 
-#[cfg(test)]
-mod remaining_presence_tests;
 
-#[cfg(test)]
-mod room_composition_tests;
 
-#[cfg(test)]
-mod room_shell_tests;
 
-#[cfg(test)]
-mod full_room_tests;
 
 #[cfg(test)]
 mod row_broadcast_tests;
@@ -162,8 +134,6 @@ mod row_broadcast_tests;
 #[cfg(test)]
 pub(super) mod call_channel_broadcast_tests;
 
-#[cfg(test)]
-mod boards_read_tests;
 
 #[cfg(test)]
 mod boards_domain_tests;
@@ -185,8 +155,7 @@ mod original_audit_tests;
 pub(crate) mod directs {
     pub(crate) use campfire_rooms::controllers::rooms::directs::*;
 
-    mod picker_tests;
-}
+    }
 
 #[cfg(test)]
 pub(crate) mod events {

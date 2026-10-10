@@ -1,6 +1,5 @@
 //! HTTP regressions with expected values recorded by cache-reaction-review.rb in pinned Rails.
-use super::freshness;
-use crate::controllers::presenters::{Presenter, test_support::*};
+use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Boost, Message, NewMessage};
 use campfire_kit::clock::FrozenClock;
@@ -28,54 +27,6 @@ async fn fixture() -> (TestApp, Arc<FrozenClock>, i64, i64) {
 }
 
 #[tokio::test]
-async fn review_warm_room_tracks_rails_reply_edits_and_author_renames() {
-    let (app, clock, source, reply) = fixture().await;
-    let mut viewer = app.david();
-    for state in oracle()["states"].as_array().unwrap() {
-        clock.set(state["time"].as_str().unwrap().parse().unwrap());
-        match state["name"].as_str().unwrap() {
-            "initial" => (),
-            "source_edited" => {
-                let response = viewer.write(Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/messages/{source}.json"))
-                    .header("content-type", "application/json").body(json!({"message": {"markdown_source": "Review after edit"}}).to_string())).await;
-                assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-            }
-            "author_renamed" => {
-                let response = viewer.write(Req::new(Method::PATCH, "/users/me/profile")
-                    .form(&[("user[name]", "Review renamed author")])).await;
-                assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
-            }
-            name => panic!("unknown Rails state {name}"),
-        }
-        for _ in 0..2 {
-            let response = viewer.get(&format!("/rooms/{ALL_TALK}")).await;
-            assert_eq!(response.status, StatusCode::OK);
-            let expected = state["html"].as_str().unwrap();
-            assert!(response.text().contains(expected), "{}: warmed room must mount the current Rails reply bytes", state["name"]);
-        }
-        let runtime = app.booted.app.clone();
-        let state = state.clone();
-        app.db().read(move |conn| {
-            let p = Presenter::new(conn, &runtime, None);
-            let reply = Message::find(conn, reply)?;
-            assert_eq!(p.message_collection_cache_key(&reply)?, state["collection_key"].as_str().unwrap());
-            assert_eq!(freshness::etag(conn, &[reply.clone(), Message::find(conn, source)?])?, state["validator"].as_str().unwrap());
-            let expected_key = campfire_views::messages::collection_fragment_key(
-                &format!("{}/{}/{}", state["collection_key"].as_str().unwrap(), state["validator"].as_str().unwrap(), p.message_rendered_cache_key(&reply)?),
-                "http://campfire.test",
-            );
-            let actual_key = p.message_fragment_cache_key(&reply, "http://campfire.test")?;
-            if state["name"] == "author_renamed" { assert_eq!(actual_key, expected_key); }
-            campfire_views::fragment_cache::with(&runtime.fragment_cache, || {
-                assert_eq!(campfire_views::fragment_cache::read(&actual_key).unwrap().as_str(), state["html"].as_str().unwrap());
-            });
-            Ok(())
-        }).await.unwrap();
-    }
-    assert!(!app.booted.app.fragment_cache.is_empty());
-}
-
-#[tokio::test]
 async fn review_reaction_pairs_match_ruby_strip_and_legacy_classification() {
     let (app, _, source, _) = fixture().await;
     let mut viewer = app.david();
@@ -96,5 +47,3 @@ async fn review_reaction_pairs_match_ruby_strip_and_legacy_classification() {
         assert_eq!(json!(stored), row["stored"], "{content:?}");
     }
 }
-
-use campfire_web::controllers::presenters::MessageCache;

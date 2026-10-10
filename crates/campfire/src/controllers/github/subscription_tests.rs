@@ -15,7 +15,7 @@ async fn csrf(fresh: &Fresh) -> (String, String) {
         .router
         .clone()
         .oneshot(
-            Request::get("/account/edit")
+            Request::get("/app/")
                 .header("Host", "example.org")
                 .header("Cookie", &fresh.cookie)
                 .body(Body::empty())
@@ -251,94 +251,3 @@ async fn github_subscription_http_status_flash_token_events_and_membership_match
         }
     }
 }
-
-#[tokio::test]
-async fn github_subscription_sections_match_rails_bytes_and_real_edit_page_permissions() {
-    let cases: Value = serde_json::from_str(include_str!(
-        "../../../../../vectors/github_subscription_sections.json"
-    ))
-    .unwrap();
-    for case in cases.as_array().unwrap() {
-        let mut input = case.clone();
-        input["room_creator"] = case.get("creator").cloned().unwrap_or(json!(811));
-        let fresh = Fresh::new(&input).await;
-        let subscribed = case["subscribed"] == true;
-        fresh
-            .app
-            .db
-            .write(move |tx| {
-                if subscribed {
-                    let s = RepositorySubscription::create(
-                        tx,
-                        815,
-                        "rails",
-                        "rails",
-                        json!(["merged"]),
-                        Some(811),
-                        false,
-                    )?;
-                    tx.conn().execute(
-                        "UPDATE github_repository_subscriptions SET id=881 WHERE id=?",
-                        [s.id],
-                    )?;
-                }
-                Ok(())
-            })
-            .await
-            .unwrap();
-        let expected = case["html"].as_str().unwrap().to_owned();
-        fresh
-            .app
-            .db
-            .read(move |conn| {
-                let room = campfire_db::Room::find(conn, 815)?;
-                let user = campfire_db::User::find(conn, 811)?;
-                let section = crate::controllers::presenters::github::subscription_section(
-                    conn, &room, &user,
-                )?;
-                assert_eq!(section.render().0, expected);
-                Ok(())
-            })
-            .await
-            .unwrap();
-        if case["kind"] == "Rooms::Direct" {
-            continue;
-        }
-        for kind in ["closeds", "opens"] {
-            let response = fresh
-                .router
-                .clone()
-                .oneshot(
-                    Request::get(format!("/rooms/{kind}/815/edit"))
-                        .header("Host", "example.org")
-                        .header("Cookie", &fresh.cookie)
-                        .body(Body::empty())
-                        .unwrap(),
-                )
-                .await
-                .unwrap();
-            assert_eq!(response.status(), 200);
-            let body = String::from_utf8(
-                axum::body::to_bytes(response.into_body(), 1024 * 1024)
-                    .await
-                    .unwrap()
-                    .to_vec(),
-            )
-            .unwrap();
-            assert_eq!(
-                body.contains("id=\"github-subscriptions\""),
-                case["name"] != "plain"
-            );
-            assert_eq!(
-                body.contains("name=\"github_repository_subscription[skip_access_check]\""),
-                case["name"] != "plain" && case["role"] != 0
-            );
-            if subscribed && case["name"] != "plain" {
-                assert!(body.contains("rails/rails"));
-                assert!(body.contains("/rooms/815/github_subscriptions/881"));
-            }
-        }
-    }
-}
-
-use campfire_views::rendering::*;

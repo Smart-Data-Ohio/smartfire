@@ -6,8 +6,6 @@ pub use campfire_people::controllers::accounts::*;
 #[cfg(test)]
 mod mutation_tests;
 
-#[cfg(test)]
-mod view_tests;
 
 #[cfg(test)]
 mod attachment_tests;
@@ -19,9 +17,9 @@ mod original_control_tests;
 pub(crate) mod audit_logs {
     pub(crate) use campfire_people::controllers::accounts::audit_logs::*;
 
-    mod tests;
     mod original_tests;
     mod original_caps_tests;
+    mod tests;
 }
 
 #[cfg(test)]
@@ -41,8 +39,8 @@ pub(crate) mod bots {
 pub(crate) mod icons {
     pub(crate) use campfire_people::controllers::accounts::icons::*;
 
-    mod tests;
     mod original_tests;
+    mod tests;
 }
 
 #[cfg(test)]

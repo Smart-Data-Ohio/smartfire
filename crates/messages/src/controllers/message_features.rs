@@ -81,7 +81,7 @@ pub fn errors_json(errors: &campfire_db::Errors) -> serde_json::Value {
 }
 
 pub fn sentence(errors: &campfire_db::Errors) -> String {
-    campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
+    campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ")
 }
 
 pub fn boolean(value: Option<&Param>) -> bool {
@@ -92,7 +92,7 @@ pub fn boolean(value: Option<&Param>) -> bool {
         )
 }
 
-pub async fn user_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
+pub async fn user_zone(c: &Ctx) -> Result<campfire_presentation::time::Zone> {
     let id = require_current_user(c)?.id;
     let name: Option<String> = c
         .app()
@@ -106,20 +106,20 @@ pub async fn user_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
         })
         .await
         .map_err(db_error)?;
-    Ok(campfire_views::time::Zone::for_user(name.as_deref()))
+    Ok(campfire_presentation::time::Zone::for_user(name.as_deref()))
 }
 
 /// WS8bm2 builder calendar parser; slash-relative expressions use a separate entry
 /// point. Unrecognized input and Ruby's invalid-calendar exception stay distinct.
 pub fn parse_time(
     raw: &str,
-    zone: &campfire_views::time::Zone,
+    zone: &campfire_presentation::time::Zone,
     now: jiff::Timestamp,
 ) -> Result<Option<Timestamp>> {
     parse_time_checked(raw, zone, now).map_err(db_error)
 }
 
-pub fn parse_time_checked(raw: &str, zone: &campfire_views::time::Zone, now: jiff::Timestamp) -> campfire_db::Result<Option<Timestamp>> {
+pub fn parse_time_checked(raw: &str, zone: &campfire_presentation::time::Zone, now: jiff::Timestamp) -> campfire_db::Result<Option<Timestamp>> {
     campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
 }
 
@@ -143,9 +143,9 @@ mod relative_split_input_tests;
 
 /// Presentation strings use WS11's shared wide-time renderer; view models never
 /// narrow an accepted database timestamp through Jiff.
-pub fn html_datetime(at: campfire_db::Timestamp, zone: &campfire_views::time::Zone) -> String {
+pub fn html_datetime(at: campfire_db::Timestamp, zone: &campfire_presentation::time::Zone) -> String {
     rails_compat::datetime::render(at, zone.tz(), true)
 }
-pub fn html_long(at: campfire_db::Timestamp, zone: &campfire_views::time::Zone) -> String {
+pub fn html_long(at: campfire_db::Timestamp, zone: &campfire_presentation::time::Zone) -> String {
     rails_compat::datetime::format(at, zone.tz(), "%B %d, %Y %H:%M")
 }

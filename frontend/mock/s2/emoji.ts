@@ -24,6 +24,8 @@ export const QUICK_REACTIONS: readonly (readonly [string, string])[] = [
 interface ImageIcon {
   readonly name: string;
   readonly title: string;
+  /** A workspace icon that's an animated GIF, with a first-frame still at `?still=1`. */
+  readonly animated?: boolean;
 }
 
 /** Built-in brand logos (a few of `vendor/icons.yml`), served at `/assets/icons/brands/:name.svg` as the server's asset
@@ -43,7 +45,7 @@ export const BRAND_ICONS: readonly ImageIcon[] = [
 export const CUSTOM_ICONS: readonly ImageIcon[] = [
   { name: "lgtm", title: "LGTM" },
   { name: "ohio", title: "Ohio" },
-  { name: "partyparrot", title: "Party parrot" },
+  { name: "partyparrot", title: "Party parrot", animated: true },
   { name: "shipit", title: "Ship it" },
   { name: "smartfire", title: "Smartfire" },
 ];
@@ -161,40 +163,60 @@ function emojiIcon(name: string, character: string): Icon {
   };
 }
 
-function imageIcon(kind: "brand" | "custom", icon: ImageIcon): Icon {
+/** The fixture `CUSTOM_ICONS` entry named `name`, if any. */
+export function customIcon(name: string): ImageIcon | undefined {
+  return CUSTOM_ICONS.find((icon) => icon.name === name);
+}
+
+/** A brand or workspace icon's DTO; an animated one's still is its URL with `?still=1`. */
+export function imageIcon(kind: "brand" | "custom", icon: ImageIcon): Icon {
+  const imageUrl = iconImageUrl(kind, icon.name);
+  const animated = icon.animated ?? false;
+
   return {
     name: icon.name,
     title: icon.title,
     kind,
     character: null,
-    imageUrl: iconImageUrl(kind, icon.name),
-    animated: false,
-    stillUrl: iconImageUrl(kind, icon.name),
+    imageUrl,
+    animated,
+    stillUrl: animated ? `${imageUrl}?still=1` : imageUrl,
   };
 }
 
-/** `Icons::lookup`: brand, then custom, then emoji. */
-export function lookupIcon(name: string): Icon | null {
+/**
+ * `Icons::lookup`: brand, then custom (the fixtures, then those `uploaded` in admin), then emoji.
+ */
+export function lookupIcon(name: string, uploaded: readonly Icon[] = []): Icon | null {
   const brand = BRAND_ICONS.find((icon) => icon.name === name);
 
   if (brand !== undefined) return imageIcon("brand", brand);
 
-  const custom = CUSTOM_ICONS.find((icon) => icon.name === name);
+  const custom = customIcon(name);
 
   if (custom !== undefined) return imageIcon("custom", custom);
+
+  const added = uploaded.find((icon) => icon.name === name);
+
+  if (added !== undefined) return added;
 
   const character = emojiIndex().byAlias.get(name);
 
   return character === undefined ? null : emojiIcon(name, character);
 }
 
-/** `GET /icons`: every brand and workspace icon, by kind then name. */
-export function imageIcons(): Icon[] {
+/** `GET /icons`: every brand and workspace icon (`uploaded` ones too), by kind then name. */
+export function imageIcons(uploaded: readonly Icon[] = []): Icon[] {
   const byName = (a: ImageIcon, b: ImageIcon) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+
+  const custom = [
+    ...CUSTOM_ICONS.map((icon) => imageIcon("custom", icon)),
+    ...uploaded.filter((icon) => customIcon(icon.name) === undefined),
+  ];
 
   return [
     ...[...BRAND_ICONS].sort(byName).map((icon) => imageIcon("brand", icon)),
-    ...[...CUSTOM_ICONS].sort(byName).map((icon) => imageIcon("custom", icon)),
+    ...custom.sort(byName),
   ];
 }
 
@@ -205,12 +227,12 @@ export const ICON_SUGGESTIONS = 8;
  * `autocompletable/icons`: exact, then prefix, then substring matches; non-emoji before emoji;
  * then by name. Empty for an empty query.
  */
-export function searchIcons(rawQuery: string): Icon[] {
+export function searchIcons(rawQuery: string, uploaded: readonly Icon[] = []): Icon[] {
   const query = rawQuery.trim().replace(/^:|:$/g, "").toLowerCase();
 
   if (query === "") return [];
 
-  const candidates: Icon[] = imageIcons();
+  const candidates: Icon[] = imageIcons(uploaded);
 
   for (const name of emojiIndex().names) {
     if (!name.includes(query)) continue;
@@ -247,12 +269,15 @@ export interface ReactionContent {
  * reaction (shortcodes of emoji are stored as the emoji); anything else is a free-text boost
  * (`null`).
  */
-export function reactionContent(raw: string): ReactionContent | null {
+export function reactionContent(
+  raw: string,
+  uploaded: readonly Icon[] = [],
+): ReactionContent | null {
   const content = raw.trim();
   const shortcode = /^:([a-z0-9_]+):$/.exec(content);
 
   if (shortcode !== null) {
-    const icon = lookupIcon(shortcode[1] ?? "");
+    const icon = lookupIcon(shortcode[1] ?? "", uploaded);
 
     if (icon === null) return null;
 

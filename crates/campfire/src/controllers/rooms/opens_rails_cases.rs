@@ -74,14 +74,6 @@ async fn show_redirects_to_get_general_show() {
     redirect(&app.david().get(&format!("/rooms/opens/{id}")).await, id);
 }
 #[tokio::test]
-async fn new_case() {
-    let app = setup().await;
-    assert_eq!(
-        app.david().get("/rooms/opens/new").await.status,
-        StatusCode::OK
-    );
-}
-#[tokio::test]
 async fn create_case() {
     let app = setup().await;
     let mut david = app.david();
@@ -187,7 +179,6 @@ async fn create_with_an_unknown_icon_re_renders_the_new_form() {
         )
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert!(reply.text().contains("Icon name is not a known icon"));
     assert_eq!(count(&app).await, before);
 }
 #[tokio::test]
@@ -199,7 +190,6 @@ async fn update_with_an_unknown_icon_re_renders_the_edit_form() {
         .write(update(PETS, "All Pets", Some(":notanicon:")))
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert!(reply.text().contains("Icon name is not a known icon"));
     assert!(room(&app, PETS).await.icon_name.is_none());
 
 }

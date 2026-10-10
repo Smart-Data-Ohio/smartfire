@@ -1,19 +1,17 @@
-//! Shared GithubWriteAction scope and thin HTML/Turbo transport over human write policy.
+//! Shared GithubWriteAction scope and legacy HTTP transport over human write policy.
 use crate::{
     app::AppCtx,
     concerns::{self, Before, cast_integer},
-    controllers::presenters::{page::db_error, view_context::Layout},
+    controllers::presenters::page::db_error,
     integrations::github::{
-        accounts::Account,
         client::PullRequestKey,
         pull_requests::PullRequest,
         threads::PullRequestThread,
-        writes::{Action, Outcome},
+        writes::Action,
     },
 };
 use campfire_db::ChannelThread;
 use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format};
-use campfire_views::github::write_actions::WriteActions;
 async fn before(c: &mut Ctx) -> Result<(PullRequest, ChannelThread, i64)> {
     concerns::before_actions(c, Before::default()).await?;
     let (_, room) = concerns::set_room(c).await?;
@@ -45,56 +43,6 @@ async fn before(c: &mut Ctx) -> Result<(PullRequest, ChannelThread, i64)> {
 fn param(c: &Ctx, key: &str) -> String {
     c.params.get(key).and_then(Param::to_s).unwrap_or_default()
 }
-async fn render(
-    c: &mut Ctx,
-    pr: PullRequest,
-    thread: ChannelThread,
-    user_id: i64,
-    result: Outcome,
-    show: bool,
-) -> Result {
-    let account = c
-        .app()
-        .db
-        .read(move |conn| Account::for_user(conn, user_id))
-        .await
-        .map_err(db_error)?;
-    let usable = if let Some(a) = &account {
-        c.app()
-            .github_accounts
-            .usable(a.id)
-            .await
-            .map_err(db_error)?
-    } else {
-        false
-    };
-    let data = WriteActions {
-        thread_id: thread.id,
-        room_id: thread.room_id,
-        pull_request_id: pr.id,
-        linked: account.is_some(),
-        usable,
-        login: account.map(|a| a.github_login).unwrap_or_default(),
-        notice: result.notice,
-        alert: result.alert,
-        comment_body: result.comment_body,
-        review_body: result.review_body,
-        reviewers_body: result.reviewers_body,
-    };
-    let layout = Layout::load(c).await?;
-    let html = layout.render(c, |_| Ok(data.render()))?;
-    if show {
-        return Ok(c.html(html));
-    }
-    let status = if result.accepted {
-        StatusCode::OK
-    } else {
-        StatusCode::UNPROCESSABLE_ENTITY
-    };
-    c.respond_to(&[&format::HTML])?;
-    Ok(c.render(status, &format::HTML, html))
-}
-
 async fn write(c: &mut Ctx, action: Action) -> Result {
     let (pr, thread, user_id) = before(c).await?;
     let key = PullRequestKey {
@@ -116,11 +64,9 @@ async fn write(c: &mut Ctx, action: Action) -> Result {
     )
     .await
     .map_err(db_error)?;
-    render(c, pr, thread, user_id, result, false).await
-}
-pub async fn show(c: &mut Ctx) -> Result {
-    let (pr, thread, user_id) = before(c).await?;
-    render(c, pr, thread, user_id, Outcome::default(), true).await
+    let _ = thread;
+    c.respond_to(&[&format::HTML])?;
+    Ok(c.head(if result.accepted { StatusCode::OK } else { StatusCode::UNPROCESSABLE_ENTITY }))
 }
 pub async fn comment(c: &mut Ctx) -> Result {
     write(c, Action::Comment).await
@@ -131,6 +77,3 @@ pub async fn review(c: &mut Ctx) -> Result {
 pub async fn review_request(c: &mut Ctx) -> Result {
     write(c, Action::ReviewRequest).await
 }
-
-use campfire_views::rendering::*;
-use campfire_web::controllers::presenters::view_context::LayoutRendering;

@@ -181,7 +181,7 @@ async fn github_connections_http_identity_flash_revocation_and_audits_match_rail
         assert_eq!(status, case["status"], "{} {body}", case["name"]);
         assert_eq!(
             headers.get("location").and_then(|v| v.to_str().ok()),
-            case["location"].as_str(),
+            case["location"].as_str().map(|location| if callback && location == "http://example.org/users/me/profile" { "http://example.org/app/settings/integrations" } else { location }),
             "{}",
             case["name"]
         );

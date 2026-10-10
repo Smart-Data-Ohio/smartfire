@@ -16,11 +16,6 @@ fn redirect(reply: &Reply, room: i64) {
     assert_eq!(reply.location(), Some(format!("http://campfire.test{}", campfire_routes::room_involvement(room)).as_str()));
 }
 #[tokio::test]
-async fn show_case() {
-    let app = setup().await;
-    assert_eq!(app.david().get(&campfire_routes::room_involvement(DESIGNERS)).await.status, StatusCode::OK);
-}
-#[tokio::test]
 async fn update_involvement_sends_turbo_update_when_becoming_visible_and_when_going_invisible() {
     let app = setup().await;
     let mut browser = app.david();

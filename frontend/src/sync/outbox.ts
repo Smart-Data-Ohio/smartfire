@@ -42,6 +42,13 @@ export interface SendOptions {
   readonly attachmentSignedId?: string | null;
   /** What the pending row shows for that file. */
   readonly attachment?: PendingAttachment | null;
+  /**
+   * Several finished uploads to post as one message, in order (not with `attachmentSignedId`).
+   * Left out, or empty, for none.
+   */
+  readonly attachmentSignedIds?: readonly string[];
+  /** What the pending row shows for those files. */
+  readonly attachments?: readonly PendingAttachment[];
   /** Drive files pinned on this message. Left out when there are none. */
   readonly driveFileIds?: readonly string[];
   /** An inline reply: the message it answers and whether that author is notified. */
@@ -85,6 +92,7 @@ export class Outbox extends Context.Service<
         const step = yield* Schedule.toStep(resendSchedule);
 
         const driveFileIds = pending.driveFileIds;
+        const signedIds = pending.attachmentSignedIds;
 
         const message = {
           clientMessageId: pending.clientMessageId,
@@ -94,10 +102,15 @@ export class Outbox extends Context.Service<
           attachmentSignedId: pending.attachmentSignedId,
         };
 
+        const grouped =
+          signedIds !== undefined && signedIds.length > 0
+            ? { ...message, attachmentSignedIds: [...signedIds] }
+            : message;
+
         const body =
           driveFileIds !== undefined && driveFileIds.length > 0
-            ? { ...message, driveFileIds: [...driveFileIds] }
-            : message;
+            ? { ...grouped, driveFileIds: [...driveFileIds] }
+            : grouped;
 
         const attempt =
           pending.threadId === null
@@ -143,6 +156,7 @@ export class Outbox extends Context.Service<
         const state = store.getState();
 
         const driveFileIds = options.driveFileIds;
+        const signedIds = options.attachmentSignedIds;
 
         const pendingBase = {
           clientMessageId,
@@ -159,10 +173,19 @@ export class Outbox extends Context.Service<
           error: null,
         };
 
+        const grouped: PendingMessage =
+          signedIds !== undefined && signedIds.length > 0
+            ? {
+                ...pendingBase,
+                attachmentSignedIds: signedIds,
+                attachments: options.attachments ?? [],
+              }
+            : pendingBase;
+
         const pending: PendingMessage =
           driveFileIds !== undefined && driveFileIds.length > 0
-            ? { ...pendingBase, driveFileIds }
-            : pendingBase;
+            ? { ...grouped, driveFileIds }
+            : grouped;
 
         noteSend(pending);
         mutations.addPending(pending);

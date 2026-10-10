@@ -427,13 +427,7 @@ async fn hostile_and_oversized_queries_answer_cleanly() {
         "after:9999-12-31",
     ] {
         assert!(search(&mut david, q).await.messages.is_empty(), "{q}");
-        let classic = david
-            .classic_page(&format!(
-                "/searches?q={}",
-                url::form_urlencoded::byte_serialize(q.as_bytes()).collect::<String>()
-            ))
-            .await;
-        assert_eq!(classic.status, StatusCode::OK, "{q}: {}", classic.text());
+
     }
 
     // Bounds: 500 characters, and 10 each of `from:` and `in:`.

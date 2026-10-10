@@ -1,8 +1,0 @@
-<div id="{{ message.dom_id("presentation") }}" dir="auto"
-     data-reply-target="body"
-     data-messages-target="body"
-     data-search-results-target="body"
-     data-message-edit-format="{% if message.details.markdown %}markdown{% else %}rich_text{% endif %}">
-  {{ crate::messages::presentation::message_presentation(ctx, message)|safe }}
-</div>
-{# Keep the final newline emitted by this Rails partial. #}

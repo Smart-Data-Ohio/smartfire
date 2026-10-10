@@ -67,7 +67,7 @@ async fn thread_reads_deny_bot_keys_and_do_not_join_a_browsing_human() {
 async fn nested_pages_show_actions_formats_and_locked_reads_match_rails_bytes() {
     let (app, _, thread, _) = fixture().await;
     let mut browser = app.david();
-    for row in oracle()["rows"].as_array().unwrap() {
+    for row in oracle()["rows"].as_array().unwrap().iter().filter(|row| row["path"].as_str().unwrap().contains(".json") || row["path"].as_str().unwrap().contains("/actions")) {
         if row["name"] == "locked_actions" {
             app.db().write(move |tx| { tx.conn().execute("UPDATE channel_threads SET locked_at = ? WHERE id = ?", (tx.now(), thread))?; Ok(()) }).await.unwrap();
         }

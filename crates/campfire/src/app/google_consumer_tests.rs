@@ -267,8 +267,6 @@ async fn google_consumer_meet_save_failure_keeps_committed_entry_and_rolls_back_
         .unwrap();
 }
 
-
-
 #[tokio::test]
 async fn google_compound_attendance_attributes_match_rails_bytes() {
     let mut a = TestApp::boot().await.unwrap();
@@ -286,35 +284,49 @@ async fn google_compound_attendance_attributes_match_rails_bytes() {
     let mut browser = a.david();
     for case in v["cases"].as_array().unwrap() {
         let get = case["location"] == "show";
-        let req = Req::new(
-            if get { Method::GET } else { Method::PATCH },
-            &format!("/rooms/{ALL_TALK}/events/{id}/attendance"),
-        )
-        .header("turbo-frame", "fixture-frame")
-        .header("content-type", "application/json")
-        .body(serde_json::to_vec(&case["params"]).unwrap());
+        // K15 deleted the Turbo frame and hidden input, but compound parameters must still
+        // leave an existing response intact when the supplied response is invalid.
+        let path = format!("/rooms/{ALL_TALK}/events/{id}/attendance");
+        let req = Req::new(if get { Method::GET } else { Method::PATCH }, &path)
+            .header("turbo-frame", "fixture-frame")
+            .header("content-type", "application/json")
+            .body(serde_json::to_vec(&case["params"]).unwrap());
         let response = if get {
             browser.send(req).await
         } else {
             browser.write(req).await
         };
         let label = format!("{} {}", case["name"], case["location"]);
-        assert_eq!(
-            response.status.as_u16() as u64,
-            case["status"].as_u64().unwrap(),
-            "{label}"
-        );
-        let html = response.text();
-        for (key, pattern) in [
-            ("frame_tag", r"<turbo-frame\b[^>]*>"),
-            ("input_tag", r#"<input\b[^>]*\bname="message_id"[^>]*>"#),
-        ] {
-            let actual = regex::Regex::new(pattern)
-                .unwrap()
-                .find(&html)
-                .map(|m| m.as_str());
-            assert_eq!(json!(actual), case[key], "{label}: exact {key}");
+        if get {
+            assert_eq!(response.status, 302, "{label}");
+            assert_eq!(
+                response.location(),
+                Some(
+                    format!("http://campfire.test/app/r/{ALL_TALK}/events/{id}/attendance")
+                        .as_str()
+                ),
+                "{label}"
+            );
+        } else {
+            assert_eq!(
+                response.status.as_u16() as u64,
+                case["status"].as_u64().unwrap(),
+                "{label}"
+            );
+            assert!(response.body.is_empty(), "{label}: retired frame markup");
         }
+        let attendance = browser
+            .get(&format!("/api/v1/rooms/{ALL_TALK}/events/{id}/attendance"))
+            .await;
+        assert_eq!(attendance.status, 200, "{label}: {}", attendance.text());
+        assert_eq!(
+            attendance.json(),
+            json!({
+                "eventId": id, "response": "going", "goingCount": 1, "maybeCount": 0,
+                "declinedCount": 0, "respondable": true, "canApplyToFuture": false
+            }),
+            "{label}: response and counts"
+        );
     }
 }
 

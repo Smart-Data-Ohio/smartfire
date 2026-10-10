@@ -530,6 +530,52 @@
     height: 32px;
   }
 
+  /* A grouped message: images and videos tile a grid (two or three across), files list below.
+     The grid takes the column's width up to 480 px, so it fits a phone without scrolling. */
+  .attachment-gallery {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .attachment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+    width: min(100%, 480px);
+    margin: var(--message-accessory-gap, var(--space-1-5)) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .attachment-grid[data-columns="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-cell {
+    min-width: 0;
+    aspect-ratio: 1;
+  }
+
+  .attachment-tile.attachment-image,
+  .attachment-tile.attachment-video {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  .attachment-tile.attachment-video {
+    object-fit: contain;
+    background: var(--bg-skeleton);
+  }
+
+  .attachment-tile.attachment-image.attachment-pending img {
+    max-height: none;
+  }
+
   /* ── Lightbox ───────────────────────────────────────────────────────────── */
 
   /* Wide on a desktop; on a phone, Dialog's full-height sheet. */
@@ -555,6 +601,33 @@
     max-width: 100%;
     max-height: calc(100dvh - 220px);
     object-fit: contain;
+  }
+
+  .lightbox[data-several] {
+    position: relative;
+  }
+
+  /* Previous and next sit on the stage's edges, over the image, as round raised buttons. */
+  .lightbox-step.button {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    border-radius: var(--radius-pill);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+    color: var(--text);
+  }
+
+  .lightbox-step.button:hover {
+    background: var(--bg-hover);
+  }
+
+  .lightbox-step[data-side="previous"] {
+    left: var(--space-2);
+  }
+
+  .lightbox-step[data-side="next"] {
+    right: var(--space-2);
   }
 
   /* ── In-place editor ────────────────────────────────────────────────────── */
@@ -799,6 +872,18 @@
     /* The phone dialog is a full-height sheet; a sunken stage that tall frames nothing. */
     .lightbox {
       background: transparent;
+    }
+
+    .attachment-grid {
+      width: 100%;
+    }
+  }
+
+  @media (width < 720px) and (pointer: coarse) {
+    .lightbox-step.button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
     }
   }
 
