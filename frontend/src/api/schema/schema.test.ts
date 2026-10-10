@@ -80,6 +80,8 @@ const membershipJson = {
 } as const;
 
 const sidebarRowJson = {
+  revision: 0,
+  evaluatedAt: "2026-10-10T12:00:00.000000000Z",
   room: roomJson,
   membership: membershipJson,
   displayName: "general",

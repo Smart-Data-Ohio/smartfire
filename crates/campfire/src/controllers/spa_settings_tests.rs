@@ -14,7 +14,7 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest as _;
 
 use crate::controllers::presenters::test_support::{
-    Browser, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
+    ALL_TALK, Browser, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
 };
 
 /// David's password in the seed.
@@ -114,7 +114,8 @@ async fn snapshot(a: &TestApp) -> Value {
             let user = statement.query_row([DAVID], |row| {
                 let mut columns = Map::new();
                 for (index, name) in names.iter().enumerate() {
-                    if name == "password_digest" {
+                    // SPA ordering metadata has its own revision tests below.
+                    if name == "password_digest" || name == "activity_revision" {
                         continue;
                     }
                     let value: rusqlite::types::Value = row.get(index)?;
@@ -124,6 +125,13 @@ async fn snapshot(a: &TestApp) -> Value {
                             rusqlite::types::Value::Null => Value::Null,
                             rusqlite::types::Value::Integer(number) => json!(number),
                             rusqlite::types::Value::Real(number) => json!(number),
+                            rusqlite::types::Value::Text(text) if name == "inbox_preferences" => {
+                                let mut preferences: Value = serde_json::from_str(&text).unwrap();
+                                if let Some(values) = preferences.as_object_mut() {
+                                    values.remove("settings_revision");
+                                }
+                                json!(preferences.to_string())
+                            }
                             rusqlite::types::Value::Text(text) => json!(text),
                             rusqlite::types::Value::Blob(bytes) => json!(bytes),
                         },
@@ -1132,12 +1140,580 @@ impl Sync {
     }
 
     async fn until(&mut self, wanted: impl Fn(&api::SyncPayload) -> bool) -> api::SyncPayload {
+        self.until_event(wanted).await.payload
+    }
+
+    async fn until_event(&mut self, wanted: impl Fn(&api::SyncPayload) -> bool) -> api::SyncEvent {
         loop {
             if let api::ServerFrame::Batch { events } = self.next().await
                 && let Some(event) = events.into_iter().find(|event| wanted(&event.payload))
             {
-                return event.payload;
+                return event;
             }
         }
     }
+}
+
+
+#[tokio::test]
+async fn a9_notification_writes_reach_all_of_the_users_sync_sessions() {
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = a.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut phone = a.sign_in(DAVID).await;
+    let desktop = a.sign_in(DAVID).await;
+    let other_user = a.sign_in(JASON).await;
+    let mut phone_sync = Sync::connect(addr, &phone.cookie_header()).await;
+    let mut desktop_sync = Sync::connect(addr, &desktop.cookie_header()).await;
+    let mut other_sync = Sync::connect(addr, &other_user.cookie_header()).await;
+    let room_id = a
+        .db()
+        .read(|conn| Ok(campfire_db::Membership::for_user(conn, DAVID)?[0].room_id))
+        .await
+        .unwrap();
+    let mut previous = read(&mut phone).await.revision;
+
+    for body in [
+        json!({"defaultNotificationLevel":"mentions"}),
+        json!({"roomNotification":{"roomId":room_id,"level":null}}),
+        json!({"roomMute":{"roomId":room_id,"duration":"minutes15"}}),
+        json!({"roomMute":{"roomId":room_id,"duration":"off"}}),
+    ] {
+        let response = write(
+            &mut phone,
+            Method::PATCH,
+            "/api/v1/settings/notifications",
+            body,
+        )
+        .await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let saved: api::Settings = parse(&response);
+        assert!(saved.revision > previous);
+        previous = saved.revision;
+        for sync in [&mut phone_sync, &mut desktop_sync] {
+            let event = sync
+                .until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_)))
+                .await;
+            assert_eq!(event.topic, "user");
+            let api::SyncPayload::SettingsUpdated(snapshot) = event.payload else {
+                unreachable!()
+            };
+            assert_eq!(*snapshot, saved);
+        }
+    }
+    let response = write(
+        &mut phone,
+        Method::PUT,
+        &format!("/api/v1/rooms/{room_id}/involvement"),
+        json!({"involvement":"everything"}),
+    )
+    .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let saved: api::InvolvementChange = parse(&response);
+    assert!(saved.settings.revision > previous);
+    assert!(
+        !saved
+            .settings
+            .notifications
+            .room_notification_levels
+            .contains_key(&room_id.to_string())
+    );
+    for sync in [&mut phone_sync, &mut desktop_sync] {
+        let event = sync
+            .until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_)))
+            .await;
+        assert_eq!(event.topic, "user");
+        let api::SyncPayload::SettingsUpdated(snapshot) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(*snapshot, saved.settings);
+    }
+
+    // A public presence update fences all the writes above on the other user's socket.
+    let response = write(
+        &mut phone,
+        Method::PATCH,
+        "/api/v1/settings/status",
+        json!({"customStatusText":"Notification sync complete"}),
+    )
+    .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    loop {
+        if let api::ServerFrame::Batch { events } = other_sync.next().await {
+            assert!(
+                events
+                    .iter()
+                    .all(|event| !matches!(event.payload, api::SyncPayload::SettingsUpdated(_)))
+            );
+            if events.iter().any(|event| matches!(&event.payload,
+                api::SyncPayload::Presence(presence) if presence.user_id == DAVID
+                    && presence.status_text.as_deref().is_some_and(|text| text.contains("Notification sync complete"))
+            )) {
+                break;
+            }
+        }
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn a9_notification_default_mute_and_membership_scope() {
+    let Some(app) = app().await else {
+        panic!("restored default seed required")
+    };
+    let mut b = app.sign_in(DAVID).await;
+    let rooms = app
+        .booted
+        .app
+        .db
+        .read(|conn| campfire_db::Membership::for_user(conn, DAVID))
+        .await
+        .unwrap();
+    let room_id = rooms[0].room_id;
+    let saved = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({
+            "defaultNotificationLevel":"mentions",
+            "roomNotification":{"roomId":room_id,"level":null},
+            "roomMute":{"roomId":room_id,"duration":"minutes15"}
+        }),
+    )
+    .await;
+    assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+    let saved: api::Settings = parse(&saved);
+    assert_eq!(
+        saved.notifications.default_notification_level,
+        api::NotificationLevel::Mentions
+    );
+    assert_eq!(
+        saved
+            .notifications
+            .room_notification_levels
+            .get(&room_id.to_string()),
+        Some(&None)
+    );
+    let until: jiff::Timestamp = saved.notifications.room_mute_until[&room_id.to_string()]
+        .as_ref()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert_eq!(
+        until,
+        SEED_NOW.parse::<jiff::Timestamp>().unwrap() + jiff::SignedDuration::from_secs(15 * 60)
+    );
+    let sidebar = b.send(get("/api/v1/sidebar")).await;
+    assert_eq!(sidebar.status, StatusCode::OK, "{}", sidebar.text());
+    let sidebar: api::Sidebar = parse(&sidebar);
+    let row = sidebar
+        .rows
+        .iter()
+        .find(|row| row.room.id == room_id)
+        .expect("muted room remains in sidebar");
+    assert_eq!(row.notification_count, 0);
+    assert_eq!(row.thread_notification_count, 0);
+    let badge = b.send(get("/api/v1/activity/unread_count")).await;
+    assert_eq!(badge.status, StatusCode::OK, "{}", badge.text());
+    let unmuted = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":room_id,"duration":"off"}}),
+    )
+    .await;
+    assert_eq!(unmuted.status, StatusCode::OK);
+    assert!(
+        parse::<api::Settings>(&unmuted)
+            .notifications
+            .room_mute_until
+            .is_empty()
+    );
+    let denied = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":i64::MAX,"duration":"forever"}}),
+    )
+    .await;
+    assert_eq!(denied.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn a9_involvement_returns_the_settings_revision_and_cleared_override() {
+    let Some(app) = app().await else {
+        panic!("restored default seed required")
+    };
+    let mut b = app.sign_in(DAVID).await;
+    let room_id = app
+        .booted
+        .app
+        .db
+        .read(|conn| Ok(campfire_db::Membership::for_user(conn, DAVID)?[0].room_id))
+        .await
+        .unwrap();
+    for involvement in ["everything", "mentions", "nothing", "muted", "invisible"] {
+        let inherited = write(
+            &mut b,
+            Method::PATCH,
+            "/api/v1/settings/notifications",
+            json!({
+                "defaultNotificationLevel": "nothing",
+                "roomNotification": { "roomId": room_id, "level": null },
+                "roomMute": { "roomId": room_id, "duration": "minutes15" }
+            }),
+        )
+        .await;
+        let before: api::Settings = parse(&inherited);
+        let response = write(
+            &mut b,
+            Method::PUT,
+            &format!("/api/v1/rooms/{room_id}/involvement"),
+            json!({ "involvement": involvement }),
+        )
+        .await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let response: Value = parse(&response);
+        let saved: api::Settings = serde_json::from_value(response["settings"].clone())
+            .expect("involvement response must carry the new settings snapshot");
+        assert!(saved.revision > before.revision);
+        assert_eq!(response["membership"]["involvement"], involvement);
+        assert!(
+            !saved
+                .notifications
+                .room_notification_levels
+                .contains_key(&room_id.to_string())
+        );
+        assert_eq!(
+            saved.notifications.default_notification_level,
+            api::NotificationLevel::Nothing
+        );
+        assert_eq!(
+            saved.notifications.room_mute_until,
+            before.notifications.room_mute_until
+        );
+        assert_eq!(saved, read(&mut b).await);
+    }
+}
+
+#[tokio::test]
+async fn a9_every_settings_write_advances_a_persisted_revision() {
+    let Some(app) = app().await else { panic!("restored default seed required") };
+    let mut b = app.sign_in(DAVID).await;
+    let initial = b.send(get("/api/v1/settings")).await;
+    let mut revision = parse::<serde_json::Value>(&initial)["revision"].as_i64()
+        .expect("settings GET returns a server revision");
+    let initial_count = b.send(get("/api/v1/activity/unread_count")).await;
+    let mut activity_revision = parse::<api::ActivityUnreadCount>(&initial_count).unread_revision;
+    let allowance = format!("/api/v1/settings/dnd_allowances/{KEVIN}");
+    for (method, path, body) in [
+        (Method::PATCH, "/api/v1/settings/profile", json!({"bio":"revision test"})),
+        (Method::DELETE, "/api/v1/settings/avatar", json!({})),
+        (Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark"})),
+        (Method::PATCH, "/api/v1/settings/calls", json!({"voiceMode":"push_to_talk"})),
+        (Method::PATCH, "/api/v1/settings/status", json!({"presenceSetting":"auto"})),
+        (Method::PATCH, "/api/v1/settings/notifications", json!({"dndEnabled":false})),
+        (Method::POST, allowance.as_str(), json!({})),
+        (Method::DELETE, allowance.as_str(), json!({})),
+    ] {
+        let response = write(&mut b, method, path, body).await;
+        assert_eq!(response.status, StatusCode::OK, "{path}: {}", response.text());
+        let next = parse::<serde_json::Value>(&response)["revision"].as_i64().unwrap();
+        assert!(next > revision, "{path} did not advance revision");
+        revision = next;
+        let read = b.send(get("/api/v1/settings")).await;
+        assert_eq!(parse::<serde_json::Value>(&read)["revision"], revision);
+        let persisted = app.booted.app.db.read(|conn| {
+            Ok(conn.query_row("SELECT activity_revision FROM users WHERE id=?", [DAVID], |r| r.get::<_, i64>(0))?)
+        }).await.unwrap();
+        assert_eq!(persisted, revision);
+        let count = b.send(get("/api/v1/activity/unread_count")).await;
+        let next = parse::<api::ActivityUnreadCount>(&count).unread_revision;
+        assert!(next > activity_revision, "{path} did not advance the count revision");
+        activity_revision = next;
+    }
+    let rejected = write(&mut b, Method::PATCH, "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":i64::MAX,"duration":"forever"}})).await;
+    assert_eq!(rejected.status, StatusCode::NOT_FOUND);
+    let read = b.send(get("/api/v1/settings")).await;
+    assert_eq!(parse::<api::Settings>(&read).revision, revision);
+    let count = b.send(get("/api/v1/activity/unread_count")).await;
+    assert_eq!(parse::<api::ActivityUnreadCount>(&count).unread_revision, activity_revision);
+}
+
+async fn notification_delivery_app() -> (TestApp, Arc<campfire_kit::clock::FrozenClock>) {
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        SEED_NOW.parse().unwrap(),
+    ));
+    let app = TestApp::boot_seed_with_env("default", clock.clone(), &[("SPA_ENABLED", "1")])
+        .await
+        .expect("restored default seed required")
+        .without_job_runner()
+        .await;
+    (app, clock)
+}
+
+async fn assert_room_notification_delivery(
+    app: &TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    browser: &mut Browser<'_>,
+    source: &str,
+    expected: (bool, i64),
+) {
+    app.db()
+        .write(|tx| {
+            let mut membership = campfire_db::Membership::find_by_room_and_user(
+                tx.conn(), ALL_TALK, DAVID,
+            )?.unwrap();
+            membership.read(tx)?;
+            tx.conn().execute(
+                "UPDATE memberships SET connected_at=NULL WHERE id=?",
+                [membership.id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let source = source.to_owned();
+    let message = app.db().write(move |tx| {
+        campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK,
+            creator_id: JASON,
+            markdown_source: Some(source),
+            ..Default::default()
+        })
+    }).await.unwrap();
+    let broadcasts = app.booted.app.broadcasts.clone();
+    let rich_text = app.db().env().rich_text.clone();
+    app.db().read(move |conn| {
+        let room = campfire_db::Room::find(conn, ALL_TALK)?;
+        broadcasts.unread_room(conn, &room, &message, &*rich_text)
+    }).await.unwrap();
+
+    let unreads = crate::channels::tests::support::identifier(
+        json!({"channel":"UnreadRoomsChannel"}),
+    );
+    let receipt = tokio::time::timeout(Duration::from_secs(1), client.next_text()).await.ok();
+    if let Some(receipt) = &receipt {
+        assert_eq!(*receipt, crate::channels::tests::support::delivery(
+            &unreads, &format!(r#"{{"roomId":{ALL_TALK}}}"#),
+        ));
+    }
+    client.assert_silent().await;
+    let unread = app.db().read(|conn| {
+        Ok(campfire_db::Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)?
+            .unwrap().unread())
+    }).await.unwrap();
+    // Read through the API again, as a reload does, rather than reusing the settings response.
+    let sidebar: api::Sidebar = parse(&browser.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == ALL_TALK).unwrap();
+    assert_eq!((unread, receipt.is_some(), row.notification_count),
+        (expected.0, expected.0, expected.1));
+}
+
+async fn inherited_notification_delivery(stored: &str, default: &str, notifications: i64) {
+    let (app, _) = notification_delivery_app().await;
+    let mut browser = app.sign_in(DAVID).await;
+    let response = write(&mut browser, Method::PUT,
+        &format!("/api/v1/rooms/{ALL_TALK}/involvement"),
+        json!({"involvement":stored}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let response = write(&mut browser, Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"defaultNotificationLevel":default,
+            "roomNotification":{"roomId":ALL_TALK,"level":null}}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let (mut client, server) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&app).await;
+    client.confirm(&crate::channels::tests::support::identifier(
+        json!({"channel":"UnreadRoomsChannel"}),
+    )).await;
+    assert_room_notification_delivery(&app, &mut client, &mut browser,
+        "An ordinary message without a mention", (true, notifications)).await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_muted_to_default_all() {
+    inherited_notification_delivery("muted", "everything", 1).await;
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_muted_to_default_mentions() {
+    inherited_notification_delivery("muted", "mentions", 0).await;
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_all_to_default_no_notifications() {
+    // No notifications retains unread markers, unlike a timed or indefinite room mute.
+    inherited_notification_delivery("everything", "nothing", 0).await;
+}
+
+#[tokio::test]
+async fn a9_unread_delivery_resumes_at_timed_mute_expiry() {
+    let (app, clock) = notification_delivery_app().await;
+    let mut browser = app.sign_in(DAVID).await;
+    let response = write(&mut browser, Method::PUT,
+        &format!("/api/v1/rooms/{ALL_TALK}/involvement"),
+        json!({"involvement":"muted"}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let response = write(&mut browser, Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"defaultNotificationLevel":"everything",
+            "roomNotification":{"roomId":ALL_TALK,"level":null},
+            "roomMute":{"roomId":ALL_TALK,"duration":"minutes15"}}),
+    ).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let (mut client, server) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&app).await;
+    client.confirm(&crate::channels::tests::support::identifier(
+        json!({"channel":"UnreadRoomsChannel"}),
+    )).await;
+    assert_room_notification_delivery(&app, &mut client, &mut browser,
+        &format!("A muted mention of <@{DAVID}>"), (false, 0)).await;
+    clock.advance(jiff::SignedDuration::from_secs(900));
+    assert_room_notification_delivery(&app, &mut client, &mut browser,
+        "The first ordinary message after expiry", (true, 1)).await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
+    async fn push_badge(app: &TestApp) -> i64 {
+        let now = app.booted.app.db.env().now();
+        app.booted
+            .app
+            .db
+            .read(move |conn| {
+                let subscription = campfire_db::PushSubscription::new(
+                    DAVID,
+                    Some("https://fcm.googleapis.com/fcm/send/a9"),
+                    None,
+                    None,
+                    None,
+                );
+                let payload = campfire_db::PushPayload::new(
+                    "Mute expiry".into(),
+                    "Badge".into(),
+                    "/app".into(),
+                    None,
+                );
+                let notification = campfire_app::integrations::web_push::Notification::build(
+                    conn,
+                    &subscription,
+                    &payload,
+                    now,
+                )?;
+                Ok(notification.badge)
+            })
+            .await
+            .unwrap()
+    }
+
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        "2035-01-01T12:00:00Z".parse().unwrap(),
+    ));
+    let app = TestApp::boot_seed_with_env("default", clock.clone(), &[("SPA_ENABLED", "1")])
+        .await
+        .expect("restored default seed required");
+    let mut browser = app.sign_in(DAVID).await;
+    let (room, message) = app.booted.app.db.write(|tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=NULL WHERE user_id=?", [DAVID])?;
+        tx.conn().execute("DELETE FROM activity_items WHERE user_id=?", [DAVID])?;
+        let (room, message, created_at): (i64,i64,campfire_db::Timestamp) = tx.conn().query_row("SELECT m.room_id,m.id,m.created_at FROM messages m JOIN memberships ms ON ms.room_id=m.room_id WHERE ms.user_id=? AND m.thread_id IS NULL AND m.creator_id!=? AND NOT m.system_note LIMIT 1", [DAVID,DAVID], |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?)))?;
+        tx.conn().execute("UPDATE memberships SET involvement='everything', unread_at=?,last_read_message_id=NULL WHERE user_id=? AND room_id=?", rusqlite::params![created_at,DAVID,room])?;
+        campfire_db::ActivityItem::refresh_unread(tx, DAVID, "Message", message, "mention")?;
+        Ok((room, message))
+    }).await.unwrap();
+    let before = parse::<api::Sidebar>(&browser.send(get("/api/v1/sidebar")).await);
+    let before = before
+        .rows
+        .iter()
+        .find(|row| row.room.id == room)
+        .unwrap()
+        .notification_count;
+    assert!(before > 0, "message {message} contributes a notification");
+    assert_eq!(push_badge(&app).await, 1);
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(
+            &browser.send(get("/api/v1/activity/unread_count")).await
+        )
+        .unread_count,
+        1
+    );
+    let muted = write(
+        &mut browser,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":room,"duration":"minutes15"}}),
+    )
+    .await;
+    assert_eq!(muted.status, StatusCode::OK, "{}", muted.text());
+    let settings_before = parse::<Value>(&muted);
+    let count_before = parse::<Value>(&browser.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(settings_before["evaluatedAt"], "2035-01-01T12:00:00.000000000Z");
+    assert_eq!(count_before["evaluatedAt"], settings_before["evaluatedAt"]);
+    assert_eq!(push_badge(&app).await, 0);
+    let favorite_path = format!("/api/v1/rooms/{room}/favorite");
+    let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
+    assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());
+    assert_eq!(parse::<api::SidebarRow>(&favorite).notification_count, 0);
+    let sidebar = parse::<api::Sidebar>(&browser.send(get("/api/v1/sidebar")).await);
+    assert_eq!(
+        sidebar
+            .rows
+            .iter()
+            .find(|row| row.room.id == room)
+            .unwrap()
+            .notification_count,
+        0
+    );
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(
+            &browser.send(get("/api/v1/activity/unread_count")).await
+        )
+        .unread_count,
+        0
+    );
+    clock.advance(jiff::SignedDuration::from_secs(900));
+    let settings_after = parse::<Value>(&browser.send(get("/api/v1/settings")).await);
+    let count_after = parse::<Value>(&browser.send(get("/api/v1/activity/unread_count")).await);
+    let list_after = parse::<Value>(&browser.send(get("/api/v1/activity")).await);
+    assert_eq!(settings_after["revision"], settings_before["revision"]);
+    assert_eq!(count_after["unreadRevision"], count_before["unreadRevision"]);
+    assert_eq!(settings_after["evaluatedAt"], "2035-01-01T12:15:00.000000000Z");
+    assert_eq!(count_after["evaluatedAt"], settings_after["evaluatedAt"]);
+    assert_eq!(list_after["evaluatedAt"], settings_after["evaluatedAt"]);
+    assert_eq!(settings_after["notifications"]["roomMuteUntil"], json!({}));
+    assert_eq!(push_badge(&app).await, 1);
+    let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
+    assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());
+    assert_eq!(
+        parse::<api::SidebarRow>(&favorite).notification_count,
+        before
+    );
+    let sidebar = parse::<api::Sidebar>(&browser.send(get("/api/v1/sidebar")).await);
+    assert_eq!(
+        sidebar
+            .rows
+            .iter()
+            .find(|row| row.room.id == room)
+            .unwrap()
+            .notification_count,
+        before
+    );
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(
+            &browser.send(get("/api/v1/activity/unread_count")).await
+        )
+        .unread_count,
+        1
+    );
 }

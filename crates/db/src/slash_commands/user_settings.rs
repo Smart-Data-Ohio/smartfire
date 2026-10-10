@@ -108,6 +108,18 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     }
     if let Some(preferences) = preferences.as_object() {
         for (key, value) in preferences {
+            if key == "settings_revision" {
+                if value.as_i64().is_none_or(|revision| revision < 0) {
+                    errors.add("inbox_preferences", "settings revision is invalid");
+                }
+                continue;
+            }
+            if crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
+                if !crate::models::notification_policy::valid_preference(key, value) {
+                    errors.add("inbox_preferences", format!("{key} is invalid"));
+                }
+                continue;
+            }
             if !matches!(value, Value::Bool(_))
                 && ![
                     json!(0),
@@ -155,6 +167,9 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
         .filter(|key| attrs[*key] != original[*key])
         .collect::<Vec<_>>();
     if changed.is_empty() {
+        if changes.contains_key("inbox_preferences") {
+            crate::models::user::profile_settings::bump_revision(tx, user)?;
+        }
         return Ok(());
     }
     let mut values = changed
@@ -170,7 +185,7 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
         .collect::<Vec<_>>()
         .join(",");
     tx.conn().execute(
-        &format!("UPDATE users SET {assignments},updated_at=? WHERE id=?"),
+        &format!("UPDATE users SET {assignments},updated_at=?,activity_revision=activity_revision+1 WHERE id=?"),
         rusqlite::params_from_iter(values),
     )?;
     Ok(())

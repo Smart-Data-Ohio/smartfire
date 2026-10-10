@@ -82,6 +82,7 @@ async fn ws12_activity_same_instant_handling_is_a_noop_after_the_first_commit() 
 async fn assert_snapshot(t: &ModelDb, snapshot: &serde_json::Value) {
     for viewer in snapshot["viewers"].as_array().unwrap() {
         let viewer = viewer.clone();
+        let now = t.db.env().now();
         t.db.read(move |conn| {
             let user = campfire_db::User::find(conn, viewer["user_id"].as_i64().unwrap())?;
             let ids = |items: Vec<ActivityItem>| {
@@ -92,7 +93,7 @@ async fn assert_snapshot(t: &ModelDb, snapshot: &serde_json::Value) {
                 viewer["ids"]
             );
             assert_eq!(
-                ActivityItem::unread_count(conn, &user)?,
+                ActivityItem::unread_count(conn, &user, now)?,
                 viewer["unread_count"].as_i64().unwrap()
             );
             for (state, expected) in viewer["filters"].as_object().unwrap() {

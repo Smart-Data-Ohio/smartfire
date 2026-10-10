@@ -6,7 +6,8 @@ import type { ChatSounds } from "../gen/ChatSounds.ts";
 import type { MessageSound } from "../gen/MessageSound.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { emptyTimeline, initialState } from "../store/state.ts";
-import { store } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
+import { notificationPreferencesFixture } from "../test/notification-fixtures.ts";
 import { chatSoundsMuted, listenForChatSounds } from "./chat-sounds.ts";
 import { emitSyncEvents } from "./signals.ts";
 
@@ -72,6 +73,7 @@ afterEach(() => {
   stop?.();
   stop = null;
   vi.restoreAllMocks();
+  vi.useRealTimers();
   store.setState(initialState, true);
 });
 
@@ -123,6 +125,30 @@ describe("sound message", () => {
 });
 
 describe("automatic playback", () => {
+  it.each(["2026-10-10T12:30:00Z", "2026-10-10T11:30:00Z"])(
+    "keeps timed mutes until server expiry with browser time %s",
+    async (browserTime) => {
+      vi.useFakeTimers({ toFake: ["Date", "performance"] });
+      vi.setSystemTime(new Date(browserTime));
+      mutations.setNotificationPreferences(
+        {
+          ...notificationPreferencesFixture,
+          roomMuteUntil: { "12": "2026-10-10T12:15:00Z" },
+        },
+        "2026-10-10T12:00:00Z",
+      );
+      stop = listenForChatSounds(12, () => true);
+      arrive(1);
+      expect(play).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(15 * 60_000 - 1);
+      arrive(2);
+      expect(play).not.toHaveBeenCalled();
+      vi.setSystemTime(new Date("2020-01-01T00:00:00Z"));
+      await vi.advanceTimersByTimeAsync(1);
+      arrive(3);
+      expect(play).toHaveBeenCalledOnce();
+    },
+  );
   it("plays a live message once at the latest page", () => {
     stop = listenForChatSounds(12, () => true);
     arrive(1);

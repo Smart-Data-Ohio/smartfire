@@ -678,21 +678,26 @@ impl Room {
     }
 
     /// `unread_memberships(message)` (`app/models/room.rb`): visible, disconnected members other
-    /// than the author go unread, muted ones only when mentioned. Members watching live, and the
-    /// author, have their read pointer advanced to the message unless they're already unread.
+    /// than the author go unread, legacy muted ones only when mentioned. Resolve inherited
+    /// levels and active room mutes from the notification policy. Members watching live, and
+    /// the author, have their read pointer advanced unless they're already unread.
     fn unread_memberships(tx: &Tx<'_>, room_id: i64, message: &Message) -> Result<()> {
         let now = tx.now();
         let cutoff = Membership::connection_cutoff(now);
+        let preferences = "(SELECT inbox_preferences FROM users WHERE id=memberships.user_id)";
+        let involvement = super::notification_policy::involvement_sql("memberships", preferences);
+        let unmuted = super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?2");
         tx.conn().execute_cached(
-            r#"UPDATE "memberships" SET "unread_at" = ?, "updated_at" = ? WHERE "memberships"."room_id" = ? AND "memberships"."involvement" != 'invisible' AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."user_id" != ? AND "memberships"."involvement" != 'muted'"#,
+            &format!(r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) != 'invisible' AND {unmuted} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND ({involvement}) != 'muted'"#),
             params![message.created_at, now, room_id, cutoff, message.creator_id],
         )?;
 
         // Only a room with muted recipients needs the message's mentions.
+        let unmuted_recipients = super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?4");
         let muted_recipients = sql::exists(
             tx.conn(),
-            r#"SELECT 1 AS one FROM "memberships" WHERE "memberships"."room_id" = ? AND "memberships"."involvement" != 'invisible' AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'muted' LIMIT 1"#,
-            params![room_id, cutoff, message.creator_id],
+            &format!(r#"SELECT 1 AS one FROM "memberships" WHERE "memberships"."room_id" = ?1 AND ({involvement}) = 'muted' AND {unmuted_recipients} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?2) AND "memberships"."user_id" != ?3 LIMIT 1"#),
+            params![room_id, cutoff, message.creator_id, now],
         )?;
         let mentionee_ids: Vec<i64> = if muted_recipients {
             message
@@ -705,7 +710,7 @@ impl Room {
         };
         if !mentionee_ids.is_empty() {
             let sql = format!(
-                r#"UPDATE "memberships" SET "unread_at" = ?, "updated_at" = ? WHERE "memberships"."room_id" = ? AND "memberships"."involvement" != 'invisible' AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'muted' AND "memberships"."user_id" IN ({})"#,
+                r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) = 'muted' AND {unmuted} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND "memberships"."user_id" IN ({})"#,
                 placeholders(mentionee_ids.len())
             );
             let mut values: Vec<rusqlite::types::Value> = vec![
@@ -721,7 +726,7 @@ impl Room {
         }
 
         tx.conn().execute_cached(
-            r#"UPDATE "memberships" SET "last_read_message_id" = ?, "updated_at" = ? WHERE "memberships"."room_id" = ? AND "memberships"."involvement" != 'invisible' AND "memberships"."unread_at" IS NULL AND (memberships.connected_at >= ? OR memberships.user_id = ?)"#,
+            &format!(r#"UPDATE "memberships" SET "last_read_message_id" = ?, "updated_at" = ? WHERE "memberships"."room_id" = ? AND ({involvement}) != 'invisible' AND "memberships"."unread_at" IS NULL AND (memberships.connected_at >= ? OR memberships.user_id = ?)"#),
             params![message.id, now, room_id, cutoff, message.creator_id],
         )?;
         Ok(())

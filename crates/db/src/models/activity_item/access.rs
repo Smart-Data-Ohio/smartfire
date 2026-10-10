@@ -1,6 +1,6 @@
 //! ActivityItem.accessible_to and ActivityItemsController's ordered/filter/cursor query.
 use crate::sql::query_all;
-use crate::{ActivityItem, Connection, Result, User};
+use crate::{ActivityItem, Connection, Result, Timestamp, User};
 use rusqlite::types::Value;
 
 /// Unfiltered is useful for counts and source lookups; the inbox defaults belong to its controller.
@@ -13,25 +13,33 @@ pub struct ActivityQuery<'a> {
 }
 
 /// The badge count and its per-user ordering token from one SQLite statement.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ActivityUnread {
     pub count: i64,
     pub revision: i64,
+    pub evaluated_at: Timestamp,
+}
+
+fn unmuted_activity_sql() -> String {
+    let room = "COALESCE(activity_messages.room_id, activity_saved_messages.room_id, activity_work_threads.room_id, activity_sla_nudges.room_id, activity_huddle_grants.room_id, activity_events.room_id)";
+    format!(" AND {}", crate::models::notification_policy::unmuted_sql(room, "users.inbox_preferences", "?2"))
 }
 
 impl ActivityItem {
-    pub fn unread_snapshot(conn: &Connection, user_id: i64) -> Result<ActivityUnread> {
+    pub fn unread_snapshot(conn: &Connection, user_id: i64, now: Timestamp) -> Result<ActivityUnread> {
         let count =
             include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL";
+                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
+                + &unmuted_activity_sql();
         let sql = format!("SELECT ({count}), activity_revision FROM users WHERE id = ?1");
-        Ok(crate::sql::query_one(conn, &sql, [user_id], |row| {
+        Ok(crate::sql::query_one(conn, &sql, rusqlite::params![user_id, now], |row| {
             Ok(ActivityUnread {
                 count: row.get(0)?,
                 revision: row.get(1)?,
+                evaluated_at: now,
             })
         })?
-        .unwrap_or_default())
+        .unwrap_or(ActivityUnread { count: 0, revision: 0, evaluated_at: now }))
     }
 
     pub fn accessible_to(conn: &Connection, user: &User) -> Result<Vec<Self>> {
@@ -46,14 +54,15 @@ impl ActivityItem {
         crate::sql::query_one(conn, &sql, rusqlite::params![user.id, id], Self::from_row)
     }
 
-    pub fn unread_count(conn: &Connection, user: &User) -> Result<i64> {
+    pub fn unread_count(conn: &Connection, user: &User, now: Timestamp) -> Result<i64> {
         if !user.is_active() || user.is_bot() {
             return Ok(0);
         }
         let sql =
             include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL";
-        Ok(conn.query_row(&sql, [user.id], |row| row.get(0))?)
+                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
+                + &unmuted_activity_sql();
+        Ok(conn.query_row(&sql, rusqlite::params![user.id, now], |row| row.get(0))?)
     }
 
     pub fn query_accessible(

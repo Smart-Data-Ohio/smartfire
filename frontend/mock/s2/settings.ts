@@ -6,6 +6,7 @@
 
 import type { CreatePushSubscription } from "../../src/gen/CreatePushSubscription.ts";
 import type { IntegrationSettings } from "../../src/gen/IntegrationSettings.ts";
+import type { NotificationLevel } from "../../src/gen/NotificationLevel.ts";
 import type { PushPublicKey } from "../../src/gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
 import type { SessionInfo } from "../../src/gen/SessionInfo.ts";
@@ -18,6 +19,7 @@ import { noContent, notFound, ok, plainError, refused, validation } from "../htt
 import {
   booleanField,
   field,
+  intField,
   isBoolean,
   isRecord,
   type Json,
@@ -92,6 +94,8 @@ function initialState(world: World, now: number): State {
 
   return {
     settings: {
+      revision: 0,
+      evaluatedAt: new Date(now).toISOString().replace("Z", "000000Z"),
       profile: {
         userId: VIEWER_ID,
         name: viewer?.name ?? "You",
@@ -111,6 +115,9 @@ function initialState(world: World, now: number): State {
         timeZones: TIME_ZONES,
       },
       notifications: {
+        defaultNotificationLevel: "everything",
+        roomNotificationLevels: {},
+        roomMuteUntil: {},
         dndEnabled: false,
         quietHoursEnabled: false,
         quietHoursStart: "22:00",
@@ -204,6 +211,7 @@ export interface SettingsModule {
   readonly routes: readonly Route[];
   /** The viewer's saved theme and text size, which boot and `/me` carry. */
   readonly appearance: () => { readonly theme: Theme; readonly textSize: TextSize };
+  readonly explicitRoomNotification: (roomId: number, changed: boolean) => Settings;
 }
 
 /** A value of `body[key]` when the key is present and not null. */
@@ -252,6 +260,7 @@ export function createSettings(
   /** The settings page, with the viewer's DND exceptions. */
   const page = (): Settings => {
     const world = ctx.world();
+    const now = ctx.now();
     const { settings } = current();
 
     const allowedPeople = [...world.dndAllowed]
@@ -262,13 +271,26 @@ export function createSettings(
       })
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    return { ...settings, notifications: { ...settings.notifications, allowedPeople } };
+    return {
+      ...settings,
+      evaluatedAt: new Date(now).toISOString().replace("Z", "000000Z"),
+      notifications: {
+        ...settings.notifications,
+        allowedPeople,
+        roomMuteUntil: Object.fromEntries(
+          Object.entries(settings.notifications.roomMuteUntil).filter(
+            ([, until]) => until === null || Date.parse(until) > now,
+          ),
+        ),
+      },
+    };
   };
 
   const update = (change: (settings: Settings) => Settings) => {
     const held = current();
 
-    held.settings = change(held.settings);
+    held.settings = { ...change(held.settings), revision: held.settings.revision + 1 };
+    ctx.world().activityRevision++;
 
     return ok(page());
   };
@@ -376,6 +398,11 @@ export function createSettings(
     });
   };
 
+  const notificationLevel = (value: Json | undefined): NotificationLevel => {
+    if (value === "everything" || value === "mentions" || value === "nothing") return value;
+    throw validation("defaultNotificationLevel", "is invalid");
+  };
+
   const notifications = (body: Json | undefined) => {
     const keywords = stringArrayField(body, "keywordAlerts");
 
@@ -388,11 +415,51 @@ export function createSettings(
     return update((held) => {
       const flag = (key: string, fallback: boolean) => booleanField(body, key) ?? fallback;
       const n = held.notifications;
+      const defaultLevel = given(body, "defaultNotificationLevel");
+      const roomNotification = given(body, "roomNotification");
+      const roomMute = given(body, "roomMute");
+      const roomNotificationLevels = { ...n.roomNotificationLevels };
+      const roomMuteUntil = { ...n.roomMuteUntil };
+
+      if (isRecord(roomNotification)) {
+        const roomId = intField(roomNotification, "roomId");
+
+        if (roomId === null || !ctx.world().rooms.has(roomId)) throw notFound("Room");
+        roomNotificationLevels[String(roomId)] =
+          roomNotification.level === null ? null : notificationLevel(roomNotification.level);
+      }
+
+      if (isRecord(roomMute)) {
+        const roomId = intField(roomMute, "roomId");
+
+        if (roomId === null || !ctx.world().rooms.has(roomId)) throw notFound("Room");
+        const duration = stringField(roomMute, "duration");
+
+        if (duration === "off") delete roomMuteUntil[String(roomId)];
+        else if (duration === "forever") roomMuteUntil[String(roomId)] = null;
+        else {
+          const seconds = new Map<string, number>([
+            ["minutes15", 900],
+            ["hour1", 3600],
+            ["hours8", 28800],
+            ["hours24", 86400],
+          ]).get(duration ?? "");
+
+          if (seconds === undefined) throw validation("roomMute", "is invalid");
+          roomMuteUntil[String(roomId)] = new Date(ctx.now() + seconds * 1000).toISOString();
+        }
+      }
 
       return {
         ...held,
         notifications: {
           ...n,
+          defaultNotificationLevel:
+            defaultLevel === undefined || defaultLevel === null
+              ? n.defaultNotificationLevel
+              : notificationLevel(defaultLevel),
+          roomNotificationLevels,
+          roomMuteUntil,
           dndEnabled: flag("dndEnabled", n.dndEnabled),
           quietHoursEnabled: flag("quietHoursEnabled", n.quietHoursEnabled),
           quietHoursStart: stringField(body, "quietHoursStart") ?? n.quietHoursStart,
@@ -500,7 +567,7 @@ export function createSettings(
     if (allowed) world.dndAllowed.add(userId);
     else world.dndAllowed.delete(userId);
 
-    return ok(page());
+    return update((held) => held);
   };
 
   const sessionList = (notice: string | null): SessionList => ({
@@ -702,6 +769,22 @@ export function createSettings(
     }));
 
   return {
+    explicitRoomNotification: (roomId, changed) => {
+      const held = current();
+      const roomNotificationLevels = { ...held.settings.notifications.roomNotificationLevels };
+      const overridden = String(roomId) in roomNotificationLevels;
+
+      delete roomNotificationLevels[String(roomId)];
+      held.settings = {
+        ...held.settings,
+        revision: held.settings.revision + (changed || overridden ? 1 : 0),
+        notifications: { ...held.settings.notifications, roomNotificationLevels },
+      };
+
+      if (changed || overridden) ctx.world().activityRevision++;
+
+      return page();
+    },
     appearance: () => {
       const { theme, textSize } = current().settings.appearance;
 

@@ -104,21 +104,24 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
     }
 
     if let Some(preferences) = changes.inbox_preferences {
+        let raw: Option<String> = tx.conn().query_row(
+            "SELECT inbox_preferences FROM users WHERE id=?",
+            [user],
+            |r| r.get(0),
+        )?;
+        let mut existing = raw
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|v| v.as_object().cloned())
+            .unwrap_or_default();
         let value = if let Some(preferences) = preferences.as_object() {
-            let raw: Option<String> = tx.conn().query_row(
-                "SELECT inbox_preferences FROM users WHERE id=?",
-                [user],
-                |r| r.get(0),
-            )?;
-            let mut existing = raw
-                .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-                .and_then(|v| v.as_object().cloned())
-                .unwrap_or_default();
             for (key, value) in preferences {
-                if INBOX_KEYS.contains(&key.as_str()) {
+                if INBOX_KEYS.contains(&key.as_str()) || crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
                     existing.insert(key.clone(), value.clone());
                 }
             }
+            Value::Object(existing)
+        } else if preferences.is_null() {
+            existing.retain(|key, _| key == "settings_revision");
             Value::Object(existing)
         } else {
             preferences
@@ -128,5 +131,16 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
             Value::String(serde_json::to_string(&value).expect("JSON preferences")),
         );
     }
-    crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))
+    crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))?;
+    Ok(())
+}
+
+/// Settings and notification counts share the persisted activity counter. Keep ordering
+/// metadata out of the legacy preferences JSON; request bodies cannot assign the counter.
+pub fn bump_revision(tx: &Tx<'_>, user: i64) -> Result<()> {
+    tx.conn().execute(
+        "UPDATE users SET activity_revision=activity_revision+1 WHERE id=?",
+        [user],
+    )?;
+    Ok(())
 }

@@ -145,9 +145,16 @@ async fn the_inbox_lists_changes_and_publishes_items() {
     assert_eq!(changed.unread_count, before.unread_count + 1);
     let event = sync.until(activity_item(mention), |_| false).await;
     assert_eq!(event.topic, "user");
+    let api::SyncPayload::ActivityItem(published) = &event.payload else {
+        panic!("activity item event required")
+    };
+    let published_at: jiff::Timestamp = published.evaluated_at.parse().unwrap();
+    assert!(published_at <= a.booted.app.db.env().now().jiff());
+    let mut expected = changed.clone();
+    expected.evaluated_at = published.evaluated_at.clone();
     assert_eq!(
         event.payload,
-        api::SyncPayload::ActivityItem(changed.clone())
+        api::SyncPayload::ActivityItem(expected)
     );
     let read: api::ActivityList = parse(&david.send(get("/api/v1/activity?status=read")).await);
     assert!(read.items.iter().any(|item| item.id == mention));
@@ -512,12 +519,16 @@ async fn saved_items_list_page_change_and_drop_their_reminders() {
     };
     let count: api::ActivityUnreadCount =
         parse(&david.send(get("/api/v1/activity/unread_count")).await);
+    let removed_at: jiff::Timestamp = removed.evaluated_at.parse().unwrap();
+    let counted_at: jiff::Timestamp = count.evaluated_at.parse().unwrap();
+    assert!(removed_at <= counted_at);
     assert_eq!(
         removed,
         api::ActivityItemRemoved {
             id: reminder,
             unread_count: count.unread_count,
             unread_revision: count.unread_revision,
+            evaluated_at: removed.evaluated_at.clone(),
         }
     );
     server.abort();

@@ -9,4 +9,8 @@ export type ActivityItemRemoved = { id: number, unreadCount: number,
 /**
  * Per-user server revision of this count. Ignore counts from older revisions.
  */
-unreadRevision: number, };
+unreadRevision: number,
+/**
+ * The injected server clock used for this count, in UTC with nanoseconds.
+ */
+evaluatedAt: string, };

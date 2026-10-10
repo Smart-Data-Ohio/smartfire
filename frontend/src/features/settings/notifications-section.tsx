@@ -1,6 +1,7 @@
 import { type FormEvent, useId, useMemo, useState } from "react";
 import type { Settings } from "../../gen/Settings.ts";
 import type { UpdateNotifications } from "../../gen/UpdateNotifications.ts";
+import { NOTIFICATION_LEVELS } from "../../store/notification-preferences.ts";
 import { useStore } from "../../store/store.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
@@ -14,6 +15,7 @@ import {
   fieldsOf,
   SettingsGroup,
   SettingsPage,
+  SettingsSelect,
   toastFailure,
   useBusy,
   useSettings,
@@ -205,6 +207,20 @@ export function NotificationsSection() {
       title="Notifications"
       description="When Smartfire pings you, and what it records."
     >
+      <SettingsGroup
+        title="Default notifications"
+        description="Rooms can use this default or keep their own notification level."
+      >
+        <SettingsSelect
+          label="Notify me about"
+          value={notifications.defaultNotificationLevel}
+          choices={NOTIFICATION_LEVELS}
+          disabled={busy("default-level")}
+          onChange={(defaultNotificationLevel) =>
+            save("default-level", { defaultNotificationLevel })
+          }
+        />
+      </SettingsGroup>
       <SettingsGroup
         title="Do not disturb"
         description="While DND is on, push notifications and sounds stay silent. Your inbox still records everything."

@@ -62,7 +62,7 @@ pub fn complete(
     // Honor the injected process clock while preserving explicit fetched_at's microseconds.
     let written_at = Timestamp::from_microsecond(tx.now().jiff().as_millisecond() * 1000);
     tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,?,?) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at,written_at,written_at])?;
-    Ok(())
+    super::user::profile_settings::bump_revision(tx, user_id)
 }
 pub fn follow_up(tx: &mut Tx<'_>, user_id: i64, now: Timestamp) -> Result<bool> {
     let won=tx.conn().execute("UPDATE calendar_meeting_caches SET refresh_pending_at=?,updated_at=? WHERE user_id=? AND (refresh_pending_at IS NULL OR refresh_pending_at<=?)",params![now,tx.now(),user_id,now.ago(SignedDuration::from_secs(60))])?==1;

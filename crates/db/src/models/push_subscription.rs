@@ -208,8 +208,8 @@ impl PushSubscription {
     }
 
     /// The badge for a notification: `user.memberships.unread.count`.
-    pub fn badge(&self, conn: &Connection) -> Result<i64> {
-        Membership::unread_count(conn, self.user_id)
+    pub fn badge(&self, conn: &Connection, now: Timestamp) -> Result<i64> {
+        Membership::unread_count(conn, self.user_id, now)
     }
 
     /// Validations: endpoint present, then `validate_endpoint_url`. `resolve` is
@@ -344,7 +344,7 @@ impl PushSubscription {
             _ => None,
         };
         let subscriptions = query_all(conn,
-            "SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND m.involvement!='invisible' AND (m.connected_at IS NULL OR m.connected_at < ?)",
+            "SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND (m.involvement IS NULL OR m.involvement!='invisible') AND (m.connected_at IS NULL OR m.connected_at < ?)",
             params![room.id, message.creator_id, Membership::connection_cutoff(now)], Self::from_row)?;
         let ids: Vec<i64> = subscriptions.iter().map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
         let users = UserStatusSettings::for_ids(conn, &ids)?;
@@ -352,6 +352,7 @@ impl PushSubscription {
         let memberships: std::collections::HashMap<i64, Membership> = Membership::for_room(conn, room.id)?.into_iter().map(|m| (m.user_id, m)).collect();
         let allowed = subscriptions.into_iter().filter(|s| {
             NotificationPolicy {
+                room_id: Some(message.room_id),
                 recipient: users.get(&s.user_id), kind: NotificationKind::RoomMessage,
                 room_involvement: memberships.get(&s.user_id).map(|m| m.involvement), thread_involvement: None,
                 mentioned: mentionee_ids.contains(&s.user_id), reply_to_recipient: reply_author_id == Some(s.user_id),

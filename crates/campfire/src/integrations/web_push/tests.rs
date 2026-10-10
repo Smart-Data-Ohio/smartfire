@@ -527,7 +527,8 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
     assert_eq!(payload["title"],"Smartfire Test");assert_eq!(payload["options"]["body"],body);
     assert_eq!(payload["options"]["tag"],"test-notification");
     assert_eq!(payload["options"]["data"]["path"],"http://campfire.test/users/me/push_subscriptions");
-    assert_eq!(payload["options"]["data"]["badge"],db.read(|c|campfire_db::Membership::unread_count(c,DAVID)).await.unwrap());
+    let now = db.env().now();
+    assert_eq!(payload["options"]["data"]["badge"],db.read(move |c|campfire_db::Membership::unread_count(c,DAVID,now)).await.unwrap());
 }
 
 #[tokio::test]
@@ -552,6 +553,7 @@ async fn ws17_endpoint_resolution_is_deferred_until_notification_delivery() {
     let receiver = Receiver::new();
     let mut sub = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
     sub.user_id = TestDb::id("david");
+    let now = t.db.env().now();
     let built =
         t.db.read(move |conn| {
             Notification::build(
@@ -563,6 +565,7 @@ async fn ws17_endpoint_resolution_is_deferred_until_notification_delivery() {
                     "/".into(),
                     Some("room-1".into()),
                 ),
+                now,
             )
         })
         .await

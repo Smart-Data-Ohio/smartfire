@@ -87,9 +87,11 @@ describe("the activity list", () => {
     expect(plain.unreadCount).toBe(plain.items.length);
     const unread = await get<ActivityUnreadCount>(server, "/api/v1/activity/unread_count");
 
-    expect({ unreadCount: plain.unreadCount, unreadRevision: plain.unreadRevision }).toEqual(
-      unread,
-    );
+    expect({
+      unreadCount: plain.unreadCount,
+      unreadRevision: plain.unreadRevision,
+      evaluatedAt: plain.evaluatedAt,
+    }).toEqual(unread);
   });
 
   it("fills every tab, keeps each to its types and brings the creators", async () => {

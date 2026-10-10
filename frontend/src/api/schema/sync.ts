@@ -21,6 +21,7 @@ import type { Assert, Pinned } from "./pin.ts";
 import { UserPresence } from "./presence.ts";
 import { MessageReactions } from "./reaction.ts";
 import { RoomRead, RoomUnread } from "./read.ts";
+import { Settings } from "./settings.ts";
 import { RoomCategory, SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
 import { StageState, StageStreamStopped } from "./stage.ts";
 import {
@@ -72,6 +73,7 @@ const ThreadGithubUpdated = Schema.Struct({
 
 /** What happened: `type` names the event and `data` carries its body. */
 export const SyncPayload = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("settings.updated"), data: Settings }),
   Schema.Struct({ type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.updated"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.removed"), data: MessageRemoved }),
@@ -129,6 +131,7 @@ const eventFields = { seq: Schema.Int, topic: Topic };
  * Kept in step with `SyncPayload` above (the pins fail otherwise).
  */
 export const SyncEvent = Schema.Union([
+  Schema.Struct({ ...eventFields, type: Schema.Literal("settings.updated"), data: Settings }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.updated"), data: MessageDTO }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.removed"), data: MessageRemoved }),
