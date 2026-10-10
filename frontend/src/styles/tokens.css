@@ -143,6 +143,27 @@
     --tooltip-bg: light-dark(var(--neutral-900), var(--charcoal-100));
     --tooltip-text: light-dark(var(--neutral-0), var(--neutral-900));
 
+    /* Code colours (src/lib/code-highlight): VS Code Dark+'s kinds of token in the app's own hues.
+       Plain code, comments and punctuation follow the palette's text tokens, and every colour holds
+       4.5:1 on --bg-sunken, a code block's ground, in each palette (tokens.test.ts). Violet stays
+       the agents' alone, so control keywords are pink. */
+    --code-plain: var(--text);
+    --code-comment: var(--text-faint);
+    --code-punctuation: var(--text-muted);
+    --code-keyword: light-dark(oklch(48% 0.17 258), oklch(76% 0.11 252));
+    --code-control: light-dark(oklch(50% 0.19 350), oklch(78% 0.12 350));
+    --code-string: light-dark(oklch(49% 0.13 40), oklch(79% 0.1 50));
+    --code-regexp: light-dark(oklch(50% 0.18 25), oklch(74% 0.14 22));
+    --code-special: light-dark(oklch(50% 0.1 80), oklch(83% 0.1 85));
+    --code-number: light-dark(oklch(49% 0.11 155), oklch(83% 0.08 140));
+    --code-variable: light-dark(oklch(42% 0.1 245), oklch(84% 0.07 230));
+    --code-constant: light-dark(oklch(48% 0.12 230), oklch(78% 0.12 225));
+    --code-function: light-dark(oklch(47% 0.1 90), oklch(87% 0.09 100));
+    --code-type: light-dark(oklch(50% 0.09 190), oklch(79% 0.1 180));
+    --code-invalid: var(--danger-text);
+    --code-inserted: var(--success-text);
+    --code-deleted: var(--danger-text);
+
     /* Shadows: a hairline ring plus two soft layers. Dark leans on the ring, light on the blur. */
     --shadow-ring: light-dark(oklch(22% 0.01 260 / 8%), oklch(100% 0 0 / 7%));
     --shadow-soft: light-dark(oklch(22% 0.01 260 / 8%), oklch(0% 0 0 / 32%));
