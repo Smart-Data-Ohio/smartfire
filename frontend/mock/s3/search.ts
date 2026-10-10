@@ -20,6 +20,7 @@ import { type Json, stringField } from "../json.ts";
 import { mentionsUser } from "../markdown.ts";
 import { VIEWER_TIME_ZONE } from "../s2/composer.ts";
 import { type Route, route, type S2Context } from "../s2/context.ts";
+import { filesOf } from "../s2/posting.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
 import { zonedTime } from "../s2/when.ts";
 import { ROOM_IDS, type RoomRecord, timestamp, VIEWER_ID, type World } from "../seed.ts";
@@ -469,27 +470,29 @@ export function createSearch(ctx: S2Context): Search {
         if (message.createdAt < onStart || message.createdAt >= onEnd) return false;
       }
 
+      const files = filesOf(message);
+
+      const hasType = (prefix: string) => files.some((file) => file.contentType.startsWith(prefix));
+
       for (const has of filters.hasValues) {
         if (has === "link" && !/href=|https?:\/\//u.test(message.bodyHtml)) return false;
 
         if (
           has === "file" &&
-          message.attachment === null &&
+          files.length === 0 &&
           !message.cards.some((card) => card.kind === "drive")
         ) {
           return false;
         }
 
-        if (has === "image" && !(message.attachment?.contentType.startsWith("image/") ?? false)) {
-          return false;
-        }
+        if (has === "image" && !hasType("image/")) return false;
 
         if (has === "mention" && !message.bodyHtml.includes("application/vnd.campfire.mention"))
           return false;
 
-        if (has === "audio" && !message.attachment?.contentType.startsWith("audio/")) return false;
+        if (has === "audio" && !hasType("audio/")) return false;
 
-        if (has === "video" && !message.attachment?.contentType.startsWith("video/")) return false;
+        if (has === "video" && !hasType("video/")) return false;
 
         if (has === "pin" && !world.pins.has(message.id)) return false;
       }

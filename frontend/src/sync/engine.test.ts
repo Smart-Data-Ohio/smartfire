@@ -2897,6 +2897,57 @@ describe("outbox", () => {
       }),
     ),
   );
+  it.effect("posts several files as one message and shows them on its pending row", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const posted = yield* Ref.make<DecodedCreateMessage | null>(null);
+        const held = yield* Deferred.make<void>();
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* api.route("POST /rooms/12/messages", (request) =>
+          Effect.gen(function* () {
+            const body = yield* Schema.decodeUnknownEffect(CreateMessageSchema)(request.body);
+
+            yield* Ref.set(posted, body);
+            yield* Deferred.await(held);
+
+            return messageFixture(5, 12, { clientMessageId: body.clientMessageId });
+          }).pipe(Effect.orDie),
+        );
+        yield* startEngine;
+        yield* session.openRoom(12, null);
+
+        const files = ["a.png", "b.png", "c.txt"].map((filename) => ({
+          filename,
+          contentType: filename.endsWith(".png") ? "image/png" : "text/plain",
+          byteSize: 10,
+          previewUrl: null,
+        }));
+
+        const id = yield* session.send(12, "three", {
+          attachmentSignedId: null,
+          attachmentSignedIds: ["s-a", "s-b", "s-c"],
+          attachments: files,
+        });
+
+        yield* settle;
+
+        expect(yield* Ref.get(posted)).toMatchObject({
+          clientMessageId: id,
+          markdownSource: "three",
+          attachmentSignedId: null,
+          attachmentSignedIds: ["s-a", "s-b", "s-c"],
+        });
+        expect(store.getState().pending[id]?.attachments).toEqual(files);
+
+        yield* Deferred.succeed(held, undefined);
+        yield* settle;
+
+        expect(store.getState().pending[id]).toBeUndefined();
+      }),
+    ),
+  );
 });
 
 describe("tombstones", () => {

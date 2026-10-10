@@ -58,7 +58,7 @@ import {
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
 import { createPeople } from "./s2/people.ts";
-import { clientMessageIdOf, driveCards, parseMessage } from "./s2/posting.ts";
+import { clientMessageIdOf, draftFiles, driveCards, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
 import { createSlack } from "./s2/slack.ts";
@@ -758,7 +758,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const message = createMessage(record, {
       ...plainDraft(VIEWER_ID, parsed.markdown, clientMessageId),
       replyToMessageId: replyTo,
-      attachment: parsed.attachment,
+      ...draftFiles(parsed),
       cards: driveCards(parsed.driveFileIds),
     });
 

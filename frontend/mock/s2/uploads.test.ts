@@ -232,3 +232,85 @@ describe("direct uploads", () => {
     expect(wrongMethod.status).toBe(405);
   });
 });
+
+describe("grouped uploads", () => {
+  async function finished(server: MockServer, names: readonly string[]) {
+    const uploads: DirectUpload[] = [];
+
+    for (const name of names) {
+      const bytes = utf8(name);
+      const upload = await declare(server, name, "text/plain", bytes);
+
+      await put(server, upload, "text/plain", bytes);
+      uploads.push(upload);
+    }
+
+    return uploads.map((upload) => upload.signedId);
+  }
+
+  it("posts several files as one message, in order, with the first in the legacy slot", async () => {
+    const { server } = harness();
+    const ids = await finished(server, ["one.txt", "two.txt", "three.txt"]);
+
+    const message = await expectStatus<MessageDTO>(
+      server,
+      "POST",
+      `/api/v1/threads/${threads.generalActive}/messages`,
+      messageBody("g-1", "Three files", { attachmentSignedId: null, attachmentSignedIds: ids }),
+      201,
+    );
+
+    expect(message.attachments?.map((file) => file.filename)).toEqual([
+      "one.txt",
+      "two.txt",
+      "three.txt",
+    ]);
+    expect(message.attachment?.filename).toBe("one.txt");
+  });
+
+  it("keeps the legacy shape for a single file", async () => {
+    const { server } = harness();
+    const [id = ""] = await finished(server, ["solo.txt"]);
+
+    const message = await expectStatus<MessageDTO>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.quiet}/messages`,
+      messageBody("g-2", "", { attachmentSignedId: id }),
+      201,
+    );
+
+    expect(message.attachment?.filename).toBe("solo.txt");
+    expect("attachments" in message).toBe(false);
+  });
+
+  it("refuses more than ten files, repeats, and mixing with the legacy slot", async () => {
+    const { server } = harness();
+    const ids = await finished(server, ["a.txt", "b.txt"]);
+    const path = `/api/v1/rooms/${rooms.quiet}/messages`;
+    const [first = "", second = ""] = ids;
+
+    const tooMany = await send(
+      server,
+      "POST",
+      path,
+      messageBody("g-3", "", { attachmentSignedIds: Array.from({ length: 11 }, () => first) }),
+    );
+
+    const repeated = await send(
+      server,
+      "POST",
+      path,
+      messageBody("g-4", "", { attachmentSignedIds: [first, first] }),
+    );
+
+    const mixed = await send(
+      server,
+      "POST",
+      path,
+      messageBody("g-5", "", { attachmentSignedId: first, attachmentSignedIds: [second] }),
+    );
+
+    expect([tooMany.status, repeated.status, mixed.status]).toEqual([422, 422, 422]);
+  });
+});
