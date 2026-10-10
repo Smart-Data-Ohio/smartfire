@@ -187,6 +187,8 @@ describe("message view actions", () => {
         kind: "custom",
         character: null,
         imageUrl: "/icons/shipit",
+        animated: false,
+        stillUrl: "/icons/shipit",
       };
 
       yield* fake.reply("GET /icons", { icons: [shipit] });

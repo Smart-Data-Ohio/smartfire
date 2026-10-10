@@ -67,7 +67,13 @@ impl UserExtras {
         let mut icons = HashMap::new();
         for user in icon_users {
             let name = user.icon_name.as_deref().unwrap();
-            if let Some(icon) = avatar_icon(name, custom_titles.get(name).map(String::as_str)) {
+            if let Some(mut icon) = avatar_icon(name, custom_titles.get(name).map(String::as_str)) {
+                if icon.kind == api::IconKind::Custom {
+                    icon.animated = campfire_db::models::workspace_icon::WorkspaceIcon::animated_by_name(conn, name)?;
+                    if icon.animated {
+                        icon.still_url = Some(format!("/icons/{name}?still=1"));
+                    }
+                }
                 icons.insert(user.id, icon);
             }
         }
@@ -147,6 +153,8 @@ fn avatar_icon(name: &str, custom_title: Option<&str>) -> Option<api::Icon> {
             kind: api::IconKind::Emoji,
             character: Some(character),
             image_url: None,
+            animated: false,
+            still_url: None,
         },
         AvatarIcon::Image { title, url, brand } => api::Icon {
             name: name.to_string(),
@@ -157,7 +165,9 @@ fn avatar_icon(name: &str, custom_title: Option<&str>) -> Option<api::Icon> {
                 api::IconKind::Custom
             },
             character: None,
+            still_url: Some(url.clone()),
             image_url: Some(url),
+            animated: false,
         },
     })
 }
@@ -1733,6 +1743,8 @@ mod tests {
                 kind: api::IconKind::Brand,
                 character: None,
                 image_url: Some("icons/brands/github.svg".into()),
+                animated: false,
+                still_url: Some("icons/brands/github.svg".into()),
             }),
         );
         assert_eq!(
@@ -1743,6 +1755,8 @@ mod tests {
                 kind: api::IconKind::Custom,
                 character: None,
                 image_url: Some("/icons/robot".into()),
+                animated: false,
+                still_url: Some("/icons/robot".into()),
             }),
         );
         assert_eq!(
@@ -1753,6 +1767,8 @@ mod tests {
                 kind: api::IconKind::Emoji,
                 character: Some("🤖".into()),
                 image_url: None,
+                animated: false,
+                still_url: None,
             }),
         );
         assert_eq!(avatar_icon("missing-icon", None), None);

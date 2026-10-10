@@ -117,6 +117,8 @@ function initialState(world: World, now: number): State {
         title: "Smart Data",
         creatorName: viewer,
         imageUrl: "/icons/smartdata",
+        animated: false,
+        stillUrl: "/icons/smartdata",
       },
     ],
     nextIconId: 2,
@@ -441,7 +443,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     return ok({ css: held.css });
   };
 
-  const icons = () => ok({ icons: current().icons });
+  const icons = () => ok({ icons: current().icons, animatedLimit: 250, animatedUsage: 0 });
 
   const createIcon = (body: Json | undefined) => {
     const held = current();
@@ -472,6 +474,8 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
         title,
         creatorName: viewerName(),
         imageUrl: `/icons/${name}`,
+        animated: false,
+        stillUrl: `/icons/${name}`,
       },
     ].sort((a, b) => a.name.localeCompare(b.name));
     held.nextIconId += 1;

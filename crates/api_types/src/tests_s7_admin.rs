@@ -157,7 +157,11 @@ fn custom_styles_and_icons() {
                 title: "Acme Corp".into(),
                 creator_name: "Ada Lovelace".into(),
                 image_url: "/icons/acme".into(),
+                animated: true,
+                still_url: "/icons/acme?still=1".into(),
             }],
+            animated_limit: 250,
+            animated_usage: 1,
         },
         json!({
             "icons": [{
@@ -165,8 +169,12 @@ fn custom_styles_and_icons() {
                 "name": "acme",
                 "title": "Acme Corp",
                 "creatorName": "Ada Lovelace",
-                "imageUrl": "/icons/acme"
-            }]
+                "imageUrl": "/icons/acme",
+                "animated": true,
+                "stillUrl": "/icons/acme?still=1"
+            }],
+            "animatedLimit": 250,
+            "animatedUsage": 1
         }),
     );
     assert_wire(

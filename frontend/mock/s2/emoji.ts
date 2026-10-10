@@ -150,7 +150,15 @@ function aliasTitle(alias: string): string {
 }
 
 function emojiIcon(name: string, character: string): Icon {
-  return { name, title: aliasTitle(name), kind: "emoji", character, imageUrl: null };
+  return {
+    name,
+    title: aliasTitle(name),
+    kind: "emoji",
+    character,
+    imageUrl: null,
+    animated: false,
+    stillUrl: null,
+  };
 }
 
 function imageIcon(kind: "brand" | "custom", icon: ImageIcon): Icon {
@@ -160,6 +168,8 @@ function imageIcon(kind: "brand" | "custom", icon: ImageIcon): Icon {
     kind,
     character: null,
     imageUrl: iconImageUrl(kind, icon.name),
+    animated: false,
+    stillUrl: iconImageUrl(kind, icon.name),
   };
 }
 

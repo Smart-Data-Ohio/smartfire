@@ -23,6 +23,7 @@ pub struct ImageFacts {
     pub content_type: String,
     pub byte_size: i64,
     pub content_error: Option<String>,
+    pub animated: bool,
 }
 impl NewIcon {
     pub fn normalized(mut self) -> Self {
@@ -71,14 +72,27 @@ impl NewIcon {
         match image {
             None => errors.add("image", "must be attached"),
             Some(image) => {
-                if !["image/png", "image/svg+xml"].contains(&image.content_type.as_str()) {
-                    errors.add("image", "must be an SVG or PNG");
+                if !["image/png", "image/svg+xml", "image/gif", "image/webp"]
+                    .contains(&image.content_type.as_str())
+                {
+                    errors.add("image", "must be an SVG, PNG, GIF or WebP image");
                 }
-                if image.byte_size > 256 * 1024 {
+                if image.byte_size > campfire_storage::workspace_icon::MAX_BYTES {
                     errors.add("image", "must be smaller than 256 KB");
                 }
                 if let Some(error) = &image.content_error {
                     errors.add("image", error);
+                }
+                if image.animated {
+                    let limit = crate::models::account::Account::first(conn)?
+                        .map(|account| account.settings().animated_emoji_limit())
+                        .unwrap_or(crate::models::account::DEFAULT_ANIMATED_EMOJI_LIMIT);
+                    if WorkspaceIcon::animated_usage(conn)? >= limit {
+                        errors.add(
+                            "image",
+                            format!("animated emoji capacity reached (limit: {limit})"),
+                        );
+                    }
                 }
             }
         }
@@ -105,6 +119,24 @@ impl NewIcon {
     }
 }
 impl WorkspaceIcon {
+    pub fn animated_usage(conn: &Connection) -> Result<i64> {
+        Ok(conn.query_row(
+            "SELECT COUNT(*) FROM workspace_icons i JOIN active_storage_attachments a ON a.record_type = 'WorkspaceIcon' AND a.record_id = i.id AND a.name = 'image' JOIN active_storage_blobs b ON b.id = a.blob_id WHERE json_extract(b.metadata, '$.emoji_animated') = 1",
+            [], |row| row.get(0),
+        )?)
+    }
+
+    pub fn animated_by_name(conn: &Connection, name: &str) -> Result<bool> {
+        let Some(icon) = Self::find_by_name(conn, name)? else {
+            return Ok(false);
+        };
+        let blob = campfire_storage::Blob::attached(conn, "WorkspaceIcon", icon.id, "image")
+            .map_err(|error| crate::Error::Other(error.to_string()))?;
+        Ok(blob
+            .as_ref()
+            .is_some_and(campfire_storage::workspace_icon::animated))
+    }
+
     fn row(r: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: r.get("id")?,

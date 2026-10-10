@@ -5,4 +5,8 @@ import type { WorkspaceIcon } from "./WorkspaceIcon";
  * `GET /api/v1/admin/icons`, and the answer to adding (`POST`) or deleting
  * (`DELETE /api/v1/admin/icons/:id`) one.
  */
-export type WorkspaceIconList = { icons: Array<WorkspaceIcon>, };
+export type WorkspaceIconList = { icons: Array<WorkspaceIcon>,
+/**
+ * Static emoji have unlimited capacity. This limit applies only to animated emoji.
+ */
+animatedLimit: number, animatedUsage: number, };

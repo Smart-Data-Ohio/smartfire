@@ -954,7 +954,7 @@ pub async fn create_direct_upload(
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding"));
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
     }
     metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();

@@ -200,13 +200,23 @@ describe("S2 DTO schemas", () => {
     });
     roundTrips(IconList, {
       icons: [
-        { name: "tada", title: "Tada", kind: "emoji", character: "🎉", imageUrl: null },
+        {
+          name: "tada",
+          title: "Tada",
+          kind: "emoji",
+          character: "🎉",
+          imageUrl: null,
+          animated: false,
+          stillUrl: null,
+        },
         {
           name: "shipit",
           title: "Ship it",
           kind: "custom",
           character: null,
           imageUrl: "/icons/shipit",
+          animated: true,
+          stillUrl: "/icons/shipit?still=1",
         },
       ],
     });
