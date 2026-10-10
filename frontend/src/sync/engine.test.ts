@@ -42,6 +42,7 @@ import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
+import { settings } from "./settings.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
@@ -249,7 +250,114 @@ const appearanceSettings: Settings = {
   },
 };
 
+const realFetch = globalThis.fetch;
+
+/** Answers fetches with `intercept`; the default passes through to the real `fetch`. */
+let intercept: typeof fetch = realFetch;
+
+vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => intercept(input, init));
+
+/**
+ * Holds `GET /settings` until `release`; every other fetch gets a 404. Call `restore` when done.
+ * The spy stays installed for the whole file, since the API client keeps the fetch it first saw.
+ */
+function gateSettingsFetch(settingsBody: Settings) {
+  let markRequested: () => void = () => undefined;
+
+  const requested = new Promise<void>((resolve) => {
+    markRequested = resolve;
+  });
+
+  let release: () => void = () => undefined;
+
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  intercept = async (input) => {
+    if (!String(input).endsWith("/settings")) {
+      return new Response("{}", { status: 404 });
+    }
+
+    markRequested();
+    await gate;
+
+    return new Response(JSON.stringify(settingsBody));
+  };
+
+  return {
+    requested,
+    release,
+    restore: () => {
+      release();
+      intercept = realFetch;
+    },
+  };
+}
+
 describe("appearance epoch ordering", () => {
+  it.effect("accepts a settings load that finishes after the first welcome of a page", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        yield* startEngine;
+
+        const { requested, release, restore } = gateSettingsFetch({
+          ...appearanceSettings,
+          revision: 1,
+        });
+
+        try {
+          const load = settings.load();
+
+          yield* Effect.promise(() => requested);
+          yield* welcome(10, false);
+          release();
+
+          const loaded = yield* Effect.promise(() => load);
+
+          expect(loaded.revision).toBe(1);
+        } finally {
+          release();
+          restore();
+        }
+      }),
+    ),
+  );
+
+  it.effect("rejects a settings load that finishes after a real server restart", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(10, false, "e1");
+
+        const { requested, release, restore } = gateSettingsFetch({
+          ...appearanceSettings,
+          revision: 1,
+        });
+
+        try {
+          const load = settings.load();
+          const rejected = expect(load).rejects.toThrow("The server restarted");
+
+          yield* Effect.promise(() => requested);
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(0, false, "e2");
+          release();
+
+          yield* Effect.promise(() => rejected);
+        } finally {
+          release();
+          restore();
+        }
+      }),
+    ),
+  );
+
   it.effect("preserves appearance ordering when reconnecting to the same server epoch", () =>
     withSync(
       Effect.gen(function* () {

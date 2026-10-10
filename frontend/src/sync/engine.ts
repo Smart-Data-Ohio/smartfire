@@ -703,7 +703,8 @@ export class Engine extends Context.Service<
         const newEpoch = point?.epoch !== frame.epoch;
 
         // The epoch fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
-        if (newEpoch) beginSettingsEpoch();
+        // A page's first welcome has no earlier epoch to restart from, so in-flight settings loads stay valid.
+        if (newEpoch && point !== null) beginSettingsEpoch();
         mutations.beginActivityGeneration(newEpoch);
         yield* Ref.set(activitySnapshotThrough, {
           generation: store.getState().activity.generation,
