@@ -3,10 +3,8 @@ pub mod input;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, db_error as default_db_error};
-use askama::Template;
 use campfire_db::{CalendarEvent, Error as DbError};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
-use campfire_views::events::{Attendance, AttendanceView};
 
 // Both Rails controllers rescue RecordNotFound with head :not_found, even for
 // JSON requests; this is a callback response, before format selection.
@@ -17,7 +15,7 @@ fn db_error(error: DbError) -> Error {
     }
 }
 
-async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
+pub async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
     let room = scheduled_room(c).await?;
     let user_id = require_current_user(c)?.id;
     let Some(id) = c
@@ -34,7 +32,7 @@ async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
         .map_err(db_error)
 }
 
-async fn scheduled_room(c: &mut Ctx) -> Result<campfire_db::Room> {
+pub async fn scheduled_room(c: &mut Ctx) -> Result<campfire_db::Room> {
     before_actions(c, Before::default()).await?;
     let (_, room) = match concerns::set_room(c).await {
         Err(Error::NotFound) => return halt(concerns::head(StatusCode::NOT_FOUND)),
@@ -50,43 +48,6 @@ async fn scheduled_room(c: &mut Ctx) -> Result<campfire_db::Room> {
     }
     Ok(room)
 }
-pub async fn index(c: &mut Ctx) -> Result {
-    let room = scheduled_room(c).await?;
-    let user = require_current_user(c)?.clone();
-    let now = c.app().db.env().now();
-    let view = c
-        .app()
-        .db
-        .read(move |conn| crate::controllers::presenters::events::index(conn, &room, &user, now))
-        .await
-        .map_err(db_error)?;
-    page::framed_page!(c, StatusCode::OK, |ctx| {
-        campfire_views::events::pages::Index { ctx, view: &view }
-    })
-    .await
-}
-pub async fn show(c: &mut Ctx) -> Result {
-    let event = set_event(c).await?;
-    let user = require_current_user(c)?.clone();
-    let view = c
-        .app()
-        .db
-        .read(move |conn| {
-            crate::controllers::presenters::events::show(
-                conn,
-                &campfire_db::Room::find(conn, event.room_id)?,
-                &user,
-                &event,
-            )
-        })
-        .await
-        .map_err(db_error)?;
-    page::framed_page!(c, StatusCode::OK, |ctx| {
-        campfire_views::events::pages::Show { ctx, view: &view }
-    })
-    .await
-}
-
 fn nested<'a>(c: &'a Ctx, key: &str) -> Result<Option<&'a Param>> {
     // params.dig(:attendance, key) stops at nil, but raises on any non-hash
     // container (including arrays, since the next key is a symbol). Keep this
@@ -105,39 +66,6 @@ fn attendance_param<'a>(c: &'a Ctx, key: &str) -> Result<Option<&'a Param>> {
         None => nested(c, key),
     }
 }
-fn message_param_text(param: &Param) -> String {
-    match param {
-        Param::Array(items) => format!(
-            "[{}]",
-            items
-                .iter()
-                .map(message_param_inspect)
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        other => campfire_richtext::ruby::json_value_to_s(&other.to_json()),
-    }
-}
-fn message_param_inspect(param: &Param) -> String {
-    match param {
-        Param::Hash(_) => format!(
-            "#<ActionController::Parameters {} permitted: false>",
-            campfire_richtext::ruby::json_value_inspect(&param.to_json())
-        ),
-        Param::Array(_) => message_param_text(param),
-        other => campfire_richtext::ruby::json_value_inspect(&other.to_json()),
-    }
-}
-fn message_attribute_values(param: &Param, values: &mut Vec<String>) {
-    match param {
-        Param::Array(items) => {
-            for item in items {
-                message_attribute_values(item, values);
-            }
-        }
-        other => values.push(message_param_text(other)),
-    }
-}
 fn sentence(messages: Vec<String>) -> String {
     match messages.len() {
         0 => String::new(),
@@ -151,20 +79,14 @@ fn sentence(messages: Vec<String>) -> String {
     }
 }
 
-pub async fn attendance_show(c: &mut Ctx) -> Result {
-    let event = set_event(c).await?;
-    let message = c.params.get("message_id").cloned();
-    render_attendance(c, event, message, None).await
-}
-
 pub async fn attendance_update(c: &mut Ctx) -> Result {
     let event = set_event(c).await?;
     let response = attendance_param(c, "response")?
         .and_then(Param::as_str)
         .map(str::to_string)
         .unwrap_or_default();
-    let message = attendance_param(c, "message_id")?.cloned();
-    let frame = c.is_turbo_frame_request() && message.as_ref().is_some_and(Param::is_present);
+    let message = attendance_param(c, "message_id")?;
+    let frame = c.is_turbo_frame_request() && message.is_some_and(Param::is_present);
     let user_id = require_current_user(c)?.id;
     let respondable = c
         .app()
@@ -201,9 +123,9 @@ pub async fn attendance_update(c: &mut Ctx) -> Result {
         }
     }
     if frame {
-        render_attendance(c, event, message, alert).await
-    } else {
-        let path = format!("/rooms/{}/events/{}", event.room_id, event.id);
+        return Ok(c.head(StatusCode::OK));
+    }
+    let path = format!("/rooms/{}/events/{}", event.room_id, event.id);
         let url = c.url_for(&path);
         c.redirect_to_with(
             &url,
@@ -217,101 +139,9 @@ pub async fn attendance_update(c: &mut Ctx) -> Result {
                 ..Default::default()
             },
         )
-    }
 }
 
-async fn render_attendance(
-    c: &mut Ctx,
-    event: CalendarEvent,
-    message: Option<Param>,
-    alert: Option<String>,
-) -> Result {
-    let user_id = require_current_user(c)?.id;
-    let message_id = message
-        .as_ref()
-        .filter(|p| !p.is_null())
-        .map(message_param_text);
-    // Rails interpolates an array's inspect form in the frame id, but the tag
-    // builder joins array attribute values with spaces in the hidden input.
-    let message_id_input = message.as_ref().and_then(Param::as_array).map(|items| {
-        let mut values = Vec::new();
-        for item in items {
-            message_attribute_values(item, &mut values);
-        }
-        values.join(" ")
-    });
-    let view = c
-        .app()
-        .db
-        .read(move |conn| {
-            let counts = event.attendance_counts(conn)?;
-            Ok(AttendanceView {
-                event_id: event.id,
-                room_id: event.room_id,
-                message_id,
-                message_id_input,
-                current_response: event.response_for(conn, Some(user_id))?,
-                going: *counts.get("going").unwrap_or(&0),
-                maybe: *counts.get("maybe").unwrap_or(&0),
-                respondable: event
-                    .respondable_by(conn, Some(&campfire_db::User::find(conn, user_id)?))?,
-                cancelled: event.cancelled(),
-                apply_to_future: event.series_head()
-                    || (event.series() && event.next_occurrence(conn)?.is_some()),
-                alert,
-            })
-        })
-        .await
-        .map_err(db_error)?;
-    page::content(c, StatusCode::OK, |_| Attendance { view: &view }.render()).await
-}
-
-async fn render_form(
-    c: &mut Ctx,
-    room: campfire_db::Room,
-    a: campfire_db::NewCalendarEvent,
-    persisted: Option<CalendarEvent>,
-    errors: campfire_db::Errors,
-    title_value: Option<String>,
-) -> Result {
-    let user = require_current_user(c)?.clone();
-    let editing = persisted.is_some();
-    let status = if errors.is_empty() {
-        StatusCode::OK
-    } else {
-        StatusCode::UNPROCESSABLE_ENTITY
-    };
-    let view = c
-        .app()
-        .db
-        .read(move |conn| {
-            crate::controllers::presenters::events::form(
-                conn,
-                &room,
-                &user,
-                &a,
-                persisted.as_ref(),
-                &errors,
-                title_value,
-            )
-        })
-        .await
-        .map_err(db_error)?;
-    if editing {
-        page::framed_page!(c, status, |ctx| campfire_views::events::forms::Edit {
-            ctx,
-            view: &view
-        })
-        .await
-    } else {
-        page::framed_page!(c, status, |ctx| campfire_views::events::forms::New {
-            ctx,
-            view: &view
-        })
-        .await
-    }
-}
-fn ensure_manager(c: &Ctx, e: &CalendarEvent, cancel: bool) -> Result<()> {
+pub fn ensure_manager(c: &Ctx, e: &CalendarEvent, cancel: bool) -> Result<()> {
     let u = Some(require_current_user(c)?);
     if if cancel {
         e.cancellable_by(u)
@@ -323,14 +153,6 @@ fn ensure_manager(c: &Ctx, e: &CalendarEvent, cancel: bool) -> Result<()> {
         halt(concerns::head(StatusCode::FORBIDDEN))
     }
 }
-async fn event_room(c: &Ctx, e: &CalendarEvent) -> Result<campfire_db::Room> {
-    let id = e.room_id;
-    c.app()
-        .db
-        .read(move |conn| campfire_db::Room::find(conn, id))
-        .await
-        .map_err(db_error)
-}
 fn redirect_event(c: &mut Ctx, e: &CalendarEvent, notice: &str) -> Result {
     let url = c.url_for(&format!("/rooms/{}/events/{}", e.room_id, e.id));
     c.redirect_to_with(
@@ -341,31 +163,16 @@ fn redirect_event(c: &mut Ctx, e: &CalendarEvent, notice: &str) -> Result {
         },
     )
 }
-pub async fn new(c: &mut Ctx) -> Result {
-    let room = scheduled_room(c).await?;
-    let user = require_current_user(c)?.clone();
-    let viewer_zone = viewer_zone(c, user.id).await?;
-    let a = input::prefill(
-        &c.params,
-        &viewer_zone,
-        c.app().db.env().now(),
-        room.id,
-        user.id,
-    )?;
-    let title = (!a.title.is_empty()).then(|| a.title.clone());
-    render_form(c, room, a, None, campfire_db::Errors::default(), title).await
-}
 pub async fn create(c: &mut Ctx) -> Result {
     let room = scheduled_room(c).await?;
     let user = require_current_user(c)?.clone();
     let viewer_zone = viewer_zone(c, user.id).await?;
     let changes = input::attributes(&c.params, None, &viewer_zone, c.app().db.env().now())?;
-    let title = changes.title.clone();
     let a = input::new_attributes(changes, room.id, user.id);
     match c
         .app()
         .db
-        .write_scoped(move || page::enter_time_zone(campfire_views::time::Zone::for_user(Some(&viewer_zone))), {
+        .write_scoped(move || page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(&viewer_zone))), {
             let a = a.clone();
             move |tx| {
                 // Rails save returns false for event validation, but exceptions from the
@@ -389,17 +196,9 @@ pub async fn create(c: &mut Ctx) -> Result {
                 "Event scheduled."
             },
         ),
-        Ok(Err(errors)) => render_form(c, room, a, None, errors, title).await,
+        Ok(Err(_errors)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
         Err(e) => Err(db_error(e)),
     }
-}
-pub async fn edit(c: &mut Ctx) -> Result {
-    let e = set_event(c).await?;
-    ensure_manager(c, &e, false)?;
-    let room = event_room(c, &e).await?;
-    let a = input::attempted(&Default::default(), &e);
-    let title = Some(a.title.clone());
-    render_form(c, room, a, Some(e), campfire_db::Errors::default(), title).await
 }
 pub async fn update(c: &mut Ctx) -> Result {
     let e = set_event(c).await?;
@@ -413,19 +212,14 @@ pub async fn update(c: &mut Ctx) -> Result {
     match c
         .app()
         .db
-        .write_scoped(move || page::enter_time_zone(campfire_views::time::Zone::for_user(Some(&viewer_zone))), {
+        .write_scoped(move || page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(&viewer_zone))), {
             let changes = changes.clone();
             move |tx| CalendarEvent::update_with_scope(tx, id, changes, &scope, Some(actor))
         })
         .await
     {
         Ok(_) => redirect_event(c, &e, "Event updated."),
-        Err(DbError::RecordInvalid(errors)) => {
-            let room = event_room(c, &e).await?;
-            let a = input::attempted(&changes, &e);
-            let title = Some(a.title.clone());
-            render_form(c, room, a, Some(e), errors, title).await
-        }
+        Err(DbError::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
         Err(e) => Err(db_error(e)),
     }
 }
@@ -439,7 +233,7 @@ pub async fn cancel(c: &mut Ctx) -> Result {
     let cancelled = c
         .app()
         .db
-        .write_scoped(move || page::enter_time_zone(campfire_views::time::Zone::for_user(Some(&viewer_zone))),
+        .write_scoped(move || page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(&viewer_zone))),
             move |tx| CalendarEvent::cancel_with_scope(tx, id, &scope, Some(actor)))
         .await
         .map_err(db_error)?;

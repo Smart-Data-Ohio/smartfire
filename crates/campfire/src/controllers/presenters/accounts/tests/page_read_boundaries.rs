@@ -12,141 +12,6 @@ fn corpus() -> Value {
     .unwrap()
 }
 
-fn tours() -> Value {
-    serde_json::from_str(include_str!(
-        "../../../../../../../vectors/agent-tour-values.json"
-    ))
-    .unwrap()
-}
-fn tour_fragment(body: &str) -> &str {
-    let start = body.find("<div id=\"tour\" hidden").unwrap();
-    let end = start + body[start..].find("\n</div>").unwrap() + "\n</div>".len();
-    &body[start..end]
-}
-async fn store_tour(t: &TestApp, case: &Value) {
-    let sql = case["sql"].as_str().unwrap().to_owned();
-    t.db()
-        .write(move |tx| {
-            tx.conn().execute(&sql, [])?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-}
-
-#[tokio::test]
-async fn ws11ui_review199_valid_tour_timestamps_match_rails_bytes() {
-    let t = TestApp::boot_frozen()
-        .await
-        .unwrap()
-        .without_job_runner()
-        .await;
-    let mut browser = t.david();
-    let data = tours();
-    let mut failures = Vec::new();
-    let mut checked = 0;
-    for case in data["cases"].as_array().unwrap().iter().filter(|c| {
-        matches!(
-            c["name"].as_str(),
-            Some("month_abbrev_dot" | "year_month_name")
-        )
-    }) {
-        store_tour(&t, case).await;
-        for expected in case["responses"].as_array().unwrap() {
-            let path = expected["path"].as_str().unwrap();
-            let response = browser.get(path).await;
-            assert!(
-                expected["body"]
-                    .as_str()
-                    .unwrap()
-                    .contains("data-tour-auto-start-value=\"false\"")
-            );
-            if response.status.as_u16() as u64 != expected["status"].as_u64().unwrap()
-                || tour_fragment(&response.text()) != expected["body"].as_str().unwrap()
-            {
-                failures.push(format!("{} {path}", case["name"]));
-            }
-            checked += 1;
-        }
-    }
-    assert_eq!(checked, 4);
-    println!(
-        "Tour valid timestamp regression: 2 values; {checked} responses; {} mismatches",
-        failures.len()
-    );
-    assert!(failures.is_empty(), "{failures:?}");
-}
-
-#[tokio::test]
-async fn ws11ui_review209_blob_tour_timestamps_do_not_restart_tour() {
-    let t = TestApp::boot_frozen()
-        .await
-        .unwrap()
-        .without_job_runner()
-        .await;
-    let mut browser = t.david();
-    for value in ["2026-01-01 00:00:00", "Jan. 1, 2026"] {
-        t.db()
-            .write(move |tx| {
-                tx.conn().execute(
-                    "UPDATE users SET tour_completed_at=CAST(? AS BLOB) WHERE id=127326141",
-                    [value],
-                )?;
-                Ok(())
-            })
-            .await
-            .unwrap();
-        for path in ["/agents", "/users/me/profile"] {
-            let response = browser.get(path).await;
-            assert_eq!(response.status, StatusCode::OK);
-            assert!(
-                tour_fragment(&response.text()).contains("data-tour-auto-start-value=\"false\""),
-                "valid SQLite BLOB timestamp {value:?} must keep the tour completed on {path}"
-            );
-        }
-    }
-    println!("Tour BLOB regression: 2 values; 4 responses; 0 mismatches");
-}
-
-#[tokio::test]
-async fn ws11ui_next_tour_differential_matches_all_rails_values() {
-    let t = TestApp::boot_frozen()
-        .await
-        .unwrap()
-        .without_job_runner()
-        .await;
-    let mut browser = t.david();
-    let data = tours();
-    let cases = data["cases"].as_array().unwrap();
-    let mut failures = Vec::new();
-    let mut checked = 0;
-    for case in cases {
-        store_tour(&t, case).await;
-        for expected in case["responses"].as_array().unwrap() {
-            let path = expected["path"].as_str().unwrap();
-            let response = browser.get(path).await;
-            let body = response.text();
-            let actual = tour_fragment(&body);
-            assert_eq!(
-                response.status.as_u16() as u64,
-                expected["status"].as_u64().unwrap()
-            );
-            let equal = actual == expected["body"].as_str().unwrap();
-            if !equal {
-                failures.push(format!("{} {path}", case["name"]));
-            }
-            checked += 1;
-        }
-    }
-    assert_eq!(cases.len(), 199);
-    assert_eq!(checked, 398);
-    println!(
-        "Tour Rails differential: 199 values; {checked} responses; {} mismatches; 0 skipped; raw fragments unchanged",
-        failures.len()
-    );
-    assert!(failures.is_empty(), "{failures:?}");
-}
-
 #[tokio::test]
 async fn ws11ui_review199_expiry_crosses_writer_wait() {
     let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
@@ -156,7 +21,7 @@ async fn ws11ui_review199_expiry_crosses_writer_wait() {
         .without_job_runner()
         .await;
     let mut browser = t.david();
-    assert_eq!(browser.get("/agents").await.status, StatusCode::OK);
+    assert_eq!(browser.get("/api/v1/agents").await.status, StatusCode::OK);
     let agent_id = t
         .db()
         .write(|tx| {
@@ -199,7 +64,7 @@ async fn ws11ui_review199_expiry_crosses_writer_wait() {
         .await
     });
     ready.await.unwrap();
-    let path = format!("/agents/{agent_id}/approvals");
+    let path = format!("/api/v1/agents/{agent_id}/approvals");
     let (response, (queued, selected)) = tokio::join!(browser.get(&path), async {
         // Observe the real queue, not elapsed time. The deadline only prevents a hung test.
         let queued = tokio::time::timeout(std::time::Duration::from_secs(5), async {
@@ -239,17 +104,8 @@ async fn ws11ui_review199_expiry_crosses_writer_wait() {
         response.status.as_u16() as u64,
         expected["status"].as_u64().unwrap()
     );
-    let body = response.text();
-    let start = body
-        .find("<menu class=\"flex flex-column gap margin-none pad txt-align-start\">")
-        .unwrap();
-    let end = start + body[start..].find("</menu>").unwrap() + "</menu>".len();
-    assert_eq!(
-        &body[start..end],
-        expected["body"].as_str().unwrap(),
-        "complete approval menu bytes after the writer wait"
-    );
 }
+
 
 #[tokio::test]
 async fn ws11ui_next_stored_datetime_cast_values_match_rails() {
@@ -304,4 +160,14 @@ async fn ws11ui_next_stored_datetime_cast_values_match_rails() {
         failures.len()
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+async fn store_tour(t: &TestApp, case: &Value) {
+    let sql = case["sql"].as_str().unwrap().to_owned();
+    t.db()
+        .write(move |tx| {
+            tx.conn().execute(&sql, [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
 }

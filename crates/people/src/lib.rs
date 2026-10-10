@@ -18,5 +18,4 @@ pub mod controllers {
 
 // The app, web and channels layers, under the paths this code used inside the campfire crate.
 use campfire_app::{account_security, app, integrations, net};
-use campfire_channels::channels;
 use campfire_runtime::{authentication, concerns, rich_text};

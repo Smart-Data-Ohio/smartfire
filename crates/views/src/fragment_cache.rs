@@ -1,42 +1,15 @@
-//! Fragment caching: `cache record do ... end` in ERB and `json.cache! record do ... end` in
-//! Jbuilder. The first rendering of a record version is what every later render reuses, whoever
-//! renders it: a broadcast renders without a request, and the pages that show the same message
-//! afterwards repeat that rendering byte for byte. So nothing in a fragment may depend on the
-//! request unless its key does (absolute message URLs partition the key by origin).
-//! The shared message tree is tokenless, as in Rails #148. Other cached forms hold slots for
-//! authenticity tokens; each render fills its own session's (`request_forgery::token_tag`).
-//!
-//! [`FragmentCache`] is the process's store. The reference keeps fragments in Redis
-//! (`config.cache_store = :redis_cache_store`, `config/environments/production.rb`), whose
-//! `config/redis.conf` sets no `maxmemory`, so it grows with every message. An in-process store
-//! can't do that, so this one is bounded by bytes the way Rails bounds its in-process store,
-//! `ActiveSupport::Cache::MemoryStore`: each entry counts its key, its payload and
-//! [`PER_ENTRY_OVERHEAD`] bytes, and when a write takes the total past the limit, least recently
-//! used entries go until it's back to three quarters of it (`MemoryStore#prune`). Reads count as
-//! uses. An entry larger than a quarter of the limit is returned but not kept, so that one huge
-//! fragment can't flush everything else. Templates reach the store that's current on this thread:
-//! the app enters it for every request ([`Scoped`]) and for renders outside one ([`with`]).
-//! Without a current store, fragments render uncached (`perform_caching = false`).
-//!
-//! Keys follow `ActionView::Helpers::CacheHelper#fragment_name_with_digest`:
-//! `views/<template>:<digest>/<record cache_key_with_version>[/<extra>]`, where the digest covers
-//! the template and the partials it renders (see [`digest`]).
-
+//! Byte-bounded value caching for legacy JSON and shared API facts.
 pub use campfire_presentation::cache_keys::{cache_version, cache_key_with_version};
 
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
-use std::hash::{Hash, Hasher};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
 pub mod keys;
-
-/// A rendered fragment as the store keeps it.
-pub type Fragment = Arc<String>;
 
 /// The store's default limit: `MemoryStore`'s default `size`, 32 MB.
 pub const DEFAULT_MAX_BYTES: usize = 32 * 1024 * 1024;
@@ -81,14 +54,7 @@ pub fn serialized_size(value: &impl serde::Serialize) -> usize {
 
 type Value = Arc<dyn Any + Send + Sync>;
 
-/// `html` without the spare capacity rendering leaves (Askama reserves a size hint up front),
-/// which a stored fragment would otherwise hold for as long as it's kept.
-fn fitted(mut html: String) -> String {
-    html.shrink_to_fit();
-    html
-}
-
-/// A byte-bounded in-process fragment store.
+/// A byte-bounded in-process value store.
 pub struct FragmentCache {
     max_bytes: usize,
     entries: Mutex<Entries>,
@@ -131,13 +97,6 @@ impl FragmentCache {
         })
     }
 
-    /// `Rails.cache.fetch(key) { render }` for a rendered fragment. What's stored has slots for
-    /// the render's authenticity tokens; what's returned has this render's own in them.
-    pub fn fetch(&self, key: &str, render: impl FnOnce() -> String) -> String {
-        let stored = self.fetch_value(key, || Fragment::new(fitted(for_the_cache(render))));
-        crate::helpers::request_forgery::fill_token_slots(&stored).into_owned()
-    }
-
     /// `Rails.cache.fetch(key) { value }` for any cloneable value (Jbuilder caches the hash it
     /// built, not its JSON).
     pub fn fetch_value<T: CacheSize + Clone + Send + Sync + 'static>(
@@ -151,7 +110,7 @@ impl FragmentCache {
         }
     }
 
-    /// [`Self::fetch_value`] where computing can fail: nothing is stored then. When two renders
+    /// [`Self::fetch_value`] where computing can fail: nothing is stored then. When two computations
     /// of a key race, the first one stored is what both return.
     pub fn try_fetch_value<T: CacheSize + Clone + Send + Sync + 'static, E>(
         &self,
@@ -161,7 +120,7 @@ impl FragmentCache {
         if let Some(value) = self.read::<T>(key) {
             return Ok(value);
         }
-        // Rendered unlocked: a fragment renders the fragments nested in it through this store.
+        // Compute outside the lock so nested cache reads can proceed.
         let value = compute()?;
         let size = key.len() + value.cache_size() + PER_ENTRY_OVERHEAD;
         Ok(self.write(key, value, size))
@@ -193,6 +152,7 @@ impl FragmentCache {
         *self.lock() = Entries::default();
     }
 
+    /// Stores `value` unless `key` already holds one of its type, and returns what `key` holds.
     fn read<T: Clone + 'static>(&self, key: &str) -> Option<T> {
         let mut entries = self.lock();
         let Entries {
@@ -208,7 +168,6 @@ impl FragmentCache {
         Some(value)
     }
 
-    /// Stores `value` unless `key` already holds one of its type, and returns what `key` holds.
     fn write<T: Clone + Send + Sync + 'static>(&self, key: &str, value: T, size: usize) -> T {
         let mut entries = self.lock();
         let Entries {
@@ -270,18 +229,6 @@ thread_local! {
     static CURRENT: RefCell<Option<Arc<FragmentCache>>> = const { RefCell::new(None) };
 }
 
-/// Runs `render` as a fragment for the cache: one whoever renders it next is shown, so what
-/// belongs to this render's session is left as slots (see `request_forgery::token_tag`).
-fn for_the_cache<R>(render: impl FnOnce() -> R) -> R {
-    let _guard = campfire_view_kit::helpers::request_forgery::enter_fragment_render();
-    render()
-}
-
-/// Whether a fragment for the cache is being rendered on this thread.
-pub fn rendering_fragment() -> bool {
-    campfire_view_kit::helpers::request_forgery::rendering_fragment()
-}
-
 /// Runs `f` with `cache` as this thread's current store.
 pub fn with<R>(cache: &Arc<FragmentCache>, f: impl FnOnce() -> R) -> R {
     struct Restore(Option<Arc<FragmentCache>>);
@@ -300,21 +247,6 @@ pub fn current() -> Option<Arc<FragmentCache>> {
     CURRENT.with(|current| current.borrow().clone())
 }
 
-/// `cache key do render end` against the current store (uncached without one).
-pub fn fetch(key: impl FnOnce() -> String, render: impl FnOnce() -> String) -> String {
-    match current() {
-        Some(cache) => cache.fetch(&key(), render),
-        None => render(),
-    }
-}
-
-/// The fragment `key` holds in the current store, if any, shared rather than copied. For callers
-/// that gather a fragment's inputs only on a miss, as `cache key do ... end` evaluates its block
-/// only then.
-pub fn read(key: &str) -> Option<Fragment> {
-    current()?.get(key)
-}
-
 /// `json.cache! key do ... end` against the current store (uncached without one).
 pub fn try_fetch_value<T: CacheSize + Clone + Send + Sync + 'static, E>(
     key: impl FnOnce() -> String,
@@ -327,7 +259,7 @@ pub fn try_fetch_value<T: CacheSize + Clone + Send + Sync + 'static, E>(
 }
 
 /// A future that has `cache` as the current store whenever it's polled: a request's handler,
-/// whose synchronous renders (on whichever worker thread polls it) then see the store.
+/// whose synchronous reads (on whichever worker thread polls it) then see the store.
 pub struct Scoped<F> {
     cache: Arc<FragmentCache>,
     future: Pin<Box<F>>,
@@ -351,14 +283,14 @@ impl<F: Future> Future for Scoped<F> {
     }
 }
 
-/// The template digest part of a key: a stable hash of the template sources a fragment renders
-/// (`ActionView::Digestor` digests the template and its dependency tree). Only its stability
-/// within the process matters: the store doesn't outlive it, and ETags hash the fragments'
-/// content, not their keys.
-pub fn digest(sources: &[&str]) -> String {
-    let mut hasher = std::hash::DefaultHasher::new();
-    sources.hash(&mut hasher);
-    format!("{:016x}", hasher.finish())
+impl CacheSize for campfire_presentation::messages::json::UserJson {
+    fn cache_size(&self) -> usize { serialized_size(self) }
+}
+impl CacheSize for campfire_presentation::messages::json::MessageJson {
+    fn cache_size(&self) -> usize { serialized_size(self) }
+}
+impl CacheSize for campfire_presentation::messages::json::BoostJson {
+    fn cache_size(&self) -> usize { serialized_size(self) }
 }
 
 #[cfg(test)]
@@ -381,21 +313,21 @@ mod tests {
     #[test]
     fn the_first_rendering_is_reused() {
         let cache = FragmentCache::new(BIG);
-        assert_eq!(cache.fetch("a", || "first".into()), "first");
-        assert_eq!(cache.fetch("a", || "second".into()), "first");
-        assert_eq!(cache.fetch("b", || "other".into()), "other");
+        assert_eq!(cache.fetch_value("a", || "first".to_string()), "first");
+        assert_eq!(cache.fetch_value("a", || "second".to_string()), "first");
+        assert_eq!(cache.fetch_value("b", || "other".to_string()), "other");
     }
 
     #[test]
     fn entries_count_their_key_payload_and_overhead() {
         let cache = FragmentCache::new(BIG);
-        cache.fetch("a", || "x".repeat(100));
-        cache.fetch("bb", || "y".repeat(10));
+        cache.fetch_value("a", || "x".repeat(100));
+        cache.fetch_value("bb", || "y".repeat(10));
         assert_eq!(
             cache.bytes(),
             (1 + 100 + PER_ENTRY_OVERHEAD) + (2 + 10 + PER_ENTRY_OVERHEAD)
         );
-        cache.fetch("a", || unreachable!());
+        cache.fetch_value::<String>("a", || unreachable!());
         assert_eq!(
             cache.bytes(),
             entry(100) + (2 + 10 + PER_ENTRY_OVERHEAD),
@@ -410,8 +342,8 @@ mod tests {
         let max = 10 * entry(1000);
         let cache = FragmentCache::new(max);
         for i in 0..1000 {
-            cache.fetch(&format!("{}", i % 3), || "x".repeat(1000));
-            cache.fetch(&format!("k{i}"), || "x".repeat(1000));
+            cache.fetch_value(&format!("{}", i % 3), || "x".repeat(1000));
+            cache.fetch_value(&format!("k{i}"), || "x".repeat(1000));
             assert!(
                 cache.bytes() <= max,
                 "{} bytes after {i} writes",
@@ -425,7 +357,7 @@ mod tests {
         );
         for hot in 0..3 {
             assert!(
-                cache.get::<Fragment>(&hot.to_string()).is_some(),
+                cache.get::<String>(&hot.to_string()).is_some(),
                 "entry {hot} is used every sixth write"
             );
         }
@@ -435,47 +367,32 @@ mod tests {
     fn going_over_prunes_to_three_quarters_least_recently_used_first() {
         let cache = FragmentCache::new(4 * entry(100));
         for key in ["a", "b", "c", "d"] {
-            cache.fetch(key, || "x".repeat(100));
+            cache.fetch_value(key, || "x".repeat(100));
         }
-        cache.fetch("a", || unreachable!("a is still stored"));
+        cache.fetch_value::<String>("a", || unreachable!("a is still stored"));
         assert_eq!(cache.len(), 4);
         // Five entries is over; three quarters of the limit holds three.
-        cache.fetch("e", || "x".repeat(100));
+        cache.fetch_value("e", || "x".repeat(100));
         assert_eq!(cache.len(), 3);
         assert!(cache.bytes() <= 3 * entry(100));
         assert_eq!(
-            cache.get::<Fragment>("b"),
+            cache.get::<String>("b"),
             None,
             "b was least recently used"
         );
-        assert_eq!(cache.get::<Fragment>("c"), None, "c went next");
+        assert_eq!(cache.get::<String>("c"), None, "c went next");
         for key in ["a", "d", "e"] {
             assert!(
-                cache.get::<Fragment>(key).is_some(),
+                cache.get::<String>(key).is_some(),
                 "{key} survives (a was used after d)"
             );
         }
     }
 
     #[test]
-    fn stored_fragments_hold_no_spare_capacity() {
-        let cache = FragmentCache::new(BIG);
-        cache.fetch("a", || {
-            let mut html = String::with_capacity(16 * 1024);
-            html.push_str("<p>hi</p>");
-            html
-        });
-        assert_eq!(
-            cache.get::<Fragment>("a").unwrap().capacity(),
-            "<p>hi</p>".len()
-        );
-        assert_eq!(cache.bytes(), entry("<p>hi</p>".len()));
-    }
-
-    #[test]
     fn a_value_larger_than_the_store_is_returned_but_not_kept() {
         let cache = FragmentCache::new(entry(10));
-        assert_eq!(cache.fetch("a", || "x".repeat(100)), "x".repeat(100));
+        assert_eq!(cache.fetch_value("a", || "x".repeat(100)), "x".repeat(100));
         assert_eq!(cache.len(), 0);
         assert_eq!(cache.bytes(), 0);
     }
@@ -484,15 +401,15 @@ mod tests {
     fn a_value_larger_than_a_quarter_of_the_store_doesnt_evict_the_rest() {
         let cache = FragmentCache::new(8 * entry(100));
         for key in ["a", "b", "c"] {
-            cache.fetch(key, || "x".repeat(100));
+            cache.fetch_value(key, || "x".repeat(100));
         }
         let big = "y".repeat(3 * entry(100));
-        assert_eq!(cache.fetch("big", || big.clone()), big);
+        assert_eq!(cache.fetch_value("big", || big.clone()), big);
         assert_eq!(cache.len(), 3, "the big value isn't kept");
-        assert_eq!(cache.get::<Fragment>("big"), None);
+        assert_eq!(cache.get::<String>("big"), None);
         for key in ["a", "b", "c"] {
             assert!(
-                cache.get::<Fragment>(key).is_some(),
+                cache.get::<String>(key).is_some(),
                 "{key} is still stored"
             );
         }
@@ -508,9 +425,9 @@ mod tests {
                 let cache = &cache;
                 scope.spawn(move || {
                     for i in 0..5000 {
-                        let hot = cache.fetch(&format!("{}", i % 8), || "x".repeat(200));
+                        let hot = cache.fetch_value(&format!("{}", i % 8), || "x".repeat(200));
                         assert_eq!(hot, "x".repeat(200));
-                        cache.fetch(&format!("cold/{t}/{i}"), || "y".repeat(200));
+                        cache.fetch_value(&format!("cold/{t}/{i}"), || "y".repeat(200));
                         assert!(cache.bytes() <= max);
                     }
                 });
@@ -537,15 +454,15 @@ mod tests {
     #[test]
     fn racing_renders_all_return_the_first_stored_fragment() {
         let cache = FragmentCache::new(BIG);
-        let barrier = std::sync::Barrier::new(8);
-        let values: Vec<Fragment> = std::thread::scope(|scope| {
-            let handles: Vec<_> = (0..8)
+        let barrier = std::sync::Barrier::new(4);
+        let values: Vec<Arc<String>> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..4)
                 .map(|t| {
                     let (cache, barrier) = (&cache, &barrier);
                     scope.spawn(move || {
                         cache.fetch_value("k", || {
                             barrier.wait();
-                            Fragment::new(t.to_string())
+                            Arc::new(t.to_string())
                         })
                     })
                 })
@@ -560,7 +477,7 @@ mod tests {
             "{values:?}"
         );
         assert!(Arc::ptr_eq(
-            &cache.get::<Fragment>("k").unwrap(),
+            &cache.get::<Arc<String>>("k").unwrap(),
             &values[0]
         ));
         assert_eq!(cache.len(), 1);
@@ -569,36 +486,6 @@ mod tests {
     #[test]
     fn jbuilder_values_count_their_json() {
         assert_eq!(serialized_size(&vec!["ab", "c"]), r#"["ab","c"]"#.len());
-    }
-
-    #[test]
-    fn nested_fragments_use_the_same_store() {
-        let cache = FragmentCache::new(BIG);
-        let outer = with(&cache, || {
-            fetch(
-                || "outer".into(),
-                || format!("[{}]", fetch(|| "inner".into(), || "x".into())),
-            )
-        });
-        assert_eq!(outer, "[x]");
-        assert_eq!(cache.len(), 2);
-        assert!(
-            current().is_none(),
-            "the store is only current inside `with`"
-        );
-        assert_eq!(fetch(|| "outer".into(), || "uncached".into()), "uncached");
-    }
-
-    #[test]
-    fn fragments_can_be_looked_up_before_rendering() {
-        let cache = FragmentCache::new(BIG);
-        assert_eq!(with(&cache, || read("a")), None);
-        with(&cache, || fetch(|| "a".into(), || "rendered".into()));
-        assert_eq!(
-            with(&cache, || read("a")).as_deref().map(String::as_str),
-            Some("rendered")
-        );
-        assert_eq!(read("a"), None, "no store, no fragments");
     }
 
     #[test]
@@ -611,74 +498,6 @@ mod tests {
         );
         assert_eq!(cache.try_fetch_value::<i32, &str>("k", || Ok(1)), Ok(1));
         assert_eq!(cache.try_fetch_value::<i32, &str>("k", || Ok(2)), Ok(1));
-    }
-
-    #[test]
-    fn a_cached_fragment_has_each_renders_own_tokens() {
-        use crate::helpers::request_forgery::{
-            AuthenticityTokens, RequestSecrets, fill_token_slots, has_token_slots, rendering_with,
-            token_tag,
-        };
-
-        struct Viewer(&'static str);
-        impl AuthenticityTokens for Viewer {
-            fn global(&self) -> String {
-                format!("{}:global", self.0)
-            }
-            fn for_form(&self, action: &str, method: &str) -> String {
-                format!("{}:{method}:{action}", self.0)
-            }
-        }
-        fn as_viewer<R>(name: &'static str, render: impl FnOnce() -> R) -> R {
-            rendering_with(
-                RequestSecrets {
-                    tokens: Box::new(Viewer(name)),
-                    csp_nonce: None,
-                },
-                render,
-            )
-        }
-
-        let cache = FragmentCache::new(BIG);
-        let boost = || format!("<form>{}</form>", token_tag("/messages/1/boosts", "post").0);
-        let message = || {
-            cache.fetch("message", || {
-                format!("<div>{}</div>", cache.fetch("boost", boost))
-            })
-        };
-        let field = |value: &str| {
-            format!(
-                "<div><form><input type=\"hidden\" name=\"authenticity_token\" value=\"{value}\" /></form></div>"
-            )
-        };
-        assert_eq!(
-            as_viewer("david", message),
-            field("david:post:/messages/1/boosts"),
-            "cold"
-        );
-        assert_eq!(
-            as_viewer("jason", message),
-            field("jason:post:/messages/1/boosts"),
-            "warm, for someone else"
-        );
-        assert_eq!(
-            message(),
-            "<div><form></form></div>",
-            "a broadcast's render has none"
-        );
-        for key in ["message", "boost"] {
-            let stored: Fragment = cache.get(key).unwrap();
-            assert!(
-                has_token_slots(&stored) && !stored.contains("david"),
-                "{key}: {stored}"
-            );
-        }
-        let stored: Fragment = cache.get("message").unwrap();
-        assert_eq!(
-            as_viewer("kevin", || fill_token_slots(&stored).into_owned()),
-            field("kevin:post:/messages/1/boosts"),
-            "read up front"
-        );
     }
 
     #[test]

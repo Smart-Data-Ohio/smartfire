@@ -69,8 +69,8 @@ async fn thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_by
             let thread = ChannelThread::find(conn, oracle()["thread_id"].as_i64().unwrap())?;
             let records = Message::in_thread(conn, thread.id)?.iter().map(|message| Ok(json!({
                 "id": message.id, "client_message_id": message.client_message_id, "creator_id": message.creator_id,
-                "markdown_source": message.markdown_source, "body": message.body_html(conn)?, "edited_at": message.edited_at.map(|time| campfire_views::messages::support::json_time(time.jiff())),
-                "reply_to_message_id": message.reply_to_message_id, "reply_target_deleted_at": message.reply_target_deleted_at.map(|time| campfire_views::messages::support::json_time(time.jiff())),
+                "markdown_source": message.markdown_source, "body": message.body_html(conn)?, "edited_at": message.edited_at.map(|time| campfire_presentation::messages::support::json_time(time.jiff())),
+                "reply_to_message_id": message.reply_to_message_id, "reply_target_deleted_at": message.reply_target_deleted_at.map(|time| campfire_presentation::messages::support::json_time(time.jiff())),
                 "drive_file_ids": message.drive_file_ids(conn)?
             }))).collect::<campfire_db::Result<Vec<_>>>()?;
             Ok(json!({"records": records, "closed": thread.status(conn, now)?.name() == "closed", "locked": thread.locked_at.is_some(),

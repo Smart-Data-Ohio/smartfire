@@ -1,21 +1,9 @@
 //! `Accounts::CustomStylesController` (reference/app/controllers/accounts/custom_styles_controller.rb).
 
-use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, format, permit_keys};
-use campfire_views::accounts;
+use campfire_kit::{Ctx, Error, Param, Redirect, Result, permit_keys};
 
 use crate::app::AppCtx;
-use crate::controllers::presenters::page::framed_page;
 use crate::concerns::{self, Before};
-
-/// `before_action :ensure_can_administer, :set_account`
-pub async fn edit(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    concerns::ensure_can_administer(c)?;
-    let account = super::current_account(c).await?;
-    c.respond_to(&[&format::HTML])?;
-    let custom_styles = account.custom_styles;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::CustomStylesEdit { ctx, custom_styles: custom_styles.clone() }).await
-}
 
 /// `@account.update!(params.require(:account).permit(:custom_styles))`
 pub async fn update(c: &mut Ctx) -> Result {

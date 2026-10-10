@@ -1,6 +1,0 @@
-<span id="{{ stage.dom_id("stage_live_badge") }}" class="stage-live" data-live-stream-badge="true" data-room-id="{{ stage.room_id }}"{% if let Some(live) = stage.live %}{% if let Some(identity) = live.identity %} data-presenter-id="{{ identity }}"{% endif %}{% endif %}>{% if let Some(live) = stage.live %}
-    <span class="stage-live__badge" role="status">
-      <span class="stage-live__pip" aria-hidden="true"></span>
-      Live: {{ live.name }}
-    </span>
-{% endif %}</span>

@@ -17,23 +17,14 @@ mod root_tests;
 #[cfg(test)]
 mod paging_tests;
 #[cfg(test)]
-mod collection_tests;
-#[cfg(test)]
 mod cache_reaction_review_tests;
-#[cfg(test)]
-mod rendered_dependency_tests;
 #[cfg(test)]
 mod csrf_tests;
 #[cfg(test)]
 mod declaration_tests;
 #[cfg(test)]
-mod room_list_tests;
-#[cfg(test)]
-mod github_integration_tests;
-#[cfg(test)]
 pub(crate) mod drive_tests;
 #[cfg(test)]
-pub(crate) mod state_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

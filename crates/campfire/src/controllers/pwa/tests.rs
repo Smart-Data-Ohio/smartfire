@@ -13,39 +13,19 @@ async fn unreleased_spa_manifest_redirects_to_single_root_identity() {
 }
 
 #[tokio::test]
-async fn pwa_http_bodies_preserve_rails_contract_after_extraction() {
-    for (seed, vectors) in [
-        (
-            "default",
-            include_str!("../../../../../vectors/users_pwa_default.json"),
-        ),
-        (
-            "first_run",
-            include_str!("../../../../../vectors/users_pwa_first_run.json"),
-        ),
-    ] {
-        let Some(app) = TestApp::boot_seed_with_env(seed, seed_clock(), &[]).await else {
-            return;
-        };
-        let vectors: serde_json::Value = serde_json::from_str(vectors).unwrap();
-        for vector in vectors["responses"].as_array().unwrap() {
-            let response = app.anonymous().get(vector["path"].as_str().unwrap()).await;
-            assert_eq!(
-                response.status.as_u16(),
-                vector["status"].as_u64().unwrap() as u16
-            );
-            assert_eq!(response.content_type(), vector["content_type"].as_str());
-            let rails = vector["body"].as_str().unwrap();
-            // The worker keeps one documented difference from Rails (the SPA's build caches).
-            let expected = if vector["path"] == "/service-worker.js" {
-                campfire_spa::pwa::rails_service_worker_with_spa_patch(rails)
-            } else {
-                owned_manifest_assets(rails)
-            };
-            assert_eq!(response.text(), expected, "{seed} {}", vector["path"]);
-            if vector["path"] == "/offline.html" {
-                assert_eq!(response.header("set-cookie"), None);
-            }
+async fn pwa_http_bodies_preserve_installed_identity_and_current_worker() {
+    for seed in ["default", "first_run"] {
+        let Some(app) = TestApp::boot_seed_with_env(seed, seed_clock(), &[]).await else { return; };
+        let mut browser = app.anonymous();
+        let manifest = browser.get("/webmanifest.json").await;
+        assert_eq!(manifest.status, StatusCode::OK);
+        assert_eq!(manifest.json()["start_url"], "/");
+        assert_eq!(manifest.json()["scope"], "/");
+        for path in ["service-worker.js", "offline.html"] {
+            let response = browser.get(&format!("/{path}")).await;
+            assert_eq!(response.status, StatusCode::OK);
+            assert_eq!(response.body, campfire_spa::pwa::file(path, true, None).unwrap().body);
+            if path == "offline.html" { assert_eq!(response.header("set-cookie"), None); }
         }
     }
 }
@@ -67,70 +47,11 @@ async fn ws17_service_worker_is_served_byte_identical_to_rails() {
     assert_eq!(offline.status, StatusCode::OK);
     assert_eq!(
         offline.body,
-        campfire_spa::pwa::file("offline.html", false, None)
+        campfire_spa::pwa::file("offline.html", true, None)
             .unwrap()
             .body
     );
 }
-#[tokio::test]
-async fn original_service_worker_logic_checks_the_real_http_script() {
-    let app = TestApp::boot_frozen().await.expect("seed required");
-    let reply = app.anonymous().get("/service-worker.js").await;
-    assert_eq!(reply.status, StatusCode::OK);
-    let dir = tempfile::tempdir().unwrap();
-    let script = dir.path().join("app/views/pwa/service_worker.js");
-    let harness = dir.path().join("test/scripts/service_worker_harness.mjs");
-    std::fs::create_dir_all(script.parent().unwrap()).unwrap();
-    std::fs::create_dir_all(harness.parent().unwrap()).unwrap();
-    std::fs::write(script, &reply.body).unwrap();
-    std::fs::write(
-        &harness,
-        include_str!("../../../../../test-support/service_worker_original_harness.mjs"),
-    )
-    .unwrap();
-    let output = std::process::Command::new("node")
-        .arg(harness)
-        .output()
-        .expect("CI's Node prerequisite");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        output.status.success(),
-        "original worker harness failed:\n{stdout}\n{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        stdout.contains("all checks passed"),
-        "original harness success receipt: {stdout}"
-    );
-}
-
-/// Frozen Rails bodies keep their provenance; only the illustrations' new owned URLs differ.
-fn owned_manifest_assets(body: &str) -> String {
-    let mut body = body.to_owned();
-    for (old, new) in [
-        ("add-f232d8a6.svg", "add.svg"),
-        ("person-da193438.svg", "person.svg"),
-        (
-            "screenshots/android-chat-f8b923c9.png",
-            "screenshots/android-chat.png",
-        ),
-        (
-            "screenshots/android-sidebar-e9d2b49f.png",
-            "screenshots/android-sidebar.png",
-        ),
-        (
-            "screenshots/android-dark-mode-e43dcf59.png",
-            "screenshots/android-dark-mode.png",
-        ),
-    ] {
-        body = body.replace(
-            &format!("/assets/{old}"),
-            &campfire_spa::pwa::asset_path(new),
-        );
-    }
-    body
-}
-
 #[tokio::test]
 async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choices_say() {
     use crate::controllers::presenters::test_support::DAVID;

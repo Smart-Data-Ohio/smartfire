@@ -3,7 +3,6 @@ use super::*;
 use crate::integrations::github::{
     jobs::FetchPullRequestJob, pull_requests::PullRequest, references,
 };
-use askama::Template;
 use campfire_db::models::google_account::GoogleAccount;
 use campfire_db::{Event, NewWorkThreadLink, WorkThreadLink};
 use rails_compat::ar_encryption::ArEncryption;
@@ -47,22 +46,6 @@ pub async fn resolve_drive_title(c: &Ctx, file_id: &str) -> Option<String> {
         value => campfire_richtext::ruby::json_value_to_s(value),
     };
     (!campfire_richtext::ruby::is_blank(&title)).then_some(title)
-}
-pub async fn index(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let (_, thread) = scope(c, false).await?;
-    c.no_store();
-    let id = thread.id;
-    let links = messages::present(c, move |p| board_posts::links(p, &thread)).await?;
-    page::content(c, StatusCode::OK, |ctx| {
-        views::LinksIndex {
-            ctx,
-            thread_id: id,
-            links: &links,
-        }
-        .render()
-    })
-    .await
 }
 enum Build {
     Invalid(String),
@@ -183,7 +166,7 @@ pub async fn create(c: &mut Ctx) -> Result {
             {
                 "That is already linked to this work thread.".into()
             } else {
-                campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
+                campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ")
             };
             return invalid(c, &thread, message).await;
         }

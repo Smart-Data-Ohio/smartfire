@@ -62,40 +62,7 @@ async fn root_and_thread_drive_requests_match_rails_bytes_order_json_validation_
             assert_eq!(denied.text(), row["extra"]["nonadmin"]["body"].as_str().unwrap());
             app.db().write(|tx| {tx.conn().execute("UPDATE users SET role=1 WHERE id=?", [JASON])?; Ok(())}).await.unwrap();
         }
-        if row["extra"].is_object() && row["extra"]["show"].is_string() {
-            use askama::Template;
-            use crate::controllers::presenters::{Presenter, page};
-            let runtime = app.booted.app.clone();
-            let id = row["saved"]["id"].as_i64().unwrap();
-            let (show, edit) = app.db().read(move |conn| {
-                let p = Presenter::new(conn, &runtime, None);
-                let message = Message::find(conn, id)?;
-                let view = p.message(&message)?;
-                let account = campfire_db::Account::first(conn)?;
-                page::render_detached_at(&runtime, account.as_ref(), "http://campfire.test", |ctx| {
-                    Ok((campfire_views::messages::Show {ctx, message:&view}.render()?,
-                        campfire_views::messages::Edit {ctx,edit:&campfire_views::messages::EditView {
-                            editable_body_html:p.editable_markdown_source(&message).unwrap(), message:view.clone()}}.render()?))
-                }).map_err(|e: askama::Error| campfire_db::Error::Other(e.to_string()))
-            }).await.unwrap();
-            assert_eq!(show, row["extra"]["show"].as_str().unwrap());
-            assert_eq!(edit, row["extra"]["edit"].as_str().unwrap());
-            let path = format!("/rooms/{ALL_TALK}/messages/{id}");
-            let mut browser = app.david();
-            assert!(browser.get(&path).await.text().contains(&show));
-            let crypto = rails_compat::ar_encryption::ArEncryption::new(&app.booted.app.secrets);
-            let token = crypto.encrypt("drive-fixture-token");
-            app.db().write(move |tx| {
-                tx.conn().execute("INSERT INTO google_accounts (user_id,email,access_token,scopes,created_at,updated_at) VALUES (?,'drive-fixture@example.test',?,'https://www.googleapis.com/auth/drive.file',?,?) ON CONFLICT(user_id) DO UPDATE SET scopes=excluded.scopes,access_token=excluded.access_token,disconnected_reason=NULL", (DAVID,token,tx.now(),tx.now()))?;
-                Ok(())
-            }).await.unwrap();
-            assert!(browser.get(&path).await.text().contains(&show));
-            let edit = browser.get(&format!("{path}/edit")).await;
-            assert_eq!(edit.status, 200);
-            assert_eq!(edit.text().matches("class=\"drive-attachment-chip\"").count(), 2);
-            assert!(edit.text().split("<input ").skip(1).filter_map(|s| s.split('>').next())
-                .any(|tag| tag.contains("name=\"message[drive_file_ids][]\"") && tag.contains("value=\"\"")));
-        }
+
         let after = app.db().read(self::counts).await.unwrap();
         assert_eq!(json!({"messages":after.0-counts.0,"drive":after.1-counts.1}), row["delta"], "{}/{} row delta", row["mode"], row["name"]);
     }
@@ -107,60 +74,3 @@ fn counts(conn: &campfire_db::Connection) -> campfire_db::Result<(i64,i64)> {
 
 // test/controllers/messages_drive_attachments_test.rb:208: the persisted rows
 // must survive the real show route and presenter, with the generic Rails chip.
-#[tokio::test]
-async fn persisted_drive_attachments_reach_the_message_http_response() {
-    let app = TestApp::boot_frozen()
-        .await
-        .expect("default seed required")
-        .without_job_runner()
-        .await;
-    let oracle: Value = serde_json::from_str(include_str!(
-        "../../../../../vectors/google_profile_html.json"
-    ))
-    .unwrap();
-    let row = oracle["drive"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|r| !r["urls"].as_array().unwrap().is_empty())
-        .unwrap();
-    let ids = vec![
-        "1AbcDefGhIjKlMnOpQrSt".into(),
-        "2BcDefGhIjKlMnOpQrStU".into(),
-    ];
-    let message = app
-        .db()
-        .write(move |tx| {
-            Message::create(
-                tx,
-                NewMessage {
-                    room_id: ALL_TALK,
-                    creator_id: DAVID,
-                    markdown_source: Some("attached".into()),
-                    client_message_id: Some("review239-drive".into()),
-                    drive_file_ids: ids,
-                    ..Default::default()
-                },
-            )
-        })
-        .await
-        .unwrap();
-    let response = app
-        .david()
-        .get(&format!("/rooms/{ALL_TALK}/messages/{}", message.id))
-        .await;
-    assert_eq!(response.status, 200);
-    let html = response.text();
-    let expected = row["html"].as_str().unwrap().replace(
-        "drive_attachments_message_0013",
-        "drive_attachments_message_review239-drive",
-    );
-    assert!(
-        html.contains(&expected),
-        "persisted attachments missing from HTTP show: {html}"
-    );
-    assert_eq!(html.matches("class=\"drive-attachments\"").count(), 1);
-    assert_eq!(html.matches("class=\"drive-attachment\"").count(), 2);
-}
-
-use campfire_web::controllers::presenters::{Rendering};

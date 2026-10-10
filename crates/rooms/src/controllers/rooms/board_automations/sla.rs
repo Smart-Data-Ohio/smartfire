@@ -1,5 +1,5 @@
 //! Validate the full form before any writes; audit each committed rule change separately.
-use super::{blank, board, label, redirect, render, sentence};
+use super::{blank, board, label, redirect, sentence};
 use crate::app::AppCtx;
 use crate::controllers::presenters::page::db_error;
 use campfire_db::{BoardSlaRule, NewBoardSlaRule};
@@ -84,15 +84,7 @@ pub async fn update_sla_rules(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     if !errors.is_empty() {
-        return render(
-            c,
-            room,
-            None,
-            Some(sentence(&errors)),
-            updates,
-            StatusCode::UNPROCESSABLE_ENTITY,
-        )
-        .await;
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
     for input in updates {
         let status = input.work_status.as_deref().unwrap().to_string();

@@ -2,14 +2,12 @@
 mod sla;
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
-use crate::controllers::presenters::page::{self, db_error};
+use crate::controllers::presenters::page::db_error;
 use campfire_db::{BoardSlaRule, BoardTagAssignment, NewBoardSlaRule, Room, User};
 use campfire_kit::{Ctx, Redirect, Result, StatusCode};
-use campfire_views::rooms::board_automations::{Settings, TagRule};
 pub use sla::update_sla_rules;
-use std::collections::BTreeMap;
 
-async fn board(c: &mut Ctx) -> Result<Room> {
+pub async fn board(c: &mut Ctx) -> Result<Room> {
     before_actions(c, Before::default()).await?;
     let id = c.param_str("board_id").and_then(super::cast_integer);
     let user = require_current_user(c)?.id;
@@ -42,111 +40,6 @@ fn redirect(c: &mut Ctx, room: &Room, notice: Option<&str>, alert: Option<&str>)
             ..Default::default()
         },
     )
-}
-pub async fn show(c: &mut Ctx) -> Result {
-    let room = board(c).await?;
-    render(c, room, None, None, Vec::new(), StatusCode::OK).await
-}
-async fn render(
-    c: &mut Ctx,
-    room: Room,
-    tag_error: Option<String>,
-    sla_error: Option<String>,
-    drafts: Vec<NewBoardSlaRule>,
-    status: StatusCode,
-) -> Result {
-    let settings = c
-        .app()
-        .db
-        .read(move |conn| {
-            let assignments = BoardTagAssignment::for_room(conn, room.id)?;
-            let ids = serde_json::json!(
-                assignments
-                    .iter()
-                    .map(|a| a.assignee_id)
-                    .collect::<Vec<_>>()
-            )
-            .to_string();
-            let users: BTreeMap<_, _> = query_all(
-                conn,
-                "SELECT * FROM users WHERE id IN (SELECT value FROM json_each(?))",
-                [ids],
-                User::from_row,
-            )?
-            .into_iter()
-            .map(|u| (u.id, u))
-            .collect();
-            let tags = assignments
-                .into_iter()
-                .map(|a| {
-                    let u = users
-                        .get(&a.assignee_id)
-                        .ok_or(campfire_db::Error::RecordNotFound("User"))?;
-                    Ok(TagRule {
-                        id: a.id,
-                        tag: a.tag,
-                        name: u.name.clone(),
-                        agent: u.is_bot(),
-                    })
-                })
-                .collect::<campfire_db::Result<Vec<_>>>()?;
-            let mut candidates = query_all(
-                conn,
-                "SELECT u.* FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.room_id=?",
-                [room.id],
-                User::from_row,
-            )?
-            .into_iter()
-            .filter(User::is_active)
-            .collect::<Vec<_>>();
-            candidates.sort_by_key(|u| rails_compat::unicode::downcase(&u.name));
-            let mut rules: BTreeMap<_, _> = BoardSlaRule::for_room(conn, room.id)?
-                .into_iter()
-                .map(|r| {
-                    (
-                        r.work_status,
-                        (
-                            Some(r.nudge_after_minutes.to_string()),
-                            Some(r.escalate_after_minutes.to_string()),
-                        ),
-                    )
-                })
-                .collect();
-            // Association find_or_initialize_by retains new unsaved rules in its target, while
-            // existing records found by a separate query are reloaded for the error page.
-            for draft in drafts {
-                if blank(&draft) {
-                    continue;
-                }
-                rules.entry(draft.work_status.unwrap()).or_insert_with(|| {
-                    (
-                        BoardSlaRule::cast_threshold(draft.nudge_after_minutes.as_deref()),
-                        BoardSlaRule::cast_threshold(draft.escalate_after_minutes.as_deref()),
-                    )
-                });
-            }
-            Ok(Settings {
-                room_id: room.id,
-                room_name: room.name.unwrap_or_default(),
-                tags,
-                candidates: candidates
-                    .into_iter()
-                    .map(|u| (u.name, u.id.to_string()))
-                    .collect(),
-                rules,
-                tag_error,
-                sla_error,
-            })
-        })
-        .await
-        .map_err(db_error)?;
-    page::framed_page!(c, status, |ctx| {
-        campfire_views::rooms::board_automations::Show {
-            ctx,
-            settings: &settings,
-        }
-    })
-    .await
 }
 fn text(c: &Ctx, key: &str) -> String {
     c.params
@@ -186,16 +79,8 @@ pub async fn create_tag_assignment(c: &mut Ctx) -> Result {
         .await;
     let saved = match saved {
         Ok(saved) => saved,
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            return render(
-                c,
-                room,
-                Some(sentence(&errors.full_messages())),
-                None,
-                Vec::new(),
-                StatusCode::UNPROCESSABLE_ENTITY,
-            )
-            .await;
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
         }
         Err(error) => return Err(db_error(error)),
     };
@@ -286,20 +171,4 @@ fn sentence(messages: &[String]) -> String {
             many.last().unwrap()
         ),
     }
-}
-
-fn query_all<P, F>(
-    conn: &campfire_db::Connection,
-    sql: &str,
-    params: P,
-    map: F,
-) -> campfire_db::Result<Vec<User>>
-where
-    P: rusqlite::Params,
-    F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<User>,
-{
-    Ok(conn
-        .prepare(sql)?
-        .query_map(params, map)?
-        .collect::<rusqlite::Result<Vec<_>>>()?)
 }

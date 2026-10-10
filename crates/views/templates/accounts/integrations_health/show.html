@@ -1,7 +1,0 @@
-{% extends "layouts/application.html" %}
-{%- block head %}{% endblock %}
-{% block nav %}  <div class="flex-item-justify-start">
-    {{ h::link_back_to_last_room_visited(ctx) }}
-  </div>
-{% endblock %}
-{% block content %}{{ self.body() }}{% endblock %}

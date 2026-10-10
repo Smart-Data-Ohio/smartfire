@@ -1,12 +1,11 @@
 //! Nested message endpoints (ChannelThreadMessagesController).
 
-use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, Timeline};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 use serde_json::{Value, json};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::{messages, presenters::page::{self, db_error}};
+use crate::controllers::{messages, presenters::page::db_error};
 
 async fn scope(c: &mut Ctx) -> Result<(Room, ChannelThread)> {
     let (_, room) = concerns::set_room(c).await?;
@@ -48,11 +47,9 @@ pub async fn index(c: &mut Ctx) -> Result {
         }).await?;
         return render_json(c, &payload);
     }
-    let items = messages::present(c, move |p| p.messages(&records)).await?;
-    let response = page::content(c, StatusCode::OK, |ctx| campfire_views::messages::Index { ctx, messages: &items }.render()).await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &items, &c.url_for(""));
-    Ok(response.with_cached_fragments(fragments))
+    campfire_runtime::navigation::redirect(c).await
 }
+
 
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
@@ -152,7 +149,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 fn render_write_error(c: &mut Ctx, error: Error) -> Result {
     let Error::Internal(internal) = error else { return Err(error) };
     let (status, text) = match internal.downcast_ref::<campfire_db::Error>() {
-        Some(campfire_db::Error::RecordInvalid(errors)) => (StatusCode::UNPROCESSABLE_ENTITY, campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")),
+        Some(campfire_db::Error::RecordInvalid(errors)) => (StatusCode::UNPROCESSABLE_ENTITY, campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ")),
         Some(campfire_db::Error::Other(message)) if message == campfire_db::channel_thread::LOCKED_MESSAGE => (StatusCode::FORBIDDEN, message.clone()),
         _ => return Err(Error::Internal(internal)),
     };
@@ -160,5 +157,3 @@ fn render_write_error(c: &mut Ctx, error: Error) -> Result {
         Ok(c.render(status, &format::JSON, serde_json::to_string(&json!({"error": text})).map_err(Error::internal)?))
     } else { Ok(c.head(status)) }
 }
-
-use campfire_web::controllers::presenters::{Rendering};

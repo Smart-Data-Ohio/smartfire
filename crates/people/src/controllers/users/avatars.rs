@@ -2,11 +2,9 @@
 //! avatar by its signed avatar token — the uploaded image's `:square` variant, the default bot
 //! avatar, or an SVG of their initials.
 
-use askama::Template;
 use campfire_db::User;
 use campfire_kit::{Ctx, Error, ExpiresIn, Freshness, Result, SendOptions, format, halt};
 use campfire_storage::Variation;
-use campfire_views::users::AvatarSvg;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
@@ -93,7 +91,7 @@ fn render_default_bot(c: &mut Ctx) -> Result {
 
 /// `render formats: :svg` (`users/avatars/show.svg.erb`).
 fn render_initials(c: &mut Ctx, user: &User) -> Result {
-    let svg = AvatarSvg { user_id: user.id, initials: user.initials() }.render().map_err(Error::internal)?;
+    let svg = campfire_presentation::avatar::initials_svg(user.id, &user.initials());
     // `Vary: Accept` like any render when the format came from a non-browser `Accept` (e.g.
     // `image/*`); a browser's image `Accept` ends in `*/*`, so it usually doesn't apply.
     Ok(c.render_as(campfire_kit::StatusCode::OK, "image/svg+xml; charset=utf-8", svg))

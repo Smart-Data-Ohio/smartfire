@@ -665,61 +665,6 @@ async fn slash_and_picker_responses_match_pinned_rails_exact_bytes() {
     }
 }
 #[tokio::test]
-async fn play_presentation_matches_every_rails_sound_and_unknown_inputs() {
-    use askama::Template;
-    let app = app().await;
-    let state = app.booted.app.clone();
-    for case in oracle()["play"].as_array().unwrap() {
-        let source = case["source"].as_str().unwrap().to_owned();
-        let client = case["client_message_id"].as_str().unwrap().to_owned();
-        let m = app
-            .db()
-            .write(move |tx| {
-                Message::create(
-                    tx,
-                    campfire_db::NewMessage {
-                        room_id: ALL_TALK,
-                        creator_id: DAVID,
-                        markdown_source: Some(source),
-                        client_message_id: Some(client),
-                        ..Default::default()
-                    },
-                )
-            })
-            .await
-            .unwrap();
-        let actual = app
-            .db()
-            .read({
-                let state = state.clone();
-                move |conn| {
-                    let p = crate::controllers::presenters::Presenter::new(
-                        conn,
-                        &state,
-                        Some("campfire.test".into()),
-                    );
-                    let view = p.message(&m)?;
-                    Ok(crate::controllers::presenters::page::render_detached_at(
-                        &state,
-                        None,
-                        "http://campfire.test",
-                        |ctx| {
-                            campfire_views::messages::PresentationPartial {
-                                ctx,
-                                message: &view,
-                            }
-                            .render()
-                            .unwrap()
-                        },
-                    ))
-                }
-            })
-            .await
-            .unwrap();
-        assert_eq!(actual, case["html"].as_str().unwrap(), "{}", case["source"]);
-    }
-}
-#[tokio::test]
 async fn slash_remind_rolls_back_post_save_and_index_when_job_insert_fails() {
     let app = app().await;
     let count = || {
@@ -800,5 +745,3 @@ async fn user_tokens_check_duplicates_outside_the_page_and_omit_invalid_names() 
     assert_eq!(r.json().as_array().unwrap().len(), 1);
     assert!(r.json()[0].get("mention_token").is_none());
 }
-
-use campfire_web::controllers::presenters::{Rendering};

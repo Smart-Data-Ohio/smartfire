@@ -7,21 +7,6 @@ async fn nonmember(app:&TestApp) {
     app.db().write(|tx|{tx.conn().execute_cached("DELETE FROM memberships WHERE room_id=? AND user_id=?",(HQ,DAVID))?;Ok(())}).await.unwrap();
 }
 #[tokio::test]
-async fn open_nonmembers_see_the_join_page_and_remember_the_room() {
-    let app=TestApp::boot().await.expect("seed required");
-    nonmember(&app).await;
-    let mut david=app.david();
-    let reply=david.get(&format!("/rooms/{HQ}")).await;
-    assert_eq!(reply.status,StatusCode::OK,"{}",reply.text());
-    assert!(reply.text().contains("<h2>#HQ</h2>"));
-    assert!(reply.text().contains(&format!("action=\"/rooms/{HQ}/join\"")));
-    assert!(reply.text().contains("Join channel"));
-    assert!(!reply.text().contains("id=\"message-area\""));
-    assert!(reply.headers.get_all("set-cookie").iter().any(|c|c.to_str().unwrap().starts_with(&format!("last_room={HQ}"))));
-    let alias=david.get(&format!("/rooms/opens/{HQ}")).await;
-    assert_eq!(alias.location(),Some(format!("http://campfire.test/rooms/{HQ}").as_str()));
-}
-#[tokio::test]
 async fn join_is_idempotent_and_uses_the_default_involvement_without_an_audit() {
     let app=TestApp::boot_frozen().await.expect("seed required");
     nonmember(&app).await;
@@ -47,13 +32,13 @@ async fn join_and_preview_refuse_private_direct_venue_deleted_and_missing_rooms(
         app.db().write(move|tx|{tx.conn().execute_cached("UPDATE rooms SET type=? WHERE id=?",(kind,HQ))?;Ok(())}).await.unwrap();
         let reply=david.write(Req::new(Method::POST,&format!("/rooms/{HQ}/join"))).await;
         assert_eq!(reply.location(),oracle()["cases"][kind.class_name()]["location"].as_str());
-        assert_eq!(david.get(&format!("/rooms/{HQ}")).await.location(),Some("http://campfire.test/"));
+        assert_eq!(david.classic_page(&format!("/rooms/{HQ}")).await.location(),Some("http://campfire.test/"));
         assert!(app.db().read(|conn|Membership::find_by_room_and_user(conn,HQ,DAVID)).await.unwrap().is_none());
     }
     app.db().write(|tx|{tx.conn().execute_cached("UPDATE rooms SET type='Rooms::Open',deleted_at=? WHERE id=?",(tx.now(),HQ))?;Ok(())}).await.unwrap();
     for id in [HQ,9999999999] {
         assert_eq!(david.write(Req::new(Method::POST,&format!("/rooms/{id}/join"))).await.location(),Some("http://campfire.test/"));
-        assert_eq!(david.get(&format!("/rooms/{id}")).await.location(),Some("http://campfire.test/"));
+        assert_eq!(david.classic_page(&format!("/rooms/{id}")).await.location(),Some("http://campfire.test/"));
     }
     assert!(app.db().read(|conn|Ok(Room::find(conn,HQ)?.deleted_at.is_some())).await.unwrap());
 }

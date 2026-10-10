@@ -35,32 +35,6 @@ async fn alive_room(c: &mut Ctx) -> Result<Room> {
     Ok(room)
 }
 
-pub async fn new(c: &mut Ctx) -> Result {
-    before_actions(c, Before::default()).await?;
-    let room = alive_room(c).await?;
-    if !room.board() {
-        return Ok(c.head(StatusCode::NOT_FOUND));
-    }
-    let first_message = match c.params.get("thread").filter(|value| !value.is_null()) {
-        Some(value) => value
-            .as_hash()
-            .ok_or_else(|| Error::internal(anyhow::anyhow!("thread does not support dig")))?
-            .get("first_message")
-            .map(|value| campfire_richtext::ruby::json_value_to_s(&value.to_json())),
-        None => None,
-    };
-    let viewer = require_current_user(c)?.clone();
-    let mut post = messages::present(c, move |p| {
-        crate::controllers::presenters::board_posts::new_post(p, &room, &viewer)
-    })
-    .await?;
-    post.first_message = first_message;
-    page::framed_page!(c, StatusCode::OK, |ctx| {
-        campfire_views::channel_threads::board::New { ctx, post: &post }
-    })
-    .await
-}
-
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = alive_room(c).await?;
@@ -107,18 +81,6 @@ async fn create_board(c: &mut Ctx, room: Room) -> Result {
         .unwrap_or_default();
     let viewer = require_current_user(c)?.clone();
     let (room_id, creator_id) = (room.id, viewer.id);
-    let attempted_status = attributes
-        .get("work_status")
-        .and_then(messages::string_column)
-        .filter(|value| !campfire_richtext::ruby::is_blank(value))
-        .unwrap_or_else(|| "planned".into());
-    let attempted = (
-        name.clone(),
-        attempted_status,
-        raw_owner.clone(),
-        tags.clone(),
-        first_message.clone(),
-    );
     let result = c
         .app()
         .db
@@ -146,34 +108,7 @@ async fn create_board(c: &mut Ctx, room: Room) -> Result {
     let thread = match result {
         Ok(thread) => thread,
         Err(campfire_db::Error::RecordNotFound(_)) => return Ok(c.head(StatusCode::NOT_FOUND)),
-        Err(campfire_db::Error::RecordInvalid(errors)) if validation_error_is_html(c)? => {
-            let mut post = messages::present(c, move |p| {
-                crate::controllers::presenters::board_posts::new_post(p, &room, &viewer)
-            })
-            .await?;
-            post.name = attempted.0;
-            post.status = attempted.1;
-            post.owner_id = match attempted.2 {
-                Value::Null => None,
-                Value::Bool(value) => Some(i64::from(value)),
-                Value::Number(value) => value.as_i64().or_else(|| value.as_f64().map(|n| n as i64)),
-                Value::String(value) if campfire_richtext::ruby::is_blank(&value) => None,
-                Value::String(value) => Some(cast_integer(&value).unwrap_or(0)),
-                _ => None,
-            };
-            post.tags = campfire_db::models::channel_thread::normalize_tag_names(
-                &attempted.3.unwrap_or_default(),
-            );
-            post.first_message = Some(attempted.4);
-            post.error = Some(campfire_views::helpers::to_sentence(
-                &errors.full_messages(),
-                " and ",
-            ));
-            return page::framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| {
-                campfire_views::channel_threads::board::New { ctx, post: &post }
-            })
-            .await;
-        }
+
         Err(error) => return write_error(c, Error::internal(error)),
     };
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {
@@ -186,16 +121,6 @@ async fn create_board(c: &mut Ctx, room: Room) -> Result {
         Ok(json!({"thread":messages::payload::thread(p,&thread,&viewer,&base)?,"parent_message":null}))
     }).await?;
     render_json(c, StatusCode::CREATED, &payload)
-}
-
-fn validation_error_is_html(c: &mut Ctx) -> Result<bool> {
-    // Rails offers HTML before its format.any error fallback. Turbo accepts
-    // HTML as well as streams, so rejected posts render the actual new form.
-    match c.respond_to(&[&format::HTML]) {
-        Ok(chosen) => Ok(*chosen == format::HTML),
-        Err(Error::UnknownFormat) => Ok(false),
-        Err(error) => Err(error),
-    }
 }
 
 async fn create_channel(c: &mut Ctx, room: Room) -> Result {
@@ -414,13 +339,6 @@ pub async fn update(c: &mut Ctx) -> Result {
     let metadata_given = attributes.contains_key("name") || minutes.is_some() || tags.is_some();
     let (thread_id, room_id) = (thread.id, room.id);
     let board = room.board();
-    let attempted = std::sync::Arc::new(std::sync::Mutex::new((
-        thread.clone(),
-        None::<Option<String>>,
-        None::<Vec<String>>,
-        None::<Vec<campfire_db::WorkThreadEvent>>,
-    )));
-    let capture = attempted.clone();
     let published = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let publication = published.clone();
     let result = c
@@ -429,8 +347,6 @@ pub async fn update(c: &mut Ctx) -> Result {
         .write(move |tx| {
             let mut thread = ChannelThread::find(tx.conn(), thread_id)?;
             let before = thread.clone();
-            let mut pending_name = None;
-            let mut pending_tags = None;
             let outcome = (|| {
                 if Membership::find_by_room_and_user(tx.conn(), room_id, actor.id)?.is_none() {
                     return Err(campfire_db::Error::RecordNotFound("Membership"));
@@ -478,10 +394,6 @@ pub async fn update(c: &mut Ctx) -> Result {
                 if !allowed {
                     return Err(campfire_db::Error::Other(FORBIDDEN_UPDATE.into()));
                 }
-                pending_tags = tags
-                    .as_deref()
-                    .map(campfire_db::models::channel_thread::normalize_tag_names);
-                pending_name = name.clone();
                 // The persisted model's name is non-null; nil fails its blank validation.
                 thread.update_metadata(
                     tx,
@@ -508,34 +420,13 @@ pub async fn update(c: &mut Ctx) -> Result {
                             ));
                         }
                     };
-                    let reload = markdown
-                        .as_ref()
-                        .filter(|value| !campfire_richtext::ruby::is_blank(value))
-                        != thread.result_markdown.as_ref();
                     thread.update_result(tx, &actor, markdown)?;
-                    if reload {
-                        pending_tags = None;
-                    }
                 }
                 if work.status.is_some() || work.owner_id.is_some() {
-                    pending_tags = None;
                     thread.update_work(tx, &actor, work)?;
                 }
                 Ok(())
             })();
-            let history = if matches!(&outcome, Err(campfire_db::Error::RecordInvalid(_))) {
-                if pending_tags.is_none() {
-                    pending_tags = Some(thread.tag_names(tx.conn())?);
-                }
-                Some(campfire_db::WorkThreadEvent::for_thread(
-                    tx.conn(),
-                    thread_id,
-                )?)
-            } else {
-                None
-            };
-            *capture.lock().expect("thread attempt") =
-                (thread.clone(), pending_name, pending_tags, history);
             outcome.map(|()| {
                 let work_changed = thread.work_changed_from(&before);
                 let model_published = campfire_db::models::channel_thread::ThreadWorkChange::pending(
@@ -555,8 +446,6 @@ pub async fn update(c: &mut Ctx) -> Result {
             })
         })
         .await;
-    let (attempted, pending_name, pending_tags, history) =
-        attempted.lock().expect("thread attempt").clone();
     let thread = match result {
         Ok(updated) => updated,
         Err(campfire_db::Error::RecordNotFound(_)) => return forbidden_update(c, &thread),
@@ -565,47 +454,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         {
             return forbidden_update(c, &thread);
         }
-        Err(campfire_db::Error::RecordInvalid(errors)) if validation_error_is_html(c)? => {
-            let records = c
-                .app()
-                .db
-                .read(move |conn| Message::last_page(conn, Timeline::Thread(thread_id)))
-                .await
-                .map_err(db_error)?;
-            if room.board() {
-                let viewer = require_current_user(c)?.clone();
-                let picker = c.app().config.google_picker.is_some();
-                let mut post = messages::present(c, move |p| {
-                    let mut post = crate::controllers::presenters::board_posts::post(
-                        p, &room, &attempted, &viewer, &records, picker,
-                    )?;
-                    if let Some(history) = history {
-                        post.history =
-                            crate::controllers::presenters::board_posts::history_records(
-                                p, history,
-                            )?;
-                    }
-                    Ok(post)
-                })
-                .await?;
-                if let Some(name) = pending_name {
-                    post.name = name;
-                }
-                if let Some(tags) = pending_tags {
-                    post.tags = tags;
-                }
-                post.error = Some(campfire_views::helpers::to_sentence(
-                    &errors.full_messages(),
-                    " and ",
-                ));
-                return page::framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| {
-                    campfire_views::channel_threads::board::Show { ctx, post: &post }
-                })
-                .await;
-            }
-            return render_standalone(c, attempted, records, StatusCode::UNPROCESSABLE_ENTITY)
-                .await;
-        }
+
         Err(error) => return write_error(c, Error::internal(error)),
     };
     if !published.load(std::sync::atomic::Ordering::Relaxed) {
@@ -683,7 +532,7 @@ fn write_error(c: &mut Ctx, error: Error) -> Result {
         campfire_db::Error::RecordInvalid(errors) => render_error(
             c,
             StatusCode::UNPROCESSABLE_ENTITY,
-            &campfire_views::helpers::to_sentence(&errors.full_messages(), " and "),
+            &campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and "),
         ),
         error if error.is_record_not_unique() => render_error(
             c,

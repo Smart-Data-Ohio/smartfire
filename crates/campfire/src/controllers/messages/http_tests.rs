@@ -34,7 +34,7 @@ async fn author_only_edits_even_for_an_administrator() {
     let message = create(&app, JASON, false).await;
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut david = app.david();
-    assert_eq!(david.get(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(david.classic_page(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
     assert_eq!(
         david
             .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -57,7 +57,7 @@ async fn system_notes_are_immutable_for_author_and_administrator() {
     for creator in [DAVID, JASON] {
         let note = create(&app, creator, true).await;
         let path = format!("/rooms/{ALL_TALK}/messages/{}", note.id);
-        assert_eq!(david.get(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
+        assert_eq!(david.classic_page(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
         assert_eq!(
             david
                 .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -95,7 +95,7 @@ async fn non_author_non_admin_cannot_edit_or_delete() {
     let message = create(&app, DAVID, false).await;
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut jason = app.sign_in(JASON).await;
-    assert_eq!(jason.get(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(jason.classic_page(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
     let before=app.db().read(move|conn|Message::find(conn,message.id)).await.unwrap();
     assert_eq!(jason.write(Req::new(Method::PATCH,&path).form(&[("message[markdown_source]","Other member edit")])).await.status,StatusCode::FORBIDDEN);
     let id=before.id;
@@ -215,7 +215,7 @@ async fn deleted_room_is_inaccessible_even_with_a_lingering_membership() {
         format!("/rooms/{ALL_TALK}/messages"),
         format!("/rooms/{ALL_TALK}/messages/{}", message.id),
     ] {
-        assert_eq!(david.get(&path).await.status, StatusCode::NOT_FOUND);
+        assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
     }
 }
 
@@ -225,7 +225,7 @@ async fn removed_and_non_members_cannot_read_or_edit_messages() {
     let message = create(&app, DAVID, false).await;
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut kevin = app.sign_in(KEVIN).await;
-    assert_eq!(kevin.get(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(kevin.classic_page(&path).await.status, StatusCode::NOT_FOUND);
     app.db()
         .write(|tx| {
             tx.conn().execute(
@@ -237,7 +237,7 @@ async fn removed_and_non_members_cannot_read_or_edit_messages() {
         .await
         .unwrap();
     let mut david = app.david();
-    assert_eq!(david.get(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
     assert_eq!(
         david
             .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -278,7 +278,7 @@ async fn root_endpoint_cannot_read_edit_or_delete_thread_messages() {
         .unwrap();
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut david = app.david();
-    assert_eq!(david.get(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
     assert_eq!(
         david
             .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -293,85 +293,6 @@ async fn root_endpoint_cannot_read_edit_or_delete_thread_messages() {
             .status,
         StatusCode::NOT_FOUND
     );
-}
-
-#[tokio::test]
-async fn markdown_message_fragments_match_real_rails_records_and_cache_hits() {
-    use crate::controllers::presenters::{Presenter, page};
-    let app = boot().await;
-    let oracle: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../vectors/messaging/fragments.json")).unwrap();
-    for row in oracle["messages"].as_array().unwrap() {
-        let row = row.clone();
-        let input = row["input"].clone();
-        let message = app
-            .db()
-            .write(move |tx| {
-                let message = Message::create(
-                    tx,
-                    NewMessage {
-                        room_id: ALL_TALK,
-                        creator_id: DAVID,
-                        client_message_id: input["client_message_id"].as_str().map(str::to_owned),
-                        markdown_source: input["markdown_source"].as_str().map(str::to_owned),
-                        body: input["body"].as_str().map(str::to_owned),
-                        system_note: input["system_note"].as_bool().unwrap_or(false),
-                        forwarded_markdown: input["forwarded_markdown"].as_bool().unwrap_or(false),
-                        forwarded_at: input
-                            .get("forwarded_at")
-                            .map(|_| campfire_db::Timestamp::from_jiff(SEED_NOW.parse::<jiff::Timestamp>().unwrap())),
-                        forwarded_from_message_id: input["forwarded_from_message_id"].as_i64(),
-                        ..Default::default()
-                    },
-                )?;
-                let fixed = campfire_db::Timestamp::from_jiff(SEED_NOW.parse::<jiff::Timestamp>().unwrap());
-                tx.conn().execute(
-                    "UPDATE messages SET created_at = ?, updated_at = ? WHERE id = ?",
-                    (fixed, fixed, message.id),
-                )?;
-                Message::find(tx.conn(), message.id)
-            })
-            .await
-            .unwrap();
-        assert_eq!(
-            message.id,
-            row["message"]["id"].as_i64().unwrap(),
-            "same Rails seed and insert order"
-        );
-        for expected in row["html_by_viewer"].as_array().unwrap() {
-            let runtime = app.booted.app.clone();
-            let message = message.clone();
-            let actual = app
-                .db()
-                .read(move |conn| {
-                    let view = Presenter::new(conn, &runtime, None).message(&message)?;
-                    let account = campfire_db::Account::first(conn)?;
-                    Ok(page::render_detached_at(
-                        &runtime,
-                        account.as_ref(),
-                        "http://campfire.test",
-                        |ctx| campfire_views::messages::message(ctx, &view),
-                    ))
-                })
-                .await
-                .unwrap();
-            let expected = expected.as_str().unwrap();
-            let first = actual
-                .bytes()
-                .zip(expected.bytes())
-                .position(|(a, b)| a != b)
-                .unwrap_or(actual.len().min(expected.len()));
-            assert!(
-                actual == expected,
-                "{} differs at byte {first}: actual {:?}, Rails {:?}",
-                row["input"]["client_message_id"],
-                &actual.as_bytes()[first.saturating_sub(40)..(first + 100).min(actual.len())],
-                &expected.as_bytes()[first.saturating_sub(40)..(first + 100).min(expected.len())]
-            );
-            assert!(!actual.contains("authenticity_token"));
-            assert!(!actual.contains("nonce=\""));
-        }
-    }
 }
 
 #[tokio::test]
@@ -602,5 +523,3 @@ async fn administrator_can_delete_another_authors_ordinary_root_message() {
     assert_eq!(app.david().write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"))).await.status,StatusCode::NO_CONTENT);
     assert!(app.db().read(move|conn|Message::find_by_id(conn,id)).await.unwrap().is_none());
 }
-
-use campfire_web::controllers::presenters::Rendering;

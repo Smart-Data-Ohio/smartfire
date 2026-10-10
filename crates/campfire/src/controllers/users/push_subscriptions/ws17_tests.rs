@@ -177,28 +177,6 @@ async fn ws17_destroy_push_subscription_via_dev_mode() {
             .is_ok()
     );
 }
-#[test]
-fn ws17_subscription_user_agent_matches_rails_display() {
-    let golden: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../../views/tests/golden/ws17-profile-ui.json"
-    ))
-    .unwrap();
-    for row in golden["subscriptions"].as_array().unwrap() {
-        let mut s = campfire_db::PushSubscription::new(
-            DAVID,
-            row["endpoint"].as_str(),
-            None,
-            None,
-            row["user_agent"].as_str(),
-        );
-        s.id = row["id"].as_i64().unwrap();
-        let actual = crate::controllers::presenters::accounts::push_subscription(&s);
-        assert_eq!(actual.browser, row["browser"].as_str().unwrap());
-        assert_eq!(actual.version, row["version"].as_str().unwrap());
-        assert_eq!(actual.platform, row["platform"].as_str().unwrap());
-    }
-}
-
 #[tokio::test]
 async fn ws17_review_malformed_endpoints_reject_new_and_existing_http_writes() {
     let app = app("142.250.123.45").await;
