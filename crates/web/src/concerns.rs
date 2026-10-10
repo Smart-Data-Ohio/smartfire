@@ -257,35 +257,16 @@ pub async fn before_actions_with_authentication(
 
 // --- The new UI ----------------------------------------------------------------------------------
 
-/// Whether this person uses the new UI, including the deployment default.
-pub async fn next_ui(c: &Ctx, user: &User) -> Result<bool> {
-    use campfire_db::models::user::ui_preference::{self, UiPreference};
-    let config = &c.app().config;
-    if !config.spa_enabled {
-        return Ok(false);
-    }
-    let user_id = user.id;
-    let stored = c.app().db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?;
-    Ok(UiPreference::effective(stored, config.spa_default_next) == UiPreference::Next)
+/// Whether this person uses the new UI: everyone does, whatever `ui_preference` once stored.
+/// Only a test of the classic pages (`Config::spa_enabled` off) says no.
+pub async fn next_ui(c: &Ctx, _user: &User) -> Result<bool> {
+    Ok(c.app().config.spa_enabled)
 }
 
-/// The UI this request uses. A stored choice overrides `SPA_DEFAULT`; signed-out visitors
-/// use the default. Disabling the SPA always selects classic, including for an explicit choice.
+/// The UI this request uses: the SPA, unless a classic page test turned it off.
 pub async fn effective_ui(c: &Ctx) -> Result<campfire_db::models::user::ui_preference::UiPreference> {
-    use campfire_db::models::user::ui_preference::{self, UiPreference};
-
-    let app = c.app();
-    if !app.config.spa_enabled {
-        return Ok(UiPreference::Classic);
-    }
-    let stored = match current_user(c) {
-        Some(user) => {
-            let user_id = user.id;
-            app.db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?
-        }
-        None => None,
-    };
-    Ok(UiPreference::effective(stored, app.config.spa_default_next))
+    use campfire_db::models::user::ui_preference::UiPreference;
+    Ok(if c.app().config.spa_enabled { UiPreference::Next } else { UiPreference::Classic })
 }
 
 /// Both UIs update the same registration at scope `/`.
@@ -293,24 +274,18 @@ pub fn service_worker_url(_ui: campfire_db::models::user::ui_preference::UiPrefe
     "/service-worker.js".into()
 }
 
-/// The SPA URL coexistence would use for `endpoint` at `path`.
+/// The SPA URL for `endpoint` at `path`.
 pub fn ported_page(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
     campfire_spa::screens::spa_url(endpoint, path, query)
 }
 
-/// Whether the query asks to stay on the classic page (`?classic=1`).
-pub fn classic_requested(query: Option<&str>) -> bool {
-    campfire_spa::screens::bypassed(query)
-}
-
-/// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
-/// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
-/// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page
-/// ([`navigates`]): not a Turbo frame's, a script's, a JSON request or a bare `fetch()`, and not
-/// with `?classic=1`, which keeps them on the classic page, nor while a flash waits for the page
-/// (classic actions still show their flash there). It runs last in the chain, so signing
-/// in, two-step enforcement and the rest come first, and a page's own checks (room access) are the
-/// SPA's to make.
+/// A signed-in person who opens a classic page the SPA has (`campfire_spa::screens`) goes to that
+/// page's SPA URL, with a 302: the old URLs (bookmarks, push and mail links) are aliases. Only for
+/// a signed-in person's `GET` or `HEAD` that navigates to an HTML page ([`navigates`]): not a
+/// Turbo frame's, a script's, a JSON request or a bare `fetch()`. A `classic` query parameter is
+/// dropped, not obeyed. A notice or alert left for the page is kept for the SPA, whose shell shows
+/// it. It runs last in the chain, so signing in, two-step enforcement and the rest come first, and
+/// a page's own checks (room access) are the SPA's to make.
 pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     use campfire_kit::format;
 
@@ -325,10 +300,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
         return Ok(());
     };
     let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
-    if campfire_spa::screens::bypassed(query) {
-        return Ok(());
-    }
-    let screen_path = c.request.path();
+    let screen_path = screen_path(c.request.path());
     let location = if endpoint == "rooms#show" {
         let confirmed = confirmed_room_query(c, screen_path, query).await?;
         campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
@@ -341,22 +313,29 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if !matches!(c.format()?, Some(f) if f == &format::HTML || f == &format::ALL) || !navigates(c) {
         return Ok(());
     }
-    // A notice or alert a classic action left for this page (`redirect_to ..., notice:`) shows
-    // here: the SPA can't show it.
-    if !c.peek_flash().is_empty() {
-        return Ok(());
-    }
-    if !next_ui(c, require_current_user(c)?).await? {
-        return Ok(());
-    }
+    keep_waiting_flash(c);
     let location = c.url_for(&location);
     halt(c.redirect_to(&location)?)
 }
 
-/// Whether this signed-in HTML navigation would be sent to the SPA, apart from which screen it
-/// is. The same gates as [`redirect_to_spa`]: the SPA is on, the request navigates, nothing has
-/// asked for classic, and no flash is waiting. Peeking the flash marks it discarded, so a
-/// controller that then redirects at a classic page must `keep` the flash or the next hop loses it.
+/// `path` as the screen map spells it: the router takes `/rooms/7.html` for `/rooms/7` (the
+/// `(.:format)` suffix), so a `.html` suffix is dropped. Other suffixes (`.json`) stay, so they
+/// match no screen, and the format check would refuse them anyway.
+fn screen_path(path: &str) -> &str {
+    path.strip_suffix(".html").unwrap_or(path)
+}
+
+/// A notice or alert a classic action left for this page (`redirect_to ..., notice:`) carries on
+/// to the SPA page this request is sent to, whose shell shows it.
+pub fn keep_waiting_flash(c: &mut Ctx) {
+    if !c.peek_flash().is_empty() {
+        c.flash().keep(None);
+    }
+}
+
+/// Whether this signed-in HTML navigation goes to the SPA, apart from which screen it is. The same
+/// gates as [`redirect_to_spa`]: the request navigates, by a person's session. A waiting flash is
+/// kept for the next hop.
 pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
     if authenticated_by(c) != AuthenticatedBy::Session || !coexistence_navigation(c)? {
         return Ok(false);
@@ -364,7 +343,8 @@ pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
     next_ui(c, require_current_user(c)?).await
 }
 
-/// The navigation gates for coexistence, before checking a person's session and UI choice.
+/// The navigation gates for the SPA, before checking a person's session. A waiting flash is kept
+/// for the next hop.
 pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     use campfire_kit::format;
 
@@ -375,14 +355,11 @@ pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     if c.is_turbo_frame_request() || c.request.is_xhr() {
         return Ok(false);
     }
-    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
-    if campfire_spa::screens::bypassed(query) {
-        return Ok(false);
-    }
     if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL) || !navigates(c) {
         return Ok(false);
     }
-    Ok(c.peek_flash().is_empty())
+    keep_waiting_flash(c);
+    Ok(true)
 }
 
 /// `thread` and `message_id` the viewer can open in the room `path` names. Anything else (another
@@ -431,11 +408,24 @@ async fn confirmed_room_query(
     }).await.map_err(Error::internal)
 }
 
-/// A browser opening a page: `Sec-Fetch-Mode: navigate`, or an `Accept` naming `text/html`. A
-/// `fetch()` or `curl` with the session cookie and `Accept: */*` isn't one, so it isn't redirected.
+/// A browser opening a page: `Sec-Fetch-Mode: navigate` outside a frame, or, from a client that
+/// sends no Fetch Metadata, an `Accept` naming `text/html`. A `fetch()` or `curl` with the session
+/// cookie and `Accept: */*`, or a script's `fetch()` of HTML (`Sec-Fetch-Mode: cors`), isn't one,
+/// so it isn't redirected.
 fn navigates(c: &Ctx) -> bool {
-    c.request.header("sec-fetch-mode").is_some_and(|mode| mode.eq_ignore_ascii_case("navigate"))
-        || c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
+    // A browser that sends Fetch Metadata says what the request is: only a top-level navigation
+    // counts, whatever it accepts (a script's `fetch()` or a frame's load doesn't). The SPA's
+    // service worker forwards a navigation with `Sec-Fetch-Dest: empty`, so any destination but a
+    // nested browsing context's counts.
+    if let Some(mode) = c.request.header("sec-fetch-mode") {
+        let nested = c.request.header("sec-fetch-dest").is_some_and(|dest| {
+            ["iframe", "frame", "fencedframe", "embed", "object"]
+                .iter()
+                .any(|nested| dest.eq_ignore_ascii_case(nested))
+        });
+        return mode.eq_ignore_ascii_case("navigate") && !nested;
+    }
+    c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
 }
 
 // --- VersionHeaders ----------------------------------------------------------------------------
@@ -1032,10 +1022,6 @@ pub async fn post_authentication_destination(c: &Ctx, url: String) -> Result<Str
         return Ok(url);
     };
     let (path, query) = local.split_once('?').map_or((local.as_str(), None), |(path, query)| (path, Some(query)));
-    // `?classic=1` stays on the classic page, as it does when routing any request to the SPA.
-    if campfire_spa::screens::bypassed(query) {
-        return Ok(url);
-    }
     let confirmed = if campfire_spa::screens::room_show_id(path).is_some() {
         Some(confirmed_room_query(c, path, query).await?)
     } else {

@@ -3,15 +3,14 @@
 //! `build.rs` digests and compiles `web/app/assets`, `web/app/javascript`,
 //! `web/vendor/javascript` and the gem assets in `vendor/` exactly as Propshaft's
 //! `assets:precompile` does, renders the import map from `web/config/importmap.rb`, and
-//! embeds everything along with `web/public` (`web/` is the port's copy of the Rails inputs).
+//! embeds classic bundles. Retained auth, media and public files live in `campfire_static_assets`.
 //!
 //! - [`asset_path`] and friends: ActionView's asset URL helpers over the Propshaft manifest.
 //! - [`stylesheet_link_tag`] / [`stylesheet_link_tag_all`] and [`javascript_importmap_tags`]:
 //!   the layout's head tags, plus the `link` preload header Rails sends alongside them.
-//! - [`serve`]: ActionDispatch::Static over the embedded public/ directory.
+//! - [`serve`]: classic bundles with a retained-static fallback.
 
 mod helpers;
-mod serve;
 mod tags;
 
 mod embedded {
@@ -22,7 +21,17 @@ pub use helpers::{
     MissingAssetError, asset_path, asset_url, audio_path, digested_path, image_path, image_url,
     javascript_path, stylesheet_path, try_asset_path,
 };
-pub use serve::{Body, StaticRequest, StaticResponse, serve};
+pub use campfire_static_assets::{Body, StaticRequest, StaticResponse};
+
+/// Classic bundles, followed by the retained static inputs for existing classic callers.
+pub fn serve(request: &StaticRequest) -> Option<StaticResponse> {
+    serve_classic(request).or_else(|| campfire_static_assets::serve(request))
+}
+
+/// Classic bundles and the combined manifest while both pipelines are still served.
+pub fn serve_classic(request: &StaticRequest) -> Option<StaticResponse> {
+    campfire_static_assets::serve_embedded(request, embedded::FILES, embedded::BUILT_AT)
+}
 pub use tags::{
     StylesheetTags, WORKER_SELECTION_MODULES, all_stylesheet_paths, append_preload_links,
     javascript_importmap_tags, javascript_importmap_tags_selecting_worker, stylesheet_link_tag,

@@ -1,6 +1,5 @@
-import { useLocation, useNavigate, useParams, useRouter } from "@tanstack/react-router";
+import { useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { classicPageFor } from "../../lib/screens.ts";
 import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -118,13 +117,6 @@ interface RoomPaneProps {
   readonly focusMessageId: number | null;
 }
 
-/** The classic page for where the SPA is now (`?classic=1`, so it doesn't send them back here). */
-function useClassicPage(): string {
-  const { pathname, searchStr } = useLocation();
-
-  return classicPageFor(pathname, searchStr);
-}
-
 function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const status = useStore((state) => state.rooms[roomId]?.status ?? "loading");
   const error = useStore((state) => state.rooms[roomId]?.error ?? null);
@@ -136,7 +128,6 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const covered = phone && paneOpen;
   // On a phone the open call view covers the conversation: what's under it can't take focus.
   const callCovers = useCallViewCovers(roomId);
-  const classicPage = useClassicPage();
 
   // Learn which of the room's threads the viewer follows, so reply indicators can show unread.
   useEffect(() => {
@@ -163,9 +154,6 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
           >
             Try again
           </Button>
-          <a className="text-muted" href={classicPage}>
-            Open in classic
-          </a>
         </div>
       </section>
     );

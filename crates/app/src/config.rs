@@ -22,10 +22,9 @@
 //!   reference caches fragments in Redis (`redis_cache_store`) with no `maxmemory`; this store is
 //!   in the process, so it's bounded like Rails' `MemoryStore` (default `size` 32 MB), evicting the
 //!   least recently used fragments. See `campfire_views::fragment_cache`.
-//! - `SPA_ENABLED`: serve the React SPA (`crates/spa`) under `/app` when `1`, `true`, `yes` or
-//!   `on`; otherwise `/app` is an unknown path, as it always was.
-//! - `SPA_DEFAULT`: `next` makes the SPA the UI of everyone who hasn't chosen one (the end of the
-//!   migration); anything else leaves them on the classic pages. Only with `SPA_ENABLED`.
+//! - `SPA_ENABLED`, `SPA_DEFAULT`: no longer read. The React SPA (`crates/spa`) under `/app` is
+//!   the only UI for signed-in people, whatever they say; the deploy workflow's `spa_mode` may
+//!   still write them.
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -71,10 +70,10 @@ pub struct Config {
     pub sign_in_google_domains: Vec<String>,
     /// Shared provider configuration from the same injected environment lookup.
     pub google_client: crate::integrations::google::api::Config,
-    /// `SPA_ENABLED`: the React SPA under `/app` (`controllers::spa`).
+    /// The React SPA under `/app` (`controllers::spa`), and every ported classic page sending a
+    /// signed-in navigation there. Always `true` from the environment (`SPA_ENABLED` isn't read).
+    /// Only tests of the classic pages, which stay compiled until they're deleted, turn it off.
     pub spa_enabled: bool,
-    /// `SPA_DEFAULT=next`: the SPA for people who haven't chosen a UI (`ui_preference`).
-    pub spa_default_next: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -186,9 +185,7 @@ impl Config {
                 client_secret: get("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
             },
-            spa_enabled: present("SPA_ENABLED")
-                .is_some_and(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on")),
-            spa_default_next: present("SPA_DEFAULT").is_some_and(|value| value.trim().eq_ignore_ascii_case("next")),
+            spa_enabled: true,
         })
     }
 }
@@ -284,32 +281,13 @@ mod tests {
     }
 
     #[test]
-    fn spa_is_off_unless_enabled() {
-        let enabled = |value: Option<&str>| {
-            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
-            vars.extend(value.map(|value| ("SPA_ENABLED", value)));
-            config(&vars).unwrap().spa_enabled
-        };
-        for value in ["1", "true", "TRUE", " yes ", "on"] {
-            assert!(enabled(Some(value)), "{value:?}");
-        }
-        for value in [None, Some(""), Some("0"), Some("false"), Some("off"), Some("no"), Some("enabled")] {
-            assert!(!enabled(value), "{value:?}");
-        }
-    }
-
-    #[test]
-    fn the_spa_is_the_default_ui_only_when_spa_default_says_next() {
-        let default_next = |value: Option<&str>| {
-            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
-            vars.extend(value.map(|value| ("SPA_DEFAULT", value)));
-            config(&vars).unwrap().spa_default_next
-        };
-        for value in ["next", "NEXT", " next "] {
-            assert!(default_next(Some(value)), "{value:?}");
-        }
-        for value in [None, Some(""), Some("classic"), Some("1"), Some("true"), Some("nextt")] {
-            assert!(!default_next(value), "{value:?}");
+    fn the_spa_is_on_whatever_the_old_switches_say() {
+        let enabled = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).unwrap().spa_enabled;
+        assert!(enabled(&[]));
+        for value in ["0", "false", "off", "", "1"] {
+            for default in ["classic", "next", ""] {
+                assert!(enabled(&[("SPA_ENABLED", value), ("SPA_DEFAULT", default)]), "{value:?}/{default:?}");
+            }
         }
     }
 

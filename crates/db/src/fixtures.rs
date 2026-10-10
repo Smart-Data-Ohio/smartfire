@@ -37,7 +37,7 @@ pub fn identify(label: &str) -> i64 {
 }
 
 /// The app's static inputs: `web/`, laid out like the Rails app they came from
-/// (`app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`,
+/// (`app/assets`, `app/javascript`, `vendor/javascript`, `config/importmap.rb`,
 /// `script/livekit-client`, ...).
 pub fn reference_root() -> PathBuf {
     workspace_root().join("web")
@@ -48,12 +48,19 @@ pub fn reference_dir() -> PathBuf {
     workspace_root().join("fixtures")
 }
 
-/// A file named by its path in the Rails app (`public/500.html`,
+/// A file named by its path in the Rails app (public/media now live in static_assets) (`public/500.html`,
 /// `test/fixtures/files/earth.png`, `script/livekit-client/package.json`), in the port's copy.
 pub fn reference_path(path: &str) -> PathBuf {
-    match path.strip_prefix("test/fixtures/") {
-        Some(fixture) => reference_dir().join(fixture),
-        None => reference_root().join(path),
+    if let Some(fixture) = path.strip_prefix("test/fixtures/") {
+        reference_dir().join(fixture)
+    } else if let Some(public) = path.strip_prefix("public/") {
+        workspace_root().join("crates/static_assets/public").join(public)
+    } else if let Some(media) = path.strip_prefix("app/assets/").filter(|path| {
+        ["images/", "sounds/", "emoji/"].iter().any(|prefix| path.starts_with(prefix))
+    }) {
+        workspace_root().join("crates/static_assets/media").join(media)
+    } else {
+        reference_root().join(path)
     }
 }
 

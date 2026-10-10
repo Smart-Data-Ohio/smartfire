@@ -4,7 +4,6 @@ import type { IntegrationChange } from "../../gen/IntegrationChange.ts";
 import type { Settings } from "../../gen/Settings.ts";
 import type { StatusSettings } from "../../gen/StatusSettings.ts";
 import {
-  classicPage,
   connectionSummary,
   deviceName,
   fieldError,
@@ -132,13 +131,6 @@ describe("settings words", () => {
       "GitHub rejected the connection. Reconnect below.",
     );
     expect(connectionSummary("GitHub", { state: "missing" })).toBeNull();
-  });
-
-  it("keeps classic links on the classic page", () => {
-    expect(classicPage("/users/me/profile")).toBe("/users/me/profile?classic=1");
-    expect(classicPage("/users/me/profile?tab=x", "github-connection-title")).toBe(
-      "/users/me/profile?tab=x&classic=1#github-connection-title",
-    );
   });
 
   it("takes only the changed service from a connection answer, and only dependents from a load", async () => {

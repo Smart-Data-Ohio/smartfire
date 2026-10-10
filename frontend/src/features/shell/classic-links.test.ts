@@ -41,15 +41,22 @@ describe("links to classic pages", () => {
 
   it("leave everything else to the browser", () => {
     for (const anchor of [
-      link("/rooms/boards/12/edit?classic=1"),
-      link("/users/me/profile?classic=1#fizzy-connection-title"),
-      link("/rooms/12?classic=1"),
       link("https://example.com/rooms/12"),
       link("/rooms/12", { target: "_blank" }),
       link("/rooms/12", { download: "" }),
     ]) {
       expect(inPlaceTarget(anchor, origin), anchor.outerHTML).toBeNull();
     }
+  });
+
+  it("opens an old `?classic=1` link in place too, as the server no longer keeps anyone on classic", () => {
+    expect(inPlaceTarget(link("/rooms/boards/12/edit?classic=1"), origin)).toBe(
+      "/app/r/12/settings",
+    );
+    expect(inPlaceTarget(link("/users/me/profile?classic=1#fizzy-connection-title"), origin)).toBe(
+      "/app/settings#fizzy-connection-title",
+    );
+    expect(inPlaceTarget(link("/rooms/12?classic=1"), origin)).toBe("/app/r/12");
   });
 
   it("opens numeric profile aliases in place and sends the viewer to settings", () => {

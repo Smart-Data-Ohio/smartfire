@@ -200,7 +200,7 @@ See [Switch the new UI mode](../deploy/gcp/README.md#switch-the-new-ui-mode) for
 | `RAILS_ENV` | database basename |
 | `DISABLE_SSL`, `RAILS_LOG_LEVEL` | SSL middleware and log level |
 | `APP_VERSION`, `GIT_REVISION` | version headers and UI |
-| `SPA_ENABLED`, `SPA_DEFAULT` | serve the React UI at `/app/`; `SPA_DEFAULT=next` makes it the default when enabled |
+| `SPA_ENABLED`, `SPA_DEFAULT` | no longer read: the React UI at `/app/` is always served and is the only signed-in UI; the release script still checks the SPA shell only when `SPA_ENABLED=1` |
 | `RAILS_MAX_THREADS`, `JOB_CONCURRENCY` | reader pool and in-process job concurrency |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web Push; Rust also accepts `VAPID_SUBJECT` |
 | `ADMIN_SESSION_IDLE_TIMEOUT_DAYS` | administrator session lifetime |

@@ -48,7 +48,7 @@ pub fn icons(conn: &Connection) -> Result<IconCatalog, String> {
         let icon = Icon::Brand {
             name: brand.name.clone(),
             title: brand.title.clone(),
-            url: campfire_assets::try_asset_path(&format!("icons/brands/{}", brand.file)).ok(),
+            url: campfire_static_assets::try_asset_path(&format!("icons/brands/{}", brand.file)).ok(),
         };
         for alias in std::iter::once(&brand.name).chain(&brand.aliases) {
             icons.brands.insert(alias.clone(), icon.clone());

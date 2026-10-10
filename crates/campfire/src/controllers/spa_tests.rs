@@ -1,5 +1,5 @@
-//! `/app` and `/api/v1/boot` over the seeded app: gated by `SPA_ENABLED`, behind the classic
-//! pages' before-actions, with their headers. The embedding itself is `campfire_spa`'s to test;
+//! `/app` and `/api/v1/boot` over the seeded app: always served (`SPA_ENABLED` is no longer
+//! read), behind the classic pages' before-actions, with their headers. The embedding itself is `campfire_spa`'s to test;
 //! these run against whatever it embedded (the stub in CI, a real dist when one was built).
 
 use axum::http::{Method, StatusCode};
@@ -68,7 +68,7 @@ async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
     let css = ":root { --accent: red; } body::after { content: \"</style>&\"; }";
     a.db().write(move |tx| Account::first(tx.conn())?.unwrap().update(tx, None, Some(Some(css)), None)).await.unwrap();
     let mut b = a.sign_in(DAVID).await;
-    let classic = b.get("/users/me/profile?classic=1").await;
+    let classic = b.classic_page("/users/me/profile").await;
     assert_eq!(classic.status, StatusCode::OK);
     assert!(classic.text().contains(&format!("<style data-turbo-track=\"reload\">{css}</style>")));
     let page = b.get("/app/").await;
@@ -82,19 +82,21 @@ async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
     assert_eq!(serde_json::from_slice::<Value>(&boot.body).unwrap()["customStyles"], css);
 }
 
+/// The old switches no longer turn the SPA off or send anyone to the classic pages.
 #[tokio::test]
-async fn app_paths_stay_unknown_unless_spa_enabled() {
-    let Some(a) = app(false).await else { return };
-    let mut b = a.sign_in(DAVID).await;
-    let unknown = b.get("/no-such-page").await;
-    assert_eq!(unknown.status, StatusCode::NOT_FOUND);
-    for path in ["/app", "/app/", "/app/rooms/1", "/app/assets/index-B2x8Kq1f.js", "/app/favicon.svg", "/api/v1/boot"] {
-        let reply = b.get(path).await;
-        assert_eq!((reply.status, reply.content_type()), (unknown.status, unknown.content_type()), "{path}");
-        assert_eq!(reply.body, unknown.body, "{path}");
+async fn the_spa_is_served_whatever_the_old_switches_say() {
+    for (enabled, default) in [("0", "classic"), ("false", "next"), ("", ""), ("1", "classic")] {
+        let env = [("SPA_ENABLED", enabled), ("SPA_DEFAULT", default)];
+        let Some(a) = TestApp::boot_seed_with_env("default", seed_clock(), &env).await else { return };
+        let mut b = a.sign_in(DAVID).await;
+        for path in ["/app", "/app/", "/app/rooms/1"] {
+            let reply = b.get(path).await;
+            assert_eq!((reply.status, reply.content_type()), (StatusCode::OK, Some("text/html; charset=utf-8")), "{env:?} {path}");
+        }
+        assert_eq!(b.send(json_request("/api/v1/boot")).await.status, StatusCode::OK, "{env:?}");
+        let classic = b.get("/searches?q=fire").await;
+        assert_eq!(classic.location(), Some("http://campfire.test/app/search?q=fire"), "{env:?}");
     }
-    let api = b.send(json_request("/api/v1/boot")).await;
-    assert_eq!(api.status, b.send(json_request("/no-such-page")).await.status);
 }
 
 #[tokio::test]
@@ -125,7 +127,7 @@ async fn signed_out_visitors_sign_in_and_come_back() {
 async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
-    let classic = b.get("/users/me/profile").await;
+    let classic = b.classic_page("/users/me/profile").await;
     assert_eq!(classic.status, StatusCode::OK);
     let shell = b.get("/app/rooms/1").await;
     assert_eq!(shell.status, StatusCode::OK);
@@ -291,17 +293,18 @@ async fn embedded_assets_are_served_by_path_and_unknown_ones_are_not_found() {
     }
 }
 
-/// Classic pages and the SPA use the same effective UI, including signed-out defaults.
+/// Classic pages and the SPA name the same worker, whatever the old switches or a stored choice
+/// of the classic UI say, signed in or out.
 #[tokio::test]
-async fn pwa_worker_selection_matches_every_effective_ui_case() {
+async fn pwa_worker_selection_ignores_the_old_switches_and_choices() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
 
-    for (enabled, default_next, preference, next) in [
-        (false, true, Some(UiPreference::Next), false),
-        (true, false, None, false),
-        (true, true, None, true),
-        (true, true, Some(UiPreference::Classic), false),
-        (true, false, Some(UiPreference::Next), true),
+    for (enabled, default_next, preference) in [
+        (false, true, Some(UiPreference::Next)),
+        (true, false, None),
+        (true, true, None),
+        (true, true, Some(UiPreference::Classic)),
+        (true, false, Some(UiPreference::Next)),
     ] {
         let env = [
             ("RAILS_ENV", "test"),
@@ -319,14 +322,9 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         }
         let label =
             format!("enabled={enabled} default_next={default_next} preference={preference:?}");
-        // Without the SPA the layout is the Rails layout and names no worker.
-        let expected = match (enabled, next) {
-            (false, _) => None,
-            (true, true) => Some("/service-worker.js"),
-            (true, false) => Some("/service-worker.js"),
-        };
+        let expected = Some("/service-worker.js");
         let mut b = a.sign_in(DAVID).await;
-        let classic = b.get("/users/me/profile?classic=1").await;
+        let classic = b.classic_page("/users/me/profile").await;
         assert_eq!(classic.status, StatusCode::OK, "{label}");
         assert_eq!(
             meta(&classic.text(), "service-worker-url").as_deref(),
@@ -339,18 +337,9 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         );
         let shell = b.get("/app/").await;
         let boot = b.send(json_request("/api/v1/boot")).await;
-        if enabled {
-            let expected = Value::from("/service-worker.js");
-            assert_eq!(
-                boot_json(&shell.text())["serviceWorkerUrl"],
-                expected,
-                "{label}"
-            );
-            assert_eq!(boot.json()["serviceWorkerUrl"], expected, "{label}");
-        } else {
-            assert_eq!(shell.status, StatusCode::NOT_FOUND, "{label}");
-            assert_eq!(boot.status, StatusCode::NOT_FOUND, "{label}");
-        }
+        let worker = Value::from("/service-worker.js");
+        assert_eq!(boot_json(&shell.text())["serviceWorkerUrl"], worker, "{label}");
+        assert_eq!(boot.json()["serviceWorkerUrl"], worker, "{label}");
         // The auth pages (no Turbo) name the same worker: two-step setup is where a password
         // sign-in can land, and its load registers the signed-in person's worker.
         unenroll(&a, DAVID).await;
@@ -365,12 +354,6 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
             setup.text().contains("data-service-worker=\"false\""),
             "auth pages keep automatic registration disabled in tests: {label}"
         );
-        // With no signed-in user, SPA_DEFAULT selects the classic layout's worker.
-        let expected = match (enabled, default_next) {
-            (false, _) => None,
-            (true, true) => Some("/service-worker.js"),
-            (true, false) => Some("/service-worker.js"),
-        };
         let signed_out = a.anonymous().get("/session/new").await;
         assert_eq!(signed_out.status, StatusCode::OK, "{label}");
         assert!(

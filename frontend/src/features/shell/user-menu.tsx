@@ -1,32 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import type { Placement } from "../../lib/anchor.ts";
-import { postClassicForm } from "../../lib/classic-form.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { Menu, MenuGroup, MenuItem, MenuSeparator, type MenuTriggerProps } from "../../ui/menu.tsx";
 import { restartTour } from "../help/tour.tsx";
 import { openOverlay } from "../switcher/overlay-store.ts";
 
 /**
- * Leaves the new UI: `POST /app/ui_preference` with `ui=classic`, as the classic profile's form
- * sends it (the session's token in `authenticity_token`). The server records the choice and
- * redirects to the classic page for where the person is (`return_to`, mapped from this SPA path).
- */
-export function switchToClassic(
-  location: Pick<Location, "pathname" | "search"> = window.location,
-): void {
-  postClassicForm("/app/ui_preference", [
-    ["ui", "classic"],
-    ["return_to", `${location.pathname}${location.search}`],
-  ]);
-}
-
-/**
  * The signed-in person's menu, opened from their panel at the foot of the sidebar or, on phones,
  * the tab bar's You tab (`trigger` renders either): their profile and settings, the people
  * directory, the workspace (its people, and for administrators the rest of the classic account
- * pages), classic's help menu (the keyboard shortcuts and restarting the product tour), and the
- * way back to the classic UI.
+ * pages), and classic's help menu (the keyboard shortcuts and restarting the product tour).
  */
 export function UserMenu({
   trigger,
@@ -61,10 +45,6 @@ export function UserMenu({
           Restart tour
         </MenuItem>
       </MenuGroup>
-      <MenuSeparator />
-      <MenuItem icon="rotate-ccw" onSelect={() => switchToClassic()}>
-        Switch to classic
-      </MenuItem>
     </Menu>
   );
 }

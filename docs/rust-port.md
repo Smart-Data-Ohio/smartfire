@@ -17,9 +17,10 @@ differences from the Rails app are listed under [Known differences](#known-diffe
 
 The Rails app's behavior is pinned by the recorded golden vectors, fixtures and frozen seeds the
 tests read; they were recorded from Rails at [`parity/reference.sha`](../parity/reference.sha) and
-are frozen. The app owns the static inputs it was ported with: the assets, JavaScript, vendored
-JavaScript, `public/`, importmap and LiveKit scripts in [`web/`](../web) (laid out like the Rails app)
-and the test fixtures in [`fixtures/`](../fixtures). Approved source copies are described in
+are frozen. Retained auth, media and public inputs live in
+[`crates/static_assets/`](../crates/static_assets/README.md). Classic stylesheets, JavaScript,
+vendored JavaScript, importmap and LiveKit builders remain in [`web/`](../web); test fixtures
+live in [`fixtures/`](../fixtures). Approved source copies are described in
 [`crates/assets/OVERRIDES.md`](../crates/assets/OVERRIDES.md). The app uses the Rails SQLite schema,
 storage layout and compatible signed/AES-GCM cookies, so existing installs keep their data and
 sessions. Boot loads an empty database's compiled schema or checks an existing database's exact

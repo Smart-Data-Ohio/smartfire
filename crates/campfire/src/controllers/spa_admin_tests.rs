@@ -857,7 +857,7 @@ async fn people_list_as_the_account_page_does() {
     );
 
     // Everyone listed is on the classic page too.
-    let html = b.get("/account/edit").await.text();
+    let html = b.classic_page("/account/edit").await.text();
     for person in &page.people {
         assert!(html.contains(&person.name), "{}", person.name);
     }
@@ -1070,7 +1070,7 @@ async fn a_two_step_reset_refuses_as_the_classic_page_does() {
             ))
             .await;
         assert!(classic.status.is_redirection(), "{}", classic.status);
-        let page = b.get(classic.location().unwrap()).await.text();
+        let page = b.classic_page(classic.location().unwrap()).await.text();
         let escaped = alert.replace('\'', "&#39;");
         assert!(page.contains(&escaped), "{alert}");
     }
@@ -1364,7 +1364,7 @@ async fn the_audit_log_filters_as_the_classic_page_does() {
 
     // The classic page lists the same rows for the same filter.
     let html = b
-        .get("/account/audit_log?action=user.role.change&target_type=User")
+        .classic_page("/account/audit_log?action=user.role.change&target_type=User")
         .await
         .text();
     for entry in &filtered.entries {
@@ -1383,6 +1383,6 @@ async fn integrations_health_reads_for_administrators() {
     assert!(health.github.connected >= 0);
     assert!(health.agent_delivery.pending >= 0);
     // The classic page renders from the same snapshot.
-    let page = b.get("/account/integrations_health").await;
+    let page = b.classic_page("/account/integrations_health").await;
     assert_eq!(page.status, StatusCode::OK);
 }

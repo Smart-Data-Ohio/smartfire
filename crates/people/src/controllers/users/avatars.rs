@@ -99,7 +99,7 @@ fn render_initials(c: &mut Ctx, user: &User) -> Result {
     Ok(c.render_as(campfire_kit::StatusCode::OK, "image/svg+xml; charset=utf-8", svg))
 }
 
-/// A file under `app/assets/images` (embedded by campfire_assets) on disk, for `send_file`: it's
+/// A file under `app/assets/images` (embedded by campfire_static_assets) on disk, for `send_file`: it's
 /// written once per process to a private directory under its own name, so the response carries
 /// the same filename and, like Rails' file bodies, gets no `Rack::ETag` digest. The lock makes the
 /// first write race-free: concurrent first requests would otherwise see a half-written file.
@@ -111,13 +111,12 @@ pub fn asset_file(logical_path: &str) -> Result<std::path::PathBuf> {
     }
     let path = dir.as_ref().expect("initialized above").path().join(logical_path);
     if !path.exists() {
-        let url = campfire_assets::asset_path(logical_path);
-        let request = campfire_assets::StaticRequest { method: "GET", path: &url, ..Default::default() };
-        let data = campfire_assets::serve(&request).ok_or_else(|| Error::internal(anyhow::anyhow!("missing asset {logical_path}")))?.body;
+        let data = campfire_static_assets::asset_bytes(logical_path)
+            .ok_or_else(|| Error::internal(anyhow::anyhow!("missing asset {logical_path}")))?;
         let parent = path.parent().expect("joined onto a directory");
         std::fs::create_dir_all(parent)?;
         let mut partial = tempfile::NamedTempFile::new_in(parent)?;
-        std::io::Write::write_all(&mut partial, &data)?;
+        std::io::Write::write_all(&mut partial, data)?;
         partial.persist(&path).map_err(|error| Error::internal(error.error))?;
     }
     Ok(path)
