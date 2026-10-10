@@ -89,12 +89,13 @@ async fn unread_predecessor_uses_id_for_equal_timestamps_and_write_failure_rolls
 }
 
 #[tokio::test]
-async fn quiet_refresh_is_204_for_every_format_before_template_negotiation() {
+async fn legacy_refresh_redirects_members_and_denies_nonmembers() {
     let app=TestApp::boot_frozen().await.expect("seed required");
-    for (accept,expected) in oracle()["refresh"].as_object().unwrap() {
+    for accept in ["text/html", "text/vnd.turbo-stream.html", "application/json"] {
         let reply=app.david().send(Req::new(Method::GET,"/rooms/699448329/refresh?since=1772467200000").header("Accept",accept)).await;
-        assert_eq!(reply.status.as_u16() as u64,expected["status"].as_u64().unwrap(),"{accept}");
-        assert_eq!(reply.text(),expected["body"].as_str().unwrap());
+        assert_eq!(reply.status,StatusCode::FOUND);
+        assert_eq!(reply.location(), Some("http://campfire.test/rooms/699448329"));
+        assert!(reply.text().is_empty());
     }
     let denied=app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/refresh?since=0")).await;
     assert_eq!(denied.status,StatusCode::NOT_FOUND);

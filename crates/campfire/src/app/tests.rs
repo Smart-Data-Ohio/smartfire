@@ -490,7 +490,7 @@ async fn concurrent_message_posts_all_complete() {
         .await
         .expect("concurrent message posts deadlocked");
     for status in statuses {
-        assert_eq!(status.unwrap(), StatusCode::OK);
+        assert_eq!(status.unwrap(), StatusCode::CREATED);
     }
 
     let after = tokio::time::timeout(WAIT, send(&router, get_with_cookie(&format!("/rooms/{room_id}"), &session.cookie_header)))

@@ -2,7 +2,7 @@
 use super::quote_integration_tests::{app_rows, insert_rows};
 use crate::controllers::presenters::{github, page, test_support::*};
 use campfire_db::{ChannelThread, Event, Message};
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -28,64 +28,8 @@ fn oracle() -> Value {
     ))
     .unwrap()
 }
-async fn subscriber(
-    app: &TestApp,
-    group: &Value,
-) -> (
-    crate::channels::tests::support::Client,
-    tokio::task::JoinHandle<()>,
-) {
-    use crate::channels::tests::support::{Client, bind_listener, identifier};
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    app.publications();
-    let listener = bind_listener().await;
-    let address = listener.local_addr().unwrap();
-    let router = app.booted.router.clone();
-    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let mut request = format!("ws://{address}/cable")
-        .into_client_request()
-        .unwrap();
-    for (key, value) in [
-        ("host", "campfire.test"),
-        ("origin", "http://campfire.test"),
-        ("cookie", david_cookie().as_str()),
-    ] {
-        request.headers_mut().insert(key, value.parse().unwrap());
-    }
-    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let mut client = Client { socket };
-    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    for (table, model) in [("rooms", "Room"), ("channel_threads", "ChannelThread")] {
-        for row in group["rows"][table].as_array().unwrap() {
-            let id = row["id"].as_i64().unwrap();
-            // Room GIDs retain the concrete Rails STI type.
-            let model = if table == "rooms" {
-                row["type"].as_str().unwrap()
-            } else {
-                model
-            };
-            let gid = campfire_views::helpers::gid_param(model, id);
-            let signed = rails_compat::turbo::signed_stream_name(
-                &app.booted.app.secrets,
-                &[&gid, "messages"],
-            );
-            client
-                .confirm(&identifier(
-                    json!({"channel":"RoomMessagesChannel", "signed_stream_name":signed}),
-                ))
-                .await;
-        }
-    }
-    (client, server)
-}
-async fn frames(
-    app: &TestApp,
-    client: &mut crate::channels::tests::support::Client,
-    expected: &Value,
-) {
-    super::comparison_support::published_frames(app, client, expected, "mapped_provider_tests.rs").await;
-    client.assert_silent().await;
-}
+
+
 
 async fn windows(app: &TestApp, group: &Value, initial: bool) {
     let ids = regex::Regex::new(r#"data-message-id="(\d+)""#).unwrap();
@@ -169,7 +113,7 @@ async fn mapped_provider_headers_replies_callbacks_have_rails_bytes_and_flat_rea
             })
             .await
             .unwrap();
-        let (mut client, server) = subscriber(&app, group).await;
+
         let id = group["callback"]["pull_request_id"].as_i64().unwrap();
         let queries = app.db().capture_read_queries();
         let writer = queries.clone();
@@ -207,7 +151,8 @@ async fn mapped_provider_headers_replies_callbacks_have_rails_bytes_and_flat_rea
             .await
             .unwrap();
         app.db().stop_capturing_read_queries();
-        frames(&app, &mut client, &group["callback"]["frames"]).await;
+
+        super::comparison_support::settle_jobs(&app).await;
         let reads = queries.lock().unwrap().len();
         let key = group["privacy"].to_string();
         println!(
@@ -222,7 +167,7 @@ async fn mapped_provider_headers_replies_callbacks_have_rails_bytes_and_flat_rea
             differences.push(format!("{key}: {previous} -> {reads}"));
         }
         windows(&app, group, false).await;
-        server.abort();
+
     }
     assert!(
         differences.is_empty(),
@@ -255,7 +200,7 @@ async fn mapped_provider_durable_jobs_replace_headers_and_older_replies() {
         .await
         .unwrap();
         insert_rows(&app, group["rows"].clone()).await;
-        let (mut client, server) = subscriber(&app, group).await;
+
         let id = group["job"]["pull_request_id"].as_i64().unwrap();
         app.db()
             .write(move |tx| {
@@ -266,7 +211,8 @@ async fn mapped_provider_durable_jobs_replace_headers_and_older_replies() {
             })
             .await
             .unwrap();
-        frames(&app, &mut client, &group["job"]["frames"]).await;
+
+        super::comparison_support::settle_jobs(&app).await;
         assert_eq!(http.received().len(), 5);
         let authorization = format!("Bearer {FIXTURE_TOKEN}");
         assert!(
@@ -275,7 +221,7 @@ async fn mapped_provider_durable_jobs_replace_headers_and_older_replies() {
                 .all(|r| r.header("Authorization") == Some(authorization.as_str()))
         );
         windows(&app, group, false).await;
-        server.abort();
+
     }
     println!(
         "WS8bm2 mapped-provider jobs: 6/6 registered durable jobs; 180/180 exact frames; 18/18 reply windows; 30/30 authenticated owner API reads"

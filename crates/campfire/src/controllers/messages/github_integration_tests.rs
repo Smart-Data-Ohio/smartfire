@@ -34,7 +34,7 @@ async fn complete_github_containers_match_rails_in_room_lists_on_cold_and_warm_c
                     let wanted = slot(expected);
                     if actual != wanted { rails_mismatch(actual.as_deref().unwrap_or(""), wanted.as_deref().unwrap_or(""), &format!("room {room_id}, message {}, warm={warm}", message.id)); }
                 }
-                assert_eq!(campfire_cable::turbo::session_bound(&html), None);
+
                 Ok(())
             }).await.unwrap();
         }

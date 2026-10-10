@@ -91,11 +91,10 @@ async fn render(
     } else {
         StatusCode::UNPROCESSABLE_ENTITY
     };
-    match c.respond_to(&[&format::TURBO_STREAM,&format::HTML])? {
-  f if f==&format::TURBO_STREAM=>Ok(c.render(status,&format::TURBO_STREAM,format!("<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_{}\"><template>{html}</template></turbo-stream>",thread.id))),
-  _=>Ok(c.render(status,&format::HTML,html))
- }
+    c.respond_to(&[&format::HTML])?;
+    Ok(c.render(status, &format::HTML, html))
 }
+
 async fn write(c: &mut Ctx, action: Action) -> Result {
     let (pr, thread, user_id) = before(c).await?;
     let key = PullRequestKey {

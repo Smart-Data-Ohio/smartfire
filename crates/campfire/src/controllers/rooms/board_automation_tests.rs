@@ -514,34 +514,13 @@ async fn review_pr206_dispatch_with_production_richtext_jobs_and_bind_limit() {
 }
 
 async fn assert_digest_broadcast_bytes(app: &TestApp, rooms: String) {
-    use crate::controllers::presenters::{Presenter, page};
-    use askama::Template;
-    use campfire_db::{Message, models::board_automations::DigestNotes};
-    let copy = app.booted.app.clone();
-    let (ids, expected) = app.db().read(move |conn| {
-        let ids = conn.prepare("SELECT id FROM messages WHERE system_note=1 AND room_id IN (SELECT value FROM json_each(?)) ORDER BY id")?
-            .query_map([rooms], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
-        let mut expected = Vec::new();
-        for id in &ids {
-            let message = Message::find(conn, *id)?;
-            let view = Presenter::new(conn, &copy, None).message(&message)?;
-            let html = page::render_detached_at(&copy, None, page::default_renderer_base_url(&copy), |ctx| {
-                campfire_views::messages::MessagePartial { ctx, message: &view }.render().unwrap()
-            });
-            expected.push((message.room_id, html));
-        }
-        Ok((ids, expected))
+    use campfire_db::models::board_automations::DigestNotes;
+    let ids = app.db().read(move |conn| {
+        Ok(conn.prepare("SELECT id FROM messages WHERE system_note=1 AND room_id IN (SELECT value FROM json_each(?)) ORDER BY id")?
+            .query_map([rooms], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)
     }).await.unwrap();
-    let actual =
-        crate::channels::board_digests::render(&app.booted.app, &DigestNotes { message_ids: ids })
-            .unwrap()
-            .into_iter()
-            .map(|(_, room, html)| (room.id, html))
-            .collect::<Vec<_>>();
-    assert_eq!(
-        actual, expected,
-        "batched digest broadcasts preserve shared renderer bytes and order"
-    );
+    let published = crate::channels::board_digests::deliver(&app.booted.app.cable, &app.booted.app, &DigestNotes { message_ids: ids.clone() }).unwrap();
+    assert_eq!(published, ids, "JSON digest publication IDs retain their order");
 }
 
 // Only pinned, explicitly approved crash inputs may change the Rails 500 response.
@@ -659,5 +638,3 @@ async fn ws12_sla_missing_and_scalar_shapes_return_empty_400_without_writes() {
         );
     }
 }
-
-use campfire_web::controllers::presenters::{Rendering};

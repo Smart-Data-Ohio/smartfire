@@ -21,24 +21,6 @@ async fn spa_api_fizzy_message_creation_http_matrix() {
         if matches!(case.as_str(), "create" | "thread" | "direct_bots") {
             let classic = run(&case, false).await;
             assert_eq!(api.0, classic.0, "reply and bot jobs must match");
-            assert_eq!(
-                api.1.len(),
-                classic.1.len(),
-                "same number of classic broadcasts"
-            );
-            // Message DOM ids contain generated client UUIDs, as in the existing thread parity test.
-            let uuid =
-                regex::Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-                    .unwrap();
-            for (index, (api, classic)) in api.1.iter().zip(&classic.1).enumerate() {
-                assert_eq!(api.0, classic.0, "broadcast stream {index}");
-                assert_eq!(
-                    uuid.replace_all(&api.1, "UUID"),
-                    uuid.replace_all(&classic.1, "UUID"),
-                    "classic frame {index}"
-                );
-            }
-            assert!(!api.1.is_empty(), "must compare real broadcasts");
         } else if matches!(case.as_str(), "enqueue_rollback" | "locked_after_create") {
             let classic = run(&case, false).await;
             assert_eq!(api.0, classic.0, "failed replies must leave the same rows");

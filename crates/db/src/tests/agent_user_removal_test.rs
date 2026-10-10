@@ -137,10 +137,7 @@ fn ws11_hard_user_removal_matches_rails_dependent_delete_and_pin_callbacks() {
         .iter()
         .filter_map(|e| e.as_broadcast())
         .filter_map(|b| match b {
-            crate::broadcasts::Broadcast::Turbo(s) => match s.partial {
-                Some(crate::broadcasts::Partial::PinBadge { message_id }) => Some(message_id),
-                _ => None,
-            },
+            crate::broadcasts::Broadcast::MessagePinned { message_id } => Some(message_id),
             _ => None,
         })
         .collect();

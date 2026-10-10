@@ -246,7 +246,7 @@ async fn remote_disconnect_preserves_prior_publications_across_streams_and_batch
         let mut client = app.connect(1).await;
         assert_eq!(client.next_text().await, WELCOME);
         let room = room(1);
-        let rooms = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(rooms)" }));
+        let rooms = identifier(json!({ "channel": "RoomsChannel" }));
         for channel in [&room, &rooms] {
             client.subscribe(channel).await;
             assert_eq!(client.next_text().await, confirm(channel));
@@ -255,8 +255,8 @@ async fn remote_disconnect_preserves_prior_publications_across_streams_and_batch
         client.perform(&room, json!({ "action": "broadcast_then_disconnect", "reconnect": reconnect })).await;
         for i in 0..70 {
             assert_eq!(client.next_text().await, message(&room, &i.to_string()), "room publication {i}, reconnect={reconnect}");
-            let remove = campfire_cable::json::encode(&format!(r#"<turbo-stream action="remove" target="room_{i}"></turbo-stream>"#));
-            assert_eq!(client.next_text().await, message(&rooms, &remove), "Turbo publication {i}, reconnect={reconnect}");
+            let remove = serde_json::json!({"removed": i}).to_string();
+            assert_eq!(client.next_text().await, message(&rooms, &remove), "rooms publication {i}, reconnect={reconnect}");
         }
         assert_eq!(client.next_text().await, format!(r#"{{"type":"disconnect","reason":"remote","reconnect":{reconnect}}}"#));
         assert_eq!(client.next().await, Frame::Close(Some((1000, String::new()))));
@@ -326,91 +326,9 @@ async fn pings_every_three_seconds_with_a_unix_timestamp() {
     assert!((ping["message"].as_i64().unwrap() - now).abs() <= 1);
 }
 
-#[tokio::test]
-async fn turbo_streams_channel_verifies_and_guards_stream_names() {
-    let app = start(test_config()).await;
-    let mut client = app.connect(1).await;
-    client.next_text().await;
 
-    let rooms = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(rooms)" }));
-    client.subscribe(&rooms).await;
-    assert_eq!(client.next_text().await, confirm(&rooms));
 
-    app.server.broadcast_remove_to(&["rooms"], "list_room_1");
-    assert_eq!(
-        client.next_text().await,
-        message(&rooms, r#""\u003cturbo-stream action=\"remove\" target=\"list_room_1\"\u003e\u003c/turbo-stream\u003e""#)
-    );
 
-    let forged = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "rooms" }));
-    client.subscribe(&forged).await;
-    assert_eq!(client.next_text().await, reject(&forged));
-
-    let missing = identifier(json!({ "channel": "Turbo::StreamsChannel" }));
-    client.subscribe(&missing).await;
-    assert_eq!(client.next_text().await, reject(&missing));
-
-    // RoomStreamsAreAuthorized: a validly signed room message stream is still turned away.
-    let guarded = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(Z2lk:messages)" }));
-    client.subscribe(&guarded).await;
-    assert_eq!(client.next_text().await, reject(&guarded));
-    app.server.broadcast_append_to(&["Z2lk", "messages"], "messages", "<p>x</p>");
-    client.assert_silent().await;
-
-    // A non-string name raises in MessageVerifier: neither confirmed nor rejected.
-    let numeric = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": 1 }));
-    client.subscribe(&numeric).await;
-    client.assert_silent().await;
-}
-
-#[tokio::test]
-async fn broadcasts_carrying_session_bound_markup_are_refused() {
-    let app = start(test_config()).await;
-    let mut client = app.connect(1).await;
-    client.next_text().await;
-    let rooms = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(rooms)" }));
-    client.subscribe(&rooms).await;
-    assert_eq!(client.next_text().await, confirm(&rooms));
-
-    let token = r#"<form><input type="hidden" name="authenticity_token" value="abc"></form>"#;
-    assert_eq!(app.server.broadcast_replace_to(&["rooms"], "room_1", token), 0);
-    assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", r#"<script nonce="abc"></script>"#), 0);
-    for html in [
-        "<svg><style/></svg><input name=authenticity_token value=secret>",
-        "<svg><style/></svg><script nonce=secret></script>",
-        "<math><style/></math><input name=authenticity_token value=secret>",
-        "<math><style/></math><script nonce=secret></script>",
-        "<noscript><input name=authenticity_token></noscript>",
-        "<select><meta name=csrf-token content=secret></select>",
-        "<select><meta name=csrf-param content=authenticity_token></select>",
-        "<select><style nonce=secret></style></select>",
-        "<select><title><input name=authenticity_token></title></select>",
-    ] {
-        assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", html), 0, "{html}");
-    }
-    client.assert_silent().await;
-
-    assert_eq!(app.server.broadcast_replace_to(&["rooms"], "room_1", "<form></form>"), 1);
-    let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
-    assert_eq!(frame["message"], r#"<turbo-stream action="replace" target="room_1"><template><form></form></template></turbo-stream>"#);
-    for html in [
-        "<div>nonce=\"example\" name=\"authenticity_token\"</div>",
-        "<textarea><input name=authenticity_token><script nonce=example></script></textarea>",
-        "<title><input name=authenticity_token><script nonce=example></script></title>",
-    ] {
-        assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", html), 1, "{html}");
-        let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
-        assert_eq!(
-            frame["message"],
-            campfire_cable::turbo::action_tag(
-                campfire_cable::turbo::Action::Append,
-                campfire_cable::turbo::Target::Target("rooms"),
-                Some(html),
-                &[],
-            )
-        );
-    }
-}
 
 async fn http_get(url: &str, headers: &[(&str, &str)]) -> (u16, Option<String>, String) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};

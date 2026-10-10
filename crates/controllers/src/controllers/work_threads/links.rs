@@ -223,47 +223,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     success(c, &thread, "Link removed.", true).await
 }
 async fn success(c: &mut Ctx, thread: &ChannelThread, notice: &str, back: bool) -> Result {
-    if *c.respond_to(&[&format::TURBO_STREAM, &format::HTML])? == format::TURBO_STREAM {
-        let thread = thread.clone();
-        let id = thread.id;
-        let links = messages::present(c, move |p| board_posts::links(p, &thread)).await?;
-        page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |ctx| {
-            views::LinksChange {
-                ctx,
-                thread_id: id,
-                links: &links,
-            }
-            .render()
-        })
-        .await
-    } else {
-        c.flash().set_notice(notice);
-        let path = format!("/rooms/{}/threads/{}", thread.room_id, thread.id);
-        if back {
-            c.redirect_back_or_to(&path)
-        } else {
-            c.redirect_to(&path)
-        }
-    }
+    c.flash().set_notice(notice);
+    let path = format!("/rooms/{}/threads/{}", thread.room_id, thread.id);
+    if back { c.redirect_back_or_to(&path) } else { c.redirect_to(&path) }
 }
 async fn invalid(c: &mut Ctx, thread: &ChannelThread, error: String) -> Result {
-    if *c.respond_to(&[&format::TURBO_STREAM, &format::HTML])? == format::TURBO_STREAM {
-        page::bare(
-            c,
-            StatusCode::UNPROCESSABLE_ENTITY,
-            &format::TURBO_STREAM,
-            |ctx| {
-                views::LinksInvalid {
-                    ctx,
-                    thread_id: thread.id,
-                    error: &error,
-                }
-                .render()
-            },
-        )
-        .await
-    } else {
-        c.flash().set_alert(error);
-        c.redirect_to(&format!("/rooms/{}/threads/{}", thread.room_id, thread.id))
-    }
+    c.flash().set_alert(error);
+    c.redirect_to(&format!("/rooms/{}/threads/{}", thread.room_id, thread.id))
 }

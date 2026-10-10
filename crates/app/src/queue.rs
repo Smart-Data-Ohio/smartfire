@@ -356,14 +356,13 @@ impl EventSink for Jobs {
     }
 }
 
-/// Full attachment/presentation renders in channels::sink. Keep the non-Turbo parent
-/// renderers here too: Rails' Agents::Steps#broadcast_parent renders the whole message.
+/// Full message publications can discover attachment recovery work while serializing JSON.
 /// Component-only events (cards, reactions, thread steps/indicators, room/status/huddle
-/// controls) never render a video or its PR-card collection cache key.
+/// controls) do not inspect the attachment.
 fn attachment_render_message_ids(event: &Event) -> Vec<i64> {
     use campfire_db::{
         Broadcast as _,
-        broadcasts::{Broadcast, Partial},
+        broadcasts::Broadcast,
         models::{agent_step::StepParentChange, board_automations::DigestNotes,
             huddle_effects::StageEndedNote, user::lifecycle::QuietStreamFinal},
     };
@@ -372,11 +371,7 @@ fn attachment_render_message_ids(event: &Event) -> Vec<i64> {
     match request.kind {
         Broadcast::KIND => request.decode::<Broadcast>().and_then(Result::ok)
             .and_then(|broadcast| match broadcast {
-                Broadcast::Turbo(frame) => match frame.partial {
-                    Some(Partial::Message { message_id } | Partial::MessageReplace { message_id }
-                        | Partial::MessagePresentation { message_id }) => Some(message_id),
-                    _ => None,
-                },
+                Broadcast::MessageCreated { message_id } | Broadcast::MessageUpdated { message_id } => Some(message_id),
                 _ => None,
             }).into_iter().collect(),
         StepParentChange::KIND => request.decode::<StepParentChange>().and_then(Result::ok)

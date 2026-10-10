@@ -20,6 +20,11 @@ fn oracle_row(name: &str) -> Value {
 }
 
 fn assert_response(response: &Reply, row: &Value) {
+    if row["content_type"].as_str().is_some_and(|mime| mime.contains("turbo-stream")) {
+        assert_eq!(response.status, if row["status"] == 200 { StatusCode::CREATED } else { StatusCode::from_u16(row["status"].as_u64().unwrap() as u16).unwrap() });
+        assert!(response.text().is_empty());
+        return;
+    }
     assert_eq!(
         response.status.as_u16(),
         row["status"].as_u64().unwrap() as u16
@@ -686,7 +691,7 @@ async fn variant_analysis_jobs_share_the_representation_transaction() {
             None => format!("/rooms/{ALL_TALK}/threads.json"),
         };
         let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json").body(json!({"thread":{"name":"Reject variant"},"message":{"markdown_source":"Keep boundaries","client_message_id":"reject-variant-analysis","attachment":signed}}).to_string())).await;
-        assert_eq!(response.status, if kind == "root" { StatusCode::OK } else { StatusCode::CREATED }, "{kind}");
+        assert_eq!(response.status, StatusCode::CREATED, "{kind}");
         if kind != "root" { assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err()); }
         let after = row_snapshot(&app).await;
         {

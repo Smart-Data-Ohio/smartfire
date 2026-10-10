@@ -341,43 +341,7 @@ async fn direct_rooms_are_found_or_created() {
     assert!(room.is_none_or(|room| room.deleted_at.is_some()));
 }
 
-#[tokio::test]
-async fn refresh_streams_messages_since_a_time() {
-    let Some(app) = TestApp::boot().await else {
-        return;
-    };
-    let mut david = app.david();
-    let reply = david
-        .send(
-            Req::new(Method::GET, &format!("/rooms/{ALL_TALK}/refresh?since=0"))
-                .header("accept", "text/vnd.turbo-stream.html, text/html"),
-        )
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(
-        reply.content_type(),
-        Some("text/vnd.turbo-stream.html; charset=utf-8")
-    );
-    assert!(
-        reply.text().starts_with(
-            r#"<turbo-stream action="append" target="messages_rooms_closed_486777696">"#
-        ),
-        "{}",
-        reply.text()
-    );
 
-    let html_only = david
-        .get(&format!("/rooms/{ALL_TALK}/refresh?since=0"))
-        .await;
-    assert_eq!(html_only.status, StatusCode::NOT_ACCEPTABLE);
-    assert_eq!(
-        david
-            .get(&format!("/rooms/{DIRECT_KEVIN_BENDER}/refresh"))
-            .await
-            .status,
-        StatusCode::NOT_FOUND
-    );
-}
 
 #[tokio::test]
 async fn involvement_is_shown_and_changed() {
@@ -817,7 +781,7 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
     );
     assert_eq!(
         jason.send(compose(&value)).await.status,
-        StatusCode::OK,
+        StatusCode::CREATED,
         "Jason's token with his own session"
     );
 }

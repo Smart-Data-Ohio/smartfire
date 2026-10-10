@@ -391,8 +391,8 @@ async fn root_create_preserves_markdown_numeric_client_id_and_deduplicates_retri
                 .body(body),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert!(reply.text().contains("markdown-body"));
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    assert!(reply.text().is_empty());
     let message = app
         .db()
         .read(|conn| Message::find_duplicate(conn, ALL_TALK, DAVID, "999"))
@@ -425,7 +425,7 @@ async fn root_create_preserves_markdown_numeric_client_id_and_deduplicates_retri
                 .body(retry),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     assert_eq!(
         app.db().read(counts).await.unwrap(),
         before,
@@ -452,7 +452,7 @@ async fn root_create_scalar_columns_match_real_rails_casts() {
                     .body(input),
             )
             .await;
-        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let expected_id = row["client_message_id"].as_str().unwrap().to_owned();
         let message = app
             .db()
@@ -484,7 +484,7 @@ async fn root_create_scalar_columns_match_real_rails_casts() {
             )
             .await
             .status,
-        StatusCode::OK
+        StatusCode::CREATED
     );
     let after = app
         .db()
@@ -543,7 +543,7 @@ async fn root_create_resolves_replies_and_normalizes_drive_sets() {
                 .body(body),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let row = app
         .db()
         .read(|conn| {
@@ -599,7 +599,7 @@ async fn administrator_can_delete_another_authors_ordinary_root_message() {
     let app=boot().await;
     let message=create(&app,JASON,false).await;
     let id=message.id;
-    assert_eq!(app.david().write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"))).await.status,StatusCode::OK);
+    assert_eq!(app.david().write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"))).await.status,StatusCode::NO_CONTENT);
     assert!(app.db().read(move|conn|Message::find_by_id(conn,id)).await.unwrap().is_none());
 }
 

@@ -347,10 +347,6 @@ async fn huddle_controller_aliased_public_url_denies_before_issuing_any_grant() 
 }
 #[tokio::test]
 async fn huddle_controller_leave_keeps_the_other_device_and_sends_one_room_refresh() {
-    use super::call_channel_broadcast_tests::{next, socket};
-    use crate::channels::broadcasts::Stream as Channel;
-    use futures_util::SinkExt;
-    use tokio_tungstenite::tungstenite::Message;
     let Some(test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
@@ -358,31 +354,6 @@ async fn huddle_controller_leave_keeps_the_other_device_and_sends_one_room_refre
     let session = current_session(&test, DAVID).await;
     let grant = active(&test, ALL_TALK, DAVID, Some(session)).await;
     let other = active(&test, ALL_TALK, DAVID, None).await;
-    let listener = crate::channels::tests::support::bind_listener().await;
-    let addr = listener.local_addr().unwrap();
-    let (stop, stopping) = tokio::sync::oneshot::channel();
-    let router = test.booted.router.clone();
-    let serving = tokio::spawn(async move {
-        axum::serve(listener, router)
-            .with_graceful_shutdown(async {
-                let _ = stopping.await;
-            })
-            .await
-            .unwrap()
-    });
-    let mut client = socket(&test, addr, DAVID).await;
-    let room = test.db().read(|c| Room::find(c, ALL_TALK)).await.unwrap();
-    let room_stream = Channel::room_messages(&room);
-    let identifier=json!({"channel":"RoomMessagesChannel","signed_stream_name":rails_compat::turbo::signed_stream_name(&test.booted.app.secrets,&room_stream.streamables())}).to_string();
-    client
-        .send(Message::Text(
-            json!({"command":"subscribe","identifier":identifier})
-                .to_string()
-                .into(),
-        ))
-        .await
-        .unwrap();
-    assert_eq!(next(&mut client).await["type"], "confirm_subscription");
     let response = browser
         .write(Req::new(
             Method::POST,
@@ -392,25 +363,6 @@ async fn huddle_controller_leave_keeps_the_other_device_and_sends_one_room_refre
     assert_eq!(response.status, StatusCode::NO_CONTENT);
     assert!(response.body.is_empty());
     assert_eq!(response.header("cache-control"), Some("no-store"));
-    test.booted
-        .app
-        .broadcasts
-        .replace(&Channel::user_rooms(DAVID), "ws13_leave_barrier", "");
-    let mut room_frames = Vec::new();
-    loop {
-        let frame = next(&mut client).await;
-        let html = frame["message"].as_str().unwrap();
-        if html.contains("target=\"ws13_leave_barrier\"") {
-            break;
-        }
-        if frame["identifier"] == identifier {
-            room_frames.push(html.to_owned());
-        }
-    }
-    assert_eq!(room_frames.len(), 1, "{room_frames:?}");
-    assert!(room_frames[0].contains(&format!(
-        "target=\"header_voice_participants_rooms_closed_{ALL_TALK}\""
-    )));
     let now = test.booted.app.db.env().now();
     let (grant, other, participants) = test
         .db()
@@ -430,7 +382,4 @@ async fn huddle_controller_leave_keeps_the_other_device_and_sends_one_room_refre
         participants.iter().map(|u| u.id).collect::<Vec<_>>(),
         vec![DAVID]
     );
-    client.close(None).await.unwrap();
-    let _ = stop.send(());
-    serving.await.unwrap();
 }

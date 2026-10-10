@@ -1,6 +1,6 @@
 //! Coverage gaps use real controllers over the default Rails seed, with fixed render entropy.
 use super::presenters::test_support::*;
-use axum::http::Method;
+use axum::http::{Method, StatusCode};
 use serde_json::Value;
 
 #[tokio::test]
@@ -86,7 +86,9 @@ async fn uncovered_controller_branches_match_fresh_pinned_rails_bytes() {
             },
             case["path"].as_str().unwrap(),
         );
-        if case["region"] == "stream" {
+        if name == "thread_create" {
+            req = req.header("accept", "application/json");
+        } else if case["region"] == "stream" {
             req = req.header("accept", "text/vnd.turbo-stream.html");
         }
         let reply = if case["method"] == "POST" {
@@ -97,6 +99,32 @@ async fn uncovered_controller_branches_match_fresh_pinned_rails_bytes() {
         } else {
             with_fixed_render_secrets(browser.send(req)).await
         };
+        if matches!(name, "users_page_one" | "users_page_two") {
+            assert_eq!(reply.status, StatusCode::FOUND);
+            assert_eq!(reply.location(), Some("http://campfire.test/app/admin/people"));
+            assert!(reply.body.is_empty());
+            continue;
+        }
+        if matches!(name, "root_create" | "thread_create" | "original_create") {
+            assert_eq!(reply.status, StatusCode::CREATED, "{name}: {}", reply.text());
+            let client_id = case["input"]["client_message_id"]
+                .as_str().unwrap().to_owned();
+            let message = app.db().read(move |conn| {
+                Ok(conn.query_row(
+                    "SELECT id, thread_id FROM messages WHERE client_message_id=?",
+                    [client_id],
+                    |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<i64>>(1)?)),
+                )?)
+            }).await.unwrap();
+            if name == "thread_create" {
+                assert_eq!(reply.json()["id"], message.0);
+                assert_eq!(message.1, Some(1900500000));
+            } else {
+                assert!(reply.body.is_empty());
+                assert_eq!(message.1, None);
+            }
+            continue;
+        }
         assert_eq!(
             reply.status.as_u16(),
             case["status"].as_u64().unwrap() as u16,
@@ -116,8 +144,7 @@ async fn uncovered_controller_branches_match_fresh_pinned_rails_bytes() {
         };
         let expected = case["body"].as_str().unwrap();
         if actual != expected {
-            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../target/template-coverage/evidence/diffs");
+            let dir = std::env::temp_dir().join("template-coverage-diffs");
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(format!("{name}.actual")), actual).unwrap();
             std::fs::write(dir.join(format!("{name}.expected")), expected).unwrap();

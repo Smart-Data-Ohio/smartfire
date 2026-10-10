@@ -70,23 +70,10 @@ impl LoadOlder<'_> {
         )
     }
 }
-#[derive(Template)]
-#[template(path = "searches/index.turbo_stream.html")]
-pub struct Older<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub index: &'a IndexView,
-}
-#[derive(Template)]
-#[template(path = "searches/clear.turbo_stream.html")]
-pub struct Clear<'a> {
-    pub ctx: &'a ViewContext<'a>,
-}
 
-impl Clear<'_> {
-    pub fn searches(&self) -> &[RecentSearch] {
-        &[]
-    }
-}
+
+
+
 
 
 

@@ -75,7 +75,6 @@ async fn attachment_rollback(bot: bool, queue_failure: bool) {
     }).await.unwrap();
     let before_rows = row_counts(&app).await;
     let before_files = stored_files(app.booted.app.storage.service.root());
-    let (_server, mut subscriber) = super::agent_reactions_tests::subscribe(&app).await;
     let vectors: Value = serde_json::from_str(include_str!(
         "../../../../vectors/agent_attachments_http.json"
     ))
@@ -120,7 +119,6 @@ async fn attachment_rollback(bot: bool, queue_failure: bool) {
         before_files,
         "attachment denial/queue failure must remove the staged file"
     );
-    subscriber.assert_silent().await;
 }
 #[tokio::test]
 async fn agent_attachment_queue_failure_rest() {

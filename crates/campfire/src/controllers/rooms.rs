@@ -66,9 +66,6 @@ mod ws17_ooo_tests;
 #[path = "rooms/members_rails_cases.rs"]
 mod members_rails_cases;
 
-#[cfg(test)]
-#[path = "rooms/refreshes_rails_cases.rs"]
-mod refreshes_rails_cases;
 
 #[cfg(test)]
 mod sidebars_rails_cases;
