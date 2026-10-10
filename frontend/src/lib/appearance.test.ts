@@ -52,6 +52,48 @@ afterEach(() => {
 });
 
 describe("restoreAppearance", () => {
+  it("loads personal account preferences without storing them as device overrides", async () => {
+    inlineBoot("dark", "default");
+    const boot = document.getElementById("boot");
+
+    if (boot === null) throw new Error("missing boot");
+    boot.textContent = JSON.stringify({
+      theme: "dark",
+      textSize: "default",
+      appearancePreferences: {
+        version: 1,
+        palette: "ocean",
+        font: "serif",
+        density: "compact",
+        motion: "reduce",
+      },
+    });
+    const { restoreAppearance, appearanceSnapshot } = await load();
+    restoreAppearance();
+    expect(appearanceSnapshot()).toMatchObject({
+      palette: "ocean",
+      font: "serif",
+      density: "compact",
+      motion: "reduce",
+    });
+    expect(stored()).not.toHaveProperty("palette", "ocean");
+  });
+
+  it("keeps an explicit device palette over the account preference", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ palette: "ember" }));
+    inlineBoot("system", "default");
+    const boot = document.getElementById("boot");
+
+    if (boot === null) throw new Error("missing boot");
+    boot.textContent = JSON.stringify({
+      theme: "system",
+      textSize: "default",
+      appearancePreferences: { version: 1, palette: "ocean", font: "serif" },
+    });
+    const { restoreAppearance, appearanceSnapshot } = await load();
+    restoreAppearance();
+    expect(appearanceSnapshot()).toMatchObject({ palette: "ember", font: "serif" });
+  });
   it("applies the account's theme and text size from the inline boot before the first render", async () => {
     inlineBoot("dark", "larger");
     const { restoreAppearance } = await load();
@@ -158,7 +200,139 @@ describe("restoreAppearance", () => {
 });
 
 describe("applyAccountAppearance", () => {
-  it("shows the account's theme and size, and remembers them for the next start", async () => {
+  it("keeps failed device edits through later edits and merges another tab's stored choices", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ palette: "ocean" }));
+    const a = await load();
+    a.restoreAppearance();
+
+    const writes = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      a.setPalette("ember");
+      a.setThemeOverride("light");
+      a.setFont("mono");
+      expect(a.appearanceSnapshot()).toMatchObject({
+        palette: "ember",
+        theme: "light",
+        font: "mono",
+      });
+      writes.mockRestore();
+      localStorage.setItem(KEY, JSON.stringify({ palette: "ocean", motion: "reduce" }));
+      window.dispatchEvent(new StorageEvent("storage", { key: KEY, storageArea: localStorage }));
+      expect(a.appearanceSnapshot()).toMatchObject({
+        palette: "ember",
+        theme: "light",
+        font: "mono",
+        motion: "reduce",
+      });
+      a.setDensity("compact");
+      expect(stored()).toMatchObject({
+        palette: "ember",
+        themeOverride: "light",
+        font: "mono",
+        motion: "reduce",
+        density: "compact",
+      });
+      localStorage.setItem(KEY, JSON.stringify({ palette: "forest" }));
+      window.dispatchEvent(new StorageEvent("storage", { key: KEY, storageArea: localStorage }));
+      expect(a.appearanceSnapshot().palette).toBe("forest");
+    } finally {
+      writes.mockRestore();
+    }
+  });
+
+  it("keeps an unsaved override removal instead of restoring the stale pin", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ palette: "ember", themeOverride: "light" }));
+    const a = await load();
+    a.restoreAppearance();
+
+    const writes = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      a.setPersonalAppearanceOverride(false);
+      a.setThemeOverride(null);
+      a.setFont("mono");
+      expect(a.appearanceSnapshot()).toMatchObject({
+        palette: "smartfire",
+        theme: "system",
+        font: "mono",
+      });
+    } finally {
+      writes.mockRestore();
+    }
+  });
+
+  it("keeps tab A's Ember pin after tab B's account save finishes and A reloads", async () => {
+    const a = await load();
+    const b = await load();
+    a.restoreAppearance();
+    b.restoreAppearance();
+    a.setPalette("ember");
+    b.applyAccountAppearance({
+      theme: "dark",
+      textSize: "default",
+      appearancePreferences: { version: 1, palette: "ocean" },
+    });
+    const reloaded = await load();
+    reloaded.restoreAppearance();
+    expect(reloaded.appearanceSnapshot().palette).toBe("ember");
+  });
+
+  it("changes only the requested override after reading another tab's choices", async () => {
+    const a = await load();
+    const b = await load();
+    a.restoreAppearance();
+    b.restoreAppearance();
+    a.setPalette("ember");
+    a.setThemeOverride("light");
+    b.setFont("mono");
+    expect(stored()).toMatchObject({ palette: "ember", themeOverride: "light", font: "mono" });
+    a.setMotion("reduce");
+    expect(stored()).toMatchObject({
+      palette: "ember",
+      themeOverride: "light",
+      font: "mono",
+      motion: "reduce",
+    });
+  });
+
+  it("applies other tabs' storage changes and clears without writing back", async () => {
+    const b = await load();
+    b.restoreAppearance();
+    b.applyAccountAppearance({
+      theme: "dark",
+      textSize: "default",
+      appearancePreferences: { version: 1, palette: "ocean" },
+    });
+    const writes = vi.spyOn(Storage.prototype, "setItem");
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ palette: "ember", font: "mono", themeOverride: "light" }),
+    );
+    writes.mockClear();
+    window.dispatchEvent(new StorageEvent("storage", { key: KEY, storageArea: localStorage }));
+    expect(b.appearanceSnapshot()).toMatchObject({
+      palette: "ember",
+      font: "mono",
+      theme: "light",
+    });
+    expect(writes).not.toHaveBeenCalled();
+    localStorage.clear();
+    window.dispatchEvent(new StorageEvent("storage", { key: null, storageArea: localStorage }));
+    expect(b.appearanceSnapshot()).toMatchObject({
+      palette: "ocean",
+      font: "inter",
+      theme: "dark",
+    });
+    expect(writes).not.toHaveBeenCalled();
+    writes.mockRestore();
+  });
+
+  it("shows the account's theme and size without writing device storage", async () => {
     const { applyAccountAppearance } = await load();
 
     applyAccountAppearance({ theme: "dark", textSize: "smaller" });
@@ -167,13 +341,7 @@ describe("applyAccountAppearance", () => {
     expect(html().dataset.textSize).toBe("smaller");
     // Only this device's own choices are stored: the classic pages read the pin, and the next
     // person to sign in on this browser must not inherit this account's theme.
-    expect(stored()).toEqual({
-      themeOverride: null,
-      density: "comfortable",
-      motion: "system",
-      palette: "smartfire",
-      font: "inter",
-    });
+    expect(localStorage.getItem(KEY)).toBeNull();
   });
 
   it("leaves a device's pinned theme on screen", async () => {
@@ -185,10 +353,6 @@ describe("applyAccountAppearance", () => {
     expect(html().dataset.theme).toBe("light");
     expect(stored()).toEqual({
       themeOverride: "light",
-      density: "comfortable",
-      motion: "system",
-      palette: "smartfire",
-      font: "inter",
     });
   });
 });

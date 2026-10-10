@@ -108,6 +108,7 @@ fn me_round_trips() {
         user: user(),
         email_address: Some("ada@example.com".into()),
         preferences: Preferences {
+            settings_revision: 3,
             theme: Theme::System,
             text_size: TextSize::Default,
             time_zone: Some("America/New_York".into()),
@@ -115,6 +116,7 @@ fn me_round_trips() {
             tour_completed: true,
             voice_mode: VoiceMode::PushToTalk,
             push_to_talk_key: "`".into(),
+            appearance_preferences: None,
         },
         presence_setting: PresenceSetting::Dnd,
         do_not_disturb: DoNotDisturb {
@@ -140,6 +142,7 @@ fn me_round_trips() {
     assert_eq!(
         wire["preferences"],
         json!({
+            "settingsRevision": 3,
             "theme": "system",
             "textSize": "default",
             "timeZone": "America/New_York",
@@ -147,6 +150,7 @@ fn me_round_trips() {
             "tourCompleted": true,
             "voiceMode": "push_to_talk",
             "pushToTalkKey": "`",
+            "appearancePreferences": null,
         })
     );
     assert_eq!(wire["presenceSetting"], "dnd");

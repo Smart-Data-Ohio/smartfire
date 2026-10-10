@@ -89,11 +89,11 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
     let avatar_url = presenters::avatar_path(&app.secrets, &user);
     let (version, revision) = (app.config.app_version.clone(), app.config.git_revision.clone());
     let user_id = user.id;
-    let (account, settings) = app
+    let (account, settings, appearance) = app
         .db
         .read(move |conn| {
             let settings = UserStatusSettings::for_ids(conn, &[user_id])?.remove(&user_id);
-            Ok((Account::first(conn)?, settings))
+            Ok((Account::first(conn)?, settings, campfire_db::models::user::profile_settings::appearance(conn, user_id)?))
         })
         .await
         .map_err(Error::internal)?;
@@ -122,6 +122,7 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         version,
         revision,
         flash: None,
+        appearance_preferences: appearance.appearance_preferences,
     })
 }
 

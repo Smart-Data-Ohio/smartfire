@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { meFixture } from "../api/testing.ts";
 import type { MessageDTO, MessagePage, PendingMessage, SidebarRow, SyncEvent } from "./model.ts";
 import {
   addPending,
@@ -9,6 +10,7 @@ import {
   markRoomRead,
   prune,
   receiveMessage,
+  setMe,
   setPageReplacing,
   setRoomDetail,
 } from "./reducers.ts";
@@ -405,5 +407,47 @@ describe("sidebar counts", () => {
     });
 
     expect(state.timelines[ROOM]).toMatchObject({ unreadFromId: 12, unreadCount: 5 });
+  });
+});
+
+describe("setMe appearance ordering", () => {
+  it("applies delayed profile and other preferences while preserving newer appearance", () => {
+    const held = {
+      ...meFixture,
+      preferences: {
+        ...meFixture.preferences,
+        settingsRevision: 20,
+        theme: "dark",
+        textSize: "large",
+        appearancePreferences: { version: 1, palette: "forest" },
+      },
+    } satisfies typeof meFixture;
+
+    const delayed = {
+      ...meFixture,
+      user: { ...meFixture.user, name: "Grace", updatedAt: "2026-10-10T12:00:00.000000Z" },
+      emailAddress: "grace@example.com",
+      presenceSetting: "invisible",
+      preferences: {
+        ...meFixture.preferences,
+        settingsRevision: 10,
+        timeZone: "UTC",
+        voiceMode: "voice_activity",
+        tourCompleted: false,
+      },
+    } satisfies typeof meFixture;
+
+    const next = setMe({ ...initialState, me: held }, delayed);
+    expect(next.me).toEqual({
+      ...delayed,
+      preferences: {
+        ...delayed.preferences,
+        settingsRevision: 20,
+        theme: "dark",
+        textSize: "large",
+        appearancePreferences: { version: 1, palette: "forest" },
+      },
+    });
+    expect(next.users[held.user.id]?.name).toBe("Grace");
   });
 });

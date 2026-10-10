@@ -356,6 +356,7 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                     value: value.clone(),
                 })
                 .collect(),
+            appearance_preferences: appearance.appearance_preferences.map(api::AppearancePreferences),
         },
         notifications: api::NotificationSettings {
             default_notification_level: notification_level(status.notification_preferences.default_notification_level),
@@ -703,6 +704,7 @@ async fn save_appearance(c: &mut Ctx) -> Result {
         theme: update.theme.map(theme_value),
         text_size: update.text_size.map(text_size_value),
         time_zone: update.time_zone,
+        appearance_preferences: update.appearance_preferences.map(|preferences| preferences.0),
         ..profile_settings::Changes::default()
     };
     write_profile(c, user, changes, settings, false, false).await?;

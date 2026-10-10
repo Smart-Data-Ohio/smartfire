@@ -26,6 +26,7 @@ pub struct Boot {
     /// Pending classic feedback, consumed only by a shell navigation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flash: Option<BootFlash>,
+    pub appearance_preferences: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
