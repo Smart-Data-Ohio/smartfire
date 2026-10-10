@@ -139,7 +139,7 @@ async fn user_suggestions_cover_the_room_or_the_workspace() {
     for suggestion in &list.suggestions {
         assert_eq!(
             suggestion.mention_token,
-            Some(format!("@[{}]", suggestion.user.name))
+            Some(format!("<@{}>", suggestion.user.id))
         );
     }
 
@@ -178,12 +178,14 @@ async fn user_suggestions_cover_the_room_or_the_workspace() {
 }
 
 #[tokio::test]
-async fn a_duplicate_name_has_no_mention_token() {
+async fn duplicate_names_have_distinct_stable_mention_tokens() {
     let Some(a) = app(true).await else { return };
     a.db()
         .write(move |tx| {
-            tx.conn()
-                .execute("UPDATE users SET name = 'Jason' WHERE id = ?", [KEVIN])?;
+            tx.conn().execute(
+                "UPDATE users SET name = 'Twin [name]' WHERE id IN (?, ?)",
+                [JASON, KEVIN],
+            )?;
             Ok(())
         })
         .await
@@ -192,16 +194,171 @@ async fn a_duplicate_name_has_no_mention_token() {
     let list: api::UserSuggestionList = parse(
         &david
             .send(get(&format!(
-                "/api/v1/autocomplete/users?roomId={DESIGNERS}&query=jason"
+                "/api/v1/autocomplete/users?roomId={DESIGNERS}&query=twin"
             )))
             .await,
     );
     assert_eq!(list.suggestions.len(), 2, "{list:?}");
+    for suggestion in &list.suggestions {
+        assert_eq!(
+            suggestion.mention_token,
+            Some(format!("<@{}>", suggestion.user.id))
+        );
+    }
+}
+
+async fn mention_notifications(
+    a: &crate::controllers::presenters::test_support::TestApp,
+    message_id: i64,
+) -> Vec<i64> {
+    a.db().read(move |conn| {
+        Ok(conn.prepare("SELECT user_id FROM activity_items WHERE source_type = 'Message' AND source_id = ? AND event_type = 'mention' ORDER BY user_id")?
+            .query_map([message_id], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?)
+    }).await.unwrap()
+}
+
+#[tokio::test]
+async fn stable_user_mentions_survive_duplicate_names_renames_and_edits() {
+    let Some(a) = app(true).await else { return };
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET name = 'Twin' WHERE id IN (?, ?)",
+                [JASON, KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let source = format!("Hi <@{KEVIN}> <@{KEVIN}> @[Twin]");
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "stable-mention", "markdownSource": source, "replyToMessageId": null, "replyNotifyAuthor": null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    assert_eq!(message.markdown_source.as_deref(), Some(source.as_str()));
     assert!(
-        list.suggestions
-            .iter()
-            .all(|suggestion| suggestion.mention_token.is_none())
+        message
+            .body_html
+            .contains(&format!("mention--user-{KEVIN}")),
+        "{}",
+        message.body_html
     );
+    assert!(
+        !message
+            .body_html
+            .contains(&format!("mention--user-{JASON}"))
+    );
+    assert_eq!(mention_notifications(&a, message.id).await, [KEVIN]);
+
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET name = 'Renamed <Person>', updated_at = '2026-10-09 23:59:59' WHERE id = ?",
+                [KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let read: api::MessageRead = parse(
+        &david
+            .send(get(&format!("/api/v1/messages/{}", message.id)))
+            .await,
+    );
+    assert!(
+        read.message.body_html.contains("Renamed &lt;Person&gt;"),
+        "{}",
+        read.message.body_html
+    );
+    let editable: api::MessageSource = parse(
+        &david
+            .send(get(&format!("/api/v1/messages/{}/source", message.id)))
+            .await,
+    );
+    assert_eq!(editable.markdown_source, source);
+
+    let edited_source = format!("{} edited", editable.markdown_source);
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", message.id),
+            &json!({"markdownSource": edited_source}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let edited: api::MessageDTO = parse(&reply);
+    assert_eq!(
+        edited.markdown_source.as_deref(),
+        Some(edited_source.as_str())
+    );
+    assert!(
+        edited.body_html.contains("Renamed &lt;Person&gt;"),
+        "{}",
+        edited.body_html
+    );
+    assert_eq!(mention_notifications(&a, message.id).await, [KEVIN]);
+}
+
+#[tokio::test]
+async fn stable_user_mentions_do_not_resolve_or_notify_unavailable_users() {
+    let Some(a) = app(true).await else { return };
+    let deleted_id = a
+        .db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+                [DESIGNERS, JZ],
+            )?;
+            let deleted = campfire_db::User::create_integration_bot(tx, "Deleted Person")?;
+            tx.conn()
+                .execute("DELETE FROM users WHERE id = ?", [deleted.id])?;
+            Ok(deleted.id)
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let source = format!("<@{JZ}> <@{MALLORY}> <@{deleted_id}> <@9223372036854775807>");
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "unavailable-mention", "markdownSource": source, "replyToMessageId": null, "replyNotifyAuthor": null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    assert_eq!(message.markdown_source.as_deref(), Some(source.as_str()));
+    assert!(
+        !message.body_html.contains("mention--user-"),
+        "{}",
+        message.body_html
+    );
+    for id in [JZ, MALLORY, deleted_id, i64::MAX] {
+        assert!(
+            message.body_html.contains(&format!("&lt;@{id}&gt;")),
+            "{}",
+            message.body_html
+        );
+    }
+    assert_eq!(
+        mention_notifications(&a, message.id).await,
+        Vec::<i64>::new()
+    );
+}
+
+#[tokio::test]
+async fn legacy_name_mentions_still_render_and_notify() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "legacy-mention", "markdownSource": "Hello @[Jason]", "replyToMessageId": null, "replyNotifyAuthor": null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    assert!(
+        message
+            .body_html
+            .contains(&format!("mention--user-{JASON}")),
+        "{}",
+        message.body_html
+    );
+    assert_eq!(mention_notifications(&a, message.id).await, [JASON]);
 }
 
 #[tokio::test]
@@ -415,7 +572,7 @@ async fn previews_render_without_posting() {
         .write(json_body(
             Method::POST,
             &path,
-            &json!({"markdownSource": "**Bold** and @[Jason]"}),
+            &json!({"markdownSource": format!("**Bold** and @[Jason] and <@{JASON}>")}),
         ))
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());

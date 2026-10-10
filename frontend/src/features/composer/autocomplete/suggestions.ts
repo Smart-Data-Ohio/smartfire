@@ -16,7 +16,7 @@ export type Suggestion =
       readonly kind: "mention";
       readonly key: string;
       readonly user: User;
-      /** `@[Exact Name]`, or `null` when the name can't be mentioned (shown disabled). */
+      /** `<@123>`; older servers may return a name token or `null` (shown disabled). */
       readonly insert: string | null;
     }
   | { readonly kind: "emoji"; readonly key: string; readonly icon: Icon; readonly insert: string }

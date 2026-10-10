@@ -216,6 +216,72 @@ fn ambiguous_inactive_and_nonmembers_do_not_resolve() {
 }
 
 #[test]
+fn stable_user_mentions_distinguish_duplicates_and_leave_unavailable_ids_literal() {
+    let user = |id, name: &str| MentionUser {
+        id,
+        name: name.into(),
+        title: name.into(),
+        attachable_sgid: format!("sgid-{id}"),
+        user_path: format!("/users/{id}"),
+        avatar_path: "/users/1/avatar?v=1".into(),
+    };
+    let members = [
+        RoomMember {
+            user: user(1, "Same [name]"),
+            active: true,
+        },
+        RoomMember {
+            user: user(2, "Same [name]"),
+            active: true,
+        },
+        RoomMember {
+            user: user(3, "Inactive"),
+            active: false,
+        },
+    ];
+    let source = "<@1> <@2> <@3> <@4> <@9223372036854775808> <@0> <@-1> <@01>";
+    let html = markdown::render(source, &members.as_slice(), &icons()).unwrap();
+    assert_eq!(
+        html.matches("<action-text-attachment ").count(),
+        2,
+        "{html}"
+    );
+    assert!(
+        html.contains("sgid=\"sgid-1\"") && html.contains("sgid=\"sgid-2\""),
+        "{html}"
+    );
+    for id in ["3", "4", "9223372036854775808", "0", "-1", "01"] {
+        assert!(html.contains(&format!("&lt;@{id}&gt;")), "{html}");
+    }
+    assert!(!html.contains("Inactive") && !html.contains("Same [name]"));
+}
+
+#[test]
+fn stable_user_mentions_stay_literal_in_code_links_and_escapes() {
+    let members = [RoomMember {
+        user: MentionUser {
+            id: 1,
+            name: "Current name".into(),
+            title: "Current name".into(),
+            attachable_sgid: "sgid-1".into(),
+            user_path: "/users/1".into(),
+            avatar_path: "/users/1/avatar?v=1".into(),
+        },
+        active: true,
+    }];
+    let source = "<@1> `<@1>` [<@1>](https://example.com/ \"<@1>\") \\<@1>\n\n```\n<@1>\n```";
+    let html = markdown::render(source, &members.as_slice(), &icons()).unwrap();
+    assert_eq!(
+        html.matches("<action-text-attachment ").count(),
+        1,
+        "{html}"
+    );
+    assert!(html.contains("<code>&lt;@1&gt;</code>"), "{html}");
+    assert!(html.contains("title=\"<@1>\""), "{html}");
+    assert!(!html.contains("SMARTFIREMENTION"), "{html}");
+}
+
+#[test]
 fn catalog_precedence_and_missing_brand_assets_match_icons() {
     let mut icons = icons();
     icons.brands.insert("smile".into(), Icon::Brand { name: "brand".into(), title: "Brand wins".into(), url: None });

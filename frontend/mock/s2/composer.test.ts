@@ -5,18 +5,46 @@ import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { MessagePreview } from "../../src/gen/MessagePreview.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { ScheduledMessageList } from "../../src/gen/ScheduledMessageList.ts";
+import type { Sidebar } from "../../src/gen/Sidebar.ts";
 import type { SlashCommandList } from "../../src/gen/SlashCommandList.ts";
 import type { SlashCommandResult } from "../../src/gen/SlashCommandResult.ts";
 import type { UserSuggestionList } from "../../src/gen/UserSuggestionList.ts";
 import { SEED_IDS } from "../server.ts";
 import { SHRUG } from "./composer.ts";
-import { expectStatus, get, harness, NOW, send } from "./testing.ts";
+import { collect, expectStatus, get, harness, NOW, send } from "./testing.ts";
 
 const { rooms, users, threads, scheduled, viewer } = SEED_IDS;
 
 const HOUR = 3_600_000;
 
 describe("autocomplete", () => {
+  it("counts an ID mention once and publishes the notification identity", async () => {
+    const { server } = harness();
+    const events = collect(server);
+    const before = await get<Sidebar>(server, "/api/v1/sidebar");
+    const previous = before.rows.find((row) => row.room.id === rooms.quiet);
+    const message = server.post(rooms.quiet, users.maya, `<@${viewer}> <@${viewer}>`);
+    const after = await get<Sidebar>(server, "/api/v1/sidebar");
+    const current = after.rows.find((row) => row.room.id === rooms.quiet);
+
+    expect(message.bodyHtml).toContain(`data-user-id="${viewer}"`);
+    expect(current?.mentionCount).toBe((previous?.mentionCount ?? 0) + 1);
+    expect(current?.notificationCount).toBe((previous?.notificationCount ?? 0) + 1);
+    expect(events.find((event) => event.type === "room.unread")).toMatchObject({
+      topic: "user",
+      type: "room.unread",
+      data: { roomId: rooms.quiet, messageId: message.id, mentioned: true },
+    });
+
+    server.post(rooms.quiet, users.maya, "<@9999999>");
+
+    const unknown = await get<Sidebar>(server, "/api/v1/sidebar");
+    const unchanged = unknown.rows.find((row) => row.room.id === rooms.quiet);
+
+    expect(unchanged?.mentionCount).toBe(current?.mentionCount);
+    expect(unchanged?.notificationCount).toBe(current?.notificationCount);
+  });
+
   it("suggests a room's members with a mention token", async () => {
     const { server } = harness();
 
@@ -32,7 +60,7 @@ describe("autocomplete", () => {
       "Riel St. Amand",
       "Theo Nakamura",
     ]);
-    expect(list.suggestions[2]?.mentionToken).toBe("@[Maya Okafor]");
+    expect(list.suggestions[2]?.mentionToken).toBe(`<@${users.maya}>`);
 
     const everyone = await get<UserSuggestionList>(server, "/api/v1/autocomplete/users?query=em");
 

@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use campfire_db::{BasicRichText, Connection, RichText};
 use campfire_kit::SharedClock;
-use campfire_richtext::markdown::{self, Icon, IconResolver};
-use campfire_richtext::{AttachableResolver, GidLookup, RenderContext};
+use campfire_richtext::markdown::{self, Icon, IconResolver, MentionResolver};
+use campfire_richtext::{AttachableResolver, GidLookup, MentionUser, RenderContext};
 use rails_compat::Secrets;
 
 use crate::controllers::presenters::DbResolver;
@@ -20,6 +20,35 @@ pub use crate::icons::{builtin_icon, client_icon_names, icons, room_icon_resolve
 pub struct AppRichText {
     secrets: Arc<Secrets>,
     clock: SharedClock,
+}
+
+struct RoomMentions<'a> {
+    members: &'a [(i64, String)],
+    resolver: DbResolver<'a>,
+}
+
+impl MentionResolver for RoomMentions<'_> {
+    fn unique_active_member(&self, name: &str) -> Option<MentionUser> {
+        let mut matches = self
+            .members
+            .iter()
+            .filter(|(_, member_name)| member_name == name);
+        let (id, _) = matches.next()?;
+        if matches.next().is_some() {
+            return None;
+        }
+        self.active_member(*id)
+    }
+
+    fn active_member(&self, id: i64) -> Option<MentionUser> {
+        if !self.members.iter().any(|(member_id, _)| *member_id == id) {
+            return None;
+        }
+        match self.resolver.find_gid(&format!("gid://campfire/User/{id}")) {
+            GidLookup::User(user) => Some(user),
+            _ => None,
+        }
+    }
 }
 
 impl AppRichText {
@@ -80,19 +109,9 @@ impl RichText for AppRichText {
             .map_err(|e| e.to_string())?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|e| e.to_string())?;
-        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
-        let mentions = |name: &str| {
-            let mut matches = members
-                .iter()
-                .filter(|(_, member_name)| member_name == name);
-            let (id, _) = matches.next()?;
-            if matches.next().is_some() {
-                return None;
-            }
-            match resolver.find_gid(&format!("gid://campfire/User/{id}")) {
-                GidLookup::User(user) => Some(user),
-                _ => None,
-            }
+        let mentions = RoomMentions {
+            members: &members,
+            resolver: DbResolver::new(conn, &self.secrets, self.clock.now()),
         };
         markdown::render(source, &mentions, &icons(conn)?).map_err(|e| e.to_string())
     }
