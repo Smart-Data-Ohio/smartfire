@@ -64,6 +64,9 @@ export function boardListing(threads: Thread[] = [boardThread(1)]): BoardListing
     digest: { date: "2026-10-07", text: "Waiting for review" },
     canAdminister: true,
     users: [userFixture(7)],
+    tags: [],
+    tagsRequired: false,
+    defaultBoardTagId: null,
   };
 }
 

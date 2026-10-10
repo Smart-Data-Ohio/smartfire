@@ -19,6 +19,9 @@ describe("the new-post dialog", () => {
     vi.spyOn(actions.boards, "postForm").mockResolvedValue({
       ownerCandidates: [],
       tagSuggestions: [],
+      tags: [],
+      tagsRequired: false,
+      defaultBoardTagId: null,
       users: [],
     });
     vi.spyOn(actions.boards, "createPost").mockImplementation(

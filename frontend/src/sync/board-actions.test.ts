@@ -83,6 +83,9 @@ describe("board actions", () => {
         yield* fake.reply(`GET /rooms/${BOARD}/posts/new`, {
           ownerCandidates: [],
           tagSuggestions: [],
+          tags: [],
+          tagsRequired: false,
+          defaultBoardTagId: null,
           users: boardDetail().users,
         });
         yield* boards.postForm(BOARD);

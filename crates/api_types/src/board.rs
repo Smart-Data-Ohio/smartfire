@@ -107,6 +107,9 @@ pub struct BoardListing {
     /// The posts' creators and the owner options' users, once each. (Owners are whole on
     /// [`crate::WorkFacts::owner`].)
     pub users: Vec<User>,
+    pub tags: Vec<BoardTag>,
+    pub tags_required: bool,
+    pub default_board_tag_id: Option<i64>,
 }
 
 /// `GET /api/v1/rooms/:room_id/posts/new` (`channel_threads#new` on a board): what the new-post
@@ -123,6 +126,63 @@ pub struct BoardPostForm {
     pub tag_suggestions: Vec<String>,
     /// The owner candidates' users.
     pub users: Vec<User>,
+    pub tags: Vec<BoardTag>,
+    pub tags_required: bool,
+    pub default_board_tag_id: Option<i64>,
+}
+
+/// One curated tag, in the board's display order. Posts store its name in `thread_tags`;
+/// free-text names remain valid alongside these labels.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoardTag {
+    pub id: i64,
+    pub name: String,
+    pub emoji: Option<String>,
+    pub position: i64,
+}
+
+/// `GET /api/v1/rooms/:room_id/board/tags`, also returned by catalog/policy writes.
+/// Every board member can read it; only the creator or an administrator can write it.
+/// Writes publish the existing `board.automations.changed` invalidation on `room:<id>`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoardTagCatalog {
+    pub room_id: i64,
+    pub tags: Vec<BoardTag>,
+    pub tags_required: bool,
+    pub default_board_tag_id: Option<i64>,
+}
+
+/// `POST .../board/tags` or `PATCH .../board/tags/:id`. Trimmed names have 1–20 characters;
+/// the catalog allows at most 20 names, unique without case. Renames update posts using them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SaveBoardTag {
+    pub name: String,
+    pub emoji: Option<String>,
+}
+
+/// `PUT .../board/tags/order`: every tag id in its desired order, exactly once.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ReorderBoardTags {
+    pub tag_ids: Vec<i64>,
+}
+
+/// `PATCH .../board`: replace the tag policy. A default must be in this board's catalog.
+/// When required, post creation or an explicit tag edit needs a catalog tag; the default
+/// supplies one if absent. Untouched legacy tag sets remain editable and readable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateBoardTagPolicy {
+    pub tags_required: bool,
+    pub default_board_tag_id: Option<i64>,
 }
 
 /// `POST /api/v1/rooms/:room_id/posts` (`channel_threads#create` on a board): create a post. Any
@@ -137,8 +197,8 @@ pub struct BoardPostForm {
 /// Errors:
 /// - 404 unless the room is a board the viewer belongs to;
 /// - `Validation` on `name` (blank, or past 100 characters);
-/// - `Validation` on `tags` (more than 5 after normalising, one past 30 characters, or not
-///   `[a-z0-9][a-z0-9-]*` once lower-cased);
+/// - `Validation` on `tags` (more than 5 after normalising, a free-text name past 30 characters
+///   or outside `[a-z0-9][a-z0-9-]*`, or no catalog tag when the board requires one and has no default);
 /// - `Validation` on `ownerId` "must be an active human member of the parent room" (or, for an
 ///   agent, "must be an active agent member of the parent room with permission to post");
 /// - `Validation` on `message` (past 50,000 characters).
@@ -152,7 +212,8 @@ pub struct CreateBoardPost {
     pub status: WorkStatus,
     /// `null` leaves it unassigned.
     pub owner_id: Option<i64>,
-    /// Each is stripped and lower-cased; blanks and repeats are dropped; up to 5.
+    /// Catalog names resolve without case to their display label; other names are stripped
+    /// and lower-cased. Blanks and repeats are dropped; up to 5 including any required default.
     pub tags: Vec<String>,
     /// The brief; `null` for none. A blank `markdownSource` without an attachment counts as none.
     pub message: Option<CreateMessage>,

@@ -182,7 +182,7 @@ pub enum SyncPayload {
     /// `thread:<id>` stop following it.
     #[serde(rename = "thread.removed")]
     ThreadRemoved(ThreadRemoved),
-    /// On `room:<id>`: a board's tag rules or SLA timers changed (see
+    /// On `room:<id>`: a board's tag catalog, tag policy, tag rules or SLA timers changed (see
     /// [`BoardAutomationsChanged`]). New.
     #[serde(rename = "board.automations.changed")]
     BoardAutomationsChanged(BoardAutomationsChanged),

@@ -140,10 +140,11 @@ impl ChannelThread {
             );
         }
         if !campfire_richtext::ruby::is_blank(tag) {
-            sql.push_str(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE name=?)");
-            values.push(Value::Text(rails_compat::unicode::downcase(
-                campfire_richtext::ruby::strip(tag),
-            )));
+            let catalog_name = crate::BoardTag::canonical_name(conn, room_id, tag)?;
+            let comparison = if catalog_name.is_some() { "lower(name)=lower(?)" } else { "name=?" };
+            sql.push_str(&format!(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE {comparison})"));
+            values.push(Value::Text(catalog_name.unwrap_or_else(||
+                rails_compat::unicode::downcase(campfire_richtext::ruby::strip(tag)))));
         }
         sql.push_str(" ORDER BY last_activity_at DESC, id DESC LIMIT ?");
         values.push(Value::Integer(
