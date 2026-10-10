@@ -1188,23 +1188,34 @@ impl Message {
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
     /// A streaming message saves even with no attachment change (`touch_streaming_activity`).
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
-        let grouped_count = self.attachments(tx.conn())?.iter()
-            .filter(|(attachment, _)| attachment.name == "attachments").count();
+        let current = Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?;
+        let grouped_blob_ids: Vec<_> = self.attachments(tx.conn())?.into_iter()
+            .filter(|(attachment, _)| attachment.name == "attachments")
+            .map(|(attachment, _)| attachment.blob_id).collect();
+        // Retaining a grouped blob leaves the legacy slot alone, with one row per blob.
+        let retaining_grouped = blob_id.is_some_and(|id| grouped_blob_ids.contains(&id));
+        let blob_id = if retaining_grouped {
+            current.as_ref().map(|attachment| attachment.blob_id)
+        } else {
+            blob_id
+        }.filter(|id| !grouped_blob_ids.contains(id));
         let mut errors = Errors::default();
-        Self::validate_attachment_count(grouped_count + usize::from(blob_id.is_some()), &mut errors);
+        Self::validate_attachment_count(grouped_blob_ids.len() + usize::from(blob_id.is_some()), &mut errors);
         errors.into_result()?;
         self.touch_streaming_activity(tx)?;
-        if let Some(attachment) =
-            Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
-        {
+        if let Some(attachment) = current {
             if Some(attachment.blob_id) == blob_id {
-                super::message_attachment_processing::schedule(tx, self.id, attachment.blob_id);
+                if !retaining_grouped {
+                    super::message_attachment_processing::schedule(tx, self.id, attachment.blob_id);
+                }
                 return Ok(());
             }
             attachment.delete(tx)?;
-            tx.emit_after_commit(Event::PurgeBlob {
-                blob_id: attachment.blob_id,
-            });
+            if !grouped_blob_ids.contains(&attachment.blob_id) {
+                tx.emit_after_commit(Event::PurgeBlob {
+                    blob_id: attachment.blob_id,
+                });
+            }
             self.touch(tx)?;
         }
         if let Some(blob_id) = blob_id {

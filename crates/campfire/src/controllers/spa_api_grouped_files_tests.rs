@@ -39,7 +39,7 @@ async fn legacy_attachment_edit(thread: bool, grouped: bool) {
     a.db().read(move |conn| {
         let saved = campfire_db::Message::find(conn, message.id)?;
         assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
-        assert_eq!(saved.attachments(conn)?.len(), if grouped { 2 } else { 1 });
+        assert_eq!(saved.attachments(conn)?.len(), 1);
         assert!(saved.attachments(conn)?.iter().all(|(_, blob)| blob.id == file_id));
         Ok(())
     }).await.unwrap();
@@ -83,6 +83,39 @@ async fn grouped_files_round4_legacy_thread_edit_keeps_current_attachment() {
 #[tokio::test]
 async fn grouped_files_round4_legacy_edit_accepts_current_grouped_attachment() {
     legacy_attachment_edit(false, true).await;
+}
+
+#[tokio::test]
+async fn grouped_files_round5_legacy_edit_retains_ten_grouped_files_and_text() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut files = Vec::new();
+    for index in 0..10 {
+        files.push(upload(&mut david, &format!("retain-{index}.txt")).await.signed_id);
+    }
+    let created = david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        &json!({"clientMessageId": "retain-ten-grouped", "markdownSource": "Original", "attachmentSignedIds": files}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let message: api::MessageDTO = parse(&created);
+    let id = message.id;
+    let original = a.db().read(move |conn| campfire_db::Message::find(conn, id)?.attachments(conn)).await.unwrap();
+    let before = write_counts(&a).await;
+    let reply = david.write(json_body(Method::PATCH,
+        &format!("/rooms/{ALL_TALK}/messages/{id}.json"),
+        &json!({"message": {"attachment": files[0], "markdown_source": "Changed"}}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(write_counts(&a).await, before);
+    let read: api::MessageRead = parse(&david.send(get(&format!("/api/v1/messages/{id}"))).await);
+    assert_eq!(read.message.markdown_source.as_deref(), Some("Changed"));
+    assert_eq!(read.message.attachments, message.attachments);
+    a.db().read(move |conn| {
+        let saved = campfire_db::Message::find(conn, id)?;
+        assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
+        assert!(saved.edited_at.is_some());
+        assert_eq!(saved.attachments(conn)?, original);
+        Ok(())
+    }).await.unwrap();
 }
 
 #[tokio::test]
