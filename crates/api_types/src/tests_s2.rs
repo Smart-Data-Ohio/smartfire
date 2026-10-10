@@ -523,6 +523,8 @@ fn preview_and_scheduled_messages_round_trip() {
             send_at: "2026-10-07T13:55:00.000Z".into(),
             thread_id: None,
             reply_to_message_id: None,
+            attachment_signed_id: None,
+            attachment_signed_ids: None,
         },
         json!({
             "markdownSource": "Standup in 5",
@@ -536,6 +538,8 @@ fn preview_and_scheduled_messages_round_trip() {
             markdown_source: Some("Standup in 10".into()),
             send_at: None,
             reply_to_message_id: None,
+            attachment_signed_id: None,
+            attachment_signed_ids: None,
         },
         json!({"markdownSource": "Standup in 10"}),
     );
@@ -557,6 +561,7 @@ fn preview_and_scheduled_messages_round_trip() {
                 dropped_at: None,
                 drop_reason: None,
                 created_at: "2026-10-06T11:00:00.000Z".into(),
+                attachments: vec![],
             }],
             conversations: vec![],
             next_cursor: None,
@@ -577,6 +582,7 @@ fn preview_and_scheduled_messages_round_trip() {
             "droppedAt": null,
             "dropReason": null,
             "createdAt": "2026-10-06T11:00:00.000Z",
+            "attachments": [],
         }], "conversations": [], "nextCursor": null}),
     );
 }

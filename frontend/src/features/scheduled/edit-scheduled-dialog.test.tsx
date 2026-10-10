@@ -1,9 +1,10 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../../mock/server.ts";
 import type { MessagePage } from "../../gen/MessagePage.ts";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import { actions } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { snippet } from "../messages/message-content.tsx";
 import { EditScheduledDialog } from "./edit-scheduled-dialog.tsx";
@@ -15,6 +16,7 @@ const ITEM: ScheduledMessage = {
   threadId: null,
   replyToMessageId: null,
   replyTarget: null,
+  attachments: [],
   markdownSource: "Hello",
   excerpt: "Hello",
   sendAt: new Date(2030, 9, 7, 9, 0).toISOString(),
@@ -37,6 +39,7 @@ afterAll(() => network.restore());
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("the scheduled message editor", () => {
@@ -140,4 +143,145 @@ describe("the scheduled message editor", () => {
 
     expect(field.getAttribute("min")).toBe("2026-10-06T12:03");
   });
+});
+
+it("shows scheduled file thumbnails and filenames", () => {
+  render(
+    <ScheduledRow
+      item={{
+        ...ITEM,
+        attachments: [
+          {
+            signedId: "signed-one",
+            attachment: {
+              filename: "one.png",
+              contentType: "image/png",
+              byteSize: 5,
+              width: 2,
+              height: 2,
+              preview: "image",
+              url: "/one.png",
+              downloadUrl: "/one.png?download",
+              thumbnailUrl: "/thumb.png",
+            },
+          },
+        ],
+      }}
+      conversation={null}
+      now={Date.now()}
+      motion={undefined}
+      sending={false}
+      handlers={{
+        onEdit: () => {},
+        onReschedule: () => {},
+        onSendNow: () => {},
+        onCancel: () => {},
+        onView: () => {},
+        onMenu: () => {},
+      }}
+    />,
+  );
+  expect(screen.getByText("one.png")).toBeDefined();
+  expect(screen.getByAltText("one.png").getAttribute("src")).toBe("/thumb.png");
+});
+
+it("removes a scheduled file while retaining the other signed upload", async () => {
+  const user = userEvent.setup();
+  const saved: unknown[] = [];
+
+  const attachment = {
+    filename: "one.txt",
+    contentType: "text/plain",
+    byteSize: 5,
+    width: null,
+    height: null,
+    preview: "file",
+    url: "/one",
+    downloadUrl: "/one?download",
+    thumbnailUrl: null,
+  } as const;
+
+  render(
+    <EditScheduledDialog
+      item={{
+        ...ITEM,
+        attachments: [
+          { signedId: "signed-one", attachment },
+          { signedId: "signed-two", attachment: { ...attachment, filename: "two.txt" } },
+        ],
+      }}
+      onClose={() => undefined}
+      onSave={async (_item, edit) => {
+        saved.push(edit);
+      }}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "Remove one.txt" }));
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(saved).toEqual([{ attachmentSignedIds: ["signed-two"] }]);
+});
+
+it("adds an uploaded file after retained files and waits for its upload", async () => {
+  const user = userEvent.setup();
+  const saved: unknown[] = [];
+  const upload = Promise.withResolvers<{ signedId: string; uploadUrl: string }>();
+  const startUpload = actions.messages.startUpload;
+  vi.spyOn(actions.messages, "startUpload").mockReturnValue(upload.promise);
+  render(
+    <EditScheduledDialog
+      item={{
+        ...ITEM,
+        attachments: [
+          {
+            signedId: "retained",
+            attachment: {
+              filename: "kept.txt",
+              contentType: "text/plain",
+              byteSize: 5,
+              width: null,
+              height: null,
+              preview: "file",
+              url: "/kept",
+              downloadUrl: "/kept?download",
+              thumbnailUrl: null,
+            },
+          },
+        ],
+      }}
+      onClose={() => undefined}
+      onSave={async (_item, edit) => {
+        saved.push(edit);
+      }}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("Add files"), {
+    target: { files: [new File(["hello"], "added.txt", { type: "text/plain" })] },
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(
+      true,
+    ),
+  );
+
+  const meta = document.createElement("meta");
+  meta.name = "csrf-token";
+  meta.content = network.server.csrfToken();
+  document.head.append(meta);
+
+  const direct = await startUpload({
+    filename: "added.txt",
+    contentType: "text/plain",
+    byteSize: 5,
+    checksum: "XUFAKrxLKna5cZ2REBfFkg==",
+  });
+
+  meta.remove();
+  await act(async () => upload.resolve(direct));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(
+      false,
+    ),
+  );
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(saved).toEqual([{ attachmentSignedIds: ["retained", direct.signedId] }]);
 });

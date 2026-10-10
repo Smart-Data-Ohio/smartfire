@@ -3,7 +3,7 @@
 use crate::sql::query_all;
 use crate::{
     AgentGrant, Attachment, Boost, ChannelThread, Event, Message, MessagePin, Result, RoomCategory,
-    Session, TwoFactorCredential, Tx, User,
+    ScheduledMessage, Session, TwoFactorCredential, Tx, User,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -100,6 +100,15 @@ impl User {
                 |r| r.get::<_, i64>(0),
             )? {
                 MessagePin::find(tx.conn(), id)?.unpin(tx)?;
+            }
+            // Detach and purge scheduled files exactly as ScheduledMessage::destroy does.
+            for id in query_all(
+                tx.conn(),
+                "SELECT id FROM scheduled_messages WHERE user_id=? ORDER BY id",
+                [self.id],
+                |r| r.get::<_, i64>(0),
+            )? {
+                ScheduledMessage::find(tx.conn(), id)?.replace_attachments(tx, &[])?;
             }
             for table in ["saved_items", "scheduled_messages", "searches"] {
                 // delete_all intentionally retains a saved/scheduled source's inbox item.

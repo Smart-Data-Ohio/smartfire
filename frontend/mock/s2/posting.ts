@@ -26,7 +26,7 @@ export const MAX_MESSAGE_FILES = 10;
  * The grouped files of a `CreateMessage` body, checked as `grouped_signed_ids` and
  * `require_grouped_uploads` do: at most ten, not with the legacy slot, no repeats, each finished.
  */
-function groupedFiles(
+export function groupedFiles(
   body: Json | undefined,
   single: string | null,
   attach: (signedId: string) => Attachment,
