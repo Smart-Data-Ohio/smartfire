@@ -1,24 +1,39 @@
-import { useEffect, useId, useMemo, useState } from "react";
-import { previewCustomTokens, useAppearance, useResolvedTheme } from "../../lib/appearance.ts";
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
+  baseTokenColours,
+  endCustomTokenPreview,
+  previewCustomTokens,
+  useAppearance,
+  useResolvedTheme,
+} from "../../lib/appearance.ts";
+import {
+  type ColourReader,
   type ContrastResult,
   type CustomTokens,
   contrastReport,
-  effectiveColours,
   formatRatio,
   normalizeHex,
   PALETTE_FIELD_GROUPS,
+  PALETTE_FIELDS,
   type PaletteField,
   presetColours,
   resetField,
   sameTokens,
   setFieldColour,
+  themeColours,
   toHex,
   tokensPayload,
 } from "../../lib/custom-palette.ts";
 import { PALETTES } from "../../lib/palette.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+
+/** Every token the editor reads from the page. */
+const EDITOR_TOKENS = PALETTE_FIELDS.map((field) => field.token);
+
+const FULL_HEX = /^#?[\da-f]{6}$/i;
+
+const THEME_NAMES = { light: "light", dark: "dark" } as const;
 
 /**
  * Settings → Appearance → Custom palette: the chosen preset's main colours, each changeable, shown
@@ -34,32 +49,56 @@ export function PaletteEditor({
 }) {
   const { palette, customTokens } = useAppearance();
   const theme = useResolvedTheme();
+  // This editor's claim on the preview, so a save finishing after it closed leaves the next alone.
+  const [owner] = useState(() => Symbol("palette editor"));
   // Colours being tried out; null while the editor shows the account's own.
   const [draft, setDraft] = useState<CustomTokens | null>(null);
+  const latest = useRef<CustomTokens | null>(null);
   const tokens = draft ?? customTokens;
-  const presets = useMemo(() => presetColours(palette, theme), [palette, theme]);
-  const colours = useMemo(() => effectiveColours(tokens, presets), [tokens, presets]);
+
+  // What each token starts from in both themes, as the page computes it (workspace CSS included).
+  const bases = useMemo(() => {
+    const computed = baseTokenColours(EDITOR_TOKENS);
+    const read: ColourReader = (token, scheme) => computed[scheme].get(token) ?? null;
+
+    return {
+      light: presetColours(palette, "light", read),
+      dark: presetColours(palette, "dark", read),
+    };
+  }, [palette]);
+
+  const colours = useMemo(() => themeColours(tokens, bases), [tokens, bases]);
   const presetLabel = PALETTES.find((choice) => choice.value === palette)?.label ?? "the preset";
   const dirty = draft !== null && !sameTokens(draft, customTokens);
   const customised = Object.keys(tokens).length > 0;
 
   // Leaving the page drops whatever wasn't saved.
-  useEffect(() => () => previewCustomTokens(null), []);
+  useEffect(() => () => endCustomTokenPreview(owner), [owner]);
 
   const edit = (next: CustomTokens) => {
+    latest.current = next;
     setDraft(next);
-    previewCustomTokens(next);
+    previewCustomTokens(next, owner);
   };
 
   const discard = () => {
+    latest.current = null;
     setDraft(null);
-    previewCustomTokens(null);
+    endCustomTokenPreview(owner);
   };
 
   const save = () => {
     if (draft === null) return;
 
-    void onSave(tokensPayload(draft)).then(discard, () => undefined);
+    const sent = draft;
+
+    // Edits made while the save was in flight stay on screen, unsaved.
+    void onSave(tokensPayload(sent)).then(
+      () => {
+        if (latest.current === sent) discard();
+      },
+      () => undefined,
+    );
   };
 
   return (
@@ -76,7 +115,7 @@ export function PaletteEditor({
             <ColourField
               key={field.token}
               field={field}
-              colour={toHex(colours.get(field.token) ?? { r: 0, g: 0, b: 0 })}
+              colour={toHex(colours[theme].get(field.token) ?? { r: 0, g: 0, b: 0 })}
               custom={tokens[field.token] !== undefined}
               disabled={disabled}
               onChange={(colour) => edit(setFieldColour(tokens, field, colour))}
@@ -145,6 +184,27 @@ function ColourField({
     setInvalid(false);
   }
 
+  const take = (hex: string) => {
+    // Already shown as typed: the colour coming back mustn't rewrite the field.
+    setShown(hex);
+
+    if (hex !== colour) onChange(hex);
+  };
+
+  /** On leaving the field or Enter: a short hex is expanded, anything incomplete is pointed out. */
+  const settle = () => {
+    const hex = normalizeHex(text);
+
+    if (hex === null) {
+      setInvalid(true);
+
+      return;
+    }
+
+    setText(hex);
+    take(hex);
+  };
+
   return (
     <div className="palette-field" data-custom={custom || undefined}>
       <input
@@ -170,7 +230,6 @@ function ColourField({
           className={`input palette-field-hex-input${invalid ? " is-error" : ""}`}
           value={text}
           disabled={disabled}
-          maxLength={7}
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
@@ -179,21 +238,24 @@ function ColourField({
           aria-describedby={invalid ? `${id}-error` : undefined}
           onChange={(event) => {
             const typed = event.target.value;
-            const hex = normalizeHex(typed);
 
             setText(typed);
             setInvalid(false);
 
-            if (hex !== null && hex !== colour) onChange(hex);
+            // Only a whole six-digit colour shows while typing: "#123" may be the start of more.
+            if (FULL_HEX.test(typed.trim())) take(normalizeHex(typed) ?? colour);
           }}
-          onBlur={() => {
-            if (normalizeHex(text) === null) setInvalid(true);
-            else setText(colour);
+          onBlur={settle}
+          onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+            if (event.key !== "Enter") return;
+
+            event.preventDefault();
+            settle();
           }}
         />
         {invalid ? (
           <span id={`${id}-error`} className="settings-error" role="alert">
-            Use a hex colour such as #4f46e5.
+            Use a six- or three-digit hex colour, such as #4f46e5.
           </span>
         ) : null}
       </span>
@@ -209,6 +271,15 @@ function ColourField({
       </Button>
     </div>
   );
+}
+
+/** "Meets 4.5:1", or where it falls short: "Below 4.5:1 in dark", "… in both themes". */
+function verdict(result: ContrastResult): string {
+  const [only, other] = result.failing;
+
+  if (only === undefined) return `Meets ${result.minimum}:1`;
+
+  return `Below ${result.minimum}:1 ${other === undefined ? `in ${THEME_NAMES[only]}` : "in both themes"}`;
 }
 
 /** Each text and UI pair's WCAG 2 ratio, with the ones under AA called out in words. */
@@ -237,7 +308,7 @@ function ContrastList({ results }: { readonly results: readonly ContrastResult[]
             <span className="palette-contrast-ratio">{formatRatio(result.ratio)}</span>
             <span className="palette-contrast-verdict">
               {result.passes ? null : <Icon name="alert" size={14} />}
-              {result.passes ? "Meets" : "Below"} {result.minimum}:1
+              {verdict(result)}
             </span>
           </li>
         ))}

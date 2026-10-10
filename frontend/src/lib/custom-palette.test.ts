@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   CONTRAST_PAIRS,
+  type ColourReader,
+  type ContrastResult,
+  type CustomTokens,
   contrastReport,
-  effectiveColours,
   formatRatio,
   normalizeHex,
   PALETTE_FIELDS,
@@ -14,9 +16,10 @@ import {
   resetField,
   sameTokens,
   setFieldColour,
+  themeColours,
   tokensPayload,
 } from "./custom-palette.ts";
-import { PALETTES } from "./palette.ts";
+import { PALETTES, type PalettePreset } from "./palette.ts";
 
 const field = (token: string) => {
   const found = PALETTE_FIELDS.find((candidate) => candidate.token === token);
@@ -25,10 +28,6 @@ const field = (token: string) => {
 
   return found;
 };
-
-const PRESET_CASES = PALETTES.flatMap((palette) =>
-  (["light", "dark"] as const).map((theme) => ({ palette: palette.value, theme })),
-);
 
 describe("colour parsing", () => {
   it("reads the hex and rgb forms the server accepts", () => {
@@ -57,15 +56,23 @@ describe("colour parsing", () => {
   });
 });
 
+/** The editor's colours in both themes: `tokens` over the preset (or what `read` finds). */
+function both(tokens: CustomTokens, preset: PalettePreset = "smartfire", read?: ColourReader) {
+  return themeColours(tokens, {
+    light: presetColours(preset, "light", read),
+    dark: presetColours(preset, "dark", read),
+  });
+}
+
+const pairOf = (report: readonly ContrastResult[], foreground: string, background: string) =>
+  report.find((result) => result.foreground === foreground && result.background === background);
+
 describe("contrast", () => {
   it("measures WCAG 2 ratios and shows them rounded down", () => {
-    const colours = effectiveColours(
-      { "--text": "#000000", "--bg-pane": "#ffffff" },
-      presetColours("smartfire", "light"),
-    );
-
-    const text = contrastReport(colours).find(
-      (result) => result.foreground === "--text" && result.background === "--bg-pane",
+    const text = pairOf(
+      contrastReport(both({ "--text": "#000000", "--bg-pane": "#ffffff" })),
+      "--text",
+      "--bg-pane",
     );
 
     expect(text?.ratio).toBeCloseTo(21, 5);
@@ -74,43 +81,76 @@ describe("contrast", () => {
     expect(formatRatio(4.5)).toBe("4.5:1");
   });
 
-  it.each(PRESET_CASES)(
-    "raises no warning for the $palette preset in $theme",
-    ({ palette, theme }) => {
-      const low = contrastReport(effectiveColours({}, presetColours(palette, theme))).filter(
-        (result) => !result.passes,
-      );
+  it.each(PALETTES.map((palette) => ({ palette: palette.value })))(
+    "raises no warning for the $palette preset in either theme",
+    ({ palette }) => {
+      const low = contrastReport(both({}, palette)).filter((result) => !result.passes);
 
       expect(low.map((result) => `${result.label} ${formatRatio(result.ratio)}`)).toEqual([]);
     },
   );
 
   it("warns below 4.5:1 for text and below 3:1 for the accent against the pane", () => {
-    const report = contrastReport(
-      effectiveColours(
-        { "--text-muted": "#999999", "--accent-solid": "#d0d0ff" },
-        presetColours("smartfire", "light"),
-      ),
-    );
+    const report = contrastReport(both({ "--text-muted": "#999999", "--accent-solid": "#d0d0ff" }));
 
     const low = report.filter((result) => !result.passes);
 
-    expect(low.map((result) => [result.foreground, result.background, result.minimum])).toEqual([
-      ["--text-muted", "--bg-pane", 4.5],
-      ["--text-muted", "--bg-sidebar", 4.5],
-      ["--on-accent", "--accent-solid", 4.5],
-      ["--accent-solid", "--bg-pane", 3],
+    expect(
+      low.map((result) => [result.foreground, result.background, result.minimum, result.failing]),
+    ).toEqual([
+      ["--text-muted", "--bg-pane", 4.5, ["light"]],
+      ["--text-muted", "--bg-sidebar", 4.5, ["light"]],
+      ["--on-accent", "--accent-solid", 4.5, ["light", "dark"]],
+      ["--accent-solid", "--bg-pane", 3, ["light"]],
     ]);
     expect(CONTRAST_PAIRS.filter((pair) => pair.minimum === 3)).toHaveLength(1);
   });
 
-  it("paints a translucent custom colour over the messages pane", () => {
-    const colours = effectiveColours(
-      { "--bg-pane": "#000000", "--mention-bg": "#ffffff80" },
-      presetColours("smartfire", "light"),
-    );
+  it("checks a custom colour against the other theme's background too, and names the theme", () => {
+    const report = contrastReport(both({ "--text": "#111111" }));
+    const pane = pairOf(report, "--text", "--bg-pane");
 
-    expect(colours.get("--mention-bg")).toEqual({ r: 128, g: 128, b: 128 });
+    expect(pane?.ratios.light).toBeGreaterThan(15);
+    expect(pane?.ratios.dark).toBeLessThan(1.5);
+    expect(pane?.failing).toEqual(["dark"]);
+    expect(pane?.passes).toBe(false);
+    expect(pane?.ratio).toBe(pane?.ratios.dark);
+    expect(pairOf(report, "--on-accent", "--accent-solid")?.failing).toEqual([]);
+  });
+
+  it("measures against the colours the page computes, workspace CSS included", () => {
+    // Workspace CSS `:root { --bg-pane: #000000; }`: the computed pane is black in both themes.
+    const read: ColourReader = (token) => (token === "--bg-pane" ? "rgb(0, 0, 0)" : null);
+    const report = contrastReport(both({ "--text": "#000000" }, "smartfire", read));
+
+    expect(pairOf(report, "--text", "--bg-pane")?.ratio).toBeCloseTo(1, 5);
+    expect(presetColours("smartfire", "light", read).get("--bg-pane")).toBe("#000000");
+    // Unreadable answers fall back to the palette's own colour.
+    expect(presetColours("smartfire", "light", read).get("--bg-app")).toBe(
+      presetColours("smartfire", "light").get("--bg-app"),
+    );
+  });
+
+  it("reads computed oklch and color(srgb) values, with their alpha", () => {
+    const read: ColourReader = (token) =>
+      ({
+        "--bg-sidebar": "oklch(0 0 0)",
+        "--bg-raised": "color(srgb 1 1 1)",
+        "--mention-bg": "oklch(1 0 0 / 0.5)",
+        "--bg-pane": "rgb(0, 0, 0)",
+      })[token] ?? null;
+
+    const light = presetColours("smartfire", "light", read);
+
+    expect(light.get("--bg-sidebar")).toBe("#000000");
+    expect(light.get("--bg-raised")).toBe("#ffffff");
+    expect(light.get("--mention-bg")).toBe("#808080");
+  });
+
+  it("paints a translucent custom colour over the messages pane", () => {
+    const colours = both({ "--bg-pane": "#000000", "--mention-bg": "#ffffff80" });
+
+    expect(colours.light.get("--mention-bg")).toEqual({ r: 128, g: 128, b: 128 });
   });
 });
 

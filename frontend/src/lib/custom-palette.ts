@@ -117,21 +117,39 @@ export function toHex({ r, g, b }: Rgb): string {
 }
 
 /**
- * The preset's colour for every token the editor shows, as `#rrggbb` in `theme`. A translucent
- * one (the dark theme's mention wash) is shown as painted over the messages pane.
+ * The colour the page computes for `token` in `theme` without any custom colour (the palette over
+ * the stylesheet, under workspace CSS), as `getComputedStyle` gives it; null when it can't tell.
+ */
+export type ColourReader = (token: string, theme: PaletteTheme) => string | null;
+
+/**
+ * The colour every token the editor shows starts from, as `#rrggbb` in `theme`: what `read`
+ * finds on the page, else the preset's own. A translucent one (the dark theme's mention wash) is
+ * shown as painted over the messages pane.
  */
 export function presetColours(
   preset: PalettePreset,
   theme: PaletteTheme,
+  read?: ColourReader,
 ): ReadonlyMap<string, string> {
-  const pane = oklchToRgb(presetOklch("--bg-pane", preset, theme));
+  const paint = (token: string): Paint => {
+    const computed = read?.(token, theme) ?? null;
+    const found = computed === null ? null : parseComputed(computed);
+
+    if (found !== null) return found;
+
+    const color = presetOklch(token, preset, theme);
+
+    return { rgb: oklchToRgb({ ...color, alpha: 1 }), alpha: color.alpha };
+  };
+
+  const pane = paint("--bg-pane").rgb;
 
   return new Map(
     PALETTE_FIELDS.map((field) => {
-      const color = presetOklch(field.token, preset, theme);
-      const rgb = oklchToRgb({ ...color, alpha: 1 });
+      const { rgb, alpha } = paint(field.token);
 
-      return [field.token, toHex(color.alpha < 1 ? composite(rgb, color.alpha, pane) : rgb)];
+      return [field.token, toHex(alpha < 1 ? composite(rgb, alpha, pane) : rgb)];
     }),
   );
 }
@@ -206,6 +224,25 @@ export function normalizeHex(input: string): string | null {
   return `#${digits.length === 3 ? [...digits].map((digit) => digit + digit).join("") : digits}`;
 }
 
+const SRGB = /^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)$/;
+
+/** A computed colour: the hex and `rgb()` forms, `oklch()` (Chrome keeps it) or `color(srgb)`. */
+function parseComputed(value: string): Paint | null {
+  const trimmed = value.trim().replaceAll("none", "0");
+  const oklch = parseOklch(trimmed);
+
+  if (oklch !== null) return { rgb: oklchToRgb({ ...oklch, alpha: 1 }), alpha: oklch.alpha };
+
+  const srgb = SRGB.exec(trimmed);
+
+  if (srgb === null) return parseColour(trimmed);
+
+  const [, r = "0", g = "0", b = "0", alpha = "1"] = srgb;
+  const byte = (channel: string) => Math.round(Math.min(1, Math.max(0, Number(channel))) * 255);
+
+  return { rgb: { r: byte(r), g: byte(g), b: byte(b) }, alpha: Number(alpha) };
+}
+
 /** Custom colours by token name, as `appearancePreferences.tokens` holds them. */
 export interface CustomTokens {
   readonly [token: string]: string;
@@ -239,6 +276,23 @@ export function effectiveColours(
       return [field.token, color.alpha < 1 ? composite(color.rgb, color.alpha, pane) : color.rgb];
     }),
   );
+}
+
+/** The editor's colours in each theme. */
+export type ThemeColours = Readonly<Record<PaletteTheme, ReadonlyMap<string, Rgb>>>;
+
+/**
+ * `tokens` over each theme's starting colours: a custom colour is one colour in both themes, so
+ * it meets the other theme's background wherever that isn't customised too.
+ */
+export function themeColours(
+  tokens: CustomTokens,
+  presets: Readonly<Record<PaletteTheme, ReadonlyMap<string, string>>>,
+): ThemeColours {
+  return {
+    light: effectiveColours(tokens, presets.light),
+    dark: effectiveColours(tokens, presets.dark),
+  };
 }
 
 /** A foreground the UI puts on a background, and the WCAG 2 AA ratio it should hold. */
@@ -279,7 +333,11 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
 
 export interface ContrastResult extends ContrastPair {
   readonly label: string;
+  readonly ratios: Readonly<Record<PaletteTheme, number>>;
+  /** The lower of the two. */
   readonly ratio: number;
+  /** The themes the pair falls short in. */
+  readonly failing: readonly PaletteTheme[];
   readonly passes: boolean;
 }
 
@@ -287,24 +345,31 @@ const LABELS: ReadonlyMap<string, string> = new Map(
   PALETTE_FIELDS.map((field) => [field.token, field.label]),
 );
 
-/** Every pair's ratio under `colours` (from `effectiveColours`). */
-export function contrastReport(colours: ReadonlyMap<string, Rgb>): readonly ContrastResult[] {
+const THEMES: readonly PaletteTheme[] = ["light", "dark"];
+
+/** Every pair's ratio in both themes under `colours` (from `themeColours`). */
+export function contrastReport(colours: ThemeColours): readonly ContrastResult[] {
   const white = { r: 255, g: 255, b: 255 };
 
   return CONTRAST_PAIRS.map((pair) => {
-    const ratio = contrastRatio(
-      colours.get(pair.foreground) ?? white,
-      colours.get(pair.background) ?? white,
-    );
+    const measure = (theme: PaletteTheme) =>
+      contrastRatio(
+        colours[theme].get(pair.foreground) ?? white,
+        colours[theme].get(pair.background) ?? white,
+      );
 
+    const ratios = { light: measure("light"), dark: measure("dark") };
+    const failing = THEMES.filter((theme) => ratios[theme] < pair.minimum);
     const foreground = LABELS.get(pair.foreground) ?? pair.foreground;
     const background = (LABELS.get(pair.background) ?? pair.background).toLowerCase();
 
     return {
       ...pair,
       label: pair.label ?? `${foreground} on ${background}`,
-      ratio,
-      passes: ratio >= pair.minimum,
+      ratios,
+      ratio: Math.min(ratios.light, ratios.dark),
+      failing,
+      passes: failing.length === 0,
     };
   });
 }

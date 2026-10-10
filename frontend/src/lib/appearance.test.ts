@@ -476,6 +476,8 @@ describe("palette and font", () => {
 });
 
 describe("custom palette colours", () => {
+  const EDITOR = Symbol("editor");
+
   const account = (tokens?: Readonly<Record<string, string>>) => ({
     theme: "system" as const,
     textSize: "default" as const,
@@ -500,12 +502,18 @@ describe("custom palette colours", () => {
   });
 
   it("previews edits over the account's colours, and drops them back to the preset or account", async () => {
-    const { applyAccountAppearance, previewCustomTokens, appearanceSnapshot } = await load();
+    const {
+      applyAccountAppearance,
+      previewCustomTokens,
+      endCustomTokenPreview,
+      appearanceSnapshot,
+    } = await load();
+
     const { paletteTokens } = await import("./palette.ts");
     const style = html().style;
 
     applyAccountAppearance(account({ "--accent-solid": "#123abc" }));
-    previewCustomTokens({ "--accent-solid": "#ff0000", "--danger": "#aa0000" });
+    previewCustomTokens({ "--accent-solid": "#ff0000", "--danger": "#aa0000" }, EDITOR);
 
     expect(style.getPropertyValue("--accent-solid")).toBe("#ff0000");
     expect(style.getPropertyValue("--danger")).toBe("#aa0000");
@@ -513,14 +521,49 @@ describe("custom palette colours", () => {
     expect(appearanceSnapshot().customTokens).toEqual({ "--accent-solid": "#123abc" });
 
     // Reset to the preset: palette tokens go back to the palette's, others to the stylesheet's.
-    previewCustomTokens({});
+    previewCustomTokens({}, EDITOR);
     expect(style.getPropertyValue("--accent-solid")).toBe(
       paletteTokens("ocean").get("--accent-solid"),
     );
     expect(style.getPropertyValue("--danger")).toBe("");
 
-    previewCustomTokens(null);
+    endCustomTokenPreview(EDITOR);
     expect(style.getPropertyValue("--accent-solid")).toBe("#123abc");
+  });
+
+  it("lets only the editor that owns the preview end it", async () => {
+    const { applyAccountAppearance, previewCustomTokens, endCustomTokenPreview } = await load();
+    const earlier = Symbol("earlier editor");
+    const later = Symbol("later editor");
+
+    applyAccountAppearance(account({ "--accent-solid": "#123abc" }));
+    previewCustomTokens({ "--accent-solid": "#111111" }, earlier);
+    previewCustomTokens({ "--accent-solid": "#222222" }, later);
+    endCustomTokenPreview(earlier);
+
+    expect(html().style.getPropertyValue("--accent-solid")).toBe("#222222");
+    endCustomTokenPreview(later);
+    expect(html().style.getPropertyValue("--accent-solid")).toBe("#123abc");
+  });
+
+  it("reads the colours the page paints without the custom ones, in both themes", async () => {
+    const { applyAccountAppearance, baseTokenColours, previewCustomTokens } = await load();
+
+    applyAccountAppearance(account({ "--mention-bg": "#123abc" }));
+    previewCustomTokens({ "--mention-bg": "#ff0000" }, EDITOR);
+    const seen: string[] = [];
+
+    const colours = baseTokenColours(["--mention-bg"], (probe) => {
+      seen.push(html().style.getPropertyValue("--mention-bg"), probe.style.colorScheme);
+
+      return "rgb(1, 2, 3)";
+    });
+
+    // The custom colours are lifted while the probe reads, then put back.
+    expect(seen).toEqual(["", "light", "", "dark"]);
+    expect(colours.light.get("--mention-bg")).toBe("rgb(1, 2, 3)");
+    expect(colours.dark.get("--mention-bg")).toBe("rgb(1, 2, 3)");
+    expect(html().style.getPropertyValue("--mention-bg")).toBe("#ff0000");
   });
 
   it("keeps a palette chosen on this device over the account's colours and any preview", async () => {
@@ -529,7 +572,7 @@ describe("custom palette colours", () => {
 
     applyAccountAppearance(account({ "--accent-solid": "#123abc" }));
     setPalette("ember");
-    previewCustomTokens({ "--accent-solid": "#ff0000" });
+    previewCustomTokens({ "--accent-solid": "#ff0000" }, EDITOR);
 
     expect(html().style.getPropertyValue("--accent-solid")).toBe(
       paletteTokens("ember").get("--accent-solid"),

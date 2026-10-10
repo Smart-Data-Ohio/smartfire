@@ -107,6 +107,12 @@ let appliedTokens: readonly string[] = [];
 /** Colours the palette editor is trying out, shown over the account's until saved or dropped. */
 let previewTokens: Readonly<Record<string, string>> | null = null;
 
+/** The editor instance whose preview is on screen: only it may end the preview. */
+let previewOwner: symbol | null = null;
+
+/** Set while `baseTokenColours` reads the page without any custom colour. */
+let customTokensLifted = false;
+
 const listeners = new Set<() => void>();
 
 function writeAttributes(appearance: Appearance): void {
@@ -169,7 +175,7 @@ function writeCustomTokens(): void {
   }
 
   const tokens =
-    overrides.palette === undefined
+    overrides.palette === undefined && !customTokensLifted
       ? (previewTokens ?? personalAppearance(accountPreferences)?.tokens ?? {})
       : {};
 
@@ -179,12 +185,65 @@ function writeCustomTokens(): void {
 }
 
 /**
- * Shows `tokens` as the custom palette on this device while the editor tries them out, without
- * saving them; `null` goes back to the account's.
+ * Shows `tokens` as the custom palette on this device while the editor `owner` tries them out,
+ * without saving them.
  */
-export function previewCustomTokens(tokens: Readonly<Record<string, string>> | null): void {
+export function previewCustomTokens(tokens: Readonly<Record<string, string>>, owner: symbol): void {
   previewTokens = tokens;
+  previewOwner = owner;
   writeCustomTokens();
+}
+
+/**
+ * Goes back to the account's custom palette, if `owner`'s preview is still the one on screen: an
+ * editor closed with a save in flight can't end the preview of the one opened after it.
+ */
+export function endCustomTokenPreview(owner: symbol): void {
+  if (previewOwner !== owner) return;
+
+  previewTokens = null;
+  previewOwner = null;
+  writeCustomTokens();
+}
+
+function computedColour(probe: HTMLElement): string {
+  return getComputedStyle(probe).color;
+}
+
+/**
+ * Each of `names` as the page paints it in the light and the dark theme without any custom
+ * colour: the palette's tokens over the stylesheet's, under the workspace's custom CSS. A hidden
+ * probe takes each token as its `color` (so `light-dark()` resolves against the probe's own
+ * `color-scheme`) while the custom colours are lifted off <html>, all before the next paint.
+ */
+export function baseTokenColours(
+  names: readonly string[],
+  read: (probe: HTMLElement) => string = computedColour,
+): Readonly<Record<ResolvedTheme, ReadonlyMap<string, string>>> {
+  const probe = document.createElement("span");
+  const colours = { light: new Map<string, string>(), dark: new Map<string, string>() };
+
+  probe.hidden = true;
+  document.body.append(probe);
+  customTokensLifted = true;
+  writeCustomTokens();
+
+  try {
+    for (const theme of ["light", "dark"] as const) {
+      probe.style.colorScheme = theme;
+
+      for (const name of names) {
+        probe.style.color = `var(${name})`;
+        colours[theme].set(name, read(probe));
+      }
+    }
+  } finally {
+    customTokensLifted = false;
+    writeCustomTokens();
+    probe.remove();
+  }
+
+  return colours;
 }
 
 /**

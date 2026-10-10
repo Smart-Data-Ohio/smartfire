@@ -89,3 +89,25 @@ test("the palette editor stacks with finger-sized controls on a phone", async ({
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(PHONE_SMALL.width);
 });
+
+test("contrast reads the colours the page computes, workspace CSS included, in both themes", async ({
+  page,
+}) => {
+  await openApp(page, "settings/profile");
+  // Workspace custom CSS, unlayered after the stylesheets: a black messages pane.
+  await page.addStyleTag({ content: ":root { --bg-pane: #000000; }" });
+  await page.getByRole("link", { name: "Appearance" }).click();
+  const editor = page.getByRole("region", { name: "Custom palette" });
+
+  await expect(editor.getByLabel("Messages hex value", { exact: true })).toHaveValue("#000000");
+  await expect(editor.getByLabel("Accent hex value", { exact: true })).toHaveValue("#3b5bd4");
+
+  await editor.getByLabel("Primary text hex value", { exact: true }).fill("#000000");
+  await expect(
+    editor.getByRole("listitem").filter({ hasText: "Primary text on messages" }),
+  ).toContainText("1.0:1");
+  // Near-black text holds on the light sidebar but not on the dark one.
+  await expect(
+    editor.getByRole("listitem").filter({ hasText: "Primary text on sidebar" }),
+  ).toContainText("Below 4.5:1 in dark");
+});
