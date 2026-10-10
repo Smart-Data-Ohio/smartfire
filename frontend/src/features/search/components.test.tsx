@@ -211,7 +211,7 @@ describe("SearchResults", () => {
     ));
 
     expect(screen.getByText("1+")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Load older messages" }));
+    await user.click(screen.getByRole("button", { name: "Load more messages" }));
     expect(results.loadMore).toHaveBeenCalledOnce();
   });
 
