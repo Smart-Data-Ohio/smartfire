@@ -87,6 +87,8 @@ describe("autocomplete", () => {
       kind: "custom",
       character: null,
       imageUrl: "/icons/shipit",
+      animated: false,
+      stillUrl: "/icons/shipit",
     });
     expect((await get<IconList>(server, "/api/v1/autocomplete/icons?query=")).icons).toEqual([]);
   });

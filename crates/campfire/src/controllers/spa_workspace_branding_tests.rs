@@ -54,7 +54,7 @@ fn png_chunk(png: &mut Vec<u8>, name: &[u8; 4], data: &[u8]) {
 }
 
 /// Real, compressible RGB PNGs, optionally with two APNG frames.
-fn png(width: u32, height: u32, apng: bool) -> Vec<u8> {
+pub(super) fn png(width: u32, height: u32, apng: bool) -> Vec<u8> {
     use std::io::Write;
 
     let mut png = b"\x89PNG\r\n\x1a\n".to_vec();

@@ -24,6 +24,8 @@ const VIPS_ARGUMENT_INPUT: c_int = 16;
 const VIPS_ACCESS_SEQUENTIAL: c_int = 1;
 const VIPS_SIZE_DOWN: c_int = 2;
 const VIPS_PRECISION_INTEGER: c_int = 0;
+const VIPS_FAIL_ON_ERROR: c_int = 2;
+const VIPS_FAIL_ON_WARNING: c_int = 3;
 const G_TYPE_INVALID: usize = 0;
 
 #[link(name = "vips")]
@@ -56,6 +58,7 @@ unsafe extern "C" {
     fn vips_thumbnail_image(input: *mut VipsImage, out: *mut *mut VipsImage, width: c_int, ...) -> c_int;
     fn vips_conv(input: *mut VipsImage, out: *mut *mut VipsImage, mask: *mut VipsImage, ...) -> c_int;
     fn vips_image_write_to_file(image: *mut VipsImage, name: *const c_char, ...) -> c_int;
+    fn vips_avg(image: *mut VipsImage, out: *mut c_double, ...) -> c_int;
     fn g_object_unref(object: *mut c_void);
     fn g_free(mem: *mut c_void);
 }
@@ -94,17 +97,26 @@ impl Image {
     /// Header-only until evaluated, with sequential access, strict error handling and at
     /// most one page. Use the loader matching the magic bytes, never a fallback loader.
     pub fn open_branding(path: &Path, content_type: &str, cancel: &Cancellation) -> Result<Image> {
+        Self::open_bounded(path, content_type, 1, false, cancel)
+    }
+
+    /// Emoji decoding evaluates every frame and rejects decoder warnings as well as errors.
+    pub fn open_emoji(path: &Path, content_type: &str, pages: i32, cancel: &Cancellation) -> Result<Image> {
+        Self::open_bounded(path, content_type, pages, true, cancel)
+    }
+
+    fn open_bounded(path: &Path, content_type: &str, pages: i32, strict: bool, cancel: &Cancellation) -> Result<Image> {
         init();
         let source = cancellation::Source::open(path, cancel)?;
         let mut out = std::ptr::null_mut();
-        const FAIL_ON_ERROR: c_int = 2;
+        let fail_on = if strict { VIPS_FAIL_ON_WARNING } else { VIPS_FAIL_ON_ERROR };
         macro_rules! load {
             ($loader:ident $(, $option:expr, $value:expr)*) => {
                 unsafe {
                     $loader(
                         source.0, &mut out,
                         c"access".as_ptr(), VIPS_ACCESS_SEQUENTIAL,
-                        c"fail_on".as_ptr(), FAIL_ON_ERROR,
+                        c"fail_on".as_ptr(), fail_on,
                         $($option.as_ptr(), $value as c_int,)*
                         std::ptr::null::<c_char>(),
                     )
@@ -114,8 +126,8 @@ impl Image {
         let status = match content_type {
             "image/png" => load!(vips_pngload_source),
             "image/jpeg" => load!(vips_jpegload_source),
-            "image/gif" => load!(vips_gifload_source, c"page", 0, c"n", 1),
-            "image/webp" => load!(vips_webpload_source, c"page", 0, c"n", 1),
+            "image/gif" => load!(vips_gifload_source, c"page", 0, c"n", pages),
+            "image/webp" => load!(vips_webpload_source, c"page", 0, c"n", pages),
             _ => return Err(Error::Vips("unsupported branding format".into())),
         };
         let image = Image::wrap_out(status, out)?;
@@ -250,6 +262,13 @@ impl Image {
         let path = cstring(path)?;
         let status = unsafe { vips_image_write_to_file(self.0, path.as_ptr(), std::ptr::null::<c_char>()) };
         if status != 0 { Err(Error::Vips(take_error())) } else { Ok(()) }
+    }
+
+    /// Evaluates all pixels without allocating a full decoded animation in memory.
+    pub fn average(&self) -> Result<f64> {
+        let mut average = 0.0;
+        let status = unsafe { vips_avg(self.0, &mut average, std::ptr::null::<c_char>()) };
+        if status != 0 { Err(Error::Vips(take_error())) } else { Ok(average) }
     }
 }
 

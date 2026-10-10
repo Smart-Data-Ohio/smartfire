@@ -949,7 +949,7 @@ pub async fn create_direct_upload(
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding"));
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
     }
     let storage = c.app().storage.clone();
     let now = c.now();
