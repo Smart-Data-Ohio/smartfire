@@ -14,6 +14,8 @@ edition.workspace = true
 test-support = ["campfire_app/test-support"]
 
 [dependencies]
+campfire_runtime.workspace = true
+campfire_presentation.workspace = true
 campfire_api_types.workspace = true
 campfire_app.workspace = true
 campfire_static_assets.workspace = true
@@ -28,7 +30,6 @@ campfire_messages.workspace = true
 campfire_richtext.workspace = true
 campfire_rooms.workspace = true
 campfire_storage.workspace = true
-campfire_views.workspace = true
 campfire_web.workspace = true
 rails_compat.workspace = true
 async-trait.workspace = true

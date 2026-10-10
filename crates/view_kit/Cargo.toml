@@ -6,6 +6,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+campfire_presentation.workspace = true
 askama.workspace = true
 campfire_static_assets.workspace = true
 campfire_routes.workspace = true

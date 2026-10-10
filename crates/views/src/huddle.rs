@@ -1,14 +1,8 @@
 //! Huddle render models, independent of the database and the request/session.
+pub use campfire_presentation::huddle::*;
+
 use crate::helpers as h;
 use askama::Template;
-use serde::Deserialize;
-
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct Participant {
-    pub id: i64,
-    pub name: String,
-    pub avatar_path: String,
-}
 
 #[derive(Template)]
 #[template(path = "rooms/huddles/_participants.html")]

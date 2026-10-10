@@ -765,3 +765,5 @@ async fn boost_of_only_a_custom_icon_shortcode_is_emoji_only_like_rails() {
     assert!(boosts.contains(&(":acme_brand:".to_string(), true)), "{boosts:?}");
     assert!(boosts.contains(&(":acme_unknown:".to_string(), false)), "{boosts:?}");
 }
+
+use campfire_web::controllers::presenters::Rendering;

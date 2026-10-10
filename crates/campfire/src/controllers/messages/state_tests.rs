@@ -77,3 +77,5 @@ async fn complete_message_states_match_rails_on_cache_misses_and_hits() {
         }
     }
 }
+
+use campfire_web::controllers::presenters::Rendering;

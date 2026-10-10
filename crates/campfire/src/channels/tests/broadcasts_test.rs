@@ -288,7 +288,7 @@ async fn ws8_model_frames_reach_subscribers_through_ws7_sink() {
     use campfire_db::{Event, broadcasts::{Broadcast, Streamable}};
     let app = start().await;
     let mut client = app.connect("jason").await;
-    let golden: Value = serde_json::from_str(include_str!("../../../../web/src/ws8_runtime_vectors.json")).unwrap();
+    let golden: Value = serde_json::from_str(include_str!("../../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
     let remove = &golden["broadcasts"][0];
     let user_id = remove["user_id"].as_i64().unwrap();
     let own = user_gid(user_id).to_param();

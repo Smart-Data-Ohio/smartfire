@@ -138,3 +138,5 @@ async fn full_sidebar_request_places_persisted_favorites_categories_and_group_dm
     assert!(link.contains("data-action=\"click-&gt;profile-card#open\""));
     assert!(html.contains("data-controller=\"badge-dot dm-presence huddle-presence\""));
 }
+
+use campfire_views::rendering::*;

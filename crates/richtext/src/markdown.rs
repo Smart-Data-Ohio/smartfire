@@ -1,9 +1,11 @@
 //! `app/models/message/markdown.rb`. Rendering is DB-free: callers supply room members,
 //! signed user attachment IDs, and the current icon catalog (including digested asset URLs).
-use std::collections::HashMap;
+use std::borrow::Cow;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::LazyLock;
 
 use comrak::Options;
+use comrak::nodes::{AstNode, NodeValue};
 use regex::Regex;
 
 use crate::attachables::{self, Attachable, MENTION_CONTENT_TYPE, MentionUser, RenderContext};
@@ -33,6 +35,7 @@ pub const MARKDOWN_TAGS: &[&str] = &[
     "ol",
     "p",
     "pre",
+    "span",
     "strong",
     "table",
     "tbody",
@@ -42,10 +45,11 @@ pub const MARKDOWN_TAGS: &[&str] = &[
     "tr",
     "ul",
 ];
-pub const MARKDOWN_ATTRIBUTES: &[&str] = &["align", "checked", "class", "disabled", "href", "rel", "start", "target", "title", "type"];
-pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "task-list-item"];
+pub const MARKDOWN_ATTRIBUTES: &[&str] =
+    &["align", "checked", "class", "data-spoiler", "disabled", "href", "rel", "start", "target", "title", "type"];
+pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "spoiler", "task-list-item"];
 const BLOCK_TAGS: &[&str] = &["blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "pre", "table", "tr", "ul"];
-static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]").unwrap());
+static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]|<@([1-9][0-9]*)>").unwrap());
 static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
 static ICON_ALT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^:([a-z0-9_]+):$").unwrap());
 static LANGUAGE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^language-[a-zA-Z0-9_+#.\-]+$").unwrap());
@@ -99,12 +103,21 @@ pub struct RoomMember {
 pub trait MentionResolver {
     /// Exactly one active member of the current room with this exact, case-sensitive name.
     fn unique_active_member(&self, name: &str) -> Option<MentionUser>;
+    /// An active member of the current room with this stable user id.
+    fn active_member(&self, _id: i64) -> Option<MentionUser> {
+        None
+    }
 }
-impl MentionResolver for [RoomMember] {
+impl MentionResolver for &[RoomMember] {
     fn unique_active_member(&self, name: &str) -> Option<MentionUser> {
         let mut matches = self.iter().filter(|m| m.active && m.user.name == name);
         let first = matches.next()?;
         matches.next().is_none().then(|| first.user.clone())
+    }
+    fn active_member(&self, id: i64) -> Option<MentionUser> {
+        self.iter()
+            .find(|m| m.active && m.user.id == id)
+            .map(|m| m.user.clone())
     }
 }
 impl<F: Fn(&str) -> Option<MentionUser>> MentionResolver for F {
@@ -134,6 +147,7 @@ pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconReso
     let (protected, tokens, pattern) = protect_mentions(source);
     let mut options = Options::default();
     options.extension.autolink = true;
+    options.extension.spoiler = true;
     options.extension.strikethrough = true;
     options.extension.table = true;
     options.extension.tagfilter = true;
@@ -145,6 +159,7 @@ pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconReso
     options.render.r#unsafe = false;
     options.render.hardbreaks = false;
     options.render.github_pre_lang = false;
+    let protected = end_autolinks_at_spoilers(&protected, &options);
     let html = comrak::markdown_to_html(&protected, &options);
     let safe = sanitizer::sanitize(&html, &markdown_allowlist()).map_err(Error::Parse)?;
     let mut dom = Dom::new();
@@ -157,11 +172,120 @@ pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconReso
     Ok(dom.to_html(root))
 }
 
+/// What ends a bare URL before a `||` (`AUTOLINK_BREAK`): comrak's autolinks stop at `<`, and
+/// raw HTML renders as nothing here (`unsafe` is off and the sanitizer drops the comment).
+const AUTOLINK_BREAK: &str = "<!-- -->";
+
+/// GFM autolinks run to the next space, so `||https://example.com/x||` makes the closing `||`
+/// part of the URL and the spoiler never closes: the URL would show, and unfurl. Each bare URL
+/// (or `www.` link) holding a `||` is ended just before that `||`, and the break is kept only if
+/// the parser then puts the link inside a spoiler. A URL whose `||` closes no spoiler
+/// (`https://example.com/a||b`) renders as before. Positions come from the parser's own source
+/// positions, so code spans and link destinations are never touched. Every candidate is tried at
+/// once and the ones that make no spoiler are dropped, so a message takes a few parses, not one
+/// per URL.
+fn end_autolinks_at_spoilers<'s>(source: &'s str, options: &Options) -> Cow<'s, str> {
+    if !source.contains("||") || !(source.contains("://") || source.contains("www.")) {
+        return source.into();
+    }
+    // Break offsets in `source` (just before a `||`), each with the start of the URL it ends.
+    let mut breaks = BTreeMap::<usize, usize>::new();
+    let mut rejected = BTreeSet::<usize>::new();
+    for _ in 0..8 {
+        let attempt = with_breaks(source, &breaks);
+        let arena = comrak::Arena::new();
+        let root = comrak::parse_document(&arena, &attempt, options);
+        let lines = line_starts(&attempt);
+        let mut spoilered = BTreeSet::new();
+        let mut candidates = Vec::new();
+        for node in root.descendants() {
+            let Some((at, text)) = autolink_at(node, &attempt, &lines) else {
+                continue;
+            };
+            // A link's text never holds a break: the `<` in it ends the URL.
+            let start = source_offset(at, &breaks);
+            if node.ancestors().any(|ancestor| matches!(ancestor.data().value, NodeValue::SpoileredText)) {
+                spoilered.insert(start);
+            }
+            if let Some(bar) = text.find("||") {
+                candidates.push((start + bar, start));
+            }
+        }
+        let mut changed = false;
+        breaks.retain(|_, start| {
+            let keep = spoilered.contains(start);
+            if !keep {
+                rejected.insert(*start);
+                changed = true;
+            }
+            keep
+        });
+        for (bar, start) in candidates {
+            if !rejected.contains(&start) && breaks.insert(bar, start).is_none() {
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    if breaks.is_empty() { source.into() } else { with_breaks(source, &breaks).into() }
+}
+
+/// `source` with `AUTOLINK_BREAK` inserted at each break offset.
+fn with_breaks(source: &str, breaks: &BTreeMap<usize, usize>) -> String {
+    let mut out = String::with_capacity(source.len() + breaks.len() * AUTOLINK_BREAK.len());
+    let mut cursor = 0;
+    for &at in breaks.keys() {
+        out.push_str(&source[cursor..at]);
+        out.push_str(AUTOLINK_BREAK);
+        cursor = at;
+    }
+    out.push_str(&source[cursor..]);
+    out
+}
+
+/// An offset in `with_breaks(source, breaks)`, outside any break, mapped back to `source`.
+fn source_offset(at: usize, breaks: &BTreeMap<usize, usize>) -> usize {
+    let before = breaks.keys().enumerate().take_while(|&(index, &position)| position + index * AUTOLINK_BREAK.len() < at).count();
+    at - before * AUTOLINK_BREAK.len()
+}
+
+/// A link the autolink extension made: its label is its own source text (`https://…`, or
+/// `www.…` for `http://www.…`), found at its source position. Returns that byte offset and text.
+fn autolink_at<'n>(node: &'n AstNode<'n>, source: &str, lines: &[usize]) -> Option<(usize, String)> {
+    let data = node.data();
+    let NodeValue::Link(link) = &data.value else {
+        return None;
+    };
+    let child = node.first_child()?;
+    if child.next_sibling().is_some() {
+        return None;
+    }
+    let NodeValue::Text(text) = &child.data().value else {
+        return None;
+    };
+    if link.url != text.as_ref() && link.url.strip_prefix("http://") != Some(text.as_ref()) {
+        return None;
+    }
+    let position = data.sourcepos.start;
+    let start = lines.get(position.line.checked_sub(1)?)? + position.column.checked_sub(1)?;
+    source.get(start..)?.starts_with(text.as_ref()).then(|| (start, text.to_string()))
+}
+
+fn line_starts(source: &str) -> Vec<usize> {
+    std::iter::once(0).chain(source.match_indices('\n').map(|(at, _)| at + 1)).collect()
+}
+
 pub fn mention_token(name: &str) -> Option<String> {
     (!is_blank(name) && !name.contains(['[', ']', '\r', '\n'])).then(|| format!("@[{name}]"))
 }
 
-fn protect_mentions(source: &str) -> (String, Vec<(String, String)>, Regex) {
+pub fn user_mention_token(id: i64) -> String {
+    format!("<@{id}>")
+}
+
+fn protect_mentions(source: &str) -> (String, Vec<String>, Regex) {
     // Unpredictable and absent from the input, so a user cannot forge an attachment placeholder.
     let prefix = loop {
         let bytes: [u8; 12] = rand::random();
@@ -181,12 +305,52 @@ fn protect_mentions(source: &str) -> (String, Vec<(String, String)>, Regex) {
         }
         protected.push_str(&source[cursor..m.start()]);
         protected.push_str(&format!("{prefix}{}TOKEN", tokens.len()));
-        tokens.push((m.as_str().to_owned(), c[1].to_owned()));
+        tokens.push(m.as_str().to_owned());
         cursor = m.end();
     }
     protected.push_str(&source[cursor..]);
     let pattern = Regex::new(&format!("{prefix}([0-9]+)TOKEN")).unwrap();
     (protected, tokens, pattern)
+}
+
+/// A Markdown source with no stored HTML (a scheduled message) as preview text: the Scheduled
+/// page and the inbox notice when one isn't sent. With no `||` it is the source as written, as
+/// the classic page shows it. Otherwise it is rendered as a message is (`render`, spoilers
+/// included) and read back as `plain_text`, so it agrees with the message exactly: a spoiler is
+/// the word "spoiler", a link or image around one shows no URL or title, and reference definitions
+/// are resolved, never shown. A source that can't be rendered (too long) is all hidden.
+pub fn redacted_excerpt(source: &str) -> String {
+    if !source.contains("||") {
+        return source.to_owned();
+    }
+    let icons = IconCatalog::default();
+    let ctx = RenderContext { resolver: &NoAttachables, request_host: None };
+    render(source, &(|_: &str| None), &icons)
+        .and_then(|html| plain_text(&html, &ctx, &icons))
+        .unwrap_or_else(|_| "spoiler".to_owned())
+}
+
+/// No mentions or attachments resolve in an excerpt: names stay as written.
+struct NoAttachables;
+impl crate::AttachableResolver for NoAttachables {
+    fn locate_signed(&self, _: &str) -> crate::SignedLookup {
+        crate::SignedLookup::Invalid
+    }
+    fn find_gid(&self, _: &str) -> crate::GidLookup {
+        crate::GidLookup::NotFound
+    }
+}
+
+/// A spoiler span, as stored HTML may mark one (`sanitizer::is_spoiler_span`).
+pub fn is_spoiler(dom: &Dom, node: NodeId) -> bool {
+    sanitizer::is_spoiler_span(dom, node)
+}
+
+/// Whether `node` hides a spoiler's words: the spoiler itself, or a link whose label holds one
+/// (`[||ending||](url "title")`). The link's URL and title would tell what the spoiler hides, so
+/// unfurls, cards and references skip both.
+pub fn conceals_spoiler(dom: &Dom, node: NodeId) -> bool {
+    is_spoiler(dom, node) || (dom.local_name(node) == Some("a") && dom.descendants(node).into_iter().any(|inner| is_spoiler(dom, inner)))
 }
 
 fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
@@ -198,6 +362,22 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
                 dom.remove_attr(node, "class");
             } else {
                 dom.set_attr(node, "class", &classes);
+            }
+        }
+        // Comrak's spoiler extension emits `<span class="spoiler">`. `data-spoiler` is the only
+        // new attribute, and the SPA and plain-text previews key off it. Escaped-character spans
+        // are not spoilers: unwrap them so they don't appear in stored HTML. Spoilers nest one
+        // level only: a spoiler inside another is unwrapped, so `||a ||b|| c||` hides all three.
+        if dom.local_name(node) == Some("span") {
+            let spoiler = dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+            let nested = spoiler && dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+            if spoiler && !nested {
+                dom.set_attr(node, "data-spoiler", "");
+            } else if dom.parent(node).is_some() {
+                for child in dom.children(node).to_vec() {
+                    dom.insert_before(node, child);
+                }
+                dom.detach(node);
             }
         }
         if dom.local_name(node) == Some("input") {
@@ -225,11 +405,24 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
 fn skipped(dom: &Dom, node: NodeId, tags: &[&str]) -> bool {
     dom.ancestors(node).iter().any(|&a| dom.local_name(a).is_some_and(|name| tags.contains(&name)))
 }
-fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[(String, String)], pattern: &Regex, mentions: &dyn MentionResolver) {
-    let users = tokens.iter().map(|(_, name)| (name.clone(), mentions.unique_active_member(name))).collect::<HashMap<_, _>>();
+fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[String], pattern: &Regex, mentions: &dyn MentionResolver) {
+    let users = tokens
+        .iter()
+        .map(|token| {
+            let user = if token.starts_with("@[") {
+                mentions.unique_active_member(&token[2..token.len() - 1])
+            } else {
+                token[2..token.len() - 1]
+                    .parse()
+                    .ok()
+                    .and_then(|id| mentions.active_member(id))
+            };
+            (token, user)
+        })
+        .collect::<HashMap<_, _>>();
     for node in dom.descendants(root) {
         for (key, value) in dom.attrs(node) {
-            let restored = pattern.replace_all(&value, |c: &regex::Captures| tokens[c[1].parse::<usize>().unwrap()].0.clone());
+            let restored = pattern.replace_all(&value, |c: &regex::Captures| tokens[c[1].parse::<usize>().unwrap()].clone());
             dom.set_attr(node, &key, &restored);
         }
         let Some(text) = dom.text(node).map(str::to_owned) else {
@@ -249,8 +442,8 @@ fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[(String, String)], pa
             if cursor < m.start() {
                 pending_text.push_str(&text[cursor..m.start()]);
             }
-            let (token, name) = &tokens[c[1].parse::<usize>().unwrap()];
-            let user = if skip { None } else { users.get(name).and_then(Option::as_ref) };
+            let token = &tokens[c[1].parse::<usize>().unwrap()];
+            let user = if skip { None } else { users.get(token).and_then(Option::as_ref) };
             match user {
                 Some(user) => {
                     if !pending_text.is_empty() {
@@ -410,6 +603,9 @@ pub fn presentation(body: &str, ctx: &RenderContext, icons: &dyn IconResolver, a
             dom.set_inner_html(node, &attachables::render_mention_in_context(&user, ctx)).map_err(Error::Parse)?;
         }
     }
+    // A mention is a `<div>`. Parsed again by the sanitizer, that start tag closes the open
+    // paragraph and the spoiler span, so the name and the words after it would render in the open.
+    crate::content::contain_spoiler_blocks(&mut dom, root);
     let html = sanitize_presentation(&dom.to_html(root), icons, asset_host)?;
     Ok(format!("<div class=\"markdown-body\" data-controller=\"drive-link\">{html}</div>"))
 }
@@ -440,6 +636,11 @@ fn plain_node(dom: &Dom, node: NodeId, icons: &dyn IconResolver) -> String {
     let name = dom.local_name(node).unwrap_or("");
     if name == "br" {
         return "\n".to_owned();
+    }
+    // Push, email, activity and sidebar excerpts are this plain text. The hidden words stay in
+    // the HTML for the reader who reveals them, and are replaced here so a preview can't leak them.
+    if sanitizer::is_spoiler_span(dom, node) {
+        return "spoiler".to_owned();
     }
     if name == "img" {
         let alt = dom.attr(node, "alt").unwrap_or("");

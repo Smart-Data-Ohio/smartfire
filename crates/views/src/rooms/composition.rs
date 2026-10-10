@@ -3,13 +3,6 @@
 use super::RoomView;
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-#[derive(Clone, Copy, Debug, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Drive {
-    None,
-    Legacy,
-    Picker,
-}
 macro_rules! partial {
     ($name:ident,$path:literal) => {
         #[derive(Template)]
@@ -104,3 +97,4 @@ pub fn request(
     };
     render(ctx, room, neutral_name, partial, drive)
 }
+pub use campfire_presentation::rooms::composition::*;

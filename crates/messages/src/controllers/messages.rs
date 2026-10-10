@@ -738,7 +738,6 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
     c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
 }
 
-
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
@@ -891,3 +890,5 @@ async fn render_room_not_found(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     page::content_in_application_layout(c, StatusCode::OK, |_| views::RoomNotFound.render()).await
 }
+
+use campfire_web::controllers::presenters::{Rendering};

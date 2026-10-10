@@ -982,7 +982,6 @@ async fn github_pr_and_thread_stamps_invalidate_message_fragments_without_touchi
         .unwrap();
 }
 
-
 #[tokio::test]
 async fn review_refresh_queue_is_atomic_with_triggering_save() {
     let (app,_dir)=super::super::references::tests::application().await;
@@ -998,3 +997,5 @@ async fn review_refresh_queue_is_atomic_with_triggering_save() {
     assert!(result.is_err(),"queue insertion failure must roll back the triggering PR save");
     app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert_eq!(stored.title.as_deref(),Some("Before"));assert!(stored.fetch_requested_at.is_none());let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class GLOB 'Github::*'",[],|r|r.get(0))?;assert_eq!(jobs,0);Ok(())}).await.unwrap();
 }
+
+use campfire_web::controllers::presenters::Rendering;

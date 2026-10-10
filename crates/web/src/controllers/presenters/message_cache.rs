@@ -3,9 +3,13 @@ use super::{Presenter, Result, cache_key_with_version};
 use campfire_db::{Message, Timestamp};
 use campfire_views::fragment_cache::keys::{self, MessageKey};
 use rusqlite::OptionalExtension;
+pub trait MessageCache {
+    fn message_fragment_cache_key(&self, message: &Message, base: &str) -> Result<String>;
+    fn message_collection_cache_key(&self, message: &Message) -> Result<String>;
+}
 
-impl Presenter<'_> {
-    pub fn message_fragment_cache_key(&self, message: &Message, base: &str) -> Result<String> {
+impl MessageCache for Presenter<'_> {
+    fn message_fragment_cache_key(&self, message: &Message, base: &str) -> Result<String> {
         // Rails' initial room list is uncached. Keep both original Rails key
         // compositions, then expand the rendered records' individual Rails versions.
         // Include the preview's source so its author's updates are covered too;
@@ -39,7 +43,7 @@ impl Presenter<'_> {
         ))
     }
 
-    pub fn message_collection_cache_key(&self, message: &Message) -> Result<String> {
+    fn message_collection_cache_key(&self, message: &Message) -> Result<String> {
         let blob = if let Some(data) = &self.search_preloads {
             data.attachments.get(&message.id).cloned()
         } else {

@@ -1,4 +1,5 @@
 use askama::Template;
+use campfire_views::rooms::{OpenFormViewRendering, ClosedFormViewRendering};
 use campfire_views::{
     helpers::request_forgery::{AuthenticityTokens, RequestSecrets, rendering_with},
     rooms,

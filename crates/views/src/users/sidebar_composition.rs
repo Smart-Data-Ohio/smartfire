@@ -2,38 +2,19 @@
 use crate::layouts::Page;
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct Person {
-    pub id: i64,
-    pub name: String,
-    pub avatar_path: String,
+pub trait RowRendering {
+    fn menu(&self) -> h::Attrs;
+    fn options(&self) -> h::Attrs;
+    fn direct_options(&self) -> h::Attrs;
+    fn render(&self, ctx: &ViewContext, configured: bool) -> String;
+    fn render_fragment(&self, ctx: &ViewContext, configured: bool) -> String;
+    fn render_collection_fragment(&self, ctx: &ViewContext, configured: bool) -> String;
+    fn render_row(&self, ctx: &ViewContext, configured: bool, collection: bool) -> String;
+
+    fn participants(&self) -> String;
 }
-impl Person {
-    pub fn first_name(&self) -> &str {
-        self.name.split_whitespace().next().unwrap_or("")
-    }
-}
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct Row {
-    pub id: i64,
-    pub kind: String,
-    pub name: String,
-    #[serde(default)]
-    pub raw_name: Option<String>,
-    #[serde(default)]
-    pub category_row: bool,
-    pub epoch: String,
-    /// Rails collection cache keys only the membership, participant IDs and admin flag.
-    #[serde(default)]
-    pub direct_cache_key: Option<String>,
-    pub members: Vec<Person>,
-    pub call: crate::rooms::calls::CallRow,
-}
-impl Row {
-    fn param_key(&self) -> String {
-        format!("rooms_{}", self.kind)
-    }
-    pub fn menu(&self) -> h::Attrs {
+impl RowRendering for Row {
+    fn menu(&self) -> h::Attrs {
         h::attrs()
             .data(
                 "menu_categorizable",
@@ -72,18 +53,6 @@ impl Row {
                 },
             )
     }
-    fn classes(&self) -> String {
-        format!(
-            "sidebar-item room btn{}{}{}",
-            if self.kind == "board" {
-                " board-room"
-            } else {
-                ""
-            },
-            if self.call.unread { " unread" } else { "" },
-            if self.call.muted { " muted" } else { "" }
-        )
-    }
     fn options(&self) -> h::Attrs {
         h::attrs()
             .id(h::dom_id(self.param_key().as_str(), self.id, Some("list")))
@@ -105,19 +74,11 @@ impl Row {
             .data("sorted_list_target", "item")
             .data("sorted_list_number", self.epoch.as_str())
     }
-    fn participants(&self) -> String {
-        crate::huddle::participants(
-            &format!("Rooms::{}", h::capitalize(&self.kind)),
-            self.id,
-            "sidebar",
-            &self.call.participants,
-        )
-    }
-    pub fn render(&self, ctx: &ViewContext, configured: bool) -> String {
+    fn render(&self, ctx: &ViewContext, configured: bool) -> String {
         self.render_row(ctx, configured, false)
     }
     /// A standalone Rails partial has no collection separator after its root tag.
-    pub fn render_fragment(&self, ctx: &ViewContext, configured: bool) -> String {
+    fn render_fragment(&self, ctx: &ViewContext, configured: bool) -> String {
         self.render_row(ctx, configured, true)
     }
     // users/sidebars/show caches only the direct membership collection.
@@ -158,21 +119,21 @@ impl Row {
         }
         .expect("sidebar row renders")
     }
-}
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct Category {
-    pub id: i64,
-    pub name: String,
-    pub collapsed: bool,
-    pub rows: Vec<Row>,
-}
-impl Category {
-    fn action(&self) -> String {
-        format!("/room_categories/{}", self.id)
+
+    fn participants(&self) -> String {
+        crate::huddle::participants(
+            &format!("Rooms::{}", h::capitalize(&self.kind)),
+            self.id,
+            "sidebar",
+            &self.call.participants,
+        )
     }
-    fn toggle_label(&self) -> &str {
-        if self.collapsed { "Expand" } else { "Collapse" }
-    }
+}
+
+pub trait CategoryRendering {
+    fn render(&self, ctx: &ViewContext, configured: bool) -> String;
+}
+impl CategoryRendering for Category {
     fn render(&self, ctx: &ViewContext, configured: bool) -> String {
         CategoryView {
             ctx,
@@ -183,24 +144,12 @@ impl Category {
         .expect("sidebar category renders")
     }
 }
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct Sidebar {
-    pub account_name: String,
-    pub logo_path: Option<String>,
-    pub actor: Person,
-    pub configured: bool,
-    pub can_create: bool,
-    pub favorites: Vec<Row>,
-    pub channels: Vec<Row>,
-    pub boards: Vec<Row>,
-    pub voice: Vec<Row>,
-    pub stage: Vec<Row>,
-    pub direct: Vec<Row>,
-    pub placeholders: Vec<Person>,
-    pub categories: Vec<Category>,
+
+pub trait SidebarRendering {
+    fn render(&self, ctx: &ViewContext) -> String;
 }
-impl Sidebar {
-    pub fn render(&self, ctx: &ViewContext) -> String {
+impl SidebarRendering for Sidebar {
+    fn render(&self, ctx: &ViewContext) -> String {
         h::sidebar_turbo_frame_tag(
             None,
             &Shell { ctx, sidebar: self }
@@ -210,6 +159,7 @@ impl Sidebar {
         .0
     }
 }
+
 #[derive(Template)]
 #[template(path = "users/sidebars/composition/_shell.html")]
 struct Shell<'a> {
@@ -394,3 +344,6 @@ pub struct Show<'a> {
     pub sidebar: &'a Sidebar,
 }
 impl Page for Show<'_> {}
+pub use campfire_presentation::users::sidebar_composition::*;
+
+use crate::rendering::*;

@@ -4,32 +4,14 @@ use crate::{
     ViewContext,
     helpers::{self as h, filters},
     layouts::Page,
-    users::UserSummary,
 };
 use askama::Template;
-
-#[derive(Clone, Debug)]
-pub struct DirectoryAgent {
-    pub id: i64,
-    pub user: UserSummary,
-    pub icon: Option<h::AvatarIcon>,
-    pub kind_description: String,
-    pub status: String,
-    pub status_note: Option<String>,
-    pub suspended: bool,
-    pub created_at: jiff::Timestamp,
-    pub status_changed_at: Option<jiff::Timestamp>,
-    pub last_seen_at: Option<jiff::Timestamp>,
+pub trait DirectoryAgentRendering {
+    fn since(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String;
+    fn last_seen(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String;
+    fn badge(&self, ctx: &ViewContext<'_>, now: &jiff::Timestamp) -> askama::Result<h::Html>;
 }
-impl DirectoryAgent {
-    fn status_label(&self) -> &str {
-        match self.status.as_str() {
-            "working" => "Working",
-            "waiting" => "Waiting",
-            "failed" => "Failed",
-            _ => "Idle",
-        }
-    }
+impl DirectoryAgentRendering for DirectoryAgent {
     fn since(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String {
         h::time_ago_in_words(
             &ctx.time_zone,
@@ -37,7 +19,7 @@ impl DirectoryAgent {
             *now,
         )
     }
-    pub fn last_seen(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String {
+    fn last_seen(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String {
         self.last_seen_at
             .map(|time| {
                 format!(
@@ -47,7 +29,7 @@ impl DirectoryAgent {
             })
             .unwrap_or_else(|| "never".into())
     }
-    pub fn badge(&self, ctx: &ViewContext<'_>, now: &jiff::Timestamp) -> askama::Result<h::Html> {
+    fn badge(&self, ctx: &ViewContext<'_>, now: &jiff::Timestamp) -> askama::Result<h::Html> {
         Ok(h::raw(
             StatusBadge {
                 ctx,
@@ -111,19 +93,6 @@ pub struct ThreadSteps {
     pub thread_id: i64,
     pub steps: Vec<crate::messages::parts::AgentStep>,
 }
-
-/// Public bot profile facts. Management facts are present only for the owner/admin.
-#[derive(Clone, Debug)]
-pub struct Profile {
-    pub agent: DirectoryAgent,
-    pub provider_runtime: String,
-    pub description: Option<String>,
-    pub rooms: Vec<(i64, String)>,
-    pub has_rooms: bool,
-    pub hidden_room_count: usize,
-    pub grants: String,
-    pub management: Option<(String, String)>,
-}
 #[derive(Template)]
 #[template(path = "users/_agent_profile.html")]
 pub struct ProfileDetails<'a> {
@@ -141,3 +110,6 @@ impl ProfileDetails<'_> {
             h::link_to_text(name, &h::routes::room(*id), h::attrs()).0).collect::<Vec<_>>().join(", "))
     }
 }
+pub use campfire_presentation::agents::*;
+
+use crate::rendering::*;

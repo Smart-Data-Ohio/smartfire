@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use campfire_api_types::{ApiError, ApiErrorResponse};
 use campfire_kit::{Ctx, Error, Param, Response, Result, StatusCode};
-use campfire_web::concerns;
+use campfire_runtime::concerns;
 
 /// Runs before an endpoint: every request is a JSON one (Rails' `defaults: { format: :json }`),
 /// so the before-actions answer a signed-out caller with a 401 rather than the sign-in redirect,

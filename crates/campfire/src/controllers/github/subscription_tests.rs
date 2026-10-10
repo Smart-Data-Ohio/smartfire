@@ -340,3 +340,5 @@ async fn github_subscription_sections_match_rails_bytes_and_real_edit_page_permi
         }
     }
 }
+
+use campfire_views::rendering::*;

@@ -22,6 +22,8 @@
 //! `views/<template>:<digest>/<record cache_key_with_version>[/<extra>]`, where the digest covers
 //! the template and the partials it renders (see [`digest`]).
 
+pub use campfire_presentation::cache_keys::{cache_version, cache_key_with_version};
+
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
@@ -357,20 +359,6 @@ pub fn digest(sources: &[&str]) -> String {
     let mut hasher = std::hash::DefaultHasher::new();
     sources.hash(&mut hasher);
     format!("{:016x}", hasher.finish())
-}
-
-/// `Time#to_fs(:usec)` of a record's `updated_at`: its `cache_version`.
-pub fn cache_version(updated_at: jiff::Timestamp) -> String {
-    format!(
-        "{}{:06}",
-        updated_at.strftime("%Y%m%d%H%M%S"),
-        updated_at.subsec_microsecond()
-    )
-}
-
-/// `record.cache_key_with_version`: `"messages/1-20240601120000000000"`.
-pub fn cache_key_with_version(table: &str, id: i64, updated_at: jiff::Timestamp) -> String {
-    format!("{table}/{id}-{}", cache_version(updated_at))
 }
 
 #[cfg(test)]

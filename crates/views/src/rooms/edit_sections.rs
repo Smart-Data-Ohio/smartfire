@@ -1,43 +1,23 @@
 //! Room settings sections. Read-only composition inputs for the owning integrations.
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-use serde::Deserialize;
-
-pub const EVENTS: [&str; 6] = [
-    "opened",
-    "merged",
-    "closed",
-    "review_requested",
-    "review_submitted",
-    "checks_failed",
-];
-const DEFAULT_EVENTS: [&str; 4] = ["opened", "merged", "review_requested", "checks_failed"];
-#[derive(Clone, Debug, Deserialize)]
-pub struct Repository {
-    pub id: i64,
-    pub owner: String,
-    pub repo: String,
-    pub events: Vec<String>,
+pub trait EditSectionsRendering {
+    fn github(&self, _ctx: &ViewContext) -> String;
+    fn inbound(&self) -> String;
+    fn new_form(&self) -> h::FormWith;
+    fn update_form(&self, repo: &Repository) -> h::FormWith;
+    fn remove(&self, repo: &Repository) -> h::Html;
+    fn event_box(&self, repo: Option<&Repository>, event: &str) -> h::Html;
+    fn skip_box(&self) -> h::Html;
+    fn full_name_field(&self) -> h::Html;
+    fn submit(&self, label: &str, class: &str) -> h::Html;
+    fn email_button(&self, rotate: bool) -> h::Html;
 }
-impl Repository {
-    fn full_name(&self) -> String {
-        format!("{}/{}", self.owner, self.repo)
-    }
-}
-#[derive(Clone, Debug, Deserialize)]
-pub struct EditSections {
-    pub room_id: i64,
-    pub can_administer: bool,
-    pub administrator: bool,
-    pub repositories: Vec<Repository>,
-    pub inbound_domain: Option<String>,
-    pub inbound_token: Option<String>,
-}
-impl EditSections {
-    pub fn github(&self, _ctx: &ViewContext) -> String {
+impl EditSectionsRendering for EditSections {
+    fn github(&self, _ctx: &ViewContext) -> String {
         Github { settings: self }.render().unwrap()
     }
-    pub fn inbound(&self) -> String {
+    fn inbound(&self) -> String {
         Inbound { settings: self }.render().unwrap()
     }
     fn new_form(&self) -> h::FormWith {
@@ -64,14 +44,6 @@ impl EditSections {
             ),
             "Remove",
         )
-    }
-    fn events(&self) -> &'static [&'static str] {
-        &EVENTS
-    }
-    fn event_label(&self, event: &str) -> String {
-        let mut label = event.replace('_', " ");
-        label[..1].make_ascii_uppercase();
-        label
     }
     fn event_box(&self, repo: Option<&Repository>, event: &str) -> h::Html {
         let checked = repo.map_or_else(
@@ -128,12 +100,6 @@ impl EditSections {
                 .data("disable_with", label),
         )
     }
-    fn email_address(&self) -> Option<String> {
-        self.inbound_domain
-            .as_ref()
-            .zip(self.inbound_token.as_ref().filter(|s| !h::is_blank(s)))
-            .map(|(d, t)| format!("room-{t}@{d}"))
-    }
     fn email_button(&self, rotate: bool) -> h::Html {
         let form = if rotate {
             h::attrs().data(
@@ -159,6 +125,7 @@ impl EditSections {
         )
     }
 }
+
 #[derive(Template)]
 #[template(path = "rooms/calls/_github_section.html")]
 struct Github<'a> {
@@ -172,3 +139,4 @@ struct Inbound<'a> {
 mod filters {
     pub use crate::helpers::filters::*;
 }
+pub use campfire_presentation::rooms::edit_sections::*;

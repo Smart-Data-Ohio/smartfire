@@ -12,6 +12,7 @@ import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
 import { FORMER_MEMBER, historyIcon, historyText } from "./work-format.ts";
@@ -73,6 +74,7 @@ export function WorkResult({ threadId, work, updatedAt, canEdit, announce }: Wor
   const [saved, setSaved] = useState(false);
   const editRef = useRef<HTMLButtonElement | null>(null);
   const returnFocus = useRef(false);
+  const resultRef = useSpoilerReveal(work.resultHtml ?? "");
 
   // Back from the editor, focus returns to the button that opened it.
   useEffect(() => {
@@ -185,6 +187,7 @@ export function WorkResult({ threadId, work, updatedAt, canEdit, announce }: Wor
         <p className="work-empty">No result recorded yet.</p>
       ) : (
         <div
+          ref={resultRef}
           className="message-body work-result-body"
           // biome-ignore lint/security/noDangerouslySetInnerHtml: resultHtml is the server's sanitizer output (crates/richtext), as message bodies are
           dangerouslySetInnerHTML={{ __html: inlineMentions(work.resultHtml) }}

@@ -135,6 +135,15 @@ describe("highlight", () => {
     expect(highlightHtml(html, [])).toBe(html);
   });
 
+  it("does not mark a word that is still inside a spoiler", () => {
+    const html =
+      '<p>Friday <span class="spoiler" data-spoiler="">the launch is secret</span> plans</p>';
+
+    expect(highlightHtml(html, ["launch", "Friday"])).toBe(
+      '<p><mark class="search-mark">Friday</mark> <span class="spoiler" data-spoiler="">the launch is secret</span> plans</p>',
+    );
+  });
+
   it("keeps markup in the body as markup", () => {
     expect(highlightHtml("<p>a &lt;b&gt; tag</p>", ["tag"])).toBe(
       '<p>a &lt;b&gt; <mark class="search-mark">tag</mark></p>',

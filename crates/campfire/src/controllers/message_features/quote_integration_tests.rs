@@ -189,3 +189,5 @@ async fn editing_plain_message_to_add_permalink_replaces_its_own_container() {
     app.db().read(move |conn| { assert_eq!(conn.query_row("SELECT referenced_message_id FROM message_references WHERE message_id=?",[message],|r|r.get::<_,i64>(0))?,source);Ok(()) }).await.unwrap();
     server.abort();
 }
+
+use campfire_web::controllers::presenters::Rendering;

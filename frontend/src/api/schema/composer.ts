@@ -15,6 +15,7 @@ import type { SlashCommandResult as GeneratedSlashCommandResult } from "../../ge
 import type { UpdateScheduledMessage as GeneratedUpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
 import type { UserSuggestion as GeneratedUserSuggestion } from "../../gen/UserSuggestion.ts";
 import type { UserSuggestionList as GeneratedUserSuggestionList } from "../../gen/UserSuggestionList.ts";
+import { QuotePreview } from "./cards.ts";
 import { ConversationName } from "./conversation.ts";
 import { Icon } from "./icon.ts";
 import { MessageId, RoomId, ScheduledMessageId, ThreadId } from "./ids.ts";
@@ -22,7 +23,7 @@ import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
-/** An `@` suggestion: insert `mentionToken`; `null` means the name is ambiguous (disabled). */
+/** Insert the stable ID token; older servers can return `null` for unavailable mentions. */
 export const UserSuggestion = Schema.Struct({
   user: User,
   mentionToken: Schema.NullOr(Schema.String),
@@ -133,7 +134,10 @@ export const ScheduledMessage = Schema.Struct({
   roomId: RoomId,
   threadId: Schema.NullOr(ThreadId),
   replyToMessageId: Schema.NullOr(MessageId),
+  replyTarget: Schema.NullOr(QuotePreview),
   markdownSource: Schema.String,
+  /** The source as preview text, spoilers redacted by the server. Shown instead of the source. */
+  excerpt: Schema.String,
   sendAt: Timestamp,
   state: ScheduledMessageState,
   sendable: Schema.Boolean,
@@ -168,6 +172,7 @@ export type CreateScheduledMessagePin = Assert<
 export const UpdateScheduledMessage = Schema.Struct({
   markdownSource: Schema.optionalKey(Schema.String),
   sendAt: Schema.optionalKey(Timestamp),
+  replyToMessageId: Schema.optionalKey(Schema.NullOr(MessageId)),
 });
 
 export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;

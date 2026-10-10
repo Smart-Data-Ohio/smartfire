@@ -160,3 +160,5 @@ async fn submit_cached_forms(room_shell: bool) {
         assert_eq!(response.status.as_u16(),expected["status"].as_u64().unwrap() as u16,"{method} {action}: {}",response.text());
     }
 }
+
+use campfire_web::controllers::presenters::MessageCache;

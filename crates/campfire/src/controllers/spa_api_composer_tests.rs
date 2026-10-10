@@ -139,7 +139,7 @@ async fn user_suggestions_cover_the_room_or_the_workspace() {
     for suggestion in &list.suggestions {
         assert_eq!(
             suggestion.mention_token,
-            Some(format!("@[{}]", suggestion.user.name))
+            Some(format!("<@{}>", suggestion.user.id))
         );
     }
 
@@ -178,12 +178,14 @@ async fn user_suggestions_cover_the_room_or_the_workspace() {
 }
 
 #[tokio::test]
-async fn a_duplicate_name_has_no_mention_token() {
+async fn duplicate_names_have_distinct_stable_mention_tokens() {
     let Some(a) = app(true).await else { return };
     a.db()
         .write(move |tx| {
-            tx.conn()
-                .execute("UPDATE users SET name = 'Jason' WHERE id = ?", [KEVIN])?;
+            tx.conn().execute(
+                "UPDATE users SET name = 'Twin [name]' WHERE id IN (?, ?)",
+                [JASON, KEVIN],
+            )?;
             Ok(())
         })
         .await
@@ -192,16 +194,173 @@ async fn a_duplicate_name_has_no_mention_token() {
     let list: api::UserSuggestionList = parse(
         &david
             .send(get(&format!(
-                "/api/v1/autocomplete/users?roomId={DESIGNERS}&query=jason"
+                "/api/v1/autocomplete/users?roomId={DESIGNERS}&query=twin"
             )))
             .await,
     );
     assert_eq!(list.suggestions.len(), 2, "{list:?}");
+    for suggestion in &list.suggestions {
+        assert_eq!(
+            suggestion.mention_token,
+            Some(format!("<@{}>", suggestion.user.id))
+        );
+    }
+}
+
+async fn mention_notifications(
+    a: &crate::controllers::presenters::test_support::TestApp,
+    message_id: i64,
+) -> Vec<i64> {
+    a.db().read(move |conn| {
+        Ok(conn.prepare("SELECT user_id FROM activity_items WHERE source_type = 'Message' AND source_id = ? AND event_type = 'mention' ORDER BY user_id")?
+            .query_map([message_id], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?)
+    }).await.unwrap()
+}
+
+#[tokio::test]
+async fn stable_user_mentions_survive_duplicate_names_renames_and_edits() {
+    let Some(a) = app(true).await else { return };
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET name = 'Twin' WHERE id IN (?, ?)",
+                [JASON, KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let source = format!("Hi <@{KEVIN}> <@{KEVIN}> @[Twin]");
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "stable-mention", "markdownSource": source, "replyToMessageId": null, "replyNotifyAuthor": null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    assert_eq!(message.markdown_source.as_deref(), Some(source.as_str()));
     assert!(
-        list.suggestions
-            .iter()
-            .all(|suggestion| suggestion.mention_token.is_none())
+        message
+            .body_html
+            .contains(&format!("mention--user-{KEVIN}")),
+        "{}",
+        message.body_html
     );
+    assert!(
+        !message
+            .body_html
+            .contains(&format!("mention--user-{JASON}"))
+    );
+    assert_eq!(mention_notifications(&a, message.id).await, [KEVIN]);
+
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET name = 'Renamed <Person>', updated_at = '2026-10-09 23:59:59' WHERE id = ?",
+                [KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let read: api::MessageRead = parse(
+        &david
+            .send(get(&format!("/api/v1/messages/{}", message.id)))
+            .await,
+    );
+    assert!(
+        read.message.body_html.contains("Renamed &lt;Person&gt;"),
+        "{}",
+        read.message.body_html
+    );
+    let editable: api::MessageSource = parse(
+        &david
+            .send(get(&format!("/api/v1/messages/{}/source", message.id)))
+            .await,
+    );
+    assert_eq!(editable.markdown_source, source);
+
+    let edited_source = format!("{} edited", editable.markdown_source);
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", message.id),
+            &json!({"markdownSource": edited_source}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let edited: api::MessageDTO = parse(&reply);
+    assert_eq!(
+        edited.markdown_source.as_deref(),
+        Some(edited_source.as_str())
+    );
+    assert!(
+        edited.body_html.contains("Renamed &lt;Person&gt;"),
+        "{}",
+        edited.body_html
+    );
+    // Renaming Kevin makes the legacy @[Twin] token resolve to Jason on this edit.
+    assert!(edited.body_html.contains(&format!("mention--user-{JASON}")));
+    assert_eq!(mention_notifications(&a, message.id).await, [JASON, KEVIN]);
+}
+
+#[tokio::test]
+async fn stable_user_mentions_do_not_resolve_or_notify_unavailable_users() {
+    let Some(a) = app(true).await else { return };
+    let deleted_id = a
+        .db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+                [DESIGNERS, JZ],
+            )?;
+            let deleted = campfire_db::User::create_integration_bot(tx, "Deleted Person")?;
+            tx.conn()
+                .execute("DELETE FROM users WHERE id = ?", [deleted.id])?;
+            Ok(deleted.id)
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let source = format!("<@{JZ}> <@{MALLORY}> <@{deleted_id}> <@9223372036854775807>");
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "unavailable-mention", "markdownSource": source, "replyToMessageId": null, "replyNotifyAuthor": null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    assert_eq!(message.markdown_source.as_deref(), Some(source.as_str()));
+    assert!(
+        !message.body_html.contains("mention--user-"),
+        "{}",
+        message.body_html
+    );
+    for id in [JZ, MALLORY, deleted_id, i64::MAX] {
+        assert!(
+            message.body_html.contains(&format!("&lt;@{id}&gt;")),
+            "{}",
+            message.body_html
+        );
+    }
+    assert_eq!(
+        mention_notifications(&a, message.id).await,
+        Vec::<i64>::new()
+    );
+}
+
+#[tokio::test]
+async fn legacy_name_mentions_still_render_and_notify() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+        &json!({"clientMessageId": "legacy-mention", "markdownSource": "Hello @[Jason]", "replyToMessageId": null, "replyNotifyAuthor": null}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message: api::MessageDTO = parse(&reply);
+    assert!(
+        message
+            .body_html
+            .contains(&format!("mention--user-{JASON}")),
+        "{}",
+        message.body_html
+    );
+    assert_eq!(mention_notifications(&a, message.id).await, [JASON]);
 }
 
 #[tokio::test]
@@ -415,7 +574,7 @@ async fn previews_render_without_posting() {
         .write(json_body(
             Method::POST,
             &path,
-            &json!({"markdownSource": "**Bold** and @[Jason]"}),
+            &json!({"markdownSource": format!("**Bold** and @[Jason] and <@{JASON}>")}),
         ))
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
@@ -734,6 +893,184 @@ async fn scheduled_messages_are_listed_changed_and_cancelled() {
     let list: api::ScheduledMessageList =
         parse(&david.send(get("/api/v1/scheduled_messages")).await);
     assert!(list.scheduled_messages.iter().all(|row| row.id != id));
+}
+
+#[tokio::test]
+async fn scheduled_reply_targets_can_be_changed_cleared_and_validated() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages");
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &schedule_body("Later", LATER, None, None),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::ScheduledMessage = parse(&reply);
+    let one = format!("/api/v1/scheduled_messages/{}", row.id);
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"replyToMessageId": ROOT_MESSAGE}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let changed: Value = parse(&reply);
+    assert_eq!(changed["replyToMessageId"], ROOT_MESSAGE);
+    assert_eq!(changed["replyTarget"]["messageId"], ROOT_MESSAGE);
+    assert!(
+        changed["replyTarget"]["excerpt"]
+            .as_str()
+            .is_some_and(|text| !text.is_empty())
+    );
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"markdownSource": "Edited"}),
+        ))
+        .await;
+    assert_eq!(
+        parse::<api::ScheduledMessage>(&reply).reply_to_message_id,
+        Some(ROOT_MESSAGE)
+    );
+    let foreign = a.db().read(|conn| {
+        Ok(conn.query_row("SELECT id FROM messages WHERE room_id <> ? AND thread_id IS NULL AND system_note = 0 LIMIT 1", [DESIGNERS], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    for target in [JASONS_REPLY, foreign, 999_999] {
+        let reply = david
+            .write(json_body(
+                Method::PATCH,
+                &one,
+                &json!({"replyToMessageId": target, "markdownSource": "Must not save"}),
+            ))
+            .await;
+        validation_fields(&reply);
+    }
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"replyToMessageId": null}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let changed: Value = parse(&reply);
+    assert_eq!(changed["replyToMessageId"], Value::Null);
+    assert_eq!(changed["replyTarget"], Value::Null);
+    assert_eq!(changed["markdownSource"], "Edited");
+
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &one,
+            &json!({"replyToMessageId": ROOT_MESSAGE}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("{one}/send_now"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let sent: api::ScheduledMessage = parse(&reply);
+    let message = a
+        .db()
+        .read(move |conn| campfire_db::Message::find(conn, sent.sent_message_id.unwrap()))
+        .await
+        .unwrap();
+    assert_eq!(message.reply_to_message_id, Some(ROOT_MESSAGE));
+    assert_eq!(message.markdown_source.as_deref(), Some("Edited"));
+}
+
+#[tokio::test]
+async fn scheduled_reply_edits_and_previews_recheck_room_access() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages");
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &schedule_body("Later", LATER, Some(THREAD), Some(JASONS_REPLY)),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::ScheduledMessage = parse(&reply);
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+                (DESIGNERS, DAVID),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/scheduled_messages/{}", row.id),
+            &json!({"replyToMessageId": JASONS_REPLY}),
+        ))
+        .await;
+    validation_fields(&reply);
+    let list: api::ScheduledMessageList =
+        parse(&david.send(get("/api/v1/scheduled_messages")).await);
+    let listed = list
+        .scheduled_messages
+        .iter()
+        .find(|item| item.id == row.id)
+        .unwrap();
+    assert!(listed.reply_target.is_none());
+    assert!(!listed.sendable);
+}
+
+#[tokio::test]
+async fn a_scheduled_message_excerpt_keeps_its_spoilers_hidden() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let source = "[||Alice dies||](https://example.com/a\\)b \"Alice dies\") soon";
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
+            &schedule_body(source, LATER, None, None),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::ScheduledMessage = parse(&reply);
+    assert_eq!(row.markdown_source, source);
+    assert_eq!(row.excerpt, "spoiler soon");
+
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/scheduled_messages/{}", row.id),
+            &json!({"markdownSource": "> [||x||][r]\n>\n> [r]: https://example.com/alice-dies \"Alice dies\""}),
+        ))
+        .await;
+    let changed: api::ScheduledMessage = parse(&reply);
+    assert_eq!(changed.excerpt, "spoiler");
+    let list: api::ScheduledMessageList =
+        parse(&david.send(get("/api/v1/scheduled_messages")).await);
+    let listed = list
+        .scheduled_messages
+        .iter()
+        .find(|listed| listed.id == row.id)
+        .unwrap();
+    assert_eq!(listed.excerpt, "spoiler");
+    assert!(
+        list.scheduled_messages
+            .iter()
+            .all(|row| !row.excerpt.contains("Alice") && !row.excerpt.contains("example.com/alice"))
+    );
 }
 
 #[tokio::test]

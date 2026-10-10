@@ -6,22 +6,6 @@ use crate::{
     messages::{MessageItem, UserView, composer::Facts, parts::AgentStep},
 };
 use askama::Template;
-
-#[derive(Clone, Debug, Default)]
-pub struct NewPost {
-    pub room_id: i64,
-    pub room_name: String,
-    pub name: Option<String>,
-    pub first_message: Option<String>,
-    pub status: String,
-    pub owner_id: Option<i64>,
-    pub tags: Vec<String>,
-    pub tag_suggestions: Vec<String>,
-    pub humans: Vec<(String, i64)>,
-    pub agents: Vec<(String, i64)>,
-    pub error: Option<String>,
-    pub field_errors: Vec<String>,
-}
 #[derive(Template)]
 #[template(path="channel_threads/new.html", blocks=["head","content"])]
 pub struct New<'a> {
@@ -117,54 +101,6 @@ fn owner_options_with_prompt(
 }
 fn room_link(id: i64, name: &str) -> h::Html {
     h::link_to_text(name, &format!("/rooms/{id}"), h::attrs())
-}
-
-pub struct History {
-    pub kind: String,
-    pub actor: String,
-    pub from_status: String,
-    pub to_status: String,
-    pub status_changed: bool,
-    pub owner_changed: bool,
-    pub from_owner: String,
-    pub to_owner: String,
-    pub note: Option<String>,
-    pub summary: Option<String>,
-    pub links: i64,
-    pub questions: i64,
-}
-pub struct Post {
-    pub id: i64,
-    pub room_id: i64,
-    pub room_name: String,
-    pub room_updated_at: jiff::Timestamp,
-    pub name: Option<String>,
-    pub lifecycle: String,
-    pub count: i64,
-    pub status: String,
-    pub status_label: String,
-    pub owner_label: String,
-    pub owner_agent: bool,
-    pub owner_id: Option<i64>,
-    pub tags: Vec<String>,
-    pub run_url: Option<String>,
-    pub can_manage: bool,
-    pub can_assign: bool,
-    pub can_lifecycle: bool,
-    pub joined: bool,
-    pub humans: Vec<(String, i64)>,
-    pub agents: Vec<(String, i64)>,
-    pub result: Option<h::Html>,
-    pub result_markdown: Option<String>,
-    pub result_at: Option<jiff::Timestamp>,
-    pub result_by: Option<String>,
-    pub user: UserView,
-    pub messages: Vec<MessageItem>,
-    pub steps: Vec<AgentStep>,
-    pub composer: Facts,
-    pub history: Vec<History>,
-    pub links: Links,
-    pub error: Option<String>,
 }
 #[derive(Template)]
 #[template(path="channel_threads/board_post.html", blocks=["head","content"])]
@@ -325,23 +261,6 @@ impl Show<'_> {
         )
     }
 }
-
-pub struct Link {
-    pub id: i64,
-    pub kind: String,
-    pub label: String,
-    pub url: String,
-    pub remove_label: String,
-    pub state: Option<String>,
-    pub title: Option<String>,
-    pub event_time: Option<jiff::Timestamp>,
-    pub event_zone: Option<String>,
-    pub cancelled: bool,
-}
-pub struct Links {
-    pub items: Vec<Link>,
-    pub events: Vec<(String, i64)>,
-}
 #[derive(Template)]
 #[template(path = "threads/work/links/_box.html")]
 pub struct LinksBox<'a> {
@@ -409,4 +328,39 @@ impl LinksBox<'_> {
                 .join("\n"),
         )
     }
+}
+pub use campfire_presentation::channel_threads::board::*;
+
+pub struct Post {
+    pub id: i64,
+    pub room_id: i64,
+    pub room_name: String,
+    pub room_updated_at: jiff::Timestamp,
+    pub name: Option<String>,
+    pub lifecycle: String,
+    pub count: i64,
+    pub status: String,
+    pub status_label: String,
+    pub owner_label: String,
+    pub owner_agent: bool,
+    pub owner_id: Option<i64>,
+    pub tags: Vec<String>,
+    pub run_url: Option<String>,
+    pub can_manage: bool,
+    pub can_assign: bool,
+    pub can_lifecycle: bool,
+    pub joined: bool,
+    pub humans: Vec<(String, i64)>,
+    pub agents: Vec<(String, i64)>,
+    pub result: Option<h::Html>,
+    pub result_markdown: Option<String>,
+    pub result_at: Option<jiff::Timestamp>,
+    pub result_by: Option<String>,
+    pub user: UserView,
+    pub messages: Vec<MessageItem>,
+    pub steps: Vec<AgentStep>,
+    pub composer: Facts,
+    pub history: Vec<History>,
+    pub links: Links,
+    pub error: Option<String>,
 }

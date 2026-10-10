@@ -22,6 +22,7 @@ use campfire_api_types::{
     ThreadRemoved, ThreadUnread, Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
+use campfire_db::models::activity_item::ActivityItemsRemoved;
 use campfire_db::{ChannelThread, Connection, Database, Membership, Message, Room, Snapshot};
 
 use super::Cable;
@@ -715,12 +716,14 @@ fn item_room_id(conn: &Connection, item_id: i64) -> campfire_db::Result<Option<i
 }
 
 /// `activity.removed` on each owner's `user` topic, with their unread count afterwards.
-pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i64, i64)>) {
+/// Removing a mention from a retained message also refreshes its room's sidebar counts.
+pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: ActivityItemsRemoved) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
     // Only owners with a sync socket open; the others get a gap marker.
-    let items = items
+    let items = removed
+        .items
         .into_iter()
         .filter(|&(_, user_id)| {
             let connected = server.sync_connected(user_id);
@@ -733,7 +736,7 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i
     if items.is_empty() {
         return;
     }
-    let server = server.downgrade();
+    let (server, slot) = (server.downgrade(), slot.clone());
     renderer.defer(Box::new(move |conn| {
         let Some(server) = server.upgrade() else {
             return;
@@ -752,6 +755,9 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i
                     |publication| publication,
                 ),
                 Err(error) => tracing::warn!(%error, id, "sync: activity count not read"),
+            }
+            if let Some(room_id) = removed.room_id {
+                sidebar_rows_later(&server, &slot, room_id, Some(vec![user_id]));
             }
         }
     }));

@@ -185,3 +185,5 @@ impl RoomLast {
         Ok(campfire_db::Room::original_for_user(c, id)?.map(|r| r.id))
     }
 }
+
+use campfire_web::controllers::presenters::{Rendering};

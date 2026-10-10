@@ -4,16 +4,6 @@ use askama::Template;
 use crate::{ViewContext, messages::MessageItem};
 use crate::helpers as h;
 
-pub struct ListRow {
-    pub id: i64,
-    pub name: String,
-    pub status: String,
-    pub message_count: i64,
-    pub work_label: Option<String>,
-    pub owner_label: String,
-    pub agent: bool,
-}
-
 #[derive(Template)]
 #[template(path = "channel_threads/index.html")]
 pub struct Index<'a> {
@@ -35,16 +25,6 @@ pub struct Show<'a> {
     pub parent: Option<&'a MessageItem>,
     pub messages: &'a [MessageItem],
     pub work: Option<&'a Work>,
-}
-pub struct Work {
-    pub id: i64,
-    pub status_label: String,
-    pub owner_label: String,
-    pub owner_agent: bool,
-    pub can_manage: bool,
-    pub history: Vec<board::History>,
-    pub links: board::Links,
-    pub steps: Vec<crate::messages::parts::AgentStep>,
 }
 #[derive(Template)]
 #[template(path="channel_threads/_work.html")]
@@ -117,3 +97,6 @@ pub struct PendingTemplate<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub user: &'a crate::messages::UserView,
 }
+pub use campfire_presentation::channel_threads::*;
+
+use crate::rendering::*;

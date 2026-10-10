@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod review_pr177_cache_probes {
+    use campfire_web::controllers::presenters::Rendering;
     use crate::controllers::presenters::{self, test_support::*};
     use axum::http::StatusCode;
     async fn boundary(app: &TestApp, user: i64, count: i64) -> String {
