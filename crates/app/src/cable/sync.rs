@@ -282,6 +282,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
     ("activity_item::ActivityItemRecorded", &["activity.item"]),
+    ("Broadcasts::sync_activity_recorded", &["activity.item", "sidebar.row.upserted", "sidebar.row.removed"]),
     ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
         "room_category::SidebarOrganized",

@@ -26,19 +26,23 @@ impl ActivityItem {
         tx: &mut Tx<'_>,
         user: &User,
         message: &crate::Message,
+        ignored: bool,
     ) -> Result<Option<Self>> {
         if !user.is_active() || user.is_bot() || message.creator_id == user.id {
             return Ok(None);
         }
-        Self::record_authorized_with_recipient(
-            tx,
-            user.id,
-            "Message",
-            message.id,
-            message.thread_id,
-            "thread_activity",
-            Some(user),
-        )
+        let item = if ignored {
+            None
+        } else {
+            Self::record_visible_for_recipient(
+                tx, user.id, "Message", message.id, message.thread_id, "thread_activity", Some(user),
+            )?
+        };
+        Self::publish_recording_for_user(tx, user, &super::ActivityItemRecorded {
+            id: item.as_ref().map_or(0, |item| item.id), user_id: user.id,
+            room_id: Some(message.room_id), source_type: "Message".into(), source_id: message.id,
+        });
+        Ok(item)
     }
 
     /// Rails-compatible entry point, including the merged WS11 budget-notice reader.
@@ -361,7 +365,12 @@ impl ActivityItem {
 
     pub(super) fn publish_recording(tx: &mut Tx<'_>, recorded: &super::ActivityItemRecorded) -> Result<()> {
         let Some(user) = User::find_by_id(tx.conn(), recorded.user_id)? else { return Ok(()); };
-        if !user.is_active() || user.is_bot() { return Ok(()); }
+        Self::publish_recording_for_user(tx, &user, recorded);
+        Ok(())
+    }
+
+    fn publish_recording_for_user(tx: &mut Tx<'_>, user: &User, recorded: &super::ActivityItemRecorded) {
+        if !user.is_active() || user.is_bot() { return; }
         // Classic cable broadcasts share the global sequence too. Both slots come from the
         // unfiltered recording attempt, including ignored actors and unchanged grouped rows.
         tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::Cable {
@@ -370,7 +379,6 @@ impl ActivityItem {
                 "recordingSource":[recorded.source_type,recorded.source_id]}),
         });
         tx.broadcast_after_commit_once(recorded);
-        Ok(())
     }
 
     pub(super) fn broadcast_recorded(
