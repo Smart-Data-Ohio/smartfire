@@ -124,6 +124,10 @@ export interface S2World {
   doNotDisturb: DoNotDisturb;
   /** The viewer's out of office, as `/ooo` leaves it. */
   outOfOffice: OutOfOffice | null;
+  /** People the viewer ignores (`user_blocks`), with when they started. */
+  readonly ignored: Map<number, string>;
+  /** The viewer's `activity_revision`, which every ignore change moves. */
+  ignoreRevision: number;
 }
 
 /** A fresh, empty S2 world. */
@@ -147,6 +151,8 @@ export function emptyS2World(): S2World {
     sentByClientId: new Map(),
     doNotDisturb: { enabled: false, until: null },
     outOfOffice: null,
+    ignored: new Map(),
+    ignoreRevision: 0,
   };
 }
 
@@ -377,6 +383,8 @@ export function pinCount(world: World, roomId: number): number {
 export interface PageLookups {
   readonly usersFor: (ids: Iterable<number>) => User[];
   readonly saved: ReadonlyMap<number, SavedItem>;
+  /** The authors the viewer ignores: their messages come marked `ignored`, content and all. */
+  readonly ignored?: ReadonlyMap<number, string>;
 }
 
 function slice(
@@ -387,7 +395,13 @@ function slice(
 ): MessagePage {
   const start = Math.max(0, from);
   const end = Math.min(list.length, to);
-  const messages = list.slice(start, end);
+
+  const messages = list
+    .slice(start, end)
+    .map((message) =>
+      lookups.ignored?.has(message.creatorId) === true ? { ...message, ignored: true } : message,
+    );
+
   const oldest = messages[0];
   const newest = messages.at(-1);
   const saved = [];

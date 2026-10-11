@@ -507,7 +507,11 @@ export function createThreads(
     return { membership: thread.viewerMembership };
   };
 
-  const lookups = () => ({ usersFor: ctx.usersFor, saved: ctx.world().saved });
+  const lookups = () => ({
+    usersFor: ctx.usersFor,
+    saved: ctx.world().saved,
+    ignored: ctx.world().ignored,
+  });
 
   return {
     routes: [

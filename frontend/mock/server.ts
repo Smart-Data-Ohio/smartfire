@@ -677,7 +677,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const messages = (roomId: number, query: URLSearchParams) =>
-    pageOf(roomOr404(roomId).messages, query, { usersFor, saved: world.saved });
+    pageOf(roomOr404(roomId).messages, query, {
+      usersFor,
+      saved: world.saved,
+      ignored: world.ignored,
+    });
 
   // --- writes ---
 
