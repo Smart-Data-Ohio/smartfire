@@ -32,12 +32,4 @@ impl FormView {
         let base = format!("/rooms/{}/events", self.room_id);
         self.id.map(|id| format!("{base}/{id}")).unwrap_or(base)
     }
-    pub fn back_path(&self) -> String {
-        self.id
-            .map(|_| self.path())
-            .unwrap_or_else(|| format!("/rooms/{}/events", self.room_id))
-    }
-    pub fn error_count(&self) -> String {
-        super::pages::plural(self.errors.len() as i64, "error")
-    }
 }

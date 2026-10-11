@@ -11,13 +11,6 @@ pub struct Item {
     pub author: Option<String>,
     pub body: String,
 }
-pub const DESTINATIONS: [(&str, &str, &str); 5] = [
-    ("/work", "check.svg", "Work threads"),
-    ("/saved", "bookmark.svg", "Saved"),
-    ("/scheduled_messages", "calendar.svg", "Scheduled"),
-    ("/agents", "bot.svg", "Agents"),
-    ("/users", "everyone.svg", "People"),
-];
 pub const TYPES: [(&str, &str); 9] = [
     ("all", "All"),
     ("mentions", "Mentions and replies"),

@@ -29,12 +29,4 @@ pub struct Profile {
     pub management: Option<(String, String)>,
 }
 impl DirectoryAgent {
-    pub fn status_label(&self) -> &str {
-        match self.status.as_str() {
-            "working" => "Working",
-            "waiting" => "Waiting",
-            "failed" => "Failed",
-            _ => "Idle",
-        }
-    }
 }

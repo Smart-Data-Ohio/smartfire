@@ -58,18 +58,3 @@ pub struct BoostMessageJson {
     /// `room_message_url(boost.message.room, boost.message)`.
     pub url: String,
 }
-
-/// `messages/by_bots/index.json.jbuilder`: `json.array! @messages, partial: "messages/message"`.
-pub fn by_bots_index(messages: &[MessageJson]) -> String {
-    crate::helpers::to_rails_json(&messages)
-}
-
-/// `messages/by_bots/show.json.jbuilder`.
-pub fn by_bots_show(message: &MessageJson) -> String {
-    crate::helpers::to_rails_json(message)
-}
-
-/// `messages/boosts/by_bots/show.json.jbuilder`.
-pub fn boosts_by_bots_show(boost: &BoostJson) -> String {
-    crate::helpers::to_rails_json(boost)
-}

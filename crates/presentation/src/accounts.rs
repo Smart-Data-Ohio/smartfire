@@ -66,17 +66,6 @@ pub struct BotGithubAccount {
     pub disconnected_reason: Option<String>,
 }
 impl BotAgentForm {
-    pub fn cap_value(&self, name: &str) -> Option<String> {
-        if let Some(value) = self.raw_caps.get(name) {
-            return value.clone();
-        }
-        match name {
-            "messages" => self.daily_message_cap,
-            "board_posts" => self.daily_board_post_cap,
-            _ => self.daily_external_action_cap,
-        }
-        .map(|value| value.to_string())
-    }
 }
 
 impl Bot {

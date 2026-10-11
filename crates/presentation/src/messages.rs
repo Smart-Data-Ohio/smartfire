@@ -8,7 +8,7 @@ use campfire_routes as routes;
 use jiff::Timestamp;
 use serde::Deserialize;
 use crate::helpers as h;
-use support::{RubyNumber, epoch_ms, iso8601};
+use support::RubyNumber;
 
 /// `EmojiHelper::REACTIONS` (see [`crate::helpers::emoji`]).
 pub use crate::helpers::emoji::REACTIONS;
@@ -210,14 +210,6 @@ pub struct ReactionGroup<'a> {
     pub reactors: Vec<&'a UserView>,
 }
 
-/// What `messages/edit` needs besides the message.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct EditView {
-    pub message: MessageView,
-    /// Message#editable_markdown_source. The field name predates the Markdown edit form.
-    pub editable_body_html: String,
-}
-
 /// `dom_id(room)` / `dom_id(room, prefix)`.
 pub fn room_dom_id(kind: RoomKind, id: i64, prefix: &str) -> String {
     if prefix.is_empty() {
@@ -245,18 +237,6 @@ impl RoomKind {
         }
     }
 
-    pub fn is_direct(self) -> bool {
-        self == RoomKind::Direct
-    }
-}
-
-impl ReplyPreview {
-    pub fn id_string(&self) -> String {
-        self.source
-            .as_ref()
-            .map(|source| source.id.to_string())
-            .unwrap_or_default()
-    }
 }
 
 impl MessageView {
@@ -269,41 +249,10 @@ impl MessageView {
         }
     }
 
-    pub fn is_unrenderable(&self) -> bool {
-        matches!(self.content, MessageContent::Unrenderable)
-    }
-
     pub fn attachment(&self) -> Option<&AttachmentView> {
         match &self.content {
             MessageContent::Attachment(attachment) => Some(attachment),
             _ => None,
-        }
-    }
-
-    pub fn created_at_iso(&self) -> String {
-        iso8601(self.created_at)
-    }
-
-    pub fn created_at_epoch(&self) -> i64 {
-        epoch_ms(self.created_at)
-    }
-
-    pub fn updated_at_epoch(&self) -> i64 {
-        epoch_ms(self.updated_at)
-    }
-
-    pub fn at_path(&self) -> String {
-        if let Some(thread) = self.details.thread_id {
-            routes::ROOM.path_with(
-                &[&self.room_id],
-                None,
-                &[
-                    ("thread", Some(&thread.to_string())),
-                    ("message_id", Some(&self.id.to_string())),
-                ],
-            )
-        } else {
-            routes::room_at_message(self.room_id, self.id)
         }
     }
 
@@ -318,37 +267,12 @@ impl MessageView {
     pub fn edit_path(&self) -> String {
         routes::edit_room_message(self.room_id, self.id)
     }
-    pub fn edited_label(&self) -> String {
-        self.details
-            .edited_at
-            .map(|time| crate::time::Zone::utc().to_fs(time, "long"))
-            .unwrap_or_default()
-    }
 
     pub fn forward_note(&self) -> Option<&str> {
         self.details
             .forward_note
             .as_deref()
             .filter(|note| !h::is_blank(note))
-    }
-
-    pub fn reply_count_label(&self) -> String {
-        format!(
-            "{} {}",
-            self.details.reply_count,
-            if self.details.reply_count == 1 {
-                "reply"
-            } else {
-                "replies"
-            }
-        )
-    }
-
-    pub fn legacy_boosts(&self) -> Vec<&BoostView> {
-        self.boosts
-            .iter()
-            .filter(|boost| boost.reaction.is_none())
-            .collect()
     }
 
     pub fn reaction_groups(&self) -> Vec<ReactionGroup<'_>> {
@@ -379,13 +303,6 @@ impl MessageView {
         groups
     }
 
-    pub fn boosts_path(&self) -> String {
-        routes::message_boosts(self.id)
-    }
-
-    pub fn new_boost_path(&self) -> String {
-        routes::new_message_boost(self.id)
-    }
 }
 
 impl BoostView {
@@ -395,15 +312,5 @@ impl BoostView {
 
     pub fn path(&self) -> String {
         routes::message_boost(self.message_id, self.id)
-    }
-    pub fn avatar_label(&self) -> String {
-        format!("{} boosted {}", self.booster.name, self.content)
-    }
-}
-
-impl EditView {
-    /// DriveAttachment#url always uses this prefix; only ids are submitted by the edit form.
-    pub fn drive_file_id<'a>(&self, url: &'a str) -> &'a str {
-        url.strip_prefix("https://drive.google.com/open?id=").expect("DriveAttachment URL")
     }
 }

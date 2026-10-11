@@ -14,6 +14,3 @@ pub struct Reference {
     pub id: i64,
     pub card: Option<Card>,
 }
-
-/// Origin placeholder used only by detached fixture renders.
-pub const ORIGIN_SLOT: &str = "http://campfire.test";

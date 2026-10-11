@@ -45,9 +45,6 @@ pub struct Sidebar {
     pub categories: Vec<Category>,
 }
 impl Person {
-    pub fn first_name(&self) -> &str {
-        self.name.split_whitespace().next().unwrap_or("")
-    }
 }
 
 impl Row {
@@ -65,14 +62,5 @@ impl Row {
             if self.call.unread { " unread" } else { "" },
             if self.call.muted { " muted" } else { "" }
         )
-    }
-}
-
-impl Category {
-    pub fn action(&self) -> String {
-        format!("/room_categories/{}", self.id)
-    }
-    pub fn toggle_label(&self) -> &str {
-        if self.collapsed { "Expand" } else { "Collapse" }
     }
 }

@@ -47,22 +47,6 @@ pub fn with_query(path: &str, params: Vec<(&str, Param)>) -> String {
     }
 }
 
-/// `rooms_directs_path(user_ids: [ id ])`.
-pub fn rooms_directs_with_users(user_ids: &[i64]) -> String {
-    with_query(
-        &campfire_routes::rooms_directs(),
-        vec![(
-            "user_ids",
-            Param::Many(user_ids.iter().map(ToString::to_string).collect()),
-        )],
-    )
-}
-
-/// `rooms_directs_path(user_ids: [ user.id ])`.
-pub fn rooms_directs_with_user(user_id: impl std::borrow::Borrow<i64>) -> String {
-    rooms_directs_with_users(&[*user_id.borrow()])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,7 +54,10 @@ mod tests {
     #[test]
     fn builds_rails_query_strings() {
         assert_eq!(
-            rooms_directs_with_users(&[5, 6]),
+            with_query(
+                "/rooms/directs",
+                vec![("user_ids", Param::Many(vec!["5".into(), "6".into()]))]
+            ),
             "/rooms/directs?user_ids%5B%5D=5&user_ids%5B%5D=6"
         );
         assert_eq!(

@@ -40,41 +40,6 @@ pub fn text(value: &Value) -> String {
     }
 }
 
-/// Rails number_to_human: round to three significant digits before choosing K/M/B.
-pub fn compact_count(number: &i64) -> String {
-    let number = *number;
-    let magnitude = i128::from(number).abs();
-    let digits = magnitude.to_string().len() as u32;
-    let quantum = 10_i128.pow(digits.saturating_sub(3));
-    let rounded = (magnitude + quantum / 2) / quantum * quantum;
-    let power = if rounded >= 1_000_000_000 {
-        9
-    } else if rounded >= 1_000_000 {
-        6
-    } else if rounded >= 1_000 {
-        3
-    } else {
-        0
-    };
-    let divisor = 10_i128.pow(power);
-    let mut value = (rounded / divisor).to_string();
-    let remainder = rounded % divisor;
-    if remainder != 0 {
-        value.push('.');
-        value
-            .push_str(format!("{remainder:0width$}", width = power as usize).trim_end_matches('0'));
-    }
-    format!(
-        "{}{value}{}",
-        if number < 0 { "-" } else { "" },
-        match power {
-            3 => "K",
-            6 => "M",
-            9 => "B",
-            _ => "",
-        }
-    )
-}
 impl Card {
     pub fn error(&self) -> bool {
         present(self.fetch_error.as_deref()).is_some()

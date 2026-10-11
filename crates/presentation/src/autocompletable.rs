@@ -14,15 +14,6 @@ pub struct UserJson {
     pub sgid: String,
 }
 
-/// `autocompletable/users/index.json.jbuilder`.
-pub fn users_index_json(users: &[MentionUser], base_url: &str) -> String {
-    let users: Vec<UserJson> = users
-        .iter()
-        .map(|user| UserJson::new(user, base_url))
-        .collect();
-    h::to_rails_json(&users)
-}
-
 /// Our Markdown picker JSON; the inherited Lexxy fixtures are not this endpoint's oracle.
 pub fn markdown_users_index_json(
     users: &[MentionUser],
