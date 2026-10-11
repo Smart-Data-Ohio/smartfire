@@ -9,6 +9,7 @@
  */
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { store } from "../../../store/store.ts";
+import { DEFAULT_AUDIO_BITRATE, microphonePreset } from "./audio-quality.ts";
 import { DEFAULT_SHARE_QUALITY } from "./screen-quality.ts";
 import {
   type CallParticipant,
@@ -78,6 +79,8 @@ export interface FakeCallHooks {
   playback(allowed: boolean): void;
   /** The current snapshot, for assertions. */
   snapshot(): CallSnapshot;
+  /** The microphone's encoding target (bits per second) the real engine would publish with. */
+  audioBitrate(): number;
 }
 
 declare global {
@@ -169,13 +172,20 @@ export class FakeTransport implements CallTransport {
   /** The quality the latest share or stream capture asked for (what the real engine encodes). */
   screenQuality: StreamQuality | null = null;
   #noise = false;
+  /** What the real engine would encode the microphone at, for this connection's grant. */
+  #audioBitrate = DEFAULT_AUDIO_BITRATE;
   readonly #startedAt = Date.now();
 
   constructor(roomId: number) {
     this.#roomId = roomId;
   }
 
-  async connect(_url: string, token: string, noiseSuppression: boolean): Promise<void> {
+  async connect(
+    _url: string,
+    token: string,
+    noiseSuppression: boolean,
+    audioBitrate: number,
+  ): Promise<void> {
     const parsed = parseFakeToken(token);
 
     if (parsed === null) {
@@ -185,6 +195,7 @@ export class FakeTransport implements CallTransport {
     await Promise.resolve();
     this.#token = parsed;
     this.#noise = noiseSuppression;
+    this.#audioBitrate = microphonePreset(audioBitrate).maxBitrate;
     this.#connected = true;
     this.#unsubscribeStore = store.subscribe((state, previous) => {
       if (
@@ -585,6 +596,7 @@ export class FakeTransport implements CallTransport {
         this.#emit({ type: "changed" });
       },
       snapshot: () => this.snapshot(),
+      audioBitrate: () => this.#audioBitrate,
     };
   }
 }
