@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { AnnouncementFollow } from "../../gen/AnnouncementFollow.ts";
 import type { RoomKind } from "../../gen/RoomKind.ts";
+import { useAnnouncementRoom } from "../../store/announcements.ts";
 import { useStore } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -18,16 +19,6 @@ type Load =
       readonly following: readonly AnnouncementFollow[];
       readonly followers: readonly AnnouncementFollow[];
     };
-
-/** Whether the store has the room down as an announcement room (its header and sidebar row). */
-export function useAnnouncementRoom(roomId: number): boolean {
-  return useStore(
-    (state) =>
-      state.rooms[roomId]?.detail?.room.announcement ??
-      state.sidebar.rows[roomId]?.room.announcement ??
-      false,
-  );
-}
 
 /** One followed (or following) room: its glyph and name, and Unfollow for those who may. */
 function FollowRow({
@@ -71,6 +62,35 @@ function FollowRow({
   );
 }
 
+/** The follows read in flight, or failed with a way to try again. */
+function FollowsState({
+  load,
+  onRetry,
+}: {
+  readonly load: Exclude<Load, { readonly status: "ready" }>;
+  readonly onRetry: () => void;
+}) {
+  if (load.status === "loading") {
+    return (
+      <div className="room-settings-skeleton" role="status" aria-label="Loading follows">
+        <Skeleton width="50%" height={12} />
+        <Skeleton width="35%" height={12} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="room-form-load-error">
+      <p className="picker-note picker-error" role="alert">
+        Couldn't load this channel's follows: {load.message}
+      </p>
+      <Button size="sm" onClick={onRetry}>
+        Try again
+      </Button>
+    </div>
+  );
+}
+
 interface AnnouncementSettingsProps {
   readonly roomId: number;
   readonly kind: RoomKind;
@@ -89,9 +109,8 @@ interface AnnouncementSettingsProps {
 export function AnnouncementSettings({ roomId, kind, manage }: AnnouncementSettingsProps) {
   const pickerId = useId();
   const mounted = useRef(true);
-  const stored = useAnnouncementRoom(roomId);
-  // The flag as the last write here answered it, until the store catches up (or moves on).
-  const [written, setWritten] = useState<{ value: boolean; over: boolean } | null>(null);
+  // The switch shows the store's word only: sync, or this write's reply when nothing newer came.
+  const announcement = useAnnouncementRoom(roomId);
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [flagging, setFlagging] = useState(false);
@@ -100,12 +119,6 @@ export function AnnouncementSettings({ roomId, kind, manage }: AnnouncementSetti
   const [unfollowing, setUnfollowing] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const followable = kind !== "board";
-
-  if (written !== null && stored !== written.over) {
-    setWritten(null);
-  }
-
-  const announcement = written?.value ?? stored;
 
   useEffect(() => {
     mounted.current = true;
@@ -159,16 +172,11 @@ export function AnnouncementSettings({ roomId, kind, manage }: AnnouncementSetti
   const flag = (next: boolean) => {
     if (flagging) return;
 
-    const over = stored;
-
     setFlagging(true);
     setProblem(null);
     actions.announcements.set(roomId, next).then(
-      (room) => {
-        if (!mounted.current) return;
-
-        setFlagging(false);
-        setWritten({ value: room.announcement ?? false, over });
+      () => {
+        if (mounted.current) setFlagging(false);
       },
       (failure: ActionError) => {
         if (!mounted.current) return;
@@ -252,6 +260,16 @@ export function AnnouncementSettings({ roomId, kind, manage }: AnnouncementSetti
 
   const busy = following || unfollowing !== null;
 
+  // Until the follows load, every list shows their state: a board, with no Following list, shows
+  // it under Followed by, so a failed read can be retried there too.
+  const status =
+    load.status === "ready" ? null : (
+      <FollowsState load={load} onRetry={() => setAttempt((count) => count + 1)} />
+    );
+
+  const followedBy =
+    manage && announcement && (load.status === "ready" ? load.followers.length > 0 : !followable);
+
   return (
     <div className="room-integrations" data-room-integration="">
       {manage ? (
@@ -281,20 +299,8 @@ export function AnnouncementSettings({ roomId, kind, manage }: AnnouncementSetti
           <p className="room-integration-note">
             Messages published in these announcement channels are copied here.
           </p>
-          {load.status === "loading" ? (
-            <div className="room-settings-skeleton" role="status" aria-label="Loading follows">
-              <Skeleton width="50%" height={12} />
-              <Skeleton width="35%" height={12} />
-            </div>
-          ) : load.status === "error" ? (
-            <div className="room-form-load-error">
-              <p className="picker-note picker-error" role="alert">
-                Couldn't load what this channel follows: {load.message}
-              </p>
-              <Button size="sm" onClick={() => setAttempt((count) => count + 1)}>
-                Try again
-              </Button>
-            </div>
+          {status !== null ? (
+            status
           ) : followed.length === 0 ? (
             <p className="room-integration-note">Not following any announcement channels.</p>
           ) : (
@@ -353,20 +359,24 @@ export function AnnouncementSettings({ roomId, kind, manage }: AnnouncementSetti
           ) : null}
         </section>
       ) : null}
-      {manage && announcement && load.status === "ready" && load.followers.length > 0 ? (
+      {followedBy ? (
         <section className="room-subscribe" aria-label="Followed by">
           <h3 className="room-subscribe-title">Followed by</h3>
-          <ul className="room-follow-list">
-            {load.followers.map((each) => (
-              <FollowRow
-                key={each.targetRoomId}
-                roomId={each.targetRoomId}
-                removing={false}
-                disabled
-                onRemove={null}
-              />
-            ))}
-          </ul>
+          {load.status === "ready" ? (
+            <ul className="room-follow-list">
+              {load.followers.map((each) => (
+                <FollowRow
+                  key={each.targetRoomId}
+                  roomId={each.targetRoomId}
+                  removing={false}
+                  disabled
+                  onRemove={null}
+                />
+              ))}
+            </ul>
+          ) : (
+            status
+          )}
         </section>
       ) : null}
       {problem === null ? null : (

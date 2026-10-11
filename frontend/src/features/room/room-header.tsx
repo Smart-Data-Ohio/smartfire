@@ -1,5 +1,6 @@
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { RoomKind } from "../../gen/RoomKind.ts";
+import { useAnnouncementRoom } from "../../store/announcements.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { MenuItem, MenuSeparator } from "../../ui/menu.tsx";
@@ -250,7 +251,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const name = detail?.displayName ?? row?.displayName ?? null;
   const iconName = detail?.room.iconName ?? row?.room.iconName ?? null;
   const topic = detail === null ? (row?.room.topic ?? null) : detail.room.topic;
-  const announcement = (detail?.room.announcement ?? row?.room.announcement) === true;
+  const announcement = useAnnouncementRoom(roomId);
   const directIds = detail?.directMemberIds ?? row?.directMemberIds ?? [];
   const otherId = kind === "direct" && directIds.length === 1 ? directIds[0] : undefined;
   // A DM's people actions for the phone's ⋯ menu (none in other rooms); wide screens show

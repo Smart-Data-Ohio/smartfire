@@ -1,9 +1,11 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sidebarFixture, sidebarRowFixture } from "../../api/testing.ts";
 import type { AnnouncementFollow } from "../../gen/AnnouncementFollow.ts";
+import type { Room } from "../../gen/Room.ts";
 import type { SidebarRow } from "../../gen/SidebarRow.ts";
+import type { SyncEvent } from "../../gen/SyncEvent.ts";
 import { mutations, sidebarRowClock } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -14,6 +16,27 @@ function row(roomId: number, name: string, announcement: boolean): SidebarRow {
 
   return { ...base, room: { ...base.room, announcement } };
 }
+
+/** The row as the server stamped it at `updatedAt`. */
+function stamped(roomId: number, announcement: boolean, updatedAt: string): SidebarRow {
+  const base = row(roomId, roomId === NEWS ? "news" : "engineering", announcement);
+
+  return { ...base, room: { ...base.room, updatedAt } };
+}
+
+/** The `sidebar.row.upserted` the server sends after a flag change, from any session. */
+function synced(roomId: number, announcement: boolean, updatedAt: string): SyncEvent {
+  return {
+    seq: 0,
+    topic: "user:7",
+    type: "sidebar.row.upserted",
+    data: { ...stamped(roomId, announcement, updatedAt), refreshRoom: true },
+  };
+}
+
+const LATER = "2026-10-11T10:00:00.000Z";
+
+const LATEST = "2026-10-11T10:00:05.000Z";
 
 function follow(sourceRoomId: number, targetRoomId: number): AnnouncementFollow {
   return { sourceRoomId, targetRoomId, creatorId: 7, createdAt: "2026-10-11T00:00:00.000Z" };
@@ -117,17 +140,17 @@ describe("Announcement settings", () => {
     expect(screen.getByText(/Only the person who made this room and administrators/)).toBeTruthy();
   });
 
-  it("flips the flag through the API and lists followers of an announcement room", async () => {
+  it("flips the flag through the API and shows what the store then holds", async () => {
     vi.spyOn(actions.announcements, "follows").mockResolvedValue({
       followers: [follow(NEWS, ENGINEERING)],
       following: [],
     });
 
-    const set = vi
-      .spyOn(actions.announcements, "set")
-      .mockImplementation((roomId, value) =>
-        Promise.resolve({ ...row(roomId, "news", value).room }),
-      );
+    const set = vi.spyOn(actions.announcements, "set").mockImplementation((roomId, value) => {
+      act(() => mutations.applyEvents([synced(roomId, value, LATER)], Date.now()));
+
+      return Promise.resolve(stamped(roomId, value, LATER).room);
+    });
 
     const user = userEvent.setup();
 
@@ -143,6 +166,61 @@ describe("Announcement settings", () => {
     expect(set).toHaveBeenCalledWith(NEWS, false);
     await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("false"));
     expect(screen.queryByRole("region", { name: "Followed by" })).toBeNull();
+  });
+
+  it("keeps sync's word when a delayed reply comes back after another session's change", async () => {
+    vi.spyOn(actions.announcements, "follows").mockResolvedValue({ followers: [], following: [] });
+
+    let release: (room: Room) => void = () => undefined;
+
+    vi.spyOn(actions.announcements, "set").mockImplementation(
+      () =>
+        new Promise<Room>((resolve) => {
+          release = resolve;
+        }),
+    );
+
+    const user = userEvent.setup();
+
+    render(<AnnouncementSettings roomId={ENGINEERING} kind="open" manage />);
+
+    const toggle = screen.getByRole("switch", { name: /Announcement channel/ });
+
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await user.click(toggle);
+    // This write's echo, then another session turning it off, both before the reply.
+    act(() => mutations.applyEvents([synced(ENGINEERING, true, LATER)], Date.now()));
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    act(() => mutations.applyEvents([synced(ENGINEERING, false, LATEST)], Date.now()));
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+
+    await act(async () => release(stamped(ENGINEERING, true, LATER).room));
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    act(() => mutations.applyEvents([synced(ENGINEERING, false, LATEST)], Date.now()));
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await waitFor(() => expect(toggle.hasAttribute("disabled")).toBe(false));
+  });
+
+  it("shows a board's follower read failing, and retries it", async () => {
+    const follows = vi
+      .spyOn(actions.announcements, "follows")
+      .mockRejectedValueOnce(new ActionError("NetworkError", "The server didn't answer"))
+      .mockResolvedValueOnce({ followers: [follow(NEWS, ENGINEERING)], following: [] });
+
+    const user = userEvent.setup();
+
+    render(<AnnouncementSettings roomId={NEWS} kind="board" manage />);
+
+    const followedBy = screen.getByRole("region", { name: "Followed by" });
+
+    expect((await within(followedBy).findByRole("alert")).textContent).toContain(
+      "The server didn't answer",
+    );
+    await user.click(within(followedBy).getByRole("button", { name: "Try again" }));
+
+    expect(follows).toHaveBeenCalledTimes(2);
+    expect(await within(followedBy).findByText("engineering")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Following" })).toBeNull();
   });
 
   it("shows the server's refusal and leaves a board without follows", async () => {
