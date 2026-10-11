@@ -1,5 +1,5 @@
 /*
- * The signed-out pages (sign-in, the second step, the sign-in link): one centred card on the app
+ * The signed-out pages (sign-in, the second step, the sign-in link, first run): one centred card on the app
  * background, as the retained pages draw it (src/auth/pages.css), from the SPA's tokens, fields and
  * buttons. Every message has a reserved line, so nothing below it moves when one appears.
  */
@@ -170,6 +170,82 @@
 
   .auth-view-form .checkbox-row {
     align-self: flex-start;
+  }
+
+  /* A refusal or failure that belongs to no field (first run's): its line is kept. */
+  .auth-view-form-error {
+    min-height: var(--leading-sidebar);
+    color: var(--danger-text);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── First run's avatar picker, as the retained form draws it ── */
+
+  .auth-view-avatar-field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1-5);
+    margin-block-end: var(--space-2);
+  }
+
+  .auth-view-avatar {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-faint);
+    cursor: pointer;
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .auth-view-avatar:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .auth-view-avatar:has(input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .auth-view-avatar-preview {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .auth-view-avatar-badge {
+    position: absolute;
+    inset-block-end: -2px;
+    inset-inline-end: -2px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+    color: var(--text);
+  }
+
+  /* One line, whatever it says, so the fields under it never move. */
+  .auth-view-avatar-note {
+    max-width: 100%;
+    min-height: var(--leading-sidebar);
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ── Google ── */

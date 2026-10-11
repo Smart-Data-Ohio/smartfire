@@ -97,7 +97,13 @@ pub async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
         Some(body) => body.0,
         None => c.read_body(16 * 1024).await.to_vec(),
     };
-    match serde_json::from_slice(&bytes) {
+    decode(c, &bytes)
+}
+
+/// A request DTO from JSON the body carried in another form (a multipart field), refused as
+/// [`body`] refuses an unreadable one.
+pub fn decode<T: DeserializeOwned>(c: &mut Ctx, bytes: &[u8]) -> Result<T> {
+    match serde_json::from_slice(bytes) {
         Ok(body) => Ok(body),
         Err(_) => campfire_kit::halt(field_error(
             c,

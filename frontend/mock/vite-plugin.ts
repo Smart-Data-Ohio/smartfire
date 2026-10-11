@@ -26,7 +26,7 @@ import { extname, join, normalize } from "node:path";
 import type { Duplex } from "node:stream";
 import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 import { type WebSocket, WebSocketServer } from "ws";
-import { type Json, parseJson } from "./json.ts";
+import { formJson, isMultipart, type Json, parseJson } from "./json.ts";
 import { BOT_ID, USERS_WITH_PHOTOS } from "./seed.ts";
 import {
   createMockServer,
@@ -131,8 +131,20 @@ function avatarSvg(userId: number): string {
 
 async function serveHttp(mock: MockServer, request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url ?? "/", "http://localhost");
-  const text = (await readBody(request)).toString("utf8");
-  const body = text.trim() === "" ? undefined : parseJson(text);
+  const raw = await readBody(request);
+  const contentType = request.headers["content-type"];
+  const multipart = isMultipart(contentType);
+  const text = multipart ? "" : raw.toString("utf8");
+
+  const body = multipart
+    ? formJson(
+        await new Response(new Uint8Array(raw), {
+          headers: { "content-type": contentType ?? "" },
+        }).formData(),
+      )
+    : text.trim() === ""
+      ? undefined
+      : parseJson(text);
 
   if (text.trim() !== "" && body === undefined) {
     sendJson(response, 400, { error: { message: "The request body isn't JSON" } });

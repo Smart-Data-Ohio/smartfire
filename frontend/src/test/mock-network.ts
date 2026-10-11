@@ -11,7 +11,7 @@
  * ```
  */
 import { vi } from "vitest";
-import { type Json, parseJson } from "../../mock/json.ts";
+import { formJson, isMultipart, type Json, parseJson } from "../../mock/json.ts";
 import {
   createMockServer,
   isBinaryPath,
@@ -182,6 +182,8 @@ function headersOf(headers: Headers): MockHeaders {
 /** The request body as JSON. Read through `Response`, which takes every `BodyInit` kind. */
 async function bodyOf(body: BodyInit | null | undefined): Promise<Json | undefined> {
   if (body === null || body === undefined) return undefined;
+
+  if (body instanceof FormData) return formJson(body);
 
   const text = await new Response(body).text();
 
@@ -486,7 +488,9 @@ export function installMockNetwork(server?: MockServer): MockNetwork {
     const body =
       init?.body !== undefined
         ? await bodyOf(init.body)
-        : parseJson((await original?.text()) ?? "");
+        : original !== null && isMultipart(original.headers.get("content-type"))
+          ? formJson(await original.formData())
+          : parseJson((await original?.text()) ?? "");
 
     const response = await backend.handle({
       method,

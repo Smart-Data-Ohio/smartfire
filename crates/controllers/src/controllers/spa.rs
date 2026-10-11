@@ -58,12 +58,20 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/api/v1/session", axum::routing::post(campfire_kit::unparsed_action(sessions::create_json)).delete(campfire_kit::unparsed_action(sessions::destroy_json)))
         .route("/api/v1/session/google", axum::routing::post(campfire_kit::action(super::google_sign_in::create_json)))
         .route("/api/v1/session/transfers/{id}", axum::routing::put(campfire_kit::action(sessions::transfers::update_json)))
+        .route("/api/v1/first_run", axum::routing::get(campfire_kit::action(super::first_runs::show_json)).post(campfire_kit::action(super::first_runs::create_json).json_body_parser(defer_json_body)))
         .route("/api/v1/public_pages/{page}", axum::routing::get(campfire_kit::action(super::public_pages::show_json)))
         .route("/api/v1/two_factor/challenge", axum::routing::get(campfire_kit::action(two_factor::challenge_show_json)).post(campfire_kit::unparsed_action(two_factor::challenge_create_json)))
         .route("/api/v1/two_factor/setup", axum::routing::get(campfire_kit::action(two_factor::setup_show_json)).post(campfire_kit::unparsed_action(two_factor::setup_create_json)))
         .route("/api/v1/sudo", axum::routing::get(campfire_kit::action(super::sudos::new_json)).post(campfire_kit::unparsed_action(super::sudos::create_json)))
         .route("/api/v1/sudo/google", axum::routing::post(campfire_kit::action(super::sudos::google_json)))
         .route("/api/v1/sudo/continue", axum::routing::get(campfire_kit::action(super::sudos::continue_json)))
+}
+
+/// Leaves a JSON body to the action's own DTO decoding (and its body token to the forgery check),
+/// so an unreadable one is the contract's 422 rather than the param parser's 400. Multipart forms
+/// still parse as usual, files included.
+fn defer_json_body(_: &axum::http::Method, _: &str, _: &[u8]) -> Option<std::result::Result<campfire_kit::ParamMap, campfire_kit::params::ParamError>> {
+    Some(Ok(campfire_kit::ParamMap::default()))
 }
 
 /// The SPA's two-step setup screen. A session that must still set up two-step sign-in may open
@@ -89,6 +97,7 @@ pub async fn show(c: &mut Ctx) -> Result {
             SignedOutRoute::SignIn => "sessions#new",
             SignedOutRoute::Transfer => "sessions/transfers#show",
             SignedOutRoute::Challenge => "two_factor/challenges#show",
+            SignedOutRoute::FirstRun => "first_runs#show",
         };
         auth::before_actions(
             c,
@@ -96,6 +105,10 @@ pub async fn show(c: &mut Ctx) -> Result {
             Before::default().allow_unauthenticated_access(),
             auth::ResponseMode::Html,
         ).await?;
+        // As the retained page: once the account exists, first run goes home.
+        if route == SignedOutRoute::FirstRun {
+            super::first_runs::prevent_repeats(c).await?;
+        }
         // Only the retained challenge restores authentication. The public sign-in and transfer
         // forms leave an existing session and its saved return destination alone.
         if route == SignedOutRoute::Challenge && concerns::restore_authentication(c).await? {
