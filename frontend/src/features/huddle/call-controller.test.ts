@@ -467,6 +467,26 @@ describe("another account answering the page", () => {
   });
 });
 
+describe("the account-change hook", () => {
+  it("stays single when its module is evaluated again", () => {
+    const first = harness().controller;
+    const second = harness().controller;
+    const endFirst = vi.spyOn(first, "endForPageChange");
+    const endSecond = vi.spyOn(second, "endForPageChange");
+    const removeFirst = endCallOnAccountChange(first);
+    const removeSecond = endCallOnAccountChange(second);
+
+    // The replaced registration's removal leaves the live one alone.
+    removeFirst();
+    mutations.markAccountChanged();
+    mutations.markAccountChanged();
+
+    expect(endFirst).not.toHaveBeenCalled();
+    expect(endSecond).toHaveBeenCalledOnce();
+    removeSecond();
+  });
+});
+
 describe("a role change", () => {
   it("rejoins for a fresh token and says a host muted them", async () => {
     const { controller, grants, calls } = harness();

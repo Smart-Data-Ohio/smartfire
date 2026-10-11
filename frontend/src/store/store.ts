@@ -94,6 +94,25 @@ import * as workspaceLayout from "./workspace-layout.ts";
  */
 export const store = createStore<State>()(() => initialState);
 
+/** What `onAccountChange` registered, by key; it lives as long as the store does. */
+const accountChangeHooks = new Map<string, () => void>();
+
+/**
+ * Runs `end` when another account answers the page (`markAccountChanged`), for what must stop
+ * outside React: the shell's effects go when it gives way to the notice. One hook per `key`, so
+ * a module evaluated again (a hot update) replaces its hook rather than adding a second one.
+ * Returns the removal.
+ */
+export function onAccountChange(key: string, end: () => void): () => void {
+  accountChangeHooks.set(key, end);
+
+  return () => {
+    if (accountChangeHooks.get(key) === end) {
+      accountChangeHooks.delete(key);
+    }
+  };
+}
+
 /**
  * The sidebar row clock now: the ticket a request opening now would hold. Requests take theirs
  * through `withRowTicket` (src/sync/row-ticket.ts), which releases it too.
@@ -318,8 +337,17 @@ export const mutations = {
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
   /** The server answered for another sign-in: offline for good, until the page reloads. */
-  markAccountChanged: () =>
-    apply((state) => ({ ...state, accountChanged: true, connection: "offline" })),
+  markAccountChanged: () => {
+    if (store.getState().accountChanged) {
+      return;
+    }
+
+    apply((state) => ({ ...state, accountChanged: true, connection: "offline" }));
+
+    for (const end of [...accountChangeHooks.values()]) {
+      end();
+    }
+  },
   mergeUsers: (users: readonly User[]) => apply((state) => reduce.mergeUsers(state, users)),
   setPresence: (list: readonly UserPresence[]) => apply((state) => reduce.setPresence(state, list)),
   setDndAllowance: (userId: number, allowed: boolean) =>

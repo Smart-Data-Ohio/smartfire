@@ -12,7 +12,7 @@ import type { StageStream } from "../../gen/StageStream.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { PHONE_QUERY } from "../../lib/breakpoints.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
-import { store } from "../../store/store.ts";
+import { onAccountChange, store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { ActionError } from "../../sync/run.ts";
 import {
@@ -2101,14 +2101,12 @@ export const callController = new CallController(browserEnvironment);
 /**
  * Ends `controller`'s call the moment another account answers the page (`accountChanged`): it
  * leaves the room, releases the microphone, camera and screen share, stops the checks and timers,
- * and drops a join still waiting on its credentials. A store subscription, not a React effect:
- * the shell gives way to a notice then, and its effects go with it. Returns the unsubscribe.
+ * and drops a join still waiting on its credentials. Registered with the store, not as a React
+ * effect: the shell gives way to a notice then, and its effects go with it. Returns the removal.
  */
 export function endCallOnAccountChange(controller: CallController): () => void {
-  return store.subscribe((state, previous) => {
-    if (state.accountChanged && !previous.accountChanged) {
-      controller.endForPageChange();
-    }
+  return onAccountChange("huddle-call", () => {
+    controller.endForPageChange();
   });
 }
 

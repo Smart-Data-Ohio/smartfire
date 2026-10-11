@@ -4,7 +4,7 @@
  * the room (through the navigator the huddle root registers) and joins its call.
  */
 import type { HuddleRing } from "../../gen/HuddleRing.ts";
-import { store } from "../../store/store.ts";
+import { onAccountChange, store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { callController } from "./call-controller.ts";
 import { callStore } from "./call-store.ts";
@@ -106,11 +106,8 @@ export const incomingCalls = new IncomingCalls({
   },
 });
 
-// The ring and the call notices end with the page's account, as the call does; this outlives the
-// shell (and `HuddleRoot`), which gives way to a notice then.
-store.subscribe((state, previous) => {
-  if (state.accountChanged && !previous.accountChanged) {
-    callNotices.reset();
-    incomingCalls.hide();
-  }
+// The ring and the call notices end with the page's account, as the call does.
+onAccountChange("huddle-alerts", () => {
+  callNotices.reset();
+  incomingCalls.hide();
 });
