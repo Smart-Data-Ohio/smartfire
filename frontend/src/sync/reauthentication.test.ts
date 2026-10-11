@@ -761,6 +761,34 @@ const leaveForGoogle = (gate: ConfirmationGate, writes: readonly ApiRequest[]) =
   });
 
 describe("the Google round trip", () => {
+  it.live("a multipart write is never kept for after Google: storage can't hold its body", () => {
+    const { layer, gate } = googleHarness();
+    const form = new FormData();
+
+    form.append("avatar", new Blob(["png"]), "avatar.png");
+
+    const upload: ApiRequest = { method: "POST", path: "/admin/uploads", form };
+
+    return Effect.gen(function* () {
+      const kept = yield* Effect.forkChild(send(styles));
+
+      yield* untilPrompt(gate);
+
+      const multipart = yield* Effect.forkChild(send(upload));
+
+      yield* untilPrompt(gate, 2);
+      // The dialog says Google can't bring it back, as for a credential.
+      expect(gate.snapshot()).toMatchObject({ writes: 2, secrets: 1 });
+      expect((yield* startGoogle(gate, "/app/admin/styles")).kind).toBe("navigate");
+      expect((yield* Fiber.join(multipart).pipe(Effect.flip))._tag).toBe("SudoRequired");
+      expect(JSON.parse(sessionStorage.getItem(KEPT_KEY) ?? "{}")).toMatchObject({
+        writes: [styles],
+        dropped: 1,
+      });
+      yield* Fiber.interrupt(kept);
+    }).pipe(Effect.provide(layer));
+  });
+
   it.live("keeps credential-free writes, fails secret ones, and replays the kept once", () => {
     const { layer, seen, gate } = googleHarness();
 

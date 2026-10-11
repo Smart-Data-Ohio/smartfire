@@ -18,14 +18,14 @@ async fn app() -> TestApp {
     app
 }
 
-fn json_request(method: Method, path: &str, body: Value) -> Req {
+pub(crate) fn json_request(method: Method, path: &str, body: Value) -> Req {
     Req::new(method, path)
         .header("accept", "application/json")
         .header("content-type", "application/json")
         .body(serde_json::to_vec(&body).unwrap())
 }
 
-fn inline_boot(reply: &Reply) -> Value {
+pub(crate) fn inline_boot(reply: &Reply) -> Value {
     let re =
         regex::Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#)
             .unwrap();
@@ -56,7 +56,7 @@ fn destination(reply: &Reply, json: bool) -> String {
     }
 }
 
-fn cookie_contract(reply: &Reply) -> Vec<String> {
+pub(crate) fn cookie_contract(reply: &Reply) -> Vec<String> {
     let mut cookies = reply
         .headers
         .get_all("set-cookie")
@@ -100,7 +100,7 @@ async fn reset_factor(app: &TestApp, enabled: bool) -> (String, Vec<String>) {
     }).await.unwrap()
 }
 
-fn browser_session(app: &TestApp, browser: &Browser<'_>) -> Value {
+pub(crate) fn browser_session(app: &TestApp, browser: &Browser<'_>) -> Value {
     let cookies = browser.cookie_header();
     let raw = cookies
         .split("; ")
@@ -115,7 +115,7 @@ fn browser_session(app: &TestApp, browser: &Browser<'_>) -> Value {
         .unwrap()
 }
 
-fn body_token(mut request: Req, json: bool, token: &str) -> Req {
+pub(crate) fn body_token(mut request: Req, json: bool, token: &str) -> Req {
     if json {
         let mut body: Value = serde_json::from_slice(&request.body).unwrap();
         body["authenticity_token"] = json!(token);

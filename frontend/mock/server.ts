@@ -1325,6 +1325,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
           google: booleanField(body, "google"),
           firstRunPending: booleanField(body, "firstRunPending"),
           pending: booleanField(body, "pending"),
+          firstRunUnavailable: booleanField(body, "firstRunUnavailable"),
         });
 
         return ok;
@@ -1504,6 +1505,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     csrfToken: csrf,
     tourCompleted,
     tourStamps,
+    firstRun: signIn.firstRun(),
     ids: SEED_IDS,
   });
 

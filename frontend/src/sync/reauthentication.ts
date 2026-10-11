@@ -34,7 +34,10 @@ export interface ConfirmationPrompt {
   readonly methods: readonly SudoMethod[];
   /** How many writes wait on it. */
   readonly writes: number;
-  /** How many of them carry a credential, so a Google confirmation can't bring them back. */
+  /**
+   * How many of them a Google confirmation can't bring back: they carry a credential, or a
+   * multipart body.
+   */
   readonly secrets: number;
 }
 
@@ -202,6 +205,13 @@ export interface GateOptions {
   readonly newId?: () => string;
 }
 
+/**
+ * Whether a held write can wait in storage through a Google round trip: not one carrying a
+ * credential, nor a multipart one (its `FormData` doesn't survive storage). Those fail instead,
+ * for their forms to send again.
+ */
+const keepable = (request: ApiRequest) => request.secret !== true && request.form === undefined;
+
 const cancelled = (message: string) => Effect.fail(new ConfirmationCancelled({ message }));
 
 /**
@@ -235,7 +245,7 @@ export function makeConfirmationGate({
         : {
             methods: last.required.reauthentication.methods,
             writes: next.length,
-            secrets: next.filter((entry) => entry.request.secret === true).length,
+            secrets: next.filter((entry) => !keepable(entry.request)).length,
           };
 
     for (const listener of listeners) {
@@ -522,7 +532,7 @@ export function makeConfirmationGate({
      * storage to keep it in, nothing is kept and every write fails so.
      */
     leave(returnTo: string, attempt: string, session: number | null): void {
-      const keep = waiting.filter((entry) => entry.request.secret !== true);
+      const keep = waiting.filter((entry) => keepable(entry.request));
       const user = viewer();
 
       const stored =
@@ -536,12 +546,12 @@ export function makeConfirmationGate({
           next: 0,
           returnTo: spaReturnPath(returnTo),
           // The request as it went, less the flag that keeps credentials out of here.
-          writes: keep.map(({ request: { secret, ...write } }) => write),
+          writes: keep.map(({ request: { secret, form, ...write } }) => write),
           dropped: waiting.length - keep.length,
         });
 
       settleAll((entry) =>
-        stored && entry.request.secret !== true ? null : Effect.fail(entry.required),
+        stored && keepable(entry.request) ? null : Effect.fail(entry.required),
       );
     },
 

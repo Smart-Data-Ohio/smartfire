@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { AuthResponse as WireResponse } from "../../gen/AuthResponse.ts";
 import type { ChallengeState as WireChallenge } from "../../gen/ChallengeState.ts";
+import type { FirstRunState as WireFirstRun } from "../../gen/FirstRunState.ts";
 import type { SignedOutBoot as WireBoot } from "../../gen/SignedOutBoot.ts";
 import type { Assert, Pinned } from "./pin.ts";
 
@@ -37,8 +38,16 @@ export const SignedOutBoot = Schema.Struct({
   csrfToken: Schema.String,
 });
 
+/** `GET /first_run`: open while there is no workspace, else home. */
+export const FirstRunState = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("pending"), csrfToken: Schema.String }),
+  Schema.Struct({ kind: Schema.Literal("navigate"), location: Schema.String }),
+]);
+
 export type AuthResponsePin = Assert<Pinned<typeof AuthResponse, WireResponse>>;
 
 export type ChallengeStatePin = Assert<Pinned<typeof ChallengeState, WireChallenge>>;
+
+export type FirstRunStatePin = Assert<Pinned<typeof FirstRunState, WireFirstRun>>;
 
 export type SignedOutBootPin = Assert<Pinned<typeof SignedOutBoot, WireBoot>>;
