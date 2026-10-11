@@ -99,6 +99,25 @@ describe("board selectors and reducers", () => {
 
     expect(boardPostIds(event(state, "thread.updated", changed), BOARD)).toEqual([1, 5, 4, 3, 2]);
   });
+  it("matches a curated label's capitals against the lower-cased query the server answered", () => {
+    const tagged = boardThread(1, "planned", 7, ["Bug report"]);
+    const untagged = boardThread(2, "planned", 8);
+    const query = { ...defaultBoardQuery, status: "all" as const, tag: "bug report" };
+    const pending = setBoardLoading({ ...initialState, me: meFixture }, BOARD, query);
+
+    const state = loadBoardListing(
+      pending,
+      { ...boardListing([tagged]), ...query, tag: "Bug report" },
+      1,
+    );
+
+    expect(state.boards[BOARD]?.query.tag).toBe("bug report");
+
+    const moved = { ...tagged, lastActivityAt: "2026-10-07T11:00:00.000Z" };
+
+    expect(boardPostIds(event(state, "thread.updated", moved), BOARD)).toEqual([1]);
+    expect(boardPostIds(event(state, "thread.created", untagged), BOARD)).toEqual([1]);
+  });
   it("returns ordered columns and moves rows on work updates", () => {
     const state = loaded();
     expect(boardColumns(state, BOARD)).toEqual({

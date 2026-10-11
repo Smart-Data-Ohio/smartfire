@@ -253,6 +253,9 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   const pendingRef = useRef(0);
   const drag = useRef<Drag | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
+  const newNameRef = useRef<HTMLInputElement | null>(null);
+  /** The row the delete confirmation was opened from, for focus to land near when it closes. */
+  const confirmedAt = useRef(0);
   const handles = useRef(new Map<number, HTMLButtonElement>());
   const { announce, region } = useAnnouncer("assertive");
   const instructionsId = useId();
@@ -616,7 +619,14 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
                       Move down
                     </MenuItem>
                     <MenuSeparator />
-                    <MenuItem icon="trash" tone="danger" onSelect={() => setDeleting(tag)}>
+                    <MenuItem
+                      icon="trash"
+                      tone="danger"
+                      onSelect={() => {
+                        confirmedAt.current = index;
+                        setDeleting(tag);
+                      }}
+                    >
                       Delete…
                     </MenuItem>
                   </Menu>
@@ -634,6 +644,7 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
           onPick={setNewEmoji}
         />
         <TextField
+          ref={newNameRef}
           label="New tag"
           className="tag-editor-add-input"
           placeholder={full ? `${MAX_BOARD_TAGS} tags is the most` : "Bug, Idea, Shipped…"}
@@ -719,6 +730,13 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
         onOpenChange={(next) => (removing || next ? undefined : setDeleting(null))}
         role="alertdialog"
         size="sm"
+        returnFocus={() => {
+          // The menu that opened this is gone, and after a delete its row too: the handle now in
+          // that place (the next row's, or the last), else the New tag field.
+          const id = ids[Math.min(confirmedAt.current, ids.length - 1)];
+
+          return (id === undefined ? undefined : handles.current.get(id)) ?? newNameRef.current;
+        }}
         title={`Delete “${deleting?.name ?? "this tag"}”?`}
         description={
           consequences === null ? undefined : (

@@ -140,7 +140,8 @@ export function loadBoardListing(state: State, listing: BoardListing, generation
         ...held,
         status: "ready",
         error: null,
-        query: { status: listing.status, owner: listing.owner, tag: listing.tag },
+        // The server answers a curated tag by its label ("Bug report"); the query stays lower-cased.
+        query: { status: listing.status, owner: listing.owner, tag: listing.tag.toLowerCase() },
         page: listing.page,
         postIds: [...new Set([...posts.map(({ thread }) => thread.id), ...held.livePostIds])],
         hasMore: listing.hasMore,
@@ -268,7 +269,8 @@ function matches(state: State, thread: Thread, query: BoardQuery): boolean {
 
   if (/^\d+$/.test(query.owner) && work.owner?.id !== Number(query.owner)) return false;
 
-  return query.tag === "" || work.tags.includes(query.tag);
+  // The query's tag is lower-cased; a curated label ("Bug report") keeps its capitals.
+  return query.tag === "" || work.tags.some((tag) => tag.toLowerCase() === query.tag);
 }
 
 /** Live facts determine filtering and order within the server window and live arrivals. */
