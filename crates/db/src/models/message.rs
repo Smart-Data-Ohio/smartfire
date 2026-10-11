@@ -908,7 +908,8 @@ impl Message {
         let body = Self::prepare_body(tx, body, self.markdown())?;
         let body = body.as_str();
         self.touch_streaming_activity(tx)?;
-        match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
+        let (record, publication) = self.body_with_publication(tx.conn())?;
+        match record {
             Some(record) if record.body.as_deref() == Some(body) => return Ok(()),
             Some(mut record) => record.update_body(tx, body)?,
             None => {
@@ -919,7 +920,7 @@ impl Message {
         if !self.streaming {
             self.sync_external_references(tx, true)?;
         }
-        crate::models::announcement::enqueue_update(tx, self.id)?;
+        crate::models::announcement::enqueue_update(tx, publication);
         Ok(())
     }
 
@@ -1022,7 +1023,8 @@ impl Message {
             .as_deref()
             .map(|body| Self::prepare_body(tx, body, markdown_source.is_some()))
             .transpose()?;
-        let current_body = self.body_html(conn)?;
+        let (current_body, publication) = self.body_with_publication(conn)?;
+        let current_body = current_body.and_then(|record| record.body);
         let body = body.filter(|body| current_body.as_deref() != Some(body.as_str()));
         let references_changed =
             !self.streaming && (markdown_source != self.markdown_source || body.is_some());
@@ -1150,7 +1152,7 @@ impl Message {
                 crate::ActivityItem::reconcile_message_mentions(tx, self, &previous)?;
             }
         }
-        crate::models::announcement::enqueue_update(tx, self.id)?;
+        crate::models::announcement::enqueue_update(tx, publication);
         Ok(())
     }
 
@@ -1192,7 +1194,9 @@ impl Message {
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
     /// A streaming message saves even with no attachment change (`touch_streaming_activity`).
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
-        let current = Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?;
+        let (current, publication) = crate::models::announcement::record_with_publication(
+            tx.conn(), self.id, "active_storage_attachments", "attachment", Attachment::from_row,
+        )?;
         let grouped_blob_ids: Vec<_> = self.attachments(tx.conn())?.into_iter()
             .filter(|(attachment, _)| attachment.name == "attachments")
             .map(|(attachment, _)| attachment.blob_id).collect();
@@ -1229,7 +1233,7 @@ impl Message {
             super::message_attachment_processing::schedule(tx, self.id, blob_id);
         }
         if changed {
-            crate::models::announcement::enqueue_update(tx, self.id)?;
+            crate::models::announcement::enqueue_update(tx, publication);
         }
         Ok(())
     }
@@ -1273,7 +1277,8 @@ impl Message {
         with_conversation: bool,
         importing: bool,
     ) -> Result<()> {
-        crate::models::announcement::enqueue_delete(tx, self.id)?;
+        let (body, publication) = self.body_with_publication(tx.conn())?;
+        crate::models::announcement::enqueue_delete(tx, publication)?;
         let quoting_ids = crate::models::message_reference::incoming_ids(tx.conn(), self.id)?;
         let now = tx.now();
         tx.conn().execute_cached(
@@ -1318,7 +1323,7 @@ impl Message {
         ] {
             tx.conn().execute_cached(sql, [self.id])?;
         }
-        if let Some(body) = RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
+        if let Some(body) = body {
             body.delete(tx)?;
         }
         tx.conn().execute_cached(
@@ -1399,6 +1404,12 @@ impl Message {
 
     pub fn body(&self, conn: &Connection) -> Result<Option<RichTextRecord>> {
         RichTextRecord::find_for(conn, RECORD_TYPE, self.id, "body")
+    }
+
+    fn body_with_publication(&self, conn: &Connection) -> Result<(Option<RichTextRecord>, Option<i64>)> {
+        crate::models::announcement::record_with_publication(
+            conn, self.id, "action_text_rich_texts", "body", RichTextRecord::from_row,
+        )
     }
 
     /// `message.body.body` as stored HTML, if any.

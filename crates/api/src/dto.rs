@@ -448,14 +448,18 @@ fn messages_and_fetches_inner(
     let mut polls = crate::cards::polls(conn, &ids, now, &*app.storage.verifier)?;
     let mut fetches = crate::cards::Fetches::default();
     let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
-    let pinned: BTreeSet<i64> = ids_query(
+    // Publication state shares the pin batch; ordinary dispatches add no read statements.
+    let flags: Vec<(i64, bool, bool)> = ids_query(
         conn,
-        r#"SELECT "message_pins"."message_id" FROM "message_pins" WHERE "message_pins"."message_id" IN ({})"#,
+        r#"SELECT m.id, pin.message_id IS NOT NULL, publication.id IS NOT NULL FROM messages m
+           LEFT JOIN message_pins pin ON pin.message_id=m.id
+           LEFT JOIN announcement_publications publication ON publication.source_message_id=m.id
+           WHERE m.id IN ({})"#,
         &ids,
-        |row| row.get(0),
-    )?
-    .into_iter()
-    .collect();
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+    let pinned: BTreeSet<i64> = flags.iter().filter(|(_, pinned, _)| *pinned).map(|(id, _, _)| *id).collect();
+    let published: BTreeSet<i64> = flags.iter().filter(|(_, _, published)| *published).map(|(id, _, _)| *id).collect();
     let file_rows: Vec<(i64, String, i64)> = ids_query(
         conn,
         r#"SELECT record_id, name, blob_id FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
@@ -520,7 +524,7 @@ fn messages_and_fetches_inner(
                 steps: steps.remove(&message.id).unwrap_or_default(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
-                published: campfire_db::models::announcement::publication_id(conn, message.id)?.is_some(),
+                published: published.contains(&message.id),
                 announcement_source: None,
             })
         })

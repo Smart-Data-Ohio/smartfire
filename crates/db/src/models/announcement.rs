@@ -186,15 +186,38 @@ pub fn publish(tx: &mut Tx<'_>, message: &Message, publisher: i64) -> crate::Res
     Ok(publication)
 }
 
-pub fn enqueue_update(tx: &mut Tx<'_>, message_id: i64) -> crate::Result<()> {
-    if let Some(publication_id) = publication_id(tx.conn(), message_id)? {
-        tx.emit_after_commit(Event::job(&SyncJob { publication_id }));
-    }
-    Ok(())
+/// Read publication state with the association a mutation already needs, including when the
+/// association is absent. Ordinary message writes need no additional read statement.
+pub(crate) fn record_with_publication<T>(
+    conn: &Connection,
+    message_id: i64,
+    table: &str,
+    name: &str,
+    from_row: impl FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+) -> crate::Result<(Option<T>, Option<i64>)> {
+    Ok(conn.query_row_cached(
+        &format!(
+            "SELECT record.*, publication.id AS publication_id FROM (SELECT ? AS id) message \
+             LEFT JOIN {table} record ON record.record_type='Message' AND record.record_id=message.id AND record.name=? \
+             LEFT JOIN announcement_publications publication ON publication.source_message_id=message.id LIMIT 1"
+        ),
+        params![message_id, name],
+        |row| {
+            let record = row.get::<_, Option<i64>>("id")?
+                .map(|_| from_row(row)).transpose()?;
+            Ok((record, row.get("publication_id")?))
+        },
+    )?)
 }
 
-pub fn enqueue_delete(tx: &mut Tx<'_>, message_id: i64) -> crate::Result<()> {
-    if let Some(publication) = publication_id(tx.conn(), message_id)? {
+pub(crate) fn enqueue_update(tx: &mut Tx<'_>, publication_id: Option<i64>) {
+    if let Some(publication_id) = publication_id {
+        tx.emit_after_commit(Event::job(&SyncJob { publication_id }));
+    }
+}
+
+pub(crate) fn enqueue_delete(tx: &mut Tx<'_>, publication: Option<i64>) -> crate::Result<()> {
+    if let Some(publication) = publication {
         let message_ids = copies(tx.conn(), publication)?
             .into_iter()
             .map(|m| m.id)

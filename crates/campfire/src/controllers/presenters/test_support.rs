@@ -131,6 +131,7 @@ pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("rooms", "tags_required"),
     ("rooms", "default_board_tag_id"),
     ("rooms", "topic"),
+    ("rooms", "announcement"),
     ("rooms", "workspace_category_id"),
     ("rooms", "workspace_position"),
     ("thread_memberships", "last_read_message_id"),
