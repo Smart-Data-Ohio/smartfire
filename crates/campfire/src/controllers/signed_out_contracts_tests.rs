@@ -521,6 +521,14 @@ async fn signed_out_boot_carries_a_redirects_flash_for_one_load() {
         "{}",
         reply.text()
     );
+    // The public pages show no flash, so they leave it for the page that does.
+    for path in ["/app/privacy", "/api/v1/public_pages/privacy", "/app/about", "/app/terms"] {
+        let reply = browser.get(path).await;
+        assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+        if path.starts_with("/app/") {
+            assert_eq!(inline_boot(&reply)["flash"], Value::Null, "{path}");
+        }
+    }
     let page = browser.get("/app/session/new").await;
     assert_eq!(page.status, StatusCode::OK, "{}", page.text());
     assert_eq!(inline_boot(&page)["flash"], alert);
