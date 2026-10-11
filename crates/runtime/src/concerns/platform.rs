@@ -131,26 +131,6 @@ impl ApplicationPlatform {
     pub fn browser(&self) -> String {
         self.user_agent.browser()
     }
-
-    #[allow(clippy::needless_update)]
-    pub fn to_view(&self) -> campfire_presentation::Platform {
-        campfire_presentation::Platform {
-            ios: self.ios(),
-            android: self.android(),
-            mac: self.mac(),
-            windows: self.windows(),
-            chrome: self.chrome(),
-            firefox: self.firefox(),
-            safari: self.safari(),
-            edge: self.edge(),
-            mobile: self.mobile(),
-            desktop: self.desktop(),
-            apple_messages: self.apple_messages(),
-            browser: self.browser(),
-            operating_system: self.operating_system().unwrap_or_default(),
-            ..Default::default()
-        }
-    }
 }
 
 /// `AllowBrowser::VERSIONS`, minus the browsers it blocks outright (`ie: false`): what the
@@ -255,13 +235,5 @@ mod tests {
             failures.len(),
             failures.join("\n")
         );
-    }
-
-    #[test]
-    fn view_platform_uses_empty_strings_for_nil() {
-        let view = ApplicationPlatform::new(Some("curl/8.4.0")).to_view();
-        assert_eq!(view.operating_system, "");
-        assert_eq!(view.browser, "curl");
-        assert!(view.desktop);
     }
 }

@@ -6,12 +6,10 @@
 pub mod bot_access;
 
 use campfire_db::{Account, CachedStatements, Connection, Membership, PushSubscription, Room, RoomType, User};
-use campfire_kit::Ctx;
 use campfire_presentation::accounts::{Bot, BotAgentForm, BotForm, BotGithubAccount, BotRoom, HelpContact};
 use campfire_presentation::users::{
     MentionUser, ProfileMembership, PushSubscription as PushSubscriptionView, UserSummary,
 };
-use campfire_presentation::Platform;
 use rails_compat::Secrets;
 use rails_compat::global_id::{self, GlobalId};
 use rails_compat::unicode;
@@ -55,11 +53,6 @@ pub fn fresh_account_logo_path_in_zone(
 ) -> String {
     let v = account.map(|account| zone.to_fs(account.updated_at.jiff(), "number"));
     campfire_routes::fresh_account_logo(v.as_deref(), size)
-}
-
-/// `platform` as the views see it (`ApplicationPlatform.new(request.user_agent)`).
-pub fn platform(c: &Ctx) -> Platform {
-    crate::concerns::platform(c).to_view()
 }
 
 /// `User.administrator.first`, for `accounts/_help_contact`.
