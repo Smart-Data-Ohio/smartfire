@@ -18,6 +18,7 @@ import type { ReadState } from "../src/gen/ReadState.ts";
 import type { RoomDetail } from "../src/gen/RoomDetail.ts";
 import type { Sidebar } from "../src/gen/Sidebar.ts";
 import type { SidebarRow } from "../src/gen/SidebarRow.ts";
+import type { SudoMethod } from "../src/gen/SudoMethod.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
@@ -35,7 +36,15 @@ import {
   respond,
   validation,
 } from "./http.ts";
-import { booleanField, field, intField, type Json, type JsonRecord, stringField } from "./json.ts";
+import {
+  booleanField,
+  field,
+  intField,
+  type Json,
+  type JsonRecord,
+  stringArrayField,
+  stringField,
+} from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
 import { createAccount } from "./s2/account.ts";
@@ -1272,10 +1281,17 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         release();
 
         return ok;
-      case "lapse-sudo":
-        admin.lapseSudo(flag("on", true));
+      case "lapse-sudo": {
+        const methods = stringArrayField(body, "methods")?.filter(
+          (method): method is SudoMethod =>
+            method === "password" || method === "totp" || method === "google",
+        );
+
+        admin.lapseSudo(flag("on", true), methods, flag("googleRefuses", false));
 
         return ok;
+      }
+
       case "animated-icon-limit":
         admin.setAnimatedIconLimit(int("limit"));
 
