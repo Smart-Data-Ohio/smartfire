@@ -82,15 +82,44 @@ export function useFollowNext(): (next: Exclude<AuthNext, { readonly kind: "erro
   );
 }
 
+/** The notice or alert a server redirect left for this page load (a refused Google sign-in, say). */
+export type SignedOutFlash = NonNullable<SignedOutBootData["flash"]>;
+
+/**
+ * Inlined boots whose flash a page has shown. The flash belongs to the page load, so a signed-out
+ * page opened after it in the SPA (sign-in, then the challenge) doesn't show it again.
+ */
+const flashShown = new WeakSet<Element>();
+
+/** The flash the Rust shell inlined for this page load, for the first signed-out page drawn. */
+export function useInlineFlash(): SignedOutFlash | null {
+  const [flash] = useState(() => {
+    const element = document.getElementById("boot");
+
+    if (element === null || flashShown.has(element)) return null;
+
+    return inlineSignedOutBoot()?.flash ?? null;
+  });
+
+  useEffect(() => {
+    const element = document.getElementById("boot");
+
+    if (element !== null) flashShown.add(element);
+  }, []);
+
+  return flash;
+}
+
 type BootLoad =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly boot: SignedOutBootData };
 
-/** The boot as it loads, and a way to ask again after a failure. */
+/** The boot as it loads, a way to ask again after a failure, and the page load's flash. */
 interface SignedOutBootState {
   readonly load: BootLoad;
   readonly retry: () => void;
+  readonly flash: SignedOutFlash | null;
 }
 
 /**
@@ -98,6 +127,9 @@ interface SignedOutBootState {
  * from `GET /api/v1/session/boot` (the Vite dev page, or a signed-in visitor here).
  */
 export function useSignedOutBoot(): SignedOutBootState {
+  const inlineFlash = useInlineFlash();
+  const [fetchedFlash, setFetchedFlash] = useState<SignedOutFlash | null>(null);
+
   const [load, setLoad] = useState<BootLoad>(() => {
     const inline = inlineSignedOutBoot();
 
@@ -106,7 +138,12 @@ export function useSignedOutBoot(): SignedOutBootState {
 
   const fetchBoot = useCallback(() => {
     auth.boot().then(
-      (boot) => setLoad({ status: "ready", boot }),
+      (boot) => {
+        setLoad({ status: "ready", boot });
+        // The server hands the flash to one boot; a second fetch (development's double effect)
+        // answers none, and mustn't clear it.
+        setFetchedFlash((shown) => shown ?? boot.flash);
+      },
       (error: Error) => setLoad({ status: "error", message: error.message }),
     );
   }, []);
@@ -121,7 +158,7 @@ export function useSignedOutBoot(): SignedOutBootState {
     fetchBoot();
   }, [fetchBoot]);
 
-  return { load, retry };
+  return { load, retry, flash: inlineFlash ?? fetchedFlash };
 }
 
 /** The page: one centred card on the app background, and whatever goes under it. */
@@ -130,11 +167,13 @@ export function AuthScreen({
   below,
   labelledBy,
   busy,
+  flash,
 }: {
   readonly children: ReactNode;
   readonly below?: ReactNode;
   readonly labelledBy: string;
   readonly busy?: boolean;
+  readonly flash?: SignedOutFlash | null;
 }) {
   // The view fills the visible viewport, which an overlaid (iOS) keyboard shrinks while viewport
   // units hold, so it follows the keyboard as the shell does.
@@ -142,10 +181,32 @@ export function AuthScreen({
 
   return (
     <div className="auth-view">
+      {flash === null || flash === undefined ? null : <AuthFlash flash={flash} />}
       <main className="auth-view-card" aria-labelledby={labelledBy} aria-busy={busy || undefined}>
         {children}
       </main>
       {below}
+    </div>
+  );
+}
+
+/**
+ * A redirect's notice or alert above the card, as the retained auth layout shows its flash: an
+ * alert is announced at once, a notice politely.
+ */
+export function AuthFlash({ flash }: { readonly flash: SignedOutFlash }) {
+  const alert = flash.kind === "alert";
+
+  return (
+    <div
+      className="auth-view-flash"
+      data-tone={alert ? "danger" : "success"}
+      role={alert ? "alert" : "status"}
+    >
+      <span className="auth-view-flash-icon">
+        <Icon name={alert ? "circle-alert" : "check"} size={12} />
+      </span>
+      <span>{flash.message}</span>
     </div>
   );
 }

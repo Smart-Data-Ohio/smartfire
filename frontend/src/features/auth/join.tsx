@@ -16,6 +16,7 @@ import {
   AuthHelp,
   AuthScreen,
   refusalMessage,
+  type SignedOutFlash,
   TranslateButton,
   useDocumentTitle,
   useFollowNext,
@@ -53,7 +54,7 @@ type Load =
 export function JoinPage({ target }: { readonly target: JoinTarget }) {
   const titleId = useId();
   const follow = useFollowNext();
-  const { load: bootLoad } = useSignedOutBoot();
+  const { load: bootLoad, flash } = useSignedOutBoot();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [inline] = useState(() => inlineSignedOutBoot());
   const asked = useRef(false);
@@ -100,9 +101,9 @@ export function JoinPage({ target }: { readonly target: JoinTarget }) {
 
   if (load.status === "ready") {
     return load.page.kind === "join" ? (
-      <JoinForm target={target} page={load.page} boot={boot} />
+      <JoinForm target={target} page={load.page} boot={boot} flash={flash} />
     ) : (
-      <DeadInvite page={load.page} boot={boot} />
+      <DeadInvite page={load.page} boot={boot} flash={flash} />
     );
   }
 
@@ -110,6 +111,7 @@ export function JoinPage({ target }: { readonly target: JoinTarget }) {
     <AuthScreen
       labelledBy={titleId}
       busy={load.status === "loading"}
+      flash={flash}
       below={
         boot?.helpContact === null || boot === null || load.status === "loading" ? undefined : (
           <AuthHelp contact={boot.helpContact} version={boot.version} />
@@ -208,10 +210,12 @@ function JoinForm({
   target,
   page,
   boot,
+  flash,
 }: {
   readonly target: JoinTarget;
   readonly page: Extract<JoinPageData, { kind: "join" }>;
   readonly boot: SignedOutBootData | null;
+  readonly flash: SignedOutFlash | null;
 }) {
   const titleId = useId();
   const follow = useFollowNext();
@@ -315,7 +319,7 @@ function JoinForm({
   };
 
   if (dead !== null) {
-    return <DeadInvite page={dead} boot={boot} />;
+    return <DeadInvite page={dead} boot={boot} flash={flash} />;
   }
 
   const { workspace } = page;
@@ -324,6 +328,7 @@ function JoinForm({
   return (
     <AuthScreen
       labelledBy={titleId}
+      flash={flash}
       below={
         contact === null || boot === null ? undefined : (
           <AuthHelp contact={contact} version={boot.version} />
@@ -404,9 +409,11 @@ function JoinForm({
 function DeadInvite({
   page,
   boot,
+  flash,
 }: {
   readonly page: Extract<JoinPageData, { kind: "inviteInvalid" }>;
   readonly boot: SignedOutBootData | null;
+  readonly flash: SignedOutFlash | null;
 }) {
   const titleId = useId();
   const contact = page.helpContact;
@@ -414,6 +421,7 @@ function DeadInvite({
   return (
     <AuthScreen
       labelledBy={titleId}
+      flash={flash}
       below={
         contact === null || boot === null ? undefined : (
           <AuthHelp contact={contact} version={boot.version} />

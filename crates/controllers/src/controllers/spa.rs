@@ -30,7 +30,7 @@ use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKi
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
-use campfire_api_types::{SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
+use campfire_api_types::{FlashMessage, FlashMessageKind, SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
 use campfire_people::controllers::{auth, sessions, two_factor, users};
 use campfire_spa::{SignedOutRoute, is_public_page, signed_out_route};
 
@@ -89,9 +89,10 @@ pub async fn show(c: &mut Ctx) -> Result {
     // About, Privacy and Terms are for anyone, as their retained pages are, and show everyone
     // the same page: the signed-out shell draws them, skipping the workspace callback chain
     // those pages skip. No session is restored, so a pending two-step enrollment isn't enforced
-    // here and a saved return destination stays as it was.
+    // here and a saved return destination stays as it was. They show no flash, so they leave a
+    // pending one for the page that does, as the retained pages do.
     if is_public_page(c.request.path()) {
-        let boot = load_signed_out_boot(c).await?;
+        let boot = load_signed_out_boot(c, false).await?;
         let nonce = c.content_security_policy_nonce();
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
         c.no_store();
@@ -122,7 +123,7 @@ pub async fn show(c: &mut Ctx) -> Result {
             SignedOutRoute::Invite => users::page_status(c, true).await?,
             _ => StatusCode::OK,
         };
-        let boot = load_signed_out_boot(c).await?;
+        let boot = load_signed_out_boot(c, true).await?;
         let nonce = c.content_security_policy_nonce();
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
         c.no_store();
@@ -143,20 +144,35 @@ pub async fn show(c: &mut Ctx) -> Result {
     Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html))
 }
 
-/// Public authentication inputs and a fresh CSRF token for the signed-out client.
+/// Public authentication inputs and a fresh CSRF token for the signed-out client. Its callers are
+/// the pages that show a flash (sign-in and joining, when the shell didn't inline their boot) and
+/// the signed-out forms' token refresh, so it hands over a pending flash; the public pages never
+/// ask for it.
 pub async fn signed_out_boot(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-    let boot = load_signed_out_boot(c).await?;
+    let boot = load_signed_out_boot(c, true).await?;
     auth::json(c, StatusCode::OK, &boot)
 }
 
-async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
+/// The signed-out boot. With `take_flash`, a redirect's pending notice or alert goes with it and is
+/// discarded; without, the flash isn't read and stays for the next page.
+async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOutBoot> {
     let (account, first_run_pending, help_contact) = c.app().db.read(|conn| {
         Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?, presenters::accounts::help_contact(conn)?))
     }).await.map_err(Error::internal)?;
     let logo_url = match &account {
         Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
         None => None,
+    };
+    // A redirect's notice or alert (a refused Google sign-in), shown by this load only.
+    let message = if take_flash {
+        let flash = c.flash();
+        let message = flash.notice().map(|message| FlashMessage { kind: FlashMessageKind::Notice, message: message.to_owned() })
+            .or_else(|| flash.alert().map(|message| FlashMessage { kind: FlashMessageKind::Alert, message: message.to_owned() }));
+        flash.discard(None);
+        message
+    } else {
+        None
     };
     Ok(SignedOutBoot {
         kind: SignedOut::SignedOut,
@@ -175,6 +191,7 @@ async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
         help_contact: help_contact.map(|owner| SignInHelpContact { name: owner.name, email_address: owner.email_address }),
         version: c.app().config.app_version.clone(),
         csrf_token: c.authenticity_tokens().global(),
+        flash: message,
     })
 }
 

@@ -340,7 +340,7 @@ function readFailure(
       if (leaveOnSignOut) {
         const location = yield* navigation.location;
 
-        yield* navigation.assign(`/session/new?return_to=${encodeURIComponent(location)}`);
+        yield* navigation.assign(`/app/session/new?return_to=${encodeURIComponent(location)}`);
       }
 
       const error = Option.getOrUndefined(decoded);

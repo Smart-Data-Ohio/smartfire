@@ -45,7 +45,7 @@ function signedOut(error: Error): boolean {
 function leave(subscription: PushSubscription | null): void {
   const unsubscribed = subscription === null ? Promise.resolve(true) : subscription.unsubscribe();
 
-  void unsubscribed.catch(() => false).then(() => window.location.assign("/session/new"));
+  void unsubscribed.catch(() => false).then(() => window.location.assign("/app/session/new"));
 }
 
 /**

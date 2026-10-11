@@ -66,12 +66,17 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
   return { pathname: () => router.state.location.pathname };
 }
 
-/** The mock's sign-in state: Google configured, first run pending, a second step waiting. */
+/**
+ * The mock's sign-in state: Google configured, first run pending, a second step waiting, and an
+ * alert or notice for the next boot to read once.
+ */
 export interface SignInChange {
   readonly google?: boolean;
   readonly firstRunPending?: boolean;
   readonly pending?: boolean;
   readonly firstRunUnavailable?: boolean;
+  readonly alert?: string;
+  readonly notice?: string;
 }
 
 /** Starts the mock over, then applies `change` to its sign-in state. */

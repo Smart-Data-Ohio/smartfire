@@ -333,6 +333,49 @@
     text-align: center;
   }
 
+  /* ── A redirect's flash: a toast above the card, as the retained auth layout draws it ── */
+
+  .auth-view-flash {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    width: min(100%, 400px);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    overflow-wrap: anywhere;
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 calc(var(--distance-toast) * -1);
+    }
+  }
+
+  .auth-view-flash-icon {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+
+  .auth-view-flash[data-tone="danger"] .auth-view-flash-icon {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .auth-view-flash[data-tone="success"] .auth-view-flash-icon {
+    background: color-mix(in oklch, var(--success), transparent 82%);
+    color: var(--success-text);
+  }
+
   /* ── The translation lists ── */
 
   .auth-view-translations {
