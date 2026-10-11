@@ -1,8 +1,4 @@
-//! Retained auth, media and public inputs. No import map or classic stylesheet compilation.
-#[path = "../retained_pages/auth_build.rs"]
-mod auth;
-
-use fancy_regex::Regex;
+//! Media and public inputs. No import map or stylesheet compilation.
 use sha1::{Digest, Sha1};
 use std::collections::BTreeMap;
 use std::env;
@@ -17,22 +13,15 @@ const VERSION: &[u8] = b"1.0";
 fn main() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
-    for path in [
-        "media",
-        "public",
-        "legacy-digests.json",
-        "../retained_pages/auth_build.rs",
-    ] {
+    for path in ["media", "public", "legacy-digests.json"] {
         println!("cargo:rerun-if-changed={path}");
     }
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
-    let auth = auth::prepare(&root, &out);
     let mut inputs = BTreeMap::new();
     for directory in [
         root.join("media/emoji"),
         root.join("media/images"),
         root.join("media/sounds"),
-        auth,
     ] {
         for file in files(&directory) {
             let logical = file
@@ -51,24 +40,10 @@ fn main() {
         .iter()
         .map(|(name, path)| (name.clone(), fs::read(path).unwrap()))
         .collect();
-    let urls = Regex::new(r#"url\(\s*["']?(fonts/[^"'\s?#)]+)([?#][^"')]+)?\s*["']?\)"#).unwrap();
     let mut manifest = BTreeMap::new();
     for (logical, content) in &contents {
         let mut hash = Sha1::new();
         hash.update(content);
-        if logical == "auth.css" {
-            // Propshaft hashes each referenced font once, in its CSS discovery order.
-            let css = std::str::from_utf8(content).unwrap();
-            let mut seen = Vec::new();
-            for captures in urls.captures_iter(css) {
-                let captures = captures.unwrap();
-                let font = captures[1].to_owned();
-                if !seen.contains(&font) {
-                    hash.update(&contents[&font]);
-                    seen.push(font);
-                }
-            }
-        }
         hash.update(VERSION);
         let digest = format!("{:x}", hash.finalize());
         let (stem, extension) = logical.rsplit_once('.').unwrap();
@@ -82,21 +57,6 @@ fn main() {
     let mut served = BTreeMap::new();
     let mut identifiers = BTreeMap::new();
     for (index, (logical, source)) in inputs.iter().enumerate() {
-        let source = if logical == "auth.css" {
-            let css = std::str::from_utf8(&contents[logical]).unwrap();
-            let compiled = urls.replace_all(css, |captures: &fancy_regex::Captures<'_>| {
-                format!(
-                    "url(\"/assets/{}{}\")",
-                    manifest[&captures[1]],
-                    captures.get(2).map_or("", |m| m.as_str())
-                )
-            });
-            let path = out.join("auth.css");
-            fs::write(&path, compiled.as_bytes()).unwrap();
-            path
-        } else {
-            source.clone()
-        };
         let identifier = format!("ASSET_{index}");
         writeln!(
             code,

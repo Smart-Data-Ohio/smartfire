@@ -44,16 +44,6 @@ pub fn audio_path(source: &str) -> String {
     asset_path(source)
 }
 
-/// `javascript_path`: appends ".js" unless the source already ends in it.
-pub fn javascript_path(source: &str) -> String {
-    resolve_asset_path(embedded::MANIFEST, source, Some(".js")).unwrap_or_else(|e| panic!("{e}"))
-}
-
-/// `stylesheet_path`: appends ".css" unless the source already ends in it.
-pub fn stylesheet_path(source: &str) -> String {
-    resolve_asset_path(embedded::MANIFEST, source, Some(".css")).unwrap_or_else(|e| panic!("{e}"))
-}
-
 /// `asset_url(source)`: the path joined onto the request's base URL (e.g. "https://host:3000"),
 /// which is what Rails uses as the host when no asset_host is configured.
 pub fn asset_url(base_url: &str, source: &str) -> String {
@@ -188,8 +178,10 @@ mod tests {
 
     #[test]
     fn appends_type_extensions() {
-        assert_eq!(stylesheet_path("auth"), stylesheet_path("auth.css"));
-        assert!(javascript_path("auth").starts_with("/assets/auth-"));
+        assert_eq!(
+            resolve_asset_path(embedded::MANIFEST, "56k", Some(".mp3")),
+            Ok(audio_path("56k.mp3"))
+        );
     }
 
     #[test]

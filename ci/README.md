@@ -59,8 +59,6 @@ publish the image or save shared caches. The toolchain's old Buildx cache is
 gone. Cargo dependency caches use the same toolchain hash and still save only
 on main pushes; the release image keeps its separate Buildx cache.
 
-Frontend auth inputs under `frontend/src/auth`, `styles`, `motion`, and the
-shared button, text-field and checkbox styles also feed Rust's asset build.
 Generated API types and embedded dist files are Rust inputs too.
 
 The other required checks are `Frontend`, `GitHub Actions audit`,

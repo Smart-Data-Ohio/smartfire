@@ -80,7 +80,7 @@ async fn profile(c: &mut Ctx) -> Result {
 async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
     let now = c.app().db.env().now();
     let secrets = c.app().secrets.clone();
-    let zone = campfire_runtime::request_context::time_zone(c).await?;
+    let zone = campfire_runtime::presenters::current::time_zone(c).await?;
     let viewer_id = viewer.id;
     let administrator = viewer.can_administer(None, false);
     #[cfg(feature = "test-support")]

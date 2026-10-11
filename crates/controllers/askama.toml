@@ -1,0 +1,4 @@
+# The public pages escape like ERB, so their articles keep the bytes the retained pages had.
+[[escaper]]
+path = "crate::controllers::public_pages::h::ErbEscaper"
+extensions = ["html"]

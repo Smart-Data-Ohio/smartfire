@@ -1,4 +1,4 @@
-//! Embedded assets shared by retained pages, APIs and persisted rich text.
+//! Embedded media shared by the APIs, the SPA and persisted rich text.
 
 mod helpers;
 mod serve;
@@ -8,7 +8,7 @@ mod embedded {
 
 pub use helpers::{
     MissingAssetError, asset_path, asset_url, audio_path, digested_path, image_path, image_url,
-    javascript_path, resolve_asset_path, resolve_asset_url, stylesheet_path, try_asset_path,
+    resolve_asset_path, resolve_asset_url, try_asset_path,
 };
 pub use serve::{Body, StaticRequest, StaticResponse, serve_embedded};
 
@@ -26,7 +26,7 @@ pub fn serve(request: &StaticRequest) -> Option<StaticResponse> {
     serve_embedded(request, embedded::FILES, embedded::BUILT_AT)
 }
 
-/// Full compiled bytes for a logical media/auth path, without constructing an HTTP response.
+/// Full compiled bytes for a logical media path, without constructing an HTTP response.
 pub fn asset_bytes(logical: &str) -> Option<&'static [u8]> {
     let path = format!("{PREFIX}/{}", digested_path(logical)?);
     embedded::FILES

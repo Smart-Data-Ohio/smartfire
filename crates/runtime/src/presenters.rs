@@ -1,5 +1,5 @@
 pub mod page;
-pub mod view_context;
+pub mod current;
 pub mod accounts;
 pub mod workspace_branding;
 pub mod status_settings;

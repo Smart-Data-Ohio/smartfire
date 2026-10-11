@@ -1,5 +1,5 @@
 //! Shared account, user, session and sidebar facts read from database rows.
-//! Request preferences and retained context are loaded by [`crate::request_context`].
+//! Request time zones and preferences are read by [`crate::presenters::current`].
 //!
 //! Queries the db crate doesn't have yet are written here against the reference's SQL.
 

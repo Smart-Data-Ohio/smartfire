@@ -1,43 +1,43 @@
 use crate::controllers::presenters::test_support::{Reply, Req, TestApp};
 use axum::http::{Method, StatusCode};
 
-/// PublicPagesControllerTest uses nav ancestry and real links, which comments cannot satisfy.
-pub(super) fn assert_public_links(body: &str) {
-    let mut dom = campfire_richtext::dom::Dom::new();
-    let root = dom.parse_fragment(body).unwrap();
-    let navs = dom.descendants(root).into_iter().filter(|id| {
-        dom.name(*id) == "nav" && dom.attr(*id, "aria-label") == Some("About this workspace")
-    }).collect::<Vec<_>>();
-    assert_eq!(navs.len(), 1, "exact About this workspace nav selector");
-    for path in ["/about", "/privacy", "/terms"] {
-        let links = dom.descendants(navs[0]).into_iter().filter(|id| {
-            dom.name(*id) == "a" && dom.attr(*id, "href") == Some(path)
-                && dom.attr(*id, "target") == Some("_blank")
-                && dom.attr(*id, "rel") == Some("noopener")
-        }).count();
-        assert_eq!(links, 1, "exact nav public link selector for {path}");
-    }
-}
-
-/// The retained page as its handler drew it before the move: the public shell, the auth
-/// stylesheet and script, and the app's `LEGAL_*` settings.
-pub(super) fn retained_page(app: &TestApp, page: &str) -> String {
-    use campfire_retained::{helpers as h, public_pages};
-    let page = match page {
-        "about" => public_pages::Page::About,
-        "privacy" => public_pages::Page::Privacy,
-        "terms" => public_pages::Page::Terms,
+/// The SPA's article for `page` under `app`'s `LEGAL_*` settings, with its links back on the
+/// retained pages Rails linked.
+fn article(app: &TestApp, page: &str) -> String {
+    use campfire_api_types::PublicPageName;
+    let name = match page {
+        "about" => PublicPageName::About,
+        "privacy" => PublicPageName::Privacy,
+        "terms" => PublicPageName::Terms,
         _ => unreachable!("{page}"),
     };
-    let policy = &app.booted.app.config.public_policy;
-    public_pages::render(
-        page,
-        &policy.operator_name,
-        &policy.contact_email,
-        &policy.effective_date,
-        h::raw(format!("{}\n{}", h::auth_stylesheet_tag(), h::auth_script_tag())),
-    )
-    .unwrap()
+    let page = super::public_page(name, &app.booted.app.config.public_policy).unwrap();
+    page.html
+        .replace("href=\"/app/privacy\"", "href=\"/privacy\"")
+        .replace("href=\"/app/terms\"", "href=\"/terms\"")
+        .replace("href=\"/app/session/new\"", "href=\"/session/new\"")
+}
+
+/// The article draws Rails' page: its title and description, and in its reading column the same
+/// text, escaped values and links.
+fn assert_rails_page(page: &str, article: &str, rails: &str) {
+    use crate::form_contracts::{links, page_content, text};
+    let name = match page {
+        "about" => super::Page::About,
+        "privacy" => super::Page::Privacy,
+        _ => super::Page::Terms,
+    };
+    assert!(rails.contains(&format!("<title>{}</title>", name.title())), "{page}");
+    assert!(
+        rails.contains(&format!("<meta name=\"description\" content=\"{}\">", name.description())),
+        "{page}"
+    );
+    assert_eq!(links(article), links(page_content(rails)), "{page}: public links");
+    assert_eq!(
+        text(article),
+        text(page_content(rails)),
+        "{page}: public policy text and escaped values"
+    );
 }
 
 /// `reply` sends `path` (`/about`, ...) for good to the SPA's copy, with `query` kept.
@@ -48,37 +48,6 @@ fn assert_moved(reply: &Reply, path: &str, query: &str) {
         Some(format!("http://campfire.test/app{path}{query}")),
         "{path}{query}"
     );
-}
-
-#[tokio::test]
-async fn unconfigured_sign_in_links_all_public_pages_in_new_tabs() {
-    // PublicPagesControllerTest at d7c7de92; render WS9's sign-in page directly, as
-    // /session/new now sends visitors to the SPA's.
-    let app = TestApp::boot_frozen().await.expect("seed required");
-    let response = app.anonymous().get("/session/new").await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(response.location(), Some("http://campfire.test/app/session/new"));
-    let body = crate::controllers::users::people_tests::render_with(
-        &app,
-        |ctx| {
-            ctx.current_user = None;
-        },
-        |ctx| {
-            use askama::Template;
-            let ctx = crate::controllers::users::people_tests::retained(ctx);
-            campfire_retained::sessions::New {
-                ctx: &ctx,
-                email_address: None,
-                help_contact: None,
-                google_sign_in_domains: app.booted.app.config.sign_in_google_domains.clone(),
-            }
-            .as_content()
-            .render()
-            .unwrap()
-        },
-    );
-    assert!(!body.contains("Sign in with Google"));
-    assert_public_links(&body);
 }
 
 #[tokio::test]
@@ -174,8 +143,8 @@ async fn public_pages_are_html_only_and_allow_wildcard_accept() {
     }
 }
 
-/// The retained pages' renderer still draws Rails' text, links and escaped values; the URLs
-/// themselves now send everyone to the SPA's copies.
+/// The SPA's articles draw Rails' text, links and escaped values; the retained URLs send everyone
+/// to the SPA's copies.
 #[tokio::test]
 async fn public_policy_text_links_and_escaped_values_match_rails() {
     let vectors: serde_json::Value =
@@ -201,7 +170,7 @@ async fn public_policy_text_links_and_escaped_values_match_rails() {
             assert_moved(&response, &format!("/{page}"), "");
             assert_eq!(response.header("set-cookie"), None);
             let expected = state["bodies"][page].as_str().unwrap();
-            crate::form_contracts::assert_public_page(page, &retained_page(&app, page), expected);
+            assert_rails_page(page, &article(&app, page), expected);
         }
     }
     let Some(app) = TestApp::boot_seed_with_env(
@@ -215,9 +184,7 @@ async fn public_policy_text_links_and_escaped_values_match_rails() {
     };
     for page in ["about", "privacy", "terms"] {
         assert_moved(&app.anonymous().get(&format!("/{page}")).await, &format!("/{page}"), "");
-        crate::form_contracts::assert_public_page(page,
-            &retained_page(&app, page),
-            vectors["pages"][0]["bodies"][page].as_str().unwrap());
+        assert_rails_page(page, &article(&app, page), vectors["pages"][0]["bodies"][page].as_str().unwrap());
     }
 }
 #[tokio::test]

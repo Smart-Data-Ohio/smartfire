@@ -17,14 +17,14 @@ differences from the Rails app are listed under [Known differences](#known-diffe
 
 The Rails app's behavior is pinned by the recorded golden vectors, fixtures and frozen seeds the
 tests read; they were recorded from Rails at [`parity/reference.sha`](../parity/reference.sha) and
-are frozen. Retained auth, media and public inputs live in
+are frozen. Media and public inputs live in
 [`crates/static_assets/`](../crates/static_assets/README.md). Shared template-free facts and legacy JSON live in
 [`crates/presentation/`](../crates/presentation/README.md); authentication, request support,
 attachment/Markdown adapters, mail and database presenters live in
 [`crates/runtime/`](../crates/runtime/README.md). The React UI in [`frontend/`](../frontend/README.md)
-is always served under `/app/`, with JSON sync. Retained auth and public pages use
-[`crates/retained_pages/`](../crates/retained_pages). Classic application templates and browser
-bundles are deleted; fixtures live in [`fixtures/`](../fixtures). The app uses the Rails SQLite schema,
+is always served under `/app/`, with JSON sync; the server's old page URLs redirect to it.
+Classic application templates, the retained auth and public pages, and browser bundles are
+deleted; fixtures live in [`fixtures/`](../fixtures). The app uses the Rails SQLite schema,
 storage layout and compatible signed/AES-GCM cookies, so existing installs keep their data and
 sessions. Boot loads an empty database's compiled schema or checks an existing database's exact
 migration set ([schema preparation](../crates/db/src/schema.rs#L103)); `campfire db-migrate` applies
@@ -35,8 +35,8 @@ new migrations (see [`ops/README.md`](../ops/README.md)).
 These contracts supersede the imported upstream operational claims:
 
 - **CSRF and sessions:** Rails-compatible masked global and per-form authenticity tokens are
-  checked and rendered in meta tags and forms, including forms opened before a runtime switch
-  ([kit CSRF](../crates/kit/src/csrf.rs#L1), [view helpers](../crates/view_kit/src/helpers/request_forgery.rs),
+  checked, and the SPA shell renders the global one in its meta tags, including for pages opened
+  before a runtime switch ([kit CSRF](../crates/kit/src/csrf.rs#L1),
   [Rails vectors](../crates/kit/tests/rails_vectors.rs)). The encrypted session holds CSRF, flash,
   return destinations and sign-in/step-up state, rather than only flash and a return URL
   ([session](../crates/kit/src/session.rs#L1), [session keys](../crates/runtime/src/concerns/session_keys.rs)).

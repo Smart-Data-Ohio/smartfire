@@ -14,14 +14,14 @@ tests pin. See `README.md` and `docs/rust-port.md` for where things stand.
   code was ported from (find it in the git history before the Rails removal).
 - **Drop-in compatible with existing data:** the same SQLite database and schema, storage layout,
   signed/encrypted cookies (so people stay signed in across releases) and environment variables.
-- Application UI changes go in `frontend/`; retained server pages live in `crates/retained_pages/`.
+- Application UI changes go in `frontend/`. The server renders no application pages: its old
+  page URLs redirect to the SPA's.
 
 ## Frontend and fixture inputs
 
 The app's static inputs live at the repository root:
 
-- `crates/static_assets/` owns retained auth, media and public inputs, with historical digest
-  aliases. `frontend/` owns the React UI and its browser dependencies. The LiveKit gateway and
+- `crates/static_assets/` owns media and public inputs, with historical digest aliases. `frontend/` owns the React UI and its browser dependencies. The LiveKit gateway and
   `livekit-local` live in `huddle-gateway/`.
 - `fixtures/`: the Rails app's `test/fixtures`, which the tests load.
 - `test-support/`: data the tests read that reference tools once held (attachment analyzer inputs,
@@ -57,10 +57,8 @@ rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing front
 | `crates/storage` | `campfire_storage` | Active Storage-compatible blobs, disk service, variants (libvips), previews (ffmpeg) |
 | `crates/cable` | `campfire_cable` | Action Cable protocol server, its WebSocket implementation, and in-process pub/sub |
 | `crates/presentation` | `campfire_presentation` | Template-free facts, formatting, JSON serializers and freshness keys |
-| `crates/static_assets` | `campfire_static_assets` | Retained auth, media and public bytes with historical digest aliases |
+| `crates/static_assets` | `campfire_static_assets` | Media and public bytes with historical digest aliases |
 | `crates/runtime` | `campfire_runtime` | Authentication, request support, storage adapters, mail and database presenters |
-| `crates/retained_pages` | `campfire_retained` | Retained auth and public server HTML |
-| `crates/view_kit` | `campfire_view_kit` | Shared retained HTML, form, escaping and CSRF helpers |
 | `crates/spa` | `campfire_spa` | The built SPA embedded at compile time (brotli/gzip, immutable caching), the shell and its boot JSON |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
 | `frontend/` | — | The React application UI (`frontend/README.md`) |

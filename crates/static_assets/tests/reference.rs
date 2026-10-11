@@ -48,24 +48,13 @@ fn every_recorded_media_digest_serves_the_original_bytes() {
 }
 
 #[test]
-fn auth_and_font_paths_match_the_pre_extraction_manifest() {
-    for (logical, digest) in fixture("auth-digests.json").as_object().unwrap() {
-        assert_eq!(
-            campfire_static_assets::digested_path(logical),
-            digest.as_str(),
-            "{logical}"
-        );
-    }
-}
-
-#[test]
-fn only_retained_browser_assets_are_embedded() {
+fn no_browser_scripts_or_stylesheets_are_embedded() {
     let browser_assets: Vec<_> = campfire_static_assets::manifest()
         .iter()
         .map(|(logical, _)| *logical)
         .filter(|logical| logical.ends_with(".js") || logical.ends_with(".css"))
         .collect();
-    assert_eq!(browser_assets, ["auth.css", "auth.js", "unsupported.js"]);
+    assert_eq!(browser_assets, Vec::<&str>::new());
 }
 
 #[test]

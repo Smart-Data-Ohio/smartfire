@@ -19,10 +19,8 @@ campfire_richtext = { path = "crates/richtext" }
 campfire_storage  = { path = "crates/storage" }
 campfire_cable    = { path = "crates/cable" }
 campfire_static_assets = { path = "crates/static_assets" }
-campfire_view_kit = { path = "crates/view_kit" }
 campfire_presentation = { path = "crates/presentation" }
 campfire_runtime = { path = "crates/runtime" }
-campfire_retained = { path = "crates/retained_pages" }
 campfire_jobs     = { path = "crates/jobs" }
 campfire_mail     = { path = "crates/mail" }
 campfire_app      = { path = "crates/app" }
@@ -57,7 +55,6 @@ hmac         = "0.12"
 sha1         = "0.10"
 sha2         = "0.10"
 subtle       = "2.6"
-fancy-regex  = "0.14"
 pbkdf2       = "0.12"
 aes-gcm      = "0.10"
 rand         = "0.9"

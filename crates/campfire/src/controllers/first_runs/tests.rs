@@ -1,5 +1,4 @@
 use crate::controllers::presenters::test_support::*;
-use askama::Template;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Account, User};
 use serde_json::{Value, json};
@@ -16,26 +15,8 @@ async fn app() -> TestApp {
     .expect("seed required")
 }
 #[tokio::test]
-async fn signup_body_matches_rails_and_is_available_until_account_exists() {
+async fn first_run_is_available_until_account_exists() {
     let app = app().await;
-    let actual = crate::controllers::users::people_tests::render_with(
-        &app,
-        |ctx| {
-            ctx.current_user = None;
-        },
-        |ctx| {
-            let ctx = crate::controllers::users::people_tests::retained(ctx);
-            campfire_retained::first_runs::Show { ctx: &ctx }
-                .as_content()
-                .render()
-                .unwrap()
-        },
-    );
-    crate::form_contracts::assert_forms(
-        "first-run-body",
-        &actual,
-        vectors()["page"]["html"].as_str().unwrap(),
-    );
     // The retained page now sends the visitor to the SPA's setup page, until the account exists.
     let mut browser = app.anonymous();
     let page = browser.get("/first_run").await;

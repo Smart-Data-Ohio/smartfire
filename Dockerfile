@@ -168,12 +168,8 @@ WORKDIR /src
 # The classic web/assets/views crates are retired; all static inputs live in crates/ and frontend/.
 COPY Cargo.toml Cargo.lock ./
 COPY crates crates
-# Retained auth, media and public inputs come with crates/static_assets.
+# Media and public inputs come with crates/static_assets.
 # crates/spa/build.rs embeds the SPA built above (and fails the build if SPA_DIST has none).
-COPY frontend/src/auth frontend/src/auth
-COPY frontend/src/styles frontend/src/styles
-COPY frontend/src/motion frontend/src/motion
-COPY frontend/src/ui/button.css frontend/src/ui/text-field.css frontend/src/ui/checkbox.css frontend/src/ui/
 COPY --from=spa /src/frontend/dist frontend/dist
 ENV SPA_DIST=/src/frontend/dist
 
