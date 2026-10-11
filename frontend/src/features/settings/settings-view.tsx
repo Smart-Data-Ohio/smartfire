@@ -32,10 +32,10 @@ function SettingsSkeleton() {
 
 /**
  * `/app/settings`: the classic profile page as sections (profile, status, notifications, rooms,
- * appearance, calls, security, sessions, push devices, integrations), a nav on the left and the chosen
- * section on the right; on phones the nav is the page and each section is pushed over it
- * (SectionsLayout). The page loads once; each section writes its own part and takes the server's
- * answer back.
+ * appearance, calls, security, sessions, ignored people, push devices, integrations), a nav on
+ * the left and the chosen section on the right; on phones the nav is the page and each section is
+ * pushed over it (SectionsLayout). The page loads once; each section writes its own part and
+ * takes the server's answer back.
  */
 export function SettingsView() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
