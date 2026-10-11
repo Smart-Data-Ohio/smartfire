@@ -28,6 +28,43 @@ pub struct ChallengeSubmission {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TwoFactorSetupSubmission {
+    pub code: String,
+}
+
+/// Provisioning material is private to the signed-in browser's pending setup.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TwoFactorSetupState {
+    pub secret: String,
+    pub manual_key: String,
+    pub otpauth_uri: String,
+    pub qr_svg: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[ts(export)]
+pub enum TwoFactorSetupResponse {
+    Ready { setup: TwoFactorSetupState },
+    /// Returned by successful confirmation only. Plaintext codes are never persisted.
+    RecoveryCodes { codes: Vec<String>, signed_out: usize, continue_url: String },
+    Navigate { location: String },
+    Error { message: String, setup: TwoFactorSetupState },
+}
+
+/// An enrollment gate carries a next step, never provisioning material or a pending identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum TwoFactorRequirement {
+    Setup { location: String },
+    Challenge { location: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SignOut {
@@ -159,6 +196,26 @@ mod tests {
     use super::*;
     use crate::tests::assert_wire;
     use serde_json::json;
+
+    #[test]
+    fn setup_contracts_round_trip() {
+        let setup = TwoFactorSetupState {
+            secret: "ABCD1234".into(),
+            manual_key: "ABCD 1234".into(),
+            otpauth_uri: "otpauth://totp/Smartfire:ada?secret=ABCD1234".into(),
+            qr_svg: "<svg/>".into(),
+        };
+        let wire = json!({"secret":"ABCD1234","manualKey":"ABCD 1234","otpauthUri":"otpauth://totp/Smartfire:ada?secret=ABCD1234","qrSvg":"<svg/>"});
+        assert_wire(&TwoFactorSetupSubmission { code: "123 456".into() }, json!({"code":"123 456"}));
+        assert_wire(&TwoFactorSetupResponse::Ready { setup: setup.clone() }, json!({"kind":"ready","setup":wire}));
+        assert_wire(&TwoFactorSetupResponse::Error { message: "That code didn't work.".into(), setup }, json!({"kind":"error","message":"That code didn't work.","setup":wire}));
+        assert_wire(&TwoFactorSetupResponse::RecoveryCodes {
+            codes: vec!["abcd-1234-efgh".into()], signed_out: 2, continue_url: "/app/".into(),
+        }, json!({"kind":"recoveryCodes","codes":["abcd-1234-efgh"],"signedOut":2,"continueUrl":"/app/"}));
+        assert_wire(&TwoFactorSetupResponse::Navigate { location: "/session/new".into() }, json!({"kind":"navigate","location":"/session/new"}));
+        assert_wire(&TwoFactorRequirement::Setup { location: "/two_factor_setup".into() }, json!({"kind":"setup","location":"/two_factor_setup"}));
+        assert_wire(&TwoFactorRequirement::Challenge { location: "/two_factor_challenge".into() }, json!({"kind":"challenge","location":"/two_factor_challenge"}));
+    }
 
     #[test]
     fn auth_actions_round_trip_without_pending_identity() {
