@@ -74,6 +74,7 @@ describe("S8 room management schemas", () => {
       defaultInvolvement: "everything",
       stageRoles: [{ userId: 7, role: "host" }],
       topic: null,
+      voiceBitrate: null,
     });
   });
 
@@ -83,6 +84,8 @@ describe("S8 room management schemas", () => {
     ).toThrow();
     roundTrips(CreateRoom, { type: "open", clientRoomId: "room-key", name: null, iconName: null });
     roundTrips(UpdateRoom, { type: "open" });
+    roundTrips(UpdateRoom, { type: "open", voiceBitrate: null });
+    roundTrips(UpdateRoom, { type: "open", voiceBitrate: 384_000 });
     roundTrips(UpdateRoom, { type: "open", name: null, iconName: "fire" });
 
     for (const type of ["closed", "voice", "stage", "board"] as const) {
@@ -94,6 +97,8 @@ describe("S8 room management schemas", () => {
         userIds: [7],
       });
       roundTrips(UpdateRoom, { type, userIds: [] });
+      roundTrips(UpdateRoom, { type, userIds: [7], voiceBitrate: null });
+      roundTrips(UpdateRoom, { type, userIds: [7], voiceBitrate: 384_000 });
       roundTrips(UpdateRoom, { type, name: null, iconName: null, userIds: [7] });
     }
 

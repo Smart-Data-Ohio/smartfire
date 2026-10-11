@@ -47,6 +47,7 @@ function boardForm(patch: Partial<RoomForm> = {}): RoomForm {
     defaultInvolvement: "mentions",
     stageRoles: [],
     topic: null,
+    voiceBitrate: null,
     ...patch,
   };
 }
@@ -168,6 +169,7 @@ describe("board settings", () => {
         createdAt: "2026-03-02T16:00:00Z",
         updatedAt: "2026-03-02T16:00:00Z",
         topic: null,
+        voiceBitrate: null,
       },
       detail: null,
       row: null,
@@ -252,6 +254,7 @@ function savedRoom(name: string) {
       createdAt: "2026-03-02T16:00:00Z",
       updatedAt: "2026-03-02T16:00:00Z",
       topic: null,
+      voiceBitrate: null,
     },
     detail: null,
     row: null,

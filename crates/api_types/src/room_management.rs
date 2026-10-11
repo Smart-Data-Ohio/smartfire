@@ -36,6 +36,8 @@ pub struct RoomForm {
     pub default_involvement: Involvement,
     pub stage_roles: Vec<RoomFormStageRole>,
     pub topic: Option<String>,
+    /// Configured audio target in bits per second; null uses the current huddle default.
+    pub voice_bitrate: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -226,6 +228,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         topic: Option<Option<String>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Closed {
         #[ts(optional)]
@@ -238,6 +243,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         topic: Option<Option<String>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Voice {
         #[ts(optional)]
@@ -250,6 +258,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         topic: Option<Option<String>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Stage {
         #[ts(optional)]
@@ -262,6 +273,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         topic: Option<Option<String>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Board {
         #[ts(optional)]
@@ -274,6 +288,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         topic: Option<Option<String>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_bitrate: Option<Option<i64>>,
     },
 }
 
@@ -292,6 +309,8 @@ enum UpdateRoomFields {
         icon_name: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         topic: Option<Option<String>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Closed {
         #[serde(default, deserialize_with = "present")]
@@ -301,6 +320,8 @@ enum UpdateRoomFields {
         user_ids: Vec<i64>,
         #[serde(default, deserialize_with = "present")]
         topic: Option<Option<String>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Voice {
         #[serde(default, deserialize_with = "present")]
@@ -310,6 +331,8 @@ enum UpdateRoomFields {
         user_ids: Vec<i64>,
         #[serde(default, deserialize_with = "present")]
         topic: Option<Option<String>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Stage {
         #[serde(default, deserialize_with = "present")]
@@ -319,6 +342,8 @@ enum UpdateRoomFields {
         user_ids: Vec<i64>,
         #[serde(default, deserialize_with = "present")]
         topic: Option<Option<String>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_bitrate: Option<Option<i64>>,
     },
     Board {
         #[serde(default, deserialize_with = "present")]
@@ -328,6 +353,8 @@ enum UpdateRoomFields {
         user_ids: Vec<i64>,
         #[serde(default, deserialize_with = "present")]
         topic: Option<Option<String>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_bitrate: Option<Option<i64>>,
     },
 }
 
@@ -338,61 +365,75 @@ impl<'de> Deserialize<'de> for UpdateRoom {
                 name,
                 icon_name,
                 topic,
+                voice_bitrate,
             } => Self::Open {
                 name,
                 icon_name,
                 topic,
+                voice_bitrate,
             },
             UpdateRoomFields::Closed {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             } => Self::Closed {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             },
             UpdateRoomFields::Voice {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             } => Self::Voice {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             },
             UpdateRoomFields::Stage {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             } => Self::Stage {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             },
             UpdateRoomFields::Board {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             } => Self::Board {
                 name,
                 icon_name,
                 user_ids,
                 topic,
+                voice_bitrate,
             },
         })
     }
 }
 
-fn present<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Option<String>>, D::Error> {
-    Option::<String>::deserialize(deserializer).map(Some)
+fn present<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
 }
 
 /// A successful room write. The viewer may have omitted or removed their own membership.
@@ -427,6 +468,29 @@ pub struct RoomLeft {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn voice_bitrate_patch_distinguishes_omitted_null_and_target() {
+        for kind in ["open", "closed", "voice", "stage", "board"] {
+            let mut omitted = json!({"type":kind});
+            if kind != "open" {
+                omitted["userIds"] = json!([]);
+            }
+            for value in [None, Some(json!(null)), Some(json!(384_000))] {
+                let mut input = omitted.clone();
+                if let Some(value) = value {
+                    input["voiceBitrate"] = value;
+                }
+                let request: UpdateRoom = serde_json::from_value(input.clone()).unwrap();
+                assert_eq!(serde_json::to_value(request).unwrap(), input);
+            }
+            for value in [json!("384000"), json!(384_000.5), json!(true)] {
+                let mut input = omitted.clone();
+                input["voiceBitrate"] = value;
+                assert!(serde_json::from_value::<UpdateRoom>(input).is_err());
+            }
+        }
+    }
 
     #[test]
     fn tagged_room_requests_reject_direct_and_unsupported_fields() {

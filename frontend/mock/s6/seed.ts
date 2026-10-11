@@ -157,6 +157,7 @@ export function seedBoards(world: World, now: number, seed: number): void {
       createdAt: at,
       updatedAt: at,
       topic: null,
+      voiceBitrate: null,
     },
     memberIds,
     membership: {

@@ -137,6 +137,7 @@ export function createRoomManagement(
       defaultInvolvement: direct ? "everything" : "mentions",
       stageRoles: [...roles].map(([userId, role]) => ({ userId, role })),
       topic: record?.room.topic ?? null,
+      voiceBitrate: record?.room.voiceBitrate ?? null,
     };
   };
 
@@ -282,6 +283,7 @@ export function createRoomManagement(
         createdAt,
         updatedAt: createdAt,
         topic: null,
+        voiceBitrate: null,
       },
       memberIds,
       membership: {
