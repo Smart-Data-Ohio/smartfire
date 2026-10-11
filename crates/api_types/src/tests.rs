@@ -200,6 +200,7 @@ fn room_and_membership_round_trip() {
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         topic: None,
+        voice_bitrate: None,
         announcement: false,
     };
     assert_wire(
@@ -213,6 +214,7 @@ fn room_and_membership_round_trip() {
             "createdAt": "2026-01-01T00:00:00.000Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
             "topic": null,
+            "voiceBitrate": null,
             "announcement": false,
         }),
     );
@@ -532,6 +534,7 @@ fn room() -> Room {
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         topic: None,
+        voice_bitrate: None,
         announcement: false,
     }
 }

@@ -600,3 +600,75 @@ fn room_topic_round_trips_and_invalid_updates_preserve_the_room() {
     t.write(move |tx| Room::find(tx.conn(), room_id)?.update_topic(tx, Some("  ")));
     assert_eq!(t.read(|c| Room::find(c, room_id)).topic, None);
 }
+
+#[test]
+fn room_voice_bitrate_defaults_round_trips_and_clears_without_events() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let room_id = id("pets");
+    let existing = t.read(|c| Room::find(c, room_id));
+    assert_eq!(existing.voice_bitrate, None);
+    assert_eq!(existing.audio_bitrate_target(), 48_000);
+    let created = t.write(|tx| {
+        Room::create_for(
+            tx,
+            RoomType::Voice,
+            Some("Call"),
+            id("david"),
+            &[id("david")],
+        )
+    });
+    assert_eq!(created.voice_bitrate, None);
+    assert_eq!(created.audio_bitrate_target(), 48_000);
+    let events = t.events();
+    for bitrate in [48_000, 64_000, 96_000, 128_000, 256_000, 384_000] {
+        t.travel(1);
+        t.write(move |tx| Room::find(tx.conn(), room_id)?.update_voice_bitrate(tx, Some(bitrate)));
+        let stored = t.read(|c| Room::find(c, room_id));
+        assert_eq!(stored.voice_bitrate, Some(bitrate));
+        assert_eq!(stored.audio_bitrate_target(), bitrate);
+        assert_eq!(stored.updated_at, t.now());
+        let joined = t.read(|c| Membership::visible_with_ordered_room(c, id("david")));
+        assert_eq!(
+            joined
+                .iter()
+                .find(|(_, r)| r.id == room_id)
+                .unwrap()
+                .1
+                .voice_bitrate,
+            Some(bitrate)
+        );
+        assert_eq!(t.events(), events);
+    }
+    let before = t.read(|c| Room::find(c, room_id));
+    t.travel(1);
+    t.write(move |tx| Room::find(tx.conn(), room_id)?.update_voice_bitrate(tx, Some(384_000)));
+    assert_eq!(t.read(|c| Room::find(c, room_id)), before);
+    t.write(move |tx| Room::find(tx.conn(), room_id)?.update_voice_bitrate(tx, None));
+    let cleared = t.read(|c| Room::find(c, room_id));
+    assert_eq!(cleared.voice_bitrate, None);
+    assert_eq!(cleared.audio_bitrate_target(), 48_000);
+    assert_eq!(t.events(), events);
+}
+
+#[test]
+fn room_voice_bitrate_rejects_unsupported_targets_without_changes() {
+    let t = TestDb::new();
+    let room_id = id("pets");
+    let before = t.read(|c| Room::find(c, room_id));
+    let events = t.events();
+    t.travel(1);
+    for bitrate in [-1, 0, 64, 48_001, 192_000, 384_001, i64::MAX] {
+        let error = t
+            .try_write(move |tx| {
+                Room::find(tx.conn(), room_id)?.update_voice_bitrate(tx, Some(bitrate))
+            })
+            .unwrap_err();
+        let crate::Error::RecordInvalid(errors) = error else {
+            panic!("expected validation")
+        };
+        assert_eq!(errors.on("voice_bitrate"), ["is not included in the list"]);
+        assert_eq!(t.read(|c| Room::find(c, room_id)), before);
+        assert_eq!(t.events(), events);
+    }
+}
