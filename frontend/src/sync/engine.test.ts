@@ -75,6 +75,7 @@ const serve = (roomMessages: readonly MessageDTO[]) =>
     const api = yield* FakeApi;
 
     yield* api.reply("GET /boot", { ...workspaceBoot, csrfToken: "token" });
+    yield* api.reply("GET /blocks", { people: [], revision: 0 });
     yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
     yield* api.reply("GET /rooms/12", roomDetailFixture(12));
     yield* api.reply("GET /rooms/12/messages", pageFixture(roomMessages));
@@ -1955,9 +1956,10 @@ describe("resync", () => {
 
         const requests = (yield* api.requests).slice(before);
 
-        expect(requests).toHaveLength(5);
+        expect(requests).toHaveLength(6);
         expect(requests).toEqual(
           expect.arrayContaining([
+            { method: "GET", path: "/blocks" },
             { method: "GET", path: "/sidebar" },
             { method: "GET", path: "/boot" },
             { method: "GET", path: "/activity/unread_count" },

@@ -18,6 +18,9 @@ pub async fn create(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let users = active_user_ids(tx.conn(), &ids)?;
+            if Room::find_direct_for(tx.conn(), &users)?.is_none() {
+                campfire_db::models::ignore_policy::require_contact(tx.conn(), user_id, &users)?;
+            }
             if users.len() > campfire_db::models::direct_room::MAX_MEMBERS {
                 return Ok(None);
             }
@@ -164,11 +167,11 @@ fn selected_user_ids(c: &Ctx, actor: Option<i64>) -> Vec<i64> {
     super::user_ids_from_param(&Param::Array(values))
 }
 fn active_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db::Result<Vec<i64>> {
-    Ok(User::where_ids(conn, ids)?
-        .into_iter()
-        .filter(User::is_active)
-        .map(|u| u.id)
-        .collect())
+    let users = User::where_ids(conn, ids)?;
+    if ids.iter().any(|id| !users.iter().any(|user| user.id == *id)) {
+        return Err(campfire_db::Error::RecordNotFound("User"));
+    }
+    Ok(users.into_iter().filter(User::is_active).map(|user| user.id).collect())
 }
 fn capacity_alert() -> String {
     format!(

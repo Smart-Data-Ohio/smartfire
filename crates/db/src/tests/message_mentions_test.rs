@@ -95,10 +95,17 @@ fn assert_update(t: &TestDb, item: &ActivityItem) {
         frames,
         [(
             format!("user_{}_activity", item.user_id),
-            serde_json::json!({"activityItemId": item.id})
+            serde_json::json!({"activityItemId": item.id, "syncRecorded": true, "recordingSource": ["Message", item.source_id]})
         )]
     );
-    assert!(!t.events().iter().any(|event| matches!(event, Event::Broadcast(request) if request.kind == "ActivityItem#sync_removed")));
+    let removals: Vec<_> = t.events().into_iter().filter_map(|event| match event {
+        Event::Broadcast(request) => request.decode::<crate::models::activity_item::ActivityItemsRemoved>().map(|removed| removed.unwrap()),
+        _ => None,
+    }).collect();
+    assert_eq!(removals.len(), 1);
+    assert!(removals[0].items.is_empty());
+    assert_eq!(removals[0].room_id, Some(id("designers")));
+    assert!(removals[0].recipient_ids.as_ref().unwrap().contains(&item.user_id));
 }
 
 fn assert_no_push(t: &TestDb) {
@@ -272,6 +279,33 @@ fn mention_edits_remove_activity_when_its_keyword_no_longer_applies() {
         .is_none()
     );
     assert_no_push(&t);
+}
+
+#[test]
+fn ignored_mention_edits_clean_up_obsolete_items_without_bumping_remaining_activity() {
+    use crate::models::user_block::UserBlock;
+    for event_type in ["mention", "reply", "thread_activity", "keyword_alert"] {
+        let t = frozen();
+        let message = edit(&t, &message(&t, event_type), true);
+        let mention = item(&t, &message, "david");
+        assert_eq!(mention.event_type, "mention");
+        assert!(mention.unread());
+        t.write(move |tx| UserBlock::set(tx, id("david"), message.creator_id, true));
+        assert_eq!(t.read(|conn| ActivityItem::unread_snapshot(conn, id("david"), t.now())).count, 0);
+        t.sink.take();
+        t.travel(1);
+        let message = edit(&t, &message, false);
+        let remaining = t.read(|conn| ActivityItem::find_by_user_and_source(conn, id("david"), "Message", message.id));
+        if event_type == "mention" {
+            assert!(remaining.is_none(), "removed mention must be deleted even while ignored");
+        } else {
+            assert_eq!(remaining, Some(ActivityItem { event_type: event_type.into(), ..mention }));
+        }
+        assert_no_push(&t);
+        t.write(move |tx| UserBlock::set(tx, id("david"), message.creator_id, false));
+        assert_eq!(t.read(|conn| ActivityItem::unread_snapshot(conn, id("david"), t.now())).count, i64::from(event_type != "mention"));
+        assert!(t.read(|conn| ActivityItem::accessible_to(conn, &crate::User::find(conn, id("david"))?)).iter().all(|item| item.event_type != "mention"));
+    }
 }
 
 #[test]

@@ -56,6 +56,63 @@ function renderRow(state: ActivityItem["state"], creatorId: number | null = null
 afterEach(() => mutations.reset());
 
 describe("an activity row", () => {
+  it("collapses cached reminders when another session changes ignore", () => {
+    renderRow("unread", 8);
+    act(() =>
+      mutations.applyEvents(
+        [
+          {
+            seq: 1,
+            topic: "user",
+            type: "blocks.updated",
+            data: { userId: 8, ignoredByMe: true, revision: 1 },
+          },
+        ],
+        NOW,
+      ),
+    );
+    expect(screen.queryByText("Can you review the launch plan?")).toBeNull();
+    act(() =>
+      mutations.applyEvents(
+        [
+          {
+            seq: 2,
+            topic: "user",
+            type: "blocks.updated",
+            data: { userId: 8, ignoredByMe: false, revision: 2 },
+          },
+        ],
+        NOW,
+      ),
+    );
+    expect(screen.getByText("Can you review the launch plan?")).toBeTruthy();
+  });
+  it("collapses an ignored saved reminder until the viewer reveals it", () => {
+    const reminder = item("unread", 8);
+
+    const source: ActivityItem["source"] & { readonly ignored: boolean } = {
+      ...reminder.source,
+      sourceType: "saved_item",
+      ignored: true,
+    };
+
+    const subject: ActivityItem = { ...reminder, eventType: "message_reminder", source };
+    render(
+      <ActivityRow
+        item={subject}
+        now={NOW}
+        motion={undefined}
+        celebrate={false}
+        onOpen={vi.fn()}
+        onAction={vi.fn()}
+        onMenu={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("Can you review the launch plan?")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Unread/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show ignored message" }));
+    expect(screen.getByText("Can you review the launch plan?")).toBeTruthy();
+  });
   it("names a live item's creator as soon as their profile lands", () => {
     renderRow("unread", 8);
 

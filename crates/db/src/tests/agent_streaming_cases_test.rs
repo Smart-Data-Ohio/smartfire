@@ -109,7 +109,7 @@ fn ws11_stream_case_thread_finalize_sends_no_unread_room_broadcast() {
         !t.events()
             .iter()
             .filter_map(|e| e.as_broadcast())
-            .any(|b| b.channel_frame().is_some_and(|(stream, _)| stream.ends_with("_unreads")))
+            .any(|b| b.channel_frames().into_iter().any(|(stream, _)| stream.ends_with("_unreads")))
     );
     t.read(move |c| {
         assert!(!Message::find(c, mid)?.streaming);

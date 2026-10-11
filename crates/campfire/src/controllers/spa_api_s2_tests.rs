@@ -531,6 +531,7 @@ async fn forwards_list_destinations_copy_and_publish() {
     };
     assert_eq!(
         api::MessageDTO {
+            ignored: None,
             cards_as_of: forward.cards_as_of.clone(),
             ..published
         },
@@ -972,18 +973,13 @@ async fn an_edit_read_before_a_delete_cannot_publish_its_preview_last() {
         .await;
     sync.until(previewing(room, Some("First one")), |_| false)
         .await;
-    tokio::time::timeout(
-        Duration::from_secs(5),
-        a.booted.app.broadcasts.settle_sync(),
-    )
-    .await
-    .expect("the previews settled");
-    let later = tokio::time::timeout(
-        Duration::from_millis(200),
-        sync.until(row_for_room, |_| false),
-    )
-    .await;
-    assert!(later.is_err(), "no row after the database's: {later:?}");
+    // The canonical activity-removal slot also refreshes the room, even without a personal
+    // item (I1). Repeated current rows are harmless; none may restore the deleted preview.
+    let later = remaining_row_events(&a, &mut sync, room).await;
+    assert!(later.iter().all(|payload| matches!(payload,
+        api::SyncPayload::SidebarRowUpserted(row)
+            if row.last_message.as_ref().map(|last| last.excerpt.as_str()) == Some("First one")
+    )), "no stale row after the database's: {later:?}");
     let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
     let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
     assert_eq!(
@@ -1002,6 +998,7 @@ async fn an_edit_read_before_a_delete_cannot_publish_its_preview_last() {
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     sync.until(previewing(room, Some("Third one")), |_| false)
         .await;
+    remaining_row_events(&a, &mut sync, room).await;
     let reply = david
         .write(json_body(
             Method::PATCH,
@@ -1153,7 +1150,10 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
     )
     .await;
     let after = remaining_row_events(&a, &mut sync, room).await;
-    assert!(after.is_empty(), "the row stays gone: {after:?}");
+    // The inbox's canonical access-loss refresh may repeat the removal, but cannot upsert.
+    assert!(after.iter().all(|payload| matches!(payload,
+        api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room
+    )), "the row stays gone: {after:?}");
     let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
     assert!(sidebar.rows.iter().all(|row| row.room.id != room));
     server.abort();

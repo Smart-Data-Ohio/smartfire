@@ -184,7 +184,7 @@ impl ActivityItem {
             rusqlite::params![message.id, serde_json::json!(mentioned).to_string()],
             Self::from_row,
         )?;
-        if obsolete.is_empty() && mentioned.iter().all(|id| previous_mentionees.contains(id)) {
+        if mentioned.len() == previous_mentionees.len() && mentioned.iter().all(|id| previous_mentionees.contains(id)) {
             return Ok(());
         }
         let recipients = candidates(tx.conn(), tx.rich_text(), message, tx.now())?.recipients;
@@ -195,29 +195,38 @@ impl ActivityItem {
                 .find(|candidate| candidate.user_id == item.user_id)
             {
                 // Recompute the remaining reason without reopening activity the recipient handled.
+                let updated_at = if super::super::ignore_policy::ignored(tx.conn(), item.user_id, message.creator_id)? {
+                    item.updated_at
+                } else {
+                    tx.now()
+                };
                 tx.conn().execute(
                     "UPDATE activity_items SET event_type=?,updated_at=? WHERE id=?",
-                    rusqlite::params![candidate.event_type, tx.now(), item.id],
+                    rusqlite::params![candidate.event_type, updated_at, item.id],
                 )?;
-                Self::broadcast_change(tx, item.user_id, item.id)?;
             } else {
                 tx.conn()
                     .execute("DELETE FROM activity_items WHERE id=?", [item.id])?;
                 removed.push((item.id, item.user_id));
             }
         }
-        if !removed.is_empty() {
-            tx.emit_after_commit(crate::Event::broadcast(&super::ActivityItemsRemoved {
-                items: removed,
-                room_id: Some(message.room_id),
-            }));
-        }
+        Self::emit_removed_in_room(tx, removed, message.room_id, None)?;
         for candidate in recipients {
-            if candidate.event_type == "mention"
+            let item = if candidate.event_type == "mention"
                 && !previous_mentionees.contains(&candidate.user_id)
             {
-                Self::refresh_unread(tx, candidate.user_id, "Message", message.id, "mention")?;
-            }
+                if super::super::ignore_policy::ignored(tx.conn(), candidate.user_id, message.creator_id)? {
+                    None
+                } else {
+                    let item = Self::refresh_unread_quietly(tx, candidate.user_id, "Message", message.id, "mention")?;
+                    Some(item)
+                }
+            } else if previous_mentionees.contains(&candidate.user_id) && !mentioned.contains(&candidate.user_id) {
+                Self::find_by_user_and_source(tx.conn(), candidate.user_id, "Message", message.id)?
+            } else { continue; };
+            Self::publish_recording(tx, &super::ActivityItemRecorded {
+                id: item.as_ref().map_or(0, |item| item.id), user_id: candidate.user_id, room_id: Some(message.room_id), source_type: "Message".into(), source_id: message.id,
+            })?;
         }
         Ok(())
     }

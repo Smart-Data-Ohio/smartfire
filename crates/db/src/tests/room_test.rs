@@ -29,6 +29,13 @@ fn revoke_membership_from_user() {
     assert_eq!(
         t.events(),
         vec![
+            // Losing room access refreshes the inbox from the unfiltered recipient roster.
+            // An empty list still consumes its slot when ignored sources stored no items (I1).
+            Event::broadcast(&crate::models::activity_item::ActivityItemsRemoved {
+                items: vec![],
+                recipient_ids: Some(vec![id("david")]),
+                room_id: Some(id("watercooler")),
+            }),
             Event::broadcast(&crate::RoomRemovalBroadcast {
                 user_id: id("david"),
                 room_id: id("watercooler"),

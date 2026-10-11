@@ -22,6 +22,7 @@ pub struct PeopleDirectory {
 #[ts(export)]
 pub struct DirectoryPerson {
     pub user_id: i64,
+    pub ignored_by_me: bool,
     /// The classic row's "Online" / "Offline" (`Person.online`).
     pub online: bool,
     /// Starred by the viewer.
@@ -36,6 +37,7 @@ pub struct DirectoryPerson {
 #[ts(export)]
 pub struct PersonProfile {
     pub user: User,
+    pub ignored_by_me: bool,
     /// `profile_status_in_zone`, worded in the request's time zone. Set for a person who isn't
     /// deactivated, including banned people; `None` for bots (`users/show.html:21,45-49`).
     pub status: Option<PersonStatus>,
@@ -56,6 +58,33 @@ pub struct PersonProfile {
     pub can_ban: bool,
     /// Active bot and administrator or agent owner (`users/show.html:28`): the capability-grants link.
     pub can_manage_bot: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BlockList {
+    pub people: Vec<BlockedPerson>,
+    pub revision: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BlockedPerson {
+    pub user: User,
+    pub ignored_by_me: bool,
+    pub created_at: crate::Timestamp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BlockState {
+    pub user_id: i64,
+    pub ignored_by_me: bool,
+    /// Orders concurrent changes and the viewer's notification badge refresh.
+    pub revision: i64,
 }
 
 /// The badge rendered by `users/statuses/_profile_status.html:2`.

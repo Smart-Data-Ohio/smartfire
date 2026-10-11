@@ -23,6 +23,7 @@ fn activity_item() -> ActivityItem {
             message_id: Some(9001),
             event_id: None,
             creator_id: Some(7),
+            ignored: None,
             title: "general".into(),
             body: "Hello there @Grace".into(),
             occurred_at: "2026-10-06T09:15:00.123Z".into(),
@@ -348,7 +349,7 @@ fn activity_round_trips() {
     }
     assert_wire(
         &ActivityItemChanged {
-            item: activity_item(),
+            item: Some(activity_item()),
             unread_count: 3,
             unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
@@ -358,6 +359,7 @@ fn activity_round_trips() {
     assert_wire(
         &ActivityItemRemoved {
             id: 301,
+            additional_ids: None,
             unread_count: 2,
             unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
@@ -999,7 +1001,7 @@ fn s3_sync_events_round_trip() {
         (
             "user",
             SyncPayload::ActivityItem(ActivityItemChanged {
-                item: activity_item(),
+                item: Some(activity_item()),
                 unread_count: 3,
                 unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
@@ -1010,6 +1012,7 @@ fn s3_sync_events_round_trip() {
             "user",
             SyncPayload::ActivityRemoved(ActivityItemRemoved {
                 id: 301,
+            additional_ids: None,
                 unread_count: 2,
                 unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),

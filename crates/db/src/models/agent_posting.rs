@@ -446,14 +446,14 @@ pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     } else {
         Vec::new()
     };
-    for m in memberships {
-        if m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id) {
-            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::UnreadRoom {
-                user_id: m.user_id,
-                room_id: message.room_id,
-                message_id: Some(message.id),
-            }));
-        }
-    }
+    let user_ids = memberships.into_iter()
+        .filter(|m| m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id))
+        .map(|m| m.user_id).collect();
+    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::UnreadRoom {
+        user_ids,
+        room_id: message.room_id,
+        message_id: Some(message.id),
+        author_id: message.creator_id,
+    }));
     Ok(())
 }

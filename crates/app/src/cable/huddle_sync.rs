@@ -251,12 +251,14 @@ pub fn notice(frame: &serde_json::Value) -> Option<HuddleNotice> {
             user_name: text("joinerName")?,
             in_call: frame["inCall"].as_bool().unwrap_or(false),
             rejoin: frame["rejoin"].as_bool().unwrap_or(false),
+            unchanged: frame["unchanged"].as_bool(),
         },
         "huddle_left" => HuddleNotice::Left {
             room_id,
             room_name: text("roomName")?,
             user_id: frame["joinerId"].as_i64()?,
             user_name: text("joinerName")?,
+            unchanged: frame["unchanged"].as_bool(),
         },
         "huddle_ended" => HuddleNotice::Ended { room_id },
         _ => return None,
@@ -284,6 +286,7 @@ pub fn ring(frame: &serde_json::Value) -> Option<HuddleRing> {
         room_name: frame["roomName"].as_str()?.to_string(),
         caller_name: frame["callerName"].as_str()?.to_string(),
         silent: frame["silent"].as_bool().unwrap_or(false),
+        unchanged: frame["unchanged"].as_bool(),
     })
 }
 
@@ -304,7 +307,8 @@ mod tests {
                 user_id: 8,
                 user_name: "Grace".into(),
                 in_call: true,
-                rejoin: false
+                rejoin: false,
+                unchanged: None,
             })
         );
         assert_eq!(
@@ -315,9 +319,14 @@ mod tests {
                 room_id: 12,
                 room_name: "general".into(),
                 user_id: 8,
-                user_name: "Grace".into()
+                user_name: "Grace".into(),
+                unchanged: None
             })
         );
+        assert!(matches!(
+            notice(&json!({"eventType":"huddle_left","roomId":12,"roomName":"general","joinerId":8,"joinerName":"Grace","unchanged":true})),
+            Some(HuddleNotice::Left { unchanged: Some(true), .. })
+        ));
         assert_eq!(
             notice(&json!({"eventType":"huddle_ended","roomId":12})),
             Some(HuddleNotice::Ended { room_id: 12 })
@@ -340,7 +349,8 @@ mod tests {
                 room_id: 3,
                 room_name: "Ada".into(),
                 caller_name: "Ada".into(),
-                silent: true
+                silent: true,
+                unchanged: None
             })
         );
         let ended = json!({"activityItemId":41,"eventType":"huddle_ended","state":"read","roomId":3,"roomName":"Ada","roomPath":"/rooms/3","callerName":"Ada","readPath":"/activity/41/read?state=read","handledPath":"/activity/41/handled?state=handled"});

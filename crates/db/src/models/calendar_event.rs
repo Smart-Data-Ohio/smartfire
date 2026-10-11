@@ -462,6 +462,10 @@ impl CalendarEvent {
     }
     /// Current notified going/maybe active human members, re-read in the triggering write.
     pub fn notification_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
+        super::ignore_policy::visible_recipients(conn, self.organizer_id, self.activity_recipient_ids(conn)?)
+    }
+
+    pub(super) fn activity_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
         query_all(
             conn,
             "SELECT u.id FROM users u JOIN event_attendances a ON a.user_id=u.id \

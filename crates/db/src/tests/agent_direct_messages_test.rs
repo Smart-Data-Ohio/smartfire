@@ -34,6 +34,30 @@ fn attrs(text: &str, client: Option<&str>) -> NewMessage {
         ..Default::default()
     }
 }
+
+#[test]
+fn ignore_agent_dm_refusal_is_identical_to_a_missing_target() {
+    let t = setup();
+    t.write(|tx| {
+        crate::models::user_block::UserBlock::set(tx, id("david"), id("bender"), true)?;
+        let mut answers = Vec::new();
+        for target in [0, id("david")] {
+            let result = dms::open_and_post(
+                tx,
+                id("bender_agent"),
+                target,
+                attrs("Hello", None),
+                DriveInput::Absent,
+                &Context::default(),
+            )?;
+            answers.push(capture(tx, result)?);
+        }
+        assert_eq!(answers[0], answers[1]);
+        assert_eq!(answers[0]["error"], "User not found");
+        assert!(Room::find_direct_for(tx.conn(), &[id("bender"), id("david")])?.is_none());
+        Ok(())
+    });
+}
 fn capture(tx: &Tx<'_>, result: DirectMessageResult) -> Result<Value> {
     Ok(match result {
         DirectMessageResult::Denied(r) => {

@@ -1,13 +1,14 @@
-//! JSON twins of `users#index`, `users#show` and `users/bans`, using the classic presenters and
-//! ban transaction. All routes require a session; writes keep the classic administrator, record,
-//! then sudo order, with the API error envelope.
+//! People directory, profiles, private ignore records and classic bans as JSON.
+//! All routes require a session. Bans retain the administrator, record, then sudo order,
+//! with the API error envelope.
 
 use axum::Router;
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
 use campfire_db::User;
 use campfire_db::models::user::presentation;
+use campfire_db::models::{ignore_policy, user_block::UserBlock};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action};
 use campfire_people::controllers::qr_code;
 use campfire_people::controllers::users::{bans, find_user};
@@ -20,6 +21,8 @@ pub fn routes() -> Router<Kit> {
     Router::new()
         .route("/api/v1/people", get(action(index)))
         .route("/api/v1/people/{id}", get(action(show)))
+        .route("/api/v1/blocks", get(action(blocks)))
+        .route("/api/v1/people/{id}/block", put(action(block)).delete(action(unblock)))
         .route(
             "/api/v1/people/{id}/ban",
             post(action(ban)).delete(action(unban)),
@@ -42,6 +45,40 @@ endpoint!(
     /// `DELETE /api/v1/people/{id}/ban`
     unban => destroy_ban
 );
+endpoint!(blocks => list_blocks);
+endpoint!(block => create_block);
+endpoint!(unblock => destroy_block);
+
+async fn list_blocks(c: &mut Ctx) -> Result {
+    let viewer = admin::viewer(c).await?.id;
+    let now = c.app().db.env().now();
+    let secrets = c.app().secrets.clone();
+    let list = c.app().db.read_snapshot(move |conn| {
+        let records = UserBlock::for_viewer(conn, viewer)?;
+        let users = dto::users(conn, &secrets, records.iter().map(|record| record.blocked_id), now)?;
+        let revision = conn.query_row("SELECT activity_revision FROM users WHERE id=?", [viewer], |row| row.get(0))?;
+        Ok(api::BlockList { revision, people: records.into_iter().filter_map(|record| {
+            users.iter().find(|user| user.id == record.blocked_id).cloned().map(|user| api::BlockedPerson {
+                user, ignored_by_me: true, created_at: dto::time(record.created_at),
+            })
+        }).collect() })
+    }).await.map_err(campfire_runtime::context::db_error)?;
+    c.json(StatusCode::OK, &list)
+}
+
+async fn create_block(c: &mut Ctx) -> Result { change_block(c, true).await }
+async fn destroy_block(c: &mut Ctx) -> Result { change_block(c, false).await }
+
+async fn change_block(c: &mut Ctx, ignored: bool) -> Result {
+    let viewer = admin::viewer(c).await?.id;
+    let person = find_user(c, "id").await?.id;
+    let state = c.app().db.write(move |tx| {
+        let revision = UserBlock::set(tx, viewer, person, ignored)?;
+        Ok(api::BlockState { user_id: person, ignored_by_me: ignored, revision })
+    }).await.map_err(campfire_runtime::context::db_error)?;
+    campfire_app::cable::sync::blocks_updated(&c.app().cable, viewer, state.clone());
+    c.json(StatusCode::OK, &state)
+}
 
 async fn directory(c: &mut Ctx) -> Result {
     let viewer = admin::viewer(c).await?;
@@ -51,12 +88,14 @@ async fn directory(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
+            let ignored = ignore_policy::ignored_authors(conn, viewer.id)?;
             let people = presentation::directory(conn, viewer.id, now)?
                 .into_iter()
                 .map(|person| {
                     let person = presenters::people::person(&secrets, person);
                     api::DirectoryPerson {
                         user_id: person.user.id,
+                        ignored_by_me: ignored.contains(&person.user.id),
                         online: person.online,
                         starred: person.starred,
                         agent: person.agent,
@@ -133,6 +172,7 @@ async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
                 .ok_or(campfire_db::Error::RecordNotFound("User"))?;
             Ok((
                 api::PersonProfile {
+                    ignored_by_me: ignore_policy::ignored(conn, viewer_id, user.id)?,
                     user,
                     status,
                     dnd_allowed,

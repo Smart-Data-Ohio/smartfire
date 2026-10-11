@@ -369,6 +369,44 @@ describe("sidebar counts", () => {
     expect(read.sidebar.rows[ROOM]?.membership.unreadAt).toBeNull();
   });
 
+  it("redundant room.read events preserve a read room and its thread and inbox pings", () => {
+    const readRow = {
+      ...row,
+      mentionCount: 2,
+      notificationCount: 1,
+      threadNotificationCount: 1,
+    };
+
+    const loaded = loadSidebar(
+      applyPage(initialState, ROOM, page([message(7, 7)]), "replace"),
+      {
+        rows: [readRow],
+        categories: [],
+        users: [],
+        directPlaceholderUserIds: [],
+        canCreateRooms: true,
+        workspaceLayout: { categories: [], rooms: [] },
+      },
+      0,
+    );
+
+    const once = applyEvents(
+      loaded,
+      [event(1, { topic: "user", type: "room.read", data: { roomId: ROOM } })],
+      0,
+    );
+
+    const twice = applyEvents(
+      once,
+      [event(2, { topic: "user", type: "room.read", data: { roomId: ROOM } })],
+      0,
+    );
+
+    expect(twice.sidebar.rows[ROOM]).toEqual(readRow);
+    expect(twice.timelines).toBe(loaded.timelines);
+    expect(twice.activity).toBe(loaded.activity);
+  });
+
   it("leaves thread pings on a room read: only reading the thread clears them", () => {
     const pinged = {
       ...row,

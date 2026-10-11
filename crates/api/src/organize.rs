@@ -263,10 +263,9 @@ async fn put_involvement(c: &mut Ctx) -> Result {
     };
     #[cfg(feature = "test-support")]
     crate::test_hooks::before_involvement_write(membership.id).await;
-    let (membership, cleared_unread) =
-        involvements::change(c, &room, membership.id, Some(involvement)).await?;
-    if cleared_unread {
-        // Muting marked it read inside the write; the other tabs clear its unread state.
+    let membership = involvements::change(c, &room, membership.id, Some(involvement)).await?;
+    if involvement == Involvement::Muted {
+        // Stored unread state depends on ignore policy; every mute publishes the read.
         campfire_app::cable::sync::room_read(&c.app().cable, membership.user_id, room.id);
     }
     let settings = crate::settings::load(c, membership.user_id).await?;

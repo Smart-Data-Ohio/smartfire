@@ -46,7 +46,7 @@ impl CalendarEvent {
             event.validate_existing(tx.conn())?.into_result()?;
             let stale = event.reminder_stale(now);
             if !stale {
-                for user_id in event.notification_recipient_ids(tx.conn())? {
+                for user_id in event.activity_recipient_ids(tx.conn())? {
                     let raw: Option<String> = tx.conn().query_row(
                         "SELECT inbox_preferences FROM users WHERE id=?",
                         [user_id],

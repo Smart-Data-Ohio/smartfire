@@ -310,6 +310,7 @@ impl Room {
         creator_id: i64,
         user_ids: &[i64],
     ) -> Result<Self> {
+        if room_type == RoomType::Direct { super::ignore_policy::require_contact(tx.conn(), creator_id, user_ids)?; }
         let key = (room_type == RoomType::Direct).then(|| Self::direct_member_key_for(user_ids));
         let mut room = Self::insert(tx, room_type, name, creator_id, key.as_deref())?;
         room.grant_to(tx, user_ids)?;
@@ -714,8 +715,9 @@ impl Room {
         let preferences = "(SELECT inbox_preferences FROM users WHERE id=memberships.user_id)";
         let involvement = super::notification_policy::involvement_sql("memberships", preferences);
         let unmuted = super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?2");
+        let visible = super::ignore_policy::visible_sql("memberships.user_id", "?5");
         tx.conn().execute_cached(
-            &format!(r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) != 'invisible' AND {unmuted} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND ({involvement}) != 'muted'"#),
+            &format!(r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) != 'invisible' AND {unmuted} AND {visible} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND ({involvement}) != 'muted'"#),
             params![message.created_at, now, room_id, cutoff, message.creator_id],
         )?;
 
@@ -737,7 +739,7 @@ impl Room {
         };
         if !mentionee_ids.is_empty() {
             let sql = format!(
-                r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) = 'muted' AND {unmuted} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND "memberships"."user_id" IN ({})"#,
+                r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) = 'muted' AND {unmuted} AND {visible} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND "memberships"."user_id" IN ({})"#,
                 placeholders(mentionee_ids.len())
             );
             let mut values: Vec<rusqlite::types::Value> = vec![

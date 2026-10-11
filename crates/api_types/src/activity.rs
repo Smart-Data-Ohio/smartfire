@@ -188,6 +188,9 @@ pub struct ActivitySource {
     /// work event's actor, the agent's user, or the scheduled message's owner. `null` for
     /// sign-ins, lockouts and a work event without an actor.
     pub creator_id: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ignored: Option<bool>,
     /// The row's heading: the viewer-relative room name, then ` · ` and the thread name or the
     /// event title where there is one; `"{bot} · daily {label} budget"`; `"Two-step sign-in"`;
     /// `"Account security"`.
@@ -332,7 +335,8 @@ pub enum AgentBudgetCap {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ActivityItemChanged {
-    pub item: ActivityItem,
+    /// None consumes an ignored source's publication without changing the visible inbox.
+    pub item: Option<ActivityItem>,
     /// The owner's unread count afterwards.
     pub unread_count: i64,
     /// Per-user server revision of this count. Ignore counts from older revisions.
@@ -350,6 +354,10 @@ pub struct ActivityItemChanged {
 #[ts(export)]
 pub struct ActivityItemRemoved {
     pub id: i64,
+    /// Additional items removed in the same recipient's publication slot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub additional_ids: Option<Vec<i64>>,
     pub unread_count: i64,
     /// Per-user server revision of this count. Ignore counts from older revisions.
     #[ts(type = "number")]

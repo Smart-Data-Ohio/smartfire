@@ -4,14 +4,14 @@
  */
 import { Effect } from "effect";
 import type { ActivityAction } from "../gen/ActivityAction.ts";
-import type { ActivityItemChanged } from "../gen/ActivityItemChanged.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
 import { call, get } from "./call.ts";
+import type { ActivityItemMutation } from "./schema/activity.ts";
 import {
-  ActivityItemChanged as ActivityItemChangedSchema,
+  ActivityItemMutation as ActivityItemChangedSchema,
   ActivityList as ActivityListSchema,
   ActivityUnreadCount as ActivityUnreadCountSchema,
 } from "./schema/activity.ts";
@@ -49,7 +49,7 @@ export const updateActivityItem = Effect.fn("api.updateActivityItem")(function* 
 ) {
   return yield* call(
     { method: "PATCH", path: `/activity/${activityItemId}`, body: { action } },
-    wire<ActivityItemChanged>(ActivityItemChangedSchema),
+    wire<ActivityItemMutation>(ActivityItemChangedSchema),
   );
 });
 
@@ -59,6 +59,6 @@ export const openActivityItem = Effect.fn("api.openActivityItem")(function* (
 ) {
   return yield* call(
     { method: "POST", path: `/activity/${activityItemId}/open` },
-    wire<ActivityItemChanged>(ActivityItemChangedSchema),
+    wire<ActivityItemMutation>(ActivityItemChangedSchema),
   );
 });

@@ -112,7 +112,7 @@ fn ws11_kill_switch_quiet_streams_expiry_cancellation_audit_and_idempotency_matc
         .collect::<Vec<_>>();
     assert_eq!(broadcasts.iter().filter(|b|matches!(b,crate::broadcasts::Broadcast::MessageUpdated{..})).count(),2);
     assert_eq!(broadcasts.iter().filter(|b|matches!(b,crate::broadcasts::Broadcast::ThreadIndicator{..})).count(),1);
-    assert!(!broadcasts.iter().any(|b|b.channel_frame().is_some_and(|(stream,_)| stream.contains("_unread_"))));
+    assert!(!broadcasts.iter().any(|b|b.channel_frames().into_iter().any(|(stream,_)| stream.contains("_unread_"))));
 }
 fn gold() -> Value {
     serde_json::from_str(include_str!(

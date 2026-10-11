@@ -15,4 +15,8 @@ messageId: number | null,
 /**
  * The message mentions this member (`mentionees`), so the mention count goes up too.
  */
-mentioned: boolean, };
+mentioned: boolean,
+/**
+ * The source was ignored; consume the publication without changing unread state.
+ */
+unchanged?: boolean, };

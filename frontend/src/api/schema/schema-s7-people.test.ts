@@ -27,7 +27,7 @@ const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S
 
 describe("S7 people schemas", () => {
   it("round-trip the directory and its rows", () => {
-    const row = { userId: 7, online: true, starred: true, agent: false };
+    const row = { userId: 7, ignoredByMe: false, online: true, starred: true, agent: false };
 
     roundTrips(DirectoryPerson, row);
     roundTrips(PeopleDirectory, { people: [row], users: [user] });
@@ -51,6 +51,7 @@ describe("S7 people schemas", () => {
       transferUrl: "https://chat.example/session/transfers/token",
       transferQrSvg: "<svg/>",
       canBan: true,
+      ignoredByMe: false,
       canManageBot: false,
     });
     roundTrips(PersonProfile, {
@@ -61,6 +62,7 @@ describe("S7 people schemas", () => {
       transferUrl: null,
       transferQrSvg: null,
       canBan: false,
+      ignoredByMe: false,
       canManageBot: true,
     });
   });
@@ -74,6 +76,7 @@ describe("S7 people schemas", () => {
       transferUrl: null,
       transferQrSvg: null,
       canBan: false,
+      ignoredByMe: false,
       canManageBot: false,
     };
 
