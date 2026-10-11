@@ -8,7 +8,8 @@ import { Menu } from "../../ui/menu.tsx";
 import { useDirectActions } from "../directs/direct-header-actions.tsx";
 import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
 import { identityOf } from "../people/agent-identity.ts";
-import { useUser } from "../people/people.ts";
+import { UNKNOWN_NAME, useUser } from "../people/people.ts";
+import { ProfileHero } from "../people/profile-banner.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { preloadRoomSettings, settingsOverState } from "../rooms/room-settings-host.tsx";
@@ -125,6 +126,23 @@ function ProfileRow({ userId }: { readonly userId: number }) {
   );
 }
 
+/** A 1:1 DM's hero: the other side's profile banner with their avatar over it, as a profile card. */
+function DirectHero({ userId }: { readonly userId: number }) {
+  const user = useUser(userId);
+
+  return (
+    <ProfileHero
+      userId={userId}
+      name={user?.name ?? UNKNOWN_NAME}
+      url={user?.bannerUrl ?? null}
+      stillUrl={user?.bannerStillUrl ?? null}
+      size="card"
+    >
+      <UserAvatar userId={userId} size={64} presence decorative />
+    </ProfileHero>
+  );
+}
+
 /**
  * A room's details, the screen a phone's room title opens (Slack's channel details, Discord's
  * channel info): who and what it is, then a row per thing about it. Members, threads, pins, files
@@ -166,7 +184,7 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
               <RoomGlyph kind={kind} iconName={detail.room.iconName} size={28} />
             </span>
           ) : (
-            <UserAvatar userId={otherId} size={64} presence decorative />
+            <DirectHero userId={otherId} />
           )}
           <h3 className="details-name">{detail.displayName}</h3>
           <p className="details-kind">

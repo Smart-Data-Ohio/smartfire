@@ -37,6 +37,8 @@ pub(crate) fn user() -> User {
         updated_at: "2026-10-06T09:15:00.123456Z".into(),
         account_name: "Ada Lovelace".into(),
         pronouns: None,
+        banner_url: Some("/users/tok/banner?v=12".into()),
+        banner_still_url: None,
     }
 }
 
@@ -94,6 +96,8 @@ fn user_is_camel_case_with_explicit_nulls() {
             "updatedAt": "2026-10-06T09:15:00.123456Z",
             "accountName": "Ada Lovelace",
             "pronouns": null,
+            "bannerUrl": "/users/tok/banner?v=12",
+            "bannerStillUrl": null,
         }),
     );
 }

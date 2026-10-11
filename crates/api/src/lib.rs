@@ -33,6 +33,7 @@ mod error;
 pub mod admin;
 pub mod bots;
 pub mod boards;
+mod branding_images;
 pub mod board_automations;
 pub mod huddles;
 pub mod join;

@@ -139,6 +139,10 @@ pub struct ProfileSettings {
     pub bot: bool,
     pub pronouns: Option<String>,
     pub nickname: Option<String>,
+    /// The profile banner, as `User.bannerUrl`; `null` when none is attached.
+    pub banner_url: Option<String>,
+    /// An animated banner's first frame, as `User.bannerStillUrl`.
+    pub banner_still_url: Option<String>,
 }
 
 /// `PATCH /api/v1/settings/profile` (`users/profiles#update`).
@@ -165,6 +169,15 @@ pub struct UpdateProfile {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateAvatar {
+    pub signed_id: String,
+}
+
+/// `PUT /api/v1/settings/banner`: a PNG, JPEG, GIF or WebP uploaded with `POST /api/v1/uploads`
+/// becomes the profile banner, checked as the workspace banner is. `DELETE` removes it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateProfileBanner {
     pub signed_id: String,
 }
 

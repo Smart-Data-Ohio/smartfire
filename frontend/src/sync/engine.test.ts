@@ -207,6 +207,8 @@ const appearanceSettings: Settings = {
     githubVerified: false,
     bot: false,
     pronouns: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
     nickname: null,
   },
   appearance: {

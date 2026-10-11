@@ -151,6 +151,8 @@ function initialState(world: World, now: number): State {
     updatedAt: rowTimestamp(now),
     accountName: "Deploy Bot",
     pronouns: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
   });
 
   return { bots, nextId: 901 };

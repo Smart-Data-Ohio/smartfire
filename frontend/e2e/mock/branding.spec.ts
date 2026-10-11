@@ -1,65 +1,6 @@
-import { crc32, deflateSync } from "node:zlib";
 import type { Page } from "@playwright/test";
+import { chunk, gradientPng, gradientRows, PNG_SIGNATURE, pngHeader } from "./png.ts";
 import { expect, matrix, openApp, SHOTS, shot, syncWelcomed, test } from "./support.ts";
-
-/** One PNG chunk: length, type, data and the CRC over type and data. */
-function chunk(type: string, data: Buffer): Buffer {
-  const length = Buffer.alloc(4);
-  const crc = Buffer.alloc(4);
-  const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
-
-  length.writeUInt32BE(data.length);
-  crc.writeUInt32BE(crc32(body));
-
-  return Buffer.concat([length, body, crc]);
-}
-
-type Rgb = readonly [number, number, number];
-
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/** An RGB PNG's IHDR chunk. */
-function pngHeader(width: number, height: number): Buffer {
-  const header = Buffer.alloc(13);
-
-  header.writeUInt32BE(width, 0);
-  header.writeUInt32BE(height, 4);
-  header.set([8, 2, 0, 0, 0], 8);
-
-  return chunk("IHDR", header);
-}
-
-/** A PNG's compressed scanlines, shading diagonally from one colour to another. */
-function gradientRows(width: number, height: number, from: Rgb, to: Rgb): Buffer {
-  const rows = Buffer.alloc((width * 3 + 1) * height);
-
-  for (let y = 0; y < height; y += 1) {
-    const row = y * (width * 3 + 1);
-
-    for (let x = 0; x < width; x += 1) {
-      const t = (x / width + y / height) / 2;
-
-      for (let channel = 0; channel < 3; channel += 1) {
-        const start = from[channel] ?? 0;
-        const end = to[channel] ?? 0;
-
-        rows[row + 1 + x * 3 + channel] = Math.round(start + (end - start) * t);
-      }
-    }
-  }
-
-  return deflateSync(rows);
-}
-
-/** A `width` × `height` PNG shading diagonally from one colour to another, for a logo or banner. */
-function gradientPng(width: number, height: number, from: Rgb, to: Rgb): Buffer {
-  return Buffer.concat([
-    PNG_SIGNATURE,
-    pngHeader(width, height),
-    chunk("IDAT", gradientRows(width, height, from, to)),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-}
 
 /** An APNG frame control chunk: the whole canvas, shown for a tenth of a second. */
 function frameControl(sequence: number, width: number, height: number): Buffer {

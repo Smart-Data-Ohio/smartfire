@@ -346,6 +346,8 @@ function seedUsers(now: number): Map<number, User> {
       updatedAt: rowTimestamp(now - person.joinedDaysAgo * DAY),
       accountName: person.name,
       pronouns: null,
+      bannerUrl: null,
+      bannerStillUrl: null,
     });
   }
 
