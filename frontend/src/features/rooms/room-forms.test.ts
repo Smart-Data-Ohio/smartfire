@@ -5,8 +5,10 @@ import {
   availableChannels,
   channelOf,
   createBody,
+  hasVoiceBitrate,
   iconNameFor,
   isDirty,
+  kbps,
   kindOf,
   privacyChoice,
   reconcileMembers,
@@ -186,5 +188,62 @@ describe("topic patches", () => {
       userIds: [1, 2],
       topic: null,
     });
+  });
+});
+
+describe("voice bitrate patches", () => {
+  const loaded = form({ voiceBitrate: 128_000 });
+
+  const draft = {
+    name: loaded.name ?? "",
+    iconName: loaded.iconName,
+    userIds: loaded.userIds,
+    voiceBitrate: loaded.voiceBitrate,
+  };
+
+  it("sends a new target, sends null to reset, and omits an untouched one", () => {
+    expect(isDirty(loaded, loaded.type, draft)).toBe(false);
+    expect(updateBody(loaded, "closed", draft)).toEqual({ type: "closed", userIds: [1, 2] });
+    expect(isDirty(loaded, loaded.type, { ...draft, voiceBitrate: 384_000 })).toBe(true);
+    expect(updateBody(loaded, "closed", { ...draft, voiceBitrate: 384_000 })).toEqual({
+      type: "closed",
+      userIds: [1, 2],
+      voiceBitrate: 384_000,
+    });
+    expect(updateBody(loaded, "closed", { ...draft, voiceBitrate: null })).toEqual({
+      type: "closed",
+      userIds: [1, 2],
+      voiceBitrate: null,
+    });
+    // A draft that never held a bitrate (the create dialog's) leaves it alone.
+    expect(
+      isDirty(loaded, loaded.type, {
+        name: draft.name,
+        iconName: draft.iconName,
+        userIds: draft.userIds,
+      }),
+    ).toBe(false);
+  });
+
+  it("treats an explicit 48 kbps as a change from the default", () => {
+    const unset = form();
+
+    expect(isDirty(unset, unset.type, { ...draft, voiceBitrate: 48_000 })).toBe(true);
+    expect(updateBody(unset, "closed", { ...draft, voiceBitrate: 48_000 })).toEqual({
+      type: "closed",
+      userIds: [1, 2],
+      voiceBitrate: 48_000,
+    });
+  });
+
+  it("is offered wherever calls happen, and reads in kbps", () => {
+    for (const kind of ["open", "closed", "voice", "stage"] as const) {
+      expect(hasVoiceBitrate(kind)).toBe(true);
+    }
+
+    expect(hasVoiceBitrate("board")).toBe(false);
+    expect(hasVoiceBitrate("direct")).toBe(false);
+    expect(kbps(48_000)).toBe("48 kbps");
+    expect(kbps(384_000)).toBe("384 kbps");
   });
 });

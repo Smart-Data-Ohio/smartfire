@@ -17,13 +17,17 @@ import { GithubSubscriptions } from "./github-subscriptions.tsx";
 import { InboundEmailSection } from "./inbound-email.tsx";
 import { MemberList } from "./member-list.tsx";
 import {
+  DEFAULT_VOICE_BITRATE,
   hasMemberList,
+  hasVoiceBitrate,
   isDirty,
+  kbps,
   type ManagedKind,
   type RoomDraft,
   reconcileMembers,
   roomLabel,
   updateBody,
+  VOICE_BITRATES,
 } from "./room-forms.ts";
 import { RoomIconButton } from "./room-icon-button.tsx";
 import { WebhooksSection } from "./webhooks.tsx";
@@ -101,7 +105,8 @@ function Pending({ load }: { readonly load: Load }) {
 
 /**
  * A room's settings (`/app/r/:id/settings`, the classic `rooms/<kind>/:id/edit` pages): its name
- * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. A board
+ * and icon, whether a text channel is private, who's in it (with stage roles), the voice bitrate
+ * its calls target (for those who may change it), and Delete. A board
  * has the same name, icon and members, a way through to its automations, and (for those who may
  * edit it) its curated tags, which save as they change. Every room, including a board, can be made
  * an announcement room and subscribe GitHub repositories here; inbound email and incoming webhooks
@@ -123,6 +128,7 @@ export default function RoomSettingsDialog({
   const tabsId = useId();
   const panelId = useId();
   const topicId = useId();
+  const bitrateId = useId();
   const nameRef = useRef<HTMLInputElement | null>(null);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -208,6 +214,7 @@ export default function RoomSettingsDialog({
           iconName: form.iconName,
           userIds: form.userIds,
           topic: form.topic ?? "",
+          voiceBitrate: form.voiceBitrate,
         });
       },
       (failure: Error) => {
@@ -234,6 +241,8 @@ export default function RoomSettingsDialog({
   // The webhook API admits exactly who may submit this form: the creator and administrators.
   // A board never takes webhook posts, so it doesn't offer them.
   const hookable = kind !== "board" && form !== null && form.canSubmit;
+  // Like the integrations, only those who may change the room see its voice bitrate.
+  const bitrateEditable = hasVoiceBitrate(kind) && form?.canSubmit === true;
 
   const shownTab: Tab =
     (tab === "members" && !members) ||
@@ -530,6 +539,35 @@ export default function RoomSettingsDialog({
             </p>
           ) : null}
         </div>
+        {bitrateEditable ? (
+          <div className="field">
+            <label className="field-label" htmlFor={bitrateId}>
+              Voice bitrate
+            </label>
+            <select
+              id={bitrateId}
+              className="input"
+              value={`${draft.voiceBitrate ?? ""}`}
+              aria-describedby={`${bitrateId}-hint`}
+              onChange={(event) => {
+                const value = event.target.value;
+
+                edit({ voiceBitrate: value === "" ? null : Number(value) });
+              }}
+            >
+              <option value="">Default ({kbps(DEFAULT_VOICE_BITRATE)})</option>
+              {VOICE_BITRATES.map((bitrate) => (
+                <option key={bitrate} value={`${bitrate}`}>
+                  {kbps(bitrate)}
+                </option>
+              ))}
+            </select>
+            <p className="field-hint" id={`${bitrateId}-hint`}>
+              Higher bitrates sound better in calls here but use more bandwidth. Takes effect the
+              next time someone joins.
+            </p>
+          </div>
+        ) : null}
         {canConvert ? (
           <div className="room-privacy">
             <Toggle
