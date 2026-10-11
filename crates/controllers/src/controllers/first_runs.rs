@@ -1,49 +1,29 @@
 //! `FirstRunsController` (reference/app/controllers/first_runs_controller.rb): set up the account
-//! and its first administrator. The retained form and the SPA's JSON contract
-//! (`/api/v1/first_run`) share the before-actions and the setup itself; only how a submission
-//! is read and how the answer is written differ.
+//! and its first administrator, through the SPA's JSON contract (`/api/v1/first_run`). The
+//! retained `/first_run` goes to the SPA's page.
 
 use campfire_api_types::{FirstRunState, FirstRunSubmission};
 use campfire_db::{Account, FirstRun, PasswordDigest};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
 use campfire_people::controllers::auth::{self, ResponseMode};
-use campfire_retained::first_runs;
 
 use super::presenters;
 use super::presenters::attachments::{self, Assignment, Record};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
-use crate::controllers::presenters::page::retained_page;
 
-/// `allow_unauthenticated_access`, `before_action :prevent_repeats`
+/// `allow_unauthenticated_access`, `before_action :prevent_repeats`. The setup page is the SPA's
+/// (`/app/first_run`).
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
     prevent_repeats(c).await?;
     c.respond_to(&[&format::HTML])?;
-    retained_page!(c, StatusCode::OK, |ctx| first_runs::Show { ctx }).await
+    concerns::redirect_to_signed_out_spa(c, "/app/first_run", StatusCode::FOUND)
 }
 
+/// The retained setup form goes, unread, to the SPA's setup page: nothing is created.
 pub async fn create(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-    prevent_repeats(c).await?;
-
-    // params.require(:user).permit(:name, :avatar, :email_address, :password)
-    let user = c
-        .params
-        .require("user")?
-        .permit(&campfire_kit::permit_keys(&[
-            "name",
-            "avatar",
-            "email_address",
-            "password",
-        ]));
-    let submission = Submission {
-        name: user.get("name").and_then(|p| p.to_s()),
-        email_address: user.get("email_address").and_then(|p| p.to_s()),
-        password: user.get("password").and_then(|p| p.to_s()),
-        avatar: Assignment::from_params(&user, "avatar")?,
-    };
-    set_up(c, submission, ResponseMode::Html).await
+    concerns::redirect_to_signed_out_spa(c, "/app/first_run", StatusCode::SEE_OTHER)
 }
 
 /// `GET /api/v1/first_run`: the retained page's before-actions, answered as JSON. Once the

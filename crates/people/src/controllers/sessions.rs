@@ -4,14 +4,12 @@ pub mod transfers;
 
 use campfire_db::PushSubscription;
 use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, format, halt};
-use campfire_retained::sessions;
 use jiff::SignedDuration;
 
 use super::auth::{self, ResponseMode};
 use super::presenters;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_user};
-use crate::controllers::presenters::page::retained_page;
 
 /// `rate_limit to: 10, within: 3.minutes, only: :create`
 const RATE_LIMIT_TO: u64 = 10;
@@ -19,7 +17,8 @@ const RATE_LIMIT_WITHIN: SignedDuration = SignedDuration::from_mins(3);
 
 const REJECTION: &str = "Too many requests or unauthorized.";
 
-/// `allow_unauthenticated_access only: %i[ new create ]`, `before_action :ensure_user_exists, only: :new`
+/// `allow_unauthenticated_access only: %i[ new create ]`, `before_action :ensure_user_exists, only: :new`.
+/// The sign-in page is the SPA's (`/app/session/new`), with this request's query string.
 pub async fn new(c: &mut Ctx) -> Result {
     auth::before_actions(
         c,
@@ -34,11 +33,13 @@ pub async fn new(c: &mut Ctx) -> Result {
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         return Ok(c.head(StatusCode::UNAUTHORIZED));
     }
-    render_new(c, StatusCode::OK).await
+    concerns::redirect_to_signed_out_spa(c, "/app/session/new", StatusCode::FOUND)
 }
 
+/// A sign-in form posted from a page loaded before the cutover goes to the SPA's sign-in page
+/// unread: no attempt is made with it, and nothing is counted against the rate limit.
 pub async fn create(c: &mut Ctx) -> Result {
-    create_response(c, ResponseMode::Html).await
+    concerns::redirect_to_signed_out_spa(c, "/app/session/new", StatusCode::SEE_OTHER)
 }
 
 pub async fn create_json(c: &mut Ctx) -> Result {
@@ -128,7 +129,7 @@ async fn ensure_user_exists(c: &mut Ctx) -> Result<()> {
         .await
         .map_err(Error::internal)?;
     if none {
-        let first_run = c.url_for(&campfire_routes::first_run());
+        let first_run = c.url_for("/app/first_run");
         return halt(c.redirect_to(&first_run)?);
     }
     Ok(())
@@ -152,7 +153,7 @@ async fn render_rejection(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -
     if mode == ResponseMode::Json {
         return auth::field_error(c, status, "base", REJECTION);
     }
-    render_new(c, status).await
+    concerns::redirect_to_signed_out_spa(c, "/app/session/new", StatusCode::FOUND)
 }
 
 pub async fn record_sign_in_failure(c: &Ctx, method: &'static str, email: String) -> Result<()> {
@@ -167,32 +168,6 @@ pub async fn record_sign_in_failure(c: &Ctx, method: &'static str, email: String
         })
         .await
         .map_err(Error::internal)
-}
-
-async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
-    c.respond_to(&[&format::HTML])?;
-    let email_address = c.param_str("email_address").map(str::to_string);
-    let help_contact = c
-        .app()
-        .db
-        .read(presenters::accounts::help_contact)
-        .await
-        .map_err(Error::internal)?;
-    // WS14g supplies the configured provider and /session/google start/callback handlers.
-    // This read-only display input never authenticates or completes a Google flow.
-    let provider = c.app().google.sign_in();
-    let google_sign_in_domains = if provider.config.configured() {
-        provider.config.domains.clone()
-    } else {
-        Vec::new()
-    };
-    retained_page!(c, status, |ctx| sessions::New {
-        ctx,
-        email_address: email_address.clone(),
-        help_contact: help_contact.clone(),
-        google_sign_in_domains: google_sign_in_domains.clone(),
-    })
-    .await
 }
 
 /// `Push::Subscription.destroy_by(endpoint: params[:push_subscription_endpoint], user_id: Current.user.id)`

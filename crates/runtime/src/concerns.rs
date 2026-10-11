@@ -325,6 +325,25 @@ pub fn keep_waiting_flash(c: &mut Ctx) {
     }
 }
 
+/// A retained authentication or public page's URL (bookmarks, mail links, old tabs, a form
+/// posted from a page loaded before the cutover) goes to the SPA page at `path`, with this
+/// request's query string as it came and its waiting notice or alert kept for that page. A `GET`
+/// or `HEAD` gets `status` (302, or 301 for a page that has moved for good); any other method a
+/// 303, so the browser follows with a `GET`. Callers send a form here before acting on it: nothing
+/// is signed in, consumed or changed. A request that wants JSON is the caller's to answer first.
+pub fn redirect_to_signed_out_spa(c: &mut Ctx, path: &str, status: StatusCode) -> Result {
+    let status = if c.request.is_get() || c.request.is_head() { status } else { StatusCode::SEE_OTHER };
+    let query = c.request.query_string();
+    let location = match query {
+        "" => path.to_owned(),
+        query if path.contains('?') => format!("{path}&{query}"),
+        query => format!("{path}?{query}"),
+    };
+    keep_waiting_flash(c);
+    let location = c.url_for(&location);
+    c.redirect_to_with(&location, campfire_kit::Redirect { status: Some(status), ..Default::default() })
+}
+
 /// Whether this signed-in HTML navigation goes to the SPA, apart from which screen it is. The same
 /// gates as [`redirect_to_spa`]: the request navigates, by a person's session. A waiting flash is
 /// kept for the next hop.
