@@ -19,9 +19,7 @@ import { expect, expectNoHorizontalOverflow, matrix, shot as save, type Theme } 
 const AVATAR = {
   name: "me.png",
   mimeType: "image/png",
-  buffer: readFileSync(
-    new URL("../fixtures/images/square_64.png", import.meta.url),
-  ),
+  buffer: readFileSync(new URL("../fixtures/images/square_64.png", import.meta.url)),
 };
 
 async function open(page: Page, path: string, theme: Theme): Promise<void> {
