@@ -154,6 +154,7 @@ describe("landBan", () => {
     transferUrl: status === "active" ? "https://chat.example/session/transfers/t" : null,
     transferQrSvg: status === "active" ? "<svg/>" : null,
     canBan: true,
+    ignoredByMe: false,
     canManageBot: false,
   });
 

@@ -311,6 +311,7 @@ fn directory_and_profile_round_trip() {
 #[test]
 fn a_message_carries_its_steps() {
     let message = MessageDTO {
+        ignored: None,
         steps: vec![step()],
         ..message()
     };

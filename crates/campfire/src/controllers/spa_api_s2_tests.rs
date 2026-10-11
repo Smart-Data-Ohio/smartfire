@@ -531,6 +531,7 @@ async fn forwards_list_destinations_copy_and_publish() {
     };
     assert_eq!(
         api::MessageDTO {
+            ignored: None,
             cards_as_of: forward.cards_as_of.clone(),
             ..published
         },

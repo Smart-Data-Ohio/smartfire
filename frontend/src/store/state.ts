@@ -1,3 +1,4 @@
+import type { BlockState } from "../gen/BlockState.ts";
 import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { NotificationSettings } from "../gen/NotificationSettings.ts";
@@ -52,6 +53,8 @@ export interface State {
    * id, for the people the person pages have seen. Their own table, so not on `users`.
    */
   readonly dndAllowances: Readonly<Record<number, boolean>>;
+  readonly ignoredPeople: Readonly<Record<number, BlockState>>;
+  readonly ignoreSnapshotRevision: number;
   readonly sidebar: SidebarState;
   /** When the sync path last changed each sidebar row, so an older HTTP reply leaves it be. */
   readonly rowTouches: RowTouches;
@@ -147,6 +150,8 @@ export const initialState: State = {
   users: {},
   presence: {},
   dndAllowances: {},
+  ignoredPeople: {},
+  ignoreSnapshotRevision: -1,
   sidebar: {
     status: "idle",
     order: [],

@@ -25,6 +25,7 @@ async function mount(name: string, accountName: string, pronouns: string | null)
     transferUrl: null,
     transferQrSvg: null,
     canBan: false,
+    ignoredByMe: false,
     canManageBot: false,
   });
 

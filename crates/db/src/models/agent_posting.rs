@@ -447,6 +447,7 @@ pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
         Vec::new()
     };
     for m in memberships {
+        if super::ignore_policy::ignored(tx.conn(), m.user_id, message.creator_id)? { continue; }
         if m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id) {
             tx.emit_after_commit(crate::Event::broadcast(&Broadcast::UnreadRoom {
                 user_id: m.user_id,

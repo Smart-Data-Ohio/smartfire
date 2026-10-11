@@ -402,6 +402,11 @@ impl SearchQuery {
         let (mut sql, mut values) = self.sql(&zone)?;
         sql.push_str(" AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)");
         values.push(user.into());
+        if self.author_ids.is_empty() && self.from_names.is_empty() {
+            sql.push_str(" AND ");
+            sql.push_str(&super::ignore_policy::visible_sql("?", "messages.creator_id"));
+            values.push(user.into());
+        }
         if self.mentions_me {
             sql.push_str(" AND EXISTS (SELECT 1 FROM action_text_rich_texts rt WHERE rt.record_type='Message' AND rt.record_id=messages.id AND rt.name='body' AND search_mentions(rt.body,?))");
             values.push(user.into());
@@ -532,6 +537,7 @@ impl SearchQuery {
     pub fn sections_for_user(&self, conn: &Connection, user: i64) -> Result<Vec<SearchSection>> {
         if self.text_tokens().is_empty()
             || !self.author_ids.is_empty()
+            || !self.from_names.is_empty()
             || self.mentions_me
             || self
                 .has_values
@@ -560,6 +566,10 @@ impl SearchQuery {
                 "SELECT rec.id,rec.room_id,rooms.type,rooms.name,rec.{title},rec.{time},{status},{cancelled} FROM {table} rec JOIN rooms ON rooms.id=rec.room_id WHERE rooms.deleted_at IS NULL AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)"
             );
             let mut values: Vec<Value> = vec![user.into()];
+            let author = if events { "rec.organizer_id" } else { "rec.creator_id" };
+            sql.push_str(" AND ");
+            sql.push_str(&super::ignore_policy::visible_sql("?", author));
+            values.push(user.into());
             if !events {
                 sql.push_str(if kind == "board-posts" {
                     " AND rooms.type='Rooms::Board'"

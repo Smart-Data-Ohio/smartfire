@@ -20,6 +20,11 @@ pub struct ActivityUnread {
     pub evaluated_at: Timestamp,
 }
 
+fn access_sql() -> String {
+    let visible = crate::models::ignore_policy::visible_sql("activity_items.user_id", "activity_messages.creator_id");
+    format!("{} AND (activity_items.source_type != 'Message' OR {visible})", include_str!("access.sql"))
+}
+
 fn unmuted_activity_sql() -> String {
     let room = "COALESCE(activity_messages.room_id, activity_saved_messages.room_id, activity_work_threads.room_id, activity_sla_nudges.room_id, activity_huddle_grants.room_id, activity_events.room_id)";
     format!(" AND {}", crate::models::notification_policy::unmuted_sql(room, "users.inbox_preferences", "?2"))
@@ -28,7 +33,7 @@ fn unmuted_activity_sql() -> String {
 impl ActivityItem {
     pub fn unread_snapshot(conn: &Connection, user_id: i64, now: Timestamp) -> Result<ActivityUnread> {
         let count =
-            include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
+            access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
                 + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
                 + &unmuted_activity_sql();
         let sql = format!("SELECT ({count}), activity_revision FROM users WHERE id = ?1");
@@ -50,7 +55,7 @@ impl ActivityItem {
         if !user.is_active() || user.is_bot() {
             return Ok(None);
         }
-        let sql = format!("{} AND activity_items.id=?2", include_str!("access.sql"));
+        let sql = format!("{} AND activity_items.id=?2", access_sql());
         crate::sql::query_one(conn, &sql, rusqlite::params![user.id, id], Self::from_row)
     }
 
@@ -59,7 +64,7 @@ impl ActivityItem {
             return Ok(0);
         }
         let sql =
-            include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
+            access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
                 + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
                 + &unmuted_activity_sql();
         Ok(conn.query_row(&sql, rusqlite::params![user.id, now], |row| row.get(0))?)
@@ -105,7 +110,7 @@ impl ActivityItem {
         query: &ActivityQuery<'_>,
         key: Option<(crate::Timestamp, i64)>,
     ) -> Result<Vec<Self>> {
-        let mut sql = include_str!("access.sql").to_string();
+        let mut sql = access_sql();
         let mut values = vec![Value::Integer(user.id)];
         if let Some((updated_at, id)) = key {
             sql.push_str(" AND (activity_items.updated_at < ? OR (activity_items.updated_at = ? AND activity_items.id < ?))");

@@ -122,7 +122,7 @@ pub fn candidates(
     let thread_map: HashMap<_, _> = threads.into_iter().collect();
     let mut recipients = Vec::new();
     for id in ids {
-        if id == message.creator_id {
+        if id == message.creator_id || crate::models::ignore_policy::ignored(conn, id, message.creator_id)? {
             continue;
         }
         let policy = NotificationPolicy {

@@ -42,6 +42,7 @@ pub(crate) fn user() -> User {
 
 pub(crate) fn message() -> MessageDTO {
     MessageDTO {
+        ignored: None,
         id: 9001,
         room_id: 12,
         thread_id: None,

@@ -11,6 +11,7 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
+import type { BlockList } from "../gen/BlockList.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
@@ -299,6 +300,7 @@ export const mutations = {
         notificationClock: serverNow(state.sidebar.serverClock),
       },
     })),
+  setBlocks: (snapshot: BlockList) => apply((state) => reduce.setBlocks(state, snapshot)),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),

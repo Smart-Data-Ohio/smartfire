@@ -55,6 +55,7 @@ export function createPeople(
     const people = users.map(
       (user): DirectoryPerson => ({
         userId: user.id,
+        ignoredByMe: false,
         // A live lease counts as online in the classic directory, whatever the presence says.
         online:
           user.role === "bot"
@@ -95,6 +96,7 @@ export function createPeople(
       transferUrl,
       transferQrSvg: transferUrl === null ? null : MOCK_TRANSFER_QR_SVG,
       canBan: admin && person && other,
+      ignoredByMe: false,
       canManageBot:
         user.role === "bot" &&
         user.status === "active" &&
@@ -123,6 +125,7 @@ export function createPeople(
 
   return {
     routes: [
+      route("GET", /^\/blocks$/, () => ok({ people: [], revision: 0 })),
       route("GET", /^\/people$/, () => ok(directory())),
       route("GET", /^\/people\/(\d+)$/, (request) => ok(profile(firstId(request)))),
       route("POST", /^\/people\/(\d+)\/ban$/, (request) => setBanned(firstId(request), true)),

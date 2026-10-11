@@ -45,6 +45,7 @@ export const MessageDTO = Schema.Struct({
   roomId: RoomId,
   threadId: Schema.NullOr(ThreadId),
   creatorId: UserId,
+  ignored: Schema.optionalKey(Schema.Boolean),
   clientMessageId: Schema.String,
   bodyHtml: Schema.String,
   sound: Schema.NullOr(MessageSound),

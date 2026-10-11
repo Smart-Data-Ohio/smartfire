@@ -219,6 +219,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("workspace_branding::publish", &["workspace.updated"]),
     ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
     ("sync::settings_updated", &["settings.updated"]),
+    ("sync::blocks_updated", &["blocks.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -400,25 +401,32 @@ pub fn message(
     let Some(dto) = renderer.message(conn, message) else {
         return;
     };
-    let payload = if created {
-        SyncPayload::MessageCreated(dto)
+    match campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) {
+        Ok(blockers) => publish_message(server, message, dto, created, &blockers),
+        Err(error) => tracing::warn!(%error, message_id = message.id, "sync: ignore policy not read"),
+    }
+}
+
+fn publish_message(server: &Cable, message: &Message, mut dto: MessageDTO, created: bool, blockers: &[i64]) {
+    let topic = message_topic(message);
+    let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
+    if blockers.is_empty() {
+        publish(server, Audience::Topic(topic), &payload(dto));
     } else {
-        SyncPayload::MessageUpdated(dto)
-    };
-    send(
-        server,
-        Audience::Topic(message_topic(message)),
-        &payload,
-        |publication| publication,
-    );
+        publish(server, Audience::TopicExcept { topic: topic.clone(), users: blockers.to_vec() }, &payload(dto.clone()));
+        dto.ignored = Some(true);
+        for &user_id in blockers {
+            publish(server, Audience::TopicUser { topic: topic.clone(), user_id }, &payload(dto.clone()));
+        }
+    }
 }
 
 /// Validate publication even without subscribers, before claims or held jobs are released.
 pub fn checked_message(server: &Cable, slot: &RendererSlot, conn: &Connection, message: &Message, created: bool) -> bool {
     let Some(renderer) = slot.0.renderer.get() else { return false; };
     let Some(dto) = renderer.message(conn, message) else { return false; };
-    let payload = if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
-    publish(server, Audience::Topic(message_topic(message)), &payload);
+    let Ok(blockers) = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) else { return false; };
+    publish_message(server, message, dto, created, &blockers);
     true
 }
 
@@ -427,8 +435,9 @@ pub fn checked_messages(server: &Cable, slot: &RendererSlot, conn: &Connection, 
     let renderer = slot.0.renderer.get()?;
     let dtos = renderer.messages(conn, messages)?;
     if dtos.len() != messages.len() { return None; }
+    let blockers = campfire_db::models::ignore_policy::blockers_for_authors(conn, messages.iter().map(|message| message.creator_id)).ok()?;
     for (message, dto) in messages.iter().zip(dtos) {
-        publish(server, Audience::Topic(message_topic(message)), &SyncPayload::MessageCreated(dto));
+        publish_message(server, message, dto, true, blockers.get(&message.creator_id).map_or(&[], Vec::as_slice));
     }
     Some(messages.iter().map(|message| message.id).collect())
 }
@@ -579,11 +588,15 @@ pub fn unread_room(
             let rich_text = db.env().rich_text.clone();
             let mentioned = db.read_blocking(move |conn| {
                 let message = Message::find(conn, message_id)?;
+                if campfire_db::models::ignore_policy::ignored(conn, user_id, message.creator_id)? {
+                    return Ok(None);
+                }
                 let mentionees = message.mentionees(conn, &*rich_text)?;
-                Ok(mentionees.iter().any(|user| user.id == user_id))
+                Ok(Some(mentionees.iter().any(|user| user.id == user_id)))
             });
             match mentioned {
-                Ok(mentioned) => mentioned,
+                Ok(Some(mentioned)) => mentioned,
+                Ok(None) => return,
                 Err(error) => {
                     return tracing::warn!(%error, message_id, "sync: unread message not read");
                 }
@@ -1712,6 +1725,10 @@ pub fn settings_updated(server: &Cable, settings: campfire_api_types::Settings) 
         &SyncPayload::SettingsUpdated(Box::new(settings)),
         |publication| publication,
     );
+}
+
+pub fn blocks_updated(server: &Cable, viewer: i64, state: campfire_api_types::BlockState) {
+    send(server, Audience::User(viewer), &SyncPayload::BlocksUpdated(state), |publication| publication);
 }
 
 pub fn user_updated(server: &Cable, user: campfire_api_types::User) {

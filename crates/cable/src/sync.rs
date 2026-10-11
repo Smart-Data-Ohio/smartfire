@@ -77,13 +77,17 @@ pub enum Audience {
     Everyone,
     /// Connections subscribed to a conversation topic (`room:<id>`, `thread:<id>`).
     Topic(String),
+    /// The conversation's subscribers except these people, whose copies are personalized.
+    TopicExcept { topic: String, users: Vec<i64> },
+    /// One person's subscribed conversation, including all their sessions and replay.
+    TopicUser { topic: String, user_id: i64 },
 }
 
 impl Audience {
     pub fn topic(&self) -> &str {
         match self {
             Audience::User(_) | Audience::Everyone => USER_TOPIC,
-            Audience::Topic(topic) => topic,
+            Audience::Topic(topic) | Audience::TopicExcept { topic, .. } | Audience::TopicUser { topic, .. } => topic,
         }
     }
 }
@@ -148,6 +152,8 @@ impl Entry {
             Audience::User(id) => *id == user_id,
             Audience::Everyone => true,
             Audience::Topic(topic) => follows(topic),
+            Audience::TopicExcept { topic, users } => !users.contains(&user_id) && follows(topic),
+            Audience::TopicUser { topic, user_id: recipient } => *recipient == user_id && follows(topic),
         }
     }
 }

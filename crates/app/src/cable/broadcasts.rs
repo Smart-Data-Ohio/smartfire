@@ -377,9 +377,13 @@ fn unread_user_ids(
     let mut memberships = Membership::for_room(conn, room.id)?;
     let ids = memberships.iter().map(|membership| membership.user_id).collect::<Vec<_>>();
     let users = UserStatusSettings::for_ids(conn, &ids)?;
-    memberships.retain(|membership| !users.get(&membership.user_id).is_some_and(|user| {
-        user.notification_preferences.muted(room.id, now)
-    }));
+    let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
+    memberships.retain(|membership| {
+        !blockers.contains(&membership.user_id)
+            && !users.get(&membership.user_id).is_some_and(|user| {
+                user.notification_preferences.muted(room.id, now)
+            })
+    });
     let muted = |membership: &Membership| {
         users.get(&membership.user_id)
             .map(|user| user.notification_preferences.involvement(room.id, membership.involvement))

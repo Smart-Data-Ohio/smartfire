@@ -897,6 +897,7 @@ impl ChannelThread {
         let mut unread_user_ids = Vec::new();
         for membership in ThreadMembership::for_thread(tx.conn(), thread.id)? {
             if membership.user_id == message.creator_id
+                || super::ignore_policy::ignored(tx.conn(), membership.user_id, message.creator_id)?
                 || Membership::find_by_room_and_user(tx.conn(), thread.room_id, membership.user_id)?
                     .is_none()
             {
@@ -1240,6 +1241,7 @@ impl ChannelThread {
         );
         let mut pushes = Vec::new();
         for candidate in candidates {
+            if super::ignore_policy::ignored(conn, candidate.recipient.id, message.creator_id)? { continue; }
             let subscriptions = PushSubscription::for_user(conn, candidate.recipient.id)?;
             if subscriptions.is_empty() {
                 continue;

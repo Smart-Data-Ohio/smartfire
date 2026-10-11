@@ -172,6 +172,7 @@ impl Room {
         if fresh.is_empty() {
             return Ok(fresh);
         }
+        super::ignore_policy::require_contact(tx.conn(), actor, &fresh)?;
         let names: Vec<_> = fresh
             .iter()
             .map(|id| User::find(tx.conn(), *id).map(|u| u.display_name().to_owned()))

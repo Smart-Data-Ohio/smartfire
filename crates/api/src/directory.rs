@@ -124,6 +124,9 @@ async fn post_direct(c: &mut Ctx) -> Result {
                 .filter(User::is_active)
                 .map(|user| user.id)
                 .collect();
+            if ids.iter().any(|id| *id != viewer) && !users.iter().any(|id| *id != viewer) {
+                return Err(campfire_db::Error::RecordNotFound("User"));
+            }
             if users.len() > MAX_MEMBERS {
                 return Ok(None);
             }
