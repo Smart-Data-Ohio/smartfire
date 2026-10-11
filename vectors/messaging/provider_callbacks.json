@@ -1217,7 +1217,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
-          "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-open\"><template><div id=\"presentation_message_provider-open\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p><a href=\"https://github.com/provider-owner/repo-1/pull/2\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://github.com/provider-owner/repo-1/pull/2</a> <a href=\"https://page.example.test/post#new-fragment\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://page.example.test/post#new-fragment</a></p></div>\n</div>\n</template></turbo-stream>"
+          "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-open\"><template><div id=\"presentation_message_provider-open\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\"><p><a href=\"https://github.com/provider-owner/repo-1/pull/2\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://github.com/provider-owner/repo-1/pull/2</a> <a href=\"https://page.example.test/post#new-fragment\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://page.example.test/post#new-fragment</a></p></div>\n</div>\n</template></turbo-stream>"
         },
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
@@ -1265,7 +1265,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
-          "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-open\"><template><div id=\"presentation_message_provider-open\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p><a href=\"https://github.com/provider-owner/repo-9/pull/10\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://github.com/provider-owner/repo-9/pull/10</a></p></div>\n</div>\n</template></turbo-stream>"
+          "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-open\"><template><div id=\"presentation_message_provider-open\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\"><p><a href=\"https://github.com/provider-owner/repo-9/pull/10\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://github.com/provider-owner/repo-9/pull/10</a></p></div>\n</div>\n</template></turbo-stream>"
         },
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
@@ -1311,7 +1311,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
-          "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-open\"><template><div id=\"presentation_message_provider-open\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>no more provider references</p></div>\n</div>\n</template></turbo-stream>"
+          "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-open\"><template><div id=\"presentation_message_provider-open\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\"><p>no more provider references</p></div>\n</div>\n</template></turbo-stream>"
         },
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",

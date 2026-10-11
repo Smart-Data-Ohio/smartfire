@@ -32,7 +32,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "Hello world &\n\nlet x = 1;",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
+        "html": "<div class=\"markdown-body\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
         "markdown_source": "Hello **world** & <x>\n\n```rust\nlet x = 1;\n```"
       },
       "creator": {
@@ -57,7 +57,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "From elsewhere\n\nAnswer",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Answer</p></div>",
+        "html": "<div class=\"markdown-body\"><p>Answer</p></div>",
         "markdown_source": "Answer"
       },
       "creator": {
@@ -86,7 +86,7 @@
         },
         "body": {
           "plain_text": "Hello world &\n\nlet x = 1;",
-          "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>"
+          "html": "<div class=\"markdown-body\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>"
         },
         "notify_author": true
       },
@@ -109,7 +109,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "From elsewhere\n\nAnswer",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Answer</p></div>",
+        "html": "<div class=\"markdown-body\"><p>Answer</p></div>",
         "markdown_source": "Answer"
       },
       "creator": {
@@ -147,7 +147,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "Hello world &\n\nlet x = 1;",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
+        "html": "<div class=\"markdown-body\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
         "markdown_source": "Hello **world** & <x>\n\n```rust\nlet x = 1;\n```"
       },
       "creator": {
@@ -218,7 +218,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "Hello world &\n\nlet x = 1;",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
+        "html": "<div class=\"markdown-body\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
         "markdown_source": "Hello **world** & <x>\n\n```rust\nlet x = 1;\n```"
       },
       "creator": {
@@ -289,7 +289,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "Thread reply",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Thread reply</p></div>",
+        "html": "<div class=\"markdown-body\"><p>Thread reply</p></div>",
         "markdown_source": "Thread reply"
       },
       "creator": {
@@ -361,7 +361,7 @@
       "updated_at": "2026-03-02T16:00:00.000Z",
       "body": {
         "plain_text": "Thread reply",
-        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Thread reply</p></div>",
+        "html": "<div class=\"markdown-body\"><p>Thread reply</p></div>",
         "markdown_source": "Thread reply"
       },
       "creator": {
