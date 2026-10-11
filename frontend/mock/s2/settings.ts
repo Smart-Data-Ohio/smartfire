@@ -30,6 +30,7 @@ import {
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { VIEWER_TIME_ZONE } from "./composer.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
+import { checkProfileImage, type ProfileImage } from "./profile-image.ts";
 import type { Uploads } from "./uploads.ts";
 
 const MINUTE_MS = 60_000;
@@ -122,6 +123,8 @@ function initialState(world: World, now: number): State {
         bot: false,
         pronouns: viewer?.pronouns ?? null,
         nickname: null,
+        bannerUrl: viewer?.bannerUrl ?? null,
+        bannerStillUrl: viewer?.bannerStillUrl ?? null,
       },
       appearance: {
         theme: "system",
@@ -413,6 +416,54 @@ export function createSettings(
         avatarAttached: signedId !== null,
       },
     }));
+
+  /**
+   * The profile banner, checked as the server checks the workspace banner. The viewer's user
+   * carries it too, published with `user.updated` as the server does.
+   */
+  const banner = (body: Json | undefined) => {
+    let image: ProfileImage | null = null;
+
+    if (body !== undefined) {
+      const signedId = stringField(body, "signedId");
+
+      if (signedId === null) throw validation("signedId", "isn't an uploaded file");
+
+      const checked = checkProfileImage(
+        uploads.attachment(signedId),
+        ctx.world().blobs.get(signedId)?.bytes ?? new Uint8Array(),
+        "banner",
+      );
+
+      if ("error" in checked) throw validation("signedId", checked.error);
+
+      image = checked;
+    }
+
+    const users = ctx.world().users;
+    const viewer = users.get(VIEWER_ID);
+
+    if (viewer !== undefined) {
+      const user = {
+        ...viewer,
+        bannerUrl: image?.url ?? null,
+        bannerStillUrl: image?.stillUrl ?? null,
+        updatedAt: rowTimestamp(ctx.now()),
+      };
+
+      users.set(VIEWER_ID, user);
+      ctx.publish([{ topic: "user", type: "user.updated", data: user }]);
+    }
+
+    return update((held) => ({
+      ...held,
+      profile: {
+        ...held.profile,
+        bannerUrl: image?.url ?? null,
+        bannerStillUrl: image?.stillUrl ?? null,
+      },
+    }));
+  };
 
   const appearance = (body: Json | undefined) =>
     update((held) => {
@@ -866,6 +917,8 @@ export function createSettings(
         return avatar(signedId);
       }),
       route("DELETE", /^\/settings\/avatar$/, () => avatar(null)),
+      route("PUT", /^\/settings\/banner$/, ({ body }) => banner(body ?? {})),
+      route("DELETE", /^\/settings\/banner$/, () => banner(undefined)),
       route("PATCH", /^\/settings\/appearance$/, ({ body }) => appearance(body)),
       route("PATCH", /^\/settings\/calls$/, ({ body }) => calls(body)),
       route("PATCH", /^\/settings\/notifications$/, ({ body }) => notifications(body)),

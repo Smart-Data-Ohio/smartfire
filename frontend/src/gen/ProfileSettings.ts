@@ -23,4 +23,12 @@ githubVerified: boolean,
 /**
  * Bots have no security, sessions or transfer sections.
  */
-bot: boolean, pronouns: string | null, nickname: string | null, };
+bot: boolean, pronouns: string | null, nickname: string | null,
+/**
+ * The profile banner, as `User.bannerUrl`; `null` when none is attached.
+ */
+bannerUrl: string | null,
+/**
+ * An animated banner's first frame, as `User.bannerStillUrl`.
+ */
+bannerStillUrl: string | null, };

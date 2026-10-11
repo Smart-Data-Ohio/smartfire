@@ -39,6 +39,8 @@ const userJson = {
   updatedAt: "2026-09-26T12:26:46.848000Z",
   accountName: "Ada Lovelace",
   pronouns: null,
+  bannerUrl: null,
+  bannerStillUrl: null,
 } as const;
 
 /** The agent owner and a thread's step, as in schema-s4.test.ts. */
@@ -65,6 +67,8 @@ const agentUserJson = {
   updatedAt: "2026-09-26T12:26:46.848000Z",
   accountName: "Scout",
   pronouns: null,
+  bannerUrl: null,
+  bannerStillUrl: null,
 } as const;
 
 const threadStepJson = {
