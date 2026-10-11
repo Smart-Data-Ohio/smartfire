@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Effect, Exit } from "effect";
+import { Deferred, Effect, Exit, Fiber } from "effect";
 import { Conflict, Validation } from "../api/errors.ts";
 import { FakeApi, meFixture, sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
@@ -114,6 +114,86 @@ describe("shared layout actions", () => {
       yield* workspaceLayout.moveRoom(2, 30, 1);
 
       expect(yield* fake.requests).toEqual([]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("fail a repeated move along with the one still on its way", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+      let repeatSettled = false;
+
+      yield* fake.route("PUT /rooms/3/workspace_category", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.andThen(Effect.fail(new Validation({ message: "Nope", fields: {} }))),
+        ),
+      );
+
+      const first = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
+
+      yield* Deferred.await(started);
+
+      const repeat = yield* Effect.forkChild(
+        workspaceLayout
+          .moveRoom(3, 30, 1)
+          .pipe(Effect.ensuring(Effect.sync(() => (repeatSettled = true)))),
+      );
+
+      yield* Effect.yieldNow;
+      expect(repeatSettled).toBe(false);
+
+      yield* Deferred.succeed(gate, undefined);
+
+      const firstExit = yield* Effect.exit(Fiber.join(first));
+      const repeatExit = yield* Effect.exit(Fiber.join(repeat));
+
+      expect(Exit.isFailure(firstExit)).toBe(true);
+      expect(Exit.isFailure(repeatExit)).toBe(true);
+      expect((yield* fake.requests).length).toBe(1);
+      expect(ids(null)).toEqual([3]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("finish a repeated move when the one still on its way lands", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      const answer: WorkspaceLayout = {
+        categories: [product, ops],
+        rooms: [
+          { roomId: 2, workspaceCategoryId: 30, position: 0 },
+          { roomId: 3, workspaceCategoryId: 30, position: 1 },
+          { roomId: 1, workspaceCategoryId: 30, position: 2 },
+        ],
+      };
+
+      yield* fake.route("PUT /rooms/3/workspace_category", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as(answer),
+        ),
+      );
+
+      const first = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
+
+      yield* Deferred.await(started);
+
+      const repeat = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
+
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(first);
+      yield* Fiber.join(repeat);
+
+      expect((yield* fake.requests).length).toBe(1);
+      expect(ids(30)).toEqual([2, 3, 1]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

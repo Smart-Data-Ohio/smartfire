@@ -8,7 +8,7 @@
  * The calls run one at a time, in the order they were made, so a room dropped into a category
  * created a moment before reaches the server after the category does.
  */
-import { Effect, Semaphore } from "effect";
+import { Deferred, Effect, Semaphore } from "effect";
 import * as api from "../api/organize-endpoints.ts";
 import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
 import type { WorkspaceLayout } from "../gen/WorkspaceLayout.ts";
@@ -71,23 +71,17 @@ const landing = <A, E, R>(
   );
 
 /**
- * Moves a room into a shared category (`null`: out of every one) just before `beforeRoomId`, or
- * at the end with `null`, for everyone. Administrators only; the server refuses anyone else.
+ * Shows the room moved and sends the move. The category's real id, and whether the room it goes
+ * before is still there, are read when the call's turn comes, against the layout the server has
+ * by then.
  */
-export const moveRoom = Effect.fn("workspaceLayout.moveRoom")(function* (
+const sendMove = (
+  current: WorkspaceLayout,
   roomId: number,
   categoryId: number | null,
   beforeRoomId: number | null,
-) {
-  const current = view();
-
-  if (isPlacedAt(current, roomId, categoryId, beforeRoomId)) {
-    return;
-  }
-
-  // The category's real id, and whether the room it goes before is still there, are read when
-  // the call's turn comes, against the layout the server has by then.
-  yield* pending(
+) =>
+  pending(
     withRoomMoved(current, roomId, categoryId, beforeRoomId),
     landing(
       Effect.suspend(() => {
@@ -99,6 +93,51 @@ export const moveRoom = Effect.fn("workspaceLayout.moveRoom")(function* (
         );
       }),
       (layout) => () => layout,
+    ),
+  );
+
+type MoveFailure = Effect.Error<ReturnType<typeof sendMove>>;
+
+/**
+ * Each room's latest move still waiting on the server. A move to where the room already shows
+ * is only a no-op once that one has landed: until then it shares its outcome.
+ */
+const unsettledMoves = new Map<number, Deferred.Deferred<void, MoveFailure>>();
+
+/**
+ * Moves a room into a shared category (`null`: out of every one) just before `beforeRoomId`, or
+ * at the end with `null`, for everyone. Administrators only; the server refuses anyone else.
+ */
+export const moveRoom = Effect.fn("workspaceLayout.moveRoom")(function* (
+  roomId: number,
+  categoryId: number | null,
+  beforeRoomId: number | null,
+) {
+  const current = view();
+
+  if (isPlacedAt(current, roomId, categoryId, beforeRoomId)) {
+    const unsettled = unsettledMoves.get(roomId);
+
+    if (unsettled !== undefined) {
+      yield* Deferred.await(unsettled);
+    }
+
+    return;
+  }
+
+  const outcome = Deferred.makeUnsafe<void, MoveFailure>();
+
+  unsettledMoves.set(roomId, outcome);
+
+  yield* sendMove(current, roomId, categoryId, beforeRoomId).pipe(
+    Effect.onExit((exit) =>
+      Effect.sync(() => {
+        if (unsettledMoves.get(roomId) === outcome) {
+          unsettledMoves.delete(roomId);
+        }
+
+        Deferred.doneUnsafe(outcome, Effect.asVoid(exit));
+      }),
     ),
   );
 });

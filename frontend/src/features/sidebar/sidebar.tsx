@@ -765,6 +765,19 @@ function useFocusAfterRender(): (request: FocusRequest) => void {
   };
 }
 
+function isHandle(element: Element | null, key: string): boolean {
+  return element instanceof HTMLElement && element.dataset.dragHandle === key;
+}
+
+/** A row or category's drag handle where it shows (a folded section's own list is inert). */
+function liveHandle(container: HTMLElement | null, key: string): HTMLElement | null {
+  return (
+    [...(container?.querySelectorAll<HTMLElement>(`[data-drag-handle="${key}"]`) ?? [])].find(
+      (candidate) => candidate.closest("[inert]") === null,
+    ) ?? null
+  );
+}
+
 /** The toggle button in a section's heading, by section key. */
 function headingTrigger(container: HTMLElement | null, key: string): HTMLElement | null {
   return (
@@ -844,7 +857,15 @@ export function Sidebar() {
     if (item.kind === "room" && target.kind === "room") {
       commands.moveRoom(item.row, target.slot);
     } else if (item.kind === "room" && target.kind === "shared") {
-      void commands.moveSharedRoom(item.row, target.categoryId, target.beforeRoomId);
+      const key = `room-${item.row.room.id}`;
+
+      // Taking the row out of its personal place afterwards remounts it in its new section: focus
+      // on it follows, unless it has gone somewhere else meanwhile.
+      void commands.moveSharedRoom(item.row, target.categoryId, target.beforeRoomId, true, () => {
+        if (isHandle(document.activeElement, key)) {
+          focusAfterRender({ find: () => liveHandle(scrollRef.current, key), ifLost: true });
+        }
+      });
     } else if (item.kind === "category" && target.kind === "category") {
       commands.reorderCategories(reorderedIds(categories, item.category.id, target.index));
     } else if (item.kind === "shared-category" && target.kind === "shared-category") {
