@@ -205,3 +205,304 @@ async fn invalid_duration_never_persists_and_parent_policy_runs_first() {
         .unwrap();
     assert_eq!(count, 0);
 }
+
+async fn register_typed(app: &TestApp, room: i64, body: Value, token: Option<&str>) -> Reply {
+    let req = Req::new(
+        Method::POST,
+        &format!("/rooms/{room}/agents/slash_commands"),
+    )
+    .header("accept", "application/json")
+    .header("content-type", "application/json")
+    .body(body.to_string());
+    let req = if let Some(token) = token {
+        req.header("authorization", &format!("Bearer {token}"))
+    } else {
+        req
+    };
+    app.anonymous().send(req).await
+}
+
+#[tokio::test]
+async fn slash_schema_http_management_set_keep_clear_invalid_and_authorization() {
+    use super::presenters::test_support::{ALL_TALK, DAVID};
+    let app = setup().await;
+    let schema = json!({"options":[{"name":"count","description":"Count","type":"integer","required":true,"min":1,"max":3}]});
+    let body = json!({"name":"typed","option_schema":schema});
+    let reply = register_typed(&app, ALL_TALK, body.clone(), Some(SECRET)).await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    assert_eq!(
+        serde_json::from_str::<Value>(&reply.text()).unwrap()["option_schema"],
+        schema
+    );
+    let reply = register_typed(
+        &app,
+        ALL_TALK,
+        json!({"name":"typed","description":"Changed"}),
+        Some(SECRET),
+    )
+    .await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    assert_eq!(
+        serde_json::from_str::<Value>(&reply.text()).unwrap()["option_schema"],
+        schema
+    );
+    for invalid in [
+        json!({"options":[{"name":"Bad","description":"Count","type":"integer","required":true}]}),
+        json!({"options":[],"subcommands":[]}),
+    ] {
+        let reply = register_typed(
+            &app,
+            ALL_TALK,
+            json!({"name":"typed","option_schema":invalid}),
+            Some(SECRET),
+        )
+        .await;
+        assert_eq!(reply.status.as_u16(), 422, "{}", reply.text());
+        assert!(
+            serde_json::from_str::<Value>(&reply.text()).unwrap()["errors"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .all(|key| key.starts_with("option_schema"))
+        );
+    }
+    assert_eq!(
+        register_typed(&app, ALL_TALK, body.clone(), None)
+            .await
+            .status
+            .as_u16(),
+        302
+    );
+    assert_eq!(
+        register_typed(&app, ALL_TALK, body.clone(), Some("unknown-credential"))
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    assert_eq!(
+        register_typed(&app, 201306877, body.clone(), Some(SECRET))
+            .await
+            .status
+            .as_u16(),
+        404
+    );
+    app.db()
+        .write(|tx| {
+            campfire_db::AgentGrant::create(
+                tx,
+                campfire_db::NewGrant {
+                    agent_id: AGENT,
+                    capability: "read_messages".into(),
+                    granted_by_id: DAVID,
+                    ..Default::default()
+                },
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        register_typed(
+            &app,
+            ALL_TALK,
+            json!({"name":"typed","option_schema":null}),
+            Some(SECRET)
+        )
+        .await
+        .status
+        .as_u16(),
+        403
+    );
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM agent_grants WHERE agent_id=?", [AGENT])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = register_typed(
+        &app,
+        ALL_TALK,
+        json!({"name":"typed","option_schema":null}),
+        Some(SECRET),
+    )
+    .await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    app.db()
+        .read(|conn| {
+            assert!(
+                campfire_db::AgentSlashCommand::find_by_name(conn, ALL_TALK, "typed")?
+                    .unwrap()
+                    .option_schema
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slash_schema_composer_listing_validation_visibility_and_delivery() {
+    use super::presenters::test_support::{ALL_TALK, DAVID, KEVIN};
+    use super::spa::api_tests::{get, json_body, parse, tag};
+    let app = setup().await;
+    let schema = json!({"subcommands":[{"name":"run","description":"Run","options":[
+        {"name":"target","description":"Target","type":"string","required":true,"choices":[{"name":"Staging","value":"staging"}]},
+        {"name":"count","description":"Count","type":"integer","required":true,"min":1,"max":3},
+        {"name":"user","description":"User","type":"user","required":false},
+        {"name":"room","description":"Room","type":"room","required":false}
+    ]}]});
+    assert_eq!(
+        register_typed(
+            &app,
+            ALL_TALK,
+            json!({"name":"typed","option_schema":schema}),
+            Some(SECRET)
+        )
+        .await
+        .status
+        .as_u16(),
+        201
+    );
+    let mut david = app.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{ALL_TALK}/slash_commands");
+    let list: Value = parse(&david.send(get(&path)).await);
+    assert_eq!(
+        list["commands"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == "typed")
+            .unwrap()["optionSchema"],
+        schema
+    );
+    let good = json!({"subcommand":"run","values":{"target":"staging","count":2,"user":DAVID,"room":ALL_TALK}});
+    for (name, value) in [
+        ("target", json!(false)),
+        ("target", json!("production")),
+        ("count", json!(4)),
+        ("count", json!(2.5)),
+    ] {
+        let mut options = good.clone();
+        options["values"][name] = value;
+        let reply = david
+            .write(json_body(
+                Method::POST,
+                &path,
+                &json!({"text":"/typed raw text","options":options}),
+            ))
+            .await;
+        assert_eq!(reply.status.as_u16(), 422, "{}", reply.text());
+        assert_eq!(tag(&reply), "Validation");
+        let body: Value = parse(&reply);
+        assert!(body["error"]["fields"][format!("options.values.{name}")].is_array());
+    }
+    let missing = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &json!({"text":"/typed","options":{"subcommand":"run","values":{}}}),
+        ))
+        .await;
+    assert_eq!(missing.status.as_u16(), 422);
+    assert_eq!(tag(&missing), "Validation");
+    let absent = david
+        .write(json_body(Method::POST, &path, &json!({"text":"/typed"})))
+        .await;
+    assert_eq!(absent.status.as_u16(), 422);
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE users SET status=1 WHERE id=?", [KEVIN])?;
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE user_id=? AND room_id=104393281",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    for (name, id) in [
+        ("user", KEVIN),
+        ("user", i64::MAX),
+        ("room", 104393281),
+        ("room", i64::MAX),
+    ] {
+        let mut options = good.clone();
+        options["values"][name] = json!(id);
+        let reply = david
+            .write(json_body(
+                Method::POST,
+                &path,
+                &json!({"text":"/typed","options":options}),
+            ))
+            .await;
+        assert_eq!(reply.status.as_u16(), 404, "{}", reply.text());
+        assert_eq!(tag(&reply), "NotFound");
+        assert_eq!(
+            parse::<Value>(&reply),
+            json!({"error":{"_tag":"NotFound","message":"Not found"}})
+        );
+    }
+    app.db()
+        .read(|conn| {
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='slash_command'",
+                [AGENT],
+                |r| r.get(0),
+            )?;
+            assert_eq!(count, 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &json!({"text":"/typed raw text","options":good}),
+        ))
+        .await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    assert_eq!(parse::<Value>(&reply)["status"], "ephemeral");
+    let poll = app
+        .anonymous()
+        .send(
+            Req::new(Method::GET, "/agents/events")
+                .header("authorization", &format!("Bearer {SECRET}"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(poll.status.as_u16(), 200, "{}", poll.text());
+    let body: Value = parse(&poll);
+    let command = &body
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["event_type"] == "slash_command")
+        .unwrap()["command"];
+    assert_eq!(command["options"], good);
+    assert_eq!(command["arguments"], "raw text");
+    assert_eq!(
+        register_typed(&app, ALL_TALK, json!({"name":"legacy"}), Some(SECRET))
+            .await
+            .status
+            .as_u16(),
+        201
+    );
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &json!({"text":"/legacy old text","options":good}),
+        ))
+        .await;
+    assert_eq!(reply.status.as_u16(), 200);
+    app.db().read(|conn| {
+        let metadata:String=conn.query_row("SELECT metadata FROM agent_events WHERE agent_id=? AND event_type='slash_command' ORDER BY id DESC LIMIT 1",[AGENT],|r|r.get(0))?;
+        assert_eq!(serde_json::from_str::<Value>(&metadata).unwrap(),json!({"command":"legacy","arguments":"old text"}));Ok(())
+    }).await.unwrap();
+}

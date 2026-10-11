@@ -3,8 +3,13 @@ import { DateTime, Schema } from "effect";
 import { CreateForwards, ForwardDestinationList, PinList, SavedItem } from "./actions.ts";
 import { CreateUpload, DirectUpload } from "./attachment.ts";
 import {
+  type CommandOption,
+  CommandSchema,
+  CommandValues,
   IconList,
+  RunSlashCommand,
   ScheduledMessageList,
+  SlashCommandList,
   SlashCommandResult,
   UserSuggestionList,
 } from "./composer.ts";
@@ -398,5 +403,73 @@ describe("S2 sync events", () => {
       "thread.read",
       "saved.changed",
     ]);
+  });
+});
+
+describe("local slash command option schemas", () => {
+  const options: (typeof CommandOption)["Encoded"][] = [
+    {
+      name: "target",
+      description: "Target",
+      required: true,
+      type: "string",
+      choices: [{ name: "Staging", value: "staging" }],
+      min_length: 1,
+      max_length: 20,
+    },
+    { name: "count", description: "Count", required: false, type: "integer", min: 1, max: 3 },
+    {
+      name: "ratio",
+      description: "Ratio",
+      required: false,
+      type: "number",
+      choices: [{ name: "Half", value: 0.5 }],
+    },
+    { name: "enabled", description: "Enabled", required: false, type: "boolean" },
+    { name: "user", description: "User", required: false, type: "user" },
+    { name: "room", description: "Room", required: false, type: "room" },
+  ];
+
+  it("round trips all option variants, subcommands and the composer listing", () => {
+    roundTrips(CommandSchema, { options });
+    const schema = { subcommands: [{ name: "run", description: "Run", options }] };
+    roundTrips(CommandSchema, schema);
+    roundTrips(SlashCommandList, {
+      commands: [
+        {
+          name: "deploy",
+          description: "Deploy",
+          argHint: "",
+          takesArguments: true,
+          agentName: "Ember",
+          optionSchema: schema,
+        },
+      ],
+    });
+    roundTrips(SlashCommandList, {
+      commands: [
+        {
+          name: "legacy",
+          description: "Legacy",
+          argHint: "",
+          takesArguments: true,
+          agentName: "Ember",
+          optionSchema: null,
+        },
+      ],
+    });
+  });
+  it("round trips typed and legacy invocation bodies", () => {
+    const values = {
+      subcommand: "run",
+      values: { target: "staging", count: 2, ratio: 0.5, enabled: false, user: 7, room: 12 },
+    };
+
+    roundTrips(CommandValues, values);
+    roundTrips(RunSlashCommand, { text: "/deploy raw text", threadId: null, options: values });
+    roundTrips(RunSlashCommand, { text: "/legacy raw text", threadId: null });
+    expect(() =>
+      Schema.decodeUnknownSync(CommandValues)({ subcommand: null, values: { target: [] } }),
+    ).toThrow();
   });
 });

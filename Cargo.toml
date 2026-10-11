@@ -9,6 +9,8 @@ publish = false
 
 [workspace.dependencies]
 bnum = "0.13"
+ts-rs = "12.0.1"
+campfire_slash_schema = { path = "crates/slash_schema" }
 httpdate = "1.0.3"
 cc = "1.2"
 rails_compat      = { path = "crates/rails_compat" }

@@ -118,7 +118,7 @@ CREATE INDEX "index_activity_items_on_source" ON "activity_items" ("source_type"
 CREATE INDEX "index_activity_items_on_user_and_state" ON "activity_items" ("user_id", "read_at", "handled_at", "created_at");
 CREATE UNIQUE INDEX "index_activity_items_on_user_and_source" ON "activity_items" ("user_id", "source_type", "source_id");
 CREATE INDEX "index_activity_items_on_user_id_and_updated_at" ON "activity_items" ("user_id", "updated_at");
-CREATE TABLE "agent_slash_commands" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "agent_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "description" varchar, "name" varchar NOT NULL, "room_id" integer NOT NULL, "takes_arguments" boolean DEFAULT TRUE NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_873314717b"
+CREATE TABLE "agent_slash_commands" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "agent_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "description" varchar, "name" varchar NOT NULL, "room_id" integer NOT NULL, "takes_arguments" boolean DEFAULT TRUE NOT NULL, "updated_at" datetime(6) NOT NULL, option_schema TEXT, CONSTRAINT "fk_rails_873314717b"
 FOREIGN KEY ("agent_id")
   REFERENCES "agents" ("id")
 , CONSTRAINT "fk_rails_e604b7b265"

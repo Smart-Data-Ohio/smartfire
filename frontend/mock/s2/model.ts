@@ -1,3 +1,4 @@
+import type { CommandSchema } from "../../src/gen/CommandSchema.ts";
 /**
  * What the mock keeps for S2 beyond the S1 rooms and messages (threads, pins, saved items,
  * stars, scheduled messages, uploaded blobs) and the pure helpers that turn it into wire DTOs.
@@ -93,6 +94,7 @@ export interface AgentCommand {
   readonly name: string;
   readonly description: string | null;
   readonly agentName: string;
+  readonly optionSchema?: CommandSchema;
 }
 
 /** The S2 part of the world, mutated in place by the S2 modules. */

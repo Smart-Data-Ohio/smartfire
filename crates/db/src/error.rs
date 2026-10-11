@@ -2,6 +2,8 @@ use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Invalid slash command options")]
+    FieldValidation(campfire_slash_schema::FieldErrors),
     /// `Google::SignIn::Rejected`: safe stable reason, never raw claims or credentials.
     #[error("Google sign-in rejected ({0})")]
     GoogleSignInRejected(&'static str),

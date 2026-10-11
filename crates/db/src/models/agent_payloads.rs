@@ -231,9 +231,13 @@ pub fn build(
             })
             .transpose()?
             .flatten();
-        compact(
+        let mut data = compact(
             json!({"agent":agent,"event_type":event.event_type,"user":actor,"room":room,"thread_id":metadata.get("thread_id"),"command":{"name":metadata.get("command"),"arguments":metadata.get("arguments")}}),
-        )
+        );
+        if let Some(options) = metadata.get("options") {
+            data["command"]["options"] = options.clone();
+        }
+        data
     } else if ["github_action_completed", "fizzy_action_completed"]
         .contains(&event.event_type.as_str())
     {

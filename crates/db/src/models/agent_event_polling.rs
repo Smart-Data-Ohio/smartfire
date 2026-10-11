@@ -257,6 +257,9 @@ impl<'a> PollContext<'a> {
             }
             payload["command"] =
                 json!({"name":e.metadata.get("command"),"arguments":e.metadata.get("arguments")});
+            if let Some(options) = e.metadata.get("options") {
+                payload["command"]["options"] = options.clone();
+            }
         } else {
             if !self.readable(&payload["room"]) {
                 return Ok(None);

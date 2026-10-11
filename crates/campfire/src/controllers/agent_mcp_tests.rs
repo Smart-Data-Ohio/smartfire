@@ -266,3 +266,38 @@ async fn mcp_shares_rest_buckets_and_counts_endpoint_before_origin() {
 async fn mcp_lists_rooms_and_owned_work() {
     check(&["tool_empty_list_rooms", "tool_empty_list_work"]).await;
 }
+
+#[tokio::test]
+async fn slash_schema_mcp_management_uses_the_shared_registration_service() {
+    use super::presenters::test_support::ALL_TALK;
+    let app = setup().await;
+    let schema = json!({"options":[{"name":"enabled","description":"Enable it","type":"boolean","required":true}]});
+    for value in [schema.clone(), Value::Null] {
+        let body = json!({"jsonrpc":"2.0","id":650,"method":"tools/call","params":{"name":"register_slash_command","arguments":{"room_id":ALL_TALK,"name":"typed","option_schema":value}}});
+        let reply = app
+            .anonymous()
+            .send(
+                Req::new(Method::POST, "/agents/mcp")
+                    .header("authorization", &format!("Bearer {SECRET}"))
+                    .header("accept", "application/json")
+                    .header("content-type", "application/json")
+                    .body(body.to_string()),
+            )
+            .await;
+        assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+        assert_ne!(reply.json()["result"]["isError"], true, "{}", reply.text());
+        let expected = value.clone();
+        app.db()
+            .read(move |conn| {
+                let command =
+                    campfire_db::AgentSlashCommand::find_by_name(conn, ALL_TALK, "typed")?.unwrap();
+                assert_eq!(
+                    serde_json::to_value(command.option_schema).unwrap(),
+                    expected
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+}

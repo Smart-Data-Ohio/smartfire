@@ -811,6 +811,10 @@
           "takes_arguments": {
             "type": "boolean",
             "description": "False when the command takes no arguments, so picking it runs immediately (default true)."
+          },
+          "option_schema": {
+            "type": ["object", "null"],
+            "description": "Local typed command schema: either options or subcommands with options. Null clears it; omission preserves it. Options have name, description, type and required, plus type-specific choices and bounds."
           }
         },
         "required": [
