@@ -65,6 +65,8 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/work" }) !== false ||
     // The Google confirmation's return: a full screen while it finishes or offers to try again.
     matchRoute({ to: "/sudo/continue" }) !== false ||
+    // "Confirm it's you" as a page: a full screen, its back chevron to the list.
+    matchRoute({ to: "/sudo/new" }) !== false ||
     matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
   if (roomId !== null || pushed) {

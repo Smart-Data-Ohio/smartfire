@@ -19,9 +19,10 @@ pub async fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
         let origin =
             session_keys::sudo_origin_path(c.request.referer(), &c.request.host(), "/app/");
         let origin = spa_origin(&origin).to_owned();
+        // Bound to the signed-in session: no other session's answer names it.
         let pending = serde_json::json!({
             "method": c.request.method.as_str(), "path": c.request.fullpath(),
-            "params": null, "origin": origin
+            "params": null, "origin": origin, "session_id": session_id(c)
         });
         c.session().insert(session_keys::SUDO_PENDING_KEY, pending);
         let reauthentication = state(c).await?;
@@ -47,6 +48,12 @@ pub async fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
         ),
     };
     session_keys::store_sudo_pending_request(c.session(), pending);
+    // Bound to the signed-in session, as the JSON gate's: no other session's answer names it.
+    let session = session_id(c);
+    if let Some(mut request) = c.session().get(session_keys::SUDO_PENDING_KEY).cloned() {
+        request["session_id"] = serde_json::json!(session);
+        c.session().insert(session_keys::SUDO_PENDING_KEY, request);
+    }
     // Approved divergence: don't reproduce Rails' oversized-cookie crash.
     // The storable-params check still counts Ruby Integer digits without quotes.
     if !c.session_cookie_fits()
@@ -76,8 +83,17 @@ fn spa_origin(path: &str) -> &str {
     }
 }
 
+/// The request the gate holds for the signed-in session, if any. One held for another session
+/// (it names a different one) is never named.
 pub fn retry(c: &mut Ctx) -> Option<SudoRetry> {
+    let current = session_id(c);
     let pending = c.session().get(session_keys::SUDO_PENDING_KEY)?;
+    if pending
+        .get("session_id")
+        .is_some_and(|held| held.as_i64() != current)
+    {
+        return None;
+    }
     let path = pending.get("path")?.as_str()?;
     if !path.starts_with('/') || path.starts_with("//") {
         return None;

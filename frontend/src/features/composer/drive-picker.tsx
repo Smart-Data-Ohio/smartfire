@@ -8,6 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { confirmThen } from "../auth/confirm-first.ts";
 import { BrandMark } from "../cards/brand-marks.tsx";
 import { useLoad } from "../events/use-load.ts";
 import {
@@ -431,7 +432,11 @@ export function DrivePicker({
               <p>Google Drive isn't connected.</p>
               <Button
                 type="button"
-                onClick={() => postClassicForm("/google/connect", [["features[]", "drive"]])}
+                onClick={() =>
+                  void confirmThen(() =>
+                    postClassicForm("/google/connect", [["features[]", "drive"]]),
+                  )
+                }
               >
                 Enable Drive previews
               </Button>

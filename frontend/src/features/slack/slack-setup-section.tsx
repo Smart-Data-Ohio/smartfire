@@ -15,6 +15,7 @@ import {
   takeDraft,
   useAdmin,
 } from "../admin/admin-parts.tsx";
+import { confirmLink } from "../auth/confirm-first.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { FieldError, SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { activeRunSentence, adminConnectionSentence, CONFIRM, optional } from "./slack-format.ts";
@@ -323,6 +324,7 @@ export function SlackSetupSection() {
                 className="button"
                 data-variant={setup.connection.state === "connected" ? "secondary" : "primary"}
                 href={setup.connectPath}
+                onClick={confirmLink}
               >
                 {setup.connection.state === "connected" ? "Reconnect Slack" : "Connect Slack"}
               </a>

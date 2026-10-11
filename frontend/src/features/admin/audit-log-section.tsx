@@ -4,6 +4,7 @@ import type { AuditLogPage } from "../../gen/AuditLogPage.ts";
 import { admin } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { confirmLink } from "../auth/confirm-first.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsPage } from "../settings/settings-parts.tsx";
 import { auditTime, filterValue, NO_FILTERS } from "./admin-format.ts";
@@ -130,7 +131,12 @@ function Filters({
         <Button variant="ghost" onClick={() => onApply(NO_FILTERS)}>
           Clear
         </Button>
-        <a className="settings-link admin-export" href={page.exportUrl} download>
+        <a
+          className="settings-link admin-export"
+          href={page.exportUrl}
+          download
+          onClick={confirmLink}
+        >
           Export CSV
         </a>
       </div>

@@ -1,18 +1,41 @@
 import { type FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SudoMethod } from "../../gen/SudoMethod.ts";
-import { actions, type ConfirmationPrompt, confirmationGate } from "../../sync/runtime.ts";
+import type { SudoSubmission } from "../../gen/SudoSubmission.ts";
+import {
+  actions,
+  type ConfirmationPrompt,
+  confirmationGate,
+  type GoogleStart,
+} from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { pageExit } from "./auth-navigation.ts";
 import "./reauthenticate.css";
 
-/** What the dialog is sending: one credential at a time, or the start of a Google confirmation. */
-type Busy = "password" | "totp" | "google" | null;
+/** What the form is sending: one credential at a time, or the start of a Google confirmation. */
+export type Busy = "password" | "totp" | "google" | null;
 
 /** The classic page's heading and lede. */
-const TITLE = "Confirm it's you";
+export const TITLE = "Confirm it's you";
 
 const LEDE = "This action needs a fresh confirmation. Confirm once and it continues.";
+
+/** What the dialog says beside Google about what doesn't come back with the person. */
+function googleNote(prompt: ConfirmationPrompt): string | null {
+  const parts = [
+    prompt.secrets > 0
+      ? "A token or secret you entered here isn't kept, so enter it again when you're back."
+      : null,
+    prompt.again > 0 ? "When you're back, click what you were doing again to finish." : null,
+  ].filter((part) => part !== null);
+
+  return parts.length === 0 ? null : `Google opens in this tab. ${parts.join(" ")}`;
+}
+
+/** The dialog's Google start: from the page showing now, which the return comes back to. */
+const startGoogleHere = () =>
+  actions.confirmation.startGoogle(`${window.location.pathname}${window.location.search}`);
 
 /** The Google "G", as the classic page draws it beside "Confirm with Google". */
 function GoogleMark() {
@@ -127,18 +150,33 @@ export function ReauthenticateDialog() {
       }
     >
       {shown === null ? null : (
-        <Choices key={opened} prompt={shown} busy={busy} onBusy={setBusy} onDirty={setDirty} />
+        <Choices
+          key={opened}
+          methods={shown.methods}
+          googleNote={googleNote(shown)}
+          busy={busy}
+          onBusy={setBusy}
+          onDirty={setDirty}
+          submit={actions.confirmation.submit}
+          startGoogle={startGoogleHere}
+        />
       )}
     </Dialog>
   );
 }
 
 interface ChoicesProps {
-  readonly prompt: ConfirmationPrompt;
+  readonly methods: readonly SudoMethod[];
+  /** What to say beside Google (what doesn't come back with the person); `null` for nothing. */
+  readonly googleNote: string | null;
   readonly busy: Busy;
   readonly onBusy: (busy: Busy) => void;
   /** Whether a credential has been typed, so a swipe down doesn't throw it away. */
   readonly onDirty: (dirty: boolean) => void;
+  /** Sends a credential: `null` once it confirmed (or the session ended), else why it didn't. */
+  readonly submit: (submission: SudoSubmission) => Promise<string | null>;
+  /** Starts a Google confirmation; on `navigate` the form leaves for it. */
+  readonly startGoogle: () => Promise<GoogleStart>;
 }
 
 /** What each credential's field asks for when it's sent empty. */
@@ -148,7 +186,15 @@ const BLANK = {
 } as const;
 
 /** The account's ways to confirm, stacked with "or" between, as on the classic page. */
-function Choices({ prompt, busy, onBusy, onDirty }: ChoicesProps) {
+export function Choices({
+  methods,
+  googleNote,
+  busy,
+  onBusy,
+  onDirty,
+  submit,
+  startGoogle,
+}: ChoicesProps) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<{ readonly password?: string; readonly totp?: string }>({});
@@ -156,7 +202,7 @@ function Choices({ prompt, busy, onBusy, onDirty }: ChoicesProps) {
   const [googleError, setGoogleError] = useState("");
   const passwordField = useRef<HTMLInputElement>(null);
   const codeField = useRef<HTMLInputElement>(null);
-  const has = (method: SudoMethod) => prompt.methods.includes(method);
+  const has = (method: SudoMethod) => methods.includes(method);
 
   useEffect(() => onDirty(password !== "" || code !== ""), [password, code, onDirty]);
 
@@ -193,21 +239,19 @@ function Choices({ prompt, busy, onBusy, onDirty }: ChoicesProps) {
     setErrors({});
     setGoogleError("");
     onBusy(kind);
-    actions.confirmation
-      .submit(kind === "password" ? { kind, password: value } : { kind, code: value })
-      .then(
-        (refusal) => {
-          onBusy(null);
+    submit(kind === "password" ? { kind, password: value } : { kind, code: value }).then(
+      (refusal) => {
+        onBusy(null);
 
-          if (refusal !== null) {
-            refuse(kind, refusal);
-          }
-        },
-        (failure: Error) => {
-          onBusy(null);
-          refuse(kind, failure.message);
-        },
-      );
+        if (refusal !== null) {
+          refuse(kind, refusal);
+        }
+      },
+      (failure: Error) => {
+        onBusy(null);
+        refuse(kind, failure.message);
+      },
+    );
   };
 
   const google = () => {
@@ -218,10 +262,10 @@ function Choices({ prompt, busy, onBusy, onDirty }: ChoicesProps) {
     setErrors({});
     setGoogleError("");
     onBusy("google");
-    actions.confirmation.startGoogle(`${window.location.pathname}${window.location.search}`).then(
+    startGoogle().then(
       (start) => {
         if (start.kind === "navigate") {
-          window.location.assign(start.location);
+          pageExit.assign(start.location);
 
           return;
         }
@@ -300,12 +344,7 @@ function Choices({ prompt, busy, onBusy, onDirty }: ChoicesProps) {
           <GoogleMark />
           Confirm with Google
         </Button>
-        {prompt.secrets > 0 ? (
-          <p className="reauth-note">
-            Google opens in this tab. A token or secret you entered here isn't kept, so enter it
-            again when you're back.
-          </p>
-        ) : null}
+        {googleNote === null ? null : <p className="reauth-note">{googleNote}</p>}
         <p className="reauth-alert" role="alert">
           {googleError}
         </p>

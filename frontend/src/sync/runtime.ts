@@ -119,7 +119,15 @@ import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
 import * as workActions from "./work-actions.ts";
 
-export type { ConfirmationPrompt, GoogleReturn } from "./reauthentication.ts";
+export type {
+  ConfirmationPrompt,
+  GoogleReturn,
+  GoogleStart,
+  SudoHere,
+  SudoStatus,
+} from "./reauthentication.ts";
+
+export { afterConfirming, spaReturnPath } from "./reauthentication.ts";
 
 export type { EventPrefill, GithubCardScope };
 
@@ -617,6 +625,27 @@ const confirmation = {
     runAction(confirmationActions.confirmAgain(confirmationGate)),
   /** Gives up on the writes still kept. */
   discardKept: (): void => confirmationActions.discardKept(confirmationGate),
+  /**
+   * Before a full-page action the server confirms first: `"go"` once a fresh confirmation is in
+   * place (asking in the dialog when it isn't); otherwise the action doesn't go.
+   */
+  confirmFirst: (): Promise<confirmationActions.ConfirmFirst> =>
+    runAction(confirmationActions.confirmFirst(confirmationGate)),
+  /**
+   * `/app/sudo/new`: whether a confirmation is fresh, and what the server holds for after it (a
+   * look: nothing held is let go).
+   */
+  status: (): Promise<confirmationActions.SudoStatus> =>
+    runAction(confirmationActions.sudoStatus()),
+  /** `/app/sudo/new`: takes what the server holds, to act on it now (it's let go). */
+  takeHeld: (): Promise<confirmationActions.SudoStatus> =>
+    runAction(confirmationActions.takeHeld()),
+  /** `/app/sudo/new`: confirms with a credential; nothing waits in memory to go again. */
+  confirmHere: (submission: SudoSubmission): Promise<confirmationActions.SudoHere> =>
+    runAction(confirmationActions.confirmHere(confirmationGate, submission)),
+  /** `/app/sudo/new`: starts Google with no writes kept; the return asks the server what it holds. */
+  googleHere: (): Promise<confirmationActions.GoogleStart> =>
+    runAction(confirmationActions.googleHere()),
 };
 
 export const actions = {
