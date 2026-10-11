@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { SudoMethod } from "../../gen/SudoMethod.ts";
 import type { SudoRetry } from "../../gen/SudoRetry.ts";
 import { mutations } from "../../store/store.ts";
-import { actions } from "../../sync/runtime.ts";
+import { actions, type SudoHere, type SudoStatus } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
 import { pageExit } from "./auth-navigation.ts";
@@ -39,6 +39,9 @@ const connectRetry: SudoRetry = {
 
 let network: MockNetwork;
 
+/** The router `open` made, to leave the page as Back would. */
+let router: ReturnType<typeof createRouter>;
+
 /** Sets the mock's confirmation: lapsed (asking with `methods`) or fresh, and what it held. */
 async function sudo(
   lapsed: boolean,
@@ -60,7 +63,7 @@ async function open() {
   const page = (path: string) =>
     createRoute({ getParentRoute: () => root, path, component: () => <p>Page {path}</p> });
 
-  const router = createRouter({
+  router = createRouter({
     routeTree: root.addChildren([
       createRoute({ getParentRoute: () => root, path: "sudo/new", component: SudoNew }),
       page("/"),
@@ -212,16 +215,78 @@ describe("/app/sudo/new", () => {
     expect(pathname()).toBe("/");
   });
 
-  it("signed out, leaves it to the sign-in redirect", async () => {
+  it("signed out (the server's 200 sign-in hand-off), goes on to sign in", async () => {
     vi.spyOn(actions.confirmation, "status").mockResolvedValue({
       kind: "navigate",
-      location: "/session/new",
+      location: "http://campfire.test/session/new",
     });
     await open();
 
-    await waitFor(() => expect(actions.confirmation.status).toHaveBeenCalled());
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://campfire.test/session/new"));
     expect(screen.queryByRole("heading", { name: "Confirm it's you" })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("signed out meanwhile, a password goes on to sign in", async () => {
+    await sudo(true, connectRetry);
+    vi.spyOn(actions.confirmation, "confirmHere").mockResolvedValue({
+      kind: "signedOut",
+      location: "http://campfire.test/session/new",
+    });
+    await open();
+
+    await userEvent.type(await screen.findByLabelText("Password"), PASSWORD);
+    await userEvent.click(screen.getByRole("button", { name: "Confirm password" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://campfire.test/session/new"));
+  });
+
+  it("left while the confirmation is on its way, the answer acts on nothing", async () => {
+    await sudo(true, exportRetry);
+
+    let answer: (reply: SudoHere) => void = () => undefined;
+
+    vi.spyOn(actions.confirmation, "confirmHere").mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+
+    const pathname = await open();
+
+    await userEvent.type(await screen.findByLabelText("Password"), PASSWORD);
+    await userEvent.click(screen.getByRole("button", { name: "Confirm password" }));
+    await act(() => router.navigate({ to: "/" }));
+    expect(await screen.findByText("Page /")).toBeTruthy();
+
+    await act(async () => answer({ kind: "confirmed", retry: exportRetry }));
+
+    // No download, and no going back to the audit log.
+    expect(assign).not.toHaveBeenCalled();
+    expect(pathname()).toBe("/");
+    expect(toastTitles()).toEqual([]);
+  });
+
+  it("left while the first read is on its way, the answer acts on nothing", async () => {
+    await sudo(false, exportRetry);
+
+    let answer: (status: SudoStatus) => void = () => undefined;
+
+    vi.spyOn(actions.confirmation, "status").mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+
+    const pathname = await open();
+
+    await act(() => router.navigate({ to: "/" }));
+    expect(await screen.findByText("Page /")).toBeTruthy();
+
+    await act(async () => answer({ kind: "confirmed", retry: exportRetry, session: 1 }));
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(pathname()).toBe("/");
   });
 
   it("says when the server can't be asked, and tries again", async () => {

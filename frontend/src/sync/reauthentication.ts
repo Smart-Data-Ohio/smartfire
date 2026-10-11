@@ -546,17 +546,22 @@ export function makeConfirmationGate({
     },
 
     /**
-     * A full-page action needs a fresh confirmation the server says isn't there
-     * (`reauthentication`): waits on the dialog with the held writes, from the screen showing
-     * now. Succeeds once confirmed here; fails if cancelled, the screen is left, or the person
-     * leaves for Google (they do it again once back).
+     * A full-page action from screen `from` needs a fresh confirmation the server says isn't
+     * there (`reauthentication`): waits on the dialog with the held writes. Succeeds once
+     * confirmed here; fails if cancelled, `from` was or is left, or the person leaves for Google
+     * (they do it again once back).
      */
-    confirmNavigation: (reauthentication: SudoRequired["reauthentication"]) =>
-      wait(
-        null,
-        new SudoRequired({ message: "Confirm your password to continue", reauthentication }),
-        screen(),
-      ),
+    confirmNavigation: (reauthentication: SudoRequired["reauthentication"], from: string) =>
+      from === screen()
+        ? wait(
+            null,
+            new SudoRequired({ message: "Confirm your password to continue", reauthentication }),
+            from,
+          )
+        : leftScreen(),
+
+    /** The screen showing now: what a full-page action captures before it asks the server. */
+    here: (): string => screen(),
 
     /** A fresh id for a Google attempt. */
     newAttempt: (): string => newId(),
@@ -700,13 +705,16 @@ export type ConfirmationGate = ReturnType<typeof makeConfirmationGate>;
 /**
  * Before a full-page action the server confirms first (connecting Google, say): whether a fresh
  * confirmation is in place, asking for one in the dialog when it isn't. `"go"` once there is one;
- * `"stay"` when the person cancelled, or left to confirm with Google (they do it again once back);
- * `"unavailable"` with the reason when the server couldn't be asked, or signed out (`null`: the
- * client is already on its way to the sign-in page).
+ * `"stay"` when the person cancelled, left to confirm with Google (they do it again once back), or
+ * left the screen that asked before the answer came (nothing acts there for them);
+ * `"signedOut"` with where to sign in; `"unavailable"` with the reason the server couldn't be
+ * asked.
  */
 export const confirmFirst = Effect.fn("confirmation.confirmFirst")(function* (
   gate: ConfirmationGate,
 ): Effect.fn.Return<ConfirmFirst, never, ApiClient> {
+  const from = gate.here();
+
   // Only a look: what the server holds for another tab's Google return stays held.
   const reply = yield* readSudo().pipe(
     Effect.match({
@@ -715,18 +723,22 @@ export const confirmFirst = Effect.fn("confirmation.confirmFirst")(function* (
     }),
   );
 
+  if (gate.here() !== from) {
+    return { kind: "stay" } as const;
+  }
+
   switch (reply.kind) {
     case "confirmed":
       return { kind: "go" } as const;
     case "ready":
-      return yield* gate.confirmNavigation(reply.reauthentication).pipe(
+      return yield* gate.confirmNavigation(reply.reauthentication, from).pipe(
         Effect.match({
           onSuccess: () => ({ kind: "go" }) as const,
           onFailure: () => ({ kind: "stay" }) as const,
         }),
       );
     case "navigate":
-      return { kind: "unavailable", reason: null } as const;
+      return { kind: "signedOut", location: reply.location } as const;
     case "error":
       return { kind: "unavailable", reason: reply.message } as const;
   }
@@ -738,7 +750,8 @@ type SudoRetry = typeof SudoRetrySchema.Type;
 export type ConfirmFirst =
   | { readonly kind: "go" }
   | { readonly kind: "stay" }
-  | { readonly kind: "unavailable"; readonly reason: string | null };
+  | { readonly kind: "signedOut"; readonly location: string }
+  | { readonly kind: "unavailable"; readonly reason: string };
 
 /** What `/app/sudo/new` reads first: the server's answer, or why it couldn't be had. */
 export type SudoStatus =
@@ -757,8 +770,9 @@ const orUnreachable = <E extends { readonly message: string }, R>(
 
 /**
  * `/app/sudo/new`'s read: whether the confirmation is fresh (`confirmed`) or what it can be
- * confirmed with (`ready`), and what the server holds for after it. Only a look: nothing held is
- * let go (another tab's Google return may need it).
+ * confirmed with (`ready`), and what the server holds for after it; signed out, where to sign in
+ * (`navigate`, for the page to follow). Only a look: nothing held is let go (another tab's Google
+ * return may need it).
  */
 export const sudoStatus = Effect.fn("confirmation.status")(function* () {
   return yield* orUnreachable(readSudo());
@@ -770,14 +784,14 @@ export const sudoStatus = Effect.fn("confirmation.status")(function* () {
  * lapsed meanwhile.
  */
 export const takeHeld = Effect.fn("confirmation.takeHeld")(function* () {
-  return yield* orUnreachable(resumeSudo(null));
+  return yield* orUnreachable(resumeSudo(null, { ownsNavigation: true }));
 });
 
 /** What a credential sent from `/app/sudo/new` came to. */
 export type SudoHere =
   | { readonly kind: "confirmed"; readonly retry: SudoRetry | null }
   | { readonly kind: "refused"; readonly message: string }
-  | { readonly kind: "signedOut" };
+  | { readonly kind: "signedOut"; readonly location: string };
 
 /**
  * Confirms from `/app/sudo/new`, where no write waits in memory: the server's held request comes
@@ -788,7 +802,8 @@ export const confirmHere = Effect.fn("confirmation.confirmHere")(function* (
   gate: ConfirmationGate,
   submission: SudoSubmission,
 ) {
-  const reply = yield* submitSudo(submission);
+  // The page follows a sign-in hand-off itself, and only while it still shows.
+  const reply = yield* submitSudo(submission, { ownsNavigation: true });
 
   switch (reply.kind) {
     case "confirmed":
@@ -798,8 +813,8 @@ export const confirmHere = Effect.fn("confirmation.confirmHere")(function* (
     case "error":
       return { kind: "refused", message: reply.message } satisfies SudoHere;
     case "navigate":
-      // The session ended; the client is already on its way to sign in.
-      return { kind: "signedOut" } satisfies SudoHere;
+      // The session ended: where to sign in.
+      return { kind: "signedOut", location: reply.location } satisfies SudoHere;
     case "ready":
       return { kind: "refused", message: "Confirmation failed. Try again." } satisfies SudoHere;
   }

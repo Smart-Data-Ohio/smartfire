@@ -167,6 +167,8 @@ function harness(
     | "page" = browserLocks(),
 ) {
   const seen: Seen[] = [];
+  /** Where the client itself sent the page (a 401's sign-in hand-off). */
+  const assigned: string[] = [];
 
   const page: Page = {
     viewer: 7,
@@ -234,7 +236,10 @@ function harness(
           ApiConfig.layer("/api/v1"),
           Layer.succeed(Navigation, {
             location: Effect.succeed("/app/admin/styles"),
-            assign: () => Effect.void,
+            assign: (url) =>
+              Effect.sync(() => {
+                assigned.push(url);
+              }),
           }),
           tab.layer,
         ),
@@ -247,7 +252,7 @@ function harness(
     return { gate: tab, layer: layerOf(tab) };
   };
 
-  return { layer: layerOf(gate), seen, gate, page, duplicate };
+  return { layer: layerOf(gate), seen, assigned, gate, page, duplicate };
 }
 
 const anyJson = (json: Schema.Json) => Effect.succeed(json);
@@ -1721,6 +1726,58 @@ describe("a full-page action checked first", () => {
     }).pipe(Effect.provide(layer));
   });
 
+  it.live("signed out, says where to sign in, whether the server answers 200 or 401", () => {
+    let status = 200;
+
+    const { layer, gate, assigned } = googleHarness({
+      respond: (entry) =>
+        entry.path === "/api/v1/sudo"
+          ? { status, body: { kind: "navigate", location: "http://campfire.test/session/new" } }
+          : null,
+    });
+
+    return Effect.gen(function* () {
+      for (const answered of [200, 401]) {
+        status = answered;
+        expect(yield* confirmFirst(gate)).toEqual({
+          kind: "signedOut",
+          location: "http://campfire.test/session/new",
+        });
+      }
+
+      // The caller follows it, from the screen it was asked on; the client never does.
+      expect(assigned).toEqual([]);
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("does nothing when the screen that asked was left before the answer came", () => {
+    let answer = Deferred.makeUnsafe<void>();
+
+    const { layer, gate, page, server } = googleHarness({
+      hold: (entry) => (entry.path === "/api/v1/sudo" ? Deferred.await(answer) : Effect.void),
+    });
+
+    return Effect.gen(function* () {
+      for (const fresh of [true, false]) {
+        answer = Deferred.makeUnsafe<void>();
+        server.fresh = fresh;
+        page.screen = "/app/settings/integrations";
+
+        const check = yield* Effect.forkChild(confirmFirst(gate));
+
+        yield* Effect.sleep(5);
+        page.screen = "/app/r/1";
+        gate.screenChanged();
+        yield* Deferred.succeed(answer, undefined);
+
+        // Neither goes (fresh) nor opens the dialog on the room (not fresh).
+        expect(yield* Fiber.join(check)).toEqual({ kind: "stay" });
+        expect(gate.snapshot()).toBeNull();
+      }
+    }).pipe(Effect.provide(layer));
+  });
+
   it.live("says why when the server can't be asked", () => {
     const { layer, gate } = googleHarness({
       respond: (entry) => (entry.path === "/api/v1/sudo" ? down : null),
@@ -1821,6 +1878,32 @@ describe("/app/sudo/new", () => {
       expect(server.pending).toBeNull();
       expect(yield* sudoStatus()).toMatchObject({ kind: "confirmed", retry: null });
       expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("signed out, hands the page where to sign in, without the client leaving", () => {
+    const { layer, gate, assigned } = googleHarness({
+      respond: (entry) =>
+        entry.path.startsWith("/api/v1/sudo")
+          ? {
+              status: entry.method === "GET" ? 200 : 401,
+              body: { kind: "navigate", location: "http://campfire.test/session/new" },
+            }
+          : null,
+    });
+
+    return Effect.gen(function* () {
+      expect(yield* sudoStatus()).toEqual({
+        kind: "navigate",
+        location: "http://campfire.test/session/new",
+      });
+      expect(yield* takeHeld()).toMatchObject({ kind: "navigate" });
+      expect(yield* confirmHere(gate, { kind: "password", password: "right" })).toEqual({
+        kind: "signedOut",
+        location: "http://campfire.test/session/new",
+      });
+      // The page follows it while it still shows; the client never goes on its own.
+      expect(assigned).toEqual([]);
     }).pipe(Effect.provide(layer));
   });
 

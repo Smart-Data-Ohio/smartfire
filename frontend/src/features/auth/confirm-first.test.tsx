@@ -204,6 +204,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  // As if back from the page it left for: the controls go again.
+  window.dispatchEvent(new Event("pageshow"));
   confirmationGate.cancel();
   cleanup();
   mutations.reset();
@@ -268,6 +270,55 @@ describe("confirming before a full-page action", () => {
 
     expect(screen.queryByRole("dialog", { name: "Confirm it's you" })).toBeNull();
     expect(left).toEqual([]);
+  });
+
+  it("goes only once for clicks after it left, while the confirmation is fresh", async () => {
+    await callers[0].show();
+
+    const button = await callers[0].control();
+
+    await userEvent.click(button);
+    await waitFor(() => expect(left).toEqual([callers[0].target]));
+
+    // The page is on its way to Google: a second click doesn't send the form again.
+    await userEvent.click(button);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(left).toEqual([callers[0].target]);
+
+    // Back from the back-forward cache, it goes again.
+    window.dispatchEvent(new Event("pageshow"));
+    await userEvent.click(button);
+    await waitFor(() => expect(left).toEqual([callers[0].target, callers[0].target]));
+  });
+
+  it("a download lets the link go again after a moment, not at once", async () => {
+    await callers[4].show();
+
+    const link = await callers[4].control();
+
+    await userEvent.click(link);
+    await waitFor(() => expect(left).toEqual([callers[4].target]));
+    await userEvent.click(link);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(left).toEqual([callers[4].target]);
+
+    // The page stayed: after the moment, it saves again.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 1000)));
+    await userEvent.click(link);
+    await waitFor(() => expect(left).toEqual([callers[4].target, callers[4].target]));
+  });
+
+  it("signed out meanwhile, goes on to sign in instead", async () => {
+    vi.spyOn(actions.confirmation, "confirmFirst").mockResolvedValue({
+      kind: "signedOut",
+      location: "http://campfire.test/session/new",
+    });
+    await callers[0].show();
+    await userEvent.click(await callers[0].control());
+
+    await waitFor(() => expect(left).toEqual(["GET http://campfire.test/session/new"]));
+    expect(toastSnapshot()).toEqual([]);
+    expect(screen.queryByRole("dialog", { name: "Confirm it's you" })).toBeNull();
   });
 
   it("goes only once for a double click", async () => {
