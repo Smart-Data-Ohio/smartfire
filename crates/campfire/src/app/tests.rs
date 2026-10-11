@@ -196,7 +196,7 @@ async fn unknown_routes_and_room_settings_alias() {
     // The settings alias redirects by room type now (#365), not the 500 of the missing controller.
     let settings = send(&test.booted.router, get("/rooms/1/settings")).await;
     assert_eq!(settings.status, StatusCode::FOUND);
-    assert_eq!(settings.header("location"), Some("http://campfire.test/session/new"));
+    assert_eq!(settings.header("location"), Some("http://campfire.test/app/session/new"));
 }
 
 /// An action behind `ApplicationController`'s chain that answers with `Current.user`.
@@ -245,7 +245,7 @@ async fn a_rails_issued_session_cookie_authenticates() {
         };
         let anonymous = send(&router, request).await;
         assert_eq!(anonymous.status, StatusCode::FOUND, "{cookie:?}");
-        assert_eq!(anonymous.header("location"), Some("http://campfire.test/session/new"));
+        assert_eq!(anonymous.header("location"), Some("http://campfire.test/app/session/new"));
     }
 }
 
@@ -285,6 +285,19 @@ async fn the_application_chain_blocks_banned_ips_forgeries_and_old_browsers() {
         let blocked = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
         assert_eq!((blocked.status, blocked.header("content-type")), (StatusCode::OK, Some("text/html; charset=utf-8")), "{path} {accept}");
     }
+    // A self-contained page: no script, its one style carries the request's nonce, and it lists
+    // the supported browsers with their minimum versions.
+    let request = Request::get("/session/new").header(header::HOST, "campfire.test").header(header::USER_AGENT, outdated);
+    let blocked = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
+    let page = blocked.text();
+    assert!(!page.contains("<script"), "{page}");
+    let nonce = regex::Regex::new(r#"<style nonce="([^"]+)">"#).unwrap().captures(&page).expect("a nonce'd style")[1].to_string();
+    assert!(blocked.header("content-security-policy").is_some_and(|policy| policy.contains(&format!("'nonce-{nonce}'"))), "{:?}", blocked.header("content-security-policy"));
+    assert!(page.contains("<title>Unsupported browser</title>") && page.contains("Upgrade to a supported web browser"), "{page}");
+    for (browser, name, version) in [("safari", "Safari", "17.2"), ("chrome", "Chrome", "120"), ("firefox", "Firefox", "121"), ("opera", "Opera", "104")] {
+        assert!(page.contains(&format!("/browsers/{browser}")) && page.contains(name) && page.contains(&format!("{version}+")), "{browser}: {page}");
+    }
+    assert!(!page.contains("unsupported"), "no retained unsupported.js: {page}");
     // In a Live controller (`include ActiveStorage::Streaming`) Rack::ETag can't digest the body.
     let request = Request::get("/account/logo").header(header::HOST, "campfire.test").header(header::USER_AGENT, outdated);
     let blocked = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;

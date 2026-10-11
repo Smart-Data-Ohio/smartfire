@@ -520,8 +520,8 @@ impl Live {
     }
 
     async fn csrf(&mut self, app: &TestApp) -> std::result::Result<String, String> {
-        // Auth remains server-rendered through the cutover. Read the issued session token,
-        // following same-origin redirects if necessary; no classic profile HTML is required.
+        // The sign-in page is the SPA's: its shell issues the session token. Start from the
+        // historic URL and follow its same-origin redirect; no classic HTML is required.
         let mut path = "/session/new".to_string();
         for _ in 0..6 {
             if let Some(token) = self

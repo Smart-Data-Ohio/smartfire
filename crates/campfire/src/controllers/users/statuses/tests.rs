@@ -1,4 +1,4 @@
-use crate::controllers::presenters::test_support::{DAVID, Req, TestApp};
+use crate::controllers::presenters::test_support::{DAVID, Req, TestApp, spa_auth_location};
 use axum::http::{Method, StatusCode};
 use campfire_db::{Timestamp, UserStatusSettings};
 use rusqlite::types::Value as SqlValue;
@@ -118,7 +118,11 @@ async fn replay(names: &[&str]) {
             "{name}: {}",
             reply.text()
         );
-        assert_eq!(reply.location(), row["location"].as_str(), "{name}");
+        assert_eq!(
+            reply.location().map(str::to_owned),
+            row["location"].as_str().map(spa_auth_location),
+            "{name}"
+        );
         let current = settings(&app).await;
         let stored = json!({"presence_setting":current.presence_setting,"custom_status_emoji":current.custom_status_emoji,"custom_status_text":current.custom_status_text,"meeting_status_enabled":current.meeting_status_enabled,"ooo_calendar_enabled":current.ooo_calendar_enabled,"ooo_note":current.ooo_note,"ooo_broadcast":current.ooo_broadcast});
         for (key, value) in stored.as_object().unwrap() {

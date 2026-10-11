@@ -17,7 +17,7 @@ use tower::ServiceExt;
 
 use campfire_app::config::Config;
 use crate::server::*;
-use crate::controllers::presenters::test_support::masked_session_token;
+use crate::controllers::presenters::test_support::{masked_session_token, spa_auth_location};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const PASSWORD: &str = "secret123456";
@@ -169,12 +169,21 @@ fn compared(headers: impl Fn(&str) -> Option<String>) -> Vec<(String, Option<Str
     COMPARED.iter().map(|name| (name.to_string(), headers(name).map(|value| masked(name, &value)))).collect()
 }
 
+/// The SPA's sign-in call, as `POST /api/v1/session` takes it.
+fn sign_in_json(email_address: &str, password: &str) -> Body {
+    Body::from(json!({ "emailAddress": email_address, "password": password }).to_string())
+}
+
 async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<&str>, token: Option<&str>) -> Reply {
-    let method = vector["method"].as_str().unwrap();
-    // The vector's classic base.css is retired; retained assets keep its header contract.
-    let path = match name {
-        "asset" | "asset_head" => campfire_static_assets::stylesheet_path("auth"),
-        _ => vector["path"].as_str().unwrap().to_string(),
+    // The vector's classic base.css is retired; retained assets keep its header contract. The
+    // retained first-run and sign-in pages now redirect to the SPA's, which render each page
+    // class, and sign-in attempts (forged or refused) go to the SPA's JSON call.
+    let (method, path) = match name {
+        "asset" | "asset_head" => (vector["method"].as_str().unwrap(), campfire_static_assets::stylesheet_path("auth")),
+        "html_page" => ("GET", "/app/first_run".to_string()),
+        "sign_in_page" | "sign_in_page_with_session" => ("GET", "/app/session/new".to_string()),
+        "forgery" | "unauthorized_render" => ("POST", "/api/v1/session".to_string()),
+        _ => (vector["method"].as_str().unwrap(), vector["path"].as_str().unwrap().to_string()),
     };
     let env = &vector["env"];
     let mut builder = request(method, &path);
@@ -193,12 +202,11 @@ async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<
             Body::from(input.to_string())
         }
         ("forgery" | "unauthorized_render", None) => {
-            builder = builder.header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
-            let mut pairs = vec![("email_address", "david@example.com"), ("password", "wrong")];
+            builder = builder.header(header::CONTENT_TYPE, "application/json").header(header::ACCEPT, "application/json");
             if name == "unauthorized_render" {
-                pairs.push(("authenticity_token", token.unwrap()));
+                builder = builder.header(campfire_kit::csrf::HEADER, token.unwrap());
             }
-            form(&pairs)
+            sign_in_json("david@example.com", "wrong")
         }
         _ => Body::empty(),
     };
@@ -214,9 +222,14 @@ async fn assert_headers_match(ssl: bool) {
         let vector = &section[name];
         // PWA extraction keeps the recorded security policy; stable worker updates and
         // personalized manifests now have explicit revalidation policies.
+        // The retained first-run page's redirect now names the SPA's. The SPA's pages and its
+        // sign-in call carry the session's authenticity token, so no cache keeps them.
+        let spa = matches!(name, "html_page" | "sign_in_page" | "sign_in_page_with_session" | "unauthorized_render");
         let expected = compared(|header| match (header, vector["path"].as_str()) {
             ("cache-control", Some("/service-worker.js")) => Some("no-cache, no-transform".into()),
             ("cache-control", Some("/webmanifest.json")) => Some("private, no-cache".into()),
+            ("cache-control", _) if spa => Some("no-store".into()),
+            ("location", _) => vector["headers"][header].as_str().map(spa_auth_location),
             _ => vector["headers"][header].as_str().map(str::to_string),
         });
         let actual = compared(|header| reply.headers.get(header).map(|value| value.to_str().unwrap().to_string()));
@@ -237,7 +250,7 @@ async fn assert_headers_match(ssl: bool) {
     }
 
     app.seed().await;
-    let page = app.send(request("GET", "/session/new").body(Body::empty()).unwrap()).await;
+    let page = app.send(request("GET", "/app/session/new").body(Body::empty()).unwrap()).await;
     let session_cookie = Fresh::session_cookie(&page).expect("the sign-in page starts a session");
     let token = masked_session_token(&app.booted.app.secrets, &session_cookie).unwrap();
     for name in ["sign_in_page", "sign_in_page_with_session", "json_head", "forgery", "unauthorized_render"] {
@@ -245,6 +258,18 @@ async fn assert_headers_match(ssl: bool) {
         check(name, &reply);
     }
     assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+
+    // The retained sign-in page and form post only send people to the SPA's page.
+    let page = app.send(request("GET", "/session/new").body(Body::empty()).unwrap()).await;
+    let scheme = if ssl { "https" } else { "http" };
+    assert_eq!((page.status, page.header("location")), (StatusCode::FOUND, Some(format!("{scheme}://campfire.test/app/session/new").as_str())));
+    let post = request("POST", "/session")
+        .header(header::COOKIE, format!("_campfire_session={session_cookie}"))
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .body(form(&[("email_address", "david@example.com"), ("password", "wrong"), ("authenticity_token", &token)]))
+        .unwrap();
+    let post = app.send(post).await;
+    assert_eq!((post.status, post.header("location")), (StatusCode::SEE_OTHER, Some(format!("{scheme}://campfire.test/app/session/new").as_str())));
 }
 
 #[tokio::test]
@@ -265,38 +290,51 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
     let expected = &vectors["rate_limit"];
     let app = boot_fresh(false).await;
     app.seed().await;
-    let page = app.send(request("GET", "/session/new").body(Body::empty()).unwrap()).await;
+    let page = app.send(request("GET", "/app/session/new").body(Body::empty()).unwrap()).await;
     let cookie = Fresh::session_cookie(&page).unwrap();
     let token = masked_session_token(&app.booted.app.secrets, &cookie).unwrap();
-    let attempt = |ip: &'static str, token: Option<&str>| {
-        let mut pairs = vec![("email_address", "david@example.com"), ("password", "wrong")];
-        if let Some(token) = token {
-            pairs.push(("authenticity_token", token));
-        }
-        request("POST", "/session")
+    let attempt = |ip: &'static str, token: &str| {
+        request("POST", "/api/v1/session")
             .header("x-forwarded-for", ip)
             .header(header::COOKIE, format!("_campfire_session={cookie}"))
-            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .body(form(&pairs))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::ACCEPT, "application/json")
+            .header(campfire_kit::csrf::HEADER, token)
+            .body(sign_in_json("david@example.com", "wrong"))
             .unwrap()
     };
 
     // Forgery protection runs before the limit, so forged attempts don't use it up.
     for _ in 0..3 {
-        assert_eq!(app.send(attempt("10.3.0.1", Some("forged"))).await.status.as_u16(), expected["forged_status"].as_u64().unwrap() as u16);
+        assert_eq!(app.send(attempt("10.3.0.1", "forged")).await.status.as_u16(), expected["forged_status"].as_u64().unwrap() as u16);
+    }
+    // Nor does the retained form post, which only sends people to the SPA's sign-in page.
+    for _ in 0..3 {
+        let post = request("POST", "/session")
+            .header("x-forwarded-for", "10.3.0.1")
+            .header(header::COOKIE, format!("_campfire_session={cookie}"))
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(form(&[("email_address", "david@example.com"), ("password", "wrong"), ("authenticity_token", &token)]))
+            .unwrap();
+        assert_eq!(app.send(post).await.status, StatusCode::SEE_OTHER);
     }
     let mut statuses = Vec::new();
     let mut last = None;
     for _ in 0..expected["statuses"].as_array().unwrap().len() {
-        let reply = app.send(attempt("10.3.0.1", Some(&token))).await;
+        let reply = app.send(attempt("10.3.0.1", &token)).await;
         statuses.push(json!(reply.status.as_u16()));
         last = Some(reply);
     }
     assert_eq!(Value::Array(statuses), expected["statuses"]);
+    // Rails rendered the sign-in form again with its alert; the SPA's call answers with the
+    // alert as the form's error.
     let limited = last.unwrap();
-    assert_eq!(limited.header("content-type"), expected["limited"]["content_type"].as_str());
-    assert!(limited.text().contains("<form"), "the sign-in form again: {}", limited.text());
-    assert_eq!(app.send(attempt("10.3.0.2", Some(&token))).await.status.as_u16(), expected["other_ip_status"].as_u64().unwrap() as u16);
+    assert_eq!(limited.header("content-type"), Some("application/json; charset=utf-8"));
+    assert_eq!(
+        serde_json::from_slice::<Value>(&limited.body).unwrap(),
+        json!({ "kind": "error", "fieldErrors": { "base": ["Too many requests or unauthorized."] } })
+    );
+    assert_eq!(app.send(attempt("10.3.0.2", &token)).await.status.as_u16(), expected["other_ip_status"].as_u64().unwrap() as u16);
 }
 
 /// `start_new_session_for`: the browser's signed `device_id` cookie is stored on its session,
@@ -305,16 +343,19 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
 async fn a_sign_in_records_the_browser_device_on_its_session() {
     let app = boot_fresh(false).await;
     let david = app.seed().await;
-    let page = app.send(request("GET", "/session/new").body(Body::empty()).unwrap()).await;
+    let page = app.send(request("GET", "/app/session/new").body(Body::empty()).unwrap()).await;
     let cookie = Fresh::session_cookie(&page).unwrap();
     let token = masked_session_token(&app.booted.app.secrets, &cookie).unwrap();
-    let sign_in = request("POST", "/session")
+    let sign_in = request("POST", "/api/v1/session")
         .header(header::COOKIE, format!("_campfire_session={cookie}"))
-        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .body(form(&[("email_address", "david@example.com"), ("password", "secret123456"), ("authenticity_token", &token)]))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::ACCEPT, "application/json")
+        .header(campfire_kit::csrf::HEADER, &token)
+        .body(sign_in_json("david@example.com", PASSWORD))
         .unwrap();
     let reply = app.send(sign_in).await;
-    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(serde_json::from_slice::<Value>(&reply.body).unwrap()["kind"], "signedIn", "{}", reply.text());
 
     let set_cookie = |name: &str| {
         reply.set_cookies().iter().find_map(|c| c.split(';').next()?.strip_prefix(&format!("{name}=")).map(str::to_string)).unwrap()
@@ -475,9 +516,11 @@ fn start_front_server(
     })
 }
 
-/// The multipart closing boundary is not the HTTP body's end. A delayed epilogue must be
-/// counted before sessions#create can insert a session, on either listener.
-async fn delayed_multipart_sign_in_is_bounded(target: bool) {
+/// The end of the sign-in's JSON is not the HTTP body's end. A delayed epilogue must be counted
+/// before sessions#create can insert a session, on either listener. (The retained form post this
+/// once sent as multipart now redirects unread, so the SPA's JSON call carries the credentials;
+/// JSON allows trailing whitespace as multipart allows an epilogue.)
+async fn delayed_sign_in_body_is_bounded(target: bool) {
     use campfire_kit::front::FrontConfig;
     use crate::test_support::{LISTENER_BINDING, bind_listener_locked, wait};
     use futures_util::Stream;
@@ -499,13 +542,13 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
     });
     let (stop, stopped) = tokio::sync::oneshot::channel();
     // Observe actual request-body consumption. A sent TCP write alone does not mean that
-    // the multipart parser has reached its closing boundary on a loaded server.
+    // the body reader has reached the end of the JSON on a loaded server.
     let (body_read, mut body_reads) = tokio::sync::mpsc::unbounded_channel();
     let observed = app.booted.router.clone().layer(axum::middleware::from_fn(
         move |request: Request<Body>, next: axum::middleware::Next| {
             let body_read = body_read.clone();
             async move {
-                let request = if request.method() == "POST" && request.uri().path() == "/session" {
+                let request = if request.method() == "POST" && request.uri().path() == "/api/v1/session" {
                     let (parts, body) = request.into_parts();
                     let mut body = body.into_data_stream();
                     let (mut read, mut reported) = (0, 0);
@@ -514,8 +557,8 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
                         if let std::task::Poll::Ready(Some(Ok(bytes))) = &polled {
                             read += bytes.len();
                         } else if polled.is_pending() && read > reported {
-                            // The parser has consumed these bytes and asked for more. Reporting
-                            // on Pending also catches a parser that stops at the MIME boundary.
+                            // The reader has consumed these bytes and asked for more. Reporting
+                            // on Pending also catches a reader that stops at the closing brace.
                             let _ = body_read.send(read - reported);
                             reported = read;
                         }
@@ -556,18 +599,13 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
         Reply { status, headers, body: raw[split + 4..].to_vec() }
     }
     let mut stream = wait("front test TCP connection", TcpStream::connect(("127.0.0.1", port))).await.unwrap();
-    stream.write_all(b"GET /session/new HTTP/1.1\r\nHost: campfire.test\r\nConnection: close\r\n\r\n").await.unwrap();
+    stream.write_all(b"GET /app/session/new HTTP/1.1\r\nHost: campfire.test\r\nConnection: close\r\n\r\n").await.unwrap();
     let page = read_reply(&mut stream).await;
     assert_eq!(page.status, StatusCode::OK);
     let cookies = page.set_cookies().iter().map(|c| c.split(';').next().unwrap()).collect::<Vec<_>>().join("; ");
-    let html = page.text();
-    let token = html.split("<meta name=\"csrf-token\" content=\"").nth(1).unwrap().split('"').next().unwrap();
-    let fields = [("email_address", "david@example.com"), ("password", PASSWORD), ("authenticity_token", token)];
-    let prefix = fields
-        .iter()
-        .map(|(key, value)| format!("--B\r\nContent-Disposition: form-data; name=\"{key}\"\r\n\r\n{value}\r\n"))
-        .collect::<String>()
-        + "--B--\r\n";
+    let session_cookie = Fresh::session_cookie(&page).expect("the sign-in page starts a session");
+    let token = masked_session_token(&app.booted.app.secrets, &session_cookie).unwrap();
+    let prefix = json!({ "emailAddress": "david@example.com", "password": PASSWORD }).to_string();
     assert!(prefix.len() < 4096);
     let sessions = || {
         app.booted
@@ -578,26 +616,26 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
     let before = sessions().await.unwrap();
     let mut stream = wait("front test TCP connection", TcpStream::connect(("127.0.0.1", port))).await.unwrap();
     let head = format!(
-        "POST /session HTTP/1.1\r\nHost: campfire.test\r\nContent-Type: multipart/form-data; boundary=B\r\nCookie: {cookies}\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
+        "POST /api/v1/session HTTP/1.1\r\nHost: campfire.test\r\nContent-Type: application/json\r\nAccept: application/json\r\nX-CSRF-Token: {token}\r\nCookie: {cookies}\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
     );
     stream.write_all(head.as_bytes()).await.unwrap();
     stream.write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes()).await.unwrap();
-    wait("multipart parser to consume the prefix and wait for the HTTP epilogue", async {
+    wait("body reader to consume the JSON and wait for the HTTP epilogue", async {
         let mut read = 0;
         while read < prefix.len() {
             read += body_reads.recv().await.expect("request body observer is still open");
         }
     }).await;
     let early_sessions = sessions().await.unwrap() - before;
-    let epilogue = vec![b'x'; 64 * 1024];
+    let epilogue = vec![b' '; 64 * 1024];
     let suffix = [format!("{:x}\r\n", epilogue.len()).as_bytes(), &epilogue, b"\r\n0\r\n\r\n"].concat();
-    // A broken implementation may already have replied and closed after the MIME boundary.
+    // A broken implementation may already have replied and closed after the closing brace.
     let _ = stream.write_all(&suffix).await;
     let reply = read_reply(&mut stream).await;
     let added = sessions().await.unwrap() - before;
     let cookie = reply.set_cookies().iter().any(|c| c.starts_with("session_token="));
     eprintln!(
-        "delayed multipart: target={target} body_bytes={} limit=4096 status={} early_sessions={early_sessions} added_sessions={added} session_cookie={cookie}",
+        "delayed sign-in body: target={target} body_bytes={} limit=4096 status={} early_sessions={early_sessions} added_sessions={added} session_cookie={cookie}",
         prefix.len() + epilogue.len(),
         reply.status.as_u16()
     );
@@ -605,8 +643,10 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
     // The identical credentials/token with an in-limit epilogue must still create a session.
     let mut control = wait("front test TCP connection", TcpStream::connect(("127.0.0.1", port))).await.unwrap();
     control.write_all(head.as_bytes()).await.unwrap();
-    control.write_all(format!("{:x}\r\n{prefix}\r\n1\r\nx\r\n0\r\n\r\n", prefix.len()).as_bytes()).await.unwrap();
-    assert_eq!(read_reply(&mut control).await.status, StatusCode::FOUND, "valid sign-in control");
+    control.write_all(format!("{:x}\r\n{prefix}\r\n1\r\n \r\n0\r\n\r\n", prefix.len()).as_bytes()).await.unwrap();
+    let signed_in = read_reply(&mut control).await;
+    assert_eq!(signed_in.status, StatusCode::OK, "valid sign-in control: {}", signed_in.text());
+    assert!(signed_in.text().contains(r#""kind":"signedIn""#), "valid sign-in control: {}", signed_in.text());
     assert_eq!(sessions().await.unwrap() - before, added + 1);
     let _ = stop.send(());
     wait("front test server shutdown", server).await.unwrap().unwrap();
@@ -614,13 +654,13 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
 }
 
 #[tokio::test]
-async fn delayed_multipart_sign_in_is_bounded_on_front() {
-    delayed_multipart_sign_in_is_bounded(false).await;
+async fn delayed_sign_in_body_is_bounded_on_front() {
+    delayed_sign_in_body_is_bounded(false).await;
 }
 
 #[tokio::test]
-async fn delayed_multipart_sign_in_is_bounded_on_target() {
-    delayed_multipart_sign_in_is_bounded(true).await;
+async fn delayed_sign_in_body_is_bounded_on_target() {
+    delayed_sign_in_body_is_bounded(true).await;
 }
 
 /// A competing socket must not be able to claim a reserved port while the server task is
@@ -695,7 +735,7 @@ async fn idle_administrator_sessions_expire_when_restored() {
         .unwrap();
 
     let expired = app.send(request("GET", "/users/me/profile").header(header::COOKIE, app.session_token_cookie(&stale)).body(Body::empty()).unwrap()).await;
-    assert_eq!((expired.status, expired.header("location")), (StatusCode::FOUND, Some("http://campfire.test/session/new")));
+    assert_eq!((expired.status, expired.header("location")), (StatusCode::FOUND, Some("http://campfire.test/app/session/new")));
     assert!(expired.set_cookies().iter().any(|cookie| cookie.starts_with("session_token=;")), "{:?}", expired.set_cookies());
     let token = stale.token.clone();
     assert!(app.booted.app.db.read(move |conn| Session::find_by_token(conn, &token)).await.unwrap().is_none(), "destroyed");
@@ -720,9 +760,9 @@ async fn a_pending_second_factor_goes_back_to_its_challenge() {
     };
 
     let waiting = app.send(request("GET", "/users/me/profile").header(header::COOKIE, pending(300)).body(Body::empty()).unwrap()).await;
-    assert_eq!(waiting.header("location"), Some("http://campfire.test/two_factor_challenge"));
+    assert_eq!(waiting.header("location"), Some("http://campfire.test/app/two_factor/challenge"));
     let lapsed = app.send(request("GET", "/users/me/profile").header(header::COOKIE, pending(-1)).body(Body::empty()).unwrap()).await;
-    assert_eq!(lapsed.header("location"), Some("http://campfire.test/session/new"));
+    assert_eq!(lapsed.header("location"), Some("http://campfire.test/app/session/new"));
 }
 
 #[tokio::test]
@@ -730,7 +770,7 @@ async fn page_navigations_bounce_back_after_sign_in() {
     let app = boot_fresh(false).await;
     app.seed().await;
     let page = app.send(request("GET", "/users/me/profile?tab=1").header(header::ACCEPT, "text/html").body(Body::empty()).unwrap()).await;
-    assert_eq!(page.header("location"), Some("http://campfire.test/session/new"));
+    assert_eq!(page.header("location"), Some("http://campfire.test/app/session/new"));
     let session = app.session(&Fresh::session_cookie(&page).unwrap());
     assert_eq!(session["return_to_after_authenticating"], "http://campfire.test/users/me/profile?tab=1");
 
@@ -786,7 +826,7 @@ async fn sudo_mode_stashes_the_request_until_confirmed() {
     };
 
     let prompt = send(request("GET", "/danger?x=1").header(header::REFERER, "http://campfire.test/rooms/1").body(Body::empty()).unwrap()).await;
-    assert_eq!(prompt.header("location"), Some("http://campfire.test/sudo/new"));
+    assert_eq!(prompt.header("location"), Some("http://campfire.test/app/sudo/new"));
     let cookie = Fresh::session_cookie(&prompt).unwrap();
     let stashed = app.session(&cookie);
     assert_eq!(stashed["sudo_pending_request"], json!({ "method": "GET", "path": "/danger?x=1", "params": null, "origin": "/rooms/1", "session_id": null }));

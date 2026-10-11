@@ -32,36 +32,50 @@ async fn setup(a: &TestApp) -> (i64, String) {
         .unwrap()
 }
 
+/// The SPA's setup API; the retained `/two_factor_setup` page now only redirects to its screen.
+const API: &str = "/api/v1/two_factor/setup";
+fn submit(code: &str) -> Req {
+    Req::new(Method::POST, API).json_body(&serde_json::json!({"code": code}))
+}
+fn show() -> Req {
+    Req::new(Method::GET, API).header("accept", "application/json")
+}
+
 #[tokio::test]
 async fn enrollment_reuses_live_secret_and_renders_private_qr() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    let first = b.get("/two_factor_setup").await;
+    // The retained page sends a navigation to the SPA's screen, query and all.
+    assert_eq!(
+        b.get("/two_factor_setup?return_to=%2F").await.location(),
+        Some("http://campfire.test/app/two_factor/setup?return_to=%2F")
+    );
+    let first = b.send(show()).await;
     assert_eq!(first.status, StatusCode::OK);
     assert_eq!(first.header("cache-control"), Some("no-store"));
     let (_, secret) = setup(&a).await;
-    assert!(
-        first.text().contains(
-            &secret
-                .as_bytes()
-                .chunks(4)
-                .map(|v| std::str::from_utf8(v).unwrap())
-                .collect::<Vec<_>>()
-                .join(" ")
-        )
+    let state = first.json();
+    assert_eq!(state["kind"], "ready");
+    assert_eq!(
+        state["setup"]["manualKey"],
+        secret
+            .as_bytes()
+            .chunks(4)
+            .map(|v| std::str::from_utf8(v).unwrap())
+            .collect::<Vec<_>>()
+            .join(" ")
     );
-    assert!(first.text().contains("<svg"));
+    assert!(state["setup"]["qrSvg"].as_str().unwrap().contains("<svg"));
     assert!(
         !first.text().contains("/qr_code/"),
         "the secret must not travel in an image URL"
     );
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(b.send(show()).await.status, StatusCode::OK);
     assert_eq!(setup(&a).await.1, secret);
-    let bad = b
-        .write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", "invalid")]))
-        .await;
+    let bad = b.write(submit("invalid")).await;
     assert_eq!(bad.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(bad.json()["setup"], state["setup"]);
     assert_eq!(setup(&a).await.1, secret);
     assert!(
         !a.db()
@@ -77,16 +91,14 @@ async fn enrollment_is_bound_to_current_session_and_never_accepts_expired_secret
     unenroll(&a).await;
     let mut one = a.sign_in(DAVID).await;
     let mut two = a.sign_in(DAVID).await;
-    assert_eq!(one.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(one.send(show()).await.status, StatusCode::OK);
     let (_, first) = setup(&a).await;
-    assert_eq!(two.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(two.send(show()).await.status, StatusCode::OK);
     let (id, second) = setup(&a).await;
     assert_ne!(first, second);
     let code = totp::at(&first, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        two.write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-            .await
-            .status,
+        two.write(submit(&code)).await.status,
         StatusCode::UNPROCESSABLE_ENTITY
     );
     assert_eq!(setup(&a).await.1, second);
@@ -102,9 +114,7 @@ async fn enrollment_is_bound_to_current_session_and_never_accepts_expired_secret
         .await
         .unwrap();
     assert_eq!(
-        two.write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-            .await
-            .status,
+        two.write(submit(&code)).await.status,
         StatusCode::UNPROCESSABLE_ENTITY
     );
     assert_ne!(setup(&a).await.1, second);
@@ -121,17 +131,13 @@ async fn enrollment_confirms_spends_step_signs_out_others_and_shows_backup_codes
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.anonymous();
-    assert_eq!(b.get("/session/new").await.status, StatusCode::OK);
     assert_eq!(
-        b.write(Req::new(Method::POST, "/session").form(&[
-            ("email_address", "david@37signals.com"),
-            ("password", "secret123456")
-        ]))
-        .await
-        .location(),
-        Some("http://campfire.test/app/")
+        b.password_sign_in("david@37signals.com", "secret123456")
+            .await
+            .json(),
+        serde_json::json!({"kind":"signedIn","location":"http://campfire.test/app/"})
     );
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(b.send(show()).await.status, StatusCode::OK);
     let (id, secret) = setup(&a).await;
     assert!(
         !a.db()
@@ -139,19 +145,20 @@ async fn enrollment_confirms_spends_step_signs_out_others_and_shows_backup_codes
             .await
             .unwrap()
     );
+    let others = a
+        .db()
+        .read(|c| Ok(Session::for_user(c, DAVID)?.len() - 1))
+        .await
+        .unwrap();
+    assert!(others > 0, "the seed signs David in elsewhere");
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
-    let result = b
-        .write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-        .await;
-    assert_eq!(result.status, StatusCode::OK);
+    let result = b.write(submit(&code)).await;
+    assert_eq!(result.status, StatusCode::OK, "{}", result.text());
     assert_eq!(result.header("cache-control"), Some("no-store"));
-    assert!(result.text().contains("Signed out your other devices"));
-    assert!(result.text().contains("smartfire-backup-codes.txt"));
-    let codes = regex::Regex::new(r#"<li><code>([^<]+)</code></li>"#)
-        .unwrap()
-        .captures_iter(&result.text())
-        .map(|c| c[1].to_string())
-        .collect::<Vec<_>>();
+    let shown = result.json();
+    assert_eq!(shown["kind"], "recoveryCodes");
+    assert_eq!(shown["signedOut"], others);
+    let codes: Vec<String> = serde_json::from_value(shown["codes"].clone()).unwrap();
     assert_eq!(codes.len(), 10);
     let enc = ArEncryption::new(&a.booted.app.secrets);
     a.db().read(move |c| {
@@ -166,6 +173,14 @@ async fn enrollment_confirms_spends_step_signs_out_others_and_shows_backup_codes
         assert_eq!(c.query_row("SELECT count(*) FROM two_factor_backup_codes WHERE two_factor_credential_id=? AND used_at IS NULL", [credential.id], |r| r.get::<_,i64>(0))?, 10);
         Ok(())
     }).await.unwrap();
+    // Once enrolled, neither the setup state nor a replayed code shows the codes again.
+    for reply in [b.send(show()).await, b.write(submit(&code)).await] {
+        assert_eq!(
+            reply.json(),
+            serde_json::json!({"kind":"navigate","location":"http://campfire.test/users/me/profile"})
+        );
+        assert!(!reply.text().contains(&codes[0]));
+    }
     assert_eq!(
         b.get("/two_factor_setup").await.location(),
         Some("http://campfire.test/users/me/profile")
@@ -178,17 +193,28 @@ async fn enrollment_requires_authentication_and_real_csrf() {
     let mut anon = a.anonymous();
     assert_eq!(
         anon.get("/two_factor_setup").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
+    );
+    assert_eq!(
+        anon.send(show()).await.json(),
+        serde_json::json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
     );
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(b.send(show()).await.status, StatusCode::OK);
     let code = totp::at(&setup(&a).await.1, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.send(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-            .await
-            .status,
+        b.send(submit(&code)).await.status,
         StatusCode::UNPROCESSABLE_ENTITY
+    );
+    // A form post to the retained page goes to the security settings without reading the code.
+    let retained = b
+        .write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        retained.location(),
+        Some("http://campfire.test/app/settings/security")
     );
     assert!(
         !a.db()
@@ -331,21 +357,20 @@ async fn enrollment_limits_attempts_without_confirming_or_auditing() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(b.send(show()).await.status, StatusCode::OK);
     for _ in 0..10 {
         assert_eq!(
-            b.write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", "invalid")]))
-                .await
-                .status,
+            b.write(submit("invalid")).await.status,
             StatusCode::UNPROCESSABLE_ENTITY
         );
     }
     let code = totp::at(&setup(&a).await.1, a.booted.app.clock.now().as_second()).unwrap();
-    let result = b
-        .write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-        .await;
+    let result = b.write(submit(&code)).await;
     assert_eq!(result.status, StatusCode::TOO_MANY_REQUESTS);
-    assert!(result.text().contains("Too many attempts."));
+    assert_eq!(
+        result.json()["message"],
+        "Too many attempts. Try again in a few minutes."
+    );
     assert!(
         !a.db()
             .read(|c| User::find(c, DAVID)?.two_factor_enabled(c))
@@ -370,22 +395,16 @@ async fn enrollment_user_limit_follows_the_account_across_ips() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(b.send(show()).await.status, StatusCode::OK);
     for n in 1..=10 {
-        let req = Req::new(Method::POST, "/two_factor_setup")
-            .header("x-forwarded-for", &format!("198.18.0.{n}"))
-            .form(&[("code", "invalid")]);
+        let req = submit("invalid").header("x-forwarded-for", &format!("198.18.0.{n}"));
         assert_eq!(b.write(req).await.status, StatusCode::UNPROCESSABLE_ENTITY);
     }
     let code = totp::at(&setup(&a).await.1, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.write(
-            Req::new(Method::POST, "/two_factor_setup")
-                .header("x-forwarded-for", "198.51.100.7")
-                .form(&[("code", &code)])
-        )
-        .await
-        .status,
+        b.write(submit(&code).header("x-forwarded-for", "198.51.100.7"))
+            .await
+            .status,
         StatusCode::TOO_MANY_REQUESTS
     );
     assert!(
@@ -401,14 +420,12 @@ async fn enrollment_keeps_confirmed_state_if_the_audit_cannot_be_saved() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_eq!(b.send(show()).await.status, StatusCode::OK);
     let (id, secret) = setup(&a).await;
     a.db().write(|tx| { tx.conn().execute_batch("CREATE TRIGGER refuse_enable_audit BEFORE INSERT ON audit_logs WHEN NEW.action='two_factor.enable' BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END")?; Ok(()) }).await.unwrap();
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-            .await
-            .status,
+        b.write(submit(&code)).await.status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
     a.db()

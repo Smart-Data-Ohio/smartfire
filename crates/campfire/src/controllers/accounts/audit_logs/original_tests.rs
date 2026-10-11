@@ -184,16 +184,16 @@ async fn run(name: &'static str) {
     };
     let csv = matches!(name, "csv" | "formula" | "request_formula");
     if csv {
-        let sudo = browser
-            .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-            .await;
-        assert_eq!(sudo.status, StatusCode::FOUND);
+        let sudo = browser.confirm_sudo("secret123456").await;
+        assert_eq!(sudo.status, StatusCode::OK);
     }
     for step in case["responses"].as_array().unwrap() {
         let reply = browser.send(Req::new(Method::GET, step["path"].as_str().unwrap()).header("x-requested-with", "XMLHttpRequest")).await;
+        let mut expected = step["response"].clone();
+        spa_auth_locations(&mut expected);
         assert_eq!(
             observation(&reply, name),
-            step["response"],
+            expected,
             "{name}: {}",
             step["path"]
         );

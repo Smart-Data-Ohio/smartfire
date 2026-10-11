@@ -146,6 +146,34 @@ async fn callback(
     ))
     .await
 }
+/// Starts Google confirmation as the SPA's sudo page does (`POST /api/v1/sudo/google`): the
+/// retained page's form post (`POST /sudo/google`) now goes to that page without starting one.
+async fn start_sudo(b: &mut Browser<'_>) -> std::collections::BTreeMap<String, String> {
+    let reply = b
+        .write(Req::new(Method::POST, "/api/v1/sudo/google").header("accept", "application/json"))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.json()["kind"], "navigate");
+    url::Url::parse(reply.json()["location"].as_str().unwrap())
+        .unwrap()
+        .query_pairs()
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect()
+}
+/// The notice or alert the SPA's sign-in page shows, from its inline signed-out boot (the
+/// retained sign-in page rendered it in its HTML).
+async fn sign_in_flash(b: &mut Browser<'_>) -> String {
+    sign_in_boot(b).await["flash"]["message"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned()
+}
+/// The SPA sign-in page's inline signed-out boot.
+async fn sign_in_boot(b: &mut Browser<'_>) -> Value {
+    let page = b.get("/app/session/new").await;
+    assert_eq!(page.status, StatusCode::OK, "{}", page.text());
+    crate::controllers::spa::signed_out_contracts_tests::inline_boot(&page)
+}
 async fn actions(a: &TestApp) -> Vec<String> {
     a.db()
         .read(|c| {
@@ -269,45 +297,33 @@ async fn sudo_contract_google_round_trip_resumes_json_once_with_identical_audit(
                 json!(["password", "totp", "google"])
             );
         }
-        let q = if json_mode {
-            let reply = b
-                .write(
-                    Req::new(Method::POST, "/api/v1/sudo/google")
-                        .header("accept", "application/json"),
-                )
-                .await;
-            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-            assert_eq!(reply.json()["kind"], "navigate");
-            url::Url::parse(reply.json()["location"].as_str().unwrap())
-                .unwrap()
-                .query_pairs()
-                .map(|(k, v)| (k.into_owned(), v.into_owned()))
-                .collect()
-        } else {
-            start(&mut b, "/sudo/google").await
-        };
+        if !json_mode {
+            // SPA cutover: the retained sudo page's Google form now goes to the SPA's sudo page
+            // without starting a flow, and that page confirms the held form post as below.
+            let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
+            assert_eq!(retained.status, StatusCode::SEE_OTHER);
+            assert_eq!(retained.location(), Some("http://campfire.test/app/sudo/new"));
+            assert!(r.calls.lock().unwrap().is_empty());
+        }
+        let q = start_sudo(&mut b).await;
         assert_eq!(q["prompt"], "login");
         assert_eq!(q["max_age"], "0");
         answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
         let reply = callback(&mut b, &q["state"]).await;
-        if json_mode {
-            assert_eq!(
-                reply.location(),
-                Some("http://campfire.test/app/sudo/continue")
-            );
-            let resumed = b.get("/api/v1/sudo/continue").await;
-            assert_eq!(resumed.status, StatusCode::OK, "{}", resumed.text());
-            assert_eq!(
-                without_session(resumed.json()),
-                json!({"kind":"confirmed","retry":{"method":"POST","path":path,"returnTo":"/app/admin"}})
-            );
-            assert_eq!(
-                without_session(b.get("/api/v1/sudo/continue").await.json()),
-                json!({"kind":"confirmed","retry":null})
-            );
-        } else {
-            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-        }
+        assert_eq!(
+            reply.location(),
+            Some("http://campfire.test/app/sudo/continue")
+        );
+        let resumed = b.get("/api/v1/sudo/continue").await;
+        assert_eq!(resumed.status, StatusCode::OK, "{}", resumed.text());
+        assert_eq!(
+            without_session(resumed.json()),
+            json!({"kind":"confirmed","retry":{"method":"POST","path":path,"returnTo":"/app/admin"}})
+        );
+        assert_eq!(
+            without_session(b.get("/api/v1/sudo/continue").await.json()),
+            json!({"kind":"confirmed","retry":null})
+        );
         let cookies = b.cookie_header();
         let raw = cookies
             .split("; ")
@@ -362,17 +378,9 @@ async fn sudo_contract_google_refusals_keep_pending_write_and_never_mark_confirm
                 gate = gate.header("accept", "application/json");
             }
             b.write(gate).await;
-            let q = if json_mode {
-                let reply = b.write(Req::new(Method::POST, "/api/v1/sudo/google")).await;
-                assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-                url::Url::parse(reply.json()["location"].as_str().unwrap())
-                    .unwrap()
-                    .query_pairs()
-                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
-                    .collect()
-            } else {
-                start(&mut b, "/sudo/google").await
-            };
+            // SPA cutover: a held form post is confirmed from the SPA's sudo page too, so both
+            // modes start Google there and come back to its continuation.
+            let q = start_sudo(&mut b).await;
             let mut v = claims(
                 &a,
                 &q,
@@ -409,32 +417,18 @@ async fn sudo_contract_google_refusals_keep_pending_write_and_never_mark_confirm
             };
             assert_eq!(
                 reply.location(),
-                Some(if json_mode {
-                    "http://campfire.test/app/sudo/continue"
-                } else if refusal == "expired" {
-                    "http://campfire.test/"
-                } else {
-                    "http://campfire.test/sudo/new"
-                }),
+                Some("http://campfire.test/app/sudo/continue"),
                 "{refusal}: {}",
                 reply.text()
             );
             let message = match refusal {
                 "cancelled" => "Google confirmation was cancelled.",
-                "expired" => {
-                    if json_mode {
-                        "Confirmation expired. Try again."
-                    } else {
-                        ""
-                    }
-                }
+                "expired" => "Confirmation expired. Try again.",
                 "subject" => "That Google account is not the one linked to your account.",
                 "unavailable" => "Google is unavailable right now. Try again.",
                 _ => "Google confirmation failed. Try again.",
             };
-            if !message.is_empty() {
-                assert_eq!(b.flash()["alert"], message);
-            }
+            assert_eq!(b.flash()["alert"], message);
             use campfire_kit::Crypto;
             let cookies = b.cookie_header();
             let raw = cookies
@@ -456,18 +450,16 @@ async fn sudo_contract_google_refusals_keep_pending_write_and_never_mark_confirm
                     .is_none(),
                 "flow consumed"
             );
-            if json_mode {
-                assert_eq!(
-                    b.get("/api/v1/sudo/continue").await.status,
-                    StatusCode::FORBIDDEN
-                );
-            }
+            assert_eq!(
+                b.get("/api/v1/sudo/continue").await.status,
+                StatusCode::FORBIDDEN
+            );
         }
         assert_eq!(actions(&a).await, vec!["sudo.confirm.failure"]);
     }
 }
 #[tokio::test]
-async fn sudo_contract_api_gate_keeps_retained_google_continuation() {
+async fn sudo_contract_api_gate_google_continuation_goes_through_the_spa() {
     let (a, r) = app().await;
     a.db().write(|tx| {
         tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
@@ -484,7 +476,12 @@ async fn sudo_contract_api_gate_keeps_retained_google_continuation() {
             .status,
             StatusCode::FORBIDDEN
         );
-        let q = start(&mut b, "/sudo/google").await;
+        // SPA cutover: the retained sudo page's Google form goes to the SPA's sudo page without
+        // starting a flow; the SPA starts it, and the callback returns to its continuation.
+        let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
+        assert_eq!(retained.status, StatusCode::SEE_OTHER);
+        assert_eq!(retained.location(), Some("http://campfire.test/app/sudo/new"));
+        let q = start_sudo(&mut b).await;
         answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
         let reply = if cancelled {
             b.get(&format!(
@@ -497,91 +494,86 @@ async fn sudo_contract_api_gate_keeps_retained_google_continuation() {
         };
         assert_eq!(
             reply.location(),
-            Some(if cancelled {
-                "http://campfire.test/sudo/new"
-            } else {
-                "http://campfire.test/app/admin"
-            })
+            Some("http://campfire.test/app/sudo/continue")
         );
+        let resumed = b.get("/api/v1/sudo/continue").await;
+        if cancelled {
+            assert_eq!(b.flash()["alert"], "Google confirmation was cancelled.");
+            assert_eq!(resumed.status, StatusCode::FORBIDDEN);
+        } else {
+            assert_eq!(
+                without_session(resumed.json()),
+                json!({"kind":"confirmed","retry":{"method":"POST","path":"/api/v1/admin/workspace/join_code","returnTo":"/app/admin"}})
+            );
+        }
     }
 }
 
 #[tokio::test]
 async fn sudo_contract_google_callback_rejects_changed_or_signed_out_user() {
-    for json_mode in [false, true] {
-        for signed_out in [false, true] {
-            let (a, r) = app().await;
-            a.db().write(|tx| {
-                tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
-                Ok(())
-            }).await.unwrap();
-            let mut b = a.sign_in(DAVID).await;
-            b.write(Req::new(Method::POST, "/api/v1/admin/workspace/join_code"))
-                .await;
-            let q = if json_mode {
-                let reply = b.write(Req::new(Method::POST, "/api/v1/sudo/google")).await;
-                url::Url::parse(reply.json()["location"].as_str().unwrap())
-                    .unwrap()
-                    .query_pairs()
-                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
-                    .collect()
-            } else {
-                start(&mut b, "/sudo/google").await
-            };
-            if signed_out {
-                a.db()
-                    .write(|tx| {
-                        tx.conn()
-                            .execute("DELETE FROM sessions WHERE user_id=?", [DAVID])?;
-                        Ok(())
-                    })
-                    .await
-                    .unwrap();
-            } else {
-                b.absorb_cookie_header(&a.sign_in(JASON).await.cookie_header());
-            }
-            answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
-            let reply = callback(&mut b, &q["state"]).await;
-            assert_eq!(
-                reply.location(),
-                Some(if signed_out {
-                    "http://campfire.test/session/new"
-                } else if json_mode {
-                    "http://campfire.test/app/sudo/continue"
-                } else {
-                    "http://campfire.test/users/me/profile"
+    // SPA cutover: only the SPA's sudo page starts Google confirmation now, so there is no
+    // retained-page mode to repeat this in.
+    for signed_out in [false, true] {
+        let (a, r) = app().await;
+        a.db().write(|tx| {
+            tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        let mut b = a.sign_in(DAVID).await;
+        b.write(Req::new(Method::POST, "/api/v1/admin/workspace/join_code"))
+            .await;
+        let q = start_sudo(&mut b).await;
+        if signed_out {
+            a.db()
+                .write(|tx| {
+                    tx.conn()
+                        .execute("DELETE FROM sessions WHERE user_id=?", [DAVID])?;
+                    Ok(())
                 })
-            );
-            assert_eq!(b.flash()["alert"], "Confirmation expired. Try again.");
-            use campfire_kit::Crypto;
-            let cookies = b.cookie_header();
-            let raw = cookies
-                .split("; ")
-                .find_map(|p| p.strip_prefix("_campfire_session="))
+                .await
                 .unwrap();
-            let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
-                .decrypt_cookie(
-                    "_campfire_session",
-                    &rails_compat::cookies::unescape(raw),
-                    a.booted.app.clock.now(),
-                )
-                .unwrap();
-            assert!(session.get("sudo_verified_at").is_none());
-            assert!(
-                session
-                    .get(crate::integrations::google::sign_in::FLOW_SESSION_KEY)
-                    .is_none()
-            );
-            assert!(r.calls.lock().unwrap().is_empty());
-            assert!(actions(&a).await.is_empty());
+        } else {
+            b.absorb_cookie_header(&a.sign_in(JASON).await.cookie_header());
         }
+        answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+        let reply = callback(&mut b, &q["state"]).await;
+        assert_eq!(
+            reply.location(),
+            Some(if signed_out {
+                "http://campfire.test/app/session/new"
+            } else {
+                "http://campfire.test/app/sudo/continue"
+            })
+        );
+        assert_eq!(b.flash()["alert"], "Confirmation expired. Try again.");
+        use campfire_kit::Crypto;
+        let cookies = b.cookie_header();
+        let raw = cookies
+            .split("; ")
+            .find_map(|p| p.strip_prefix("_campfire_session="))
+            .unwrap();
+        let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
+            .decrypt_cookie(
+                "_campfire_session",
+                &rails_compat::cookies::unescape(raw),
+                a.booted.app.clock.now(),
+            )
+            .unwrap();
+        assert!(session.get("sudo_verified_at").is_none());
+        assert!(
+            session
+                .get(crate::integrations::google::sign_in::FLOW_SESSION_KEY)
+                .is_none()
+        );
+        assert!(r.calls.lock().unwrap().is_empty());
+        assert!(actions(&a).await.is_empty());
     }
 }
 #[tokio::test]
 async fn provisions_then_subject_signs_in_without_repeating_link_audit() {
     let (a, r) = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let before = sessions(&a).await;
     let q = start(&mut b, "/session/google").await;
     assert_eq!(q["scope"], "openid email profile");
@@ -597,7 +589,7 @@ async fn provisions_then_subject_signs_in_without_repeating_link_audit() {
         vec!["user.create", "session.sign_in.success"]
     );
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     answer(&r, claims(&a, &q, "alice", "new@smartdata.net"));
     callback(&mut b, &q["state"]).await;
@@ -622,11 +614,11 @@ async fn provisions_then_subject_signs_in_without_repeating_link_audit() {
 async fn security_wrong_state_consumes_flow_without_google_or_failure_audit() {
     let (a, r) = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     assert_eq!(
         callback(&mut b, "forged").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     answer(&r, claims(&a, &q, "alice", "alice@smartdata.net"));
     callback(&mut b, &q["state"]).await;
@@ -643,7 +635,7 @@ async fn security_signed_tokens_with_bad_nonce_audience_domain_or_expiry_never_c
         ("exp", json!(1)),
     ] {
         let mut b = a.anonymous();
-        b.get("/session/new").await;
+        b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
         let before = sessions(&a).await;
         let mut v = claims(&a, &q, "alice", "alice@smartdata.net");
@@ -651,7 +643,7 @@ async fn security_signed_tokens_with_bad_nonce_audience_domain_or_expiry_never_c
         answer(&r, v);
         assert_eq!(
             callback(&mut b, &q["state"]).await.location(),
-            Some("http://campfire.test/session/new")
+            Some("http://campfire.test/app/session/new")
         );
         assert_eq!(sessions(&a).await, before);
     }
@@ -671,9 +663,14 @@ async fn link_owns_flow_and_sudo_and_reauth_require_fresh_matching_subject() {
     assert_eq!(actions(&a).await, vec!["google.sign_in.link"]);
     for (path, action) in [
         ("/two_factor_reauthentication", "two_factor.reauthenticate"),
-        ("/sudo/google", "sudo.confirm.success"),
+        ("/api/v1/sudo/google", "sudo.confirm.success"),
     ] {
-        let q = start(&mut b, path).await;
+        // SPA cutover: sudo's Google confirmation starts from the SPA's sudo page.
+        let q = if path == "/api/v1/sudo/google" {
+            start_sudo(&mut b).await
+        } else {
+            start(&mut b, path).await
+        };
         assert_eq!(q["prompt"], "login");
         assert_eq!(q["max_age"], "0");
         let mut v = claims(&a, &q, "david", "different@smartdata.net");
@@ -681,16 +678,24 @@ async fn link_owns_flow_and_sudo_and_reauth_require_fresh_matching_subject() {
         answer(&r, v);
         callback(&mut b, &q["state"]).await;
         assert!(!actions(&a).await.iter().any(|s| s == action));
-        let q = start(&mut b, path).await;
+        let q = if path == "/api/v1/sudo/google" {
+            start_sudo(&mut b).await
+        } else {
+            start(&mut b, path).await
+        };
         answer(&r, claims(&a, &q, "david", "different@smartdata.net"));
         callback(&mut b, &q["state"]).await;
         assert!(actions(&a).await.iter().any(|s| s == action));
     }
-    let q = start(&mut b, "/sudo/google").await;
+    let q = start_sudo(&mut b).await;
     answer(&r, claims(&a, &q, "other", "other@smartdata.net"));
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/continue")
+    );
+    assert_eq!(
+        b.flash()["alert"],
+        "That Google account is not the one linked to your account."
     );
     assert_eq!(actions(&a).await.last().unwrap(), "sudo.confirm.failure");
     let mut b = a.sign_in(JASON).await;
@@ -704,7 +709,7 @@ async fn link_owns_flow_and_sudo_and_reauth_require_fresh_matching_subject() {
 async fn session_insert_failure_rolls_back_provision_identity_and_audits() {
     let (a, r) = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     a.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_google_session BEFORE INSERT ON sessions BEGIN SELECT RAISE(ABORT,'fixture rollback'); END;")?;Ok(())}).await.unwrap();
     answer(&r, claims(&a, &q, "rollback", "rollback@smartdata.net"));
@@ -778,17 +783,28 @@ async fn enrolled_google_sign_in_is_pending_until_second_factor_and_remembered_d
         .await
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     let before = sessions(&a).await;
     answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
+        Some("http://campfire.test/app/two_factor/challenge")
     );
     assert_eq!(sessions(&a).await, before);
     assert!(actions(&a).await.is_empty());
-    assert_eq!(b.get("/two_factor_challenge").await.status, StatusCode::OK);
+    // SPA cutover: the retained challenge page is the SPA's, which reads the pending challenge.
+    assert_eq!(
+        b.get("/two_factor_challenge").await.location(),
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    assert_eq!(b.get("/app/two_factor/challenge").await.status, StatusCode::OK);
+    assert_eq!(
+        b.send(Req::new(Method::GET, "/api/v1/two_factor/challenge").header("accept", "application/json"))
+            .await
+            .status,
+        StatusCode::OK
+    );
     let token = a
         .db()
         .write(|tx| {
@@ -807,7 +823,7 @@ async fn enrolled_google_sign_in_is_pending_until_second_factor_and_remembered_d
         "two_factor_remember={}",
         campfire_kit::cookies::escape(&signed)
     ));
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
     assert_eq!(
@@ -876,17 +892,16 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
         r.clone(),
     ));
     let mut b = a.anonymous();
-    let html = b.get("/session/new").await.text();
-    for text in [
-        "Sign in with Google",
-        "#EA4335",
-        "@smartdata.net and @cnbssoftware.com",
-        "Other email addresses can sign in with email and password.",
-        "name=\"email_address\"",
-        "name=\"password\"",
-    ] {
-        assert!(html.contains(text), "{text}");
-    }
+    // SPA cutover: the sign-in page is the SPA's. Its signed-out boot names Google and the
+    // domains the retained page listed, beside the password form.
+    assert_eq!(
+        b.get("/session/new").await.location(),
+        Some("http://campfire.test/app/session/new")
+    );
+    assert_eq!(
+        sign_in_boot(&mut b).await["signInMethods"],
+        json!({"password":true,"google":true,"googleDomains":["smartdata.net","cnbssoftware.com"]})
+    );
     // Each app-scoped config installation models Rails' current env for that request.
     for mode in 0..2 {
         let mut cfg = config(&[]);
@@ -899,9 +914,10 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
             .google
             .install(SignIn::with_client(cfg, r.clone()));
         let mut b = a.anonymous();
-        let html = b.get("/session/new").await.text();
-        assert!(!html.contains("Sign in with Google"));
-        assert!(html.contains("name=\"password\""));
+        assert_eq!(
+            sign_in_boot(&mut b).await["signInMethods"],
+            json!({"password":true,"google":false,"googleDomains":[]})
+        );
         assert_eq!(
             b.write(Req::new(Method::POST, "/session/google"))
                 .await
@@ -912,14 +928,12 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
             callback(&mut b, "unused").await.status,
             StatusCode::NOT_FOUND
         );
+        let signed_in = b.password_sign_in("david@37signals.com", "secret123456").await;
         assert_eq!(
-            b.write(Req::new(Method::POST, "/session").form(&[
-                ("email_address", "david@37signals.com"),
-                ("password", "secret123456")
-            ]))
-            .await
-            .location(),
-            Some("http://campfire.test/app/")
+            signed_in.json(),
+            json!({"kind":"signedIn","location":"http://campfire.test/app/"}),
+            "{}",
+            signed_in.text()
         );
     }
     assert!(r.calls.lock().unwrap().is_empty());
@@ -928,7 +942,7 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
 async fn google_sessions_csrf_pkce_and_signed_in_guards_match_rails() {
     let (a, r) = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     assert_eq!(
         b.send(Req::new(Method::POST, "/session/google"))
             .await
@@ -978,16 +992,16 @@ async fn google_sessions_first_run_cannot_be_bypassed() {
         .await
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     assert_eq!(
         b.write(Req::new(Method::POST, "/session/google"))
             .await
             .location(),
-        Some("http://campfire.test/first_run")
+        Some("http://campfire.test/app/first_run")
     );
     assert_eq!(
         callback(&mut b, "unused").await.location(),
-        Some("http://campfire.test/first_run")
+        Some("http://campfire.test/app/first_run")
     );
     assert!(r.calls.lock().unwrap().is_empty());
 }
@@ -1012,14 +1026,14 @@ async fn google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attem
     let before = counts(&a).await;
     for (key, value) in cases {
         let mut b = a.anonymous();
-        b.get("/session/new").await;
+        b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
         let mut c = claims(&a, &q, "member", "member@smartdata.net");
         c[key] = value;
         answer(&r, c);
         assert_eq!(
             callback(&mut b, &q["state"]).await.location(),
-            Some("http://campfire.test/session/new"),
+            Some("http://campfire.test/app/session/new"),
             "{key}"
         );
         assert_eq!(counts(&a).await, before, "{key}");
@@ -1056,7 +1070,7 @@ async fn google_sessions_denied_missing_token_and_transport_outages_have_exact_n
         ),
     ] {
         let mut b = a.anonymous();
-        b.get("/session/new").await;
+        b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
         if keys {
             answer(&r, claims(&a, &q, "outage", "outage@smartdata.net"));
@@ -1066,9 +1080,9 @@ async fn google_sessions_denied_missing_token_and_transport_outages_have_exact_n
         }
         assert_eq!(
             callback(&mut b, &q["state"]).await.location(),
-            Some("http://campfire.test/session/new")
+            Some("http://campfire.test/app/session/new")
         );
-        assert!(b.get("/session/new").await.text().contains(message));
+        assert_eq!(sign_in_flash(&mut b).await, message);
         assert_eq!(counts(&a).await, before);
     }
     let body = r.calls.lock().unwrap()[0].2.clone();
@@ -1083,7 +1097,7 @@ async fn google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_co
     let before = counts(&a).await;
     for cancel in [true, false] {
         let mut b = a.anonymous();
-        b.get("/session/new").await;
+        b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
         let path = format!(
             "/session/google/callback?state={}{}",
@@ -1092,21 +1106,21 @@ async fn google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_co
         );
         assert_eq!(
             b.get(&path).await.location(),
-            Some("http://campfire.test/session/new")
+            Some("http://campfire.test/app/session/new")
         );
-        assert!(b.get("/session/new").await.text().contains(if cancel {
+        assert!(sign_in_flash(&mut b).await.starts_with(if cancel {
             "Google sign-in was cancelled."
         } else {
             "Google sign-in failed."
         }));
     }
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let old = start(&mut b, "/session/google").await;
     start(&mut b, "/session/google").await;
     assert_eq!(
         callback(&mut b, &old["state"]).await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     let q = start(&mut b, "/session/google").await;
     use campfire_kit::Crypto;
@@ -1136,13 +1150,12 @@ async fn google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_co
     ));
     assert_eq!(
         callback(&mut b, &q["state"]).await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     assert!(
-        b.get("/session/new")
+        sign_in_flash(&mut b)
             .await
-            .text()
-            .contains("Google sign-in expired.")
+            .starts_with("Google sign-in expired.")
     );
     assert_eq!(counts(&a).await, before);
     assert!(r.calls.lock().unwrap().is_empty());
@@ -1163,9 +1176,9 @@ async fn google_sessions_secondary_domains_multi_audience_and_return_path_provis
     );
     assert_eq!(
         b.get(&path).await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     let mut c = claims(&a, &q, "secondary", "secondary@cnbssoftware.com");
     c["aud"] = json!(["test-client-id", "other"]);
@@ -1198,12 +1211,9 @@ async fn google_sessions_secondary_domains_multi_audience_and_return_path_provis
     );
     b.write(Req::new(Method::DELETE, "/session")).await;
     assert_eq!(
-        b.write(Req::new(Method::POST, "/session").form(&[
-            ("email_address", "secondary@cnbssoftware.com"),
-            ("password", "anything")
-        ]))
-        .await
-        .status,
+        b.password_sign_in("secondary@cnbssoftware.com", "anything")
+            .await
+            .status,
         StatusCode::UNAUTHORIZED
     );
 }
@@ -1234,7 +1244,7 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
         }).await.unwrap();
         let before = counts(&a).await;
         let mut b = a.anonymous();
-        b.get("/session/new").await;
+        b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
         answer(
             &r,
@@ -1251,11 +1261,11 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
         );
         assert_eq!(
             callback(&mut b, &q["state"]).await.location(),
-            Some("http://campfire.test/session/new"),
+            Some("http://campfire.test/app/session/new"),
             "{kind}"
         );
         assert_eq!(counts(&a).await, before, "{kind}");
-        let notices = b.get("/session/new").await.text();
+        let notices = sign_in_flash(&mut b).await;
         assert!(
             notices.contains(match kind {
                 "deactivated" | "retained" | "banned" => "This account is no longer active.",
@@ -1274,7 +1284,7 @@ async fn google_sessions_malformed_signature_algorithm_and_unknown_key_fail_clos
     let before = counts(&a).await;
     for kind in ["malformed", "signature", "algorithm", "unknown-key"] {
         let mut b = a.anonymous();
-        b.get("/session/new").await;
+        b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
         let good = token(claims(&a, &q, "forged", "forged@smartdata.net"));
         let mut parts = good.split('.').map(str::to_owned).collect::<Vec<_>>();
@@ -1307,7 +1317,7 @@ async fn google_sessions_malformed_signature_algorithm_and_unknown_key_fail_clos
             Ok((200, serde_json::to_vec(&json!({"id_token":bad})).unwrap()));
         assert_eq!(
             callback(&mut b, &q["state"]).await.location(),
-            Some("http://campfire.test/session/new"),
+            Some("http://campfire.test/app/session/new"),
             "{kind}"
         );
         assert_eq!(counts(&a).await, before);
@@ -1353,7 +1363,7 @@ async fn google_sessions_rejection_log_names_reason_without_token_or_authorizati
     let _other_dispatch = tracing::Dispatch::new(tracing::subscriber::NoSubscriber::default());
     let (a, r) = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     let signed = token(claims(&a, &q, "log", "log@evil.test"));
     *r.response.lock().unwrap() = Ok((
@@ -1366,7 +1376,7 @@ async fn google_sessions_rejection_log_names_reason_without_token_or_authorizati
     );
     assert_eq!(
         b.get(&path).await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     let output = String::from_utf8(log.lock().unwrap().clone()).unwrap();
     assert!(
@@ -1550,15 +1560,21 @@ async fn sudo_attempt_expires_after_ten_minutes() {
 }
 
 #[tokio::test]
-async fn sudo_attempt_retained_and_unnamed_google_flows_are_unchanged() {
+async fn sudo_attempt_retained_form_and_unnamed_google_flows_record_no_attempt() {
     let (a, r, _) = linked_app().await;
     let mut b = a.sign_in(DAVID).await;
-    // The retained page's Google start takes no attempt and ends where it always did.
     b.write(Req::new(Method::POST, "/account/join_code").header("referer", "http://campfire.test/app/admin")).await;
-    let q = start(&mut b, "/sudo/google").await;
-    answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
-    let reply = callback(&mut b, &q["state"]).await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    // SPA cutover: the retained page's Google form goes to the SPA's sudo page and starts nothing.
+    let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(retained.location(), Some("http://campfire.test/app/sudo/new"));
+    // A Google start that names no attempt ends at the plain continuation.
+    let q = start_sudo(&mut b).await;
+    finish(&a, &r, &mut b, &q).await;
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        json!({"kind":"confirmed","retry":{"method":"POST","path":"/account/join_code","returnTo":"/app/admin"}})
+    );
     assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
     let cookies = b.cookie_header();
     assert!(!cookies.is_empty());

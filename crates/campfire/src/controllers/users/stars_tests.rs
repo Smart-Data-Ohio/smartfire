@@ -212,6 +212,6 @@ async fn ws12_stars_html_redirects_and_inactive_targets_match_rails() {
             .write(Req::new(Method::POST, &path(KEVIN)))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }

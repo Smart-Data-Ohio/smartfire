@@ -11,8 +11,8 @@ use rails_compat::{ar_encryption::ArEncryption, totp};
 use serde_json::{Value, json};
 
 use super::admin_tests::{
-    PASSWORD, app, assert_parity_with_app, audits, dump, error, get, json_body, parse, settle,
-    write,
+    Outcome, PASSWORD, app, assert_parity_with_app, audits, dump, error, get, json_body, parse,
+    settle, write,
 };
 use crate::controllers::presenters::{
     accounts,
@@ -162,17 +162,6 @@ fn confirmation<'a>(case: &str, context: &'a Value) -> &'a str {
     }
 }
 
-fn classic_codes(reply: &Reply) -> Vec<String> {
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(reply.header("cache-control"), Some("no-store"));
-    assert_eq!(reply.header("pragma"), Some("no-cache"));
-    regex::Regex::new(r#"<li><code>([^<]+)</code></li>"#)
-        .unwrap()
-        .captures_iter(&reply.text())
-        .map(|capture| capture[1].to_owned())
-        .collect()
-}
-
 async fn check_codes(a: &TestApp, codes: &[String], old: &Value) {
     assert_eq!(codes.len(), 10);
     assert_eq!(
@@ -219,13 +208,40 @@ async fn check_codes(a: &TestApp, codes: &[String], old: &Value) {
     }
 }
 
-fn classic_alert(b: &Browser<'_>, reply: &Reply, alert: &str) {
-    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+/// The retained profile's two-step forms now go, unread, to the SPA's security settings: the
+/// write is never made, whatever it carried.
+async fn assert_retained_redirects(b: &mut Browser<'_>, request: Req) {
+    let before = dump(b.app()).await;
+    let reply = b.write(request).await;
     assert_eq!(
-        reply.location(),
-        Some("http://campfire.test/users/me/profile")
+        (reply.status, reply.location()),
+        (StatusCode::SEE_OTHER, Some("http://campfire.test/app/settings/security")),
+        "{}",
+        reply.text()
     );
-    assert_eq!(b.flash(), json!({"alert": alert}));
+    assert_eq!(dump(b.app()).await, before, "the retained form changes nothing");
+}
+
+/// Signs David in (with sudo) on a fresh app, runs `prepare` (its answer goes to `exercise`),
+/// then records what `exercise` leaves behind: the JSON settings carry these writes alone now.
+async fn api_outcome<P, F>(prepare: P, exercise: F) -> Option<Outcome>
+where
+    P: AsyncFnOnce(&TestApp, &mut Browser<'_>) -> Value,
+    F: AsyncFnOnce(&mut Browser<'_>, Value),
+{
+    let a = stopped_app().await?;
+    let mut b = a.sign_in(DAVID).await;
+    b.grant_sudo().await;
+    let context = prepare(&a, &mut b).await;
+    let before = dump(&a).await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    exercise(&mut b, context).await;
+    let frames = settle(&capture).await;
+    Some(Outcome {
+        before,
+        rows: dump(&a).await,
+        frames,
+    })
 }
 
 fn api_alert(reply: &Reply, tag: &str, status: StatusCode, message: &str) {
@@ -235,7 +251,7 @@ fn api_alert(reply: &Reply, tag: &str, status: StatusCode, message: &str) {
         match tag {
             "Validation" => json!({"_tag": tag, "message": message, "fields": {}}),
             "RateLimited" => json!({"_tag": tag, "message": message, "retryAfter": 0}),
-            "TwoFactorRequired" => json!({"_tag": tag, "message": message, "requirement":{"kind":"setup","location":"http://campfire.test/two_factor_setup"}}),
+            "TwoFactorRequired" => json!({"_tag": tag, "message": message, "requirement":{"kind":"setup","location":"http://campfire.test/app/two_factor/setup"}}),
             _ => json!({"_tag": tag, "message": message}),
         }
     );
@@ -275,62 +291,16 @@ async fn backup_codes_match_accepted_refused_not_enabled_rate_and_google_branche
         } else {
             REFUSED
         };
-        let Some(outcome) = assert_parity_with_app(
-            stopped_app,
+        let Some(outcome) = api_outcome(
             async |a, b| {
                 let context = prepare(a, b, case).await;
                 if case == "rate" {
                     for _ in 0..10 {
-                        let reply = b
-                            .write(
-                                Req::new(Method::POST, classic_path).form(&[("reauth", "wrong")]),
-                            )
-                            .await;
-                        classic_alert(b, &reply, REFUSED);
+                        let reply = write(b, Method::POST, api_path, json!({"reauth": "wrong"})).await;
+                        api_alert(&reply, "Validation", StatusCode::UNPROCESSABLE_ENTITY, REFUSED);
                     }
                 }
                 context
-            },
-            async |b, context| {
-                if case == "google_wrong_then_empty" {
-                    let wrong = "wrong";
-                    let reply = b
-                        .write(Req::new(Method::POST, classic_path).form(&[("reauth", wrong)]))
-                        .await;
-                    classic_alert(b, &reply, GOOGLE_REFUSED);
-                }
-                let reauth = if case.ends_with("then_empty") {
-                    ""
-                } else {
-                    confirmation(case, &context)
-                };
-                let reply = b
-                    .write(Req::new(Method::POST, classic_path).form(&[("reauth", reauth)]))
-                    .await;
-                if accepted {
-                    check_codes(b.app(), &classic_codes(&reply), &context["old"]).await;
-                    if case.starts_with("google") || case == "code_reused" {
-                        let reply = b
-                            .write(Req::new(Method::POST, classic_path).form(&[("reauth", reauth)]))
-                            .await;
-                        classic_alert(
-                            b,
-                            &reply,
-                            if case.starts_with("google") {
-                                GOOGLE_REFUSED
-                            } else {
-                                REFUSED
-                            },
-                        );
-                    }
-                } else if case == "not_enabled" {
-                    assert_eq!(
-                        reply.location(),
-                        Some("http://campfire.test/two_factor_setup")
-                    );
-                } else {
-                    classic_alert(b, &reply, if case == "rate" { RATE } else { refused });
-                }
             },
             async |b, context| {
                 if case == "google_wrong_then_empty" {
@@ -348,6 +318,11 @@ async fn backup_codes_match_accepted_refused_not_enabled_rate_and_google_branche
                 } else {
                     confirmation(case, &context)
                 };
+                assert_retained_redirects(
+                    b,
+                    Req::new(Method::POST, classic_path).form(&[("reauth", reauth)]),
+                )
+                .await;
                 let reply = write(b, Method::POST, api_path, json!({"reauth": reauth})).await;
                 if case != "rate" {
                     assert_eq!(reply.header("cache-control"), Some("no-store"));
@@ -501,64 +476,24 @@ async fn disable_matches_notice_refusals_conflict_rate_and_response_cookies() {
         "google",
     ] {
         let accepted = matches!(case, "password" | "session_refresh" | "code" | "google");
-        let expected_cookies = std::sync::Mutex::new(None);
-        let Some(outcome) = assert_parity_with_app(
-            stopped_app,
+        let Some(outcome) = api_outcome(
             async |a, b| {
                 let context = prepare(a, b, case).await;
                 if case == "rate" {
                     for _ in 0..10 {
-                        b.write(
-                            Req::new(Method::DELETE, "/two_factor_setup")
-                                .form(&[("reauth", "wrong")]),
-                        )
-                        .await;
+                        write(b, Method::DELETE, "/api/v1/settings/two_factor", json!({"reauth": "wrong"}))
+                            .await;
                     }
                 }
                 context
             },
             async |b, context| {
-                let before_token = authentication_token(b.app(), b);
-                let reply = b
-                    .write(
-                        Req::new(Method::DELETE, "/two_factor_setup")
-                            .form(&[("reauth", confirmation(case, &context))]),
-                    )
-                    .await;
-                if accepted {
-                    if case == "session_refresh" {
-                        assert!(reply.headers.get_all("set-cookie").iter().any(|value| {
-                            value.to_str().unwrap().starts_with("session_token=")
-                        }));
-                    }
-                    assert_eq!(reply.status, StatusCode::FOUND);
-                    assert_eq!(
-                        reply.location(),
-                        Some("http://campfire.test/two_factor_setup")
-                    );
-                    assert_eq!(b.flash(), json!({"notice": DISABLED}));
-                    *expected_cookies.lock().unwrap() = Some(cookies(b.app(), b, &reply));
-                    assert_disabled(b, &reply, &before_token, &context).await;
-                } else if case == "not_enabled" {
-                    assert_eq!(
-                        reply.location(),
-                        Some("http://campfire.test/two_factor_setup")
-                    );
-                } else {
-                    classic_alert(
-                        b,
-                        &reply,
-                        if case == "rate" {
-                            RATE
-                        } else if case == "no_password" {
-                            GOOGLE_REFUSED
-                        } else {
-                            REFUSED
-                        },
-                    );
-                }
-            },
-            async |b, context| {
+                assert_retained_redirects(
+                    b,
+                    Req::new(Method::DELETE, "/two_factor_setup")
+                        .form(&[("reauth", confirmation(case, &context))]),
+                )
+                .await;
                 let before_token = authentication_token(b.app(), b);
                 let reply = write(
                     b,
@@ -579,10 +514,7 @@ async fn disable_matches_notice_refusals_conflict_rate_and_response_cookies() {
                     assert!(change.two_factor.confirmed_at.is_none());
                     assert!(change.two_factor.devices.is_empty());
                     check_panel(b.app(), DAVID, &change.two_factor).await;
-                    assert_eq!(
-                        cookies(b.app(), b, &reply),
-                        expected_cookies.lock().unwrap().clone().unwrap()
-                    );
+                    cookies(b.app(), b, &reply);
                     assert_disabled(b, &reply, &before_token, &context).await;
                 } else if case == "not_enabled" {
                     api_alert(
@@ -695,9 +627,6 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
         ] {
             let notice = if all { ALL_FORGOTTEN } else { FORGOTTEN };
             let accepted = matches!(case, "password" | "code" | "other" | "missing" | "google");
-            // The response cookies, the session they leave and the remember cookie the browser
-            // still holds, from the classic side, for the API side to match.
-            let expected_cookies = std::sync::Mutex::new(None);
             let path = |context: &Value, api: bool| {
                 let prefix = if api {
                     "/api/v1/settings/two_factor/devices"
@@ -717,62 +646,24 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                     format!("{prefix}/{id}")
                 }
             };
-            let Some(outcome) = assert_parity_with_app(
-                stopped_app,
+            let Some(outcome) = api_outcome(
                 async |a, b| {
                     let context = prepare(a, b, case).await;
                     if case == "rate" {
                         for _ in 0..10 {
-                            b.write(
-                                Req::new(Method::DELETE, &path(&context, false))
-                                    .form(&[("reauth", "wrong")]),
-                            )
-                            .await;
+                            write(b, Method::DELETE, &path(&context, true), json!({"reauth": "wrong"}))
+                                .await;
                         }
                     }
                     context
                 },
                 async |b, context| {
-                    let reply = b
-                        .write(
-                            Req::new(Method::DELETE, &path(&context, false))
-                                .form(&[("reauth", confirmation(case, &context))]),
-                        )
-                        .await;
-                    if accepted {
-                        assert_eq!(reply.status, StatusCode::FOUND);
-                        assert_eq!(
-                            reply.location(),
-                            Some("http://campfire.test/users/me/profile")
-                        );
-                        assert_eq!(b.flash(), json!({"notice": notice}));
-                        check_devices(b.app(), &context, case, all).await;
-                    } else if case == "not_enabled" {
-                        // Forgetting has no enrollment check in classic: with two-step sign-in
-                        // off, the password still confirms it and the notice comes back.
-                        assert_eq!(reply.status, StatusCode::FOUND);
-                        assert_eq!(
-                            reply.location(),
-                            Some("http://campfire.test/users/me/profile")
-                        );
-                        assert_eq!(b.flash(), json!({"notice": notice}));
-                    } else {
-                        classic_alert(
-                            b,
-                            &reply,
-                            if case == "rate" {
-                                RATE
-                            } else if case == "no_password" {
-                                GOOGLE_REFUSED
-                            } else {
-                                REFUSED
-                            },
-                        );
-                    }
-                    *expected_cookies.lock().unwrap() =
-                        Some((cookies(b.app(), b, &reply), remember_cookie(b)));
-                },
-                async |b, context| {
+                    assert_retained_redirects(
+                        b,
+                        Req::new(Method::DELETE, &path(&context, false))
+                            .form(&[("reauth", confirmation(case, &context))]),
+                    )
+                    .await;
                     let reply = write(
                         b,
                         Method::DELETE,
@@ -815,10 +706,18 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                             },
                         );
                     }
+                    // Forgetting never touches this browser's own cookies: only the session's.
+                    cookies(b.app(), b, &reply);
+                    assert!(
+                        reply.headers.get_all("set-cookie").iter().all(|header| {
+                            header.to_str().unwrap().starts_with("_campfire_session=")
+                        }),
+                        "{case} all={all}: response cookies"
+                    );
                     assert_eq!(
-                        (cookies(b.app(), b, &reply), remember_cookie(b)),
-                        expected_cookies.lock().unwrap().clone().unwrap(),
-                        "{case} all={all}: response cookies, session and remember cookie"
+                        remember_cookie(b).as_deref(),
+                        Some("remembered-before-disable"),
+                        "{case} all={all}: remember cookie"
                     );
                 },
             )
@@ -826,7 +725,7 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
             else {
                 return;
             };
-            // With two-step sign-in off, classic still confirms and forgets (and audits it).
+            // With two-step sign-in off, the password still confirms and forgets (and audits it).
             let confirmed = accepted || case == "not_enabled";
             assert_eq!(
                 audits(&outcome).contains("two_factor.devices.revoke_all"),
@@ -1209,7 +1108,10 @@ async fn every_account_route_refuses_a_bot_session() {
     let reply = b
         .write(Req::new(Method::DELETE, "/two_factor_setup").form(&[("reauth", PASSWORD)]))
         .await;
-    assert_eq!(reply.location(), Some("http://campfire.test/"));
+    assert_eq!(
+        (reply.status, reply.location()),
+        (StatusCode::SEE_OTHER, Some("http://campfire.test/app/settings/security"))
+    );
     let before = dump(&a).await;
     let capture = a.booted.app.cable.capture_every_publication();
     // No sign-in link, codes, device changes or test push for a bot's own session.

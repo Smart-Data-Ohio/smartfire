@@ -74,7 +74,8 @@ async fn cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated() {
         .unwrap();
     let rejected = b
         .write(
-            Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", "000000")]),
+            Req::new(Method::POST, "/api/v1/sudo")
+                .json_body(&json!({"kind":"totp","code":"000000"})),
         )
         .await;
     let after = a
@@ -95,7 +96,7 @@ async fn cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated() {
     assert_eq!(verifier, "totp");
     let gated = b.write(Req::new(Method::POST, "/account/join_code")).await;
     assert_eq!(gated.status, StatusCode::FOUND);
-    assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
+    assert_eq!(gated.location(), Some("http://campfire.test/app/sudo/new"));
 }
 
 #[tokio::test]
@@ -104,16 +105,19 @@ async fn cutover_d_gated_audit_csv_get_continues_and_returns_csv() {
     let mut b = a.sign_in_for_tests(DAVID).await;
     let gated = b.get("/account/audit_log.csv").await;
     assert_eq!(gated.status, StatusCode::FOUND);
-    assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
+    assert_eq!(gated.location(), Some("http://campfire.test/app/sudo/new"));
     let confirmed = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .confirm_sudo("secret123456")
         .await;
-    assert_eq!(confirmed.status, StatusCode::FOUND);
+    assert_eq!(confirmed.status, StatusCode::OK);
+    // The confirmation names the held GET; the SPA goes there.
     assert_eq!(
-        confirmed.location(),
-        Some("http://campfire.test/account/audit_log.csv")
+        confirmed.json()["retry"],
+        json!({"method":"GET","path":"/account/audit_log.csv","returnTo":"/app/"})
     );
-    let csv = b.get(confirmed.location().unwrap()).await;
+    let csv = b
+        .get(confirmed.json()["retry"]["path"].as_str().unwrap())
+        .await;
     assert_eq!(csv.status, StatusCode::OK);
     assert_eq!(
         csv.headers
@@ -138,10 +142,10 @@ async fn sudo_at_minutes(minutes: i64) -> crate::controllers::presenters::test_s
     load_fixtures(&a).await;
     let mut b = a.sign_in_for_tests(DAVID).await;
     let confirmed = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .confirm_sudo("secret123456")
         .await;
-    assert_eq!(confirmed.status, StatusCode::FOUND);
-    assert_eq!(confirmed.location(), Some("http://campfire.test/"));
+    assert_eq!(confirmed.status, StatusCode::OK);
+    assert_eq!(confirmed.json()["retry"], Value::Null);
     clock.advance(SignedDuration::from_mins(minutes));
     b.write(Req::new(Method::POST, "/account/join_code")).await
 }
@@ -158,7 +162,7 @@ async fn cutover_d_fourteen_minute_confirmation_allows_real_join_code_post() {
 async fn cutover_d_sixteen_minute_confirmation_gates_real_join_code_post() {
     let response = sudo_at_minutes(16).await;
     assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(response.location(), Some("http://campfire.test/sudo/new"));
+    assert_eq!(response.location(), Some("http://campfire.test/app/sudo/new"));
 }
 
 #[tokio::test]

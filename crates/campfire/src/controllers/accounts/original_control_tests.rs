@@ -1,6 +1,6 @@
 //! Original account and ban assertions through routed writes, with Rails observations.
 use crate::controllers::presenters::test_support::*;
-use axum::http::{Method, StatusCode};
+use axum::http::StatusCode;
 use campfire_db::{Account, Ban, Session, User};
 use serde_json::{Value, json};
 const JZ: i64 = 773523953;
@@ -43,10 +43,10 @@ async fn run(name: &'static str) {
     if viewer == DAVID {
         assert_eq!(
             browser
-                .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+                .confirm_sudo("secret123456")
                 .await
                 .status,
-            StatusCode::FOUND
+            StatusCode::OK
         );
     }
     let reply = if case["method"] == "GET" {

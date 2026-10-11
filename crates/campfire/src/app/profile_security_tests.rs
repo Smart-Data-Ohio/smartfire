@@ -92,17 +92,28 @@ async fn self_changed_email_persists_marker_and_audit_for_rails_rollback() {
     assert_eq!(audit, 1);
 }
 
+/// A password sign-in through the SPA's call (`POST /api/v1/session`).
+fn sign_in_attempt(email_address: &str, password: &str) -> Req {
+    Req::new(Method::POST, "/api/v1/session")
+        .json_body(&json!({"emailAddress": email_address, "password": password}))
+}
+
 #[tokio::test]
 async fn unauthorized_password_request_writes_a_filtered_failure_audit() {
     let a = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     let before = failures(&a).await;
-    let response = b
+    // The retained form post only sends people to the SPA's sign-in page: no attempt, no audit.
+    let retained = b
         .write(Req::new(Method::POST, "/session").form(&[
             ("email_address", "david@37signals.com"),
             ("password", "wrong"),
         ]))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(failures(&a).await, before);
+    let response = b
+        .write(sign_in_attempt("david@37signals.com", "wrong"))
         .await;
     assert_eq!(response.status, StatusCode::UNAUTHORIZED);
     assert_eq!(failures(&a).await, before + 1);
@@ -112,24 +123,17 @@ async fn unauthorized_password_request_writes_a_filtered_failure_audit() {
 async fn rate_limited_password_request_writes_a_failure_audit() {
     let a = app().await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     for _ in 0..10 {
         assert_eq!(
-            b.write(Req::new(Method::POST, "/session").form(&[
-                ("email_address", "david@37signals.com"),
-                ("password", "wrong")
-            ]))
-            .await
-            .status,
+            b.write(sign_in_attempt("david@37signals.com", "wrong"))
+                .await
+                .status,
             StatusCode::UNAUTHORIZED
         );
     }
     let before = failures(&a).await;
     let response = b
-        .write(Req::new(Method::POST, "/session").form(&[
-            ("email_address", "another@example.test"),
-            ("password", "wrong"),
-        ]))
+        .write(sign_in_attempt("another@example.test", "wrong"))
         .await;
     assert_eq!(response.status, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(failures(&a).await, before + 1);
@@ -139,10 +143,23 @@ async fn rate_limited_password_request_writes_a_failure_audit() {
 async fn rejected_transfer_writes_a_filtered_failure_audit() {
     let a = app().await;
     let mut b = a.anonymous();
-    b.get("/session/transfers/invalid-transfer").await;
+    let page = b.get("/session/transfers/invalid-transfer").await;
+    assert_eq!(
+        (page.status, page.location()),
+        (
+            StatusCode::FOUND,
+            Some("http://campfire.test/app/session/transfers/invalid-transfer")
+        )
+    );
     let before = failures(&a).await;
-    let response = b
+    // The retained page's form post goes to the SPA's transfer page unused.
+    let retained = b
         .write(Req::new(Method::PUT, "/session/transfers/invalid-transfer"))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(failures(&a).await, before);
+    let response = b
+        .write(Req::new(Method::PUT, "/api/v1/session/transfers/invalid-transfer").json_body(&json!({})))
         .await;
     assert_eq!(response.status, StatusCode::BAD_REQUEST);
     assert_eq!(failures(&a).await, before + 1);
@@ -311,17 +328,12 @@ async fn password_failure_rows_collapse_filter_and_cap_exactly_like_rails() {
         .await
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     for case in vectors()["failure"].as_array().unwrap() {
         let response = b
             .write(
-                Req::new(Method::POST, "/session")
+                sign_in_attempt(case["email"].as_str().unwrap(), "wrong")
                     .header("user-agent", CHROME)
-                    .header("x-forwarded-for", "127.0.0.1")
-                    .form(&[
-                        ("email_address", case["email"].as_str().unwrap()),
-                        ("password", "wrong"),
-                    ]),
+                    .header("x-forwarded-for", "127.0.0.1"),
             )
             .await;
         assert_eq!(
@@ -339,10 +351,10 @@ async fn password_failure_rows_collapse_filter_and_cap_exactly_like_rails() {
         .await
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     let response = b
         .write(
-            Req::new(Method::PUT, "/session/transfers/invalid-transfer")
+            Req::new(Method::PUT, "/api/v1/session/transfers/invalid-transfer")
+                .json_body(&json!({}))
                 .header("user-agent", CHROME)
                 .header("x-forwarded-for", "127.0.0.1"),
         )
@@ -371,7 +383,6 @@ async fn password_failure_rows_collapse_filter_and_cap_exactly_like_rails() {
         .parse()
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     for case in vectors()["failure_windows"].as_array().unwrap() {
         clock.set(
             start
@@ -382,13 +393,9 @@ async fn password_failure_rows_collapse_filter_and_cap_exactly_like_rails() {
         );
         let response = b
             .write(
-                Req::new(Method::POST, "/session")
+                sign_in_attempt(case["email"].as_str().unwrap(), "wrong")
                     .header("user-agent", CHROME)
-                    .header("x-forwarded-for", case["ip"].as_str().unwrap())
-                    .form(&[
-                        ("email_address", case["email"].as_str().unwrap()),
-                        ("password", "wrong"),
-                    ]),
+                    .header("x-forwarded-for", case["ip"].as_str().unwrap()),
             )
             .await;
         assert_eq!(

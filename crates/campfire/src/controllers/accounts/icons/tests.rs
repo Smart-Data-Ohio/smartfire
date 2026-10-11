@@ -296,7 +296,7 @@ async fn icon_serving_enforces_ws9_enrollment_and_stale_session_rules() {
         .unwrap();
     assert_eq!(
         member.get("/icons/acme").await.location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
     app.db()
         .write(|tx| {
@@ -310,7 +310,7 @@ async fn icon_serving_enforces_ws9_enrollment_and_stale_session_rules() {
         .unwrap();
     assert_eq!(
         app.david().get("/icons/acme").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }
 

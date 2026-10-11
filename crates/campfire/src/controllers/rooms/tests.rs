@@ -34,7 +34,7 @@ async fn index_redirects_to_the_last_room() {
     );
     // Anonymous: off to sign in.
     let reply = app.anonymous().get("/rooms").await;
-    assert_eq!(reply.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(reply.location(), Some("http://campfire.test/app/session/new"));
 }
 
 #[tokio::test]

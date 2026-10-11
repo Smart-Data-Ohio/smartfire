@@ -13,6 +13,10 @@ pub(crate) mod signed_out_contracts_tests;
 mod sudo_contracts_tests;
 
 #[cfg(test)]
+#[path = "spa_retained_redirect_tests.rs"]
+mod retained_redirect_tests;
+
+#[cfg(test)]
 #[path = "spa_tests.rs"]
 mod tests;
 

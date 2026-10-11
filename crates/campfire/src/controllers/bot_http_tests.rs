@@ -1,6 +1,6 @@
 //! Actual pinned Rails bot API responses, persisted state and create-only reply-token scope.
 use super::agent_http_tests::{AGENT, SECRET, setup};
-use super::presenters::test_support::{BENDER_KEY, Req};
+use super::presenters::test_support::{BENDER_KEY, Req, spa_auth_locations};
 use campfire_db::{Message, NewMessage};
 use campfire_kit::Method;
 use serde_json::{Value, json};
@@ -94,8 +94,11 @@ async fn check(case: &Value) {
         "{name}"
     );
     assert_eq!(reply.text(),case["response_body"].as_str().unwrap(),"{name}: raw response bytes");
+    // Rails sent signed-out bots to its sign-in page; that page is now the SPA's.
+    let mut headers = case["response_headers"].clone();
+    spa_auth_locations(&mut headers);
     for key in ["Content-Type","Cache-Control","Pragma","X-Total-Count","Link","Location","Retry-After"] {
-        assert_eq!(reply.header(key),case["response_headers"][key.to_ascii_lowercase()].as_str(),"{name}: {key}");
+        assert_eq!(reply.header(key),headers[key.to_ascii_lowercase()].as_str(),"{name}: {key}");
     }
     let after = app.db().read(counts).await.unwrap();
     assert_eq!(

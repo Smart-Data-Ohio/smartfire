@@ -1,5 +1,5 @@
-//! The retained join forms and the SPA's JSON join endpoints over the same frozen seed: the same
-//! rows, invite uses, session and cookies, and the same refusals.
+//! The retained join pages and forms, which now go to the SPA's, and the SPA's JSON join endpoints
+//! over the same frozen seed: the rows, invite uses, session and cookies, and the refusals.
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::User;
@@ -101,64 +101,69 @@ async fn enrollment(app: &TestApp, email: &'static str) -> Value {
 
 /// The new browser's cookie authenticates the new user (who still has to set up two-step sign-in).
 async fn assert_signed_in_as(browser: &mut Browser<'_>, id: i64) {
-    let page = browser.get("/two_factor_setup").await;
+    let page = browser.get("/app/two_factor/setup").await;
     assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains(&format!("name=\"current-user-id\" content=\"{id}\"")));
+    assert_eq!(crate::controllers::spa::signed_out_contracts_tests::inline_boot(&page)["user"]["id"], id);
+}
+
+/// The retained page and form at `retained` go to the SPA's copy; the form creates nothing and
+/// signs no one in.
+async fn assert_retained_goes_to_the_spa(app: &TestApp, browser: &mut Browser<'_>, retained: &str, email: &str) {
+    let spa = format!("http://campfire.test/app{retained}");
+    let before = app.db().read(User::count).await.unwrap();
+    let page = browser.get(retained).await;
+    assert_eq!((page.status, page.location()), (StatusCode::FOUND, Some(spa.as_str())));
+    let reply = browser.write(signup(false, retained, "Retained", email)).await;
+    assert_eq!((reply.status, reply.location()), (StatusCode::SEE_OTHER, Some(spa.as_str())));
+    assert_eq!(app.db().read(User::count).await.unwrap(), before);
+    assert!(!browser.cookie_header().contains("session_token="));
 }
 
 #[tokio::test]
-async fn join_code_html_and_json_enroll_identically() {
+async fn join_code_html_goes_to_the_spa_and_json_enrolls() {
     let code = join_code();
-    let mut outcomes = Vec::new();
-    for json in [false, true] {
-        let app = app().await;
-        let mut browser = app.anonymous();
-        let path = if json { format!("/api/v1/join/{code}") } else { format!("/join/{code}") };
-        let page = if json { browser.send(json_get(&path)).await } else { browser.get(&path).await };
-        assert_eq!(page.status, StatusCode::OK);
-        let reply = browser.write(signup(json, &path, "New Person", "new@37signals.com")).await;
-        let location = if json {
-            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-            assert_eq!(reply.json()["kind"], "signedIn");
-            reply.json()["location"].as_str().unwrap().to_owned()
-        } else {
-            assert_eq!(reply.status, StatusCode::FOUND);
-            reply.location().unwrap().to_owned()
-        };
-        let facts = enrollment(&app, "new@37signals.com").await;
-        assert_signed_in_as(&mut browser, facts["id"].as_i64().unwrap()).await;
-        outcomes.push(json!({"location":location,"cookies":cookie_contract(&reply),"facts":facts}));
-    }
-    assert_eq!(outcomes[0], outcomes[1]);
-    assert_eq!(outcomes[0]["location"], "http://campfire.test/");
+    let app = app().await;
+    let mut browser = app.anonymous();
+    let before = app.db().read(User::count).await.unwrap();
+    assert_retained_goes_to_the_spa(&app, &mut browser, &format!("/join/{code}"), "new@37signals.com").await;
+
+    let path = format!("/api/v1/join/{code}");
+    let page = browser.send(json_get(&path)).await;
+    assert_eq!(page.status, StatusCode::OK);
+    let reply = browser.write(signup(true, &path, "New Person", "new@37signals.com")).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.json(), json!({"kind":"signedIn","location":"http://campfire.test/"}));
+    assert!(cookie_contract(&reply).iter().any(|cookie| cookie.starts_with("session_token=set")));
+    let facts = enrollment(&app, "new@37signals.com").await;
+    assert_signed_in_as(&mut browser, facts["id"].as_i64().unwrap()).await;
     // A member, never the requested administrator, with the avatar and a session.
-    assert_eq!(outcomes[0]["facts"]["user"][2], 0);
-    assert_eq!(outcomes[0]["facts"]["avatar"][0][0], "me.png");
-    assert_eq!(outcomes[0]["facts"]["sessions"].as_array().unwrap().len(), 1);
+    assert_eq!(facts["users"], before + 1);
+    assert_eq!(facts["user"][2], 0);
+    assert_eq!(facts["avatar"][0][0], "me.png");
+    assert_eq!(facts["sessions"].as_array().unwrap().len(), 1);
 }
 
 #[tokio::test]
-async fn invite_html_and_json_enroll_identically_and_count_one_use() {
-    let mut outcomes = Vec::new();
-    for json in [false, true] {
-        let app = app().await;
-        let (invite, token) = invite(&app, Some(5)).await;
-        let mut browser = app.anonymous();
-        let path = if json { format!("/api/v1/invite/{token}") } else { format!("/invite/{token}") };
-        let reply = browser.write(signup(json, &path, "Invited", "invited@example.com")).await;
-        let location = if json {
-            assert_eq!(reply.json(), json!({"kind":"signedIn","location":"http://campfire.test/"}));
-            "http://campfire.test/".to_owned()
-        } else {
-            reply.location().unwrap().to_owned()
-        };
-        let facts = enrollment(&app, "invited@example.com").await;
-        assert_signed_in_as(&mut browser, facts["id"].as_i64().unwrap()).await;
-        let uses = app.db().read(move |c| WorkspaceInvite::find(c, invite.id)).await.unwrap().unwrap().uses;
-        outcomes.push(json!({"location":location,"cookies":cookie_contract(&reply),"facts":facts,"uses":uses}));
-    }
-    assert_eq!(outcomes[0], outcomes[1]);
-    assert_eq!(outcomes[0]["uses"], 1);
+async fn invite_html_goes_to_the_spa_and_json_enrolls_counting_one_use() {
+    let app = app().await;
+    let (invite, token) = invite(&app, Some(5)).await;
+    let mut browser = app.anonymous();
+    let before = app.db().read(User::count).await.unwrap();
+    assert_retained_goes_to_the_spa(&app, &mut browser, &format!("/invite/{token}"), "invited@example.com").await;
+    let uses = async || app.db().read(move |c| WorkspaceInvite::find(c, invite.id)).await.unwrap().unwrap().uses;
+    assert_eq!(uses().await, 0);
+
+    let path = format!("/api/v1/invite/{token}");
+    let reply = browser.write(signup(true, &path, "Invited", "invited@example.com")).await;
+    assert_eq!(reply.json(), json!({"kind":"signedIn","location":"http://campfire.test/"}));
+    assert!(cookie_contract(&reply).iter().any(|cookie| cookie.starts_with("session_token=set")));
+    let facts = enrollment(&app, "invited@example.com").await;
+    assert_signed_in_as(&mut browser, facts["id"].as_i64().unwrap()).await;
+    assert_eq!(facts["users"], before + 1);
+    assert_eq!(facts["user"][2], 0);
+    assert_eq!(facts["avatar"][0][0], "me.png");
+    assert_eq!(facts["sessions"].as_array().unwrap().len(), 1);
+    assert_eq!(uses().await, 1);
 }
 
 #[tokio::test]
@@ -250,9 +255,10 @@ async fn json_invite_refusals_match_the_retained_reasons_and_statuses() {
             .unwrap();
         let token = if state == "unknown" { "unknown".to_owned() } else { token };
         let mut browser = app.anonymous();
+        // The retained page goes to the SPA's whatever the invite's state: the SPA's answers it.
         let html = browser.get(&format!("/invite/{token}")).await;
-        assert_eq!(html.status, status);
-        assert!(html.text().contains(reason), "{state}");
+        let spa = format!("http://campfire.test/app/invite/{token}");
+        assert_eq!((html.status, html.location()), (StatusCode::FOUND, Some(spa.as_str())), "{state}");
         let path = format!("/api/v1/invite/{token}");
         for reply in [
             browser.send(json_get(&path)).await,
@@ -282,7 +288,7 @@ async fn json_join_refusals_keep_the_retained_duplicate_redirect_body_and_forger
         let duplicate = browser.write(signup(true, &path, "Another David", "david@37signals.com")).await;
         assert_eq!(
             (duplicate.status, duplicate.json()),
-            (StatusCode::OK, json!({"kind":"navigate","location":"http://campfire.test/session/new?email_address=david%4037signals.com"}))
+            (StatusCode::OK, json!({"kind":"navigate","location":"http://campfire.test/app/session/new?email_address=david%4037signals.com"}))
         );
         // A body without the join fields.
         let malformed = browser
@@ -292,13 +298,14 @@ async fn json_join_refusals_keep_the_retained_duplicate_redirect_body_and_forger
             (malformed.status, malformed.json()),
             (StatusCode::UNPROCESSABLE_ENTITY, json!({"kind":"error","fieldErrors":{"base":["The request body isn't valid."]}}))
         );
-        // Without the authenticity token, as the retained form.
+        // Without the authenticity token, as the retained form was.
         let forged = browser.send(signup(true, &path, "Forged", "forged@example.com")).await;
         assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY);
-        let forged = browser
-            .send(signup(false, &path.replace("/api/v1/join/", "/join/").replace("/api/v1/invite/", "/invite/"), "Forged", "forged@example.com"))
-            .await;
-        assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY);
+        // The retained form goes to the SPA's page before its forgery check, creating nothing.
+        let retained = path.replace("/api/v1/join/", "/join/").replace("/api/v1/invite/", "/invite/");
+        let forged = browser.send(signup(false, &retained, "Forged", "forged@example.com")).await;
+        let spa = format!("http://campfire.test/app{retained}");
+        assert_eq!((forged.status, forged.location()), (StatusCode::SEE_OTHER, Some(spa.as_str())));
     }
     assert_eq!(app.db().read(User::count).await.unwrap(), before);
     assert_eq!(app.db().read(move |c| WorkspaceInvite::find(c, invite.id)).await.unwrap().unwrap().uses, 0);

@@ -214,7 +214,7 @@ async fn cutover_events_signed_out_index_redirects_to_sign_in() {
     let mut guest = app.anonymous();
     let reply = guest.get(&index_path()).await;
     assert_eq!(reply.status, StatusCode::FOUND);
-    assert_eq!(reply.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(reply.location(), Some("http://campfire.test/app/session/new"));
 }
 #[tokio::test]
 async fn cutover_events_update_uses_existing_zone_and_notifies_attendees() {

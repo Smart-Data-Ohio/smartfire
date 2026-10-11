@@ -129,7 +129,7 @@ async fn google_connection_state_is_one_use_and_sudo_guards_writes() {
         b.write(Req::new(Method::POST, "/google/connect"))
             .await
             .location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/new")
     );
     let state = start(&a, &mut b).await;
     assert_eq!(
@@ -370,7 +370,7 @@ async fn google_connection_authorize_parameters_configuration_and_sign_in_guards
             .write(Req::new(Method::POST, "/google/connect"))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     let mut b = a.sign_in(DAVID).await;
     b.get("/users/me/profile").await;

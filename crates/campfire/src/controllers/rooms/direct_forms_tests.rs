@@ -24,7 +24,7 @@ async fn direct_forms_keep_human_membership_and_group_delete_gates() {
             .send(Req::new(Method::GET, &path).header("x-requested-with", "XMLHttpRequest"))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     assert_eq!(
         app.anonymous()

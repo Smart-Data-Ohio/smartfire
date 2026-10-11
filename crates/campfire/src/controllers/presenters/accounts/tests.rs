@@ -190,16 +190,6 @@ impl Reply {
             .collect()
     }
 
-    /// Asserts the page has a form posting to `action`.
-    fn assert_form(&self, action: &str) {
-        let html = self.text();
-        assert!(
-            html.contains(&format!("action=\"{action}\""))
-                || html.contains(&format!("action=\"http://{HOST}{action}\"")),
-            "no form for {action} in {html}"
-        );
-    }
-
 }
 
 struct Browser<'a> {
@@ -216,8 +206,13 @@ impl Browser<'_> {
         headers: &[(&str, &str)],
         body: Option<(&str, String)>,
     ) -> Reply {
-        if method != Method::GET && self.cookies.get(campfire_kit::session::SESSION_KEY).and_then(|raw| masked_session_token(&self.test.booted.app.secrets, raw)).is_none() {
-            Box::pin(self.get("/app/")).await;
+        // A page gives the session its authenticity token: the SPA's shell, or, signed out, its
+        // sign-in page.
+        for page in ["/app/", "/app/session/new"] {
+            if method == Method::GET || self.cookies.get(campfire_kit::session::SESSION_KEY).and_then(|raw| masked_session_token(&self.test.booted.app.secrets, raw)).is_some() {
+                break;
+            }
+            Box::pin(self.get(page)).await;
         }
         let mut request = Request::builder()
             .method(method.clone())
@@ -327,32 +322,33 @@ impl Browser<'_> {
         self.cookies.insert(key.into(), campfire_kit::cookies::escape(&cookie));
     }
 
+    /// A JSON call as the SPA makes it.
+    async fn json(&mut self, path: &str, body: serde_json::Value) -> Reply {
+        self.request(
+            Method::POST,
+            path,
+            &[("accept", "application/json")],
+            Some(("application/json", body.to_string())),
+        )
+        .await
+    }
+
     async fn sign_in(&mut self, email: &str) {
-        let page = self.get("/session/new").await;
+        let page = self.get("/app/session/new").await;
         assert_eq!(page.status, StatusCode::OK, "{}", page.text());
-        page.assert_form("/session");
         let reply = self
-            .form(
-                "post",
-                "/session",
-                &[("email_address", email), ("password", PASSWORD)],
+            .json(
+                "/api/v1/session",
+                serde_json::json!({"emailAddress": email, "password": PASSWORD}),
             )
             .await;
-        assert_eq!(
-            reply.status,
-            StatusCode::FOUND,
-            "sign in as {email}: {}",
-            reply.text()
-        );
-        if reply.location() == "http://campfire.test/two_factor_challenge" {
+        assert_eq!(reply.status, StatusCode::OK, "sign in as {email}: {}", reply.text());
+        if reply.text().contains("\"secondFactorRequired\"") {
             let completed = self.complete_challenge(email).await;
-            assert_eq!(completed.status, StatusCode::FOUND, "{}", completed.text());
+            assert_eq!(completed.status, StatusCode::OK, "{}", completed.text());
         }
     }
     async fn complete_challenge(&mut self, email: &str) -> Reply {
-        self.get("/two_factor_challenge")
-            .await
-            .assert_form("/two_factor_challenge");
         let email = email.to_owned();
         let secrets = self.test.booted.app.secrets.clone();
         let now = self.test.booted.app.clock.now().as_second();
@@ -375,16 +371,32 @@ impl Browser<'_> {
             })
             .await
             .unwrap();
-        self.form("post", "/two_factor_challenge", &[("code", &code)])
-            .await
+        self.json(
+            "/api/v1/two_factor/challenge",
+            serde_json::json!({"code": code, "rememberDevice": false}),
+        )
+        .await
+    }
+
+    /// Uses a sign-in transfer link as the SPA's transfer page does.
+    async fn transfer(&mut self, id: &str) -> Reply {
+        self.request(
+            Method::PUT,
+            &format!("/api/v1/session/transfers/{id}"),
+            &[("accept", "application/json")],
+            Some(("application/json", "{}".into())),
+        )
+        .await
     }
 
     async fn confirm_sudo(&mut self) {
-        assert_eq!(self.get("/sudo/new").await.status, StatusCode::OK);
-        assert_redirect(
-            &self.form("post", "/sudo", &[("password", PASSWORD)]).await,
-            "http://campfire.test/",
-        );
+        let reply = self
+            .json(
+                "/api/v1/sudo",
+                serde_json::json!({"kind": "password", "password": PASSWORD}),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     }
 }
 
@@ -413,6 +425,11 @@ fn encode(value: &str) -> String {
     campfire_presentation::helpers::url::cgi_escape(value)
 }
 
+/// A JSON reply's body.
+fn json(reply: &Reply) -> serde_json::Value {
+    serde_json::from_slice(&reply.body).unwrap_or_else(|error| panic!("{error}: {}", reply.text()))
+}
+
 fn assert_redirect(reply: &Reply, location: &str) {
     assert_eq!(
         (reply.status, reply.location()),
@@ -434,33 +451,23 @@ async fn signs_in_with_a_password_and_out_again() {
     // Unauthenticated requests remember where they were going.
     assert_redirect(
         &browser.get("/account/edit").await,
-        "http://campfire.test/session/new",
+        "http://campfire.test/app/session/new",
     );
 
-    let page = browser.get("/session/new").await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains("<title>Sign in</title>"));
-    assert!(page.header("link").is_none());
-    assert!(page.text().contains(&format!(
-        "<link rel=\"stylesheet\" href=\"{}\">",
-        campfire_static_assets::stylesheet_path("auth")
-    )));
-    assert!(page.text().contains(&format!(
-        "<script src=\"{}\"></script>",
-        campfire_static_assets::javascript_path("auth")
-    )));
-    page.assert_form("/session");
+    // The retained page goes to the SPA's, which signs in through `POST /api/v1/session`.
+    assert_redirect(
+        &browser.get("/session/new").await,
+        "http://campfire.test/app/session/new",
+    );
+    assert_eq!(browser.get("/app/session/new").await.status, StatusCode::OK);
     let signed_in = browser
-        .form(
-            "post",
-            "/session",
-            &[
-                ("email_address", &test.label("emails.david")),
-                ("password", PASSWORD),
-            ],
+        .json(
+            "/api/v1/session",
+            serde_json::json!({"emailAddress": test.label("emails.david"), "password": PASSWORD}),
         )
         .await;
-    assert_redirect(&signed_in, "http://campfire.test/two_factor_challenge");
+    assert_eq!(signed_in.status, StatusCode::OK, "{}", signed_in.text());
+    assert_eq!(json(&signed_in)["kind"], "secondFactorRequired");
     assert!(
         !signed_in
             .set_cookies()
@@ -470,7 +477,11 @@ async fn signs_in_with_a_password_and_out_again() {
     let signed_in = browser
         .complete_challenge(&test.label("emails.david"))
         .await;
-    assert_redirect(&signed_in, "http://campfire.test/app/admin");
+    assert_eq!(signed_in.status, StatusCode::OK, "{}", signed_in.text());
+    assert_eq!(
+        json(&signed_in),
+        serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/app/admin"})
+    );
     let session_cookie = signed_in
         .set_cookies()
         .into_iter()
@@ -508,7 +519,7 @@ async fn signs_in_with_a_password_and_out_again() {
     );
     assert_redirect(
         &browser.get("/users/me/profile").await,
-        "http://campfire.test/session/new",
+        "http://campfire.test/app/session/new",
     );
 }
 
@@ -518,16 +529,30 @@ async fn rejects_bad_passwords_and_rate_limits_sign_ins() {
         return;
     };
     let mut browser = test.browser("198.51.100.2");
-    browser.get("/session/new").await.assert_form("/session");
+    assert_redirect(
+        &browser.get("/session/new").await,
+        "http://campfire.test/app/session/new",
+    );
+    // The retained form signs nobody in and isn't counted.
+    let retained = browser
+        .form(
+            "post",
+            "/session",
+            &[
+                ("email_address", "david@37signals.com"),
+                ("password", "wrong"),
+            ],
+        )
+        .await;
+    assert_eq!(
+        (retained.status, retained.location()),
+        (StatusCode::SEE_OTHER, "http://campfire.test/app/session/new")
+    );
     for attempt in 1..=11 {
         let reply = browser
-            .form(
-                "post",
-                "/session",
-                &[
-                    ("email_address", "david@37signals.com"),
-                    ("password", "wrong"),
-                ],
+            .json(
+                "/api/v1/session",
+                serde_json::json!({"emailAddress": "david@37signals.com", "password": "wrong"}),
             )
             .await;
         let expected = if attempt <= 10 {
@@ -536,24 +561,17 @@ async fn rejects_bad_passwords_and_rate_limits_sign_ins() {
             StatusCode::TOO_MANY_REQUESTS
         };
         assert_eq!(reply.status, expected, "attempt {attempt}");
-        let html = reply.text();
-        assert!(
-            html.contains("Too many requests or unauthorized.") && html.contains("shake"),
-            "{html}"
+        assert_eq!(
+            json(&reply),
+            serde_json::json!({"kind": "error", "fieldErrors": {"base": ["Too many requests or unauthorized."]}})
         );
-        assert!(html.contains(r#"value="david@37signals.com""#));
     }
     // Deactivated users can't sign in.
     let mut other = test.browser("198.51.100.3");
-    other.get("/session/new").await.assert_form("/session");
     let reply = other
-        .form(
-            "post",
-            "/session",
-            &[
-                ("email_address", &test.label("emails.rita")),
-                ("password", PASSWORD),
-            ],
+        .json(
+            "/api/v1/session",
+            serde_json::json!({"emailAddress": test.label("emails.rita"), "password": PASSWORD}),
         )
         .await;
     assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
@@ -636,24 +654,31 @@ async fn transfers_sign_in_on_another_device() {
 
     let mut phone = test.browser("198.51.100.6");
     let path = format!("/session/transfers/{transfer_id}");
-    let show = phone.get(&path).await;
-    assert_eq!(show.status, StatusCode::OK);
-    show.assert_form(&path);
-    assert_redirect(
-        &phone.form("put", &path, &[]).await,
-        "http://campfire.test/two_factor_challenge",
+    let spa_page = format!("http://campfire.test/app/session/transfers/{transfer_id}");
+    assert_redirect(&phone.get(&path).await, &spa_page);
+    // The retained form goes to the SPA's page without using the link.
+    let retained = phone.form("put", &path, &[]).await;
+    assert_eq!(
+        (retained.status, retained.location()),
+        (StatusCode::SEE_OTHER, spa_page.as_str())
     );
-    assert_redirect(
-        &phone.complete_challenge(&test.label("emails.kevin")).await,
-        "http://campfire.test/app/",
+    let transferred = phone.transfer(&transfer_id).await;
+    assert_eq!(transferred.status, StatusCode::OK, "{}", transferred.text());
+    assert_eq!(json(&transferred)["kind"], "secondFactorRequired");
+    let completed = phone.complete_challenge(&test.label("emails.kevin")).await;
+    assert_eq!(
+        json(&completed),
+        serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/app/"})
     );
     assert_redirect(&phone.get("/users/me/profile").await, "http://campfire.test/app/settings");
 
     let mut stranger = test.browser("198.51.100.7");
-    let bogus = "/session/transfers/bogus";
-    stranger.get(bogus).await.assert_form(bogus);
+    assert_redirect(
+        &stranger.get("/session/transfers/bogus").await,
+        "http://campfire.test/app/session/transfers/bogus",
+    );
     assert_eq!(
-        stranger.form("put", bogus, &[]).await.status,
+        stranger.transfer("bogus").await.status,
         StatusCode::BAD_REQUEST
     );
 }
@@ -666,37 +691,64 @@ async fn joins_with_the_join_code() {
         return;
     };
     let mut browser = test.browser("198.51.100.8");
+    // The retained URL goes to the SPA's join page, which checks the code.
+    assert_redirect(
+        &browser.get("/join/nope").await,
+        "http://campfire.test/app/join/nope",
+    );
     assert_eq!(
-        browser.get("/join/nope").await.status,
+        browser.request(Method::GET, "/api/v1/join/nope", &[("accept", "application/json")], None).await.status,
         StatusCode::NOT_FOUND
     );
-    let path = format!("/join/{}", test.label("join_codes.signal"));
-    let page = browser.get(&path).await;
-    assert_eq!(page.status, StatusCode::OK);
-    page.assert_form(&path);
+    let code = test.label("join_codes.signal");
+    let path = format!("/join/{code}");
+    assert_redirect(
+        &browser.get(&path).await,
+        &format!("http://campfire.test/app/join/{code}"),
+    );
+    let api = format!("/api/v1/join/{code}");
+    let page = browser.request(Method::GET, &api, &[("accept", "application/json")], None).await;
+    assert_eq!(page.status, StatusCode::OK, "{}", page.text());
+    assert_eq!(json(&page)["kind"], "join");
+    // The retained form makes no account.
     let fields = [
         ("user[name]", "New Person"),
         ("user[email_address]", "new@example.com"),
         ("user[password]", PASSWORD),
     ];
-    assert_redirect(
-        &browser.form("post", &path, &fields).await,
-        "http://campfire.test/",
+    let retained = browser.form("post", &path, &fields).await;
+    assert_eq!(
+        (retained.status, retained.location()),
+        (StatusCode::SEE_OTHER, format!("http://campfire.test/app/join/{code}").as_str())
     );
-    assert_redirect(&browser.get("/users/me/profile").await, "http://campfire.test/two_factor_setup");
-    assert_eq!(browser.get("/two_factor_setup").await.status, StatusCode::OK);
+    let joined = browser
+        .json(
+            &api,
+            serde_json::json!({"name": "New Person", "emailAddress": "new@example.com", "password": PASSWORD}),
+        )
+        .await;
+    assert_eq!(joined.status, StatusCode::OK, "{}", joined.text());
+    assert_eq!(
+        json(&joined),
+        serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/"})
+    );
+    assert_redirect(&browser.get("/users/me/profile").await, "http://campfire.test/app/two_factor/setup?required=true");
+    assert_redirect(
+        &browser.get("/two_factor_setup").await,
+        "http://campfire.test/app/two_factor/setup",
+    );
 
     // A taken email address goes to sign in instead.
     let mut other = test.browser("198.51.100.9");
-    other.get(&path).await.assert_form(&path);
-    let fields = [
-        ("user[name]", "Imposter"),
-        ("user[email_address]", "new@example.com"),
-        ("user[password]", PASSWORD),
-    ];
-    assert_redirect(
-        &other.form("post", &path, &fields).await,
-        "http://campfire.test/session/new?email_address=new%40example.com",
+    let taken = other
+        .json(
+            &api,
+            serde_json::json!({"name": "Imposter", "emailAddress": "new@example.com", "password": PASSWORD}),
+        )
+        .await;
+    assert_eq!(
+        json(&taken)["location"],
+        "http://campfire.test/app/session/new?email_address=new%40example.com"
     );
 }
 
@@ -708,23 +760,42 @@ async fn first_run_sets_up_the_account() {
     let mut browser = test.browser("198.51.100.10");
     assert_redirect(
         &browser.get("/session/new").await,
-        "http://campfire.test/first_run",
+        "http://campfire.test/app/first_run",
     );
-    let page = browser.get("/first_run").await;
+    assert_redirect(
+        &browser.get("/first_run").await,
+        "http://campfire.test/app/first_run",
+    );
+    let page = browser
+        .request(Method::GET, "/api/v1/first_run", &[("accept", "application/json")], None)
+        .await;
     assert_eq!(page.status, StatusCode::OK, "{}", page.text());
-    page.assert_form("/first_run");
+    assert_eq!(json(&page)["kind"], "pending");
+    // The retained form sets nothing up.
     let fields = [
         ("user[name]", "Owner"),
         ("user[email_address]", "owner@example.com"),
         ("user[password]", PASSWORD),
     ];
-    assert_redirect(
-        &browser.form("post", "/first_run", &fields).await,
-        "http://campfire.test/",
+    let retained = browser.form("post", "/first_run", &fields).await;
+    assert_eq!(
+        (retained.status, retained.location()),
+        (StatusCode::SEE_OTHER, "http://campfire.test/app/first_run")
     );
+    let set_up = browser
+        .json(
+            "/api/v1/first_run",
+            serde_json::json!({"name": "Owner", "emailAddress": "owner@example.com", "password": PASSWORD}),
+        )
+        .await;
+    assert_eq!(set_up.status, StatusCode::OK, "{}", set_up.text());
+    assert_eq!(json(&set_up)["kind"], "signedIn");
     assert_redirect(&browser.get("/first_run").await, "http://campfire.test/");
-    assert_redirect(&browser.get("/").await, "http://campfire.test/two_factor_setup");
-    assert_eq!(browser.get("/two_factor_setup").await.status, StatusCode::OK);
+    assert_redirect(&browser.get("/").await, "http://campfire.test/app/two_factor/setup?required=true");
+    assert_redirect(
+        &browser.get("/two_factor_setup").await,
+        "http://campfire.test/app/two_factor/setup",
+    );
 }
 
 // --- Account ---------------------------------------------------------------------------------------
@@ -761,14 +832,22 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     let path = format!("/account/bots/{bot_id}/key");
     let old_key = test.label("bot_keys.bender");
     let response = admin.form("put", &path, &[]).await;
-    assert_redirect(&response, "http://campfire.test/sudo/new");
+    assert_redirect(&response, "http://campfire.test/app/sudo/new");
     assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
-    assert_eq!(admin.get("/sudo/new").await.status, StatusCode::OK);
-    let confirmed = admin.form("post", "/sudo", &[("password", PASSWORD)]).await;
-    assert_eq!(confirmed.status, StatusCode::OK);
-    confirmed.assert_form(&path);
-    assert!(confirmed.text().contains("name=\"_method\" value=\"put\""));
-    // The browser submits Rails' continuation form after confirmation.
+    assert_redirect(&admin.get("/sudo/new").await, "http://campfire.test/app/sudo/new");
+    let confirmed = admin
+        .json(
+            "/api/v1/sudo",
+            serde_json::json!({"kind": "password", "password": PASSWORD}),
+        )
+        .await;
+    assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
+    assert_eq!(
+        json(&confirmed)["retry"],
+        serde_json::json!({"method": "PUT", "path": path, "returnTo": "/app/"})
+    );
+    // The held write runs only when it's sent again.
+    assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
     let response = admin.form("put", &path, &[]).await;
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(response.headers.get("cache-control").unwrap(), "no-store");
@@ -997,7 +1076,7 @@ async fn qr_codes_and_the_pwa() {
 async fn agent_directory_rejects_credentials_bots_and_unsigned_visitors() {
     let Some(test) = boot_seed("default").await else { return };
     let mut browser = test.browser("198.51.100.94");
-    assert_redirect(&browser.get("/agents").await, "http://campfire.test/session/new");
+    assert_redirect(&browser.get("/agents").await, "http://campfire.test/app/session/new");
     let secret = test.booted.app.db.write(|tx| {
         let id = tx.conn().query_row("SELECT id FROM agents LIMIT 1", [], |r| r.get(0))?;
         Ok(campfire_db::models::agent_credential::AgentCredential::create_with_secret(tx, id, "directory-denial", 127326141, None)?.1)

@@ -61,10 +61,10 @@ async fn admin_browser(a: &TestApp) -> Browser<'_> {
     let mut b = a.sign_in(DAVID).await;
     b.get("/users/me/profile").await;
     assert_eq!(
-        b.write(request(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        b.confirm_sudo("secret123456")
             .await
             .status,
-        StatusCode::FOUND
+        StatusCode::OK
     );
     b
 }

@@ -28,7 +28,7 @@ async fn requires_authentication() {
  let reply=app.anonymous().send(request(DESIGNERS)).await;
  assert_eq!(reply.status,StatusCode::UNAUTHORIZED);assert!(reply.body.is_empty());
  let reply=app.anonymous().get(&format!("/rooms/{DESIGNERS}/members")).await;
- assert_eq!(reply.status,StatusCode::FOUND);assert_eq!(reply.location(),Some("http://campfire.test/session/new"));
+ assert_eq!(reply.status,StatusCode::FOUND);assert_eq!(reply.location(),Some("http://campfire.test/app/session/new"));
 }
 #[tokio::test]
 async fn does_not_expose_members_of_an_inaccessible_room() {

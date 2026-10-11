@@ -103,7 +103,7 @@ async fn slack_oauth_security_requires_sudo_and_consumes_invalid_state_before_ne
     ] {
         let (status, headers, _) = request(&f, method, path, Value::Null, json!({})).await;
         assert_eq!(status, 302);
-        assert_eq!(headers["location"], "http://example.org/sudo/new");
+        assert_eq!(headers["location"], "http://example.org/app/sudo/new");
     }
     let (status,headers,_)=request(&f,"GET","/slack/oauth/callback?state=bogus&code=fixture-code",Value::Null,json!({"slack_oauth_state":{"state":"fixture-state","user_id":811},"slack_oauth_return_to":"/slack/imports"})).await;
     assert_eq!(status, 302);
@@ -232,10 +232,10 @@ async fn slack_connections_http_persistence_audits_and_requests_match_rails() {
         assert_eq!(
             headers.get("location").and_then(|h| h.to_str().ok()),
             case["location"].as_str().map(|location| if method == "GET" { match location {
-                "http://example.org/account/slack_import" => "http://example.org/app/admin/slack",
-                "http://example.org/slack/imports" => "http://example.org/app/settings/slack",
-                location => location,
-            } } else { location }),
+                "http://example.org/account/slack_import" => "http://example.org/app/admin/slack".into(),
+                "http://example.org/slack/imports" => "http://example.org/app/settings/slack".into(),
+                location => crate::controllers::presenters::test_support::spa_auth_location(location),
+            } } else { crate::controllers::presenters::test_support::spa_auth_location(location) }).as_deref(),
             "{}",
             case["name"]
         );

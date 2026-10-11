@@ -36,7 +36,7 @@ async fn integration_health_http_security_rejects_members_and_signed_out_visitor
     assert_eq!(response.status(), 302);
     assert_eq!(
         response.headers()["location"],
-        "http://example.org/session/new"
+        "http://example.org/app/session/new"
     );
     assert!(fresh.server.received().is_empty());
 }

@@ -1,5 +1,6 @@
 //! Committed status changes on a separate SQLite connection; no timing sleeps or mocked linker.
 use super::*;
+use crate::controllers::presenters::test_support::spa_auth_locations;
 use campfire_kit::FrozenClock;
 #[tokio::test]
 async fn google_status_races_and_link_csrf_match_pinned_rails_requests() {
@@ -8,6 +9,9 @@ async fn google_status_races_and_link_csrf_match_pinned_rails_requests() {
     ))
     .unwrap();
     for row in oracle["rows"].as_array().unwrap() {
+        // SPA cutover: the retained sign-in page the pinned rows name is the SPA's.
+        let mut row = row.clone();
+        spa_auth_locations(&mut row);
         let at = jiff::Timestamp::from_second(oracle["now"].as_i64().unwrap()).unwrap();
         let a = TestApp::boot_with_clock(Arc::new(FrozenClock::new(at)))
             .await
@@ -35,7 +39,7 @@ async fn google_status_races_and_link_csrf_match_pinned_rails_requests() {
         let action = row["spec"]["action"].as_str().map(str::to_owned);
         let actual = if let Some(action) = action {
             let mut b = a.anonymous();
-            b.get("/session/new").await;
+            b.get("/app/session/new").await;
             let q = start(&mut b, "/session/google").await;
             let path = a.db().path().to_owned();
             let env = a.db().env().clone();
@@ -111,7 +115,7 @@ async fn google_status_races_and_link_csrf_match_pinned_rails_requests() {
             } else {
                 a.sign_in(KEVIN).await
             };
-            b.get("/session/new").await;
+            b.get("/app/session/new").await;
             let request = Req::new(Method::POST, "/user/profile/google_sign_in_link");
             let reply = match kind {
                 "anonymous" => b.write(request).await,

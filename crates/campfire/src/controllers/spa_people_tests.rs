@@ -295,7 +295,7 @@ async fn ban_refusals_keep_classic_order_and_change_nothing() {
                 assert_eq!(classic_reply.status, StatusCode::FOUND);
                 assert_eq!(
                     classic_reply.location(),
-                    Some("http://campfire.test/sudo/new")
+                    Some("http://campfire.test/app/sudo/new")
                 );
             } else {
                 assert_eq!(classic_reply.status, status);

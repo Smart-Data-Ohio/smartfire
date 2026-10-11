@@ -142,13 +142,8 @@ async fn original_password_session_enrollment_and_stale_icon_access() {
         .await
         .unwrap();
     let mut browser = app.anonymous();
-    let signed = browser
-        .write(
-            Req::new(Method::POST, "/session")
-                .form(&[("email_address", &email), ("password", "secret123456")]),
-        )
-        .await;
-    assert_eq!(signed.status, StatusCode::FOUND);
+    let signed = browser.password_sign_in(&email, "secret123456").await;
+    assert_eq!(signed.status, StatusCode::OK, "{}", signed.text());
     let token = app
         .db()
         .read(|c| {
@@ -162,7 +157,7 @@ async fn original_password_session_enrollment_and_stale_icon_access() {
     assert_eq!(first.status, StatusCode::FOUND);
     assert_eq!(
         first.location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
     let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.booted.app.secrets);
     app.db()
@@ -178,7 +173,7 @@ async fn original_password_session_enrollment_and_stale_icon_access() {
         .unwrap();
     let stale = browser.get("/icons/acme").await;
     assert_eq!(stale.status, StatusCode::FOUND);
-    assert_eq!(stale.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(stale.location(), Some("http://campfire.test/app/session/new"));
     assert!(
         app.db()
             .read(move |c| Session::find_by_token(c, &token))

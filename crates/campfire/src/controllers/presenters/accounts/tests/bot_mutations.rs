@@ -178,7 +178,7 @@ async fn create_requires_administrator_and_sudo() {
         &admin
             .form("post", "/account/bots", &[("user[name]", "Denied UI bot")])
             .await,
-        "http://campfire.test/sudo/new",
+        "http://campfire.test/app/sudo/new",
     );
     assert_eq!(
         test.booted
@@ -414,7 +414,7 @@ async fn only_changed_webhook_requires_sudo_and_audits_origin() {
                 )],
             )
             .await,
-        "http://campfire.test/sudo/new",
+        "http://campfire.test/app/sudo/new",
     );
     assert_eq!(
         test.booted

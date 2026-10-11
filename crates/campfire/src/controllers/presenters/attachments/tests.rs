@@ -967,10 +967,10 @@ async fn durable_analysis_other_callers_roll_back() {
         if kind == "bot create" {
             assert_eq!(
                 browser
-                    .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+                    .confirm_sudo("secret123456")
                     .await
                     .status,
-                StatusCode::FOUND
+                StatusCode::OK
             );
         }
         reject_analysis(&app).await;
@@ -996,32 +996,38 @@ async fn durable_analysis_other_callers_roll_back() {
                     .read(|conn| Ok(campfire_db::Account::first(conn)?.unwrap().join_code))
                     .await
                     .unwrap();
+                // The SPA's join page's multipart submission.
                 (
                     Method::POST,
-                    format!("/join/{join_code}"),
+                    format!("/api/v1/join/{join_code}"),
                     vec![
-                        ("user[name]", "Rollback person"),
-                        ("user[email_address]", "attachment@example.test"),
-                        ("user[password]", "fixture-password"),
+                        ("name", "Rollback person"),
+                        ("emailAddress", "attachment@example.test"),
+                        ("password", "fixture-password"),
                     ],
                 )
             }
-            _ => (
-                Method::POST,
-                "/first_run".into(),
-                vec![
-                    ("user[name]", "Rollback person"),
-                    ("user[email_address]", "attachment@example.test"),
-                    ("user[password]", "fixture-password"),
-                ],
-            ),
+            _ => {
+                // The SPA's first-run page's multipart submission, after the page has loaded.
+                browser.get("/api/v1/first_run").await;
+                (
+                    Method::POST,
+                    "/api/v1/first_run".into(),
+                    vec![(
+                        "submission",
+                        r#"{"name":"Rollback person","emailAddress":"attachment@example.test","password":"fixture-password"}"#,
+                    )],
+                )
+            }
         };
-        let reply = browser
-            .write(
-                Req::new(method, &path)
-                    .multipart(&fields, ("user[avatar]", "parity.png", "image/png", &png())),
-            )
-            .await;
+        let spa = path.starts_with("/api/v1/");
+        let avatar = if spa { "avatar" } else { "user[avatar]" };
+        let mut request =
+            Req::new(method, &path).multipart(&fields, (avatar, "parity.png", "image/png", &png()));
+        if spa {
+            request = request.header("accept", "application/json");
+        }
+        let reply = browser.write(request).await;
         assert_eq!(
             reply.status,
             StatusCode::INTERNAL_SERVER_ERROR,

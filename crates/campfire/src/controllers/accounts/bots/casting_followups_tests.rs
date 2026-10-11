@@ -1,7 +1,7 @@
 //! PR196 Casting follow-ups boundaries, captured from pinned Rails by render_replay.sh.
 use super::input_casts;
 use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, Req, TestApp, with_fixed_render_secrets,
+    BENDER, DAVID, Req, TestApp,
 };
 use campfire_db::Timestamp;
 use campfire_kit::{Method, Param};
@@ -149,7 +149,7 @@ async fn ws11ui_casting_followups_http_save_boundary_expiries_matches_rails() {
 }
 
 #[tokio::test]
-async fn ws11ui_casting_followups_sudo_replay_numeric_hidden_fields_match_rails() {
+async fn ws11ui_casting_followups_sudo_numeric_bodies_are_held_and_named_for_the_retry() {
     let t = TestApp::boot_frozen()
         .await
         .unwrap()
@@ -169,31 +169,17 @@ async fn ws11ui_casting_followups_sudo_replay_numeric_hidden_fields_match_rails(
                     .body(format!("{{\"unused\":{raw}}}")),
             )
             .await;
-        let replay = with_fixed_render_secrets(
-            browser.write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")])),
-        )
-        .await;
-        let body = replay.text();
-        let form = body
-            .find("data-controller=\"auto-submit\"")
-            .and_then(|marker| body[..marker].rfind("<form "))
-            .and_then(|start| {
-                body[start..]
-                    .find("</form>")
-                    .map(|end| body[start..start + end + 7].to_owned())
-            });
-        // The replayed form's contract (action, method, fields, values), not its markup.
-        let contract = |html: Option<&str>| {
-            format!("{:?}", crate::form_contracts::forms(html.unwrap_or_default()))
-        };
-        let actual = json!({"challenge_status":challenged.status.as_u16(),"status":replay.status.as_u16(),"form":contract(form.as_deref())});
-        let expected = json!({"challenge_status":case["challenge_status"],"status":case["status"],"form":contract(case["form"].as_str())});
+        // Rails' replay page re-sent the held body as hidden fields; the SPA keeps the body
+        // itself, so the confirmation names only the held method and path.
+        let confirmed = browser.confirm_sudo("secret123456").await;
+        let actual = json!({"challenge_status":challenged.status.as_u16(),"status":confirmed.status.as_u16(),"retry":confirmed.json()["retry"]});
+        let expected = json!({"challenge_status":case["challenge_status"],"status":200,"retry":{"method":"POST","path":path,"returnTo":"/app/"}});
         if actual != expected {
             failures.push(json!({"raw":raw,"actual":actual,"expected":expected}));
         }
     }
     println!(
-        "Casting follow-ups sudo replay HTML differential: {} compared; {} mismatches",
+        "Casting follow-ups sudo held-request differential: {} compared; {} mismatches",
         cases.len(),
         failures.len()
     );

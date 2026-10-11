@@ -798,6 +798,13 @@ impl Req {
         self
     }
 
+    /// A JSON body asking for JSON, as the SPA sends its API calls.
+    pub fn json_body(self, body: &serde_json::Value) -> Self {
+        self.header("accept", "application/json")
+            .header("content-type", "application/json")
+            .body(serde_json::to_vec(body).unwrap())
+    }
+
     /// A multipart body with text fields and one file field.
     pub fn multipart(mut self, fields: &[(&str, &str)], file: (&str, &str, &str, &[u8])) -> Self {
         let boundary = "----campfiretestboundary";
@@ -817,6 +824,45 @@ impl Req {
             "content-type",
             &format!("multipart/form-data; boundary={boundary}"),
         )
+    }
+}
+
+/// The retained sign-in, two-step, sudo and first-run pages, and the SPA page each now redirects
+/// to (crates/runtime/src/concerns.rs `redirect_to_signed_out_spa` and the gates).
+pub const SPA_AUTH_PAGES: [(&str, &str); 5] = [
+    ("/session/new", "/app/session/new"),
+    ("/sudo/new", "/app/sudo/new"),
+    ("/two_factor_challenge", "/app/two_factor/challenge"),
+    ("/two_factor_setup", "/app/two_factor/setup?required=true"),
+    ("/first_run", "/app/first_run"),
+];
+
+/// A pinned Rails location (absolute or a path, with or without a query) with its retained auth
+/// page swapped for the SPA page the server now sends people to; anything else is unchanged.
+pub fn spa_auth_location(location: &str) -> String {
+    let path_start = location
+        .find("://")
+        .map(|scheme| location[scheme + 3..].find('/').map_or(location.len(), |p| scheme + 3 + p))
+        .unwrap_or(0);
+    let (origin, rest) = location.split_at(path_start);
+    let (path, query) = rest.split_once('?').map_or((rest, None), |(p, q)| (p, Some(q)));
+    match SPA_AUTH_PAGES.iter().find(|(retained, _)| *retained == path) {
+        Some((_, spa)) => match query {
+            Some(query) if spa.contains('?') => format!("{origin}{spa}&{query}"),
+            Some(query) => format!("{origin}{spa}?{query}"),
+            None => format!("{origin}{spa}"),
+        },
+        None => location.to_string(),
+    }
+}
+
+/// Every string in a pinned Rails observation passed through [`spa_auth_location`].
+pub fn spa_auth_locations(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::String(text) => *text = spa_auth_location(text),
+        serde_json::Value::Array(items) => items.iter_mut().for_each(spa_auth_locations),
+        serde_json::Value::Object(fields) => fields.values_mut().for_each(spa_auth_locations),
+        _ => {}
     }
 }
 
@@ -967,6 +1013,25 @@ impl Browser<'_> {
         let token = self.authenticity_token().await;
         self.send(req.header(campfire_kit::csrf::HEADER, &token))
             .await
+    }
+
+    /// Signs in with a password as the SPA's sign-in page does (`POST /api/v1/session`).
+    pub async fn password_sign_in(&mut self, email_address: &str, password: &str) -> Reply {
+        let body = serde_json::json!({"emailAddress": email_address, "password": password});
+        self.write(Req::new(Method::POST, "/api/v1/session").json_body(&body)).await
+    }
+
+    /// Answers a pending second factor as the SPA's challenge page does
+    /// (`POST /api/v1/two_factor/challenge`).
+    pub async fn answer_challenge(&mut self, code: &str, remember_device: bool) -> Reply {
+        let body = serde_json::json!({"code": code, "rememberDevice": remember_device});
+        self.write(Req::new(Method::POST, "/api/v1/two_factor/challenge").json_body(&body)).await
+    }
+
+    /// Confirms it's you with a password as the SPA's sudo page does (`POST /api/v1/sudo`).
+    pub async fn confirm_sudo(&mut self, password: &str) -> Reply {
+        let body = serde_json::json!({"kind": "password", "password": password});
+        self.write(Req::new(Method::POST, "/api/v1/sudo").json_body(&body)).await
     }
 
     /// A masked global token for this browser's session, as `csrf_meta_tags` renders it. A

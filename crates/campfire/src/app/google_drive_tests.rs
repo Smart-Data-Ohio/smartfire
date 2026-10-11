@@ -78,7 +78,7 @@ async fn google_drive_requires_viewer_grant_and_valid_id_and_has_distinct_anonym
         anon.get(&format!("/google/drive/files/{FILE}"))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     let mut b = a.sign_in(DAVID).await;
     assert_eq!(

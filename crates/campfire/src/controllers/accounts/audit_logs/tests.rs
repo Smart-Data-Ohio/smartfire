@@ -75,7 +75,7 @@ async fn authorization_and_csv_sudo_are_checked_before_export() {
     for path in ["/account/audit_log", "/account/audit_log.csv"] {
         assert_eq!(
             app.anonymous().get(path).await.location(),
-            Some("http://campfire.test/session/new")
+            Some("http://campfire.test/app/session/new")
         );
         assert_eq!(
             app.sign_in(KEVIN).await.send(Req::new(Method::GET, path).header("x-requested-with", "XMLHttpRequest")).await.status,
@@ -89,14 +89,14 @@ async fn authorization_and_csv_sudo_are_checked_before_export() {
     );
     assert_eq!(
         browser.get("/account/audit_log.csv").await.location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/new")
     );
     assert_eq!(
         browser
-            .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+            .confirm_sudo("secret123456")
             .await
             .status,
-        StatusCode::FOUND
+        StatusCode::OK
     );
     let response = browser
         .get("/account/audit_log.csv?audit_action=user.ban")
@@ -129,7 +129,7 @@ async fn export_cap_and_truncated_filename_use_filtered_count() {
     }).await.unwrap();
     let mut browser = app.david();
     browser
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .confirm_sudo("secret123456")
         .await;
     let csv = browser
         .get("/account/audit_log.csv?audit_action=user.unban")

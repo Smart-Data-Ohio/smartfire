@@ -379,7 +379,7 @@ async fn github_mutations_require_sudo_before_any_external_call_or_write() {
             &browser
                 .form(method, &path(&test), &[("access_token", "pasted")])
                 .await,
-            &format!("http://{HOST}/sudo/new"),
+            &format!("http://{HOST}/app/sudo/new"),
         );
     }
     assert_eq!(stored(&test).await, before);

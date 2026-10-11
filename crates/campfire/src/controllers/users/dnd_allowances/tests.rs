@@ -101,7 +101,7 @@ async fn ws17_allowances_reject_self_bots_inactive_missing_and_anonymous() {
             .write(Req::new(Method::POST, &path(JASON)))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }
 #[tokio::test]

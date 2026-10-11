@@ -156,10 +156,10 @@ async fn google_sign_in_returns_directly_to_the_spa_after_the_last_factor() {
             // An authenticated page stashes its actual request URI in the cookie session.
             assert_eq!(
                 b.get(saved).await.location(),
-                Some("http://campfire.test/session/new"),
+                Some("http://campfire.test/app/session/new"),
                 "{saved}: stashes a real authenticated page"
             );
-            b.get("/session/new").await;
+            b.get("/app/session/new").await;
             let q = start(&mut b, "/session/google").await;
             answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
             let reply = callback(&mut b, &q["state"]).await;

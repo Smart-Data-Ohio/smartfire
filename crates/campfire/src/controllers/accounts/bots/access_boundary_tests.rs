@@ -5,9 +5,9 @@ use axum::http::{Method, StatusCode};
 async fn admin(t: &TestApp) -> crate::controllers::presenters::test_support::Browser<'_> {
     let mut browser = t.david();
     let response = browser
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .confirm_sudo("secret123456")
         .await;
-    assert_eq!(response.status, StatusCode::FOUND);
+    assert_eq!(response.status, StatusCode::OK);
     browser
 }
 async fn reject_audit(t: &TestApp) {

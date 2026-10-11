@@ -51,7 +51,7 @@ async fn room_icon_writes_require_a_human_with_create_or_administer_permission()
                 &serde_json::json!("smile"),
             ))
             .await;
-        assert_eq!(denied.location(), Some("http://campfire.test/session/new"));
+        assert_eq!(denied.location(), Some("http://campfire.test/app/session/new"));
     }
     assert_eq!(counts(&app).await, before);
 }

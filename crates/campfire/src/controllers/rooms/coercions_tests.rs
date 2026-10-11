@@ -39,7 +39,7 @@ async fn direct_namespace_show_keeps_auth_gates_and_redirects_to_the_room() {
     let mut david=app.david();
     for (id,expected) in oracle()["shows"].as_object().unwrap() {
         let path=format!("/rooms/directs/{id}");
-        assert_eq!(app.anonymous().classic_page(&path).await.location(),Some("http://campfire.test/session/new"));
+        assert_eq!(app.anonymous().classic_page(&path).await.location(),Some("http://campfire.test/app/session/new"));
         assert_eq!(app.anonymous().get(&format!("{path}?bot_key={BENDER_KEY}")).await.status,StatusCode::FORBIDDEN);
         let reply=david.classic_page(&path).await;
         assert_eq!(reply.status.as_u16() as u64,expected["status"].as_u64().unwrap(),"{id}");

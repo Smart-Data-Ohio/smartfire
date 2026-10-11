@@ -1,7 +1,7 @@
 //! Real HTTP/SQLite security tests for `test/controllers/sudos_controller_test.rb`.
 //! These require the WS19 default seed; missing input is a failure, never a silent skip.
 use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, JASON, KEVIN, Reply, Req, TestApp,
+    BENDER, Browser, DAVID, JASON, KEVIN, Reply, Req, TestApp,
 };
 use axum::http::{Method, StatusCode};
 use campfire_db::{Account, TwoFactorBackupCode, TwoFactorCredential};
@@ -32,53 +32,46 @@ impl RedirectResponse for Reply {
     }
 }
 
+/// Confirms (or tries to) as the SPA's sudo page does: `POST /api/v1/sudo` with `body`.
+async fn confirm(b: &mut Browser<'_>, body: Value) -> Reply {
+    b.write(Req::new(Method::POST, "/api/v1/sudo").json_body(&body))
+        .await
+}
+
+/// The browser's cookie session, where the gate keeps the request it held.
+fn session_state(a: &TestApp, b: &Browser<'_>) -> Value {
+    let cookies = b.cookie_header();
+    let raw = cookies
+        .split("; ")
+        .find_map(|cookie| cookie.strip_prefix("_campfire_session="))
+        .unwrap();
+    RailsCrypto::new(a.booted.app.secrets.clone())
+        .decrypt_cookie(
+            "_campfire_session",
+            &rails_compat::cookies::unescape(raw),
+            a.booted.app.clock.now(),
+        )
+        .unwrap()
+}
+
 #[tokio::test]
 async fn sudo_password_prompt_and_rejection_statuses() {
     let a = app().await;
     let mut b = a.sign_in(DAVID).await;
     let prompt = b.get("/sudo/new").await;
-    assert_eq!(prompt.status, StatusCode::OK);
-    assert!(prompt.text().contains("Confirm it's you"));
-    assert!(prompt.text().contains("name=\"password\""));
-    assert!(prompt.text().contains("name=\"totp_code\""));
-    let forms = regex::Regex::new(
-        r#"(?s)<form\b[^>]*action="(?:http://campfire.test)?/sudo"[^>]*>(.*?)</form>"#,
-    )
-    .unwrap();
-    let password_input =
-        regex::Regex::new(r#"<input\b[^>]*type="password"[^>]*name="password""#).unwrap();
-    assert!(
-        forms
-            .captures_iter(&prompt.text())
-            .any(|form| password_input.is_match(&form[1]))
+    assert_eq!(prompt.status, StatusCode::FOUND);
+    assert_eq!(
+        prompt.redirect_location(),
+        Some("http://campfire.test/app/sudo/new")
     );
-    assert!(
-        !regex::Regex::new(r#"<form\b[^>]*action="(?:http://campfire.test)?/sudo/google""#)
-            .unwrap()
-            .is_match(&prompt.text())
+    // The SPA's page offers what `GET /api/v1/sudo` names: password and TOTP, no Google.
+    let methods = b.get("/api/v1/sudo").await;
+    assert_eq!(methods.status, StatusCode::OK);
+    assert_eq!(methods.json()["kind"], "ready");
+    assert_eq!(
+        methods.json()["reauthentication"]["methods"],
+        json!(["password", "totp"])
     );
-    let sudo_forms = forms
-        .captures_iter(&prompt.text())
-        .map(|form| form[1].to_owned())
-        .collect::<Vec<_>>();
-    let inputs = regex::Regex::new(r#"<input\b[^>]*>"#).unwrap();
-    for (name, value) in [
-        ("password", None),
-        ("verifier", Some("totp")),
-        ("totp_code", None),
-    ] {
-        assert_eq!(
-            sudo_forms
-                .iter()
-                .flat_map(|form| inputs.find_iter(form))
-                .filter(|input| input.as_str().contains(&format!("name=\"{name}\""))
-                    && value
-                        .is_none_or(|value| input.as_str().contains(&format!("value=\"{value}\""))))
-                .count(),
-            1,
-            "{name}"
-        );
-    }
     let failures_before = a
         .db()
         .read(|c| {
@@ -90,9 +83,7 @@ async fn sudo_password_prompt_and_rejection_statuses() {
         })
         .await
         .unwrap();
-    let bad = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
-        .await;
+    let bad = b.confirm_sudo("wrong").await;
     assert_eq!(bad.status, StatusCode::UNAUTHORIZED);
     assert_eq!(
         a.db()
@@ -105,18 +96,31 @@ async fn sudo_password_prompt_and_rejection_statuses() {
             .unwrap(),
         failures_before + 1
     );
-    assert!(bad.text().contains("Confirmation failed. Try again."));
+    assert_eq!(
+        bad.json(),
+        json!({"kind":"error","message":"Confirmation failed. Try again."})
+    );
     assert_eq!(
         b.write(Req::new(Method::POST, "/account/join_code"))
             .await
             .redirect_location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/new")
     );
-    let unsupported = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("verifier", "other")]))
-        .await;
+    let unsupported = confirm(&mut b, json!({"kind":"other"})).await;
     assert_eq!(unsupported.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert!(unsupported.text().contains("not available"));
+    assert_eq!(
+        unsupported.json(),
+        json!({"kind":"error","message":"The request body isn't valid."})
+    );
+    // The retained form confirms nothing and counts nothing: it goes to the SPA's page.
+    let retained = b
+        .write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        retained.redirect_location(),
+        Some("http://campfire.test/app/sudo/new")
+    );
     let rows = a
         .db()
         .read(|c| {
@@ -135,7 +139,7 @@ async fn sudo_password_prompt_and_rejection_statuses() {
 }
 
 #[tokio::test]
-async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early() {
+async fn sudo_gate_holds_the_write_until_confirmed_and_names_it_once() {
     let a = app().await;
     let mut b = a.sign_in(DAVID).await;
     let before = a
@@ -148,9 +152,17 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
     let gated = b.write(Req::new(Method::POST, "/account/join_code")).await;
     assert_eq!(
         gated.redirect_location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/new")
     );
-    assert_eq!(b.get("/sudo/new").await.status, StatusCode::OK);
+    assert_eq!(
+        b.get("/sudo/new").await.redirect_location(),
+        Some("http://campfire.test/app/sudo/new")
+    );
+    let held = json!({"method":"POST","path":"/account/join_code","returnTo":"/app/"});
+    assert_eq!(
+        b.get("/api/v1/sudo").await.json()["reauthentication"]["retry"],
+        held
+    );
     assert_eq!(
         a.db()
             .read(Account::first)
@@ -160,36 +172,21 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
             .join_code,
         before
     );
-    let confirmed = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-        .await;
-    assert_eq!(confirmed.status, StatusCode::OK);
-    let text = confirmed.text();
-    assert!(text.contains("action=\"/account/join_code\""));
+    let confirmed = b.confirm_sudo("secret123456").await;
+    assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
+    assert_eq!(confirmed.json()["kind"], "confirmed");
+    assert_eq!(confirmed.json()["retry"], held);
+    // Confirming sends nothing on: the held write runs only when it's sent again.
     assert_eq!(
-        regex::Regex::new(r#"<form\b[^>]*action="/account/join_code"[^>]*method="post""#)
+        a.db()
+            .read(Account::first)
+            .await
             .unwrap()
-            .find_iter(&text)
-            .count(),
-        1
+            .unwrap()
+            .join_code,
+        before
     );
-    assert!(text.contains("data-controller=\"auto-submit\""));
-    let replay =
-        regex::Regex::new(r#"(?s)<form[^>]*action="/account/join_code"[^>]*>(.*?)</form>"#)
-            .unwrap()
-            .captures(&text)
-            .unwrap()[1]
-            .to_string();
-    let token = regex::Regex::new(r#"name="authenticity_token" value="([^"]+)""#)
-        .unwrap()
-        .captures(&replay)
-        .unwrap()[1]
-        .to_string();
-    let real = b.real_authenticity_token().unwrap();
-    assert!(real.is_valid(&token, "/account/join_code", "POST"));
-    let resumed = b
-        .send(Req::new(Method::POST, "/account/join_code").form(&[("authenticity_token", &token)]))
-        .await;
+    let resumed = b.write(Req::new(Method::POST, "/account/join_code")).await;
     assert_eq!(
         resumed.redirect_location(),
         Some("http://campfire.test/account/edit")
@@ -203,14 +200,9 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
             .join_code,
         before
     );
-    let again = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-        .await;
-    assert_eq!(
-        again.redirect_location(),
-        Some("http://campfire.test/"),
-        "pending request is consumed"
-    );
+    let again = b.confirm_sudo("secret123456").await;
+    assert_eq!(again.status, StatusCode::OK);
+    assert_eq!(again.json()["retry"], Value::Null, "pending request is consumed");
     assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT count(*) FROM audit_logs WHERE action = 'sudo.confirm.success' AND details = '{\"verifier\":\"password\"}'", [], |row| row.get::<_, i64>(0))?)).await.unwrap(), 2);
 }
 
@@ -259,7 +251,7 @@ async fn sudo_applies_to_all_present_rails_sensitive_actions() {
         let reply = b.write(Req::new(method.clone(), &path).form(&pairs)).await;
         assert_eq!(
             reply.redirect_location(),
-            Some("http://campfire.test/sudo/new"),
+            Some("http://campfire.test/app/sudo/new"),
             "{method} {path}: {} {}",
             reply.status,
             reply.text()
@@ -288,15 +280,21 @@ async fn sudo_secret_and_large_bodies_return_to_the_origin_and_never_replay() {
             .await;
         assert_eq!(
             gated.redirect_location(),
-            Some("http://campfire.test/sudo/new")
+            Some("http://campfire.test/app/sudo/new")
         );
-        let confirmed = b
-            .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-            .await;
+        let state = session_state(&a, &b);
+        assert!(state["sudo_pending_request"]["params"].is_null());
+        assert_eq!(state["sudo_pending_request"]["origin"], "/account/bots/new");
+        let confirmed = b.confirm_sudo("secret123456").await;
+        assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
         assert_eq!(
-            confirmed.redirect_location(),
-            Some("http://campfire.test/account/bots/new")
+            confirmed.json()["retry"],
+            json!({"method":"POST","path":"/account/bots","returnTo":"/app/"})
         );
+        // The retained continuation of the same held request goes back to where it was made.
+        let (status, headers, _) = probe(&a, "/continue", state).await;
+        assert_eq!(status, StatusCode::FOUND);
+        assert_eq!(headers["location"], "http://campfire.test/account/bots/new");
     }
 }
 
@@ -323,14 +321,20 @@ async fn sudo_non_replayable_fizzy_post_uses_only_a_same_host_referrer() {
         let gated = b.write(request).await;
         assert_eq!(
             gated.redirect_location(),
-            Some("http://campfire.test/sudo/new")
+            Some("http://campfire.test/app/sudo/new")
         );
-        let confirmed = b
-            .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-            .await;
-        assert_eq!(confirmed.status, StatusCode::FOUND);
-        assert_eq!(confirmed.redirect_location(), Some(expected));
-        assert!(!confirmed.text().contains("action=\"/fizzy/connection\""));
+        let state = session_state(&a, &b);
+        assert!(state["sudo_pending_request"]["params"].is_null());
+        let confirmed = b.confirm_sudo("secret123456").await;
+        assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
+        assert_eq!(
+            confirmed.json()["retry"],
+            json!({"method":"POST","path":"/fizzy/connection","returnTo":"/app/"})
+        );
+        let (status, headers, body) = probe(&a, "/continue", state).await;
+        assert_eq!(status, StatusCode::FOUND);
+        assert_eq!(headers["location"], expected);
+        assert!(!body.contains("action=\"/fizzy/connection\""));
     }
 }
 
@@ -352,22 +356,16 @@ async fn sudo_totp_is_replay_protected_shares_lockout_and_does_not_spend_backup_
         .await
         .unwrap();
     let mut b = a.sign_in(DAVID).await;
-    let ok = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", &code)]))
-        .await;
-    assert_eq!(ok.redirect_location(), Some("http://campfire.test/"));
+    let ok = confirm(&mut b, json!({"kind":"totp","code":code})).await;
+    assert_eq!(ok.status, StatusCode::OK, "{}", ok.text());
+    assert_eq!(ok.json()["kind"], "confirmed");
     let success = a.db().read(|c| Ok((
         c.query_row("SELECT count(*) FROM audit_logs WHERE action='sudo.confirm.success'", [], |row| row.get::<_, i64>(0))?,
         c.query_row("SELECT json_extract(details, '$.verifier') FROM audit_logs WHERE action='sudo.confirm.success' ORDER BY id DESC LIMIT 1", [], |row| row.get::<_, String>(0))?
     ))).await.unwrap();
     assert_eq!(success, (1, "totp".into()));
     for submitted in [&code, &codes[0], "wrong", "wrong", "wrong"] {
-        let rejected = b
-            .write(
-                Req::new(Method::POST, "/sudo")
-                    .form(&[("verifier", "totp"), ("totp_code", submitted)]),
-            )
-            .await;
+        let rejected = confirm(&mut b, json!({"kind":"totp","code":submitted})).await;
         assert_eq!(rejected.status, StatusCode::UNAUTHORIZED);
     }
     let (locked, unused) = a
@@ -389,11 +387,9 @@ async fn sudo_totp_is_replay_protected_shares_lockout_and_does_not_spend_backup_
     assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT count(*) FROM audit_logs WHERE action = 'sudo.confirm.success' AND details = '{\"verifier\":\"totp\"}'", [], |row| row.get::<_, i64>(0))?)).await.unwrap(), 1);
     let next = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second() + 30).unwrap();
     assert_eq!(
-        b.write(
-            Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", &next)])
-        )
-        .await
-        .status,
+        confirm(&mut b, json!({"kind":"totp","code":next}))
+            .await
+            .status,
         StatusCode::UNAUTHORIZED,
         "a fresh valid code is refused while locked out"
     );
@@ -401,12 +397,9 @@ async fn sudo_totp_is_replay_protected_shares_lockout_and_does_not_spend_backup_
     let mut b = a.sign_in(DAVID).await;
     for _ in 0..5 {
         assert_eq!(
-            b.write(
-                Req::new(Method::POST, "/sudo")
-                    .form(&[("verifier", "totp"), ("totp_code", "000000")])
-            )
-            .await
-            .status,
+            confirm(&mut b, json!({"kind":"totp","code":"000000"}))
+                .await
+                .status,
             StatusCode::UNAUTHORIZED
         );
     }
@@ -422,11 +415,9 @@ async fn sudo_totp_is_replay_protected_shares_lockout_and_does_not_spend_backup_
         .unwrap();
     let code = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.write(
-            Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", &code)])
-        )
-        .await
-        .status,
+        confirm(&mut b, json!({"kind":"totp","code":code}))
+            .await
+            .status,
         StatusCode::UNAUTHORIZED
     );
 }
@@ -444,35 +435,32 @@ async fn sudo_unsupported_totp_without_enrollment_and_google_without_link() {
         .await
         .unwrap();
     let mut b = a.sign_in(DAVID).await;
-    let prompt = b.get("/sudo/new").await;
+    let prompt = b.get("/api/v1/sudo").await;
     assert_eq!(prompt.status, StatusCode::OK);
-    assert!(!prompt.text().contains("name=\"totp_code\""));
-    let forms = regex::Regex::new(
-        r#"(?s)<form\b[^>]*action="(?:http://campfire.test)?/sudo"[^>]*>(.*?)</form>"#,
-    )
-    .unwrap();
-    let password =
-        regex::Regex::new(r#"<input\b[^>]*type="password"[^>]*name="password""#).unwrap();
-    assert!(
-        forms
-            .captures_iter(&prompt.text())
-            .any(|form| password.is_match(&form[1]))
-    );
-    assert!(
-        !regex::Regex::new(r#"<form\b[^>]*action="(?:http://campfire.test)?/sudo/google""#)
-            .unwrap()
-            .is_match(&prompt.text())
-    );
-    let rejected = b
-        .write(
-            Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", "123456")]),
-        )
-        .await;
-    assert_eq!(rejected.status, StatusCode::UNPROCESSABLE_ENTITY);
-    let google = b.write(Req::new(Method::POST, "/sudo/google")).await;
     assert_eq!(
-        google.redirect_location(),
-        Some("http://campfire.test/sudo/new")
+        prompt.json()["reauthentication"]["methods"],
+        json!(["password"])
+    );
+    let rejected = confirm(&mut b, json!({"kind":"totp","code":"123456"})).await;
+    assert_eq!(rejected.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        rejected.json()["message"],
+        "That confirmation method is not available."
+    );
+    let google = b
+        .write(Req::new(Method::POST, "/api/v1/sudo/google").json_body(&json!({})))
+        .await;
+    assert_eq!(google.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        google.json(),
+        json!({"kind":"error","message":"Google confirmation is not available for your account."})
+    );
+    // The retained Google form starts nothing: it goes to the SPA's page.
+    let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        retained.redirect_location(),
+        Some("http://campfire.test/app/sudo/new")
     );
 }
 
@@ -482,40 +470,33 @@ async fn sudo_create_and_google_share_ten_attempts_in_three_minutes() {
     for _ in 0..5 {
         let mut b = a.sign_in(DAVID).await;
         assert_eq!(
-            b.write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
-                .await
-                .status,
+            b.confirm_sudo("wrong").await.status,
             StatusCode::UNAUTHORIZED
         );
         assert_eq!(
-            b.write(Req::new(Method::POST, "/sudo/google")).await.status,
-            StatusCode::FOUND
+            b.write(Req::new(Method::POST, "/api/v1/sudo/google").json_body(&json!({})))
+                .await
+                .status,
+            StatusCode::UNPROCESSABLE_ENTITY
         );
     }
     let mut b = a.sign_in(DAVID).await;
-    let rejected = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-        .await;
+    let rejected = b.confirm_sudo("secret123456").await;
     assert_eq!(rejected.status, StatusCode::TOO_MANY_REQUESTS);
-    assert!(
-        rejected
-            .text()
-            .contains("Too many confirmation attempts. Try again in a few minutes.")
+    assert_eq!(
+        rejected.json()["message"],
+        "Too many confirmation attempts. Try again in a few minutes."
     );
     let a = app().await;
     let mut b = a.sign_in(DAVID).await;
     for _ in 0..10 {
         assert_eq!(
-            b.write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
-                .await
-                .status,
+            b.confirm_sudo("wrong").await.status,
             StatusCode::UNAUTHORIZED
         );
     }
     assert_eq!(
-        b.write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
-            .await
-            .status,
+        b.confirm_sudo("wrong").await.status,
         StatusCode::TOO_MANY_REQUESTS
     );
 }
@@ -526,13 +507,25 @@ async fn sudo_confirmations_require_authentication_and_csrf() {
     let mut anonymous = a.anonymous();
     assert_eq!(
         anonymous.get("/sudo/new").await.redirect_location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     let mut b = a.sign_in(DAVID).await;
     let rejected = b
-        .send(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .send(
+            Req::new(Method::POST, "/api/v1/sudo")
+                .json_body(&json!({"kind":"password","password":"secret123456"})),
+        )
         .await;
     assert_eq!(rejected.status, StatusCode::UNPROCESSABLE_ENTITY);
+    // The retained form goes to the SPA's page before any check, confirming nothing.
+    let retained = b
+        .send(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        retained.redirect_location(),
+        Some("http://campfire.test/app/sudo/new")
+    );
     assert_eq!(
         a.db()
             .read(|c| Ok(c.query_row(
@@ -589,7 +582,7 @@ async fn sudo_bot_webhook_gate_compares_the_stripped_value_and_leaves_name_edits
         )
         .await
         .redirect_location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/new")
     );
 }
 
@@ -620,7 +613,7 @@ async fn sudo_uploaded_files_are_never_stashed_or_staged_before_confirmation() {
         .await;
     assert_eq!(
         gated.redirect_location(),
-        Some("http://campfire.test/sudo/new")
+        Some("http://campfire.test/app/sudo/new")
     );
     assert_eq!(
         a.db()
@@ -632,11 +625,27 @@ async fn sudo_uploaded_files_are_never_stashed_or_staged_before_confirmation() {
             .unwrap(),
         before
     );
+    let state = session_state(&a, &b);
+    assert!(state["sudo_pending_request"]["params"].is_null());
+    assert_eq!(state["sudo_pending_request"]["origin"], "/account/bots/new");
+    let confirmed = b.confirm_sudo("secret123456").await;
+    assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
     assert_eq!(
-        b.write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        confirmed.json()["retry"],
+        json!({"method":"POST","path":"/account/bots","returnTo":"/app/"})
+    );
+    let (status, headers, _) = probe(&a, "/continue", state).await;
+    assert_eq!(status, StatusCode::FOUND);
+    assert_eq!(headers["location"], "http://campfire.test/account/bots/new");
+    assert_eq!(
+        a.db()
+            .read(|c| Ok(
+                c.query_row("SELECT count(*) FROM active_storage_blobs", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
             .await
-            .redirect_location(),
-        Some("http://campfire.test/account/bots/new")
+            .unwrap(),
+        before
     );
 }
 
@@ -773,7 +782,7 @@ async fn sudo_google_seam_binds_the_member_subject_and_fresh_numeric_auth_time()
             (now - 329).to_string(),
             "/account/edit",
         ),
-        (DAVID, "someone-else", now.to_string(), "/sudo/new"),
+        (DAVID, "someone-else", now.to_string(), "/app/sudo/new"),
         (
             JASON,
             "ws9-google-subject",
@@ -784,9 +793,9 @@ async fn sudo_google_seam_binds_the_member_subject_and_fresh_numeric_auth_time()
             DAVID,
             "ws9-google-subject",
             (now - 330).to_string(),
-            "/sudo/new",
+            "/app/sudo/new",
         ),
-        (DAVID, "ws9-google-subject", String::new(), "/sudo/new"),
+        (DAVID, "ws9-google-subject", String::new(), "/app/sudo/new"),
     ] {
         let path =
             format!("/callback?flow_user={flow_user}&subject={subject}&auth_time={auth_time}");

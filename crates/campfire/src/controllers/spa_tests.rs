@@ -105,20 +105,27 @@ async fn signed_out_visitors_sign_in_and_come_back() {
     let mut b = a.anonymous();
     let page = b.get("/app/rooms/42?tab=files").await;
     assert_eq!(page.status, StatusCode::FOUND);
-    assert_eq!(page.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(page.location(), Some("http://campfire.test/app/session/new"));
     assert_eq!(session(&a, &b)["return_to_after_authenticating"], "http://campfire.test/app/rooms/42?tab=files");
 
-    b.get("/session/new").await;
-    let signed_in = b
-        .write(Req::new(Method::POST, "/session").form(&[("email_address", "david@37signals.com"), ("password", "secret123456")]))
-        .await;
-    assert_eq!(signed_in.location(), Some("http://campfire.test/app/rooms/42?tab=files"), "back to the SPA");
+    // The retained sign-in page is the SPA's now; its JSON sign-in sends them back to the room.
+    let retained = b.get("/session/new").await;
+    assert_eq!(retained.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(b.get("/app/session/new").await.status, StatusCode::OK);
+    assert_eq!(session(&a, &b)["return_to_after_authenticating"], "http://campfire.test/app/rooms/42?tab=files");
+    let signed_in = b.password_sign_in("david@37signals.com", "secret123456").await;
+    assert_eq!(signed_in.status, StatusCode::OK, "{}", signed_in.text());
+    assert_eq!(
+        signed_in.json(),
+        serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/app/rooms/42?tab=files"}),
+        "back to the SPA"
+    );
 
     let mut anonymous = a.anonymous();
     assert_eq!(anonymous.send(json_request("/api/v1/boot")).await.status, StatusCode::UNAUTHORIZED);
-    assert_eq!(anonymous.get("/api/v1/boot").await.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(anonymous.get("/api/v1/boot").await.location(), Some("http://campfire.test/app/session/new"));
     for path in ["/app", "/app/"] {
-        assert_eq!(anonymous.get(path).await.location(), Some("http://campfire.test/session/new"), "{path}");
+        assert_eq!(anonymous.get(path).await.location(), Some("http://campfire.test/app/session/new"), "{path}");
     }
 }
 
@@ -214,7 +221,7 @@ async fn deactivated_users_are_signed_out_of_the_spa() {
     let mut b = a.sign_in(JASON).await;
     assert_eq!(b.get("/app").await.status, StatusCode::OK);
     a.db().write(|tx| User::find(tx.conn(), JASON)?.deactivate(tx)).await.unwrap();
-    assert_eq!(b.get("/app").await.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(b.get("/app").await.location(), Some("http://campfire.test/app/session/new"));
     assert_eq!(b.send(json_request("/api/v1/boot")).await.status, StatusCode::UNAUTHORIZED);
 }
 
@@ -230,7 +237,7 @@ async fn two_step_enrollment_is_enforced_on_the_spa() {
         })
         .await
         .unwrap();
-    assert_eq!(b.get("/app/rooms/1").await.location(), Some("http://campfire.test/two_factor_setup"));
+    assert_eq!(b.get("/app/rooms/1").await.location(), Some("http://campfire.test/app/two_factor/setup?required=true"));
     assert_eq!(session(&a, &b)["return_to_after_authenticating"], "http://campfire.test/app/rooms/1");
     assert_eq!(b.send(json_request("/api/v1/boot")).await.status, StatusCode::FORBIDDEN);
 }
@@ -331,30 +338,26 @@ async fn pwa_worker_selection_ignores_the_old_switches_and_choices() {
         let worker = Value::from("/service-worker.js");
         assert_eq!(boot_json(&shell.text())["serviceWorkerUrl"], worker, "{label}");
         assert_eq!(boot.json()["serviceWorkerUrl"], worker, "{label}");
-        // The auth pages (no Turbo) name the same worker: two-step setup is where a password
-        // sign-in can land, and its load registers the signed-in person's worker.
+        // The auth pages are the SPA's now and name the same worker: two-step setup is where a
+        // password sign-in can land, and its load registers the signed-in person's worker.
         unenroll(&a, DAVID).await;
-        let setup = b.get("/two_factor_setup").await;
+        let retained = b.get("/two_factor_setup").await;
+        assert_eq!(retained.location(), Some("http://campfire.test/app/two_factor/setup"), "{label}");
+        let setup = b.get("/app/two_factor/setup").await;
         assert_eq!(setup.status, StatusCode::OK, "{label}");
         assert_eq!(
-            meta(&setup.text(), "service-worker-url").as_deref(),
+            boot_json(&setup.text())["serviceWorkerUrl"].as_str(),
             expected,
             "auth page: {label}"
         );
-        assert!(
-            setup.text().contains("data-service-worker=\"false\""),
-            "auth pages keep automatic registration disabled in tests: {label}"
-        );
-        let signed_out = a.anonymous().get("/session/new").await;
+        let mut anonymous = a.anonymous();
+        let retained = anonymous.get("/session/new").await;
+        assert_eq!(retained.location(), Some("http://campfire.test/app/session/new"), "{label}");
+        let signed_out = anonymous.get("/app/session/new").await;
         assert_eq!(signed_out.status, StatusCode::OK, "{label}");
         assert!(
             signed_out.text().contains("href=\"/webmanifest.json\""),
             "{label}"
-        );
-        assert_eq!(
-            meta(&signed_out.text(), "service-worker-url").as_deref(),
-            expected,
-            "signed out: {label}"
         );
     }
 }
@@ -372,8 +375,9 @@ async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     assert_eq!(alias.header("location"), Some("http://campfire.test/webmanifest.json"));
     let shell = a.sign_in(DAVID).await.get("/app/").await;
     assert!(shell.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
-    let classic = a.anonymous().get("/session/new").await;
-    assert!(classic.text().contains("href=\"/webmanifest.json\""));
+    let signed_out = a.anonymous().get("/app/session/new").await;
+    assert_eq!(signed_out.status, StatusCode::OK);
+    assert!(signed_out.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
 }
 
 #[tokio::test]

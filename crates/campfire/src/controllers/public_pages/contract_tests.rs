@@ -61,9 +61,14 @@ async fn assert_matches_retained(app: &TestApp, state: &str, member: bool) -> Ve
         assert_eq!(page.policy.contact_email, policy.contact_email, "{state} {slug}");
         assert_eq!(page.policy.effective_date, policy.effective_date, "{state} {slug}");
 
+        // The retained URL now goes to the SPA's page; its renderer still draws the original.
         let retained = app.anonymous().get(&format!("/{slug}")).await;
-        assert_eq!(retained.status, StatusCode::OK);
-        let body = retained.text();
+        assert_eq!(retained.status, StatusCode::MOVED_PERMANENTLY);
+        assert_eq!(
+            retained.location().map(str::to_owned),
+            Some(format!("http://campfire.test/app/{slug}"))
+        );
+        let body = super::tests::retained_page(app, slug);
         assert!(body.contains(&format!("<title>{}</title>", page.title)), "{state} {slug}");
         assert!(
             body.contains(&format!("<meta name=\"description\" content=\"{}\">", page.description)),
