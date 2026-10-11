@@ -213,7 +213,7 @@ class WorkflowTest(unittest.TestCase):
                      b"web/app/javascript/application.js"]:
             self.assertFalse(rust_input(path), path)
         # frontend/src/gen is generated from crates/api_types; the clippy job checks it.
-        for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"crates/static_assets/auth/auth.js",
+        for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"crates/static_assets/build.rs",
                      b".github/workflows/rust.yml", b"crates/api_types/src/lib.rs",
                      b"frontend/src/gen/MessageDTO.ts"]:
             self.assertTrue(rust_input(path), path)

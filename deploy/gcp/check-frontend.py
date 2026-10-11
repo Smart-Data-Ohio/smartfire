@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the public auth pages and built SPA shell after a healthy cutover."""
+"""Read the public pages and the built SPA shell they land on after a healthy cutover."""
 import argparse
 from html.parser import HTMLParser
 import json
@@ -7,6 +7,11 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+from urllib.parse import urlsplit
+
+# Each public path, and the path it must end on after redirects (None: wherever it lands). The
+# retained sign-in and public pages redirect to the SPA's, which reference its built assets.
+PAGES = {"/session/new": "/app/session/new", "/": None, "/about": "/app/about"}
 
 
 class Assets(HTMLParser):
@@ -18,7 +23,7 @@ class Assets(HTMLParser):
         attributes = dict(attributes)
         path = attributes.get("src" if tag == "script" else "href", "")
         if tag in ("script", "link") and re.fullmatch(
-            r"/(?:assets/auth-[0-9a-f]+|app/assets/[A-Za-z0-9_-]+)\.(?:js|css)", path
+            r"/app/assets/[A-Za-z0-9_-]+\.(?:js|css)", path
         ):
             self.paths.add(path)
 
@@ -29,38 +34,40 @@ def fetch(origin, path):
         result = subprocess.run([
             "curl", "--silent", "--show-error", "--location", "--max-redirs", "4",
             "--connect-timeout", "5", "--max-time", "20", "--output", str(body),
-            "--write-out", "%{http_code}\n%{content_type}", "--url", origin + path,
+            "--write-out", "%{http_code}\n%{url_effective}\n%{content_type}", "--url", origin + path,
         ], capture_output=True, text=True, check=True)
-        status, content_type = result.stdout.split("\n", 1)
+        status, url, content_type = result.stdout.split("\n", 2)
         if status != "200":
             raise ValueError(f"{path} returned {status}, expected 200")
         content = body.read_bytes()
         if not content:
             raise ValueError(f"{path} returned an empty body")
-        return content, content_type
+        return content, content_type, urlsplit(url).path
 
 
 def check(origin, spa):
     receipt = {}
     verified = set()
-    for path in ["/session/new", "/"] + (["/app/offline.html"] if spa else []):
-        content, content_type = fetch(origin, path)
+    pages = dict(PAGES, **({"/app/offline.html": "/app/offline.html"} if spa else {}))
+    for path, destination in pages.items():
+        content, content_type, landed = fetch(origin, path)
+        if destination is not None and landed != destination:
+            raise ValueError(f"{path} ended at {landed}, expected {destination}")
         if "text/html" not in content_type:
             raise ValueError(f"{path} did not return HTML")
         assets = Assets()
         assets.feed(content.decode())
-        prefix = "/app/assets/" if path == "/app/offline.html" else "/assets/auth-"
-        paths = sorted(asset for asset in assets.paths if asset.startswith(prefix))
+        paths = sorted(assets.paths)
         if {Path(asset).suffix for asset in paths} != {".js", ".css"}:
             raise ValueError(f"{path} is missing the built JS or CSS references")
         for asset in paths:
             if asset not in verified:
-                _, asset_type = fetch(origin, asset)
+                _, asset_type, _ = fetch(origin, asset)
                 expected = "javascript" if asset.endswith(".js") else "text/css"
                 if expected not in asset_type:
                     raise ValueError(f"{asset} did not return {expected}")
                 verified.add(asset)
-        receipt[path] = {"status": 200, "assets": paths}
+        receipt[path] = {"status": 200, "location": landed, "assets": paths}
     return receipt
 
 
