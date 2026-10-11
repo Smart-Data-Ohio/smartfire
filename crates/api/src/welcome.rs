@@ -644,8 +644,7 @@ async fn save_welcome(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let mut account =
-                Account::first(tx.conn())?.ok_or(campfire_db::Error::RecordNotFound("Account"))?;
+            let mut account = Account::first_in(tx)?;
             let previous = stored(&account);
             let next = match resolve(tx.conn(), user_id, update, &previous, &keeper(&secrets))?
                 .and_then(normalize)

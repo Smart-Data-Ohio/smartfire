@@ -498,3 +498,56 @@ async fn saving_tells_every_client_through_workspace_updated() {
     .await;
     server.abort();
 }
+
+#[tokio::test]
+async fn a_workspace_save_queued_behind_a_welcome_save_keeps_it() {
+    let a = app(true).await.expect("seed required");
+    let mut welcome_tab = a.sign_in(DAVID).await;
+    let mut settings_tab = a.sign_in(DAVID).await;
+    // Both tabs hold their tokens already, so each request does nothing but its own save.
+    welcome_tab.authenticity_token().await;
+    settings_tab.authenticity_token().await;
+    // The writer is busy; the welcome save queues, then a description save queues behind it.
+    let (release, held) = std::sync::mpsc::channel::<()>();
+    let blocker = a.db().write(move |_tx| {
+        held.recv().ok();
+        Ok(())
+    });
+    let pause = |millis| tokio::time::sleep(std::time::Duration::from_millis(millis));
+    let welcome = async {
+        pause(50).await;
+        welcome_tab
+            .write(patch(&json!({"message": "Hello", "rooms": []})))
+            .await
+    };
+    let workspace = async {
+        pause(300).await;
+        settings_tab
+            .write(json_body(
+                Method::PATCH,
+                "/api/v1/admin/workspace",
+                &json!({"description": "Where we talk"}),
+            ))
+            .await
+    };
+    let releaser = async {
+        pause(600).await;
+        release.send(()).unwrap();
+    };
+    let (blocked, welcome, workspace, ()) = tokio::join!(blocker, welcome, workspace, releaser);
+    blocked.unwrap();
+    assert_eq!(welcome.status, StatusCode::OK, "{}", welcome.text());
+    assert_eq!(workspace.status, StatusCode::OK, "{}", workspace.text());
+
+    // Each save changed only its own keys: the description save didn't put the old welcome back.
+    let account = a
+        .db()
+        .read(campfire_db::Account::first)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(account.settings().description(), "Where we talk");
+    let mut david = a.sign_in(DAVID).await;
+    let stored: api::WelcomeAdmin = parse(&david.send(get("/api/v1/admin/welcome")).await);
+    assert_eq!(stored.message, "Hello");
+}

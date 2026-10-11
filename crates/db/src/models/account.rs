@@ -300,6 +300,13 @@ impl Account {
         })
     }
 
+    /// The account as stored, for a write transaction to change: read inside the transaction
+    /// that writes it, so [`Account::update`] merges into the latest settings and a concurrent
+    /// save of other keys isn't put back.
+    pub fn first_in(tx: &Tx<'_>) -> Result<Self> {
+        Self::first(tx.conn())?.or_not_found("Account")
+    }
+
     /// `Account.first` (`Current.account`).
     pub fn first(conn: &Connection) -> Result<Option<Self>> {
         query_one(
