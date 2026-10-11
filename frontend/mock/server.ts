@@ -89,6 +89,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { createWorkspaceLayout, workspaceLayoutOf } from "./s3/workspace-layout.ts";
 import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
 import { createApprovals } from "./s4/approvals.ts";
 import { createLedger, UNKNOWN_LEDGER_TYPE } from "./s4/ledger.ts";
@@ -538,7 +539,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       users: usersFor([...rows.flatMap((row) => row.directMemberIds), ...placeholders]),
       directPlaceholderUserIds: placeholders,
       canCreateRooms: true,
-      workspaceLayout: { categories: [], rooms: [] },
+      workspaceLayout: workspaceLayoutOf(world),
     };
   };
 
@@ -1009,6 +1010,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const cards = createCards(ctx, events);
   const fizzy = createFizzy(ctx, threads);
 
+  const workspaceLayout = createWorkspaceLayout(ctx);
+
   const routes = [
     ...agents.routes,
     ...approvals.routes,
@@ -1040,6 +1043,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
+    ...workspaceLayout.routes,
   ];
 
   composer.arm();
@@ -1421,6 +1425,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return { status: 200, json: { steps: [...agents.setSteps(messageId, int("stage"))] } };
       }
 
+      case "workspace-layout":
+        return { status: 200, json: workspaceLayout.control(body) };
       case "viewer-role": {
         const role = text("role");
         const viewer = world.users.get(VIEWER_ID);

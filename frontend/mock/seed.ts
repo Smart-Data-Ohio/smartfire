@@ -13,6 +13,7 @@ import type { RoomCategory } from "../src/gen/RoomCategory.ts";
 import type { RoomKind } from "../src/gen/RoomKind.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserPresence } from "../src/gen/UserPresence.ts";
+import type { WorkspaceCategory } from "../src/gen/WorkspaceCategory.ts";
 import {
   ANNOUNCEMENTS,
   DESIGN_LINES,
@@ -149,7 +150,17 @@ export interface World extends S2World, S3World {
   readonly rooms: Map<number, RoomRecord>;
   /** The viewer's categories by `(position, id)`; replaced as they change (mock/s3/organize.ts). */
   categories: RoomCategory[];
+  /** The shared workspace categories, by `(position, id)` (mock/s3/workspace-layout.ts). */
+  workspaceCategories: WorkspaceCategory[];
+  /** Each organized room's shared category and position, by room id; others have neither. */
+  readonly workspacePlacements: Map<number, WorkspacePlacement>;
   nextMessageId: number;
+}
+
+/** A room's place in the shared layout (`rooms.workspace_category_id`, `workspace_position`). */
+export interface WorkspacePlacement {
+  readonly categoryId: number | null;
+  readonly position: number | null;
 }
 
 /** RFC 3339 with milliseconds and `Z`, the server's fixed form. */
@@ -852,6 +863,8 @@ export function seedWorld(now: number, random: Random): World {
       { id: CATEGORY_IDS.launch, name: "Launch", collapsed: false, position: 1 },
       { id: CATEGORY_IDS.team, name: "Team", collapsed: false, position: 2 },
     ],
+    workspaceCategories: [],
+    workspacePlacements: new Map(),
     nextMessageId: FIRST_LIVE_MESSAGE_ID,
   };
 }
