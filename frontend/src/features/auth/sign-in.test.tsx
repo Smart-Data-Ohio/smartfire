@@ -90,7 +90,21 @@ describe("branding", () => {
       `mailto:${MOCK_TWO_FACTOR_EMAIL}`,
     );
     expect(screen.getByText("Smartfire™ version 2.0.0-mock")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Privacy Policy" })).toBeTruthy();
+
+    // The public pages are the SPA's copies, in a new tab as the retained sign-in page opens them.
+    const pages = [
+      ["About", "/app/about"],
+      ["Privacy Policy", "/app/privacy"],
+      ["Terms of Service", "/app/terms"],
+    ] as const;
+
+    for (const [name, href] of pages) {
+      const link = screen.getByRole("link", { name });
+
+      expect(link.getAttribute("href")).toBe(href);
+      expect(link.getAttribute("target")).toBe("_blank");
+    }
+
     expect(screen.getByRole("button", { name: "Translate password" })).toBeTruthy();
   });
 });
