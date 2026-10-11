@@ -407,6 +407,120 @@ fn typed_schema() -> Value {
     ]}]})
 }
 #[test]
+fn slash_malformed_schema_reads_and_listing_isolate_commands() {
+    let t = frozen();
+    t.write(|tx| {
+        let agent = id("bender_agent");
+        let room = id("watercooler");
+        commands::register(tx, agent, room, "broken", None, None)?;
+        commands::register_with_schema(tx, agent, room, "typed", None, None, Some(typed_schema()))?;
+        tx.conn().execute(
+            "UPDATE agent_slash_commands SET option_schema='{' WHERE name='broken'",
+            [],
+        )?;
+        let command = AgentSlashCommand::find_by_name(tx.conn(), room, "broken")?.unwrap();
+        assert_eq!(
+            AgentSlashCommand::find(tx.conn(), command.id)?
+                .unwrap()
+                .name,
+            "broken"
+        );
+        assert!(command.payload().get("option_schema").is_none());
+        let suggestions = crate::command_suggestions::for_room(tx.conn(), room, false, None)?;
+        let broken = suggestions.iter().find(|c| c.name == "broken").unwrap();
+        assert_eq!(broken.description, "Custom command");
+        assert!(
+            serde_json::to_value(broken)
+                .unwrap()
+                .get("option_schema")
+                .is_none()
+        );
+        let typed = suggestions.iter().find(|c| c.name == "typed").unwrap();
+        assert_eq!(json!(typed.option_schema), typed_schema());
+        Ok(())
+    });
+}
+
+#[test]
+fn slash_malformed_schema_invocation_returns_validation_without_delivery() {
+    let t = frozen();
+    t.write(|tx| {
+        let ctx = context();
+        commands::register(tx, id("bender_agent"), ctx.room_id, "broken", None, None)?;
+        tx.conn().execute(
+            "UPDATE agent_slash_commands SET option_schema='{' WHERE name='broken'",
+            [],
+        )?;
+        match slash::dispatch(tx, &ctx, "/broken") {
+            Err(crate::Error::FieldValidation(fields)) => {
+                assert_eq!(
+                    json!(fields),
+                    json!({"options":["command option schema is unavailable"]})
+                );
+            }
+            result => panic!("expected schema validation error, got {result:?}"),
+        }
+        let count: i64 = tx.conn().query_row(
+            "SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",
+            [],
+            |r| r.get(0),
+        )?;
+        assert_eq!(count, 0);
+        commands::register(tx, id("bender_agent"), ctx.room_id, "valid", None, None)?;
+        assert_eq!(slash::dispatch(tx, &ctx, "/valid")?.kind, "ephemeral");
+        Ok(())
+    });
+}
+
+#[test]
+fn slash_malformed_schema_registration_can_keep_clear_and_replace() {
+    let t = frozen();
+    t.write(|tx| {
+        let agent = id("bender_agent");
+        let room = id("watercooler");
+        commands::register(tx, agent, room, "broken", None, None)?;
+        for schema in [Value::Null, typed_schema()] {
+            tx.conn().execute(
+                "UPDATE agent_slash_commands SET option_schema='{' WHERE name='broken'",
+                [],
+            )?;
+            assert_eq!(
+                commands::register(tx, agent, room, "broken", Some("Updated"), None)?.status,
+                201
+            );
+            let stored: String = tx.conn().query_row(
+                "SELECT option_schema FROM agent_slash_commands WHERE name='broken'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(stored, "{");
+            let result = commands::register_with_schema(
+                tx,
+                agent,
+                room,
+                "broken",
+                None,
+                None,
+                Some(schema.clone()),
+            )?;
+            assert_eq!(result.status, 201);
+            let stored: Option<String> = tx.conn().query_row(
+                "SELECT option_schema FROM agent_slash_commands WHERE name='broken'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(
+                stored
+                    .map(|s| serde_json::from_str::<Value>(&s).unwrap())
+                    .unwrap_or(Value::Null),
+                schema
+            );
+        }
+        Ok(())
+    });
+}
+
+#[test]
 fn slash_typed_schema_management_keeps_canonical_json_and_authorization() {
     let t = frozen();
     t.write(|tx| {
@@ -434,7 +548,7 @@ fn slash_typed_schema_management_keeps_canonical_json_and_authorization() {
         )?;
         assert_eq!(
             stored,
-            serde_json::to_string(&command.option_schema).unwrap()
+            serde_json::to_string(&command.option_schema()?).unwrap()
         );
         assert_eq!(
             commands::register(tx, agent, room, "typed", Some("Updated"), None)?
@@ -460,7 +574,7 @@ fn slash_typed_schema_management_keeps_canonical_json_and_authorization() {
             json!(
                 AgentSlashCommand::find(tx.conn(), command.id)?
                     .unwrap()
-                    .option_schema
+                    .option_schema()?
             ),
             schema
         );
@@ -542,7 +656,7 @@ fn slash_typed_schema_management_keeps_canonical_json_and_authorization() {
         assert!(
             AgentSlashCommand::find(tx.conn(), command.id)?
                 .unwrap()
-                .option_schema
+                .option_schema()?
                 .is_none()
         );
         Ok(())

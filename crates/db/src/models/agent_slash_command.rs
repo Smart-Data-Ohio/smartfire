@@ -16,7 +16,7 @@ pub struct AgentSlashCommand {
     pub name: String,
     pub description: Option<String>,
     pub takes_arguments: bool,
-    pub option_schema: Option<CommandSchema>,
+    option_schema_json: Option<String>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -59,7 +59,7 @@ impl AgentSlashCommand {
             name: r.get("name")?,
             description: r.get("description")?,
             takes_arguments: r.get("takes_arguments")?,
-            option_schema: schema_from_row(r, "option_schema")?,
+            option_schema_json: r.get("option_schema")?,
             created_at: r.get("created_at")?,
             updated_at: r.get("updated_at")?,
         })
@@ -136,10 +136,13 @@ impl AgentSlashCommand {
     }
     pub fn payload(&self) -> serde_json::Value {
         let mut payload = json!({"name":self.name,"description":self.description,"room_id":self.room_id,"agent_id":self.agent_id,"takes_arguments":self.takes_arguments});
-        if let Some(schema) = &self.option_schema {
+        if let Some(schema) = self.option_schema().ok().flatten() {
             payload["option_schema"] = json!(schema);
         }
         payload
+    }
+    pub fn option_schema(&self) -> Result<Option<CommandSchema>> {
+        parse_schema(self.id, self.option_schema_json.as_deref())
     }
 }
 
@@ -203,9 +206,9 @@ pub fn register_with_schema(
             422,
         ));
     };
+    let update_schema = option_schema.is_some();
     let schema = match option_schema {
-        None => existing.as_ref().and_then(|c| c.option_schema.clone()),
-        Some(Value::Null) => None,
+        None | Some(Value::Null) => None,
         Some(value) => {
             let schema: CommandSchema = match serde_json::from_value(value) {
                 Ok(schema) => schema,
@@ -227,6 +230,13 @@ pub fn register_with_schema(
             Some(schema)
         }
     };
+    let option_schema_json = if update_schema {
+        schema
+            .as_ref()
+            .map(|s| serde_json::to_string(s).expect("validated schema"))
+    } else {
+        existing.as_ref().and_then(|c| c.option_schema_json.clone())
+    };
     let attributes = NewAgentSlashCommand {
         agent_id,
         room_id,
@@ -247,9 +257,9 @@ pub fn register_with_schema(
     let command = if let Some(existing) = existing {
         if attributes.description != existing.description
             || attributes.takes_arguments != existing.takes_arguments
-            || attributes.option_schema != existing.option_schema
+            || option_schema_json != existing.option_schema_json
         {
-            tx.conn().execute("UPDATE agent_slash_commands SET description=?,takes_arguments=?,option_schema=?,updated_at=? WHERE id=?",params![attributes.description,attributes.takes_arguments,attributes.option_schema.as_ref().map(|s|serde_json::to_string(s).expect("validated schema")),tx.now(),existing.id])?;
+            tx.conn().execute("UPDATE agent_slash_commands SET description=?,takes_arguments=?,option_schema=?,updated_at=? WHERE id=?",params![attributes.description,attributes.takes_arguments,option_schema_json,tx.now(),existing.id])?;
         }
         AgentSlashCommand::find(tx.conn(), existing.id)?.expect("updated command")
     } else {
@@ -309,7 +319,7 @@ pub fn invoke_with_options(
             command.name
         ))));
     };
-    let resolved = if let Some(schema) = &command.option_schema {
+    let resolved = if let Some(schema) = command.option_schema()? {
         let values = options.cloned().unwrap_or_default();
         let errors = schema.validate_values(&values);
         if !errors.is_empty() {
@@ -379,17 +389,22 @@ pub(crate) fn schema_from_row(
     row: &Row<'_>,
     column: &str,
 ) -> rusqlite::Result<Option<CommandSchema>> {
-    row.get::<_, Option<String>>(column)?
-        .map(|json| {
-            serde_json::from_str(&json).map_err(|error| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Text,
-                    Box::new(error),
-                )
-            })
+    let json: Option<String> = row.get(column)?;
+    Ok(parse_schema(row.get("command_id")?, json.as_deref())
+        .ok()
+        .flatten())
+}
+fn parse_schema(command_id: i64, json: Option<&str>) -> Result<Option<CommandSchema>> {
+    json.map(|json| {
+        serde_json::from_str(json).map_err(|error| {
+            tracing::warn!(command_id, %error, "Unreadable slash command option schema");
+            crate::Error::FieldValidation(std::collections::BTreeMap::from([(
+                "options".into(),
+                vec!["command option schema is unavailable".into()],
+            )]))
         })
-        .transpose()
+    })
+    .transpose()
 }
 fn schema_invalid(fields: campfire_slash_schema::FieldErrors) -> ServiceResult {
     ServiceResult {

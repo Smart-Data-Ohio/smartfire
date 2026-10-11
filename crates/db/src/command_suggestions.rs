@@ -31,7 +31,7 @@ pub fn for_room(
             option_schema: None,
         })
         .collect::<Vec<_>>();
-    let mut stmt=conn.prepare(&format!("SELECT c.name,c.description,c.takes_arguments,c.option_schema,{} FROM agent_slash_commands c JOIN agents a ON a.id=c.agent_id JOIN users u ON u.id=a.user_id WHERE c.room_id=? ORDER BY c.name", crate::User::projection("u", "agent_")))?;
+    let mut stmt=conn.prepare(&format!("SELECT c.name,c.description,c.takes_arguments,c.option_schema,c.id AS command_id,{} FROM agent_slash_commands c JOIN agents a ON a.id=c.agent_id JOIN users u ON u.id=a.user_id WHERE c.room_id=? ORDER BY c.name", crate::User::projection("u", "agent_")))?;
     commands.extend(
         stmt.query_map([room_id], |r| {
             let name: String = r.get(0)?;
@@ -44,8 +44,15 @@ pub fn for_room(
                     .unwrap_or_else(|| "Custom command".into()),
                 arg_hint: String::new(),
                 takes_arguments: r.get(2)?,
-                option_schema: crate::models::agent_slash_command::schema_from_row(r, "option_schema")?,
-                agent: Some(crate::User::from_prefixed_row(r, "agent_")?.display_name().to_owned()),
+                option_schema: crate::models::agent_slash_command::schema_from_row(
+                    r,
+                    "option_schema",
+                )?,
+                agent: Some(
+                    crate::User::from_prefixed_row(r, "agent_")?
+                        .display_name()
+                        .to_owned(),
+                ),
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?,

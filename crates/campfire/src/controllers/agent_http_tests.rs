@@ -222,6 +222,143 @@ async fn register_typed(app: &TestApp, room: i64, body: Value, token: Option<&st
     app.anonymous().send(req).await
 }
 
+async fn malformed_slash_schema_app() -> TestApp {
+    use super::presenters::test_support::ALL_TALK;
+    let app = setup().await;
+    for name in ["broken", "valid"] {
+        let reply = register_typed(
+            &app,
+            ALL_TALK,
+            json!({"name":name,"option_schema":{"options":[]}}),
+            Some(SECRET),
+        )
+        .await;
+        assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    }
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agent_slash_commands SET option_schema='{' WHERE name='broken'",
+                [],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app
+}
+
+#[tokio::test]
+async fn slash_malformed_schema_composer_listing_keeps_both_commands() {
+    use super::presenters::test_support::{ALL_TALK, DAVID};
+    use super::spa::api_tests::{get, parse};
+    let app = malformed_slash_schema_app().await;
+    let mut david = app.sign_in(DAVID).await;
+    let reply = david
+        .send(get(&format!("/api/v1/rooms/{ALL_TALK}/slash_commands")))
+        .await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    let list: campfire_api_types::SlashCommandList = parse(&reply);
+    let broken = list.commands.iter().find(|c| c.name == "broken").unwrap();
+    assert_eq!(broken.agent_name.as_deref(), Some("Bender Bot"));
+    assert!(broken.option_schema.is_none());
+    let valid = list.commands.iter().find(|c| c.name == "valid").unwrap();
+    assert_eq!(json!(valid.option_schema), json!({"options":[]}));
+}
+
+#[tokio::test]
+async fn slash_malformed_schema_composer_invocation_returns_validation() {
+    use super::presenters::test_support::{ALL_TALK, DAVID};
+    use super::spa::api_tests::{json_body, parse};
+    let app = malformed_slash_schema_app().await;
+    let mut david = app.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{ALL_TALK}/slash_commands");
+    for body in [
+        json!({"text":"/broken"}),
+        json!({"text":"/broken","options":{"values":{}}}),
+    ] {
+        let reply = david.write(json_body(Method::POST, &path, &body)).await;
+        assert_eq!(reply.status.as_u16(), 422, "{}", reply.text());
+        assert_eq!(
+            parse::<Value>(&reply),
+            json!({"error":{"_tag":"Validation","message":"Invalid slash command options","fields":{"options":["command option schema is unavailable"]}}})
+        );
+    }
+    let reply = david
+        .write(json_body(Method::POST, &path, &json!({"text":"/valid"})))
+        .await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    assert_eq!(parse::<Value>(&reply)["status"], "ephemeral");
+    app.db()
+        .read(|conn| {
+            let metadata: String = conn.query_row(
+                "SELECT metadata FROM agent_events WHERE event_type='slash_command'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(
+                serde_json::from_str::<Value>(&metadata).unwrap()["command"],
+                "valid"
+            );
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(count, 1);
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slash_malformed_schema_http_management_can_clear_and_replace() {
+    use super::presenters::test_support::ALL_TALK;
+    let app = malformed_slash_schema_app().await;
+    for schema in [Value::Null, json!({"options":[]})] {
+        app.db()
+            .write(|tx| {
+                tx.conn().execute(
+                    "UPDATE agent_slash_commands SET option_schema='{' WHERE name='broken'",
+                    [],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let reply = register_typed(
+            &app,
+            ALL_TALK,
+            json!({"name":"broken","option_schema":schema}),
+            Some(SECRET),
+        )
+        .await;
+        assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+        assert_eq!(
+            serde_json::from_str::<Value>(&reply.text()).unwrap()["option_schema"],
+            schema
+        );
+        let stored: Option<String> = app
+            .db()
+            .read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT option_schema FROM agent_slash_commands WHERE name='broken'",
+                    [],
+                    |r| r.get(0),
+                )?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            stored
+                .map(|s| serde_json::from_str::<Value>(&s).unwrap())
+                .unwrap_or(Value::Null),
+            schema
+        );
+    }
+}
+
 #[tokio::test]
 async fn slash_schema_http_management_set_keep_clear_invalid_and_authorization() {
     use super::presenters::test_support::{ALL_TALK, DAVID};
@@ -335,7 +472,7 @@ async fn slash_schema_http_management_set_keep_clear_invalid_and_authorization()
             assert!(
                 campfire_db::AgentSlashCommand::find_by_name(conn, ALL_TALK, "typed")?
                     .unwrap()
-                    .option_schema
+                    .option_schema()?
                     .is_none()
             );
             Ok(())

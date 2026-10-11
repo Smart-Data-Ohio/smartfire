@@ -292,7 +292,7 @@ async fn slash_schema_mcp_management_uses_the_shared_registration_service() {
                 let command =
                     campfire_db::AgentSlashCommand::find_by_name(conn, ALL_TALK, "typed")?.unwrap();
                 assert_eq!(
-                    serde_json::to_value(command.option_schema).unwrap(),
+                    serde_json::to_value(command.option_schema()?).unwrap(),
                     expected
                 );
                 Ok(())
