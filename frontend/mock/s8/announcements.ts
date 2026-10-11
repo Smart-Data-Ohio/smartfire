@@ -199,6 +199,7 @@ export function createAnnouncements(ctx: S2Context): Announcements {
     const attributed: MessageDTO = {
       ...copy,
       updatedAt: touched(ctx.now(), copy.updatedAt),
+      announcementCopy: true,
       announcementSource: {
         roomId: source.roomId,
         messageId: source.id,
@@ -230,7 +231,7 @@ export function createAnnouncements(ctx: S2Context): Announcements {
       throw invalid("message", "Message", "must be in an announcement room");
     }
 
-    if (message.systemNote || message.streaming || message.announcementSource != null) {
+    if (message.systemNote || message.streaming || message.announcementCopy === true) {
       throw invalid(
         "message",
         "Message",

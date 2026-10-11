@@ -56,6 +56,31 @@ describe("publish permission", () => {
     expect(messagePermissions(own, { ...author, viewerRole: "bot" }).publish).toBe(false);
   });
 
+  it("isn't offered on a copy whose source the viewer can't see", () => {
+    // An administrator outside the source room: the server leaves the source out but still marks
+    // the copy, here in a room that is itself an announcement room.
+    const hidden = messageFixture(6, NEWS, {
+      creatorId: 9,
+      announcementCopy: true,
+      announcementSource: null,
+    });
+
+    const admin = { ...author, viewerRole: "administrator" } as const;
+
+    expect(messagePermissions(hidden, admin).publish).toBe(false);
+    expect(
+      menuSections({
+        permissions: messagePermissions(hidden, admin),
+        pinned: false,
+        published: false,
+        saved: false,
+        inThread: false,
+      })
+        .flat()
+        .some((entry) => entry.command === "publish"),
+    ).toBe(false);
+  });
+
   it("is never offered on a system note, a streaming message or a delivered copy", () => {
     const admin = { ...author, viewerRole: "administrator" } as const;
 

@@ -72,6 +72,9 @@ export function messagePermissions(
       !note &&
       !message.streaming &&
       context.announcement === true &&
+      // A copy is never published again. Its source can be hidden from the viewer, so the
+      // server's mark decides, not whether the source is shown.
+      message.announcementCopy !== true &&
       message.announcementSource == null,
   };
 }

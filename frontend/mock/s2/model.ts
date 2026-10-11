@@ -238,6 +238,7 @@ export function buildMessage(
     createdAt,
     updatedAt: createdAt,
     published: false,
+    announcementCopy: false,
     announcementSource: null,
   };
 

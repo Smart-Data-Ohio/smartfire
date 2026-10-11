@@ -824,6 +824,7 @@ export function seedWorld(now: number, random: Random): World {
       createdAt,
       updatedAt: editedAt ?? createdAt,
       published: false,
+      announcementCopy: false,
       announcementSource: null,
     });
     messagesByRoom.set(draft.roomId, list);
