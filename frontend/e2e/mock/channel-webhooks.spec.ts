@@ -9,6 +9,7 @@ import {
 } from "./support.ts";
 
 const ROOM = ROOM_IDS.launchPlanning;
+
 // Six settings tabs are wider than the dialog: their strip scrolls sideways on purpose.
 const TAB_STRIP = ".room-form .t-tabs";
 
