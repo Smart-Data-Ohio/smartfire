@@ -245,7 +245,8 @@ async fn unenrolled_public_shells_match_retained_forms_and_preserve_return_path(
             if spa {
                 let boot = inline_boot(&reply);
                 assert_eq!(boot["kind"], "signedOut");
-                assert_eq!(boot.as_object().unwrap().len(), 5);
+                // The help contact and the version joined the five original keys with slice 45.
+                assert_eq!(boot.as_object().unwrap().len(), 7);
             } else {
                 assert!(reply.text().contains("<form"));
             }

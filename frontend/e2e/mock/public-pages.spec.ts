@@ -34,6 +34,7 @@ async function signOut(page: Page): Promise<void> {
     if (route.request().resourceType() !== "document") return route.fallback();
 
     const response = await route.fetch();
+
     const html = (await response.text()).replace(
       BOOT_SCRIPT,
       `<script type="application/json" id="boot">${boot.replaceAll("<", "\\u003c")}</script>`,
