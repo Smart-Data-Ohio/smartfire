@@ -190,17 +190,19 @@ impl ActivityItem {
         let recipients = candidates(tx.conn(), tx.rich_text(), message, tx.now())?.recipients;
         let mut removed = Vec::new();
         for item in obsolete {
-            if super::super::ignore_policy::ignored(tx.conn(), item.user_id, message.creator_id)? {
-                continue;
-            }
             if let Some(candidate) = recipients
                 .iter()
                 .find(|candidate| candidate.user_id == item.user_id)
             {
                 // Recompute the remaining reason without reopening activity the recipient handled.
+                let updated_at = if super::super::ignore_policy::ignored(tx.conn(), item.user_id, message.creator_id)? {
+                    item.updated_at
+                } else {
+                    tx.now()
+                };
                 tx.conn().execute(
                     "UPDATE activity_items SET event_type=?,updated_at=? WHERE id=?",
-                    rusqlite::params![candidate.event_type, tx.now(), item.id],
+                    rusqlite::params![candidate.event_type, updated_at, item.id],
                 )?;
             } else {
                 tx.conn()

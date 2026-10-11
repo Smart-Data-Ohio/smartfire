@@ -555,7 +555,7 @@ async fn ignore_html_direct_targets_match_missing_people_on_create_and_add() {
 
 #[tokio::test]
 async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types() {
-    use campfire_db::{ChannelThread, NewChannelThread, Room, RoomType, ThreadMembership, ThreadInvolvement};
+    use campfire_db::{ChannelThread, Membership, NewChannelThread, Room, RoomType, ThreadMembership, ThreadInvolvement};
     use campfire_api_types::SyncPayload;
     let mut observed = Vec::new();
     for ignored in [false, true] {
@@ -566,6 +566,8 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
             let board = Room::create_for(tx, RoomType::Board, Some("Sequence board"), JASON, &users)?;
             let thread = ChannelThread::create(tx, NewChannelThread { room_id: room.id, creator_id: JASON, name: Some("Sequence thread".into()), ..Default::default() })?;
             ThreadMembership::join(tx, thread.id, DAVID)?.update_involvement(tx, ThreadInvolvement::Everything)?;
+            Membership::find_by_room_and_user(tx.conn(), room.id, DAVID)?.unwrap().read(tx)?;
+            tx.conn().execute("UPDATE memberships SET connected_at=NULL,connections=0 WHERE room_id=? AND user_id=?", [room.id, DAVID])?;
             campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, ignored)?;
             Ok((room.id, board.id, thread.id))
         }).await.unwrap();
@@ -597,7 +599,13 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
             false
         }, |_| false).await;
         checkpoints.push(first.seq - start);
+        assert_eq!(a.db().read(move |conn| {
+            let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+            Ok(Membership::find_stored(conn, membership.id)?.unread())
+        }).await.unwrap(), !ignored, "chat unread state differs before muting");
         for (method, path, body) in [
+            (Method::PUT, format!("/api/v1/rooms/{room}/involvement"), json!({"involvement":"muted"})),
+            (Method::PUT, format!("/api/v1/rooms/{room}/involvement"), json!({"involvement":"everything"})),
             (Method::PATCH, format!("/api/v1/messages/{message}"), json!({"markdownSource":"Edited post"})),
             (Method::POST, format!("/api/v1/threads/{thread}/messages"), json!({"clientMessageId":"sequence-reply", "markdownSource":"A reply"})),
             (Method::POST, format!("/api/v1/rooms/{board}/posts"), json!({"name":"Board post", "status":"planned", "ownerId":null, "tags":[], "message":{"clientMessageId":"sequence-board", "markdownSource":"Board opener"}})),
