@@ -645,6 +645,53 @@
     gap: var(--space-2);
   }
 
+  /* Announcement follows: one quiet row per room, then the picker that adds one. */
+  .room-follow-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    list-style: none;
+  }
+
+  .room-follow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-md);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  }
+
+  .room-follow + .room-follow {
+    border-top: 1px solid var(--border);
+  }
+
+  .room-follow-icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .room-follow-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .room-follow-picker {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .room-follow-select {
+    flex: 1;
+    min-width: 0;
+  }
+
   /* The form didn't load: the reason and a retry on one line. */
   .room-form-load-error {
     display: flex;
@@ -687,10 +734,22 @@
       width: 100%;
     }
 
-    /* Four settings tabs (a board's Tags, a channel's Email) share the sheet's width on one line:
-       labels only, each tab as wide as its label needs. */
+    .room-follow-picker {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    /* The settings tabs share the sheet's width on one line: labels only, each tab as wide as its
+       label needs. */
     .room-form .tabs .t-tabs {
       align-self: stretch;
+      min-width: max-content;
+    }
+
+    /* More tabs than fit (a channel's Members, Announcements and Email) scroll sideways. */
+    .room-form .tabs {
+      overflow-x: auto;
+      scrollbar-width: none;
     }
 
     .room-form .tab {
