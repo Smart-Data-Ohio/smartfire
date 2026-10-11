@@ -20,6 +20,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
+import { parseTwoFactorSetupSearch } from "./features/auth/two-factor-search.ts";
 import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
@@ -136,6 +137,18 @@ const transferRoute = createRoute({
   ...chunked(() =>
     import("./features/auth/transfer.tsx").then((module) => ({ default: module.TransferRoute })),
   ),
+});
+
+/**
+ * `/app/two_factor/setup?return_to=&required=`: setting up two-step sign-in, outside the shell (an
+ * unverified session's requests answer the enrollment gate). Settings and the shell's gate open it
+ * in the SPA; the retained `/two_factor_setup` page still serves its own URL.
+ */
+const twoFactorSetupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "two_factor/setup",
+  validateSearch: parseTwoFactorSetupSearch,
+  ...chunked(() => import("./features/auth/two-factor-setup.tsx")),
 });
 
 /**
@@ -677,6 +690,7 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   challengeRoute,
   transferRoute,
+  twoFactorSetupRoute,
   aboutRoute,
   privacyRoute,
   termsRoute,
