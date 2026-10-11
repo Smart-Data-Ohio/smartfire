@@ -1,3 +1,4 @@
+import type { BoardTag } from "../../gen/BoardTag.ts";
 import type { User } from "../../gen/User.ts";
 import type { WorkFacts } from "../../gen/WorkFacts.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
@@ -6,6 +7,7 @@ import { Avatar } from "../../ui/avatar.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { isAgent } from "../people/people.ts";
 import { ownerLabel, WORK_STATUS_LABEL } from "./board-format.ts";
+import { orderedPostTags, sameTagName } from "./board-tags.ts";
 
 /** A work status as a soft pill: neutral planned, accent in progress, red blocked, green done. */
 export function StatusChip({ status }: { readonly status: WorkStatus }) {
@@ -60,13 +62,27 @@ export function OwnerLine({
   );
 }
 
-/** A post's tags as small pills; the filtered one stands out. */
+/** A curated tag's emoji, sized to sit in a pill; hidden from readers (the name says it). */
+export function TagEmoji({ emoji }: { readonly emoji: string | null }) {
+  return emoji === null || emoji === "" ? null : (
+    <span className="board-tag-emoji" aria-hidden="true">
+      {emoji}
+    </span>
+  );
+}
+
+/**
+ * A post's tags as small pills; the filtered one stands out. The board's curated tags lead, in
+ * its order and with their emoji; free-text tags follow with their "#", as they always have.
+ */
 export function TagList({
   tags,
   active = "",
+  catalog = [],
 }: {
   readonly tags: readonly string[];
   readonly active?: string;
+  readonly catalog?: readonly BoardTag[];
 }) {
   if (tags.length === 0) {
     return null;
@@ -74,9 +90,15 @@ export function TagList({
 
   return (
     <ul className="board-tags">
-      {tags.map((tag) => (
-        <li key={tag} className="board-tag" data-active={tag === active || undefined}>
-          {tag}
+      {orderedPostTags(catalog, tags).map(({ name, tag }) => (
+        <li
+          key={name}
+          className="board-tag"
+          data-curated={tag === undefined ? undefined : true}
+          data-active={(active !== "" && sameTagName(name, active)) || undefined}
+        >
+          {tag === undefined ? null : <TagEmoji emoji={tag.emoji} />}
+          {tag?.name ?? name}
         </li>
       ))}
     </ul>

@@ -4,6 +4,7 @@ import type { BoardDigest } from "../gen/BoardDigest.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { BoardOwnerOption } from "../gen/BoardOwnerOption.ts";
 import type { BoardStatusFilter } from "../gen/BoardStatusFilter.ts";
+import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { BoardTagCount } from "../gen/BoardTagCount.ts";
 import type { Thread } from "../gen/Thread.ts";
 import { mergeUserList } from "./ordering.ts";
@@ -167,6 +168,14 @@ export function boardAutomationsChanged(state: State, roomId: number): State {
       ...state.boardAutomationsChanged,
       [roomId]: (state.boardAutomationsChanged[roomId] ?? 0) + 1,
     },
+  };
+}
+
+/** A board's curated tags and policy as an answer has them (the caller drops stale answers). */
+export function setBoardTagCatalog(state: State, catalog: BoardTagCatalog): State {
+  return {
+    ...state,
+    boardTagCatalogs: { ...state.boardTagCatalogs, [catalog.roomId]: catalog },
   };
 }
 

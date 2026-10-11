@@ -1,11 +1,20 @@
+import type { ReactNode } from "react";
 import type { BoardOwnerOption } from "../../gen/BoardOwnerOption.ts";
 import type { BoardStatusFilter } from "../../gen/BoardStatusFilter.ts";
+import type { BoardTag } from "../../gen/BoardTag.ts";
 import type { BoardTagCount } from "../../gen/BoardTagCount.ts";
 import { useStore } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
-import { Menu, MenuGroup, MenuRadioItem, MenuSeparator, SubMenu } from "../../ui/menu.tsx";
+import {
+  Menu,
+  MenuGroup,
+  MenuItem,
+  MenuRadioItem,
+  MenuSeparator,
+  SubMenu,
+} from "../../ui/menu.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
 import {
   activeFilterCount,
@@ -13,6 +22,8 @@ import {
   ownerFilterLabel,
   STATUS_FILTER_LABEL,
 } from "./board-format.ts";
+import { TagEmoji } from "./board-parts.tsx";
+import { catalogTag, postsUsing, sameTagName } from "./board-tags.ts";
 
 const VIEWS = [
   { value: "list", label: "List", icon: "list-checks" },
@@ -31,12 +42,16 @@ interface BoardToolbarProps {
   readonly query: BoardQuery;
   readonly ownerOptions: readonly BoardOwnerOption[];
   readonly tagCounts: readonly BoardTagCount[];
+  /** The board's curated tags, which lead the tag filter with their emoji. */
+  readonly catalog: readonly BoardTag[];
   readonly onChange: (next: Partial<BoardQuery>) => void;
   readonly onNewPost: () => void;
   /** The board's creator or an administrator: they get the Automations button. */
   readonly canAdminister: boolean;
   readonly automationsOpen: boolean;
   readonly onAutomations: () => void;
+  /** Opens the board's tag editor (its settings' Tags tab); only for those who may edit it. */
+  readonly onManageTags: () => void;
 }
 
 /** One removable chip per filter that differs from the default. */
@@ -46,7 +61,7 @@ function FilterChip({
   onClear,
 }: {
   readonly label: string;
-  readonly value: string;
+  readonly value: ReactNode;
   readonly onClear: () => void;
 }) {
   return (
@@ -65,6 +80,68 @@ function FilterChip({
   );
 }
 
+/** The tag filter's name for a tag: a curated tag's emoji and label, else the tag as typed. */
+function TagValue({
+  catalog,
+  tag,
+}: {
+  readonly catalog: readonly BoardTag[];
+  readonly tag: string;
+}) {
+  const curated = catalogTag(catalog, tag);
+
+  return curated === undefined ? (
+    tag
+  ) : (
+    <>
+      <TagEmoji emoji={curated.emoji} />
+      {curated.name}
+    </>
+  );
+}
+
+/**
+ * The board's curated tags as a row of filter chips under the toolbar (Discord's forum tag bar):
+ * one press filters to a tag, a second press on it clears the filter. Free-text tags stay in the
+ * Filter menu. Scrolls sideways on a phone rather than wrapping.
+ */
+export function BoardTagStrip({
+  catalog,
+  active,
+  onChange,
+}: {
+  readonly catalog: readonly BoardTag[];
+  readonly active: string;
+  readonly onChange: (tag: string) => void;
+}) {
+  if (catalog.length === 0) {
+    return null;
+  }
+
+  return (
+    <fieldset className="board-tag-strip" aria-label="Filter by board tag">
+      {catalog.map((tag) => {
+        const on = active !== "" && sameTagName(tag.name, active);
+
+        return (
+          <button
+            key={tag.id}
+            type="button"
+            className="board-tag-filter"
+            aria-pressed={on}
+            onClick={() => onChange(on ? "" : tag.name)}
+          >
+            <span className="board-tag-filter-face">
+              <TagEmoji emoji={tag.emoji} />
+              {tag.name}
+            </span>
+          </button>
+        );
+      })}
+    </fieldset>
+  );
+}
+
 /**
  * The board's toolbar, under the room header: List or Board on the left, the active filters as
  * chips, then Filter (status in the list, owner, tag, each a submenu of choices), the "+" that
@@ -74,15 +151,29 @@ export function BoardToolbar({
   query,
   ownerOptions,
   tagCounts,
+  catalog,
   onChange,
   onNewPost,
   canAdminister,
   automationsOpen,
   onAutomations,
+  onManageTags,
 }: BoardToolbarProps) {
   const users = useStore((state) => state.users);
   const active = activeFilterCount(query);
   const list = query.view === "list";
+  const others = tagCounts.filter((tag) => catalogTag(catalog, tag.name) === undefined);
+  const activeTag = catalogTag(catalog, query.tag)?.name ?? query.tag;
+
+  const otherTag = (tag: BoardTagCount) => (
+    <MenuRadioItem
+      key={tag.name}
+      checked={query.tag === tag.name}
+      onSelect={() => onChange({ tag: tag.name })}
+    >
+      {tag.name} <span className="board-menu-count tabular">({tag.count})</span>
+    </MenuRadioItem>
+  );
 
   return (
     <div className="board-toolbar" role="toolbar" aria-label="Board">
@@ -108,7 +199,11 @@ export function BoardToolbar({
           />
         )}
         {query.tag === "" ? null : (
-          <FilterChip label="Tag" value={query.tag} onClear={() => onChange({ tag: "" })} />
+          <FilterChip
+            label="Tag"
+            value={<TagValue catalog={catalog} tag={query.tag} />}
+            onClear={() => onChange({ tag: "" })}
+          />
         )}
         {active > 1 ? (
           <Button
@@ -197,21 +292,41 @@ export function BoardToolbar({
               </MenuGroup>
             ) : null}
           </SubMenu>
-          <SubMenu label={`Tag: ${query.tag === "" ? "Any" : query.tag}`} icon="hash">
+          <SubMenu label={`Tag: ${query.tag === "" ? "Any" : activeTag}`} icon="hash">
             <MenuGroup label="Tag">
               <MenuRadioItem checked={query.tag === ""} onSelect={() => onChange({ tag: "" })}>
                 Any tag
               </MenuRadioItem>
-              {tagCounts.map((tag) => (
-                <MenuRadioItem
-                  key={tag.name}
-                  checked={query.tag === tag.name}
-                  onSelect={() => onChange({ tag: tag.name })}
-                >
-                  {tag.name} <span className="board-menu-count tabular">({tag.count})</span>
-                </MenuRadioItem>
-              ))}
+              {catalog.length === 0 ? others.map(otherTag) : null}
             </MenuGroup>
+            {catalog.length > 0 ? <MenuSeparator /> : null}
+            {catalog.length > 0 ? (
+              <MenuGroup label="Board tags">
+                {catalog.map((tag) => (
+                  <MenuRadioItem
+                    key={tag.id}
+                    checked={query.tag !== "" && sameTagName(query.tag, tag.name)}
+                    onSelect={() => onChange({ tag: tag.name })}
+                  >
+                    <TagEmoji emoji={tag.emoji} />
+                    {tag.name}{" "}
+                    <span className="board-menu-count tabular">
+                      ({postsUsing(tagCounts, tag.name) ?? 0})
+                    </span>
+                  </MenuRadioItem>
+                ))}
+              </MenuGroup>
+            ) : null}
+            {catalog.length > 0 && others.length > 0 ? <MenuSeparator /> : null}
+            {catalog.length > 0 && others.length > 0 ? (
+              <MenuGroup label="Other tags">{others.map(otherTag)}</MenuGroup>
+            ) : null}
+            {canAdminister ? <MenuSeparator /> : null}
+            {canAdminister ? (
+              <MenuItem icon="pencil" onSelect={onManageTags}>
+                Manage board tags…
+              </MenuItem>
+            ) : null}
           </SubMenu>
         </Menu>
         <IconButton
