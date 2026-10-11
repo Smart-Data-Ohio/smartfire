@@ -416,7 +416,11 @@ async fn setup_shell_opens_for_an_unenrolled_session_and_keeps_its_return_path()
         .await;
     // Only the screen's page is let through: the rest of /app, a nested path and a JSON request
     // for it stay gated.
-    for path in ["/app/", "/app/two_factor/setup/extra", "/app/settings/security"] {
+    for path in [
+        "/app/",
+        "/app/two_factor/setup/extra",
+        "/app/settings/security",
+    ] {
         assert_eq!(
             browser.get(path).await.location(),
             Some("http://campfire.test/two_factor_setup"),
@@ -443,9 +447,15 @@ async fn setup_shell_opens_for_an_unenrolled_session_and_keeps_its_return_path()
         .await;
     assert_eq!(page.status, StatusCode::OK, "{}", page.text());
     assert_eq!(page.location(), None);
-    assert!(page.text().contains(r#"<script type="application/json" id="boot""#));
+    assert!(
+        page.text()
+            .contains(r#"<script type="application/json" id="boot""#)
+    );
     assert_eq!(page.header("cache-control"), Some("no-store"));
-    assert_eq!(cookie_state(&app, &browser)["return_to_after_authenticating"], saved);
+    assert_eq!(
+        cookie_state(&app, &browser)["return_to_after_authenticating"],
+        saved
+    );
     assert_eq!(facts(&app).await, before);
 
     // Setting up from the screen returns to the saved path.
@@ -457,7 +467,10 @@ async fn setup_shell_opens_for_an_unenrolled_session_and_keeps_its_return_path()
     // Enrolled, the screen sends the account to its profile, as the retained page does.
     let retained = browser.get("/two_factor_setup").await;
     let shell = browser.get(SHELL).await;
-    assert_eq!(retained.location(), Some("http://campfire.test/users/me/profile"));
+    assert_eq!(
+        retained.location(),
+        Some("http://campfire.test/users/me/profile")
+    );
     assert_eq!(shell.status, retained.status);
     assert_eq!(shell.location(), retained.location());
 }
