@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BoardListing } from "../../src/gen/BoardListing.ts";
 import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { BoardTagCatalog } from "../../src/gen/BoardTagCatalog.ts";
@@ -11,6 +11,10 @@ import { buildWorld } from "../s3/seed.ts";
 import { USER_IDS, VIEWER_ID } from "../seed.ts";
 import { createBoardTags } from "./board-tags.ts";
 import { BOARD_ROOM_ID } from "./seed.ts";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const root = `/api/v1/rooms/${BOARD_ROOM_ID}`;
 
@@ -308,6 +312,32 @@ describe("mock board tag catalog", () => {
     expect(fieldsOf(await send(server, "POST", `${root}/board/tags`, { name: "STRASSE" }))).toEqual(
       { name: ["has already been taken"] },
     );
+  });
+
+  it("filters by a tag the runtime lower-cases but the server's folding keeps (U+A7CE)", async () => {
+    // As a Unicode 17 runtime does; the server (caseless, Unicode 16) keeps U+A7CE as it is.
+    const lower = String.prototype.toLowerCase;
+
+    vi.spyOn(String.prototype, "toLowerCase").mockImplementation(function (this: string) {
+      return lower.call(this).replaceAll("\u{a7ce}", "\u{a7cf}");
+    });
+
+    const { server } = harness();
+
+    await seedCatalog(server, { tags: [{ name: "\u{a7ce}" }] });
+
+    const made = await expectStatus<ThreadDetail>(
+      server,
+      "POST",
+      `${root}/posts`,
+      post(["\u{a7ce}"]),
+      201,
+    );
+
+    const filtered = await get<BoardListing>(server, `${root}/board?tag=%EA%9F%8E`);
+
+    expect(filtered.tag).toBe("\u{a7ce}");
+    expect(filtered.posts.map(({ thread }) => thread.id)).toEqual([made.thread.id]);
   });
 });
 

@@ -168,7 +168,7 @@ export function BoardToolbar({
   const otherTag = (tag: BoardTagCount) => (
     <MenuRadioItem
       key={tag.name}
-      checked={query.tag === tag.name}
+      checked={sameTagName(query.tag, tag.name)}
       onSelect={() => onChange({ tag: tag.name })}
     >
       {tag.name} <span className="board-menu-count tabular">({tag.count})</span>

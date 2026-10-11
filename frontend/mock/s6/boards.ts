@@ -84,7 +84,14 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
     const rawOwner = query.get("owner") ?? "anyone";
     const owner = /^(anyone|me|agents|[1-9]\d*)$/.test(rawOwner) ? rawOwner : "anyone";
-    const asked = (query.get("tag") ?? "").trim().toLowerCase();
+
+    // The server lower-cases the tag with Ruby's (Unicode 15) table; this runtime's toLowerCase
+    // may know newer characters, so only ASCII is lower-cased here (free-text tags are ASCII), and
+    // the filter compares through the server's case folding, which takes in the rest.
+    const asked = (query.get("tag") ?? "")
+      .trim()
+      .replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+
     const tag = asked === "" ? "" : canonicalBoardTag(ctx.world(), roomId, asked);
     const rawPage = Number(query.get("page") ?? 1);
     const page = Number.isFinite(rawPage) ? Math.max(1, Math.min(20, Math.trunc(rawPage))) : 1;

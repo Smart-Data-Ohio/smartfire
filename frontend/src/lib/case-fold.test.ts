@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { caseFold, caselessEqual } from "./case-fold.ts";
 
 // The same table as board_catalog_case_folding_pins_the_spa_table (crates/db), which checks it
@@ -20,7 +20,13 @@ const SERVER_FOLDS: readonly (readonly [string, string])[] = [
   ["\u{212a}", "k"],
   ["µ", "μ"],
   ["Équipe", "équipe"],
+  ["\u{a7ce}", "\u{a7ce}"],
+  ["\u{a7cf}", "\u{a7cf}"],
 ];
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("caseFold", () => {
   it.each(SERVER_FOLDS)("folds %s as the server does", (name, folded) => {
@@ -33,5 +39,19 @@ describe("caseFold", () => {
     expect(caselessEqual("ΟΔΟΣ", "οδος")).toBe(true);
     expect(caselessEqual("ı", "I")).toBe(false);
     expect(caselessEqual("İ", "i")).toBe(false);
+    expect(caselessEqual("\u{a7ce}", "\u{a7cf}")).toBe(false);
+  });
+
+  it("folds from its own table, so every runtime folds as the server does", () => {
+    const lower = vi.spyOn(String.prototype, "toLowerCase");
+    const localeLower = vi.spyOn(String.prototype, "toLocaleLowerCase");
+    const normalize = vi.spyOn(String.prototype, "normalize");
+
+    for (const [name] of SERVER_FOLDS) caseFold(name);
+    caseFold("Plain ASCII, digits 0-9 and \u{a7ce} \u{1f600}");
+
+    expect(lower).not.toHaveBeenCalled();
+    expect(localeLower).not.toHaveBeenCalled();
+    expect(normalize).not.toHaveBeenCalled();
   });
 });

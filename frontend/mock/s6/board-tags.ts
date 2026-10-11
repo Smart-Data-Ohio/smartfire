@@ -72,7 +72,8 @@ export function boardPostTags(world: World, roomId: number, input: readonly stri
     if (trimmed === "") continue;
 
     const label =
-      catalog.tags.find((tag) => same(tag.name, trimmed))?.name ?? trimmed.toLowerCase();
+      catalog.tags.find((tag) => same(tag.name, trimmed))?.name ??
+      trimmed.replace(/[A-Z]+/g, (letters) => letters.toLowerCase());
 
     if (!tags.includes(label)) tags.push(label);
   }

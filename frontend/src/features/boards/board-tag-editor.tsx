@@ -259,8 +259,6 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   const drag = useRef<Drag | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
   const newNameRef = useRef<HTMLInputElement | null>(null);
-  /** The last queued write's answer, while more are queued behind it. */
-  const answered = useRef<BoardTagCatalog | undefined>(undefined);
   /** Policy changes made but not yet answered, shown over the catalog meanwhile. */
   const [policyDraft, setPolicyDraft] = useState<PolicyPatch>({});
   /** The row the delete confirmation was opened from, for focus to land near when it closes. */
@@ -306,8 +304,10 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
 
   /**
    * Runs `write` after every change made before it, so the server sees them in order. It gets
-   * the catalog as of the change before it (that write's answer, else the store's), so a field
-   * it doesn't change goes out as the server now has it, not as it was when the change was made.
+   * the freshest catalog accepted so far, so a field it doesn't change goes out as the server now
+   * has it, not as it was when the change was made. That's the store's: every catalog answer
+   * (these writes, refetches after someone else's change) lands there unless one to a later
+   * request already has, so an answer that was slow to arrive can't bring back an older default.
    */
   const enqueue = (
     write: (base: BoardTagCatalog | undefined) => Promise<BoardTagCatalog>,
@@ -315,13 +315,7 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
     pendingRef.current += 1;
     setPending((count) => count + 1);
 
-    const result = queue.current.then(() =>
-      write(answered.current ?? store.getState().boardTagCatalogs[roomId]).then((answer) => {
-        answered.current = answer;
-
-        return answer;
-      }),
-    );
+    const result = queue.current.then(() => write(store.getState().boardTagCatalogs[roomId]));
 
     queue.current = result
       .catch(() => undefined)
@@ -330,7 +324,6 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
         setPending((count) => count - 1);
 
         if (pendingRef.current === 0) {
-          answered.current = undefined;
           setOrder(null);
           setPolicyDraft({});
         }
@@ -342,7 +335,6 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   const failed = (title: string) => (failure: Error) => {
     toast({ title, description: refusalText(failure), tone: "danger" });
     // Whatever the change was, show the catalog as the server now has it.
-    answered.current = undefined;
     setOrder(null);
     setPolicyDraft({});
     refreshBoardTags(roomId);

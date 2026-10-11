@@ -41,12 +41,24 @@ export interface BoardState {
   readonly removedPostIds: readonly number[];
 }
 
+/**
+ * The tag stays as asked (or as the server answered it): it's only ever compared through the
+ * server's case folding, never lower-cased here, since the runtime's lower-casing follows its own
+ * Unicode version and can tell apart names the server treats as one.
+ */
 export function normalizeBoardQuery(query: BoardQuery): BoardQuery {
   return {
     status: query.status,
     owner: /^(anyone|me|agents|[1-9]\d*)$/.test(query.owner) ? query.owner : "anyone",
-    tag: query.tag.trim().toLowerCase(),
+    tag: query.tag.trim(),
   };
+}
+
+/** Whether two queries ask the server for the same posts. */
+export function sameBoardQuery(left: BoardQuery, right: BoardQuery): boolean {
+  return (
+    left.status === right.status && left.owner === right.owner && caselessEqual(left.tag, right.tag)
+  );
 }
 
 export function setBoardLoading(
@@ -57,7 +69,7 @@ export function setBoardLoading(
 ): State {
   const held = state.boards[roomId];
   const normalized = normalizeBoardQuery(query);
-  const same = held !== undefined && JSON.stringify(held.query) === JSON.stringify(normalized);
+  const same = held !== undefined && sameBoardQuery(held.query, normalized);
 
   return {
     ...state,
@@ -141,8 +153,8 @@ export function loadBoardListing(state: State, listing: BoardListing, generation
         ...held,
         status: "ready",
         error: null,
-        // The server answers a curated tag by its label ("Bug report"); the query stays lower-cased.
-        query: { status: listing.status, owner: listing.owner, tag: listing.tag.toLowerCase() },
+        // The server answers a curated tag by its label ("Bug report"), any other one lower-cased.
+        query: { status: listing.status, owner: listing.owner, tag: listing.tag },
         page: listing.page,
         postIds: [...new Set([...posts.map(({ thread }) => thread.id), ...held.livePostIds])],
         hasMore: listing.hasMore,

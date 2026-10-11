@@ -306,9 +306,12 @@ fn board_catalog_case_folding_pins_the_spa_table() {
         ("İstanbul", "i\u{307}stanbul"), ("ISTANBUL", "istanbul"), ("ı", "ı"),
         ("ΟΔΟΣ", "οδοσ"), ("οδος", "οδοσ"), ("ﬁle", "file"), ("ﬀ", "ff"),
         ("Ꭰ", "Ꭰ"), ("ꭰ", "Ꭰ"), ("ǅ", "ǆ"), ("\u{212a}", "k"), ("µ", "μ"), ("Équipe", "équipe"),
+        ("\u{a7ce}", "\u{a7ce}"), ("\u{a7cf}", "\u{a7cf}"),
     ] {
         assert_eq!(caseless::default_case_fold_str(name), folded, "{name}");
     }
     assert!(caseless::default_caseless_match_str("Straße", "STRASSE"));
     assert!(!caseless::default_caseless_match_str("ı", "I"));
+    // Newer than the server's tables: a Unicode 17 runtime lower-cases U+A7CE to U+A7CF.
+    assert!(!caseless::default_caseless_match_str("\u{a7ce}", "\u{a7cf}"));
 }
