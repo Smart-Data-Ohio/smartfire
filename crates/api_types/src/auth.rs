@@ -1,0 +1,191 @@
+//! Signed-out authentication contracts. Retained forms use the same operations and cookies.
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use ts_rs::TS;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PasswordSignIn {
+    pub email_address: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct GoogleSignInStart {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TransferSignIn {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ChallengeSubmission {
+    pub code: String,
+    pub remember_device: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SignOut {
+    pub push_subscription_endpoint: Option<String>,
+}
+
+/// Credential refusals keep their HTTP status, but are next actions rather than expired sessions.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum AuthResponse {
+    SignedIn {
+        location: String,
+    },
+    SecondFactorRequired {
+        challenge: ChallengeState,
+    },
+    Navigate {
+        location: String,
+    },
+    Error {
+        field_errors: BTreeMap<String, Vec<String>>,
+    },
+}
+
+/// No pending identity, secret, recovery codes or session token is sent to the browser.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ChallengeState {
+    pub methods: Vec<ChallengeMethod>,
+    pub remember_device: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ChallengeMethod {
+    Totp,
+    RecoveryCode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum SignedOut {
+    SignedOut,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SignedOutBoot {
+    pub kind: SignedOut,
+    pub workspace: SignInWorkspace,
+    pub sign_in_methods: SignInMethods,
+    pub first_run_pending: bool,
+    pub csrf_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SignInWorkspace {
+    pub name: Option<String>,
+    pub logo_url: Option<String>,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SignInMethods {
+    pub password: bool,
+    pub google: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::assert_wire;
+    use serde_json::json;
+
+    #[test]
+    fn auth_actions_round_trip_without_pending_identity() {
+        assert_wire(
+            &AuthResponse::SignedIn {
+                location: "/app/".into(),
+            },
+            json!({"kind":"signedIn","location":"/app/"}),
+        );
+        assert_wire(
+            &AuthResponse::Navigate {
+                location: "/session/new".into(),
+            },
+            json!({"kind":"navigate","location":"/session/new"}),
+        );
+        assert_wire(
+            &AuthResponse::SecondFactorRequired {
+                challenge: ChallengeState {
+                    methods: vec![ChallengeMethod::Totp, ChallengeMethod::RecoveryCode],
+                    remember_device: true,
+                },
+            },
+            json!({"kind":"secondFactorRequired","challenge":{"methods":["totp","recoveryCode"],"rememberDevice":true}}),
+        );
+        assert_wire(
+            &AuthResponse::Error {
+                field_errors: [("code".into(), vec!["That code didn't work.".into()])].into(),
+            },
+            json!({"kind":"error","fieldErrors":{"code":["That code didn't work."]}}),
+        );
+    }
+
+    #[test]
+    fn public_boot_and_auth_requests_round_trip() {
+        assert_wire(
+            &SignedOutBoot {
+                kind: SignedOut::SignedOut,
+                workspace: SignInWorkspace {
+                    name: None,
+                    logo_url: None,
+                    description: String::new(),
+                },
+                sign_in_methods: SignInMethods {
+                    password: true,
+                    google: false,
+                },
+                first_run_pending: true,
+                csrf_token: "masked".into(),
+            },
+            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":false},"firstRunPending":true,"csrfToken":"masked"}),
+        );
+        assert_wire(
+            &PasswordSignIn {
+                email_address: "ada@example.com".into(),
+                password: "secret".into(),
+            },
+            json!({"emailAddress":"ada@example.com","password":"secret"}),
+        );
+        assert_wire(
+            &ChallengeSubmission {
+                code: "123456".into(),
+                remember_device: false,
+            },
+            json!({"code":"123456","rememberDevice":false}),
+        );
+        assert_wire(
+            &SignOut {
+                push_subscription_endpoint: None,
+            },
+            json!({"pushSubscriptionEndpoint":null}),
+        );
+        assert_wire(&GoogleSignInStart {}, json!({}));
+        assert_wire(&TransferSignIn {}, json!({}));
+    }
+}

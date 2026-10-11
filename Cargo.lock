@@ -599,6 +599,7 @@ dependencies = [
  "askama",
  "axum",
  "base64 0.22.1",
+ "campfire_api_types",
  "campfire_app",
  "campfire_cable",
  "campfire_db",
@@ -780,6 +781,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "askama",
+ "campfire_api_types",
  "campfire_app",
  "campfire_channels",
  "campfire_db",
@@ -922,6 +924,7 @@ version = "0.1.0"
 dependencies = [
  "askama",
  "brotli",
+ "campfire_api_types",
  "campfire_routes",
  "flate2",
  "serde",

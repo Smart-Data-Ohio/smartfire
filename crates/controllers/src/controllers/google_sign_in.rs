@@ -12,6 +12,7 @@ use campfire_db::{
 };
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 use serde_json::{Map, Value, json};
+use campfire_people::controllers::auth::{self, ResponseMode};
 
 fn configured(c: &mut Ctx) -> Result<()> {
     if c.app().google.sign_in().config.configured() {
@@ -59,10 +60,32 @@ fn canceled(c: &Ctx) -> bool {
         || c.params.get("code").is_none_or(|p| !p.is_present())
 }
 pub async fn create(c: &mut Ctx) -> Result {
+    create_response(c, ResponseMode::Html).await
+}
+
+pub async fn create_json(c: &mut Ctx) -> Result {
+    let result = create_response(c, ResponseMode::Json).await;
+    auth::complete(c, result)
+}
+
+async fn create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     concerns::before_actions(c, Before::default().require_unauthenticated_access()).await?;
     configured(c)?;
     workspace(c).await?;
-    c.app().google.clone().start(c, "sign_in", None)
+    let response = c.app().google.clone().start(c, "sign_in", None)?;
+    if mode == ResponseMode::Html {
+        return Ok(response);
+    }
+    // State, nonce, PKCE and the allowed provider host come from the retained start operation.
+    let location = response
+        .get_header("location")
+        .expect("Google authorization redirect")
+        .to_owned();
+    auth::json(
+        c,
+        StatusCode::OK,
+        &campfire_api_types::AuthResponse::Navigate { location },
+    )
 }
 pub async fn callback(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;

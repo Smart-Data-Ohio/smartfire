@@ -7,6 +7,7 @@ use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, format, halt};
 use campfire_retained::sessions;
 use jiff::SignedDuration;
 
+use super::auth::{self, ResponseMode};
 use super::presenters;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_user};
@@ -20,7 +21,13 @@ const REJECTION: &str = "Too many requests or unauthorized.";
 
 /// `allow_unauthenticated_access only: %i[ new create ]`, `before_action :ensure_user_exists, only: :new`
 pub async fn new(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    auth::before_actions(
+        c,
+        "sessions#new",
+        Before::default().allow_unauthenticated_access(),
+        ResponseMode::Html,
+    )
+    .await?;
     ensure_user_exists(c).await?;
     // Our Rails app: background polls redirected to sign in keep their JSON Accept header, and
     // get a 401 (`format.json { head :unauthorized }`) rather than UnknownFormat's 406.
@@ -31,8 +38,38 @@ pub async fn new(c: &mut Ctx) -> Result {
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-    rate_limit(c).await?;
+    create_response(c, ResponseMode::Html).await
+}
+
+pub async fn create_json(c: &mut Ctx) -> Result {
+    let result = create_response(c, ResponseMode::Json).await;
+    auth::complete(c, result)
+}
+
+async fn create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
+    auth::before_actions(
+        c,
+        "sessions#create",
+        Before::default().allow_unauthenticated_access(),
+        mode,
+    )
+    .await?;
+    if mode == ResponseMode::Json {
+        let body: campfire_api_types::PasswordSignIn = match auth::body(c).await {
+            Ok(body) => body,
+            Err(error) => {
+                rate_limit(c, mode).await?;
+                return Err(error);
+            }
+        };
+        c.params.insert(
+            "email_address",
+            campfire_kit::Param::Str(body.email_address),
+        );
+        c.params
+            .insert("password", campfire_kit::Param::Str(body.password));
+    }
+    rate_limit(c, mode).await?;
 
     let email_address = c.param_str("email_address").map(str::to_string);
     let password = c.param_str("password").map(str::to_string);
@@ -44,17 +81,42 @@ pub async fn create(c: &mut Ctx) -> Result {
     };
 
     match user {
-        Some(user) => super::two_factor::begin_session_for(c, user, "password").await,
-        None => render_rejection(c, StatusCode::UNAUTHORIZED).await,
+        Some(user) => super::two_factor::begin_session_response(c, user, "password", mode).await,
+        None => render_rejection(c, StatusCode::UNAUTHORIZED, mode).await,
     }
 }
 
 pub async fn destroy(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    destroy_response(c, ResponseMode::Html).await
+}
+
+pub async fn destroy_json(c: &mut Ctx) -> Result {
+    let result = destroy_response(c, ResponseMode::Json).await;
+    auth::complete(c, result)
+}
+
+async fn destroy_response(c: &mut Ctx, mode: ResponseMode) -> Result {
+    auth::before_actions(
+        c,
+        "sessions#destroy",
+        Before::default(),
+        mode,
+    )
+    .await?;
+    if mode == ResponseMode::Json {
+        let body: campfire_api_types::SignOut = auth::body(c).await?;
+        c.params.remove("push_subscription_endpoint");
+        if let Some(endpoint) = body.push_subscription_endpoint {
+            c.params.insert(
+                "push_subscription_endpoint",
+                campfire_kit::Param::Str(endpoint),
+            );
+        }
+    }
     remove_push_subscription(c).await?;
     concerns::terminate_current_session(c).await?;
     let root = c.url_for(&campfire_routes::root());
-    c.redirect_to(&root)
+    mode.navigate(c, &root)
 }
 
 /// `redirect_to first_run_url if User.none?`
@@ -73,7 +135,7 @@ async fn ensure_user_exists(c: &mut Ctx) -> Result<()> {
 }
 
 /// `flash.now[:alert] = "Too many requests or unauthorized."; render :new, status:`
-async fn render_rejection(c: &mut Ctx, status: StatusCode) -> Result {
+async fn render_rejection(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Result {
     record_sign_in_failure(
         c,
         "password",
@@ -87,14 +149,13 @@ async fn render_rejection(c: &mut Ctx, status: StatusCode) -> Result {
     )
     .await?;
     c.flash().now("alert", REJECTION);
+    if mode == ResponseMode::Json {
+        return auth::field_error(c, status, "base", REJECTION);
+    }
     render_new(c, status).await
 }
 
-pub async fn record_sign_in_failure(
-    c: &Ctx,
-    method: &'static str,
-    email: String,
-) -> Result<()> {
+pub async fn record_sign_in_failure(c: &Ctx, method: &'static str, email: String) -> Result<()> {
     let context = super::two_factor::audit_context(c)?;
     c.app()
         .db
@@ -159,9 +220,9 @@ pub fn rate_limit_rule() -> RateLimit {
     RateLimit::new("sessions", RATE_LIMIT_TO, RATE_LIMIT_WITHIN)
 }
 
-async fn rate_limit(c: &mut Ctx) -> Result<()> {
+async fn rate_limit(c: &mut Ctx, mode: ResponseMode) -> Result<()> {
     if c.rate_limited(&rate_limit_rule(), None)? {
-        return halt(render_rejection(c, StatusCode::TOO_MANY_REQUESTS).await?);
+        return halt(render_rejection(c, StatusCode::TOO_MANY_REQUESTS, mode).await?);
     }
     Ok(())
 }

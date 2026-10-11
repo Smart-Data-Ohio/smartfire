@@ -18,6 +18,7 @@ pub mod pwa;
 pub mod screens;
 mod serve;
 mod shell;
+mod signed_out;
 
 #[cfg(test)]
 mod tests;
@@ -28,7 +29,8 @@ mod embedded {
 
 pub use boot::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind, script_json, text_size, theme};
 pub use serve::{File, Served, file};
-pub use shell::render_shell;
+pub use shell::{render_shell, render_signed_out_shell};
+pub use signed_out::{SignedOutRoute, signed_out_route};
 
 /// The URL prefix the SPA lives under (Vite's `base`, without its trailing slash).
 pub const PREFIX: &str = "/app";
