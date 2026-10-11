@@ -1,6 +1,7 @@
 import { dayKey, formatDay, toMillis } from "../../lib/time.ts";
 import { emptyIgnores, type IgnoreSet, messageIgnored } from "../../store/ignores.ts";
 import type { MessageDTO, PendingMessage, Timeline } from "../../store/model.ts";
+import { displayedAuthor } from "../messages/webhook-attribution.ts";
 
 /** Consecutive messages from one author within this window share a header. */
 export const GROUP_WINDOW_MS = 5 * 60_000;
@@ -41,9 +42,18 @@ export type TimelineItem =
 
 interface Previous {
   readonly creatorId: number;
+  /** A webhook message's shown name: one webhook posting under two names makes two groups. */
+  readonly persona: string | null;
   readonly millis: number;
   readonly day: string;
   readonly quiet: boolean;
+}
+
+/** A forward of a webhook's message, at any depth, is the forwarder's, and groups with their own. */
+function persona(message: MessageDTO): string | null {
+  const author = displayedAuthor(message);
+
+  return author.kind === "webhook" ? author.name : null;
 }
 
 /** The key a message or pending row renders under. */
@@ -51,11 +61,17 @@ export function messageKey(clientMessageId: string): string {
   return `c-${clientMessageId}`;
 }
 
-function continues(previous: Previous | null, creatorId: number, millis: number): boolean {
+function continues(
+  previous: Previous | null,
+  creatorId: number,
+  persona: string | null,
+  millis: number,
+): boolean {
   return (
     previous !== null &&
     !previous.quiet &&
     previous.creatorId === creatorId &&
+    previous.persona === persona &&
     millis - previous.millis < GROUP_WINDOW_MS
   );
 }
@@ -129,10 +145,14 @@ export function timelineItems({
 
       for (const message of run) {
         const millis = toMillis(message.createdAt);
-        const groupStart = message.systemNote || !continues(before, message.creatorId, millis);
+        const shownAs = persona(message);
+
+        const groupStart =
+          message.systemNote || !continues(before, message.creatorId, shownAs, millis);
 
         before = {
           creatorId: message.creatorId,
+          persona: shownAs,
           millis,
           day: dayKey(millis),
           quiet: message.systemNote,
@@ -164,7 +184,12 @@ export function timelineItems({
     items.push({ kind: "earlier", key: "earlier" });
   }
 
-  const place = (creatorId: number, createdAt: string, quiet: boolean): boolean => {
+  const place = (
+    creatorId: number,
+    createdAt: string,
+    quiet: boolean,
+    persona: string | null = null,
+  ): boolean => {
     const millis = toMillis(createdAt);
     const day = dayKey(millis);
     let breaks = false;
@@ -176,9 +201,9 @@ export function timelineItems({
       breaks = true;
     }
 
-    const groupStart = breaks || quiet || !continues(previous, creatorId, millis);
+    const groupStart = breaks || quiet || !continues(previous, creatorId, persona, millis);
 
-    previous = { creatorId, millis, day, quiet };
+    previous = { creatorId, persona, millis, day, quiet };
 
     return groupStart;
   };
@@ -194,7 +219,13 @@ export function timelineItems({
     }
 
     run.push(message);
-    previous = { creatorId: message.creatorId, millis, day, quiet: true };
+    previous = {
+      creatorId: message.creatorId,
+      persona: persona(message),
+      millis,
+      day,
+      quiet: true,
+    };
   };
 
   for (const id of timeline.ids) {
@@ -217,7 +248,8 @@ export function timelineItems({
       continue;
     }
 
-    const groupStart = place(message.creatorId, message.createdAt, message.systemNote) || forced;
+    const groupStart =
+      place(message.creatorId, message.createdAt, message.systemNote, persona(message)) || forced;
 
     items.push({ kind: "message", key: messageKey(message.clientMessageId), message, groupStart });
   }

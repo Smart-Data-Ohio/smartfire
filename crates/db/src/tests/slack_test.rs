@@ -219,7 +219,7 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                     if table == "rooms"
                         && matches!(
                             column.as_str(),
-                            "topic" | "workspace_category_id" | "workspace_position"
+                            "topic" | "announcement" | "voice_bitrate" | "workspace_category_id" | "workspace_position"
                         )
                     {
                         continue;

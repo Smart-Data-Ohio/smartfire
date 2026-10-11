@@ -94,6 +94,8 @@ pub struct Room {
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
     pub topic: Option<String>,
+    pub announcement: bool,
+    pub voice_bitrate: Option<i64>,
 }
 
 /// `user.rooms`: `has_many :rooms, -> { alive }, through: :memberships` (`app/models/user.rb`).
@@ -101,6 +103,13 @@ const SELECT_FOR_USER: &str = r#"SELECT "rooms".* FROM "rooms" INNER JOIN "membe
 
 /// `Rooms::Direct::MAX_MEMBERS`: ad hoc group DMs hold at most this many members.
 pub const DIRECT_MAX_MEMBERS: usize = 10;
+
+/// Audio targets in bits per second: the existing 48 kbps preset plus Discord tiers.
+/// These are room policy, not a promise of codec or device support.
+pub const VOICE_BITRATES: [i64; 6] = [48_000, 64_000, 96_000, 128_000, 256_000, 384_000];
+
+/// The huddle client's LiveKit AudioPresets.music target. NULL keeps this default.
+pub const DEFAULT_VOICE_BITRATE: i64 = 48_000;
 
 impl Room {
     pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
@@ -118,12 +127,14 @@ impl Room {
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
             topic: row.get("topic")?,
+            announcement: row.get("announcement")?,
+            voice_bitrate: row.get("voice_bitrate")?,
         })
     }
 
     /// The room's columns as `r_<column>`, for a join that reads its rows with
     /// [`Room::from_prefixed_row`].
-    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic"#;
+    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic, "rooms"."announcement" AS r_announcement, "rooms"."voice_bitrate" AS r_voice_bitrate"#;
 
     pub(crate) fn from_prefixed_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -140,6 +151,8 @@ impl Room {
             created_at: row.get("r_created_at")?,
             updated_at: row.get("r_updated_at")?,
             topic: row.get("r_topic")?,
+            announcement: row.get("r_announcement")?,
+            voice_bitrate: row.get("r_voice_bitrate")?,
         })
     }
 
@@ -569,6 +582,33 @@ impl Room {
             params![topic, self.updated_at, self.id],
         )?;
         self.topic = topic;
+        Ok(())
+    }
+
+    pub fn audio_bitrate_target(&self) -> i64 {
+        self.voice_bitrate.unwrap_or(DEFAULT_VOICE_BITRATE)
+    }
+
+    pub fn validate_voice_bitrate(bitrate: Option<i64>) -> Result<()> {
+        if bitrate.is_some_and(|value| !VOICE_BITRATES.contains(&value)) {
+            let mut errors = Errors::default();
+            errors.add("voice_bitrate", "is not included in the list");
+            return Err(crate::Error::RecordInvalid(errors));
+        }
+        Ok(())
+    }
+
+    pub fn update_voice_bitrate(&mut self, tx: &mut Tx<'_>, bitrate: Option<i64>) -> Result<()> {
+        Self::validate_voice_bitrate(bitrate)?;
+        if bitrate == self.voice_bitrate {
+            return Ok(());
+        }
+        self.updated_at = tx.now();
+        tx.conn().execute_cached(
+            "UPDATE rooms SET voice_bitrate=?,updated_at=? WHERE id=?",
+            params![bitrate, self.updated_at, self.id],
+        )?;
+        self.voice_bitrate = bitrate;
         Ok(())
     }
 

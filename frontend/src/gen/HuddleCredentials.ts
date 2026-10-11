@@ -30,4 +30,8 @@ roomName: string,
  * What the token allows, so the client knows without decoding it: listeners skip the
  * microphone check and start with publishing off. New on the wire.
  */
-canPublish: boolean, };
+canPublish: boolean,
+/**
+ * Effective room audio target in bits per second, not guaranteed codec capability.
+ */
+audioBitrateTarget: number, };

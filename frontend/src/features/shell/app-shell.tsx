@@ -25,7 +25,7 @@ import { UpdateBanner } from "./update-banner.tsx";
 import "./app-shell.css";
 
 /** A full-column page that isn't a conversation: its tab title, or `null` for a room. */
-type Page = "Settings" | "Workspace" | "People" | null;
+type Page = "Settings" | "Workspace" | "People" | "Server guide" | null;
 
 /**
  * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings, the
@@ -96,8 +96,8 @@ export function AppShell() {
     });
   }, [reduced, router]);
 
-  // Settings, the workspace pages and the people pages fill the main column, so phones show them
-  // rather than the conversation list.
+  // Settings, the workspace pages, the people pages and the server guide fill the main column, so
+  // phones show them rather than the conversation list.
   const page = useMatches({
     select: (matches): Page =>
       matches.some((match) => match.routeId.startsWith("/shell/settings"))
@@ -106,7 +106,9 @@ export function AppShell() {
           ? "Workspace"
           : matches.some((match) => match.routeId.startsWith("/shell/people"))
             ? "People"
-            : null,
+            : matches.some((match) => match.routeId === "/shell/guide")
+              ? "Server guide"
+              : null,
   });
 
   useEffect(() => {

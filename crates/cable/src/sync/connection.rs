@@ -217,7 +217,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
         }
         if let Some(resync) = resync {
             // Write what came before the gap, then ask for the refetch.
-            let frames = connection.take_batches();
+            let frames = connection.take_batches().await;
             if connection.send(&mut sink, &frames).await.is_err()
                 || connection
                     .send(&mut sink, &[encode(&resync)])
@@ -229,7 +229,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
         }
         let due = connection.flush_at.is_some_and(|at| at <= Instant::now());
         if due || connection.full() || bye.is_some() {
-            let frames = connection.take_batches();
+            let frames = connection.take_batches().await;
             if connection.send(&mut sink, &frames).await.is_err() {
                 break;
             }
@@ -470,26 +470,27 @@ impl<U> Connection<U> {
     }
 
     /// The pending events as `batch` frames of at most `flush_max` events each.
-    fn take_batches(&mut self) -> Vec<Frame> {
+    async fn take_batches(&mut self) -> Vec<Frame> {
         self.flush_at = None;
         let max = self.engine.ring.config().flush_max.max(1);
-        let frames = self
-            .outgoing()
+        let outgoing: Vec<_> = self.outgoing().into_iter().cloned().collect();
+        self.pending.clear();
+        let wires: Vec<_> = outgoing.iter().map(|entry| entry.json_for(self.user_id)).collect();
+        let events = self.session.events_for_viewer(&wires).await;
+        events
             .chunks(max)
             .map(|events| {
                 let mut frame = String::from(r#"{"t":"batch","events":["#);
-                for (i, entry) in events.iter().enumerate() {
+                for (i, event) in events.iter().enumerate() {
                     if i > 0 {
                         frame.push(',');
                     }
-                    frame.push_str(entry.json_for(self.user_id));
+                    frame.push_str(event);
                 }
                 frame.push_str("]}");
                 Frame::from(frame)
             })
-            .collect();
-        self.pending.clear();
-        frames
+            .collect()
     }
 
     async fn send(&mut self, sink: &mut Sink, frames: &[Frame]) -> std::io::Result<()> {
@@ -1013,7 +1014,7 @@ mod tests {
         connection
             .disconnect(None, false, &mut internal, 16)
             .expect("the disconnect is seen before the write");
-        let frames = connection.take_batches();
+        let frames = connection.take_batches().await;
         assert_eq!(
             frames.iter().map(Frame::as_str).collect::<Vec<_>>(),
             [
@@ -1023,8 +1024,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn batches_split_at_the_flush_size_and_keep_sequence_order() {
+    #[tokio::test]
+    async fn batches_split_at_the_flush_size_and_keep_sequence_order() {
         let mut connection = connection(SyncConfig {
             flush_max: 2,
             ..SyncConfig::default()
@@ -1034,7 +1035,7 @@ mod tests {
         }
         connection.catch_up(false);
         assert!(connection.flush_at.is_some());
-        let frames = connection.take_batches();
+        let frames = connection.take_batches().await;
         assert_eq!(frames.len(), 3);
         assert_eq!(
             frames[0].as_str(),

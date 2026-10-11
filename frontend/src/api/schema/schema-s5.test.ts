@@ -89,6 +89,7 @@ describe("S5 DTO schemas", () => {
       roomId: 12,
       roomName: "Grace Hopper",
       canPublish: true,
+      audioBitrateTarget: 384_000,
     });
     roundTrips(ModerateHuddle, { membershipId: 32, action: "disconnect" });
     expect(() =>

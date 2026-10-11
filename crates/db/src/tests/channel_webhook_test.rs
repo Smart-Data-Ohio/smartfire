@@ -171,7 +171,7 @@ fn channel_webhook_message_snapshot_and_token_recheck() {
     let author_id = hook.author_id;
     let hook_id = hook.id;
     let digest = ChannelWebhook::digest(&token);
-    let payload = WebhookMessage {
+    let payload = WebhookMessage::Post {
         webhook_id: hook_id,
         token_digest: Some(digest.clone()),
         username: Some("CI".into()),

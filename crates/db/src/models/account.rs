@@ -32,6 +32,8 @@ const RESTRICT_ROOM_CREATION: &str = "restrict_room_creation_to_administrators";
 const UPLOAD_LIMIT: &str = "upload_limit_bytes";
 const DESCRIPTION: &str = "description";
 const VANITY_SLUG: &str = "vanity_slug";
+/// The welcome card and server guide (U1, U4): a JSON object the API layer validates and reads.
+const WELCOME: &str = "welcome";
 const ANIMATED_EMOJI_LIMIT: &str = "animated_emoji_limit";
 pub const DEFAULT_ANIMATED_EMOJI_LIMIT: i64 = 250;
 pub const DEFAULT_UPLOAD_LIMIT_BYTES: i64 = 100 * 1024 * 1024;
@@ -171,6 +173,11 @@ impl AccountSettings {
             .filter(|slug| !slug.is_empty())
     }
 
+    /// The stored welcome card and server guide, as the API last wrote them.
+    pub fn welcome(&self) -> Option<&Value> {
+        self.data.get(WELCOME).filter(|value| value.is_object())
+    }
+
     /// `restrict_room_creation_to_administrators?`: `present?` of the stored value.
     pub fn restrict_room_creation_to_administrators(&self) -> bool {
         present(self.data.get(RESTRICT_ROOM_CREATION))
@@ -232,6 +239,13 @@ impl AccountSettings {
                 VANITY_SLUG => {
                     self.data.insert(VANITY_SLUG.into(), Value::from(validate_vanity_slug(value)?));
                 }
+                WELCOME => {
+                    let welcome = serde_json::from_str::<Value>(value)
+                        .ok()
+                        .filter(Value::is_object)
+                        .ok_or_else(|| Error::Other("welcome must be a JSON object".into()))?;
+                    self.data.insert(WELCOME.into(), welcome);
+                }
                 other => {
                     return Err(Error::Other(format!(
                         "undefined method '{other}=' for account settings"
@@ -284,6 +298,13 @@ impl Account {
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
+    }
+
+    /// The account as stored, for a write transaction to change: read inside the transaction
+    /// that writes it, so [`Account::update`] merges into the latest settings and a concurrent
+    /// save of other keys isn't put back.
+    pub fn first_in(tx: &Tx<'_>) -> Result<Self> {
+        Self::first(tx.conn())?.or_not_found("Account")
     }
 
     /// `Account.first` (`Current.account`).

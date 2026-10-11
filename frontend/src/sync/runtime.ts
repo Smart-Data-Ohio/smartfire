@@ -12,6 +12,7 @@ import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { prepareGooglePicker } from "../api/google-picker.ts";
 import { readMessage } from "../api/message-endpoints.ts";
+import { welcome as readWelcome } from "../api/welcome-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
@@ -22,7 +23,11 @@ import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
 import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { CancelEvent } from "../gen/CancelEvent.ts";
+import type { ChannelWebhook } from "../gen/ChannelWebhook.ts";
+import type { ChannelWebhookCredential } from "../gen/ChannelWebhookCredential.ts";
+import type { ChannelWebhookList } from "../gen/ChannelWebhookList.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
+import type { CreateChannelWebhook } from "../gen/CreateChannelWebhook.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
 import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
@@ -74,6 +79,7 @@ import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateBoardTagPolicy } from "../gen/UpdateBoardTagPolicy.ts";
+import type { UpdateChannelWebhook } from "../gen/UpdateChannelWebhook.ts";
 import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
@@ -85,6 +91,7 @@ import type { WorkLinkForm } from "../gen/WorkLinkForm.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
+import type { WorkspaceWelcome } from "../gen/WorkspaceWelcome.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ApprovalFilter } from "../store/approvals.ts";
 import type { BoardQuery } from "../store/boards.ts";
@@ -489,6 +496,29 @@ const rooms = {
     runAction(roomActions.inboundEmail(roomId)),
   rotateInboundEmail: (roomId: number): Promise<InboundEmail> =>
     runAction(roomActions.rotateInboundEmail(roomId)),
+  channelWebhooks: (roomId: number): Promise<ChannelWebhookList> =>
+    runAction(roomActions.channelWebhooks(roomId)),
+  /** The credential is for one-time display; callers must not keep it anywhere lasting. */
+  createChannelWebhook: (
+    roomId: number,
+    body: CreateChannelWebhook,
+  ): Promise<ChannelWebhookCredential> => runAction(roomActions.createChannelWebhook(roomId, body)),
+  updateChannelWebhook: (
+    roomId: number,
+    webhookId: number,
+    body: UpdateChannelWebhook,
+  ): Promise<ChannelWebhook> =>
+    runAction(roomActions.updateChannelWebhook(roomId, webhookId, body)),
+  deleteChannelWebhook: (roomId: number, webhookId: number): Promise<void> =>
+    runAction(roomActions.deleteChannelWebhook(roomId, webhookId)),
+  regenerateChannelWebhook: (
+    roomId: number,
+    webhookId: number,
+  ): Promise<ChannelWebhookCredential> =>
+    runAction(roomActions.regenerateChannelWebhook(roomId, webhookId)),
+  /** The test message arrives in the room over sync like any other post. */
+  testChannelWebhook: (roomId: number, webhookId: number): Promise<void> =>
+    runAction(roomActions.testChannelWebhook(roomId, webhookId)).then(() => undefined),
 };
 
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
@@ -677,6 +707,30 @@ const confirmation = {
     runAction(confirmationActions.googleHere(confirmationGate)),
 };
 
+/**
+ * Calls `listener` whenever the welcome card and guide may have changed for this viewer: an
+ * administrator's save reaches every client as `workspace.updated` (the branding event), and a
+ * resync of the `user` topic may have skipped one.
+ */
+export function onWelcomeStale(listener: () => void): () => void {
+  const offEvents = onSyncEvents((events) => {
+    if (events.some((event) => event.type === "workspace.updated")) {
+      listener();
+    }
+  });
+
+  const offResync = onResync((topics) => {
+    if (topics.includes("user")) {
+      listener();
+    }
+  });
+
+  return () => {
+    offEvents();
+    offResync();
+  };
+}
+
 export const actions = {
   chatSounds: { listen: listenForChatSounds, play: playChatSound },
   boards: {
@@ -773,6 +827,9 @@ export const actions = {
    * focus) and adds the sidebar row when the membership is visible.
    */
   joinOpenRoom: (roomId: number): Promise<void> => runtime.runPromise(session.joinOpenRoom(roomId)),
+
+  /** The workspace's welcome card and server guide, with only the rooms this viewer can reach. */
+  welcome: (): Promise<WorkspaceWelcome> => runAction(readWelcome()),
 
   /** Loads an open room again (its Try again); doesn't subscribe or say present a second time. */
   reloadRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>

@@ -7,6 +7,7 @@ import { GithubCard } from "./github-card.tsx";
 import { DriveChip, LinkCard, LinkedinCard } from "./link-cards.tsx";
 import { PollCard } from "./poll-card.tsx";
 import { QuoteCard } from "./quote-card.tsx";
+import { WebhookEmbed } from "./webhook-embed.tsx";
 import { XCard } from "./x-card.tsx";
 import "./cards.css";
 
@@ -43,8 +44,9 @@ function CardView({
 
 /**
  * Everything under a message's body in the classic slot order: its poll, then its cards (Drive
- * files, pull requests, posts, events, Fizzy cards, quotes, LinkedIn posts, other pages). A kind
- * this app doesn't know, or a card it can't read, is skipped on its own. `threadId` is the thread
+ * files, pull requests, posts, events, Fizzy cards, quotes, LinkedIn posts, other pages), then a
+ * webhook message's own embeds. A kind this app doesn't know, or a card it can't read, is skipped
+ * on its own. `threadId` is the thread
  * pane's thread when this message heads it (a pull request's discussion lists its files there).
  */
 export default function MessageCards({
@@ -55,8 +57,9 @@ export default function MessageCards({
   readonly threadId: number | null;
 }) {
   const cards = visibleCards(message);
+  const embeds = message.embeds ?? [];
 
-  if (message.poll === null && cards.length === 0) {
+  if (message.poll === null && cards.length === 0 && embeds.length === 0) {
     return null;
   }
 
@@ -72,6 +75,12 @@ export default function MessageCards({
         // biome-ignore lint/suspicious/noArrayIndexKey: the server's slot order is the identity
         <CardBoundary key={`${index}:${card.kind}`}>
           <CardView message={message} card={card} threadId={threadId} />
+        </CardBoundary>
+      ))}
+      {embeds.map((embed, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: embeds have no id; their order is fixed
+        <CardBoundary key={`embed:${index}`}>
+          <WebhookEmbed embed={embed} />
         </CardBoundary>
       ))}
     </div>

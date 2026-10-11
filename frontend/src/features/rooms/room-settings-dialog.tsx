@@ -25,6 +25,7 @@ import {
   updateBody,
 } from "./room-forms.ts";
 import { RoomIconButton } from "./room-icon-button.tsx";
+import { WebhooksSection } from "./webhooks.tsx";
 import "./rooms.css";
 
 interface RoomSettingsDialogProps {
@@ -43,7 +44,7 @@ type Load =
 /** A refetch of membership after subscribe or unsubscribe. Save waits until it succeeds. */
 type MemberSync = "idle" | "pending" | "error";
 
-type Tab = "general" | "members" | "tags" | "github" | "email";
+type Tab = "general" | "members" | "tags" | "github" | "email" | "webhooks";
 
 const NOUN = {
   open: "channel",
@@ -102,9 +103,9 @@ function Pending({ load }: { readonly load: Load }) {
  * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. A board
  * has the same name, icon and members, a way through to its automations, and (for those who may
  * edit it) its curated tags, which save as they change. Every room, including
- * a board, can subscribe GitHub repositories here; inbound email is offered except on a board.
- * The creator and administrators can change them; everyone else reads the room and is refused the
- * two integrations. Nothing about the room itself is written until "Save changes"; then the room's
+ * a board, can subscribe GitHub repositories here; inbound email and incoming webhooks are offered
+ * except on a board. The creator and administrators can change them; everyone else reads the room
+ * and is refused the integrations (Webhooks isn't even offered to them, as the API refuses it). Nothing about the room itself is written until "Save changes"; then the room's
  * header, sidebar row and member list update in place.
  */
 export default function RoomSettingsDialog({
@@ -227,11 +228,15 @@ export default function RoomSettingsDialog({
   const members = hasMemberList(kind);
   const emailable = kind !== "board";
   const taggable = kind === "board" && form !== null && form.canSubmit;
+  // The webhook API admits exactly who may submit this form: the creator and administrators.
+  // A board never takes webhook posts, so it doesn't offer them.
+  const hookable = kind !== "board" && form !== null && form.canSubmit;
 
   const shownTab: Tab =
     (tab === "members" && !members) ||
     (tab === "email" && !emailable) ||
-    (tab === "tags" && !taggable)
+    (tab === "tags" && !taggable) ||
+    (tab === "webhooks" && !hookable)
       ? "general"
       : tab;
 
@@ -249,6 +254,10 @@ export default function RoomSettingsDialog({
 
   if (emailable) {
     tabItems.push({ value: "email", label: "Email", icon: "inbox" });
+  }
+
+  if (hookable) {
+    tabItems.push({ value: "webhooks", label: "Webhooks", icon: "link" });
   }
 
   const canConvert =
@@ -573,7 +582,7 @@ export default function RoomSettingsDialog({
     ) : (
       <form
         id={formId}
-        className="room-form"
+        className={tabItems.length > 4 ? "room-form room-form-crowded" : "room-form"}
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
@@ -599,7 +608,8 @@ export default function RoomSettingsDialog({
               value === "members" ||
               value === "tags" ||
               value === "github" ||
-              value === "email"
+              value === "email" ||
+              value === "webhooks"
             ) {
               setTab(value);
             } else {
@@ -633,6 +643,7 @@ export default function RoomSettingsDialog({
             <GithubSubscriptions roomId={roomId} onMembership={reconcileMembership} />
           ) : null}
           {shownTab === "email" ? <InboundEmailSection roomId={roomId} /> : null}
+          {shownTab === "webhooks" ? <WebhooksSection roomId={roomId} open={open} /> : null}
         </div>
         {problem === null ? null : (
           <p className="picker-note picker-error" role="alert">

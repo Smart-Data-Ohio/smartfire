@@ -75,6 +75,8 @@ pub(crate) fn message() -> MessageDTO {
         steps: vec![],
         created_at: "2026-10-06T09:15:00.123Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
+        published: false,
+        announcement_source: None,
         embeds: None,
         webhook: None,
     }
@@ -198,6 +200,8 @@ fn room_and_membership_round_trip() {
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         topic: None,
+        voice_bitrate: None,
+        announcement: false,
     };
     assert_wire(
         &room,
@@ -210,6 +214,8 @@ fn room_and_membership_round_trip() {
             "createdAt": "2026-01-01T00:00:00.000Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
             "topic": null,
+            "voiceBitrate": null,
+            "announcement": false,
         }),
     );
     for (kind, wire) in [
@@ -282,6 +288,8 @@ fn message_round_trips() {
             "cards": [],
             "cardsAsOf": "2026-10-06T09:15:00.200Z",
             "steps": [],
+            "published": false,
+            "announcementSource": null,
             "createdAt": "2026-10-06T09:15:00.123Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
         }),
@@ -527,6 +535,8 @@ fn room() -> Room {
         created_at: "2026-01-01T00:00:00.000Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         topic: None,
+        voice_bitrate: None,
+        announcement: false,
     }
 }
 

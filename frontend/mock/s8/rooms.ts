@@ -49,6 +49,9 @@ interface RoomManagement {
   readonly routes: readonly Route[];
 }
 
+/** Mirrors `VOICE_BITRATES` in crates/db/src/models/room.rs. */
+const VOICE_BITRATES: readonly number[] = [48_000, 64_000, 96_000, 128_000, 256_000, 384_000];
+
 function roomInvalid(field: string, detail: string, message: string): HttpError {
   const invalid = validation(field, detail);
 
@@ -137,7 +140,18 @@ export function createRoomManagement(
       defaultInvolvement: direct ? "everything" : "mentions",
       stageRoles: [...roles].map(([userId, role]) => ({ userId, role })),
       topic: record?.room.topic ?? null,
+      voiceBitrate: record?.room.voiceBitrate ?? null,
     };
+  };
+
+  const voiceBitrate = (body: Json | undefined): number | null | undefined => {
+    const value = field(body, "voiceBitrate");
+
+    if (value === undefined || value === null) return value;
+
+    if (isNumber(value) && VOICE_BITRATES.includes(value)) return value;
+
+    throw validation("voiceBitrate", "is not included in the list");
   };
 
   const parse = (body: Json | undefined, creating: boolean) => {
@@ -150,7 +164,7 @@ export function createRoomManagement(
       type === "open" ? ["type", "name", "iconName"] : ["type", "name", "iconName", "userIds"];
 
     if (creating) keys.push("clientRoomId");
-    else keys.push("topic");
+    else keys.push("topic", "voiceBitrate");
 
     if (Object.keys(body).some((key) => !keys.includes(key)))
       throw validation("base", "Unknown room field");
@@ -176,6 +190,7 @@ export function createRoomManagement(
       name: nullableString(body, "name", creating),
       iconName: nullableString(body, "iconName", creating),
       topic: creating ? undefined : nullableString(body, "topic", false),
+      voiceBitrate: creating ? undefined : voiceBitrate(body),
     };
   };
 
@@ -282,6 +297,7 @@ export function createRoomManagement(
         createdAt,
         updatedAt: createdAt,
         topic: null,
+        voiceBitrate: null,
       },
       memberIds,
       membership: {
@@ -360,6 +376,8 @@ export function createRoomManagement(
       iconName,
       updatedAt: timestamp(Math.max(ctx.now(), Date.parse(record.room.updatedAt) + 1)),
       topic,
+      voiceBitrate:
+        input.voiceBitrate === undefined ? record.room.voiceBitrate : input.voiceBitrate,
     };
     record.memberIds =
       input.type === "open"

@@ -145,6 +145,7 @@ fn a_room_call_and_its_credentials() {
             room_id: 12,
             room_name: "Grace Hopper".into(),
             can_publish: true,
+            audio_bitrate_target: 384_000,
         },
         json!({
             "url": "wss://huddles.example.com",
@@ -154,6 +155,7 @@ fn a_room_call_and_its_credentials() {
             "roomId": 12,
             "roomName": "Grace Hopper",
             "canPublish": true,
+            "audioBitrateTarget": 384_000,
         }),
     );
 }

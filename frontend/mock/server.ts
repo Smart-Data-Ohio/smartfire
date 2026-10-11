@@ -90,6 +90,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { createWelcome } from "./s3/welcome.ts";
 import { createWorkspaceLayout, workspaceLayoutOf } from "./s3/workspace-layout.ts";
 import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
 import { createApprovals } from "./s4/approvals.ts";
@@ -101,6 +102,7 @@ import { createHuddles } from "./s5/huddles.ts";
 import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createWorkLinks } from "./s6/work-links.ts";
+import { createChannelWebhooks } from "./s8/channel-webhooks.ts";
 import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomIntegrations } from "./s8/room-integrations.ts";
@@ -577,6 +579,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         createdAt,
         updatedAt: createdAt,
         topic: null,
+        voiceBitrate: null,
+        announcement: false,
       },
       memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
       membership: {
@@ -1017,6 +1021,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const fizzy = createFizzy(ctx, threads);
 
   const workspaceLayout = createWorkspaceLayout(ctx);
+  const welcome = createWelcome(ctx, admin, openPreview);
 
   const routes = [
     ...agents.routes,
@@ -1024,6 +1029,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...ledger.routes,
     ...createRoomManagement(ctx, admin, huddles).routes,
     ...createRoomIntegrations(ctx).routes,
+    ...createChannelWebhooks(ctx).routes,
     ...events.routes,
     ...huddles.routes,
     ...cards.routes,
@@ -1051,6 +1057,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
     ...workspaceLayout.routes,
+    ...welcome.routes,
   ];
 
   composer.arm();
@@ -1434,6 +1441,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
       case "workspace-layout":
         return { status: 200, json: workspaceLayout.control(body) };
+      case "welcome":
+        return { status: 200, json: welcome.control(body) };
       case "viewer-role": {
         const role = text("role");
         const viewer = world.users.get(VIEWER_ID);

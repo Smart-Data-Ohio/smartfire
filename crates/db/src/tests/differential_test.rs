@@ -159,7 +159,7 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
             if table == "rooms"
                 && matches!(
                     name.as_str(),
-                    "topic" | "workspace_category_id" | "workspace_position" | "tags_required" | "default_board_tag_id"
+                    "topic" | "announcement" | "voice_bitrate" | "workspace_category_id" | "workspace_position" | "tags_required" | "default_board_tag_id"
                 )
             {
                 continue;

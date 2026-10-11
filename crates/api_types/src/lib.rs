@@ -16,6 +16,8 @@
 //! - enums are lowercase string literals.
 
 mod actions;
+mod announcements;
+pub use announcements::*;
 mod activity;
 mod admin;
 mod agents;
@@ -84,6 +86,10 @@ pub use admin::{
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
     PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
+};
+pub use admin::{
+    GuideEntry, GuideResource, GuideResourceEdit, GuideRoom, WelcomeAdmin, WelcomeRoom, WelcomeRoomCard,
+    WelcomeRoomChoice, WelcomeRoomEdit, WelcomeSettings, WelcomeUpdate, WorkspaceWelcome,
 };
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,

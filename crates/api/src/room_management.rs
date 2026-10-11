@@ -240,6 +240,7 @@ async fn form(c: &Ctx, kind: api::RoomKind, room: Option<Room>) -> Result<api::R
                 },
                 stage_roles,
                 topic: room.as_ref().and_then(|room| room.topic.clone()),
+                voice_bitrate: room.as_ref().and_then(|room| room.voice_bitrate),
             })
         })
         .await
@@ -286,6 +287,7 @@ type UpdateFields = (
     Option<Option<String>>,
     Vec<i64>,
     Option<Option<String>>,
+    Option<Option<i64>>,
 );
 
 fn update_fields(input: api::UpdateRoom) -> UpdateFields {
@@ -294,31 +296,71 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             name,
             icon_name,
             topic,
-        } => (api::RoomKind::Open, name, icon_name, Vec::new(), topic),
+            voice_bitrate,
+        } => (
+            api::RoomKind::Open,
+            name,
+            icon_name,
+            Vec::new(),
+            topic,
+            voice_bitrate,
+        ),
         api::UpdateRoom::Closed {
             name,
             icon_name,
             user_ids,
             topic,
-        } => (api::RoomKind::Closed, name, icon_name, user_ids, topic),
+            voice_bitrate,
+        } => (
+            api::RoomKind::Closed,
+            name,
+            icon_name,
+            user_ids,
+            topic,
+            voice_bitrate,
+        ),
         api::UpdateRoom::Voice {
             name,
             icon_name,
             user_ids,
             topic,
-        } => (api::RoomKind::Voice, name, icon_name, user_ids, topic),
+            voice_bitrate,
+        } => (
+            api::RoomKind::Voice,
+            name,
+            icon_name,
+            user_ids,
+            topic,
+            voice_bitrate,
+        ),
         api::UpdateRoom::Stage {
             name,
             icon_name,
             user_ids,
             topic,
-        } => (api::RoomKind::Stage, name, icon_name, user_ids, topic),
+            voice_bitrate,
+        } => (
+            api::RoomKind::Stage,
+            name,
+            icon_name,
+            user_ids,
+            topic,
+            voice_bitrate,
+        ),
         api::UpdateRoom::Board {
             name,
             icon_name,
             user_ids,
             topic,
-        } => (api::RoomKind::Board, name, icon_name, user_ids, topic),
+            voice_bitrate,
+        } => (
+            api::RoomKind::Board,
+            name,
+            icon_name,
+            user_ids,
+            topic,
+            voice_bitrate,
+        ),
     }
 }
 
@@ -526,7 +568,10 @@ async fn update_room(c: &mut Ctx) -> Result {
     }
     rooms::ensure_can_administer(c, &room)?;
     let input = body(c).await?;
-    let (kind, name, icon, ids, topic) = update_fields(input);
+    let (kind, name, icon, ids, topic, voice_bitrate) = update_fields(input);
+    if let Some(bitrate) = voice_bitrate {
+        Room::validate_voice_bitrate(bitrate).map_err(db_error)?;
+    }
     let topic = topic
         .map(|value| Room::normalize_topic(value.as_deref()))
         .transpose()
@@ -550,6 +595,7 @@ async fn update_room(c: &mut Ctx) -> Result {
                 name,
                 icon: icon.map(call_icon),
                 topic,
+                voice_bitrate,
             },
             ids,
             has_remaining_ids,
@@ -565,7 +611,12 @@ async fn update_room(c: &mut Ctx) -> Result {
         let room = operations::update_with_topic(
             c,
             room,
-            operations::RoomChanges { name, icon, topic },
+            operations::RoomChanges {
+                name,
+                icon,
+                topic,
+                voice_bitrate,
+            },
             target,
         )
         .await
@@ -580,7 +631,7 @@ async fn update_room(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &result)
 }
 
-async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
+pub(crate) async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     match room.room_type {
         RoomType::Open => opens::broadcast(c, room, update).await,
         RoomType::Closed => closeds::broadcast(c, room, update).await,
