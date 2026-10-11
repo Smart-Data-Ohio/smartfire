@@ -57,6 +57,8 @@ export interface ApiRequest {
   readonly root?: true;
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: Schema.Json;
+  /** Credential refusals are decoded next actions; token refresh uses the public auth boot. */
+  readonly auth?: true;
 }
 
 /** Validates a success body; a failure becomes a `ServerError`. */
@@ -91,9 +93,8 @@ export class ApiClient extends Context.Service<
       const navigation = yield* Navigation;
       const token = yield* Ref.make(readCsrfMeta());
 
-      const refreshToken = refreshCsrfToken(http, baseUrl).pipe(
-        Effect.tap((fresh) => Ref.set(token, fresh)),
-      );
+      const refreshToken = (auth?: true) =>
+        refreshCsrfToken(http, baseUrl, auth).pipe(Effect.tap((fresh) => Ref.set(token, fresh)));
 
       const attempt = Effect.fnUntraced(function* <A>(
         request: ApiRequest,
@@ -101,7 +102,7 @@ export class ApiClient extends Context.Service<
       ) {
         const isWrite = request.method !== "GET";
         const held = isWrite ? yield* Ref.get(token) : null;
-        const csrf = isWrite && held === null ? yield* refreshToken : held;
+        const csrf = isWrite && held === null ? yield* refreshToken(request.auth) : held;
 
         const response = yield* http.execute(toHttpRequest(baseUrl, request, csrf)).pipe(
           Effect.catchReason(
@@ -116,13 +117,21 @@ export class ApiClient extends Context.Service<
           return yield* readSuccess(response, decode);
         }
 
+        if (request.auth === true && [400, 401, 404, 422, 429].includes(response.status)) {
+          return yield* readSuccess(response, decode).pipe(
+            Effect.catchTag("ServerError", (error) =>
+              response.status === 422 ? readFailure(response, navigation) : Effect.fail(error),
+            ),
+          );
+        }
+
         return yield* readFailure(response, navigation);
       });
 
       const execute = <A>(request: ApiRequest, decode: ResponseDecoder<A>) =>
         attempt(request, decode).pipe(
           Effect.catchTag("StaleCsrfToken", () =>
-            refreshToken.pipe(
+            refreshToken(request.auth).pipe(
               Effect.andThen(attempt(request, decode)),
               Effect.catchTag("StaleCsrfToken", (stale) => Effect.fail(stale.error)),
             ),
@@ -130,7 +139,7 @@ export class ApiClient extends Context.Service<
         );
 
       const csrfToken = Effect.flatMap(Ref.get(token), (held) =>
-        held === null ? Effect.orElseSucceed(refreshToken, () => null) : Effect.succeed(held),
+        held === null ? Effect.orElseSucceed(refreshToken(), () => null) : Effect.succeed(held),
       );
 
       return ApiClient.of({ execute, setCsrfToken: (fresh) => Ref.set(token, fresh), csrfToken });
@@ -204,18 +213,21 @@ const decodeCsrfReply = Schema.decodeUnknownEffect(CsrfReply);
 function refreshCsrfToken(
   http: HttpClient.HttpClient,
   baseUrl: string,
+  auth?: true,
 ): Effect.Effect<string, NetworkError | ServerError> {
-  return http.get(`${baseUrl}/boot`, { acceptJson: true }).pipe(
-    Effect.flatMap((response) => response.json),
-    Effect.flatMap(decodeCsrfReply),
-    Effect.map((reply) => reply.csrfToken),
-    Effect.catchTag("HttpClientError", (error) =>
-      Effect.fail(new NetworkError({ message: error.message })),
-    ),
-    Effect.catchTag("SchemaError", (error) =>
-      Effect.fail(new ServerError({ status: 200, message: error.message })),
-    ),
-  );
+  return http
+    .get(`${baseUrl}${auth === true ? "/session/boot" : "/boot"}`, { acceptJson: true })
+    .pipe(
+      Effect.flatMap((response) => response.json),
+      Effect.flatMap(decodeCsrfReply),
+      Effect.map((reply) => reply.csrfToken),
+      Effect.catchTag("HttpClientError", (error) =>
+        Effect.fail(new NetworkError({ message: error.message })),
+      ),
+      Effect.catchTag("SchemaError", (error) =>
+        Effect.fail(new ServerError({ status: 200, message: error.message })),
+      ),
+    );
 }
 
 function readSuccess<A>(

@@ -20,6 +20,7 @@ mod activity;
 mod admin;
 mod agents;
 mod attachment;
+mod auth;
 mod board;
 mod board_automations;
 mod bots;
@@ -55,6 +56,8 @@ mod sync;
 mod thread;
 mod user;
 mod work;
+
+pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, TransferSignIn};
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
