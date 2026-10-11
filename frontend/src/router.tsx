@@ -139,8 +139,8 @@ const transferRoute = createRoute({
 });
 
 /**
- * About, Privacy and Terms, outside the shell for anyone: signed out, the server renders their
- * URLs with the signed-out boot (crates/spa/src/signed_out.rs). `/about`, `/privacy` and `/terms`
+ * About, Privacy and Terms, outside the shell for anyone: the server renders their URLs with the
+ * signed-out boot, signed in or not (crates/spa/src/signed_out.rs). `/about`, `/privacy` and `/terms`
  * still serve the retained pages until a later slice makes these canonical.
  */
 const aboutRoute = createRoute({

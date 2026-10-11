@@ -62,9 +62,11 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
-    // About, Privacy and Terms are for anyone, as their retained pages are: without a session,
-    // the signed-out shell draws them, skipping the workspace callback chain those pages skip.
-    if is_public_page(c.request.path()) && !concerns::restore_authentication(c).await? {
+    // About, Privacy and Terms are for anyone, as their retained pages are, and show everyone
+    // the same page: the signed-out shell draws them, skipping the workspace callback chain
+    // those pages skip. No session is restored, so a pending two-step enrollment isn't enforced
+    // here and a saved return destination stays as it was.
+    if is_public_page(c.request.path()) {
         let boot = load_signed_out_boot(c).await?;
         let nonce = c.content_security_policy_nonce();
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());

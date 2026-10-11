@@ -17,8 +17,8 @@ pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
     }
 }
 
-/// About, Privacy and Terms, which anyone may read: signed in, the app's own shell draws them;
-/// signed out, the signed-out shell does.
+/// About, Privacy and Terms, which anyone may read: the signed-out shell draws them for everyone,
+/// as the retained pages show a member and a visitor the same page.
 pub fn is_public_page(path: &str) -> bool {
     matches!(path, "/app/about" | "/app/privacy" | "/app/terms")
 }

@@ -148,7 +148,7 @@ async fn public_page_contract_refuses_other_pages() {
 }
 
 #[tokio::test]
-async fn spa_public_pages_serve_the_signed_out_shell_or_the_app() {
+async fn spa_public_pages_serve_the_signed_out_shell_to_everyone() {
     let app = TestApp::boot_frozen().await.expect("seed required");
     for path in ["/app/about", "/app/privacy", "/app/terms"] {
         let reply = app.anonymous().get(path).await;
@@ -158,12 +158,19 @@ async fn spa_public_pages_serve_the_signed_out_shell_or_the_app() {
         // No public discovery beyond the retained pages: nothing asks robots to skip them there.
         assert!(!reply.text().contains("noindex"), "{path}");
 
+        // A member sees the same page, as on the retained pages, and their session isn't touched.
         let mut browser = app.sign_in(DAVID).await;
         let reply = browser.get(path).await;
         assert_eq!(reply.status, StatusCode::OK, "{path}");
-        let boot = inline_boot(&reply);
-        assert_ne!(boot["kind"], "signedOut", "{path}");
-        assert!(boot["user"].is_object(), "{path}: the signed-in boot");
+        assert_eq!(inline_boot(&reply)["kind"], "signedOut", "{path}");
+        assert!(
+            reply
+                .headers
+                .get_all("set-cookie")
+                .iter()
+                .all(|cookie| !cookie.to_str().unwrap().starts_with("session_token=")),
+            "{path}"
+        );
     }
 }
 
