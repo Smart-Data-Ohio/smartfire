@@ -696,3 +696,13 @@ describe("S3 sync events", () => {
     expect(Schema.encodeSync(ServerFrame)(frame)).toEqual(wire);
   });
 });
+
+it("retains every removal id in one recipient publication", () => {
+  roundTrips(ActivityItemRemoved, {
+    id: 301,
+    additionalIds: [302, 303],
+    unreadCount: 0,
+    unreadRevision: 3,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+  });
+});

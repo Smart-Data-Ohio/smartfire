@@ -209,12 +209,13 @@ pub fn notify_leave(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
     let mut in_call = in_call_user_ids(tx.conn(), room.id, tx.now())?;
     in_call.remove(&leaver.id);
     let members = room_users(tx.conn(), room.id)?;
+    let blockers = super::ignore_policy::blockers_of(tx.conn(), leaver.id)?.into_iter().collect::<BTreeSet<_>>();
     if !in_call.is_empty() {
         for id in &in_call {
             if let Some(viewer) = human(tx.conn(), *id)?
                 && !NotificationPreferences::load(tx.conn(), viewer.id)?.muted(room.id, tx.now())
             {
-                leave_notice(tx, &room, &leaver, &viewer, &members);
+                leave_notice(tx, &room, &leaver, &viewer, &members, blockers.contains(&viewer.id));
             }
         }
         if room.direct() {
@@ -223,7 +224,7 @@ pub fn notify_leave(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
                     continue;
                 }
                 if let Some(viewer) = human(tx.conn(), membership.user_id)? {
-                    leave_notice(tx, &room, &leaver, &viewer, &members);
+                    leave_notice(tx, &room, &leaver, &viewer, &members, blockers.contains(&viewer.id));
                 }
             }
         }
@@ -382,12 +383,10 @@ fn activity(tx: &mut Tx<'_>, viewer: i64, id: i64, payload: serde_json::Value) {
         payload: json!({"activityItemId":id, "huddleInvitation":payload}),
     }));
 }
-fn leave_notice(tx: &mut Tx<'_>, room: &Room, leaver: &User, viewer: &User, members: &[User]) {
-    notice(
-        tx,
-        viewer.id,
-        json!({"eventType":"huddle_left", "roomId":room.id, "roomName":display_name(room,viewer.id,viewer.display_name(),members,true), "joinerId":leaver.id, "joinerName":leaver.display_name()}),
-    );
+fn leave_notice(tx: &mut Tx<'_>, room: &Room, leaver: &User, viewer: &User, members: &[User], ignored: bool) {
+    let mut frame = json!({"eventType":"huddle_left", "roomId":room.id, "roomName":display_name(room,viewer.id,viewer.display_name(),members,true), "joinerId":leaver.id, "joinerName":leaver.display_name()});
+    if ignored { frame["unchanged"] = json!(true); }
+    notice(tx, viewer.id, frame);
 }
 fn human(conn: &Connection, id: i64) -> Result<Option<User>> {
     Ok(User::find_by_id(conn, id)?.filter(|u| u.is_active() && !u.is_bot()))

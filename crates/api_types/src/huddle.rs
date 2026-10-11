@@ -191,6 +191,9 @@ pub enum HuddleNotice {
         room_name: String,
         user_id: i64,
         user_name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        unchanged: Option<bool>,
     },
     /// `huddle_ended`: the last person left. Clears the room's banner.
     Ended { room_id: i64 },

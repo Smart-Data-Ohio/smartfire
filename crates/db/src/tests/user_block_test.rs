@@ -118,7 +118,10 @@ fn ignore_work_activity_filters_old_items_and_stops_new_notifications() {
             },
         )
     });
-    assert!(t.events()[before..].iter().filter_map(|event| event.as_broadcast()).any(|event| matches!(event, crate::broadcasts::Broadcast::Cable { stream, .. } if stream == format!("user_{viewer}_activity"))));
+    assert!(t.events()[before..].iter().any(|event| {
+        matches!(event, crate::Event::Broadcast(request) if request.decode::<crate::models::activity_item::ActivityItemRecorded>()
+            .is_some_and(|recorded| recorded.unwrap().user_id == viewer && request.arguments["id"] == 0))
+    }), "{:?}", &t.events()[before..]);
     t.read(|conn| {
         assert_eq!(ActivityItem::unread_count(conn, &User::find(conn, viewer)?, t.now())?, 0,
             "the canonical publication must leave the blocker's visible inbox unchanged");
@@ -670,6 +673,70 @@ fn ignore_board_unread_filters_only_the_authors_content() {
     });
     t.read(|conn| {
         assert!(!Membership::find_by_room_and_user(conn, room_id, viewer)?.unwrap().unread());
+        Ok(())
+    });
+}
+
+
+#[test]
+fn ignore_thread_recording_preserves_visible_group_and_never_creates_or_bumps_hidden_activity() {
+    use crate::models::user_block::UserBlock;
+    use crate::{ActivityItem, ChannelThread, NewMessage, ThreadInvolvement, ThreadMembership, User};
+    let t = TestDb::new();
+    let (viewer, author, other) = (id("jason"), id("david"), id("kevin"));
+    let thread = channel_thread_test::create_thread(&t, "designers", "david", None, Some("Group ignore"));
+    let thread_id = thread.id;
+    t.write(move |tx| {
+        ThreadMembership::join(tx, thread_id, viewer)?.update_involvement(tx, ThreadInvolvement::Everything)?;
+        UserBlock::set(tx, viewer, author, true)?;
+        Ok(())
+    });
+    let post = |creator| t.write(move |tx| {
+        let message = ChannelThread::find(tx.conn(), thread_id)?.post_message(tx, creator, NewMessage { body: Some("Reply".into()), ..Default::default() })?;
+        ActivityItem::record_message(tx, &message)?;
+        Ok(message.id)
+    });
+    post(author);
+    t.read(|conn| {
+        assert!(ActivityItem::accessible_to(conn, &User::find(conn, viewer)?)?.is_empty());
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE user_id=? AND event_type='thread_activity'", [viewer], |row| row.get::<_, i64>(0))?, 0);
+        Ok(())
+    });
+    let visible = post(other);
+    let before = t.read(|conn| ActivityItem::find_by_user_and_source(conn, viewer, "Message", visible)).unwrap();
+    t.clock.travel(jiff::SignedDuration::from_secs(1));
+    post(author);
+    t.read(|conn| {
+        assert_eq!(ActivityItem::find(conn, before.id)?, before);
+        assert_eq!(ActivityItem::accessible_to(conn, &User::find(conn, viewer)?)?, vec![before.clone()]);
+        Ok(())
+    });
+    t.write(move |tx| before.mark_read(tx));
+    let read = t.read(|conn| ActivityItem::find_by_user_and_source(conn, viewer, "Message", visible)).unwrap();
+    post(author);
+    t.read(|conn| { assert_eq!(ActivityItem::find(conn, read.id)?, read); Ok(()) });
+}
+
+#[test]
+fn ignore_sla_activity_maps_the_board_posts_author_for_all_read_paths() {
+    use crate::models::activity_item::ActivitySource;
+    use crate::models::user_block::UserBlock;
+    use crate::{ActivityItem, BoardSlaNudge, NewBoardSlaNudge, User};
+    let t = TestDb::new();
+    let (viewer, author) = (id("jason"), id("david"));
+    let thread = channel_thread_test::create_thread(&t, "designers", "david", None, Some("SLA ignore"));
+    let thread_id = thread.id;
+    let item = t.write(move |tx| {
+        let nudge = BoardSlaNudge::create(tx, NewBoardSlaNudge { room_id: id("designers"), channel_thread_id: thread_id, recipient_id: viewer, work_status: Some("planned".into()), stage: Some("nudge".into()), status_entered_at: Some(tx.now()) })?;
+        ActivityItem::record(tx, viewer, ActivitySource::BoardSlaNudge(nudge.id), "work_sla", false)?.ok_or(crate::Error::RecordNotFound("ActivityItem"))
+    });
+    t.write(move |tx| UserBlock::set(tx, viewer, author, true));
+    t.read(|conn| {
+        let user = User::find(conn, viewer)?;
+        assert!(ActivityItem::find_accessible(conn, &user, item.id)?.is_none());
+        assert!(ActivityItem::accessible_to(conn, &user)?.is_empty());
+        assert_eq!(ActivityItem::unread_count(conn, &user, t.now())?, 0);
+        assert_eq!(ActivityItem::unread_snapshot(conn, viewer, t.now())?.count, 0);
         Ok(())
     });
 }

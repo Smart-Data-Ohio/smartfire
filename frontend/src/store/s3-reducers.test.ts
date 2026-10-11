@@ -617,6 +617,25 @@ describe("the activity inbox", () => {
     expect(next.activity.unreadCount).toBe(2);
   });
 
+  it("removes every item in one recipient publication", () => {
+    const next = events(inbox(), {
+      topic: "user",
+      type: "activity.removed",
+      data: {
+        id: 5,
+        additionalIds: [4],
+        unreadCount: 1,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      },
+    });
+
+    expect(next.activity.items[5]).toBeUndefined();
+    expect(next.activity.items[4]).toBeUndefined();
+    expect(ids(next, "all", "unread")).toEqual([3]);
+    expect(next.activity.unreadCount).toBe(1);
+  });
+
   it("invalidates a delayed count even when removal of an unseen item leaves the count unchanged", () => {
     const state = inbox();
 

@@ -570,11 +570,14 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
             Ok((room.id, board.id, thread.id))
         }).await.unwrap();
         let mut jason = a.sign_in(JASON).await;
+        let mut david = a.sign_in(DAVID).await;
         a.booted.app.broadcasts.settle_sync().await;
         let (addr, server) = serve(&a).await;
         let topics = [format!("room:{room}"), format!("room:{board}"), format!("thread:{thread}")];
         let mut author = Sync::connect(addr, &jason.cookie_header(), &topics).await;
+        let mut blocker = Sync::connect(addr, &david.cookie_header(), &topics).await;
         author.welcome().await;
+        blocker.welcome().await;
         let marker = || a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
             campfire_cable::sync::Audience::Topic(format!("room:{room}")),
             serde_json::to_string(&SyncPayload::RoomRead(campfire_api_types::RoomRead { room_id: room })).unwrap(),
@@ -585,27 +588,48 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
         assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let message = parse::<Value>(&reply)["id"].as_i64().unwrap();
         a.booted.app.broadcasts.settle_sync().await;
+        let events = std::cell::RefCell::new(Vec::new());
+        let mut checkpoints = Vec::new();
+        marker();
+        let first = author.until(|e| {
+            if matches!(e.payload, SyncPayload::RoomRead(_)) { return true; }
+            events.borrow_mut().push(serde_json::to_value(&e.payload).unwrap()["type"].as_str().unwrap().to_owned());
+            false
+        }, |_| false).await;
+        checkpoints.push(first.seq - start);
         for (method, path, body) in [
             (Method::PATCH, format!("/api/v1/messages/{message}"), json!({"markdownSource":"Edited post"})),
             (Method::POST, format!("/api/v1/threads/{thread}/messages"), json!({"clientMessageId":"sequence-reply", "markdownSource":"A reply"})),
             (Method::POST, format!("/api/v1/rooms/{board}/posts"), json!({"name":"Board post", "status":"planned", "ownerId":null, "tags":[], "message":{"clientMessageId":"sequence-board", "markdownSource":"Board opener"}})),
+            (Method::PUT, format!("/api/v1/rooms/{board}/involvement"), json!({"involvement":"muted"})),
+            (Method::PUT, format!("/api/v1/rooms/{board}/involvement"), json!({"involvement":"everything"})),
+            (Method::POST, format!("/api/v1/threads/{thread}/messages"), json!({"clientMessageId":"sequence-reply-two", "markdownSource":"Another reply"})),
+            (Method::PATCH, format!("/api/v1/messages/{message}"), json!({"markdownSource":format!("After mute <@{DAVID}>")})),
+            (Method::PATCH, format!("/api/v1/messages/{message}"), json!({"markdownSource":"Remove mention"})),
             (Method::POST, format!("/api/v1/messages/{message}/boosts"), json!({"content":"👍"})),
+            (Method::DELETE, format!("/api/v1/messages/{message}"), json!({})),
+            (Method::DELETE, format!("/api/v1/threads/{thread}"), json!({})),
         ] {
-            let reply = jason.write(json_body(method, &path, &body)).await;
+            let client = if path.ends_with("/involvement") { &mut david } else { &mut jason };
+            let reply = client.write(json_body(method, &path, &body)).await;
             assert!(reply.status.is_success(), "{path}: {}", reply.text());
             a.booted.app.broadcasts.settle_sync().await;
+            // Deferred recipient snapshots can interleave within an operation. The next
+            // author-visible publication must have the same sequence after every operation.
+            marker();
+            let checkpoint = author.until(|e| {
+                if matches!(e.payload, SyncPayload::RoomRead(_)) { return true; }
+                events.borrow_mut().push(serde_json::to_value(&e.payload).unwrap()["type"].as_str().unwrap().to_owned());
+                false
+            }, |_| false).await;
+            checkpoints.push(checkpoint.seq - start);
         }
-        marker();
-        let events = std::cell::RefCell::new(Vec::new());
-        author.until(|e| {
-            if matches!(e.payload, SyncPayload::RoomRead(_)) { return true; }
-            events.borrow_mut().push((e.seq - start, serde_json::to_value(&e.payload).unwrap()["type"].as_str().unwrap().to_owned()));
-            false
-        }, |_| false).await;
-        assert!(events.borrow().iter().any(|(_, kind)| kind == "message.created"));
-        assert!(events.borrow().iter().any(|(_, kind)| kind == "message.updated"));
-        assert!(events.borrow().iter().any(|(_, kind)| kind == "message.reactions"));
-        observed.push(events.into_inner());
+        assert!(events.borrow().iter().any(|kind| kind == "message.created"));
+        assert!(events.borrow().iter().any(|kind| kind == "message.updated"));
+        assert!(events.borrow().iter().any(|kind| kind == "message.reactions"));
+        let mut kinds = events.into_inner();
+        kinds.sort();
+        observed.push((checkpoints, kinds));
         server.abort();
     }
     assert_eq!(observed[0], observed[1]);
@@ -649,7 +673,7 @@ async fn ignore_board_unread_publication_keeps_its_slot_and_unchanged_state() {
         campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, true)?;
         Ok(room.id)
     }).await.unwrap();
-    let david = a.sign_in(DAVID).await;
+    let mut david = a.sign_in(DAVID).await;
     let (addr, server) = serve(&a).await;
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
     sync.welcome().await;
@@ -660,6 +684,14 @@ async fn ignore_board_unread_publication_keeps_its_slot_and_unchanged_state() {
         }).await.unwrap();
         let event = sync.until(|e| matches!(e.payload, campfire_api_types::SyncPayload::RoomUnread(_)), |_| false).await;
         assert_eq!(serde_json::to_value(event.payload).unwrap()["data"]["unchanged"], true);
+        a.booted.app.broadcasts.settle_sync().await;
+        let row = sync.until(|e| matches!(&e.payload, campfire_api_types::SyncPayload::SidebarRowUpserted(row) if row.room.id == room), |_| false).await;
+        assert!(serde_json::to_value(row.payload).unwrap()["data"]["membership"]["unreadAt"].is_null());
+        let sidebar: Value = parse(&david.send(get("/api/v1/sidebar")).await);
+        let row = sidebar["rows"].as_array().unwrap().iter().find(|row| row["room"]["id"] == room).unwrap();
+        assert!(row["membership"]["unreadAt"].is_null());
+        let detail: Value = parse(&david.send(get(&format!("/api/v1/rooms/{room}"))).await);
+        assert!(detail["membership"]["unreadAt"].is_null());
     }
     server.abort();
 }
@@ -701,6 +733,46 @@ async fn ignore_activity_keeps_the_global_slot_with_both_sync_sockets_open() {
         let SyncPayload::ActivityItem(changed) = event.payload else { unreachable!() };
         assert_eq!(changed.item.is_none(), ignored);
         if ignored { assert_eq!(changed.unread_count, before["unreadCount"].as_i64().unwrap()); }
+        server.abort();
+    }
+    assert_eq!(increments[0], increments[1]);
+}
+
+
+#[tokio::test]
+async fn ignore_approval_updates_preserve_the_authors_sequence_and_hide_the_blockers_card() {
+    use campfire_api_types::SyncPayload;
+    use campfire_db::{AgentApproval, NewApproval};
+    let mut increments = Vec::new();
+    for ignored in [false, true] {
+        let a = app(true).await.expect("seed required").without_job_runner().await;
+        let approval = a.db().write(move |tx| {
+            campfire_db::models::user_block::UserBlock::set(tx, DAVID, BENDER, ignored)?;
+            AgentApproval::create(tx, NewApproval { agent_id: 773018776, action: "ignore.audit".into(), summary: "Approval slot".into(), ..Default::default() })
+        }).await.unwrap();
+        let jason = a.sign_in(JASON).await;
+        let david = a.sign_in(DAVID).await;
+        a.booted.app.broadcasts.settle_sync().await;
+        let (addr, server) = serve(&a).await;
+        let topic = format!("room:{DESIGNERS}");
+        let mut author = Sync::connect(addr, &jason.cookie_header(), std::slice::from_ref(&topic)).await;
+        let mut blocker = Sync::connect(addr, &david.cookie_header(), &[]).await;
+        author.welcome().await;
+        blocker.welcome().await;
+        let marker = || a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
+            campfire_cable::sync::Audience::Topic(topic.clone()),
+            serde_json::to_string(&SyncPayload::RoomRead(campfire_api_types::RoomRead { room_id: DESIGNERS })).unwrap(),
+        ));
+        marker();
+        let start = author.until(|e| matches!(e.payload, SyncPayload::RoomRead(_)), |_| false).await.seq;
+        a.booted.app.broadcasts.sync_approval(approval.id);
+        a.booted.app.broadcasts.settle_sync().await;
+        marker();
+        let end = author.until(|e| matches!(e.payload, SyncPayload::RoomRead(_)), |_| false).await.seq;
+        increments.push(end - start);
+        let event = blocker.until(|e| matches!(e.payload, SyncPayload::ApprovalUpdated(_) | SyncPayload::ActivityItem(_)), |_| false).await;
+        if ignored { assert!(matches!(event.payload, SyncPayload::ActivityItem(changed) if changed.item.is_none())); }
+        else { assert!(matches!(event.payload, SyncPayload::ApprovalUpdated(_))); }
         server.abort();
     }
     assert_eq!(increments[0], increments[1]);

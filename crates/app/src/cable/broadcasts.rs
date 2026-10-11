@@ -104,6 +104,11 @@ impl Broadcasts {
         sync::activity_item_later(&self.server, &self.sync, user_id, item_id);
     }
 
+    /// A recording slot, including the room of a source with no personally stored item.
+    pub fn sync_activity_recorded(&self, recorded: campfire_db::models::activity_item::ActivityItemRecorded) {
+        sync::activity_item_in_room_later(&self.server, &self.sync, recorded.user_id, recorded.id, recorded.room_id);
+    }
+
     /// `activity.removed` for removed inbox items.
     pub fn sync_activity_removed(&self, removed: ActivityItemsRemoved) {
         sync::activity_removed_later(&self.server, &self.sync, removed);

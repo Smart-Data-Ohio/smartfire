@@ -1172,6 +1172,7 @@ pub fn membership_row(
     membership: &Membership,
     now: Timestamp,
 ) -> Result<api::SidebarRow> {
+    let membership = Membership::find(conn, membership.id)?;
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
         Some(members(conn, room.id)?)
@@ -1188,7 +1189,7 @@ pub fn membership_row(
     };
     Ok(sidebar_row_with(
         room,
-        membership,
+        &membership,
         viewer.display_name(),
         members.as_deref(),
         counts,
@@ -1274,6 +1275,7 @@ pub fn room_detail(
     membership: &Membership,
     now: Timestamp,
 ) -> Result<api::RoomDetail> {
+    let membership = Membership::find(conn, membership.id)?;
     let members = members(conn, room.id)?;
     let member_count: i64 = conn.query_row_cached(
         r#"SELECT COUNT(*) FROM "memberships" WHERE "memberships"."room_id" = ?"#,
@@ -1290,7 +1292,7 @@ pub fn room_detail(
     };
     let member_preview_ids: Vec<i64> = members.iter().take(5).map(|(id, _)| *id).collect();
     let unread =
-        room_unread::first_unread(conn, membership)?.map(|(first_unread_message_id, count)| {
+        room_unread::first_unread(conn, &membership)?.map(|(first_unread_message_id, count)| {
             api::UnreadDivider {
                 first_unread_message_id,
                 count,
@@ -1298,7 +1300,7 @@ pub fn room_detail(
         });
     Ok(api::RoomDetail {
         room: self::room(room),
-        membership: self::membership(membership),
+        membership: self::membership(&membership),
         display_name: accounts::room_display_name(conn, room, viewer)?,
         member_count,
         pins_count: MessagePin::count_for_room(conn, room.id)?,

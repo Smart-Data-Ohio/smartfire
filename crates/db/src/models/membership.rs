@@ -182,11 +182,19 @@ impl Membership {
         .or_not_found("Membership")
     }
 
-    fn policy_select() -> String {
+    /// Persisted state for write decisions and publication eligibility, before personal filtering.
+    pub fn find_stored(conn: &Connection, id: i64) -> Result<Self> {
+        query_one(conn, "SELECT * FROM memberships WHERE id=?", [id], Self::from_row)?
+            .or_not_found("Membership")
+    }
+
+    fn policy_columns() -> String {
         let unread = super::ignore_policy::room_unread_sql();
-        format!(
-            "SELECT memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM memberships"
-        )
+        format!("memberships.*, CASE WHEN {unread} THEN memberships.unread_at END AS visible_unread_at")
+    }
+
+    fn policy_select() -> String {
+        format!("SELECT {} FROM memberships", Self::policy_columns())
     }
 
     fn from_policy_row(row: &Row<'_>) -> rusqlite::Result<Self> {
@@ -311,9 +319,9 @@ impl Membership {
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Self::policy_columns(), Room::PREFIXED_COLUMNS),
             [user_id],
-            |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
+            |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
         )
     }
 
@@ -321,9 +329,9 @@ impl Membership {
     pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Self::policy_columns(), Room::PREFIXED_COLUMNS),
             [user_id],
-            |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
+            |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
         )
     }
 

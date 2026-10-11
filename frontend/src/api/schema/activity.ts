@@ -222,6 +222,7 @@ export type ActivityItemMutation = typeof ActivityItemMutation.Encoded;
 /** The `activity.removed` event: the item went with its source. */
 export const ActivityItemRemoved = Schema.Struct({
   id: ActivityItemId,
+  additionalIds: Schema.optionalKey(Schema.Array(ActivityItemId)),
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
   evaluatedAt: EvaluationTimestamp,

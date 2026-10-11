@@ -359,6 +359,7 @@ fn activity_round_trips() {
     assert_wire(
         &ActivityItemRemoved {
             id: 301,
+            additional_ids: None,
             unread_count: 2,
             unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
@@ -1011,6 +1012,7 @@ fn s3_sync_events_round_trip() {
             "user",
             SyncPayload::ActivityRemoved(ActivityItemRemoved {
                 id: 301,
+            additional_ids: None,
                 unread_count: 2,
                 unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),

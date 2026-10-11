@@ -30,7 +30,9 @@ fn access_sql() -> String {
 }
 
 fn activity_author_sql() -> &'static str {
-    "COALESCE(activity_messages.creator_id, activity_saved_messages.creator_id, activity_work_events.actor_id, activity_huddle_grants.user_id, activity_events.organizer_id, activity_approval_agents.user_id, activity_budget_agents.user_id, activity_scheduled_messages.user_id)"
+    // All eleven ActivitySource kinds: SavedItem remains accessible by choice; Session and
+    // TwoFactorCredential are the recipient's own security events, with no external author.
+    "COALESCE(activity_messages.creator_id, activity_saved_messages.creator_id, activity_work_events.actor_id, activity_sla_threads.creator_id, activity_huddle_grants.user_id, activity_events.organizer_id, activity_approval_agents.user_id, activity_budget_agents.user_id, activity_scheduled_messages.user_id)"
 }
 
 fn unread_activity_sql() -> String {
@@ -76,6 +78,13 @@ impl ActivityItem {
             return Ok(None);
         }
         let sql = format!("{} AND activity_items.id=?2", access_sql());
+        crate::sql::query_one(conn, &sql, rusqlite::params![user.id, id], Self::from_row)
+    }
+
+    /// Source authorization without ignore filtering, for publication eligibility only.
+    pub fn find_authorized(conn: &Connection, user: &User, id: i64) -> Result<Option<Self>> {
+        if !user.is_active() || user.is_bot() { return Ok(None); }
+        let sql = format!("{} AND activity_items.id=?2", include_str!("access.sql"));
         crate::sql::query_one(conn, &sql, rusqlite::params![user.id, id], Self::from_row)
     }
 

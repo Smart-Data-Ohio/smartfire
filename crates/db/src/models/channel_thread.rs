@@ -1051,7 +1051,7 @@ impl ChannelThread {
                 Ok((row.get(0)?, row.get(1)?))
             })?;
             if !importing {
-                crate::ActivityItem::emit_removed(tx, removed);
+                crate::ActivityItem::emit_removed_in_room(tx, removed, self.room_id, None)?;
             }
         }
         for sql in [

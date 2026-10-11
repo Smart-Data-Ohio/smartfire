@@ -1201,6 +1201,11 @@ export function applyEvents(
         break;
       case "activity.removed":
         next = removeActivityItem(next, event.data.id, event.data);
+
+        for (const id of event.data.additionalIds ?? []) {
+          next = removeActivityItem(next, id, event.data);
+        }
+
         break;
       case "scheduled.changed":
         next = applyScheduled(next, event.data);

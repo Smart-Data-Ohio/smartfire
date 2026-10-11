@@ -354,6 +354,10 @@ pub struct ActivityItemChanged {
 #[ts(export)]
 pub struct ActivityItemRemoved {
     pub id: i64,
+    /// Additional items removed in the same recipient's publication slot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub additional_ids: Option<Vec<i64>>,
     pub unread_count: i64,
     /// Per-user server revision of this count. Ignore counts from older revisions.
     #[ts(type = "number")]

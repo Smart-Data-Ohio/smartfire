@@ -33,12 +33,12 @@ pub async fn change(
         .app()
         .db
         .write(move |tx| {
-            let mut membership = Membership::find(tx.conn(), membership_id)?;
+            let mut membership = Membership::find_stored(tx.conn(), membership_id)?;
             let was_unread = membership.unread();
             membership.update_involvement(tx, involvement)?;
             if membership.involved_in(Involvement::Muted) { membership.read(tx)?; }
             let cleared_unread = was_unread && !membership.unread();
-            Ok((membership, cleared_unread))
+            Ok((Membership::find(tx.conn(), membership_id)?, cleared_unread))
         })
         .await
         .map_err(db_error)?;

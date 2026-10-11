@@ -1,4 +1,9 @@
 //! Personal visibility and one-way contact prevention. People remain discoverable.
+//!
+//! I1: Whether a sequenced publication happens, and how many happen, depends only on
+//! unfiltered state. Ignore filtering changes a blocker's payload, never its publication slot.
+//! I2: Filter stored per-recipient state at write time where possible. An ignored author's
+//! event must not create, replace or bump an activity item the blocker sees.
 use crate::sql::{exists, query_all};
 use crate::{Connection, Error, Result};
 use rusqlite::params;

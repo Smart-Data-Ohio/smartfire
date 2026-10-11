@@ -46,3 +46,27 @@ it("consumes ignored caller publications without ringing or showing a join notic
     unsubscribe();
   }
 });
+
+it("consumes an ignored leave notice without notifying while retaining the next signal", () => {
+  const received: number[] = [];
+  const unsubscribe = onHuddleSignal((signal) => received.push(signal.seq));
+
+  const notice: HuddleNotice = {
+    kind: "left",
+    roomId: 5,
+    roomName: "Room",
+    userId: 2,
+    userName: "Caller",
+  };
+
+  try {
+    emitSyncEvents([
+      { seq: 5, topic: "user", type: "huddle.notice", data: notice },
+      { seq: 6, topic: "user", type: "huddle.notice", data: { ...notice, unchanged: true } },
+      { seq: 7, topic: "user", type: "huddle.notice", data: { kind: "ended", roomId: 5 } },
+    ]);
+    expect(received).toEqual([5, 7]);
+  } finally {
+    unsubscribe();
+  }
+});

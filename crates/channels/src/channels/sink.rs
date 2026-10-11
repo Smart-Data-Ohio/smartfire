@@ -77,13 +77,12 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
                 app.broadcasts.sync_events_changed(change);
             }
         }),
-        campfire_db::models::activity_item::ActivityItemTouched::KIND => decode::<
-            campfire_db::models::activity_item::ActivityItemTouched,
+        campfire_db::models::activity_item::ActivityItemRecorded::KIND => decode::<
+            campfire_db::models::activity_item::ActivityItemRecorded,
         >(request)
-        .map(|touched| {
+        .map(|recorded| {
             if let Some(app) = app {
-                app.broadcasts
-                    .sync_activity_item(touched.user_id, touched.id);
+                app.broadcasts.sync_activity_recorded(recorded);
             }
         }),
         campfire_db::models::activity_item::ActivityItemsRemoved::KIND => decode::<campfire_db::models::activity_item::ActivityItemsRemoved>(request).map(|removed| {
@@ -167,7 +166,15 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, change: &campfire_db::
     use campfire_db::broadcasts::Broadcast;
     match change {
         Broadcast::Cable { stream, payload } => {
-            cable.broadcast(stream, payload);
+            if payload["syncRecorded"].as_bool() == Some(true) {
+                let mut classic = payload.clone();
+                let fields = classic.as_object_mut().expect("activity frame is an object");
+                fields.remove("syncRecorded");
+                fields.remove("recordingSource");
+                cable.broadcast(stream, &classic);
+            } else {
+                cable.broadcast(stream, payload);
+            }
             crate::cable::sync::cable_stream(cable, stream, payload);
             if let Some(app) = app { app.broadcasts.sync_activity_stream(stream, payload); }
         }

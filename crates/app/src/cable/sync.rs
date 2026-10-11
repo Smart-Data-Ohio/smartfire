@@ -281,7 +281,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("agent_approval::ApprovalChange", &["approval.updated"]),
     ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
-    ("activity_item::ActivityItemTouched", &["activity.item"]),
+    ("activity_item::ActivityItemRecorded", &["activity.item"]),
     ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
         "room_category::SidebarOrganized",
@@ -696,6 +696,7 @@ pub fn activity_stream(
     stream: &str,
     payload: &serde_json::Value,
 ) {
+    if payload["syncRecorded"].as_bool() == Some(true) { return; }
     let (Some(user_id), Some(item_id)) = (
         stream
             .strip_prefix("user_")
@@ -716,6 +717,11 @@ pub fn activity_stream(
 /// reply while still unread). Only read for an owner with a sync socket open; others get a gap
 /// marker, so a resume of theirs refetches.
 pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, item_id: i64) {
+    activity_item_in_room_later(server, slot, user_id, item_id, None);
+}
+
+/// The recording source supplies the room even when the personal item was not stored.
+pub fn activity_item_in_room_later(server: &Cable, slot: &RendererSlot, user_id: i64, item_id: i64, room_id: Option<i64>) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
@@ -744,7 +750,7 @@ pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, it
         // A message's item counts toward its room's red pill (`notificationCount`): a thread
         // reply pings without making the room unread, and reading the item clears it.
         // Read afresh later, under the room's lock, as every row is ([`RoomRows::publish`]).
-        match item_room_id(conn, item_id) {
+        match room_id.map(Some).map_or_else(|| item_room_id(conn, item_id), Ok) {
             Ok(Some(room_id)) => {
                 sidebar_rows_later(&server, &slot, room_id, Some(vec![user_id]));
             }
@@ -772,8 +778,15 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
         return;
     };
     // Only owners with a sync socket open; the others get a gap marker.
-    let items = removed
-        .items
+    let items = if let Some(recipient_ids) = &removed.recipient_ids {
+        recipient_ids.iter().map(|&user_id| (
+            removed.items.iter().filter(|&&(_, owner)| owner == user_id).map(|&(id, _)| id).collect::<Vec<_>>(),
+            user_id,
+        )).collect()
+    } else {
+        removed.items.iter().map(|&(id, user_id)| (vec![id], user_id)).collect::<Vec<_>>()
+    };
+    let items = items
         .into_iter()
         .filter(|&(_, user_id)| {
             let connected = server.sync_connected(user_id);
@@ -792,7 +805,9 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
         let Some(server) = server.upgrade() else {
             return;
         };
-        for (id, user_id) in items {
+        for (ids, user_id) in items {
+            let id = ids.first().copied().unwrap_or(0);
+            let additional_ids = (ids.len() > 1).then(|| ids.into_iter().skip(1).collect());
             let count = render.activity_unread_count(conn, user_id);
             match count {
                 Ok(Some(unread)) => send(
@@ -800,6 +815,7 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
                     Audience::User(user_id),
                     &SyncPayload::ActivityRemoved(campfire_api_types::ActivityItemRemoved {
                         id,
+                        additional_ids,
                         unread_count: unread.count,
                         unread_revision: unread.revision,
                         evaluated_at: unread.evaluated_at.to_evaluation_time(),
@@ -1904,7 +1920,7 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
         let Some(renderer) = slot.get(&server) else {
             return;
         };
-        let read = (|| -> campfire_db::Result<Vec<(i64, campfire_api_types::ApprovalUpdated)>> {
+        let read = (|| -> campfire_db::Result<Vec<(i64, SyncPayload)>> {
             let items: Vec<(i64, i64)> = conn
                 .prepare_cached(
                     "SELECT id, user_id FROM activity_items WHERE source_type = 'AgentApproval' \
@@ -1921,11 +1937,15 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
                 let Some(user) = campfire_db::User::find_by_id(conn, user_id)? else {
                     continue;
                 };
-                if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?.is_none() {
+                if campfire_db::ActivityItem::find_authorized(conn, &user, item_id)?.is_none() {
                     continue;
                 }
                 if let Some(update) = renderer.approval_updated(conn, approval_id, user_id)? {
-                    updates.push((user_id, update));
+                    let payload = if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?.is_none() {
+                        let Some(unchanged) = renderer.activity_item(conn, user_id, item_id)? else { continue; };
+                        SyncPayload::ActivityItem(unchanged)
+                    } else { SyncPayload::ApprovalUpdated(update) };
+                    updates.push((user_id, payload));
                 }
             }
             Ok(updates)
@@ -1936,7 +1956,7 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
                     send(
                         &server,
                         Audience::User(user_id),
-                        &SyncPayload::ApprovalUpdated(update),
+                        &update,
                         |publication| publication,
                     );
                 }

@@ -280,6 +280,7 @@ fn notices_are_tagged_by_kind() {
             room_name: "general".into(),
             user_id: 8,
             user_name: "Grace Hopper".into(),
+            unchanged: None,
         },
         json!({"kind": "left", "roomId": 12, "roomName": "general", "userId": 8, "userName": "Grace Hopper"}),
     );

@@ -135,6 +135,7 @@ export const HuddleNotice = Schema.Union([
     roomName: Schema.String,
     userId: UserId,
     userName: Schema.String,
+    unchanged: Schema.optionalKey(Schema.Boolean),
   }),
   Schema.Struct({ kind: Schema.Literal("ended"), roomId: RoomId }),
 ]);

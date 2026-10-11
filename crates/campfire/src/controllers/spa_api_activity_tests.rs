@@ -526,6 +526,7 @@ async fn saved_items_list_page_change_and_drop_their_reminders() {
         removed,
         api::ActivityItemRemoved {
             id: reminder,
+            additional_ids: None,
             unread_count: count.unread_count,
             unread_revision: count.unread_revision,
             evaluated_at: removed.evaluated_at.clone(),
