@@ -13,11 +13,23 @@ export function useMessagePermissions(message: MessageDTO): MessagePermissions {
   const viewerRole = useStore((state) => state.me?.user.role ?? null);
   const roomKind = useStore((state) => state.rooms[message.roomId]?.detail?.room.kind ?? null);
 
+  const announcement = useStore(
+    (state) =>
+      (state.rooms[message.roomId]?.detail?.room.announcement ??
+        state.sidebar.rows[message.roomId]?.room.announcement) === true,
+  );
+
   const threadStatus = useStore((state) =>
     message.threadId === null ? null : (state.threads[message.threadId]?.status ?? null),
   );
 
-  return messagePermissions(message, { viewerId, viewerRole, roomKind, threadStatus });
+  return messagePermissions(message, {
+    viewerId,
+    viewerRole,
+    roomKind,
+    threadStatus,
+    announcement,
+  });
 }
 
 /** The viewer's saved item for `message`, or `null` when it isn't saved. */

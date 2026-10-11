@@ -58,6 +58,52 @@ export function MessageFlags({
   );
 }
 
+/** A published announcement's mark beside its time (or its last line), for everyone in the room. */
+export function PublishedMark({ published }: { readonly published: boolean | undefined }) {
+  return published === true ? (
+    <span className="message-published">
+      <Icon name="megaphone" size={12} />
+      Published
+    </span>
+  ) : null;
+}
+
+/**
+ * Above a copy delivered from an announcement room: the room it came from and the workspace, as
+ * Discord names a followed channel, linking to the original. Shown only when the server includes
+ * the source, which it leaves out for someone who can't see that room.
+ */
+export function AnnouncementOrigin({
+  source,
+}: {
+  readonly source: MessageDTO["announcementSource"];
+}) {
+  const workspace = useStore((state) => state.boot?.account.name ?? null);
+
+  if (source == null) {
+    return null;
+  }
+
+  const room = source.roomName === null ? "An announcement channel" : `#${source.roomName}`;
+
+  return (
+    <div className="message-announcement">
+      <Icon name="megaphone" size={12} className="message-announcement-icon" />
+      <Link
+        to="/r/$roomId/m/$messageId"
+        params={{ roomId: source.roomId, messageId: source.messageId }}
+        className="message-announcement-link"
+        preload={false}
+      >
+        <span className="message-announcement-room">{room}</span>
+        {workspace === null ? null : (
+          <span className="message-announcement-workspace"> · {workspace}</span>
+        )}
+      </Link>
+    </div>
+  );
+}
+
 /** Where a quote jumps to: the original on its timeline, a thread reply in its thread pane. */
 function QuoteLink({
   source,

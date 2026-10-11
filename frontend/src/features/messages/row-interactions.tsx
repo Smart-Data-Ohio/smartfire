@@ -25,6 +25,7 @@ import {
   copyLink,
   copyText,
   markUnread,
+  publish,
   remove,
   togglePin,
   toggleReaction,
@@ -344,6 +345,10 @@ export function useRowInteractions(
         return;
       case "fizzy":
         if (permissions.fizzy) openFizzyCard(message);
+
+        return;
+      case "publish":
+        if (permissions.publish && message.published !== true) publish(message);
 
         return;
       case "delete":

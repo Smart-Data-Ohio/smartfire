@@ -499,18 +499,20 @@
      wrapped message; the small labels read at 11-12 px; and while the day pill floats over the
      timeline, the line under it fades out so the pill never sits on text. */
   @media (width < 720px) {
-    .message-body-row:has(> .message-edited) {
+    .message-body-row:has(> .message-edited, > .message-published) {
       display: block;
     }
 
-    .message-body-row:has(> .message-edited) > .message-body,
-    .message-body-row:has(> .message-edited) > .message-body > p:last-child,
-    .message-body-row:has(> .message-edited) > .message-forward-note {
+    .message-body-row:has(> .message-edited, > .message-published) > .message-body,
+    .message-body-row:has(> .message-edited, > .message-published) > .message-body > p:last-child,
+    .message-body-row:has(> .message-edited, > .message-published) > .message-forward-note {
       display: inline;
     }
 
     /* The inline last paragraph drops its top margin, so the block before it keeps the gap. */
-    .message-body-row:has(> .message-edited) > .message-body > :nth-last-child(2) {
+    .message-body-row:has(> .message-edited, > .message-published)
+      > .message-body
+      > :nth-last-child(2) {
       margin-bottom: var(--space-1);
     }
 
@@ -518,7 +520,8 @@
       font-size: var(--text-meta);
     }
 
-    .message-body-row > .message-edited {
+    .message-body-row > .message-edited,
+    .message-body-row > .message-published {
       margin-left: var(--space-1);
       white-space: nowrap;
     }

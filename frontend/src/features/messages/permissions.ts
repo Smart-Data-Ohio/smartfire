@@ -10,6 +10,8 @@ export interface MessageContext {
   readonly roomKind: RoomKind | null;
   /** The status of the thread a reply sits in; `null` on the root timeline or when unknown. */
   readonly threadStatus: ThreadStatus | null;
+  /** Whether the message's room is an announcement room, when the store knows. */
+  readonly announcement?: boolean;
 }
 
 /** What the viewer may do with one message. */
@@ -28,13 +30,20 @@ export interface MessagePermissions {
   readonly markUnread: boolean;
   /** Create a Fizzy card from it (any message but a system note, connected or not, even locked). */
   readonly fizzy: boolean;
+  /**
+   * Publish it to the rooms following its announcement room: the author's or an administrator's,
+   * never a system note, a message still streaming, or a copy published from elsewhere.
+   */
+  readonly publish: boolean;
 }
 
 /**
  * The contract's rules (`MessageDTO` docs, `messages#ensure_can_edit` / `ensure_can_delete`):
  * edit is the creator's, never on a system note, never in a locked thread; delete is the
  * creator's or an administrator's, never on a system note; pin, save, react and forward are for
- * any human member. Bots never act through this UI.
+ * any human member. Publishing (`announcements#publish`) is the author's or an administrator's,
+ * in an announcement room, for a finished message that isn't a system note or a delivered copy.
+ * Bots never act through this UI.
  */
 export function messagePermissions(
   message: MessageDTO,
@@ -58,5 +67,11 @@ export function messagePermissions(
     thread: human && !note && (root || message.thread !== null) && context.roomKind !== "direct",
     markUnread: human && root,
     fizzy: human && !note,
+    publish:
+      (own || admin) &&
+      !note &&
+      !message.streaming &&
+      context.announcement === true &&
+      message.announcementSource == null,
   };
 }
