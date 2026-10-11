@@ -19,6 +19,7 @@ import {
   entryDrafts,
   entryErrors,
   GUIDE_MAX,
+  guideUpdateOf,
   hasErrors,
   length,
   MESSAGE_MAX,
@@ -29,8 +30,8 @@ import {
   type RowErrors,
   roomDrafts,
   roomErrors,
-  settingsOf,
   TITLE_MAX,
+  welcomeUpdateOf,
 } from "./welcome-draft.ts";
 import "./welcome-editor.css";
 
@@ -134,25 +135,31 @@ function Paragraph({
   );
 }
 
+/** The picker's value for a saved room this administrator can't see. */
+const KEPT = "kept";
+
 /**
- * The room picker: the rooms this administrator can suggest, by name. A saved room missing from
- * them is one they can't see; it stays chosen (unnamed) until someone picks another.
+ * The room picker: the rooms this administrator can suggest, by name. A saved room they can't
+ * see (`kept`: the server sent a token, not its id) stays chosen, unnamed, until they pick
+ * another.
  */
 function RoomPicker({
   label,
   value,
+  kept,
   choices,
   onChange,
   error,
 }: {
   readonly label: string;
   readonly value: number | null;
+  readonly kept: boolean;
   readonly choices: readonly WelcomeRoomChoice[];
   readonly onChange: (roomId: number | null) => void;
   readonly error: string | undefined;
 }) {
   const id = useId();
-  const hidden = value !== null && !choices.some((choice) => choice.id === value);
+  const hidden = value === null && kept;
 
   return (
     <div className="field welcome-editor-room">
@@ -162,17 +169,21 @@ function RoomPicker({
       <select
         id={id}
         className="input settings-select"
-        value={value === null ? "" : String(value)}
+        value={hidden ? KEPT : value === null ? "" : String(value)}
         aria-invalid={error !== undefined || undefined}
         aria-describedby={`${id}-note`}
         onChange={(event) => {
+          if (event.target.value === KEPT) {
+            return;
+          }
+
           const picked = choices.find((choice) => String(choice.id) === event.target.value);
 
           onChange(picked?.id ?? null);
         }}
       >
         <option value="">Choose a room…</option>
-        {hidden ? <option value={String(value)}>A room you can't see</option> : null}
+        {hidden ? <option value={KEPT}>A room you can't see</option> : null}
         {choices.map((choice) => (
           <option key={choice.id} value={String(choice.id)}>
             #{choice.name}
@@ -250,9 +261,9 @@ function WelcomeForm({
   readonly loaded: WelcomeAdmin;
   readonly onSaved: (next: WelcomeAdmin) => void;
 }) {
-  const { settings, choices } = loaded;
-  const [message, setMessage] = useState(settings.message);
-  const [rooms, setRooms] = useState<RoomDraft[]>(() => roomDrafts(settings.rooms));
+  const { choices } = loaded;
+  const [message, setMessage] = useState(loaded.message);
+  const [rooms, setRooms] = useState<RoomDraft[]>(() => roomDrafts(loaded.rooms));
   const [refused, setRefused] = useState<string | null>(null);
   const { busy, track } = useBusy();
   const listRef = useRef<HTMLDivElement>(null);
@@ -273,7 +284,8 @@ function WelcomeForm({
     setRefused(null);
     void track(
       "welcome",
-      admin.saveWelcome({ ...settingsOf(message, rooms, []), guide: settings.guide }).then(
+      // The welcome's section only: a guide saved meanwhile stays as saved.
+      admin.saveWelcome(welcomeUpdateOf(message, rooms)).then(
         (next) => {
           onSaved(next);
           toast({ title: "Welcome saved", tone: "success" });
@@ -317,9 +329,10 @@ function WelcomeForm({
                 <RoomPicker
                   label="Room"
                   value={room.roomId}
+                  kept={room.keep !== null}
                   choices={choices}
                   error={rowErrors.room}
-                  onChange={(roomId) => change(room.key, { roomId })}
+                  onChange={(roomId) => change(room.key, { roomId, keep: null })}
                 />
                 <Line
                   label="Emoji"
@@ -410,8 +423,8 @@ function GuideForm({
   readonly loaded: WelcomeAdmin;
   readonly onSaved: (next: WelcomeAdmin) => void;
 }) {
-  const { settings, choices } = loaded;
-  const [entries, setEntries] = useState<EntryDraft[]>(() => entryDrafts(settings.guide));
+  const { choices } = loaded;
+  const [entries, setEntries] = useState<EntryDraft[]>(() => entryDrafts(loaded.guide));
   const [refused, setRefused] = useState<string | null>(null);
   const { busy, track } = useBusy();
   const listRef = useRef<HTMLDivElement>(null);
@@ -433,7 +446,8 @@ function GuideForm({
     setRefused(null);
     void track(
       "guide",
-      admin.saveWelcome({ ...settings, guide: settingsOf("", [], entries).guide }).then(
+      // The guide's section only: a welcome saved meanwhile stays as saved.
+      admin.saveWelcome(guideUpdateOf(entries)).then(
         (next) => {
           onSaved(next);
           toast({ title: "Server guide saved", tone: "success" });
@@ -486,9 +500,10 @@ function GuideForm({
                 <RoomPicker
                   label="Room"
                   value={entry.roomId}
+                  kept={entry.keep !== null}
                   choices={choices}
                   error={rowErrors.room}
-                  onChange={(roomId) => change(entry.key, { roomId })}
+                  onChange={(roomId) => change(entry.key, { roomId, keep: null })}
                 />
               ) : (
                 <div className="welcome-editor-wide">
@@ -602,15 +617,25 @@ function EntryKind({
   );
 }
 
+/** The answer each form last saved, which it starts again from; `null` before its first save. */
+interface FormStarts {
+  readonly welcome: WelcomeAdmin | null;
+  readonly guide: WelcomeAdmin | null;
+}
+
 /**
  * The welcome card and the server guide, for administrators: two groups in the workspace
- * settings, each saved on its own (the other keeps what was last saved). Loaded once on mount;
- * a save answers with the stored copy, which both forms then start from.
+ * settings, each saving only its own section, so saving one never puts back an older copy of the
+ * other (even with both saves in flight). Loaded once on mount; a save answers with the stored
+ * copy, which the form that saved starts again from.
  */
 export function WelcomeEditor() {
   const [loaded, setLoaded] = useState<WelcomeAdmin | null>(null);
   const [failed, setFailed] = useState(false);
-  // A form starts again from the stored copy after its own save; the other keeps its edits.
+
+  // A form starts again from the answer to its own save (not whichever answer landed last); the
+  // other keeps its edits.
+  const [starts, setStarts] = useState<FormStarts>({ welcome: null, guide: null });
   const [generations, setGenerations] = useState({ welcome: 0, guide: 0 });
   const { hash } = useLocation();
 
@@ -644,10 +669,11 @@ export function WelcomeEditor() {
 
   const saved = (form: "welcome" | "guide") => (next: WelcomeAdmin) => {
     setLoaded(next);
+    setStarts((current) => ({ ...current, [form]: next }));
     setGenerations((current) => ({ ...current, [form]: current[form] + 1 }));
   };
 
-  const body = (form: (loaded: WelcomeAdmin) => ReactNode) =>
+  const body = (form: (loaded: WelcomeAdmin) => ReactNode, start: WelcomeAdmin | null) =>
     loaded === null ? (
       failed ? (
         <p className="text-muted">Couldn't load these settings.</p>
@@ -655,7 +681,7 @@ export function WelcomeEditor() {
         <Skeleton width={240} height={14} />
       )
     ) : (
-      form(loaded)
+      form({ ...(start ?? loaded), choices: loaded.choices })
     );
 
   return (
@@ -665,18 +691,24 @@ export function WelcomeEditor() {
         title="Welcome screen"
         description="A message and up to five suggested rooms at the top of Home, for everyone."
       >
-        {body((current) => (
-          <WelcomeForm key={generations.welcome} loaded={current} onSaved={saved("welcome")} />
-        ))}
+        {body(
+          (current) => (
+            <WelcomeForm key={generations.welcome} loaded={current} onSaved={saved("welcome")} />
+          ),
+          starts.welcome,
+        )}
       </SettingsGroup>
       <SettingsGroup
         id="guide"
         title="Server guide"
         description="Up to ten entries, each a room link or a short note, on the Server guide page."
       >
-        {body((current) => (
-          <GuideForm key={generations.guide} loaded={current} onSaved={saved("guide")} />
-        ))}
+        {body(
+          (current) => (
+            <GuideForm key={generations.guide} loaded={current} onSaved={saved("guide")} />
+          ),
+          starts.guide,
+        )}
       </SettingsGroup>
     </>
   );

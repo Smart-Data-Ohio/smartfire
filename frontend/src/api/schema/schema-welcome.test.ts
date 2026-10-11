@@ -11,14 +11,15 @@ const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S
 describe("the welcome schemas", () => {
   it("round-trip the configuration and what a viewer reads", () => {
     roundTrips(WelcomeAdmin, {
-      settings: {
-        message: "Say **hi**",
-        rooms: [{ roomId: 3, emoji: "👋", description: "Introduce yourself" }],
-        guide: [
-          { title: "Start here", emoji: null, roomId: 3, body: null },
-          { title: "Hours", emoji: "🕘", roomId: null, body: "9 to 5" },
-        ],
-      },
+      message: "Say **hi**",
+      rooms: [
+        { roomId: 3, keep: null, emoji: "👋", description: "Introduce yourself" },
+        { roomId: null, keep: "opaque", emoji: null, description: "" },
+      ],
+      guide: [
+        { title: "Start here", emoji: null, roomId: 3, keep: null, body: null },
+        { title: "Hours", emoji: "🕘", roomId: null, keep: null, body: "9 to 5" },
+      ],
       choices: [{ id: 3, name: "general" }],
     });
     roundTrips(WorkspaceWelcome, {
@@ -51,7 +52,7 @@ describe("the welcome schemas", () => {
     const mock = createMockServer({ now: () => clock.now(), seed: 1, scheduler: clock });
 
     const saved = await mock.handle({
-      method: "PUT",
+      method: "PATCH",
       path: "/api/v1/admin/welcome",
       body: {
         message: "Hello",

@@ -3,9 +3,9 @@
  * repeated so a mistake shows beside its field before Save. The server checks again, and alone
  * decides which rooms may be suggested.
  */
-import type { GuideResource } from "../../gen/GuideResource.ts";
-import type { WelcomeRoom } from "../../gen/WelcomeRoom.ts";
-import type { WelcomeSettings } from "../../gen/WelcomeSettings.ts";
+import type { GuideResourceEdit } from "../../gen/GuideResourceEdit.ts";
+import type { WelcomeRoomEdit } from "../../gen/WelcomeRoomEdit.ts";
+import type { WelcomeUpdate } from "../../gen/WelcomeUpdate.ts";
 
 export const MESSAGE_MAX = 1000;
 
@@ -21,10 +21,15 @@ export const BODY_MAX = 1000;
 
 const EMOJI_MAX = 16;
 
-/** A suggested room being edited; `key` keeps its row while rows move. */
+/**
+ * A suggested room being edited; `key` keeps its row while rows move. `keep` stands for a saved
+ * room this administrator can't see (the server sent no id); it goes back as is until another
+ * room is picked.
+ */
 export interface RoomDraft {
   readonly key: number;
   readonly roomId: number | null;
+  readonly keep: string | null;
   readonly emoji: string;
   readonly description: string;
 }
@@ -36,6 +41,7 @@ export interface EntryDraft {
   readonly emoji: string;
   readonly kind: "room" | "note";
   readonly roomId: number | null;
+  readonly keep: string | null;
   readonly body: string;
 }
 
@@ -56,32 +62,42 @@ export function length(text: string): number {
   return [...text].length;
 }
 
-export function roomDrafts(rooms: readonly WelcomeRoom[]): RoomDraft[] {
+export function roomDrafts(rooms: readonly WelcomeRoomEdit[]): RoomDraft[] {
   return rooms.map((room) => ({
     key: draftKey(),
     roomId: room.roomId,
+    keep: room.keep,
     emoji: room.emoji ?? "",
     description: room.description,
   }));
 }
 
-export function entryDrafts(guide: readonly GuideResource[]): EntryDraft[] {
+export function entryDrafts(guide: readonly GuideResourceEdit[]): EntryDraft[] {
   return guide.map((entry) => ({
     key: draftKey(),
     title: entry.title,
     emoji: entry.emoji ?? "",
-    kind: entry.roomId === null ? "note" : "room",
+    kind: entry.roomId === null && entry.keep === null ? "note" : "room",
     roomId: entry.roomId,
+    keep: entry.keep,
     body: entry.body ?? "",
   }));
 }
 
 export function blankRoom(): RoomDraft {
-  return { key: draftKey(), roomId: null, emoji: "", description: "" };
+  return { key: draftKey(), roomId: null, keep: null, emoji: "", description: "" };
 }
 
 export function blankEntry(): EntryDraft {
-  return { key: draftKey(), title: "", emoji: "", kind: "note", roomId: null, body: "" };
+  return {
+    key: draftKey(),
+    title: "",
+    emoji: "",
+    kind: "note",
+    roomId: null,
+    keep: null,
+    body: "",
+  };
 }
 
 /** A control character other than a line break or tab (multi-line text allows those). */
@@ -122,7 +138,9 @@ export function roomErrors(rooms: readonly RoomDraft[]): RowErrors[] {
     const description = room.description.trim();
 
     if (room.roomId === null) {
-      errors.room = "Choose a room.";
+      if (room.keep === null) {
+        errors.room = "Choose a room.";
+      }
     } else if (seen.has(room.roomId)) {
       errors.room = "This room is already suggested.";
     } else {
@@ -157,7 +175,7 @@ export function entryErrors(entries: readonly EntryDraft[]): RowErrors[] {
       errors.title = `Keep it to one line of ${TITLE_MAX} characters or fewer.`;
     }
 
-    if (entry.kind === "room" && entry.roomId === null) {
+    if (entry.kind === "room" && entry.roomId === null && entry.keep === null) {
       errors.room = "Choose a room.";
     }
 
@@ -191,31 +209,39 @@ function emojiOrNull(emoji: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-/** The settings a valid draft saves. Rows without a room are left out (they don't validate). */
-export function settingsOf(
-  message: string,
-  rooms: readonly RoomDraft[],
-  entries: readonly EntryDraft[],
-): WelcomeSettings {
+/** What the welcome form saves: its message and rooms. Rows without a room are left out. */
+export function welcomeUpdateOf(message: string, rooms: readonly RoomDraft[]): WelcomeUpdate {
   return {
     message: message.trim(),
     rooms: rooms.flatMap((room) =>
-      room.roomId === null
+      room.roomId === null && room.keep === null
         ? []
         : [
             {
               roomId: room.roomId,
+              keep: room.roomId === null ? room.keep : null,
               emoji: emojiOrNull(room.emoji),
               description: room.description.trim(),
             },
           ],
     ),
-    guide: entries.map((entry) => ({
-      title: entry.title.trim(),
-      emoji: emojiOrNull(entry.emoji),
-      roomId: entry.kind === "room" ? entry.roomId : null,
-      body: entry.kind === "note" ? entry.body.trim() : null,
-    })),
+  };
+}
+
+/** What the guide form saves: its entries, in order. */
+export function guideUpdateOf(entries: readonly EntryDraft[]): WelcomeUpdate {
+  return {
+    guide: entries.map((entry) => {
+      const link = entry.kind === "room";
+
+      return {
+        title: entry.title.trim(),
+        emoji: emojiOrNull(entry.emoji),
+        roomId: link ? entry.roomId : null,
+        keep: link && entry.roomId === null ? entry.keep : null,
+        body: link ? null : entry.body.trim(),
+      };
+    }),
   };
 }
 

@@ -103,7 +103,7 @@ import type { StartSlackImport } from "../gen/StartSlackImport.ts";
 import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { WelcomeAdmin } from "../gen/WelcomeAdmin.ts";
-import type { WelcomeSettings } from "../gen/WelcomeSettings.ts";
+import type { WelcomeUpdate } from "../gen/WelcomeUpdate.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
 import type { WorkspaceInvite } from "../gen/WorkspaceInvite.ts";
@@ -158,11 +158,11 @@ export const admin = {
   welcome: (): Promise<WelcomeAdmin> => runAction(adminWelcome()),
 
   /**
-   * Replaces the welcome card and server guide; `Validation` names the refused field (`message`,
-   * `rooms` or `guide`). Every client hears `workspace.updated` and reads its copy again.
+   * Replaces the sections `update` names (the welcome's `message` and `rooms`, or the `guide`),
+   * leaving the rest as stored; `Validation` names the refused field. Every client hears
+   * `workspace.updated` and reads its copy again.
    */
-  saveWelcome: (settings: WelcomeSettings): Promise<WelcomeAdmin> =>
-    runAction(updateWelcome(settings)),
+  saveWelcome: (update: WelcomeUpdate): Promise<WelcomeAdmin> => runAction(updateWelcome(update)),
 
   invites: (): Promise<WorkspaceInviteList> => runAction(invites()),
 

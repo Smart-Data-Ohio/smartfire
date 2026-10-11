@@ -14,7 +14,7 @@ describe("the welcome card and server guide", () => {
     const { server } = harness();
     const empty = await get<WelcomeAdmin>(server, "/api/v1/admin/welcome");
 
-    expect(empty.settings).toEqual({ message: "", rooms: [], guide: [] });
+    expect([empty.message, empty.rooms, empty.guide]).toEqual(["", [], []]);
     expect(empty.choices.map((choice) => choice.id)).toContain(JOINABLE_OPEN_ROOM.id);
 
     await send(server, "POST", "/__mock/viewer-role", { role: "member" });
@@ -24,7 +24,7 @@ describe("the welcome card and server guide", () => {
     );
     await expectStatus(
       server,
-      "PUT",
+      "PATCH",
       "/api/v1/admin/welcome",
       { message: "Mine", rooms: [], guide: [] },
       403,
@@ -42,7 +42,7 @@ describe("the welcome card and server guide", () => {
 
     const saved = await expectStatus<WelcomeAdmin>(
       server,
-      "PUT",
+      "PATCH",
       "/api/v1/admin/welcome",
       {
         message: "  Say **hi**  ",
@@ -55,9 +55,9 @@ describe("the welcome card and server guide", () => {
       200,
     );
 
-    expect(saved.settings.message).toBe("Say **hi**");
-    expect(saved.settings.rooms).toEqual([
-      { roomId: ROOM_IDS.general, emoji: "👋", description: "Everyone" },
+    expect(saved.message).toBe("Say **hi**");
+    expect(saved.rooms).toEqual([
+      { roomId: ROOM_IDS.general, keep: null, emoji: "👋", description: "Everyone" },
     ]);
     expect(events.some((event) => event.type === "workspace.updated")).toBe(true);
 
@@ -82,7 +82,7 @@ describe("the welcome card and server guide", () => {
     const { server } = harness();
     const good = { message: "Hello", rooms: [room(ROOM_IDS.general)], guide: [] };
 
-    await expectStatus(server, "PUT", "/api/v1/admin/welcome", good, 200);
+    await expectStatus(server, "PATCH", "/api/v1/admin/welcome", good, 200);
 
     const cases: readonly [string, Json][] = [
       ["message", { message: "x".repeat(1001), rooms: [], guide: [] }],
@@ -121,16 +121,14 @@ describe("the welcome card and server guide", () => {
     ];
 
     for (const [field, body] of cases) {
-      const response = await send(server, "PUT", "/api/v1/admin/welcome", body);
+      const response = await send(server, "PATCH", "/api/v1/admin/welcome", body);
 
       expect(response.status, JSON.stringify(body)).toBe(422);
       expect(errorOf(response.json).tag).toBe("Validation");
       expect(JSON.stringify(response.json)).toContain(`"${field}"`);
     }
 
-    expect((await get<WelcomeAdmin>(server, "/api/v1/admin/welcome")).settings.message).toBe(
-      "Hello",
-    );
+    expect((await get<WelcomeAdmin>(server, "/api/v1/admin/welcome")).message).toBe("Hello");
   });
 
   it("sends each viewer only the rooms they belong to or may join", async () => {
@@ -138,7 +136,7 @@ describe("the welcome card and server guide", () => {
 
     await expectStatus(
       server,
-      "PUT",
+      "PATCH",
       "/api/v1/admin/welcome",
       {
         message: "",
@@ -183,6 +181,86 @@ describe("the welcome card and server guide", () => {
       [JOINABLE_OPEN_ROOM.id, false],
     ]);
     expect(seen.guide.map((entry) => entry.title)).toEqual(["Hours"]);
+  });
+
+  it("saves one section at a time, leaving the other as stored", async () => {
+    const { server } = harness();
+
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/welcome",
+      { guide: [note("Hours", "9")] },
+      200,
+    );
+    await expectStatus(server, "PATCH", "/api/v1/admin/welcome", { message: "Hi", rooms: [] }, 200);
+
+    const both = await get<WelcomeAdmin>(server, "/api/v1/admin/welcome");
+
+    expect([both.message, both.guide.map((entry) => entry.title)]).toEqual(["Hi", ["Hours"]]);
+  });
+
+  it("shows an administrator a saved room they can't reach as a token, and keeps it", async () => {
+    const { server } = harness();
+
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/welcome",
+      {
+        rooms: [room(ROOM_IDS.general), room(ROOM_IDS.launchPlanning, "Private chatter")],
+        guide: [{ title: "Plans", emoji: null, roomId: ROOM_IDS.launchPlanning, body: null }],
+      },
+      200,
+    );
+    await expectStatus(
+      server,
+      "PATCH",
+      `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+      { type: "closed", name: "launch-planning", iconName: null, userIds: [2, 3, 6] },
+      200,
+    );
+
+    const response = await server.handle({ method: "GET", path: "/api/v1/admin/welcome" });
+    const text = JSON.stringify(response.json);
+
+    expect(text).not.toContain("launch-planning");
+    expect(text).not.toContain(`"roomId":${ROOM_IDS.launchPlanning},`);
+
+    const seen = await get<WelcomeAdmin>(server, "/api/v1/admin/welcome");
+    const hidden = seen.rooms[1];
+
+    expect(hidden?.roomId).toBeNull();
+    expect(hidden?.description).toBe("Private chatter");
+    expect(seen.guide[0]?.roomId).toBeNull();
+
+    // Naming it outright is refused like any room out of reach; the token keeps it.
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/welcome",
+      { rooms: [room(ROOM_IDS.launchPlanning)] },
+      422,
+    );
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/welcome",
+      { rooms: [{ ...hidden, description: "Ask first" }] },
+      200,
+    );
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/welcome",
+      { rooms: [{ roomId: null, keep: "made-up", emoji: null, description: "" }] },
+      422,
+    );
+
+    const after = await get<WelcomeAdmin>(server, "/api/v1/admin/welcome");
+
+    expect(after.rooms.map((row) => [row.roomId, row.description])).toEqual([[null, "Ask first"]]);
+    expect(after.guide).toHaveLength(1);
   });
 
   it("forgets the configuration when the world resets", async () => {

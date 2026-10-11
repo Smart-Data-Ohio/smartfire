@@ -1,18 +1,21 @@
 /**
- * The welcome card and server guide (`crates/api/src/welcome.rs`): administrators read and
- * replace the configuration at `/admin/welcome`; everyone reads `/welcome`, which keeps only the
- * rooms the viewer belongs to (Open) or may join (an alive open room: Join). The server's rules
- * apply on a write (lengths, counts, rooms that exist and aren't direct messages), and every save
- * publishes `workspace.updated`, as the server's `write_workspace` does. The configuration
- * belongs to the world, so a reset clears it. `/__mock/welcome` stands in for another
- * administrator's save.
+ * The welcome card and server guide (`crates/api/src/welcome.rs`): administrators read the
+ * configuration at `/admin/welcome` and `PATCH` one section (the welcome or the guide) at a time;
+ * everyone reads `/welcome`, which keeps only the rooms the viewer belongs to (Open) or may join
+ * (an alive open room: Join). An administrator's copy shows a saved room they can't reach as a
+ * `keep` token, never its id or name. The server's rules apply on a write (lengths, counts, rooms
+ * they can reach or tokens for rooms already saved), and every save publishes
+ * `workspace.updated`. The configuration belongs to the world, so a reset clears it.
+ * `/__mock/welcome` stands in for another administrator's save.
  */
 import type { GuideEntry } from "../../src/gen/GuideEntry.ts";
 import type { GuideResource } from "../../src/gen/GuideResource.ts";
+import type { GuideResourceEdit } from "../../src/gen/GuideResourceEdit.ts";
 import type { WelcomeAdmin } from "../../src/gen/WelcomeAdmin.ts";
 import type { WelcomeRoom } from "../../src/gen/WelcomeRoom.ts";
 import type { WelcomeRoomCard } from "../../src/gen/WelcomeRoomCard.ts";
 import type { WelcomeRoomChoice } from "../../src/gen/WelcomeRoomChoice.ts";
+import type { WelcomeRoomEdit } from "../../src/gen/WelcomeRoomEdit.ts";
 import type { WelcomeSettings } from "../../src/gen/WelcomeSettings.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceWelcome } from "../../src/gen/WorkspaceWelcome.ts";
@@ -108,6 +111,96 @@ function settingsOf(body: Json | undefined): WelcomeSettings | null {
   }
 
   return { message, rooms: parsedRooms, guide: parsedGuide };
+}
+
+const nullableString = (value: Json | undefined): value is string | null | undefined =>
+  value === undefined || value === null || isString(value);
+
+const nullableNumber = (value: Json | undefined): value is number | null | undefined =>
+  value === undefined || value === null || isNumber(value);
+
+/** The sections a `PATCH` names, or `null` for a body that isn't update-shaped. */
+interface Update {
+  message?: string;
+  rooms?: readonly WelcomeRoomEdit[];
+  guide?: readonly GuideResourceEdit[];
+}
+
+function updateOf(body: Json | undefined): Update | null {
+  if (!isRecord(body)) return null;
+
+  const message = field(body, "message");
+  const rooms = field(body, "rooms");
+  const guide = field(body, "guide");
+
+  if (message !== undefined && !isString(message)) return null;
+
+  if (rooms !== undefined && !Array.isArray(rooms)) return null;
+
+  if (guide !== undefined && !Array.isArray(guide)) return null;
+
+  const parsedRooms: WelcomeRoomEdit[] = [];
+
+  for (const room of rooms ?? []) {
+    const roomId = field(room, "roomId");
+    const keep = field(room, "keep");
+    const emoji = field(room, "emoji");
+    const description = field(room, "description");
+
+    if (
+      !nullableNumber(roomId) ||
+      !nullableString(keep) ||
+      !nullableString(emoji) ||
+      !isString(description)
+    ) {
+      return null;
+    }
+
+    parsedRooms.push({
+      roomId: roomId ?? null,
+      keep: keep ?? null,
+      emoji: emoji ?? null,
+      description,
+    });
+  }
+
+  const parsedGuide: GuideResourceEdit[] = [];
+
+  for (const entry of guide ?? []) {
+    const title = field(entry, "title");
+    const emoji = field(entry, "emoji");
+    const roomId = field(entry, "roomId");
+    const keep = field(entry, "keep");
+    const text = field(entry, "body");
+
+    if (
+      !isString(title) ||
+      !nullableString(emoji) ||
+      !nullableNumber(roomId) ||
+      !nullableString(keep) ||
+      !nullableString(text)
+    ) {
+      return null;
+    }
+
+    parsedGuide.push({
+      title,
+      emoji: emoji ?? null,
+      roomId: roomId ?? null,
+      keep: keep ?? null,
+      body: text ?? null,
+    });
+  }
+
+  const update: Update = {};
+
+  if (message !== undefined) update.message = message;
+
+  if (rooms !== undefined) update.rooms = parsedRooms;
+
+  if (guide !== undefined) update.guide = parsedGuide;
+
+  return update;
 }
 
 /** A trimmed emoji, `null` for a blank one; throws for anything but a short non-ASCII run. */
@@ -215,6 +308,26 @@ export function createWelcome(
 
   const current = (): WelcomeSettings => saved.get(ctx.world()) ?? EMPTY;
 
+  // `keep` tokens: opaque, each standing for a room id, per world.
+  const tokens = new WeakMap<World, Map<string, number>>();
+  let issued = 0;
+
+  const keepToken = (roomId: number): string => {
+    const known = tokens.get(ctx.world()) ?? new Map<string, number>();
+
+    tokens.set(ctx.world(), known);
+
+    issued += 1;
+
+    const token = `keep-${issued.toString(36)}`;
+
+    known.set(token, roomId);
+
+    return token;
+  };
+
+  const keptRoom = (token: string): number | null => tokens.get(ctx.world())?.get(token) ?? null;
+
   const isAdministrator = () => ctx.world().users.get(VIEWER_ID)?.role === "administrator";
 
   const requireAdministrator = () => {
@@ -255,7 +368,29 @@ export function createWelcome(
       .sort((left, right) => left.name.localeCompare(right.name) || left.id - right.id);
   };
 
-  const adminView = (): WelcomeAdmin => ({ settings: current(), choices: choices() });
+  /** The configuration as the viewer may see it: a room they can't reach goes as a token. */
+  const adminView = (): WelcomeAdmin => {
+    const settings = current();
+
+    const mask = (roomId: number) =>
+      reach(roomId) === null ? { roomId: null, keep: keepToken(roomId) } : { roomId, keep: null };
+
+    return {
+      message: settings.message,
+      rooms: settings.rooms.map((room) => ({
+        ...mask(room.roomId),
+        emoji: room.emoji,
+        description: room.description,
+      })),
+      guide: settings.guide.map((entry) => ({
+        title: entry.title,
+        emoji: entry.emoji,
+        ...(entry.roomId === null ? { roomId: null, keep: null } : mask(entry.roomId)),
+        body: entry.body,
+      })),
+      choices: choices(),
+    };
+  };
 
   const render = (source: string) =>
     `<div class="markdown-body">${renderMarkdown(source, ctx.mentionables())}</div>`;
@@ -323,39 +458,77 @@ export function createWelcome(
   const save = (body: Json | undefined): MockResponse => {
     requireAdministrator();
 
-    const given = settingsOf(body);
+    const update = updateOf(body);
 
-    if (given === null) throw validation("message", "isn't a welcome configuration");
+    if (update === null) throw validation("message", "isn't a welcome update");
 
-    const settings = normalize(given);
+    if ((update.rooms?.length ?? 0) > ROOMS_MAX) {
+      throw validation("rooms", `can suggest at most ${ROOMS_MAX} rooms`);
+    }
 
-    const previous = new Set([
-      ...current().rooms.map((room) => room.roomId),
-      ...current().guide.flatMap((entry) => (entry.roomId === null ? [] : [entry.roomId])),
+    if ((update.guide?.length ?? 0) > GUIDE_MAX) {
+      throw validation("guide", `can hold at most ${GUIDE_MAX} resources`);
+    }
+
+    const previous = current();
+
+    const saved = new Set([
+      ...previous.rooms.map((room) => room.roomId),
+      ...previous.guide.flatMap((entry) => (entry.roomId === null ? [] : [entry.roomId])),
     ]);
 
-    // A room saved before stays saveable while it exists and isn't a direct message.
-    const allowed = (roomId: number) => {
-      if (reach(roomId) !== null) return true;
+    // A room the administrator can reach, or a token for one already saved; nothing else.
+    const pick = (
+      section: "rooms" | "guide",
+      at: number,
+      row: { readonly roomId: number | null; readonly keep: string | null },
+      unreachable: string,
+    ): number | null => {
+      if (row.roomId !== null && row.keep !== null) {
+        throw validation(section, `#${at}: names a room and keeps one; send one or the other`);
+      }
 
-      const record = ctx.world().rooms.get(roomId);
+      if (row.roomId !== null) {
+        if (reach(row.roomId) === null) throw validation(section, `#${at}: ${unreachable}`);
 
-      return previous.has(roomId) && record !== undefined && record.room.kind !== "direct";
+        return row.roomId;
+      }
+
+      if (row.keep !== null) {
+        const kept = keptRoom(row.keep);
+
+        if (kept === null || !saved.has(kept)) {
+          throw validation(section, `#${at}: that room is no longer saved; choose another`);
+        }
+
+        return kept;
+      }
+
+      return null;
     };
 
-    settings.rooms.forEach((room, index) => {
-      if (!allowed(room.roomId)) {
-        throw validation("rooms", `#${index + 1}: isn't a room you can suggest`);
-      }
+    const rooms: WelcomeRoom[] | undefined = update.rooms?.map((room, index) => {
+      const roomId = pick("rooms", index + 1, room, "isn't a room you can suggest");
+
+      if (roomId === null) throw validation("rooms", `#${index + 1}: choose a room`);
+
+      return { roomId, emoji: room.emoji, description: room.description };
     });
 
-    settings.guide.forEach((entry, index) => {
-      if (entry.roomId !== null && !allowed(entry.roomId)) {
-        throw validation("guide", `#${index + 1}: links to a room you can't choose`);
-      }
-    });
+    const guide: GuideResource[] | undefined = update.guide?.map((entry, index) => ({
+      title: entry.title,
+      emoji: entry.emoji,
+      roomId: pick("guide", index + 1, entry, "links to a room you can't choose"),
+      body: entry.body,
+    }));
 
-    store(settings);
+    store(
+      normalize({
+        message: update.message ?? previous.message,
+        rooms: rooms ?? previous.rooms,
+        guide: guide ?? previous.guide,
+      }),
+    );
 
     return ok(adminView());
   };
@@ -368,7 +541,7 @@ export function createWelcome(
 
         return ok(adminView());
       }),
-      route("PUT", /^\/admin\/welcome$/, (request) => save(request.body)),
+      route("PATCH", /^\/admin\/welcome$/, (request) => save(request.body)),
     ],
     control(body) {
       const settings = (isRecord(body) ? settingsOf(body) : null) ?? EMPTY;

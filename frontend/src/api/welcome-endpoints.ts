@@ -1,10 +1,11 @@
 /**
  * The welcome card and server guide (U1, U4): everyone reads their own filtered copy at
- * `/welcome`; administrators read and replace the configuration at `/admin/welcome`.
+ * `/welcome`; administrators read the configuration at `/admin/welcome` and patch one section
+ * (the welcome or the guide) at a time.
  */
 import { Effect } from "effect";
 import type { WelcomeAdmin } from "../gen/WelcomeAdmin.ts";
-import type { WelcomeSettings } from "../gen/WelcomeSettings.ts";
+import type { WelcomeUpdate } from "../gen/WelcomeUpdate.ts";
 import type { WorkspaceWelcome } from "../gen/WorkspaceWelcome.ts";
 import { call, get } from "./call.ts";
 import {
@@ -25,7 +26,7 @@ export const adminWelcome = Effect.fn("api.adminWelcome")(function* () {
   return yield* call(get("/admin/welcome"), adminReply);
 });
 
-/** `PUT /admin/welcome`: replaces the whole configuration. */
-export const updateWelcome = Effect.fn("api.updateWelcome")(function* (body: WelcomeSettings) {
-  return yield* call({ method: "PUT", path: "/admin/welcome", body }, adminReply);
+/** `PATCH /admin/welcome`: replaces the sections `body` names; the rest stays as stored. */
+export const updateWelcome = Effect.fn("api.updateWelcome")(function* (body: WelcomeUpdate) {
+  return yield* call({ method: "PATCH", path: "/admin/welcome", body }, adminReply);
 });

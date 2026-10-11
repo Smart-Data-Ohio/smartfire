@@ -4,12 +4,13 @@ import {
   blankRoom,
   type EntryDraft,
   entryErrors,
+  guideUpdateOf,
   hasErrors,
   messageError,
   moved,
   type RoomDraft,
   roomErrors,
-  settingsOf,
+  welcomeUpdateOf,
 } from "./welcome-draft.ts";
 
 const room = (patch: Partial<RoomDraft>): RoomDraft => ({ ...blankRoom(), roomId: 1, ...patch });
@@ -39,6 +40,7 @@ describe("the welcome draft", () => {
       room({ roomId: 3, description: "two\nlines" }),
       room({ roomId: 4, emoji: "wave" }),
       room({ roomId: 5, emoji: "👨‍👩‍👧" }),
+      room({ roomId: null, keep: "sealed" }),
     ]);
 
     expect(errors).toEqual([
@@ -48,6 +50,7 @@ describe("the welcome draft", () => {
       { description: "Keep it to 100 characters or fewer." },
       { description: "Keep it to one line of text." },
       { emoji: "Use a single emoji, or leave it empty." },
+      {},
       {},
     ]);
     expect(hasErrors(errors)).toBe(true);
@@ -64,6 +67,7 @@ describe("the welcome draft", () => {
         entry({ kind: "note", body: " " }),
         entry({ kind: "note", body: "x".repeat(1001) }),
         entry({ kind: "room", roomId: 3, body: "ignored" }),
+        entry({ kind: "room", roomId: null, keep: "sealed" }),
       ]),
     ).toEqual([
       {},
@@ -73,25 +77,37 @@ describe("the welcome draft", () => {
       { body: "Write the note." },
       { body: "Keep it to 1,000 characters or fewer." },
       {},
+      {},
     ]);
   });
 
-  it("saves trimmed settings: blank emoji as null, and only what each entry's kind holds", () => {
+  it("saves each section trimmed: blank emoji as null, and only what each row holds", () => {
     expect(
-      settingsOf(
-        "  Hi  ",
-        [room({ roomId: 4, emoji: " 👋 ", description: " Say hello " }), room({ roomId: null })],
-        [
-          entry({ emoji: " ", body: " Nine to five " }),
-          entry({ title: "Ship", kind: "room", roomId: 3, body: "stale note" }),
-        ],
-      ),
+      welcomeUpdateOf("  Hi  ", [
+        room({ roomId: 4, emoji: " 👋 ", description: " Say hello " }),
+        room({ roomId: null }),
+        room({ roomId: null, keep: "sealed", description: " Ask first " }),
+      ]),
     ).toEqual({
       message: "Hi",
-      rooms: [{ roomId: 4, emoji: "👋", description: "Say hello" }],
+      rooms: [
+        { roomId: 4, keep: null, emoji: "👋", description: "Say hello" },
+        { roomId: null, keep: "sealed", emoji: null, description: "Ask first" },
+      ],
+    });
+    expect(
+      guideUpdateOf([
+        entry({ emoji: " ", body: " Nine to five " }),
+        entry({ title: "Ship", kind: "room", roomId: 3, body: "stale note" }),
+        entry({ title: "Plans", kind: "room", roomId: null, keep: "sealed" }),
+        entry({ title: "Note now", kind: "note", keep: "sealed" }),
+      ]),
+    ).toEqual({
       guide: [
-        { title: "Hours", emoji: null, roomId: null, body: "Nine to five" },
-        { title: "Ship", emoji: null, roomId: 3, body: null },
+        { title: "Hours", emoji: null, roomId: null, keep: null, body: "Nine to five" },
+        { title: "Ship", emoji: null, roomId: 3, keep: null, body: null },
+        { title: "Plans", emoji: null, roomId: null, keep: "sealed", body: null },
+        { title: "Note now", emoji: null, roomId: null, keep: null, body: "Nine to five" },
       ],
     });
   });

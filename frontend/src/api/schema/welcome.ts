@@ -1,49 +1,44 @@
 import { Schema } from "effect";
 import type { GuideEntry as GeneratedGuideEntry } from "../../gen/GuideEntry.ts";
-import type { GuideResource as GeneratedGuideResource } from "../../gen/GuideResource.ts";
+import type { GuideResourceEdit as GeneratedGuideResourceEdit } from "../../gen/GuideResourceEdit.ts";
 import type { GuideRoom as GeneratedGuideRoom } from "../../gen/GuideRoom.ts";
 import type { WelcomeAdmin as GeneratedWelcomeAdmin } from "../../gen/WelcomeAdmin.ts";
-import type { WelcomeRoom as GeneratedWelcomeRoom } from "../../gen/WelcomeRoom.ts";
 import type { WelcomeRoomCard as GeneratedWelcomeRoomCard } from "../../gen/WelcomeRoomCard.ts";
 import type { WelcomeRoomChoice as GeneratedWelcomeRoomChoice } from "../../gen/WelcomeRoomChoice.ts";
-import type { WelcomeSettings as GeneratedWelcomeSettings } from "../../gen/WelcomeSettings.ts";
+import type { WelcomeRoomEdit as GeneratedWelcomeRoomEdit } from "../../gen/WelcomeRoomEdit.ts";
 import type { WorkspaceWelcome as GeneratedWorkspaceWelcome } from "../../gen/WorkspaceWelcome.ts";
 import { RoomId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 
-/** A suggested room as administrators set it. */
-export const WelcomeRoom = Schema.Struct({
-  roomId: RoomId,
+/**
+ * A suggested room in the editor: `roomId` for a room this administrator can see, or an opaque
+ * `keep` token for a saved one they can't (sent back as is, it keeps that room).
+ */
+export const WelcomeRoomEdit = Schema.Struct({
+  roomId: Schema.NullOr(RoomId),
+  keep: Schema.NullOr(Schema.String),
   emoji: Schema.NullOr(Schema.String),
   description: Schema.String,
 });
 
-export type WelcomeRoom = typeof WelcomeRoom.Type;
+export type WelcomeRoomEdit = typeof WelcomeRoomEdit.Type;
 
-export type WelcomeRoomPin = Assert<Pinned<typeof WelcomeRoom, GeneratedWelcomeRoom>>;
+export type WelcomeRoomEditPin = Assert<Pinned<typeof WelcomeRoomEdit, GeneratedWelcomeRoomEdit>>;
 
-/** A guide entry as administrators set it: a room link or a short note, never both. */
-export const GuideResource = Schema.Struct({
+/** A guide entry in the editor: a room link (`roomId` or `keep`) or a short note, never both. */
+export const GuideResourceEdit = Schema.Struct({
   title: Schema.String,
   emoji: Schema.NullOr(Schema.String),
   roomId: Schema.NullOr(RoomId),
+  keep: Schema.NullOr(Schema.String),
   body: Schema.NullOr(Schema.String),
 });
 
-export type GuideResource = typeof GuideResource.Type;
+export type GuideResourceEdit = typeof GuideResourceEdit.Type;
 
-export type GuideResourcePin = Assert<Pinned<typeof GuideResource, GeneratedGuideResource>>;
-
-/** `PUT /admin/welcome`: the whole welcome card and server guide. */
-export const WelcomeSettings = Schema.Struct({
-  message: Schema.String,
-  rooms: Schema.Array(WelcomeRoom),
-  guide: Schema.Array(GuideResource),
-});
-
-export type WelcomeSettings = typeof WelcomeSettings.Type;
-
-export type WelcomeSettingsPin = Assert<Pinned<typeof WelcomeSettings, GeneratedWelcomeSettings>>;
+export type GuideResourceEditPin = Assert<
+  Pinned<typeof GuideResourceEdit, GeneratedGuideResourceEdit>
+>;
 
 /** A room the editor offers. */
 export const WelcomeRoomChoice = Schema.Struct({ id: RoomId, name: Schema.String });
@@ -54,9 +49,11 @@ export type WelcomeRoomChoicePin = Assert<
   Pinned<typeof WelcomeRoomChoice, GeneratedWelcomeRoomChoice>
 >;
 
-/** `GET /admin/welcome`, and the answer to the `PUT`. */
+/** `GET /admin/welcome`, and the answer to the `PATCH`: what this administrator may see. */
 export const WelcomeAdmin = Schema.Struct({
-  settings: WelcomeSettings,
+  message: Schema.String,
+  rooms: Schema.Array(WelcomeRoomEdit),
+  guide: Schema.Array(GuideResourceEdit),
   choices: Schema.Array(WelcomeRoomChoice),
 });
 
