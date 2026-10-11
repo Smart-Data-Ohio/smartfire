@@ -6,10 +6,12 @@ import {
 } from "../../src/api/schema/people.ts";
 import type { PeopleDirectory } from "../../src/gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../../src/gen/PersonProfile.ts";
+import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { Json } from "../json.ts";
 import { AGENT_IDS } from "../s4/agents.ts";
 import { BOT_ID, DEACTIVATED_ID, USER_IDS, VIEWER_ID } from "../seed.ts";
-import { errorOf, expectStatus, get, harness, send } from "./testing.ts";
+import { THREAD_IDS } from "./seed.ts";
+import { collect, errorOf, expectStatus, get, harness, send } from "./testing.ts";
 
 describe("the mock's people pages", () => {
   it("lists everyone active but the viewer, starred first, then by name", async () => {
@@ -159,5 +161,36 @@ describe("the mock's people pages", () => {
 
     await expectStatus<Json>(server, "GET", "/api/v1/people/999", null, 404);
     await expectStatus<Json>(server, "POST", "/api/v1/people/999/ban", null, 404);
+  });
+});
+
+describe("the mock's ignores", () => {
+  it("publishes every write to the viewer's sessions, a no-op too, at the write's revision", async () => {
+    const { server } = harness();
+    const events = collect(server);
+
+    await send(server, "PUT", `/api/v1/people/${USER_IDS.maya}/block`);
+    await send(server, "DELETE", `/api/v1/people/${USER_IDS.theo}/block`);
+
+    const published = events.filter((event) => event.type === "blocks.updated");
+
+    expect(published.map((event) => [event.topic, event.data])).toEqual([
+      ["user", { userId: USER_IDS.maya, ignoredByMe: true, revision: 1 }],
+      ["user", { userId: USER_IDS.theo, ignoredByMe: false, revision: 1 }],
+    ]);
+    expect(published[1]?.seq).toBeGreaterThan(published[0]?.seq ?? Infinity);
+  });
+
+  it("flags a thread's parent from someone you ignore, as a page's messages are", async () => {
+    const { server } = harness();
+    const path = `/api/v1/threads/${THREAD_IDS.design}`;
+    const before = await get<ThreadDetail>(server, path);
+    const author = before.parentMessage?.creatorId;
+
+    expect(author).toBeTypeOf("number");
+
+    expect(before.parentMessage?.ignored).toBeUndefined();
+    await send(server, "PUT", `/api/v1/people/${author}/block`);
+    expect((await get<ThreadDetail>(server, path)).parentMessage?.ignored).toBe(true);
   });
 });

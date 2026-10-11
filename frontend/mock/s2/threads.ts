@@ -95,7 +95,12 @@ export function createThreads(
 
     const room = ctx.world().rooms.get(thread.roomId);
 
-    return room?.messages.find((message) => message.id === thread.parentMessageId) ?? null;
+    const parent = room?.messages.find((message) => message.id === thread.parentMessageId);
+
+    if (parent === undefined) return null;
+
+    // Marked like a page's messages: the server flags an ignored author's parent too.
+    return ctx.world().ignored.has(parent.creatorId) ? { ...parent, ignored: true } : parent;
   };
 
   const detail = (thread: ThreadRecord): ThreadDetail => {

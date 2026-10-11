@@ -139,7 +139,7 @@ export function createPeople(
     return { people, revision: world.ignoreRevision };
   };
 
-  /** `PUT` / `DELETE /people/:id/block`: idempotent, and never for yourself. */
+  /** `PUT` / `DELETE /people/:id/block`: idempotent, never for yourself, and published to the viewer. */
   const setIgnored = (userId: number, ignored: boolean): BlockState => {
     const world = ctx.world();
 
@@ -154,7 +154,12 @@ export function createPeople(
       world.ignoreRevision += 1;
     }
 
-    return { userId, ignoredByMe: ignored, revision: world.ignoreRevision };
+    const state = { userId, ignoredByMe: ignored, revision: world.ignoreRevision };
+
+    // Every write, a no-op too, tells the viewer's other sessions, as the server does.
+    ctx.publish([{ topic: "user", type: "blocks.updated", data: state }]);
+
+    return state;
   };
 
   return {
