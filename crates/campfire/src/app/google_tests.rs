@@ -1556,3 +1556,61 @@ async fn sudo_attempt_retained_and_unnamed_google_flows_are_unchanged() {
         .unwrap();
     assert!(session.get("sudo_google_attempt").is_none());
 }
+
+/// Replaces `b`'s sign-in with a new session of the same person, keeping the rest of its cookie
+/// session: the browser signed in again (after the first session was revoked, say).
+async fn sign_in_again(a: &TestApp, b: &mut Browser<'_>) {
+    let again = a.sign_in(DAVID).await;
+    b.absorb_cookie_header(&session_token(&again));
+}
+
+/// `b`'s sign-in cookie, as a `Cookie` header pair.
+fn session_token(b: &Browser<'_>) -> String {
+    b.cookie_header()
+        .split("; ")
+        .find(|pair| pair.starts_with("session_token="))
+        .unwrap()
+        .to_owned()
+}
+
+#[tokio::test]
+async fn sudo_attempt_a_google_flow_finished_under_another_session_records_nothing() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    hold(&mut b, Method::PATCH, "/api/v1/admin/custom_styles").await;
+    let q = start_attempt(&mut b, ATTEMPT).await;
+
+    // Same person, same browser, a new session before Google comes back.
+    sign_in_again(&a, &mut b).await;
+    answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+    let reply = callback(&mut b, &q["state"]).await;
+    assert_eq!(reply.location(), Some("http://campfire.test/app/sudo/continue"));
+
+    // The new session isn't confirmed by it, and the attempt is never named.
+    let read = b.get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}")).await;
+    assert_eq!(read.status, StatusCode::FORBIDDEN, "{}", read.text());
+    assert!(read.json().get("attempt").is_none());
+}
+
+#[tokio::test]
+async fn sudo_attempt_a_record_answers_only_the_session_that_finished_it() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
+    let q = start_attempt(&mut b, ATTEMPT).await;
+    finish(&a, &r, &mut b, &q).await;
+    let first_session = session_token(&b);
+
+    sign_in_again(&a, &mut b).await;
+    let confirmed = b
+        .write(json_request(Method::POST, "/api/v1/sudo", json!({"kind":"password","password":"secret123456"})))
+        .await;
+    assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
+    let read = continuation(&mut b, ATTEMPT).await;
+    assert!(read.get("attempt").is_none(), "{read}");
+    // Nor does the other session's acknowledgement remove it.
+    b.write(json_request(Method::DELETE, &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"), json!({})))
+        .await;
+    b.absorb_cookie_header(&first_session);
+    assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+}

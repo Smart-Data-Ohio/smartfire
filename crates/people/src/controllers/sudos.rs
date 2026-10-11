@@ -137,10 +137,12 @@ fn confirmed_json(c: &mut Ctx) -> Result {
     )
 }
 
-/// A Google confirmation the SPA started, with the attempt id it named, if any.
+/// A Google confirmation the SPA started: the attempt id it named, if any, and the signed-in
+/// session that started it.
 #[derive(Clone)]
 struct GoogleJson {
     attempt: Option<String>,
+    session_id: Option<i64>,
 }
 
 /// Keep the consumed OAuth flow's response mode for the shared confirmation operation.
@@ -150,7 +152,11 @@ pub fn restore_google_response_mode(c: &mut Ctx, flow: &serde_json::Value) {
             .as_str()
             .filter(|attempt| sudo::valid_attempt(attempt))
             .map(str::to_owned);
-        c.set_current(GoogleJson { attempt });
+        let session_id = flow["session_id"].as_i64();
+        c.set_current(GoogleJson {
+            attempt,
+            session_id,
+        });
     }
 }
 
@@ -297,6 +303,7 @@ pub async fn google(c: &mut Ctx) -> Result {
         let key = crate::integrations::google::sign_in::FLOW_SESSION_KEY;
         if let Some(mut flow) = c.session().get(key).cloned() {
             flow["google_json"] = serde_json::Value::Bool(true);
+            flow["session_id"] = serde_json::json!(sudo::session_id(c));
             if let Some(attempt) = attempt {
                 flow["attempt"] = serde_json::Value::String(attempt);
             }
@@ -345,6 +352,17 @@ pub async fn finish_google(
         };
         return redirect_alert(c, &path, "Confirmation expired. Try again.");
     };
+    // The SPA's flow belongs to the session that started it: a sign-in since ends it.
+    if c
+        .current::<GoogleJson>()
+        .is_some_and(|json| json.session_id.is_none() || json.session_id != sudo::session_id(c))
+    {
+        return redirect_alert(
+            c,
+            &campfire_routes::new_sudo(),
+            "Confirmation expired. Try again.",
+        );
+    }
     if !auth_time.is_some_and(|time| time > (c.now().as_second() - 330) as f64) {
         return redirect_alert(
             c,

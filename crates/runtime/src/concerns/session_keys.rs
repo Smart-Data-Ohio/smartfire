@@ -238,10 +238,15 @@ pub fn consume_google_reauthentication(session: &mut Session, now: Timestamp) ->
 // --- Starting a session ------------------------------------------------------------------------
 
 /// What `start_new_session_for` drops first: a different member signing in on this browser must
-/// not inherit the previous one's confirmations.
+/// not inherit the previous one's confirmations. The SPA's Google confirmation in flight goes too
+/// (its flow is bound to the session that started it); the retained page's flow stays, as in Rails.
 pub fn clear_confirmations(session: &mut Session) {
     for key in [SUDO_VERIFIED_KEY, SUDO_PENDING_KEY, SUDO_ATTEMPT_KEY, REAUTH_KEY] {
         session.remove(key);
+    }
+    let flow = campfire_app::integrations::google::sign_in::FLOW_SESSION_KEY;
+    if session.get(flow).is_some_and(|flow| flow["google_json"] == true) {
+        session.remove(flow);
     }
 }
 
@@ -385,6 +390,23 @@ mod tests {
         }
         assert!(session.contains_key(TWO_FACTOR_PENDING_USER_KEY));
         assert!(session.contains_key(RETURN_TO_KEY));
+    }
+
+    #[test]
+    fn a_new_session_drops_the_spas_google_confirmation_in_flight_but_not_the_retained_one() {
+        let vectors = vectors();
+        let flow = campfire_app::integrations::google::sign_in::FLOW_SESSION_KEY;
+        let mut session = rails_session(&vectors);
+        session.insert(flow, json!({ "purpose": "sudo", "google_json": true, "attempt": "attempt-0000000000000001" }));
+        session.insert(SUDO_ATTEMPT_KEY, json!({ "id": "attempt-0000000000000001" }));
+        clear_confirmations(&mut session);
+        assert!(!session.contains_key(flow));
+        assert!(!session.contains_key(SUDO_ATTEMPT_KEY));
+
+        // The retained page's flow (and sign-in's own) is left as Rails leaves it.
+        session.insert(flow, json!({ "purpose": "sudo" }));
+        clear_confirmations(&mut session);
+        assert!(session.contains_key(flow));
     }
 
     #[test]
