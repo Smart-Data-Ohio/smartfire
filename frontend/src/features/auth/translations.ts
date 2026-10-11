@@ -1,6 +1,6 @@
 /**
- * The sign-in fields' translation lists, as the retained page prints them beside each label
- * (crates/view_kit/src/helpers/translations_table.rs: `user_name`, `email_address` and `password`).
+ * The sign-in fields' translation lists, printed beside each label (`user_name`, `email_address`
+ * and `password`, as Rails' translations table had them).
  */
 export interface Translation {
   readonly flag: string;
