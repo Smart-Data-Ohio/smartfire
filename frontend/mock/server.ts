@@ -1468,6 +1468,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     csrfToken: csrf,
     tourCompleted,
     tourStamps,
+    joined: join.joined().map((person) => ({ ...person })),
     ids: SEED_IDS,
   });
 
