@@ -519,7 +519,7 @@ async fn deliver(
     let parameters = MessageParams {
         markdown_source: Some(input.content.unwrap_or_default()),
         attachments: files,
-        webhook: Some(WebhookMessage {
+        webhook: Some(WebhookMessage::Post {
             webhook_id: hook.id,
             token_digest,
             username: input.username,

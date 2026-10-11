@@ -32,20 +32,7 @@ async fn sync(app: App, job: Sync, _: Execution) -> JobResult {
 
 pub(crate) async fn deliver(app: App, publication: i64) -> campfire_db::Result<()> {
     app.db
-        .write(move |tx| {
-            for (message, created) in announcement::deliver(tx, publication)? {
-                if created {
-                    campfire_db::models::agent_posting::broadcast_create(tx, &message)?;
-                } else {
-                    tx.emit_after_commit(campfire_db::Event::broadcast(
-                        &campfire_db::broadcasts::Broadcast::MessageUpdated {
-                            message_id: message.id,
-                        },
-                    ));
-                }
-            }
-            Ok(())
-        })
+        .write(move |tx| announcement::sync(tx, publication))
         .await
 }
 

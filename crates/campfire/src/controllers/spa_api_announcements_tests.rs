@@ -2,7 +2,7 @@ use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 
 use super::api_tests::{app, get, json_body, parse};
-use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, HQ, JASON, KEVIN};
+use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, HQ, JASON, KEVIN, TestApp};
 
 #[tokio::test]
 async fn announcement_follow_returns_422_for_board_targets() {
@@ -1015,7 +1015,7 @@ async fn announcement_webhook_copies_preserve_ignore_policy_in_http_live_and_rep
                     room_id: ALL_TALK,
                     creator_id: author.1,
                     markdown_source: Some(format!("News for <@{KEVIN}> and <@{DAVID}>")),
-                    webhook: Some(WebhookMessage {
+                    webhook: Some(WebhookMessage::Post {
                         webhook_id: author.0,
                         token_digest: None,
                         username: Some("Release bot".into()),
@@ -1093,4 +1093,271 @@ async fn announcement_webhook_copies_preserve_ignore_policy_in_http_live_and_rep
     assert_eq!(message.webhook.unwrap().name, "Announcements");
     assert_eq!(message.announcement_source.unwrap().message_id, source_id);
     server.abort();
+}
+
+async fn embeds_only_announcement() -> (TestApp, Value) {
+    use campfire_db::models::announcement;
+    let a = app(true)
+        .await
+        .expect("restored seed required")
+        .without_job_runner()
+        .await;
+    a.db()
+        .write(|tx| {
+            announcement::set_flag(tx, ALL_TALK, true)?;
+            announcement::follow(tx, ALL_TALK, HQ, JASON)
+        })
+        .await
+        .unwrap();
+    let mut admin = a.sign_in(JASON).await;
+    let reply = admin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/webhooks"),
+            &json!({"name":"Announcements"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let hook = parse::<Value>(&reply);
+    let reply = a
+        .anonymous()
+        .send(json_body(
+            Method::POST,
+            &format!(
+                "/api/webhooks/{}/{}?wait=true",
+                hook["webhook"]["id"],
+                hook["token"].as_str().unwrap(),
+            ),
+            &json!({"embeds":[{"title":"Release"}]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let source = parse::<Value>(&reply);
+    assert_eq!(source["markdownSource"], "");
+    (a, source)
+}
+
+async fn publish_embeds_only_announcement(a: &TestApp, source_id: i64) -> i64 {
+    use campfire_db::models::announcement;
+    let mut admin = a.sign_in(JASON).await;
+    let reply = admin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{source_id}/publish"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(parse::<Value>(&reply)["published"], true);
+    let publication = a
+        .db()
+        .read(move |conn| announcement::publication_id(conn, source_id))
+        .await
+        .unwrap()
+        .unwrap();
+    crate::jobs::announcements::deliver(a.booted.app.clone(), publication)
+        .await
+        .unwrap();
+    a.db()
+        .read(move |conn| {
+            let copies = announcement::copies(conn, publication)?;
+            assert_eq!(copies.len(), 1);
+            assert_eq!(copies[0].room_id, HQ);
+            assert_eq!(copies[0].markdown_source.as_deref(), Some(""));
+            Ok(copies[0].id)
+        })
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn announcement_embeds_only_webhook_publication_preserves_snapshot() {
+    let (a, source) = embeds_only_announcement().await;
+    let source_id = source["id"].as_i64().unwrap();
+    // Attribution belongs to the saved post even after the webhook is renamed or deleted.
+    a.db()
+        .write(|tx| {
+            use campfire_db::models::channel_webhook::ChannelWebhook;
+            let hook = ChannelWebhook::list_for_room(tx.conn(), ALL_TALK)?.remove(0);
+            ChannelWebhook::rename(tx, hook.id, "Renamed")?;
+            ChannelWebhook::delete(tx, hook.id)
+        })
+        .await
+        .unwrap();
+    let copy_id = publish_embeds_only_announcement(&a, source_id).await;
+    let mut admin = a.sign_in(JASON).await;
+    let copy = parse::<Value>(
+        &admin
+            .send(get(&format!("/api/v1/messages/{copy_id}")))
+            .await,
+    );
+    assert_eq!(copy["message"]["creatorId"], source["creatorId"]);
+    assert_eq!(copy["message"]["webhook"], source["webhook"]);
+    assert_eq!(copy["message"]["embeds"], json!([{"title":"Release"}]));
+    assert_eq!(
+        copy["message"]["announcementSource"]["messageId"],
+        source_id
+    );
+}
+
+#[tokio::test]
+async fn announcement_embeds_only_webhook_edits_propagate() {
+    let (a, source) = embeds_only_announcement().await;
+    let source_id = source["id"].as_i64().unwrap();
+    let copy_id = publish_embeds_only_announcement(&a, source_id).await;
+    let mut admin = a.sign_in(JASON).await;
+    for text in ["Release details", ""] {
+        a.db()
+            .write(move |tx| {
+                campfire_db::Message::find(tx.conn(), source_id)?.edit(
+                    tx,
+                    campfire_db::MessageChanges {
+                        markdown_source: Some(text.into()),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+        let copy = parse::<Value>(
+            &admin
+                .send(get(&format!("/api/v1/messages/{copy_id}")))
+                .await,
+        );
+        assert_eq!(copy["message"]["markdownSource"], text);
+        assert_eq!(copy["message"]["webhook"], source["webhook"]);
+        assert_eq!(copy["message"]["embeds"], source["embeds"]);
+    }
+}
+
+#[tokio::test]
+async fn announcement_copy_failure_rolls_back_publication_and_deliveries() {
+    use super::api_tests::ALL_PETS;
+    use campfire_db::models::announcement;
+    let (a, source) = embeds_only_announcement().await;
+    let source_id = source["id"].as_i64().unwrap();
+    let rejected_room = HQ.max(ALL_PETS);
+    a.db()
+        .write(move |tx| {
+            announcement::follow(tx, ALL_TALK, ALL_PETS, JASON)?;
+            tx.conn().execute_batch(&format!(
+                "CREATE TRIGGER reject_announcement_copy BEFORE INSERT ON messages \
+                 WHEN NEW.room_id={rejected_room} BEGIN \
+                 SELECT RAISE(ABORT, 'forced announcement copy failure'); END;"
+            ))?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut admin = a.sign_in(JASON).await;
+    let reply = admin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{source_id}/publish"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "{}",
+        reply.text()
+    );
+    a.db()
+        .read(move |conn| {
+            assert!(announcement::publication_id(conn, source_id)?.is_none());
+            let deliveries: i64 =
+                conn.query_row("SELECT count(*) FROM announcement_deliveries", [], |row| {
+                    row.get(0)
+                })?;
+            assert_eq!(deliveries, 0);
+            let copies: i64 = conn.query_row(
+                "SELECT count(*) FROM messages WHERE creator_id=? AND room_id IN (?,?)",
+                (source["creatorId"].as_i64().unwrap(), HQ, ALL_PETS),
+                |row| row.get(0),
+            )?;
+            assert_eq!(copies, 0, "the earlier follower must also roll back");
+            assert!(
+                campfire_jobs::inspect::all(conn)?
+                    .iter()
+                    .all(|job| job.class != "Announcement::SyncJob")
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let read = parse::<Value>(
+        &admin
+            .send(get(&format!("/api/v1/messages/{source_id}")))
+            .await,
+    );
+    assert_eq!(read["message"]["published"], false);
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_batch("DROP TRIGGER reject_announcement_copy")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = admin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{source_id}/publish"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    a.db()
+        .read(move |conn| {
+            let publication = announcement::publication_id(conn, source_id)?.unwrap();
+            assert_eq!(announcement::copies(conn, publication)?.len(), 2);
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn announcement_copy_edit_failure_rolls_back_source_edit() {
+    let (a, source) = embeds_only_announcement().await;
+    let source_id = source["id"].as_i64().unwrap();
+    let copy_id = publish_embeds_only_announcement(&a, source_id).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute_batch(&format!(
+                "CREATE TRIGGER reject_announcement_edit BEFORE UPDATE ON messages \
+                 WHEN NEW.room_id={HQ} BEGIN \
+                 SELECT RAISE(ABORT, 'forced announcement edit failure'); END;"
+            ))?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let error = a
+        .db()
+        .write(move |tx| {
+            campfire_db::Message::find(tx.conn(), source_id)?.edit(
+                tx,
+                campfire_db::MessageChanges {
+                    markdown_source: Some("Revised release".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("forced announcement edit failure"),
+        "{error}"
+    );
+    let mut admin = a.sign_in(JASON).await;
+    for id in [source_id, copy_id] {
+        let read = parse::<Value>(&admin.send(get(&format!("/api/v1/messages/{id}"))).await);
+        assert_eq!(read["message"]["markdownSource"], "");
+        assert!(read["message"]["editedAt"].is_null());
+        assert_eq!(read["message"]["webhook"], source["webhook"]);
+    }
 }

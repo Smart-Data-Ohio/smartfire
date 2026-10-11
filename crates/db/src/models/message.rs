@@ -784,7 +784,7 @@ impl Message {
             && attributes.attachment_blob_id.is_none()
             && attributes.attachment_blob_ids.is_empty()
             && attributes.drive_file_ids.is_empty()
-            && attributes.webhook.as_ref().is_none_or(|input| input.embeds.as_array().is_none_or(Vec::is_empty))
+            && attributes.webhook.as_ref().is_none_or(|input| input.embeds().as_array().is_none_or(Vec::is_empty))
         {
             errors.add("markdown_source", "can't be blank");
         }
@@ -925,7 +925,7 @@ impl Message {
         if !self.streaming {
             self.sync_external_references(tx, true)?;
         }
-        crate::models::announcement::enqueue_update(tx, publication);
+        crate::models::announcement::enqueue_update(tx, publication)?;
         Ok(())
     }
 
@@ -1071,7 +1071,7 @@ impl Message {
             forward_note: forward_note.clone(),
             forwarded_markdown: self.forwarded_markdown,
             drive_file_ids: drive_file_ids.clone(),
-            webhook: None,
+            webhook: crate::models::channel_webhook::ChannelWebhook::message_snapshot(conn, self.id)?,
         };
         Self::validate_attributes(conn, &attributes, false)?.into_result()?;
 
@@ -1158,7 +1158,7 @@ impl Message {
                 crate::ActivityItem::reconcile_message_mentions(tx, self, &previous)?;
             }
         }
-        crate::models::announcement::enqueue_update(tx, publication);
+        crate::models::announcement::enqueue_update(tx, publication)?;
         Ok(())
     }
 
@@ -1239,7 +1239,7 @@ impl Message {
             super::message_attachment_processing::schedule(tx, self.id, blob_id);
         }
         if changed {
-            crate::models::announcement::enqueue_update(tx, publication);
+            crate::models::announcement::enqueue_update(tx, publication)?;
         }
         Ok(())
     }

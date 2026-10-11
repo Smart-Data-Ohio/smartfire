@@ -170,8 +170,11 @@ fn announcement_bodyless_publications_still_propagate_after_room_flag_is_disable
 fn announcement_unfollow_stops_pending_and_future_deliveries() {
     let (t, source, first, second, message) = setup();
     let original = message.clone();
-    let publication = t.write(move |tx| announcement::publish(tx, &original, id("david")));
-    t.write(move |tx| announcement::unfollow(tx, source, first));
+    let publication = t.write(move |tx| {
+        let publication = announcement::publish(tx, &original, id("david"))?;
+        announcement::unfollow(tx, source, first)?;
+        Ok(publication)
+    });
     t.write(move |tx| announcement::deliver(tx, publication));
     assert_eq!(
         t.read(move |c| announcement::copies(c, publication))

@@ -175,9 +175,7 @@ pub fn publish(tx: &mut Tx<'_>, message: &Message, publisher: i64) -> crate::Res
     // Reserve the follower set now, never on a retry. Later follows do not backfill.
     tx.conn().execute_cached("INSERT INTO announcement_deliveries(publication_id,target_room_id) SELECT ?, f.target_room_id FROM announcement_follows f JOIN rooms r ON r.id=f.target_room_id WHERE f.source_room_id=? AND r.deleted_at IS NULL AND r.type IN ('Rooms::Open','Rooms::Closed','Rooms::Voice','Rooms::Stage')", [publication, message.room_id])?;
     message.touch(tx)?;
-    tx.emit_after_commit(Event::job(&SyncJob {
-        publication_id: publication,
-    }));
+    enqueue_update(tx, Some(publication))?;
     tx.emit_after_commit(Event::broadcast(
         &crate::broadcasts::Broadcast::MessageUpdated {
             message_id: message.id,
@@ -210,10 +208,15 @@ pub(crate) fn record_with_publication<T>(
     )?)
 }
 
-pub(crate) fn enqueue_update(tx: &mut Tx<'_>, publication_id: Option<i64>) {
+pub(crate) fn enqueue_update(tx: &mut Tx<'_>, publication_id: Option<i64>) -> crate::Result<()> {
     if let Some(publication_id) = publication_id {
+        // Delivery uses the final source state and must succeed before its write commits.
+        tx.before_commit_record_latest("announcement", publication_id, move |tx| {
+            sync(tx, publication_id)
+        })?;
         tx.emit_after_commit(Event::job(&SyncJob { publication_id }));
     }
+    Ok(())
 }
 
 pub(crate) fn enqueue_delete(tx: &mut Tx<'_>, publication: Option<i64>) -> crate::Result<()> {
@@ -295,7 +298,22 @@ pub fn replay_access(
     Ok(ReplayAccess { rooms, sources })
 }
 
-/// Each reserved delivery and its normal message callbacks commit in the same write transaction.
+pub fn sync(tx: &mut Tx<'_>, publication: i64) -> crate::Result<()> {
+    for (message, created) in deliver(tx, publication)? {
+        if created {
+            super::agent_posting::broadcast_create(tx, &message)?;
+        } else {
+            tx.emit_after_commit(Event::broadcast(
+                &crate::broadcasts::Broadcast::MessageUpdated {
+                    message_id: message.id,
+                },
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Reserved deliveries and their normal message callbacks commit with the source write.
 pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message, bool)>> {
     let Some(source_id) = query_one(
         tx.conn(),
@@ -396,6 +414,9 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                         .map(|(_, id)| *id)
                         .collect(),
                     drive_file_ids: drive_ids.clone(),
+                    webhook: super::channel_webhook::ChannelWebhook::message_snapshot(
+                        tx.conn(), source.id,
+                    )?,
                     ..Default::default()
                 },
             )?;
@@ -407,7 +428,6 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                 let rendered = copy.body_html(tx.conn())?.unwrap_or_default();
                 copy.update_body(tx, &format!("{rendered}\n{snapshot}"))?;
             }
-            super::channel_webhook::ChannelWebhook::copy_message(tx, source.id, copy.id)?;
             tx.conn().execute_cached("UPDATE announcement_deliveries SET message_id=? WHERE publication_id=? AND target_room_id=?", [copy.id,publication,room_id])?;
             changed.push((copy, true));
         }
