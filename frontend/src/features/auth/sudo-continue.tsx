@@ -22,6 +22,17 @@ function announce(result: GoogleReturn): void {
     return;
   }
 
+  if (result.abandoned > 0) {
+    // What was kept wasn't for this confirmation (another tab's, a new session's) or ran out.
+    toast({
+      title: result.abandoned === 1 ? "Your change wasn't sent" : "Your changes weren't sent",
+      description: "The confirmation didn't match the page you left. Make the change again.",
+      tone: "danger",
+    });
+
+    return;
+  }
+
   if (result.failure !== null) {
     toast({
       title: "Confirmed, but the change didn't go through",
@@ -54,9 +65,10 @@ function announce(result: GoogleReturn): void {
 
 /**
  * `/app/sudo/continue`, where a Google confirmation started in the SPA comes back. Once the server
- * says the confirmation is fresh for the hand-off this tab kept, its writes go again, each once;
- * then it returns to the page they came from. A refused or stale one changes nothing. When the
- * server can't be asked, the writes stay kept and the page offers to try again.
+ * says it confirmed the attempt this tab kept writes for, they go again, each once; then it returns
+ * to the page they came from. Anything else changes nothing, and says the change wasn't sent. When
+ * the server can't be asked (or its answer is lost), the writes stay kept and the page offers to
+ * try again: the server answers for the attempt again.
  */
 export function SudoContinue() {
   const navigate = useNavigate();

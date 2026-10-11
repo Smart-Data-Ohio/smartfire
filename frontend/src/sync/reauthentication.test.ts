@@ -21,12 +21,15 @@ import {
 interface Seen {
   readonly method: string;
   readonly path: string;
+  readonly query: URLSearchParams;
   readonly body: string;
 }
 
 interface Reply {
   readonly status: number;
   readonly body: unknown;
+  /** The connection drops partway through the body: the status and headers arrive, then it ends. */
+  readonly truncated?: boolean;
 }
 
 const encodeErrorBody = Schema.encodeSync(ApiErrorResponse);
@@ -86,7 +89,13 @@ function harness(
     Effect.gen(function* () {
       const web = yield* HttpClientRequest.toWeb(request).pipe(Effect.orDie);
       const body = yield* Effect.promise(() => web.text());
-      const entry: Seen = { method: request.method, path: url.pathname, body };
+
+      const entry: Seen = {
+        method: request.method,
+        path: url.pathname,
+        query: url.searchParams,
+        body,
+      };
 
       seen.push(entry);
 
@@ -96,12 +105,18 @@ function harness(
 
       const reply = answer(entry, index);
 
+      const text = JSON.stringify(reply.body);
+
       return HttpClientResponse.fromWeb(
         request,
-        new Response(JSON.stringify(reply.body), {
-          status: reply.status,
-          headers: { "content-type": "application/json" },
-        }),
+        new Response(
+          reply.status === 204
+            ? null
+            : reply.truncated === true
+              ? text.slice(0, text.length / 2)
+              : text,
+          { status: reply.status, headers: { "content-type": "application/json" } },
+        ),
       );
     }),
   );
@@ -425,23 +440,64 @@ describe("the confirmation gate", () => {
       expect(seen).toHaveLength(1);
     }).pipe(Effect.provide(layer));
   });
+
+  it.live("a write whose screen was left fails even once a confirmation landed elsewhere", () => {
+    const latch = Deferred.makeUnsafe<void>();
+
+    const { layer, seen, gate, page } = harness(
+      () => held(),
+      // The style edit's 403 is slow: the person moves on before it arrives.
+      (entry) => (entry.path.endsWith("/custom_styles") ? Deferred.await(latch) : Effect.void),
+    );
+
+    return Effect.gen(function* () {
+      const write = yield* Effect.forkChild(send(styles));
+
+      for (let turn = 0; turn < 100 && seen.length === 0; turn += 1) {
+        yield* Effect.sleep(1);
+      }
+
+      page.screen = "/app/admin/people";
+      gate.screenChanged();
+      // A guarded action on the new page asked and was confirmed.
+      gate.confirmed();
+      Deferred.doneUnsafe(latch, Effect.void);
+
+      expect((yield* Fiber.join(write).pipe(Effect.flip))._tag).toBe("ConfirmationCancelled");
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+    }).pipe(Effect.provide(layer));
+  });
 });
 
-/** What the fake server answers `/sudo/continue` with, given its pending request and the call count. */
-type Continuation = (pending: SudoRetry | null, call: number) => Reply;
+const decodeGoogleStart = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Struct({ attempt: Schema.optionalKey(Schema.String) })),
+);
 
-const freshContinuation: Continuation = (pending) => ({
-  status: 200,
-  body: { kind: "confirmed", retry: pending },
-});
+/** The fake server's confirmation state, as `require_sudo_mode` and `sudos#continue` keep it. */
+interface Server {
+  /** Whether the confirmation is fresh. */
+  fresh: boolean;
+  /** The pending request: the last guarded write it held. */
+  pending: SudoRetry | null;
+  /** The Google attempt it confirmed, with the pending request it took over. */
+  attempt: { readonly id: string; readonly retry: SudoRetry | null } | null;
+}
 
 /**
- * A server that holds guarded writes (recording the last as its pending request, as
- * `require_sudo_mode` does) until a Google confirmation, unless `refuse`. Its continuation
- * consumes the pending request when it answers 200.
+ * What the fake server answers `/sudo/continue` with on its `call`th read; `answer` is what it
+ * would answer itself (and computing it does what the server does).
+ */
+type Continuation = (call: number, answer: () => Reply) => Reply;
+
+/**
+ * A server that holds guarded writes until a Google confirmation, unless `refuse`. Starting Google
+ * with an attempt confirms it at once (the round trip) and records the attempt, taking over the
+ * pending request. The continuation names the attempt it is asked about while it's recorded, and
+ * reads it again until acknowledged; a read naming no recorded attempt consumes the pending
+ * request, as the classic continuation does.
  */
 function googleHarness({
-  continuation = freshContinuation,
+  continuation = (_call, answer) => answer(),
   refuse = false,
   hold,
 }: {
@@ -449,41 +505,79 @@ function googleHarness({
   readonly refuse?: boolean;
   readonly hold?: (seen: Seen) => Effect.Effect<void>;
 } = {}) {
-  let fresh = false;
-  let pending: SudoRetry | null = null;
+  const server: Server = { fresh: false, pending: null, attempt: null };
   let continues = 0;
 
-  return harness((entry) => {
+  const answer = (entry: Seen): Reply => {
+    const asked = entry.query.get("attempt");
+
+    if (!server.fresh) {
+      return {
+        status: 403,
+        body: { kind: "ready", reauthentication: required().reauthentication },
+      };
+    }
+
+    if (asked !== null && server.attempt?.id === asked) {
+      return {
+        status: 200,
+        body: { kind: "confirmed", retry: server.attempt.retry, attempt: asked },
+      };
+    }
+
+    const retry = server.pending;
+
+    server.pending = null;
+
+    return { status: 200, body: { kind: "confirmed", retry } };
+  };
+
+  const built = harness((entry) => {
     if (entry.path === "/api/v1/sudo/google") {
-      fresh = !refuse;
+      server.fresh = !refuse;
+
+      const { attempt } = decodeGoogleStart(entry.body || "{}");
+
+      if (!refuse && attempt !== undefined) {
+        server.attempt = { id: attempt, retry: server.pending };
+        server.pending = null;
+      }
 
       return { status: 200, body: { kind: "navigate", location: "https://accounts.test/o" } };
+    }
+
+    if (entry.path === "/api/v1/sudo/continue" && entry.method === "DELETE") {
+      if (server.attempt?.id === entry.query.get("attempt")) server.attempt = null;
+
+      return { status: 204, body: null };
     }
 
     if (entry.path === "/api/v1/sudo/continue") {
       continues += 1;
 
-      if (!fresh) {
-        return {
-          status: 403,
-          body: { kind: "ready", reauthentication: required().reauthentication },
-        };
-      }
-
-      const reply = continuation(pending, continues);
-
-      if (reply.status === 200) pending = null;
-
-      return reply;
+      return continuation(continues, () => answer(entry));
     }
 
-    if (fresh) return { status: 200, body: { saved: entry.path } };
+    if (server.fresh) return { status: 200, body: { saved: entry.path } };
 
-    pending = retryOf(entry);
+    server.pending = retryOf(entry);
 
     return held(["password", "google"], entry);
   }, hold);
+
+  return { ...built, server };
 }
+
+/** The attempt the page started Google with. */
+const startedAttempt = (seen: readonly Seen[]) =>
+  decodeGoogleStart(seen.find((entry) => entry.path === "/api/v1/sudo/google")?.body ?? "{}")
+    .attempt;
+
+/** The continuation calls, as method and the attempt they name. */
+const continuations = (seen: readonly Seen[]) =>
+  seen.flatMap((entry) =>
+    entry.path === "/api/v1/sudo/continue" ? [[entry.method, entry.query.get("attempt")]] : [],
+  );
 
 const role: ApiRequest = { method: "PATCH", path: "/admin/people/4", body: { role: "member" } };
 
@@ -525,10 +619,11 @@ describe("the Google round trip", () => {
       const stored = sessionStorage.getItem(KEPT_KEY) ?? "";
 
       expect(stored).not.toContain("ghp_secret");
-      expect(JSON.parse(stored)).toMatchObject({
+      // Kept under the attempt the server was given when Google started.
+      expect(JSON.parse(stored)).toEqual({
+        id: startedAttempt(seen),
         user: 7,
-        // The server's pending request: the last write it held.
-        retry: { method: "PUT", path: "/api/v1/settings/github_connection" },
+        expiresAt: 1_000_000 + 10 * 60_000,
         returnTo: "/app/admin/styles?tab=css",
         writes: [styles],
         dropped: 1,
@@ -542,9 +637,15 @@ describe("the Google round trip", () => {
         replayed: 1,
         failure: null,
         dropped: 1,
+        abandoned: 0,
         unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      // The continuation was read for that attempt, then acknowledged once the replay was done.
+      expect(continuations(seen)).toEqual([
+        ["GET", startedAttempt(seen)],
+        ["DELETE", startedAttempt(seen)],
+      ]);
 
       // A reload of the continue page sends nothing again.
       expect((yield* resumeAfterGoogle(gate)).replayed).toBe(0);
@@ -567,31 +668,157 @@ describe("the Google round trip", () => {
     }).pipe(Effect.provide(layer));
   });
 
-  it.live("a continuation that names no pending write, or another, replays nothing", () => {
-    const other: SudoRetry = { method: "DELETE", path: "/api/v1/x", returnTo: "/app/" };
+  it.live("a continuation that names no attempt, or another, replays nothing and says so", () => {
+    // The same pending request each time: only the attempt counts.
+    const retry: SudoRetry = {
+      method: "PATCH",
+      path: "/api/v1/admin/custom_styles",
+      returnTo: "/app/admin/styles",
+    };
 
-    return Effect.forEach([null, other], (named) => {
-      const { layer, seen, gate } = googleHarness({
-        continuation: () => ({ status: 200, body: { kind: "confirmed", retry: named } }),
-      });
+    const bodies = [
+      { kind: "confirmed", retry },
+      { kind: "confirmed", retry, attempt: "someone-elses-attempt-0001" },
+    ];
+
+    return Effect.forEach(bodies, (body) => {
+      const { layer, seen, gate } = googleHarness({ continuation: () => ({ status: 200, body }) });
 
       return Effect.gen(function* () {
         yield* leaveForGoogle(gate, [styles]);
-        expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 0 });
+        expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+          confirmed: true,
+          replayed: 0,
+          abandoned: 1,
+        });
         expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
         expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
       }).pipe(Effect.provide(layer));
     });
   });
 
-  it.live("a hand-off older than its time limit replays nothing", () => {
+  it.live("an abandoned attempt never takes another tab's confirmation", () => {
+    // This tab leaves for Google and gives up there: its attempt is never confirmed.
+    const { layer, seen, gate, server } = googleHarness({ refuse: true });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      // Another tab of the same session holds its own style edit and confirms it with Google,
+      // and hasn't read its continuation yet.
+      const theirs: SudoRetry = {
+        method: "PATCH",
+        path: "/api/v1/admin/custom_styles",
+        returnTo: "/app/admin/styles",
+      };
+
+      server.fresh = true;
+      server.pending = theirs;
+      server.attempt = { id: "the-other-tabs-attempt-01", retry: theirs };
+
+      // This tab follows its continuation link.
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 0,
+        abandoned: 1,
+      });
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+      // The other tab's attempt is still there for it.
+      expect(server.attempt?.id).toBe("the-other-tabs-attempt-01");
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("an interrupted replay resumes only while the server still confirms its attempt", () =>
+    Effect.forEach(["signed in again", "same session"], (session) => {
+      const latch = Deferred.makeUnsafe<void>();
+      let styleSends = 0;
+
+      const { layer, seen, gate, server } = googleHarness({
+        // The first replay never finishes: the page goes (a reload, a closed tab) during it.
+        hold: (entry) => {
+          if (!entry.path.endsWith("/custom_styles")) return Effect.void;
+
+          styleSends += 1;
+
+          return styleSends === 2 ? Deferred.await(latch) : Effect.void;
+        },
+      });
+
+      return Effect.gen(function* () {
+        yield* leaveForGoogle(gate, [styles, role]);
+
+        const replay = yield* Effect.forkChild(resumeAfterGoogle(gate));
+
+        for (let turn = 0; turn < 100 && styleSends < 2; turn += 1) {
+          yield* Effect.sleep(1);
+        }
+
+        yield* Fiber.interrupt(replay);
+        expect(JSON.parse(sessionStorage.getItem(KEPT_KEY) ?? "{}").writes).toEqual([role]);
+
+        if (session === "signed in again") {
+          // Signed out and in again as the same person, who then confirmed something unrelated:
+          // the new session never heard of this attempt.
+          server.attempt = null;
+          server.pending = null;
+        }
+
+        const resumed = yield* resumeAfterGoogle(gate);
+
+        expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+
+        if (session === "same session") {
+          expect(resumed).toMatchObject({ confirmed: true, replayed: 1, abandoned: 0 });
+          expect(writesTo(seen, "/admin/people/4")).toHaveLength(2);
+          expect(server.attempt).toBeNull();
+        } else {
+          expect(resumed).toMatchObject({ confirmed: true, replayed: 0, abandoned: 1 });
+          expect(writesTo(seen, "/admin/people/4")).toHaveLength(1);
+        }
+      }).pipe(Effect.provide(layer));
+    }),
+  );
+
+  it.live("a status read whose body is lost reads the same answer again", () => {
+    const { layer, seen, gate, server } = googleHarness({
+      // The server answers (and its session cookie arrives), but the body is cut short.
+      continuation: (call, answer) => (call === 1 ? { ...answer(), truncated: true } : answer()),
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const first = yield* resumeAfterGoogle(gate);
+
+      expect(first).toMatchObject({ confirmed: false, replayed: 0 });
+      expect(first.unreachable).not.toBeNull();
+      expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
+
+      // Try again.
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 1,
+        abandoned: 0,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+      expect(server.attempt).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a hand-off older than its time limit replays nothing and says so", () => {
     const { layer, seen, gate, page } = googleHarness();
 
     return Effect.gen(function* () {
       yield* leaveForGoogle(gate, [styles]);
       page.now += 11 * 60_000;
 
-      expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 0 });
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 0,
+        abandoned: 1,
+      });
+
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
       expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
     }).pipe(Effect.provide(layer));
@@ -599,8 +826,7 @@ describe("the Google round trip", () => {
 
   it.live("a failed status read keeps the writes for another try", () => {
     const { layer, seen, gate } = googleHarness({
-      continuation: (pending, call) =>
-        call === 1 ? { status: 500, body: {} } : freshContinuation(pending, call),
+      continuation: (call, answer) => (call === 1 ? { status: 500, body: {} } : answer()),
     });
 
     return Effect.gen(function* () {
@@ -657,6 +883,7 @@ describe("the Google round trip", () => {
         replayed: 0,
         failure: null,
         dropped: 0,
+        abandoned: 1,
         unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();

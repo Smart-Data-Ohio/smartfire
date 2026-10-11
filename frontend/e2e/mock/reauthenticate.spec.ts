@@ -189,17 +189,25 @@ for (const theme of THEMES) {
         expect(patches).toBe(1);
       });
 
-      test("a failed return from Google keeps the change and tries again", async ({
+      test("a lost answer from Google's return keeps the change and tries again", async ({
         page,
         request,
       }) => {
         let failures = 1;
 
-        await page.route("**/api/v1/sudo/continue", (route) =>
-          failures-- > 0
-            ? route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
-            : route.fallback(),
-        );
+        // The server answers the first status read, but its body is cut short on the way.
+        await page.route(/\/api\/v1\/sudo\/continue(\?|$)/, async (route) => {
+          if (route.request().method() !== "GET" || failures-- <= 0) {
+            await route.fallback();
+
+            return;
+          }
+
+          const response = await route.fetch();
+          const body = await response.text();
+
+          await route.fulfill({ response, body: body.slice(0, body.length / 2) });
+        });
         await lapse(request, ["password", "google"]);
         await open(page, "/app/admin/styles", theme);
 
@@ -221,6 +229,39 @@ for (const theme of THEMES) {
         await expect(page.getByRole("textbox", { name: "Custom CSS" })).toHaveValue(
           "p { margin: 0; }",
         );
+      });
+
+      test("a Google return for another attempt sends nothing and says so", async ({
+        page,
+        request,
+      }) => {
+        let patches = 0;
+
+        page.on("request", (sent) => {
+          if (sent.method() === "PATCH" && sent.url().endsWith("/api/v1/admin/custom_styles")) {
+            patches += 1;
+          }
+        });
+        // This page's attempt is abandoned; another tab's attempt is the one Google confirms.
+        await page.route("**/api/v1/sudo/google", (route) =>
+          route.fallback({ postData: JSON.stringify({ attempt: "another-tabs-attempt-0001" }) }),
+        );
+        await lapse(request, ["password", "google"]);
+        await open(page, "/app/admin/styles", theme);
+
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("h1 { color: red; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+
+        await expect(page).toHaveURL(/\/app\/admin\/styles$/);
+        await expect(page.getByText("Your change wasn't sent")).toBeVisible();
+        await expect(page.getByText("Make the change again.")).toBeVisible();
+        await shot(page, "reauth-google-abandoned", theme);
+        await page.locator(".settings-page h1").waitFor();
+        await expect(page.getByRole("textbox", { name: "Custom CSS" })).not.toHaveValue(
+          "h1 { color: red; }",
+        );
+        expect(patches).toBe(1);
       });
 
       test("a Google confirmation comes back and finishes the change", async ({

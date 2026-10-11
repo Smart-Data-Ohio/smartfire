@@ -16,7 +16,11 @@ export const SudoState = Schema.Struct({
 
 export const SudoResponse = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("ready"), reauthentication: SudoState }),
-  Schema.Struct({ kind: Schema.Literal("confirmed"), retry: Schema.NullOr(SudoRetry) }),
+  Schema.Struct({
+    kind: Schema.Literal("confirmed"),
+    retry: Schema.NullOr(SudoRetry),
+    attempt: Schema.optionalKey(Schema.String),
+  }),
   Schema.Struct({ kind: Schema.Literal("navigate"), location: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("error"), message: Schema.String }),
 ]);

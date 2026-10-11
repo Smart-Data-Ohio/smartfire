@@ -17,7 +17,7 @@ import type { SudoRetry } from "../../src/gen/SudoRetry.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
-import { HttpError, notFound, ok, validation } from "../http.ts";
+import { HttpError, noContent, notFound, ok, validation } from "../http.ts";
 import { booleanField, intField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { MOCK_TOTP, RATE_ALERT } from "./account.ts";
@@ -215,6 +215,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   let handling: SudoRetry | null = null;
   /** The last write held for a confirmation; a confirmation's answer names it once. */
   let pendingRetry: SudoRetry | null = null;
+  /**
+   * The Google attempt confirmed last, with the pending request it took over: the continuation
+   * names it, and answers for it again until the page acknowledges it.
+   */
+  let googleAttempt: { readonly id: string; readonly retry: SudoRetry | null } | null = null;
 
   /** `require_sudo_mode`: role changes, removal, custom styles and a new join link. */
   const requireSudo = () => {
@@ -274,10 +279,10 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   };
 
   /**
-   * `POST /sudo/google`: the mock skips Google itself. It confirms at once (unless it's set to
-   * refuse) and sends the page straight to where Google would return it.
+   * `POST /sudo/google`: the mock skips Google itself. It confirms the body's attempt at once
+   * (unless it's set to refuse) and sends the page straight to where Google would return it.
    */
-  const startGoogleSudo = () => {
+  const startGoogleSudo = (body: Json | undefined) => {
     if (!sudoMethods.includes("google")) {
       return sudoReply(
         { kind: "error", message: "Google confirmation is not available for your account." },
@@ -285,9 +290,25 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       );
     }
 
-    if (!googleRefuses) sudoLapsed = false;
+    const attempt = stringField(body, "attempt");
+
+    if (!googleRefuses) {
+      sudoLapsed = false;
+      googleAttempt = attempt === null ? null : { id: attempt, retry: consumeRetry() };
+    }
 
     return sudoReply({ kind: "navigate", location: "/app/sudo/continue" });
+  };
+
+  /** `GET /sudo/continue`: names the attempt asked about while it's the one confirmed. */
+  const continueSudo = (attempt: string | null) => {
+    if (sudoLapsed) return sudoReady(403);
+
+    if (attempt !== null && googleAttempt?.id === attempt) {
+      return sudoReply({ kind: "confirmed", retry: googleAttempt.retry, attempt });
+    }
+
+    return sudoReply({ kind: "confirmed", retry: consumeRetry() });
   };
 
   const current = (): State => {
@@ -763,6 +784,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     lapseSudo: (on, methods = ["password"], refuses = false) => {
       sudoLapsed = on;
       pendingRetry = null;
+      googleAttempt = null;
       sudoMethods = methods;
       googleRefuses = refuses;
     },
@@ -807,10 +829,13 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     routes: [
       route("GET", /^\/sudo$/, () => sudoReady()),
       route("POST", /^\/sudo$/, ({ body }) => confirmSudo(body)),
-      route("POST", /^\/sudo\/google$/, () => startGoogleSudo()),
-      route("GET", /^\/sudo\/continue$/, () =>
-        sudoLapsed ? sudoReady(403) : sudoReply({ kind: "confirmed", retry: consumeRetry() }),
-      ),
+      route("POST", /^\/sudo\/google$/, ({ body }) => startGoogleSudo(body)),
+      route("GET", /^\/sudo\/continue$/, ({ query }) => continueSudo(query.get("attempt"))),
+      route("DELETE", /^\/sudo\/continue$/, ({ query }) => {
+        if (googleAttempt?.id === query.get("attempt")) googleAttempt = null;
+
+        return noContent();
+      }),
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
       ...(["logo", "banner"] as const).flatMap((kind) => [
