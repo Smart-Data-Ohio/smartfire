@@ -61,6 +61,33 @@ export function ReauthenticateDialog() {
   const [opened, setOpened] = useState(0);
   const [wasOpen, setWasOpen] = useState(open);
   const [dirty, setDirty] = useState(false);
+  // The control that sent the write. A busy button disables itself, which drops focus to the page
+  // before the dialog opens, so the dialog can't see it as its opener: it's taken from the last
+  // focus at the moment a write is first held, and focus goes back to it on close.
+  const sender = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let lastFocus: HTMLElement | null = null;
+    let held = confirmationGate.snapshot() !== null;
+
+    const track = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement) lastFocus = event.target;
+    };
+
+    const unsubscribe = confirmationGate.subscribe(() => {
+      const holding = confirmationGate.snapshot() !== null;
+
+      if (holding && !held) sender.current = lastFocus;
+      held = holding;
+    });
+
+    document.addEventListener("focusin", track);
+
+    return () => {
+      unsubscribe();
+      document.removeEventListener("focusin", track);
+    };
+  }, []);
 
   if (prompt !== null && prompt !== shown) {
     setShown(prompt);
@@ -91,6 +118,7 @@ export function ReauthenticateDialog() {
       description={LEDE}
       size="sm"
       dirty={dirty}
+      returnFocus={() => (sender.current?.isConnected === true ? sender.current : null)}
       onExited={() => setShown(null)}
       footer={
         <Button variant="secondary" disabled={busy !== null} onClick={cancel}>

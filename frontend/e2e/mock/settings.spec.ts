@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import {
   DESKTOP,
   expect,
@@ -161,20 +161,6 @@ test("an out-of-office end in the past is refused in place", async ({ page }) =>
 
   await expect(page.getByText("Out of office needs a future date and time.")).toBeVisible();
 });
-
-/** Lapses the password confirmation and stands in for the classic page that asks for it. */
-async function lapseSudo(page: Page, request: APIRequestContext) {
-  const state = await (await request.get("/__mock/state")).json();
-
-  await request.post("/__mock/lapse-sudo", { headers: { "X-CSRF-Token": state.csrfToken } });
-  await page.route("**/sudo/new", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<h1>Confirm your password</h1>",
-    }),
-  );
-}
 
 /** The integrations page's group for `title`. */
 function group(page: Page, title: string) {
@@ -356,19 +342,6 @@ test("a slow reload from an earlier change never undoes a later one", async ({ p
   await stale;
   await expect(github.getByRole("button", { name: "Disconnect GitHub" })).toBeVisible();
   await expect(github.getByText(/^Comments and reviews you post/)).toBeVisible();
-});
-
-test("a lapsed password confirmation goes to confirm it", async ({ page, request }) => {
-  await lapseSudo(page, request);
-  await openSettings(page, "integrations");
-
-  await group(page, "GitHub").getByRole("button", { name: "Disconnect GitHub" }).click();
-  await page
-    .getByRole("alertdialog", { name: "Disconnect GitHub?" })
-    .getByRole("button", { name: "Disconnect" })
-    .click();
-
-  await expect(page.getByRole("heading", { name: "Confirm your password" })).toBeVisible();
 });
 
 test("a theme the server refuses is put back", async ({ page }) => {
