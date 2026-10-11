@@ -14,7 +14,6 @@
 import type { AccountSettings } from "../../src/gen/AccountSettings.ts";
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { RoomMembershipRow } from "../../src/gen/RoomMembershipRow.ts";
-import type { SignedOutBoot } from "../../src/gen/SignedOutBoot.ts";
 import type { TwoFactorSettings } from "../../src/gen/TwoFactorSettings.ts";
 import type { TwoFactorSetupResponse } from "../../src/gen/TwoFactorSetupResponse.ts";
 import type { TwoFactorSetupState } from "../../src/gen/TwoFactorSetupState.ts";
@@ -145,8 +144,8 @@ export interface AccountModule {
   readonly control: (change: TwoFactorControl) => void;
 }
 
-/** Creates the account module; `csrfToken` is the server's current token, for the public boot. */
-export function createAccount(ctx: S2Context, csrfToken: () => string): AccountModule {
+/** Creates the account module; the public boot (and its token) comes from the sign-in module. */
+export function createAccount(ctx: S2Context, _csrfToken: () => string): AccountModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
 
@@ -297,18 +296,6 @@ export function createAccount(ctx: S2Context, csrfToken: () => string): AccountM
       route("POST", /^\/two_factor\/setup$/, ({ body }) =>
         confirmSetup(stringField(body, "code") ?? ""),
       ),
-      // The public boot the auth requests refresh their token from (setup and sign-out use it).
-      route("GET", /^\/session\/boot$/, () => {
-        const boot: SignedOutBoot = {
-          kind: "signedOut",
-          workspace: { name: "Smartfire", logoUrl: null, description: "" },
-          signInMethods: { password: true, google: false },
-          firstRunPending: false,
-          csrfToken: csrfToken(),
-        };
-
-        return ok(boot);
-      }),
       route("DELETE", /^\/session$/, () => ok({ kind: "navigate", location: SIGNED_OUT_LOCATION })),
       route("GET", /^\/settings\/account$/, () => ok(account())),
       route("POST", /^\/settings\/two_factor\/backup_codes$/, ({ body }) => {

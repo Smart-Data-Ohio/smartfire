@@ -142,7 +142,7 @@ const transferRoute = createRoute({
 /**
  * `/app/two_factor/setup?return_to=&required=`: setting up two-step sign-in, outside the shell (an
  * unverified session's requests answer the enrollment gate). Settings and the shell's gate open it
- *  in the SPA; the retained `/two_factor_setup` page still serves its own URL.
+ * in the SPA; the retained `/two_factor_setup` page still serves its own URL.
  */
 const twoFactorSetupRoute = createRoute({
   getParentRoute: () => rootRoute,
