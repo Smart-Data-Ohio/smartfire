@@ -210,6 +210,7 @@ test("focus stays on a starred room an administrator drops for everyone", async 
 
   // A slow server: the room leaves Favourites only once the shared move has landed.
   let release = () => {};
+
   const answered = new Promise<void>((resolve) => {
     release = resolve;
   });
