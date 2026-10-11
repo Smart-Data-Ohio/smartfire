@@ -310,8 +310,9 @@ fn api_errors_are_tagged_unions_under_error() {
         (
             ApiError::TwoFactorRequired {
                 message: "Set up two-factor".into(),
+                requirement: TwoFactorRequirement::Setup { location: "/two_factor_setup".into() },
             },
-            json!({"_tag": "TwoFactorRequired", "message": "Set up two-factor"}),
+            json!({"_tag": "TwoFactorRequired", "message": "Set up two-factor", "requirement":{"kind":"setup","location":"/two_factor_setup"}}),
             403,
         ),
         (

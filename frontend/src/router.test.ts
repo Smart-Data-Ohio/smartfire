@@ -53,6 +53,17 @@ describe("the screen map and the router", () => {
       "/app/r/:id/t/:id/links",
       // Where a Google confirmation started from the SPA's dialog comes back; no page of its own.
       "/app/sudo/continue",
+      // The signed-out pages are outside the signed-in screen map; their retained URLs keep
+      // serving the retained pages until a later slice makes these canonical.
+      "/app/session/new",
+      "/app/two_factor/challenge",
+      "/app/session/transfers/:id",
+      // Two-step setup: outside the signed-in screen map, like the signed-out pages.
+      "/app/two_factor/setup",
+      // So are About, Privacy and Terms, for anyone; /about, /privacy and /terms stay retained.
+      "/app/about",
+      "/app/privacy",
+      "/app/terms",
     ]);
 
     for (const route of Object.values(router.routesById)) {

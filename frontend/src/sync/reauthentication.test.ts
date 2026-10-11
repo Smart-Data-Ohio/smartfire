@@ -4,7 +4,8 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import { ApiClient, ApiConfig, type ApiRequest, Navigation } from "../api/client.ts";
-import { ApiErrorResponse, SudoRequired } from "../api/errors.ts";
+import { ApiErrorResponse, SudoRequired, TwoFactorRequired } from "../api/errors.ts";
+import { onTwoFactorRequirement } from "../api/two-factor-gate.ts";
 import type { SudoMethod } from "../gen/SudoMethod.ts";
 import type { SudoRetry } from "../gen/SudoRetry.ts";
 import {
@@ -316,6 +317,38 @@ describe("the confirmation gate", () => {
         '{"css":"body { color: red; }"}',
       ]);
     }).pipe(Effect.provide(layer));
+  });
+
+  it.live("the two-step setup gate never asks for a confirmation, before or after one", () => {
+    const enroll = new TwoFactorRequired({
+      message: "Set up two-step sign-in to continue",
+      requirement: { kind: "setup", location: "http://campfire.test/two_factor_setup" },
+    });
+
+    const gated: Reply = { status: 403, body: encodeErrorBody({ error: enroll }) };
+    const reported: unknown[] = [];
+
+    // The first write meets the setup gate; the second is held, then meets it on its replay.
+    const { layer, seen, gate } = harness((entry) =>
+      seen.length === 2 && entry.path.endsWith("/custom_styles") ? held() : gated,
+    );
+
+    const stop = onTwoFactorRequirement((requirement) => reported.push(requirement));
+
+    return Effect.gen(function* () {
+      expect((yield* send(styles).pipe(Effect.flip))._tag).toBe("TwoFactorRequired");
+      expect(gate.snapshot()).toBeNull();
+
+      const write = yield* Effect.forkChild(send(styles).pipe(Effect.flip));
+
+      yield* untilPrompt(gate);
+      gate.confirmed();
+
+      expect((yield* Fiber.join(write))._tag).toBe("TwoFactorRequired");
+      expect(gate.snapshot()).toBeNull();
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(3);
+      expect(reported).toEqual([enroll.requirement, enroll.requirement]);
+    }).pipe(Effect.ensuring(Effect.sync(stop)), Effect.provide(layer));
   });
 
   it.live("cancelling fails the write unsent with ConfirmationCancelled", () => {

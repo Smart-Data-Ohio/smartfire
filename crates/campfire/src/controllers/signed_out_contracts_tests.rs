@@ -245,7 +245,8 @@ async fn unenrolled_public_shells_match_retained_forms_and_preserve_return_path(
             if spa {
                 let boot = inline_boot(&reply);
                 assert_eq!(boot["kind"], "signedOut");
-                assert_eq!(boot.as_object().unwrap().len(), 5);
+                // The help contact and the version joined the five original keys with slice 45.
+                assert_eq!(boot.as_object().unwrap().len(), 7);
             } else {
                 assert!(reply.text().contains("<form"));
             }
@@ -267,6 +268,55 @@ async fn unenrolled_public_shells_match_retained_forms_and_preserve_return_path(
             outcomes.push(facts(&app).await);
         }
         assert_eq!(outcomes[0], outcomes[1]);
+    }
+}
+
+/// The policy pages, like their retained copies, answer an unenrolled session without enforcing
+/// enrollment or touching its saved return destination.
+#[tokio::test]
+async fn unenrolled_sessions_read_public_pages_without_enrollment_or_a_new_return_path() {
+    let app = app().await;
+    reset_factor(&app, false).await;
+    let mut browser = app.anonymous();
+    browser.get("/session/new").await;
+    password(&mut browser, false, "david@37signals.com", "secret123456").await;
+    assert_eq!(
+        browser.get("/app/settings/security?return=1").await.location(),
+        Some("http://campfire.test/two_factor_setup")
+    );
+    let before = facts(&app).await;
+    let return_path = browser_session(&app, &browser)["return_to_after_authenticating"].clone();
+    assert_eq!(return_path, "http://campfire.test/app/settings/security?return=1");
+    for page in ["about", "privacy", "terms"] {
+        let retained = browser.get(&format!("/{page}")).await;
+        assert_eq!(retained.status, StatusCode::OK, "/{page}");
+        assert_eq!(retained.text(), app.anonymous().get(&format!("/{page}")).await.text());
+
+        let shell = browser.get(&format!("/app/{page}")).await;
+        assert_eq!(shell.status, StatusCode::OK, "/app/{page}: {}", shell.text());
+        assert_eq!(shell.location(), None);
+        // The page a visitor gets, as the retained page shows this session what it shows anyone.
+        assert_eq!(inline_boot(&shell)["kind"], "signedOut", "/app/{page}");
+
+        let contract = browser
+            .send(Req::new(Method::GET, &format!("/api/v1/public_pages/{page}")).header("accept", "application/json"))
+            .await;
+        assert_eq!(contract.status, StatusCode::OK, "{page}");
+        assert_eq!(contract.json()["page"], page);
+        assert_eq!(
+            contract.body,
+            app.anonymous()
+                .send(Req::new(Method::GET, &format!("/api/v1/public_pages/{page}")).header("accept", "application/json"))
+                .await
+                .body
+        );
+
+        assert_eq!(
+            browser_session(&app, &browser)["return_to_after_authenticating"],
+            return_path,
+            "{page}"
+        );
+        assert_eq!(facts(&app).await, before, "{page}");
     }
 }
 
@@ -382,9 +432,15 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
         assert_eq!(boot["kind"], "signedOut");
         assert_eq!(
             boot["signInMethods"],
-            json!({"password":true,"google":false})
+            json!({"password":true,"google":false,"googleDomains":[]})
         );
         assert_eq!(boot["firstRunPending"], false);
+        // The retained sign-in page's help line: the first administrator and the version.
+        assert_eq!(
+            boot["helpContact"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            ["name", "emailAddress"]
+        );
+        assert!(boot["version"].is_string());
         assert_eq!(boot["workspace"]["description"], "");
         assert!(boot["workspace"]["name"].is_string());
         assert!(boot["workspace"].get("logoUrl").is_some());
@@ -405,8 +461,10 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
             [
                 "csrfToken",
                 "firstRunPending",
+                "helpContact",
                 "kind",
                 "signInMethods",
+                "version",
                 "workspace"
             ]
         );
@@ -1089,6 +1147,10 @@ async fn google_start_shares_the_authorization_url_flow_cookie_and_return_path()
         let boot = browser.get("/api/v1/session/boot").await;
         if json {
             assert_eq!(boot.json()["signInMethods"]["google"], true);
+            assert_eq!(
+                boot.json()["signInMethods"]["googleDomains"],
+                json!(["smartdata.net"])
+            );
         }
         outcomes.push((
             url,

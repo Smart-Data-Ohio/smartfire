@@ -8,7 +8,9 @@
 //!   encodings, and a font or image is sent as it is.
 //! - `GET /app`, `/app/*`: the shell, behind `ApplicationController`'s before-actions, so signing
 //!   in (with the return path), two-step enforcement, deactivation and the rest apply as on a
-//!   classic page. A file at the dist's root (Vite's `public/`) is served as it is.
+//!   classic page. A file at the dist's root (Vite's `public/`) is served as it is. The setup
+//!   screen (`/app/two_factor/setup`) has the retained setup page's before-actions instead, so a
+//!   session that must set up two-step sign-in can open it.
 //! - `GET /api/v1/boot`: the shell's boot JSON and CSRF token, for the Vite dev server (whose own
 //!   `index.html` has neither) and for the SPA to refresh its token without a reload.
 //!
@@ -28,9 +30,9 @@ use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKi
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
-use campfire_api_types::{SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
+use campfire_api_types::{SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
 use campfire_people::controllers::{auth, sessions, two_factor};
-use campfire_spa::{SignedOutRoute, signed_out_route};
+use campfire_spa::{SignedOutRoute, is_public_page, signed_out_route};
 
 /// The SPA routes. `immutable_cache_control` is the policy for digest-stamped assets.
 pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
@@ -56,14 +58,32 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/api/v1/session", axum::routing::post(campfire_kit::unparsed_action(sessions::create_json)).delete(campfire_kit::unparsed_action(sessions::destroy_json)))
         .route("/api/v1/session/google", axum::routing::post(campfire_kit::action(super::google_sign_in::create_json)))
         .route("/api/v1/session/transfers/{id}", axum::routing::put(campfire_kit::action(sessions::transfers::update_json)))
+        .route("/api/v1/public_pages/{page}", axum::routing::get(campfire_kit::action(super::public_pages::show_json)))
         .route("/api/v1/two_factor/challenge", axum::routing::get(campfire_kit::action(two_factor::challenge_show_json)).post(campfire_kit::unparsed_action(two_factor::challenge_create_json)))
+        .route("/api/v1/two_factor/setup", axum::routing::get(campfire_kit::action(two_factor::setup_show_json)).post(campfire_kit::unparsed_action(two_factor::setup_create_json)))
         .route("/api/v1/sudo", axum::routing::get(campfire_kit::action(super::sudos::new_json)).post(campfire_kit::unparsed_action(super::sudos::create_json)))
         .route("/api/v1/sudo/google", axum::routing::post(campfire_kit::action(super::sudos::google_json)))
         .route("/api/v1/sudo/continue", axum::routing::get(campfire_kit::action(super::sudos::continue_json)).delete(campfire_kit::action(super::sudos::acknowledge_json)))
 }
 
+/// The SPA's two-step setup screen. A session that must still set up two-step sign-in may open
+/// it as a page, as it may open the retained `/two_factor_setup`; a JSON request for it, and the
+/// rest of `/app`, stay behind the gate.
+const SETUP_SHELL: &str = "/app/two_factor/setup";
+
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
+    // About, Privacy and Terms are for anyone, as their retained pages are, and show everyone
+    // the same page: the signed-out shell draws them, skipping the workspace callback chain
+    // those pages skip. No session is restored, so a pending two-step enrollment isn't enforced
+    // here and a saved return destination stays as it was.
+    if is_public_page(c.request.path()) {
+        let boot = load_signed_out_boot(c).await?;
+        let nonce = c.content_security_policy_nonce();
+        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
+        c.no_store();
+        return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+    }
     if let Some(route) = signed_out_route(c.request.path()) {
         let endpoint = match route {
             SignedOutRoute::SignIn => "sessions#new",
@@ -86,6 +106,8 @@ pub async fn show(c: &mut Ctx) -> Result {
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
         c.no_store();
         return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+    } else if c.request.path() == SETUP_SHELL && !concerns::sudo::json_request(c)? {
+        two_factor::setup_shell_before(c).await?;
     } else {
         concerns::before_actions(c, Before::default()).await?;
     }
@@ -108,8 +130,8 @@ pub async fn signed_out_boot(c: &mut Ctx) -> Result {
 }
 
 async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
-    let (account, first_run_pending) = c.app().db.read(|conn| {
-        Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?))
+    let (account, first_run_pending, help_contact) = c.app().db.read(|conn| {
+        Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?, presenters::accounts::help_contact(conn)?))
     }).await.map_err(Error::internal)?;
     let logo_url = match &account {
         Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
@@ -122,8 +144,15 @@ async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
             logo_url,
             description: account.map(|account| account.settings().description().to_owned()).unwrap_or_default(),
         },
-        sign_in_methods: SignInMethods { password: true, google: c.app().google.sign_in().config.configured() },
+        sign_in_methods: {
+            let provider = c.app().google.sign_in();
+            let configured = provider.config.configured();
+            let google_domains = if configured { provider.config.domains.clone() } else { Vec::new() };
+            SignInMethods { password: true, google: configured, google_domains }
+        },
         first_run_pending,
+        help_contact: help_contact.map(|owner| SignInHelpContact { name: owner.name, email_address: owner.email_address }),
+        version: c.app().config.app_version.clone(),
         csrf_token: c.authenticity_tokens().global(),
     })
 }

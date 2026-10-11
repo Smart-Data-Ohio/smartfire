@@ -9,9 +9,11 @@ import {
   InvalidAuthenticityToken,
   NetworkError,
   ServerError,
+  TwoFactorRequired,
   Unauthorized,
 } from "./errors.ts";
 import { Reauthentication } from "./reauthentication.ts";
+import { reportTwoFactorRequirement } from "./two-factor-gate.ts";
 
 /** Where the JSON API lives: `/api/v1` on the serving origin (Vite proxies it to Rust in dev). */
 export class ApiConfig extends Context.Service<ApiConfig, { readonly baseUrl: string }>()(
@@ -42,9 +44,16 @@ export class Navigation extends Context.Service<
 >()("smartfire/api/Navigation") {
   static readonly layerBrowser = Layer.succeed(Navigation, {
     location: Effect.sync(() => `${window.location.pathname}${window.location.search}`),
-    assign: (url: string) => Effect.sync(() => window.location.assign(url)),
+    assign: (url: string) => Effect.sync(() => addressBar.assign(url)),
   });
 }
+
+/** The browser's real `location.assign`, as an object so a test can watch the app leave. */
+export const addressBar = {
+  assign(url: string): void {
+    window.location.assign(url);
+  },
+};
 
 /** One `/api/v1` request. Bodies and replies are JSON. */
 export interface ApiRequest {
@@ -65,6 +74,11 @@ export interface ApiRequest {
    * needs a fresh confirmation is then never kept in storage for after a Google confirmation.
    */
   readonly secret?: true;
+  /**
+   * The caller follows a 401's next action itself, so the client doesn't leave the page for it: a
+   * screen that may be gone by the time the answer arrives, and must not navigate then.
+   */
+  readonly ownsNavigation?: true;
 }
 
 /** Validates a success body; a failure becomes a `ServerError`. */
@@ -128,7 +142,7 @@ export class ApiClient extends Context.Service<
         if (request.auth === true && [400, 401, 403, 404, 422, 429].includes(response.status)) {
           return yield* readSuccess(response, decode).pipe(
             Effect.tap((body) => {
-              if (response.status !== 401) return Effect.void;
+              if (response.status !== 401 || request.ownsNavigation === true) return Effect.void;
 
               const next = decodeNavigation(body);
 
@@ -136,13 +150,13 @@ export class ApiClient extends Context.Service<
             }),
             Effect.catchTag("ServerError", (error) =>
               [401, 403, 422].includes(response.status)
-                ? readFailure(response, navigation)
+                ? readFailure(response, navigation, request.ownsNavigation !== true)
                 : Effect.fail(error),
             ),
           );
         }
 
-        return yield* readFailure(response, navigation);
+        return yield* readFailure(response, navigation, request.ownsNavigation !== true);
       });
 
       const once = <A>(request: ApiRequest, decode: ResponseDecoder<A>) =>
@@ -290,10 +304,14 @@ const decodeNavigation = Schema.decodeUnknownOption(
   Schema.Struct({ kind: Schema.Literal("navigate"), location: Schema.String }),
 );
 
-/** Turns a non-2xx response into its typed error; 401 also leaves for the sign-in page. */
+/**
+ * Turns a non-2xx response into its typed error; 401 also leaves for the sign-in page (unless the
+ * caller owns navigation), and the two-step enrollment gate is reported to its listeners.
+ */
 function readFailure(
   response: HttpClientResponse.HttpClientResponse,
   navigation: Navigation["Service"],
+  leaveOnSignOut: boolean,
 ): Effect.Effect<never, ApiFailure | StaleCsrfToken> {
   return Effect.gen(function* () {
     const text = yield* response.text.pipe(Effect.orElseSucceed(() => ""));
@@ -309,9 +327,11 @@ function readFailure(
     });
 
     if (response.status === 401) {
-      const location = yield* navigation.location;
+      if (leaveOnSignOut) {
+        const location = yield* navigation.location;
 
-      yield* navigation.assign(`/session/new?return_to=${encodeURIComponent(location)}`);
+        yield* navigation.assign(`/session/new?return_to=${encodeURIComponent(location)}`);
+      }
 
       const error = Option.getOrUndefined(decoded);
 
@@ -329,6 +349,13 @@ function readFailure(
       if (decoded.value instanceof InvalidAuthenticityToken) {
         return yield* new StaleCsrfToken({ error: decoded.value });
       }
+    }
+
+    // The enrollment gate: the caller still fails, and the shell routes to the setup screen.
+    const refusal = Option.getOrUndefined(decoded);
+
+    if (refusal instanceof TwoFactorRequired) {
+      yield* Effect.sync(() => reportTwoFactorRequirement(refusal.requirement));
     }
 
     return yield* Option.getOrElse(decoded, () => fallback);

@@ -70,6 +70,7 @@ import { createPeople } from "./s2/people.ts";
 import { clientMessageIdOf, draftFiles, driveCards, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
+import { createSignIn } from "./s2/sign-in.ts";
 import { createSlack } from "./s2/slack.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
@@ -957,6 +958,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   );
 
   const admin = createAdmin(ctx, uploads);
+  const signIn = createSignIn(ctx, admin, () => csrf);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
@@ -997,6 +999,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   approvals.seed();
   ledger.seed();
 
+  const account = createAccount(ctx, () => csrf);
   const huddles = createHuddles(ctx, simulate);
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
@@ -1025,8 +1028,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...saved.routes,
     ...work.routes,
     ...settings.routes,
-    ...createAccount(ctx).routes,
+    ...account.routes,
     ...admin.routes,
+    ...signIn.routes,
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
@@ -1126,6 +1130,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         throw plainError(422, "InvalidAuthenticityToken", "Can't verify CSRF token authenticity.");
       }
     }
+
+    // An unverified session (two-step sign-in turned off) may only set it up or sign out.
+    account.gate(method, path);
 
     const joining = /^\/rooms\/(\d+)\/(preview|join)$/.exec(path);
 
@@ -1294,6 +1301,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         release();
 
         return ok;
+      case "two-factor":
+        account.control({
+          enrolled: booleanField(body, "enrolled"),
+          required: booleanField(body, "required"),
+          expire: booleanField(body, "expire"),
+        });
+
+        return ok;
       case "lapse-sudo": {
         const methods = stringArrayField(body, "methods")?.filter(
           (method): method is SudoMethod =>
@@ -1305,6 +1320,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "sign-in":
+        signIn.configure({
+          google: booleanField(body, "google"),
+          firstRunPending: booleanField(body, "firstRunPending"),
+          pending: booleanField(body, "pending"),
+        });
+
+        return ok;
       case "animated-icon-limit":
         admin.setAnimatedIconLimit(int("limit"));
 

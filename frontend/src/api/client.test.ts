@@ -4,6 +4,7 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientError from "effect/http/HttpClientError";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
+import type { TwoFactorRequirement } from "../gen/TwoFactorRequirement.ts";
 import { passwordSignIn, submitChallenge } from "./auth-endpoints.ts";
 import { readBoot } from "./boot.ts";
 import { ApiClient, ApiConfig, Navigation } from "./client.ts";
@@ -17,11 +18,14 @@ import {
   RateLimited,
   ServerError,
   SudoRequired,
+  TwoFactorRequired,
   Unauthorized,
 } from "./errors.ts";
 import { resumeSudo, submitSudo } from "./sudo-endpoints.ts";
 import { meFixture, roomDetailFixture } from "./testing.ts";
 import { completeTour } from "./tour-endpoints.ts";
+import { onTwoFactorRequirement } from "./two-factor-gate.ts";
+import { readTwoFactorSetup, submitTwoFactorSetup } from "./two-factor-setup-endpoints.ts";
 
 /** What the fake server saw. */
 interface Seen {
@@ -131,6 +135,103 @@ afterEach(() => {
   for (const node of document.querySelectorAll('meta[name="csrf-token"], #boot')) {
     node.remove();
   }
+});
+
+describe("two-factor setup HTTP statuses", () => {
+  for (const status of [422, 429]) {
+    it.effect(`returns the setup and error wording on ${status} without navigating`, () => {
+      const body = {
+        kind: "error",
+        message:
+          status === 422
+            ? "That code didn't work. Check your authenticator app and try again."
+            : "Too many attempts. Try again in a few minutes.",
+        setup: {
+          secret: "ABCD1234",
+          manualKey: "ABCD 1234",
+          otpauthUri: "otpauth://totp/Smartfire:ada?secret=ABCD1234",
+          qrSvg: "<svg/>",
+        },
+      };
+
+      const { layer, navigations, seen } = harness(() => json(status, body));
+
+      return Effect.gen(function* () {
+        const client = yield* ApiClient;
+
+        yield* client.setCsrfToken("held-csrf");
+
+        expect(yield* submitTwoFactorSetup({ code: "123 456" })).toEqual(body);
+
+        expect(seen).toMatchObject([
+          { method: "POST", csrf: "held-csrf", body: '{"code":"123 456"}' },
+        ]);
+        expect(navigations).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    });
+  }
+
+  it.effect("leaves a signed-out setup's 401 next action to its screen", () => {
+    const body = { kind: "navigate", location: "http://campfire.test/session/new" };
+    const { layer, navigations } = harness(() => json(401, body));
+
+    return Effect.gen(function* () {
+      // The screen follows it, if it is still on screen when the answer arrives.
+      expect(yield* readTwoFactorSetup()).toEqual(body);
+      expect(navigations).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect(
+    "fails an undecodable 401 Unauthorized without leaving when the caller navigates",
+    () => {
+      const { layer, navigations } = harness(() =>
+        errorReply(401, new Unauthorized({ message: "Signed out" })),
+      );
+
+      return Effect.gen(function* () {
+        const client = yield* ApiClient;
+
+        const error = yield* client
+          .execute(
+            { method: "GET", path: "/two_factor/setup", auth: true, ownsNavigation: true },
+            Schema.decodeUnknownEffect(Schema.Number),
+          )
+          .pipe(Effect.flip);
+
+        expect(error).toEqual(new Unauthorized({ message: "Signed out" }));
+        expect(navigations).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    },
+  );
+});
+
+describe("two-factor enrollment gate", () => {
+  it.effect("decodes a required setup without redirecting or exposing provisioning secrets", () => {
+    const expected = new TwoFactorRequired({
+      message: "Set up two-step sign-in to continue",
+      requirement: { kind: "setup", location: "http://campfire.test/two_factor_setup" },
+    });
+
+    const { layer, navigations, seen } = harness(() => errorReply(403, expected));
+    const reported: TwoFactorRequirement[] = [];
+    const stop = onTwoFactorRequirement((requirement) => reported.push(requirement));
+
+    return Effect.gen(function* () {
+      const client = yield* ApiClient;
+
+      const error = yield* client
+        .execute({ method: "GET", path: "/settings" }, Schema.decodeUnknownEffect(Schema.String))
+        .pipe(Effect.flip);
+
+      expect(error._tag).toBe("TwoFactorRequired");
+      expect(error).toMatchObject({ requirement: expected.requirement });
+      expect(navigations).toEqual([]);
+      expect(seen).toHaveLength(1);
+      // The shell hears the requirement and routes to the setup screen itself.
+      expect(reported).toEqual([expected.requirement]);
+    }).pipe(Effect.ensuring(Effect.sync(stop)), Effect.provide(layer));
+  });
 });
 
 describe("sudo HTTP statuses", () => {

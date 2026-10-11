@@ -1,8 +1,10 @@
 # Signed-out authentication contracts
 
-Slice 44 adds JSON contracts and a public SPA boot mode. The retained auth pages and
-production sign-in navigation keep their current URLs and handlers. This slice adds no
-React pages or navigation links.
+Slice 44 adds JSON contracts and a public SPA boot mode. Slice 45 renders the sign-in,
+second-factor challenge and transfer pages at the reserved SPA routes
+(`frontend/src/features/auth/`). The retained auth pages and production sign-in navigation
+keep their current URLs and handlers; a later slice moves the canonical routes to the SPA
+pages and deletes the retained ones.
 
 ## Reserved SPA routes
 
@@ -16,7 +18,7 @@ The shell permits visitors without a session only at these auth paths:
 
 The transfer ID must occupy one nonempty path segment. Other paths under `/app/` still
 require authentication. These names follow the existing `/app/` prefix and retained
-resource names. The frontend router does not render these pages until slice 45.
+resource names.
 
 A signed-in visitor to the challenge gets the retained page's redirect to `/`. The retained
 sign-in and transfer GETs accept signed-in visitors without a redirect, so their SPA
@@ -34,19 +36,24 @@ no-store`.
 {
   "kind": "signedOut",
   "workspace": { "name": "Smart Data", "logoUrl": null, "description": "" },
-  "signInMethods": { "password": true, "google": false },
+  "signInMethods": { "password": true, "google": false, "googleDomains": [] },
   "firstRunPending": false,
+  "helpContact": { "name": "Ada", "emailAddress": "ada@example.com" },
+  "version": "2.0.0",
   "csrfToken": "masked token"
 }
 ```
 
 The workspace name is null before an account exists. The description is plain text from
 account settings. Password sign-in is always available. Google is available when its
-provider configuration is complete. `firstRunPending` uses the retained sign-in page's
-check for no users. Unlike `/session/new`, the reserved SPA sign-in shell remains available
-before first run so slice 73 can use this flag.
+provider configuration is complete, and `googleDomains` lists the domains it accepts, as the
+retained note under the Google button names them. `firstRunPending` uses the retained sign-in
+page's check for no users. Unlike `/session/new`, the reserved SPA sign-in shell remains
+available before first run; the SPA page sends the visitor on to `/first_run`, as the retained
+page does. `helpContact` is the first administrator's name and email address and `version` the
+app version, the help line the retained sign-in page prints under its card.
 
-The DTO contains no users, rooms, messages, session identity, pending identity, second-factor
+Apart from that help contact, the DTO contains no users, rooms, messages, session identity, pending identity, second-factor
 secret, recovery codes, custom workspace CSS, cable endpoint or service-worker URL.
 Authenticated `GET /api/v1/boot` keeps its existing contract and access requirement.
 
@@ -95,3 +102,32 @@ for an arbitrary redirect destination.
 `frontend/src/api/auth-endpoints.ts` decodes these next actions. Its auth requests interpret
 credential 401 responses as field errors and refresh CSRF through `/api/v1/session/boot`.
 The existing application client keeps its sign-in redirect for ordinary API 401 responses.
+
+## TOTP enrollment contracts
+
+`GET /api/v1/two_factor/setup` starts or resumes the signed-in human's session-bound setup.
+`POST /api/v1/two_factor/setup` confirms `TwoFactorSetupSubmission`, which contains `code`.
+The write requires the same CSRF proof as the retained form. Both endpoints use
+`TwoFactorSetupResponse`:
+
+- `ready` carries `setup` with `secret`, `manualKey`, `otpauthUri`, and the retained page's exact `qrSvg`.
+- `error` carries `message` and `setup`. Wrong or expired codes keep HTTP 422. Attempt limits keep HTTP 429.
+- `recoveryCodes` carries `codes`, `signedOut`, and `continueUrl` after successful confirmation.
+- `navigate` carries the retained redirect destination when setup is already complete or the caller must sign in.
+
+All provisioning and recovery-code responses have `Cache-Control: no-store` and `Pragma: no-cache`.
+Visits extend a live secret's 30-minute expiry. Expired or abandoned setups reject confirmation
+and issue new provisioning material. Confirmation consumes the setup, stores ten recovery-code
+digests, verifies the current session, revokes other sessions, and records the retained audit.
+Codes appear only in the successful POST response. Subsequent GETs or POSTs navigate to the profile.
+
+An unenrolled session's protected JSON requests receive HTTP 403 with `ApiError::TwoFactorRequired`.
+Its `requirement` is `{kind: "setup", location: ".../two_factor_setup"}` and contains no secret.
+HTML requests still redirect and save their return destination. Requests that require the
+sign-in challenge use the `challenge` requirement instead. An enabled account's unverified
+session is still terminated and must sign in again.
+
+Initial enrollment does not require sudo confirmation in the retained flow. Existing
+backup-code, disable, and remembered-device actions retain their request-local password,
+authenticator, or Google confirmation. Other sensitive writes continue using the existing
+sudo contracts. These endpoints and client functions add no setup UI.

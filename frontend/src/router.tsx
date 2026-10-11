@@ -21,6 +21,7 @@ import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { SudoContinue } from "./features/auth/sudo-continue.tsx";
+import { parseTwoFactorSetupSearch } from "./features/auth/two-factor-search.ts";
 import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
@@ -107,6 +108,77 @@ const shellRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "shell",
   component: AppShell,
+});
+
+/**
+ * The signed-out pages, outside the shell (no boot, no socket), each in its own chunk: the server
+ * renders their URLs for a visitor without a session (crates/spa/src/signed_out.rs).
+ * `/session/new` and the other retained auth URLs still serve the retained pages; only these
+ * `/app/` paths draw the SPA ones.
+ */
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "session/new",
+  ...chunked(() =>
+    import("./features/auth/sign-in.tsx").then((module) => ({ default: module.SignInPage })),
+  ),
+});
+
+const challengeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "two_factor/challenge",
+  ...chunked(() =>
+    import("./features/auth/challenge.tsx").then((module) => ({ default: module.ChallengePage })),
+  ),
+});
+
+const transferRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "session/transfers/$transferId",
+  ...chunked(() =>
+    import("./features/auth/transfer.tsx").then((module) => ({ default: module.TransferRoute })),
+  ),
+});
+
+/**
+ * `/app/two_factor/setup?return_to=&required=`: setting up two-step sign-in, outside the shell (an
+ * unverified session's requests answer the enrollment gate). Settings and the shell's gate open it
+ * in the SPA; the retained `/two_factor_setup` page still serves its own URL.
+ */
+const twoFactorSetupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "two_factor/setup",
+  validateSearch: parseTwoFactorSetupSearch,
+  ...chunked(() => import("./features/auth/two-factor-setup.tsx")),
+});
+
+/**
+ * About, Privacy and Terms, outside the shell for anyone: the server renders their URLs with the
+ * signed-out boot, signed in or not (crates/spa/src/signed_out.rs). `/about`, `/privacy` and `/terms`
+ * still serve the retained pages until a later slice makes these canonical.
+ */
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "about",
+  ...chunked(() =>
+    import("./features/auth/public-page.tsx").then((module) => ({ default: module.AboutPage })),
+  ),
+});
+
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "privacy",
+  ...chunked(() =>
+    import("./features/auth/public-page.tsx").then((module) => ({ default: module.PrivacyPage })),
+  ),
+});
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "terms",
+  ...chunked(() =>
+    import("./features/auth/public-page.tsx").then((module) => ({ default: module.TermsPage })),
+  ),
 });
 
 /** `/app/`: the last room on wide screens, the conversation list on phones. */
@@ -623,6 +695,13 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
+  signInRoute,
+  challengeRoute,
+  transferRoute,
+  twoFactorSetupRoute,
+  aboutRoute,
+  privacyRoute,
+  termsRoute,
   shellRoute.addChildren([
     homeRoute,
     sudoContinueRoute,

@@ -28,6 +28,43 @@ pub struct ChallengeSubmission {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TwoFactorSetupSubmission {
+    pub code: String,
+}
+
+/// Provisioning material is private to the signed-in browser's pending setup.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TwoFactorSetupState {
+    pub secret: String,
+    pub manual_key: String,
+    pub otpauth_uri: String,
+    pub qr_svg: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[ts(export)]
+pub enum TwoFactorSetupResponse {
+    Ready { setup: TwoFactorSetupState },
+    /// Returned by successful confirmation only. Plaintext codes are never persisted.
+    RecoveryCodes { codes: Vec<String>, signed_out: usize, continue_url: String },
+    Navigate { location: String },
+    Error { message: String, setup: TwoFactorSetupState },
+}
+
+/// An enrollment gate carries a next step, never provisioning material or a pending identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum TwoFactorRequirement {
+    Setup { location: String },
+    Challenge { location: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SignOut {
@@ -167,7 +204,19 @@ pub struct SignedOutBoot {
     pub workspace: SignInWorkspace,
     pub sign_in_methods: SignInMethods,
     pub first_run_pending: bool,
+    /// The first administrator, whom the retained sign-in page names for help.
+    pub help_contact: Option<SignInHelpContact>,
+    /// The version the retained sign-in page prints under the help contact.
+    pub version: String,
     pub csrf_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SignInHelpContact {
+    pub name: String,
+    pub email_address: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -185,6 +234,8 @@ pub struct SignInWorkspace {
 pub struct SignInMethods {
     pub password: bool,
     pub google: bool,
+    /// The Google Workspace domains Google sign-in accepts, named under its button.
+    pub google_domains: Vec<String>,
 }
 
 #[cfg(test)]
@@ -192,6 +243,26 @@ mod tests {
     use super::*;
     use crate::tests::assert_wire;
     use serde_json::json;
+
+    #[test]
+    fn setup_contracts_round_trip() {
+        let setup = TwoFactorSetupState {
+            secret: "ABCD1234".into(),
+            manual_key: "ABCD 1234".into(),
+            otpauth_uri: "otpauth://totp/Smartfire:ada?secret=ABCD1234".into(),
+            qr_svg: "<svg/>".into(),
+        };
+        let wire = json!({"secret":"ABCD1234","manualKey":"ABCD 1234","otpauthUri":"otpauth://totp/Smartfire:ada?secret=ABCD1234","qrSvg":"<svg/>"});
+        assert_wire(&TwoFactorSetupSubmission { code: "123 456".into() }, json!({"code":"123 456"}));
+        assert_wire(&TwoFactorSetupResponse::Ready { setup: setup.clone() }, json!({"kind":"ready","setup":wire}));
+        assert_wire(&TwoFactorSetupResponse::Error { message: "That code didn't work.".into(), setup }, json!({"kind":"error","message":"That code didn't work.","setup":wire}));
+        assert_wire(&TwoFactorSetupResponse::RecoveryCodes {
+            codes: vec!["abcd-1234-efgh".into()], signed_out: 2, continue_url: "/app/".into(),
+        }, json!({"kind":"recoveryCodes","codes":["abcd-1234-efgh"],"signedOut":2,"continueUrl":"/app/"}));
+        assert_wire(&TwoFactorSetupResponse::Navigate { location: "/session/new".into() }, json!({"kind":"navigate","location":"/session/new"}));
+        assert_wire(&TwoFactorRequirement::Setup { location: "/two_factor_setup".into() }, json!({"kind":"setup","location":"/two_factor_setup"}));
+        assert_wire(&TwoFactorRequirement::Challenge { location: "/two_factor_challenge".into() }, json!({"kind":"challenge","location":"/two_factor_challenge"}));
+    }
 
     #[test]
     fn auth_actions_round_trip_without_pending_identity() {
@@ -310,12 +381,18 @@ mod tests {
                 },
                 sign_in_methods: SignInMethods {
                     password: true,
-                    google: false,
+                    google: true,
+                    google_domains: vec!["example.com".into()],
                 },
                 first_run_pending: true,
+                help_contact: Some(SignInHelpContact {
+                    name: "Ada".into(),
+                    email_address: "ada@example.com".into(),
+                }),
+                version: "1.2.3".into(),
                 csrf_token: "masked".into(),
             },
-            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":false},"firstRunPending":true,"csrfToken":"masked"}),
+            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked"}),
         );
         assert_wire(
             &PasswordSignIn {

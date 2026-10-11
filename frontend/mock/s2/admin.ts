@@ -196,6 +196,8 @@ export interface AdminModule {
   noteRequest(method: string, path: string, origin: string): void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
+  /** The workspace's description, for the signed-out boot. */
+  readonly description: () => string;
   readonly customStyles: () => string | null;
   readonly roomCreationRestricted: () => boolean;
   readonly uploadLimitBytes: () => number;
@@ -805,6 +807,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       handling = { method: method.toUpperCase(), path, returnTo: origin };
     },
     branding,
+    description: () => current().description,
     customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,
     uploadLimitBytes: () => current().uploadLimitBytes,
