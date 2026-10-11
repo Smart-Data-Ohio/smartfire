@@ -7,16 +7,19 @@
 import {
   auditLog,
   createIcon,
+  createInvite,
   customStyles,
   destroyIcon,
   icons,
   integrationsHealth,
+  invites,
   people,
   removeBanner,
   removeLogo,
   removePerson,
   resetJoinCode,
   resetTwoFactor,
+  revokeInvite,
   setGoogleLink,
   updateBanner,
   updateCustomStyles,
@@ -73,6 +76,7 @@ import type { CreateBot } from "../gen/CreateBot.ts";
 import type { CreateCredential } from "../gen/CreateCredential.ts";
 import type { CreateGrant } from "../gen/CreateGrant.ts";
 import type { CreateIcon } from "../gen/CreateIcon.ts";
+import type { CreateWorkspaceInvite } from "../gen/CreateWorkspaceInvite.ts";
 import type { CredentialCreated } from "../gen/CredentialCreated.ts";
 import type { CredentialList } from "../gen/CredentialList.ts";
 import type { CustomStyles } from "../gen/CustomStyles.ts";
@@ -99,6 +103,9 @@ import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
+import type { WorkspaceInvite } from "../gen/WorkspaceInvite.ts";
+import type { WorkspaceInviteCreated } from "../gen/WorkspaceInviteCreated.ts";
+import type { WorkspaceInviteList } from "../gen/WorkspaceInviteList.ts";
 import { mutations } from "../store/store.ts";
 import { brandingOf } from "../store/workspace.ts";
 import { peoplePagesOver } from "./people-pages.ts";
@@ -143,6 +150,13 @@ export const admin = {
   removeBanner: (): Promise<Workspace> => branded(runAction(removeBanner())),
 
   resetJoinCode: (): Promise<Workspace> => runAction(resetJoinCode()),
+
+  invites: (): Promise<WorkspaceInviteList> => runAction(invites()),
+
+  createInvite: (body: CreateWorkspaceInvite): Promise<WorkspaceInviteCreated> =>
+    runAction(createInvite(body)),
+
+  revokeInvite: (inviteId: number): Promise<WorkspaceInvite> => runAction(revokeInvite(inviteId)),
 
   people: (page: string | null = null): Promise<PeoplePage> => runAction(people(page)),
 

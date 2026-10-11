@@ -1,5 +1,6 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { type ChangeEvent, type FormEvent, useEffect, useId, useRef, useState } from "react";
+import type { InviteRefusal } from "../../gen/InviteRefusal.ts";
 import type { JoinPage as JoinPageData } from "../../gen/JoinPage.ts";
 import {
   auth,
@@ -9,7 +10,7 @@ import {
   type SignedOutBootData,
 } from "../../sync/auth.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
-import { Icon } from "../../ui/icons/icon.tsx";
+import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import {
   AuthHeader,
@@ -404,7 +405,41 @@ function JoinForm({
   );
 }
 
-/** An invite that died between showing the form and sending it. */
+/** What each dead invite says: its mark, what happened, and what to do next. */
+const REFUSALS: Readonly<
+  Record<InviteRefusal, { icon: IconName; title: string; what: string; next: string }>
+> = {
+  expired: {
+    icon: "hourglass",
+    title: "This invite has expired",
+    what: "Invites last only as long as whoever made them chose.",
+    next: "Ask the person who sent it for a fresh link.",
+  },
+  exhausted: {
+    icon: "users",
+    title: "This invite is full",
+    what: "It was made for a set number of people, and they've all joined.",
+    next: "Ask the person who sent it for a new link.",
+  },
+  revoked: {
+    icon: "ban",
+    title: "This invite was turned off",
+    what: "A workspace administrator revoked it, so it can't be used to join.",
+    next: "If you expected to join, ask them for a new invite.",
+  },
+  unknown: {
+    icon: "link",
+    title: "We couldn't find this invite",
+    what: "The link may be incomplete, or mistyped.",
+    next: "Check that you copied the whole link, or ask for a new one.",
+  },
+};
+
+/**
+ * An invite that can't be used (expired, full, revoked or unknown), whether it was dead on arrival
+ * or died between showing the form and sending it: the workspace's logo marked with why, what
+ * happened, and the next step. With a help contact the next step is a ready email to them.
+ */
 function DeadInvite({
   page,
   boot,
@@ -416,6 +451,10 @@ function DeadInvite({
 }) {
   const titleId = useId();
   const contact = page.helpContact;
+  const { icon, title, what, next } = REFUSALS[page.refusal];
+  const name = page.workspace.name;
+
+  const subject = `A new invite${name === null ? "" : ` to ${name}`}`;
 
   return (
     <AuthScreen
@@ -427,18 +466,45 @@ function DeadInvite({
         )
       }
     >
-      <AuthHeader
-        titleId={titleId}
-        title={joinTitle(page.workspace.name)}
-        logoUrl={page.workspace.logoUrl}
-      >
+      <header className="auth-view-header">
+        <span className="auth-view-invite-mark" data-refusal={page.refusal}>
+          {page.workspace.logoUrl === null ? (
+            <span className="auth-view-invite-blank" />
+          ) : (
+            <img
+              className="auth-view-logo"
+              src={page.workspace.logoUrl}
+              alt=""
+              width={48}
+              height={48}
+            />
+          )}
+          <span className="auth-view-invite-badge" aria-hidden="true">
+            <Icon name={icon} size={14} />
+          </span>
+        </span>
+        {name === null ? null : <p className="auth-view-invite-workspace">{name}</p>}
+        <h1 id={titleId} className="auth-view-title">
+          {title}
+        </h1>
         <p className="auth-view-lede" role="alert">
-          This invite is no longer valid.
+          {what}
         </p>
-      </AuthHeader>
-      <p className="auth-view-note">
-        {page.reason} Ask a workspace administrator for a new invite.
-      </p>
+      </header>
+      <div className="auth-view-stack">
+        <p className="auth-view-invite-next">{next}</p>
+        {contact === null ? null : (
+          <a
+            className="button auth-view-wide"
+            data-variant="primary"
+            data-size="lg"
+            href={`mailto:${contact.emailAddress}?subject=${encodeURIComponent(subject)}`}
+          >
+            <Icon name="send" size={16} />
+            Email {contact.name}
+          </a>
+        )}
+      </div>
       <SignInNote />
     </AuthScreen>
   );

@@ -16,6 +16,7 @@ import { BotSection } from "./features/admin/bot-section.tsx";
 import { BotsSection } from "./features/admin/bots-section.tsx";
 import { IconsSection } from "./features/admin/icons-section.tsx";
 import { IntegrationsSection as AdminIntegrationsSection } from "./features/admin/integrations-section.tsx";
+import { InvitesSection } from "./features/admin/invites-section.tsx";
 import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
@@ -495,6 +496,7 @@ const adminRoute = createRoute({
 const adminSections = [
   createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "workspace", component: WorkspaceSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "invites", component: InvitesSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),
