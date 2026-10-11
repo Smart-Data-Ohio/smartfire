@@ -9,8 +9,10 @@ import {
   InvalidAuthenticityToken,
   NetworkError,
   ServerError,
+  TwoFactorRequired,
   Unauthorized,
 } from "./errors.ts";
+import { reportTwoFactorRequirement } from "./two-factor-gate.ts";
 
 /** Where the JSON API lives: `/api/v1` on the serving origin (Vite proxies it to Rust in dev). */
 export class ApiConfig extends Context.Service<ApiConfig, { readonly baseUrl: string }>()(
@@ -262,7 +264,10 @@ const decodeNavigation = Schema.decodeUnknownOption(
   Schema.Struct({ kind: Schema.Literal("navigate"), location: Schema.String }),
 );
 
-/** Turns a non-2xx response into its typed error; 401 also leaves for the sign-in page. */
+/**
+ * Turns a non-2xx response into its typed error; 401 also leaves for the sign-in page, and the
+ * two-step enrollment gate is reported to its listeners.
+ */
 function readFailure(
   response: HttpClientResponse.HttpClientResponse,
   navigation: Navigation["Service"],
@@ -301,6 +306,11 @@ function readFailure(
       if (decoded.value instanceof InvalidAuthenticityToken) {
         return yield* new StaleCsrfToken({ error: decoded.value });
       }
+    }
+
+    // The enrollment gate: the caller still fails, and the shell routes to the setup screen.
+    if (Option.isSome(decoded) && decoded.value instanceof TwoFactorRequired) {
+      yield* Effect.sync(() => reportTwoFactorRequirement(decoded.value.requirement));
     }
 
     return yield* Option.getOrElse(decoded, () => fallback);

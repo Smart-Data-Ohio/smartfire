@@ -5,11 +5,19 @@ import {
   BackupCodes as BackupCodesSchema,
   TwoFactorChange as TwoFactorChangeSchema,
 } from "../../src/api/schema/settings.ts";
+import { TwoFactorSetupResponse } from "../../src/api/schema/two-factor-setup.ts";
 import type { AccountSettings } from "../../src/gen/AccountSettings.ts";
 import type { BackupCodes } from "../../src/gen/BackupCodes.ts";
 import type { TwoFactorChange } from "../../src/gen/TwoFactorChange.ts";
-import type { Json } from "../json.ts";
-import { MOCK_TOTP, RATE_ALERT, REAUTH_ALERT } from "./account.ts";
+import { field, type Json } from "../json.ts";
+import {
+  MOCK_TOTP,
+  RATE_ALERT,
+  REAUTH_ALERT,
+  SETUP_PROFILE,
+  SETUP_WRONG,
+  SIGNED_OUT_LOCATION,
+} from "./account.ts";
 import { MOCK_PASSWORD } from "./settings.ts";
 import { errorOf, expectStatus, get, harness } from "./testing.ts";
 
@@ -125,7 +133,27 @@ describe("the mock's account panels", () => {
     expect(off.notice).toBe("Two-step sign-in is off. Set it up again to keep signing in.");
     expect(off.twoFactor.confirmedAt).toBeNull();
 
+    // The replacement session is unverified: the enrollment gate answers until setup is done.
     const again = await expectStatus<Json>(
+      server,
+      "DELETE",
+      "/api/v1/settings/two_factor",
+      { reauth: MOCK_TOTP },
+      403,
+    );
+
+    expect(errorOf(again)).toMatchObject({
+      tag: "TwoFactorRequired",
+      message: "Set up two-step sign-in to continue",
+    });
+  });
+
+  it("refuse a change once two-step sign-in was turned off elsewhere", async () => {
+    const { server } = harness();
+
+    await expectStatus(server, "POST", "/__mock/two-factor", { enrolled: false }, 200);
+
+    const stale = await expectStatus<Json>(
       server,
       "DELETE",
       "/api/v1/settings/two_factor",
@@ -133,7 +161,7 @@ describe("the mock's account panels", () => {
       409,
     );
 
-    expect(errorOf(again)).toMatchObject({
+    expect(errorOf(stale)).toMatchObject({
       tag: "Conflict",
       message: "Set up two-step sign-in first.",
     });
@@ -144,5 +172,83 @@ describe("the mock's account panels", () => {
 
     await expectStatus(server, "POST", "/api/v1/settings/push_subscriptions/4/test", null, 204);
     await expectStatus(server, "POST", "/api/v1/settings/push_subscriptions/99/test", null, 404);
+  });
+});
+
+const SETUP = "/api/v1/two_factor/setup";
+
+describe("the mock's two-step setup", () => {
+  it("gates an unverified session to setup and sign-out, then confirms to one-time codes", async () => {
+    const { server } = harness();
+
+    await expectStatus(
+      server,
+      "POST",
+      "/__mock/two-factor",
+      { enrolled: false, required: true },
+      200,
+    );
+
+    const gated = await expectStatus<Json>(server, "GET", ACCOUNT, null, 403);
+
+    expect(gated).toMatchObject({
+      error: {
+        _tag: "TwoFactorRequired",
+        requirement: { kind: "setup", location: "http://localhost/two_factor_setup" },
+      },
+    });
+
+    const ready = Schema.decodeUnknownSync(TwoFactorSetupResponse)(await get<Json>(server, SETUP));
+
+    if (ready.kind !== "ready") throw new Error(`expected ready, got ${ready.kind}`);
+
+    expect(ready.setup.manualKey.replaceAll(" ", "")).toBe(ready.setup.secret);
+    expect(ready.setup.qrSvg.startsWith("<svg")).toBe(true);
+    // Visits reuse the pending key.
+    expect(await get<Json>(server, SETUP)).toEqual(ready);
+
+    const wrong = await expectStatus<Json>(server, "POST", SETUP, { code: "000000" }, 422);
+
+    expect(wrong).toEqual({ kind: "error", message: SETUP_WRONG, setup: ready.setup });
+
+    const limited = await expectStatus<Json>(server, "POST", SETUP, { code: "limit" }, 429);
+
+    expect(limited).toMatchObject({ kind: "error", message: RATE_ALERT });
+
+    const codes = await expectStatus<Json>(server, "POST", SETUP, { code: "123 456" }, 200);
+
+    expect(codes).toMatchObject({ kind: "recoveryCodes", signedOut: 1 });
+    expect(field(codes, "codes")).toHaveLength(10);
+    await get(server, ACCOUNT);
+    // The codes are shown once: setup now navigates to the profile.
+    expect(await get<Json>(server, SETUP)).toEqual({ kind: "navigate", location: SETUP_PROFILE });
+  });
+
+  it("renews an expired setup with a new key and lets a gated session sign out", async () => {
+    const { server } = harness();
+
+    await expectStatus(
+      server,
+      "POST",
+      "/__mock/two-factor",
+      { enrolled: false, required: true },
+      200,
+    );
+
+    const first = await get<Json>(server, SETUP);
+
+    await expectStatus(server, "POST", "/__mock/two-factor", { expire: true }, 200);
+
+    const expired = await expectStatus<Json>(server, "POST", SETUP, { code: MOCK_TOTP }, 422);
+
+    expect(expired).toMatchObject({ kind: "error", message: SETUP_WRONG });
+    expect(field(field(expired, "setup"), "secret")).not.toBe(
+      field(field(first, "setup"), "secret"),
+    );
+
+    expect(await expectStatus<Json>(server, "DELETE", "/api/v1/session", null, 200)).toEqual({
+      kind: "navigate",
+      location: SIGNED_OUT_LOCATION,
+    });
   });
 });

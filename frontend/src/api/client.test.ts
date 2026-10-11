@@ -4,6 +4,7 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientError from "effect/http/HttpClientError";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
+import type { TwoFactorRequirement } from "../gen/TwoFactorRequirement.ts";
 import { passwordSignIn, submitChallenge } from "./auth-endpoints.ts";
 import { readBoot } from "./boot.ts";
 import { ApiClient, ApiConfig, Navigation } from "./client.ts";
@@ -23,6 +24,7 @@ import {
 import { resumeSudo, submitSudo } from "./sudo-endpoints.ts";
 import { meFixture, roomDetailFixture } from "./testing.ts";
 import { completeTour } from "./tour-endpoints.ts";
+import { onTwoFactorRequirement } from "./two-factor-gate.ts";
 import { readTwoFactorSetup, submitTwoFactorSetup } from "./two-factor-setup-endpoints.ts";
 
 /** What the fake server saw. */
@@ -188,6 +190,8 @@ describe("two-factor enrollment gate", () => {
     });
 
     const { layer, navigations, seen } = harness(() => errorReply(403, expected));
+    const reported: TwoFactorRequirement[] = [];
+    const stop = onTwoFactorRequirement((requirement) => reported.push(requirement));
 
     return Effect.gen(function* () {
       const client = yield* ApiClient;
@@ -200,7 +204,9 @@ describe("two-factor enrollment gate", () => {
       expect(error).toMatchObject({ requirement: expected.requirement });
       expect(navigations).toEqual([]);
       expect(seen).toHaveLength(1);
-    }).pipe(Effect.provide(layer));
+      // The shell hears the requirement and routes to the setup screen itself.
+      expect(reported).toEqual([expected.requirement]);
+    }).pipe(Effect.ensuring(Effect.sync(stop)), Effect.provide(layer));
   });
 });
 
