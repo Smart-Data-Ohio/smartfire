@@ -9,6 +9,7 @@ import {
   refusalMessage,
   useDocumentTitle,
   useFollowNext,
+  useInlineFlash,
   useRestoredFromCache,
 } from "./auth-parts.tsx";
 
@@ -40,6 +41,7 @@ const FIELDS = {
 export function ChallengePage() {
   const titleId = useId();
   const follow = useFollowNext();
+  const flash = useInlineFlash();
   const codeRef = useRef<HTMLInputElement | null>(null);
   const [methods, setMethods] = useState<readonly Method[]>(["totp", "recoveryCode"]);
   const [rememberOffered, setRememberOffered] = useState(true);
@@ -125,7 +127,7 @@ export function ChallengePage() {
   const field = FIELDS[method];
 
   return (
-    <AuthScreen labelledBy={titleId}>
+    <AuthScreen labelledBy={titleId} flash={flash}>
       <AuthHeader
         titleId={titleId}
         title="Enter your code"

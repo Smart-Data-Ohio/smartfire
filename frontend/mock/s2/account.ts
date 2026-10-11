@@ -62,7 +62,7 @@ const TWO_FACTOR_REQUIRED = "TwoFactorRequired" satisfies ApiError["_tag"];
 const SETUP_REQUIRED: ApiError = {
   _tag: TWO_FACTOR_REQUIRED,
   message: "Set up two-step sign-in to continue",
-  requirement: { kind: "setup", location: "/two_factor_setup" },
+  requirement: { kind: "setup", location: "/app/two_factor/setup" },
 };
 
 /** What an unverified session may still do: set up, or sign out. */

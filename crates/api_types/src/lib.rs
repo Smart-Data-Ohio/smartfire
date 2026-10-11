@@ -62,7 +62,7 @@ mod work;
 pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
 pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, SudoMethod, SudoResponse, SudoRetry, SudoState, SudoSubmission, TransferSignIn};
 pub use auth::{TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
-pub use auth::SignInHelpContact;
+pub use auth::{FlashMessage, FlashMessageKind, SignInHelpContact};
 pub use auth::{FirstRunState, FirstRunSubmission};
 pub use auth::SudoGoogleStart;
 pub use auth::{InviteRefusal, JoinPage, WorkspaceJoin};

@@ -80,6 +80,7 @@ describe("signed-out auth contracts", () => {
         helpContact: { name: "Ada", emailAddress: "ada@example.com" },
         version: "2.0.0",
         csrfToken: "public-token",
+        flash: null,
       };
 
       yield* fake.reply("GET /session/boot", boot);

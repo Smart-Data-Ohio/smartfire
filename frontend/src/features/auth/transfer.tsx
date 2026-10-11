@@ -7,6 +7,7 @@ import {
   AuthScreen,
   refusalMessage,
   useFollowNext,
+  useInlineFlash,
   useRestoredFromCache,
 } from "./auth-parts.tsx";
 
@@ -32,6 +33,7 @@ export function TransferRoute() {
 export function TransferPage({ transferId }: { readonly transferId: string }) {
   const titleId = useId();
   const follow = useFollowNext();
+  const flash = useInlineFlash();
   const [landing, setLanding] = useState<Landing>({ status: "working" });
   const [logoUrl] = useState(() => inlineSignedOutBoot()?.workspace.logoUrl ?? null);
   const sent = useRef<string | null>(null);
@@ -70,7 +72,7 @@ export function TransferPage({ transferId }: { readonly transferId: string }) {
 
   if (landing.status === "working") {
     return (
-      <AuthScreen labelledBy={titleId} busy>
+      <AuthScreen labelledBy={titleId} busy flash={flash}>
         <AuthHeader titleId={titleId} title="Signing you in" logoUrl={logoUrl} />
         <p className="auth-view-wait" role="status">
           <Spinner />
@@ -82,7 +84,7 @@ export function TransferPage({ transferId }: { readonly transferId: string }) {
 
   if (landing.status === "restored") {
     return (
-      <AuthScreen labelledBy={titleId}>
+      <AuthScreen labelledBy={titleId} flash={flash}>
         <AuthHeader titleId={titleId} title="Sign-in link" logoUrl={logoUrl} />
         <div className="auth-view-stack">
           <Button
@@ -107,7 +109,7 @@ export function TransferPage({ transferId }: { readonly transferId: string }) {
   }
 
   return (
-    <AuthScreen labelledBy={titleId}>
+    <AuthScreen labelledBy={titleId} flash={flash}>
       <AuthHeader titleId={titleId} title="Couldn't sign you in" logoUrl={logoUrl} />
       <div className="auth-view-stack">
         <p className="auth-view-alert" role="alert">

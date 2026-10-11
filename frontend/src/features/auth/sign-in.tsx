@@ -9,6 +9,7 @@ import {
   AuthScreen,
   GoogleMark,
   refusalMessage,
+  type SignedOutFlash,
   TranslateButton,
   useDocumentTitle,
   useFollowNext,
@@ -24,7 +25,7 @@ import { EMAIL_TRANSLATIONS, PASSWORD_TRANSLATIONS } from "./translations.ts";
  * run (the SPA's, at `/app/first_run`), as the retained page sends it to its own.
  */
 export function SignInPage() {
-  const { load, retry } = useSignedOutBoot();
+  const { load, retry, flash } = useSignedOutBoot();
   const navigate = useNavigate();
   const titleId = useId();
   const firstRun = load.status === "ready" && load.boot.firstRunPending;
@@ -36,11 +37,11 @@ export function SignInPage() {
   }, [firstRun, navigate]);
 
   if (load.status === "ready" && !firstRun) {
-    return <SignInForm boot={load.boot} />;
+    return <SignInForm boot={load.boot} flash={flash} />;
   }
 
   return (
-    <AuthScreen labelledBy={titleId} busy={load.status === "loading" || firstRun}>
+    <AuthScreen labelledBy={titleId} busy={load.status === "loading" || firstRun} flash={flash}>
       <AuthHeader titleId={titleId} title="Sign in" />
       {load.status === "error" ? (
         <div className="auth-view-stack" role="alert">
@@ -61,7 +62,13 @@ export function SignInPage() {
 
 type Busy = "password" | "google" | null;
 
-function SignInForm({ boot }: { readonly boot: SignedOutBootData }) {
+function SignInForm({
+  boot,
+  flash,
+}: {
+  readonly boot: SignedOutBootData;
+  readonly flash: SignedOutFlash | null;
+}) {
   const titleId = useId();
   const follow = useFollowNext();
   const passwordRef = useRef<HTMLInputElement | null>(null);
@@ -116,7 +123,7 @@ function SignInForm({ boot }: { readonly boot: SignedOutBootData }) {
   const { workspace, signInMethods } = boot;
 
   return (
-    <AuthScreen labelledBy={titleId} below={<AuthFooter boot={boot} />}>
+    <AuthScreen labelledBy={titleId} below={<AuthFooter boot={boot} />} flash={flash}>
       <AuthHeader
         titleId={titleId}
         title={workspace.name ?? "Sign in"}

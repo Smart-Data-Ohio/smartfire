@@ -10,6 +10,9 @@
  * rate limited. The sign-in link `mock-transfer-token` signs in, `mock-transfer-two-factor` goes
  * on to the challenge, and any other link is invalid.
  *
+ * `alert` or `notice` leaves a flash for the next boot, which reads it once, as a server redirect's
+ * flash is read by the page it lands on.
+ *
  * First run (slice 73) is open while `firstRunPending` is set; setting up closes it. A name
  * starting `fail` is refused as an unreadable submission, so the page's refusal shows, and
  * `firstRunUnavailable` fails the next check as an unreachable server would.
@@ -19,6 +22,7 @@
  */
 import type { AuthResponse } from "../../src/gen/AuthResponse.ts";
 import type { FirstRunState } from "../../src/gen/FirstRunState.ts";
+import type { FlashMessage } from "../../src/gen/FlashMessage.ts";
 import type { SignedOutBoot } from "../../src/gen/SignedOutBoot.ts";
 import type { MockResponse } from "../http.ts";
 import { type Json, parseJson, stringField } from "../json.ts";
@@ -69,17 +73,21 @@ interface State {
   firstRun: Json;
   /** The next first-run check answers 503, as a server that can't be reached would. */
   firstRunUnavailable: boolean;
+  /** What the next boot shows, once. */
+  flash: FlashMessage | null;
 }
 
 /** The sign-in module. */
 export interface SignInModule {
   readonly routes: readonly Route[];
-  /** `/__mock/sign-in`: Google configured, first run pending, a second step waiting. */
+  /** `/__mock/sign-in`: Google configured, first run pending, a second step waiting, a flash. */
   configure(change: {
     readonly google: boolean | null;
     readonly firstRunPending: boolean | null;
     readonly pending: boolean | null;
     readonly firstRunUnavailable: boolean | null;
+    readonly alert: string | null;
+    readonly notice: string | null;
   }): void;
   /** The last first-run submission as it arrived (JSON, or the multipart form's fields). */
   firstRun(): Json;
@@ -97,7 +105,7 @@ const CHALLENGE: AuthResponse = {
 
 const SIGNED_IN: AuthResponse = { kind: "signedIn", location: SIGNED_IN_LOCATION };
 
-const BACK_TO_SIGN_IN: AuthResponse = { kind: "navigate", location: "/session/new" };
+const BACK_TO_SIGN_IN: AuthResponse = { kind: "navigate", location: "/app/session/new" };
 
 /** Where first run sends a visitor once the workspace exists: home, as `prevent_repeats` does. */
 const HOME: AuthResponse = { kind: "navigate", location: "/" };
@@ -141,6 +149,7 @@ export function createSignIn(
         firstRunPending: false,
         firstRun: null,
         firstRunUnavailable: false,
+        flash: null,
       };
       stateWorld = world;
     }
@@ -151,6 +160,9 @@ export function createSignIn(
   const boot = (): SignedOutBoot => {
     const held = current();
     const branding = admin.branding();
+    const flash = held.flash;
+
+    held.flash = null;
 
     return {
       kind: "signedOut",
@@ -168,6 +180,7 @@ export function createSignIn(
       helpContact: { name: "Riel", emailAddress: MOCK_TWO_FACTOR_EMAIL },
       version: "2.0.0-mock",
       csrfToken: csrfToken(),
+      flash,
     };
   };
 
@@ -180,6 +193,10 @@ export function createSignIn(
       held.firstRunPending = change.firstRunPending ?? held.firstRunPending;
       held.pending = change.pending ?? held.pending;
       held.firstRunUnavailable = change.firstRunUnavailable ?? held.firstRunUnavailable;
+
+      if (change.alert !== null) held.flash = { kind: "alert", message: change.alert };
+
+      if (change.notice !== null) held.flash = { kind: "notice", message: change.notice };
     },
     routes: [
       route("GET", /^\/session\/boot$/, () => ({ status: 200, json: boot() })),
