@@ -33,7 +33,6 @@
     "QR_URL_ID": "aHR0cHM6Ly9leGFtcGxlLmNvbQ",
     "CLASSIC_SHELL": "data-controller=\"local-time lightbox",
     "SPA_BOOT": "<script type=\"application/json\" id=\"boot\"",
-    "SPA_RELOAD": "<meta name=\"turbo-visit-control\" content=\"reload\" />",
     "ERR404": "We can’t find that (404)",
     "ERR500": "Something went wrong (500)"
   },
@@ -849,7 +848,7 @@
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
-        {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "{SPA_RELOAD}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
+        {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
         {"id": "app.noslash", "method": "GET", "path": "/app", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}},
         {"id": "app.anonymous", "method": "GET", "path": "/app/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "app.switch_off_ignored", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}

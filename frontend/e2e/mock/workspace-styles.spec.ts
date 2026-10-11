@@ -1,6 +1,6 @@
 import { expect, saveAccountAppearance, test } from "./support.ts";
 
-const selector = 'style[data-turbo-track="reload"]';
+const selector = "style#workspace-styles";
 
 const css =
   ":root { --accent: rgb(200, 40, 60); } body { border-top: 7px solid rgb(200, 40, 60); }";
