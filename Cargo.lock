@@ -886,6 +886,7 @@ dependencies = [
  "askama",
  "axum",
  "bytes",
+ "campfire_api_types",
  "campfire_app",
  "campfire_cable",
  "campfire_db",

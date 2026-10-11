@@ -10,9 +10,10 @@ use crate::sessions::HelpContact;
 #[template(path = "users/new.html", blocks = ["head", "content"])]
 pub struct New<'a> {
     pub ctx: &'a crate::Context<'a>,
-    pub join_code: String,
+    pub join_path: String,
     pub description: String,
     pub help_contact: Option<HelpContact>,
+    pub invite_error: Option<&'static str>,
 }
 
 impl Page for New<'_> {

@@ -71,7 +71,7 @@ fn redirect(c: &mut Ctx, path: &str, notice: Option<&str>, alert: Option<&str>) 
 }
 pub async fn start(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    concerns::require_sudo_mode(c)?;
+    concerns::require_sudo_mode(c).await?;
     let user = concerns::require_current_user(c)?.clone();
     let Some(workspace) = service(c)
         .current_workspace()
@@ -178,7 +178,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
 }
 pub async fn disconnect(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    concerns::require_sudo_mode(c)?;
+    concerns::require_sudo_mode(c).await?;
     let user = concerns::require_current_user(c)?.clone();
     let path = return_path(&user, &param(c, "return_to"));
     if disconnect_user(c, user).await? {

@@ -20,7 +20,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let bot = super::find_active_bot(c, "bot_id").await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let token = c
         .params
         .get("access_token")
@@ -105,7 +105,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let bot = super::find_active_bot(c, "bot_id").await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let bot_id = bot.id;
     disconnect(c, bot).await?;
     redirect(c, bot_id, "GitHub disconnected.", true)

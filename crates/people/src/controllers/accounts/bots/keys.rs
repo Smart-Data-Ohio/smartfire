@@ -11,7 +11,7 @@ use crate::concerns::{self, Before, require_current_user};
 pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let bot = super::find_active_bot(c, "bot_id").await?;
     let key = reset_key(c, bot).await?;
     c.set_header("cache-control", "no-store");

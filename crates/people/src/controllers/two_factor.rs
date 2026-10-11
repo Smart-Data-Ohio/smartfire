@@ -3,6 +3,7 @@ use super::auth::{self, ResponseMode};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
 use crate::controllers::presenters::page::retained_page;
+use campfire_api_types::{TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::{TwoFactorCredential, TwoFactorRememberedDevice, User};
 use campfire_kit::{
@@ -26,8 +27,8 @@ fn scalar(c: &Ctx, name: &'static str) -> String {
         .and_then(|p| p.to_s())
         .unwrap_or_default()
 }
-fn profile(c: &mut Ctx) -> Result {
-    c.redirect_to(&c.url_for("/users/me/profile"))
+fn profile(c: &mut Ctx, mode: ResponseMode) -> Result {
+    mode.navigate(c, &c.url_for("/users/me/profile"))
 }
 /// IP and per-user limits share the app's WS4 in-process store, as Rails does.
 fn limited(
@@ -50,29 +51,69 @@ pub fn no_store(c: &mut Ctx) {
 }
 
 pub async fn setup_show(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    let mode = setup_mode(c)?;
+    auth::before_actions(c, "two_factor/setups#show", Before::default(), mode).await?;
     ensure_human(c)?;
     no_store(c);
     if enabled(c).await? {
-        return profile(c);
+        return profile(c, mode);
     }
-    render_setup(c, StatusCode::OK).await
+    render_setup(c, StatusCode::OK, mode).await
+}
+
+fn setup_mode(c: &mut Ctx) -> Result<ResponseMode> {
+    Ok(if concerns::sudo::json_request(c)? { ResponseMode::Json } else { ResponseMode::Html })
+}
+
+pub async fn setup_show_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", campfire_kit::Param::Str("json".into()));
+    let result = setup_show(c).await;
+    complete_setup(c, result)
+}
+
+pub async fn setup_create_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", campfire_kit::Param::Str("json".into()));
+    let result = setup_create(c).await;
+    complete_setup(c, result)
+}
+
+fn complete_setup(c: &mut Ctx, result: Result) -> Result {
+    if let Err(Error::Halt(response)) = &result
+        && response.status == StatusCode::UNAUTHORIZED
+        && matches!(response.body, campfire_kit::response::Body::Empty)
+    {
+        return auth::json(c, response.status, &TwoFactorSetupResponse::Navigate {
+            location: c.url_for("/session/new"),
+        });
+    }
+    auth::complete(c, result)
 }
 
 pub async fn setup_create(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    let mode = setup_mode(c)?;
+    auth::before_actions(c, "two_factor/setups#create", Before::default(), mode).await?;
     let user = require_current_user(c)?.clone();
     if limited(c, "two_factor/setups", "per-user", Some(user.id))? {
         no_store(c);
         if enabled(c).await? {
-            return profile(c);
+            return profile(c, mode);
         }
         c.flash()
             .now("alert", "Too many attempts. Try again in a few minutes.");
-        return render_setup(c, StatusCode::TOO_MANY_REQUESTS).await;
+        return render_setup(c, StatusCode::TOO_MANY_REQUESTS, mode).await;
     }
     ensure_human(c)?;
     no_store(c);
+    if mode == ResponseMode::Json {
+        match auth::body::<TwoFactorSetupSubmission>(c).await {
+            Ok(body) => c.params.insert("code", campfire_kit::Param::Str(body.code)),
+            Err(Error::Halt(_)) => {
+                c.flash().now("alert", "The request body isn't valid.");
+                return render_setup(c, StatusCode::UNPROCESSABLE_ENTITY, mode).await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
     let session_id = current_session(c)
         .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?
         .id;
@@ -89,13 +130,13 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
     .await
     .map_err(Error::internal)?;
     match outcome {
-        crate::authentication::Enrollment::Enabled => profile(c),
+        crate::authentication::Enrollment::Enabled => profile(c, mode),
         crate::authentication::Enrollment::Wrong => {
             c.flash().now(
                 "alert",
                 "That code didn't work. Check your authenticator app and try again.",
             );
-            render_setup(c, StatusCode::UNPROCESSABLE_ENTITY).await
+            render_setup(c, StatusCode::UNPROCESSABLE_ENTITY, mode).await
         }
         crate::authentication::Enrollment::Confirmed {
             codes,
@@ -125,7 +166,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
                 .await
                 .map_err(Error::internal)?;
             let continue_url = concerns::post_authenticating_url(c).await?;
-            render_backups(c, codes, signed_out, continue_url).await
+            render_backups(c, codes, signed_out, continue_url, mode).await
         }
     }
 }
@@ -143,8 +184,10 @@ async fn enabled(c: &Ctx) -> Result<bool> {
         .await
         .map_err(Error::internal)
 }
-async fn render_setup(c: &mut Ctx, status: StatusCode) -> Result {
-    c.respond_to(&[&format::HTML])?;
+async fn render_setup(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Result {
+    if mode == ResponseMode::Html {
+        c.respond_to(&[&format::HTML])?;
+    }
     let session_id = current_session(c)
         .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?
         .id;
@@ -171,6 +214,14 @@ async fn render_setup(c: &mut Ctx, status: StatusCode) -> Result {
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<_>>()
         .join(" ");
+    if mode == ResponseMode::Json {
+        let setup = TwoFactorSetupState { secret, manual_key: key, otpauth_uri: uri, qr_svg: qr };
+        let response = match c.flash().alert().map(str::to_owned) {
+            Some(message) => TwoFactorSetupResponse::Error { message, setup },
+            None => TwoFactorSetupResponse::Ready { setup },
+        };
+        return auth::json(c, status, &response);
+    }
     retained_page!(c, status, |ctx| two_factor::Setup {
         ctx,
         key: key.clone(),
@@ -183,7 +234,13 @@ async fn render_backups(
     codes: Vec<String>,
     signed_out: usize,
     continue_url: String,
+    mode: ResponseMode,
 ) -> Result {
+    if mode == ResponseMode::Json {
+        return auth::json(c, StatusCode::OK, &TwoFactorSetupResponse::RecoveryCodes {
+            codes, signed_out, continue_url,
+        });
+    }
     c.respond_to(&[&format::HTML])?;
     retained_page!(c, StatusCode::OK, |ctx| two_factor::BackupCodes {
         ctx,
@@ -668,7 +725,7 @@ async fn management_reply(c: &mut Ctx, outcome: ManagementOutcome, disabling: bo
         ManagementOutcome::NotEnabled => c.redirect_to(&c.url_for("/two_factor_setup")),
         ManagementOutcome::NotHuman => c.redirect_to(&c.url_for("/")),
         ManagementOutcome::Codes(codes) => {
-            render_backups(c, codes, 0, c.url_for("/users/me/profile")).await
+            render_backups(c, codes, 0, c.url_for("/users/me/profile"), ResponseMode::Html).await
         }
         ManagementOutcome::Alert(alert) => reauth_alert(c, alert),
         ManagementOutcome::Notice(notice) => c.redirect_to_with(

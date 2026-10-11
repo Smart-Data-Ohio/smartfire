@@ -14,6 +14,7 @@ pub const TARGET_TYPES: &[&str] = &[
     "AgentGrant",
     "AgentApproval",
     "WorkspaceIcon",
+    "WorkspaceInvite",
 ];
 
 #[derive(Clone, Debug, Default)]
