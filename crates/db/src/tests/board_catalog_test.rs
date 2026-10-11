@@ -276,3 +276,39 @@ fn board_catalog_unicode_rename_merges_legacy_case_equivalent_tags() {
     assert!(names(&t, &curated).is_empty());
     assert_eq!(names(&t, &other_post), ["strasse"]);
 }
+
+#[test]
+fn board_catalog_deleting_the_last_tag_lifts_the_requirement() {
+    let t = channel_thread_test::frozen();
+    let room_id = board(&t);
+    let bug = t.write(move |tx| BoardTag::create(tx, room_id, "Bug", None));
+    let idea = t.write(move |tx| BoardTag::create(tx, room_id, "Idea", None));
+    t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, Some(idea.id)));
+    // Two admins each delete a tag without seeing the other's: neither asks to lift the requirement.
+    t.write(move |tx| BoardTag::destroy(tx, room_id, bug.id));
+    let policy = t.read(|conn| BoardTagPolicy::for_room(conn, room_id));
+    assert!(policy.tags_required, "a tag is still there to meet it");
+    assert_eq!(policy.default_board_tag_id, Some(idea.id));
+    t.write(move |tx| BoardTag::destroy(tx, room_id, idea.id));
+    let policy = t.read(|conn| BoardTagPolicy::for_room(conn, room_id));
+    assert!(!policy.tags_required);
+    assert_eq!(policy.default_board_tag_id, None);
+    assert_eq!(names(&t, &post(&t, room_id, &[]).unwrap()), Vec::<String>::new());
+    assert!(t.try_write(move |tx| BoardTagPolicy::update(tx, room_id, true, None)).is_err(), "nothing to require");
+    t.write(move |tx| BoardTagPolicy::update(tx, room_id, false, None));
+}
+
+/// The SPA folds names to match these (frontend/src/lib/case-fold.test.ts holds the same table).
+#[test]
+fn board_catalog_case_folding_pins_the_spa_table() {
+    for (name, folded) in [
+        ("Straße", "strasse"), ("STRASSE", "strasse"), ("\u{1e9e}", "ss"),
+        ("İstanbul", "i\u{307}stanbul"), ("ISTANBUL", "istanbul"), ("ı", "ı"),
+        ("ΟΔΟΣ", "οδοσ"), ("οδος", "οδοσ"), ("ﬁle", "file"), ("ﬀ", "ff"),
+        ("Ꭰ", "Ꭰ"), ("ꭰ", "Ꭰ"), ("ǅ", "ǆ"), ("\u{212a}", "k"), ("µ", "μ"), ("Équipe", "équipe"),
+    ] {
+        assert_eq!(caseless::default_case_fold_str(name), folded, "{name}");
+    }
+    assert!(caseless::default_caseless_match_str("Straße", "STRASSE"));
+    assert!(!caseless::default_caseless_match_str("ı", "I"));
+}

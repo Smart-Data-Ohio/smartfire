@@ -47,13 +47,17 @@ function installCatalog(start: Omit<BoardTagCatalog, "roomId">) {
         ],
       }),
     ),
-    remove: vi.spyOn(actions.boards, "deleteTag").mockImplementation((_, id) =>
-      answer({
+    remove: vi.spyOn(actions.boards, "deleteTag").mockImplementation((_, id) => {
+      const tags = catalog.tags.filter((tag) => tag.id !== id);
+
+      // As `BoardTag::destroy`: the last tag takes the requirement with it.
+      return answer({
         ...catalog,
-        tags: catalog.tags.filter((tag) => tag.id !== id),
+        tags,
+        tagsRequired: catalog.tagsRequired && tags.length > 0,
         defaultBoardTagId: catalog.defaultBoardTagId === id ? null : catalog.defaultBoardTagId,
-      }),
-    ),
+      });
+    }),
     policy: vi
       .spyOn(actions.boards, "updateTagPolicy")
       .mockImplementation((_, body) => answer({ ...catalog, ...body })),
@@ -131,13 +135,13 @@ describe("the board tag editor", () => {
     await user.click(within(confirm).getByRole("button", { name: "Delete tag" }));
 
     await waitFor(() => expect(server.remove).toHaveBeenCalledWith(ROOM, 1));
-    await waitFor(() =>
-      expect(server.policy).toHaveBeenCalledWith(ROOM, {
-        tagsRequired: false,
-        defaultBoardTagId: null,
-      }),
-    );
     expect(await screen.findByText("No tags yet. Add the first below.")).toBeTruthy();
+    // The server lifted the requirement in the delete itself; no second write can fail or race.
+    expect(screen.getByRole("switch", { name: /Require a tag/ }).getAttribute("aria-checked")).toBe(
+      "false",
+    );
+    expect(screen.queryByText("Saving…")).toBeNull();
+    expect(server.policy).not.toHaveBeenCalled();
   });
 
   it("sets the default and the requirement from the rules", async () => {
@@ -165,6 +169,48 @@ describe("the board tag editor", () => {
         tagsRequired: true,
         defaultBoardTagId: 2,
       }),
+    );
+  });
+
+  it("builds each queued rule change on the answer to the one before it", async () => {
+    const server = installCatalog({
+      tags: [bug, idea],
+      tagsRequired: false,
+      defaultBoardTagId: null,
+    });
+
+    const first = Promise.withResolvers<void>();
+    const answer = server.policy.getMockImplementation();
+
+    server.policy.mockImplementationOnce(async (roomId, body) => {
+      await first.promise;
+
+      if (answer === undefined) throw new Error("no answer");
+
+      return answer(roomId, body);
+    });
+
+    const user = userEvent.setup();
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    await user.selectOptions(await screen.findByLabelText("Start new posts with"), "2");
+    // Shown at once, while the server hasn't answered.
+    expect(screen.getByLabelText<HTMLSelectElement>("Start new posts with").value).toBe("2");
+    await user.click(screen.getByRole("switch", { name: /Require a tag on new posts/ }));
+    expect(server.policy).toHaveBeenCalledTimes(1);
+
+    first.resolve();
+
+    await waitFor(() => expect(server.policy).toHaveBeenCalledTimes(2));
+    expect(server.policy).toHaveBeenLastCalledWith(ROOM, {
+      tagsRequired: true,
+      defaultBoardTagId: 2,
+    });
+    await waitFor(() => expect(screen.queryByText("Saving…")).toBeNull());
+    expect(screen.getByLabelText<HTMLSelectElement>("Start new posts with").value).toBe("2");
+    expect(screen.getByRole("switch", { name: /Require a tag/ }).getAttribute("aria-checked")).toBe(
+      "true",
     );
   });
 });

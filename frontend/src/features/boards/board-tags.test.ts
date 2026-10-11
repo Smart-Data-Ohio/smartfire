@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BoardTag } from "../../gen/BoardTag.ts";
 import {
+  addedDefault,
   deleteConsequences,
   EMPTY_CATALOG,
   initialSelection,
@@ -40,19 +41,40 @@ describe("board tag selection", () => {
     ]);
     expect(postTagNames(tags, [1], ["bug report"])).toEqual(["Bug report"]);
   });
+
+  it("matches names under the server's full case folding", () => {
+    const street: BoardTag = { id: 3, name: "Straße", emoji: null, position: 2 };
+    const sigma: BoardTag = { id: 4, name: "ΟΔΟΣ", emoji: null, position: 3 };
+
+    expect(postTagNames([street, sigma], [], ["STRASSE", "οδος"])).toEqual(["Straße", "ΟΔΟΣ"]);
+    expect(tagNameProblem([street], "strasse")).toBe("“Straße” is already a tag here.");
+    expect(tagNameProblem([sigma], "οδος")).toBe("“ΟΔΟΣ” is already a tag here.");
+    expect(tagNameProblem([{ ...street, name: "ı" }], "I")).toBeUndefined();
+  });
 });
 
 describe("postTagsProblem", () => {
-  it("asks for a curated tag on a board that requires one, even with a default", () => {
+  it("asks for a curated tag on a board that requires one and has no default", () => {
     expect(postTagsProblem(catalog({ tagsRequired: true }), ["api"])).toEqual({
       field: "catalog",
       message: REQUIRED_TAG_MESSAGE,
     });
-    expect(
-      postTagsProblem(catalog({ tagsRequired: true, defaultBoardTagId: 2 }), []),
-    ).toMatchObject({ field: "catalog" });
     expect(postTagsProblem(catalog({ tagsRequired: true }), ["idea"])).toBeUndefined();
     expect(postTagsProblem({ ...EMPTY_CATALOG, tagsRequired: true }, [])).toBeUndefined();
+  });
+
+  it("lets the default stand in, as the server adds it, and counts it toward five", () => {
+    const required = catalog({ tagsRequired: true, defaultBoardTagId: 2 });
+
+    expect(postTagsProblem(required, [])).toBeUndefined();
+    expect(postTagsProblem(required, ["api"])).toBeUndefined();
+    expect(addedDefault(required, ["api"])).toBe(idea);
+    expect(addedDefault(required, ["Bug report"])).toBeUndefined();
+    expect(addedDefault(catalog({ defaultBoardTagId: 2 }), [])).toBeUndefined();
+    expect(postTagsProblem(required, ["a", "b", "c", "d", "e"])).toEqual({
+      field: "tags",
+      message: "Use up to 4 tags: Idea is added as well.",
+    });
   });
 
   it("counts every tag toward five and checks only free text against the grammar", () => {

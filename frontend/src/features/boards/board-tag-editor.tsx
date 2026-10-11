@@ -9,7 +9,7 @@ import {
 import type { BoardTag } from "../../gen/BoardTag.ts";
 import type { BoardTagCatalog } from "../../gen/BoardTagCatalog.ts";
 import { LazyEmojiPicker, preloadEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
-import { useStore } from "../../store/store.ts";
+import { store, useStore } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -226,6 +226,11 @@ function EditorSkeleton() {
   );
 }
 
+interface PolicyPatch {
+  readonly tagsRequired?: boolean;
+  readonly defaultBoardTagId?: number | null;
+}
+
 /**
  * A board's curated tags (Discord's forum tags), for its creator and administrators: add one
  * with an emoji, rename it, change its emoji, drag it (or move it with the arrow keys) into
@@ -254,6 +259,10 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   const drag = useRef<Drag | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
   const newNameRef = useRef<HTMLInputElement | null>(null);
+  /** The last queued write's answer, while more are queued behind it. */
+  const answered = useRef<BoardTagCatalog | undefined>(undefined);
+  /** Policy changes made but not yet answered, shown over the catalog meanwhile. */
+  const [policyDraft, setPolicyDraft] = useState<PolicyPatch>({});
   /** The row the delete confirmation was opened from, for focus to land near when it closes. */
   const confirmedAt = useRef(0);
   const handles = useRef(new Map<number, HTMLButtonElement>());
@@ -295,12 +304,24 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
 
   useLiveFlip(listRef, ids.join(","), String(roomId));
 
-  /** Runs `write` after every change made before it, so the server sees them in order. */
-  const enqueue = <T,>(write: () => Promise<T>): Promise<T> => {
+  /**
+   * Runs `write` after every change made before it, so the server sees them in order. It gets
+   * the catalog as of the change before it (that write's answer, else the store's), so a field
+   * it doesn't change goes out as the server now has it, not as it was when the change was made.
+   */
+  const enqueue = (
+    write: (base: BoardTagCatalog | undefined) => Promise<BoardTagCatalog>,
+  ): Promise<BoardTagCatalog> => {
     pendingRef.current += 1;
     setPending((count) => count + 1);
 
-    const result = queue.current.then(write);
+    const result = queue.current.then(() =>
+      write(answered.current ?? store.getState().boardTagCatalogs[roomId]).then((answer) => {
+        answered.current = answer;
+
+        return answer;
+      }),
+    );
 
     queue.current = result
       .catch(() => undefined)
@@ -308,7 +329,11 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
         pendingRef.current -= 1;
         setPending((count) => count - 1);
 
-        if (pendingRef.current === 0) setOrder(null);
+        if (pendingRef.current === 0) {
+          answered.current = undefined;
+          setOrder(null);
+          setPolicyDraft({});
+        }
       });
 
     return result;
@@ -317,7 +342,9 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   const failed = (title: string) => (failure: Error) => {
     toast({ title, description: refusalText(failure), tone: "danger" });
     // Whatever the change was, show the catalog as the server now has it.
+    answered.current = undefined;
     setOrder(null);
+    setPolicyDraft({});
     refreshBoardTags(roomId);
   };
 
@@ -409,23 +436,25 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   };
 
   const saveTag = (tag: BoardTag, patch: { name?: string; emoji?: string | null }) =>
-    enqueue(() =>
-      actions.boards.updateTag(roomId, tag.id, {
-        name: patch.name ?? tag.name,
-        emoji: patch.emoji === undefined ? tag.emoji : patch.emoji,
-      }),
-    );
+    enqueue((base) => {
+      // An earlier queued rename or emoji change has landed by now: keep it.
+      const now = base?.tags.find((held) => held.id === tag.id) ?? tag;
 
-  const savePolicy = (patch: { tagsRequired?: boolean; defaultBoardTagId?: number | null }) => {
+      return actions.boards.updateTag(roomId, tag.id, {
+        name: patch.name ?? now.name,
+        emoji: patch.emoji === undefined ? now.emoji : patch.emoji,
+      });
+    });
+
+  const savePolicy = (patch: PolicyPatch) => {
     if (catalog === undefined) return;
 
-    enqueue(() =>
+    setPolicyDraft((draft) => ({ ...draft, ...patch }));
+    enqueue((base = catalog) =>
       actions.boards.updateTagPolicy(roomId, {
-        tagsRequired: patch.tagsRequired ?? catalog.tagsRequired,
+        tagsRequired: patch.tagsRequired ?? base.tagsRequired,
         defaultBoardTagId:
-          patch.defaultBoardTagId === undefined
-            ? catalog.defaultBoardTagId
-            : patch.defaultBoardTagId,
+          patch.defaultBoardTagId === undefined ? base.defaultBoardTagId : patch.defaultBoardTagId,
       }),
     ).catch(failed("Couldn't save the tag rules"));
   };
@@ -465,24 +494,14 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
     if (deleting === null || catalog === undefined) return;
 
     const tag = deleting;
-    const { liftsRequirement } = deleteConsequences(catalog, tag, postsUsing(counts, tag.name));
 
     setRemoving(true);
+    // The server lifts a requirement the last tag held up in the same write, and answers with it.
     enqueue(() => actions.boards.deleteTag(roomId, tag.id))
       .then(() => {
         setRemoving(false);
         setDeleting(null);
         announce(`Deleted ${tag.name}.`);
-
-        // A requirement nothing can meet would refuse every new post.
-        if (liftsRequirement) {
-          enqueue(() =>
-            actions.boards.updateTagPolicy(roomId, {
-              tagsRequired: false,
-              defaultBoardTagId: null,
-            }),
-          ).catch(failed("Couldn't stop requiring a tag"));
-        }
       })
       .catch((failure: Error) => {
         setRemoving(false);
@@ -513,6 +532,12 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
   }
 
   const full = tags.length >= MAX_BOARD_TAGS;
+  const shownRequired = policyDraft.tagsRequired ?? catalog.tagsRequired;
+
+  const shownDefault =
+    policyDraft.defaultBoardTagId === undefined
+      ? catalog.defaultBoardTagId
+      : policyDraft.defaultBoardTagId;
 
   const consequences =
     deleting === null
@@ -536,7 +561,7 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
       ) : (
         <ol className="tag-editor-list" ref={listRef} aria-label="Board tags">
           {shown.map((tag, index) => {
-            const isDefault = catalog.defaultBoardTagId === tag.id;
+            const isDefault = shownDefault === tag.id;
 
             return (
               <li
@@ -680,8 +705,8 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
       </section>
       <section className="tag-editor-policy" aria-label="Tag rules">
         <Toggle
-          checked={catalog.tagsRequired}
-          disabled={tags.length === 0 && !catalog.tagsRequired}
+          checked={shownRequired}
+          disabled={tags.length === 0 && !shownRequired}
           onCheckedChange={(tagsRequired) => savePolicy({ tagsRequired })}
           label="Require a tag on new posts"
           description={
@@ -697,7 +722,7 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
           <select
             id={defaultId}
             className="input board-select"
-            value={catalog.defaultBoardTagId ?? ""}
+            value={shownDefault ?? ""}
             disabled={tags.length === 0}
             aria-describedby={`${defaultId}-hint`}
             onChange={(event) =>
@@ -715,7 +740,7 @@ export function BoardTagEditor({ roomId }: { readonly roomId: number }) {
           </select>
           <p id={`${defaultId}-hint`} className="field-hint">
             Picked to start with on every new post.
-            {catalog.tagsRequired ? " A post sent without a tag gets it." : ""}
+            {shownRequired ? " A post sent without a tag gets it." : ""}
           </p>
         </div>
         {pending > 0 ? (

@@ -1,5 +1,6 @@
 import type { BoardTag } from "../../src/gen/BoardTag.ts";
 import type { BoardTagCatalog } from "../../src/gen/BoardTagCatalog.ts";
+import { caselessEqual } from "../../src/lib/case-fold.ts";
 import { forbidden, HttpError, notFound, ok, validation } from "../http.ts";
 import {
   booleanField,
@@ -23,9 +24,8 @@ export interface BoardTagState {
 
 const VALIDATION = "Validation";
 
-/** The server folds case with Unicode rules; lower-casing agrees for the mock's names. */
-const same = (left: string, right: string) =>
-  left.trim().toLowerCase() === right.trim().toLowerCase();
+/** The server's name comparison: trimmed, under full Unicode case folding. */
+const same = (left: string, right: string) => caselessEqual(left.trim(), right.trim());
 
 function tagState(world: World, roomId: number): BoardTagState | null {
   const room = world.rooms.get(roomId);
@@ -234,6 +234,9 @@ export function createBoardTags(ctx: TagContext) {
 
     if (state.defaultBoardTagId === tagId) state.defaultBoardTagId = null;
 
+    // `BoardTag::destroy`: the last tag takes a requirement with it, so the board stays postable.
+    if (state.tags.length === 0) state.tagsRequired = false;
+
     for (const post of posts(roomId)) {
       if (post.work != null)
         post.work.tags = post.work.tags.filter((held) => !same(held, tag.name));
@@ -268,6 +271,9 @@ export function createBoardTags(ctx: TagContext) {
 
     if (defaultId !== null && !state.tags.some((tag) => tag.id === defaultId))
       throw validation("default_board_tag_id", "must belong to this board");
+
+    if (required && state.tags.length === 0)
+      throw validation("tags_required", "needs at least one board tag");
 
     state.tagsRequired = required;
     state.defaultBoardTagId = defaultId;

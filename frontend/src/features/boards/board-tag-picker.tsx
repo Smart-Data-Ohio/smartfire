@@ -9,6 +9,8 @@ interface BoardTagPickerProps {
   readonly required: boolean;
   /** The board's default, named in the hint so the pre-selected chip explains itself. */
   readonly defaultName: string | undefined;
+  /** The default the server will add because nothing curated is picked on a board that requires one. */
+  readonly added: string | undefined;
   readonly error: string | undefined;
   /** Bump to shake again for the same error (a second failed submit). */
   readonly attempt: number;
@@ -27,6 +29,7 @@ export function BoardTagPicker({
   selected,
   required,
   defaultName,
+  added,
   error,
   attempt,
   onToggle,
@@ -44,11 +47,13 @@ export function BoardTagPicker({
   }
 
   const hint =
-    defaultName === undefined
-      ? required
-        ? "Pick at least one."
-        : "Pick any that fit."
-      : `${defaultName} is the board's default.`;
+    added !== undefined
+      ? `${added} will be added, since this board requires a tag.`
+      : defaultName !== undefined
+        ? `${defaultName} is the board's default.`
+        : required
+          ? "Pick at least one."
+          : "Pick any that fit.";
 
   return (
     <fieldset

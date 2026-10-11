@@ -135,7 +135,7 @@ test("a board admin curates tags from the toolbar's tag filter", async ({ page }
   await expect(strip.getByRole("button", { name: /Bug/ })).toHaveCount(0);
 });
 
-test("a post on a board that requires a tag starts with the default and needs one", async ({
+test("a post on a board that requires a tag starts with the default, which stands in", async ({
   page,
   request,
 }) => {
@@ -153,15 +153,52 @@ test("a post on a board that requires a tag starts with the default and needs on
 
   const dialog = page.getByRole("dialog", { name: "New post" });
   const picker = dialog.getByRole("group", { name: /Board tags/ });
-  const bug = picker.getByRole("button", { name: /Bug/ });
   const idea = picker.getByRole("button", { name: /Idea/ });
 
   await expect(picker.getByText("Required")).toBeVisible();
   await expect(idea).toHaveAttribute("aria-pressed", "true");
-  await expect(bug).toHaveAttribute("aria-pressed", "false");
+  await expect(picker.getByRole("button", { name: /Bug/ })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   await expect(picker.getByText("Idea is the board's default.")).toBeVisible();
 
+  // Nothing picked: the server adds the default, so the form says so and lets the post through.
   await idea.click();
+  await expect(
+    picker.getByText("Idea will be added, since this board requires a tag."),
+  ).toBeVisible();
+  await dialog.getByLabel("Title").fill("Sketch a dark mode");
+  await dialog.getByRole("button", { name: "Create post" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page
+      .getByRole("complementary", { name: "Sketch a dark mode" })
+      .getByRole("listitem")
+      .filter({ hasText: /^💡\s*Idea$/ }),
+  ).toBeVisible();
+});
+
+test("a post on a board that requires a tag and has no default needs one picked", async ({
+  page,
+  request,
+}) => {
+  await curate(request, {
+    tags: [
+      { name: "Bug", emoji: "🐞" },
+      { name: "Idea", emoji: "💡" },
+    ],
+    tagsRequired: true,
+  });
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, `r/${BOARD}`);
+  await page.getByRole("button", { name: "New post" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "New post" });
+  const picker = dialog.getByRole("group", { name: /Board tags/ });
+  const bug = picker.getByRole("button", { name: /Bug/ });
+
+  await expect(picker.getByText("Pick at least one.")).toBeVisible();
   await dialog.getByLabel("Title").fill("Crash when saving drafts");
   await dialog.getByRole("button", { name: "Create post" }).click();
   await expect(picker.getByText("Pick at least one of this board's tags.")).toBeVisible();

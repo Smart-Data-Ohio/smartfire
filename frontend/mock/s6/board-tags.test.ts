@@ -243,6 +243,72 @@ describe("mock board tag catalog", () => {
       listing.posts.find(({ thread }) => thread.id === made.thread.id)?.thread.work?.tags,
     ).toEqual(["Proposal"]);
   });
+
+  it("lifts the requirement with the last tag and refuses one with nothing to meet it", async () => {
+    const { server } = harness();
+
+    const seeded = await seedCatalog(server, {
+      tags: [{ name: "Bug" }, { name: "Idea" }],
+      tagsRequired: true,
+      defaultTag: "Idea",
+    });
+
+    const [bug, idea] = seeded.tags;
+
+    if (bug === undefined || idea === undefined) throw new Error("Tags missing");
+
+    const one = await expectStatus<BoardTagCatalog>(
+      server,
+      "DELETE",
+      `${root}/board/tags/${bug.id}`,
+      null,
+      200,
+    );
+
+    expect(one.tagsRequired).toBe(true);
+
+    const none = await expectStatus<BoardTagCatalog>(
+      server,
+      "DELETE",
+      `${root}/board/tags/${idea.id}`,
+      null,
+      200,
+    );
+
+    expect([none.tagsRequired, none.defaultBoardTagId]).toEqual([false, null]);
+    await expectStatus<ThreadDetail>(server, "POST", `${root}/posts`, post([]), 201);
+
+    const refused = await send(server, "PATCH", `${root}/board`, {
+      tagsRequired: true,
+      defaultBoardTagId: null,
+    });
+
+    expect(fieldsOf(refused)).toEqual({ tags_required: ["needs at least one board tag"] });
+  });
+
+  it("matches names and filters under full case folding", async () => {
+    const { server } = harness();
+
+    await seedCatalog(server, { tags: [{ name: "Straße" }] });
+
+    const made = await expectStatus<ThreadDetail>(
+      server,
+      "POST",
+      `${root}/posts`,
+      post(["STRASSE"]),
+      201,
+    );
+
+    expect(made.thread.work?.tags).toEqual(["Straße"]);
+
+    const filtered = await get<BoardListing>(server, `${root}/board?tag=strasse`);
+
+    expect(filtered.tag).toBe("Straße");
+    expect(filtered.posts.map(({ thread }) => thread.id)).toEqual([made.thread.id]);
+    expect(fieldsOf(await send(server, "POST", `${root}/board/tags`, { name: "STRASSE" }))).toEqual(
+      { name: ["has already been taken"] },
+    );
+  });
 });
 
 describe("mock board tag authorization", () => {

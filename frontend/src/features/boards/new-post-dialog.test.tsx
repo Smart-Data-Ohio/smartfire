@@ -304,15 +304,37 @@ describe("the new-post dialog", () => {
       );
     });
 
-    it("holds the post until a required tag is picked, then names the problem and focuses the chips", async () => {
+    it("sends a required board's post with nothing picked when the server adds the default", async () => {
       const create = catalog(true, 2);
       const user = userEvent.setup();
 
       render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
 
-      expect(screen.getByText("Required")).toBeTruthy();
+      expect(screen.getByText("Idea is the board's default.")).toBeTruthy();
 
       await user.click(chip("Idea"));
+
+      expect(screen.getByText("Idea will be added, since this board requires a tag.")).toBeTruthy();
+
+      await user.type(screen.getByLabelText("Title"), "Default fills in");
+      await user.type(screen.getByLabelText(/More tags/), "api");
+      await user.click(screen.getByRole("button", { name: "Create post" }));
+
+      await waitFor(() =>
+        expect(create).toHaveBeenCalledWith(900, expect.objectContaining({ tags: ["api"] })),
+      );
+      expect(screen.queryByText("Pick at least one of this board's tags.")).toBeNull();
+    });
+
+    it("holds the post until a required tag is picked when there's no default, and focuses the chips", async () => {
+      const create = catalog(true, null);
+      const user = userEvent.setup();
+
+      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+
+      expect(screen.getByText("Required")).toBeTruthy();
+      expect(screen.getByText("Pick at least one.")).toBeTruthy();
+
       await user.type(screen.getByLabelText("Title"), "Untagged");
       await user.click(screen.getByRole("button", { name: "Create post" }));
 

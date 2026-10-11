@@ -5,6 +5,7 @@
 import type { BoardTag } from "../../gen/BoardTag.ts";
 import type { BoardTagCatalog } from "../../gen/BoardTagCatalog.ts";
 import type { BoardTagCount } from "../../gen/BoardTagCount.ts";
+import { caselessEqual } from "../../lib/case-fold.ts";
 import { MAX_TAGS, tagsProblem } from "./board-format.ts";
 
 /** A board holds at most 20 curated tags. */
@@ -20,12 +21,9 @@ export const EMPTY_CATALOG: Omit<BoardTagCatalog, "roomId"> = {
   defaultBoardTagId: null,
 };
 
-/**
- * The server compares names with Unicode case folding; lower-casing both sides agrees with it
- * for every name the form can tell apart before asking.
- */
+/** Whether the server takes two tag names for one: trimmed, under full Unicode case folding. */
 export function sameTagName(left: string, right: string): boolean {
-  return left.trim().toLowerCase() === right.trim().toLowerCase();
+  return caselessEqual(left.trim(), right.trim());
 }
 
 /** The curated tag a post's tag name stands for, if any. */
@@ -87,20 +85,47 @@ export function hasCatalogTag(tags: readonly BoardTag[], names: readonly string[
 export const REQUIRED_TAG_MESSAGE = "Pick at least one of this board's tags.";
 
 /**
+ * The tag the server adds to a post sent with `names`: the default, on a board that requires a
+ * tag, when none of `names` is curated (`BoardTagPolicy::post_tags`).
+ */
+export function addedDefault(
+  catalog: Omit<BoardTagCatalog, "roomId">,
+  names: readonly string[],
+): BoardTag | undefined {
+  return catalog.tagsRequired && !hasCatalogTag(catalog.tags, names)
+    ? defaultTag(catalog)
+    : undefined;
+}
+
+/**
  * What the server would refuse about a new post's tags, said for the form: a required tag
- * missing, more than five in all, or a free-text tag outside the classic grammar. Curated
- * labels skip the grammar (they may hold spaces and capitals).
+ * missing with no default to stand in, more than five in all (the default it adds counts), or
+ * a free-text tag outside the classic grammar. Curated labels skip the grammar (they may hold
+ * spaces and capitals).
  */
 export function postTagsProblem(
   catalog: Omit<BoardTagCatalog, "roomId">,
   names: readonly string[],
 ): { readonly field: "catalog" | "tags"; readonly message: string } | undefined {
-  if (catalog.tagsRequired && catalog.tags.length > 0 && !hasCatalogTag(catalog.tags, names)) {
+  const added = addedDefault(catalog, names);
+
+  if (
+    catalog.tagsRequired &&
+    catalog.tags.length > 0 &&
+    added === undefined &&
+    !hasCatalogTag(catalog.tags, names)
+  ) {
     return { field: "catalog", message: REQUIRED_TAG_MESSAGE };
   }
 
-  if (names.length > MAX_TAGS) {
-    return { field: "tags", message: `Use up to ${MAX_TAGS} tags in all.` };
+  if (names.length + (added === undefined ? 0 : 1) > MAX_TAGS) {
+    return {
+      field: "tags",
+      message:
+        added === undefined
+          ? `Use up to ${MAX_TAGS} tags in all.`
+          : `Use up to ${MAX_TAGS - 1} tags: ${added.name} is added as well.`,
+    };
   }
 
   const free = names.filter((name) => catalogTag(catalog.tags, name) === undefined);

@@ -23,6 +23,7 @@ import { isAgent } from "../people/people.ts";
 import { MAX_TAGS, parseTags, WORK_STATUS_LABEL, WORK_STATUSES } from "./board-format.ts";
 import { BoardTagPicker } from "./board-tag-picker.tsx";
 import {
+  addedDefault,
   catalogTag,
   defaultTag,
   EMPTY_CATALOG,
@@ -528,6 +529,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
             selected={selection}
             required={catalog.tagsRequired}
             defaultName={defaultTag(catalog)?.name}
+            added={addedDefault(catalog, tags)?.name}
             error={fieldMessage(fields, "catalog")}
             attempt={attempt}
             firstRef={firstChipRef}

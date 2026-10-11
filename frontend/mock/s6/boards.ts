@@ -2,6 +2,7 @@ import type { BoardListing } from "../../src/gen/BoardListing.ts";
 import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { BoardStatusFilter } from "../../src/gen/BoardStatusFilter.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
+import { caselessEqual } from "../../src/lib/case-fold.ts";
 import { notFound, ok, validation } from "../http.ts";
 import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
 import { firstId, route, type S2Context } from "../s2/context.ts";
@@ -106,7 +107,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
         if (/^\d+$/.test(owner) && work.owner?.id !== Number(owner)) return false;
 
-        return tag === "" || work.tags.some((held) => held.toLowerCase() === tag.toLowerCase());
+        return tag === "" || work.tags.some((held) => caselessEqual(held, tag));
       })
       .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) || b.id - a.id);
 

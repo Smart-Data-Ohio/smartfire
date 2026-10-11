@@ -85,11 +85,11 @@ describe("board selectors and reducers", () => {
       boardPostIds(filter(event(state, "thread.created", badgeAgent), "agents"), BOARD),
     ).toEqual([6, 3]);
   });
-  it("uses exact lowercase tags and sorts by activity before descending id", () => {
+  it("matches whole tags under case folding, as the server does, and sorts by activity before descending id", () => {
     const state = loaded();
     expect(boardPostIds(filter(state, "anyone", "open", "api"), BOARD)).toEqual([3, 1]);
     expect(boardPostIds(filter(state, "anyone", "all", "ap"), BOARD)).toEqual([]);
-    expect(boardPostIds(filter(state, "anyone", "all", "API"), BOARD)).toEqual([]);
+    expect(boardPostIds(filter(state, "anyone", "all", "API"), BOARD)).toEqual([3, 1]);
 
     const changed = {
       ...threads[0],
@@ -117,6 +117,16 @@ describe("board selectors and reducers", () => {
 
     expect(boardPostIds(event(state, "thread.updated", moved), BOARD)).toEqual([1]);
     expect(boardPostIds(event(state, "thread.created", untagged), BOARD)).toEqual([1]);
+  });
+
+  it("filters under the server's full case folding, not lower-casing", () => {
+    const street = boardThread(1, "planned", 7, ["Straße"]);
+    const query = { ...defaultBoardQuery, status: "all" as const, tag: "strasse" };
+    const pending = setBoardLoading({ ...initialState, me: meFixture }, BOARD, query);
+    const state = loadBoardListing(pending, { ...boardListing([street]), ...query }, 1);
+    const moved = { ...street, lastActivityAt: "2026-10-07T11:00:00.000Z" };
+
+    expect(boardPostIds(event(state, "thread.updated", moved), BOARD)).toEqual([1]);
   });
   it("returns ordered columns and moves rows on work updates", () => {
     const state = loaded();

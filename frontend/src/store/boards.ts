@@ -7,6 +7,7 @@ import type { BoardStatusFilter } from "../gen/BoardStatusFilter.ts";
 import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { BoardTagCount } from "../gen/BoardTagCount.ts";
 import type { Thread } from "../gen/Thread.ts";
+import { caselessEqual } from "../lib/case-fold.ts";
 import { mergeUserList } from "./ordering.ts";
 import type { State } from "./state.ts";
 
@@ -269,8 +270,8 @@ function matches(state: State, thread: Thread, query: BoardQuery): boolean {
 
   if (/^\d+$/.test(query.owner) && work.owner?.id !== Number(query.owner)) return false;
 
-  // The query's tag is lower-cased; a curated label ("Bug report") keeps its capitals.
-  return query.tag === "" || work.tags.some((tag) => tag.toLowerCase() === query.tag);
+  // As the server filters: a curated label ("Bug report", "Straße") matches under case folding.
+  return query.tag === "" || work.tags.some((tag) => caselessEqual(tag, query.tag));
 }
 
 /** Live facts determine filtering and order within the server window and live arrivals. */

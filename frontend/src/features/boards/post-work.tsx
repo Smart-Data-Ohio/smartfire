@@ -33,7 +33,7 @@ import {
   WORK_STATUSES,
 } from "./board-format.ts";
 import { OwnerLine, StatusChip, TagList, UserFace } from "./board-parts.tsx";
-import { defaultTag, EMPTY_CATALOG, postTagsProblem } from "./board-tags.ts";
+import { EMPTY_CATALOG, postTagsProblem } from "./board-tags.ts";
 import { PostLinks } from "./post-links.tsx";
 
 const RESULT_MAX = 20_000;
@@ -302,12 +302,7 @@ function TagsFact({
  * grammar, and a board that requires a tag needs one of its own unless its default fills in.
  */
 function editedTagsProblem(catalog: BoardTagCatalog, names: readonly string[]): string | undefined {
-  const fills = defaultTag(catalog) !== undefined;
-
-  const problem = postTagsProblem(
-    { ...catalog, tagsRequired: catalog.tagsRequired && !fills },
-    names,
-  );
+  const problem = postTagsProblem(catalog, names);
 
   if (problem?.field === "catalog") {
     return `Include one of this board's tags: ${catalog.tags.map((tag) => tag.name).join(", ")}.`;

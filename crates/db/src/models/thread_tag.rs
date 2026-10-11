@@ -245,6 +245,13 @@ impl BoardTag {
         let tag = Self::find(tx.conn(), room_id, id)?;
         for used in tag.uses(tx.conn())? { used.destroy(tx)?; }
         tx.conn().execute("DELETE FROM board_tags WHERE id=?", [id])?;
+        // A requirement with no tag left to meet it would refuse every post: the last tag takes it along.
+        if !sql::exists(tx.conn(), "SELECT 1 FROM board_tags WHERE room_id=?", [room_id])? {
+            tx.conn().execute(
+                "UPDATE rooms SET tags_required=0,default_board_tag_id=NULL,updated_at=? WHERE id=? AND tags_required",
+                params![tx.now(), room_id],
+            )?;
+        }
         Ok(())
     }
 
@@ -290,6 +297,12 @@ impl BoardTagPolicy {
             && !sql::exists(tx.conn(), "SELECT 1 FROM board_tags WHERE room_id=? AND id=?", params![room_id,id])? {
             let mut errors = Errors::default();
             errors.add("default_board_tag_id", "must belong to this board");
+            errors.into_result()?;
+        }
+        // Required with nothing to pick would refuse every post (see `BoardTag::destroy`).
+        if required && !sql::exists(tx.conn(), "SELECT 1 FROM board_tags WHERE room_id=?", [room_id])? {
+            let mut errors = Errors::default();
+            errors.add("tags_required", "needs at least one board tag");
             errors.into_result()?;
         }
         tx.conn().execute("UPDATE rooms SET tags_required=?,default_board_tag_id=?,updated_at=? WHERE id=?", params![required,default_id,tx.now(),room_id])?;
