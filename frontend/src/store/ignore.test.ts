@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { messageFixture, sidebarRowFixture, userFixture } from "../api/testing.ts";
-import { blocksRequest, ignoresStale, isIgnored, messageIgnored } from "./ignores.ts";
+import { meFixture, messageFixture, sidebarRowFixture, userFixture } from "../api/testing.ts";
+import { ignoresStale, isIgnored, messageIgnored } from "./ignores.ts";
 import {
   applyBlockState,
   applyEvents,
   applyPage,
-  identifyIgnores,
   invalidateIgnores,
   receiveMessage,
   setBlocks,
@@ -41,14 +40,14 @@ describe("personal ignore sync", () => {
           seq: 1,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: true, revision: 3 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: true, revision: 3 },
         },
       ],
       0,
     );
 
-    expect(collapsed(setBlocks(blocked, { people: [], revision: 2 }))).toBe(true);
-    const reconnected = setBlocks(blocked, { people: [], revision: 4 });
+    expect(collapsed(setBlocks(blocked, { viewerId: 7, people: [], revision: 2 }))).toBe(true);
+    const reconnected = setBlocks(blocked, { viewerId: 7, people: [], revision: 4 });
     expect(collapsed(reconnected)).toBe(false);
 
     const replayed = applyEvents(
@@ -58,7 +57,7 @@ describe("personal ignore sync", () => {
           seq: 2,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: true, revision: 3 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: true, revision: 3 },
         },
       ],
       0,
@@ -90,7 +89,7 @@ describe("personal ignore sync", () => {
           seq: 1,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: true, revision: 3 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: true, revision: 3 },
         },
       ],
       0,
@@ -105,7 +104,7 @@ describe("personal ignore sync", () => {
           seq: 2,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: false, revision: 2 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: false, revision: 2 },
         },
       ],
       0,
@@ -120,7 +119,7 @@ describe("personal ignore sync", () => {
           seq: 3,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: false, revision: 4 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: false, revision: 4 },
         },
       ],
       0,
@@ -140,7 +139,7 @@ describe("personal ignore sync", () => {
           seq: 1,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: true, revision: 3 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: true, revision: 3 },
         },
       ],
       0,
@@ -168,7 +167,7 @@ describe("personal ignore sync", () => {
           seq: 2,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: false, revision: 4 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: false, revision: 4 },
         },
       ],
       0,
@@ -185,6 +184,7 @@ describe("personal ignore sync", () => {
 
   it("drops an echo or a stale snapshot, and reads missing as not ignored once loaded", () => {
     const loaded = setBlocks(initialState, {
+      viewerId: 7,
       people: [{ user: userFixture(2), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" }],
       revision: 4,
     });
@@ -201,13 +201,13 @@ describe("personal ignore sync", () => {
           seq: 1,
           topic: "user",
           type: "blocks.updated",
-          data: { userId: 2, ignoredByMe: false, revision: 5 },
+          data: { viewerId: 7, userId: 2, ignoredByMe: false, revision: 5 },
         },
       ],
       0,
     );
 
-    const echoed = setBlocks(stopped, { people: [], revision: 5 });
+    const echoed = setBlocks(stopped, { viewerId: 7, people: [], revision: 5 });
 
     expect(echoed.ignores.people[2]).toBeUndefined();
     expect(
@@ -226,7 +226,9 @@ describe("personal ignore sync", () => {
         ),
       ),
     ).toBe(false);
-    expect(setBlocks(echoed, { people: [], revision: 3 }).ignores).toBe(echoed.ignores);
+    expect(setBlocks(echoed, { viewerId: 7, people: [], revision: 3 }).ignores).toBe(
+      echoed.ignores,
+    );
   });
 });
 
@@ -245,17 +247,22 @@ describe("per-person ignore revisions", () => {
     seq,
     topic: "user" as const,
     type: "blocks.updated" as const,
-    data: { userId, ignoredByMe, revision },
+    data: { viewerId: 7, userId, ignoredByMe, revision },
   });
 
   const ignored = (state: State, userId: number) => isIgnored(state.ignores, userId, undefined);
 
   it("lands another person's change at the revision a local no-op already reported", () => {
     // B ignored as of 10. Elsewhere: unignore B (11), then ignore A (12).
-    const loaded = setBlocks(initialState, { people: listed(B), revision: 10 });
+    const loaded = setBlocks(initialState, { viewerId: 7, people: listed(B), revision: 10 });
 
     // Before those events arrive, "Stop ignoring B" here is a no-op that reports revision 12.
-    const stopped = applyBlockState(loaded, { userId: B, ignoredByMe: false, revision: 12 });
+    const stopped = applyBlockState(loaded, {
+      viewerId: 7,
+      userId: B,
+      ignoredByMe: false,
+      revision: 12,
+    });
 
     expect(ignored(stopped, B)).toBe(false);
 
@@ -266,21 +273,21 @@ describe("per-person ignore revisions", () => {
   });
 
   it("keeps a change newer than a snapshot that lands after it", () => {
-    const loaded = setBlocks(initialState, { people: listed(B), revision: 10 });
+    const loaded = setBlocks(initialState, { viewerId: 7, people: listed(B), revision: 10 });
     const changed = applyEvents(loaded, [event(1, A, true, 12), event(2, B, false, 13)], 0);
 
     // A snapshot read at 11, before both changes, arrives late.
-    const late = setBlocks(changed, { people: listed(B), revision: 11 });
+    const late = setBlocks(changed, { viewerId: 7, people: listed(B), revision: 11 });
 
     expect(late.ignores.snapshot).toBe(11);
     expect(ignored(late, A)).toBe(true);
     expect(ignored(late, B)).toBe(false);
 
     // One read after them takes over; one older than the last snapshot is dropped.
-    const current = setBlocks(late, { people: listed(A), revision: 14 });
+    const current = setBlocks(late, { viewerId: 7, people: listed(A), revision: 14 });
 
     expect(current.ignores.people).toEqual({ [A]: { ignored: true, revision: 14 } });
-    expect(setBlocks(current, { people: listed(B), revision: 13 })).toBe(current);
+    expect(setBlocks(current, { viewerId: 7, people: listed(B), revision: 13 })).toBe(current);
   });
 });
 
@@ -296,11 +303,7 @@ describe("ignore snapshot freshness", () => {
     expect(ignoresStale(missed.ignores)).toBe(true);
 
     // The held reply lands: its data merges, but it vouches only for generation 1.
-    const landed = setBlocks(
-      missed,
-      { people: [], revision: 10 },
-      { coveredAt: heldAt, userId: null },
-    );
+    const landed = setBlocks(missed, { viewerId: 7, people: [], revision: 10 }, heldAt);
 
     expect(landed.ignores.snapshot).toBe(10);
     expect(ignoresStale(landed.ignores)).toBe(true);
@@ -308,19 +311,21 @@ describe("ignore snapshot freshness", () => {
     // One requested after the miss clears it; an older one never moves coverage back.
     const current = setBlocks(
       landed,
-      { people: [], revision: 11 },
-      { coveredAt: missed.ignores.invalidatedAt, userId: null },
+      { viewerId: 7, people: [], revision: 11 },
+      missed.ignores.invalidatedAt,
     );
 
     expect(ignoresStale(current.ignores)).toBe(false);
-    expect(
-      setBlocks(current, { people: [], revision: 9 }, { coveredAt: heldAt, userId: null }),
-    ).toBe(current);
+    expect(setBlocks(current, { viewerId: 7, people: [], revision: 9 }, heldAt)).toBe(current);
   });
 });
 
 describe("whose ignore set it is", () => {
-  const listed = (revision: number, ...ids: number[]) => ({
+  const A = 7;
+  const B = 8;
+
+  const listed = (viewerId: number, revision: number, ...ids: number[]) => ({
+    viewerId,
     people: ids.map((id) => ({
       user: userFixture(id),
       ignoredByMe: true,
@@ -329,38 +334,53 @@ describe("whose ignore set it is", () => {
     revision,
   });
 
-  const A = 1;
-  const B = 8;
+  /** Signed in as A, A's set loaded at 100 with user 3 ignored. */
+  function signedInAsA(): State {
+    const state = { ...initialState, me: { ...meFixture, user: userFixture(A) } };
 
-  it("drops A's set for B's when another sign-in reconnects without replay", () => {
-    const ofA = identifyIgnores(initialState, A);
-    const loadedA = setBlocks(ofA, listed(100, 3), blocksRequest(ofA.ignores, A));
+    return setBlocks(state, listed(A, 100, 3), state.ignores.invalidatedAt);
+  }
 
-    expect(isIgnored(loadedA.ignores, 3, undefined)).toBe(true);
+  it("never lets B's snapshot vouch for A's set, even when it was asked for A", () => {
+    const loaded = signedInAsA();
+    const asked = invalidateIgnores(loaded);
+    const coveredAt = asked.ignores.invalidatedAt;
 
-    // Another tab signs in as B; this one reconnects without replay and asks again.
-    const asked = invalidateIgnores(identifyIgnores(loadedA, B));
+    // `/boot` failed, so nothing said B signed in; the request went out for A.
+    const answered = setBlocks(asked, listed(B, 2, 4), coveredAt);
 
-    expect(asked.ignores).toMatchObject({ userId: B, snapshot: null, people: {} });
-    expect(ignoresStale(asked.ignores)).toBe(true);
-    expect(isIgnored(asked.ignores, 3, true)).toBe(true);
-
-    const loadedB = setBlocks(asked, listed(2, 4), blocksRequest(asked.ignores, A));
-
-    expect(loadedB.ignores).toMatchObject({ userId: B, snapshot: 2 });
-    expect(ignoresStale(loadedB.ignores)).toBe(false);
-    expect(isIgnored(loadedB.ignores, 4, undefined)).toBe(true);
-    expect(isIgnored(loadedB.ignores, 3, undefined)).toBe(false);
+    expect(answered).toBe(asked);
+    expect(ignoresStale(answered.ignores)).toBe(true);
+    expect(isIgnored(answered.ignores, 4, undefined)).toBe(false);
   });
 
-  it("discards a reply read for A that lands after the switch to B", () => {
-    const ofA = identifyIgnores(initialState, A);
-    const loadedA = setBlocks(ofA, listed(100, 3), blocksRequest(ofA.ignores, A));
-    const forA = blocksRequest(invalidateIgnores(loadedA).ignores, A);
-    const switched = invalidateIgnores(identifyIgnores(loadedA, B));
+  it("drops B's changes and keeps A's own", () => {
+    const loaded = signedInAsA();
 
-    expect(setBlocks(switched, listed(101, 3, 5), forA)).toBe(switched);
-    expect(ignoresStale(switched.ignores)).toBe(true);
+    const theirs = applyBlockState(loaded, {
+      viewerId: B,
+      userId: 3,
+      ignoredByMe: false,
+      revision: 200,
+    });
+
+    expect(theirs).toBe(loaded);
+
+    const own = applyBlockState(loaded, {
+      viewerId: A,
+      userId: 5,
+      ignoredByMe: true,
+      revision: 101,
+    });
+
+    expect(isIgnored(own.ignores, 5, undefined)).toBe(true);
+  });
+
+  it("takes its owner from the first payload when no one is signed in yet", () => {
+    const first = setBlocks(initialState, listed(B, 2, 4), 0);
+
+    expect(first.ignores.userId).toBe(B);
+    expect(setBlocks(first, listed(A, 3, 3), 0)).toBe(first);
   });
 });
 

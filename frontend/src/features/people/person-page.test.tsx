@@ -54,7 +54,7 @@ function answerIgnores() {
   return vi.spyOn(ignores, "set").mockImplementation((userId, ignored) => {
     revision += 1;
 
-    const change = { userId, ignoredByMe: ignored, revision };
+    const change = { viewerId: 7, userId, ignoredByMe: ignored, revision };
 
     mutations.applyBlockState(change);
 
@@ -133,7 +133,7 @@ it("follows an ignore made in another session", async () => {
   await mount("Maya", "Maya", null);
   await screen.findByRole("button", { name: "Ignore" });
 
-  act(() => mutations.applyBlockState({ userId: 2, ignoredByMe: true, revision: 3 }));
+  act(() => mutations.applyBlockState({ viewerId: 7, userId: 2, ignoredByMe: true, revision: 3 }));
 
   expect(screen.getByRole("button", { name: "Stop ignoring" })).toBeTruthy();
   expect(store.getState().ignores.people[2]?.ignored).toBe(true);
@@ -141,6 +141,7 @@ it("follows an ignore made in another session", async () => {
 
 it("follows an unignore made in another session once the snapshot drops them", async () => {
   mutations.setBlocks({
+    viewerId: 7,
     revision: 4,
     people: [
       { user: userFixture(2, "Maya"), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" },
@@ -150,7 +151,7 @@ it("follows an unignore made in another session once the snapshot drops them", a
   expect(await screen.findByRole("button", { name: "Stop ignoring" })).toBeTruthy();
 
   // The other session's write echoes here as a refetch of the list, which no longer has Maya.
-  act(() => mutations.setBlocks({ revision: 5, people: [] }));
+  act(() => mutations.setBlocks({ viewerId: 7, revision: 5, people: [] }));
 
   expect(screen.getByRole("button", { name: "Ignore" })).toBeTruthy();
   expect(screen.queryByText("Ignored")).toBeNull();

@@ -1,6 +1,7 @@
 import {
   Clock,
   Context,
+  Deferred,
   Effect,
   Layer,
   Predicate,
@@ -20,7 +21,7 @@ import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
-import { blocksRequest, ignoresStale } from "../store/ignores.ts";
+import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
@@ -44,6 +45,7 @@ import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { recoverResyncedRooms, roomVisitToken } from "./session.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
+import { reloadForNewSignIn } from "./sign-in-change.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import {
@@ -85,6 +87,9 @@ export const SILENCE_LIMIT_MS = 30_000;
 const BLOCKS_RETRIES = 3;
 
 const blocksRetrySchedule = Schedule.exponential("500 millis", 2).pipe(Schedule.jittered);
+
+/** How long the user resync's boot and sidebar reads may take before they count as failed. */
+const RESYNC_READ_TIMEOUT = "15 seconds";
 
 /** How long one ignore snapshot request may take before it counts as failed. */
 const BLOCKS_REQUEST_TIMEOUT = "10 seconds";
@@ -243,6 +248,20 @@ export class Engine extends Context.Service<
       const blocksWanted = yield* Queue.sliding<void>(1);
       /** Abandons the ignore snapshot request in flight. */
       const blocksRestart = yield* Queue.sliding<void>(1);
+      /** The user resync's boot or sidebar read failed or stalled: the next resume reads again. */
+      const userResyncStale = yield* Ref.make(false);
+      /** The server answered for someone else: the run stops, then the page reloads. */
+      const signedOut = yield* Deferred.make<void>();
+
+      /** Whether `userId`, as the server just answered for, isn't who this page signed in as. */
+      const signedInElsewhere = (userId: number) => {
+        const me = store.getState().me;
+
+        return me !== null && me.user.id !== userId;
+      };
+
+      /** Stops the run; `run` reloads the page once everything in it has ended. */
+      const leaveForNewSignIn = Effect.asVoid(Deferred.succeed(signedOut, undefined));
       /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
@@ -505,14 +524,20 @@ export class Engine extends Context.Service<
         Queue.offerUnsafe(blocksRestart, undefined);
       });
 
-      /** One snapshot request, tagged with the generation and person it's for as it starts. */
+      /**
+       * One snapshot request; it covers what was invalidated before it started. The server says
+       * whose list it is: someone else's means another sign-in, and the page reloads.
+       */
       const fetchBlocks = Effect.suspend(() => {
-        const state = store.getState();
-        const request = blocksRequest(state.ignores, state.me?.user.id ?? null);
+        const coveredAt = store.getState().ignores.invalidatedAt;
 
         return blocks().pipe(
           Effect.timeout(BLOCKS_REQUEST_TIMEOUT),
-          Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot, request))),
+          Effect.flatMap((snapshot) =>
+            signedInElsewhere(snapshot.viewerId)
+              ? leaveForNewSignIn
+              : Effect.sync(() => mutations.setBlocks(snapshot, coveredAt)),
+          ),
         );
       });
 
@@ -563,8 +588,35 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
+            // `followBlocks` fetches the ignore snapshot apart from these reads: one that stalls
+            // or fails doesn't hold it up.
+            yield* requestBlocks;
+
+            // Who is signed in, before their sidebar can render over this page: someone else
+            // (another tab switched accounts) means a reload.
+            const signedIn = yield* boot().pipe(
+              Effect.timeout(RESYNC_READ_TIMEOUT),
+              Effect.tap((data) =>
+                Effect.sync(() => mutations.setWorkspaceStyles(data.customStyles)),
+              ),
+              Effect.map((data) => data.user.id),
+              Effect.catch((error) =>
+                Effect.logWarning("sync: workspace styles resync failed", error.message).pipe(
+                  Effect.as(null),
+                ),
+              ),
+              Effect.provideContext(api),
+            );
+
+            if (signedIn !== null && signedInElsewhere(signedIn)) {
+              yield* leaveForNewSignIn;
+
+              return;
+            }
+
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
+                Effect.timeout(RESYNC_READ_TIMEOUT),
                 Effect.map((data) => {
                   // Authoritative: every HTTP reply already on its way is stale now.
                   const restored = mutations.resyncSidebar(data, since);
@@ -592,33 +644,9 @@ export class Engine extends Context.Service<
               yield* Ref.set(snapshotThrough, sidebarThrough);
             }
 
-            const signedIn = yield* boot().pipe(
-              Effect.tap((data) =>
-                Effect.sync(() => mutations.setWorkspaceStyles(data.customStyles)),
-              ),
-              Effect.map((data) => data.user.id),
-              Effect.catch((error) =>
-                Effect.logWarning("sync: workspace styles resync failed", error.message).pipe(
-                  Effect.as(null),
-                ),
-              ),
-              Effect.provideContext(api),
-            );
+            // A read that failed or stalled is made again on the next resume.
+            yield* Ref.set(userResyncStale, signedIn === null || !installed);
 
-            // The ignore set is per person: someone else signed in (another tab) drops it, and
-            // abandons a request still out for the last person.
-            if (signedIn !== null) {
-              const owner = store.getState().ignores.userId;
-
-              mutations.identifyIgnores(signedIn);
-
-              if (owner !== null && owner !== signedIn) {
-                yield* restartBlocks;
-              }
-            }
-
-            // Asked once the person is known, so the request is tagged for the right one.
-            yield* requestBlocks;
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
             mutations.markInboxStale();
@@ -736,6 +764,17 @@ export class Engine extends Context.Service<
           return;
         }
 
+        // Someone else's ignore list: another sign-in. Nothing of theirs lands on this page.
+        if (
+          fresh.some(
+            (event) => event.type === "blocks.updated" && signedInElsewhere(event.data.viewerId),
+          )
+        ) {
+          yield* leaveForNewSignIn;
+
+          return;
+        }
+
         const now = yield* Clock.currentTimeMillis;
 
         for (const event of fresh) {
@@ -823,10 +862,13 @@ export class Engine extends Context.Service<
           // happened, then skip sidebar and activity events the fresh snapshots cover.
           if (afterReload && frame.replayThrough > point.seq) {
             yield* resync(scope, ["user"], frame.replayThrough, frame.replayThrough);
+          } else if (yield* Ref.get(userResyncStale)) {
+            // Replay covers events missed while away, but not a resync read that never landed.
+            yield* Effect.forkIn(resync(scope, ["user"], frame.replayThrough), scope);
           } else {
             yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
 
-            // Replay covers events missed while away, but not a snapshot that never landed.
+            // Nor a snapshot that never landed.
             if (ignoresStale(store.getState().ignores)) {
               yield* requestBlocks;
             }
@@ -1030,17 +1072,25 @@ export class Engine extends Context.Service<
         }
       });
 
-      const run = Effect.scoped(
-        Effect.gen(function* () {
-          const scope = yield* Effect.scope;
+      const run = Effect.gen(function* () {
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            const scope = yield* Effect.scope;
 
-          yield* Effect.forkIn(Effect.scoped(expire), scope);
-          yield* Effect.forkIn(Effect.scoped(followRooms), scope);
-          yield* Effect.forkIn(followBlocks, scope);
-          yield* Effect.forkIn(presence.run, scope);
-          yield* connectLoop(scope);
-        }),
-      );
+            yield* Effect.forkIn(Effect.scoped(expire), scope);
+            yield* Effect.forkIn(Effect.scoped(followRooms), scope);
+            yield* Effect.forkIn(followBlocks, scope);
+            yield* Effect.forkIn(presence.run, scope);
+            yield* Effect.raceFirst(connectLoop(scope), Deferred.await(signedOut));
+          }),
+        );
+
+        // Everything above has stopped (socket, fetches, retries): nothing more renders or
+        // persists for the last person before the page loads as the new one.
+        if (yield* Deferred.isDone(signedOut)) {
+          reloadForNewSignIn();
+        }
+      });
 
       return Engine.of({ run });
     }),

@@ -129,15 +129,21 @@ describe("ignored messages", () => {
     render(<Rows ids={[1, 2]} />);
     expect(screen.getByText("Message 1")).toBeTruthy();
 
-    act(() => mutations.applyBlockState({ userId: 9, ignoredByMe: true, revision: 5 }));
+    act(() =>
+      mutations.applyBlockState({ viewerId: 7, userId: 9, ignoredByMe: true, revision: 5 }),
+    );
     expect(screen.getByText("2 messages from someone you ignore")).toBeTruthy();
     expect(screen.queryByText("Message 1")).toBeNull();
 
     // The sync echo of the same write changes nothing.
-    act(() => mutations.applyBlockState({ userId: 9, ignoredByMe: false, revision: 5 }));
+    act(() =>
+      mutations.applyBlockState({ viewerId: 7, userId: 9, ignoredByMe: false, revision: 5 }),
+    );
     expect(screen.queryByText("Message 1")).toBeNull();
 
-    act(() => mutations.applyBlockState({ userId: 9, ignoredByMe: false, revision: 6 }));
+    act(() =>
+      mutations.applyBlockState({ viewerId: 7, userId: 9, ignoredByMe: false, revision: 6 }),
+    );
     expect(screen.getByText("Message 1")).toBeTruthy();
     expect(screen.queryByText(/from someone you ignore/)).toBeNull();
   });
@@ -190,10 +196,11 @@ describe("ignored messages", () => {
 
     install([parent]);
     mutations.setBlocks({
+      viewerId: 7,
       revision: 4,
       people: [{ user: userFixture(9), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" }],
     });
-    mutations.applyBlockState({ userId: 9, ignoredByMe: false, revision: 5 });
+    mutations.applyBlockState({ viewerId: 7, userId: 9, ignoredByMe: false, revision: 5 });
 
     function Parent() {
       const message = useStore((state) => state.messages[2]);

@@ -45,6 +45,7 @@ import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refre
 import * as session from "./session.ts";
 import { settings } from "./settings.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
+import { pageReload } from "./sign-in-change.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -76,7 +77,7 @@ const serve = (roomMessages: readonly MessageDTO[]) =>
     const api = yield* FakeApi;
 
     yield* api.reply("GET /boot", { ...workspaceBoot, csrfToken: "token" });
-    yield* api.reply("GET /blocks", { people: [], revision: 0 });
+    yield* api.reply("GET /blocks", { viewerId: 7, people: [], revision: 0 });
     yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
     yield* api.reply("GET /rooms/12", roomDetailFixture(12));
     yield* api.reply("GET /rooms/12/messages", pageFixture(roomMessages));
@@ -3414,10 +3415,11 @@ describe("ignores", () => {
       seq,
       topic: "user",
       type: "blocks.updated",
-      data: { userId, ignoredByMe, revision },
+      data: { viewerId: 7, userId, ignoredByMe, revision },
     }) as const;
 
   const listed = (revision: number, ...ids: number[]) => ({
+    viewerId: 7,
     people: ids.map((id) => ({
       user: userFixture(id),
       ignoredByMe: true,
@@ -3553,11 +3555,38 @@ describe("ignores", () => {
     ),
   );
 
-  it.effect("keeps only B's ignores after another sign-in reconnects this tab", () =>
+  /** Answers `/boot` as A again. */
+  const bootAsA = Effect.flatMap(FakeApi, (api) =>
+    api.reply("GET /boot", { ...workspaceBoot, csrfToken: "token" }),
+  );
+
+  /** Answers `/boot` as B, signed in from another tab. */
+  const bootAsB = Effect.flatMap(FakeApi, (api) =>
+    api.reply("GET /boot", {
+      ...workspaceBoot,
+      user: { ...workspaceBoot.user, id: 8 },
+      csrfToken: "token",
+    }),
+  );
+
+  /** Stubs the page reload, noting whether the socket was still open each time. */
+  const stubReload = Effect.gen(function* () {
+    const socket = yield* MemorySocket;
+    const openAtReload: boolean[] = [];
+
+    vi.spyOn(pageReload, "reload").mockImplementation(() => {
+      openAtReload.push(Effect.runSync(socket.isOpen));
+    });
+
+    return openAtReload;
+  });
+
+  it.effect("never lets B's snapshot vouch for A's set when /boot fails", () =>
     withSync(
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
         const api = yield* FakeApi;
+        const reloads = yield* stubReload;
 
         yield* serve([]);
         yield* api.reply("GET /blocks", listed(100, 3));
@@ -3565,61 +3594,134 @@ describe("ignores", () => {
         yield* welcome(5, false);
         expect(store.getState().ignores).toMatchObject({ userId: 7, snapshot: 100 });
 
-        // B signs in elsewhere; this tab reconnects as B with nothing to replay.
-        yield* api.reply("GET /boot", {
-          ...workspaceBoot,
-          user: { ...workspaceBoot.user, id: 8 },
-          csrfToken: "token",
-        });
-        yield* api.reply("GET /blocks", listed(2, 4));
+        // B signs in elsewhere; this tab reconnects as B, and its `/boot` read fails.
+        yield* api.route("GET /boot", () =>
+          Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
+        );
+        yield* api.reply("GET /blocks", { ...listed(2, 4), viewerId: 8 });
         yield* socket.drop;
         yield* TestClock.adjust(250);
         yield* welcome(1, false, "e2");
         yield* settle;
 
+        // B's snapshot says whose it is: it never lands, and the page reloads as B.
         const ignores = store.getState().ignores;
 
-        expect(ignores).toMatchObject({ userId: 8, snapshot: 2 });
-        expect(Object.keys(ignores.people)).toEqual(["4"]);
-        expect(stale()).toBe(false);
+        expect(ignores).toMatchObject({ userId: 7, snapshot: 100 });
+        expect(Object.keys(ignores.people)).toEqual(["3"]);
+        expect(stale()).toBe(true);
+        expect(reloads).toEqual([false]);
       }),
     ),
   );
 
-  it.effect("discards A's snapshot that lands after the switch to B", () =>
+  it.effect("reloads once, after the engine stops, when /boot says B signed in", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+        sessionStorage.setItem("smartfire.draft.12", "A's draft");
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+
+        yield* bootAsB;
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+
+        const sidebars = (yield* api.requests).filter((r) => r.path === "/sidebar").length;
+
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect(reloads).toEqual([false]);
+        expect(running.pollUnsafe()).toBeDefined();
+        expect(sessionStorage.getItem("smartfire.draft.12")).toBeNull();
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
+        // B's sidebar was never read, so it never rendered over A's page.
+        expect((yield* api.requests).filter((r) => r.path === "/sidebar").length).toBe(sidebars);
+      }),
+    ),
+  );
+
+  it.effect("drops A's snapshot still in flight when B's sign-in is found", () =>
     withSync(
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
-        const api = yield* FakeApi;
+        const reloads = yield* stubReload;
         const release = yield* Deferred.make<void>();
 
         yield* serve([]);
         yield* startEngine;
         yield* welcome(5, false);
-        expect(store.getState().ignores.userId).toBe(7);
+        expect(store.getState().ignores.snapshot).toBe(0);
 
         // A's next snapshot is held in flight.
         yield* held(release, listed(101, 3, 5));
         yield* pushEvents(blocksUpdated(6, 5, true, 101));
         yield* settle;
 
-        yield* api.reply("GET /boot", {
-          ...workspaceBoot,
-          user: { ...workspaceBoot.user, id: 8 },
-          csrfToken: "token",
-        });
-        yield* api.reply("GET /blocks", listed(2, 4));
+        yield* bootAsB;
         yield* socket.drop;
         yield* TestClock.adjust(250);
         yield* welcome(1, false, "e2");
         yield* Deferred.succeed(release, undefined);
         yield* settle;
 
-        const ignores = store.getState().ignores;
+        expect(store.getState().ignores.snapshot).toBe(0);
+        expect(store.getState().ignores.people[3]).toBeUndefined();
+        expect(reloads).toEqual([false]);
+      }),
+    ),
+  );
 
-        expect(ignores).toMatchObject({ userId: 8, snapshot: 2 });
-        expect(Object.keys(ignores.people)).toEqual(["4"]);
+  it.effect("asks for the snapshot at once while the boot and sidebar reads stall", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Reconnected with nothing to replay; boot and sidebar never answer.
+        yield* api.route("GET /boot", () => Effect.never);
+        yield* api.route("GET /sidebar", () => Effect.never);
+        yield* api.reply("GET /blocks", listed(2, 4));
+
+        const before = yield* blockRequests;
+
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect((yield* blockRequests) - before).toBe(1);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
         expect(stale()).toBe(false);
+
+        // The stalled reads time out; the next resume reads them again.
+        yield* TestClock.adjust("40 seconds");
+        yield* bootAsA;
+        yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
+        yield* socket.drop;
+        yield* TestClock.adjust("30 seconds");
+
+        const sidebars = (yield* api.requests).filter((r) => r.path === "/sidebar").length;
+
+        yield* welcome(1, true, "e2");
+        yield* settle;
+
+        expect((yield* api.requests).filter((r) => r.path === "/sidebar").length).toBe(
+          sidebars + 1,
+        );
       }),
     ),
   );

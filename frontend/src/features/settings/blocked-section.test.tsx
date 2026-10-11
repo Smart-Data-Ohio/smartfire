@@ -18,6 +18,7 @@ afterEach(() => {
 });
 
 const LIST: BlockList = {
+  viewerId: 7,
   revision: 4,
   people: [
     { user: userFixture(2, "Maya"), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" },
@@ -54,7 +55,7 @@ it("lists the people you ignore, each linking to their page", async () => {
 });
 
 it("says so when you ignore nobody", async () => {
-  await mount({ revision: 0, people: [] });
+  await mount({ viewerId: 7, revision: 0, people: [] });
 
   expect(await screen.findByText("You're not ignoring anyone")).toBeTruthy();
   expect(screen.queryByRole("list")).toBeNull();
@@ -64,7 +65,7 @@ it("stops ignoring someone and drops them from the list", async () => {
   await mount(LIST);
 
   const set = vi.spyOn(ignores, "set").mockImplementation((userId, ignored) => {
-    const change = { userId, ignoredByMe: ignored, revision: 5 };
+    const change = { viewerId: 7, userId, ignoredByMe: ignored, revision: 5 };
 
     mutations.applyBlockState(change);
 
@@ -83,7 +84,7 @@ it("keeps a stopped person gone when the write's sync echo refetches the list", 
   await mount(LIST);
 
   vi.spyOn(ignores, "set").mockImplementation((userId, ignored) => {
-    const change = { userId, ignoredByMe: ignored, revision: 5 };
+    const change = { viewerId: 7, userId, ignoredByMe: ignored, revision: 5 };
 
     mutations.applyBlockState(change);
 
@@ -94,7 +95,7 @@ it("keeps a stopped person gone when the write's sync echo refetches the list", 
   await waitFor(() => expect(screen.queryByRole("link", { name: "Maya" })).toBeNull());
 
   // The echo's `GET /blocks` at the write's revision: Maya isn't on it, so nothing says "ignored".
-  act(() => mutations.setBlocks({ revision: 5, people: LIST.people.slice(1) }));
+  act(() => mutations.setBlocks({ viewerId: 7, revision: 5, people: LIST.people.slice(1) }));
 
   expect(screen.queryByRole("link", { name: "Maya" })).toBeNull();
   expect(screen.getByRole("link", { name: "Jason" })).toBeTruthy();
@@ -108,7 +109,7 @@ it("drops someone you stopped ignoring elsewhere as the change lands", async () 
   await mount(LIST);
   await screen.findByRole("link", { name: "Jason" });
 
-  act(() => mutations.applyBlockState({ userId: 3, ignoredByMe: false, revision: 9 }));
+  act(() => mutations.applyBlockState({ viewerId: 7, userId: 3, ignoredByMe: false, revision: 9 }));
 
   expect(screen.queryByRole("link", { name: "Jason" })).toBeNull();
   expect(screen.getByRole("link", { name: "Maya" })).toBeTruthy();

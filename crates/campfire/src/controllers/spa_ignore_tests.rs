@@ -116,10 +116,13 @@ async fn ignore_endpoints_are_private_idempotent_and_allow_bots_but_not_self() {
                 .await;
             assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
             assert_eq!(parse::<Value>(&reply)["ignoredByMe"], true);
+            assert_eq!(parse::<Value>(&reply)["viewerId"], DAVID);
         }
     }
     let list: Value = parse(&david.send(get("/api/v1/blocks")).await);
     assert_eq!(list["people"].as_array().unwrap().len(), 2);
+    // The list says whose it is, so a client can tell another sign-in's answer apart.
+    assert_eq!(list["viewerId"], DAVID);
     let directory: Value = parse(&david.send(get("/api/v1/people")).await);
     for target in [JASON, BENDER] {
         let person = directory["people"]
@@ -142,10 +145,9 @@ async fn ignore_endpoints_are_private_idempotent_and_allow_bots_but_not_self() {
             .iter()
             .any(|user| user["id"] == JASON)
     );
-    assert_eq!(
-        parse::<Value>(&kevin.send(get("/api/v1/blocks")).await)["people"],
-        json!([])
-    );
+    let kevins: Value = parse(&kevin.send(get("/api/v1/blocks")).await);
+    assert_eq!(kevins["people"], json!([]));
+    assert_eq!(kevins["viewerId"], KEVIN);
     let profile: Value = parse(&kevin.send(get(&format!("/api/v1/people/{JASON}"))).await);
     assert_eq!(profile["ignoredByMe"], false);
     let own = david
@@ -385,6 +387,7 @@ async fn ignore_changes_sync_only_to_blockers_other_sessions() {
         assert_eq!(event.topic, "user");
         let data = serde_json::to_value(&event.payload).unwrap();
         assert_eq!(data["data"]["userId"], JASON);
+        assert_eq!(data["data"]["viewerId"], DAVID);
         assert_eq!(data["data"]["ignoredByMe"], ignored);
     }
     server.abort();

@@ -41,7 +41,6 @@ import * as approvals from "./approvals.ts";
 import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
-import type { BlocksRequest } from "./ignores.ts";
 import {
   beginRoomRequest,
   claimRoomOutcome,
@@ -307,12 +306,14 @@ export const mutations = {
         notificationClock: serverNow(state.sidebar.serverClock),
       },
     })),
-  /** `request`: as `blocksRequest` tagged it (omitted, it vouches for nothing missed). */
-  setBlocks: (snapshot: BlockList, request?: BlocksRequest) =>
-    apply((state) => reduce.setBlocks(state, snapshot, request)),
+  /**
+   * `coveredAt`: the ignore set's `invalidatedAt` when the request started (omitted, it vouches
+   * for nothing missed).
+   */
+  setBlocks: (snapshot: BlockList, coveredAt?: number) =>
+    apply((state) => reduce.setBlocks(state, snapshot, coveredAt)),
   applyBlockState: (change: BlockState) => apply((state) => reduce.applyBlockState(state, change)),
   invalidateIgnores: () => apply(reduce.invalidateIgnores),
-  identifyIgnores: (userId: number) => apply((state) => reduce.identifyIgnores(state, userId)),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),

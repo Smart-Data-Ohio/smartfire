@@ -4,8 +4,6 @@ import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
 import {
   applyBlockChange,
   applyBlockSnapshot,
-  type BlocksRequest,
-  identifyIgnores as identifyIgnoresIn,
   invalidateIgnores as invalidateIgnoresIn,
 } from "./ignores.ts";
 /**
@@ -845,9 +843,9 @@ export function receiveMessage(state: State, message: MessageDTO): State {
 export function setBlocks(
   state: State,
   snapshot: BlockList,
-  request: BlocksRequest = { coveredAt: Number.NEGATIVE_INFINITY, userId: state.ignores.userId },
+  coveredAt = Number.NEGATIVE_INFINITY,
 ): State {
-  const ignores = applyBlockSnapshot(state.ignores, snapshot, request);
+  const ignores = applyBlockSnapshot(state.ignores, snapshot, coveredAt, state.me?.user.id ?? null);
 
   return ignores === state.ignores ? state : { ...state, ignores };
 }
@@ -857,14 +855,7 @@ export function setBlocks(
  * flag; whoever shows them reads the set, so the change collapses (or opens) them everywhere.
  */
 export function applyBlockState(state: State, change: BlockState): State {
-  const ignores = applyBlockChange(state.ignores, change);
-
-  return ignores === state.ignores ? state : { ...state, ignores };
-}
-
-/** The server says `userId` is signed in: a set held for someone else is dropped. */
-export function identifyIgnores(state: State, userId: number): State {
-  const ignores = identifyIgnoresIn(state.ignores, userId);
+  const ignores = applyBlockChange(state.ignores, change, state.me?.user.id ?? null);
 
   return ignores === state.ignores ? state : { ...state, ignores };
 }

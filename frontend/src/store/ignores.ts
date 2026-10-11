@@ -10,6 +10,10 @@
  * current value. So "person P at revision R" has exactly one answer, but one revision can carry
  * several people's states: a change is ordered against what's held for that person, and a
  * snapshot against the last snapshot.
+ *
+ * Every payload says whose list it is (`viewerId`, from the server). One for anyone but the set's
+ * owner (the person signed in here) never lands, and never vouches for the set: the sync engine
+ * takes it as a sign that someone else signed in, and reloads.
  */
 import type { BlockList } from "../gen/BlockList.ts";
 import type { BlockState } from "../gen/BlockState.ts";
@@ -22,8 +26,8 @@ export interface IgnoreEntry {
 
 export interface IgnoreSet {
   /**
-   * Whose set this is: the signed-in person it was loaded for, or null before anyone. Another
-   * person's snapshot never merges into it.
+   * Whose set this is, as the server said: the `viewerId` of the payloads it holds, or null before
+   * any landed.
    */
   readonly userId: number | null;
   /**
@@ -64,17 +68,37 @@ function knownAt(set: IgnoreSet, userId: number): number {
 }
 
 /**
- * One person's change, from a write's reply or the sync event. It lands when it's newer than what
- * the set knows about that person. One at the same revision states the same fact (the revision
- * only moves with a change), so the echo of a write changes nothing.
+ * Whether a payload the server answered for `viewerId` is this set's: its owner's, or, before it
+ * has one, that of `signedIn` (the person this page signed in as, when known).
  */
-export function applyBlockChange(set: IgnoreSet, change: BlockState): IgnoreSet {
-  if (change.revision <= knownAt(set, change.userId)) {
+export function ownsIgnores(set: IgnoreSet, viewerId: number, signedIn: number | null): boolean {
+  const owner = set.userId ?? signedIn;
+
+  return owner === null || owner === viewerId;
+}
+
+/**
+ * One person's change, from a write's reply or the sync event, made by `signedIn` (see
+ * `ownsIgnores`). It lands when it's newer than what the set knows about that person. One at the
+ * same revision states the same fact (the revision only moves with a change), so the echo of a
+ * write changes nothing.
+ */
+export function applyBlockChange(
+  set: IgnoreSet,
+  change: BlockState,
+  signedIn: number | null,
+): IgnoreSet {
+  if (!ownsIgnores(set, change.viewerId, signedIn)) {
     return set;
+  }
+
+  if (change.revision <= knownAt(set, change.userId)) {
+    return set.userId === change.viewerId ? set : { ...set, userId: change.viewerId };
   }
 
   return {
     ...set,
+    userId: change.viewerId,
     people: {
       ...set.people,
       [change.userId]: { ignored: change.ignoredByMe, revision: change.revision },
@@ -82,61 +106,26 @@ export function applyBlockChange(set: IgnoreSet, change: BlockState): IgnoreSet 
   };
 }
 
-/** What a `GET /blocks` request is for: the generation it covers and the person it reads. */
-export interface BlocksRequest {
-  readonly coveredAt: number;
-  readonly userId: number | null;
-}
-
 /**
- * Tags a `GET /blocks` request as it starts: the set's generation, and its owner (or, before it
- * has one, `viewerId`, the person signed in).
- */
-export function blocksRequest(set: IgnoreSet, viewerId: number | null): BlocksRequest {
-  return { coveredAt: set.invalidatedAt, userId: set.userId ?? viewerId };
-}
-
-/**
- * The person signed in is `userId`, as the server just said. A set held for someone else is
- * dropped: empty, not loaded and stale, with its generations carried on so nothing requested
- * for them covers it. Returns the set unchanged when it's already theirs.
- */
-export function identifyIgnores(set: IgnoreSet, userId: number): IgnoreSet {
-  if (set.userId === userId) {
-    return set;
-  }
-
-  if (set.userId === null && set.snapshot === null && Object.keys(set.people).length === 0) {
-    return { ...set, userId };
-  }
-
-  return {
-    ...emptyIgnores,
-    userId,
-    invalidatedAt: set.invalidatedAt + 1,
-    coveredThrough: set.coveredThrough,
-  };
-}
-
-/**
- * A `GET /blocks` snapshot, from a request tagged as it started (`blocksRequest`). One read for
- * someone other than the set's owner is dropped. Every person known as of its revision or earlier takes its answer (listed: ignored;
- * absent: not); a change newer than it is kept. Data older than the last snapshot applied is
- * dropped, but the reply still covers what was invalidated before its request: what the set holds
- * is newer still.
+ * A `GET /blocks` snapshot, from a request started when the set's `invalidatedAt` was
+ * `coveredAt`. One for someone other than the owner (see `ownsIgnores`) is dropped whole: it
+ * neither merges nor covers anything. Otherwise every person known as of its revision or earlier
+ * takes its answer (listed: ignored; absent: not); a change newer than it is kept. Data older
+ * than the last snapshot applied is dropped, but the reply still covers what was invalidated
+ * before its request: what the set holds is newer still.
  */
 export function applyBlockSnapshot(
   set: IgnoreSet,
   snapshot: BlockList,
-  request: BlocksRequest,
+  coveredAt: number,
+  signedIn: number | null,
 ): IgnoreSet {
-  // Read for someone else (a sign-in changed while it was out): it says nothing about this set.
-  if (set.userId !== null && request.userId !== set.userId) {
+  if (!ownsIgnores(set, snapshot.viewerId, signedIn)) {
     return set;
   }
 
-  const userId = set.userId ?? request.userId;
-  const coveredThrough = Math.max(set.coveredThrough, request.coveredAt);
+  const userId = snapshot.viewerId;
+  const coveredThrough = Math.max(set.coveredThrough, coveredAt);
 
   if (set.snapshot !== null && snapshot.revision < set.snapshot) {
     return coveredThrough === set.coveredThrough && userId === set.userId

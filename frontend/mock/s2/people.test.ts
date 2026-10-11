@@ -175,8 +175,8 @@ describe("the mock's ignores", () => {
     const published = events.filter((event) => event.type === "blocks.updated");
 
     expect(published.map((event) => [event.topic, event.data])).toEqual([
-      ["user", { userId: USER_IDS.maya, ignoredByMe: true, revision: 1 }],
-      ["user", { userId: USER_IDS.theo, ignoredByMe: false, revision: 1 }],
+      ["user", { viewerId: VIEWER_ID, userId: USER_IDS.maya, ignoredByMe: true, revision: 1 }],
+      ["user", { viewerId: VIEWER_ID, userId: USER_IDS.theo, ignoredByMe: false, revision: 1 }],
     ]);
     expect(published[1]?.seq).toBeGreaterThan(published[0]?.seq ?? Infinity);
   });
