@@ -16,6 +16,117 @@ const RITA: i64 = 773523954;
 const LOU: i64 = 773523958;
 
 #[tokio::test]
+async fn spa_api_room_management_voice_bitrate_reads_updates_and_reuses_settings_permissions() {
+    let a = app().await.expect("frozen seeds required");
+    let mut admin = a.sign_in(DAVID).await;
+    let mut creator = a.sign_in(KEVIN).await;
+    let mut member = a.sign_in(LOU).await;
+    let mut outsider = a.sign_in(RITA).await;
+    for kind in ["open", "closed", "board", "voice", "stage"] {
+        let created = created(&mut creator, kind, &[KEVIN, LOU, DAVID]).await;
+        let path = format!("/api/v1/rooms/{}", created.room.id);
+        assert_eq!(created.room.voice_bitrate, None);
+        let edit = format!("{path}/edit");
+        assert_eq!(
+            parse::<Value>(&creator.send(get(&edit)).await)["voiceBitrate"],
+            json!(null)
+        );
+        let mut body = json!({"type":kind,"voiceBitrate":384_000});
+        if kind != "open" {
+            body["userIds"] = json!([KEVIN, LOU, DAVID]);
+        }
+        let before = dump(&a).await;
+        let denied = write(&mut member, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(denied.status, StatusCode::FORBIDDEN, "{}", denied.text());
+        if kind != "open" {
+            let denied = write(&mut outsider, Method::PATCH, &path, body.clone()).await;
+            assert_eq!(denied.status, StatusCode::NOT_FOUND, "{}", denied.text());
+            assert_eq!(
+                outsider.send(get(&edit)).await.status,
+                StatusCode::NOT_FOUND
+            );
+        }
+        assert_eq!(dump(&a).await, before);
+        for bitrate in [48_000, 64_000, 96_000, 128_000, 256_000, 384_000] {
+            body["voiceBitrate"] = json!(bitrate);
+            let saved = write(&mut creator, Method::PATCH, &path, body.clone()).await;
+            assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+            assert_eq!(
+                parse::<api::RoomMutation>(&saved).room.voice_bitrate,
+                Some(bitrate)
+            );
+            assert_eq!(
+                parse::<Value>(&member.send(get(&edit)).await)["voiceBitrate"],
+                json!(bitrate)
+            );
+            assert_eq!(
+                parse::<Value>(&creator.send(get(&path)).await)["room"]["voiceBitrate"],
+                json!(bitrate)
+            );
+        }
+        body.as_object_mut().unwrap().remove("voiceBitrate");
+        let retained = write(&mut creator, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(retained.status, StatusCode::OK, "{}", retained.text());
+        assert_eq!(
+            parse::<api::RoomMutation>(&retained).room.voice_bitrate,
+            Some(384_000)
+        );
+        body["voiceBitrate"] = json!(null);
+        let cleared = write(&mut admin, Method::PATCH, &path, body).await;
+        assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+        assert_eq!(
+            parse::<api::RoomMutation>(&cleared).room.voice_bitrate,
+            None
+        );
+    }
+}
+
+#[tokio::test]
+async fn spa_api_room_management_voice_bitrate_validation_is_atomic() {
+    let a = app().await.expect("frozen seeds required");
+    let mut creator = a.sign_in(KEVIN).await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for kind in ["open", "closed", "board", "voice", "stage"] {
+        let created = created(&mut creator, kind, &[KEVIN, DAVID]).await;
+        let path = format!("/api/v1/rooms/{}", created.room.id);
+        super::admin_tests::settle(&capture).await;
+        let before = dump(&a).await;
+        for bitrate in [
+            json!(-1),
+            json!(0),
+            json!(64),
+            json!(48_001),
+            json!(192_000),
+            json!(384_001),
+            json!("384000"),
+            json!(96_000.5),
+        ] {
+            let mut body = json!({"type":kind,"name":"Must not persist","voiceBitrate":bitrate});
+            if kind != "open" {
+                body["userIds"] = json!([KEVIN]);
+            }
+            let invalid = write(&mut creator, Method::PATCH, &path, body).await;
+            assert_eq!(
+                invalid.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{}",
+                invalid.text()
+            );
+            assert_eq!(error(&invalid)["_tag"], json!("Validation"));
+            if bitrate.is_i64() {
+                assert_eq!(
+                    error(&invalid)["fields"]["voiceBitrate"],
+                    json!(["is not included in the list"])
+                );
+            }
+            assert_eq!(dump(&a).await, before);
+            assert!(super::admin_tests::settle(&capture).await.is_empty());
+        }
+    }
+}
+
+
+#[tokio::test]
 async fn spa_api_rooms_creation_replays_without_any_side_effects() {
     let a = app().await.expect("frozen seeds required");
     let mut david = a.sign_in(DAVID).await;

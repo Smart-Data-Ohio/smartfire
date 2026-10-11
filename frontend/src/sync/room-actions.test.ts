@@ -34,6 +34,7 @@ const form: RoomForm = {
   defaultInvolvement: "everything",
   stageRoles: [],
   topic: null,
+  voiceBitrate: null,
 };
 
 const seed = () => {

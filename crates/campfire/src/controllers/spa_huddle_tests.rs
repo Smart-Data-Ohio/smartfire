@@ -147,6 +147,32 @@ async fn join(b: &mut Browser<'_>, room_id: i64) -> api::HuddleCredentials {
     parse(&reply)
 }
 
+#[tokio::test]
+async fn huddle_bootstrap_returns_the_effective_audio_bitrate_target() {
+    let a = app(true).await.expect("frozen seeds required");
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(join(&mut david, HQ).await.audio_bitrate_target, 48_000);
+    let voice = voice(&a).await;
+    let (stage, _, _, _) = stage(&a).await;
+    for (room, kind) in [(voice, "voice"), (stage, "stage")] {
+        assert_eq!(join(&mut david, room.id).await.audio_bitrate_target, 48_000);
+        let path = format!("/api/v1/rooms/{}", room.id);
+        for (bitrate, expected) in [
+            (json!(384_000), 384_000),
+            (json!(96_000), 96_000),
+            (json!(null), 48_000),
+        ] {
+            let body = json!({"type":kind,"userIds":[DAVID, JASON, KEVIN],"voiceBitrate":bitrate});
+            let saved = david.write(send_json(Method::PATCH, &path, &body)).await;
+            assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+            let credentials = join(&mut david, room.id).await;
+            assert_eq!(credentials.audio_bitrate_target, expected);
+            assert_grant(&credentials, room.id, true);
+        }
+    }
+}
+
+
 /// The LiveKit token's claims.
 fn claims(credentials: &api::HuddleCredentials) -> Value {
     use base64::Engine as _;

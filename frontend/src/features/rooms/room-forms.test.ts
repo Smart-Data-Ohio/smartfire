@@ -47,6 +47,7 @@ function form(patch: Partial<RoomForm> = {}): RoomForm {
     defaultInvolvement: "mentions",
     stageRoles: [],
     topic: null,
+    voiceBitrate: null,
     ...patch,
   };
 }

@@ -28,4 +28,8 @@ displayMemberIds: Array<number>, users: Array<User>,
 /**
  * The types the workspace creation rule allows, including Direct.
  */
-allowedTypes: Array<RoomKind>, conversionTypes: Array<RoomKind>, canSubmit: boolean, canDelete: boolean, canLeave: boolean, groupCapable: boolean, defaultInvolvement: Involvement, stageRoles: Array<RoomFormStageRole>, topic: string | null, };
+allowedTypes: Array<RoomKind>, conversionTypes: Array<RoomKind>, canSubmit: boolean, canDelete: boolean, canLeave: boolean, groupCapable: boolean, defaultInvolvement: Involvement, stageRoles: Array<RoomFormStageRole>, topic: string | null,
+/**
+ * Configured audio target in bits per second; null uses the current huddle default.
+ */
+voiceBitrate: number | null, };
