@@ -29,7 +29,7 @@ use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
 use campfire_api_types::{SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
-use campfire_people::controllers::{auth, sessions, two_factor};
+use campfire_people::controllers::{auth, sessions, two_factor, users};
 use campfire_spa::{SignedOutRoute, signed_out_route};
 
 /// The SPA routes. `immutable_cache_control` is the policy for digest-stamped assets.
@@ -51,38 +51,46 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/app", axum::routing::get(campfire_kit::action(show)))
         .route("/app/", axum::routing::get(campfire_kit::action(show)))
         .route("/app/{*path}", axum::routing::get(page))
+        // The join pages' own routes, so the shell reads their code or token as decoded params.
+        .route("/app/join/{join_code}", axum::routing::get(campfire_kit::action(show)))
+        .route("/app/invite/{token}", axum::routing::get(campfire_kit::action(show)))
         .route("/api/v1/boot", axum::routing::get(campfire_kit::action(boot)))
         .route("/api/v1/session/boot", axum::routing::get(campfire_kit::action(signed_out_boot)))
         .route("/api/v1/session", axum::routing::post(campfire_kit::unparsed_action(sessions::create_json)).delete(campfire_kit::unparsed_action(sessions::destroy_json)))
         .route("/api/v1/session/google", axum::routing::post(campfire_kit::action(super::google_sign_in::create_json)))
         .route("/api/v1/session/transfers/{id}", axum::routing::put(campfire_kit::action(sessions::transfers::update_json)))
+        .route("/api/v1/join/{join_code}", axum::routing::get(campfire_kit::action(users::new_json)).post(campfire_kit::action(users::create_json)))
+        .route("/api/v1/invites/{token}", axum::routing::get(campfire_kit::action(users::invite_new_json)).post(campfire_kit::action(users::invite_create_json)))
         .route("/api/v1/two_factor/challenge", axum::routing::get(campfire_kit::action(two_factor::challenge_show_json)).post(campfire_kit::unparsed_action(two_factor::challenge_create_json)))
 }
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
     if let Some(route) = signed_out_route(c.request.path()) {
-        let endpoint = match route {
-            SignedOutRoute::SignIn => "sessions#new",
-            SignedOutRoute::Transfer => "sessions/transfers#show",
-            SignedOutRoute::Challenge => "two_factor/challenges#show",
+        let (endpoint, before) = match route {
+            SignedOutRoute::SignIn => ("sessions#new", Before::default().allow_unauthenticated_access()),
+            SignedOutRoute::Transfer => ("sessions/transfers#show", Before::default().allow_unauthenticated_access()),
+            SignedOutRoute::Challenge => ("two_factor/challenges#show", Before::default().allow_unauthenticated_access()),
+            // The retained join pages send a signed-in visitor to the root.
+            SignedOutRoute::Join | SignedOutRoute::Invite => ("users#new", Before::default().require_unauthenticated_access()),
         };
-        auth::before_actions(
-            c,
-            endpoint,
-            Before::default().allow_unauthenticated_access(),
-            auth::ResponseMode::Html,
-        ).await?;
+        auth::before_actions(c, endpoint, before, auth::ResponseMode::Html).await?;
         // Only the retained challenge restores authentication. The public sign-in and transfer
         // forms leave an existing session and its saved return destination alone.
         if route == SignedOutRoute::Challenge && concerns::restore_authentication(c).await? {
             return c.redirect_to(&c.url_for("/"));
         }
+        // A wrong join code or a dead invite keeps the retained page's status; the page says why.
+        let status = match route {
+            SignedOutRoute::Join => users::page_status(c, false).await?,
+            SignedOutRoute::Invite => users::page_status(c, true).await?,
+            _ => StatusCode::OK,
+        };
         let boot = load_signed_out_boot(c).await?;
         let nonce = c.content_security_policy_nonce();
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
         c.no_store();
-        return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+        return Ok(c.render_as(status, "text/html; charset=utf-8", html));
     } else {
         concerns::before_actions(c, Before::default()).await?;
     }

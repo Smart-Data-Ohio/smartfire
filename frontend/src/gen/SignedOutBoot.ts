@@ -4,11 +4,11 @@ import type { SignInMethods } from "./SignInMethods";
 import type { SignInWorkspace } from "./SignInWorkspace";
 import type { SignedOut } from "./SignedOut";
 
-export type SignedOutBoot = { kind: SignedOut, workspace: SignInWorkspace, signInMethods: SignInMethods, firstRunPending: boolean,
+export type SignedOutBoot = { kind: SignedOut, workspace: SignInWorkspace, signInMethods: SignInMethods, firstRunPending: boolean, 
 /**
  * The first administrator, whom the retained sign-in page names for help.
  */
-helpContact: SignInHelpContact | null,
+helpContact: SignInHelpContact | null, 
 /**
  * The version the retained sign-in page prints under the help contact.
  */

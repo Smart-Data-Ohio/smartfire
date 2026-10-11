@@ -123,6 +123,54 @@ pub struct SignInMethods {
     pub google_domains: Vec<String>,
 }
 
+/// `POST /api/v1/join/:join_code` and `POST /api/v1/invites/:token`: the retained join form's
+/// fields. Sent as multipart form parts beside an optional `avatar` file (a JSON body without the
+/// avatar is read the same way).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceJoin {
+    pub name: String,
+    pub email_address: String,
+    pub password: String,
+}
+
+/// `GET /api/v1/join/:join_code` and `GET /api/v1/invites/:token`: what the retained join page
+/// shows. A dead invite answers `inviteInvalid` with the retained page's status (410, or 404 for
+/// an unknown token), as does a submission to one. Access gates and a wrong join code answer an
+/// [`AuthResponse`], as the session endpoints do.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum JoinPage {
+    Join {
+        workspace: SignInWorkspace,
+        help_contact: Option<SignInHelpContact>,
+    },
+    InviteInvalid {
+        workspace: SignInWorkspace,
+        help_contact: Option<SignInHelpContact>,
+        refusal: InviteRefusal,
+        /// The retained page's sentence for the refusal ("It has expired.").
+        reason: String,
+    },
+}
+
+/// Why a workspace invite can't enroll anyone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum InviteRefusal {
+    Expired,
+    Exhausted,
+    Revoked,
+    Unknown,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,7 +253,43 @@ mod tests {
             },
             json!({"pushSubscriptionEndpoint":null}),
         );
+        assert_wire(
+            &WorkspaceJoin {
+                name: "Ada".into(),
+                email_address: "ada@example.com".into(),
+                password: "secret".into(),
+            },
+            json!({"name":"Ada","emailAddress":"ada@example.com","password":"secret"}),
+        );
         assert_wire(&GoogleSignInStart {}, json!({}));
         assert_wire(&TransferSignIn {}, json!({}));
+    }
+
+    #[test]
+    fn join_pages_round_trip() {
+        let workspace = SignInWorkspace {
+            name: Some("Harbor".into()),
+            logo_url: None,
+            description: "Crew".into(),
+        };
+        assert_wire(
+            &JoinPage::Join {
+                workspace: workspace.clone(),
+                help_contact: None,
+            },
+            json!({"kind":"join","workspace":{"name":"Harbor","logoUrl":null,"description":"Crew"},"helpContact":null}),
+        );
+        assert_wire(
+            &JoinPage::InviteInvalid {
+                workspace,
+                help_contact: Some(SignInHelpContact {
+                    name: "Ada".into(),
+                    email_address: "ada@example.com".into(),
+                }),
+                refusal: InviteRefusal::Exhausted,
+                reason: "All its uses have been taken.".into(),
+            },
+            json!({"kind":"inviteInvalid","workspace":{"name":"Harbor","logoUrl":null,"description":"Crew"},"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"refusal":"exhausted","reason":"All its uses have been taken."}),
+        );
     }
 }
