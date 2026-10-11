@@ -52,7 +52,7 @@ async fn show_requires_sign_in() {
     let app = setup().await;
     let reply = app.anonymous().get("/switcher.json").await;
     assert_eq!(reply.status, StatusCode::FOUND);
-    assert_eq!(reply.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(reply.location(), Some("http://campfire.test/session/new"));
 }
 
 async fn seed_switcher_data(db: &campfire_db::Database, offset: usize) {

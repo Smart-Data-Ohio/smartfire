@@ -190,7 +190,11 @@ async fn run(name: &'static str) {
     for step in case["responses"].as_array().unwrap() {
         let reply = browser.send(Req::new(Method::GET, step["path"].as_str().unwrap()).header("x-requested-with", "XMLHttpRequest")).await;
         let mut expected = step["response"].clone();
-        spa_auth_locations(&mut expected);
+        // Rails sent these to its sign-in page; a page now goes to the SPA's, and a download
+        // still to the retained route.
+        if !step["path"].as_str().unwrap().ends_with(".csv") {
+            spa_auth_locations(&mut expected);
+        }
         assert_eq!(
             observation(&reply, name),
             expected,

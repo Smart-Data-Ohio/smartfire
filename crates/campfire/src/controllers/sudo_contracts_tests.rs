@@ -673,7 +673,10 @@ async fn sudo_contract_all_retained_callers_negotiate_json_before_mutation() {
                 );
                 assert!(session(&app, &browser)["sudo_pending_request"]["params"].is_null());
             } else {
-                assert_eq!(reply.location(), Some("http://campfire.test/app/sudo/new"));
+                // A form goes to the SPA's confirmation; the CSV download, not a page, to the
+                // retained route.
+                let page = if path.ends_with(".csv") { "/sudo/new" } else { "/app/sudo/new" };
+                assert_eq!(reply.location(), Some(format!("http://campfire.test{page}").as_str()));
             }
         }
     }

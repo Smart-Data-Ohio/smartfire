@@ -135,7 +135,7 @@ async fn retained_forms_redirect_with_see_other_and_change_nothing() {
     // The password went nowhere: sudo is still unconfirmed.
     assert_eq!(
         david.get("/account/audit_log.csv").await.location(),
-        Some("http://campfire.test/app/sudo/new")
+        Some("http://campfire.test/sudo/new")
     );
     assert_eq!(facts().await, before);
 }
@@ -206,4 +206,70 @@ async fn the_enrollment_gate_sends_pages_to_the_spa_setup_without_a_loop() {
         .send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
         .await;
     assert_eq!(state.status, StatusCode::OK, "{}", state.text());
+}
+
+/// A JSON request for `path`.
+fn json_get(path: &str) -> Req {
+    Req::new(Method::GET, path).header("accept", "application/json")
+}
+
+#[tokio::test]
+async fn gates_send_only_page_navigations_to_the_spa_pages() {
+    let app = app().await;
+    // Signed out, a page goes to the SPA's sign-in. A JSON request goes to the retained route,
+    // which still answers it with a 401, never the SPA's HTML.
+    let mut visitor = app.anonymous();
+    assert_eq!(visitor.get("/app/").await.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(
+        visitor.send(json_get("/app/")).await.location(),
+        Some("http://campfire.test/session/new")
+    );
+    assert_eq!(visitor.send(json_get("/session/new")).await.status, StatusCode::UNAUTHORIZED);
+
+    // Waiting on a second factor: the SPA's challenge for a page, the retained route (which
+    // answers only HTML) for anything else.
+    let mut pending = app.anonymous();
+    let signed_in = pending.password_sign_in("david@37signals.com", "secret123456").await;
+    assert_eq!(signed_in.json()["kind"], "secondFactorRequired", "{}", signed_in.text());
+    assert_eq!(
+        pending.get("/app/").await.location(),
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    assert_eq!(
+        pending.send(json_get("/app/")).await.location(),
+        Some("http://campfire.test/two_factor_challenge")
+    );
+    let retained = pending.send(json_get("/two_factor_challenge")).await;
+    assert_eq!(retained.status, StatusCode::NOT_ACCEPTABLE, "{}", retained.text());
+
+    // The sudo gate: a page or form goes to the SPA's confirmation, a download (CSV) to the
+    // retained route, which a browser follows on to the SPA's page and anything else is refused.
+    let mut david = app.sign_in(DAVID).await;
+    assert_eq!(
+        david.write(Req::new(Method::POST, "/account/join_code")).await.location(),
+        Some("http://campfire.test/app/sudo/new")
+    );
+    assert_eq!(
+        david.get("/account/audit_log.csv").await.location(),
+        Some("http://campfire.test/sudo/new")
+    );
+    assert_eq!(david.get("/sudo/new").await.location(), Some("http://campfire.test/app/sudo/new"));
+    let csv = david.send(Req::new(Method::GET, "/sudo/new").header("accept", "text/csv")).await;
+    assert_eq!(csv.status, StatusCode::NOT_ACCEPTABLE, "{}", csv.text());
+}
+
+#[tokio::test]
+async fn before_first_run_only_a_page_goes_to_the_spa_setup() {
+    let app = TestApp::boot_seed("first_run").await.expect("first-run seed");
+    let mut visitor = app.anonymous();
+    assert_eq!(
+        visitor.get("/session/new").await.location(),
+        Some("http://campfire.test/app/first_run")
+    );
+    assert_eq!(
+        visitor.send(json_get("/session/new")).await.location(),
+        Some("http://campfire.test/first_run")
+    );
+    let retained = visitor.send(json_get("/first_run")).await;
+    assert_eq!(retained.status, StatusCode::NOT_ACCEPTABLE, "{}", retained.text());
 }

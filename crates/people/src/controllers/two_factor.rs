@@ -6,7 +6,7 @@ use campfire_api_types::{TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorS
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::{TwoFactorCredential, TwoFactorRememberedDevice, User};
 use campfire_kit::{
-    Cookie, Ctx, Error, RateLimit, Redirect, Result, SameSite, StatusCode, halt,
+    Cookie, Ctx, Error, RateLimit, Redirect, Result, SameSite, StatusCode, format, halt,
 };
 use jiff::SignedDuration;
 use rails_compat::{ar_encryption::ArEncryption, totp};
@@ -338,6 +338,8 @@ pub async fn challenge_show(c: &mut Ctx) -> Result {
         ResponseMode::Html,
     )
     .await?;
+    // As the retained page, which answered only HTML.
+    c.respond_to(&[&format::HTML])?;
     concerns::redirect_to_signed_out_spa(c, "/app/two_factor/challenge", StatusCode::FOUND)
 }
 

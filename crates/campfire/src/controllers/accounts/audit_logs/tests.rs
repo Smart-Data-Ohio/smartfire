@@ -72,11 +72,12 @@ fn full_dates_and_invalid_inputs_match_rails_date_parse() {
 #[tokio::test]
 async fn authorization_and_csv_sudo_are_checked_before_export() {
     let app = fixture().await;
-    for path in ["/account/audit_log", "/account/audit_log.csv"] {
-        assert_eq!(
-            app.anonymous().get(path).await.location(),
-            Some("http://campfire.test/app/session/new")
-        );
+    // The page goes to the SPA's sign-in; the download to the retained route.
+    for (path, sign_in) in [
+        ("/account/audit_log", "http://campfire.test/app/session/new"),
+        ("/account/audit_log.csv", "http://campfire.test/session/new"),
+    ] {
+        assert_eq!(app.anonymous().get(path).await.location(), Some(sign_in));
         assert_eq!(
             app.sign_in(KEVIN).await.send(Req::new(Method::GET, path).header("x-requested-with", "XMLHttpRequest")).await.status,
             StatusCode::FORBIDDEN
@@ -89,7 +90,7 @@ async fn authorization_and_csv_sudo_are_checked_before_export() {
     );
     assert_eq!(
         browser.get("/account/audit_log.csv").await.location(),
-        Some("http://campfire.test/app/sudo/new")
+        Some("http://campfire.test/sudo/new")
     );
     assert_eq!(
         browser

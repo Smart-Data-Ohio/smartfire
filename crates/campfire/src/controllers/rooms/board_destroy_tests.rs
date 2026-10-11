@@ -181,7 +181,7 @@ async fn board_destroy_still_requires_session_and_csrf_before_the_reference_erro
     let before = snapshot(&app).await;
     assert_eq!(
         app.anonymous().send(delete(id, ".json")).await.location(),
-        Some("http://campfire.test/app/session/new")
+        Some("http://campfire.test/session/new")
     );
     assert_eq!(
         app.david().send(delete(id, ".json")).await.status,

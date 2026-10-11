@@ -431,15 +431,15 @@ async fn setup_shell_opens_for_an_unenrolled_session_and_keeps_its_return_path()
     let json = browser.send(Req::new(Method::GET, "/api/v1/settings")).await;
     assert_eq!(json.status, StatusCode::FORBIDDEN);
     assert_eq!(json.json(), gated);
-    // The gate lets the screen's path through whatever the request asks for, so it can't loop: a
-    // JSON request for it gets the page, never the setup state, and issues nothing.
+    // The gate lets the screen through only as a page, so the gate's redirect can't loop; a JSON
+    // request for it gets the gate's typed refusal, uncached, and issues nothing.
     let before = facts(&app).await;
     let json = browser
         .send(Req::new(Method::GET, SHELL).header("accept", "application/json"))
         .await;
-    assert_eq!(json.status, StatusCode::OK);
-    assert_eq!(json.content_type(), Some("text/html; charset=utf-8"));
-    assert!(!json.text().contains("otpauth://"));
+    assert_eq!(json.status, StatusCode::FORBIDDEN);
+    assert_eq!(json.json(), gated);
+    assert_eq!(json.header("cache-control"), Some("no-store"));
     assert_eq!(facts(&app).await, before);
 
     assert_eq!(

@@ -105,7 +105,8 @@ async fn cutover_d_gated_audit_csv_get_continues_and_returns_csv() {
     let mut b = a.sign_in_for_tests(DAVID).await;
     let gated = b.get("/account/audit_log.csv").await;
     assert_eq!(gated.status, StatusCode::FOUND);
-    assert_eq!(gated.location(), Some("http://campfire.test/app/sudo/new"));
+    // A download isn't a page, so it goes by the retained confirmation route.
+    assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
     let confirmed = b
         .confirm_sudo("secret123456")
         .await;

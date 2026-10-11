@@ -35,7 +35,8 @@ async fn workspace(c: &mut Ctx) -> Result<()> {
         .await
         .map_err(Error::internal)?;
     if !ready {
-        return halt(c.redirect_to(&c.url_for("/app/first_run"))?);
+        let first_run = concerns::auth_page_url(c, "/app/first_run", "/first_run");
+        return halt(c.redirect_to(&first_run)?);
     }
     Ok(())
 }

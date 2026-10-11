@@ -129,7 +129,7 @@ async fn ensure_user_exists(c: &mut Ctx) -> Result<()> {
         .await
         .map_err(Error::internal)?;
     if none {
-        let first_run = c.url_for("/app/first_run");
+        let first_run = concerns::auth_page_url(c, "/app/first_run", &campfire_routes::first_run());
         return halt(c.redirect_to(&first_run)?);
     }
     Ok(())

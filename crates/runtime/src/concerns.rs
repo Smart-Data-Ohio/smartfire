@@ -344,6 +344,24 @@ pub fn redirect_to_signed_out_spa(c: &mut Ctx, path: &str, status: StatusCode) -
     c.redirect_to_with(&location, campfire_kit::Redirect { status: Some(status), ..Default::default() })
 }
 
+/// Whether this request is a page navigation: it asks for HTML (a Turbo Stream's types include
+/// it) and isn't a JSON request. A request whose format can't be read counts as neither.
+pub fn html_navigation(c: &mut Ctx) -> bool {
+    !sudo::json_request(c).unwrap_or(true)
+        && c.format().ok().flatten().is_some_and(|f| f.symbol == "html" || f.string.contains("html"))
+}
+
+/// Where a gate sends this request: a page navigation to the SPA's page `spa`, anything else to
+/// the retained route `retained` it replaced, which still answers a JSON or other non-HTML request
+/// in its own format (a 401, a 406) rather than with the SPA's HTML. The SPA's JSON API is the
+/// exception: it never hands the redirect on, but answers with where to navigate (or a typed
+/// error), so it names the SPA's page for the page load that follows.
+pub fn auth_page_url(c: &mut Ctx, spa: &str, retained: &str) -> String {
+    let navigates = html_navigation(c) || c.request.path().starts_with("/api/v1/");
+    let path = if navigates { spa } else { retained };
+    c.url_for(path)
+}
+
 /// Whether this signed-in HTML navigation goes to the SPA, apart from which screen it is. The same
 /// gates as [`redirect_to_spa`]: the request navigates, by a person's session. A waiting flash is
 /// kept for the next hop.
@@ -603,6 +621,7 @@ pub fn expire_idle_timed_out_session(
 /// `TwoFactorEnforcement#require_two_factor_enrollment`. The callback and every late restore
 /// share this gate. Verified sessions do not query the credential; key authentication is exempt.
 pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> {
+    let setup_page = setup_page(c);
     let Some(session) = current_session(c) else { return Ok(()) };
     let Some(user) = current_user(c) else { return Ok(()) };
     if authenticated_by(c) != AuthenticatedBy::Session || !user.requires_two_factor() {
@@ -615,13 +634,13 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
         matches!(controller, "two_factor/challenges" | "pwa")
             || (controller == "two_factor/setups" && matches!(action, "show" | "create"))
             || (controller == "sessions" && action == "destroy")
-    }) || setup_page(c) || session.two_factor_verified() {
+    }) || setup_page || session.two_factor_verified() {
         return Ok(());
     }
     let user = user.clone();
     let enabled = c.app().db.read(move |conn| user.two_factor_enabled(conn)).await.map_err(Error::internal)?;
     let json = sudo::json_request(c)?;
-    let html = !json && c.format()?.is_some_and(|f| f.symbol == "html" || f.string.contains("html"));
+    let html = html_navigation(c);
     if enabled {
         terminate_current_session(c).await?;
         if html {
@@ -656,10 +675,13 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
 /// two-step sign-in.
 const TWO_FACTOR_SETUP_PAGE: &str = "/app/two_factor/setup";
 
-/// Opening the setup screen itself is never gated on setting up, whichever route serves it, so the
-/// gate's redirect can't send it back to itself.
-fn setup_page(c: &Ctx) -> bool {
-    (c.request.is_get() || c.request.is_head()) && c.request.path() == TWO_FACTOR_SETUP_PAGE
+/// Loading the setup screen as a page is never gated on setting up, whichever route serves it, so
+/// the gate's redirect can't send it back to itself. Any other request for it (JSON, say) stays
+/// behind the gate and gets its answer.
+fn setup_page(c: &mut Ctx) -> bool {
+    (c.request.is_get() || c.request.is_head())
+        && c.request.path() == TWO_FACTOR_SETUP_PAGE
+        && html_navigation(c)
 }
 
 /// `bot_authentication`: `params[:bot_key].present?` and a matching active bot.
@@ -784,11 +806,13 @@ fn ruby_space(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
 }
 
-/// `request_authentication`: someone waiting on their second factor goes back to the SPA's
-/// challenge; anyone else to the SPA's sign-in, remembering the page they were after.
+/// `request_authentication`: someone waiting on their second factor goes back to the challenge;
+/// anyone else to sign in, remembering the page they were after. A page navigation goes to the
+/// SPA's pages; any other request to the retained routes, which answer it as before (a JSON
+/// request to sign in gets a 401, not the SPA's HTML).
 pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
     if two_factor_pending_user(c).await?.is_some() {
-        let location = c.url_for("/app/two_factor/challenge");
+        let location = auth_page_url(c, "/app/two_factor/challenge", "/two_factor_challenge");
         return halt(c.redirect_to(&location)?);
     }
     // Only page navigations bounce back after sign in: not background polls (JSON, Turbo Stream
@@ -797,7 +821,7 @@ pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
         let url = c.request.url();
         c.session().insert(session_keys::RETURN_TO_KEY, url);
     }
-    let location = c.url_for("/app/session/new");
+    let location = auth_page_url(c, "/app/session/new", &campfire_routes::new_session());
     halt(c.redirect_to(&location)?)
 }
 
