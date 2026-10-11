@@ -80,6 +80,11 @@ function middleOf(timeline: Timeline | undefined): number | null {
 /** The server pings after 15 s idle; this long without any frame means the socket is dead. */
 export const SILENCE_LIMIT_MS = 30_000;
 
+/** Retries of a failed ignore snapshot before it waits for the next resume. */
+const BLOCKS_RETRIES = 3;
+
+const blocksRetrySchedule = Schedule.exponential("500 millis", 2).pipe(Schedule.jittered);
+
 /** A connection that lasted this long resets the reconnect backoff. */
 export const STABLE_AFTER_MS = 60_000;
 
@@ -478,6 +483,22 @@ export class Engine extends Context.Service<
         );
       };
 
+      /**
+       * The ignore snapshot, retried with backoff. The set is marked stale first, so a refetch
+       * that never lands (it fails every try, or the connection drops under it) is made again on
+       * the next resume; a snapshot that lands clears the mark.
+       */
+      const refreshBlocks = Effect.suspend(() => {
+        mutations.markIgnoresStale();
+
+        return blocks().pipe(
+          Effect.retry({ schedule: blocksRetrySchedule, times: BLOCKS_RETRIES }),
+          Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot))),
+          Effect.catch((error) => Effect.logWarning("sync: ignore snapshot failed", error.message)),
+          Effect.provideContext(api),
+        );
+      });
+
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
       const resync = Effect.fnUntraced(function* (
         scope: Scope.Scope,
@@ -493,13 +514,8 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
-            yield* blocks().pipe(
-              Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot))),
-              Effect.catch((error) =>
-                Effect.logWarning("sync: ignore snapshot failed", error.message),
-              ),
-              Effect.provideContext(api),
-            );
+            // Forked: a failing snapshot waits out its retries without holding up the sidebar.
+            yield* Effect.forkIn(refreshBlocks, scope);
 
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
@@ -745,6 +761,11 @@ export class Engine extends Context.Service<
             yield* resync(scope, ["user"], frame.replayThrough, frame.replayThrough);
           } else {
             yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
+
+            // Replay covers events missed while away, but not a snapshot that never landed.
+            if (store.getState().ignores.stale) {
+              yield* Effect.forkIn(refreshBlocks, scope);
+            }
           }
 
           return;

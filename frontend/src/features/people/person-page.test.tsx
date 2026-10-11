@@ -136,7 +136,7 @@ it("follows an ignore made in another session", async () => {
   act(() => mutations.applyBlockState({ userId: 2, ignoredByMe: true, revision: 3 }));
 
   expect(screen.getByRole("button", { name: "Stop ignoring" })).toBeTruthy();
-  expect(store.getState().ignores.people[2]).toBe(true);
+  expect(store.getState().ignores.people[2]?.ignored).toBe(true);
 });
 
 it("follows an unignore made in another session once the snapshot drops them", async () => {

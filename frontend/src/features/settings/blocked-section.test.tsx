@@ -76,7 +76,7 @@ it("stops ignoring someone and drops them from the list", async () => {
   expect(set).toHaveBeenCalledWith(2, false);
   await waitFor(() => expect(screen.queryByRole("link", { name: "Maya" })).toBeNull());
   expect(screen.getByRole("link", { name: "Jason" })).toBeTruthy();
-  expect(store.getState().ignores.people[2]).toBe(false);
+  expect(store.getState().ignores.people[2]?.ignored).toBe(false);
 });
 
 it("keeps a stopped person gone when the write's sync echo refetches the list", async () => {

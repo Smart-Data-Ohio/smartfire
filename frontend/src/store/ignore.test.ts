@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, sidebarRowFixture, userFixture } from "../api/testing.ts";
-import { messageIgnored } from "./ignores.ts";
-import { applyEvents, applyPage, receiveMessage, setBlocks } from "./reducers.ts";
+import { isIgnored, messageIgnored } from "./ignores.ts";
+import { applyBlockState, applyEvents, applyPage, receiveMessage, setBlocks } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
 
 /** Whether message 9 shows collapsed, as every view reads it. */
@@ -181,7 +181,10 @@ describe("personal ignore sync", () => {
       revision: 4,
     });
 
-    expect(loaded.ignores).toMatchObject({ loaded: true, revision: 4, people: { 2: true } });
+    expect(loaded.ignores).toMatchObject({
+      snapshot: 4,
+      people: { 2: { ignored: true, revision: 4 } },
+    });
 
     const stopped = applyEvents(
       loaded,
@@ -216,6 +219,60 @@ describe("personal ignore sync", () => {
       ),
     ).toBe(false);
     expect(setBlocks(echoed, { people: [], revision: 3 }).ignores).toBe(echoed.ignores);
+  });
+});
+
+describe("per-person ignore revisions", () => {
+  const A = 2;
+  const B = 3;
+
+  const listed = (...ids: number[]) =>
+    ids.map((id) => ({
+      user: userFixture(id),
+      ignoredByMe: true,
+      createdAt: "2026-10-01T12:00:00Z",
+    }));
+
+  const event = (seq: number, userId: number, ignoredByMe: boolean, revision: number) => ({
+    seq,
+    topic: "user" as const,
+    type: "blocks.updated" as const,
+    data: { userId, ignoredByMe, revision },
+  });
+
+  const ignored = (state: State, userId: number) => isIgnored(state.ignores, userId, undefined);
+
+  it("lands another person's change at the revision a local no-op already reported", () => {
+    // B ignored as of 10. Elsewhere: unignore B (11), then ignore A (12).
+    const loaded = setBlocks(initialState, { people: listed(B), revision: 10 });
+
+    // Before those events arrive, "Stop ignoring B" here is a no-op that reports revision 12.
+    const stopped = applyBlockState(loaded, { userId: B, ignoredByMe: false, revision: 12 });
+
+    expect(ignored(stopped, B)).toBe(false);
+
+    const arrived = applyEvents(stopped, [event(1, B, false, 11), event(2, A, true, 12)], 0);
+
+    expect(ignored(arrived, A)).toBe(true);
+    expect(ignored(arrived, B)).toBe(false);
+  });
+
+  it("keeps a change newer than a snapshot that lands after it", () => {
+    const loaded = setBlocks(initialState, { people: listed(B), revision: 10 });
+    const changed = applyEvents(loaded, [event(1, A, true, 12), event(2, B, false, 13)], 0);
+
+    // A snapshot read at 11, before both changes, arrives late.
+    const late = setBlocks(changed, { people: listed(B), revision: 11 });
+
+    expect(late.ignores.snapshot).toBe(11);
+    expect(ignored(late, A)).toBe(true);
+    expect(ignored(late, B)).toBe(false);
+
+    // One read after them takes over; one older than the last snapshot is dropped.
+    const current = setBlocks(late, { people: listed(A), revision: 14 });
+
+    expect(current.ignores.people).toEqual({ [A]: { ignored: true, revision: 14 } });
+    expect(setBlocks(current, { people: listed(B), revision: 13 })).toBe(current);
   });
 });
 

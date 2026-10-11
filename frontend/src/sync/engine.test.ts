@@ -3407,6 +3407,69 @@ describe("people", () => {
   );
 });
 
+describe("ignores", () => {
+  const blocksUpdated = (seq: number, userId: number, ignoredByMe: boolean, revision: number) =>
+    ({
+      seq,
+      topic: "user",
+      type: "blocks.updated",
+      data: { userId, ignoredByMe, revision },
+    }) as const;
+
+  const blockRequests = Effect.gen(function* () {
+    const api = yield* FakeApi;
+
+    return (yield* api.requests).filter((request) => request.path === "/blocks").length;
+  });
+
+  it.effect("retries a failed snapshot, then refetches it on the next resume", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        expect(store.getState().ignores).toMatchObject({ snapshot: 0, stale: false });
+
+        yield* api.route("GET /blocks", () =>
+          Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
+        );
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        // Three retries with backoff (0.5 s, 1 s, 2 s), then it waits for the next chance.
+        yield* TestClock.adjust("4 seconds");
+
+        expect((yield* blockRequests) - before).toBe(4);
+        expect(store.getState().ignores.stale).toBe(true);
+
+        yield* api.reply("GET /blocks", {
+          people: [{ user: userFixture(3), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" }],
+          revision: 2,
+        });
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+
+        const resumed = yield* blockRequests;
+
+        yield* welcome(6, true);
+
+        expect((yield* blockRequests) - resumed).toBe(1);
+        expect(store.getState().ignores).toMatchObject({ snapshot: 2, stale: false });
+
+        // A clean resume after that makes no further snapshot request.
+        yield* socket.drop;
+        yield* TestClock.adjust(500);
+        yield* welcome(6, true);
+        expect((yield* blockRequests) - resumed).toBe(1);
+      }),
+    ),
+  );
+});
+
 describe("activity follows the room list", () => {
   const countRequests = Effect.gen(function* () {
     const api = yield* FakeApi;

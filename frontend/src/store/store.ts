@@ -308,6 +308,7 @@ export const mutations = {
     })),
   setBlocks: (snapshot: BlockList) => apply((state) => reduce.setBlocks(state, snapshot)),
   applyBlockState: (change: BlockState) => apply((state) => reduce.applyBlockState(state, change)),
+  markIgnoresStale: () => apply(reduce.markIgnoresStale),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),

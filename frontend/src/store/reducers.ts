@@ -1,7 +1,11 @@
 import type { BlockList } from "../gen/BlockList.ts";
 import type { BlockState } from "../gen/BlockState.ts";
 import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
-import { applyBlockChange, applyBlockSnapshot } from "./ignores.ts";
+import {
+  applyBlockChange,
+  applyBlockSnapshot,
+  markIgnoresStale as markIgnoresStaleIn,
+} from "./ignores.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
@@ -835,7 +839,7 @@ export function receiveMessage(state: State, message: MessageDTO): State {
     : withThreadTimeline({ ...reconciled, messages }, threadId, next);
 }
 
-/** A `GET /blocks` snapshot: the viewer's whole ignore set, unless the set is newer. */
+/** A `GET /blocks` snapshot: the viewer's whole ignore set, keeping any newer change. */
 export function setBlocks(state: State, snapshot: BlockList): State {
   const ignores = applyBlockSnapshot(state.ignores, snapshot);
 
@@ -848,6 +852,13 @@ export function setBlocks(state: State, snapshot: BlockList): State {
  */
 export function applyBlockState(state: State, change: BlockState): State {
   const ignores = applyBlockChange(state.ignores, change);
+
+  return ignores === state.ignores ? state : { ...state, ignores };
+}
+
+/** A blocks refetch failed or a change may be missing: refetch at the next chance. */
+export function markIgnoresStale(state: State): State {
+  const ignores = markIgnoresStaleIn(state.ignores);
 
   return ignores === state.ignores ? state : { ...state, ignores };
 }
