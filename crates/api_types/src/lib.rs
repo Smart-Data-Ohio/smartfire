@@ -85,8 +85,8 @@ pub use admin::{
     WorkspaceIconList,
 };
 pub use admin::{
-    GuideEntry, GuideResource, GuideRoom, WelcomeAdmin, WelcomeRoom, WelcomeRoomCard, WelcomeRoomChoice,
-    WelcomeSettings, WorkspaceWelcome,
+    GuideEntry, GuideResource, GuideResourceEdit, GuideRoom, WelcomeAdmin, WelcomeRoom, WelcomeRoomCard,
+    WelcomeRoomChoice, WelcomeRoomEdit, WelcomeSettings, WelcomeUpdate, WorkspaceWelcome,
 };
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,

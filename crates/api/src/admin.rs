@@ -361,9 +361,8 @@ async fn branding_image(c: &mut Ctx, signed_id: &str, kind: Kind) -> Result<Prep
     crate::branding_images::prepare(c, signed_id, kind, branding::MAX_BYTES).await
 }
 
-/// `accounts#update`: the account, its logo, then the audit of what changed. Publishes
-/// `workspace.updated` once saved.
-pub(crate) async fn write_workspace(
+/// `accounts#update`: the account, its logo, then the audit of what changed.
+async fn write_workspace(
     c: &mut Ctx,
     name: Option<String>,
     settings: Option<Vec<(String, String)>>,

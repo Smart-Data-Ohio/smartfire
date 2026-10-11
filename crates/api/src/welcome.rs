@@ -1,11 +1,14 @@
 //! The welcome card and the server guide (U1, U4): a welcome message, up to five suggested rooms
 //! and up to ten read-only resources, kept in `accounts.settings` under `welcome`.
 //!
-//! Administrators read and replace the whole configuration at `/api/v1/admin/welcome`; everyone
-//! reads their own copy at `/api/v1/welcome`. That copy is filtered for the viewer: a room they
-//! neither belong to nor may join (a closed room, a direct message, a deleted room) is left out
-//! entirely, so its name and id never reach them. Saving publishes `workspace.updated`, the event
-//! a branding change sends, and every client reads its own copy again.
+//! Administrators read the configuration at `/api/v1/admin/welcome` and `PATCH` one section at a
+//! time (the welcome or the guide), read and written in one transaction so two saves don't undo
+//! each other. Everyone reads their own copy at `/api/v1/welcome`. Both copies are filtered for
+//! the person asking: a room they neither belong to nor may join (a closed room, a direct message,
+//! a deleted room) never reaches them by name or id. Viewers don't get it at all; administrators
+//! get its row with an opaque `keep` token in place of the room, which keeps it when sent back.
+//! Saving publishes `workspace.updated`, the event a branding change sends, and every client
+//! reads its own copy again.
 
 use std::collections::{BTreeSet, HashMap};
 
@@ -18,9 +21,11 @@ use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action}
 use campfire_richtext::MentionUser;
 use campfire_richtext::markdown;
 use campfire_runtime::context::db_error;
-use campfire_runtime::presenters::attachments::Assignment;
+use campfire_runtime::presenters;
+use rails_compat::message_encryptor::Serializer;
+use rails_compat::{MessageEncryptor, Secrets};
 
-use crate::admin::{administrator, body, viewer, write_workspace};
+use crate::admin::{administrator, body, viewer};
 use crate::error::{fail, validation};
 
 /// The `accounts.settings` key.
@@ -40,7 +45,7 @@ pub fn routes() -> Router<Kit> {
         .route("/api/v1/welcome", get(action(welcome)))
         .route(
             "/api/v1/admin/welcome",
-            get(action(admin_welcome)).put(unparsed_action(update_welcome)),
+            get(action(admin_welcome)).patch(unparsed_action(update_welcome)),
         )
 }
 
@@ -53,7 +58,7 @@ endpoint!(
     admin_welcome => show_admin_welcome
 );
 endpoint!(
-    /// `PUT /api/v1/admin/welcome`
+    /// `PATCH /api/v1/admin/welcome`
     update_welcome => save_welcome
 );
 
@@ -293,39 +298,203 @@ fn room_ids(settings: &api::WelcomeSettings) -> Vec<i64> {
     ids.into_iter().collect()
 }
 
-/// An administrator may name a room they can reach, or one already saved that still exists and
-/// isn't a direct message (another administrator's choice they can't see). Anything else is
-/// refused with the same words whether or not the room exists.
-pub fn check_rooms(
+/// What a `keep` token is encrypted for.
+const KEEP_PURPOSE: &str = "welcome_room";
+
+/// Seals and opens `keep` tokens: a saved room's id, encrypted (with a fresh IV each time) so an
+/// administrator who can't see the room can hand it back without learning which room it is.
+fn keeper(secrets: &Secrets) -> MessageEncryptor {
+    MessageEncryptor::new(
+        &secrets.key_generator.generate_key(KEEP_PURPOSE, 32),
+        Serializer::Json,
+    )
+}
+
+fn keep_token(keeper: &MessageEncryptor, room_id: i64) -> String {
+    keeper.encrypt_and_sign(&serde_json::Value::from(room_id), Some(KEEP_PURPOSE), None)
+}
+
+fn kept_room(keeper: &MessageEncryptor, token: &str) -> Option<i64> {
+    keeper
+        .decrypt_and_verify(token, Some(KEEP_PURPOSE), jiff::Timestamp::now())
+        .ok()?
+        .as_i64()
+}
+
+/// The configuration as administrator `user_id` may see it: a saved room they can't reach comes
+/// without its id, as a `keep` token.
+pub fn for_admin(
     conn: &Connection,
     user_id: i64,
     settings: &api::WelcomeSettings,
-    previous: &api::WelcomeSettings,
-) -> campfire_db::Result<std::result::Result<(), Invalid>> {
+    keeper: &MessageEncryptor,
+) -> campfire_db::Result<api::WelcomeAdmin> {
     let reach = reachable(conn, user_id, &room_ids(settings))?;
-    let kept: BTreeSet<i64> = Room::for_ids(conn, &room_ids(previous))?
-        .into_iter()
-        .filter(|room| room.deleted_at.is_none() && room.room_type != RoomType::Direct)
-        .map(|room| room.id)
+    let mask = |id: i64| {
+        if reach.contains_key(&id) {
+            (Some(id), None)
+        } else {
+            (None, Some(keep_token(keeper, id)))
+        }
+    };
+    let rooms = settings
+        .rooms
+        .iter()
+        .map(|room| {
+            let (room_id, keep) = mask(room.room_id);
+            api::WelcomeRoomEdit {
+                room_id,
+                keep,
+                emoji: room.emoji.clone(),
+                description: room.description.clone(),
+            }
+        })
         .collect();
-    let allowed = |id: i64| reach.contains_key(&id) || kept.contains(&id);
-    for (index, room) in settings.rooms.iter().enumerate() {
-        if !allowed(room.room_id) {
-            return Ok(Err(invalid(
+    let guide = settings
+        .guide
+        .iter()
+        .map(|resource| {
+            let (room_id, keep) = resource.room_id.map_or((None, None), mask);
+            api::GuideResourceEdit {
+                title: resource.title.clone(),
+                emoji: resource.emoji.clone(),
+                room_id,
+                keep,
+                body: resource.body.clone(),
+            }
+        })
+        .collect();
+    Ok(api::WelcomeAdmin {
+        message: settings.message.clone(),
+        rooms,
+        guide,
+        choices: choices(conn, user_id)?,
+    })
+}
+
+/// `previous` with the sections `update` names replaced, rooms resolved: a `roomId` must be a room
+/// administrator `user_id` can reach, and a `keep` token must open to a room already saved. A
+/// room that doesn't exist and one they can't see are refused in the same words. The result
+/// still needs [`normalize`].
+pub fn resolve(
+    conn: &Connection,
+    user_id: i64,
+    update: api::WelcomeUpdate,
+    previous: &api::WelcomeSettings,
+    keeper: &MessageEncryptor,
+) -> campfire_db::Result<std::result::Result<api::WelcomeSettings, Invalid>> {
+    if update
+        .rooms
+        .as_ref()
+        .is_some_and(|rooms| rooms.len() > ROOMS_MAX)
+    {
+        return Ok(Err(invalid(
+            "rooms",
+            format!("can suggest at most {ROOMS_MAX} rooms"),
+        )));
+    }
+    if update
+        .guide
+        .as_ref()
+        .is_some_and(|guide| guide.len() > GUIDE_MAX)
+    {
+        return Ok(Err(invalid(
+            "guide",
+            format!("can hold at most {GUIDE_MAX} resources"),
+        )));
+    }
+    let named: Vec<i64> = update
+        .rooms
+        .iter()
+        .flatten()
+        .filter_map(|room| room.room_id)
+        .chain(
+            update
+                .guide
+                .iter()
+                .flatten()
+                .filter_map(|resource| resource.room_id),
+        )
+        .collect();
+    let reach = reachable(conn, user_id, &named)?;
+    let saved: BTreeSet<i64> = room_ids(previous).into_iter().collect();
+    let pick = |field: &'static str,
+                at: usize,
+                room_id: Option<i64>,
+                keep: Option<&str>,
+                unreachable: &str|
+     -> std::result::Result<Option<i64>, Invalid> {
+        match (room_id, keep) {
+            (Some(_), Some(_)) => Err(invalid(
+                field,
+                format!("#{at}: names a room and keeps one; send one or the other"),
+            )),
+            (Some(id), None) if reach.contains_key(&id) => Ok(Some(id)),
+            (Some(_), None) => Err(invalid(field, format!("#{at}: {unreachable}"))),
+            (None, Some(token)) => kept_room(keeper, token)
+                .filter(|id| saved.contains(id))
+                .map(Some)
+                .ok_or_else(|| {
+                    invalid(
+                        field,
+                        format!("#{at}: that room is no longer saved; choose another"),
+                    )
+                }),
+            (None, None) => Ok(None),
+        }
+    };
+    let mut next = previous.clone();
+    if let Some(message) = update.message {
+        next.message = message;
+    }
+    if let Some(rooms) = update.rooms {
+        let mut resolved = Vec::with_capacity(rooms.len());
+        for (index, room) in rooms.into_iter().enumerate() {
+            let at = index + 1;
+            let picked = pick(
                 "rooms",
-                format!("#{}: isn't a room you can suggest", index + 1),
-            )));
+                at,
+                room.room_id,
+                room.keep.as_deref(),
+                "isn't a room you can suggest",
+            );
+            let room_id = match picked {
+                Ok(Some(id)) => id,
+                Ok(None) => return Ok(Err(invalid("rooms", format!("#{at}: choose a room")))),
+                Err(refused) => return Ok(Err(refused)),
+            };
+            resolved.push(api::WelcomeRoom {
+                room_id,
+                emoji: room.emoji,
+                description: room.description,
+            });
         }
+        next.rooms = resolved;
     }
-    for (index, resource) in settings.guide.iter().enumerate() {
-        if resource.room_id.is_some_and(|id| !allowed(id)) {
-            return Ok(Err(invalid(
+    if let Some(guide) = update.guide {
+        let mut resolved = Vec::with_capacity(guide.len());
+        for (index, resource) in guide.into_iter().enumerate() {
+            let picked = pick(
                 "guide",
-                format!("#{}: links to a room you can't choose", index + 1),
-            )));
+                index + 1,
+                resource.room_id,
+                resource.keep.as_deref(),
+                "links to a room you can't choose",
+            );
+            let room_id = match picked {
+                Ok(room_id) => room_id,
+                Err(refused) => return Ok(Err(refused)),
+            };
+            resolved.push(api::GuideResource {
+                title: resource.title,
+                emoji: resource.emoji,
+                room_id,
+                body: resource.body,
+            });
         }
+        next.guide = resolved;
     }
-    Ok(Ok(()))
+    Ok(Ok(next))
 }
 
 /// `source` rendered as a message's markdown is (no mentions resolve) and sanitized for display.
@@ -450,13 +619,14 @@ fn choices(conn: &Connection, user_id: i64) -> campfire_db::Result<Vec<api::Welc
 
 async fn reply_admin(c: &mut Ctx, user_id: i64) -> Result {
     let settings = stored(&account(c).await?);
-    let choices = c
+    let secrets = c.app().secrets.clone();
+    let admin = c
         .app()
         .db
-        .read(move |conn| choices(conn, user_id))
+        .read(move |conn| for_admin(conn, user_id, &settings, &keeper(&secrets)))
         .await
         .map_err(db_error)?;
-    c.json(StatusCode::OK, &api::WelcomeAdmin { settings, choices })
+    c.json(StatusCode::OK, &admin)
 }
 
 async fn show_admin_welcome(c: &mut Ctx) -> Result {
@@ -466,31 +636,35 @@ async fn show_admin_welcome(c: &mut Ctx) -> Result {
 
 async fn save_welcome(c: &mut Ctx) -> Result {
     let user = administrator(c).await?;
-    let update: api::WelcomeSettings = body(c).await?;
-    let settings = normalize(update)
-        .map_err(|refused| fail(c, validation(refused.field, &refused.message)))?;
-    let previous = stored(&account(c).await?);
-    let (user_id, checked) = (user.id, settings.clone());
-    let rooms = c
+    let update: api::WelcomeUpdate = body(c).await?;
+    let (user_id, secrets) = (user.id, c.app().secrets.clone());
+    // Read, merged and written in one transaction: a save of the guide can't put back a welcome
+    // another save just replaced.
+    let outcome = c
         .app()
         .db
-        .read(move |conn| check_rooms(conn, user_id, &checked, &previous))
+        .write(move |tx| {
+            let mut account =
+                Account::first(tx.conn())?.ok_or(campfire_db::Error::RecordNotFound("Account"))?;
+            let previous = stored(&account);
+            let next = match resolve(tx.conn(), user_id, update, &previous, &keeper(&secrets))?
+                .and_then(normalize)
+            {
+                Ok(next) => next,
+                Err(refused) => return Ok(Err(refused)),
+            };
+            let json = serde_json::to_string(&next)
+                .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+            account.update(tx, None, None, Some(&[(SETTINGS_KEY, json.as_str())]))?;
+            Ok(Ok(()))
+        })
         .await
         .map_err(db_error)?;
-    if let Err(refused) = rooms {
+    if let Err(refused) = outcome {
         return Err(fail(c, validation(refused.field, &refused.message)));
     }
-    let json = serde_json::to_string(&settings).map_err(Error::internal)?;
-    write_workspace(
-        c,
-        None,
-        Some(vec![(SETTINGS_KEY.to_string(), json)]),
-        Assignment::Unchanged,
-        Assignment::Unchanged,
-        None,
-    )
-    .await?;
-    reply_admin(c, user.id).await
+    presenters::workspace_branding::publish(c.app()).await;
+    reply_admin(c, user_id).await
 }
 
 #[cfg(test)]

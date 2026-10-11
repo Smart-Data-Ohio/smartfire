@@ -3,10 +3,9 @@ import type { GuideResource } from "./GuideResource";
 import type { WelcomeRoom } from "./WelcomeRoom";
 
 /**
- * `PUT /api/v1/admin/welcome`: the whole welcome screen and server guide, kept in
- * `accounts.settings`. An empty message with no rooms turns the welcome card off; an empty
- * guide hides the guide page. A refusal is `Validation` with `fields` among `message`,
- * `rooms` and `guide`.
+ * The welcome screen and server guide as stored in `accounts.settings` under `welcome`. Never
+ * sent as is: administrators get [`WelcomeAdmin`], everyone else [`WorkspaceWelcome`]. An empty
+ * message with no rooms turns the welcome card off; an empty guide hides the guide page.
  */
 export type WelcomeSettings = {
 /**
