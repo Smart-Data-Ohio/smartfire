@@ -7,7 +7,6 @@
 import type {
   AudioCaptureOptions,
   LocalAudioTrack,
-  LocalParticipant,
   LocalTrack,
   Participant,
   RemoteParticipant,
@@ -16,9 +15,7 @@ import type {
   Room,
   RoomOptions,
   ScreenShareCaptureOptions,
-  Track,
   TrackPublication,
-  TrackPublishOptions,
 } from "livekit-client";
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { loadForUpdate } from "../../../service-worker/update-required.ts";
@@ -68,12 +65,7 @@ export function loadLiveKit(): Promise<LiveKit> {
 }
 
 export async function createLiveKitTransport(): Promise<CallTransport> {
-  return liveKitTransport(await loadLiveKit());
-}
-
-/** A transport over `lk`, the loaded SDK (or, in tests, a stand-in for the parts a call uses). */
-export function liveKitTransport(lk: LiveKit): CallTransport {
-  return new LiveKitTransport(lk);
+  return new LiveKitTransport(await loadLiveKit());
 }
 
 /** getDisplayMedia reports unusable constraints as NotSupportedError or TypeError. */
@@ -129,19 +121,6 @@ function quality(participant: Participant): ConnectionQuality {
   }
 }
 
-function stopTracks(tracks: readonly LocalTrack[]): void {
-  for (const track of tracks) {
-    track.stop();
-  }
-}
-
-/** Stops every track `room`'s local participant publishes, releasing its devices. */
-function stopLocalTracks(room: Room): void {
-  for (const publication of room.localParticipant.trackPublications.values()) {
-    publication.track?.stop();
-  }
-}
-
 class LiveKitTransport implements CallTransport {
   readonly #lk: LiveKit;
   #room: Room | null = null;
@@ -166,15 +145,6 @@ class LiveKitTransport implements CallTransport {
   readonly #captured = new Map<number, LocalTrack[]>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
-  /**
-   * Bumped by `disconnect`. A capture that settles after it belongs to a call that has ended:
-   * its tracks are stopped there and then, and never published.
-   */
-  #generation = 0;
-  /** Tracks captured and on their way to LiveKit; a disconnect stops these too. */
-  readonly #publishing = new Set<LocalTrack>();
-  /** A source's first capture still in flight (the SDK's own guard sits on the path this replaces). */
-  readonly #enabling = new Map<Track.Source, Promise<void>>();
 
   constructor(lk: LiveKit) {
     this.#lk = lk;
@@ -194,7 +164,6 @@ class LiveKitTransport implements CallTransport {
     const room = this.#room;
 
     this.#room = null;
-    this.#generation += 1;
 
     for (const unbind of this.#unbind.splice(0)) {
       unbind();
@@ -211,14 +180,10 @@ class LiveKitTransport implements CallTransport {
 
     this.#captured.clear();
 
-    for (const track of this.#publishing) {
-      track.stop();
-    }
-
-    this.#publishing.clear();
-
     if (room !== null) {
-      stopLocalTracks(room);
+      for (const publication of room.localParticipant.trackPublications.values()) {
+        publication.track?.stop();
+      }
     }
 
     const context = this.#boostContext;
@@ -285,17 +250,7 @@ class LiveKitTransport implements CallTransport {
   }
 
   async setMicrophone(enabled: boolean): Promise<void> {
-    const { Microphone } = this.#lk.Track.Source;
-
-    if (enabled) {
-      await this.#enable(Microphone, (local) =>
-        local.createTracks({ audio: this.#audioCapture() }),
-      );
-    } else {
-      await this.#enabling.get(Microphone)?.catch(() => undefined);
-      await this.#room?.localParticipant.setMicrophoneEnabled(false);
-    }
-
+    await this.#room?.localParticipant.setMicrophoneEnabled(enabled, this.#audioCapture());
     this.#watchMicrophone();
   }
 
@@ -312,17 +267,13 @@ class LiveKitTransport implements CallTransport {
       return;
     }
 
-    const { Camera } = this.#lk.Track.Source;
-
     if (enabled) {
-      await this.#enable(Camera, () => local.createTracks({ video: true }), {
+      await local.setCameraEnabled(true, undefined, {
         degradationPreference: "maintain-framerate",
       });
 
       return;
     }
-
-    await this.#enabling.get(Camera)?.catch(() => undefined);
 
     const track = local.getTrackPublication(this.#lk.Track.Source.Camera)?.track;
 
@@ -347,19 +298,16 @@ class LiveKitTransport implements CallTransport {
       return;
     }
 
-    const { ScreenShare } = this.#lk.Track.Source;
-
     if (!enabled) {
-      await this.#enabling.get(ScreenShare)?.catch(() => undefined);
       await local.setScreenShareEnabled(false);
 
       return;
     }
 
-    await this.#enable(
-      ScreenShare,
-      () => withCaptureFallback(quality, (options) => local.createScreenTracks(options)),
-      screenPublishOptions(quality, this.#lk.VideoPreset),
+    const publish = screenPublishOptions(quality, this.#lk.VideoPreset);
+
+    await withCaptureFallback(quality, (options) =>
+      local.setScreenShareEnabled(true, options, publish),
     );
   }
 
@@ -375,16 +323,8 @@ class LiveKitTransport implements CallTransport {
       return Promise.reject(new Error("screen-share-unavailable"));
     }
 
-    const generation = this.#generation;
-
     return withCaptureFallback(quality, (options) => local.createScreenTracks(options)).then(
       (tracks) => {
-        if (generation !== this.#generation) {
-          stopTracks(tracks);
-
-          throw new Error("call-ended");
-        }
-
         this.#capturedSequence += 1;
         this.#captured.set(this.#capturedSequence, tracks);
 
@@ -404,14 +344,7 @@ class LiveKitTransport implements CallTransport {
 
     const publish = screenPublishOptions(streamQuality, this.#lk.VideoPreset);
 
-    const generation = this.#generation;
-
     for (const track of tracks) {
-      // The disconnect stopped these; publishing the rest would only wait out LiveKit's timeout.
-      if (generation !== this.#generation) {
-        throw new Error("screen-capture-gone");
-      }
-
       await local.publishTrack(track, publish);
     }
 
@@ -433,18 +366,9 @@ class LiveKitTransport implements CallTransport {
       return false;
     }
 
-    const generation = this.#generation;
-
     try {
       await room.switchActiveDevice(kind, deviceId);
     } catch {
-      return false;
-    }
-
-    // A switch re-acquires the device; one that lands after the call ended is let go at once.
-    if (generation !== this.#generation) {
-      stopLocalTracks(room);
-
       return false;
     }
 
@@ -652,89 +576,6 @@ class LiveKitTransport implements CallTransport {
     this.#statsBaseline = sample.baseline;
 
     return sample.stats;
-  }
-
-  /**
-   * Turns `source` on, as the SDK's `set…Enabled(true)` does, except that a capture settling after
-   * a disconnect is stopped instead of published: the SDK would publish it into the closed room
-   * and hold the device until its publish timeout. A published source just unmutes (which may
-   * re-acquire the microphone, so that is checked too). `capture` runs before the first await
-   * here unless another capture of the source is in flight, keeping a screen share in the
-   * gesture.
-   */
-  async #enable(
-    source: Track.Source,
-    capture: (local: LocalParticipant) => Promise<LocalTrack[]>,
-    publish?: TrackPublishOptions,
-  ): Promise<void> {
-    const pending = this.#enabling.get(source);
-
-    if (pending !== undefined) {
-      await pending.catch(() => undefined);
-    }
-
-    const room = this.#room;
-
-    if (room === null) {
-      return;
-    }
-
-    const generation = this.#generation;
-    const local = room.localParticipant;
-    const published = local.getTrackPublication(source);
-
-    if (published !== undefined) {
-      await published.unmute();
-
-      if (generation !== this.#generation) {
-        published.track?.stop();
-      }
-
-      return;
-    }
-
-    const enabling = this.#captureAndPublish(local, generation, capture(local), publish);
-
-    this.#enabling.set(source, enabling);
-
-    try {
-      await enabling;
-    } finally {
-      if (this.#enabling.get(source) === enabling) {
-        this.#enabling.delete(source);
-      }
-    }
-  }
-
-  async #captureAndPublish(
-    local: LocalParticipant,
-    generation: number,
-    capture: Promise<LocalTrack[]>,
-    publish: TrackPublishOptions | undefined,
-  ): Promise<void> {
-    const tracks = await capture;
-
-    if (generation !== this.#generation) {
-      stopTracks(tracks);
-
-      return;
-    }
-
-    for (const track of tracks) {
-      this.#publishing.add(track);
-    }
-
-    try {
-      await Promise.all(tracks.map((track) => local.publishTrack(track, publish)));
-    } catch (error) {
-      stopTracks(tracks);
-
-      throw error;
-    } finally {
-      for (const track of tracks) {
-        this.#publishing.delete(track);
-      }
-    }
   }
 
   #emit(event: TransportEvent): void {
@@ -1350,19 +1191,9 @@ class LiveKitTransport implements CallTransport {
    * reported so the dock can say so.
    */
   async #restartCapture(track: LocalAudioTrack, constraints: AudioCaptureOptions): Promise<void> {
-    const generation = this.#generation;
-
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await track.restartTrack(constraints);
-
-        // The re-acquired microphone outlived the call it was for.
-        if (generation !== this.#generation) {
-          track.stop();
-
-          return;
-        }
-
         this.#restartFailed = false;
 
         return;
