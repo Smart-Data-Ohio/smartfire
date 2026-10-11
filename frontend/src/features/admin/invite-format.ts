@@ -81,6 +81,23 @@ export function filterInvites(
   return invites.filter((invite) => filter === "all" || inviteState(invite, now) === filter);
 }
 
+/**
+ * A moment in the list, short enough for a table cell: "Oct 9, 3:00 PM", with the year only when
+ * it isn't this one ("Dec 30, 2025, 3:00 PM").
+ */
+export function shortTime(timestamp: string, now: number, locale?: string): string {
+  const date = new Date(timestamp);
+  const thisYear = date.getFullYear() === new Date(now).getFullYear();
+
+  return date.toLocaleString(locale, {
+    year: thisYear ? undefined : "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /** "3 of 10", or "3, no limit". */
 export function usesLabel(invite: WorkspaceInvite): string {
   return invite.maxUses === null

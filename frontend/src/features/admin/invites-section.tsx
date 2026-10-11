@@ -43,6 +43,7 @@ import {
   maxUsesOf,
   revokeConfirmation,
   STATE_LABEL,
+  shortTime,
   USE_CHOICES,
   type UseLimit,
   usesLabel,
@@ -183,9 +184,11 @@ function InviteLinkDialog({
 function StateBadge({
   invite,
   state,
+  now,
 }: {
   readonly invite: WorkspaceInvite;
   readonly state: WorkspaceInviteState;
+  readonly now: number;
 }) {
   return (
     <span className="admin-invite-state-cell">
@@ -194,8 +197,12 @@ function StateBadge({
         {STATE_LABEL[state]}
       </span>
       {state === "revoked" && invite.revokedAt !== null ? (
-        <time className="text-faint" dateTime={invite.revokedAt}>
-          {auditTime(invite.revokedAt)}
+        <time
+          className="text-faint"
+          dateTime={invite.revokedAt}
+          title={auditTime(invite.revokedAt)}
+        >
+          {shortTime(invite.revokedAt, now)}
         </time>
       ) : null}
     </span>
@@ -223,20 +230,22 @@ function InviteRow({
         {invite.creator.name}
       </CardCell>
       <CardCell column="Created">
-        <time dateTime={invite.createdAt}>{auditTime(invite.createdAt)}</time>
+        <time dateTime={invite.createdAt} title={auditTime(invite.createdAt)}>
+          {shortTime(invite.createdAt, now)}
+        </time>
       </CardCell>
       <CardCell column="Expires">
         {invite.expiresAt === null ? (
           "Never"
         ) : (
           <time dateTime={invite.expiresAt} title={auditTime(invite.expiresAt)}>
-            {expiresLabel(invite, now, (at) => auditTime(at))}
+            {expiresLabel(invite, now, (at) => shortTime(at, now))}
           </time>
         )}
       </CardCell>
       <CardCell column="Uses">{usesLabel(invite)}</CardCell>
       <CardCell column="Status">
-        <StateBadge invite={invite} state={state} />
+        <StateBadge invite={invite} state={state} now={now} />
       </CardCell>
       <CardCell column="Actions" className="admin-invite-actions">
         {state === "active" ? (

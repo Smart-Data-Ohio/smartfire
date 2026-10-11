@@ -481,26 +481,27 @@
     box-shadow: 0 0 0 1px var(--success);
   }
 
+  /* The whole link shows, wrapped: nothing of it hides off to the side. */
   .admin-invite-link-url {
     flex: 1;
     min-width: 0;
-    overflow-x: auto;
     font-family: var(--font-mono);
     font-size: var(--text-meta);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     user-select: all;
   }
 
   .admin-invite-state-cell {
     display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-1-5);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-0-5);
   }
 
   .admin-invite-state {
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
     gap: var(--space-1);
     padding: 1px var(--space-1-5);
     border-radius: var(--radius-pill);
@@ -525,6 +526,23 @@
   .admin-invite-state[data-state="revoked"] {
     background: var(--danger-soft);
     color: var(--danger-text);
+  }
+
+  /* The invites fit the settings column: cells wrap rather than scroll. */
+  .admin-invites .admin-audit-table td {
+    white-space: normal;
+  }
+
+  .admin-invites .admin-audit-table td:first-child {
+    min-width: 9ch;
+  }
+
+  .admin-invites .admin-audit-table td[data-label="Uses"] {
+    white-space: nowrap;
+  }
+
+  .admin-invites .admin-audit-table thead th:last-child {
+    text-align: right;
   }
 
   .admin-audit-table tr[data-state]:not([data-state="active"]) td {
@@ -706,12 +724,6 @@
       flex-direction: column;
       align-items: stretch;
       padding: var(--space-3);
-    }
-
-    .admin-invite-link-url {
-      overflow-x: visible;
-      white-space: normal;
-      overflow-wrap: anywhere;
     }
 
     .admin-invite-link-box .button {

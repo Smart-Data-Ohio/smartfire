@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
 import {
-  INVITE_REASONS,
   MOCK_DEAD_INVITES,
   MOCK_INVITE,
   MOCK_JOIN_CODE,
@@ -132,10 +131,12 @@ matrix("joins with an invite", async ({ page, theme }) => {
 
 matrix("says why an invite can't be used, and links to sign in", async ({ page, theme }) => {
   await open(page, `invite/${MOCK_DEAD_INVITES.expired}`, theme);
-  await expect(page.getByRole("alert")).toHaveText("This invite is no longer valid.");
   await expect(
-    page.getByText(`${INVITE_REASONS.expired} Ask a workspace administrator for a new invite.`),
+    page.getByRole("heading", { level: 1, name: "This invite has expired" }),
   ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Invites last only as long as whoever made them chose.",
+  );
   await expect(page.getByRole("textbox", { name: "Name" })).toBeHidden();
   await expectNoHorizontalOverflow(page);
   await shot(page, "join-invite-expired", theme);

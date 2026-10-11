@@ -8,6 +8,7 @@ import {
   linkTerms,
   maxUsesOf,
   revokeConfirmation,
+  shortTime,
   timeLeft,
   usesLabel,
 } from "./invite-format.ts";
@@ -96,5 +97,12 @@ describe("invite format", () => {
   it("words the empty list for each filter", () => {
     expect(emptyLine("all")).toBe("No invites yet. Create one above to share a private link.");
     expect(emptyLine("exhausted")).toBe("No used up invites.");
+  });
+});
+
+describe("short times", () => {
+  it("leave out this year, and keep another", () => {
+    expect(shortTime("2026-10-09T15:00:00.000Z", NOW, "en-US")).not.toContain("2026");
+    expect(shortTime("2025-12-30T15:00:00.000Z", NOW, "en-US")).toContain("2025");
   });
 });
