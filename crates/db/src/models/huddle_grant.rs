@@ -172,23 +172,7 @@ impl HuddleGrant {
         let Some((user_id, room_id, stage_role, server_muted)) = candidate else {
             return Err(crate::Error::Other("HuddleGrant::Ineligible".into()));
         };
-        let room = crate::Room::find(tx.conn(), room_id)?;
-        let user = crate::User::find(tx.conn(), user_id)?;
-        if let Some(limit) = room.voice_user_limit
-            && !user.can_administer(Some(room.creator_id), false)
-        {
-            // Recent issuance reserves a slot until LiveKit reports presence. Count users,
-            // not grants, so reconnects and second devices keep their existing slot.
-            let since = tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW));
-            let (count, rejoining): (i64, bool) = tx.conn().query_row_cached(
-                "SELECT COUNT(DISTINCT user_id),COALESCE(MAX(user_id=?),0) FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL AND (last_seen_at>? OR last_issued_at>?)",
-                params![user_id, room_id, since, since],
-                |row| Ok((row.get(0)?, row.get(1)?)),
-            )?;
-            if count >= limit && !rejoining {
-                return Err(crate::Error::HuddleRoomFull);
-            }
-        }
+        Self::check_capacity(tx, room_id, user_id)?;
         let grants = query_all(
             tx.conn(),
             "SELECT * FROM huddle_grants WHERE session_id=? AND revoked_at IS NULL AND ((room_id=? AND membership_id!=?) OR (room_id!=? AND last_seen_at>?)) ORDER BY id",
@@ -231,6 +215,27 @@ impl HuddleGrant {
         let id = tx.conn().query_row_cached("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,stage_role,server_muted,last_issued_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING id", params![identity, room_name, session_id, user_id, membership_id, room_id, stage_role, server_muted, now, now, now], |r| r.get(0))?;
         Ok((Self::find_by_id(tx.conn(), id)?.unwrap(), None))
     }
+
+    fn check_capacity(tx: &Tx<'_>, room_id: i64, user_id: i64) -> Result<()> {
+        let room = crate::Room::find(tx.conn(), room_id)?;
+        if let Some(limit) = room.voice_user_limit
+            && !crate::User::find(tx.conn(), user_id)?.can_administer(Some(room.creator_id), false)
+        {
+            // Presence and live reservations hold one slot per user, including other devices.
+            // Issuance and gateway admission both check under the immediate write transaction.
+            let since = tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW));
+            let (count, rejoining): (i64, bool) = tx.conn().query_row_cached(
+                "SELECT COUNT(DISTINCT user_id),COALESCE(MAX(user_id=?),0) FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL AND (last_seen_at>? OR last_issued_at>?)",
+                params![user_id, room_id, since, since],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?;
+            if count >= limit && !rejoining {
+                return Err(crate::Error::HuddleRoomFull);
+            }
+        }
+        Ok(())
+    }
+
     pub fn authorized(&self, conn: &Connection) -> Result<bool> {
         if self.revoked() {
             return Ok(false);
@@ -362,6 +367,7 @@ impl HuddleGrant {
         Ok(())
     }
     pub fn record_seen(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        Self::check_capacity(tx, self.room_id, self.user_id)?;
         let now = tx.now();
         if self
             .last_seen_at

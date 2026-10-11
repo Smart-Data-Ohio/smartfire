@@ -44,6 +44,152 @@ fn issue(db: &TestDb, room: i64, caller: (i64, i64)) -> crate::Result<HuddleGran
     db.try_write(move |tx| HuddleGrant::issue(tx, caller.1, caller.0, room, &config()))
 }
 
+fn admit(tx: &mut crate::Tx<'_>, id: i64) -> crate::Result<bool> {
+    HuddleGrant::authorize_or_revoke(tx, id, &config())?
+        .expect("eligible grant")
+        .record_seen(tx)
+}
+
+#[test]
+fn voice_user_limit_gateway_refuses_an_expired_reservation_when_another_user_joined() {
+    let db = TestDb::new();
+    let room = room(&db, Some(1));
+    let kevin = caller(&db, room, "kevin");
+    let delayed = issue(&db, room, kevin).unwrap();
+    db.travel(IN_CALL_WINDOW + 1);
+    let joined = issue(&db, room, caller(&db, room, "jz")).unwrap();
+    assert!(matches!(
+        db.try_write(move |tx| admit(tx, delayed.id)),
+        Err(Error::HuddleRoomFull)
+    ));
+    db.write(move |tx| admit(tx, joined.id));
+    let events = db.events();
+
+    assert!(matches!(
+        db.try_write(move |tx| admit(tx, delayed.id)),
+        Err(Error::HuddleRoomFull)
+    ));
+    assert!(matches!(
+        issue(&db, room, kevin),
+        Err(Error::HuddleRoomFull)
+    ));
+    let delayed = db
+        .read(|conn| HuddleGrant::find_by_id(conn, delayed.id))
+        .unwrap();
+    assert_eq!(delayed.last_seen_at, None);
+    assert!(!delayed.revoked());
+    assert_eq!(db.events(), events);
+    assert_eq!(
+        db.read(|conn| HuddleGrant::participants_for(conn, room, db.now()))
+            .iter()
+            .map(|user| user.id)
+            .collect::<Vec<_>>(),
+        [identify("jz")]
+    );
+}
+
+#[test]
+fn voice_user_limit_gateway_reacquires_a_free_slot_after_reservation_expiry() {
+    let db = TestDb::new();
+    let room = room(&db, Some(1));
+    let delayed = issue(&db, room, caller(&db, room, "kevin")).unwrap();
+    db.travel(IN_CALL_WINDOW + 1);
+    assert!(db.write(move |tx| admit(tx, delayed.id)));
+    assert!(matches!(
+        issue(&db, room, caller(&db, room, "jz")),
+        Err(Error::HuddleRoomFull)
+    ));
+    assert_eq!(
+        db.read(|conn| HuddleGrant::participants_for(conn, room, db.now()))
+            .iter()
+            .map(|user| user.id)
+            .collect::<Vec<_>>(),
+        [identify("kevin")]
+    );
+}
+
+#[test]
+fn voice_user_limit_gateway_preserves_reconnects_second_devices_and_live_reservations() {
+    let db = TestDb::new();
+    let room = room(&db, Some(2));
+    let first = issue(&db, room, caller(&db, room, "kevin")).unwrap();
+    let second = issue(&db, room, caller(&db, room, "jz")).unwrap();
+    db.write(move |tx| Room::find(tx.conn(), room)?.update_voice_user_limit(tx, Some(1)));
+    // Both reservations remain valid when the limit is lowered before admission.
+    db.write(move |tx| admit(tx, first.id));
+    db.write(move |tx| admit(tx, second.id));
+    db.travel(11);
+    assert!(db.write(move |tx| admit(tx, first.id)));
+    db.write(move |tx| admit(tx, second.id));
+    let device = issue(&db, room, caller(&db, room, "kevin")).unwrap();
+    db.travel(11);
+    db.write(move |tx| admit(tx, first.id));
+    db.write(move |tx| admit(tx, second.id));
+    db.travel(10);
+    // This device's reservation expired, but the user's other device remains present.
+    assert!(db.write(move |tx| admit(tx, device.id)));
+    assert_eq!(
+        db.read(|conn| HuddleGrant::participants_for(conn, room, db.now()))
+            .len(),
+        2
+    );
+}
+
+#[test]
+fn voice_user_limit_gateway_admits_admins_and_room_creators_after_reservation_expiry() {
+    let db = TestDb::new();
+    let room = room(&db, Some(1));
+    let admin = issue(&db, room, caller(&db, room, "jason")).unwrap();
+    let creator = issue(&db, room, caller(&db, room, "david")).unwrap();
+    db.write(move |tx| {
+        tx.conn()
+            .execute("UPDATE users SET role=0 WHERE id=?", [identify("david")])?;
+        Ok(())
+    });
+    db.travel(IN_CALL_WINDOW + 1);
+    let member = issue(&db, room, caller(&db, room, "kevin")).unwrap();
+    db.write(move |tx| admit(tx, member.id));
+    assert!(db.write(move |tx| admit(tx, admin.id)));
+    assert!(db.write(move |tx| admit(tx, creator.id)));
+    assert_eq!(
+        db.read(|conn| HuddleGrant::participants_for(conn, room, db.now()))
+            .len(),
+        3
+    );
+}
+
+#[test]
+fn voice_user_limit_gateway_serializes_admission_across_two_db_writers() {
+    let db = TestDb::new();
+    let room = room(&db, Some(1));
+    let first = issue(&db, room, caller(&db, room, "kevin")).unwrap();
+    db.travel(IN_CALL_WINDOW + 1);
+    let second = issue(&db, room, caller(&db, room, "jz")).unwrap();
+    db.travel(IN_CALL_WINDOW + 1);
+    let other_process = db.another_process();
+    let barrier = std::sync::Barrier::new(2);
+    let (a, b) = std::thread::scope(|scope| {
+        let a = scope.spawn(|| {
+            barrier.wait();
+            db.try_write(move |tx| admit(tx, first.id))
+        });
+        let b = scope.spawn(|| {
+            barrier.wait();
+            other_process.write_blocking(move |tx| admit(tx, second.id))
+        });
+        (a.join().unwrap(), b.join().unwrap())
+    });
+    assert!(matches!(
+        (&a, &b),
+        (Ok(true), Err(Error::HuddleRoomFull)) | (Err(Error::HuddleRoomFull), Ok(true))
+    ));
+    assert_eq!(
+        db.read(|conn| HuddleGrant::participants_for(conn, room, db.now()))
+            .len(),
+        1
+    );
+}
+
 #[test]
 fn voice_user_limit_validates_round_trips_and_clears_without_jobs() {
     let db = TestDb::new();

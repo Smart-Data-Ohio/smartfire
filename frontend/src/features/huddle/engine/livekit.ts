@@ -20,6 +20,7 @@ import type {
 } from "livekit-client";
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { loadForUpdate } from "../../../service-worker/update-required.ts";
+import { ActionError } from "../../../sync/run.ts";
 import { microphonePublishOptions } from "./audio-quality.ts";
 import { canShareScreen, permissionDenied } from "./devices.ts";
 import { createLevelMeter, type LevelMeter } from "./meter.ts";
@@ -172,7 +173,20 @@ class LiveKitTransport implements CallTransport {
 
     this.#room = room;
     this.#bind(room);
-    await room.connect(url, token, { autoSubscribe: true });
+
+    try {
+      await room.connect(url, token, { autoSubscribe: true });
+    } catch (error) {
+      if (
+        error instanceof this.#lk.ConnectionError &&
+        error.status === 403 &&
+        error.message.trim() === "This voice room is full"
+      ) {
+        throw new ActionError("HuddleRoomFull", "This voice room is full");
+      }
+
+      throw error;
+    }
   }
 
   async disconnect(): Promise<void> {
