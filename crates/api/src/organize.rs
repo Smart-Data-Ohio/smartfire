@@ -362,6 +362,7 @@ async fn put_workspace_room(c: &mut Ctx) -> Result {
     let api::MoveWorkspaceRoom {
         workspace_category_id,
         position,
+        before_room_id,
     } = body(c).await?;
     let layout = c
         .app()
@@ -371,12 +372,30 @@ async fn put_workspace_room(c: &mut Ctx) -> Result {
             if Membership::find_by_room_and_user(tx.conn(), room_id, viewer.id)?.is_none() {
                 return Err(campfire_db::Error::RecordNotFound("Room"));
             }
-            campfire_db::WorkspaceCategory::move_room(
-                tx,
-                room_id,
-                workspace_category_id,
-                position,
-            )?;
+            match before_room_id {
+                Some(before) => {
+                    // Only a room in the administrator's own layout (`visible_rooms`) can be
+                    // named: any other is answered as if it didn't exist.
+                    let visible = Membership::find_by_room_and_user(tx.conn(), before, viewer.id)?
+                        .and_then(|membership| membership.involvement)
+                        .is_some_and(|involvement| {
+                            involvement != campfire_db::Involvement::Invisible
+                        });
+                    campfire_db::WorkspaceCategory::move_room_before(
+                        tx,
+                        room_id,
+                        workspace_category_id,
+                        before,
+                        visible,
+                    )?
+                }
+                None => campfire_db::WorkspaceCategory::move_room(
+                    tx,
+                    room_id,
+                    workspace_category_id,
+                    position,
+                )?,
+            }
             crate::sync::workspace_layout(tx.conn(), viewer.id)
         })
         .await

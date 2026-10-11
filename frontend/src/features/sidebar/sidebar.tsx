@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import { setThemeOverride, useAppearance } from "../../lib/appearance.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
@@ -17,13 +18,14 @@ import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
+import { groupRooms, sharedCategories, sharedLayout } from "../../store/workspace-layout.ts";
 import { saveAccountTheme } from "../../sync/settings.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
-import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
+import { Menu, MenuGroup, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
@@ -38,17 +40,19 @@ import { useDestination } from "../shell/view-store.ts";
 import { openOverlay } from "../switcher/overlay-store.ts";
 import { CategoryNameField } from "./category-name-field.tsx";
 import { DeleteCategoryDialog } from "./delete-category-dialog.tsx";
+import { headingTrigger, movedRowFocus } from "./focus-targets.ts";
 import * as commands from "./organize-commands.ts";
 import {
   acceptsRoom,
   type DragItem,
+  type DropContext,
   type DropTarget,
-  FAVORITES_PLACEHOLDER,
+  dragSections,
   reorderedIds,
   sameTarget,
-  slotForSection,
+  targetForSection,
 } from "./organize-model.ts";
-import { RoomContextMenu, type RoomMenuRequest } from "./room-menu.tsx";
+import { RoomContextMenu, type RoomMenuRequest, type SharedMenu } from "./room-menu.tsx";
 import {
   notificationLabel,
   peekingRows,
@@ -114,11 +118,29 @@ const NO_DROP: SectionDrop = {
   edge: null,
 };
 
+/** The categories a category drag can reorder among: the viewer's own, or the shared ones. */
+interface DragCategories {
+  readonly categories: readonly RoomCategory[];
+  readonly sharedCategories: readonly WorkspaceCategory[];
+}
+
+/** The drop line in a list: against the row `beforeRoomId` names, or after the last of `others`. */
+function lineIn(others: readonly Row[], beforeRoomId: number | null): SectionDrop["line"] {
+  if (beforeRoomId !== null) {
+    return { roomId: beforeRoomId, edge: "before" };
+  }
+
+  const last = others.at(-1);
+
+  return last === undefined ? null : { roomId: last.room.id, edge: "after" };
+}
+
 /** How `section` looks under the current drag. */
 function sectionDrop(
   drag: DragState | null,
   section: SidebarSection,
-  categories: readonly RoomCategory[],
+  held: DragCategories,
+  context: DropContext,
 ): SectionDrop {
   if (drag === null) {
     return NO_DROP;
@@ -126,59 +148,55 @@ function sectionDrop(
 
   const { item, target } = drag;
 
-  if (item.kind === "category") {
-    const others = categories.filter((category) => category.id !== item.category.id);
-    const dragging = section.category?.id === item.category.id;
+  if (item.kind !== "room") {
+    const own = item.kind === "category" ? section.category : section.sharedCategory;
+    const list = item.kind === "category" ? held.categories : held.sharedCategories;
+    const others = list.filter((category) => category.id !== item.category.id);
+    const dragging = own?.id === item.category.id;
 
-    if (target?.kind !== "category" || section.category === null || dragging) {
+    if (target?.kind !== item.kind || own === null || dragging) {
       return { ...NO_DROP, dragging };
     }
 
     const before = others[target.index];
     const after = target.index === others.length ? others.at(-1) : undefined;
-
-    const edge =
-      before?.id === section.category.id
-        ? "before"
-        : after?.id === section.category.id
-          ? "after"
-          : null;
+    const edge = before?.id === own.id ? "before" : after?.id === own.id ? "after" : null;
 
     return { ...NO_DROP, edge };
   }
 
   const roomId = item.row.room.id;
-  const disabled = !acceptsRoom(section, item.row);
+  const disabled = !acceptsRoom(section, item.row, context);
+  const others = section.rows.filter((row) => row.room.id !== roomId);
 
-  if (target?.kind !== "room") {
+  if (target === null || (target.kind !== "room" && target.kind !== "shared")) {
     return { ...NO_DROP, roomId, disabled };
   }
 
   if (section.kind === "favorites") {
-    if (target.slot.kind !== "favorite") {
+    if (target.kind !== "room" || target.slot.kind !== "favorite") {
       return { ...NO_DROP, roomId, disabled };
     }
 
-    const others = section.rows.filter((row) => row.room.id !== roomId);
-    const before = others[target.slot.index];
-    const after = target.slot.index >= others.length ? others.at(-1) : undefined;
-
-    const line =
-      before === undefined
-        ? after === undefined
-          ? null
-          : { roomId: after.room.id, edge: "after" as const }
-        : { roomId: before.room.id, edge: "before" as const };
+    const line = lineIn(others, others[target.slot.index]?.room.id ?? null);
 
     return { ...NO_DROP, roomId, disabled, active: others.length === 0, line };
   }
 
-  const here = slotForSection(section, item.row, 0);
+  const here = targetForSection(section, item.row, 0, context);
 
-  const active =
-    here !== null && sameTarget(target, { kind: "room", slot: here } satisfies DropTarget);
+  if (target.kind === "shared") {
+    // An administrator's drop in the shared layout lands between rooms, as among favourites.
+    if (here?.kind !== "shared" || here.categoryId !== target.categoryId) {
+      return { ...NO_DROP, roomId, disabled };
+    }
 
-  return { ...NO_DROP, roomId, disabled, active };
+    const line = lineIn(others, target.beforeRoomId);
+
+    return { ...NO_DROP, roomId, disabled, active: others.length === 0, line };
+  }
+
+  return { ...NO_DROP, roomId, disabled, active: here !== null && sameTarget(target, here) };
 }
 
 interface SectionProps {
@@ -311,7 +329,11 @@ function Section({
 }
 
 interface CategoryActionsProps {
-  readonly category: RoomCategory;
+  readonly category: { readonly id: number; readonly name: string };
+  /** Its move handle's key: "category-3" for yours, "shared-4" for a shared one. */
+  readonly handle: string;
+  /** A shared category's menu says who it changes for. */
+  readonly shared?: boolean;
   readonly index: number;
   readonly count: number;
   readonly onPickUp: KeyHandler;
@@ -324,9 +346,14 @@ interface CategoryActionsProps {
 
 type KeyHandler = (event: KeyboardEvent<HTMLElement>) => void;
 
-/** A category heading's end: its move handle (Space to pick up) and its menu. */
+/**
+ * A category heading's end: its move handle (Space to pick up) and its menu. A shared category's
+ * belong to administrators, and its menu is headed by who sees the changes.
+ */
 function CategoryActions({
   category,
+  handle,
+  shared = false,
   index,
   count,
   onPickUp,
@@ -336,6 +363,23 @@ function CategoryActions({
   onNew,
   onDelete,
 }: CategoryActionsProps) {
+  const items = (
+    <>
+      <MenuItem icon="pencil" onSelect={onRename}>
+        Rename
+      </MenuItem>
+      <MenuItem disabled={index === 0} onSelect={() => onMove(index - 1)}>
+        Move up
+      </MenuItem>
+      <MenuItem disabled={index === count - 1} onSelect={() => onMove(index + 1)}>
+        Move down
+      </MenuItem>
+      <MenuItem icon="folder-plus" onSelect={onNew}>
+        {shared ? "New shared category" : "New category"}
+      </MenuItem>
+    </>
+  );
+
   return (
     <>
       <IconButton
@@ -343,7 +387,7 @@ function CategoryActions({
         label={`Move ${category.name}`}
         size="sm"
         className="sidebar-section-action sidebar-category-grip"
-        data-drag-handle={`category-${category.id}`}
+        data-drag-handle={handle}
         aria-roledescription="draggable category"
         onKeyDown={onPickUp}
         onBlur={onBlur}
@@ -361,21 +405,10 @@ function CategoryActions({
           />
         )}
       >
-        <MenuItem icon="pencil" onSelect={onRename}>
-          Rename
-        </MenuItem>
-        <MenuItem disabled={index === 0} onSelect={() => onMove(index - 1)}>
-          Move up
-        </MenuItem>
-        <MenuItem disabled={index === count - 1} onSelect={() => onMove(index + 1)}>
-          Move down
-        </MenuItem>
-        <MenuItem icon="folder-plus" onSelect={onNew}>
-          New category
-        </MenuItem>
+        {shared ? <MenuGroup label="Changes for everyone">{items}</MenuGroup> : items}
         <MenuSeparator />
         <MenuItem icon="trash" tone="danger" onSelect={onDelete}>
-          Delete category
+          {shared ? "Delete shared category" : "Delete category"}
         </MenuItem>
       </Menu>
     </>
@@ -460,6 +493,7 @@ function WorkspaceHeader({
   folded,
   onBannerBroken,
   onNewCategory,
+  onNewSharedCategory,
 }: {
   readonly title: string;
   /** The workspace logo's still, beside the name where the rail is a tab bar (phones). */
@@ -471,6 +505,8 @@ function WorkspaceHeader({
   /** The banner image didn't load: show the plain header instead. */
   readonly onBannerBroken: (src: string) => void;
   readonly onNewCategory?: (() => void) | undefined;
+  /** Administrators add categories to the workspace's shared layout here. */
+  readonly onNewSharedCategory?: (() => void) | undefined;
 }) {
   const canCreateRooms = useStore((state) => state.sidebar.canCreateRooms);
 
@@ -522,6 +558,11 @@ function WorkspaceHeader({
         {onNewCategory === undefined ? null : (
           <MenuItem icon="folder-plus" onSelect={onNewCategory}>
             New category
+          </MenuItem>
+        )}
+        {onNewSharedCategory === undefined ? null : (
+          <MenuItem icon="users" onSelect={onNewSharedCategory}>
+            New shared category
           </MenuItem>
         )}
         <MenuSeparator />
@@ -624,12 +665,17 @@ function YouPanel() {
   );
 }
 
-/** The floating copy of what is being dragged, following the pointer. */
+/**
+ * The floating copy of what is being dragged, following the pointer. Over a place in the shared
+ * layout (an administrator's drop, or a shared category) it says the move is for everyone.
+ */
 function DragGhost({
   item,
+  shared,
   ghostRef,
 }: {
   readonly item: DragItem;
+  readonly shared: boolean;
   readonly ghostRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
@@ -645,6 +691,12 @@ function DragGhost({
           <span className="sidebar-row-name">{item.category.name}</span>
         </>
       )}
+      {shared ? (
+        <span className="sidebar-drag-ghost-shared">
+          <Icon name="users" size={12} />
+          Everyone
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -656,7 +708,20 @@ function DragGhost({
 type Editing =
   | { readonly kind: "create"; readonly row: Row | null; readonly opener: HTMLElement | null }
   | { readonly kind: "rename"; readonly categoryId: number }
+  | { readonly kind: "create-shared"; readonly opener: HTMLElement | null }
+  | { readonly kind: "rename-shared"; readonly categoryId: number }
   | null;
+
+/** The new category field's name: for a room, or a shared one. */
+function newCategoryLabel(
+  editing: Extract<Editing, { readonly kind: "create" | "create-shared" }>,
+): string {
+  if (editing.kind === "create-shared") {
+    return "New shared category name";
+  }
+
+  return editing.row === null ? "New category name" : `New category for ${editing.row.displayName}`;
+}
 
 /** Where focus should go once the sidebar has rendered the change that calls for it. */
 interface FocusRequest {
@@ -701,13 +766,8 @@ function useFocusAfterRender(): (request: FocusRequest) => void {
   };
 }
 
-/** The toggle button in a section's heading, by section key. */
-function headingTrigger(container: HTMLElement | null, key: string): HTMLElement | null {
-  return (
-    container?.querySelector<HTMLElement>(
-      `[data-drop-section="${key}"] .sidebar-section-trigger`,
-    ) ?? null
-  );
+function isHandle(element: Element | null, key: string): boolean {
+  return element instanceof HTMLElement && element.dataset.dragHandle === key;
 }
 
 /** What opened a new category's field, when focus can go back to it (not a closing menu's item). */
@@ -716,10 +776,12 @@ function openerOf(active: Element | null): HTMLElement | null {
 }
 
 /**
- * The conversation list: the workspace header, then Favourites, your categories, Channels, Voice
- * and Direct messages, then your own panel. Rows and categories can be dragged into place (or
- * moved from their menus), categories created, renamed, folded and deleted, and each row's menu
- * sets its notification level.
+ * The conversation list: the workspace header, then Favourites, your categories, the workspace's
+ * shared categories, Channels, Voice and Direct messages, then your own panel. Rows and
+ * categories can be dragged into place (or moved from their menus), categories created, renamed,
+ * folded and deleted, and each row's menu sets its notification level. Your own organisation
+ * wins over the shared layout (sections.ts); administrators also arrange the shared layout, for
+ * everyone, with the same drags and menus.
  */
 export function Sidebar() {
   const sidebar = useStore((state) => state.sidebar);
@@ -732,6 +794,7 @@ export function Sidebar() {
   const [menu, setMenu] = useState<RoomMenuRequest | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [deleting, setDeleting] = useState<RoomCategory | null>(null);
+  const [deletingShared, setDeletingShared] = useState<WorkspaceCategory | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const menuIds = useRef(0);
   const hintId = useId();
@@ -740,7 +803,18 @@ export function Sidebar() {
   const view = organizedSidebar(sidebar);
   const { canCreateRooms } = sidebar;
   const categories = view.categories;
-  const all = sidebarSections(sidebar);
+  const admin = useStore((state) => state.me?.user.role === "administrator");
+  const layout = sharedLayout(sidebar);
+  const shared = sharedCategories(layout);
+  const homes = new Map(layout.rooms.map((place) => [place.roomId, place.workspaceCategoryId]));
+
+  const context: DropContext = {
+    admin,
+    sharedHome: (roomId) => homes.get(roomId) ?? null,
+    sharedCategories: shared,
+  };
+
+  const all = sidebarSections(sidebar, { admin });
   const flip = useFlip(scrollRef);
   const focusAfterRender = useFocusAfterRender();
   // A keyboard drag's steps interrupt: each one answers the key just pressed.
@@ -765,8 +839,26 @@ export function Sidebar() {
   const onDrop = (item: DragItem, target: DropTarget) => {
     if (item.kind === "room" && target.kind === "room") {
       commands.moveRoom(item.row, target.slot);
+    } else if (item.kind === "room" && target.kind === "shared") {
+      const key = `room-${item.row.room.id}`;
+
+      const section = target.categoryId === null ? null : `shared-${target.categoryId}`;
+
+      // Taking the row out of its personal place afterwards remounts it in its new section: focus
+      // on it follows (to the heading, when that section is folded), unless it has gone somewhere
+      // else meanwhile.
+      void commands.moveSharedRoom(item.row, target.categoryId, target.beforeRoomId, true, () => {
+        if (isHandle(document.activeElement, key)) {
+          focusAfterRender({
+            find: () => movedRowFocus(scrollRef.current, key, section),
+            ifLost: true,
+          });
+        }
+      });
     } else if (item.kind === "category" && target.kind === "category") {
       commands.reorderCategories(reorderedIds(categories, item.category.id, target.index));
+    } else if (item.kind === "shared-category" && target.kind === "shared-category") {
+      commands.reorderSharedCategories(reorderedIds(shared, item.category.id, target.index));
     }
   };
 
@@ -778,6 +870,8 @@ export function Sidebar() {
     containerRef: scrollRef,
     sectionsRef: shownRef,
     categories,
+    sharedCategories: shared,
+    context,
     onDrop,
     announce: announcer.announce,
   });
@@ -785,9 +879,7 @@ export function Sidebar() {
   const { drag } = dnd;
 
   const withPlaceholder =
-    drag?.item.kind === "room" && !all.some((section) => section.kind === "favorites")
-      ? [FAVORITES_PLACEHOLDER, ...all]
-      : all;
+    drag?.item.kind === "room" ? dragSections(all, drag.item.row, context) : all;
 
   const sections =
     destination === "dms"
@@ -864,8 +956,29 @@ export function Sidebar() {
   const newCategory = (row: Row | null = null) =>
     setEditing({ kind: "create", row, opener: openerOf(document.activeElement) });
 
+  const newSharedCategory = () =>
+    setEditing({ kind: "create-shared", opener: openerOf(document.activeElement) });
+
   const focusHeading = (key: string, ifLost = false) =>
     focusAfterRender({ find: () => headingTrigger(scrollRef.current, key), ifLost });
+
+  /** The shared layout as `row`'s menu offers it: where it is, and its neighbours there. */
+  const sharedMenuFor = (row: Row): SharedMenu => {
+    const home = homes.get(row.room.id) ?? null;
+
+    const holder = sections.find(
+      (section) =>
+        (section.kind === "shared" || section.kind === "channels" || section.kind === "voice") &&
+        section.rows.some((candidate) => candidate.room.id === row.room.id),
+    );
+
+    return {
+      admin,
+      categories: shared,
+      home: shared.some((category) => category.id === home) ? home : null,
+      siblings: holder?.rows.map((candidate) => candidate.room.id) ?? null,
+    };
+  };
 
   /** A cancelled new category: back to what opened it, else the room it was for, else Channels. */
   const focusAfterCancel = (opener: HTMLElement | null, row: Row | null) =>
@@ -892,8 +1005,19 @@ export function Sidebar() {
    * has named it (the draft's heading goes with it, so only if focus is still nowhere else).
    */
   const create = (name: string, row: Row | null, refocus: boolean) => {
-    const created = commands.createCategory(name, row);
+    landFocus("category-", commands.createCategory(name, row), refocus);
+  };
 
+  const createShared = (name: string, refocus: boolean) => {
+    landFocus("shared-", commands.createSharedCategory(name), refocus);
+  };
+
+  /** Focus follows a new category of the kind `prefix` keys: its draft's heading, then its own. */
+  const landFocus = (
+    prefix: "category-" | "shared-",
+    created: Promise<{ readonly id: number } | null>,
+    refocus: boolean,
+  ) => {
     if (!refocus) {
       return;
     }
@@ -902,7 +1026,7 @@ export function Sidebar() {
       find: () =>
         [
           ...(scrollRef.current?.querySelectorAll<HTMLElement>(
-            '[data-drop-section^="category-"] .sidebar-section-trigger',
+            `[data-drop-section^="${prefix}"] .sidebar-section-trigger`,
           ) ?? []),
         ].at(-1) ?? null,
       ifLost: false,
@@ -910,7 +1034,7 @@ export function Sidebar() {
 
     void created.then((category) => {
       if (category !== null) {
-        focusHeading(`category-${category.id}`, true);
+        focusHeading(`${prefix}${category.id}`, true);
       }
     });
   };
@@ -965,6 +1089,7 @@ export function Sidebar() {
       case "favorites":
         return <span className="text-faint">Drop here to add a favourite</span>;
       case "category":
+      case "shared":
         return <span className="text-faint">Drag channels here</span>;
       default:
         return <span className="text-faint">No channels yet</span>;
@@ -972,7 +1097,30 @@ export function Sidebar() {
   };
 
   const actionFor = (section: SidebarSection) => {
-    const { category } = section;
+    const { category, sharedCategory } = section;
+
+    if (sharedCategory !== null) {
+      return admin ? (
+        <CategoryActions
+          category={sharedCategory}
+          handle={section.key}
+          shared
+          index={shared.findIndex((candidate) => candidate.id === sharedCategory.id)}
+          count={shared.length}
+          onPickUp={(event) =>
+            dnd.onKeyDown(event, { kind: "shared-category", category: sharedCategory })
+          }
+          onBlur={dnd.onBlur}
+          onRename={() => setEditing({ kind: "rename-shared", categoryId: sharedCategory.id })}
+          onMove={(to) => {
+            commands.reorderSharedCategories(reorderedIds(shared, sharedCategory.id, to));
+            focusHeading(section.key);
+          }}
+          onNew={newSharedCategory}
+          onDelete={() => setDeletingShared(sharedCategory)}
+        />
+      ) : undefined;
+    }
 
     if (category !== null) {
       const index = categories.findIndex((candidate) => candidate.id === category.id);
@@ -980,6 +1128,7 @@ export function Sidebar() {
       return (
         <CategoryActions
           category={category}
+          handle={section.key}
           index={index}
           count={categories.length}
           onPickUp={(event) => dnd.onKeyDown(event, { kind: "category", category })}
@@ -1014,7 +1163,35 @@ export function Sidebar() {
   };
 
   const headingFor = (section: SidebarSection) => {
-    const { category } = section;
+    const { category, sharedCategory } = section;
+
+    if (
+      sharedCategory !== null &&
+      editing?.kind === "rename-shared" &&
+      editing.categoryId === sharedCategory.id
+    ) {
+      return (
+        <CategoryNameField
+          label={`Rename ${sharedCategory.name}`}
+          initial={sharedCategory.name}
+          onSubmit={(name, refocus) => {
+            commands.renameSharedCategory(sharedCategory, name);
+            setEditing(null);
+
+            if (refocus) {
+              focusHeading(section.key);
+            }
+          }}
+          onCancel={(refocus) => {
+            setEditing(null);
+
+            if (refocus) {
+              focusHeading(section.key);
+            }
+          }}
+        />
+      );
+    }
 
     if (category === null || editing?.kind !== "rename" || editing.categoryId !== category.id) {
       return undefined;
@@ -1044,36 +1221,64 @@ export function Sidebar() {
   };
 
   const createField =
-    editing?.kind === "create" ? (
+    editing?.kind === "create" || editing?.kind === "create-shared" ? (
       <div className="sidebar-section sidebar-new-category">
         <CategoryNameField
-          label={
-            editing.row === null
-              ? "New category name"
-              : `New category for ${editing.row.displayName}`
-          }
-          placeholder="New category"
+          label={newCategoryLabel(editing)}
+          placeholder={editing.kind === "create" ? "New category" : "New shared category"}
           onSubmit={(name, refocus) => {
-            create(name, editing.row, refocus);
+            if (editing.kind === "create") {
+              create(name, editing.row, refocus);
+            } else {
+              createShared(name, refocus);
+            }
+
             setEditing(null);
           }}
           onCancel={(refocus) => {
             setEditing(null);
 
             if (refocus) {
-              focusAfterCancel(editing.opener, editing.row);
+              focusAfterCancel(editing.opener, editing.kind === "create" ? editing.row : null);
             }
           }}
         />
       </div>
     ) : null;
 
-  const lastCategoryIndex = sections.findLastIndex((section) => section.kind === "category");
+  /** Dragging a heading reorders its category: yours, or a shared one for an administrator. */
+  const headingDrag = (section: SidebarSection) => {
+    const { category, sharedCategory } = section;
+
+    if (category !== null) {
+      return (event: PointerEvent<HTMLElement>) =>
+        dnd.onPointerDown(event, { kind: "category", category });
+    }
+
+    if (sharedCategory !== null && admin) {
+      return (event: PointerEvent<HTMLElement>) =>
+        dnd.onPointerDown(event, { kind: "shared-category", category: sharedCategory });
+    }
+
+    return undefined;
+  };
+
+  // The new-category field goes after the last category of its kind: yours before the shared
+  // ones, the shared ones before Channels.
+  const lastOf = (kind: SidebarSection["kind"]) =>
+    sections.findLastIndex((section) => section.kind === kind);
+
+  const firstOf = (...kinds: readonly SidebarSection["kind"][]) =>
+    sections.findIndex((section) => kinds.includes(section.kind));
 
   const createAfter =
-    lastCategoryIndex === -1
-      ? sections.findIndex((section) => section.kind === "channels") - 1
-      : lastCategoryIndex;
+    editing?.kind === "create-shared"
+      ? lastOf("shared") === -1
+        ? firstOf("channels") - 1
+        : lastOf("shared")
+      : lastOf("category") === -1
+        ? firstOf("shared", "channels") - 1
+        : lastOf("category");
 
   return (
     <aside className="sidebar" aria-label="Conversations">
@@ -1084,6 +1289,7 @@ export function Sidebar() {
         folded={folded}
         onBannerBroken={setBrokenBanner}
         onNewCategory={destination === "dms" ? undefined : () => newCategory()}
+        onNewSharedCategory={destination === "dms" || !admin ? undefined : newSharedCategory}
       />
       <JumpButton />
       <div
@@ -1112,19 +1318,14 @@ export function Sidebar() {
                     action={actionFor(section)}
                     heading={headingFor(section)}
                     empty={emptyFor(section)}
-                    drop={sectionDrop(drag, section, categories)}
+                    drop={sectionDrop(
+                      drag,
+                      section,
+                      { categories, sharedCategories: shared },
+                      context,
+                    )}
                     preview={destination === "dms"}
-                    onHeadingPointerDown={
-                      section.category === null
-                        ? undefined
-                        : (event) => {
-                            const { category } = section;
-
-                            if (category !== null) {
-                              dnd.onPointerDown(event, { kind: "category", category });
-                            }
-                          }
-                    }
+                    onHeadingPointerDown={headingDrag(section)}
                   />
                 </SectionWithField>
               ))}
@@ -1136,13 +1337,20 @@ export function Sidebar() {
         Space picks it up to move it; Shift F10 opens its menu.
       </p>
       {announcer.region}
-      {drag?.mode === "pointer" ? <DragGhost item={drag.item} ghostRef={dnd.ghostRef} /> : null}
+      {drag?.mode === "pointer" ? (
+        <DragGhost
+          item={drag.item}
+          shared={drag.target?.kind === "shared" || drag.target?.kind === "shared-category"}
+          ghostRef={dnd.ghostRef}
+        />
+      ) : null}
       {menu !== null && menuRow !== undefined ? (
         <RoomContextMenu
           key={menu.id}
           request={menu}
           row={menuRow}
           categories={categories}
+          shared={sharedMenuFor(menuRow)}
           onNewCategory={(row) => newCategory(row)}
           onClosed={(id) => setMenu((current) => (current?.id === id ? null : current))}
         />
@@ -1165,6 +1373,17 @@ export function Sidebar() {
           }
         }}
         onConfirm={commands.deleteCategory}
+      />
+      <DeleteCategoryDialog
+        category={deletingShared}
+        shared
+        roomCount={deletingShared === null ? 0 : groupRooms(layout, deletingShared.id).length}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletingShared(null);
+          }
+        }}
+        onConfirm={commands.deleteSharedCategory}
       />
       <HuddleDock />
       <YouPanel />

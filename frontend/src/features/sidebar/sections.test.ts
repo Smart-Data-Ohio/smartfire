@@ -162,6 +162,104 @@ describe("sidebarSections", () => {
   });
 });
 
+describe("sidebarSections with the shared layout", () => {
+  const product = { id: 30, name: "Product", position: 1 };
+  const support = { id: 31, name: "Support", position: 0 };
+  const empty = { id: 32, name: "Later", position: 2 };
+
+  const shared = (rows: readonly SidebarRow[], overlay = false): SidebarState => {
+    const base = sidebarOf(rows);
+
+    const layout = {
+      categories: [product, support, empty],
+      rooms: [
+        { roomId: 1, workspaceCategoryId: null, position: 1 },
+        { roomId: 2, workspaceCategoryId: null, position: 0 },
+        { roomId: 3, workspaceCategoryId: null, position: null },
+        { roomId: 4, workspaceCategoryId: 30, position: 1 },
+        { roomId: 5, workspaceCategoryId: 30, position: 0 },
+        { roomId: 6, workspaceCategoryId: 31, position: 0 },
+        { roomId: 7, workspaceCategoryId: 30, position: 2 },
+        { roomId: 8, workspaceCategoryId: 31, position: 1 },
+        { roomId: 9, workspaceCategoryId: null, position: 0 },
+      ],
+    };
+
+    return overlay
+      ? {
+          ...base,
+          workspaceOverlay: {
+            ...layout,
+            rooms: layout.rooms.map((place) =>
+              place.roomId === 1 ? { ...place, workspaceCategoryId: 31, position: 2 } : place,
+            ),
+          },
+        }
+      : { ...base, workspaceLayout: layout };
+  };
+
+  const rows = [
+    row(1, "alpha"),
+    row(2, "beta"),
+    row(3, "gamma"),
+    row(4, "design"),
+    // Personal organisation wins: a favourite and a channel in the viewer's own category.
+    row(5, "launch", { favorite: 0 }),
+    row(6, "help", { category: 7 }),
+    row(7, "stage", { kind: "stage" }),
+    row(8, "Ada", { kind: "direct" }),
+    row(9, "lounge", { kind: "voice" }),
+  ];
+
+  const layoutOf = (sections: ReturnType<typeof sidebarSections>) =>
+    sections.map((section) => [section.key, section.rows.map((entry) => entry.room.id)]);
+
+  it("puts favourites and personal categories first, then the shared hierarchy for the rest", () => {
+    expect(layoutOf(sidebarSections(shared(rows)))).toEqual([
+      ["favorites", [5]],
+      ["category-7", [6]],
+      // Support (position 0) before Product; Support's room 6 is in a personal category and a
+      // direct message never takes a shared place, so it has nothing left to show.
+      ["shared-30", [4, 7]],
+      ["channels", [2, 1, 3]],
+      ["voice", [9]],
+      ["direct", [8]],
+    ]);
+  });
+
+  it("shows administrators every shared category, empty ones included, in order", () => {
+    expect(sidebarSections(shared(rows), { admin: true }).map((section) => section.key)).toEqual([
+      "favorites",
+      "category-7",
+      "shared-31",
+      "shared-30",
+      "shared-32",
+      "channels",
+      "voice",
+      "direct",
+    ]);
+  });
+
+  it("draws a pending shared change over the layout", () => {
+    const sections = sidebarSections(shared(rows, true), { admin: true });
+
+    expect(
+      sections.find((section) => section.key === "shared-31")?.rows.map((entry) => entry.room.id),
+    ).toEqual([1]);
+    expect(
+      sections.find((section) => section.key === "channels")?.rows.map((entry) => entry.room.id),
+    ).toEqual([2, 3]);
+  });
+
+  it("names the shared category a section shows", () => {
+    const section = sidebarSections(shared(rows)).find((candidate) => candidate.kind === "shared");
+
+    expect(section?.title).toBe("Product");
+    expect(section?.sharedCategory).toEqual(product);
+    expect(section?.category).toBeNull();
+  });
+});
+
 describe("sidebarTotals", () => {
   it("counts unread rooms, and notifications as each row's policy count", () => {
     const totals = sidebarTotals(

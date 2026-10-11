@@ -140,8 +140,11 @@ export interface SidebarState {
   readonly order: readonly number[];
   readonly rows: Readonly<Record<number, SidebarRow>>;
   readonly categories: readonly RoomCategory[];
+  /** The shared hierarchy an administrator sets for everyone (store/workspace-layout.ts). */
   readonly workspaceLayout: WorkspaceLayout;
   readonly workspaceLayoutTouchedAt: number;
+  /** A shared layout change on its way to the server, drawn instead of `workspaceLayout`. */
+  readonly workspaceOverlay: WorkspaceLayout | null;
   readonly placeholderUserIds: readonly number[];
   readonly canCreateRooms: boolean;
   /** Organising changes on their way to the server, drawn over the rows (S3, organize.ts). */
@@ -165,6 +168,7 @@ export const initialState: State = {
     categories: [],
     workspaceLayout: { categories: [], rooms: [] },
     workspaceLayoutTouchedAt: 0,
+    workspaceOverlay: null,
     placeholderUserIds: [],
     canCreateRooms: false,
     overlay: emptyOverlay,
