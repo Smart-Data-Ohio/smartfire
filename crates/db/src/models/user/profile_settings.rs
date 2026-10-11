@@ -267,6 +267,8 @@ fn validate_appearance_preserving(value: &Value, preserved: &Map<String, Value>)
             "font" => &["inter", "system", "atkinson", "serif", "mono"],
             "density" => &["comfortable", "compact"],
             "motion" => &["system", "reduce", "full"],
+            // The Home welcome card, once its person closes it (the guide reopens it).
+            "welcome" => &["dismissed"],
             "tokens" => {
                 let tokens = value.as_object().ok_or_else(|| reject("tokens must be a colour map".into()))?;
                 for (name, colour) in tokens {

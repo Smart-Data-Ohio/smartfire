@@ -23,7 +23,6 @@ use crate::concerns::{self, Before};
 pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
-    let mut account = current_account(c).await?;
 
     let params = c.params.require("account")?.permit(&[Permit::from("name"), Permit::from("logo"), Permit::AnyHash("settings".into())]);
     let name = params.get("name").and_then(Param::to_s);
@@ -38,6 +37,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
+            // Read where it's written: a concurrent save of other settings keys stays saved.
+            let mut account = Account::first_in(tx)?;
             let before = account.clone();
             let before_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|s| s.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect());

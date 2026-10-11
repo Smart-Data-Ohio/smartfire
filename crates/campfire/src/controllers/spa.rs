@@ -153,3 +153,7 @@ mod api_drive_tests;
 #[cfg(test)]
 #[path = "spa_tour_tests.rs"]
 mod tour_tests;
+
+#[cfg(test)]
+#[path = "spa_welcome_tests.rs"]
+mod welcome_tests;
