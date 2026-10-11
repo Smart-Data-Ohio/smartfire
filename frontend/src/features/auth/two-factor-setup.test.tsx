@@ -57,7 +57,9 @@ async function twoFactor(change: {
 function GatedRoom() {
   useTwoFactorSetupGate();
 
+  // Two requests refused together, as the shell's are: only one may route.
   useEffect(() => {
+    settings.account().catch(() => undefined);
     settings.account().catch(() => undefined);
   }, []);
 
@@ -278,7 +280,13 @@ describe("the setup screen's query", () => {
     expect(safeReturnPath("/app/r/4?message=9")).toBe("/app/r/4?message=9");
     expect(safeReturnPath("/app")).toBe("/app");
 
-    for (const unsafe of ["//evil.example/app", "https://evil.example/app", "/apple", "/app//x"]) {
+    for (const unsafe of [
+      "//evil.example/app",
+      "https://evil.example/app",
+      "/apple",
+      "/app//x",
+      "/app/two_factor/setup?required=true",
+    ]) {
       expect(safeReturnPath(unsafe), unsafe).toBeNull();
     }
 

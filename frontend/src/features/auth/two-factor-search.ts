@@ -30,9 +30,16 @@ export function parseTwoFactorSetupSearch(search: RawTwoFactorSetupSearch): TwoF
   return required ? { return_to: returnTo, required: true } : { return_to: returnTo };
 }
 
-/** A page of this app to return to (`/app…`, never another origin), else `null`. */
+/**
+ * A page of this app to return to (`/app…`, never another origin, never the setup screen itself),
+ * else `null`.
+ */
 export function safeReturnPath(path: string): string | null {
   if (!/^\/app(?:[/?#]|$)/.test(path) || path.includes("//") || path.includes("\\")) {
+    return null;
+  }
+
+  if (/^\/app\/two_factor\/setup(?:[/?#]|$)/.test(path)) {
     return null;
   }
 
