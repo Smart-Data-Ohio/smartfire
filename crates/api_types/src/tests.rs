@@ -201,6 +201,7 @@ fn room_and_membership_round_trip() {
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         topic: None,
         voice_bitrate: None,
+        voice_user_limit: None,
         announcement: false,
     };
     assert_wire(
@@ -344,6 +345,11 @@ fn api_errors_are_tagged_unions_under_error() {
                 message: "Changed".into(),
             },
             json!({"_tag": "Conflict", "message": "Changed"}),
+            409,
+        ),
+        (
+            ApiError::HuddleRoomFull { message: "This voice room is full".into() },
+            json!({"_tag": "HuddleRoomFull", "message": "This voice room is full"}),
             409,
         ),
         (
@@ -535,6 +541,7 @@ fn room() -> Room {
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         topic: None,
         voice_bitrate: None,
+        voice_user_limit: None,
         announcement: false,
     }
 }

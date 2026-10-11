@@ -48,6 +48,7 @@ function form(patch: Partial<RoomForm> = {}): RoomForm {
     stageRoles: [],
     topic: null,
     voiceBitrate: null,
+    voiceUserLimit: null,
     ...patch,
   };
 }

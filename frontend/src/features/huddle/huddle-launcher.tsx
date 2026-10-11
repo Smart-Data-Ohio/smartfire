@@ -61,6 +61,7 @@ function CallStack({ roomId }: { readonly roomId: number }) {
 
 export function HuddleLauncher({ roomId }: { readonly roomId: number }) {
   const available = useHuddlesAvailable();
+  const participants = useCallParticipants(roomId);
   const row = useStore((state) => state.sidebar.rows[roomId] ?? null);
   const detailName = useStore((state) => state.rooms[roomId]?.detail?.displayName ?? null);
 
@@ -91,6 +92,15 @@ export function HuddleLauncher({ roomId }: { readonly roomId: number }) {
   return (
     <span className="huddle-launch">
       <CallStack roomId={roomId} />
+      {row.room.voiceUserLimit !== null ? (
+        <span
+          className="field-hint"
+          role="status"
+          aria-label={`${participants.length} of ${row.room.voiceUserLimit} voice participants`}
+        >
+          {participants.length}/{row.room.voiceUserLimit}
+        </span>
+      ) : null}
       <Button
         variant={active ? "secondary" : "ghost"}
         size="sm"

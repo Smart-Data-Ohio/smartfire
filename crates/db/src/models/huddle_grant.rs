@@ -172,6 +172,23 @@ impl HuddleGrant {
         let Some((user_id, room_id, stage_role, server_muted)) = candidate else {
             return Err(crate::Error::Other("HuddleGrant::Ineligible".into()));
         };
+        let room = crate::Room::find(tx.conn(), room_id)?;
+        let user = crate::User::find(tx.conn(), user_id)?;
+        if let Some(limit) = room.voice_user_limit
+            && !user.can_administer(Some(room.creator_id), false)
+        {
+            // Recent issuance reserves a slot until LiveKit reports presence. Count users,
+            // not grants, so reconnects and second devices keep their existing slot.
+            let since = tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW));
+            let (count, rejoining): (i64, bool) = tx.conn().query_row_cached(
+                "SELECT COUNT(DISTINCT user_id),COALESCE(MAX(user_id=?),0) FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL AND (last_seen_at>? OR last_issued_at>?)",
+                params![user_id, room_id, since, since],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?;
+            if count >= limit && !rejoining {
+                return Err(crate::Error::HuddleRoomFull);
+            }
+        }
         let grants = query_all(
             tx.conn(),
             "SELECT * FROM huddle_grants WHERE session_id=? AND revoked_at IS NULL AND ((room_id=? AND membership_id!=?) OR (room_id!=? AND last_seen_at>?)) ORDER BY id",
@@ -372,10 +389,17 @@ impl HuddleGrant {
         tx: &mut Tx<'_>,
         seen_after: Option<Timestamp>,
     ) -> Result<bool> {
-        let Some(seen) = self.last_seen_at else {
+        if self.last_seen_at.is_some_and(|seen| seen_after.is_some_and(|floor| seen > floor)) {
             return Ok(false);
-        };
-        if seen_after.is_some_and(|floor| seen > floor) {
+        }
+        // An explicit leave also releases an issued slot before the first sighting.
+        if tx.conn().execute_cached(
+            "UPDATE huddle_grants SET last_issued_at=NULL WHERE id=? AND (? IS NULL OR last_issued_at<=?) AND room_id IN (SELECT id FROM rooms WHERE voice_user_limit IS NOT NULL)",
+            params![self.id, seen_after, seen_after],
+        )? > 0 {
+            self.last_issued_at = None;
+        }
+        if self.last_seen_at.is_none() {
             return Ok(false);
         }
         let was_in_call = self.in_call(tx.now());

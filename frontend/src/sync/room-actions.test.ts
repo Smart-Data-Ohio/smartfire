@@ -35,6 +35,7 @@ const form: RoomForm = {
   stageRoles: [],
   topic: null,
   voiceBitrate: null,
+  voiceUserLimit: null,
 };
 
 const seed = () => {

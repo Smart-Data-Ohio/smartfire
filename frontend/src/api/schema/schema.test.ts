@@ -73,6 +73,7 @@ const roomJson = {
   updatedAt: "2026-10-06T09:15:00.123Z",
   topic: null,
   voiceBitrate: null,
+  voiceUserLimit: null,
 } as const;
 
 const membershipJson = {

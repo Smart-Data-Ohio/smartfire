@@ -168,6 +168,7 @@ pub async fn update_room(
             icon,
             topic: None,
             voice_bitrate: None,
+            voice_user_limit: None,
         },
         ids,
         has_remaining_ids,
@@ -189,6 +190,7 @@ pub async fn update_room_with_topic(
         icon,
         topic,
         voice_bitrate,
+        voice_user_limit,
     } = changes;
     let app = c.app().clone();
     let audit = audit_context(c)?;
@@ -212,6 +214,7 @@ pub async fn update_room_with_topic(
         if let Some(icon)=icon && icon != room.icon_name {tx.conn().execute_cached("UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?",rusqlite::params![icon,tx.now(),room.id])?;room.reload(tx.conn())?;}
         if let Some(topic)=topic { room.update_topic(tx,topic.as_deref())?; }
         if let Some(bitrate)=voice_bitrate { room.update_voice_bitrate(tx,bitrate)?; }
+        if let Some(limit)=voice_user_limit { room.update_voice_user_limit(tx,limit)?; }
         let before=room.user_ids(tx.conn())?;
         let granted=existing_user_ids(tx.conn(),&ids)?;
         let revoked:Vec<_>=before.iter().filter(|id|!blank_only && !ids.contains(id)).copied().collect();

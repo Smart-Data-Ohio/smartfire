@@ -2,6 +2,8 @@ use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("This voice room is full")]
+    HuddleRoomFull,
     /// `Google::SignIn::Rejected`: safe stable reason, never raw claims or credentials.
     #[error("Google sign-in rejected ({0})")]
     GoogleSignInRejected(&'static str),

@@ -241,6 +241,7 @@ async fn form(c: &Ctx, kind: api::RoomKind, room: Option<Room>) -> Result<api::R
                 stage_roles,
                 topic: room.as_ref().and_then(|room| room.topic.clone()),
                 voice_bitrate: room.as_ref().and_then(|room| room.voice_bitrate),
+                voice_user_limit: room.as_ref().and_then(|room| room.voice_user_limit),
             })
         })
         .await
@@ -288,6 +289,7 @@ type UpdateFields = (
     Vec<i64>,
     Option<Option<String>>,
     Option<Option<i64>>,
+    Option<Option<i64>>,
 );
 
 fn update_fields(input: api::UpdateRoom) -> UpdateFields {
@@ -297,6 +299,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             icon_name,
             topic,
             voice_bitrate,
+            voice_user_limit,
         } => (
             api::RoomKind::Open,
             name,
@@ -304,6 +307,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             Vec::new(),
             topic,
             voice_bitrate,
+            voice_user_limit,
         ),
         api::UpdateRoom::Closed {
             name,
@@ -311,6 +315,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         } => (
             api::RoomKind::Closed,
             name,
@@ -318,6 +323,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         ),
         api::UpdateRoom::Voice {
             name,
@@ -325,6 +331,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         } => (
             api::RoomKind::Voice,
             name,
@@ -332,6 +339,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         ),
         api::UpdateRoom::Stage {
             name,
@@ -339,6 +347,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         } => (
             api::RoomKind::Stage,
             name,
@@ -346,6 +355,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         ),
         api::UpdateRoom::Board {
             name,
@@ -353,6 +363,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         } => (
             api::RoomKind::Board,
             name,
@@ -360,6 +371,7 @@ fn update_fields(input: api::UpdateRoom) -> UpdateFields {
             user_ids,
             topic,
             voice_bitrate,
+            voice_user_limit,
         ),
     }
 }
@@ -568,9 +580,12 @@ async fn update_room(c: &mut Ctx) -> Result {
     }
     rooms::ensure_can_administer(c, &room)?;
     let input = body(c).await?;
-    let (kind, name, icon, ids, topic, voice_bitrate) = update_fields(input);
+    let (kind, name, icon, ids, topic, voice_bitrate, voice_user_limit) = update_fields(input);
     if let Some(bitrate) = voice_bitrate {
         Room::validate_voice_bitrate(bitrate).map_err(db_error)?;
+    }
+    if let Some(limit) = voice_user_limit {
+        Room::validate_voice_user_limit(limit).map_err(db_error)?;
     }
     let topic = topic
         .map(|value| Room::normalize_topic(value.as_deref()))
@@ -596,6 +611,7 @@ async fn update_room(c: &mut Ctx) -> Result {
                 icon: icon.map(call_icon),
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
             ids,
             has_remaining_ids,
@@ -616,6 +632,7 @@ async fn update_room(c: &mut Ctx) -> Result {
                 icon,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
             target,
         )

@@ -9,6 +9,7 @@ pub struct RoomChanges {
     pub icon: Option<Option<String>>,
     pub topic: Option<Option<String>>,
     pub voice_bitrate: Option<Option<i64>>,
+    pub voice_user_limit: Option<Option<i64>>,
 }
 
 pub async fn create(
@@ -55,6 +56,7 @@ pub async fn update(
             icon,
             topic: None,
             voice_bitrate: None,
+            voice_user_limit: None,
         },
         kind,
     )
@@ -83,6 +85,9 @@ pub async fn update_with_topic(
             }
             if let Some(bitrate) = changes.voice_bitrate {
                 room.update_voice_bitrate(tx, bitrate)?;
+            }
+            if let Some(limit) = changes.voice_user_limit {
+                room.update_voice_user_limit(tx, limit)?;
             }
             Ok(room)
         })

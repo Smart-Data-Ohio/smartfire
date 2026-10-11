@@ -120,6 +120,8 @@ export default function RoomSettingsDialog({
   const tabsId = useId();
   const panelId = useId();
   const topicId = useId();
+  const bitrateId = useId();
+  const limitId = useId();
   const nameRef = useRef<HTMLInputElement | null>(null);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -205,6 +207,8 @@ export default function RoomSettingsDialog({
           iconName: form.iconName,
           userIds: form.userIds,
           topic: form.topic ?? "",
+          voiceBitrate: form.voiceBitrate,
+          voiceUserLimit: form.voiceUserLimit,
         });
       },
       (failure: Error) => {
@@ -525,6 +529,55 @@ export default function RoomSettingsDialog({
             </p>
           ) : null}
         </div>
+        {form.canSubmit && kind !== "board" ? (
+          <>
+            <div className="field">
+              <label className="field-label" htmlFor={bitrateId}>
+                Voice bitrate
+              </label>
+              <select
+                id={bitrateId}
+                className="input"
+                value={draft.voiceBitrate ?? ""}
+                onChange={(event) =>
+                  edit({
+                    voiceBitrate: event.target.value === "" ? null : Number(event.target.value),
+                  })
+                }
+              >
+                <option value="">Default (48 kbps)</option>
+                {[48, 64, 96, 128, 256, 384].map((kbps) => (
+                  <option key={kbps} value={kbps * 1000}>
+                    {kbps} kbps
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor={limitId}>
+                Voice user limit
+              </label>
+              <select
+                id={limitId}
+                className="input"
+                value={draft.voiceUserLimit ?? ""}
+                onChange={(event) =>
+                  edit({
+                    voiceUserLimit: event.target.value === "" ? null : Number(event.target.value),
+                  })
+                }
+              >
+                <option value="">No limit</option>
+                {Array.from({ length: 99 }, (_, index) => index + 1).map((limit) => (
+                  <option key={limit} value={limit}>
+                    {limit}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint">Room administrators can join even when the room is full.</p>
+            </div>
+          </>
+        ) : null}
         {canConvert ? (
           <div className="room-privacy">
             <Toggle

@@ -36,6 +36,10 @@ export class Conflict extends Schema.TaggedError<Conflict>()("Conflict", {
   message: Schema.String,
 }) {}
 
+export class HuddleRoomFull extends Schema.TaggedError<HuddleRoomFull>()("HuddleRoomFull", {
+  message: Schema.String,
+}) {}
+
 /** 422: the CSRF token was missing or stale. The client refreshes it and retries once. */
 export class InvalidAuthenticityToken extends Schema.TaggedError<InvalidAuthenticityToken>()(
   "InvalidAuthenticityToken",
@@ -107,6 +111,7 @@ export const ApiError = Schema.Union([
   TwoFactorRequired,
   NotFound,
   Conflict,
+  HuddleRoomFull,
   InvalidAuthenticityToken,
   Validation,
   RateLimited,

@@ -1129,3 +1129,35 @@ async fn a_stage_goes_live_at_1080p60_and_every_viewer_reads_it_back() {
     );
     server.abort();
 }
+
+#[tokio::test]
+async fn voice_user_limit_refuses_full_joins_with_a_typed_conflict_and_allows_rejoin_and_admin() {
+    let a = app(true).await.expect("frozen seeds required");
+    let room = voice(&a).await;
+    a.db().write(move |tx| {
+        tx.conn().execute_cached("UPDATE users SET role=0 WHERE id=?", [JASON])?;
+        Room::find(tx.conn(), room.id)?.update_voice_user_limit(tx, Some(1))
+    }).await.unwrap();
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{}/huddle", room.id);
+    let first = join(&mut kevin, room.id).await;
+    // The grant holds the last slot even before the gateway's first sighting.
+    let refused = jason.write(empty(Method::POST, &path)).await;
+    assert_eq!(denial(&refused), (StatusCode::CONFLICT, "HuddleRoomFull".into(), "This voice room is full".into()));
+    seen(&a, first.grant_id).await;
+    assert_eq!(join(&mut kevin, room.id).await.grant_id, first.grant_id);
+    let mut device = a.sign_in(KEVIN).await;
+    assert_ne!(join(&mut device, room.id).await.grant_id, first.grant_id);
+    let admin = join(&mut david, room.id).await;
+    seen(&a, admin.grant_id).await;
+    let detail: api::HuddleDetail = parse(&kevin.send(get(&path)).await);
+    assert_eq!(detail.presence.participants.len(), 2);
+    let room_detail = kevin.send(get(&format!("/api/v1/rooms/{}", room.id))).await.json();
+    assert_eq!(room_detail["room"]["voiceUserLimit"], json!(1));
+    let cleared = david.write(send_json(Method::PATCH, &format!("/api/v1/rooms/{}", room.id),
+        &json!({"type":"voice","userIds":[DAVID,JASON,KEVIN],"voiceUserLimit":null}))).await;
+    assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+    join(&mut jason, room.id).await;
+}

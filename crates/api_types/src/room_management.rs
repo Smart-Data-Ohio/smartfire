@@ -38,6 +38,8 @@ pub struct RoomForm {
     pub topic: Option<String>,
     /// Configured audio target in bits per second; null uses the current huddle default.
     pub voice_bitrate: Option<i64>,
+    /// Maximum distinct huddle users; null means unlimited. Room administrators bypass it.
+    pub voice_user_limit: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -231,6 +233,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         voice_bitrate: Option<Option<i64>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Closed {
         #[ts(optional)]
@@ -246,6 +251,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         voice_bitrate: Option<Option<i64>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Voice {
         #[ts(optional)]
@@ -261,6 +269,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         voice_bitrate: Option<Option<i64>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Stage {
         #[ts(optional)]
@@ -276,6 +287,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         voice_bitrate: Option<Option<i64>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Board {
         #[ts(optional)]
@@ -291,6 +305,9 @@ pub enum UpdateRoom {
         #[ts(optional)]
         #[serde(skip_serializing_if = "Option::is_none")]
         voice_bitrate: Option<Option<i64>>,
+        #[ts(optional)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        voice_user_limit: Option<Option<i64>>,
     },
 }
 
@@ -311,6 +328,8 @@ enum UpdateRoomFields {
         topic: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         voice_bitrate: Option<Option<i64>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Closed {
         #[serde(default, deserialize_with = "present")]
@@ -322,6 +341,8 @@ enum UpdateRoomFields {
         topic: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         voice_bitrate: Option<Option<i64>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Voice {
         #[serde(default, deserialize_with = "present")]
@@ -333,6 +354,8 @@ enum UpdateRoomFields {
         topic: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         voice_bitrate: Option<Option<i64>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Stage {
         #[serde(default, deserialize_with = "present")]
@@ -344,6 +367,8 @@ enum UpdateRoomFields {
         topic: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         voice_bitrate: Option<Option<i64>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_user_limit: Option<Option<i64>>,
     },
     Board {
         #[serde(default, deserialize_with = "present")]
@@ -355,6 +380,8 @@ enum UpdateRoomFields {
         topic: Option<Option<String>>,
         #[serde(default, deserialize_with = "present")]
         voice_bitrate: Option<Option<i64>>,
+        #[serde(default, deserialize_with = "present")]
+        voice_user_limit: Option<Option<i64>>,
     },
 }
 
@@ -366,11 +393,13 @@ impl<'de> Deserialize<'de> for UpdateRoom {
                 icon_name,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             } => Self::Open {
                 name,
                 icon_name,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
             UpdateRoomFields::Closed {
                 name,
@@ -378,12 +407,14 @@ impl<'de> Deserialize<'de> for UpdateRoom {
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             } => Self::Closed {
                 name,
                 icon_name,
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
             UpdateRoomFields::Voice {
                 name,
@@ -391,12 +422,14 @@ impl<'de> Deserialize<'de> for UpdateRoom {
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             } => Self::Voice {
                 name,
                 icon_name,
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
             UpdateRoomFields::Stage {
                 name,
@@ -404,12 +437,14 @@ impl<'de> Deserialize<'de> for UpdateRoom {
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             } => Self::Stage {
                 name,
                 icon_name,
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
             UpdateRoomFields::Board {
                 name,
@@ -417,12 +452,14 @@ impl<'de> Deserialize<'de> for UpdateRoom {
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             } => Self::Board {
                 name,
                 icon_name,
                 user_ids,
                 topic,
                 voice_bitrate,
+                voice_user_limit,
             },
         })
     }
@@ -468,6 +505,29 @@ pub struct RoomLeft {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn voice_user_limit_patch_distinguishes_omitted_null_and_target() {
+        for kind in ["open", "closed", "voice", "stage", "board"] {
+            let mut omitted = json!({"type":kind});
+            if kind != "open" {
+                omitted["userIds"] = json!([]);
+            }
+            for value in [None, Some(json!(null)), Some(json!(5))] {
+                let mut input = omitted.clone();
+                if let Some(value) = value {
+                    input["voiceUserLimit"] = value;
+                }
+                let request: UpdateRoom = serde_json::from_value(input.clone()).unwrap();
+                assert_eq!(serde_json::to_value(request).unwrap(), input);
+            }
+            for value in [json!("5"), json!(5.5), json!(true)] {
+                let mut input = omitted.clone();
+                input["voiceUserLimit"] = value;
+                assert!(serde_json::from_value::<UpdateRoom>(input).is_err());
+            }
+        }
+    }
 
     #[test]
     fn voice_bitrate_patch_distinguishes_omitted_null_and_target() {

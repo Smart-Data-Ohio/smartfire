@@ -141,6 +141,7 @@ export function createRoomManagement(
       stageRoles: [...roles].map(([userId, role]) => ({ userId, role })),
       topic: record?.room.topic ?? null,
       voiceBitrate: record?.room.voiceBitrate ?? null,
+      voiceUserLimit: record?.room.voiceUserLimit ?? null,
     };
   };
 
@@ -154,6 +155,15 @@ export function createRoomManagement(
     throw validation("voiceBitrate", "is not included in the list");
   };
 
+  const voiceUserLimit = (body: Json | undefined): number | null | undefined => {
+    const value = field(body, "voiceUserLimit");
+
+    if (value === undefined || value === null) return value;
+
+    if (isNumber(value) && Number.isInteger(value) && value >= 1 && value <= 99) return value;
+    throw validation("voiceUserLimit", "must be between 1 and 99");
+  };
+
   const parse = (body: Json | undefined, creating: boolean) => {
     if (!isRecord(body)) throw validation("base", "Invalid room body");
     const type = roomType(field(body, "type"));
@@ -164,7 +174,7 @@ export function createRoomManagement(
       type === "open" ? ["type", "name", "iconName"] : ["type", "name", "iconName", "userIds"];
 
     if (creating) keys.push("clientRoomId");
-    else keys.push("topic", "voiceBitrate");
+    else keys.push("topic", "voiceBitrate", "voiceUserLimit");
 
     if (Object.keys(body).some((key) => !keys.includes(key)))
       throw validation("base", "Unknown room field");
@@ -191,6 +201,7 @@ export function createRoomManagement(
       iconName: nullableString(body, "iconName", creating),
       topic: creating ? undefined : nullableString(body, "topic", false),
       voiceBitrate: creating ? undefined : voiceBitrate(body),
+      voiceUserLimit: creating ? undefined : voiceUserLimit(body),
     };
   };
 
@@ -298,6 +309,7 @@ export function createRoomManagement(
         updatedAt: createdAt,
         topic: null,
         voiceBitrate: null,
+        voiceUserLimit: null,
       },
       memberIds,
       membership: {
@@ -378,6 +390,8 @@ export function createRoomManagement(
       topic,
       voiceBitrate:
         input.voiceBitrate === undefined ? record.room.voiceBitrate : input.voiceBitrate,
+      voiceUserLimit:
+        input.voiceUserLimit === undefined ? record.room.voiceUserLimit : input.voiceUserLimit,
     };
     record.memberIds =
       input.type === "open"

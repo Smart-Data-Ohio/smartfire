@@ -243,6 +243,21 @@ describe("joining", () => {
     await controller.leave();
   });
 
+  it("explains that a voice room is full without starting a transport", async () => {
+    const { controller, transports } = harness({
+      join: async () => {
+        throw new ActionError("HuddleRoomFull", "This voice room is full");
+      },
+    });
+
+    await controller.join(ROOM, "Lounge", null);
+    expect(callStore.getState().phase).toBe("failed");
+    expect(callStore.getState().notice).toBe(
+      "This voice room is full. Try again when someone leaves.",
+    );
+    expect(transports).toHaveLength(0);
+  });
+
   it("says why a join failed", async () => {
     const { controller } = harness({
       join: async () => {

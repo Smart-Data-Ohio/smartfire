@@ -12,4 +12,8 @@ name: string | null, iconName: string | null, creatorId: number, createdAt: stri
 /**
  * Configured audio target in bits per second; null uses the current huddle default.
  */
-voiceBitrate: number | null, announcement?: boolean, };
+voiceBitrate: number | null,
+/**
+ * Maximum distinct huddle users; null means unlimited. Room administrators bypass it.
+ */
+voiceUserLimit: number | null, announcement?: boolean, };
