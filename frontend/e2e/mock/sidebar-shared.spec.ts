@@ -204,6 +204,33 @@ test("an administrator arranges the shared layout by keyboard, drag and menu", a
   expect(await names(page, "channels")).toEqual(expect.arrayContaining(["random", "quiet"]));
 });
 
+test("focus stays on a starred room an administrator drops for everyone", async ({ page }) => {
+  await control(page.request, "workspace-layout", PRODUCT_LAYOUT);
+  await openApp(page, `r/${ROOM_IDS.general}`);
+
+  // A slow server: the room leaves Favourites only once the shared move has landed.
+  let release = () => {};
+  const answered = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route("**/rooms/*/workspace_category", async (route) => {
+    await answered;
+    await route.continue();
+  });
+
+  await row(section(page, "favorites"), "engineering").focus();
+  await page.keyboard.press("Space");
+  await arrowUpTo(page, "Product, after general, for everyone", "ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(row(section(page, "favorites"), "engineering")).toBeFocused();
+
+  release();
+  await expect.poll(() => names(page, "shared-1")).toEqual(["general", "engineering", "quiet"]);
+  expect(await names(page, "favorites")).toEqual(["Maya Okafor"]);
+  await expect(row(section(page, "shared-1"), "engineering")).toBeFocused();
+});
+
 test("a shared category's heading is dragged into place", async ({ page }) => {
   await control(page.request, "workspace-layout", PRODUCT_LAYOUT);
   await openApp(page, `r/${ROOM_IDS.general}`);
