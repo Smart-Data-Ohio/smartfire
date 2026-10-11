@@ -203,7 +203,7 @@ function SharedItems({ row, shared }: SharedItemsProps) {
             checked={home === category.id}
             onSelect={() => {
               if (home !== category.id) {
-                moveSharedRoom(row, category.id, null, false);
+                void moveSharedRoom(row, category.id, null, false);
               }
             }}
           >
@@ -215,7 +215,7 @@ function SharedItems({ row, shared }: SharedItemsProps) {
           checked={home === null}
           onSelect={() => {
             if (home !== null) {
-              moveSharedRoom(row, null, null, false);
+              void moveSharedRoom(row, null, null, false);
             }
           }}
         >
@@ -227,13 +227,13 @@ function SharedItems({ row, shared }: SharedItemsProps) {
           <MenuSeparator />
           <MenuItem
             disabled={index === 0}
-            onSelect={() => moveSharedRoom(row, home, siblings[index - 1] ?? null, false)}
+            onSelect={() => void moveSharedRoom(row, home, siblings[index - 1] ?? null, false)}
           >
             Move up
           </MenuItem>
           <MenuItem
             disabled={index === siblings.length - 1}
-            onSelect={() => moveSharedRoom(row, home, siblings[index + 2] ?? null, false)}
+            onSelect={() => void moveSharedRoom(row, home, siblings[index + 2] ?? null, false)}
           >
             Move down
           </MenuItem>

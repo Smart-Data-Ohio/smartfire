@@ -4,6 +4,7 @@ import {
   acceptsRoom,
   categoryTargets,
   type DropContext,
+  dragSections,
   insertionIndex,
   involvementChoices,
   reorderedIds,
@@ -154,7 +155,13 @@ describe("drops on the shared layout", () => {
 
   const withShared = [favorites, launch, product, channels, voice, direct];
   const homes = new Map([[1, 30]]);
-  const member: DropContext = { admin: false, sharedHome: (roomId) => homes.get(roomId) ?? null };
+
+  const member: DropContext = {
+    admin: false,
+    sharedHome: (roomId) => homes.get(roomId) ?? null,
+    sharedCategories: [PRODUCT],
+  };
+
   const admin: DropContext = { ...member, admin: true };
   const placed = { ...general, membership: { ...general.membership, roomCategoryId: LAUNCH.id } };
 
@@ -199,6 +206,33 @@ describe("drops on the shared layout", () => {
     expect(acceptsRoom(channels, placed, member)).toBe(false);
     expect(acceptsRoom(product, row(6, "ops"), member)).toBe(false);
     expect(slotForSection(channels, row(6, "ops"), 0, null)).toEqual({ kind: "channels" });
+  });
+
+  it("shows a room's shared category while it is dragged, though nothing else is left in it", () => {
+    // #general was Product's only room for this member; starred, it left Product hidden.
+    const starred = row(1, "general", "open", 2);
+    const hidden = [{ ...favorites, rows: [engineering, maya, starred] }, launch, channels, direct];
+
+    expect(dragSections(hidden, starred, member).map((shown) => shown.key)).toEqual([
+      "favorites",
+      "category-1",
+      "shared-30",
+      "channels",
+      "direct",
+    ]);
+    expect(dragSections(hidden, starred, member)[2]?.rows).toEqual([]);
+    // Shown already, or no shared home: nothing added.
+    expect(dragSections(withShared, starred, member)).toEqual(withShared);
+    expect(dragSections(hidden, row(6, "ops"), member).map((shown) => shown.key)).toEqual([
+      "favorites",
+      "category-1",
+      "channels",
+      "direct",
+    ]);
+    expect(roomTargets(hidden, starred, member).at(-1)).toEqual({
+      target: { kind: "room", slot: { kind: "channels" } },
+      label: "Product",
+    });
   });
 
   it("lists a gap per room in the shared sections for an administrator's keyboard drag", () => {

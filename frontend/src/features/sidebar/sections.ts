@@ -82,7 +82,8 @@ function sharedSection(category: WorkspaceCategory, rows: readonly SidebarRow[])
  * the workspace's shared layout: the shared categories in the administrators' order, each room in
  * its shared position, then Channels and Voice for the rooms in no shared category (in their
  * shared order too, rooms never organized after the rest by name), and Direct messages newest
- * first. A shared category with nothing left to show is dropped, except for administrators.
+ * first. A shared category with nothing left to show is dropped, except for administrators (a
+ * drag shows the dragged room's own again: `dragSections` in organize-model.ts).
  * Pending organising changes are drawn in, and invisible rooms stay out. Empty Favourites and
  * Voice are dropped; Channels and Direct messages always show (they hold the "add" affordances).
  */

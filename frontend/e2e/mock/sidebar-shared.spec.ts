@@ -89,10 +89,10 @@ async function drag(page: Page, from: Locator, to: Locator, { drop = true } = {}
   }
 }
 
-/** Steps a keyboard drag up until the announcer names `label`. */
-async function arrowUpTo(page: Page, label: string) {
+/** Steps a keyboard drag (up, or down) until the announcer names `label`. */
+async function arrowUpTo(page: Page, label: string, key = "ArrowUp") {
   for (let step = 0; step < 40; step += 1) {
-    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press(key);
 
     if ((await announcer(page).textContent()) === label) {
       return;
@@ -153,6 +153,8 @@ test("an administrator arranges the shared layout by keyboard, drag and menu", a
 
   await everyone.getByRole("menuitemradio", { name: "Product" }).click();
   await expect.poll(() => names(page, "shared-1")).toEqual(["quiet", "random"]);
+  // The menus play out their exit first; a right click on the way out would land on them.
+  await expect(page.getByRole("menu")).toHaveCount(0);
 
   await row(list, "random").click({ button: "right" });
   await page
@@ -257,6 +259,43 @@ test("anyone else sees the shared layout live, and their drags stay their own", 
   await page.keyboard.press("Escape");
   await page.mouse.up();
   expect(await names(page, "shared-1")).toEqual(["general", "quiet"]);
+
+  // With both its rooms in Team, Product is hidden; a drag of either brings it back to drop on.
+  await drag(page, row(section(page, "shared-1"), "general"), section(page, "category-2"));
+  await drag(page, row(section(page, "shared-1"), "quiet"), section(page, "category-2"));
+  await expect.poll(() => names(page, "category-2")).toEqual(["announcements", "general", "quiet"]);
+  await expect(section(page, "shared-1")).toHaveCount(0);
+
+  const start = await row(section(page, "category-2"), "general").boundingBox();
+
+  if (start === null) {
+    throw new Error("No #general in Team");
+  }
+
+  await page.mouse.move(start.x + 24, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 30, start.y + start.height / 2 + 6, { steps: 3 });
+  await expect(section(page, "shared-1")).toBeVisible();
+
+  const home = await section(page, "shared-1").boundingBox();
+
+  if (home === null) {
+    throw new Error("Product didn't show for the drag");
+  }
+
+  await page.mouse.move(home.x + 40, home.y + home.height / 2, { steps: 8 });
+  await expect(section(page, "shared-1")).not.toHaveAttribute("data-drop-disabled");
+  await page.mouse.up();
+  await expect.poll(() => names(page, "shared-1")).toEqual(["general"]);
+
+  // And for a keyboard drag: Product is a stop below Team.
+  await drag(page, row(section(page, "shared-1"), "general"), section(page, "category-2"));
+  await expect(section(page, "shared-1")).toHaveCount(0);
+  await row(section(page, "category-2"), "quiet").focus();
+  await page.keyboard.press("Space");
+  await arrowUpTo(page, "Product", "ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect.poll(() => names(page, "shared-1")).toEqual(["quiet"]);
 });
 
 test.describe("on a touch phone", () => {

@@ -134,25 +134,33 @@ export function setInvolvement(
  * An administrator's move of a room in the shared layout, for everyone: into `categoryId`
  * (`null`: no shared category) just before `beforeRoomId`, or at the end. A drop
  * (`leavePersonal`) also takes a room the viewer had starred or put in a category of their own
- * out of there, so it shows where it was dropped; a menu's move leaves those alone.
+ * out of there, so it shows where it was dropped; a menu's move leaves those alone. That waits
+ * for the shared move to land: when it is refused, the room keeps its personal place.
  */
-export function moveSharedRoom(
+export async function moveSharedRoom(
   row: SidebarRow,
   categoryId: number | null,
   beforeRoomId: number | null,
   leavePersonal = true,
-): void {
+): Promise<void> {
   beforeChange?.();
 
-  if (leavePersonal && personallyPlaced(row)) {
-    actions.organize
+  const moved = await actions.workspaceLayout.moveRoom(row.room.id, categoryId, beforeRoomId).then(
+    () => true,
+    (error: ActionError) => {
+      failed(`Couldn't move ${row.displayName} for everyone`)(error);
+
+      return false;
+    },
+  );
+
+  if (moved && leavePersonal && personallyPlaced(row)) {
+    beforeChange?.();
+
+    await actions.organize
       .moveRoom(row.room.id, { kind: "channels" })
       .catch(failed(`Couldn't move ${row.displayName}`));
   }
-
-  actions.workspaceLayout
-    .moveRoom(row.room.id, categoryId, beforeRoomId)
-    .catch(failed(`Couldn't move ${row.displayName} for everyone`));
 }
 
 /** A new shared category at the end; resolves to it, or `null` after a refusal (toasted). */

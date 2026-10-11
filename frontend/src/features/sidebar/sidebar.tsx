@@ -46,7 +46,7 @@ import {
   type DragItem,
   type DropContext,
   type DropTarget,
-  FAVORITES_PLACEHOLDER,
+  dragSections,
   reorderedIds,
   sameTarget,
   targetForSection,
@@ -811,7 +811,13 @@ export function Sidebar() {
   const layout = sharedLayout(sidebar);
   const shared = sharedCategories(layout);
   const homes = new Map(layout.rooms.map((place) => [place.roomId, place.workspaceCategoryId]));
-  const context: DropContext = { admin, sharedHome: (roomId) => homes.get(roomId) ?? null };
+
+  const context: DropContext = {
+    admin,
+    sharedHome: (roomId) => homes.get(roomId) ?? null,
+    sharedCategories: shared,
+  };
+
   const all = sidebarSections(sidebar, { admin });
   const flip = useFlip(scrollRef);
   const focusAfterRender = useFocusAfterRender();
@@ -838,7 +844,7 @@ export function Sidebar() {
     if (item.kind === "room" && target.kind === "room") {
       commands.moveRoom(item.row, target.slot);
     } else if (item.kind === "room" && target.kind === "shared") {
-      commands.moveSharedRoom(item.row, target.categoryId, target.beforeRoomId);
+      void commands.moveSharedRoom(item.row, target.categoryId, target.beforeRoomId);
     } else if (item.kind === "category" && target.kind === "category") {
       commands.reorderCategories(reorderedIds(categories, item.category.id, target.index));
     } else if (item.kind === "shared-category" && target.kind === "shared-category") {
@@ -863,9 +869,7 @@ export function Sidebar() {
   const { drag } = dnd;
 
   const withPlaceholder =
-    drag?.item.kind === "room" && !all.some((section) => section.kind === "favorites")
-      ? [FAVORITES_PLACEHOLDER, ...all]
-      : all;
+    drag?.item.kind === "room" ? dragSections(all, drag.item.row, context) : all;
 
   const sections =
     destination === "dms"

@@ -46,9 +46,15 @@ export interface DropContext {
   readonly admin: boolean;
   /** The shared category a room falls back to without personal organisation (`null`: none). */
   readonly sharedHome: (roomId: number) => number | null;
+  /** The shared categories in their order, shown or not. */
+  readonly sharedCategories: readonly WorkspaceCategory[];
 }
 
-export const PERSONAL_DROPS: DropContext = { admin: false, sharedHome: () => null };
+export const PERSONAL_DROPS: DropContext = {
+  admin: false,
+  sharedHome: () => null,
+  sharedCategories: [],
+};
 
 /** The empty Favourites section shown while a room is dragged, so there is somewhere to star it. */
 export const FAVORITES_PLACEHOLDER: SidebarSection = {
@@ -60,6 +66,55 @@ export const FAVORITES_PLACEHOLDER: SidebarSection = {
   sharedCategory: null,
   collapsed: false,
 };
+
+/**
+ * The sections as a drag of `row` shows them: an empty Favourites to star it in, and its shared
+ * category even when nothing else of the viewer's is left in it (a favourite was its last room),
+ * so a room taken out of the shared layout can always be dropped back.
+ */
+export function dragSections(
+  sections: readonly SidebarSection[],
+  row: SidebarRow,
+  context: DropContext,
+): readonly SidebarSection[] {
+  const withFavorites = sections.some((section) => section.kind === "favorites")
+    ? sections
+    : [FAVORITES_PLACEHOLDER, ...sections];
+
+  const homeId = context.sharedHome(row.room.id);
+  const home = context.sharedCategories.find((category) => category.id === homeId);
+
+  if (
+    home === undefined ||
+    withFavorites.some((section) => section.sharedCategory?.id === homeId)
+  ) {
+    return withFavorites;
+  }
+
+  const rank = (category: WorkspaceCategory) =>
+    context.sharedCategories.findIndex((candidate) => candidate.id === category.id);
+
+  // After the shared categories before it, ahead of the rest of the layout.
+  const at = withFavorites.findIndex((section) =>
+    section.sharedCategory === null
+      ? section.kind === "channels" || section.kind === "voice" || section.kind === "direct"
+      : rank(section.sharedCategory) > rank(home),
+  );
+
+  const placeholder: SidebarSection = {
+    key: `shared-${home.id}`,
+    kind: "shared",
+    title: home.name,
+    rows: [],
+    category: null,
+    sharedCategory: home,
+    collapsed: false,
+  };
+
+  return at === -1
+    ? [...withFavorites, placeholder]
+    : [...withFavorites.slice(0, at), placeholder, ...withFavorites.slice(at)];
+}
 
 /** The section a room lives in when it isn't a favourite or in a category. */
 function homeKind(row: SidebarRow): SidebarSection["kind"] {
@@ -197,18 +252,15 @@ function gaps(
 /**
  * Every place a keyboard drag can take `row`, top to bottom: each gap among the favourites, then
  * each section that takes it, with a gap per room in the shared layout's sections for an
- * administrator. Favourites come first even when there are none yet.
+ * administrator. Favourites come first even when there are none yet, and the room's shared
+ * category shows even when it would otherwise be hidden (`dragSections`).
  */
 export function roomTargets(
   sections: readonly SidebarSection[],
   row: SidebarRow,
   context: DropContext = PERSONAL_DROPS,
 ): readonly LabelledTarget[] {
-  const withFavorites = sections.some((section) => section.kind === "favorites")
-    ? sections
-    : [FAVORITES_PLACEHOLDER, ...sections];
-
-  return withFavorites.flatMap((section): LabelledTarget[] => {
+  return dragSections(sections, row, context).flatMap((section): LabelledTarget[] => {
     const others = section.rows.filter((candidate) => candidate.room.id !== row.room.id);
 
     if (section.kind === "favorites") {
