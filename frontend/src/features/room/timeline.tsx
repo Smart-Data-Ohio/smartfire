@@ -12,6 +12,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { hasCards, useCardsChunkLoaded, useCardsChunkSettled } from "../cards/card-slot.tsx";
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
+import { IgnoredNotice, useIgnoredReveal } from "../messages/message-content.tsx";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
 import { useChatSounds } from "../messages/use-chat-sounds.ts";
 import { useViewportAnchor } from "../messages/viewport-anchor.ts";
@@ -169,7 +170,16 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   });
 
   const now = Date.now();
-  const items = timelineItems({ timeline, messages, pending, now });
+  const reveal = useIgnoredReveal(focusMessageId);
+
+  const items = timelineItems({
+    timeline,
+    messages,
+    pending,
+    now,
+    revealed: reveal.revealed,
+    focusId: reveal.focusId,
+  });
 
   // The row of the viewer's latest send from here: its key is the same pending and confirmed.
   const sentKeyRef = useRef<string | null>(null);
@@ -713,6 +723,15 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       case "earlier":
         // Room timelines page older messages on scroll; only a board post's thread has this row.
         return <div key={item.key} />;
+      case "ignored":
+        return (
+          <IgnoredNotice
+            key={item.key}
+            count={item.ids.length}
+            revealed={item.revealed}
+            onToggle={() => reveal.toggle(item.ids, !item.revealed)}
+          />
+        );
       case "pending":
         return <PendingRow key={item.key} pending={item.pending} groupStart={item.groupStart} />;
       case "message": {

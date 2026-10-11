@@ -56,9 +56,13 @@ function layout(
   timeline: Partial<Timeline> = {},
   pending: readonly PendingMessage[] = [],
   introFirst = false,
+  revealed: ReadonlySet<number> = new Set(),
+  focusId: number | null = null,
 ): TimelineItem[] {
   return timelineItems({
     introFirst,
+    revealed,
+    focusId,
     timeline: {
       ...emptyTimeline,
       status: "ready",
@@ -80,6 +84,8 @@ function summary(items: readonly TimelineItem[]): string[] {
         return `p${item.groupStart ? "*" : ""}`;
       case "day":
         return `day:${item.label}`;
+      case "ignored":
+        return `ignored:${item.ids.join(",")}${item.revealed ? " open" : ""}`;
       default:
         return item.kind;
     }
@@ -282,5 +288,90 @@ describe("prepended", () => {
       "1*",
     ]);
     expect(summary(layout(list, {}, [], true))).toEqual(["intro", "day:Today", "1*"]);
+  });
+});
+
+describe("ignored authors", () => {
+  const ignored = (id: number, creatorId: number, createdAt: string): MessageDTO => ({
+    ...message(id, creatorId, createdAt),
+    ignored: true,
+  });
+
+  it("collapses a run of ignored messages into one line, and the next message starts a group", () => {
+    const items = layout([
+      message(1, 7, local(6, 9, 0)),
+      ignored(2, 9, local(6, 9, 1)),
+      ignored(3, 9, local(6, 9, 2)),
+      ignored(4, 10, local(6, 9, 3)),
+      message(5, 7, local(6, 9, 4)),
+    ]);
+
+    expect(summary(items)).toEqual(["intro", "day:Today", "1*", "ignored:2,3,4", "5*"]);
+    expect(items.find((item) => item.kind === "ignored")?.key).toBe("ignored-client-2");
+  });
+
+  it("keeps runs apart across a visible message, a new day and the unread divider", () => {
+    const items = layout(
+      [
+        ignored(1, 9, local(5, 9, 0)),
+        ignored(2, 9, local(6, 9, 0)),
+        message(3, 7, local(6, 9, 1)),
+        ignored(4, 9, local(6, 9, 2)),
+        ignored(5, 9, local(6, 9, 3)),
+      ],
+      { unreadFromId: 5, unreadCount: 1 },
+    );
+
+    expect(summary(items)).toEqual([
+      "intro",
+      "day:Yesterday",
+      "ignored:1",
+      "day:Today",
+      "ignored:2",
+      "3*",
+      "ignored:4",
+      "unread",
+      "ignored:5",
+    ]);
+  });
+
+  it("lays a revealed run out under its line, grouped by author as usual", () => {
+    const list = [
+      ignored(1, 9, local(6, 9, 0)),
+      ignored(2, 9, local(6, 9, 1)),
+      ignored(3, 10, local(6, 9, 2)),
+      message(4, 10, local(6, 9, 3)),
+    ];
+
+    expect(summary(layout(list, {}, [], false, new Set([2])))).toEqual([
+      "intro",
+      "day:Today",
+      "ignored:1,2,3 open",
+      "1*",
+      "2",
+      "3*",
+      "4*",
+    ]);
+  });
+
+  it("opens the run a permalink lands in", () => {
+    const list = [message(1, 7, local(6, 9, 0)), ignored(2, 9, local(6, 9, 1))];
+
+    expect(summary(layout(list, {}, [], false, new Set(), 2))).toEqual([
+      "intro",
+      "day:Today",
+      "1*",
+      "ignored:2 open",
+      "2*",
+    ]);
+  });
+
+  it("renders a message the server didn't mark as it is", () => {
+    const list = [
+      message(1, 9, local(6, 9, 0)),
+      { ...message(2, 9, local(6, 9, 1)), ignored: false },
+    ];
+
+    expect(summary(layout(list))).toEqual(["intro", "day:Today", "1*", "2"]);
   });
 });

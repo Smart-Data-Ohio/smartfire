@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
+import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { CardSlot } from "../cards/card-slot.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
@@ -242,4 +243,96 @@ export function MessageContent({ message, trailing, inThread = false }: MessageC
       </div>
     </>
   );
+}
+
+/** "1 message from someone you ignore", "3 messages from someone you ignore". */
+export function ignoredLabel(count: number): string {
+  return `${count} ${count === 1 ? "message" : "messages"} from someone you ignore`;
+}
+
+/**
+ * The line that stands in for messages from people you ignore, Discord style: how many, and Show
+ * (Hide once shown). Showing is this screen's alone: nothing is saved, and a reload collapses
+ * them again.
+ */
+export function IgnoredNotice({
+  count,
+  revealed,
+  onToggle,
+}: {
+  readonly count: number;
+  readonly revealed: boolean;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <div className="message-ignored" data-revealed={revealed || undefined}>
+      <span className="message-ignored-line">
+        <Icon name="eye-off" size={14} className="message-ignored-icon" />
+        <span>{ignoredLabel(count)}</span>
+        <span aria-hidden="true">—</span>
+        <Button variant="link" size="sm" aria-expanded={revealed} onClick={onToggle}>
+          {revealed ? "Hide" : "Show"}
+        </Button>
+      </span>
+    </div>
+  );
+}
+
+/** One message outside a timeline (a thread's parent): collapsed behind the line if ignored. */
+export function IgnoredGate({
+  message,
+  children,
+}: {
+  readonly message: MessageDTO;
+  readonly children: ReactNode;
+}) {
+  const [shown, setShown] = useState(false);
+
+  if (message.ignored !== true) {
+    return children;
+  }
+
+  return (
+    <>
+      <IgnoredNotice count={1} revealed={shown} onToggle={() => setShown((open) => !open)} />
+      {shown ? children : null}
+    </>
+  );
+}
+
+/** Which ignored runs a timeline shows, and the toggle its lines call. */
+export interface IgnoredReveal {
+  readonly revealed: ReadonlySet<number>;
+  /** The focused message, unless the reader hid its run: a permalink opens the run it lands in. */
+  readonly focusId: number | null;
+  readonly toggle: (ids: readonly number[], open: boolean) => void;
+}
+
+/** A timeline's shown ignored runs, by message id; local to the screen, never saved. */
+export function useIgnoredReveal(focusMessageId: number | null): IgnoredReveal {
+  const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set());
+  const [hiddenFocus, setHiddenFocus] = useState<number | null>(null);
+
+  const toggle = (ids: readonly number[], open: boolean) => {
+    setRevealed((current) => {
+      const next = new Set(current);
+
+      for (const id of ids) {
+        if (open) next.add(id);
+        else next.delete(id);
+      }
+
+      return next;
+    });
+
+    if (focusMessageId !== null && ids.includes(focusMessageId)) {
+      setHiddenFocus(open ? null : focusMessageId);
+    }
+  };
+
+  return {
+    revealed,
+    focusId: focusMessageId === hiddenFocus ? null : focusMessageId,
+    toggle,
+  };
 }
