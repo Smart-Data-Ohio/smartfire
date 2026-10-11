@@ -580,7 +580,7 @@ async fn update_room(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &result)
 }
 
-async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
+pub(crate) async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     match room.room_type {
         RoomType::Open => opens::broadcast(c, room, update).await,
         RoomType::Closed => closeds::broadcast(c, room, update).await,

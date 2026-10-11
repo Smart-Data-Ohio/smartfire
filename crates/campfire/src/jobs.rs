@@ -3,6 +3,12 @@
 //! crate takes them (plans/crate-split-plan.md, "Tests").
 
 pub(crate) use campfire_channels::jobs::*;
+pub(crate) mod announcements;
+pub(crate) fn registry() -> crate::queue::Registry {
+    let mut registry = campfire_channels::jobs::registry();
+    announcements::register(&mut registry);
+    registry
+}
 // What `reminders` and `huddle_render_tests` name through `super::`.
 #[cfg(test)]
 use crate::queue::{Registry, discard_missing};

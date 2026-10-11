@@ -314,10 +314,11 @@ async fn create_thread(c: &mut Ctx) -> Result {
     let viewer = concerns::require_current_user(c)?.clone();
     let detail = detail(c, viewer, thread.id).await?;
     let app = c.app().clone();
+    let viewer_id = concerns::require_current_user(c)?.id;
     let message = c
         .app()
         .db
-        .read(move |conn| dto::message(conn, &app, &message))
+        .read(move |conn| dto::message_for_viewer(conn, &app, &message, viewer_id))
         .await
         .map_err(db_error)?;
     c.json(status, &api::ThreadCreated { detail, message })
@@ -480,10 +481,11 @@ async fn create_reply(c: &mut Ctx) -> Result {
         Err(error) => return Err(error),
     };
     let app = c.app().clone();
+    let viewer_id = campfire_runtime::concerns::require_current_user(c)?.id;
     let dto = c
         .app()
         .db
-        .read(move |conn| dto::message(conn, &app, &message))
+        .read(move |conn| dto::message_for_viewer(conn, &app, &message, viewer_id))
         .await
         .map_err(db_error)?;
     c.json(status, &dto)

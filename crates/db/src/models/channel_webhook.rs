@@ -18,13 +18,28 @@ pub struct ChannelWebhook {
     pub updated_at: Timestamp,
 }
 
-/// Passed through the normal message save; the token is rechecked under its writer lock.
+/// New posts recheck their token under the writer lock; copies retain the saved attribution.
 #[derive(Debug, Clone)]
-pub struct WebhookMessage {
-    pub webhook_id: i64,
-    pub token_digest: Option<String>,
-    pub username: Option<String>,
-    pub embeds: Value,
+pub enum WebhookMessage {
+    Post {
+        webhook_id: i64,
+        token_digest: Option<String>,
+        username: Option<String>,
+        embeds: Value,
+    },
+    Snapshot {
+        payload: WebhookMessagePayload,
+        avatar_blob_id: Option<i64>,
+    },
+}
+
+impl WebhookMessage {
+    pub(crate) fn embeds(&self) -> &Value {
+        match self {
+            Self::Post { embeds, .. } => embeds,
+            Self::Snapshot { payload, .. } => &payload.embeds,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -183,13 +198,33 @@ impl ChannelWebhook {
         message: &crate::Message,
         input: &WebhookMessage,
     ) -> Result<()> {
-        let webhook = Self::required(tx.conn(), input.webhook_id)?;
+        let (webhook_id, token_digest, username) = match input {
+            WebhookMessage::Post {
+                webhook_id,
+                token_digest,
+                username,
+                ..
+            } => (*webhook_id, token_digest, username),
+            WebhookMessage::Snapshot {
+                payload,
+                avatar_blob_id,
+            } => {
+                tx.conn().execute(
+                    "INSERT INTO channel_webhook_messages(message_id,name,username,embeds_json) VALUES(?,?,?,?)",
+                    params![message.id, payload.name, payload.username, payload.embeds.to_string()],
+                )?;
+                if let Some(blob_id) = avatar_blob_id {
+                    Attachment::create(tx, "Message", message.id, "webhook_avatar", *blob_id)?;
+                }
+                return Ok(());
+            }
+        };
+        let webhook = Self::required(tx.conn(), webhook_id)?;
         let room = crate::Room::find(tx.conn(), webhook.room_id)?;
         if room.deleted()
             || webhook.room_id != message.room_id
             || webhook.author_id != message.creator_id
-            || input
-                .token_digest
+            || token_digest
                 .as_ref()
                 .is_some_and(|digest| digest != &webhook.token_digest)
         {
@@ -197,7 +232,7 @@ impl ChannelWebhook {
         }
         tx.conn().execute(
             "INSERT INTO channel_webhook_messages(message_id,webhook_id,name,username,embeds_json) VALUES(?,?,?,?,?)",
-            params![message.id,webhook.id,webhook.name,input.username,input.embeds.to_string()],
+            params![message.id,webhook.id,webhook.name,username,input.embeds().to_string()],
         )?;
         if let Some(blob_id) = webhook.avatar_blob_id(tx.conn())? {
             Attachment::create(tx, "Message", message.id, "webhook_avatar", blob_id)?;
@@ -207,6 +242,23 @@ impl ChannelWebhook {
             params![tx.now(), tx.now(), webhook.id],
         )?;
         Ok(())
+    }
+
+    pub(crate) fn message_snapshot(
+        conn: &Connection,
+        message_id: i64,
+    ) -> Result<Option<WebhookMessage>> {
+        Self::message_payload(conn, message_id)?
+            .map(|payload| {
+                let avatar_blob_id =
+                    Attachment::find_for(conn, "Message", message_id, "webhook_avatar")?
+                        .map(|avatar| avatar.blob_id);
+                Ok(WebhookMessage::Snapshot {
+                    payload,
+                    avatar_blob_id,
+                })
+            })
+            .transpose()
     }
 
     pub fn message_payloads(
@@ -249,7 +301,9 @@ impl ChannelWebhook {
             "INSERT INTO channel_webhook_messages(message_id,name,username,embeds_json) SELECT ?,name,username,embeds_json FROM channel_webhook_messages WHERE message_id=?",
             params![message_id, source_id],
         )?;
-        if let Some(avatar) = Attachment::find_for(tx.conn(), "Message", source_id, "webhook_avatar")? {
+        if let Some(avatar) =
+            Attachment::find_for(tx.conn(), "Message", source_id, "webhook_avatar")?
+        {
             Attachment::create(tx, "Message", message_id, "webhook_avatar", avatar.blob_id)?;
         }
         Ok(())

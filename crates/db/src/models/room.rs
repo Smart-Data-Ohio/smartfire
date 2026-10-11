@@ -94,6 +94,7 @@ pub struct Room {
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
     pub topic: Option<String>,
+    pub announcement: bool,
 }
 
 /// `user.rooms`: `has_many :rooms, -> { alive }, through: :memberships` (`app/models/user.rb`).
@@ -118,12 +119,13 @@ impl Room {
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
             topic: row.get("topic")?,
+            announcement: row.get("announcement")?,
         })
     }
 
     /// The room's columns as `r_<column>`, for a join that reads its rows with
     /// [`Room::from_prefixed_row`].
-    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic"#;
+    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic, "rooms"."announcement" AS r_announcement"#;
 
     pub(crate) fn from_prefixed_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -140,6 +142,7 @@ impl Room {
             created_at: row.get("r_created_at")?,
             updated_at: row.get("r_updated_at")?,
             topic: row.get("r_topic")?,
+            announcement: row.get("r_announcement")?,
         })
     }
 

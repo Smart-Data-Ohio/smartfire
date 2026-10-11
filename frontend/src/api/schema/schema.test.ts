@@ -104,6 +104,24 @@ const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S
   expect(Schema.encodeSync(schema)(Schema.decodeUnknownSync(schema)(wire))).toEqual(wire);
 
 describe("DTO schemas", () => {
+  it("keeps announcement, ignore and webhook fields together", () => {
+    const wire = {
+      ...messageJson,
+      ignored: true,
+      published: false,
+      announcementSource: { roomId: 14, messageId: 9000, roomName: "News" },
+      embeds: [{ title: "Release" }],
+      webhook: { name: "Announcements", username: "Release bot", avatarUrl: null },
+    };
+
+    const message = Schema.decodeUnknownSync(MessageDTO)(wire);
+    expect(message.ignored).toBe(true);
+    expect(message.announcementSource?.messageId).toBe(9000);
+    expect(message.webhook?.username).toBe("Release bot");
+    expect(message.embeds?.[0]?.title).toBe("Release");
+    roundTrips(MessageDTO, wire);
+  });
+
   it("decodes a message to branded ids and DateTime values and encodes it back unchanged", () => {
     const message = Schema.decodeUnknownSync(MessageDTO)(messageJson);
 

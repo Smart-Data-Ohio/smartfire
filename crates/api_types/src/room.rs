@@ -17,6 +17,9 @@ pub struct Room {
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
     pub topic: Option<String>,
+    #[serde(default)]
+    #[ts(as = "Option<bool>", optional)]
+    pub announcement: bool,
 }
 
 /// `rooms.type`.

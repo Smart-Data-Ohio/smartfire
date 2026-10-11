@@ -579,6 +579,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         createdAt,
         updatedAt: createdAt,
         topic: null,
+        announcement: false,
       },
       memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
       membership: {

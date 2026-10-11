@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod announcement;
 pub mod ignore_policy;
 pub mod user_block;
 pub mod workspace_invite;
