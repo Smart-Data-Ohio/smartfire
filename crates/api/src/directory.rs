@@ -131,6 +131,9 @@ async fn post_direct(c: &mut Ctx) -> Result {
             if ids.iter().any(|id| *id != viewer) && !users.iter().any(|id| *id != viewer) {
                 return Err(campfire_db::Error::RecordNotFound("User"));
             }
+            if Room::find_direct_for(tx.conn(), &users)?.is_none() {
+                campfire_db::models::ignore_policy::require_contact(tx.conn(), viewer, &users)?;
+            }
             if users.len() > MAX_MEMBERS {
                 return Ok(None);
             }

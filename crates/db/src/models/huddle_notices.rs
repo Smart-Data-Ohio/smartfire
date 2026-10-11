@@ -154,7 +154,7 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
     let rejoin: bool = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE id!=? AND room_id=? AND user_id=? AND revoked_at>=? AND last_seen_at>=?)", params![grant.id, room.id, joiner.id, tx.now().ago(SignedDuration::from_secs(5)), tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW))], |r| r.get(0))?;
     let blockers = super::ignore_policy::blockers_of(tx.conn(), joiner.id)?.into_iter().collect::<BTreeSet<_>>();
     for membership in memberships {
-        if membership.user_id == joiner.id || blockers.contains(&membership.user_id) {
+        if membership.user_id == joiner.id {
             continue;
         }
         let Some((viewer, invitations_enabled, preferences)) = viewers.iter().find(|(u,_,_)|u.id == membership.user_id && u.is_active() && !u.is_bot()) else {
@@ -174,11 +174,9 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
         {
             continue;
         }
-        notice(
-            tx,
-            viewer.id,
-            json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, viewer.display_name(), &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.display_name(), "inCall":viewer_in_call, "rejoin":rejoin}),
-        );
+        let mut frame = json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, viewer.display_name(), &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.display_name(), "inCall":viewer_in_call, "rejoin":rejoin});
+        if blockers.contains(&viewer.id) { frame["unchanged"] = json!(true); }
+        notice(tx, viewer.id, frame);
         if !viewer_in_call && *invitations_enabled {
             enqueue_huddle_push(
                 tx,

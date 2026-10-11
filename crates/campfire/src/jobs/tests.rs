@@ -1019,8 +1019,8 @@ fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
         Ok(())
     }).unwrap();
     let actual: Vec<_> = sink.events().iter().filter_map(|event| match event.as_broadcast()? {
-        event @ campfire_db::broadcasts::Broadcast::Cable { .. } if event.channel_frame().is_some_and(|(stream, _)| stream.ends_with("_unread_threads")) => {
-            let (stream, payload) = event.channel_frame().unwrap();
+        event @ campfire_db::broadcasts::Broadcast::Cable { .. } if event.channel_frames().into_iter().any(|(stream, _)| stream.ends_with("_unread_threads")) => {
+            let (stream, payload) = event.channel_frames().into_iter().next().unwrap();
             Some(serde_json::json!({"kind":"cable", "stream":stream, "payload":payload}))
         }
         _ => None,

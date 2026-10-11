@@ -32,7 +32,13 @@ async fn closed_listing_uses_one_thread_query_including_locked_and_stale_without
     }).await.unwrap();
     let path=format!("/rooms/{ALL_TALK}/threads.json?state=closed");
     let captured=queries(&app,&path).await;
-    let selects=captured.iter().filter(|sql|sql.to_lowercase().contains("from \"channel_threads\"")||sql.to_lowercase().contains("from channel_threads")).collect::<Vec<_>>();
+    // Count thread-row loads, excluding board unread EXISTS clauses in membership projections.
+    let selects=captured.iter().filter(|sql| {
+        let sql=sql.to_lowercase();
+        sql.starts_with("select \"channel_threads\".* from \"channel_threads\"")
+            || sql.starts_with("select * from \"channel_threads\"")
+            || sql.starts_with("select * from channel_threads")
+    }).collect::<Vec<_>>();
     assert_eq!(selects.len(),1,"{selects:#?}");
     let response=app.david().get(&path).await;
     let actual=response.json()["threads"].as_array().unwrap().iter().filter_map(|r|r["id"].as_i64()).collect::<Vec<_>>();

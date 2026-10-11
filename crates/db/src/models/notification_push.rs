@@ -261,6 +261,10 @@ pub fn board_nudge_push(
     now: Timestamp,
 ) -> Result<Option<PushDelivery>> {
     let nudge = BoardNudgeSource::find(conn, id)?;
+    let author = crate::ChannelThread::find(conn, nudge.thread_id)?.creator_id;
+    if super::ignore_policy::ignored(conn, nudge.recipient_id, author)? {
+        return Ok(None);
+    }
     let recipient = UserStatusSettings::find(conn, nudge.recipient_id)?;
     if !recipient.active_human()
         || Membership::find_by_room_and_user(conn, nudge.room_id, nudge.recipient_id)?.is_none()
@@ -282,6 +286,8 @@ pub fn board_nudge_push(
 pub struct HuddleInvitationDeliveryJob {
     pub payload: PushPayload,
     pub subscription_ids: Vec<i64>,
+    #[serde(default)]
+    pub sender_id: Option<i64>,
 }
 impl Job for HuddleInvitationDeliveryJob {
     const CLASS: &'static str = "Huddle::InvitationDeliveryJob";
@@ -290,6 +296,8 @@ impl Job for HuddleInvitationDeliveryJob {
 pub struct HuddleJoinDeliveryJob {
     pub payload: PushPayload,
     pub subscription_ids: Vec<i64>,
+    #[serde(default)]
+    pub sender_id: Option<i64>,
 }
 impl Job for HuddleJoinDeliveryJob {
     const CLASS: &'static str = "Huddle::JoinDeliveryJob";
@@ -390,6 +398,7 @@ pub fn enqueue_huddle_invitation(
     tx.emit_after_commit(Event::job(&HuddleInvitationDeliveryJob {
         payload,
         subscription_ids,
+        sender_id: Some(sender_id),
     }));
     Ok(true)
 }
@@ -412,6 +421,7 @@ pub fn enqueue_huddle_join(
     tx.emit_after_commit(Event::job(&HuddleJoinDeliveryJob {
         payload,
         subscription_ids,
+        sender_id: Some(sender_id),
     }));
     Ok(true)
 }

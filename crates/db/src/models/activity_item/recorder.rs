@@ -118,18 +118,10 @@ impl ActivityItem {
             .into_iter()
             .map(|user| (user.id, user))
             .collect::<HashMap<_, _>>();
-        let blockers = facts
-            .creator_id
-            .map(|author| crate::models::ignore_policy::blockers_of(tx.conn(), author))
-            .transpose()?
-            .unwrap_or_default()
-            .into_iter()
-            .collect::<HashSet<_>>();
         let recipients = recipient_ids
             .iter()
             .filter_map(|id| users.get(id))
             .filter(|user| Self::can_record_for_recipient(user, &facts, authorization))
-            .filter(|user| !blockers.contains(&user.id))
             .collect::<Vec<_>>();
         // Grouped thread items still need each recipient's current unhandled row.
         if facts.thread_id.is_none()
@@ -215,12 +207,6 @@ impl ActivityItem {
         let Some(user) = User::find_by_id(tx.conn(), user_id)? else {
             return Ok(None);
         };
-        if facts.source_type != "Message"
-            && let Some(author) = facts.creator_id
-            && crate::models::ignore_policy::ignored(tx.conn(), user_id, author)?
-        {
-            return Ok(None);
-        }
         Self::record_with_facts(tx, &user, facts, event_type, authorization)
     }
 

@@ -157,22 +157,22 @@ impl Room {
         users: &[i64],
         actor: i64,
     ) -> Result<Vec<i64>> {
-        if !self.direct_group_capable(tx.conn())? {
-            return Err(crate::Error::Other("NotAGroup".into()));
-        }
         let current = self.user_ids(tx.conn())?;
         let fresh: Vec<_> = users
             .iter()
             .copied()
             .filter(|id| !current.contains(id))
             .collect();
+        super::ignore_policy::require_contact(tx.conn(), actor, &fresh)?;
+        if !self.direct_group_capable(tx.conn())? {
+            return Err(crate::Error::Other("NotAGroup".into()));
+        }
         if current.len() + fresh.len() > MAX_MEMBERS {
             return Err(crate::Error::Other("OverCapacity".into()));
         }
         if fresh.is_empty() {
             return Ok(fresh);
         }
-        super::ignore_policy::require_contact(tx.conn(), actor, &fresh)?;
         let names: Vec<_> = fresh
             .iter()
             .map(|id| User::find(tx.conn(), *id).map(|u| u.display_name().to_owned()))

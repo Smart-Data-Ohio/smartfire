@@ -144,12 +144,11 @@ pub(crate) fn changed(
     viewer: &User,
     item_id: i64,
 ) -> campfire_db::Result<Option<api::ActivityItemChanged>> {
-    let Some(row) = ActivityItem::find_accessible(conn, viewer, item_id)? else {
-        return Ok(None);
+    let item = match ActivityItem::find_accessible(conn, viewer, item_id)? {
+        Some(row) => items(conn, app, viewer, std::slice::from_ref(&row))?.pop(),
+        None => None,
     };
-    let Some(item) = items(conn, app, viewer, std::slice::from_ref(&row))?.pop() else {
-        return Ok(None);
-    };
+    if item.is_none() { return Ok(None); }
     let unread = ActivityItem::unread_snapshot(conn, viewer.id, app.db.env().now())?;
     Ok(Some(api::ActivityItemChanged {
         item,

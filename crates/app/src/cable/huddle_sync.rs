@@ -251,6 +251,7 @@ pub fn notice(frame: &serde_json::Value) -> Option<HuddleNotice> {
             user_name: text("joinerName")?,
             in_call: frame["inCall"].as_bool().unwrap_or(false),
             rejoin: frame["rejoin"].as_bool().unwrap_or(false),
+            unchanged: frame["unchanged"].as_bool(),
         },
         "huddle_left" => HuddleNotice::Left {
             room_id,
@@ -284,6 +285,7 @@ pub fn ring(frame: &serde_json::Value) -> Option<HuddleRing> {
         room_name: frame["roomName"].as_str()?.to_string(),
         caller_name: frame["callerName"].as_str()?.to_string(),
         silent: frame["silent"].as_bool().unwrap_or(false),
+        unchanged: frame["unchanged"].as_bool(),
     })
 }
 
@@ -304,7 +306,8 @@ mod tests {
                 user_id: 8,
                 user_name: "Grace".into(),
                 in_call: true,
-                rejoin: false
+                rejoin: false,
+                unchanged: None,
             })
         );
         assert_eq!(
@@ -340,7 +343,8 @@ mod tests {
                 room_id: 3,
                 room_name: "Ada".into(),
                 caller_name: "Ada".into(),
-                silent: true
+                silent: true,
+                unchanged: None
             })
         );
         let ended = json!({"activityItemId":41,"eventType":"huddle_ended","state":"read","roomId":3,"roomName":"Ada","roomPath":"/rooms/3","callerName":"Ada","readPath":"/activity/41/read?state=read","handledPath":"/activity/41/handled?state=handled"});

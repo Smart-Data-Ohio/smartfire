@@ -150,7 +150,7 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
       missing.add(event.data.creatorId);
     }
 
-    if (event.type === "activity.item") {
+    if (event.type === "activity.item" && event.data.item !== null) {
       const creatorId = event.data.item.source.creatorId;
 
       if (creatorId !== null && known[creatorId] === undefined) {

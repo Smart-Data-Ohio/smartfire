@@ -54,7 +54,7 @@ fn validation_fields(reply: &crate::controllers::presenters::test_support::Reply
 }
 
 fn activity_item(id: i64) -> impl Fn(&api::SyncEvent) -> bool {
-    move |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.id == id)
+    move |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.as_ref().unwrap().id == id)
 }
 
 #[tokio::test]
@@ -140,8 +140,8 @@ async fn the_inbox_lists_changes_and_publishes_items() {
         .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let changed: api::ActivityItemChanged = parse(&response);
-    assert_eq!(changed.item.state, api::ActivityState::Read);
-    assert!(changed.item.read_at.is_some());
+    assert_eq!(changed.item.as_ref().unwrap().state, api::ActivityState::Read);
+    assert!(changed.item.as_ref().unwrap().read_at.is_some());
     assert_eq!(changed.unread_count, before.unread_count + 1);
     let event = sync.until(activity_item(mention), |_| false).await;
     assert_eq!(event.topic, "user");
@@ -169,12 +169,12 @@ async fn the_inbox_lists_changes_and_publishes_items() {
                 .write(json_body(Method::PATCH, &path, &json!({"action": action})))
                 .await,
         );
-        assert_eq!(changed.item.state, state, "{action}");
+        assert_eq!(changed.item.as_ref().unwrap().state, state, "{action}");
         let event = sync.until(activity_item(mention), |_| false).await;
         let api::SyncPayload::ActivityItem(published) = event.payload else {
             unreachable!()
         };
-        assert_eq!(published.item.state, state, "{action}");
+        assert_eq!(published.item.as_ref().unwrap().state, state, "{action}");
     }
 
     // Opening marks it read, never handled.
@@ -187,7 +187,7 @@ async fn the_inbox_lists_changes_and_publishes_items() {
         .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let opened: api::ActivityItemChanged = parse(&response);
-    assert_eq!(opened.item.state, api::ActivityState::Read);
+    assert_eq!(opened.item.as_ref().unwrap().state, api::ActivityState::Read);
     let count: api::ActivityUnreadCount =
         parse(&david.send(get("/api/v1/activity/unread_count")).await);
     assert_eq!(count.unread_count, before.unread_count + 1);
@@ -263,7 +263,7 @@ async fn activity_count_persists_in_both_uis_across_fresh_sessions() {
     );
     assert_eq!(changed.unread_count, 1);
     assert_eq!(changed.unread_revision, count.unread_revision + 1);
-    assert!(changed.item.read_at.is_some() && changed.item.handled_at.is_some());
+    assert!(changed.item.as_ref().unwrap().read_at.is_some() && changed.item.as_ref().unwrap().handled_at.is_some());
     let response = david
         .write(
             Req::new(Method::PATCH, &format!("/activity/{read}/read"))
@@ -714,7 +714,7 @@ async fn scheduled_messages_tell_the_other_tabs() {
     assert_eq!((message.as_str(), fields.len()), ("channel access lost", 0));
     // The two twins are read afresh by separate deferred jobs, so either may come first.
     let dropped_row = scheduled_changed(row.id, api::ScheduledMessageState::Dropped);
-    let dropped_item = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.event_type == api::ActivityEventType::ScheduledMessageDropped);
+    let dropped_item = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.as_ref().unwrap().event_type == api::ActivityEventType::ScheduledMessageDropped);
     let (mut row_seen, mut item) = (false, None);
     while !row_seen || item.is_none() {
         let event = sync
@@ -725,7 +725,7 @@ async fn scheduled_messages_tell_the_other_tabs() {
             _ => row_seen = true,
         }
     }
-    assert_eq!(item.unwrap().item.source.source_id, row.id);
+    assert_eq!(item.unwrap().item.unwrap().source.source_id, row.id);
     server.abort();
 }
 
@@ -775,7 +775,7 @@ async fn mention_count_change(sync: &mut Sync, item_id: i64, removed: bool, coun
                 |event| match &event.payload {
                     api::SyncPayload::ActivityRemoved(item) => removed && item.id == item_id,
                     api::SyncPayload::ActivityItem(changed) => {
-                        !removed && changed.item.id == item_id
+                        !removed && changed.item.as_ref().unwrap().id == item_id
                     }
                     api::SyncPayload::SidebarRowUpserted(row) => {
                         row.room.id == DESIGNERS && row.mention_count == count
@@ -956,8 +956,8 @@ async fn mention_edits_promote_reply_and_demote_with_live_counts() {
             .until(
                 |event| match &event.payload {
                     api::SyncPayload::ActivityItem(changed) => {
-                        changed.item.id == before.id
-                            && changed.item.event_type == api::ActivityEventType::Reply
+                        changed.item.as_ref().unwrap().id == before.id
+                            && changed.item.as_ref().unwrap().event_type == api::ActivityEventType::Reply
                     }
                     api::SyncPayload::SidebarRowUpserted(row) => {
                         row.room.id == DESIGNERS && row.mention_count == 0
@@ -1160,7 +1160,7 @@ async fn inbox_items_leave_with_their_source_and_only_their_owner_hears() {
     kevins_sync
         .until(activity_item(own), |event| match &event.payload {
             api::SyncPayload::ActivityRemoved(removed) => david_ids.contains(&removed.id),
-            api::SyncPayload::ActivityItem(changed) => changed.item.id != own,
+            api::SyncPayload::ActivityItem(changed) => changed.item.as_ref().unwrap().id != own,
             _ => false,
         })
         .await;
@@ -1459,7 +1459,7 @@ async fn credentials_threads_scheduled_and_saved_tell_the_other_tabs() {
     let newer = replies[1];
     let event = sync
         .until(
-            move |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.source.message_id == Some(newer)),
+            move |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.as_ref().unwrap().source.message_id == Some(newer)),
             |_| false,
         )
         .await;
@@ -1467,7 +1467,7 @@ async fn credentials_threads_scheduled_and_saved_tell_the_other_tabs() {
         unreachable!()
     };
     assert_eq!(
-        (touched.item.event_type, touched.item.state),
+        (touched.item.as_ref().unwrap().event_type, touched.item.as_ref().unwrap().state),
         (
             api::ActivityEventType::ThreadActivity,
             api::ActivityState::Unread

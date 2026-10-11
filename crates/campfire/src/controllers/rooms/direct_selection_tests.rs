@@ -1,4 +1,4 @@
-//! Real Rails collection predicates, next-request flash, direct reuse and group additions.
+//! Rails collection predicates and group writes, with unavailable direct targets refused uniformly.
 use axum::http::{Method, StatusCode};
 use campfire_db::{CachedStatements, Message, Room, RoomType};
 use campfire_kit::Crypto;
@@ -31,7 +31,16 @@ async fn direct_selection_queries_match_rails_and_commit_notes_audits_and_flash(
     for case in oracle()["creates"].as_array().unwrap() {
         let before:i64 = app.db().read(|conn| Ok(conn.query_row_cached("SELECT count(*) FROM rooms WHERE type='Rooms::Direct'",[],|r|r.get(0))?)).await.unwrap();
         let reply = david.write(Req::new(Method::POST,"/rooms/directs").header("content-type","application/json").header("Accept","application/json").body(serde_json::to_vec(&serde_json::json!({"user_ids":case["input"]})).unwrap())).await;
-        assert_eq!(reply.status.as_u16() as u64,case["status"].as_u64().unwrap(),"{}: {}",case["input"],reply.text());
+        // Rails casts booleans to absent user ids 0/1. Those targets now share the blocked 404.
+        let missing_target=case["input"].is_boolean();
+        assert_eq!(reply.status.as_u16() as u64,if missing_target {404} else {case["status"].as_u64().unwrap()},"{}: {}",case["input"],reply.text());
+        if missing_target {
+            assert_eq!(reply.location(),None);
+            let after:i64=app.db().read(|conn|Ok(conn.query_row_cached("SELECT count(*) FROM rooms WHERE type='Rooms::Direct'",[],|r|r.get(0))?)).await.unwrap();
+            assert_eq!(after,before);
+            assert_eq!(next_flash(&app,&reply,&mut cookie),serde_json::json!({}));
+            continue;
+        }
         assert_eq!(reply.location(),case["location"].as_str());
         let id:i64 = reply.location().unwrap().rsplit('/').next().unwrap().parse().unwrap();
         let (after,mut ids) = app.db().read(move|conn| Ok((conn.query_row_cached("SELECT count(*) FROM rooms WHERE type='Rooms::Direct'",[],|r|r.get::<_,i64>(0))?,Room::find(conn,id)?.user_ids(conn)?))).await.unwrap();ids.sort();
@@ -45,8 +54,10 @@ async fn direct_selection_queries_match_rails_and_commit_notes_audits_and_flash(
             room.grant_to(tx,&[DAVID,JASON,KEVIN])?;Ok(room.id)
         }).await.unwrap();
         let reply = david.write(Req::new(Method::POST,&format!("/rooms/directs/{id}/add_members")).header("content-type","application/json").header("Accept","application/json").body(serde_json::to_vec(&serde_json::json!({"user_ids":case["input"]})).unwrap())).await;
-        assert_eq!(reply.status.as_u16() as u64,case["status"].as_u64().unwrap(),"{}: {}",case["input"],reply.text());
-        assert_eq!(reply.location(),case["location"].as_str());
+        // Rails casts booleans to absent user ids 0/1. Those targets now share the blocked 404.
+        let missing_target=case["input"].is_boolean();
+        assert_eq!(reply.status.as_u16() as u64,if missing_target {404} else {case["status"].as_u64().unwrap()},"{}: {}",case["input"],reply.text());
+        assert_eq!(reply.location(),if missing_target {None} else {case["location"].as_str()});
         assert_eq!(next_flash(&app,&reply,&mut cookie),case["next_flash"],"{}",case["input"]);
         let renderer=app.db().env().rich_text.clone();
         let (mut ids,notes,audits) = app.db().read(move|conn| {

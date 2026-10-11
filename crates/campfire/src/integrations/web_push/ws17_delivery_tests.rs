@@ -572,3 +572,39 @@ async fn cutover_c_reminder_real_job_suppresses_ended_events_with_recent_running
     let payload: Value = serde_json::from_str(&receiver.open(&requests[0].body)).unwrap();
     assert_eq!(payload["options"]["body"], "Starting now: Quick sync");
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ignore_queued_huddle_deliveries_recheck_sender_policy_in_the_real_registry() {
+    for name in ["invitation_baseline", "join_baseline"] {
+        let test = TestApp::boot_frozen().await.expect("seed required");
+        test.booted.jobs.shutdown(Duration::from_secs(5)).await;
+        let original = test.booted.app.clone();
+        let db = original.db.clone();
+        let service = push_service(201, "Created").await;
+        let receiver = Receiver::new();
+        let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
+        let app = with_pool(&original, pool.clone());
+        let row = vectors()["rows"].as_array().unwrap().iter().find(|r| r["name"] == name).unwrap().clone();
+        let recipient = row["recipient_id"].as_i64().unwrap();
+        let sender = row["sender_id"].as_i64().unwrap();
+        let sub = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
+        db.write(move |tx| {
+            tx.conn().execute_batch(row["setup_sql"].as_str().unwrap())?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=?", rusqlite::params![sub.endpoint, sub.p256dh_key, sub.auth_key])?;
+            let room = row["room_id"].as_i64().unwrap();
+            let payload: PushPayload = serde_json::from_value(row["deliveries"][0]["payload"].clone()).unwrap();
+            let queued = if name == "join_baseline" {
+                enqueue_huddle_join(tx, room, recipient, sender, payload)?
+            } else {
+                enqueue_huddle_invitation(tx, room, recipient, sender, payload)?
+            };
+            assert!(queued);
+            campfire_db::models::user_block::UserBlock::set(tx, recipient, sender, true)
+        }).await.unwrap();
+        let runner = campfire_jobs::start(db.clone(), app.jobs.queue.clone(), crate::jobs::registry(), app.clone(), crate::queue::runner_config(&app.config));
+        wait_for_jobs_and_deliveries(&db, &pool, &["Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"]).await;
+        runner.shutdown(Duration::from_secs(5)).await;
+        pool.shutdown().await;
+        assert!(service.server.received().is_empty(), "{name} sent after a block");
+    }
+}

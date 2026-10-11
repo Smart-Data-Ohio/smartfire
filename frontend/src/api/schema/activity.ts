@@ -199,7 +199,7 @@ export type UpdateActivityItemPin = Assert<
 
 /** A state change's or `open`'s reply, and the `activity.item` event. */
 export const ActivityItemChanged = Schema.Struct({
-  item: ActivityItem,
+  item: Schema.NullOr(ActivityItem),
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
   evaluatedAt: EvaluationTimestamp,
@@ -210,6 +210,14 @@ export type ActivityItemChanged = typeof ActivityItemChanged.Type;
 export type ActivityItemChangedPin = Assert<
   Pinned<typeof ActivityItemChanged, GeneratedActivityItemChanged>
 >;
+
+/** Successful item mutations always return the authorized item. */
+export const ActivityItemMutation = Schema.Struct({
+  ...ActivityItemChanged.fields,
+  item: ActivityItem,
+});
+
+export type ActivityItemMutation = typeof ActivityItemMutation.Encoded;
 
 /** The `activity.removed` event: the item went with its source. */
 export const ActivityItemRemoved = Schema.Struct({

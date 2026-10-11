@@ -570,52 +570,60 @@ pub fn room_unread(
     message_id: Option<i64>,
     mentioned: bool,
 ) {
+    room_unread_with_policy(server, user_id, room_id, message_id, mentioned, false);
+}
+
+pub fn room_unread_with_policy(
+    server: &Cable,
+    user_id: i64,
+    room_id: i64,
+    message_id: Option<i64>,
+    mentioned: bool,
+    unchanged: bool,
+) {
     if !server.sync_wanted() {
         return;
     }
     let payload = SyncPayload::RoomUnread(RoomUnread {
         room_id,
-        message_id,
-        mentioned,
+        message_id: if unchanged { None } else { message_id },
+        mentioned: mentioned && !unchanged,
+        unchanged: unchanged.then_some(true),
     });
     send_unread_change(server, user_id, room_id, &payload);
 }
 
-/// The twin of a `Broadcast::UnreadRoom` the database layer emits: `room.unread` with the message
-/// that made the room unread, and whether it mentions the person (read from `db` when there is
-/// one; without a database, unmentioned).
+/// Resolve the source policy once for the complete fan-out, including title-only board posts.
 pub fn unread_room(
     server: &Cable,
     db: Option<&Database>,
-    user_id: i64,
+    user_ids: &[i64],
     room_id: i64,
     message_id: Option<i64>,
+    author_id: i64,
 ) {
     if !server.sync_wanted() {
         return;
     }
-    let mentioned = match (db, message_id) {
-        (Some(db), Some(message_id)) => {
-            let rich_text = db.env().rich_text.clone();
-            let mentioned = db.read_blocking(move |conn| {
-                let message = Message::find(conn, message_id)?;
-                if campfire_db::models::ignore_policy::ignored(conn, user_id, message.creator_id)? {
-                    return Ok(None);
-                }
-                let mentionees = message.mentionees(conn, &*rich_text)?;
-                Ok(Some(mentionees.iter().any(|user| user.id == user_id)))
-            });
-            match mentioned {
-                Ok(Some(mentioned)) => mentioned,
-                Ok(None) => return,
-                Err(error) => {
-                    return tracing::warn!(%error, message_id, "sync: unread message not read");
-                }
+    let facts = db.map(|db| {
+        db.read_blocking(|conn| {
+            let blockers = campfire_db::models::ignore_policy::blockers_of(conn, author_id)?;
+            let mentioned = message_id.map(|id| {
+                Message::find(conn, id)?.mentionees(conn, &*db.env().rich_text)
+                    .map(|users| users.into_iter().map(|user| user.id).collect::<Vec<_>>())
+            }).transpose()?.unwrap_or_default();
+            Ok((blockers, mentioned))
+        })
+    }).transpose();
+    match facts {
+        Ok(facts) => {
+            let (blockers, mentioned) = facts.unwrap_or_default();
+            for &user_id in user_ids {
+                room_unread_with_policy(server, user_id, room_id, message_id, mentioned.contains(&user_id), blockers.contains(&user_id));
             }
         }
-        _ => false,
-    };
-    room_unread(server, user_id, room_id, message_id, mentioned);
+        Err(error) => tracing::warn!(%error, "sync: unread policy not read"),
+    }
 }
 
 /// `room.read` on the person's `user` topic.
@@ -680,8 +688,8 @@ pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
 
 /// `activity.item` on the owner's `user` topic: the twin of `ActivityChannel`'s
 /// `{activityItemId}` frame on `user_<id>_activity` (a huddle ring's frame carries the id too).
-/// The frame is sent after commit, so the item is read afresh; one the owner can't see (any
-/// more) publishes nothing.
+/// The frame is sent after commit, so the item is read afresh; hidden content keeps its
+/// publication slot with a null item.
 pub fn activity_stream(
     server: &Cable,
     slot: &RendererSlot,

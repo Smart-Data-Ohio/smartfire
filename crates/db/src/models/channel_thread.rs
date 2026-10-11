@@ -904,22 +904,25 @@ impl ChannelThread {
             .collect::<HashSet<_>>();
         for membership in ThreadMembership::for_thread(tx.conn(), thread.id)? {
             if membership.user_id == message.creator_id
-                || blockers.contains(&membership.user_id)
                 || !room_members.contains(&membership.user_id)
             {
                 continue;
             }
-            tx.conn().execute_cached(
-                r#"UPDATE "thread_memberships" SET "unread_at" = ?, "updated_at" = ? WHERE "thread_memberships"."id" = ?"#,
-                params![message.created_at, now, membership.id],
-            )?;
+            if !blockers.contains(&membership.user_id) {
+                tx.conn().execute_cached(
+                    r#"UPDATE "thread_memberships" SET "unread_at" = ?, "updated_at" = ? WHERE "thread_memberships"."id" = ?"#,
+                    params![message.created_at, now, membership.id],
+                )?;
+            }
             unread_user_ids.push(membership.user_id);
         }
         let mut seen = HashSet::new();
         for user_id in unread_user_ids.into_iter().filter(|id| seen.insert(*id)) {
+            let mut payload = serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id });
+            if blockers.contains(&user_id) { payload["refreshOnly"] = serde_json::json!(true); }
             tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                 stream: format!("user_{user_id}_unread_threads"),
-                payload: serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id }),
+                payload,
             }));
         }
         Ok(())

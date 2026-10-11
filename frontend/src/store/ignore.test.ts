@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { messageFixture } from "../api/testing.ts";
+import { messageFixture, sidebarRowFixture } from "../api/testing.ts";
 import { applyEvents, applyPage, receiveMessage, setBlocks } from "./reducers.ts";
 import { initialState } from "./state.ts";
 
@@ -164,5 +164,48 @@ describe("personal ignore sync", () => {
     });
 
     expect(arrived.messages[9]?.ignored).toBe(false);
+  });
+});
+
+describe("unchanged sync publications", () => {
+  it("consumes room, thread and activity slots without adding unread state", () => {
+    const before = {
+      ...initialState,
+      sidebar: { ...initialState.sidebar, rows: { 4: sidebarRowFixture(4, "Room") } },
+    };
+
+    const state = applyEvents(
+      before,
+      [
+        {
+          seq: 1,
+          topic: "user",
+          type: "room.unread",
+          data: { roomId: 4, messageId: null, mentioned: false, unchanged: true },
+        },
+        {
+          seq: 2,
+          topic: "user",
+          type: "thread.unread",
+          data: { roomId: 4, threadId: 9, refreshOnly: true },
+        },
+        {
+          seq: 3,
+          topic: "user",
+          type: "activity.item",
+          data: {
+            item: null,
+            unreadCount: 0,
+            unreadRevision: 0,
+            evaluatedAt: "2026-10-11T00:00:00.000000000Z",
+          },
+        },
+      ],
+      0,
+    );
+
+    expect(state.sidebar.rows).toEqual(before.sidebar.rows);
+    expect(state.threads).toEqual(initialState.threads);
+    expect(state.activity.items).toEqual(initialState.activity.items);
   });
 });

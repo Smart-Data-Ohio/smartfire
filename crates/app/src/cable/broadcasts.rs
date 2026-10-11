@@ -287,13 +287,15 @@ impl Broadcasts {
                 .iter()
                 .map(|user| user.id)
                 .collect();
+            let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
             for &user_id in &user_ids {
-                sync::room_unread(
+                sync::room_unread_with_policy(
                     &self.server,
                     user_id,
                     room.id,
                     Some(message.id),
                     mentioned.contains(&user_id),
+                    blockers.contains(&user_id),
                 );
             }
             // A direct row previews its newest root, so every member's row changes with one.
@@ -377,10 +379,8 @@ fn unread_user_ids(
     let mut memberships = Membership::for_room(conn, room.id)?;
     let ids = memberships.iter().map(|membership| membership.user_id).collect::<Vec<_>>();
     let users = UserStatusSettings::for_ids(conn, &ids)?;
-    let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
     memberships.retain(|membership| {
-        !blockers.contains(&membership.user_id)
-            && !users.get(&membership.user_id).is_some_and(|user| {
+        !users.get(&membership.user_id).is_some_and(|user| {
                 user.notification_preferences.muted(room.id, now)
             })
     });

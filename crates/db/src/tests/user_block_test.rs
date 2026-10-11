@@ -118,14 +118,10 @@ fn ignore_work_activity_filters_old_items_and_stops_new_notifications() {
             },
         )
     });
-    assert!(t.events()[before..].iter().filter_map(|event| event.as_broadcast()).all(|event| !matches!(event, crate::broadcasts::Broadcast::Cable { stream, .. } if stream == format!("user_{viewer}_activity"))));
+    assert!(t.events()[before..].iter().filter_map(|event| event.as_broadcast()).any(|event| matches!(event, crate::broadcasts::Broadcast::Cable { stream, .. } if stream == format!("user_{viewer}_activity"))));
     t.read(|conn| {
-        let unread: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM activity_items WHERE user_id=? AND read_at IS NULL",
-            [viewer],
-            |row| row.get(0),
-        )?;
-        assert_eq!(unread, 0, "ignored work cannot rearm a handled inbox row");
+        assert_eq!(ActivityItem::unread_count(conn, &User::find(conn, viewer)?, t.now())?, 0,
+            "the canonical publication must leave the blocker's visible inbox unchanged");
         Ok(())
     });
 }
@@ -371,7 +367,8 @@ fn ignore_fanouts_load_blockers_once_for_any_roster_size() {
                 .iter()
                 .filter(|sql| sql.contains("FROM user_blocks"))
                 .count();
-            assert_eq!(count, 1, "{lane}: {size} recipients in room {}", room.id);
+            let expected = usize::from(matches!(lane, "thread" | "push"));
+            assert_eq!(count, expected, "{lane}: {size} recipients in room {}", room.id);
         }
     }
 }
@@ -616,6 +613,63 @@ fn ignore_search_sections_exclude_ignored_thread_authors() {
             .collect();
         assert!(!ids.contains(&hidden));
         assert!(ids.contains(&visible));
+        Ok(())
+    });
+}
+
+#[test]
+fn ignore_reading_a_filtered_thread_persists_the_read_cursor() {
+    use crate::{ChannelThread, NewMessage, ThreadMembership};
+    use crate::models::user_block::UserBlock;
+    let t = TestDb::new();
+    let (viewer, author) = (id("jason"), id("david"));
+    let thread = channel_thread_test::create_thread(&t, "designers", "david", None, Some("Read hidden thread"));
+    let thread_id = thread.id;
+    let message = t.write(move |tx| {
+        ThreadMembership::join(tx, thread_id, viewer)?;
+        ChannelThread::find(tx.conn(), thread_id)?.post_message(tx, author, NewMessage { body: Some("Unread before block".into()), ..Default::default() })
+    });
+    t.write(move |tx| {
+        UserBlock::set(tx, viewer, author, true)?;
+        let mut membership = ThreadMembership::find_by_thread_and_user(tx.conn(), thread_id, viewer)?.unwrap();
+        assert!(!membership.unread());
+        membership.read(tx)?;
+        UserBlock::set(tx, viewer, author, false)
+    });
+    t.read(|conn| {
+        let membership = ThreadMembership::find_by_thread_and_user(conn, thread_id, viewer)?.unwrap();
+        assert!(!membership.unread(), "reading while blocked must survive unblocking");
+        assert!(membership.last_read_message_id.is_some_and(|id| id >= message.id));
+        Ok(())
+    });
+}
+
+#[test]
+fn ignore_board_unread_filters_only_the_authors_content() {
+    use crate::{ChannelThread, Membership, NewChannelThread, Room, RoomType};
+    use crate::models::user_block::UserBlock;
+    let t = TestDb::new();
+    let (viewer, author, unrelated) = (id("jason"), id("david"), id("kevin"));
+    let room = t.write(move |tx| Room::create_for(tx, RoomType::Board, Some("Ignored board"), author, &[viewer, author, unrelated]));
+    let room_id = room.id;
+    t.write(move |tx| {
+        ChannelThread::create_board_post(tx, NewChannelThread { room_id, creator_id: author, name: Some("Visible post".into()), work_status: Some("planned".into()), ..Default::default() }, Some("Board opener".into()))?;
+        Ok(())
+    });
+    for (blocked, unread) in [(unrelated, true), (author, false)] {
+        t.write(move |tx| UserBlock::set(tx, viewer, blocked, true));
+        t.read(|conn| {
+            assert_eq!(Membership::find_by_room_and_user(conn, room_id, viewer)?.unwrap().unread(), unread);
+            assert_eq!(Membership::unread_count(conn, viewer, t.now())? > 0, unread);
+            Ok(())
+        });
+    }
+    t.write(move |tx| {
+        Membership::find_by_room_and_user(tx.conn(), room_id, viewer)?.unwrap().read(tx)?;
+        UserBlock::set(tx, viewer, author, false)
+    });
+    t.read(|conn| {
+        assert!(!Membership::find_by_room_and_user(conn, room_id, viewer)?.unwrap().unread());
         Ok(())
     });
 }

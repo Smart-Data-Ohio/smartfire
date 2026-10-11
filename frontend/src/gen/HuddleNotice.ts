@@ -18,4 +18,4 @@ inCall: boolean,
  * They were in the call moments ago (a reconnect or a reissued grant): the client
  * cancels the pending "left" notice instead of showing "joined".
  */
-rejoin: boolean, } | { "kind": "left", roomId: number, roomName: string, userId: number, userName: string, } | { "kind": "ended", roomId: number, };
+rejoin: boolean, unchanged?: boolean, } | { "kind": "left", roomId: number, roomName: string, userId: number, userName: string, } | { "kind": "ended", roomId: number, };

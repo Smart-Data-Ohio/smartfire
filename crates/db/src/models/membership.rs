@@ -551,7 +551,10 @@ impl Membership {
     pub fn read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.validate_organization(tx.conn(), self.room_category_id)?;
         let last_read_message_id = self.latest_root_message_id(tx.conn())?;
-        if self.unread_at.is_none() && self.last_read_message_id == last_read_message_id {
+        let stored = query_one(tx.conn(), "SELECT * FROM memberships WHERE id=?", [self.id], Self::from_row)?
+            .or_not_found("Membership")?;
+        if stored.unread_at.is_none() && stored.last_read_message_id == last_read_message_id {
+            *self = stored;
             return Ok(());
         }
         let now = tx.now();

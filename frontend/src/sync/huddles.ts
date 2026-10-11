@@ -115,8 +115,11 @@ function isHuddleSignal(event: SyncEvent): event is HuddleSignal {
   switch (event.type) {
     case "huddle.presence":
     case "huddle.role":
+      return true;
     case "huddle.notice":
+      return event.data.kind !== "joined" || !event.data.unchanged;
     case "huddle.ring":
+      return !event.data.unchanged;
     case "stage.updated":
     case "stage.stream.stopped":
       return true;

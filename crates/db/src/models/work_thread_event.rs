@@ -216,19 +216,11 @@ impl WorkThreadEvent {
             );
         }
         let mut seen = HashSet::new();
-        let blockers = self
-            .actor_id
-            .map(|author| super::ignore_policy::blockers_of(conn, author))
-            .transpose()?
-            .unwrap_or_default()
-            .into_iter()
-            .collect::<HashSet<_>>();
         let ids = candidates
             .into_iter()
             .flatten()
             .filter(|id| {
                 Some(*id) != self.actor_id
-                    && !blockers.contains(id)
                     && seen.insert(*id)
                     && memberships.get(id).is_some_and(|membership| {
                         !matches!(

@@ -434,8 +434,8 @@ async fn ignore_live_messages_are_marked_privately_for_room_and_thread_subscribe
         let blocked = blocker
             .until(wanted, |e| {
                 matches!(&e.payload,
-                    SyncPayload::RoomUnread(row) if row.room_id == DESIGNERS
-                ) || matches!(&e.payload, SyncPayload::ThreadUnread(row) if row.thread_id == 1)
+                    SyncPayload::RoomUnread(row) if row.room_id == DESIGNERS && row.unchanged != Some(true)
+                ) || matches!(&e.payload, SyncPayload::ThreadUnread(row) if row.thread_id == 1 && !row.refresh_only)
             })
             .await;
         let normal = other
@@ -524,4 +524,184 @@ async fn ignore_sidebar_badges_exclude_old_and_new_messages_and_mentions() {
     }
     let count_after: Value = parse(&david.send(get("/api/v1/activity/unread_count")).await);
     assert_eq!(count_after["unreadCount"], count_before["unreadCount"]);
+}
+
+#[tokio::test]
+async fn ignore_html_direct_targets_match_missing_people_on_create_and_add() {
+    use crate::controllers::presenters::test_support::Req;
+    let a = app(true).await.expect("seed required").without_job_runner().await;
+    let group = a.db().write(|tx| {
+        let room = campfire_db::Room::find_or_create_direct_for(tx, &[JASON, DAVID, BENDER], JASON)?;
+        campfire_db::models::user_block::UserBlock::set(tx, KEVIN, JASON, true)?;
+        Ok(room)
+    }).await.unwrap();
+    let mut jason = a.sign_in(JASON).await;
+    for path in ["/rooms/directs".to_owned(), format!("/rooms/directs/{}/add_members", group.id), format!("/rooms/directs/{DIRECT_DAVID_JASON}/add_members")] {
+        for extra in [None, Some(DAVID)] {
+            let mut replies = Vec::new();
+            for target in [KEVIN, 999999999] {
+                let target = target.to_string();
+                let extra = extra.map(|id| id.to_string());
+                let mut fields = vec![("user_ids[]", target.as_str())];
+                if let Some(extra) = &extra { fields.push(("user_ids[]", extra.as_str())); }
+                replies.push(jason.write(Req::new(Method::POST, &path).form(&fields)).await);
+            }
+            assert_eq!(replies[0].status, StatusCode::NOT_FOUND, "{path}");
+            assert_eq!(replies[0].status, replies[1].status, "{path}");
+            assert_eq!(replies[0].text(), replies[1].text(), "{path}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types() {
+    use campfire_db::{ChannelThread, NewChannelThread, Room, RoomType, ThreadMembership, ThreadInvolvement};
+    use campfire_api_types::SyncPayload;
+    let mut observed = Vec::new();
+    for ignored in [false, true] {
+        let a = app(true).await.expect("seed required").without_job_runner().await;
+        let (room, board, thread) = a.db().write(move |tx| {
+            let users = [JASON, DAVID];
+            let room = Room::create_for(tx, RoomType::Closed, Some("Sequence room"), JASON, &users)?;
+            let board = Room::create_for(tx, RoomType::Board, Some("Sequence board"), JASON, &users)?;
+            let thread = ChannelThread::create(tx, NewChannelThread { room_id: room.id, creator_id: JASON, name: Some("Sequence thread".into()), ..Default::default() })?;
+            ThreadMembership::join(tx, thread.id, DAVID)?.update_involvement(tx, ThreadInvolvement::Everything)?;
+            campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, ignored)?;
+            Ok((room.id, board.id, thread.id))
+        }).await.unwrap();
+        let mut jason = a.sign_in(JASON).await;
+        a.booted.app.broadcasts.settle_sync().await;
+        let (addr, server) = serve(&a).await;
+        let topics = [format!("room:{room}"), format!("room:{board}"), format!("thread:{thread}")];
+        let mut author = Sync::connect(addr, &jason.cookie_header(), &topics).await;
+        author.welcome().await;
+        let marker = || a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
+            campfire_cable::sync::Audience::Topic(format!("room:{room}")),
+            serde_json::to_string(&SyncPayload::RoomRead(campfire_api_types::RoomRead { room_id: room })).unwrap(),
+        ));
+        marker();
+        let start = author.until(|e| matches!(e.payload, SyncPayload::RoomRead(_)), |_| false).await.seq;
+        let reply = jason.write(json_body(Method::POST, &format!("/api/v1/rooms/{room}/messages"), &json!({"clientMessageId":"sequence-post", "markdownSource":"A post"}))).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let message = parse::<Value>(&reply)["id"].as_i64().unwrap();
+        a.booted.app.broadcasts.settle_sync().await;
+        for (method, path, body) in [
+            (Method::PATCH, format!("/api/v1/messages/{message}"), json!({"markdownSource":"Edited post"})),
+            (Method::POST, format!("/api/v1/threads/{thread}/messages"), json!({"clientMessageId":"sequence-reply", "markdownSource":"A reply"})),
+            (Method::POST, format!("/api/v1/rooms/{board}/posts"), json!({"name":"Board post", "status":"planned", "ownerId":null, "tags":[], "message":{"clientMessageId":"sequence-board", "markdownSource":"Board opener"}})),
+            (Method::POST, format!("/api/v1/messages/{message}/boosts"), json!({"content":"👍"})),
+        ] {
+            let reply = jason.write(json_body(method, &path, &body)).await;
+            assert!(reply.status.is_success(), "{path}: {}", reply.text());
+            a.booted.app.broadcasts.settle_sync().await;
+        }
+        marker();
+        let events = std::cell::RefCell::new(Vec::new());
+        author.until(|e| {
+            if matches!(e.payload, SyncPayload::RoomRead(_)) { return true; }
+            events.borrow_mut().push((e.seq - start, serde_json::to_value(&e.payload).unwrap()["type"].as_str().unwrap().to_owned()));
+            false
+        }, |_| false).await;
+        assert!(events.borrow().iter().any(|(_, kind)| kind == "message.created"));
+        assert!(events.borrow().iter().any(|(_, kind)| kind == "message.updated"));
+        assert!(events.borrow().iter().any(|(_, kind)| kind == "message.reactions"));
+        observed.push(events.into_inner());
+        server.abort();
+    }
+    assert_eq!(observed[0], observed[1]);
+}
+
+#[tokio::test]
+async fn ignore_unread_fanout_batches_policy_through_the_real_sync_sink() {
+    use campfire_db::{Message, NewMessage, NewUser, Room, RoomType, User};
+    let a = app(true).await.expect("seed required").without_job_runner().await;
+    let (room, message) = a.db().write(|tx| {
+        let mut users = vec![JASON, DAVID];
+        for n in 0..28 {
+            users.push(User::create(tx, NewUser { name: format!("Sync recipient {n}"), ..Default::default() })?.id);
+        }
+        let room = Room::create_for(tx, RoomType::Closed, Some("Thirty sync recipients"), JASON, &users)?;
+        let message = Message::create(tx, NewMessage { room_id: room.id, creator_id: JASON, markdown_source: Some("Fanout post".into()), ..Default::default() })?;
+        campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, true)?;
+        Ok((room.id, message))
+    }).await.unwrap();
+    let david = a.sign_in(DAVID).await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
+    sync.welcome().await;
+    let queries = a.db().capture_read_queries();
+    a.db().write(move |tx| campfire_db::models::agent_posting::broadcast_unread_room(tx, &message)).await.unwrap();
+    // Sink delivery is synchronous; deferred sidebar readers are outside this policy budget.
+    a.db().stop_capturing_read_queries();
+    let count = queries.lock().unwrap().iter().filter(|sql| sql.starts_with("SELECT blocker_id FROM user_blocks") || sql.starts_with("SELECT 1 FROM user_blocks")).count();
+    assert_eq!(count, 1, "one lookup for thirty recipients through the live sink");
+    let event = sync.until(|e| matches!(e.payload, campfire_api_types::SyncPayload::RoomUnread(_)), |_| false).await;
+    assert_eq!(serde_json::to_value(event.payload).unwrap()["data"]["unchanged"], true);
+    server.abort();
+}
+
+#[tokio::test]
+async fn ignore_board_unread_publication_keeps_its_slot_and_unchanged_state() {
+    use campfire_db::{ChannelThread, NewChannelThread, Room, RoomType};
+    let a = app(true).await.expect("seed required").without_job_runner().await;
+    let room = a.db().write(|tx| {
+        let room = Room::create_for(tx, RoomType::Board, Some("Board policy"), JASON, &[JASON, DAVID])?;
+        campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, true)?;
+        Ok(room.id)
+    }).await.unwrap();
+    let david = a.sign_in(DAVID).await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
+    sync.welcome().await;
+    for opener in [None, Some("Board opener".to_owned())] {
+        a.db().write(move |tx| {
+            ChannelThread::create_board_post(tx, NewChannelThread { room_id: room, creator_id: JASON, name: Some("Ignored post".into()), work_status: Some("planned".into()), ..Default::default() }, opener)?;
+            Ok(())
+        }).await.unwrap();
+        let event = sync.until(|e| matches!(e.payload, campfire_api_types::SyncPayload::RoomUnread(_)), |_| false).await;
+        assert_eq!(serde_json::to_value(event.payload).unwrap()["data"]["unchanged"], true);
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn ignore_activity_keeps_the_global_slot_with_both_sync_sockets_open() {
+    use campfire_api_types::SyncPayload;
+    let mut increments = Vec::new();
+    for ignored in [false, true] {
+        let a = app(true).await.expect("seed required").without_job_runner().await;
+        let room = a.db().write(move |tx| {
+            let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Activity sequence"), JASON, &[JASON, DAVID])?;
+            campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, ignored)?;
+            Ok(room.id)
+        }).await.unwrap();
+        let mut jason = a.sign_in(JASON).await;
+        let mut david = a.sign_in(DAVID).await;
+        let before: Value = parse(&david.send(get("/api/v1/activity/unread_count")).await);
+        a.booted.app.broadcasts.settle_sync().await;
+        let (addr, server) = serve(&a).await;
+        let topics = [format!("room:{room}")];
+        let mut author = Sync::connect(addr, &jason.cookie_header(), &topics).await;
+        let mut blocker = Sync::connect(addr, &david.cookie_header(), &topics).await;
+        author.welcome().await;
+        blocker.welcome().await;
+        let marker = || a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
+            campfire_cable::sync::Audience::Topic(format!("room:{room}")),
+            serde_json::to_string(&SyncPayload::RoomRead(campfire_api_types::RoomRead { room_id: room })).unwrap(),
+        ));
+        marker();
+        let start = author.until(|e| matches!(e.payload, SyncPayload::RoomRead(_)), |_| false).await.seq;
+        let reply = jason.write(json_body(Method::POST, &format!("/api/v1/rooms/{room}/messages"), &json!({"clientMessageId":"activity-sequence", "markdownSource":format!("Hello <@{DAVID}>")}))).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        a.booted.app.broadcasts.settle_sync().await;
+        marker();
+        let end = author.until(|e| matches!(e.payload, SyncPayload::RoomRead(_)), |_| false).await.seq;
+        increments.push(end - start);
+        let event = blocker.until(|e| matches!(e.payload, SyncPayload::ActivityItem(_)), |_| false).await;
+        let SyncPayload::ActivityItem(changed) = event.payload else { unreachable!() };
+        assert_eq!(changed.item.is_none(), ignored);
+        if ignored { assert_eq!(changed.unread_count, before["unreadCount"].as_i64().unwrap()); }
+        server.abort();
+    }
+    assert_eq!(increments[0], increments[1]);
 }

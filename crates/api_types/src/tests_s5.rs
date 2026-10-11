@@ -262,6 +262,7 @@ fn notices_are_tagged_by_kind() {
             user_name: "Grace Hopper".into(),
             in_call: true,
             rejoin: false,
+                unchanged: None,
         },
         json!({
             "kind": "joined",
@@ -347,6 +348,7 @@ fn every_s5_event_has_its_type_and_data() {
                 room_name: "Grace Hopper".into(),
                 caller_name: "Grace Hopper".into(),
                 silent: true,
+                unchanged: None,
             }),
             json!({"type": "huddle.ring", "data": {
                 "activityItemId": 77,
@@ -368,6 +370,7 @@ fn every_s5_event_has_its_type_and_data() {
                 room_name: "general".into(),
                 caller_name: "Grace Hopper".into(),
                 silent: false,
+                unchanged: None,
             }),
             json!({"type": "huddle.ring", "data": {
                 "activityItemId": null,

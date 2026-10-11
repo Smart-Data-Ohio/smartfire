@@ -181,6 +181,9 @@ pub enum HuddleNotice {
         /// They were in the call moments ago (a reconnect or a reissued grant): the client
         /// cancels the pending "left" notice instead of showing "joined".
         rejoin: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        unchanged: Option<bool>,
     },
     /// `huddle_left`: sent to those still in the call.
     Left {
@@ -219,6 +222,9 @@ pub struct HuddleRing {
     /// (`kind=huddle` sound policy). Always `false` when `event` is `ended`, which is sent
     /// without a sound check.
     pub silent: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub unchanged: Option<bool>,
 }
 
 /// What a [`HuddleRing`] says.

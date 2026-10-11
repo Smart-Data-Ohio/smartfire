@@ -1193,6 +1193,7 @@ export function applyEvents(
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
+        if (event.data.item === null) break;
         next = approvalRequested(
           applyActivityItem(next, event.data.item, event.data),
           event.data.item,
@@ -1237,6 +1238,7 @@ export function applyEvents(
             : setTyping(next, event.topic, event.data.userId, event.data.on, now);
         break;
       case "room.unread":
+        if (event.data.unchanged) break;
         next = roomUnread(next, event.data.roomId, event.data.messageId, event.data.mentioned, now);
         break;
       case "room.read":

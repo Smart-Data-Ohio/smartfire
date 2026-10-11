@@ -196,21 +196,24 @@ fn successful_bookkeeping_and_callback_order_match_rails() {
         )
     });
     assert_checks(&t, &g["checks"]);
-    let events: Vec<Value> = t.events().into_iter().filter_map(|event| match event {
-        Event::PushMessage { room_id, message_id } => Some(json!({"kind":"push", "class":"Room::PushMessageJob", "conversation_id":room_id, "message_id":message_id})),
-        Event::Job(job) if job.class == "ChannelThread::PushMessageJob" => Some(json!({"kind":"push", "class":job.class, "conversation_id":job.arguments["thread_id"], "message_id":job.arguments["message_id"]})),
-        Event::Broadcast(request) => {
-            let broadcast = request.decode::<Broadcast>()?.unwrap();
-            if let Some((stream, payload)) = broadcast.channel_frame() {
-                return Some(json!({"kind":"cable", "stream":stream, "payload":payload}));
+    let mut events = Vec::new();
+    for event in t.events() {
+        match event {
+            Event::PushMessage { room_id, message_id } => events.push(json!({"kind":"push", "class":"Room::PushMessageJob", "conversation_id":room_id, "message_id":message_id})),
+            Event::Job(job) if job.class == "ChannelThread::PushMessageJob" => events.push(json!({"kind":"push", "class":job.class, "conversation_id":job.arguments["thread_id"], "message_id":job.arguments["message_id"]})),
+            Event::Broadcast(request) => {
+                let Some(broadcast) = request.decode::<Broadcast>() else { continue; };
+                let broadcast = broadcast.unwrap();
+                for (stream, payload) in broadcast.channel_frames() {
+                    events.push(json!({"kind":"cable", "stream":stream, "payload":payload}));
+                }
+                if let Broadcast::ThreadIndicator { message_id, reply_count } = broadcast {
+                    events.push(json!({"kind":"indicator", "parent_message_id":message_id, "count":reply_count}));
+                }
             }
-            match broadcast {
-                Broadcast::ThreadIndicator { message_id, reply_count } => Some(json!({"kind":"indicator", "parent_message_id":message_id, "count":reply_count})),
-                _ => None,
-            }
+            _ => {}
         }
-        _ => None,
-    }).collect();
+    }
     assert_eq!(json!(events), g["events"]);
 }
 

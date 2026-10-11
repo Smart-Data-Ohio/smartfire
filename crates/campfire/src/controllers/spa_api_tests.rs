@@ -1271,9 +1271,10 @@ async fn a_database_unread_carries_its_message_and_mention() {
                 [(ROOM, Some(mention)), (ALL_TALK, Some(BOOSTED)), (HQ, None)]
             {
                 tx.emit_after_commit(campfire_db::Event::broadcast(&Broadcast::UnreadRoom {
-                    user_id: DAVID,
+                    user_ids: vec![DAVID],
                     room_id,
                     message_id,
+                    author_id: JASON,
                 }));
             }
             Ok(())
@@ -1326,22 +1327,26 @@ async fn a_database_unread_carries_its_message_and_mention() {
             api::RoomUnread {
                 room_id: ROOM,
                 message_id: Some(mention),
-                mentioned: true
+                mentioned: true,
+                unchanged: None,
             },
             api::RoomUnread {
                 room_id: ALL_TALK,
                 message_id: Some(BOOSTED),
-                mentioned: false
+                mentioned: false,
+                unchanged: None,
             },
             api::RoomUnread {
                 room_id: HQ,
                 message_id: None,
-                mentioned: false
+                mentioned: false,
+                unchanged: None,
             },
             api::RoomUnread {
                 room_id: ALL_TALK,
                 message_id: Some(scheduled),
-                mentioned: false
+                mentioned: false,
+                unchanged: None,
             },
         ]
     );

@@ -171,10 +171,14 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, change: &campfire_db::
             crate::cable::sync::cable_stream(cable, stream, payload);
             if let Some(app) = app { app.broadcasts.sync_activity_stream(stream, payload); }
         }
-        Broadcast::UnreadRoom { user_id, room_id, message_id } => {
-            cable.broadcast(&campfire_db::broadcasts::unread_rooms_stream_name(*user_id), &serde_json::json!({"roomId":room_id}));
-            crate::cable::sync::unread_room(cable, app.map(|app| &app.db), *user_id, *room_id, *message_id);
-            if let (Some(app), Some(_)) = (app, message_id) { app.broadcasts.sync_unread_rows(*room_id, vec![*user_id]); }
+        Broadcast::UnreadRoom { user_ids, room_id, message_id, author_id } => {
+            for &user_id in user_ids {
+                cable.broadcast(&campfire_db::broadcasts::unread_rooms_stream_name(user_id), &serde_json::json!({"roomId":room_id}));
+            }
+            crate::cable::sync::unread_room(cable, app.map(|app| &app.db), user_ids, *room_id, *message_id, *author_id);
+            if let Some(app) = app {
+                app.broadcasts.sync_unread_rows(*room_id, user_ids.clone());
+            }
         }
         Broadcast::MessageCreated { message_id } | Broadcast::MessageUpdated { message_id } => {
             let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;

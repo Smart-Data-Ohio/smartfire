@@ -349,7 +349,7 @@ fn activity_round_trips() {
     }
     assert_wire(
         &ActivityItemChanged {
-            item: activity_item(),
+            item: Some(activity_item()),
             unread_count: 3,
             unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
@@ -1000,7 +1000,7 @@ fn s3_sync_events_round_trip() {
         (
             "user",
             SyncPayload::ActivityItem(ActivityItemChanged {
-                item: activity_item(),
+                item: Some(activity_item()),
                 unread_count: 3,
                 unread_revision: 17,
             evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),

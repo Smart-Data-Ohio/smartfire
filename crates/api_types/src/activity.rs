@@ -335,7 +335,8 @@ pub enum AgentBudgetCap {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ActivityItemChanged {
-    pub item: ActivityItem,
+    /// None consumes an ignored source's publication without changing the visible inbox.
+    pub item: Option<ActivityItem>,
     /// The owner's unread count afterwards.
     pub unread_count: i64,
     /// Per-user server revision of this count. Ignore counts from older revisions.

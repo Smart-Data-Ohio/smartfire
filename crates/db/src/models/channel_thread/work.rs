@@ -176,15 +176,13 @@ impl ChannelThread {
             }
             if let Some(message) = &opener {
                 crate::models::agent_delivery::enqueue_for_message(tx, message)?;
-                let blockers = crate::models::ignore_policy::blockers_of(tx.conn(), message.creator_id)?.into_iter().collect::<std::collections::HashSet<_>>();
                 for (membership, user) in
                     Membership::for_room_with_users(tx.conn(), thread.room_id)?
                 {
                     let Some(user) = user else {
                         continue;
                     };
-                    if blockers.contains(&user.id)
-                        || !user.is_active()
+                    if !user.is_active()
                         || user.is_bot()
                         || user.id == creator_id
                         || membership.involvement == Some(crate::Involvement::Invisible)
