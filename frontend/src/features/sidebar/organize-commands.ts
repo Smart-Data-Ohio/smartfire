@@ -29,21 +29,30 @@ export function onBeforeOrganize(capture: () => void): () => void {
   };
 }
 
-/**
- * Each room's latest organising change from here, by sequence number. A drop for everyone takes
- * the room out of its personal place only after the server answers; a personal change made in
- * the meantime is newer, and wins.
- */
-const latestChange = new Map<number, number>();
-
-let changeCount = 0;
-
-function claimRoom(roomId: number): number {
-  changeCount += 1;
-  latestChange.set(roomId, changeCount);
-
-  return changeCount;
+/** Where the viewer has put a room of their own accord: starred, or in a category of theirs. */
+interface PersonalPlace {
+  readonly favoritePosition: number | null;
+  readonly roomCategoryId: number | null;
 }
+
+/** The room's personal place as the sidebar shows it now, or `null` when it has none. */
+function personalPlace(roomId: number): PersonalPlace | null {
+  const row = organizedSidebar(store.getState().sidebar).rows[roomId];
+
+  if (row === undefined || !personallyPlaced(row)) {
+    return null;
+  }
+
+  const { favoritePosition, roomCategoryId } = row.membership;
+
+  return { favoritePosition, roomCategoryId };
+}
+
+const samePlace = (left: PersonalPlace | null, right: PersonalPlace | null) =>
+  left !== null &&
+  right !== null &&
+  left.favoritePosition === right.favoritePosition &&
+  left.roomCategoryId === right.roomCategoryId;
 
 function failed(title: string): (error: ActionError) => void {
   return (error) => {
@@ -52,14 +61,12 @@ function failed(title: string): (error: ActionError) => void {
 }
 
 export function moveRoom(row: SidebarRow, slot: RoomSlot): void {
-  claimRoom(row.room.id);
   beforeChange?.();
 
   actions.organize.moveRoom(row.room.id, slot).catch(failed(`Couldn't move ${row.displayName}`));
 }
 
 export function toggleFavorite(row: SidebarRow): void {
-  claimRoom(row.room.id);
   beforeChange?.();
 
   const starred = row.membership.favoritePosition !== null;
@@ -81,10 +88,6 @@ export function createCategory(
   name: string,
   row: SidebarRow | null = null,
 ): Promise<RoomCategory | null> {
-  if (row !== null) {
-    claimRoom(row.room.id);
-  }
-
   beforeChange?.();
 
   return actions.organize.createCategory(name, row?.room.id ?? null).catch((error: ActionError) => {
@@ -158,9 +161,10 @@ export function setInvolvement(
  * (`null`: no shared category) just before `beforeRoomId`, or at the end. A drop
  * (`leavePersonal`) also takes a room the viewer had starred or put in a category of their own
  * out of there, so it shows where it was dropped; a menu's move leaves those alone. That waits
- * for the shared move to land: when it is refused, or the room was organised again meanwhile,
- * the room keeps its personal place. `beforeLeaving` runs just before the room leaves it (the
- * sidebar keeps focus on the row); resolves once it has, to whether it did.
+ * for the shared move to land, and only takes the room out of the place it had at the drop: when
+ * the move is refused, or the room has been put somewhere else meanwhile (here or in another
+ * tab), it stays. `beforeLeaving` runs just before it leaves (the sidebar keeps focus on the
+ * row); resolves once it has, to whether it did.
  */
 export async function moveSharedRoom(
   row: SidebarRow,
@@ -170,7 +174,7 @@ export async function moveSharedRoom(
   beforeLeaving: (() => void) | null = null,
 ): Promise<boolean> {
   const roomId = row.room.id;
-  const change = claimRoom(roomId);
+  const dropped = leavePersonal ? personalPlace(roomId) : null;
 
   beforeChange?.();
 
@@ -183,15 +187,7 @@ export async function moveSharedRoom(
     },
   );
 
-  const now = organizedSidebar(store.getState().sidebar).rows[roomId];
-
-  if (
-    !moved ||
-    !leavePersonal ||
-    latestChange.get(roomId) !== change ||
-    now === undefined ||
-    !personallyPlaced(now)
-  ) {
+  if (!moved || !samePlace(dropped, personalPlace(roomId))) {
     return false;
   }
 

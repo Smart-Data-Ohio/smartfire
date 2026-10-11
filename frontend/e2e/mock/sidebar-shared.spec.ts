@@ -232,6 +232,24 @@ test("focus stays on a starred room an administrator drops for everyone", async 
   await expect(row(section(page, "shared-1"), "engineering")).toBeFocused();
 });
 
+test("focus goes to the heading of a folded category a starred room is dropped into", async ({
+  page,
+}) => {
+  await control(page.request, "workspace-layout", PRODUCT_LAYOUT);
+  await openApp(page, `r/${ROOM_IDS.general}`);
+
+  await heading(page, "shared-1").click();
+  await expect(heading(page, "shared-1")).toHaveAttribute("aria-expanded", "false");
+
+  await row(section(page, "favorites"), "engineering").focus();
+  await page.keyboard.press("Space");
+  await arrowUpTo(page, "Product, after general, for everyone", "ArrowDown");
+  await page.keyboard.press("Enter");
+
+  await expect.poll(() => names(page, "favorites")).toEqual(["Maya Okafor"]);
+  await expect(heading(page, "shared-1")).toBeFocused();
+});
+
 test("a shared category's heading is dragged into place", async ({ page }) => {
   await control(page.request, "workspace-layout", PRODUCT_LAYOUT);
   await openApp(page, `r/${ROOM_IDS.general}`);

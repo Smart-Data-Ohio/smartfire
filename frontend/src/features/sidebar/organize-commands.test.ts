@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture, sidebarFixture, sidebarRowFixture } from "../../api/testing.ts";
+import type { SidebarRow } from "../../store/model.ts";
 import { mutations, sidebarRowClock } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
-import { moveRoom, moveSharedRoom } from "./organize-commands.ts";
+import { moveSharedRoom } from "./organize-commands.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -22,9 +23,50 @@ const starred = (() => {
   return { ...row, membership: { ...row.membership, favoritePosition: 0 } };
 })();
 
+const team = { id: 7, name: "Team", collapsed: false, position: 0 };
+
+let seq = 0;
+
+/** #general's membership changing as `sidebar.row.upserted` brings it (another tab, or a reply). */
+function upserted(change: Partial<SidebarRow["membership"]>): void {
+  seq += 1;
+  mutations.applyEvents(
+    [
+      {
+        seq,
+        topic: `user:${meFixture.user.id}`,
+        type: "sidebar.row.upserted",
+        data: { ...starred, membership: { ...starred.membership, ...change } },
+      },
+    ],
+    Date.now(),
+  );
+}
+
+/** A shared move that lands when the test says so. */
+function heldSharedMoves(): (() => void)[] {
+  const landings: (() => void)[] = [];
+
+  vi.spyOn(actions.workspaceLayout, "moveRoom").mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        landings.push(resolve);
+      }),
+  );
+
+  return landings;
+}
+
+/** The personal move, landing at once in the store as its reply would. */
+function personalMoves() {
+  return vi.spyOn(actions.organize, "moveRoom").mockImplementation(async () => {
+    upserted({ favoritePosition: null, roomCategoryId: null });
+  });
+}
+
 beforeEach(() => {
   mutations.setMe(meFixture);
-  mutations.loadSidebar(sidebarFixture([starred]), sidebarRowClock());
+  mutations.loadSidebar({ ...sidebarFixture([starred]), categories: [team] }, sidebarRowClock());
 });
 
 describe("moving a room for everyone", () => {
@@ -46,37 +88,39 @@ describe("moving a room for everyone", () => {
     expect(personal).toHaveBeenCalledWith(1, { kind: "channels" });
   });
 
-  it("leaves the room where a personal move made while the shared one was out put it", async () => {
-    let land = () => {};
-
-    vi.spyOn(actions.workspaceLayout, "moveRoom").mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          land = resolve;
-        }),
-    );
-
-    const personal = vi.spyOn(actions.organize, "moveRoom").mockResolvedValue(undefined);
+  it("leaves the room where another tab put it while the shared move was out", async () => {
+    const landings = heldSharedMoves();
+    const personal = personalMoves();
     const shared = moveSharedRoom(starred, 30, null);
 
-    moveRoom(starred, { kind: "category", categoryId: 7 });
-    land();
+    upserted({ favoritePosition: null, roomCategoryId: team.id });
+
+    for (const land of landings) {
+      land();
+    }
 
     expect(await shared).toBe(false);
-    expect(personal.mock.calls).toEqual([[1, { kind: "category", categoryId: 7 }]]);
+    expect(personal).not.toHaveBeenCalled();
   });
 
-  it("leaves the cleanup to the latest of two drops of the same room", async () => {
-    const landings: (() => void)[] = [];
+  it("leaves the room where a newer star put it while the shared move was out", async () => {
+    const landings = heldSharedMoves();
+    const personal = personalMoves();
+    const shared = moveSharedRoom(starred, 30, null);
 
-    vi.spyOn(actions.workspaceLayout, "moveRoom").mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          landings.push(resolve);
-        }),
-    );
+    upserted({ favoritePosition: 3 });
 
-    const personal = vi.spyOn(actions.organize, "moveRoom").mockResolvedValue(undefined);
+    for (const land of landings) {
+      land();
+    }
+
+    expect(await shared).toBe(false);
+    expect(personal).not.toHaveBeenCalled();
+  });
+
+  it("takes the room out of its personal place once for two drops of it", async () => {
+    const landings = heldSharedMoves();
+    const personal = personalMoves();
     const first = moveSharedRoom(starred, 30, null);
     const second = moveSharedRoom(starred, 30, null);
 
@@ -84,8 +128,7 @@ describe("moving a room for everyone", () => {
       land();
     }
 
-    expect(await first).toBe(false);
-    expect(await second).toBe(true);
+    expect([await first, await second]).toEqual([true, false]);
     expect(personal.mock.calls).toEqual([[1, { kind: "channels" }]]);
   });
 

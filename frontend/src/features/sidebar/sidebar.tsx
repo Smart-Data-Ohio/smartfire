@@ -40,6 +40,7 @@ import { useDestination } from "../shell/view-store.ts";
 import { openOverlay } from "../switcher/overlay-store.ts";
 import { CategoryNameField } from "./category-name-field.tsx";
 import { DeleteCategoryDialog } from "./delete-category-dialog.tsx";
+import { headingTrigger, movedRowFocus } from "./focus-targets.ts";
 import * as commands from "./organize-commands.ts";
 import {
   acceptsRoom,
@@ -769,24 +770,6 @@ function isHandle(element: Element | null, key: string): boolean {
   return element instanceof HTMLElement && element.dataset.dragHandle === key;
 }
 
-/** A row or category's drag handle where it shows (a folded section's own list is inert). */
-function liveHandle(container: HTMLElement | null, key: string): HTMLElement | null {
-  return (
-    [...(container?.querySelectorAll<HTMLElement>(`[data-drag-handle="${key}"]`) ?? [])].find(
-      (candidate) => candidate.closest("[inert]") === null,
-    ) ?? null
-  );
-}
-
-/** The toggle button in a section's heading, by section key. */
-function headingTrigger(container: HTMLElement | null, key: string): HTMLElement | null {
-  return (
-    container?.querySelector<HTMLElement>(
-      `[data-drop-section="${key}"] .sidebar-section-trigger`,
-    ) ?? null
-  );
-}
-
 /** What opened a new category's field, when focus can go back to it (not a closing menu's item). */
 function openerOf(active: Element | null): HTMLElement | null {
   return active instanceof HTMLElement && active.closest('[role="menu"]') === null ? active : null;
@@ -859,11 +842,17 @@ export function Sidebar() {
     } else if (item.kind === "room" && target.kind === "shared") {
       const key = `room-${item.row.room.id}`;
 
+      const section = target.categoryId === null ? null : `shared-${target.categoryId}`;
+
       // Taking the row out of its personal place afterwards remounts it in its new section: focus
-      // on it follows, unless it has gone somewhere else meanwhile.
+      // on it follows (to the heading, when that section is folded), unless it has gone somewhere
+      // else meanwhile.
       void commands.moveSharedRoom(item.row, target.categoryId, target.beforeRoomId, true, () => {
         if (isHandle(document.activeElement, key)) {
-          focusAfterRender({ find: () => liveHandle(scrollRef.current, key), ifLost: true });
+          focusAfterRender({
+            find: () => movedRowFocus(scrollRef.current, key, section),
+            ifLost: true,
+          });
         }
       });
     } else if (item.kind === "category" && target.kind === "category") {

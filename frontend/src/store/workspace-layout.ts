@@ -150,6 +150,22 @@ export function isPlacedAt(
   return before.length === after.length && before.every((id, index) => after[index] === id);
 }
 
+/**
+ * Whether the move would change nothing: the room shows there and the server has it there too.
+ * A pending change that put it there might still be refused, so a move it shows doesn't count.
+ */
+export function isSettledAt(
+  sidebar: SidebarState,
+  roomId: number,
+  categoryId: number | null,
+  beforeRoomId: number | null,
+): boolean {
+  return (
+    isPlacedAt(sharedLayout(sidebar), roomId, categoryId, beforeRoomId) &&
+    isPlacedAt(sidebar.workspaceLayout, roomId, categoryId, beforeRoomId)
+  );
+}
+
 /** The categories in the order `categoryIds` gives, numbered from 0 as the server does. */
 export function withCategoriesOrdered(
   layout: WorkspaceLayout,

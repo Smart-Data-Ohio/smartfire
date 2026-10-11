@@ -11,7 +11,8 @@ import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { RoomCategory } from "../../store/model.ts";
 import { isInSlot, organizedSidebar } from "../../store/organize.ts";
 import { store } from "../../store/store.ts";
-import { isPlacedAt, sharedLayout } from "../../store/workspace-layout.ts";
+import { isSettledAt } from "../../store/workspace-layout.ts";
+import { liveHandle } from "./focus-targets.ts";
 import {
   categoryIndex,
   categoryTargets,
@@ -121,7 +122,7 @@ function isNoOp(item: DragItem, target: DropTarget, held: HeldCategories): boole
   if (target.kind === "shared") {
     return (
       !personallyPlaced(row) &&
-      isPlacedAt(sharedLayout(sidebar), row.room.id, target.categoryId, target.beforeRoomId)
+      isSettledAt(sidebar, row.room.id, target.categoryId, target.beforeRoomId)
     );
   }
 
@@ -215,11 +216,9 @@ export function useSidebarDrag({
     }
 
     // The first live one: a folded section's own list is inert, its peek isn't.
-    const handle = [
-      ...(containerRef.current?.querySelectorAll<HTMLElement>(`[data-drag-handle="${key}"]`) ?? []),
-    ].find((candidate) => candidate.closest("[inert]") === null);
+    const handle = liveHandle(containerRef.current, key);
 
-    if (handle !== undefined) {
+    if (handle !== null) {
       focusAfter.current = null;
       handle.focus({ preventScroll: false });
     }

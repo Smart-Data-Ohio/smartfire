@@ -117,14 +117,71 @@ describe("shared layout actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  it.effect("fail a repeated move along with the one still on its way", () =>
+  it.effect("send a refused move again that a later pending change still shows", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const refuse = yield* Deferred.make<void>();
+      const rename = yield* Deferred.make<void>();
+      let attempts = 0;
+
+      yield* fake.route("PUT /rooms/3/workspace_category", () => {
+        attempts += 1;
+
+        return attempts === 1
+          ? Deferred.succeed(started, undefined).pipe(
+              Effect.andThen(Deferred.await(refuse)),
+              Effect.andThen(Effect.fail(new Validation({ message: "Nope", fields: {} }))),
+            )
+          : Effect.succeed({
+              categories: [product, ops],
+              rooms: [
+                { roomId: 2, workspaceCategoryId: 30, position: 0 },
+                { roomId: 3, workspaceCategoryId: 30, position: 1 },
+                { roomId: 1, workspaceCategoryId: 30, position: 2 },
+              ],
+            });
+      });
+      yield* fake.route("PATCH /workspace_categories/31", () =>
+        Deferred.await(rename).pipe(Effect.as({ ...ops, name: "Operations" })),
+      );
+
+      const first = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
+
+      yield* Deferred.await(started);
+
+      const renaming = yield* Effect.forkChild(workspaceLayout.renameCategory(31, "Operations"));
+
+      yield* Effect.yieldNow;
+      expect(names()).toEqual(["Product", "Operations"]);
+
+      yield* Deferred.succeed(refuse, undefined);
+      expect(Exit.isFailure(yield* Effect.exit(Fiber.join(first)))).toBe(true);
+      // The rename's pending layout was drawn while the move showed, so it still shows it.
+      expect(ids(30)).toEqual([2, 3, 1]);
+
+      const retry = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
+
+      yield* Effect.yieldNow;
+      yield* Deferred.succeed(rename, undefined);
+      yield* Fiber.join(renaming);
+      yield* Fiber.join(retry);
+
+      expect(attempts).toBe(2);
+      expect(ids(30)).toEqual([2, 3, 1]);
+      expect(overlay()).toBeNull();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("send a repeated move of its own while the first is on its way", () =>
     Effect.gen(function* () {
       seed();
 
       const fake = yield* FakeApi;
       const started = yield* Deferred.make<void>();
       const gate = yield* Deferred.make<void>();
-      let repeatSettled = false;
 
       yield* fake.route("PUT /rooms/3/workspace_category", () =>
         Deferred.succeed(started, undefined).pipe(
@@ -137,63 +194,14 @@ describe("shared layout actions", () => {
 
       yield* Deferred.await(started);
 
-      const repeat = yield* Effect.forkChild(
-        workspaceLayout
-          .moveRoom(3, 30, 1)
-          .pipe(Effect.ensuring(Effect.sync(() => (repeatSettled = true)))),
-      );
-
-      yield* Effect.yieldNow;
-      expect(repeatSettled).toBe(false);
-
-      yield* Deferred.succeed(gate, undefined);
-
-      const firstExit = yield* Effect.exit(Fiber.join(first));
-      const repeatExit = yield* Effect.exit(Fiber.join(repeat));
-
-      expect(Exit.isFailure(firstExit)).toBe(true);
-      expect(Exit.isFailure(repeatExit)).toBe(true);
-      expect((yield* fake.requests).length).toBe(1);
-      expect(ids(null)).toEqual([3]);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
-  );
-
-  it.effect("finish a repeated move when the one still on its way lands", () =>
-    Effect.gen(function* () {
-      seed();
-
-      const fake = yield* FakeApi;
-      const started = yield* Deferred.make<void>();
-      const gate = yield* Deferred.make<void>();
-
-      const answer: WorkspaceLayout = {
-        categories: [product, ops],
-        rooms: [
-          { roomId: 2, workspaceCategoryId: 30, position: 0 },
-          { roomId: 3, workspaceCategoryId: 30, position: 1 },
-          { roomId: 1, workspaceCategoryId: 30, position: 2 },
-        ],
-      };
-
-      yield* fake.route("PUT /rooms/3/workspace_category", () =>
-        Deferred.succeed(started, undefined).pipe(
-          Effect.andThen(Deferred.await(gate)),
-          Effect.as(answer),
-        ),
-      );
-
-      const first = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
-
-      yield* Deferred.await(started);
-
       const repeat = yield* Effect.forkChild(workspaceLayout.moveRoom(3, 30, 1));
 
       yield* Deferred.succeed(gate, undefined);
-      yield* Fiber.join(first);
-      yield* Fiber.join(repeat);
 
-      expect((yield* fake.requests).length).toBe(1);
-      expect(ids(30)).toEqual([2, 3, 1]);
+      expect(Exit.isFailure(yield* Effect.exit(Fiber.join(first)))).toBe(true);
+      expect(Exit.isFailure(yield* Effect.exit(Fiber.join(repeat)))).toBe(true);
+      expect((yield* fake.requests).length).toBe(2);
+      expect(ids(null)).toEqual([3]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
