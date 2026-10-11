@@ -1,5 +1,4 @@
-//! Broadcasting names: `Channel::Naming#channel_name`, `Channel::Broadcasting#broadcasting_for`
-//! and Turbo's `stream_name_from`.
+//! Broadcasting names: `Channel::Naming#channel_name` and `Channel::Broadcasting#broadcasting_for`.
 //!
 //! Callers pass each streamable already converted with `to_gid_param` (records, see
 //! [`gid_param`]) or `to_param` (symbols and strings, which are themselves).
@@ -26,12 +25,6 @@ pub fn broadcasting_for(class_name: &str, broadcastables: &[&str]) -> String {
         .chain(broadcastables.iter().copied())
         .collect::<Vec<_>>()
         .join(":")
-}
-
-/// `Turbo::Streams::StreamName#stream_name_from`: `turbo_stream_from @room, :messages` names the
-/// stream `<room gid param>:messages`.
-pub fn stream_name_from(streamables: &[&str]) -> String {
-    streamables.join(":")
 }
 
 /// `ActiveSupport::Inflector.underscore` without acronym inflections (Campfire defines none).
@@ -63,7 +56,7 @@ mod tests {
     fn channel_names() {
         assert_eq!(channel_name("RoomChannel"), "room");
         assert_eq!(channel_name("TypingNotificationsChannel"), "typing_notifications");
-        assert_eq!(channel_name("Turbo::StreamsChannel"), "turbo:streams");
+        assert_eq!(channel_name("Namespaced::StreamsChannel"), "namespaced:streams");
         assert_eq!(channel_name("HTMLChannel"), "html");
         assert_eq!(channel_name("HTMLParserChannel"), "html_parser");
     }
@@ -73,6 +66,5 @@ mod tests {
         let room = gid_param(&GlobalId { app: "campfire".into(), model_name: "Rooms::Open".into(), id: "1".into() });
         assert_eq!(room, "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6Ok9wZW4vMQ");
         assert_eq!(broadcasting_for("PresenceChannel", &[&room]), format!("presence:{room}"));
-        assert_eq!(stream_name_from(&[&room, "messages"]), format!("{room}:messages"));
     }
 }

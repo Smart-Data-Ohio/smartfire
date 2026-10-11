@@ -3,7 +3,6 @@
 #[derive(Debug, Clone)]
 pub struct ProfileStatus {
     pub user_id: i64,
-    pub stream_name: String,
     pub presence: String,
     pub status_text: Option<String>,
     pub dnd_allowed: bool,

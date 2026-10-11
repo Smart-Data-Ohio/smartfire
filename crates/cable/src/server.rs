@@ -79,7 +79,7 @@ pub struct ServerBuilder<U: Send + Sync + 'static> {
 }
 
 impl<U: Identified + Send + Sync + 'static> ServerBuilder<U> {
-    /// Registers a channel under its Ruby class name (`"RoomChannel"`, `"Turbo::StreamsChannel"`),
+    /// Registers a channel under its Ruby class name (`"RoomChannel"`, `"PresenceChannel"`),
     /// which is what clients put in the identifier's `channel`.
     pub fn channel<C, F>(mut self, class_name: &str, factory: F) -> Self
     where

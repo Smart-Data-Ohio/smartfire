@@ -10,7 +10,7 @@ pub mod rich_text;
 pub mod controllers {
     pub use crate::presenters;
 }
-use campfire_app::{cable, icons, integrations, queue, ruby, security, state};
+use campfire_app::{icons, integrations, queue, ruby, security, state};
 mod app {
     #[cfg(test)]
     pub(crate) use crate::asset_goldens;

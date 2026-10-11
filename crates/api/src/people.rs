@@ -107,7 +107,6 @@ async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
             let status = if person {
                 Some(presenters::status_settings::profile_status_in_zone(
                     conn,
-                    &secrets,
                     user.id,
                     viewer_id,
                     now,

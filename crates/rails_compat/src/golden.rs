@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 
 use crate::global_id::{self, GlobalId};
 use crate::metadata::{self, Serializer};
-use crate::{Secrets, cookies, password, signed_id, turbo};
+use crate::{Secrets, cookies, password, signed_id};
 
 fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -221,24 +221,6 @@ fn tampered_sgids_for_other_models_are_rejected() {
 }
 
 #[test]
-fn turbo_stream_names() {
-    for case in cases("turbo_stream_names.generate") {
-        let parts: Vec<&str> = case["parts"].as_array().unwrap().iter().map(str).collect();
-        assert_eq!(parts.join(":"), str(&case["stream_name"]));
-        assert_eq!(turbo::signed_stream_name(&SECRETS, &parts), str(&case["signed"]));
-    }
-    for case in cases("turbo_stream_names.verify") {
-        let name = turbo::verified_stream_name(&SECRETS, str(&case["signed"]));
-        let expected = match &case["expected"] {
-            Value::Null => None,
-            Value::String(s) => Some(s.clone()),
-            other => Some(other.to_string()),
-        };
-        assert_eq!(name, expected, "{}", label(case));
-    }
-}
-
-#[test]
 fn app_verifiers() {
     for case in cases("app_verifiers.generate") {
         let verifier = crate::app_verifier(&SECRETS, str(&case["name"]));
@@ -312,13 +294,6 @@ fn write_rust_output_for_rails_to_verify() {
         json!({ "sgid": global_id::sgid(secrets, &GlobalId::new("Rooms::Open", 1), "default", None), "purpose": "attachable", "expected": null }),
     ];
 
-    let room = GlobalId::new("Rooms::Open", 1).to_param();
-    let user = GlobalId::new("User", 1).to_param();
-    let turbo: Vec<Value> = [vec![room.as_str(), "messages"], vec!["rooms"], vec![user.as_str(), "rooms"], vec!["unicode ☃ <&>"]]
-        .iter()
-        .map(|parts| json!({ "signed": turbo::signed_stream_name(secrets, parts), "expected": parts.join(":") }))
-        .collect();
-
     let passwords: Vec<Value> = [("secret123456", password::COST), ("pässwörd ☃", password::MIN_COST), (&"a".repeat(80), password::MIN_COST)]
         .iter()
         .map(|(pw, cost)| json!({ "password": pw, "digest": password::digest_with_cost(pw, *cost) }))
@@ -345,7 +320,6 @@ fn write_rust_output_for_rails_to_verify() {
                      "session_token_cookie": cookies::sign(secrets, "session_token", session_token, Some(permanent)) },
         "signed_ids": signed_ids,
         "sgids": sgids,
-        "turbo_stream_names": turbo,
         "passwords": passwords,
     });
 

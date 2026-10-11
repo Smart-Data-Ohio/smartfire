@@ -209,7 +209,7 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, change: &campfire_db::
         Broadcast::UserStatus { user_id } => {
             if let Some(app) = app {
                 app.db.read_blocking(|conn| {
-                    let status = crate::controllers::presenters::status_settings::profile_status(conn, &app.secrets, *user_id, *user_id, app.db.env().now())?;
+                    let status = crate::controllers::presenters::status_settings::profile_status(conn, *user_id, *user_id, app.db.env().now())?;
                     crate::cable::sync::status_badge(cable, *user_id, &status.presence, status.status_text.as_deref());
                     Ok(())
                 })?;
