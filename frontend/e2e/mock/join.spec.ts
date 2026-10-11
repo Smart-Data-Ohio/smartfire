@@ -20,7 +20,7 @@ const AVATAR = {
   name: "me.png",
   mimeType: "image/png",
   buffer: readFileSync(
-    new URL("../../../fixtures/files/workspace_icons/square_64.png", import.meta.url),
+    new URL("../fixtures/images/square_64.png", import.meta.url),
   ),
 };
 
