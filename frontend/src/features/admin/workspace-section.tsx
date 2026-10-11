@@ -8,6 +8,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { adminFailure, useAdmin } from "./admin-parts.tsx";
+import { WelcomeEditor } from "./welcome-editor.tsx";
 import { descriptionError, vanitySlugError } from "./workspace-identity.ts";
 import { WorkspaceProfile } from "./workspace-profile.tsx";
 
@@ -277,7 +278,8 @@ function JoinLink() {
 /**
  * Workspace: the classic account page's top half. Everyone sees the profile (icon and banner),
  * the name and the join link; administrators also rename the workspace, change its icon and
- * banner, decide who may create rooms and swap the join link for a new one.
+ * banner, write the welcome card and server guide, decide who may create rooms and swap the
+ * join link for a new one.
  */
 export function WorkspaceSection() {
   const { workspace, replace } = useAdmin();
@@ -312,6 +314,7 @@ export function WorkspaceSection() {
           <DescriptionForm key={workspace.description} workspace={workspace} />
         </SettingsGroup>
       ) : null}
+      {workspace.canAdminister ? <WelcomeEditor /> : null}
       {workspace.canAdminister ? (
         <SettingsGroup title="Name">
           <NameForm key={workspace.name} workspace={workspace} />

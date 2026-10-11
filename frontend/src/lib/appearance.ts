@@ -60,6 +60,8 @@ export interface Appearance {
   readonly personalOverride: boolean;
   /** The account's custom palette colours (`appearancePreferences.tokens`), saved or not shown. */
   readonly customTokens: Readonly<Record<string, string>>;
+  /** The workspace's welcome card was put away from Home (`appearancePreferences.welcome`). */
+  readonly welcomeDismissed: boolean;
 }
 
 const STORAGE_KEY = "smartfire.appearance";
@@ -89,6 +91,7 @@ const DEFAULTS: Appearance = {
   font: "inter",
   personalOverride: false,
   customTokens: {},
+  welcomeDismissed: false,
 };
 
 let current: Appearance = DEFAULTS;
@@ -301,6 +304,7 @@ function commit(next: Omit<Appearance, "theme">): void {
     motion: overrides.motion ?? account?.motion ?? DEFAULTS.motion,
     personalOverride: Object.keys(overrides).length > 0,
     customTokens: account?.tokens ?? DEFAULTS.customTokens,
+    welcomeDismissed: account?.welcome === "dismissed",
   };
   writeAttributes(current);
 

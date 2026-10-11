@@ -65,6 +65,7 @@ import {
   startSlackImport,
   undoSlackRun,
 } from "../api/slack-endpoints.ts";
+import { adminWelcome, updateWelcome } from "../api/welcome-endpoints.ts";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
 import type { Bot } from "../gen/Bot.ts";
@@ -101,6 +102,8 @@ import type { StartSlackDryRun } from "../gen/StartSlackDryRun.ts";
 import type { StartSlackImport } from "../gen/StartSlackImport.ts";
 import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
+import type { WelcomeAdmin } from "../gen/WelcomeAdmin.ts";
+import type { WelcomeSettings } from "../gen/WelcomeSettings.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
 import type { WorkspaceInvite } from "../gen/WorkspaceInvite.ts";
@@ -150,6 +153,16 @@ export const admin = {
   removeBanner: (): Promise<Workspace> => branded(runAction(removeBanner())),
 
   resetJoinCode: (): Promise<Workspace> => runAction(resetJoinCode()),
+
+  /** The welcome card and server guide as configured, and the rooms the editor offers. */
+  welcome: (): Promise<WelcomeAdmin> => runAction(adminWelcome()),
+
+  /**
+   * Replaces the welcome card and server guide; `Validation` names the refused field (`message`,
+   * `rooms` or `guide`). Every client hears `workspace.updated` and reads its copy again.
+   */
+  saveWelcome: (settings: WelcomeSettings): Promise<WelcomeAdmin> =>
+    runAction(updateWelcome(settings)),
 
   invites: (): Promise<WorkspaceInviteList> => runAction(invites()),
 
