@@ -59,7 +59,7 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/api/v1/two_factor/challenge", axum::routing::get(campfire_kit::action(two_factor::challenge_show_json)).post(campfire_kit::unparsed_action(two_factor::challenge_create_json)))
         .route("/api/v1/sudo", axum::routing::get(campfire_kit::action(super::sudos::new_json)).post(campfire_kit::unparsed_action(super::sudos::create_json)))
         .route("/api/v1/sudo/google", axum::routing::post(campfire_kit::action(super::sudos::google_json)))
-        .route("/api/v1/sudo/continue", axum::routing::get(campfire_kit::action(super::sudos::continue_json)))
+        .route("/api/v1/sudo/continue", axum::routing::get(campfire_kit::action(super::sudos::continue_json)).delete(campfire_kit::action(super::sudos::acknowledge_json)))
 }
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.

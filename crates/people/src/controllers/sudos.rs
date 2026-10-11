@@ -3,7 +3,7 @@ use super::auth;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, require_current_user, session_keys, sudo};
 use crate::controllers::presenters::page::retained_page;
-use campfire_api_types::{SudoMethod, SudoResponse, SudoSubmission};
+use campfire_api_types::{SudoGoogleStart, SudoMethod, SudoResponse, SudoSubmission};
 use campfire_db::SudoVerifier;
 use campfire_kit::{Ctx, Error, Param, RateLimit, Redirect, Result, StatusCode, format, halt};
 use campfire_retained::sudos;
@@ -50,10 +50,48 @@ pub async fn continue_json(c: &mut Ctx) -> Result {
         if !session_keys::sudo_verified(c.session(), now) {
             return render_new(c, StatusCode::FORBIDDEN).await;
         }
+        // The SPA asks by the attempt id it started Google with: only this session's finished
+        // attempt is named, and it answers the same way until acknowledged or expired.
+        if let Some(attempt) = attempt_param(c)
+            && let Some(retry) = sudo::attempt_retry(c, &attempt)?
+        {
+            c.no_store();
+            return auth::json(
+                c,
+                StatusCode::OK,
+                &SudoResponse::Confirmed {
+                    retry,
+                    attempt: Some(attempt),
+                },
+            );
+        }
         confirmed_json(c)
     }
     .await;
     complete(c, result)
+}
+
+/// `DELETE /api/v1/sudo/continue?attempt=…`: the SPA has replayed (or given up on) what the
+/// attempt confirmed, so its record goes. Another attempt's record stays.
+pub async fn acknowledge_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", Param::Str("json".into()));
+    let result = async {
+        before_actions(c, "sudos#continue").await?;
+        if let Some(attempt) = attempt_param(c) {
+            sudo::acknowledge_attempt(c, &attempt);
+        }
+        c.no_store();
+        Ok(c.head(StatusCode::NO_CONTENT))
+    }
+    .await;
+    complete(c, result)
+}
+
+fn attempt_param(c: &Ctx) -> Option<String> {
+    c.query_params
+        .get("attempt")
+        .and_then(|param| param.to_s())
+        .filter(|attempt| sudo::valid_attempt(attempt))
 }
 
 fn complete(c: &mut Ctx, result: Result) -> Result {
@@ -89,16 +127,30 @@ fn complete(c: &mut Ctx, result: Result) -> Result {
 fn confirmed_json(c: &mut Ctx) -> Result {
     let retry = sudo::retry(c);
     session_keys::continue_after_sudo(c.session(), &campfire_routes::root());
-    auth::json(c, StatusCode::OK, &SudoResponse::Confirmed { retry })
+    auth::json(
+        c,
+        StatusCode::OK,
+        &SudoResponse::Confirmed {
+            retry,
+            attempt: None,
+        },
+    )
 }
 
+/// A Google confirmation the SPA started, with the attempt id it named, if any.
 #[derive(Clone)]
-struct GoogleJson;
+struct GoogleJson {
+    attempt: Option<String>,
+}
 
 /// Keep the consumed OAuth flow's response mode for the shared confirmation operation.
 pub fn restore_google_response_mode(c: &mut Ctx, flow: &serde_json::Value) {
     if flow["purpose"] == "sudo" && flow["google_json"] == true {
-        c.set_current(GoogleJson);
+        let attempt = flow["attempt"]
+            .as_str()
+            .filter(|attempt| sudo::valid_attempt(attempt))
+            .map(str::to_owned);
+        c.set_current(GoogleJson { attempt });
     }
 }
 
@@ -216,6 +268,24 @@ pub async fn google(c: &mut Ctx) -> Result {
     before_actions(c, "sudos#google").await?;
     rate_limit(c).await?;
     let json_mode = sudo::json_request(c)?;
+    let attempt = if json_mode {
+        let start = auth::body_or_default::<SudoGoogleStart>(c).await?;
+        if start
+            .attempt
+            .as_deref()
+            .is_some_and(|attempt| !sudo::valid_attempt(attempt))
+        {
+            return reject(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "The request body isn't valid.",
+            )
+            .await;
+        }
+        start.attempt
+    } else {
+        None
+    };
     let user_id = require_current_user(c)?.id;
     if let Some(google) = c.app().sudo.google()
         && linked_subject(c, user_id).await?.is_some()
@@ -227,6 +297,9 @@ pub async fn google(c: &mut Ctx) -> Result {
         let key = crate::integrations::google::sign_in::FLOW_SESSION_KEY;
         if let Some(mut flow) = c.session().get(key).cloned() {
             flow["google_json"] = serde_json::Value::Bool(true);
+            if let Some(attempt) = attempt {
+                flow["attempt"] = serde_json::Value::String(attempt);
+            }
             c.session().insert(key, flow);
         }
         let location = response
@@ -293,6 +366,9 @@ pub async fn finish_google(
         .map_err(Error::internal)?;
     if matches {
         if let Some(path) = google_return_path(c) {
+            if let Some(attempt) = c.current::<GoogleJson>().and_then(|json| json.attempt.clone()) {
+                sudo::record_attempt(c, &attempt)?;
+            }
             c.redirect_to(&c.url_for(path))
         } else {
             continue_after_sudo(c).await

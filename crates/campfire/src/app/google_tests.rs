@@ -1385,3 +1385,174 @@ mod security_cases;
 mod slack_claim;
 
 mod ui_return;
+
+// --- Attempt-scoped Google confirmations (the SPA's hand-off) ----------------------------------
+
+const ATTEMPT: &str = "attempt-0000000000000001";
+const OTHER_ATTEMPT: &str = "attempt-0000000000000002";
+
+/// A frozen clock the test can move, and an app where DAVID has a linked Google identity.
+async fn linked_app() -> (TestApp, Arc<Recorded>, Arc<campfire_kit::FrozenClock>) {
+    let clock = Arc::new(campfire_kit::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap(),
+    ));
+    let (a, r) = app_with_clock(clock.clone(), &[]).await;
+    a.db().write(|tx| {
+        tx.conn().execute("INSERT INTO google_identities (user_id,subject,email,created_at,updated_at) VALUES (?, 'david', 'david@smartdata.net', ?, ?)", rusqlite::params![DAVID,tx.now(),tx.now()])?;
+        Ok(())
+    }).await.unwrap();
+    (a, r, clock)
+}
+
+fn json_request(method: Method, path: &str, body: Value) -> Req {
+    Req::new(method, path)
+        .header("accept", "application/json")
+        .header("content-type", "application/json")
+        .header("referer", "http://campfire.test/app/admin")
+        .body(serde_json::to_vec(&body).unwrap())
+}
+
+/// Holds a guarded JSON write at `path` for a fresh confirmation.
+async fn hold(b: &mut Browser<'_>, method: Method, path: &str) {
+    let held = b.write(json_request(method, path, json!({}))).await;
+    assert_eq!(held.status, StatusCode::FORBIDDEN, "{}", held.text());
+}
+
+/// Starts a JSON Google confirmation for `attempt`; the authorization request's query.
+async fn start_attempt(
+    b: &mut Browser<'_>,
+    attempt: &str,
+) -> std::collections::BTreeMap<String, String> {
+    let reply = b
+        .write(json_request(Method::POST, "/api/v1/sudo/google", json!({ "attempt": attempt })))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    url::Url::parse(reply.json()["location"].as_str().unwrap())
+        .unwrap()
+        .query_pairs()
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect()
+}
+
+/// Google answers for DAVID and the browser follows the callback back to the SPA.
+async fn finish(a: &TestApp, r: &Recorded, b: &mut Browser<'_>, q: &std::collections::BTreeMap<String, String>) {
+    answer(r, claims(a, q, "david", "david@smartdata.net"));
+    let reply = callback(b, &q["state"]).await;
+    assert_eq!(reply.location(), Some("http://campfire.test/app/sudo/continue"));
+}
+
+async fn continuation(b: &mut Browser<'_>, attempt: &str) -> Value {
+    let reply = b.get(&format!("/api/v1/sudo/continue?attempt={attempt}")).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    reply.json()
+}
+
+fn named(attempt: &str, path: &str) -> Value {
+    json!({"kind":"confirmed","retry":{"method":"POST","path":path,"returnTo":"/app/admin"},"attempt":attempt})
+}
+
+#[tokio::test]
+async fn sudo_attempt_continuation_names_its_attempt_and_reads_again_until_acknowledged() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
+    for bad in ["short", "attempt with spaces 0000", &"x".repeat(65)] {
+        let refused = b
+            .write(json_request(Method::POST, "/api/v1/sudo/google", json!({ "attempt": bad })))
+            .await;
+        assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}");
+    }
+    let q = start_attempt(&mut b, ATTEMPT).await;
+    finish(&a, &r, &mut b, &q).await;
+
+    let first = continuation(&mut b, ATTEMPT).await;
+    assert_eq!(first, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+    // A read whose answer was lost is answered the same way again.
+    assert_eq!(continuation(&mut b, ATTEMPT).await, first);
+    assert_eq!(continuation(&mut b, OTHER_ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(continuation(&mut b, ATTEMPT).await, first);
+
+    let acknowledged = b
+        .write(json_request(Method::DELETE, &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"), json!({})))
+        .await;
+    assert_eq!(acknowledged.status, StatusCode::NO_CONTENT, "{}", acknowledged.text());
+    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(actions(&a).await, vec!["sudo.confirm.success"]);
+}
+
+#[tokio::test]
+async fn sudo_attempt_an_abandoned_attempt_never_takes_a_later_confirmation() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    // Tab one holds a write and leaves for Google, then never comes back.
+    hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
+    start_attempt(&mut b, ATTEMPT).await;
+    // Tab two, same session, holds another and finishes its own Google confirmation.
+    hold(&mut b, Method::PATCH, "/api/v1/admin/custom_styles").await;
+    let q = start_attempt(&mut b, OTHER_ATTEMPT).await;
+    finish(&a, &r, &mut b, &q).await;
+
+    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        continuation(&mut b, OTHER_ATTEMPT).await,
+        json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"},"attempt":OTHER_ATTEMPT})
+    );
+}
+
+#[tokio::test]
+async fn sudo_attempt_belongs_to_the_session_that_started_it() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
+    let q = start_attempt(&mut b, ATTEMPT).await;
+    finish(&a, &r, &mut b, &q).await;
+
+    // Another session of the same person, freshly confirmed by password.
+    let mut other = a.sign_in(DAVID).await;
+    let confirmed = other
+        .write(json_request(Method::POST, "/api/v1/sudo", json!({"kind":"password","password":"secret123456"})))
+        .await;
+    assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
+    assert_eq!(continuation(&mut other, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    // Its acknowledgement doesn't reach the first session's attempt either.
+    other
+        .write(json_request(Method::DELETE, &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"), json!({})))
+        .await;
+    assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+}
+
+#[tokio::test]
+async fn sudo_attempt_expires_after_ten_minutes() {
+    let (a, r, clock) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
+    let q = start_attempt(&mut b, ATTEMPT).await;
+    finish(&a, &r, &mut b, &q).await;
+
+    clock.advance(jiff::SignedDuration::from_mins(9));
+    assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+    clock.advance(jiff::SignedDuration::from_mins(2));
+    // Still a fresh confirmation (15 minutes), but no longer this attempt's.
+    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+}
+
+#[tokio::test]
+async fn sudo_attempt_retained_and_unnamed_google_flows_are_unchanged() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    // The retained page's Google start takes no attempt and ends where it always did.
+    b.write(Req::new(Method::POST, "/account/join_code").header("referer", "http://campfire.test/app/admin")).await;
+    let q = start(&mut b, "/sudo/google").await;
+    answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
+    let reply = callback(&mut b, &q["state"]).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    let cookies = b.cookie_header();
+    assert!(!cookies.is_empty());
+    use campfire_kit::Crypto;
+    let raw = cookies.split("; ").find_map(|p| p.strip_prefix("_campfire_session=")).unwrap();
+    let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
+        .decrypt_cookie("_campfire_session", &rails_compat::cookies::unescape(raw), a.booted.app.clock.now())
+        .unwrap();
+    assert!(session.get("sudo_google_attempt").is_none());
+}

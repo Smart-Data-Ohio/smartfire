@@ -51,6 +51,17 @@ pub enum SudoMethod {
     Google,
 }
 
+/// `POST /api/v1/sudo/google`: the SPA's id for this Google confirmation. The continuation names it
+/// once Google confirms, so the page replays only the writes it kept under that id.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SudoGoogleStart {
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attempt: Option<String>,
+}
+
 /// The caller retains the write body; it is never echoed or stored in the cookie.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -74,7 +85,13 @@ pub struct SudoState {
 #[ts(export)]
 pub enum SudoResponse {
     Ready { reauthentication: SudoState },
-    Confirmed { retry: Option<SudoRetry> },
+    Confirmed {
+        retry: Option<SudoRetry>,
+        /// The Google attempt this session confirmed, when the continuation asked for it by id.
+        #[ts(optional)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        attempt: Option<String>,
+    },
     Navigate { location: String },
     Error { message: String },
 }
@@ -220,11 +237,30 @@ mod tests {
             json!({"kind":"ready","reauthentication":{"methods":["password","totp","google"],"retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}}}),
         );
         assert_wire(
-            &SudoResponse::Confirmed { retry: Some(retry) },
+            &SudoResponse::Confirmed {
+                retry: Some(retry.clone()),
+                attempt: None,
+            },
             json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}}),
         );
         assert_wire(
-            &SudoResponse::Confirmed { retry: None },
+            &SudoResponse::Confirmed {
+                retry: Some(retry),
+                attempt: Some("attempt-0000000000000001".into()),
+            },
+            json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"},"attempt":"attempt-0000000000000001"}),
+        );
+        assert_wire(
+            &SudoGoogleStart {
+                attempt: Some("attempt-0000000000000001".into()),
+            },
+            json!({"attempt":"attempt-0000000000000001"}),
+        );
+        assert_wire(
+            &SudoResponse::Confirmed {
+                retry: None,
+                attempt: None,
+            },
             json!({"kind":"confirmed","retry":null}),
         );
         assert_wire(

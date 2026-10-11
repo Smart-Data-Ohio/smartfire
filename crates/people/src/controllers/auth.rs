@@ -108,6 +108,19 @@ pub async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
     }
 }
 
+/// [`body`], with an absent (empty) body read as `T::default()`.
+pub async fn body_or_default<T: DeserializeOwned + Default>(c: &mut Ctx) -> Result<T> {
+    let bytes = match c.take_current::<JsonBody>() {
+        Some(body) => body.0,
+        None => c.read_body(16 * 1024).await.to_vec(),
+    };
+    if bytes.iter().all(u8::is_ascii_whitespace) {
+        return Ok(T::default());
+    }
+    c.set_current(JsonBody(bytes));
+    body(c).await
+}
+
 impl ResponseMode {
     pub fn navigate(self, c: &mut Ctx, location: &str) -> Result {
         self.redirect(c, location, false)
