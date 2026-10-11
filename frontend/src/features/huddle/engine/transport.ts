@@ -115,9 +115,15 @@ export interface CallTransport {
   /**
    * Connects and subscribes; rejects when the room can't be joined. `noiseSuppression` says
    * whether RNNoise is wanted: the microphone then asks the browser for no suppression of its
-   * own, so the signal is filtered exactly once.
+   * own, so the signal is filtered exactly once. `audioBitrate` is the grant's
+   * `audioBitrateTarget` (bits per second), what the microphone encodes at.
    */
-  connect(url: string, token: string, noiseSuppression: boolean): Promise<void>;
+  connect(
+    url: string,
+    token: string,
+    noiseSuppression: boolean,
+    audioBitrate: number,
+  ): Promise<void>;
   /** Leaves the room and stops every local track. Never rejects. */
   disconnect(): Promise<void>;
   snapshot(): CallSnapshot;
