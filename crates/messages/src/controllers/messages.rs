@@ -226,6 +226,7 @@ pub struct MessageParams {
     pub reply_to_message_id: Option<i64>,
     pub reply_notify_author: Option<bool>,
     pub drive_file_ids: Vec<String>,
+    pub webhook: Option<campfire_db::models::channel_webhook::WebhookMessage>,
 }
 
 /// `params.require(:message).permit(:body, :attachment, :client_message_id)`
@@ -615,6 +616,7 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     reply_to_message_id: attributes.reply_to_message_id,
                     reply_notify_author: attributes.reply_notify_author,
                     drive_file_ids: attributes.drive_file_ids,
+                    webhook: attributes.webhook,
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     attachment_blob_ids: files.iter().map(|blob| blob.id).collect(),

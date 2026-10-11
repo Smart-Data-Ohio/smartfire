@@ -40,6 +40,8 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     action: false,
     streaming: false,
     embedsSuppressed: false,
+    embeds: null,
+    webhook: null,
     replyToMessageId: null,
     forwardedFromMessageId: null,
     forwardedAt: null,

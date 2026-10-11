@@ -57,6 +57,7 @@ mod switcher;
 mod sync;
 mod thread;
 mod user;
+mod webhooks;
 mod work;
 
 pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
@@ -208,6 +209,11 @@ pub use thread::{
     UpdateThread,
 };
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
+pub use webhooks::{
+    ChannelWebhook, ChannelWebhookCredential, ChannelWebhookList, CreateChannelWebhook,
+    ExecuteWebhook, MessageWebhook, UpdateChannelWebhook, WebhookEmbed, WebhookEmbedField,
+    WebhookEmbedFooter,
+};
 pub use work::{
     CreateWorkHandoff, CreateWorkLink, UpdateWork, WorkDetail, WorkFacts, WorkFilter,
     WorkHandoffReceiver, WorkHistoryEntry, WorkHistoryHandoff, WorkHistoryKind, WorkLink,

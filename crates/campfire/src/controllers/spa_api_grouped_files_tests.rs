@@ -445,7 +445,7 @@ async fn scheduled_files_reject_foreign_uploads_and_mixed_slots() {
     }).await.unwrap();
 }
 
-async fn upload(b: &mut Browser<'_>, filename: &str) -> api::DirectUpload {
+pub(super) async fn upload(b: &mut Browser<'_>, filename: &str) -> api::DirectUpload {
     let reply = b
         .write(json_body(
             Method::POST,

@@ -189,6 +189,8 @@ function message(id: number, roomId = ROOM, threadId: number | null = null): Mes
     action: false,
     streaming: false,
     embedsSuppressed: false,
+    embeds: null,
+    webhook: null,
     replyToMessageId: null,
     forwardedFromMessageId: null,
     forwardedAt: null,

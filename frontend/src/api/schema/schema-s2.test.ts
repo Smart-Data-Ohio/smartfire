@@ -80,6 +80,8 @@ const messageJson = {
   action: false,
   streaming: false,
   embedsSuppressed: false,
+  embeds: null,
+  webhook: null,
   replyToMessageId: null,
   forwardedFromMessageId: null,
   forwardedAt: "2026-10-06T09:15:30.000Z",
