@@ -273,7 +273,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     return true;
   };
 
-  const parseChange = (body: Json | undefined): WorkChange => {
+  const parseChange = (body: Json | undefined, thread: ThreadRecord): WorkChange => {
     if (!isRecord(body)) throw invalidBody("expected an object");
 
     // `undefined` when the body leaves a key out, `null` when it sends `null`.
@@ -300,13 +300,19 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       status: rawStatus === undefined ? undefined : (status ?? null),
       ownerId: rawOwner === undefined ? undefined : ownerId,
       resultMarkdown: rawResult === undefined ? undefined : stringField(body, "resultMarkdown"),
-      tags: field(body, "tags") === undefined ? undefined : tagsOf(body),
+      tags:
+        field(body, "tags") === undefined
+          ? undefined
+          : tagsOf(
+              body,
+              thread.isBoard ? { world: ctx.world(), roomId: thread.roomId } : undefined,
+            ),
     };
   };
 
   const update = (threadId: number, body: Json | undefined): ThreadDetail => {
     const thread = scope(threadId);
-    const change = parseChange(body);
+    const change = parseChange(body, thread);
     const allowed = threads.detail(thread).permissions;
     const manager = allowed.canManageWork || allowed.canConvertWork;
     const assignment = allowed.canAssignWork || allowed.canConvertWork;
@@ -442,7 +448,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     updateAs(threadId, body, actorId) {
       const thread = threads.threadOr404(threadId);
 
-      apply(thread, parseChange(body), actorId);
+      apply(thread, parseChange(body, thread), actorId);
 
       return threads.detail(thread);
     },
