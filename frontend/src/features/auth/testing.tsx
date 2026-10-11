@@ -1,5 +1,5 @@
 /**
- * Test support for the signed-out pages: the four routes in a memory router under `/app/`, as
+ * Test support for the signed-out pages: their routes in a memory router under `/app/`, as
  * src/router.tsx mounts them, and the mock's sign-in controls.
  */
 import {
@@ -14,6 +14,7 @@ import { act, render } from "@testing-library/react";
 import type { MockNetwork } from "../../test/mock-network.ts";
 import { ChallengePage } from "./challenge.tsx";
 import { FirstRunPage } from "./first-run.tsx";
+import { AboutPage, PrivacyPage, TermsPage } from "./public-page.tsx";
 import { SignInPage } from "./sign-in.tsx";
 import { TransferRoute } from "./transfer.tsx";
 
@@ -39,6 +40,9 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
       component: TransferRoute,
     }),
     createRoute({ getParentRoute: () => root, path: "first_run", component: FirstRunPage }),
+    createRoute({ getParentRoute: () => root, path: "about", component: AboutPage }),
+    createRoute({ getParentRoute: () => root, path: "privacy", component: PrivacyPage }),
+    createRoute({ getParentRoute: () => root, path: "terms", component: TermsPage }),
   ];
 
   const router = createRouter({

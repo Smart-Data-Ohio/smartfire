@@ -57,6 +57,10 @@ describe("the screen map and the router", () => {
       "/app/two_factor/challenge",
       "/app/session/transfers/:id",
       "/app/first_run",
+      // So are About, Privacy and Terms, for anyone; /about, /privacy and /terms stay retained.
+      "/app/about",
+      "/app/privacy",
+      "/app/terms",
     ]);
 
     for (const route of Object.values(router.routesById)) {

@@ -41,6 +41,7 @@ mod organize;
 mod panes;
 mod people;
 mod presence;
+mod public_pages;
 mod reaction;
 mod read;
 mod room;
@@ -58,6 +59,7 @@ mod thread;
 mod user;
 mod work;
 
+pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
 pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, SudoMethod, SudoResponse, SudoRetry, SudoState, SudoSubmission, TransferSignIn};
 pub use auth::{TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 pub use auth::SignInHelpContact;

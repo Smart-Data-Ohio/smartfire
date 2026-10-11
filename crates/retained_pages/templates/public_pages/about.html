@@ -29,12 +29,12 @@
   this workspace's server and may remain in its backups. People who operate that
   server can access that data. Room membership still controls what ordinary
   members can see. The
-  {{ h::link_to_text("privacy policy", &h::routes::privacy(), h::attrs().attr("target", "_blank").attr("rel", "noopener")) }} explains this in detail; the
-  {{ h::link_to_text("terms of service", &h::routes::terms(), h::attrs().attr("target", "_blank").attr("rel", "noopener")) }} covers the rules for using the workspace.
+  {{ h::link_to_text("privacy policy", &links.privacy, h::attrs().attr("target", "_blank").attr("rel", "noopener")) }} explains this in detail; the
+  {{ h::link_to_text("terms of service", &links.terms, h::attrs().attr("target", "_blank").attr("rel", "noopener")) }} covers the rules for using the workspace.
 </p>
 
 {% let operator_name = operator_name.as_deref() %}{% let contact_email = contact_email.as_deref() %}{% if operator_name.is_some() || contact_email.is_some() %}  <h2>Who runs this workspace</h2>
 {% if let Some(operator_name) = operator_name %}    <p>This workspace is operated by <strong>{{ operator_name }}</strong>.</p>
 {% endif %}{% if let Some(contact_email) = contact_email %}    <p>Contact: {{ h::mail_to(contact_email) }}</p>
 {% endif %}{% endif %}
-<p>{{ h::link_to_text("Sign in to this workspace", &h::routes::new_session(), h::attrs()) }}</p>{{ "\n" }}
+<p>{{ h::link_to_text("Sign in to this workspace", &links.sign_in, h::attrs()) }}</p>{{ "\n" }}

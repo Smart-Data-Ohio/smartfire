@@ -13,6 +13,9 @@
  * First run (slice 73) is open while `firstRunPending` is set; setting up closes it. A name
  * starting `fail` is refused as an unreadable submission, so the page's refusal shows, and
  * `firstRunUnavailable` fails the next check as an unreachable server would.
+ *
+ * About, Privacy and Terms answer what the Rust contract does for the auth-page fixtures' policy:
+ * public-pages.json is written by crates/campfire's public_page_mock_fixture test.
  */
 import type { AuthResponse } from "../../src/gen/AuthResponse.ts";
 import type { FirstRunState } from "../../src/gen/FirstRunState.ts";
@@ -22,6 +25,7 @@ import { type Json, parseJson, stringField } from "../json.ts";
 import { MOCK_TOTP } from "./account.ts";
 import type { AdminModule } from "./admin.ts";
 import { type Route, route, type S2Context } from "./context.ts";
+import PUBLIC_PAGES from "./public-pages.json" with { type: "json" };
 import { MOCK_PASSWORD } from "./settings.ts";
 
 /** Signs in with the mock password, straight into the app. */
@@ -179,6 +183,12 @@ export function createSignIn(
     },
     routes: [
       route("GET", /^\/session\/boot$/, () => ({ status: 200, json: boot() })),
+      route("GET", /^\/public_pages\/about$/, () => ({ status: 200, json: PUBLIC_PAGES.about })),
+      route("GET", /^\/public_pages\/privacy$/, () => ({
+        status: 200,
+        json: PUBLIC_PAGES.privacy,
+      })),
+      route("GET", /^\/public_pages\/terms$/, () => ({ status: 200, json: PUBLIC_PAGES.terms })),
       route("POST", /^\/session$/, ({ body }) => {
         const email = (stringField(body, "emailAddress") ?? "").trim().toLowerCase();
         const password = stringField(body, "password") ?? "";
