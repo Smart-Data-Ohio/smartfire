@@ -1320,7 +1320,17 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
             method === "password" || method === "totp" || method === "google",
         );
 
-        admin.lapseSudo(flag("on", true), methods, flag("googleRefuses", false));
+        const held = field(body, "retry");
+        const method = stringField(held, "method");
+        const path = stringField(held, "path");
+        const returnTo = stringField(held, "returnTo");
+
+        admin.lapseSudo(
+          flag("on", true),
+          methods,
+          flag("googleRefuses", false),
+          method === null || path === null || returnTo === null ? null : { method, path, returnTo },
+        );
 
         return ok;
       }

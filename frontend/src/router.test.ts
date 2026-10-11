@@ -53,6 +53,9 @@ describe("the screen map and the router", () => {
       "/app/r/:id/t/:id/links",
       // Where a Google confirmation started from the SPA's dialog comes back; no page of its own.
       "/app/sudo/continue",
+      // The full-page confirmation; the retained /sudo/new keeps serving its own page until the
+      // server's gate sends pages here.
+      "/app/sudo/new",
       // The signed-out pages are outside the signed-in screen map; their retained URLs keep
       // serving the retained pages until a later slice makes these canonical.
       "/app/session/new",

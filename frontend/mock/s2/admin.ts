@@ -186,7 +186,16 @@ export interface AdminModule {
    * limited). `methods` are the ways the viewer may confirm (the password alone by default); a
    * Google confirmation succeeds at once unless `googleRefuses`.
    */
-  lapseSudo(on: boolean, methods?: readonly SudoMethod[], googleRefuses?: boolean): void;
+  /**
+   * Lapses (or renews) the confirmation, offering `methods`; `retry` is a request the server's
+   * classic gate held meanwhile (a full page sent to `/sudo/new`), for its answers to name.
+   */
+  lapseSudo(
+    on: boolean,
+    methods?: readonly SudoMethod[],
+    googleRefuses?: boolean,
+    retry?: SudoRetry | null,
+  ): void;
   /** Throws `SudoRequired` while the confirmation has lapsed, for the bot pages' guarded writes. */
   readonly requireSudo: () => void;
   /**
@@ -308,6 +317,15 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     return sudoReply({ kind: "navigate", location: "/app/sudo/continue", session: SESSION });
   };
+
+  /**
+   * `GET /sudo`: `confirmed` while the confirmation is fresh, else `ready`; either names the
+   * pending request without consuming it.
+   */
+  const sudoStatus = () =>
+    sudoLapsed
+      ? sudoReady()
+      : sudoReply({ kind: "confirmed", retry: pendingRetry, session: SESSION });
 
   /** `GET /sudo/continue`: names the attempt asked about while it's the one confirmed. */
   const continueSudo = (attempt: string | null) => {
@@ -795,9 +813,9 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   });
 
   return {
-    lapseSudo: (on, methods = ["password"], refuses = false) => {
+    lapseSudo: (on, methods = ["password"], refuses = false, retry = null) => {
       sudoLapsed = on;
-      pendingRetry = null;
+      pendingRetry = retry;
       googleAttempt = null;
       sudoMethods = methods;
       googleRefuses = refuses;
@@ -842,7 +860,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       current().animatedIconLimit = limit;
     },
     routes: [
-      route("GET", /^\/sudo$/, () => sudoReady()),
+      route("GET", /^\/sudo$/, () => sudoStatus()),
       route("POST", /^\/sudo$/, ({ body }) => confirmSudo(body)),
       route("POST", /^\/sudo\/google$/, ({ body }) => startGoogleSudo(body)),
       route("GET", /^\/sudo\/continue$/, ({ query }) => continueSudo(query.get("attempt"))),

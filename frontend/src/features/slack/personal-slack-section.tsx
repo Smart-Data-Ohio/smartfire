@@ -7,6 +7,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { auditTime } from "../admin/admin-format.ts";
 import { adminFailure, CardCell, CardRow, CardTable, Confirm } from "../admin/admin-parts.tsx";
+import { useConfirmFirst } from "../auth/confirm-first.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { CONFIRM, modeLabel, personalConnectionSentence } from "./slack-format.ts";
@@ -44,6 +45,7 @@ function IntegrationsBack() {
  */
 export function PersonalSlackSection() {
   const navigate = useNavigate();
+  const { confirmLink } = useConfirmFirst();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [ask, setAsk] = useState<Ask | null>(null);
   const { busy, track } = useBusy();
@@ -122,6 +124,7 @@ export function PersonalSlackSection() {
                 className="button"
                 data-variant={connected ? "secondary" : "primary"}
                 href={page.connectPath}
+                onClick={confirmLink}
               >
                 {connected ? "Reconnect Slack" : "Connect Slack"}
               </a>

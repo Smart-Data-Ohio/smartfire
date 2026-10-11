@@ -66,3 +66,38 @@
     display: none;
   }
 }
+
+/* `/app/sudo/new` (sudo-new.tsx): the same choices as a page in the main pane. */
+@layer app {
+  .reauth-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    width: 100%;
+    max-width: 26rem;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-5);
+    overflow-y: auto;
+  }
+
+  .reauth-page-lede {
+    color: var(--text-muted);
+  }
+
+  .reauth-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  @media (width < 720px) {
+    .reauth-page {
+      max-width: none;
+      padding: var(--space-5) var(--space-4);
+    }
+
+    .reauth-page-actions > .button {
+      flex: 1;
+    }
+  }
+}

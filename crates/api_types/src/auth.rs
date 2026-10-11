@@ -166,6 +166,8 @@ pub enum SudoResponse {
         session: Option<i64>,
     },
     Confirmed {
+        /// The request the gate holds for this session: `GET /api/v1/sudo` only peeks at it; a
+        /// confirmation (`POST /api/v1/sudo`) or the continuation hands it over and lets it go.
         retry: Option<SudoRetry>,
         /// The Google attempt this session confirmed, when the continuation asked for it by id.
         #[ts(optional)]

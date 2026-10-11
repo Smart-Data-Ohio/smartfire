@@ -6,7 +6,10 @@ import type { ConfirmationCancelled, SudoRequired } from "./errors.ts";
 export interface ConfirmationTicket {
   /** How many confirmations had finished. */
   readonly confirmations: number;
-  /** The screen that sent it: leaving that screen cancels its wait for a confirmation. */
+  /**
+   * The visit of the screen that sent it: leaving that screen (even to come back) cancels its
+   * wait for a confirmation.
+   */
   readonly screen: string;
 }
 
