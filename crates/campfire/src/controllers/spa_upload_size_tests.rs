@@ -398,6 +398,7 @@ async fn upload_size_existing_blobs_are_limited_for_messages_but_not_avatars() {
         .unwrap();
     let signed_id =
         campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    super::admin_tests::set_uploader(&a, blob.id, DAVID).await;
     a.db()
         .write(|tx| {
             tx.conn().execute(

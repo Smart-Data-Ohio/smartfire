@@ -1,0 +1,116 @@
+/* An image slot (the workspace icon and banner, a person's profile banner): a drop target with
+   its thumbnail, progress, refusal and actions. */
+@layer app {
+  .profile-slots {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  /* A drop target: a quiet dashed edge that firms up while a file is held over it. */
+  .profile-slot {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      box-shadow var(--duration-small) var(--ease-enter);
+  }
+
+  .profile-slot[data-over] {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .profile-slot-thumb {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--bg-hover);
+    color: var(--text-faint);
+  }
+
+  .profile-slot[data-kind="banner"] .profile-slot-thumb {
+    width: 100px;
+  }
+
+  .profile-slot-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-slot-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .profile-slot-title {
+    margin: 0;
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .settings-group-body .profile-slot-hint {
+    color: var(--text-muted);
+  }
+
+  .profile-slot-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .profile-slot-progress progress {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-pill);
+    appearance: none;
+    background: var(--bg-hover);
+    accent-color: var(--accent);
+  }
+
+  .profile-slot-progress progress::-webkit-progress-bar {
+    background: var(--bg-hover);
+  }
+
+  .profile-slot-progress progress::-webkit-progress-value {
+    background: var(--accent-solid);
+    transition: inline-size var(--duration-small) var(--ease-move);
+  }
+
+  .profile-slot-progress progress::-moz-progress-bar {
+    background: var(--accent-solid);
+  }
+
+  .settings-group-body .profile-slot-error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+  }
+
+  .profile-slot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+
+  .settings-group-body .profile-formats {
+    color: var(--text-faint);
+  }
+}

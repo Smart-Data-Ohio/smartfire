@@ -22,6 +22,13 @@ export const PROFILE_SLOTS: Readonly<
   },
 };
 
+/** A person's own profile banner, in their settings. */
+export const USER_BANNER_SLOT = {
+  title: "Profile banner",
+  noun: "banner",
+  hint: "Wide, at least 960 × 320. Shown across the top of your profile; the sides crop on phones.",
+} as const;
+
 /** The file types and size, said once under both slots. */
 export const PROFILE_FORMATS =
   "PNG, JPEG, GIF or WebP, up to 10 MB and 4096 pixels wide. GIF and WebP can be animated.";

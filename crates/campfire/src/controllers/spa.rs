@@ -102,6 +102,9 @@ mod slack_tests;
 #[cfg(test)]
 #[path = "spa_workspace_branding_tests.rs"]
 mod workspace_branding_tests;
+#[cfg(test)]
+#[path = "spa_profile_banner_tests.rs"]
+mod profile_banner_tests;
 
 #[cfg(test)]
 #[path = "spa_animated_emoji_tests.rs"]

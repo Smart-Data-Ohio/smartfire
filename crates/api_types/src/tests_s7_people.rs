@@ -12,7 +12,8 @@ fn user_json() -> Value {
         "customStatus": {"emoji": "🌴", "text": "On a beach", "expiresAt": null},
         "avatarIcon": null, "agent": null, "createdAt": "2026-09-26T12:26:46.848Z",
         "updatedAt": "2026-10-06T09:15:00.123456Z",
-        "accountName": "Ada Lovelace", "pronouns": null
+        "accountName": "Ada Lovelace", "pronouns": null,
+        "bannerUrl": "/users/tok/banner?v=12", "bannerStillUrl": null
     })
 }
 

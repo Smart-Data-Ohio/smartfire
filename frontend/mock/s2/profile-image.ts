@@ -3,6 +3,7 @@
  * the bytes (not the declared type), the size from the header, and "animated" means a GIF or WebP
  * with more than one frame. An animated PNG counts as still, as the server's pipeline sees it.
  */
+import type { Attachment } from "../../src/gen/Attachment.ts";
 import { imageSize } from "./assets.ts";
 
 export interface ProfileImageInfo {
@@ -139,3 +140,48 @@ export const PROFILE_MAX_SIZE = {
   logo: [4096, 4096],
   banner: [4096, 2304],
 } as const;
+
+/** What a logo or banner may be, as the server checks it. */
+const PROFILE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+
+const PROFILE_MAX_BYTES = 10 * 1024 * 1024;
+
+/** An uploaded logo or banner: its URL, and its first frame's when it's animated. */
+export interface ProfileImage {
+  readonly url: string;
+  readonly stillUrl: string | null;
+}
+
+/**
+ * An upload checked as a logo or banner, as the server checks it: the bytes must really be a
+ * PNG, JPEG, GIF or WebP within the size caps, whatever type was declared. A refusal is the
+ * server's message for `signedId`.
+ */
+export function checkProfileImage(
+  attachment: Pick<Attachment, "url" | "thumbnailUrl" | "contentType" | "byteSize">,
+  bytes: Uint8Array,
+  kind: keyof typeof PROFILE_MAX_SIZE,
+  maxBytes: number = PROFILE_MAX_BYTES,
+): ProfileImage | { readonly error: string } {
+  const info = PROFILE_TYPES.has(attachment.contentType) ? readProfileImage(bytes) : null;
+
+  if (info === null) return { error: "must be a PNG, JPEG, GIF or WebP image" };
+
+  if (attachment.byteSize > Math.min(maxBytes, PROFILE_MAX_BYTES)) {
+    return {
+      error:
+        maxBytes < PROFILE_MAX_BYTES
+          ? "exceeds the workspace upload limit"
+          : "must be 10 MB or smaller",
+    };
+  }
+
+  const [maxWidth, maxHeight] = PROFILE_MAX_SIZE[kind];
+
+  if (info.width > maxWidth || info.height > maxHeight) {
+    return { error: `must be at most ${maxWidth} × ${maxHeight} pixels` };
+  }
+
+  // An animated GIF or WebP gets a still: the mock's thumbnail stands in for its first frame.
+  return { url: attachment.url, stillUrl: info.animated ? attachment.thumbnailUrl : null };
+}

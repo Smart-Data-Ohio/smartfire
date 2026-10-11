@@ -56,3 +56,44 @@ it("shows the server's identity validation error beside its field", async () => 
   fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
   expect(await screen.findByText("Pronouns must not contain control characters.")).toBeTruthy();
 });
+
+it("previews the banner slot empty, with the avatar's tint and an upload control", async () => {
+  const { container } = render(<Harness initial={await settings.load()} />);
+
+  expect(screen.getByRole("heading", { name: "Profile banner" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Upload banner" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Remove banner" })).toBeNull();
+  expect(
+    container.querySelector<HTMLElement>(".settings-banner .profile-banner")?.dataset.empty,
+  ).toBe("true");
+});
+
+it("refuses a file that isn't an image before uploading it", async () => {
+  render(<Harness initial={await settings.load()} />);
+
+  const input = screen.getByLabelText("Choose banner image");
+  const notes = new File(["plain words"], "notes.txt", { type: "text/plain" });
+
+  fireEvent.change(input, { target: { files: [notes] } });
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "Choose a PNG, JPEG, GIF or WebP image.",
+  );
+});
+
+it("shows a saved banner in the preview and removes it", async () => {
+  const loaded = await settings.load();
+  const url = "/users/token/banner?v=3";
+
+  render(
+    <Harness
+      initial={{ ...loaded, profile: { ...loaded.profile, bannerUrl: url, bannerStillUrl: null } }}
+    />,
+  );
+
+  const name = `${loaded.profile.name}'s profile banner`;
+
+  expect(screen.getByRole("img", { name }).getAttribute("src")).toBe(url);
+  fireEvent.click(screen.getByRole("button", { name: "Remove banner" }));
+  await waitFor(() => expect(screen.queryByRole("img", { name })).toBeNull());
+  expect(screen.getByRole("button", { name: "Upload banner" })).toBeTruthy();
+});

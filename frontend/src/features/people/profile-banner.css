@@ -1,0 +1,58 @@
+/* A profile's banner strip, with the avatar over its lower edge (ProfileHero). */
+@layer app {
+  .profile-hero {
+    --profile-hero-avatar: 96px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .profile-hero[data-size="card"] {
+    --profile-hero-avatar: 64px;
+  }
+
+  .profile-banner {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 1;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    /* No banner: a wash of the avatar's own tint, so the strip still reads as theirs. */
+    background: linear-gradient(
+      135deg,
+      light-dark(oklch(88% 0.06 var(--avatar-hue)), oklch(42% 0.1 var(--avatar-hue))),
+      light-dark(
+        oklch(80% 0.09 calc(var(--avatar-hue) + 40)),
+        oklch(32% 0.08 calc(var(--avatar-hue) + 40))
+      )
+    );
+  }
+
+  .profile-hero[data-size="card"] .profile-banner {
+    border-radius: var(--radius-md);
+  }
+
+  .profile-banner-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-hero-avatar {
+    display: inline-flex;
+    margin-top: calc(var(--profile-hero-avatar) * -0.5);
+    border-radius: clamp(4px, calc(var(--profile-hero-avatar) * 0.24), 16px);
+    box-shadow: 0 0 0 4px var(--bg-pane);
+  }
+
+  /* Phones: a taller strip, so a narrow column doesn't flatten it to a sliver. */
+  @media (width < 720px) {
+    .profile-banner {
+      aspect-ratio: 5 / 2;
+    }
+  }
+}

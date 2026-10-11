@@ -1226,6 +1226,28 @@ async fn an_avatar_comes_from_a_direct_upload() {
         .unwrap();
     let signed_id =
         campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    // Only your own upload: one with no uploader, or someone else's, is refused.
+    let ownerless = write(
+        &mut b,
+        Method::PUT,
+        "/api/v1/settings/avatar",
+        json!({"signedId": signed_id}),
+    )
+    .await;
+    assert_eq!(
+        error(&ownerless)["fields"]["signedId"],
+        json!(["must be an image you uploaded"])
+    );
+    super::admin_tests::set_uploader(&a, blob.id, JASON).await;
+    let theirs = write(
+        &mut b,
+        Method::PUT,
+        "/api/v1/settings/avatar",
+        json!({"signedId": signed_id}),
+    )
+    .await;
+    assert_eq!(theirs.status, StatusCode::UNPROCESSABLE_ENTITY);
+    super::admin_tests::set_uploader(&a, blob.id, DAVID).await;
     let attached = spa(
         &mut b,
         Method::PUT,

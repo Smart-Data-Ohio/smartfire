@@ -37,11 +37,13 @@ impl User {
         tx.savepoint(|tx| {
             AgentGrant::revoke_for_user(tx, self.id)?;
             dependencies(tx, self, DependencyPhase::BeforeDestroy)?;
-            if let Some(attachment) = Attachment::find_for(tx.conn(), "User", self.id, "avatar")? {
-                attachment.delete(tx)?;
-                tx.emit_after_commit(Event::PurgeBlob {
-                    blob_id: attachment.blob_id,
-                });
+            for name in ["avatar", "banner"] {
+                if let Some(attachment) = Attachment::find_for(tx.conn(), "User", self.id, name)? {
+                    attachment.delete(tx)?;
+                    tx.emit_after_commit(Event::PurgeBlob {
+                        blob_id: attachment.blob_id,
+                    });
+                }
             }
             // User::Bot registers these associations before User's core ones.
             // Do not call Agent::destroy: Rails deletes the Agent row and preserves its rows.

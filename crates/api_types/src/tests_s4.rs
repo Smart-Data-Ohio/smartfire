@@ -34,6 +34,7 @@ pub(crate) fn agent_user() -> User {
         }),
         agent: Some(badge()),
         updated_at: "2026-10-06T09:16:00.123789Z".into(),
+        banner_url: None,
         ..user()
     }
 }
@@ -211,6 +212,8 @@ fn an_agent_user_carries_its_badge_and_icon() {
             "updatedAt": "2026-10-06T09:16:00.123789Z",
             "accountName": "Scout",
             "pronouns": null,
+            "bannerUrl": null,
+            "bannerStillUrl": null,
         }),
     );
 }
