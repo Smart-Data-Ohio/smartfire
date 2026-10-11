@@ -10,7 +10,7 @@ import {
 } from "../../../mock/s2/sign-in.ts";
 import { auth } from "../../sync/auth.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
-import { FIRST_RUN_PATH, pageExit } from "./auth-navigation.ts";
+import { pageExit } from "./auth-navigation.ts";
 import { domainSentence } from "./sign-in.tsx";
 import { renderAuth, resetSignIn } from "./testing.tsx";
 
@@ -191,10 +191,13 @@ it("can sign in again once Back restores the page from the back/forward cache", 
   expect(signIns).toHaveBeenCalledTimes(1);
 });
 
-it("hands a fresh install to first run", async () => {
+it("hands a fresh install to the SPA's first run", async () => {
   await resetSignIn(network, { firstRunPending: true });
-  await renderAuth("/app/session/new");
 
-  await waitFor(() => expect(replace).toHaveBeenCalledWith(FIRST_RUN_PATH));
-  expect(screen.queryByRole("textbox", { name: "Email address" })).toBeNull();
+  const router = await renderAuth("/app/session/new");
+
+  await waitFor(() => expect(router.pathname()).toBe("/first_run"));
+  expect(await screen.findByRole("heading", { level: 1, name: "Set up Smartfire" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Sign in$/ })).toBeNull();
+  expect(replace).not.toHaveBeenCalled();
 });

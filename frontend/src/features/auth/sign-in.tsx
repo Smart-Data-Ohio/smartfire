@@ -1,8 +1,8 @@
+import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { type AuthNext, auth, type SignedOutBootData } from "../../sync/auth.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
-import { FIRST_RUN_PATH, pageExit } from "./auth-navigation.ts";
 import {
   AuthFooter,
   AuthHeader,
@@ -21,18 +21,19 @@ import { EMAIL_TRANSLATIONS, PASSWORD_TRANSLATIONS } from "./translations.ts";
  * `/app/session/new`: the retained sign-in page (crates/retained_pages/templates/sessions/new.html)
  * in the SPA. Email and password, Google when it is configured, the workspace's name, logo and
  * description, then the public pages and whom to ask for help. A fresh install goes on to first
- * run, as the retained page sends it.
+ * run (the SPA's, at `/app/first_run`), as the retained page sends it to its own.
  */
 export function SignInPage() {
   const { load, retry } = useSignedOutBoot();
+  const navigate = useNavigate();
   const titleId = useId();
   const firstRun = load.status === "ready" && load.boot.firstRunPending;
 
   useDocumentTitle("Sign in");
 
   useEffect(() => {
-    if (firstRun) pageExit.replace(FIRST_RUN_PATH);
-  }, [firstRun]);
+    if (firstRun) void navigate({ to: "/first_run", replace: true });
+  }, [firstRun, navigate]);
 
   if (load.status === "ready" && !firstRun) {
     return <SignInForm boot={load.boot} />;

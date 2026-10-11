@@ -4,12 +4,14 @@ pub enum SignedOutRoute {
     SignIn,
     Transfer,
     Challenge,
+    FirstRun,
 }
 
 pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
     match path {
         "/app/session/new" => Some(SignedOutRoute::SignIn),
         "/app/two_factor/challenge" => Some(SignedOutRoute::Challenge),
+        "/app/first_run" => Some(SignedOutRoute::FirstRun),
         _ => path
             .strip_prefix("/app/session/transfers/")
             .filter(|id| !id.is_empty() && !id.contains('/'))
@@ -34,6 +36,10 @@ mod tests {
             signed_out_route("/app/two_factor/challenge"),
             Some(SignedOutRoute::Challenge)
         );
+        assert_eq!(
+            signed_out_route("/app/first_run"),
+            Some(SignedOutRoute::FirstRun)
+        );
         for path in [
             "/session/new",
             "/app/",
@@ -41,6 +47,8 @@ mod tests {
             "/app/session/transfers/",
             "/app/session/transfers/a/b",
             "/app/two_factor/challenge/extra",
+            "/first_run",
+            "/app/first_run/extra",
         ] {
             assert_eq!(signed_out_route(path), None, "{path}");
         }

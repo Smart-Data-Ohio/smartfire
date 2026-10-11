@@ -6,7 +6,7 @@ pub use campfire_controllers::controllers::spa::*;
 
 #[cfg(test)]
 #[path = "signed_out_contracts_tests.rs"]
-mod signed_out_contracts_tests;
+pub(crate) mod signed_out_contracts_tests;
 
 #[cfg(test)]
 #[path = "spa_tests.rs"]
