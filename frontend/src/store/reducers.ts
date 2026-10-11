@@ -859,6 +859,36 @@ export function setBlocks(state: State, snapshot: BlockList): State {
   return { ...next, messages };
 }
 
+/**
+ * One ignore change, from the sync event or the write's own reply: the person's messages held
+ * collapse (or open) for this viewer. A change no newer than the snapshot or the copy held is
+ * dropped, so the event that echoes a write lands once.
+ */
+export function applyBlockState(state: State, change: BlockState): State {
+  const held = state.ignoredPeople[change.userId];
+
+  if (
+    change.revision <= state.ignoreSnapshotRevision ||
+    (held !== undefined && held.revision >= change.revision)
+  ) {
+    return state;
+  }
+
+  const messages = { ...state.messages };
+
+  for (const message of Object.values(messages)) {
+    if (message.creatorId === change.userId) {
+      messages[message.id] = { ...message, ignored: change.ignoredByMe };
+    }
+  }
+
+  return {
+    ...state,
+    messages,
+    ignoredPeople: { ...state.ignoredPeople, [change.userId]: change },
+  };
+}
+
 function ignoredMessage(state: State, message: MessageDTO): MessageDTO {
   const preference = state.ignoredPeople[message.creatorId];
 
@@ -1143,33 +1173,9 @@ export function applyEvents(
       case "user.updated":
         next = mergeUsers(next, [event.data]);
         break;
-      case "blocks.updated": {
-        const change = event.data;
-        const held = next.ignoredPeople[change.userId];
-
-        if (
-          change.revision <= next.ignoreSnapshotRevision ||
-          (held !== undefined && held.revision >= change.revision)
-        )
-          break;
-        const messages = { ...next.messages };
-
-        for (const message of Object.values(messages)) {
-          if (message.creatorId === change.userId) {
-            messages[message.id] = { ...message, ignored: change.ignoredByMe };
-          }
-        }
-
-        next = {
-          ...next,
-          messages,
-          ignoredPeople: {
-            ...next.ignoredPeople,
-            [change.userId]: change,
-          },
-        };
+      case "blocks.updated":
+        next = applyBlockState(next, event.data);
         break;
-      }
 
       case "message.created":
         next = stopTypingFor(receiveMessage(next, event.data), event.topic, event.data.creatorId);

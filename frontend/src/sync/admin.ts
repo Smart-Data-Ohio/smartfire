@@ -46,7 +46,13 @@ import {
   suspendBot,
   updateBot,
 } from "../api/bot-endpoints.ts";
-import { peopleDirectory, personProfile, setBanned } from "../api/people-endpoints.ts";
+import {
+  blocks,
+  peopleDirectory,
+  personProfile,
+  setBanned,
+  setIgnored,
+} from "../api/people-endpoints.ts";
 import { setDndAllowance } from "../api/settings-endpoints.ts";
 import {
   cancelSlackRun,
@@ -67,6 +73,8 @@ import {
 } from "../api/slack-endpoints.ts";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
+import type { BlockList } from "../gen/BlockList.ts";
+import type { BlockState } from "../gen/BlockState.ts";
 import type { Bot } from "../gen/Bot.ts";
 import type { BotChange } from "../gen/BotChange.ts";
 import type { BotKey } from "../gen/BotKey.ts";
@@ -292,3 +300,27 @@ export const peoplePages = peoplePagesOver({
   setBanned: (userId, banned) => runAction(setBanned(userId, banned)),
   setDndAllowance: (userId, allowed) => runAction(setDndAllowance(userId, allowed)),
 });
+
+/**
+ * Ignoring someone. Each reply lands in the store first, so every timeline collapses (or opens)
+ * their messages at once; the sync echo of the same change is then dropped by its revision, and
+ * refreshes the sidebar's counts.
+ */
+export const ignores = {
+  /** The people you ignore, oldest first; the snapshot also brings the store up to date. */
+  list: (): Promise<BlockList> =>
+    runAction(blocks()).then((snapshot) => {
+      mutations.mergeUsers(snapshot.people.map((person) => person.user));
+      mutations.setBlocks(snapshot);
+
+      return snapshot;
+    }),
+
+  /** Ignores them (`true`) or stops (`false`). */
+  set: (userId: number, ignored: boolean): Promise<BlockState> =>
+    runAction(setIgnored(userId, ignored)).then((change) => {
+      mutations.applyBlockState(change);
+
+      return change;
+    }),
+};

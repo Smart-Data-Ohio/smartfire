@@ -12,6 +12,7 @@ import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { BlockList } from "../gen/BlockList.ts";
+import type { BlockState } from "../gen/BlockState.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
@@ -306,6 +307,7 @@ export const mutations = {
       },
     })),
   setBlocks: (snapshot: BlockList) => apply((state) => reduce.setBlocks(state, snapshot)),
+  applyBlockState: (change: BlockState) => apply((state) => reduce.applyBlockState(state, change)),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
