@@ -1125,53 +1125,63 @@ pub fn ensure_can_administer(c: &mut Ctx) -> Result<()> {
 /// `allow_browser versions: VERSIONS, block: -> { render template: "sessions/incompatible_browser" }`
 pub async fn allow_browser(c: &mut Ctx) -> Result<()> {
     if platform::browser_blocked(c.request.user_agent()) {
-        return halt(render_incompatible_browser(c).await?);
+        return halt(render_incompatible_browser(c)?);
     }
     Ok(())
 }
 
-/// `render template: "sessions/incompatible_browser"` (200). Rendered from a before-action, so
-/// it's HTML whatever the request format. The layout is the controller's: turbo-rails' frame
-/// layout for a Turbo-Frame request, except in controllers that declare their own layout
-/// (`MessagesController` and its `Messages::ByBotsController`), which always use the application
-/// layout.
-async fn render_incompatible_browser(c: &mut Ctx) -> Result {
-    use askama::Template;
-    use campfire_retained::sessions::IncompatibleBrowser;
-
-    let own_layout = c
-        .current::<MatchedRoute>()
-        .is_some_and(|route| {
-            route.endpoint.starts_with("messages#")
-                || route.endpoint.starts_with("messages/by_bots#")
-        });
-    use crate::request_context::{
-        retained_document, retained_page_or_frame_in_any_format,
-    };
-
-    // An explicit `render template:`, so no format lookup: a blocked browser gets this page for
-    // /webmanifest.json, /service-worker.js or `Accept: application/json` alike (verified against
-    // the reference), never a 406. The document is the retained shell. Message controllers still
-    // force that full document when the request asks for a frame.
-    let response = if own_layout {
-        retained_document(c, StatusCode::OK, |ctx| {
-            IncompatibleBrowser { ctx }.render()
-        })
-        .await?
-    } else {
-        retained_page_or_frame_in_any_format(
-            c,
-            StatusCode::OK,
-            |ctx| IncompatibleBrowser { ctx }.render(),
-            |ctx| {
-                let page = IncompatibleBrowser { ctx };
-                campfire_retained::layouts::frame(ctx, page.as_head(), page.as_content())
-            },
-        )
-        .await?
-    };
-    Ok(response.content_type(campfire_kit::response::HTML_UTF8))
+/// `render template: "sessions/incompatible_browser"` (200), as a page of its own. Rendered from
+/// a before-action, so it's this full HTML document whatever the request format, frame or
+/// controller: a blocked browser gets it for /webmanifest.json, /service-worker.js or
+/// `Accept: application/json` alike (verified against the reference), never a 406. The browsers it
+/// is for can't run the SPA, so it loads no script and no stylesheet: its style is inline, under
+/// the request's CSP nonce, and its only requests are the browser logos.
+fn render_incompatible_browser(c: &mut Ctx) -> Result {
+    let title = if platform(c).apple_messages() { "Smartfire" } else { "Unsupported browser" };
+    let nonce = c.content_security_policy_nonce();
+    let html = incompatible_browser_page(title, nonce.as_deref());
+    Ok(c.render_as(StatusCode::OK, campfire_kit::response::HTML_UTF8, html))
 }
+
+fn incompatible_browser_page(title: &str, nonce: Option<&str>) -> String {
+    use std::fmt::Write;
+
+    let nonce = nonce.map(|nonce| format!(" nonce=\"{}\"", campfire_richtext::ruby::html_escape(nonce))).unwrap_or_default();
+    let mut browsers = String::new();
+    for (browser, version) in platform::ALLOW_BROWSER_VERSIONS {
+        let logo = campfire_static_assets::asset_path(&format!("browsers/{browser}.svg"));
+        let name = format!("{}{}", browser[..1].to_ascii_uppercase(), &browser[1..]);
+        write!(
+            browsers,
+            "<li><img src=\"{logo}\" alt=\"\" aria-hidden=\"true\" width=\"56\" height=\"56\"><strong>{name}</strong><span>{version}+</span></li>"
+        )
+        .unwrap();
+    }
+    format!(
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+         <title>{title}</title>\n<style{nonce}>{INCOMPATIBLE_BROWSER_STYLE}</style>\n</head>\n<body>\n\
+         <main>\n<h1>Upgrade to a supported web browser</h1>\n\
+         <p>Smartfire requires a modern web browser. Please use one of the browsers listed below and make sure auto-updates are enabled.</p>\n\
+         <ul>{browsers}</ul>\n</main>\n</body>\n</html>\n"
+    )
+}
+
+/// The page's own style, for browsers that predate the features the rest of the app relies on:
+/// hex colours, physical properties and flexbox with margins, no custom properties, `gap`,
+/// `:has()`, `oklch()` or `@layer`.
+const INCOMPATIBLE_BROWSER_STYLE: &str = "\
+*{box-sizing:border-box}\
+body{margin:0;padding:40px 16px;min-height:100vh;background:#f7f8f9;color:#1c1e24;\
+font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;line-height:1.5}\
+main{max-width:50ch;margin:0 auto;padding:2em;background:#fff;border:1px solid #e2e4e8;border-radius:0.8em;\
+box-shadow:0 0.4em 1.6em rgba(0,0,0,0.18);text-align:center}\
+h1{margin:0 0 1rem;font-size:1.8rem;line-height:1.2}\
+p{margin:0}\
+ul{display:flex;flex-wrap:wrap;justify-content:center;margin:1rem -0.5ch 0;padding:0;list-style:none}\
+li{display:flex;flex-direction:column;align-items:center;width:20%;min-width:8ch;margin:1rem 0.5ch 0}\
+img{display:block;width:7ch;height:auto;margin-bottom:0.5rem}\
+@media (prefers-color-scheme:dark){body{background:#16181c;color:#e7e9ee}main{background:#22252b;border-color:#33373d}}";
 
 // --- SetPlatform -------------------------------------------------------------------------------
 
