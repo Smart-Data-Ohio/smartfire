@@ -2,7 +2,7 @@ import { Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import { useStore } from "../../store/store.ts";
-import { peoplePages } from "../../sync/admin.ts";
+import { ignores, peoplePages } from "../../sync/admin.ts";
 import { directs } from "../../sync/directs.ts";
 import { ActionError } from "../../sync/run.ts";
 import { Avatar } from "../../ui/avatar.tsx";
@@ -17,6 +17,7 @@ import { usePresenceStatus } from "./people.ts";
 import {
   BAN_CONFIRMATION,
   botPage,
+  IGNORE_CONFIRMATION,
   landBan,
   newerUser,
   OWN_TRANSFER_HINT,
@@ -166,6 +167,7 @@ function Profile({
   const [savingDnd, setSavingDnd] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [banning, setBanning] = useState(false);
+  const [ignoring, setIgnoring] = useState(false);
   const mounted = useRef<AbortController | null>(null);
   const held = useStore((state) => state.users[profile.user.id]);
   // Their user as the newest copy has it: a resync may have brought a later one than this page's.
@@ -177,6 +179,11 @@ function Profile({
   // Their DND exception as the store has it, so a change that finished after you left and came
   // back still shows; the page's own copy only until the store has one.
   const dndAllowed = active && !own ? (stored ?? profile.dndAllowed) : null;
+
+  const storedIgnore = useStore((state) => state.ignoredPeople[profile.user.id]?.ignoredByMe);
+  // Whether you ignore them as the store last heard (another session may have changed it), the
+  // page's own copy until it has.
+  const ignored = !own && (storedIgnore ?? profile.ignoredByMe);
 
   // Leaving the page stops a ban's follow-up fetches.
   useEffect(() => {
@@ -237,6 +244,52 @@ function Profile({
       .finally(() => setBanning(false));
   };
 
+  const changeIgnore = (next: boolean) => {
+    setIgnoring(true);
+    ignores
+      .set(user.id, next)
+      .then(
+        (change) => {
+          onChange((current) => ({ ...current, ignoredByMe: change.ignoredByMe }));
+          toast({
+            title: next ? `You're ignoring ${user.name}` : `You stopped ignoring ${user.name}`,
+            tone: "success",
+          });
+        },
+        (error: Error) =>
+          toast({
+            title: next ? `Couldn't ignore ${user.name}` : `Couldn't stop ignoring ${user.name}`,
+            description: error.message,
+            tone: "danger",
+          }),
+      )
+      .finally(() => setIgnoring(false));
+  };
+
+  // Stopping needs no question: it only shows you their messages again.
+  const askIgnore = () =>
+    ignored
+      ? changeIgnore(false)
+      : setAsk({
+          title: `Ignore ${user.name}?`,
+          message: IGNORE_CONFIRMATION,
+          label: `Ignore ${user.name}`,
+          danger: false,
+          run: () => changeIgnore(true),
+        });
+
+  const ignoreButton = own ? null : (
+    <Button
+      variant="secondary"
+      icon={ignored ? "eye" : "eye-off"}
+      aria-pressed={ignored}
+      loading={ignoring}
+      onClick={askIgnore}
+    >
+      {ignored ? "Stop ignoring" : "Ignore"}
+    </Button>
+  );
+
   const askBan = () =>
     setAsk(
       active
@@ -261,6 +314,7 @@ function Profile({
       <div className="person" data-status={user.status}>
         <Avatar name={user.name} userId={user.id} src={user.avatarUrl} size={96} />
         <span className="people-badge">Bot</span>
+        {ignored ? <span className="people-badge">Ignored</span> : null}
         {active ? (
           <div className="person-actions">
             <Button
@@ -282,10 +336,12 @@ function Profile({
                 Manage capability grants
               </Link>
             ) : null}
+            {ignoreButton}
           </div>
         ) : (
           <p className="text-muted">{user.name} is no longer on this account</p>
         )}
+        <Confirm ask={ask} onCancel={() => setAsk(null)} />
       </div>
     );
   }
@@ -312,6 +368,7 @@ function Profile({
         <UserAvatar userId={user.id} size={96} />
       </ProfileHero>
       {user.status === "banned" ? <span className="people-badge">Banned</span> : null}
+      {ignored ? <span className="people-badge">Ignored</span> : null}
       {profile.emailAddress === null ? null : (
         <a className="person-email" href={`mailto:${profile.emailAddress}`}>
           {profile.emailAddress}
@@ -341,6 +398,7 @@ function Profile({
           >
             Message
           </Button>
+          {ignoreButton}
         </div>
       ) : null}
       {profile.transferUrl === null || !active ? null : (
@@ -369,8 +427,8 @@ function Profile({
 
 /**
  * `/app/people/$userId`: someone's page, as the classic `users#show` shows it to this viewer:
- * their status, the DND exception, Message and, for administrators, their email, sign-in link
- * and the ban button. A bot with an agent record opens its agent profile.
+ * their status, the DND exception, Message, Ignore and, for administrators, their email, sign-in
+ * link and the ban button. A bot with an agent record opens its agent profile.
  */
 export function PersonPage({
   userId,
