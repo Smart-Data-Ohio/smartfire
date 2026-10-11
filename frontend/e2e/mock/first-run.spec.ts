@@ -17,16 +17,8 @@ import {
  * the app with a full page load, which the always-signed-in mock then serves.
  */
 
-const AVATAR = join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "..",
-  "fixtures",
-  "files",
-  "workspace_icons",
-  "square_64.png",
-);
+// Inside frontend/ so the sparse e2e checkout has it.
+const AVATAR = join(import.meta.dirname, "..", "fixtures", "images", "square_64.png");
 
 async function configure(
   request: APIRequestContext,
