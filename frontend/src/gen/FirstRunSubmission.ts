@@ -6,8 +6,18 @@
  * `submission` field and the picture in an `avatar` file field. Answers an [`AuthResponse`]:
  * `signedIn` when set up, `navigate` home once the workspace already exists.
  */
-export type FirstRunSubmission = { name: string, emailAddress: string,
+export type FirstRunSubmission = {
 /**
- * Empty leaves the administrator without a password, as the retained form does.
+ * Required: the retained form fails without one (after committing the account).
  */
-password: string, };
+name: string,
+/**
+ * Omitted (or null) leaves the administrator without an email address, as a retained
+ * submission without the field does; an empty string is kept as one.
+ */
+emailAddress?: string,
+/**
+ * Omitted, null or empty leaves the administrator without a password, as the retained
+ * form does.
+ */
+password?: string, };

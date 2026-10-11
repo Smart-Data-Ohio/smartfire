@@ -191,8 +191,9 @@ async fn rows(app: &TestApp) -> Value {
 #[derive(Clone, Copy)]
 struct Case {
     name: &'static str,
-    email: &'static str,
-    password: &'static str,
+    /// `None` leaves the field out of the submission altogether.
+    email: Option<&'static str>,
+    password: Option<&'static str>,
     avatar: bool,
 }
 
@@ -204,7 +205,13 @@ async fn submit(browser: &mut Browser<'_>, case: Case, json: bool) -> (Reply, St
         let state = state.json();
         assert_eq!(state["kind"], "pending");
         let token = state["csrfToken"].as_str().unwrap().to_owned();
-        let submission = json!({"name": case.name, "emailAddress": case.email, "password": case.password});
+        let mut submission = json!({"name": case.name});
+        if let Some(email) = case.email {
+            submission["emailAddress"] = json!(email);
+        }
+        if let Some(password) = case.password {
+            submission["password"] = json!(password);
+        }
         let request = if case.avatar {
             Req::new(Method::POST, "/api/v1/first_run")
                 .header("accept", "application/json")
@@ -219,10 +226,13 @@ async fn submit(browser: &mut Browser<'_>, case: Case, json: bool) -> (Reply, St
     } else {
         assert_eq!(browser.get("/first_run").await.status, StatusCode::OK);
         let fields = [
-            ("user[name]", case.name),
-            ("user[email_address]", case.email),
-            ("user[password]", case.password),
-        ];
+            Some(("user[name]", case.name)),
+            case.email.map(|email| ("user[email_address]", email)),
+            case.password.map(|password| ("user[password]", password)),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
         let request = if case.avatar {
             Req::new(Method::POST, "/first_run")
                 .multipart(&fields, ("user[avatar]", "me.png", "image/png", AVATAR))
@@ -246,10 +256,15 @@ async fn submit(browser: &mut Browser<'_>, case: Case, json: bool) -> (Reply, St
 #[tokio::test]
 async fn json_first_run_creates_the_same_rows_cookies_and_session_as_the_form() {
     for case in [
-        Case { name: "New Person", email: "new@37signals.com", password: "secret123456", avatar: false },
-        Case { name: "New Person", email: "new@37signals.com", password: "secret123456", avatar: true },
-        Case { name: "", email: "new@37signals.com", password: "secret123456", avatar: false },
-        Case { name: "New Person", email: "new@37signals.com", password: "", avatar: false },
+        Case { name: "New Person", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: false },
+        Case { name: "New Person", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: true },
+        Case { name: "", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: false },
+        Case { name: "New Person", email: Some("new@37signals.com"), password: Some(""), avatar: false },
+        // Fields the retained form accepts when absent (vectors/users_first_run.json
+        // missing_email, missing_password): no email address, no password.
+        Case { name: "New Person", email: None, password: Some("secret123456"), avatar: false },
+        Case { name: "New Person", email: Some("new@37signals.com"), password: None, avatar: false },
+        Case { name: "New Person", email: None, password: None, avatar: true },
     ] {
         let mut outcomes = Vec::new();
         for json in [false, true] {
@@ -276,7 +291,18 @@ async fn json_first_run_creates_the_same_rows_cookies_and_session_as_the_form() 
             usize::from(case.avatar),
             "{rows}"
         );
-        assert_eq!(outcomes[0], outcomes[1], "{}/{}", case.name, case.password);
+        // Omitted stays NULL, never an empty string standing in for it.
+        assert_eq!(
+            rows["users"][0][2],
+            case.email.map_or(Value::Null, |email| json!(email)),
+            "{rows}"
+        );
+        assert_eq!(
+            rows["users"][0][5],
+            json!(i64::from(case.password.is_some_and(|password| !password.is_empty()))),
+            "{rows}"
+        );
+        assert_eq!(outcomes[0], outcomes[1], "{}/{:?}/{:?}", case.name, case.email, case.password);
     }
 }
 

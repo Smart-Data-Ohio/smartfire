@@ -109,8 +109,8 @@ async fn create_json_response(c: &mut Ctx) -> Result {
     }
     let submission = Submission {
         name: Some(body.name),
-        email_address: Some(body.email_address),
-        password: Some(body.password),
+        email_address: body.email_address,
+        password: body.password,
         avatar,
     };
     set_up(c, submission, ResponseMode::Json).await

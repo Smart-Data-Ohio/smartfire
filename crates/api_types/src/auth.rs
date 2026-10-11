@@ -35,10 +35,18 @@ pub struct ChallengeSubmission {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct FirstRunSubmission {
+    /// Required: the retained form fails without one (after committing the account).
     pub name: String,
-    pub email_address: String,
-    /// Empty leaves the administrator without a password, as the retained form does.
-    pub password: String,
+    /// Omitted (or null) leaves the administrator without an email address, as a retained
+    /// submission without the field does; an empty string is kept as one.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email_address: Option<String>,
+    /// Omitted, null or empty leaves the administrator without a password, as the retained
+    /// form does.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
 }
 
 /// `GET /api/v1/first_run`: whether the workspace can still be set up.
@@ -237,10 +245,29 @@ mod tests {
         assert_wire(
             &FirstRunSubmission {
                 name: "Ada".into(),
-                email_address: "ada@example.com".into(),
-                password: String::new(),
+                email_address: Some("ada@example.com".into()),
+                password: Some(String::new()),
             },
             json!({"name":"Ada","emailAddress":"ada@example.com","password":""}),
+        );
+        assert_wire(
+            &FirstRunSubmission {
+                name: "Ada".into(),
+                email_address: None,
+                password: None,
+            },
+            json!({"name":"Ada"}),
+        );
+        assert_eq!(
+            serde_json::from_value::<FirstRunSubmission>(
+                json!({"name":"Ada","emailAddress":null,"password":null})
+            )
+            .unwrap(),
+            FirstRunSubmission {
+                name: "Ada".into(),
+                email_address: None,
+                password: None,
+            }
         );
         assert_wire(
             &FirstRunState::Pending {
