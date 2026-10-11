@@ -3,17 +3,13 @@ import type { State } from "./state.ts";
 import { useStore } from "./store.ts";
 
 /**
- * The newest copy of a room the store holds: its open detail or its sidebar row, whichever the
- * server touched last. A flag change reaches the row first (sync, or a write's reply); the detail
- * catches up on the room's next read.
+ * The room as the store holds it for its flag: the sidebar row, which sync keeps current and a
+ * write's reply can't overwrite once sync has touched it; the open detail only for a room with no
+ * row (one the viewer isn't in). Timestamps can't pick between the two: they tie to the
+ * millisecond, and a tie says nothing about which is current.
  */
 export function storedRoom(state: State, roomId: number): Room | null {
-  const detail = state.rooms[roomId]?.detail?.room ?? null;
-  const row = state.sidebar.rows[roomId]?.room ?? null;
-
-  if (detail === null || row === null) return detail ?? row;
-
-  return Date.parse(row.updatedAt) > Date.parse(detail.updatedAt) ? row : detail;
+  return state.sidebar.rows[roomId]?.room ?? state.rooms[roomId]?.detail?.room ?? null;
 }
 
 /** Whether the store has the room down as an announcement room. */

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Clock, Effect } from "effect";
 import { FakeApi, sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import type { Room } from "../gen/Room.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
@@ -57,6 +57,42 @@ describe("announcement flag writes", () => {
       // A later "off" changes nothing either.
       mutations.applyEvents([synced(false, OFF_AT)], Date.now());
       expect(flagged()).toBe(false);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("sync that lands while the reply is being landed keeps its touches", () =>
+    Effect.gen(function* () {
+      mutations.loadSidebar(sidebarFixture([{ ...row, unreadCount: 3 }]), sidebarRowClock());
+
+      const fake = yield* FakeApi;
+
+      yield* fake.reply(`PUT /rooms/${NEWS}/announcement`, room(true, ON_AT));
+
+      // The room is read on another device just as the reply is about to land.
+      const clock = yield* Clock.Clock;
+
+      const reading: Clock.Clock = {
+        currentTimeMillisUnsafe: () => clock.currentTimeMillisUnsafe(),
+        currentTimeMillis: Effect.sync(() => {
+          mutations.applyEvents(
+            [{ seq: 0, topic: "user:7", type: "room.read", data: { roomId: NEWS } }],
+            clock.currentTimeMillisUnsafe(),
+          );
+
+          return clock.currentTimeMillisUnsafe();
+        }),
+        currentTimeNanosUnsafe: () => clock.currentTimeNanosUnsafe(),
+        currentTimeNanos: clock.currentTimeNanos,
+        monotonicTimeNanosUnsafe: () => clock.monotonicTimeNanosUnsafe(),
+        monotonicTimeNanos: clock.monotonicTimeNanos,
+        sleep: (duration) => clock.sleep(duration),
+      };
+
+      yield* announcements
+        .setAnnouncement(NEWS, true)
+        .pipe(Effect.provideService(Clock.Clock, reading));
+
+      expect(store.getState().sidebar.rows[NEWS]?.unreadCount).toBe(0);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
