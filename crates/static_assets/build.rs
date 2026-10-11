@@ -13,8 +13,11 @@ const VERSION: &[u8] = b"1.0";
 fn main() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
+    // Absolute paths: ci/with-release-inputs.sh builds from a temporary copy that shares this
+    // target directory. Relative paths would resolve against whichever copy builds next and look
+    // fresh, leaving embedded.rs pointing into the deleted copy; absolute ones go missing and rerun.
     for path in ["media", "public", "legacy-digests.json"] {
-        println!("cargo:rerun-if-changed={path}");
+        println!("cargo:rerun-if-changed={}", root.join(path).display());
     }
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
     let mut inputs = BTreeMap::new();
@@ -60,8 +63,8 @@ fn main() {
         let identifier = format!("ASSET_{index}");
         writeln!(
             code,
-            "static {identifier}: &[u8] = include_bytes!({:?});",
-            source.to_str().unwrap()
+            "static {identifier}: &[u8] = {};",
+            include(&root, source)
         )
         .unwrap();
         served.insert(format!("/assets/{}", manifest[logical]), identifier.clone());
@@ -89,8 +92,8 @@ fn main() {
         let identifier = format!("PUBLIC_{index}");
         writeln!(
             code,
-            "static {identifier}: &[u8] = include_bytes!({:?});",
-            file.to_str().unwrap()
+            "static {identifier}: &[u8] = {};",
+            include(&root, file)
         )
         .unwrap();
         served.insert(format!("/{relative}"), identifier);
@@ -135,6 +138,16 @@ fn main() {
     )
     .unwrap();
     fs::write(out.join("embedded.rs"), code).unwrap();
+}
+
+/// `include_bytes!` relative to the compiling crate's manifest directory, so the generated code
+/// never names the directory the build script happened to run in.
+fn include(root: &Path, file: &Path) -> String {
+    let relative = file.strip_prefix(root).unwrap().to_str().unwrap();
+    format!(
+        "include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), {:?}))",
+        format!("/{relative}")
+    )
 }
 
 fn files(directory: &Path) -> Vec<PathBuf> {
