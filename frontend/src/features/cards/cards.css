@@ -1,6 +1,6 @@
 /*
  * Cards under a message (S3): polls, events, GitHub pull requests, posts on X, Fizzy cards,
- * quotes, LinkedIn posts, link previews and Drive files. One raised surface for all of them,
+ * quotes, LinkedIn posts, link previews, Drive files and webhook embeds. One raised surface for all of them,
  * the same ring and corner as a file attachment, capped at a readable width; every colour is a
  * token, so both themes follow.
  */
@@ -1241,5 +1241,76 @@
     inline-size: 1.5rem;
     block-size: 1.5rem;
     object-fit: contain;
+  }
+
+  /* A webhook's embed: plain text in Discord's layout, its colour (if any) on the left edge. */
+  .webhook-embed {
+    gap: var(--space-1-5);
+    border-left: 4px solid var(--embed-color, var(--border-strong));
+    border-radius: var(--radius-sm) var(--radius-md) var(--radius-md) var(--radius-sm);
+  }
+
+  .webhook-embed-title {
+    font-weight: var(--weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  a.webhook-embed-title {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a.webhook-embed-title:hover {
+    text-decoration: underline;
+  }
+
+  .webhook-embed-description {
+    margin: 0;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  .webhook-embed-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+    margin: 0;
+  }
+
+  .webhook-embed-field {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .webhook-embed-field[data-inline] {
+    grid-column: auto;
+  }
+
+  .webhook-embed-field dt {
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  .webhook-embed-field dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  .webhook-embed-footer {
+    margin: 0;
+  }
+
+  /* Phones: inline fields stack, three columns don't fit a narrow card. */
+  @media (width < 720px) {
+    .webhook-embed-fields {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .webhook-embed-field[data-inline] {
+      grid-column: 1 / -1;
+    }
   }
 }

@@ -24,7 +24,11 @@ import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
 import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { CancelEvent } from "../gen/CancelEvent.ts";
+import type { ChannelWebhook } from "../gen/ChannelWebhook.ts";
+import type { ChannelWebhookCredential } from "../gen/ChannelWebhookCredential.ts";
+import type { ChannelWebhookList } from "../gen/ChannelWebhookList.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
+import type { CreateChannelWebhook } from "../gen/CreateChannelWebhook.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
 import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
@@ -77,6 +81,7 @@ import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateBoardTagPolicy } from "../gen/UpdateBoardTagPolicy.ts";
+import type { UpdateChannelWebhook } from "../gen/UpdateChannelWebhook.ts";
 import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
@@ -493,6 +498,29 @@ const rooms = {
     runAction(roomActions.inboundEmail(roomId)),
   rotateInboundEmail: (roomId: number): Promise<InboundEmail> =>
     runAction(roomActions.rotateInboundEmail(roomId)),
+  channelWebhooks: (roomId: number): Promise<ChannelWebhookList> =>
+    runAction(roomActions.channelWebhooks(roomId)),
+  /** The credential is for one-time display; callers must not keep it anywhere lasting. */
+  createChannelWebhook: (
+    roomId: number,
+    body: CreateChannelWebhook,
+  ): Promise<ChannelWebhookCredential> => runAction(roomActions.createChannelWebhook(roomId, body)),
+  updateChannelWebhook: (
+    roomId: number,
+    webhookId: number,
+    body: UpdateChannelWebhook,
+  ): Promise<ChannelWebhook> =>
+    runAction(roomActions.updateChannelWebhook(roomId, webhookId, body)),
+  deleteChannelWebhook: (roomId: number, webhookId: number): Promise<void> =>
+    runAction(roomActions.deleteChannelWebhook(roomId, webhookId)),
+  regenerateChannelWebhook: (
+    roomId: number,
+    webhookId: number,
+  ): Promise<ChannelWebhookCredential> =>
+    runAction(roomActions.regenerateChannelWebhook(roomId, webhookId)),
+  /** The test message arrives in the room over sync like any other post. */
+  testChannelWebhook: (roomId: number, webhookId: number): Promise<void> =>
+    runAction(roomActions.testChannelWebhook(roomId, webhookId)).then(() => undefined),
 };
 
 /**

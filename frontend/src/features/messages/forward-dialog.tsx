@@ -14,6 +14,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { plainText } from "./commands.ts";
 import { filterDestinations, MAX_FORWARDS, targetKey } from "./forward-targets.ts";
 import { fileSummary, messageFiles } from "./message-files.ts";
+import { displayedAuthor } from "./webhook-attribution.ts";
 
 interface ForwardDialogProps {
   readonly message: MessageDTO;
@@ -30,7 +31,13 @@ type Load =
 const DONE_DWELL_MS = 900;
 
 function Preview({ message }: { readonly message: MessageDTO }) {
-  const author = store.getState().users[message.creatorId]?.name ?? "Someone";
+  const shown = displayedAuthor(message);
+
+  const author =
+    shown.kind === "webhook"
+      ? shown.name
+      : (store.getState().users[shown.userId]?.name ?? "Someone");
+
   const text = plainText(message);
 
   return (

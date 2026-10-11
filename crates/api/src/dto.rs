@@ -381,6 +381,7 @@ pub fn room(room: &Room) -> api::Room {
         created_at: time(room.created_at),
         updated_at: time(room.updated_at),
         topic: room.topic.clone(),
+        voice_bitrate: room.voice_bitrate,
         announcement: room.announcement,
     }
 }

@@ -103,6 +103,7 @@ import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createWorkLinks } from "./s6/work-links.ts";
 import { createAnnouncements } from "./s8/announcements.ts";
+import { createChannelWebhooks } from "./s8/channel-webhooks.ts";
 import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomIntegrations } from "./s8/room-integrations.ts";
@@ -579,6 +580,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         createdAt,
         updatedAt: createdAt,
         topic: null,
+        voiceBitrate: null,
         announcement: false,
       },
       memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
@@ -1025,6 +1027,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createRoomManagement(ctx, admin, huddles).routes,
     ...createRoomIntegrations(ctx).routes,
     ...createAnnouncements(ctx).routes,
+    ...createChannelWebhooks(ctx).routes,
     ...events.routes,
     ...huddles.routes,
     ...cards.routes,

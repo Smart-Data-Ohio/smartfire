@@ -462,4 +462,41 @@ describe("room management mock", () => {
       { roomId: solo.room.id, deleted: true },
     );
   });
+
+  it("stores a voice bitrate on PATCH, clears it with null, and refuses other values", async () => {
+    const { server } = harness();
+    const path = `/api/v1/rooms/${rooms.quiet}`;
+
+    const set = await expectStatus<RoomMutation>(
+      server,
+      "PATCH",
+      path,
+      { type: "open", voiceBitrate: 384_000 },
+      200,
+    );
+
+    expect(set.room.voiceBitrate).toBe(384_000);
+
+    const edit = await get<{ voiceBitrate: number | null }>(
+      server,
+      `/api/v1/rooms/${rooms.quiet}/edit`,
+    );
+
+    expect(edit.voiceBitrate).toBe(384_000);
+
+    const cleared = await expectStatus<RoomMutation>(
+      server,
+      "PATCH",
+      path,
+      { type: "open", voiceBitrate: null },
+      200,
+    );
+
+    expect(cleared.room.voiceBitrate).toBeNull();
+
+    const refused = await send(server, "PATCH", path, { type: "open", voiceBitrate: 12345 });
+
+    expect(refused.status).toBe(422);
+    expect(field(field(refused.json, "error"), "_tag")).toBe("Validation");
+  });
 });

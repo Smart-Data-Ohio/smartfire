@@ -106,6 +106,7 @@ test("phone settings reach the Announcements tab without overflowing", async ({
   await expect(
     dialog.getByText("There are no announcement channels you're in to follow."),
   ).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  // Six settings tabs are wider than the sheet: their strip scrolls sideways on purpose.
+  await expectNoHorizontalOverflow(page, { allowScroll: ".room-form .t-tabs" });
   await page.screenshot({ path: testInfo.outputPath("settings-phone.png") });
 });

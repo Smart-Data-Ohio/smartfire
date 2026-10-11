@@ -853,6 +853,7 @@ export function seedWorld(now: number, random: Random): World {
         createdAt,
         updatedAt: newest === undefined ? createdAt : newest.createdAt,
         topic: null,
+        voiceBitrate: null,
         announcement: false,
       },
       memberIds: [...seed.memberIds],

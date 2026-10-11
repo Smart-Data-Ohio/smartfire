@@ -26,6 +26,7 @@ function credentials(roomId: number, canPublish = true): HuddleCredentials {
     roomId,
     roomName: `Room ${roomId}`,
     canPublish,
+    audioBitrateTarget: 48_000,
   };
 }
 

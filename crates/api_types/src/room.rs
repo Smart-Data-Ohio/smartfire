@@ -17,6 +17,8 @@ pub struct Room {
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
     pub topic: Option<String>,
+    /// Configured audio target in bits per second; null uses the current huddle default.
+    pub voice_bitrate: Option<i64>,
     #[serde(default)]
     #[ts(as = "Option<bool>", optional)]
     pub announcement: bool,

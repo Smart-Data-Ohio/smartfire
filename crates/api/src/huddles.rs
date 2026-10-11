@@ -274,6 +274,7 @@ async fn create_huddle(c: &mut Ctx) -> Result {
         room_id: room.id,
         room_name,
         can_publish,
+        audio_bitrate_target: room.audio_bitrate_target(),
     };
     c.json(StatusCode::OK, &credentials)
 }

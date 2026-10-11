@@ -65,6 +65,17 @@ export function AgentBadgeFor({
   );
 }
 
+/** Discord's APP tag beside a room webhook's name, where its message or a forward of one shows it. */
+export function AppTag() {
+  return (
+    <span className="agent-badges">
+      <span className="agent-badge" data-tone="app" title="Posted by a webhook">
+        App
+      </span>
+    </span>
+  );
+}
+
 function AgentTag({ kind }: { readonly kind: string }) {
   const icon = agentKindIcon(kind);
   const label = agentKindLabel(kind);

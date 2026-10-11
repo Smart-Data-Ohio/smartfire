@@ -1,9 +1,11 @@
 import { Suspense } from "react";
+import type { MessageWebhook } from "../../gen/MessageWebhook.ts";
 import { formatFull, formatTime } from "../../lib/time.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { actions } from "../../sync/runtime.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
+import { Avatar } from "../../ui/avatar.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { AgentProfileLink } from "../agents/agent-link.tsx";
@@ -19,7 +21,8 @@ import {
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
 import { useViewerId } from "../messages/use-message.ts";
-import { AgentBadge } from "../people/agent-badge.tsx";
+import { displayedAuthor, webhookName } from "../messages/webhook-attribution.ts";
+import { AgentBadge, AppTag } from "../people/agent-badge.tsx";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ThreadIndicator } from "../threads/thread-indicator.tsx";
@@ -38,18 +41,32 @@ interface HeaderProps {
   readonly createdAt: string;
   readonly edited: boolean;
   readonly published?: boolean | undefined;
+  /** Set when a room webhook posted it: the name it posted under replaces the author's. */
+  readonly webhook?: MessageWebhook | null;
 }
 
-/** Name (an agent's opens its profile), agent badge and time: the first row of a group. */
-function MessageHeader({ creatorId, createdAt, edited, published }: HeaderProps) {
+/**
+ * Name (an agent's opens its profile), agent badge and time: the first row of a group. A webhook's
+ * message shows the webhook's name and Discord's APP tag instead, with no profile to open.
+ */
+function MessageHeader({ creatorId, createdAt, edited, published, webhook = null }: HeaderProps) {
   const user = useUser(creatorId);
 
   return (
     <header className="message-header">
-      <AgentProfileLink userId={creatorId}>
-        <span className="message-author">{user?.name ?? UNKNOWN_NAME}</span>
-      </AgentProfileLink>
-      <AgentBadge userId={creatorId} />
+      {webhook === null ? (
+        <>
+          <AgentProfileLink userId={creatorId}>
+            <span className="message-author">{user?.name ?? UNKNOWN_NAME}</span>
+          </AgentProfileLink>
+          <AgentBadge userId={creatorId} />
+        </>
+      ) : (
+        <>
+          <span className="message-author">{webhookName(webhook)}</span>
+          <AppTag />
+        </>
+      )}
       <Tooltip content={formatFull(createdAt)} describe={false}>
         <time className="message-time tabular" dateTime={createdAt} tabIndex={-1}>
           {formatTime(createdAt)}
@@ -65,14 +82,26 @@ function Gutter({
   creatorId,
   createdAt,
   groupStart,
+  webhook = null,
 }: {
   readonly creatorId: number;
   readonly createdAt: string;
   readonly groupStart: boolean;
+  readonly webhook?: MessageWebhook | null;
 }) {
   return (
     <div className="message-gutter">
-      {groupStart ? (
+      {groupStart && webhook !== null ? (
+        // The webhook's own picture, else its initials: its bot account isn't listed anywhere,
+        // so the store may not hold it.
+        <Avatar
+          name={webhookName(webhook)}
+          userId={creatorId}
+          size={36}
+          decorative
+          {...(webhook.avatarUrl === null ? {} : { src: webhook.avatarUrl })}
+        />
+      ) : groupStart ? (
         <AgentProfileLink userId={creatorId} duplicate>
           <UserAvatar userId={creatorId} size={36} decorative />
         </AgentProfileLink>
@@ -116,7 +145,12 @@ export function MessageRow({
   const streaming = message.streaming && isAgent(creator);
   const row = useRowInteractions(message, inThread, onNavigate);
   const edited = message.editedAt !== null;
-  const name = creator?.name ?? UNKNOWN_NAME;
+
+  // Only a message the webhook posted itself: a forward of one, at any depth, is the forwarder's.
+  const author = displayedAuthor(message);
+  const webhook = author.kind === "webhook" ? author.webhook : null;
+  const name = author.kind === "webhook" ? author.name : (creator?.name ?? UNKNOWN_NAME);
+
   // A pinned message, a reply or an announcement copy always shows who wrote it, under its flag,
   // quote or source line.
   const copy = message.announcementSource != null;
@@ -143,7 +177,12 @@ export function MessageRow({
       aria-label={`${name}, ${formatTime(message.createdAt)}`}
       {...row.rowProps}
     >
-      <Gutter creatorId={message.creatorId} createdAt={message.createdAt} groupStart={header} />
+      <Gutter
+        creatorId={message.creatorId}
+        createdAt={message.createdAt}
+        groupStart={header}
+        webhook={webhook}
+      />
       <div className="message-main">
         <MessageFlags pinned={message.pinned} saved={row.saved} />
         <AnnouncementOrigin source={message.announcementSource} />
@@ -154,6 +193,7 @@ export function MessageRow({
             createdAt={message.createdAt}
             edited={edited}
             published={message.published}
+            webhook={webhook}
           />
         ) : null}
         {streaming ? (
