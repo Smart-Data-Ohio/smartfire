@@ -1,3 +1,4 @@
+import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
 import type { AccountSettings } from "../../gen/AccountSettings.ts";
 import type { RememberedDevice } from "../../gen/RememberedDevice.ts";
@@ -37,6 +38,9 @@ const TWO_FACTOR_ID = "settings-two-factor";
 /** The sign-in link group, likewise. */
 const TRANSFER_ID = "settings-transfer";
 
+/** Where the setup screen returns once two-step sign-in is set up. */
+const SECURITY_PATH = "/app/settings/security";
+
 /**
  * Where focus lands when a two-step dialog closes and its opener has gone (a forgotten browser's
  * button, or the confirmation that made new codes): the first remaining Forget, else the group's
@@ -75,7 +79,8 @@ function fieldRefusal(error: Error): boolean {
 /**
  * Security: two-step sign-in (new backup codes, turning it off, forgetting remembered browsers,
  * each confirmed with a code or password as the classic profile asks) and the private link that
- * signs you in on another device. Setting two-step sign-in up stays on the classic setup page.
+ * signs you in on another device. Setting two-step sign-in up opens the SPA's setup screen, which
+ * comes back here.
  */
 export function SecuritySection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -134,14 +139,20 @@ function TwoFactorGroup({ twoFactor, onChange, onStale }: TwoFactorGroupProps) {
   const [ask, setAsk] = useState<Ask | null>(null);
   const [codes, setCodes] = useState<readonly string[] | null>(null);
   const now = useNow();
+  const navigate = useNavigate();
 
   if (twoFactor.confirmedAt === null) {
     return (
       <SettingsGroup id={TWO_FACTOR_ID} title="Two-step sign-in" description="Not set up yet.">
         <div className="settings-actions">
-          <a className="button" data-variant="primary" href="/two_factor_setup">
+          <Link
+            className="button"
+            data-variant="primary"
+            to="/two_factor/setup"
+            search={{ return_to: SECURITY_PATH }}
+          >
             Set up two-step sign-in
-          </a>
+          </Link>
         </div>
       </SettingsGroup>
     );
@@ -161,8 +172,13 @@ function TwoFactorGroup({ twoFactor, onChange, onStale }: TwoFactorGroupProps) {
           setCodes(reply.codes);
         });
       case "disable":
+        // The server swapped in an unverified session: setup is the only way on from here.
         return settingsActions.disableTwoFactor(reauth).then(() => {
-          window.location.assign("/two_factor_setup");
+          void navigate({
+            to: "/two_factor/setup",
+            search: { return_to: SECURITY_PATH, required: true },
+            replace: true,
+          });
         });
       case "forget":
         return settingsActions.forgetDevices(kind.device.id, reauth).then((change) => {

@@ -57,8 +57,10 @@ export const SETUP_PROFILE = "http://localhost/users/me/profile";
 export const SIGNED_OUT_LOCATION = "http://localhost/";
 
 /** The enrollment gate's refusal, as `enforce_two_factor_for_restored_session` answers JSON. */
+const TWO_FACTOR_REQUIRED = "TwoFactorRequired" satisfies ApiError["_tag"];
+
 const SETUP_REQUIRED: ApiError = {
-  _tag: "TwoFactorRequired",
+  _tag: TWO_FACTOR_REQUIRED,
   message: "Set up two-step sign-in to continue",
   requirement: { kind: "setup", location: "http://localhost/two_factor_setup" },
 };

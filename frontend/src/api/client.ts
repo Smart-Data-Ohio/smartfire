@@ -309,8 +309,10 @@ function readFailure(
     }
 
     // The enrollment gate: the caller still fails, and the shell routes to the setup screen.
-    if (Option.isSome(decoded) && decoded.value instanceof TwoFactorRequired) {
-      yield* Effect.sync(() => reportTwoFactorRequirement(decoded.value.requirement));
+    const refusal = Option.getOrUndefined(decoded);
+
+    if (refusal instanceof TwoFactorRequired) {
+      yield* Effect.sync(() => reportTwoFactorRequirement(refusal.requirement));
     }
 
     return yield* Option.getOrElse(decoded, () => fallback);
