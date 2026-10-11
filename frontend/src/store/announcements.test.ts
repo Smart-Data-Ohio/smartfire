@@ -93,4 +93,60 @@ describe("the stored announcement flag", () => {
     expect(store.getState().sidebar.rows[NEWS]).toBeUndefined();
     expect(isAnnouncementRoom(store.getState(), NEWS)).toBe(false);
   });
+
+  describe("a detail newer than the row keeps its own flag when the row leaves", () => {
+    const ROW_AT = "2026-10-11T10:00:00.000Z";
+    const DETAIL_AT = "2026-10-11T10:01:00.000Z";
+
+    const seed = () => {
+      const row = sidebarRowFixture(NEWS, "news");
+      const detail = roomDetailFixture(NEWS);
+
+      mutations.loadSidebar(
+        sidebarFixture([{ ...row, room: { ...row.room, announcement: true, updatedAt: ROW_AT } }]),
+        sidebarRowClock(),
+      );
+      mutations.setRoomDetail(
+        { ...detail, room: { ...detail.room, announcement: false, updatedAt: DETAIL_AT } },
+        beginRoomRequest(),
+      );
+    };
+
+    const expectDetailKept = () => {
+      expect(store.getState().sidebar.rows[NEWS]).toBeUndefined();
+      expect(store.getState().rooms[NEWS]?.detail?.room).toMatchObject({
+        announcement: false,
+        updatedAt: DETAIL_AT,
+      });
+      expect(isAnnouncementRoom(store.getState(), NEWS)).toBe(false);
+    };
+
+    it("on sidebar.row.removed", () => {
+      seed();
+      mutations.applyEvents(
+        [
+          {
+            seq: 0,
+            topic: "user:7",
+            type: "sidebar.row.removed",
+            data: { roomId: NEWS, refreshRoom: true },
+          },
+        ],
+        Date.now(),
+      );
+      expectDetailKept();
+    });
+
+    it("when a loaded sidebar drops the row", () => {
+      seed();
+      mutations.loadSidebar(sidebarFixture([]), sidebarRowClock());
+      expectDetailKept();
+    });
+
+    it("when a resync drops the row", () => {
+      seed();
+      mutations.resyncSidebar(sidebarFixture([]), sidebarRowClock());
+      expectDetailKept();
+    });
+  });
 });

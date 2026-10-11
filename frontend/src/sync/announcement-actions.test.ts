@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Effect } from "effect";
-import { FakeApi, sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
+import { FakeApi, roomDetailFixture, sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import type { Room } from "../gen/Room.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { isAnnouncementRoom } from "../store/announcements.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import * as announcements from "./announcement-actions.ts";
+import * as rooms from "./room-actions.ts";
 
 const NEWS = 5;
 
@@ -123,6 +124,29 @@ describe("announcement flag writes", () => {
       yield* announcements.setAnnouncement(NEWS, true);
       expect(flagged()).toBe(true);
       expect(store.getState().sidebar.rows[NEWS]?.room.updatedAt).toBe(ON_AT);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("a management reply that removes the row keeps its newer detail's flag", () =>
+    Effect.gen(function* () {
+      mutations.loadSidebar(
+        sidebarFixture([{ ...row, room: room(true, ON_AT) }]),
+        sidebarRowClock(),
+      );
+
+      const fake = yield* FakeApi;
+      const base = roomDetailFixture(NEWS);
+      const detail = { ...base, room: { ...base.room, announcement: false, updatedAt: OFF_AT } };
+
+      yield* fake.reply(`PATCH /rooms/${NEWS}`, { room: detail.room, detail, row: null });
+      yield* rooms.update(NEWS, { type: "open" });
+
+      expect(store.getState().sidebar.rows[NEWS]).toBeUndefined();
+      expect(store.getState().rooms[NEWS]?.detail?.room).toMatchObject({
+        announcement: false,
+        updatedAt: OFF_AT,
+      });
+      expect(flagged()).toBe(false);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });

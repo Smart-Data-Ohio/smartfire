@@ -1063,9 +1063,10 @@ export function setRoomUnavailable(state: State, roomId: number, keepRow = false
 
 /**
  * A row leaving hands its announcement flag to the room's detail, which then stands for the room
- * (`storedRoom`): the row was the flag's authority, and the detail may be an older read. Without
- * this, the detail's older flag would come back until the room is read again, or for good if that
- * read fails.
+ * (`storedRoom`), unless the detail is strictly newer than the row: an older read, or one from
+ * the same millisecond (the row is the authority on a tie), would otherwise bring back a stale
+ * flag until the room is read again, or for good if that read fails. A newer detail, such as a
+ * management reply that removes the row, keeps its own. With no usable timestamp, nothing moves.
  */
 function keepRowFlag(state: State, row: SidebarRow | undefined): State {
   const loaded = row === undefined ? undefined : state.rooms[row.room.id];
@@ -1076,6 +1077,11 @@ function keepRowFlag(state: State, row: SidebarRow | undefined): State {
   const announcement = row.room.announcement;
 
   if (announcement === undefined || detail.room.announcement === announcement) return state;
+
+  const rowAt = Date.parse(row.room.updatedAt);
+  const detailAt = Date.parse(detail.room.updatedAt);
+
+  if (Number.isNaN(rowAt) || Number.isNaN(detailAt) || detailAt > rowAt) return state;
 
   return {
     ...state,
