@@ -853,9 +853,24 @@
     animation: sidebar-ghost-lift var(--duration-small) var(--ease-spring-soft);
   }
 
-  .sidebar-drag-ghost[data-kind="category"] {
+  .sidebar-drag-ghost[data-kind="category"],
+  .sidebar-drag-ghost[data-kind="shared-category"] {
     color: var(--text-muted);
     font-size: var(--text-meta);
+  }
+
+  /* An administrator's drop that rearranges the shared layout says it's for everyone. */
+  .sidebar-drag-ghost-shared {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-1);
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    animation: sidebar-ghost-fade var(--duration-micro) var(--ease-enter);
   }
 
   @keyframes sidebar-ghost-lift {

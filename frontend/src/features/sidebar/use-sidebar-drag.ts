@@ -7,19 +7,23 @@ import {
   useRef,
   useState,
 } from "react";
+import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { RoomCategory } from "../../store/model.ts";
 import { isInSlot, organizedSidebar } from "../../store/organize.ts";
 import { store } from "../../store/store.ts";
+import { isPlacedAt, sharedLayout } from "../../store/workspace-layout.ts";
 import {
   categoryIndex,
   categoryTargets,
   type DragItem,
+  type DropContext,
   type DropTarget,
   insertionIndex,
   type LabelledTarget,
+  personallyPlaced,
   roomTargets,
   sameTarget,
-  slotForSection,
+  targetForSection,
 } from "./organize-model.ts";
 import type { SidebarSection } from "./sections.ts";
 
@@ -47,6 +51,10 @@ interface DragOptions {
   /** The sections as shown (the Favourites placeholder included while a room is dragged). */
   readonly sectionsRef: RefObject<readonly SidebarSection[]>;
   readonly categories: readonly RoomCategory[];
+  /** The shared categories in order (an administrator reorders them). */
+  readonly sharedCategories: readonly WorkspaceCategory[];
+  /** Who drops, and the shared layout they drop on. */
+  readonly context: DropContext;
   /** A drop on a real change: the item and where it goes. */
   readonly onDrop: (item: DragItem, target: DropTarget) => void;
   /** Says what was picked up, where it is, where it went (the page's live region). */
@@ -69,21 +77,55 @@ function nameOf(item: DragItem): string {
 }
 
 function handleKey(item: DragItem): string {
-  return item.kind === "room" ? `room-${item.row.room.id}` : `category-${item.category.id}`;
+  switch (item.kind) {
+    case "room":
+      return `room-${item.row.room.id}`;
+    case "category":
+      return `category-${item.category.id}`;
+    case "shared-category":
+      return `shared-${item.category.id}`;
+  }
+}
+
+/** The categories a category drag reorders: the viewer's own, or the shared ones. */
+interface HeldCategories {
+  readonly categories: readonly RoomCategory[];
+  readonly sharedCategories: readonly WorkspaceCategory[];
 }
 
 /** Whether `target` would leave `item` where it already is. */
-function isNoOp(item: DragItem, target: DropTarget, categories: readonly RoomCategory[]): boolean {
-  if (item.kind === "category") {
+function isNoOp(item: DragItem, target: DropTarget, held: HeldCategories): boolean {
+  switch (item.kind) {
+    case "category":
+      return (
+        target.kind === "category" &&
+        categoryIndex(held.categories, item.category.id) === target.index
+      );
+    case "shared-category":
+      return (
+        target.kind === "shared-category" &&
+        categoryIndex(held.sharedCategories, item.category.id) === target.index
+      );
+    case "room":
+      break;
+  }
+
+  const sidebar = store.getState().sidebar;
+  const view = organizedSidebar(sidebar);
+  const row = view.rows[item.row.room.id];
+
+  if (row === undefined) {
+    return false;
+  }
+
+  if (target.kind === "shared") {
     return (
-      target.kind === "category" && categoryIndex(categories, item.category.id) === target.index
+      !personallyPlaced(row) &&
+      isPlacedAt(sharedLayout(sidebar), row.room.id, target.categoryId, target.beforeRoomId)
     );
   }
 
-  const view = organizedSidebar(store.getState().sidebar);
-  const row = view.rows[item.row.room.id];
-
-  return target.kind === "room" && row !== undefined && isInSlot(view, row, target.slot);
+  return target.kind === "room" && isInSlot(view, row, target.slot);
 }
 
 /** The vertical middles of `elements`, in viewport coordinates. */
@@ -115,6 +157,8 @@ export function useSidebarDrag({
   containerRef,
   sectionsRef,
   categories,
+  sharedCategories,
+  context,
   onDrop,
   announce,
 }: DragOptions): SidebarDrag {
@@ -129,10 +173,10 @@ export function useSidebarDrag({
 
   const stopPointer = useRef<(() => void) | null>(null);
   const focusAfter = useRef<string | null>(null);
-  const latest = useRef({ drag, categories, onDrop });
+  const latest = useRef({ drag, categories, sharedCategories, context, onDrop });
 
   useLayoutEffect(() => {
-    latest.current = { drag, categories, onDrop };
+    latest.current = { drag, categories, sharedCategories, context, onDrop };
   });
 
   useEffect(() => () => stopPointer.current?.(), []);
@@ -173,12 +217,15 @@ export function useSidebarDrag({
       return null;
     }
 
-    if (item.kind === "category") {
-      const others = [
-        ...container.querySelectorAll<HTMLElement>('[data-drop-section^="category-"]'),
-      ].filter((element) => element.dataset.dropSection !== `category-${item.category.id}`);
+    if (item.kind !== "room") {
+      // Yours reorder among yours, shared ones among the shared ones.
+      const prefix = item.kind === "category" ? "category-" : "shared-";
 
-      return { kind: "category", index: insertionIndex(midpoints(others), y) };
+      const others = [
+        ...container.querySelectorAll<HTMLElement>(`[data-drop-section^="${prefix}"]`),
+      ].filter((element) => element.dataset.dropSection !== `${prefix}${item.category.id}`);
+
+      return { kind: item.kind, index: insertionIndex(midpoints(others), y) };
     }
 
     const element = hit.closest<HTMLElement>("[data-drop-section]");
@@ -193,7 +240,8 @@ export function useSidebarDrag({
 
     const others = section.rows.filter((row) => row.room.id !== item.row.room.id);
 
-    // Over an open Favourites list the gap under the pointer; over a folded one, the end.
+    // Over an open list the gap under the pointer (among the favourites, or in the shared
+    // layout for an administrator); over a folded one, the end.
     const rows = [
       ...element.querySelectorAll<HTMLElement>('[data-list="main"] > [data-room-id]'),
     ].filter((row) => row.dataset.roomId !== String(item.row.room.id));
@@ -201,9 +249,7 @@ export function useSidebarDrag({
     const index =
       element.dataset.open === "true" ? insertionIndex(midpoints(rows), y) : others.length;
 
-    const slot = slotForSection(section, item.row, index);
-
-    return slot === null ? null : { kind: "room", slot };
+    return targetForSection(section, item.row, index, latest.current.context);
   };
 
   const scrollNearEdge = (y: number) => {
@@ -230,7 +276,7 @@ export function useSidebarDrag({
   };
 
   const land = (item: DragItem, target: DropTarget | null): boolean => {
-    if (target === null || isNoOp(item, target, latest.current.categories)) {
+    if (target === null || isNoOp(item, target, latest.current)) {
       return false;
     }
 
@@ -270,7 +316,7 @@ export function useSidebarDrag({
       scrollNearEdge(moved.clientY);
 
       const next = targetAt(moved.clientX, moved.clientY, item);
-      const shown = next !== null && isNoOp(item, next, latest.current.categories) ? null : next;
+      const shown = next !== null && isNoOp(item, next, latest.current) ? null : next;
 
       target = shown;
       setDrag((current) =>
@@ -324,21 +370,17 @@ export function useSidebarDrag({
 
   const pickUp = (item: DragItem) => {
     const shown = sectionsRef.current;
-    const held = latest.current.categories;
-    const view = organizedSidebar(store.getState().sidebar);
+    const held = latest.current;
 
     const targets =
-      item.kind === "room" ? roomTargets(shown, item.row) : categoryTargets(held, item.category);
+      item.kind === "room"
+        ? roomTargets(shown, item.row, held.context)
+        : item.kind === "category"
+          ? categoryTargets(held.categories, item.category)
+          : categoryTargets(held.sharedCategories, item.category, "shared-category");
 
-    const here = targets.findIndex(({ target }) => {
-      if (item.kind === "category") {
-        return target.kind === "category" && target.index === categoryIndex(held, item.category.id);
-      }
-
-      const row = view.rows[item.row.room.id];
-
-      return target.kind === "room" && row !== undefined && isInSlot(view, row, target.slot);
-    });
+    // It starts where it is: the target that would leave it in place.
+    const here = targets.findIndex(({ target }) => isNoOp(item, target, held));
 
     const index = Math.max(here, 0);
     const first = targets[index];

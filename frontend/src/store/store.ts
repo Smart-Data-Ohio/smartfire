@@ -31,6 +31,7 @@ import type { WorkFacts } from "../gen/WorkFacts.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkspaceBranding } from "../gen/WorkspaceBranding.ts";
+import type { WorkspaceLayout } from "../gen/WorkspaceLayout.ts";
 import * as activity from "./activity.ts";
 import * as agents from "./agents.ts";
 import * as approvals from "./approvals.ts";
@@ -82,6 +83,7 @@ import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
 import * as work from "./work.ts";
 import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
+import * as workspaceLayout from "./workspace-layout.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -717,6 +719,14 @@ export const mutations = {
   /** A membership reply; `since` is its request's ticket. */
   setMembership: (membership: Membership, since: number) =>
     apply((state) => organize.setMembership(state, membership, since)),
+  /** Shared workspace layout (C3, C14): an administrator's pending change, and its reply. */
+  addWorkspaceOverlay: (layout: WorkspaceLayout) =>
+    apply((state) => workspaceLayout.addWorkspaceOverlay(state, layout)),
+  dropWorkspaceOverlay: (layout: WorkspaceLayout) =>
+    apply((state) => workspaceLayout.dropWorkspaceOverlay(state, layout)),
+  /** A reply's change to the held layout; `since` is its request's ticket. */
+  landWorkspaceChange: (change: (layout: WorkspaceLayout) => WorkspaceLayout, since: number) =>
+    apply((state) => workspaceLayout.landWorkspaceChange(state, change, since)),
   /** Back to an empty store (tests). */
   reset: () => {
     heldTickets.length = 0;

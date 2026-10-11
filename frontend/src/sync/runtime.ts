@@ -81,6 +81,7 @@ import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkLinkForm } from "../gen/WorkLinkForm.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
+import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ApprovalFilter } from "../store/approvals.ts";
 import type { BoardQuery } from "../store/boards.ts";
@@ -118,6 +119,7 @@ import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
 import * as workActions from "./work-actions.ts";
+import * as workspaceLayoutActions from "./workspace-layout-actions.ts";
 
 export type {
   ConfirmationPrompt,
@@ -435,6 +437,27 @@ const organize = {
     runAction(organizeActions.setInvolvement(roomId, involvement)),
 };
 
+/**
+ * The shared workspace layout (C3, C14), for administrators: each change shows at once and rolls
+ * back if the server refuses; failures reject with an `ActionError` (a stale category order's is
+ * tagged `Conflict`, and the sidebar has been fetched again by then).
+ */
+const workspaceLayout = {
+  moveRoom: (
+    roomId: number,
+    categoryId: number | null,
+    beforeRoomId: number | null,
+  ): Promise<void> => runAction(workspaceLayoutActions.moveRoom(roomId, categoryId, beforeRoomId)),
+  createCategory: (name: string): Promise<WorkspaceCategory> =>
+    runAction(workspaceLayoutActions.createCategory(name)),
+  renameCategory: (categoryId: number, name: string): Promise<void> =>
+    runAction(workspaceLayoutActions.renameCategory(categoryId, name)),
+  deleteCategory: (categoryId: number): Promise<void> =>
+    runAction(workspaceLayoutActions.deleteCategory(categoryId)),
+  reorderCategories: (categoryIds: readonly number[]): Promise<void> =>
+    runAction(workspaceLayoutActions.reorderCategories(categoryIds)),
+};
+
 /** Room management plumbing; readable form facts and successful writes land before resolving. */
 const rooms = {
   newForm: (type: RoomKind): Promise<RoomForm> => runAction(roomActions.newForm(type)),
@@ -691,6 +714,7 @@ export const actions = {
   ledger,
   search,
   organize,
+  workspaceLayout,
   rooms,
   cards,
   events,

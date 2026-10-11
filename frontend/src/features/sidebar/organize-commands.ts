@@ -4,12 +4,13 @@
  */
 
 import type { Involvement } from "../../gen/Involvement.ts";
+import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
 import type { RoomSlot } from "../../store/organize.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { toast } from "../../ui/toast-store.ts";
-import { involvementChoice } from "./organize-model.ts";
+import { involvementChoice, personallyPlaced } from "./organize-model.ts";
 
 let beforeChange: (() => void) | null = null;
 
@@ -127,6 +128,73 @@ export function setInvolvement(
       }
     })
     .catch(failed(`Couldn't change notifications to ${involvementChoice(level).label}`));
+}
+
+/**
+ * An administrator's move of a room in the shared layout, for everyone: into `categoryId`
+ * (`null`: no shared category) just before `beforeRoomId`, or at the end. A drop
+ * (`leavePersonal`) also takes a room the viewer had starred or put in a category of their own
+ * out of there, so it shows where it was dropped; a menu's move leaves those alone.
+ */
+export function moveSharedRoom(
+  row: SidebarRow,
+  categoryId: number | null,
+  beforeRoomId: number | null,
+  leavePersonal = true,
+): void {
+  beforeChange?.();
+
+  if (leavePersonal && personallyPlaced(row)) {
+    actions.organize
+      .moveRoom(row.room.id, { kind: "channels" })
+      .catch(failed(`Couldn't move ${row.displayName}`));
+  }
+
+  actions.workspaceLayout
+    .moveRoom(row.room.id, categoryId, beforeRoomId)
+    .catch(failed(`Couldn't move ${row.displayName} for everyone`));
+}
+
+/** A new shared category at the end; resolves to it, or `null` after a refusal (toasted). */
+export function createSharedCategory(name: string): Promise<WorkspaceCategory | null> {
+  beforeChange?.();
+
+  return actions.workspaceLayout.createCategory(name).catch((error: ActionError) => {
+    failed(`Couldn't create "${name.trim()}"`)(error);
+
+    return null;
+  });
+}
+
+export function renameSharedCategory(category: WorkspaceCategory, name: string): void {
+  actions.workspaceLayout
+    .renameCategory(category.id, name)
+    .catch(failed("Couldn't rename the shared category"));
+}
+
+export function deleteSharedCategory(category: WorkspaceCategory): void {
+  beforeChange?.();
+
+  actions.workspaceLayout
+    .deleteCategory(category.id)
+    .catch(failed(`Couldn't delete ${category.name}`));
+}
+
+export function reorderSharedCategories(categoryIds: readonly number[]): void {
+  beforeChange?.();
+
+  actions.workspaceLayout.reorderCategories(categoryIds).catch((error: ActionError) => {
+    if (error.tag === "Conflict") {
+      toast({
+        title: "The shared categories changed elsewhere",
+        description: "This is the latest order. Try the move again.",
+      });
+
+      return;
+    }
+
+    failed("Couldn't reorder the shared categories")(error);
+  });
 }
 
 export function markRead(row: SidebarRow): void {

@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RoomMuteDuration } from "../../gen/RoomMuteDuration.ts";
+import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { Placement } from "../../lib/anchor.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
@@ -25,7 +26,13 @@ import {
 } from "../../ui/menu.tsx";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { toastFailure } from "../settings/settings-parts.tsx";
-import { markRead, moveRoom, setInvolvement, toggleFavorite } from "./organize-commands.ts";
+import {
+  markRead,
+  moveRoom,
+  moveSharedRoom,
+  setInvolvement,
+  toggleFavorite,
+} from "./organize-commands.ts";
 import { involvementChoice, involvementChoices } from "./organize-model.ts";
 
 /** A row's open menu: where it hangs (a viewport box) and how it was opened. */
@@ -158,19 +165,106 @@ function useFavoritePlace(roomId: number): FavoritePlace {
   return { index, count };
 }
 
+/** The workspace's shared layout as a room's menu offers it. */
+export interface SharedMenu {
+  /** Administrators move the room for everyone. */
+  readonly admin: boolean;
+  /** The shared categories, in order. */
+  readonly categories: readonly WorkspaceCategory[];
+  /** The room's shared category (`null`: none). */
+  readonly home: number | null;
+  /** The room ids shown with it in its shared section, in order; `null` while it shows elsewhere. */
+  readonly siblings: readonly number[] | null;
+}
+
+const NO_SHARED: SharedMenu = { admin: false, categories: [], home: null, siblings: null };
+
+interface SharedItemsProps {
+  readonly row: SidebarRow;
+  readonly shared: SharedMenu;
+}
+
+/**
+ * An administrator's "Move for everyone": the room's shared category, and its place among its
+ * neighbours there (touch has no drag, so the menu does the moving).
+ */
+function SharedItems({ row, shared }: SharedItemsProps) {
+  const { categories, home, siblings } = shared;
+  const index = siblings?.indexOf(row.room.id) ?? -1;
+  const uncategorized = canCategorize(row) ? "Channels" : "Voice";
+
+  return (
+    <SubMenu label="Move for everyone" icon="users">
+      <MenuGroup label="Shared category">
+        {categories.map((category) => (
+          <MenuRadioItem
+            key={category.id}
+            icon="folder"
+            checked={home === category.id}
+            onSelect={() => {
+              if (home !== category.id) {
+                moveSharedRoom(row, category.id, null, false);
+              }
+            }}
+          >
+            {category.name}
+          </MenuRadioItem>
+        ))}
+        <MenuRadioItem
+          icon={canCategorize(row) ? "hash" : "volume"}
+          checked={home === null}
+          onSelect={() => {
+            if (home !== null) {
+              moveSharedRoom(row, null, null, false);
+            }
+          }}
+        >
+          {uncategorized}
+        </MenuRadioItem>
+      </MenuGroup>
+      {siblings !== null && index !== -1 && siblings.length > 1 ? (
+        <>
+          <MenuSeparator />
+          <MenuItem
+            disabled={index === 0}
+            onSelect={() => moveSharedRoom(row, home, siblings[index - 1] ?? null, false)}
+          >
+            Move up
+          </MenuItem>
+          <MenuItem
+            disabled={index === siblings.length - 1}
+            onSelect={() => moveSharedRoom(row, home, siblings[index + 2] ?? null, false)}
+          >
+            Move down
+          </MenuItem>
+        </>
+      ) : null}
+    </SubMenu>
+  );
+}
+
 interface RoomMenuItemsProps {
   readonly row: SidebarRow;
   readonly categories: readonly RoomCategory[];
+  /** The shared layout (none by default): its category for the room, and for administrators the moves. */
+  readonly shared?: SharedMenu;
   /** "Move to → New category…": opens the name field, the room to move in once it exists. */
   readonly onNewCategory: (row: SidebarRow) => void;
 }
 
 /**
  * A conversation's menu: favourite (and, for a favourite, move up or down among them), move to a
- * category (channels only), notification level, mute, mark as read when there is something
- * unread, and the room's settings (not a direct message's: its header has rename and add people).
+ * category (channels only; leaving yours puts it back in its shared category, if it has one), for
+ * an administrator its place in the shared layout, notification level, mute, mark as read when
+ * there is something unread, and the room's settings (not a direct message's: its header has
+ * rename and add people).
  */
-export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsProps) {
+export function RoomMenuItems({
+  row,
+  categories,
+  shared = NO_SHARED,
+  onNewCategory,
+}: RoomMenuItemsProps) {
   const navigate = useNavigate();
   const preferences = useStore((state) => state.sidebar.notificationPreferences);
   const now = useStore((state) => state.sidebar.notificationClock ?? 0);
@@ -179,6 +273,7 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
   const starred = favoritePosition !== null;
   const favorite = useFavoritePlace(row.room.id);
   const { kind } = row.room;
+  const sharedHome = shared.categories.find((category) => category.id === shared.home) ?? null;
 
   const openSettings = () => {
     // Closing settings steps back to whatever page this menu was opened on.
@@ -235,11 +330,12 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
             </MenuRadioItem>
           ))}
           <MenuRadioItem
-            icon="hash"
+            icon={sharedHome === null ? "hash" : "users"}
+            {...(sharedHome === null ? {} : { description: "Shared category" })}
             checked={!starred && roomCategoryId === null}
             onSelect={() => moveRoom(row, { kind: "channels" })}
           >
-            Channels
+            {sharedHome?.name ?? "Channels"}
           </MenuRadioItem>
           <MenuSeparator />
           <MenuItem icon="folder-plus" onSelect={() => onNewCategory(row)}>
@@ -247,6 +343,7 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
           </MenuItem>
         </SubMenu>
       ) : null}
+      {shared.admin && kind !== "direct" ? <SharedItems row={row} shared={shared} /> : null}
       <SubMenu label="Notifications" icon={involvementChoice(involvement).icon}>
         <NotificationItems row={row} level={involvement} />
       </SubMenu>
@@ -392,6 +489,7 @@ export function RoomContextMenu({
   request,
   row,
   categories,
+  shared,
   onNewCategory,
   onClosed,
 }: RoomContextMenuProps) {
@@ -403,7 +501,12 @@ export function RoomContextMenu({
         <Anchor trigger={trigger} request={request} onClosed={() => onClosed(request.id)} />
       )}
     >
-      <RoomMenuItems row={row} categories={categories} onNewCategory={onNewCategory} />
+      <RoomMenuItems
+        row={row}
+        categories={categories}
+        {...(shared === undefined ? {} : { shared })}
+        onNewCategory={onNewCategory}
+      />
     </Menu>
   );
 }

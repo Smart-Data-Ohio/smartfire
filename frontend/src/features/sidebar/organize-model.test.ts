@@ -62,6 +62,7 @@ function section(
     title,
     rows,
     category,
+    sharedCategory: null,
     collapsed: false,
   };
 }

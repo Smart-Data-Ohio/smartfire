@@ -53,7 +53,7 @@ const categories = (entries: SidebarOverlay["categories"]): SidebarOverlay => ({
  * How long one change may hold the lock. A call the server never answers would otherwise freeze
  * every organising change after it.
  */
-const SERVER_TIMEOUT = "15 seconds";
+export const SERVER_TIMEOUT = "15 seconds";
 
 /**
  * Shows `entry` from now until `change` settles; the change waits its turn for the server. The
@@ -115,7 +115,7 @@ const REFETCH_ATTEMPTS = 3;
  * changed while it was on its way are newer than it, so they stay. A reply a sync resync made
  * stale is read again, three times in all; then the sync state stands as it is.
  */
-const refetchSidebar = Effect.gen(function* () {
+export const refetchSidebar = Effect.gen(function* () {
   for (let attempt = 0; attempt < REFETCH_ATTEMPTS; attempt++) {
     const landed = yield* withRowTicket((since) =>
       Effect.map(fetchSidebar(), (sidebar) => mutations.loadSidebar(sidebar, since)),
@@ -128,7 +128,7 @@ const refetchSidebar = Effect.gen(function* () {
 );
 
 /** A change the server didn't answer in time: refetch in the background, and fail with why. */
-const stalled = Effect.forkDetach(refetchSidebar).pipe(
+export const stalled = Effect.forkDetach(refetchSidebar).pipe(
   Effect.andThen(
     Effect.fail(
       new NetworkError({
