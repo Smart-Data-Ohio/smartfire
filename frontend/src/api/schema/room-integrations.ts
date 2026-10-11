@@ -1,4 +1,7 @@
 import { Schema } from "effect";
+import type { ChannelWebhook as GeneratedChannelWebhook } from "../../gen/ChannelWebhook.ts";
+import type { ChannelWebhookCredential as GeneratedChannelWebhookCredential } from "../../gen/ChannelWebhookCredential.ts";
+import type { ChannelWebhookList as GeneratedChannelWebhookList } from "../../gen/ChannelWebhookList.ts";
 import type { GithubEventChoice as GeneratedGithubEventChoice } from "../../gen/GithubEventChoice.ts";
 import type { GithubSubscription as GeneratedGithubSubscription } from "../../gen/GithubSubscription.ts";
 import type { GithubSubscriptionList as GeneratedGithubSubscriptionList } from "../../gen/GithubSubscriptionList.ts";
@@ -6,6 +9,7 @@ import type { InboundEmail as GeneratedInboundEmail } from "../../gen/InboundEma
 import type { SubscribeGithubRepository as GeneratedSubscribeGithubRepository } from "../../gen/SubscribeGithubRepository.ts";
 import type { UpdateGithubSubscription as GeneratedUpdateGithubSubscription } from "../../gen/UpdateGithubSubscription.ts";
 import type { Assert, Pinned } from "./pin.ts";
+import { Timestamp } from "./time.ts";
 
 /** One pull-request event the classic subscription form offers. */
 export const GithubEventChoice = Schema.Struct({
@@ -68,3 +72,37 @@ export const InboundEmail = Schema.Struct({
 });
 
 export type InboundEmailPin = Assert<Pinned<typeof InboundEmail, GeneratedInboundEmail>>;
+
+/** A room's incoming webhook. The token never appears here, only in a credential. */
+export const ChannelWebhook = Schema.Struct({
+  id: Schema.Int,
+  roomId: Schema.Int,
+  creatorId: Schema.Int,
+  name: Schema.String,
+  avatarUrl: Schema.NullOr(Schema.String),
+  lastUsedAt: Schema.NullOr(Timestamp),
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+});
+
+export type ChannelWebhookPin = Assert<Pinned<typeof ChannelWebhook, GeneratedChannelWebhook>>;
+
+/** `GET /api/v1/rooms/:room_id/webhooks`. */
+export const ChannelWebhookList = Schema.Struct({
+  webhooks: Schema.Array(ChannelWebhook),
+});
+
+export type ChannelWebhookListPin = Assert<
+  Pinned<typeof ChannelWebhookList, GeneratedChannelWebhookList>
+>;
+
+/** Create and regenerate: the only replies that carry the token and its execution URL. */
+export const ChannelWebhookCredential = Schema.Struct({
+  webhook: ChannelWebhook,
+  token: Schema.String,
+  url: Schema.String,
+});
+
+export type ChannelWebhookCredentialPin = Assert<
+  Pinned<typeof ChannelWebhookCredential, GeneratedChannelWebhookCredential>
+>;

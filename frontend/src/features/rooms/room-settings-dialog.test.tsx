@@ -6,10 +6,11 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ChannelWebhook } from "../../gen/ChannelWebhook.ts";
 import type { GithubSubscriptionList } from "../../gen/GithubSubscriptionList.ts";
 import type { InboundEmail } from "../../gen/InboundEmail.ts";
 import type { RoomForm } from "../../gen/RoomForm.ts";
@@ -694,5 +695,75 @@ describe("channel topic settings", () => {
     await mount(CLOSED);
     const field = await screen.findByRole("textbox", { name: "Topic" });
     expect(field.hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("webhook settings", () => {
+  const WEBHOOK: ChannelWebhook = {
+    id: 21,
+    roomId: CLOSED,
+    creatorId: 1,
+    name: "Deployments",
+    avatarUrl: null,
+    lastUsedAt: null,
+    createdAt: "2026-10-03T15:00:00.000Z",
+    updatedAt: "2026-10-03T15:00:00.000Z",
+  };
+
+  it("offers Webhooks only to those the API lets manage them, and never on a board", async () => {
+    const list = vi.spyOn(actions.rooms, "channelWebhooks").mockResolvedValue({ webhooks: [] });
+    const edit = vi.spyOn(actions.rooms, "editForm");
+
+    edit.mockResolvedValue(closedForm({ canSubmit: false, canDelete: false }));
+    await mount(CLOSED);
+
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    expect(screen.getByRole("tab", { name: "General" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Webhooks" })).toBeNull();
+    cleanup();
+
+    edit.mockResolvedValue(boardForm());
+    await mount(BOARD);
+    await screen.findByRole("dialog", { name: "Board settings" });
+    expect(screen.queryByRole("tab", { name: "Webhooks" })).toBeNull();
+    cleanup();
+
+    edit.mockResolvedValue(closedForm());
+    await mount(CLOSED);
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    expect(screen.getByRole("tab", { name: "Webhooks" })).toBeTruthy();
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it("forgets a webhook URL on show when the settings close", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(closedForm());
+    vi.spyOn(actions.rooms, "channelWebhooks").mockResolvedValue({ webhooks: [] });
+    vi.spyOn(actions.rooms, "createChannelWebhook").mockResolvedValue({
+      webhook: WEBHOOK,
+      token: "one-time-token",
+      url: "https://chat.example.test/api/webhooks/21/one-time-token",
+    });
+
+    const user = userEvent.setup();
+
+    await mount(CLOSED, true);
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    await user.click(screen.getByRole("tab", { name: "Webhooks" }));
+    await user.type(await screen.findByLabelText("Name"), "Deployments");
+    await user.click(screen.getByRole("button", { name: "Create webhook" }));
+    expect(await screen.findByText(/one-time-token/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(document.body.textContent).not.toContain("one-time-token");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Channel settings" })).toBeNull(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reopen settings" }));
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    await user.click(screen.getByRole("tab", { name: "Webhooks" }));
+    expect(await screen.findByText("No webhooks yet.")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("one-time-token");
+    expect(JSON.stringify(store.getState())).not.toContain("one-time-token");
   });
 });

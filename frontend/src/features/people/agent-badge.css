@@ -35,6 +35,12 @@
     color: var(--text-muted);
   }
 
+  /* A room webhook's APP tag, in the accent as Discord tints it. */
+  .agent-badge[data-tone="app"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
   .agent-state {
     background: var(--bg-active);
     color: var(--text-muted);
