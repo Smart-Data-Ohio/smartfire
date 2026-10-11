@@ -55,6 +55,20 @@ function announce(result: GoogleReturn): void {
     return;
   }
 
+  if (result.elsewhere > 0) {
+    // A duplicated tab sent them: this copy stays quiet rather than send them twice.
+    toast({
+      title: "Confirmed",
+      description:
+        result.elsewhere === 1
+          ? "Another tab already sent your change."
+          : "Another tab already sent your changes.",
+      tone: "success",
+    });
+
+    return;
+  }
+
   toast({
     title: "Confirmed",
     description:

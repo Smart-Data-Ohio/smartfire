@@ -12,7 +12,9 @@
  * `/app/sudo/continue` replays them only when the server says it confirmed exactly that attempt,
  * for that same person, in time; the server reads that answer again for the attempt until the page
  * acknowledges it, so a lost answer or an interrupted replay can ask again. Any other answer drops
- * them, and the page says the change wasn't sent. The rest fail with their `SudoRequired` before
+ * them, and the page says the change wasn't sent. A duplicated tab carries a copy of the hand-off,
+ * so the tabs of this browser replay an attempt one at a time (a Web Lock) and mark each write in
+ * local storage as it goes: a write marked by one tab is never sent by another. The rest fail with their `SudoRequired` before
  * the page goes, so their forms can keep what isn't secret.
  */
 import { Effect, Layer, Option, Schema } from "effect";
@@ -53,6 +55,8 @@ const Handoff = Schema.Struct({
   user: Schema.Number,
   /** When (ms since the epoch) the writes stop being worth sending. */
   expiresAt: Schema.Number,
+  /** The first kept write's place in the batch: each write's mark across tabs. */
+  next: Schema.Int,
   /** The SPA page the writes came from. */
   returnTo: Schema.String,
   /** The writes still to send, in order; each leaves as its replay begins. */
@@ -62,6 +66,12 @@ const Handoff = Schema.Struct({
 });
 
 type Handoff = typeof Handoff.Type;
+
+/** A kept write on its way, with its place in the batch. */
+interface KeptTurn {
+  readonly write: typeof KeptWrite.Type;
+  readonly index: number;
+}
 
 /** The hand-off waiting for this person, and how many writes one of theirs held as it ran out. */
 interface HandoffClaim {
@@ -73,6 +83,14 @@ const decodeHandoff = Schema.decodeUnknownOption(Schema.fromJsonString(Handoff))
 
 /** The session storage key of the writes kept across the Google round trip. */
 export const KEPT_KEY = "smartfire:confirmation-pending";
+
+/** The local storage key prefix of the writes an attempt's replays have sent, in any tab. */
+export const SENT_PREFIX = "smartfire:confirmation-sent:";
+
+/** Which of an attempt's writes (by place in the batch) a tab has sent, and until when it matters. */
+const SentRecord = Schema.Struct({ expiresAt: Schema.Number, sent: Schema.Array(Schema.Int) });
+
+const decodeSent = Schema.decodeUnknownOption(Schema.fromJsonString(SentRecord));
 
 /**
  * How long a hand-off lasts: a Google round trip, well inside the server's 15-minute confirmation
@@ -114,6 +132,31 @@ function sessionStore(): Storage | null {
   }
 }
 
+/** Local storage, or `null` where the browser refuses it. */
+function localStore(): Storage | null {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Holds the browser's Web Lock `name` until the returned release runs; at once where the browser
+ * has no Web Locks (the local storage marks still keep a write from going twice).
+ */
+function webLock(name: string): Promise<() => void> {
+  if (!("locks" in globalThis.navigator)) {
+    return Promise.resolve(() => undefined);
+  }
+
+  return new Promise((acquired) => {
+    globalThis.navigator.locks
+      .request(name, () => new Promise<void>((release) => acquired(() => release())))
+      .catch(() => acquired(() => undefined));
+  });
+}
+
 /** The SPA page showing now: a write belongs to the screen it was sent from. */
 function currentScreen(): string {
   return globalThis.location?.pathname ?? "";
@@ -123,6 +166,10 @@ function currentScreen(): string {
 export interface GateOptions {
   /** Where Google round trips keep their writes. */
   readonly storage?: () => Storage | null;
+  /** Where every tab marks the writes it replayed. */
+  readonly shared?: () => Storage | null;
+  /** Takes a lock every tab of this browser shares; resolves with its release. */
+  readonly lock?: (name: string) => Promise<() => void>;
   /** The signed-in person's id; `null` before the boot names them. */
   readonly viewer?: () => number | null;
   readonly now?: () => number;
@@ -140,6 +187,8 @@ const cancelled = (message: string) => Effect.fail(new ConfirmationCancelled({ m
  */
 export function makeConfirmationGate({
   storage = sessionStore,
+  shared = localStore,
+  lock = webLock,
   viewer = () => null,
   now = Date.now,
   screen = currentScreen,
@@ -258,8 +307,83 @@ export function makeConfirmationGate({
     }
   };
 
+  /** The writes attempt `id`'s replays have sent, in any tab, by place in the batch. */
+  const sentRecord = (id: string) => {
+    const raw = shared()?.getItem(`${SENT_PREFIX}${id}`) ?? null;
+
+    return raw === null ? null : Option.getOrNull(decodeSent(raw));
+  };
+
+  /** Drops the marks of attempts whose writes are no longer worth sending anywhere. */
+  const forgetSentRecords = () => {
+    try {
+      const store = shared();
+
+      if (store === null) {
+        return;
+      }
+
+      const keys = Array.from({ length: store.length }, (_, index) => store.key(index));
+
+      for (const key of keys) {
+        if (key?.startsWith(SENT_PREFIX) === true) {
+          const record = Option.getOrNull(decodeSent(store.getItem(key) ?? ""));
+
+          if (record === null || now() >= record.expiresAt) {
+            store.removeItem(key);
+          }
+        }
+      }
+    } catch {
+      // Nothing to tidy where storage refuses.
+    }
+  };
+
   return {
     layer,
+
+    /** Holds this browser's lock on attempt `id`'s replay; resolves with its release. */
+    exclusive: (id: string): Promise<() => void> => lock(`smartfire:confirmation:${id}`),
+
+    /**
+     * Marks write `index` of attempt `id` as sent, for every tab: `"claimed"` when this tab may
+     * send it, `"sent"` when a tab already did, `"unavailable"` when storage can't say.
+     */
+    claimSent(id: string, index: number, expiresAt: number): "claimed" | "sent" | "unavailable" {
+      try {
+        const store = shared();
+
+        if (store === null) {
+          return "unavailable";
+        }
+
+        const record = sentRecord(id);
+
+        if (record?.sent.includes(index) === true) {
+          return "sent";
+        }
+
+        store.setItem(
+          `${SENT_PREFIX}${id}`,
+          JSON.stringify({ expiresAt, sent: [...(record?.sent ?? []), index] }),
+        );
+
+        return "claimed";
+      } catch {
+        return "unavailable";
+      }
+    },
+
+    /** How many of `handoff`'s kept writes a tab has already sent. */
+    sentElsewhere(handoff: Handoff): number {
+      try {
+        const sent = sentRecord(handoff.id)?.sent ?? [];
+
+        return handoff.writes.filter((_, offset) => sent.includes(handoff.next + offset)).length;
+      } catch {
+        return 0;
+      }
+    },
 
     subscribe(listener: () => void): () => void {
       listeners.add(listener);
@@ -318,6 +442,7 @@ export function makeConfirmationGate({
           id: attempt,
           user,
           expiresAt: now() + HANDOFF_TTL_MS,
+          next: 0,
           returnTo: spaReturnPath(returnTo),
           // The request as it went, less the flag that keeps credentials out of here.
           writes: keep.map(({ request: { secret, ...write } }) => write),
@@ -337,6 +462,8 @@ export function makeConfirmationGate({
     handoff(): HandoffClaim {
       const handoff = readHandoff();
 
+      forgetSentRecords();
+
       if (handoff !== null && handoff.user === viewer() && now() < handoff.expiresAt) {
         return { handoff, expired: 0 };
       }
@@ -350,10 +477,11 @@ export function makeConfirmationGate({
     },
 
     /**
-     * Takes hand-off `id`'s next write to send, leaving the rest stored (or forgetting the hand-off
-     * with its last). `null` when there's none left, or the hand-off has changed under it.
+     * Takes hand-off `id`'s next write to send, with its place in the batch, leaving the rest
+     * stored (or forgetting the hand-off with its last). `null` when there's none left, or the
+     * hand-off has changed under it.
      */
-    takeNext(id: string): typeof KeptWrite.Type | null {
+    takeNext(id: string): KeptTurn | null {
       const handoff = readHandoff();
       const [next, ...rest] = handoff?.id === id ? handoff.writes : [];
 
@@ -362,11 +490,15 @@ export function makeConfirmationGate({
       }
 
       // Gone from storage before it's sent: a reload mid-replay never sends it twice.
-      if (!writeHandoff(rest.length === 0 ? null : { ...handoff, writes: rest })) {
+      if (
+        !writeHandoff(
+          rest.length === 0 ? null : { ...handoff, next: handoff.next + 1, writes: rest },
+        )
+      ) {
         return null;
       }
 
-      return next;
+      return { write: next, index: handoff.next };
     },
 
     /** Forgets any hand-off. */
@@ -450,6 +582,8 @@ export interface GoogleReturn {
    * tab's confirmation, a new session, a refusal) or they ran out of time. Their change is lost.
    */
   readonly abandoned: number;
+  /** Kept writes another tab of this browser already sent (a duplicated tab's copy). */
+  readonly elsewhere: number;
   /**
    * Why the server couldn't say whether the confirmation is fresh (it was unreachable, say). The
    * kept writes are all still kept: try again.
@@ -464,17 +598,44 @@ const anyJson = (json: Schema.Json) => Effect.succeed(json);
  * confirmed exactly that attempt, replays the writes kept for it, each once and in order, then
  * acknowledges the attempt. Each write leaves storage as its replay begins, so a reload never
  * sends one twice and the rest go after it (the server answers for the attempt again until it is
- * acknowledged); a status read that fails keeps them all for another try. Any other answer drops
- * them, counted in `abandoned`.
+ * acknowledged); a status read that fails keeps them all for another try. Tabs of this browser
+ * replay an attempt one at a time, and a write another tab sent is skipped (`elsewhere`). Any
+ * other answer drops them, counted in `abandoned`.
  */
 export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(function* (
   gate: ConfirmationGate,
 ) {
   const { handoff, expired } = gate.handoff();
+
+  if (handoff === null) {
+    return yield* resume(gate, null, expired);
+  }
+
+  return yield* Effect.acquireUseRelease(
+    Effect.promise(() => gate.exclusive(handoff.id)),
+    // Re-read under the lock: this tab's hand-off as it is now.
+    () => resume(gate, gate.handoff().handoff, expired),
+    (release) => Effect.sync(release),
+  );
+});
+
+const resume = Effect.fnUntraced(function* (
+  gate: ConfirmationGate,
+  handoff: Handoff | null,
+  expired: number,
+) {
   const returnTo = spaReturnPath(handoff?.returnTo ?? null);
   const dropped = handoff?.dropped ?? 0;
   const kept = handoff?.writes.length ?? 0;
-  const outcome = { returnTo, replayed: 0, failure: null, dropped, abandoned: expired };
+
+  const outcome = {
+    returnTo,
+    replayed: 0,
+    failure: null,
+    dropped,
+    abandoned: expired,
+    elsewhere: 0,
+  };
 
   const status = yield* resumeSudo(handoff?.id ?? null).pipe(
     Effect.match({
@@ -488,6 +649,8 @@ export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(fun
   }
 
   const reply = status.answer;
+  // Writes another tab already sent aren't lost, whatever this answer says.
+  const sentElsewhere = handoff === null ? 0 : gate.sentElsewhere(handoff);
 
   if (reply.kind !== "confirmed") {
     gate.forget();
@@ -495,7 +658,8 @@ export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(fun
     return {
       ...outcome,
       confirmed: false,
-      abandoned: expired + kept,
+      abandoned: expired + kept - sentElsewhere,
+      elsewhere: sentElsewhere,
       unreachable: null,
     } satisfies GoogleReturn;
   }
@@ -509,7 +673,8 @@ export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(fun
     return {
       ...outcome,
       confirmed: true,
-      abandoned: expired + kept,
+      abandoned: expired + kept - sentElsewhere,
+      elsewhere: sentElsewhere,
       unreachable: null,
       returnTo:
         handoff === null && reply.retry !== null ? spaReturnPath(reply.retry.returnTo) : returnTo,
@@ -518,20 +683,31 @@ export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(fun
 
   const client = yield* ApiClient;
   let replayed = 0;
+  let elsewhere = 0;
+  let abandoned = expired;
   let failure: string | null = null;
 
-  for (let write = gate.takeNext(handoff.id); write !== null; write = gate.takeNext(handoff.id)) {
-    const landed = yield* client.execute(write, anyJson).pipe(
-      Effect.match({
-        onSuccess: () => null,
-        onFailure: (error) => error.message,
-      }),
-    );
+  for (let turn = gate.takeNext(handoff.id); turn !== null; turn = gate.takeNext(handoff.id)) {
+    const claim = gate.claimSent(handoff.id, turn.index, handoff.expiresAt);
 
-    if (landed === null) {
-      replayed += 1;
+    if (claim === "sent") {
+      elsewhere += 1;
+    } else if (claim === "unavailable") {
+      // Without the mark another tab could send it too: it isn't sent from here.
+      abandoned += 1;
     } else {
-      failure ??= landed;
+      const landed = yield* client.execute(turn.write, anyJson).pipe(
+        Effect.match({
+          onSuccess: () => null,
+          onFailure: (error) => error.message,
+        }),
+      );
+
+      if (landed === null) {
+        replayed += 1;
+      } else {
+        failure ??= landed;
+      }
     }
   }
 
@@ -542,6 +718,8 @@ export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(fun
     ...outcome,
     confirmed: true,
     replayed,
+    elsewhere,
+    abandoned,
     failure,
     unreachable: null,
   } satisfies GoogleReturn;

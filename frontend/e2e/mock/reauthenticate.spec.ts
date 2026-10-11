@@ -264,6 +264,76 @@ for (const theme of THEMES) {
         expect(patches).toBe(1);
       });
 
+      test("a duplicated continue page never sends the change twice", async ({
+        page,
+        context,
+        request,
+      }) => {
+        let patches = 0;
+        let reads = 0;
+        const copied = Promise.withResolvers<void>();
+
+        context.on("request", (sent) => {
+          if (sent.method() === "PATCH" && sent.url().endsWith("/api/v1/admin/custom_styles")) {
+            patches += 1;
+          }
+        });
+        // The first status read waits until the copy is open: nothing is replayed or
+        // acknowledged before both continue pages are loaded.
+        await context.route(/\/api\/v1\/sudo\/continue(\?|$)/, async (route) => {
+          if (route.request().method() === "GET") {
+            reads += 1;
+
+            if (reads === 1) await copied.promise;
+          }
+
+          await route.fallback();
+        });
+        await lapse(request, ["password", "google"]);
+        await open(page, "/app/admin/styles", theme);
+
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("em { color: teal; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+        await expect(page).toHaveURL(/\/app\/sudo\/continue$/);
+        await expect.poll(() => reads).toBe(1);
+
+        // The tab is duplicated: the copy starts with the same session storage.
+        const kept = await page.evaluate(() =>
+          sessionStorage.getItem("smartfire:confirmation-pending"),
+        );
+
+        const copy = await context.newPage();
+
+        await copy.setViewportSize(viewport);
+        await copy.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+        await copy.addInitScript((value) => {
+          if (value !== null && sessionStorage.getItem("duplicated") === null) {
+            sessionStorage.setItem("duplicated", "1");
+            sessionStorage.setItem("smartfire:confirmation-pending", value);
+          }
+        }, kept);
+        await copy.goto("/app/sudo/continue");
+        copied.resolve();
+
+        const saved = "Confirmed — your change was saved";
+        const sentElsewhere = "Another tab already sent your change.";
+
+        for (const tab of [page, copy]) {
+          await expect(tab.getByText(saved).or(tab.getByText(sentElsewhere))).toBeVisible();
+          await expect(tab).toHaveURL(/\/app\/admin\/styles$/);
+        }
+
+        const told = await Promise.all(
+          [page, copy].map(async (tab) => (await tab.getByText(saved).count()) > 0),
+        );
+
+        expect(told.toSorted()).toEqual([false, true]);
+        await shot(told[0] === true ? copy : page, "reauth-google-elsewhere", theme);
+        expect(patches).toBe(2);
+        await copy.close();
+      });
+
       test("a Google confirmation comes back and finishes the change", async ({
         page,
         request,

@@ -67,9 +67,53 @@ interface Page {
   screen: string;
 }
 
+/** One browser's Web Locks: a single holder per name, the others waiting their turn. */
+function browserLocks() {
+  const tails = new Map<string, Promise<void>>();
+
+  return (name: string): Promise<() => void> => {
+    const previous = tails.get(name) ?? Promise.resolve();
+    const held = Promise.withResolvers<void>();
+
+    tails.set(
+      name,
+      previous.then(() => held.promise),
+    );
+
+    return previous.then(() => held.resolve);
+  };
+}
+
+/** A copy of `storage`, as duplicating a tab copies its session storage. */
+function copyOf(storage: Storage): Storage {
+  const items = new Map<string, string>();
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+
+    if (key !== null) items.set(key, storage.getItem(key) ?? "");
+  }
+
+  return {
+    get length() {
+      return items.size;
+    },
+    clear: () => items.clear(),
+    getItem: (key) => items.get(key) ?? null,
+    key: (index) => [...items.keys()][index] ?? null,
+    removeItem: (key) => {
+      items.delete(key);
+    },
+    setItem: (key, value) => {
+      items.set(key, value);
+    },
+  };
+}
+
 /**
  * The real `ApiClient` over a fake `HttpClient` (replies from `answer`, by request in order) and a
- * fresh confirmation gate on session storage, reading `page`.
+ * fresh confirmation gate on session storage, reading `page`. `duplicate` opens another tab of
+ * the same browser on a copy of this one's session storage.
  */
 function harness(
   answer: (seen: Seen, index: number) => Reply,
@@ -77,13 +121,19 @@ function harness(
 ) {
   const seen: Seen[] = [];
   const page: Page = { viewer: 7, now: 1_000_000, screen: "/app/admin/styles" };
+  const lock = browserLocks();
 
-  const gate = makeConfirmationGate({
-    storage: () => sessionStorage,
-    viewer: () => page.viewer,
-    now: () => page.now,
-    screen: () => page.screen,
-  });
+  const gateOn = (storage: Storage) =>
+    makeConfirmationGate({
+      storage: () => storage,
+      shared: () => localStorage,
+      lock,
+      viewer: () => page.viewer,
+      now: () => page.now,
+      screen: () => page.screen,
+    });
+
+  const gate = gateOn(sessionStorage);
 
   const http = HttpClient.make((request, url) =>
     Effect.gen(function* () {
@@ -121,21 +171,28 @@ function harness(
     }),
   );
 
-  const layer = ApiClient.layer.pipe(
-    Layer.provide(
-      Layer.mergeAll(
-        Layer.succeed(HttpClient.HttpClient, http),
-        ApiConfig.layer("/api/v1"),
-        Layer.succeed(Navigation, {
-          location: Effect.succeed("/app/admin/styles"),
-          assign: () => Effect.void,
-        }),
-        gate.layer,
+  const layerOf = (tab: ConfirmationGate) =>
+    ApiClient.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(HttpClient.HttpClient, http),
+          ApiConfig.layer("/api/v1"),
+          Layer.succeed(Navigation, {
+            location: Effect.succeed("/app/admin/styles"),
+            assign: () => Effect.void,
+          }),
+          tab.layer,
+        ),
       ),
-    ),
-  );
+    );
 
-  return { layer, seen, gate, page };
+  const duplicate = () => {
+    const tab = gateOn(copyOf(sessionStorage));
+
+    return { gate: tab, layer: layerOf(tab) };
+  };
+
+  return { layer: layerOf(gate), seen, gate, page, duplicate };
 }
 
 const anyJson = (json: Schema.Json) => Effect.succeed(json);
@@ -184,6 +241,7 @@ beforeEach(() => {
 
 afterEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
   document.querySelector('meta[name="csrf-token"]')?.remove();
 });
 
@@ -624,6 +682,7 @@ describe("the Google round trip", () => {
         id: startedAttempt(seen),
         user: 7,
         expiresAt: 1_000_000 + 10 * 60_000,
+        next: 0,
         returnTo: "/app/admin/styles?tab=css",
         writes: [styles],
         dropped: 1,
@@ -638,6 +697,7 @@ describe("the Google round trip", () => {
         failure: null,
         dropped: 1,
         abandoned: 0,
+        elsewhere: 0,
         unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
@@ -871,6 +931,68 @@ describe("the Google round trip", () => {
     }).pipe(Effect.provide(layer));
   });
 
+  it.live("a duplicated tab never sends the writes another tab is replaying", () => {
+    const acknowledged = Deferred.makeUnsafe<void>();
+
+    const { layer, seen, gate, duplicate } = googleHarness({
+      // The first tab's acknowledgement is slow: both tabs read the confirmed attempt first.
+      hold: (entry) =>
+        entry.method === "DELETE" && entry.path === "/api/v1/sudo/continue"
+          ? Deferred.await(acknowledged)
+          : Effect.void,
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles, role]);
+
+      // Duplicated before the continue page loaded: the copy holds the same two writes.
+      const copy = duplicate();
+      const first = yield* Effect.forkChild(resumeAfterGoogle(gate));
+
+      const second = yield* Effect.forkChild(
+        resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer)),
+      );
+
+      // Both continue pages are open before anything is acknowledged.
+      yield* Effect.sleep(10);
+      Deferred.doneUnsafe(acknowledged, Effect.void);
+
+      const results = [yield* Fiber.join(first), yield* Fiber.join(second)];
+
+      expect(
+        results.map((result) => [result.replayed, result.elsewhere, result.abandoned]),
+      ).toEqual([
+        [2, 0, 0],
+        [0, 2, 0],
+      ]);
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+      expect(writesTo(seen, "/admin/people/4")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a duplicated tab opened after the replay says another tab sent it", () => {
+    const { layer, seen, gate, duplicate } = googleHarness();
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const copy = duplicate();
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        replayed: 1,
+        elsewhere: 0,
+      });
+      // The first tab acknowledged the attempt: the server no longer names it.
+      expect(yield* resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer))).toMatchObject({
+        confirmed: true,
+        replayed: 0,
+        elsewhere: 1,
+        abandoned: 0,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
   it.live("a refused Google return replays nothing and forgets the writes", () => {
     const { layer, seen, gate } = googleHarness({ refuse: true });
 
@@ -884,6 +1006,7 @@ describe("the Google round trip", () => {
         failure: null,
         dropped: 0,
         abandoned: 1,
+        elsewhere: 0,
         unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
