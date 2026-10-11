@@ -28,7 +28,7 @@ use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKi
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
-use campfire_api_types::{SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
+use campfire_api_types::{SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
 use campfire_people::controllers::{auth, sessions, two_factor};
 use campfire_spa::{SignedOutRoute, signed_out_route};
 
@@ -105,8 +105,8 @@ pub async fn signed_out_boot(c: &mut Ctx) -> Result {
 }
 
 async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
-    let (account, first_run_pending) = c.app().db.read(|conn| {
-        Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?))
+    let (account, first_run_pending, help_contact) = c.app().db.read(|conn| {
+        Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?, presenters::accounts::help_contact(conn)?))
     }).await.map_err(Error::internal)?;
     let logo_url = match &account {
         Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
@@ -119,8 +119,15 @@ async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
             logo_url,
             description: account.map(|account| account.settings().description().to_owned()).unwrap_or_default(),
         },
-        sign_in_methods: SignInMethods { password: true, google: c.app().google.sign_in().config.configured() },
+        sign_in_methods: {
+            let provider = c.app().google.sign_in();
+            let configured = provider.config.configured();
+            let google_domains = if configured { provider.config.domains.clone() } else { Vec::new() };
+            SignInMethods { password: true, google: configured, google_domains }
+        },
         first_run_pending,
+        help_contact: help_contact.map(|owner| SignInHelpContact { name: owner.name, email_address: owner.email_address }),
+        version: c.app().config.app_version.clone(),
         csrf_token: c.authenticity_tokens().global(),
     })
 }

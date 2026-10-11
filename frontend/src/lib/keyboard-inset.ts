@@ -66,7 +66,8 @@ function editing(): boolean {
 }
 
 /**
- * The on-screen keyboard, for the whole app; the shell runs it once, batched to a frame. On <html>,
+ * The on-screen keyboard, for the whole app; the shell runs it once (and each signed-out page,
+ * outside the shell, its own), batched to a frame. On <html>,
  * while an overlaid keyboard (iOS) is up: `--viewport-top-inset` and `--viewport-height`, the
  * visible area's top and height, which the shell takes, so its header and composer stay on
  * screen; and `--keyboard-inset`, the layout viewport's strip below the visible area, which a

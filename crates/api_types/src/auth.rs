@@ -89,7 +89,19 @@ pub struct SignedOutBoot {
     pub workspace: SignInWorkspace,
     pub sign_in_methods: SignInMethods,
     pub first_run_pending: bool,
+    /// The first administrator, whom the retained sign-in page names for help.
+    pub help_contact: Option<SignInHelpContact>,
+    /// The version the retained sign-in page prints under the help contact.
+    pub version: String,
     pub csrf_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SignInHelpContact {
+    pub name: String,
+    pub email_address: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -107,6 +119,8 @@ pub struct SignInWorkspace {
 pub struct SignInMethods {
     pub password: bool,
     pub google: bool,
+    /// The Google Workspace domains Google sign-in accepts, named under its button.
+    pub google_domains: Vec<String>,
 }
 
 #[cfg(test)]
@@ -158,12 +172,18 @@ mod tests {
                 },
                 sign_in_methods: SignInMethods {
                     password: true,
-                    google: false,
+                    google: true,
+                    google_domains: vec!["example.com".into()],
                 },
                 first_run_pending: true,
+                help_contact: Some(SignInHelpContact {
+                    name: "Ada".into(),
+                    email_address: "ada@example.com".into(),
+                }),
+                version: "1.2.3".into(),
                 csrf_token: "masked".into(),
             },
-            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":false},"firstRunPending":true,"csrfToken":"masked"}),
+            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked"}),
         );
         assert_wire(
             &PasswordSignIn {

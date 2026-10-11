@@ -1,0 +1,303 @@
+/*
+ * The signed-out pages (sign-in, the second step, the sign-in link): one centred card on the app
+ * background, as the retained pages draw it (src/auth/pages.css), from the SPA's tokens, fields and
+ * buttons. Every message has a reserved line, so nothing below it moves when one appears.
+ */
+
+@layer app {
+  /* Its own scroll container over the visible viewport: the app's stylesheet locks the body for
+     the shell, and a phone keyboard or a short window leaves the card taller than the screen. The
+     auto margins centre the page while it fits and let it scroll from the top once it doesn't. */
+  .auth-view {
+    position: fixed;
+    inset: var(--viewport-top-inset) 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-6);
+    height: var(--viewport-height);
+    padding: calc(var(--space-10) + var(--safe-top)) calc(var(--space-4) + var(--safe-right))
+      calc(var(--space-10) + var(--safe-bottom)) calc(var(--space-4) + var(--safe-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .auth-view > * {
+    flex-shrink: 0;
+  }
+
+  .auth-view > :first-child {
+    margin-block-start: auto;
+  }
+
+  .auth-view > :last-child {
+    margin-block-end: auto;
+  }
+
+  .auth-view-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    width: min(100%, 400px);
+    padding: var(--space-8);
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+    box-shadow: var(--shadow-raised);
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 var(--distance-rise);
+    }
+  }
+
+  @media (width < 720px) {
+    .auth-view > :first-child {
+      margin-block-start: 0;
+    }
+
+    .auth-view {
+      padding: calc(var(--space-4) + var(--safe-top)) calc(var(--space-3) + var(--safe-right))
+        calc(var(--space-8) + var(--safe-bottom)) calc(var(--space-3) + var(--safe-left));
+    }
+
+    .auth-view-card {
+      padding: var(--space-6) var(--space-5);
+    }
+  }
+
+  /* ── Header ── */
+
+  .auth-view-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .auth-view-logo {
+    width: 48px;
+    height: 48px;
+    margin-block-end: var(--space-2);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 0 1px var(--shadow-ring);
+    object-fit: cover;
+  }
+
+  .auth-view-title {
+    font-size: var(--text-page);
+    line-height: var(--leading-page);
+    overflow-wrap: anywhere;
+  }
+
+  .auth-view-lede,
+  .auth-view-description {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    overflow-wrap: anywhere;
+  }
+
+  /* The workspace's own words, as typed: its line breaks kept. */
+  .auth-view-description {
+    white-space: pre-line;
+  }
+
+  /* ── Forms ── */
+
+  /* Each field keeps a line for its message under it, which does the spacing a gap would. */
+  .auth-view-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .auth-view-form .input {
+    width: 100%;
+  }
+
+  .auth-view-form > .button[type="submit"] {
+    margin-block-start: var(--space-2);
+  }
+
+  .auth-view-wide {
+    width: 100%;
+  }
+
+  .field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: var(--control-sm);
+  }
+
+  .field-label-row > .field-label {
+    font-weight: var(--weight-medium);
+  }
+
+  /* A one-time code reads as a code: centred, monospaced, spaced. */
+  .input.auth-view-code-input {
+    font-family: var(--font-mono);
+    font-size: var(--text-composer);
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+
+  .input.auth-view-code-input::placeholder {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    letter-spacing: normal;
+  }
+
+  .auth-view-code {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  /* The code's refusals run to two lines ("That code didn't work. Check your authenticator…"). */
+  .auth-view-code .field-error {
+    min-height: calc(var(--leading-sidebar) * 2);
+  }
+
+  .auth-view-switch {
+    align-self: center;
+  }
+
+  .auth-view-form .checkbox-row {
+    align-self: flex-start;
+  }
+
+  /* ── Google ── */
+
+  .auth-view-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .auth-view-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .auth-view-divider::before,
+  .auth-view-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .auth-view-google-mark {
+    width: 18px;
+    height: 18px;
+  }
+
+  .auth-view-note {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    text-align: center;
+  }
+
+  /* ── Waiting and refusals ── */
+
+  .auth-view-wait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .auth-view-alert {
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    text-align: center;
+  }
+
+  /* ── The translation lists ── */
+
+  .auth-view-translations {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-1) var(--space-4);
+    max-width: min(320px, calc(100vw - var(--space-8)));
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .auth-view-translation {
+    display: contents;
+  }
+
+  .auth-view-translation dd {
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Under the card ── */
+
+  .auth-view-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-1) var(--space-4);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .auth-view-links a,
+  .auth-view-help a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .auth-view-links a:hover,
+  .auth-view-help a:hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .auth-view-links a:focus-visible,
+  .auth-view-help a:focus-visible {
+    border-radius: var(--radius-xs);
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .auth-view-help {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    margin-block-start: calc(var(--space-4) * -1);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    text-align: center;
+  }
+
+  .auth-view-help a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    overflow-wrap: anywhere;
+  }
+}
