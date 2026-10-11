@@ -16,13 +16,17 @@ import { GithubSubscriptions } from "./github-subscriptions.tsx";
 import { InboundEmailSection } from "./inbound-email.tsx";
 import { MemberList } from "./member-list.tsx";
 import {
+  DEFAULT_VOICE_BITRATE,
   hasMemberList,
+  hasVoiceBitrate,
   isDirty,
+  kbps,
   type ManagedKind,
   type RoomDraft,
   reconcileMembers,
   roomLabel,
   updateBody,
+  VOICE_BITRATES,
 } from "./room-forms.ts";
 import { RoomIconButton } from "./room-icon-button.tsx";
 import { WebhooksSection } from "./webhooks.tsx";
@@ -100,7 +104,8 @@ function Pending({ load }: { readonly load: Load }) {
 
 /**
  * A room's settings (`/app/r/:id/settings`, the classic `rooms/<kind>/:id/edit` pages): its name
- * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. A board
+ * and icon, whether a text channel is private, who's in it (with stage roles), the voice bitrate
+ * its calls target (for those who may change it), and Delete. A board
  * has the same name, icon and members, a way through to its automations, and (for those who may
  * edit it) its curated tags, which save as they change. Every room, including
  * a board, can subscribe GitHub repositories here; inbound email and incoming webhooks are offered
@@ -235,6 +240,8 @@ export default function RoomSettingsDialog({
   // The webhook API admits exactly who may submit this form: the creator and administrators.
   // A board never takes webhook posts, so it doesn't offer them.
   const hookable = kind !== "board" && form !== null && form.canSubmit;
+  // Like the integrations, only those who may change the room see its voice bitrate.
+  const bitrateEditable = hasVoiceBitrate(kind) && form?.canSubmit === true;
 
   const shownTab: Tab =
     (tab === "members" && !members) ||
@@ -529,7 +536,7 @@ export default function RoomSettingsDialog({
             </p>
           ) : null}
         </div>
-        {form.canSubmit && kind !== "board" ? (
+        {bitrateEditable ? (
           <>
             <div className="field">
               <label className="field-label" htmlFor={bitrateId}>
@@ -538,20 +545,25 @@ export default function RoomSettingsDialog({
               <select
                 id={bitrateId}
                 className="input"
-                value={draft.voiceBitrate ?? ""}
-                onChange={(event) =>
-                  edit({
-                    voiceBitrate: event.target.value === "" ? null : Number(event.target.value),
-                  })
-                }
+                value={`${draft.voiceBitrate ?? ""}`}
+                aria-describedby={`${bitrateId}-hint`}
+                onChange={(event) => {
+                  const value = event.target.value;
+
+                  edit({ voiceBitrate: value === "" ? null : Number(value) });
+                }}
               >
-                <option value="">Default (48 kbps)</option>
-                {[48, 64, 96, 128, 256, 384].map((kbps) => (
-                  <option key={kbps} value={kbps * 1000}>
-                    {kbps} kbps
+                <option value="">Default ({kbps(DEFAULT_VOICE_BITRATE)})</option>
+                {VOICE_BITRATES.map((bitrate) => (
+                  <option key={bitrate} value={`${bitrate}`}>
+                    {kbps(bitrate)}
                   </option>
                 ))}
               </select>
+              <p className="field-hint" id={`${bitrateId}-hint`}>
+                Higher bitrates sound better in calls here but use more bandwidth. Takes effect the
+                next time someone joins.
+              </p>
             </div>
             <div className="field">
               <label className="field-label" htmlFor={limitId}>
@@ -560,7 +572,8 @@ export default function RoomSettingsDialog({
               <select
                 id={limitId}
                 className="input"
-                value={draft.voiceUserLimit ?? ""}
+                value={`${draft.voiceUserLimit ?? ""}`}
+                aria-describedby={`${limitId}-hint`}
                 onChange={(event) =>
                   edit({
                     voiceUserLimit: event.target.value === "" ? null : Number(event.target.value),
@@ -574,7 +587,9 @@ export default function RoomSettingsDialog({
                   </option>
                 ))}
               </select>
-              <p className="field-hint">Room administrators can join even when the room is full.</p>
+              <p className="field-hint" id={`${limitId}-hint`}>
+                Room administrators can join even when the room is full.
+              </p>
             </div>
           </>
         ) : null}

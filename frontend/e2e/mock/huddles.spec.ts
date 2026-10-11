@@ -167,6 +167,46 @@ test("joining and leaving a huddle in a channel", async ({ page }) => {
   await expect(launcher(page)).toHaveText("Join huddle");
 });
 
+test("a channel's voice bitrate is what its next call's microphone encodes at", async ({
+  page,
+}, testInfo) => {
+  const settings = async () => {
+    await page.goto(`/app/r/${GENERAL}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    return { dialog, bitrate: dialog.getByRole("combobox", { name: "Voice bitrate" }) };
+  };
+
+  const encoded = () => page.evaluate(() => window.__smartfireHuddle?.audioBitrate());
+
+  await open(page, GENERAL);
+
+  let { dialog, bitrate } = await settings();
+
+  await expect(bitrate).toHaveValue("");
+  await expect(bitrate.locator("option:checked")).toHaveText("Default (48 kbps)");
+  await bitrate.selectOption({ label: "256 kbps" });
+  await page.screenshot({ path: testInfo.outputPath("voice-bitrate.png") });
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).toBeHidden();
+
+  await join(page);
+  await page.waitForFunction(() => window.__smartfireHuddle !== undefined);
+  expect(await encoded()).toBe(256_000);
+  await dock(page).getByRole("button", { name: "Leave call" }).click();
+  await expect(dock(page)).toHaveCount(0);
+
+  ({ dialog, bitrate } = await settings());
+  await expect(bitrate).toHaveValue("256000");
+  await bitrate.selectOption({ label: "Default (48 kbps)" });
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).toBeHidden();
+
+  await join(page);
+  expect(await encoded()).toBe(48_000);
+});
+
 test("the first join checks devices", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`/app/r/${GENERAL}`);
