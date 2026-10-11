@@ -510,40 +510,67 @@ impl Session {
 
 #[async_trait::async_trait]
 impl SyncSession for Session {
-    async fn event_for_viewer(&mut self, wire: &str) -> Option<String> {
-        let mut event: api::SyncEvent = serde_json::from_str(wire).ok()?;
-        let message = match &mut event.payload {
-            api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => {
-                message
-            }
-            _ => return Some(wire.to_owned()),
-        };
-        let app = self.app.upgrade()?;
-        let (viewer, room_id, message_id) = (self.user.id, message.room_id, message.id);
-        let source = app.db
-            .read_snapshot(move |conn| {
-                if Room::find_for_user(conn, viewer, room_id)?.is_none() {
-                    return Ok(None);
-                }
-                Ok(Some(campfire_db::models::announcement::source_for_viewer(conn, message_id, viewer)?))
+    async fn events_for_viewer(&mut self, wires: &[&str]) -> Vec<String> {
+        let events: Vec<_> = wires
+            .iter()
+            .filter_map(|wire| {
+                serde_json::from_str::<api::SyncEvent>(wire)
+                    .ok()
+                    .map(|event| (*wire, event))
             })
-            .await;
-        match source {
-            Ok(Some(source)) => {
-                message.announcement_source = source.map(|source| api::AnnouncementSource {
-                    room_id: source.room_id,
-                    message_id: source.message_id,
-                    room_name: source.room_name,
-                });
-            }
-            Ok(None) => return None,
-            Err(error) => {
-                tracing::warn!(%error, message_id, "sync: message delivery not authorized");
-                app.cable.sync_skipped_for(viewer);
-                return None;
+            .collect();
+        let mut room_ids = BTreeSet::new();
+        let mut message_ids = BTreeSet::new();
+        for (_, event) in &events {
+            if let api::SyncPayload::MessageCreated(message)
+            | api::SyncPayload::MessageUpdated(message) = &event.payload
+            {
+                room_ids.insert(message.room_id);
+                message_ids.insert(message.id);
             }
         }
-        serde_json::to_string(&event).ok()
+        if message_ids.is_empty() {
+            return events
+                .into_iter()
+                .map(|(wire, _)| wire.to_owned())
+                .collect();
+        }
+        let viewer = self.user.id;
+        let access = if let Some(app) = self.app.upgrade() {
+            app.db
+                .read_snapshot(move |conn| {
+                    campfire_db::models::announcement::replay_access(
+                        conn, viewer, room_ids, message_ids,
+                    )
+                })
+                .await
+                .unwrap_or_else(|error| {
+                    tracing::warn!(%error, "sync: message batch delivery not authorized");
+                    app.cable.sync_skipped_for(viewer);
+                    Default::default()
+                })
+        } else {
+            Default::default()
+        };
+        events
+            .into_iter()
+            .filter_map(|(wire, mut event)| match &mut event.payload {
+                api::SyncPayload::MessageCreated(message)
+                | api::SyncPayload::MessageUpdated(message) => {
+                    if !access.rooms.contains(&message.room_id) {
+                        return None;
+                    }
+                    message.announcement_source =
+                        access.sources.get(&message.id).map(|source| api::AnnouncementSource {
+                            room_id: source.room_id,
+                            message_id: source.message_id,
+                            room_name: source.room_name.clone(),
+                        });
+                    serde_json::to_string(&event).ok()
+                }
+                _ => Some(wire.to_owned()),
+            })
+            .collect()
     }
 
     async fn authorize(&mut self, topic: &str) -> bool {

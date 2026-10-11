@@ -474,12 +474,8 @@ impl<U> Connection<U> {
         let max = self.engine.ring.config().flush_max.max(1);
         let outgoing: Vec<_> = self.outgoing().into_iter().cloned().collect();
         self.pending.clear();
-        let mut events = Vec::with_capacity(outgoing.len());
-        for entry in outgoing {
-            if let Some(event) = self.session.event_for_viewer(&entry.json).await {
-                events.push(event);
-            }
-        }
+        let wires: Vec<_> = outgoing.iter().map(|entry| entry.json.as_ref()).collect();
+        let events = self.session.events_for_viewer(&wires).await;
         events
             .chunks(max)
             .map(|events| {

@@ -4,6 +4,183 @@ use serde_json::{Value, json};
 use super::api_tests::{app, get, json_body, parse};
 use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, HQ, JASON, KEVIN};
 
+#[tokio::test]
+async fn announcement_follow_returns_422_for_board_targets() {
+    let a = app(true)
+        .await
+        .expect("restored seed required")
+        .without_job_runner()
+        .await;
+    a.db()
+        .write(|tx| {
+            campfire_db::models::announcement::set_flag(tx, ALL_TALK, true)?;
+            tx.conn()
+                .execute("UPDATE rooms SET type='Rooms::Board' WHERE id=?", [HQ])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut admin = a.sign_in(JASON).await;
+    let reply = admin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/announcement_follows"),
+            &json!({"targetRoomId":HQ}),
+        ))
+        .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    let error = parse::<Value>(&reply);
+    assert_eq!(error["error"]["_tag"], "Validation");
+    assert_eq!(
+        error["error"]["fields"]["targetRoomId"],
+        json!(["must show plain timeline messages; boards are not supported"])
+    );
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("boards are not supported")
+    );
+    assert!(
+        a.db()
+            .read(|conn| campfire_db::models::announcement::followers(conn, ALL_TALK))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+async fn replay_query_count(copies: bool) {
+    use super::api_tests::{Sync, serve};
+    use campfire_api_types as api;
+    use campfire_cable::sync::{Audience, SyncPublication};
+    use campfire_db::models::announcement;
+    use campfire_db::{Message, NewMessage};
+    let mut counts = Vec::new();
+    for size in [1, 100] {
+        let a = app(true)
+            .await
+            .expect("restored seed required")
+            .without_job_runner()
+            .await;
+        let mut david = a.sign_in(DAVID).await;
+        let (addr, server) = serve(&a).await;
+        let topics = [format!("room:{HQ}")];
+        let mut live = Sync::connect(addr, &david.cookie_header(), &topics).await;
+        let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = live.next().await else {
+            panic!("a welcome")
+        };
+        let ids = a
+            .db()
+            .write(move |tx| {
+                if copies {
+                    announcement::set_flag(tx, ALL_TALK, true)?;
+                    announcement::follow(tx, ALL_TALK, HQ, DAVID)?;
+                }
+                let mut ids = Vec::new();
+                for _ in 0..size {
+                    let source = Message::create(
+                        tx,
+                        NewMessage {
+                            room_id: if copies { ALL_TALK } else { HQ },
+                            creator_id: DAVID,
+                            body: Some("<p>Batch replay</p>".into()),
+                            ..Default::default()
+                        },
+                    )?;
+                    if copies {
+                        let publication = announcement::publish(tx, &source, DAVID)?;
+                        let copy = announcement::deliver(tx, publication)?.remove(0).0;
+                        ids.push((copy.id, Some(source.id)));
+                    } else {
+                        ids.push((source.id, None));
+                    }
+                }
+                Ok(ids)
+            })
+            .await
+            .unwrap();
+        let read: api::MessageRead = parse(
+            &david
+                .send(get(&format!("/api/v1/messages/{}", ids[0].0)))
+                .await,
+        );
+        a.booted.app.broadcasts.settle_sync().await;
+        for &(id, _) in &ids {
+            let mut message = read.message.clone();
+            message.id = id;
+            message.announcement_source = None;
+            a.booted.app.cable.sync_publish(SyncPublication::new(
+                Audience::Topic(topics[0].clone()),
+                serde_json::to_string(&api::SyncPayload::MessageCreated(message)).unwrap(),
+            ));
+        }
+        let last_id = ids.last().unwrap().0;
+        live.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == last_id), |_| false).await;
+        let queries = a.db().capture_read_queries();
+        let mut replay = Sync::open(
+            addr,
+            &david.cookie_header(),
+            &topics,
+            json!({"epoch":epoch,"seq":seq}),
+        )
+        .await;
+        assert!(matches!(
+            replay.next().await,
+            Some(api::ServerFrame::Welcome { resumed: true, .. })
+        ));
+        for &(id, source_id) in &ids {
+            let event = replay.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == id), |_| false).await;
+            let api::SyncPayload::MessageCreated(message) = event.payload else {
+                unreachable!()
+            };
+            assert_eq!(
+                message.announcement_source.map(|source| source.message_id),
+                source_id
+            );
+        }
+        a.db().stop_capturing_read_queries();
+        let queries = queries.lock().unwrap();
+        let selects = queries
+            .iter()
+            .filter(|sql| sql.trim_start().to_ascii_uppercase().starts_with("SELECT"))
+            .count();
+        let provenance = queries
+            .iter()
+            .filter(|sql| sql.contains("JOIN announcement_publications"))
+            .count();
+        println!(
+            "announcement replay: copies={copies}, messages={size}, SELECTs={selects}, provenance={provenance}"
+        );
+        assert_eq!(
+            provenance,
+            usize::from(copies),
+            "one provenance query only when copies are present"
+        );
+        counts.push(selects);
+        server.abort();
+    }
+    assert_eq!(
+        counts[0], counts[1],
+        "replay SELECT count must be constant for 1 and 100 messages"
+    );
+}
+
+#[tokio::test]
+async fn announcement_replay_query_count_is_constant_without_copies() {
+    replay_query_count(false).await;
+}
+
+#[tokio::test]
+async fn announcement_replay_query_count_is_constant_with_copies() {
+    replay_query_count(true).await;
+}
+
 async fn replay_announcement(revoked_room: Option<i64>) {
     use super::api_tests::{Sync, serve};
     use campfire_api_types as api;

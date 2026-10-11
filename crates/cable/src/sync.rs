@@ -354,10 +354,10 @@ fn new_epoch() -> String {
 pub trait SyncSession: Send {
     /// Whether this connection may follow `topic` (`room:<id>` or `thread:<id>`).
     async fn authorize(&mut self, topic: &str) -> bool;
-    /// Apply current viewer permissions to an event before live delivery or replay.
-    /// `None` leaves an event out of this connection's batch.
-    async fn event_for_viewer(&mut self, event: &str) -> Option<String> {
-        Some(event.to_owned())
+    /// Apply current viewer permissions to a batch before live delivery or replay.
+    /// Omit events this connection may no longer receive, retaining sequence order.
+    async fn events_for_viewer(&mut self, events: &[&str]) -> Vec<String> {
+        events.iter().map(|event| (*event).to_owned()).collect()
     }
     /// `typing`: the person started or stopped typing in `conversation`.
     async fn typing(&mut self, conversation: &str, on: bool);

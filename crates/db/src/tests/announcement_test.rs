@@ -224,6 +224,79 @@ fn announcement_follow_refuses_long_cycles_and_direct_rooms_and_copy_publication
 }
 
 #[test]
+fn announcement_follow_refuses_boards_and_accepts_shared_timeline_rooms() {
+    let (t, source, _, _, _) = setup();
+    let target = id("pets");
+    t.write(move |tx| {
+        tx.conn()
+            .execute("UPDATE rooms SET type='Rooms::Board' WHERE id=?", [target])?;
+        Ok(())
+    });
+    let error = t
+        .try_write(move |tx| announcement::follow(tx, source, target, id("david")))
+        .unwrap_err();
+    let crate::Error::RecordInvalid(errors) = error else {
+        panic!("{error:?}")
+    };
+    assert_eq!(
+        errors.on("targetRoomId"),
+        ["must show plain timeline messages; boards are not supported"]
+    );
+    assert!(
+        t.read(move |c| announcement::following(c, target))
+            .is_empty()
+    );
+    for kind in [
+        "Rooms::Open",
+        "Rooms::Closed",
+        "Rooms::Voice",
+        "Rooms::Stage",
+    ] {
+        t.write(move |tx| {
+            tx.conn()
+                .execute("UPDATE rooms SET type=? WHERE id=?", (kind, target))?;
+            announcement::follow(tx, source, target, id("david"))?;
+            announcement::unfollow(tx, source, target)
+        });
+    }
+}
+
+#[test]
+fn announcement_delivery_skips_legacy_board_follows_and_reserved_board_targets() {
+    let (t, source, first, second, message) = setup();
+    let target = id("pets");
+    let publication = t.write(move |tx| {
+        tx.conn().execute("UPDATE rooms SET type='Rooms::Board' WHERE id=?", [first])?;
+        announcement::follow(tx, source, target, id("david"))?;
+        let publication = announcement::publish(tx, &message, id("david"))?;
+        let reserved: i64 = tx.conn().query_row("SELECT count(*) FROM announcement_deliveries WHERE publication_id=? AND target_room_id=?", (publication, first), |r| r.get(0))?;
+        assert_eq!(reserved, 0, "legacy board follows must not reserve deliveries");
+        tx.conn().execute("UPDATE rooms SET type='Rooms::Board' WHERE id=?", [second])?;
+        // A reservation made by an earlier release must also be skipped.
+        tx.conn().execute("INSERT INTO announcement_deliveries(publication_id,target_room_id) VALUES (?,?)", (publication, first))?;
+        Ok(publication)
+    });
+    for _ in 0..2 {
+        let delivered = t.write(move |tx| announcement::deliver(tx, publication));
+        assert_eq!(
+            delivered
+                .iter()
+                .map(|(message, _)| message.room_id)
+                .collect::<Vec<_>>(),
+            [target]
+        );
+    }
+    let copies = t.read(move |c| announcement::copies(c, publication));
+    assert_eq!(
+        copies
+            .iter()
+            .map(|message| message.room_id)
+            .collect::<Vec<_>>(),
+        [target]
+    );
+}
+
+#[test]
 fn announcement_hidden_source_reference_is_null_for_target_only_members() {
     let (t, source, _, _, message) = setup();
     let original = message.clone();

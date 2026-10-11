@@ -1,10 +1,13 @@
 //! Same-instance announcement publications and their reserved destinations.
+use std::collections::{BTreeMap, BTreeSet};
+
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 
-use crate::sql::{query_all, query_one};
+use crate::sql::{placeholders, query_all, query_one};
 use crate::{
-    CachedStatements, Errors, Event, Job, Message, MessageChanges, NewMessage, Room, Timestamp, Tx,
+    CachedStatements, Errors, Event, Job, Message, MessageChanges, NewMessage, Room, RoomType,
+    Snapshot, Timestamp, Tx,
 };
 
 #[derive(Debug, Clone)]
@@ -20,6 +23,12 @@ pub struct Source {
     pub room_id: i64,
     pub message_id: i64,
     pub room_name: Option<String>,
+}
+
+#[derive(Debug, Default)]
+pub struct ReplayAccess {
+    pub rooms: BTreeSet<i64>,
+    pub sources: BTreeMap<i64, Source>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,8 +83,15 @@ pub fn follow(tx: &mut Tx<'_>, source: i64, target: i64, creator: i64) -> crate:
     if !source_room.announcement {
         return Err(invalid("sourceRoomId", "must be an announcement room"));
     }
-    if target_room.direct() {
-        return Err(invalid("targetRoomId", "cannot be a direct message"));
+    match target_room.room_type {
+        RoomType::Open | RoomType::Closed | RoomType::Voice | RoomType::Stage => {}
+        RoomType::Direct => return Err(invalid("targetRoomId", "cannot be a direct message")),
+        RoomType::Board => {
+            return Err(invalid(
+                "targetRoomId",
+                "must show plain timeline messages; boards are not supported",
+            ));
+        }
     }
     let cycle: bool = tx.conn().query_row_cached(
         "WITH RECURSIVE chain(id) AS (SELECT ? UNION SELECT f.target_room_id FROM announcement_follows f JOIN chain ON f.source_room_id=chain.id) SELECT EXISTS(SELECT 1 FROM chain WHERE id=?)",
@@ -157,7 +173,7 @@ pub fn publish(tx: &mut Tx<'_>, message: &Message, publisher: i64) -> crate::Res
     }
     let publication: i64 = tx.conn().query_row_cached("INSERT INTO announcement_publications(source_message_id,publisher_id,published_at) VALUES (?,?,?) RETURNING id", params![message.id, publisher, tx.now()], |r| r.get(0))?;
     // Reserve the follower set now, never on a retry. Later follows do not backfill.
-    tx.conn().execute_cached("INSERT INTO announcement_deliveries(publication_id,target_room_id) SELECT ?, f.target_room_id FROM announcement_follows f JOIN rooms r ON r.id=f.target_room_id WHERE f.source_room_id=? AND r.deleted_at IS NULL AND r.type!='Rooms::Direct'", [publication, message.room_id])?;
+    tx.conn().execute_cached("INSERT INTO announcement_deliveries(publication_id,target_room_id) SELECT ?, f.target_room_id FROM announcement_follows f JOIN rooms r ON r.id=f.target_room_id WHERE f.source_room_id=? AND r.deleted_at IS NULL AND r.type IN ('Rooms::Open','Rooms::Closed','Rooms::Voice','Rooms::Stage')", [publication, message.room_id])?;
     message.touch(tx)?;
     tx.emit_after_commit(Event::job(&SyncJob {
         publication_id: publication,
@@ -221,6 +237,41 @@ pub fn source_for_viewer(
     )
 }
 
+pub fn replay_access(
+    conn: &Snapshot<'_>,
+    viewer: i64,
+    room_ids: BTreeSet<i64>,
+    message_ids: BTreeSet<i64>,
+) -> crate::Result<ReplayAccess> {
+    // Detect copies with the room grants so ordinary batches need no provenance read.
+    let grants = query_all(
+        conn,
+        &format!(
+            "SELECT r.id,d.message_id FROM rooms r JOIN memberships member ON member.room_id=r.id AND member.user_id=? LEFT JOIN announcement_deliveries d ON d.target_room_id=r.id AND d.message_id IN ({}) WHERE r.id IN ({}) AND r.deleted_at IS NULL",
+            placeholders(message_ids.len()),
+            placeholders(room_ids.len())
+        ),
+        rusqlite::params_from_iter(std::iter::once(viewer).chain(message_ids).chain(room_ids)),
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<i64>>(1)?)),
+    )?;
+    let rooms = grants.iter().map(|(room, _)| *room).collect();
+    let copies: BTreeSet<_> = grants
+        .into_iter()
+        .filter_map(|(_, message)| message)
+        .collect();
+    let sources = if copies.is_empty() {
+        BTreeMap::new()
+    } else {
+        query_all(conn, &format!(
+            "SELECT d.message_id,r.id,m.id,r.name FROM announcement_deliveries d JOIN announcement_publications p ON p.id=d.publication_id JOIN messages m ON m.id=p.source_message_id JOIN rooms r ON r.id=m.room_id JOIN memberships member ON member.room_id=r.id AND member.user_id=? WHERE d.message_id IN ({}) AND r.deleted_at IS NULL",
+            placeholders(copies.len())
+        ), rusqlite::params_from_iter(std::iter::once(viewer).chain(copies)), |row| Ok((row.get::<_, i64>(0)?, Source {
+            room_id: row.get(1)?, message_id: row.get(2)?, room_name: row.get(3)?,
+        })))?.into_iter().collect()
+    };
+    Ok(ReplayAccess { rooms, sources })
+}
+
 /// Each reserved delivery and its normal message callbacks commit in the same write transaction.
 pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message, bool)>> {
     let Some(source_id) = query_one(
@@ -238,7 +289,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
     }
     let destinations = query_all(
         tx.conn(),
-        "SELECT d.target_room_id,d.message_id FROM announcement_deliveries d JOIN rooms r ON r.id=d.target_room_id WHERE d.publication_id=? AND r.deleted_at IS NULL AND r.type!='Rooms::Direct' ORDER BY d.target_room_id",
+        "SELECT d.target_room_id,d.message_id FROM announcement_deliveries d JOIN rooms r ON r.id=d.target_room_id WHERE d.publication_id=? AND r.deleted_at IS NULL AND r.type IN ('Rooms::Open','Rooms::Closed','Rooms::Voice','Rooms::Stage') ORDER BY d.target_room_id",
         [publication],
         |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<i64>>(1)?)),
     )?;
