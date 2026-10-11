@@ -261,7 +261,7 @@ def session(app, labels):
     room = labels["rooms.watercooler"]
     s = lg("scrape", "--base", app.base, "--cookie", cookie, "--room", room)[0]
     return {
-        "cookie": cookie, "csrf": s["csrf"] or "", "streams": ",".join(s["streams"]), "room": room,
+        "cookie": cookie, "csrf": s["csrf"] or "", "room": room,
         "write_room": labels["rooms.hq"], "before": labels["messages.busy_060"], "css": s["css"],
     }
 
@@ -324,7 +324,7 @@ def cable(app, sess, clients, tput_secs=15, posters=4, hold=0):
     sampler.start()
     c0 = app.cpu()
     res, lg_cpu, err = lg("cable", "--base", app.base, "--cookie", sess["cookie"], "--room", sess["room"], "--csrf", sess["csrf"],
-                          "--streams", sess["streams"], "--clients", clients, "--tput-secs", tput_secs, "--posters", posters,
+                          "--clients", clients, "--tput-secs", tput_secs, "--posters", posters,
                           "--hold-secs", hold, stderr=True)
     c1 = app.cpu()
     time.sleep(1)

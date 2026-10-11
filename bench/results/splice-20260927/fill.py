@@ -8,7 +8,7 @@ def get(p):
 def csrf(html): m = re.search(r'name="csrf-token" content="([^"]+)"', html); return m.group(1) if m else ""
 def post(p, data, token):
     d = urllib.parse.urlencode({**data, "authenticity_token": token}).encode()
-    r = op.open(urllib.request.Request(base + p, d, {"Accept": "text/vnd.turbo-stream.html, text/html", "Sec-Fetch-Site": "same-origin"})); return r.geturl(), r.read().decode()
+    r = op.open(urllib.request.Request(base + p, d, {"Sec-Fetch-Site": "same-origin"})); return r.geturl(), r.read().decode()
 op.open(base + "/session/new")
 url, html = get("/first_run")
 url, html = get("/session/new")

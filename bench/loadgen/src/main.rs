@@ -2,10 +2,10 @@
 //! (WebSocket) to one server and prints one JSON object per command on stdout.
 //!
 //!   loadgen login  --base URL --email E --password P            -> {"cookie": "..."}
-//!   loadgen scrape --base URL --cookie C --room ID              -> csrf token, stream names, assets
+//!   loadgen scrape --base URL --cookie C --room ID              -> csrf token, assets
 //!   loadgen http   --base URL --cookie C --path P --conc N --duration S
 //!                  [--post-room ID --csrf T]                     -> latency/throughput
-//!   loadgen cable  --base URL --cookie C --room ID --csrf T --clients N [--streams a,b,c]
+//!   loadgen cable  --base URL --cookie C --room ID --csrf T --clients N
 //!                  [--sources 127.0.0.2,127.0.0.3 --hold-secs 60 --deflate 1]
 //!                  [--latency-msgs 30 --interval-ms 200 --tput-secs 15 --posters 4]
 //!   loadgen upload --base URL --cookie C --room ID --csrf T --file PATH [--reps 5]
@@ -148,10 +148,6 @@ fn same_origin() -> (&'static str, String) {
     ("sec-fetch-site", "same-origin".into())
 }
 
-fn unescape(s: &str) -> String {
-    s.replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'")
-}
-
 async fn login(a: &Args) -> Res<Value> {
     let addr = host_port(&a.get("base"));
     let mut jar = Vec::new();
@@ -178,23 +174,13 @@ async fn scrape(a: &Args) -> Res<Value> {
     let addr = host_port(&a.get("base"));
     let path = format!("/rooms/{}", a.get("room"));
     let r = one_shot(&addr, "GET", &path, &[("cookie", a.get("cookie"))], Bytes::new()).await?;
-    let mut html = String::from_utf8_lossy(&r.body).to_string();
-    // The sidebar frame (loaded lazily by the page) carries the rooms/user-rooms stream sources.
-    let sidebar = one_shot(&addr, "GET", "/users/me/sidebar", &[("cookie", a.get("cookie"))], Bytes::new()).await?;
-    html.push_str(&String::from_utf8_lossy(&sidebar.body));
-    let streams: Vec<String> = {
-        // "Channel|signed name" for each <turbo-cable-stream-source>.
-        let re = regex::Regex::new(r#"<turbo-cable-stream-source channel="([^"]+)" signed-stream-name="([^"]+)""#).unwrap();
-        let mut seen = HashSet::new();
-        re.captures_iter(&html).map(|c| format!("{}|{}", &c[1], unescape(&c[2]))).filter(|s| seen.insert(s.clone())).collect()
-    };
+    let html = String::from_utf8_lossy(&r.body).to_string();
     let css = regex::Regex::new(r#"href="(/assets/[^"]+\.css)""#).unwrap().captures(&html).map(|c| c[1].to_string());
     let js = regex::Regex::new(r#"(/assets/[^"]+\.js)""#).unwrap().captures(&html).map(|c| c[1].to_string());
     Ok(json!({
         "status": r.status,
         "bytes": r.body.len(),
         "csrf": csrf_from(&html),
-        "streams": streams,
         "css": css,
         "js": js,
     }))
@@ -239,7 +225,7 @@ fn message_request(cookie: &str, csrf: &str, body_text: &str) -> (Vec<(&'static 
         vec![
             ("cookie", cookie.to_string()),
             ("content-type", "application/x-www-form-urlencoded".into()),
-            ("accept", "text/vnd.turbo-stream.html, text/html, application/xhtml+xml".into()),
+            ("accept", "application/json".into()),
             ("x-csrf-token", csrf.to_string()),
             same_origin(),
         ],
@@ -651,17 +637,12 @@ async fn cable(a: &Args) -> Res<Value> {
     let sources: Vec<std::net::IpAddr> =
         a.opt("sources").unwrap_or_default().split(',').filter(|s| !s.is_empty()).map(|s| s.parse()).collect::<Result<_, _>>()?;
 
-    // The chatter.js load shape: presence for the room, unread rooms, heartbeat, and the page's
-    // turbo stream sources (rooms list, the room's messages, the user's rooms).
-    let mut subs = vec![
+    // The chatter.js load shape: presence for the room, unread rooms and heartbeat.
+    let subs = vec![
         json!({"channel": "PresenceChannel", "room_id": room.parse::<u64>()?}).to_string(),
         json!({"channel": "UnreadRoomsChannel"}).to_string(),
         json!({"channel": "HeartbeatChannel"}).to_string(),
     ];
-    for s in a.get("streams").split(',').filter(|s| !s.is_empty()) {
-        let (channel, name) = s.split_once('|').unwrap_or(("Turbo::StreamsChannel", s));
-        subs.push(json!({"channel": channel, "signed_stream_name": name}).to_string());
-    }
 
     let delivery = Arc::new(Delivery {
         sent: Mutex::new(HashMap::new()),
@@ -836,13 +817,13 @@ async fn upload(a: &Args) -> Res<Value> {
     let data = std::fs::read(&file)?;
     let name = std::path::Path::new(&file).file_name().unwrap().to_string_lossy().to_string();
     let ctype = if name.ends_with(".png") { "image/png" } else { "image/jpeg" };
-    let img_re = regex::Regex::new(r#"<img[^>]+src="([^"]+)""#).unwrap();
 
     let mut runs = Vec::new();
     for _ in 0..reps {
         let boundary = format!("----bench{}", nonce());
+        let client_message_id = nonce();
         let mut body = Vec::new();
-        for (k, v) in [("authenticity_token", csrf.as_str()), ("message[client_message_id]", &nonce())] {
+        for (k, v) in [("authenticity_token", csrf.as_str()), ("message[client_message_id]", &client_message_id)] {
             body.extend(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n").as_bytes());
         }
         body.extend(
@@ -859,7 +840,7 @@ async fn upload(a: &Args) -> Res<Value> {
             &[
                 ("cookie", cookie.clone()),
                 ("content-type", format!("multipart/form-data; boundary={boundary}")),
-                ("accept", "text/vnd.turbo-stream.html, text/html".into()),
+                ("accept", "application/json".into()),
                 ("x-csrf-token", csrf.clone()),
                 same_origin(),
             ],
@@ -867,9 +848,12 @@ async fn upload(a: &Args) -> Res<Value> {
         )
         .await?;
         let post_ms = t0.elapsed().as_secs_f64() * 1000.0;
-        let html = String::from_utf8_lossy(&r.body).to_string();
-        let Some(src) = img_re.captures(&html).map(|c| unescape(&c[1])) else {
-            runs.push(json!({"post_status": r.status, "post_ms": post_ms, "error": "no <img> in response"}));
+        // The post answers with no body; the room's newest messages carry the attachment's URLs.
+        let page = one_shot(&addr, "GET", &format!("/api/v1/rooms/{room}/messages"), &[("cookie", cookie.clone())], Bytes::new()).await?;
+        let page: Value = serde_json::from_slice(&page.body).unwrap_or_default();
+        let attachment = page["messages"].as_array().into_iter().flatten().find(|m| m["clientMessageId"] == client_message_id.as_str()).map(|m| &m["attachment"]);
+        let Some(src) = attachment.and_then(|a| a["thumbnailUrl"].as_str().or(a["url"].as_str())).map(str::to_owned) else {
+            runs.push(json!({"post_status": r.status, "post_ms": post_ms, "error": "no attachment on the posted message"}));
             continue;
         };
         // Follow redirects to the bytes (representations/redirect -> disk service).

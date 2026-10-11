@@ -192,11 +192,10 @@ run_rep() {
   start_sampler "$cg" "$OUT/.$app-$rep.mem"
   log "$app rep $rep: cold start ${cold_ms}ms, idle ${idle_cur}MB (anon ${idle_anon}MB)"
 
-  local cookie scrape csrf streams css
+  local cookie scrape csrf css
   cookie=$(lg login --base "$BASE" --email "$EMAIL" --password "$PASSWORD" | python3 -c 'import json,sys; print(json.load(sys.stdin)["cookie"])')
   scrape=$(lg scrape --base "$BASE" --cookie "$cookie" --room "$ROOM")
   csrf=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["csrf"] or "")' "$scrape")
-  streams=$(python3 -c 'import json,sys; print(",".join(json.loads(sys.argv[1])["streams"]))' "$scrape")
   css=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["css"])' "$scrape")
 
   local routes=(
@@ -229,7 +228,7 @@ run_rep() {
   for n in $CABLE_CLIENTS_RUN; do
     local pm=$OUT/.$app-$rep-cable$n
     taskset -c "$PROCMEM_CPUS" python3 "$BENCH/lib/procmem.py" sample "$cg" "$pm.jsonl" & PROCMEM=$!
-    local res; res=$(lg cable --base "$BASE" --cookie "$cookie" --room "$ROOM" --csrf "$csrf" --streams "$streams" \
+    local res; res=$(lg cable --base "$BASE" --cookie "$cookie" --room "$ROOM" --csrf "$csrf" \
       --clients "$n" --tput-secs "$CABLE_TPUT_SECS" --posters "$CABLE_POSTERS" 2> "$pm.stderr")
     sleep 0.5; kill "$PROCMEM" 2>/dev/null || true; wait "$PROCMEM" 2>/dev/null || true; PROCMEM=""
     res=$(python3 -c 'import json,sys; r=json.loads(sys.argv[1]); r["process_memory"]=json.loads(sys.argv[2]); print(json.dumps(r))' \

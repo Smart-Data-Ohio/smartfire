@@ -8,7 +8,7 @@
 # CLIENTS clients (default 100,000), a 30 s idle hold, paced posts and 10 s of throughput. Pass
 # `--deflate 1` for browser-like compressed clients. It prints CPU and memory per phase and writes
 # $WORK/cable-LABEL.json. The first run sets up $WORK (default bench/.work/pi-100k): a database
-# filled by ../splice-20260927/fill.py, a signed-in cookie and the room's stream names.
+# filled by ../splice-20260927/fill.py and a signed-in cookie.
 #
 # Many clients need many local ports: they're spread over ten loopback addresses, and a run leaves
 # its ports in TIME_WAIT for a minute, so wait between runs (or set SOURCES to other addresses).
@@ -48,7 +48,6 @@ if [ ! -f "$WORK/scrape.json" ]; then
   "$LOADGEN" scrape --base "http://127.0.0.1:$PORT" --cookie "$(cat "$WORK/cookie")" --room 1 > "$WORK/scrape.json"
 fi
 PID=$(cat "$WORK/pid"); COOKIE=$(cat "$WORK/cookie")
-STREAMS=$(python3 -c 'import json,sys; print(",".join(json.load(open(sys.argv[1]))["streams"]))' "$WORK/scrape.json")
 
 # time, app Pss (kB), app CPU ticks, load generator CPU ticks
 ( while sleep 1; do
@@ -57,7 +56,7 @@ STREAMS=$(python3 -c 'import json,sys; print(",".join(json.load(open(sys.argv[1]
   l=$(pgrep -x loadgen | head -1 || true); lc=$( [ -n "$l" ] && awk '{print $14+$15}' /proc/$l/stat || echo 0)
   echo "$(date +%s.%N) $p $a $lc"
 done ) > "$WORK/samp-$LABEL.txt" 2>/dev/null & SAMPLER=$!
-taskset -c 12-23 "$LOADGEN" cable --base "http://127.0.0.1:$PORT" --cookie "$COOKIE" --room 1 --streams "$STREAMS" \
+taskset -c 12-23 "$LOADGEN" cable --base "http://127.0.0.1:$PORT" --cookie "$COOKIE" --room 1 \
   --clients "$N" --sources "$SOURCES" --hold-secs 30 --latency-msgs 10 --tput-secs 10 --posters 2 "$@" \
   > "$WORK/cable-$LABEL.json" 2> "$WORK/cable-$LABEL.err"
 kill $SAMPLER
