@@ -395,6 +395,74 @@ async fn setup_contract_enrollment_gate_is_typed_for_every_json_entry_and_retain
 }
 
 #[tokio::test]
+async fn setup_shell_opens_for_an_unenrolled_session_and_keeps_its_return_path() {
+    const SHELL: &str = "/app/two_factor/setup";
+    let gated = json!({"error":{"_tag":"TwoFactorRequired","message":"Set up two-step sign-in to continue","requirement":{"kind":"setup","location":"http://campfire.test/two_factor_setup"}}});
+    let app = app().await;
+    // Signed out, the screen asks for sign-in as the retained page does.
+    let retained = app.anonymous().get("/two_factor_setup").await;
+    let shell = app.anonymous().get(SHELL).await;
+    assert_eq!(retained.status, StatusCode::FOUND);
+    assert_eq!(shell.status, retained.status);
+    assert_eq!(shell.location(), retained.location());
+
+    let mut browser = app.anonymous();
+    browser.get("/session/new").await;
+    browser
+        .write(Req::new(Method::POST, "/session").form(&[
+            ("email_address", "david@37signals.com"),
+            ("password", "secret123456"),
+        ]))
+        .await;
+    // Only the screen's page is let through: the rest of /app, a nested path and a JSON request
+    // for it stay gated.
+    for path in ["/app/", "/app/two_factor/setup/extra", "/app/settings/security"] {
+        assert_eq!(
+            browser.get(path).await.location(),
+            Some("http://campfire.test/two_factor_setup"),
+            "{path}"
+        );
+    }
+    let json = browser
+        .send(Req::new(Method::GET, SHELL).header("accept", "application/json"))
+        .await;
+    assert_eq!(json.status, StatusCode::FORBIDDEN);
+    assert_eq!(json.json(), gated);
+
+    assert_eq!(
+        browser.get("/app/settings?tab=security").await.location(),
+        Some("http://campfire.test/two_factor_setup")
+    );
+    let saved = cookie_state(&app, &browser)["return_to_after_authenticating"].clone();
+    assert_eq!(saved, "http://campfire.test/app/settings?tab=security");
+    let before = facts(&app).await;
+
+    // A full load of the SPA's setup screen is the shell, not the gate's redirect.
+    let page = browser
+        .get("/app/two_factor/setup?return_to=%2Fapp%2Fsettings%3Ftab%3Dsecurity&required=true")
+        .await;
+    assert_eq!(page.status, StatusCode::OK, "{}", page.text());
+    assert_eq!(page.location(), None);
+    assert!(page.text().contains(r#"<script type="application/json" id="boot""#));
+    assert_eq!(page.header("cache-control"), Some("no-store"));
+    assert_eq!(cookie_state(&app, &browser)["return_to_after_authenticating"], saved);
+    assert_eq!(facts(&app).await, before);
+
+    // Setting up from the screen returns to the saved path.
+    browser.get(API).await;
+    let code = totp::at(&setup(&app).await.1, app.booted.app.clock.now().as_second()).unwrap();
+    let reply = browser.write(submission(true, &code)).await;
+    assert_eq!(reply.json()["continueUrl"], saved);
+
+    // Enrolled, the screen sends the account to its profile, as the retained page does.
+    let retained = browser.get("/two_factor_setup").await;
+    let shell = browser.get(SHELL).await;
+    assert_eq!(retained.location(), Some("http://campfire.test/users/me/profile"));
+    assert_eq!(shell.status, retained.status);
+    assert_eq!(shell.location(), retained.location());
+}
+
+#[tokio::test]
 async fn setup_contract_authentication_csrf_and_bad_bodies_do_not_confirm() {
     let app = app().await;
     let mut anonymous = app.anonymous();

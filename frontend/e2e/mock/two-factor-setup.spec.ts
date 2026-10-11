@@ -119,3 +119,21 @@ test("sign out stays available while setup is required", async ({ page }) => {
   await signOut;
   await expect(page).not.toHaveURL(/two_factor/);
 });
+
+matrix("a full load of the setup screen while setup is required", async ({ page, theme }) => {
+  await twoFactor(page, { enrolled: false, required: true });
+  await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+  await page.goto("/app/two_factor/setup?return_to=%2Fapp%2Fr%2F1&required=true");
+
+  await expect(page.getByRole("heading", { name: "Set up two-step sign-in" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "QR code for your authenticator app" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to settings" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await settle(page);
+  await shot(page, "two-factor-setup-direct", theme);
+
+  await verify(page, "123456");
+  await page.getByRole("button", { name: "I've saved these codes" }).click();
+  await expect(page).toHaveURL(/\/app\/r\/1$/);
+});
