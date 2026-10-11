@@ -344,7 +344,7 @@ fn the_welcome_settings_and_what_a_viewer_reads() {
                 }],
                 guide: vec![
                     GuideResource { title: "Start here".into(), emoji: None, room_id: Some(3), body: None },
-                    GuideResource { title: "Hours".into(), emoji: Some(":clock:".into()), room_id: None, body: Some("9 to 5".into()) },
+                    GuideResource { title: "Hours".into(), emoji: Some("🕘".into()), room_id: None, body: Some("9 to 5".into()) },
                 ],
             },
             choices: vec![WelcomeRoomChoice { id: 3, name: "general".into() }],
@@ -355,7 +355,7 @@ fn the_welcome_settings_and_what_a_viewer_reads() {
                 "rooms": [{"roomId": 3, "emoji": "👋", "description": "Introduce yourself"}],
                 "guide": [
                     {"title": "Start here", "emoji": null, "roomId": 3, "body": null},
-                    {"title": "Hours", "emoji": ":clock:", "roomId": null, "body": "9 to 5"}
+                    {"title": "Hours", "emoji": "🕘", "roomId": null, "body": "9 to 5"}
                 ]
             },
             "choices": [{"id": 3, "name": "general"}]

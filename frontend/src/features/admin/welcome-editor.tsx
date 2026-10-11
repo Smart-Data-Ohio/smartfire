@@ -346,7 +346,8 @@ function WelcomeForm({
                     focusAfter(
                       listRef.current,
                       `[data-row="${room.key}"] [data-tool="${to < index ? "up" : "down"}"]`,
-                      `[data-row="${room.key}"] select`,
+                      // At the top or bottom that button is disabled: the other one, then.
+                      `[data-row="${room.key}"] [data-tool="${to < index ? "down" : "up"}"]`,
                     );
                   }}
                   onRemove={() => {
@@ -511,7 +512,8 @@ function GuideForm({
                   focusAfter(
                     listRef.current,
                     `[data-row="${entry.key}"] [data-tool="${to < index ? "up" : "down"}"]`,
-                    `[data-row="${entry.key}"] input`,
+                    // At the top or bottom that button is disabled: the other one, then.
+                    `[data-row="${entry.key}"] [data-tool="${to < index ? "down" : "up"}"]`,
                   );
                 }}
                 onRemove={() => {
