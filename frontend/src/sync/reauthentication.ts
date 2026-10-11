@@ -22,8 +22,9 @@
  */
 import { Effect, Layer, Option, Schema } from "effect";
 import { ApiClient, type ApiRequest } from "../api/client.ts";
-import { ConfirmationCancelled, type SudoRequired } from "../api/errors.ts";
+import { ConfirmationCancelled, SudoRequired } from "../api/errors.ts";
 import { type ConfirmationTicket, Reauthentication } from "../api/reauthentication.ts";
+import type { SudoResponse, SudoRetry as SudoRetrySchema } from "../api/schema/sudo.ts";
 import { acknowledgeSudo, resumeSudo, startSudoGoogle, submitSudo } from "../api/sudo-endpoints.ts";
 import type { SudoMethod } from "../gen/SudoMethod.ts";
 import type { SudoSubmission } from "../gen/SudoSubmission.ts";
@@ -39,6 +40,11 @@ export interface ConfirmationPrompt {
    * multipart body.
    */
   readonly secrets: number;
+  /**
+   * How many of them are full-page actions (connecting Google, say) checked before they leave:
+   * after a Google confirmation the person does them again.
+   */
+  readonly again: number;
 }
 
 /** A write kept for after the Google round trip: the request exactly as it was sent. */
@@ -73,6 +79,8 @@ const Handoff = Schema.Struct({
   writes: Schema.Array(KeptWrite),
   /** Writes left behind because they carried a credential: their forms ask again. */
   dropped: Schema.Int,
+  /** Full-page actions that were waiting too: the person does them again. */
+  again: Schema.optionalKey(Schema.Int),
 });
 
 type Handoff = typeof Handoff.Type;
@@ -125,7 +133,8 @@ export function spaReturnPath(path: string | null): string {
     path === null ||
     !(path === "/app" || path.startsWith("/app/")) ||
     path.includes("\\") ||
-    path.startsWith("/app/sudo/continue")
+    path.startsWith("/app/sudo/continue") ||
+    path.startsWith(SUDO_PAGE)
   ) {
     return HOME;
   }
@@ -134,7 +143,8 @@ export function spaReturnPath(path: string | null): string {
 }
 
 interface Waiting {
-  readonly request: ApiRequest;
+  /** The held write; `null` for a full-page action checked before it leaves (`confirmFirst`). */
+  readonly request: ApiRequest | null;
   readonly required: SudoRequired;
   /** The screen that sent it. */
   readonly screen: string;
@@ -212,6 +222,9 @@ export interface GateOptions {
  */
 const keepable = (request: ApiRequest) => request.secret !== true && request.form === undefined;
 
+/** A held write that can't wait in storage (not a full-page action, which isn't a write). */
+const unkeepable = (entry: Waiting) => entry.request !== null && !keepable(entry.request);
+
 const cancelled = (message: string) => Effect.fail(new ConfirmationCancelled({ message }));
 
 /**
@@ -245,7 +258,8 @@ export function makeConfirmationGate({
         : {
             methods: last.required.reauthentication.methods,
             writes: next.length,
-            secrets: next.filter((entry) => !keepable(entry.request)).length,
+            secrets: next.filter(unkeepable).length,
+            again: next.filter((entry) => entry.request === null).length,
           };
 
     for (const listener of listeners) {
@@ -291,8 +305,13 @@ export function makeConfirmationGate({
       return Effect.void;
     }
 
-    return Effect.callback<void, SudoRequired | ConfirmationCancelled>((resume) => {
-      const entry: Waiting = { request, required, screen: ticket.screen, settle: resume };
+    return wait(request, required, ticket.screen);
+  };
+
+  /** Waits on the dialog with `request` (or a full-page action, `null`) from `from`. */
+  const wait = (request: ApiRequest | null, required: SudoRequired, from: string) =>
+    Effect.callback<void, SudoRequired | ConfirmationCancelled>((resume) => {
+      const entry: Waiting = { request, required, screen: from, settle: resume };
 
       publish([...waiting, entry]);
 
@@ -303,7 +322,6 @@ export function makeConfirmationGate({
         }
       });
     });
-  };
 
   const layer = Layer.succeed(Reauthentication, {
     ticket: Effect.sync(() => ({ confirmations, screen: screen() })),
@@ -521,6 +539,19 @@ export function makeConfirmationGate({
       settle(gone, leftScreen);
     },
 
+    /**
+     * A full-page action needs a fresh confirmation the server says isn't there
+     * (`reauthentication`): waits on the dialog with the held writes, from the screen showing
+     * now. Succeeds once confirmed here; fails if cancelled, the screen is left, or the person
+     * leaves for Google (they do it again once back).
+     */
+    confirmNavigation: (reauthentication: SudoRequired["reauthentication"]) =>
+      wait(
+        null,
+        new SudoRequired({ message: "Confirm your password to continue", reauthentication }),
+        screen(),
+      ),
+
     /** A fresh id for a Google attempt. */
     newAttempt: (): string => newId(),
 
@@ -532,7 +563,10 @@ export function makeConfirmationGate({
      * storage to keep it in, nothing is kept and every write fails so.
      */
     leave(returnTo: string, attempt: string, session: number | null): void {
-      const keep = waiting.filter((entry) => keepable(entry.request));
+      const keep = waiting.flatMap((entry) =>
+        entry.request !== null && keepable(entry.request) ? [entry.request] : [],
+      );
+
       const user = viewer();
 
       const stored =
@@ -546,12 +580,16 @@ export function makeConfirmationGate({
           next: 0,
           returnTo: spaReturnPath(returnTo),
           // The request as it went, less the flag that keeps credentials out of here.
-          writes: keep.map(({ request: { secret, form, ...write } }) => write),
-          dropped: waiting.length - keep.length,
+          writes: keep.map(({ secret, form, ...write }) => write),
+          dropped: waiting.filter(unkeepable).length,
+          again: waiting.filter((entry) => entry.request === null).length,
         });
 
+      // Full-page actions don't wait in storage: they fail now, and the person does them again.
       settleAll((entry) =>
-        stored && keepable(entry.request) ? null : Effect.fail(entry.required),
+        stored && entry.request !== null && keepable(entry.request)
+          ? null
+          : Effect.fail(entry.required),
       );
     },
 
@@ -653,6 +691,115 @@ export function makeConfirmationGate({
 
 export type ConfirmationGate = ReturnType<typeof makeConfirmationGate>;
 
+/**
+ * Before a full-page action the server confirms first (connecting Google, say): whether a fresh
+ * confirmation is in place, asking for one in the dialog when it isn't. `"go"` once there is one;
+ * `"stay"` when the person cancelled, or left to confirm with Google (they do it again once back);
+ * `"unavailable"` with the reason when the server couldn't be asked, or signed out (`null`: the
+ * client is already on its way to the sign-in page).
+ */
+export const confirmFirst = Effect.fn("confirmation.confirmFirst")(function* (
+  gate: ConfirmationGate,
+): Effect.fn.Return<ConfirmFirst, never, ApiClient> {
+  const reply = yield* resumeSudo(null).pipe(
+    Effect.match({
+      onSuccess: (answer) => answer,
+      onFailure: (error) => ({ kind: "error", message: error.message }) as const,
+    }),
+  );
+
+  switch (reply.kind) {
+    case "confirmed":
+      return { kind: "go" } as const;
+    case "ready":
+      return yield* gate.confirmNavigation(reply.reauthentication).pipe(
+        Effect.match({
+          onSuccess: () => ({ kind: "go" }) as const,
+          onFailure: () => ({ kind: "stay" }) as const,
+        }),
+      );
+    case "navigate":
+      return { kind: "unavailable", reason: null } as const;
+    case "error":
+      return { kind: "unavailable", reason: reply.message } as const;
+  }
+});
+
+type SudoRetry = typeof SudoRetrySchema.Type;
+
+/** What `confirmFirst` came to. */
+export type ConfirmFirst =
+  | { readonly kind: "go" }
+  | { readonly kind: "stay" }
+  | { readonly kind: "unavailable"; readonly reason: string | null };
+
+/** What `/app/sudo/new` reads first: the server's answer, or why it couldn't be had. */
+export type SudoStatus =
+  | typeof SudoResponse.Type
+  | { readonly kind: "unreachable"; readonly message: string };
+
+/**
+ * `/app/sudo/new`'s read: whether the confirmation is fresh (`confirmed`, with what the server
+ * held for after it) or what it can be confirmed with (`ready`). A fresh one is consumed: what
+ * the server held is the page's to continue with now.
+ */
+export const sudoStatus = Effect.fn("confirmation.status")(function* () {
+  return yield* resumeSudo(null).pipe(
+    Effect.catch((error) =>
+      Effect.succeed({ kind: "unreachable", message: error.message } satisfies SudoStatus),
+    ),
+  );
+});
+
+/** What a credential sent from `/app/sudo/new` came to. */
+export type SudoHere =
+  | { readonly kind: "confirmed"; readonly retry: SudoRetry | null }
+  | { readonly kind: "refused"; readonly message: string }
+  | { readonly kind: "signedOut" };
+
+/**
+ * Confirms from `/app/sudo/new`, where no write waits in memory: the server's held request comes
+ * back with the confirmation (`retry`) for the page to continue with. A dialog waiting meanwhile
+ * (another screen's write) goes on too.
+ */
+export const confirmHere = Effect.fn("confirmation.confirmHere")(function* (
+  gate: ConfirmationGate,
+  submission: SudoSubmission,
+) {
+  const reply = yield* submitSudo(submission);
+
+  switch (reply.kind) {
+    case "confirmed":
+      gate.confirmed();
+
+      return { kind: "confirmed", retry: reply.retry } satisfies SudoHere;
+    case "error":
+      return { kind: "refused", message: reply.message } satisfies SudoHere;
+    case "navigate":
+      // The session ended; the client is already on its way to sign in.
+      return { kind: "signedOut" } satisfies SudoHere;
+    case "ready":
+      return { kind: "refused", message: "Confirmation failed. Try again." } satisfies SudoHere;
+  }
+});
+
+/**
+ * Starts Google from `/app/sudo/new`. No writes wait (and a hand-off another page kept stays
+ * as it is): the continue page asks the server whether it confirmed, and what it held.
+ */
+export const googleHere = Effect.fn("confirmation.googleHere")(function* () {
+  const reply = yield* startSudoGoogle(null);
+
+  if (reply.kind === "navigate") {
+    return { kind: "navigate", location: reply.location } satisfies GoogleStart;
+  }
+
+  return {
+    kind: "error",
+    message: reply.kind === "error" ? reply.message : "Google confirmation didn't start.",
+  } satisfies GoogleStart;
+});
+
 /** What a password or code submission came to: `null` when confirmed, else the reason to show. */
 export const submit = Effect.fn("confirmation.submit")(function* (
   gate: ConfirmationGate,
@@ -743,12 +890,19 @@ export interface GoogleReturn {
   readonly confirmed: boolean;
   /** The SPA page to go back to. */
   readonly returnTo: string;
+  /**
+   * A page to load in full instead (no hand-off: the server's held request was a page the person
+   * asked for, `GET`, before it asked them to confirm); `null` to go back to `returnTo`.
+   */
+  readonly follow: string | null;
   /** Writes that went again and landed. */
   readonly replayed: number;
   /** The first replayed write's failure, if one failed. */
   readonly failure: string | null;
   /** Writes left behind because they carried a credential. */
   readonly dropped: number;
+  /** Full-page actions (connecting Google, say) that waited too: the person does them again. */
+  readonly again: number;
   /**
    * Kept writes dropped unsent: the server didn't confirm the attempt they were kept for (another
    * tab's confirmation, a new session, a refusal) or they ran out of time. Their change is lost.
@@ -841,6 +995,38 @@ const resumeOnce = Effect.fnUntraced(function* (
   );
 });
 
+/**
+ * Where a confirmation with nothing kept goes, by what the server held (`retry`): a page asked for
+ * (`GET`) loads again; a change (never sent again from here) goes back to the page it came from
+ * to make again. Unconfirmed with something held, back to `/app/sudo/new` to confirm again.
+ */
+export function afterConfirming(
+  reply: typeof SudoResponse.Type,
+  fallback: string,
+): Pick<GoogleReturn, "returnTo" | "follow"> {
+  if (reply.kind === "confirmed" && reply.retry !== null) {
+    const { method, path, returnTo } = reply.retry;
+
+    return {
+      returnTo: spaReturnPath(returnTo),
+      follow: method.toUpperCase() === "GET" && pageLoad(path) ? path : null,
+    };
+  }
+
+  if (reply.kind === "ready" && reply.reauthentication.retry !== null) {
+    return { returnTo: SUDO_PAGE, follow: null };
+  }
+
+  return { returnTo: fallback, follow: null };
+}
+
+/** The SPA page that asks for a confirmation in full (where the server's sudo gate sends pages). */
+export const SUDO_PAGE = "/app/sudo/new";
+
+/** Whether `path` is a page of this site to load (not the API, not another origin). */
+const pageLoad = (path: string) =>
+  path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/api/");
+
 /** How long the lock may take before the page says another tab holds it. */
 const WAIT_NOTICE_MS = 300;
 
@@ -848,9 +1034,11 @@ const WAIT_NOTICE_MS = 300;
 const untouched = (returnTo: string | null, expired: number): GoogleReturn => ({
   confirmed: false,
   returnTo: spaReturnPath(returnTo),
+  follow: null,
   replayed: 0,
   failure: null,
   dropped: 0,
+  again: 0,
   abandoned: expired,
   elsewhere: 0,
   unconfirmed: 0,
@@ -875,9 +1063,11 @@ const resume = Effect.fnUntraced(function* (
 
   const outcome = {
     returnTo,
+    follow: null,
     replayed: 0,
     failure: null,
     dropped,
+    again: handoff?.again ?? 0,
     abandoned: expired,
     elsewhere: 0,
     unconfirmed: 0,
@@ -904,15 +1094,10 @@ const resume = Effect.fnUntraced(function* (
     gate.noteConfirmed();
   }
 
+  // Nothing kept here: the server may hold what the person asked for before it asked them to
+  // confirm (`/app/sudo/new`).
   if (handoff === null) {
-    return {
-      ...outcome,
-      confirmed,
-      returnTo:
-        reply.kind === "confirmed" && reply.retry !== null
-          ? spaReturnPath(reply.retry.returnTo)
-          : returnTo,
-    } satisfies GoogleReturn;
+    return { ...outcome, ...afterConfirming(reply, returnTo), confirmed } satisfies GoogleReturn;
   }
 
   // Writes another tab already claimed aren't lost, whatever this answer says.
@@ -1052,8 +1237,9 @@ const resume = Effect.fnUntraced(function* (
     }
   }
 
-  // A copy storage wouldn't let go of is all marked sent by now.
-  if (gate.nextKept(handoff.id) !== null) {
+  // A copy storage wouldn't let go of is all marked sent by now; one that kept no writes (only
+  // full-page actions waited) is done with too.
+  if (handoff.writes.length === 0 || gate.nextKept(handoff.id) !== null) {
     gate.forget();
   }
 

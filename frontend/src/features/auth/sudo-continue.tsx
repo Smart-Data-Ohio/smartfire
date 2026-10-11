@@ -5,10 +5,22 @@ import { actions, type GoogleReturn } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { RoutePending } from "../shell/route-pending.tsx";
+import { pageExit } from "./auth-navigation.ts";
 import "../room/room.css";
 
 /** Tells the person what the Google return came to. */
 function announce(result: GoogleReturn): void {
+  // What waited for the confirmation besides the writes: a click to make again.
+  if (!announceWrites(result) && result.confirmed && result.again > 0) {
+    toast({ title: "Confirmed. Try that again.", tone: "success" });
+  }
+}
+
+/**
+ * Tells the person what the Google return came to for its writes; whether that already asked
+ * them to try again.
+ */
+function announceWrites(result: GoogleReturn): boolean {
   if (!result.confirmed) {
     // A refused Google confirmation leaves its alert in the boot flash, which the shell shows.
     if (store.getState().boot?.flash == null) {
@@ -19,7 +31,7 @@ function announce(result: GoogleReturn): void {
       });
     }
 
-    return;
+    return true;
   }
 
   if (result.abandoned > 0) {
@@ -31,7 +43,7 @@ function announce(result: GoogleReturn): void {
       tone: "danger",
     });
 
-    return;
+    return false;
   }
 
   if (result.failure !== null) {
@@ -41,7 +53,7 @@ function announce(result: GoogleReturn): void {
       tone: "danger",
     });
 
-    return;
+    return false;
   }
 
   if (result.unconfirmed > 0) {
@@ -54,7 +66,7 @@ function announce(result: GoogleReturn): void {
       tone: "danger",
     });
 
-    return;
+    return false;
   }
 
   if (result.replayed > 0) {
@@ -66,7 +78,7 @@ function announce(result: GoogleReturn): void {
       tone: "success",
     });
 
-    return;
+    return false;
   }
 
   if (result.elsewhere > 0) {
@@ -80,7 +92,7 @@ function announce(result: GoogleReturn): void {
       tone: "success",
     });
 
-    return;
+    return false;
   }
 
   toast({
@@ -89,6 +101,8 @@ function announce(result: GoogleReturn): void {
       result.dropped > 0 ? "Enter the token or secret again to finish." : "Try that again.",
     tone: "success",
   });
+
+  return result.dropped === 0;
 }
 
 /** What the continue page shows once it isn't loading. */
@@ -166,6 +180,15 @@ export function SudoContinue() {
           kept: result.kept,
           returnTo: result.returnTo,
         });
+
+        return;
+      }
+
+      // A page the server held for the confirmation loads again (a download stays here: back
+      // first).
+      if (result.follow !== null) {
+        void navigate({ href: result.returnTo, replace: true });
+        pageExit.assign(result.follow);
 
         return;
       }

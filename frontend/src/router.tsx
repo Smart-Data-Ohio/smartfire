@@ -22,6 +22,7 @@ import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { parseSignInSearch } from "./features/auth/auth-navigation.ts";
 import { SudoContinue } from "./features/auth/sudo-continue.tsx";
+import { SudoNew } from "./features/auth/sudo-new.tsx";
 import { parseTwoFactorSetupSearch } from "./features/auth/two-factor-search.ts";
 import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
@@ -221,6 +222,16 @@ const sudoContinueRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "sudo/continue",
   component: SudoContinue,
+});
+
+/**
+ * `/app/sudo/new`: "Confirm it's you" as a page, for a request the server's confirmation gate
+ * held (a full page load: nothing waits in memory); once confirmed it goes on, or back.
+ */
+const sudoNewRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "sudo/new",
+  component: SudoNew,
 });
 
 /** `/app/r/$roomId`: a room's timeline (channel, DM, voice and stage share it). */
@@ -736,6 +747,7 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     homeRoute,
     sudoContinueRoute,
+    sudoNewRoute,
     activityRoute,
     savedRoute,
     scheduledRoute,

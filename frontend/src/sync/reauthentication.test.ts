@@ -9,15 +9,20 @@ import { onTwoFactorRequirement } from "../api/two-factor-gate.ts";
 import type { SudoMethod } from "../gen/SudoMethod.ts";
 import type { SudoRetry } from "../gen/SudoRetry.ts";
 import {
+  afterConfirming,
   type ConfirmationGate,
   confirmAgain,
+  confirmFirst,
+  confirmHere,
   discardKept,
+  googleHere,
   KEPT_KEY,
   makeConfirmationGate,
   resumeAfterGoogle,
   spaReturnPath,
   startGoogle,
   submit,
+  sudoStatus,
 } from "./reauthentication.ts";
 
 /** What the fake server saw. */
@@ -306,7 +311,12 @@ describe("the confirmation gate", () => {
       const write = yield* Effect.forkChild(send(styles));
 
       yield* untilPrompt(gate);
-      expect(gate.snapshot()).toEqual({ methods: ["password", "totp"], writes: 1, secrets: 0 });
+      expect(gate.snapshot()).toEqual({
+        methods: ["password", "totp"],
+        writes: 1,
+        secrets: 0,
+        again: 0,
+      });
 
       gate.confirmed();
 
@@ -825,6 +835,7 @@ describe("the Google round trip", () => {
         returnTo: "/app/admin/styles?tab=css",
         writes: [styles],
         dropped: 1,
+        again: 0,
       });
 
       yield* Fiber.interrupt(kept);
@@ -832,9 +843,11 @@ describe("the Google round trip", () => {
       expect(yield* resumeAfterGoogle(gate)).toEqual({
         confirmed: true,
         returnTo: "/app/admin/styles?tab=css",
+        follow: null,
         replayed: 1,
         failure: null,
         dropped: 1,
+        again: 0,
         abandoned: 0,
         elsewhere: 0,
         unconfirmed: 0,
@@ -1540,9 +1553,11 @@ describe("the Google round trip", () => {
       expect(yield* resumeAfterGoogle(gate)).toEqual({
         confirmed: false,
         returnTo: "/app/admin/styles?tab=css",
+        follow: null,
         replayed: 0,
         failure: null,
         dropped: 0,
+        again: 0,
         abandoned: 0,
         elsewhere: 0,
         unconfirmed: 0,
@@ -1593,6 +1608,308 @@ describe("the Google round trip", () => {
     expect(spaReturnPath("https://evil.test/app/")).toBe("/app/");
     expect(spaReturnPath("/account/edit")).toBe("/app/");
     expect(spaReturnPath("/app/sudo/continue")).toBe("/app/");
+    expect(spaReturnPath("/app/sudo/new")).toBe("/app/");
     expect(spaReturnPath(null)).toBe("/app/");
+  });
+});
+
+/** The server is down. */
+const down: Reply = { status: 503, body: "Service Unavailable" };
+
+/** What the classic gate held for a page asked for in full: a download, say. */
+const exportRetry: SudoRetry = {
+  method: "GET",
+  path: "/account/audit_log.csv?action=sign_in",
+  returnTo: "/app/settings/audit-log",
+};
+
+/** What it held for a form the person sent in full: connecting Google, say. */
+const connectRetry: SudoRetry = {
+  method: "POST",
+  path: "/google/connect",
+  returnTo: "/app/settings/integrations",
+};
+
+/** The password check at `POST /sudo`, which the Google harness otherwise holds as a write. */
+const passwordCheck = (entry: Seen, server: Server): Reply | null => {
+  if (entry.path !== "/api/v1/sudo" || entry.method !== "POST") return null;
+
+  if (entry.body.includes("wrong")) return refused;
+
+  server.fresh = true;
+
+  const retry = server.pending;
+
+  server.pending = null;
+
+  return { status: 200, body: { kind: "confirmed", retry, session: server.session } };
+};
+
+describe("a full-page action checked first", () => {
+  it.live("goes at once while the confirmation is fresh, without a prompt", () => {
+    const { layer, seen, gate, server } = googleHarness();
+
+    server.fresh = true;
+
+    return Effect.gen(function* () {
+      expect(yield* confirmFirst(gate)).toEqual({ kind: "go" });
+      expect(gate.snapshot()).toBeNull();
+      expect(continuations(seen)).toEqual([["GET", null]]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("asks in the dialog when it isn't, and goes once the person confirms", () => {
+    const { layer, gate } = googleHarness({ respond: passwordCheck });
+
+    return Effect.gen(function* () {
+      const check = yield* Effect.forkChild(confirmFirst(gate));
+
+      yield* untilPrompt(gate);
+      expect(gate.snapshot()).toEqual({
+        methods: ["password", "totp"],
+        writes: 1,
+        secrets: 0,
+        again: 1,
+      });
+      expect(yield* submit(gate, { kind: "password", password: "wrong" })).toBe(
+        "Confirmation failed. Try again.",
+      );
+      expect(gate.snapshot()?.again).toBe(1);
+      expect(yield* submit(gate, { kind: "password", password: "right" })).toBeNull();
+      expect(yield* Fiber.join(check)).toEqual({ kind: "go" });
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("stays when the person cancels, or the screen changes", () => {
+    const { layer, gate, page } = googleHarness();
+
+    return Effect.gen(function* () {
+      const cancelled = yield* Effect.forkChild(confirmFirst(gate));
+
+      yield* untilPrompt(gate);
+      gate.cancel();
+      expect(yield* Fiber.join(cancelled)).toEqual({ kind: "stay" });
+
+      const left = yield* Effect.forkChild(confirmFirst(gate));
+
+      yield* untilPrompt(gate);
+      page.screen = "/app/r/1";
+      gate.screenChanged();
+      expect(yield* Fiber.join(left)).toEqual({ kind: "stay" });
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("says why when the server can't be asked", () => {
+    const { layer, gate } = googleHarness({
+      respond: (entry) => (entry.path === "/api/v1/sudo/continue" ? down : null),
+    });
+
+    return Effect.gen(function* () {
+      const outcome = yield* confirmFirst(gate);
+
+      expect(outcome.kind).toBe("unavailable");
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("leaving for Google, it stays: the return asks the person to click again", () => {
+    const { layer, seen, gate } = googleHarness();
+
+    return Effect.gen(function* () {
+      const kept = yield* Effect.forkChild(send(styles));
+
+      yield* untilPrompt(gate);
+
+      const check = yield* Effect.forkChild(confirmFirst(gate));
+
+      yield* untilPrompt(gate, 2);
+      expect(gate.snapshot()).toMatchObject({ writes: 2, secrets: 0, again: 1 });
+      expect((yield* startGoogle(gate, "/app/admin/styles")).kind).toBe("navigate");
+      expect(yield* Fiber.join(check)).toEqual({ kind: "stay" });
+      expect(JSON.parse(sessionStorage.getItem(KEPT_KEY) ?? "{}")).toMatchObject({
+        writes: [styles],
+        dropped: 0,
+        again: 1,
+      });
+      yield* Fiber.interrupt(kept);
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        returnTo: "/app/admin/styles",
+        follow: null,
+        replayed: 1,
+        again: 1,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("with only the action waiting, the return still says to click again", () => {
+    const { layer, gate } = googleHarness();
+
+    return Effect.gen(function* () {
+      const check = yield* Effect.forkChild(confirmFirst(gate));
+
+      yield* untilPrompt(gate);
+      expect((yield* startGoogle(gate, "/app/settings/integrations")).kind).toBe("navigate");
+      expect(yield* Fiber.join(check)).toEqual({ kind: "stay" });
+
+      expect(yield* resumeAfterGoogle(gate)).toEqual({
+        confirmed: true,
+        returnTo: "/app/settings/integrations",
+        follow: null,
+        replayed: 0,
+        failure: null,
+        dropped: 0,
+        again: 1,
+        abandoned: 0,
+        elsewhere: 0,
+        unconfirmed: 0,
+        held: null,
+        kept: 0,
+        unreachable: null,
+      });
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+});
+
+describe("/app/sudo/new", () => {
+  it.live("reads whether the confirmation is fresh, and what the server held", () => {
+    const { layer, gate, server } = googleHarness();
+
+    server.pending = exportRetry;
+
+    return Effect.gen(function* () {
+      expect(yield* sudoStatus()).toMatchObject({ kind: "ready" });
+
+      server.fresh = true;
+      expect(yield* sudoStatus()).toMatchObject({ kind: "confirmed", retry: exportRetry });
+      // Consumed: the next read has nothing held.
+      expect(yield* sudoStatus()).toMatchObject({ kind: "confirmed", retry: null });
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("says the server couldn't be asked rather than failing", () => {
+    const { layer } = googleHarness({
+      respond: () => down,
+    });
+
+    return Effect.gen(function* () {
+      expect((yield* sudoStatus()).kind).toBe("unreachable");
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a password confirms here and hands back what the server held", () => {
+    const { layer, gate, server } = googleHarness({ respond: passwordCheck });
+
+    server.pending = connectRetry;
+
+    return Effect.gen(function* () {
+      expect(yield* confirmHere(gate, { kind: "password", password: "wrong" })).toEqual({
+        kind: "refused",
+        message: "Confirmation failed. Try again.",
+      });
+      expect(yield* confirmHere(gate, { kind: "password", password: "right" })).toEqual({
+        kind: "confirmed",
+        retry: connectRetry,
+      });
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("Google starts with no attempt and keeps nothing", () => {
+    const { layer, seen, server } = googleHarness();
+
+    server.pending = exportRetry;
+
+    return Effect.gen(function* () {
+      expect(yield* googleHere()).toEqual({
+        kind: "navigate",
+        location: "https://accounts.test/o",
+      });
+      expect(seen.find((entry) => entry.path === "/api/v1/sudo/google")?.body).toBe("{}");
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("back from Google with nothing kept, a page asked for loads again", () => {
+    const { layer, gate, server } = googleHarness();
+
+    server.pending = exportRetry;
+
+    return Effect.gen(function* () {
+      yield* googleHere();
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        returnTo: "/app/settings/audit-log",
+        follow: "/account/audit_log.csv?action=sign_in",
+        again: 0,
+      });
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("back from Google with nothing kept, a form goes back to be sent again", () => {
+    const { layer, gate, server } = googleHarness();
+
+    server.pending = connectRetry;
+
+    return Effect.gen(function* () {
+      yield* googleHere();
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        returnTo: "/app/settings/integrations",
+        follow: null,
+      });
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("back from a refused Google with something held, it asks again on the page", () => {
+    const { layer, gate, server } = googleHarness({
+      refuse: true,
+      respond: (entry, held) =>
+        entry.path === "/api/v1/sudo/continue" && !held.fresh
+          ? {
+              status: 403,
+              body: {
+                kind: "ready",
+                reauthentication: { methods: ["password"], retry: held.pending },
+                session: held.session,
+              },
+            }
+          : null,
+    });
+
+    server.pending = connectRetry;
+
+    return Effect.gen(function* () {
+      yield* googleHere();
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: false,
+        returnTo: "/app/sudo/new",
+        follow: null,
+      });
+    }).pipe(Effect.provide(layer));
+  });
+
+  it("follows only pages of this site", () => {
+    const go = (path: string, method = "GET") =>
+      afterConfirming({ kind: "confirmed", retry: { method, path, returnTo: "/app/x" } }, "/app/")
+        .follow;
+
+    expect(go("/slack/oauth/start?return_to=x")).toBe("/slack/oauth/start?return_to=x");
+    expect(go("/api/v1/admin/people")).toBeNull();
+    expect(go("//evil.test/")).toBeNull();
+    expect(go("https://evil.test/")).toBeNull();
+    expect(go("/google/connect", "POST")).toBeNull();
+    expect(afterConfirming({ kind: "confirmed", retry: null }, "/app/r/1")).toEqual({
+      returnTo: "/app/r/1",
+      follow: null,
+    });
   });
 });

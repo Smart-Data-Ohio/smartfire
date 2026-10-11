@@ -19,10 +19,13 @@ export const submitSudo = Effect.fn("submitSudo")(function* (body: SudoSubmissio
   return yield* client.execute({ method: "POST", path: "/sudo", body, auth: true }, decodeSudo);
 });
 
-/** `POST /sudo/google`, for the SPA's `attempt` id: the continuation names it once Google confirms. */
-export const startSudoGoogle = Effect.fn("startSudoGoogle")(function* (attempt: string) {
+/**
+ * `POST /sudo/google`, for the SPA's `attempt` id: the continuation names it once Google confirms.
+ * Without one (`/app/sudo/new`, which keeps no writes) the continuation asks only whether it did.
+ */
+export const startSudoGoogle = Effect.fn("startSudoGoogle")(function* (attempt: string | null) {
   const client = yield* ApiClient;
-  const body: SudoGoogleStart = { attempt };
+  const body: SudoGoogleStart = attempt === null ? {} : { attempt };
 
   return yield* client.execute(
     { method: "POST", path: "/sudo/google", body, auth: true },
