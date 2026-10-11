@@ -1,0 +1,207 @@
+/*
+ * About, Privacy and Terms: a header, a reading column and a footer, as the retained public layout
+ * draws them (src/auth/pages.css), from the SPA's tokens. The article's own classes (.public-lede,
+ * .public-updated, .public-callout) are the retained template's.
+ */
+
+@layer app {
+  /* Its own scroll container: the app's stylesheet locks the body for the shell. */
+  .public-view {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg-app);
+  }
+
+  .public-view-skip {
+    position: absolute;
+    inset-block-start: calc(var(--space-2) + var(--safe-top));
+    inset-inline-start: calc(var(--space-2) + var(--safe-left));
+    z-index: 30;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    translate: 0 -200%;
+  }
+
+  .public-view-skip:focus-visible {
+    translate: 0;
+  }
+
+  .public-view-wrap {
+    width: min(100%, 720px);
+    margin-inline: auto;
+    padding-inline: calc(var(--space-5) + var(--safe-left)) calc(var(--space-5) + var(--safe-right));
+  }
+
+  .public-view-header {
+    flex-shrink: 0;
+    padding-block-start: var(--safe-top);
+    border-block-end: 1px solid var(--border);
+    background: var(--bg-pane);
+  }
+
+  .public-view-header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    min-height: var(--pane-header-height);
+    padding-block: var(--space-2);
+  }
+
+  .public-view-brand {
+    color: var(--text);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+    text-decoration: none;
+  }
+
+  .public-view-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .public-view-nav a:not(.button) {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .public-view-nav a:not(.button):hover {
+    color: var(--text);
+  }
+
+  .public-view-main {
+    flex: 1 0 auto;
+    padding-block: var(--space-10);
+    outline: none;
+  }
+
+  .public-view-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding-block: var(--space-10);
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .auth-view-wait.public-view-state {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  /* ── The article ── */
+
+  .public-view-prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    overflow-wrap: break-word;
+  }
+
+  .public-view-prose h1 {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+  }
+
+  .public-view-prose h2 {
+    margin-block-start: var(--space-4);
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+  }
+
+  .public-view-prose h3 {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .public-view-prose ul,
+  .public-view-prose ol {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-inline-start: var(--space-6);
+    list-style: disc;
+  }
+
+  .public-view-prose ol {
+    list-style: decimal;
+  }
+
+  .public-view-prose li::marker {
+    color: var(--text-faint);
+  }
+
+  .public-view-prose strong {
+    font-weight: var(--weight-semibold);
+  }
+
+  .public-view-prose code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-xs);
+    background: var(--bg-hover);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  .public-view-prose .public-lede {
+    color: var(--text-muted);
+    font-size: var(--text-composer);
+    line-height: var(--leading-composer);
+  }
+
+  .public-view-prose .public-updated {
+    color: var(--text-faint);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .public-view-prose .public-callout {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--mention-bg);
+    box-shadow: inset 3px 0 0 var(--mention);
+  }
+
+  /* ── Footer ── */
+
+  .public-view-footer {
+    flex-shrink: 0;
+    padding-block: var(--space-6) calc(var(--space-8) + var(--safe-bottom));
+    border-block-start: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .public-view-footer .public-view-nav {
+    margin-block-end: var(--space-3);
+    font-size: var(--text-meta);
+  }
+
+  @media (width < 720px) {
+    .public-view-main {
+      padding-block: var(--space-6);
+    }
+
+    .public-view-prose h1 {
+      font-size: var(--text-page);
+      line-height: var(--leading-page);
+    }
+  }
+}

@@ -30,7 +30,7 @@ use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
 use campfire_api_types::{SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
 use campfire_people::controllers::{auth, sessions, two_factor};
-use campfire_spa::{SignedOutRoute, signed_out_route};
+use campfire_spa::{SignedOutRoute, is_public_page, signed_out_route};
 
 /// The SPA routes. `immutable_cache_control` is the policy for digest-stamped assets.
 pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
@@ -56,11 +56,21 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/api/v1/session", axum::routing::post(campfire_kit::unparsed_action(sessions::create_json)).delete(campfire_kit::unparsed_action(sessions::destroy_json)))
         .route("/api/v1/session/google", axum::routing::post(campfire_kit::action(super::google_sign_in::create_json)))
         .route("/api/v1/session/transfers/{id}", axum::routing::put(campfire_kit::action(sessions::transfers::update_json)))
+        .route("/api/v1/public_pages/{page}", axum::routing::get(campfire_kit::action(super::public_pages::show_json)))
         .route("/api/v1/two_factor/challenge", axum::routing::get(campfire_kit::action(two_factor::challenge_show_json)).post(campfire_kit::unparsed_action(two_factor::challenge_create_json)))
 }
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
+    // About, Privacy and Terms are for anyone, as their retained pages are: without a session,
+    // the signed-out shell draws them, skipping the workspace callback chain those pages skip.
+    if is_public_page(c.request.path()) && !concerns::restore_authentication(c).await? {
+        let boot = load_signed_out_boot(c).await?;
+        let nonce = c.content_security_policy_nonce();
+        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
+        c.no_store();
+        return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+    }
     if let Some(route) = signed_out_route(c.request.path()) {
         let endpoint = match route {
             SignedOutRoute::SignIn => "sessions#new",

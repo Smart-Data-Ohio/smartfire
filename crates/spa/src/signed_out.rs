@@ -17,6 +17,12 @@ pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
     }
 }
 
+/// About, Privacy and Terms, which anyone may read: signed in, the app's own shell draws them;
+/// signed out, the signed-out shell does.
+pub fn is_public_page(path: &str) -> bool {
+    matches!(path, "/app/about" | "/app/privacy" | "/app/terms")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,6 +49,17 @@ mod tests {
             "/app/two_factor/challenge/extra",
         ] {
             assert_eq!(signed_out_route(path), None, "{path}");
+        }
+    }
+
+    #[test]
+    fn public_pages_are_a_fixed_allow_list() {
+        for path in ["/app/about", "/app/privacy", "/app/terms"] {
+            assert!(is_public_page(path), "{path}");
+            assert_eq!(signed_out_route(path), None, "{path}");
+        }
+        for path in ["/about", "/app/about/", "/app/terms/extra", "/app/privacy.json", "/app/"] {
+            assert!(!is_public_page(path), "{path}");
         }
     }
 }

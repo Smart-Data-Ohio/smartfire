@@ -40,6 +40,7 @@ mod organize;
 mod panes;
 mod people;
 mod presence;
+mod public_pages;
 mod reaction;
 mod read;
 mod room;
@@ -57,6 +58,7 @@ mod thread;
 mod user;
 mod work;
 
+pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
 pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInHelpContact, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, TransferSignIn};
 
 pub use actions::{
