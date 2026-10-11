@@ -43,6 +43,15 @@ pub trait SyncRenderer: Send + Sync + 'static {
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<SidebarRow>>;
+    /// Shared organization filtered for one viewer, read from the publication's snapshot.
+    fn workspace_layout(
+        &self,
+        _conn: &Connection,
+        _user_id: i64,
+    ) -> campfire_db::Result<Option<campfire_api_types::WorkspaceLayout>> {
+        Ok(None)
+    }
+
     /// The thread as `GET /api/v1/threads/:id` serves it.
     fn thread(&self, conn: &Connection, thread: &ChannelThread) -> Option<Thread>;
     /// The reply indicator of `parent`'s thread: `Ok(None)` when it has none (any more).
@@ -138,6 +147,7 @@ pub struct RendererSlot(Arc<RendererState>);
 #[derive(Default)]
 struct RendererState {
     renderer: OnceLock<Arc<dyn SyncRenderer>>,
+    workspace: Mutex<()>,
     threads: PublicationLocks,
     rooms: PublicationLocks,
     /// Per parent message, for its `thread.indicator`.
@@ -280,6 +290,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "sidebar.category.removed",
         ],
     ),
+    ("workspace_category::WorkspaceOrganized", &["workspace.layout.updated"]),
     ("poll::PollChanged", &["poll.updated", "poll.ballot"]),
     ("calendar_event::EventsChanged", &["events.changed"]),
     // The card slots' replaces after a fetch, a refresh or an event's change.
@@ -1897,6 +1908,47 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
             Err(error) => tracing::warn!(%error, approval_id, "sync: approval not read"),
         }
     }));
+}
+
+/// Reads and publishes the shared layout per member under one lock, so deferred snapshots
+/// cannot arrive in reverse order. Disconnected members get a resume gap and refetch.
+pub fn workspace_organized_later(server: &Cable, slot: &RendererSlot) {
+    defer_rows(server, slot, move |server, slot, reader| {
+        let _guard = hold(&slot.0.workspace);
+        let Some(renderer) = slot.get(server) else {
+            return;
+        };
+        reader.read(&mut |conn| {
+            in_snapshot(conn, 0, |snapshot| {
+                let viewers = match campfire_db::User::active(snapshot) {
+                    Ok(viewers) => viewers,
+                    Err(error) => {
+                        tracing::warn!(%error, "sync: workspace viewers not read");
+                        return;
+                    }
+                };
+                for viewer in viewers {
+                    if !server.sync_connected(viewer.id) {
+                        server.sync_skipped_for(viewer.id);
+                        continue;
+                    }
+                    match renderer.workspace_layout(snapshot, viewer.id) {
+                        Ok(Some(layout)) => send(
+                            server,
+                            Audience::User(viewer.id),
+                            &SyncPayload::WorkspaceLayoutUpdated(layout),
+                            |publication| publication,
+                        ),
+                        Ok(None) => server.sync_skipped_for(viewer.id),
+                        Err(error) => {
+                            tracing::warn!(%error, user_id = viewer.id, "sync: workspace layout not read");
+                            server.sync_skipped_for(viewer.id);
+                        }
+                    }
+                }
+            });
+        });
+    });
 }
 
 #[cfg(test)]

@@ -185,7 +185,7 @@ pub enum SyncPayload {
     /// `thread:<id>` stop following it.
     #[serde(rename = "thread.removed")]
     ThreadRemoved(ThreadRemoved),
-    /// On `room:<id>`: a board's tag rules or SLA timers changed (see
+    /// On `room:<id>`: a board's tag catalog, tag policy, tag rules or SLA timers changed (see
     /// [`BoardAutomationsChanged`]). New.
     #[serde(rename = "board.automations.changed")]
     BoardAutomationsChanged(BoardAutomationsChanged),
@@ -267,6 +267,9 @@ pub enum SyncPayload {
     /// On the presenter's `user` topic: someone else ended their stream.
     #[serde(rename = "stage.stream.stopped")]
     StageStreamStopped(StageStreamStopped),
+    /// A shared organization change, filtered for the recipient on their user topic.
+    #[serde(rename = "workspace.layout.updated")]
+    WorkspaceLayoutUpdated(crate::WorkspaceLayout),
 }
 
 /// Workspace images as the SPA uses them; animated sources have a PNG still URL too.

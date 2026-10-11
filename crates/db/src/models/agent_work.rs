@@ -90,10 +90,11 @@ pub fn list_board_posts(
                 .unwrap_or(Bind::Null)
         });
     }
-    let tag = rails_compat::unicode::downcase(strip(tag.unwrap_or("")));
-    if !is_blank(&tag) {
-        sql.push_str(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE name=?)");
-        binds.push(Bind::Text(tag));
+    let tag = strip(tag.unwrap_or(""));
+    if !is_blank(tag) {
+        let names = crate::ThreadTag::matching_names(conn, room.id, tag)?;
+        sql.push_str(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE name IN (SELECT value FROM json_each(?)))");
+        binds.push(Bind::Text(serde_json::json!(names).to_string()));
     }
     sql.push_str(" ORDER BY last_activity_at DESC,id DESC LIMIT 100");
     Ok(Outcome::ok(

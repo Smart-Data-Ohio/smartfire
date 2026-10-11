@@ -512,6 +512,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       users: usersFor([...rows.flatMap((row) => row.directMemberIds), ...placeholders]),
       directPlaceholderUserIds: placeholders,
       canCreateRooms: true,
+      workspaceLayout: { categories: [], rooms: [] },
     };
   };
 

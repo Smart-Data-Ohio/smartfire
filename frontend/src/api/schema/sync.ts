@@ -32,6 +32,7 @@ import {
   ThreadUnread,
 } from "./thread.ts";
 import { User } from "./user.ts";
+import { WorkspaceLayout } from "./workspace-layout.ts";
 
 /** A sync topic: `user`, `room:<id>` or `thread:<id>`. */
 const Topic = Schema.String;
@@ -120,6 +121,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("stage.stream.stopped"), data: StageStreamStopped }),
   Schema.Struct({ type: Schema.Literal("workspace.updated"), data: WorkspaceBranding }),
   Schema.Struct({ type: Schema.Literal("workspace.styles.updated"), data: CustomStyles }),
+  Schema.Struct({ type: Schema.Literal("workspace.layout.updated"), data: WorkspaceLayout }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -243,6 +245,11 @@ export const SyncEvent = Schema.Union([
     ...eventFields,
     type: Schema.Literal("workspace.styles.updated"),
     data: CustomStyles,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("workspace.layout.updated"),
+    data: WorkspaceLayout,
   }),
 ]);
 

@@ -2,6 +2,7 @@ import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { NotificationSettings } from "../gen/NotificationSettings.ts";
 import type { StageState } from "../gen/StageState.ts";
+import type { WorkspaceLayout } from "../gen/WorkspaceLayout.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import { type AgentsSlice, emptyAgents } from "./agents.ts";
 import { type ApprovalsSlice, emptyApprovals } from "./approvals.ts";
@@ -130,6 +131,8 @@ export interface SidebarState {
   readonly order: readonly number[];
   readonly rows: Readonly<Record<number, SidebarRow>>;
   readonly categories: readonly RoomCategory[];
+  readonly workspaceLayout: WorkspaceLayout;
+  readonly workspaceLayoutTouchedAt: number;
   readonly placeholderUserIds: readonly number[];
   readonly canCreateRooms: boolean;
   /** Organising changes on their way to the server, drawn over the rows (S3, organize.ts). */
@@ -149,6 +152,8 @@ export const initialState: State = {
     order: [],
     rows: {},
     categories: [],
+    workspaceLayout: { categories: [], rooms: [] },
+    workspaceLayoutTouchedAt: 0,
     placeholderUserIds: [],
     canCreateRooms: false,
     overlay: emptyOverlay,

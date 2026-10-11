@@ -20,6 +20,26 @@ A post is a channel thread with forced work tracking: it always has a status, an
 
 Assigning an agent writes the same assignment event as assigning one in a channel, so the agent picks the post up from its event feed.
 
+## Curated tags (API)
+
+Board creators and administrators can maintain up to 20 curated tags per board. Names are
+trimmed, limited to 20 characters, and unique without case; each tag can have an emoji.
+Posts keep their tag names in the existing tag storage, so legacy free-text tags still appear.
+Submitted catalog names resolve without case to their display label. Renaming a catalog tag
+renames it on that board's posts, merging duplicates; deleting it removes it from those posts
+and clears it as the default.
+
+The board listing and new-post form expose `tags`, `tagsRequired`, and `defaultBoardTagId`.
+Members can read `GET /api/v1/rooms/:room_id/board/tags`. Settings writers use `POST` on that
+path, `PATCH`/`DELETE` on `.../tags/:id`, `PUT .../tags/order` with every `tagIds` entry exactly
+once, and `PATCH .../board` with both policy fields. Tag writes send `name` and nullable `emoji`.
+Catalog and policy changes publish `board.automations.changed`; consumers refetch the catalog.
+
+When tags are required, creating a post or explicitly editing its tags must include a catalog
+tag. An absent catalog tag is supplied by the board's default, if configured, or rejected with
+422. Free-text tags can accompany it, within the five-tag post limit. Changing other fields on
+an existing legacy post leaves its tags alone. The catalog editor is the next frontend slice.
+
 ## Status, owner, tags, and result
 
 A post's header shows its status, owner, tags, linked pull requests, events, and files, and a **Run** link when the post carries one. The status and owner change through **Update work**, the title through **Rename**, and tags through their own control:

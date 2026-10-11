@@ -9,6 +9,7 @@ import type { Assert, Pinned } from "./pin.ts";
 import { Membership, Room } from "./room.ts";
 import { EvaluationTimestamp, Timestamp } from "./time.ts";
 import { User } from "./user.ts";
+import { WorkspaceLayout } from "./workspace-layout.ts";
 
 /** A direct room's newest root message, previewed under its row on phones. */
 export const SidebarLastMessage = Schema.Struct({
@@ -60,6 +61,7 @@ export const Sidebar = Schema.Struct({
   users: Schema.Array(User),
   directPlaceholderUserIds: Schema.Array(UserId),
   canCreateRooms: Schema.Boolean,
+  workspaceLayout: WorkspaceLayout,
 });
 
 export type Sidebar = typeof Sidebar.Type;

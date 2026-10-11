@@ -6,7 +6,7 @@
 //! (`rooms/favorites_controller.rb`) and `rooms/involvements#update`
 //! (`rooms/involvements_controller.rb`), all under `crates/rooms/src/controllers/rooms/`.
 //!
-//! Everything here is per person: categories belong to their creator (`room_categories.user_id`)
+//! Personal categories belong to their creator (`room_categories.user_id`)
 //! and favourites and involvement live on the viewer's membership. Another person's category is
 //! a 404, and so is a room the viewer isn't a member of.
 //!
@@ -17,7 +17,7 @@
 //!   favourites**.
 //!
 //! Rooms within a category (and within Channels, Voice and Direct messages) stay in name order:
-//! there's no per-room position.
+//! there's no personal per-room position. Shared workspace positions are a separate fallback.
 //!
 //! A hidden room (involvement `invisible`) has no sidebar row, but it's still the viewer's room:
 //! as in the classic controllers, the category and favourite calls accept it and it stays
@@ -176,4 +176,61 @@ pub struct UpdateInvolvement {
 pub struct InvolvementChange {
     pub membership: crate::Membership,
     pub settings: crate::Settings,
+}
+
+/// Shared fallback layout. Personal favourites and category assignments take precedence; direct
+/// messages are excluded, and rooms contain only the viewer's visible memberships.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceLayout {
+    pub categories: Vec<WorkspaceCategory>,
+    pub rooms: Vec<WorkspaceRoomPosition>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceCategory {
+    pub id: i64,
+    pub name: String,
+    pub position: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceRoomPosition {
+    pub room_id: i64,
+    pub workspace_category_id: Option<i64>,
+    /// Zero-based within the category; null until the group has been organized.
+    pub position: Option<i64>,
+}
+
+/// Admin-only `POST /api/v1/workspace_categories` and `PATCH /api/v1/workspace_categories/:id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WriteWorkspaceCategory {
+    pub name: String,
+}
+
+/// Admin-only `PUT /api/v1/rooms/:id/workspace_category`: move within or between shared groups.
+/// Answers the administrator's visible [`WorkspaceLayout`].
+/// Position is zero-based and clamped. Null category means uncategorized; direct rooms are 422.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MoveWorkspaceRoom {
+    pub workspace_category_id: Option<i64>,
+    pub position: i64,
+}
+
+/// Admin-only `PUT /api/v1/workspace_categories/order`: every category once, or 409 without writes.
+/// Answers the administrator's visible [`WorkspaceLayout`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ReorderWorkspaceCategories {
+    pub category_ids: Vec<i64>,
 }
