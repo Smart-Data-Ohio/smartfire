@@ -103,22 +103,22 @@ describe("mock shared workspace layout", () => {
 
     await move(server, ROOM_IDS.design, product.id, 0);
 
-    const before = (beforeRoomId: number, categoryId: number | null = product.id) =>
+    const placeBefore = (beforeRoomId: number, categoryId: number | null = product.id) =>
       send(server, "PUT", `/api/v1/rooms/${ROOM_IDS.quiet}/workspace_category`, {
         workspaceCategoryId: categoryId,
         position: 0,
         beforeRoomId,
       });
 
-    expect((await before(ROOM_IDS.design)).status).toBe(200);
+    expect((await placeBefore(ROOM_IDS.design)).status).toBe(200);
     expect(group(await layoutOf(server), product.id)).toEqual([
       [ROOM_IDS.quiet, 0],
       [ROOM_IDS.design, 1],
     ]);
     // Not in the target group, or not a room at all: refused, nothing moves.
-    expect((await before(ROOM_IDS.general)).status).toBe(422);
-    expect((await before(ROOM_IDS.design, null)).status).toBe(422);
-    expect((await before(-1)).status).toBe(422);
+    expect((await placeBefore(ROOM_IDS.general)).status).toBe(422);
+    expect((await placeBefore(ROOM_IDS.design, null)).status).toBe(422);
+    expect((await placeBefore(-1)).status).toBe(422);
     expect(group(await layoutOf(server), product.id)).toEqual([
       [ROOM_IDS.quiet, 0],
       [ROOM_IDS.design, 1],
