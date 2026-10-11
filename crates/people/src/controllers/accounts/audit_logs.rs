@@ -28,7 +28,7 @@ async fn show_with_limit(c: &mut Ctx, csv_export_limit: i64, _export_limit_label
     c.set_header("pragma", "no-cache");
     let csv = c.formats()?.first().is_some_and(|f| f.is("csv"));
     if csv {
-        concerns::sudo::require_sudo_mode(c)?;
+        concerns::sudo::require_sudo_mode(c).await?;
     }
     if *c.respond_to(&[&format::HTML, &format::CSV])? == format::HTML {
         return campfire_runtime::navigation::redirect(c).await;

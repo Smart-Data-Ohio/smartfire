@@ -96,10 +96,14 @@ pub async fn callback(c: &mut Ctx) -> Result {
         .session()
         .remove(sign_in::FLOW_SESSION_KEY)
         .unwrap_or(Value::Null);
+    super::sudos::restore_google_response_mode(c, &flow);
     let valid = sign_in::valid_flow(&flow, &scalar(c, "state"), &c.app().secrets, c.now());
     let purpose = flow.get("purpose").and_then(Value::as_str).unwrap_or("");
     if valid && matches!(purpose, "link" | "reauth" | "sudo") {
         return step_up(c, &flow, purpose).await;
+    }
+    if purpose == "sudo" && let Some(path) = super::sudos::google_return_path(c) {
+        return redirect(c, path, "Confirmation expired. Try again.", false);
     }
     if concerns::signed_in(c) {
         return c.redirect_to(&c.url_for("/"));
@@ -260,7 +264,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
         .is_none_or(|u| Some(u.id) != flow["user_id"].as_i64())
     {
         let path = if user.is_some() {
-            step_up_profile(c, purpose).await?
+            if purpose == "sudo" { super::sudos::google_return_path(c).unwrap_or("/users/me/profile") } else { step_up_profile(c, purpose).await? }
         } else {
             "/session/new"
         };
@@ -273,7 +277,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
     }
     let user = user.unwrap();
     let path = if purpose == "sudo" {
-        "/sudo/new"
+        super::sudos::google_return_path(c).unwrap_or("/sudo/new")
     } else {
         step_up_profile(c, purpose).await?
     };

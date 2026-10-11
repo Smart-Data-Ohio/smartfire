@@ -1046,8 +1046,8 @@ pub fn sudo_rate_limit() -> campfire_kit::RateLimit {
 /// [`session_keys::SUDO_TIMEOUT`] ago; otherwise stashes this request to continue after
 /// confirming (`store_sudo_pending_request`) and redirects to `new_sudo_url`.
 #[allow(dead_code)]
-pub fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
-    sudo::require_sudo_mode(c)
+pub async fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
+    sudo::require_sudo_mode(c).await
 }
 
 /// `deny_bots`: 403 for bot-key and bot-reply-token requests.

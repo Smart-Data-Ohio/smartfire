@@ -1217,7 +1217,7 @@ async fn integration_reply(
 
 async fn link_github(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    crate::admin::require_sudo(c)?;
+    crate::admin::require_sudo(c).await?;
     let token: api::IntegrationToken = body(c).await?;
     let id = user.id;
     let change = github::connections::connect_token(c, user, &token.access_token, false).await?;
@@ -1226,7 +1226,7 @@ async fn link_github(c: &mut Ctx) -> Result {
 
 async fn unlink_github(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    crate::admin::require_sudo(c)?;
+    crate::admin::require_sudo(c).await?;
     let id = user.id;
     let notice = github::connections::disconnect_user(c, user, false).await?;
     integration_reply(c, id, Ok(notice)).await
@@ -1234,7 +1234,7 @@ async fn unlink_github(c: &mut Ctx) -> Result {
 
 async fn link_fizzy(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    crate::admin::require_sudo(c)?;
+    crate::admin::require_sudo(c).await?;
     let token: api::IntegrationToken = body(c).await?;
     let id = user.id;
     let change = fizzy_connections::connect_token(c, user, &token.access_token).await?;
@@ -1243,7 +1243,7 @@ async fn link_fizzy(c: &mut Ctx) -> Result {
 
 async fn unlink_fizzy(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    crate::admin::require_sudo(c)?;
+    crate::admin::require_sudo(c).await?;
     let id = user.id;
     let notice = fizzy_connections::disconnect_user(c, user).await?;
     integration_reply(c, id, Ok(notice)).await
@@ -1255,7 +1255,7 @@ async fn unlink_google(c: &mut Ctx) -> Result {
         Error::Status(StatusCode::NOT_FOUND) => Error::NotFound,
         error => error,
     })?;
-    crate::admin::require_sudo(c)?;
+    crate::admin::require_sudo(c).await?;
     let id = user.id;
     let notice = google_connections::disconnect_user(c, user).await?;
     integration_reply(c, id, Ok(notice)).await

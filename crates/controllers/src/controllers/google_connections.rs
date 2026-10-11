@@ -43,7 +43,7 @@ fn redirect_to(c: &mut Ctx, path: &str, message: &str, notice: bool) -> Result {
 pub async fn connect(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     configured(c)?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let mut bytes = [0; 16];
     rand::rng().fill_bytes(&mut bytes);
     let raw = bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
@@ -145,7 +145,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     configured(c)?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let user = concerns::require_current_user(c)?.clone();
     let notice = disconnect_user(c, user).await?;
     redirect(c, &notice, true)
