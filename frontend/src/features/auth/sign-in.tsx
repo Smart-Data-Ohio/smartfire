@@ -19,10 +19,9 @@ import {
 import { EMAIL_TRANSLATIONS, PASSWORD_TRANSLATIONS } from "./translations.ts";
 
 /**
- * `/app/session/new`: the retained sign-in page (crates/retained_pages/templates/sessions/new.html)
- * in the SPA. Email and password, Google when it is configured, the workspace's name, logo and
- * description, then the public pages and whom to ask for help. A fresh install goes on to first
- * run (the SPA's, at `/app/first_run`), as the retained page sends it to its own.
+ * `/app/session/new`: the sign-in page. Email and password, Google when it is configured, the
+ * workspace's name, logo and description, then the public pages and whom to ask for help. A fresh
+ * install goes on to first run (`/app/first_run`).
  */
 export function SignInPage() {
   const { load, retry, flash } = useSignedOutBoot();

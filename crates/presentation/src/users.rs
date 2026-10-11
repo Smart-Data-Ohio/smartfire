@@ -1,29 +1,15 @@
 pub mod profile_sections;
 pub mod statuses;
 pub mod appearance;
-pub mod settings;
 pub mod people;
 pub mod summary;
 pub mod sidebar_composition;
-pub mod sidebar;
 pub mod google;
 
-pub use sidebar::*;
 pub use summary::*;
 pub use people::*;
-pub use settings::*;
 pub use appearance::*;
 pub use profile_sections::*;
-
-#[derive(Clone)]
-pub struct UserSession {
-    pub id: i64,
-    pub current: bool,
-    pub description: String,
-    pub ip_address: Option<String>,
-    pub last_active_at: jiff::Timestamp,
-    pub created_at: jiff::Timestamp,
-}
 
 /// A user as `users/_mention` and the autocompletable views see it.
 #[derive(Clone, Debug, Default)]

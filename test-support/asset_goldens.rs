@@ -241,13 +241,13 @@ mod tests {
     use super::*;
 
     fn pages() -> (String, String) {
-        let first = campfire_static_assets::stylesheet_path("auth");
-        let second = campfire_static_assets::asset_path("fonts/inter-latin-var.woff2");
-        let script = campfire_static_assets::javascript_path("auth");
+        let first = campfire_static_assets::asset_path("add.svg");
+        let second = campfire_static_assets::asset_path("56k.mp3");
+        let script = campfire_static_assets::asset_path("bot.svg");
         let actual = format!(
             "<link rel=\"stylesheet\" href=\"{first}\"><link rel=\"preload\" href=\"{second}\"><script src=\"{script}\"></script>"
         );
-        let expected = actual.replace(&first, "/assets/auth-00000000.css");
+        let expected = actual.replace(&first, "/assets/add-00000000.svg");
         (actual, expected)
     }
 
@@ -278,11 +278,11 @@ mod tests {
     #[test]
     fn rejects_wrong_and_missing_digests_even_when_golden_agrees() {
         let (actual, expected) = pages();
-        let path = campfire_static_assets::stylesheet_path("auth");
+        let path = campfire_static_assets::asset_path("add.svg");
         for wrong in [
-            "/assets/auth-00000000.css",
-            "/assets/auth.css",
-            "/assets/auth-not-a-digest.css",
+            "/assets/add-00000000.svg",
+            "/assets/add.svg",
+            "/assets/add-not-a-digest.svg",
         ] {
             let changed = actual.replace(&path, wrong);
             assert!(
@@ -290,7 +290,7 @@ mod tests {
                     .unwrap_err()
                     .contains("asset")
             );
-            if wrong != "/assets/auth-not-a-digest.css" {
+            if wrong != "/assets/add-not-a-digest.svg" {
                 assert!(matching_bytes(&changed, &changed).is_err());
             }
         }
@@ -316,9 +316,9 @@ mod reviewed_mutations {
     use super::*;
 
     fn rejected(wrapper: &str) {
-        let current = campfire_static_assets::stylesheet_path("auth");
+        let current = campfire_static_assets::asset_path("add.svg");
         let actual = wrapper.replace("URL", &current);
-        let expected = wrapper.replace("URL", "/assets/auth-00000000.css");
+        let expected = wrapper.replace("URL", "/assets/add-00000000.svg");
         assert_ne!(actual, expected);
         assert!(!compare(wrapper, &actual, &expected));
     }
@@ -345,7 +345,7 @@ mod reviewed_mutations {
     }
     #[test]
     fn leaves_unchanged_external_urls_byte_exact() {
-        let page = r#"<link href="https://cdn.example.test/assets/auth-00000000.css">"#;
+        let page = r#"<link href="https://cdn.example.test/assets/add-00000000.svg">"#;
         assert!(compare("external URL", page, page));
     }
 }
@@ -396,14 +396,14 @@ mod field_boundaries {
 
     #[test]
     fn accepts_only_local_attribute_pwa_and_link_header_values() {
-        let current = campfire_static_assets::stylesheet_path("auth");
+        let current = campfire_static_assets::asset_path("add.svg");
         for actual in [
             format!(r#"<meta content='{current}'>"#),
             format!(r#"<img src={current}>"#),
             format!(r#"{{"icons":[{{"src":"{current}"}}]}}"#),
             format!("<{current}>; rel=preload; as=style"),
         ] {
-            let expected = actual.replace(&current, "/assets/auth-00000000.css");
+            let expected = actual.replace(&current, "/assets/add-00000000.svg");
             assert!(compare("local field", &actual, &expected));
             assert!(!compare("wrong actual", &expected, &actual));
         }
@@ -411,7 +411,7 @@ mod field_boundaries {
 
     #[test]
     fn comments_raw_text_json_keys_and_unknown_paths_remain_byte_exact() {
-        let current = campfire_static_assets::stylesheet_path("auth");
+        let current = campfire_static_assets::asset_path("add.svg");
         for wrapper in [
             r#"<!-- <img src="URL"> -->"#,
             r#"<!-- <img src="URL">"#,
@@ -422,7 +422,7 @@ mod field_boundaries {
             r#"{"caption":"URL"}"#,
         ] {
             let actual = wrapper.replace("URL", &current);
-            let expected = wrapper.replace("URL", "/assets/auth-00000000.css");
+            let expected = wrapper.replace("URL", "/assets/add-00000000.svg");
             assert!(!compare("ordinary bytes", &actual, &expected));
         }
         let unknown = r#"<img src="/assets/not-in-pipeline-00000000.css">"#;

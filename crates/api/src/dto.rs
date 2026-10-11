@@ -1245,7 +1245,7 @@ pub fn me(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let dnd = settings.manual_dnd_active(now);
-    let preferences = campfire_runtime::request_context::user_preferences(conn, viewer.id, now.jiff())?;
+    let preferences = campfire_runtime::presenters::current::user_preferences(conn, viewer.id, now.jiff())?;
     let sounds = preferences.notification_sounds;
     let chat_sounds = api::ChatSounds {
         muted: sounds.muted,

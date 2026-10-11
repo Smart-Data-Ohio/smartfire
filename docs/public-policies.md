@@ -103,19 +103,15 @@ and `crates/controllers/src/controllers/google_connections.rs`):
 
 - The public pages controller (`crates/controllers/src/controllers/public_pages.rs`)
   skips the application's modern-browser gate, sign-in redirect, and all
-  private-state concerns. Framework security
-  defaults (default response headers, forgery protection, production
-  `force_ssl`) still apply. Non-HTML formats answer 404, so no JSON or
-  private data is reachable; HEAD works; pages carry no `noindex`.
-- The `layouts/public` template (`crates/retained_pages/templates/layouts/public.html`)
-  is a minimal standalone layout: no
-  importmap/JS, no Turbo/Action Cable/PWA/private meta tags, no
-  signed-in user state, and no CSRF meta tags (emitting one would create a
-  session cookie). Zoom stays enabled. Analytics and Google scripts are
-  absent.
-- The retained public shell uses the auth stylesheet compiled from `frontend/src/auth/`.
-  Light/dark follows `prefers-color-scheme`; keyboard focus is visible;
-  `prefers-reduced-motion` disables transitions.
+  private-state concerns. Framework security defaults (default response
+  headers, forgery protection, production `force_ssl`) still apply.
+  `/about`, `/privacy` and `/terms` move permanently (301) to the SPA's
+  `/app/about`, `/app/privacy` and `/app/terms`, keeping the query string;
+  other formats answer 404. The SPA draws each page for anyone, signed in or
+  not, from `GET /api/v1/public_pages/{page}`, whose article renders from
+  `crates/controllers/templates/public_pages/`. The pages carry no `noindex`.
+- The SPA's public layout follows `prefers-color-scheme`; keyboard focus is
+  visible; `prefers-reduced-motion` disables transitions.
 - The sign-in page links About/Privacy/Terms below the panel, beside the
   Google button when configured. No acceptance checkbox or new sign-in
   gate was added.

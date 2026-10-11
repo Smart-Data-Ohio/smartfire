@@ -72,9 +72,6 @@ impl Filters {
     pub fn export_path(&self) -> String {
         self.path(Some(("format", "csv")))
     }
-    pub fn next_path(&self, next: &str) -> String {
-        self.path(Some(("page", next)))
-    }
     pub fn path(&self, extra: Option<(&str, &str)>) -> String {
         let mut query = Vec::new();
         for (key, value) in [

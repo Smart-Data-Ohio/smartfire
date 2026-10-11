@@ -60,13 +60,6 @@ pub fn votes_label(count: usize) -> String {
     format!("{count} vote{}", if count == 1 { "" } else { "s" })
 }
 impl AgentStep {
-    pub fn status_label(&self) -> String {
-        let status = self.status.replace('_', " ");
-        let mut chars = status.chars();
-        chars.next().map_or(String::new(), |first| {
-            first.to_uppercase().to_string() + &chars.as_str().to_lowercase()
-        })
-    }
     pub fn duration(&self) -> String {
         self.duration_ms.map_or(String::new(), |ms| {
             if ms < 1000 {
@@ -134,11 +127,5 @@ impl Poll {
     }
     pub fn count_label(&self, option_id: &i64) -> String {
         votes_label(self.option_votes(option_id).len())
-    }
-    pub fn total_label(&self) -> String {
-        votes_label(self.votes.len())
-    }
-    pub fn results_path(&self) -> String {
-        campfire_routes::room_poll(self.room_id, self.id)
     }
 }

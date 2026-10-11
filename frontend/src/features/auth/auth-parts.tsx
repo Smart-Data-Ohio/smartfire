@@ -213,8 +213,7 @@ export function AuthFlash({ flash }: { readonly flash: SignedOutFlash }) {
 
 /**
  * Calls `restored` when the browser brings the page back from its back/forward cache (Back after
- * leaving for Google or the app), so a form left busy by the departure can be used again, as the
- * retained auth.js clears its submitting forms on `pageshow`.
+ * leaving for Google or the app), so a form left busy by the departure can be used again.
  */
 export function useRestoredFromCache(restored: () => void): void {
   const onRestore = useEffectEvent(restored);

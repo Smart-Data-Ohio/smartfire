@@ -18,7 +18,6 @@ campfire_db.workspace = true
 campfire_richtext.workspace = true
 campfire_storage.workspace = true
 campfire_static_assets.workspace = true
-campfire_retained.workspace = true
 campfire_app.workspace = true
 campfire_channels.workspace = true
 anyhow.workspace = true

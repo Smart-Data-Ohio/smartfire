@@ -6,13 +6,10 @@ license.workspace = true
 publish.workspace = true
 
 [build-dependencies]
-fancy-regex.workspace = true
 httpdate.workspace = true
 serde_json.workspace = true
 sha1.workspace = true
 
 [dev-dependencies]
-fancy-regex.workspace = true
-tempfile.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

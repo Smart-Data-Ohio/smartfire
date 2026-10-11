@@ -8,25 +8,6 @@ pub fn iso8601(time: Timestamp) -> String {
     time.strftime("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
-/// `time.to_fs(:epoch)`, defined in `reference/config/initializers/time_formats.rb` as
-/// `(time.to_f * 1000).to_i`. The float round trip is deliberate: it truncates some
-/// millisecond values down by one, and the client compares these numbers.
-pub fn epoch_ms(time: Timestamp) -> i64 {
-    // `Time#to_f` is the nearest double to the exact rational, which parsing the decimal
-    // representation gives us.
-    let seconds = time.as_second();
-    let nanos = time.subsec_nanosecond();
-    let decimal = if seconds < 0 && nanos != 0 {
-        let whole = seconds + 1;
-        let frac = 1_000_000_000 - nanos;
-        format!("{}{}.{:09}", if whole == 0 { "-" } else { "" }, whole, frac)
-    } else {
-        format!("{seconds}.{nanos:09}")
-    };
-    let to_f: f64 = decimal.parse().unwrap_or(seconds as f64);
-    (to_f * 1000.0) as i64
-}
-
 /// `time.as_json` with Active Support's default precision: `2026-09-26T12:26:46.848Z`.
 pub fn json_time(time: Timestamp) -> String {
     let millis = time.subsec_nanosecond() / 1_000_000;
@@ -93,14 +74,6 @@ pub fn ruby_float(value: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn epoch_truncates_through_a_float_like_ruby() {
-        let time: Timestamp = "2026-09-26T12:23:46.483521Z".parse().unwrap();
-        assert_eq!(epoch_ms(time), 1790425426483);
-        let time: Timestamp = "2026-09-26T11:23:46Z".parse().unwrap();
-        assert_eq!(epoch_ms(time), 1790421826000);
-    }
 
     #[test]
     fn formats_floats_like_ruby() {

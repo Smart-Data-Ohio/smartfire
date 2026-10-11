@@ -71,10 +71,6 @@ pub fn distance_of_time_in_words(
     }
 }
 
-/// The caller passes the request's clock so frozen parity runs and live pages use the same API.
-pub fn time_ago_in_words(zone: &Zone, instant: jiff::Timestamp, now: jiff::Timestamp) -> String {
-    distance_of_time_in_words(zone, instant, now, false)
-}
 impl Zone {
     /// `ActiveSupport::TimeZone["UTC"]`, the app's default `Time.zone`.
     pub fn utc() -> Self {

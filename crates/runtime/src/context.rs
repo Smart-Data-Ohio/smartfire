@@ -1,4 +1,3 @@
-use campfire_app::app::AppState;
 use campfire_kit::{Ctx, Error};
 
 thread_local! {
@@ -18,12 +17,6 @@ pub fn enter_time_zone(zone: campfire_presentation::time::Zone) -> TimeZoneGuard
 }
 pub fn renderer_time_zone() -> campfire_presentation::time::Zone {
     RENDER_TIME_ZONE.with(|zone| zone.borrow().clone().unwrap_or_else(campfire_presentation::time::Zone::utc))
-}
-
-/// config/initializers/default_url_options.rb: APP_URL configures jobs as well as mail.
-/// ActionController's renderer supplies example.org only when no origin is configured.
-pub fn default_renderer_base_url(app: &AppState) -> &str {
-    app.config.mail.app_url.as_deref().unwrap_or("http://example.org")
 }
 
 /// `SetCurrentRequest#default_url_options` supplies the request's host, port and protocol to

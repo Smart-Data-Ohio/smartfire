@@ -175,11 +175,11 @@ fn sign_in_json(email_address: &str, password: &str) -> Body {
 }
 
 async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<&str>, token: Option<&str>) -> Reply {
-    // The vector's classic base.css is retired; retained assets keep its header contract. The
+    // The vector's classic base.css is retired; an embedded media file keeps its header contract. The
     // retained first-run and sign-in pages now redirect to the SPA's, which render each page
     // class, and sign-in attempts (forged or refused) go to the SPA's JSON call.
     let (method, path) = match name {
-        "asset" | "asset_head" => (vector["method"].as_str().unwrap(), campfire_static_assets::stylesheet_path("auth")),
+        "asset" | "asset_head" => (vector["method"].as_str().unwrap(), campfire_static_assets::asset_path("default-bot-avatar.svg")),
         "html_page" => ("GET", "/app/first_run".to_string()),
         "sign_in_page" | "sign_in_page_with_session" => ("GET", "/app/session/new".to_string()),
         "forgery" | "unauthorized_render" => ("POST", "/api/v1/session".to_string()),

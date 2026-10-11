@@ -78,23 +78,6 @@ pub enum ConnectionPanel {
     },
 }
 impl ConnectionPanel {
-    pub fn connect_label(&self, provider: &str) -> String {
-        format!(
-            "{} {provider}",
-            if self.exists() {
-                "Reconnect"
-            } else {
-                "Connect"
-            }
-        )
-    }
-    pub fn oauth_label(&self) -> &str {
-        if self.exists() {
-            "Reconnect with GitHub"
-        } else {
-            "Connect with GitHub"
-        }
-    }
     pub fn exists(&self) -> bool {
         !matches!(self, Self::Missing)
     }

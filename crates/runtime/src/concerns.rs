@@ -262,11 +262,6 @@ pub async fn next_ui(_c: &Ctx, _user: &User) -> Result<bool> {
     Ok(true)
 }
 
-/// The SPA URL for `endpoint` at `path`.
-pub fn ported_page(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
-    campfire_spa::screens::spa_url(endpoint, path, query)
-}
-
 /// A signed-in person who opens a classic page the SPA has (`campfire_spa::screens`) goes to that
 /// page's SPA URL, with a 302: the old URLs (bookmarks, push and mail links) are aliases. Only for
 /// a signed-in person's `GET` or `HEAD` that navigates to an HTML page ([`navigates`]): not a
@@ -360,16 +355,6 @@ pub fn auth_page_url(c: &mut Ctx, spa: &str, retained: &str) -> String {
     let navigates = html_navigation(c) || c.request.path().starts_with("/api/v1/");
     let path = if navigates { spa } else { retained };
     c.url_for(path)
-}
-
-/// Whether this signed-in HTML navigation goes to the SPA, apart from which screen it is. The same
-/// gates as [`redirect_to_spa`]: the request navigates, by a person's session. A waiting flash is
-/// kept for the next hop.
-pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
-    if authenticated_by(c) != AuthenticatedBy::Session || !coexistence_navigation(c)? {
-        return Ok(false);
-    }
-    next_ui(c, require_current_user(c)?).await
 }
 
 /// The navigation gates for the SPA, before checking a person's session. A waiting flash is kept

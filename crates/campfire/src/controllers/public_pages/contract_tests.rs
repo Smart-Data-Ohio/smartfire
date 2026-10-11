@@ -1,4 +1,4 @@
-//! The SPA's About, Privacy and Terms contract against the retained pages it copies.
+//! The SPA's About, Privacy and Terms contract.
 use crate::controllers::presenters::test_support::{DAVID, Reply, Req, TestApp, seed_clock};
 use axum::http::{Method, StatusCode};
 use campfire_api_types::{PublicPage, PublicPageName};
@@ -15,21 +15,6 @@ fn json_get(path: &str) -> Req {
     Req::new(Method::GET, path).header("accept", "application/json")
 }
 
-/// The retained page's article: what its layout puts in the reading column.
-fn retained_article(body: &str) -> &str {
-    let (_, rest) = body
-        .split_once("<article class=\"public-prose\">")
-        .expect("retained article");
-    rest.split_once("</article>").expect("article end").0.trim()
-}
-
-/// The contract's article with its links back on the retained pages.
-fn as_retained(html: &str) -> String {
-    html.replace("href=\"/app/privacy\"", "href=\"/privacy\"")
-        .replace("href=\"/app/terms\"", "href=\"/terms\"")
-        .replace("href=\"/app/session/new\"", "href=\"/session/new\"")
-}
-
 fn inline_boot(reply: &Reply) -> Value {
     let re =
         regex::Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#)
@@ -37,9 +22,9 @@ fn inline_boot(reply: &Reply) -> Value {
     serde_json::from_str(&re.captures(&reply.text()).expect("boot script")[1]).unwrap()
 }
 
-/// Every page of `app` matches its retained render, for anyone (and a `member`, where the seed has
-/// people); answers the three contracts.
-async fn assert_matches_retained(app: &TestApp, state: &str, member: bool) -> Vec<PublicPage> {
+/// Every page of `app` answers its contract, the same for anyone (and a `member`, where the seed
+/// has people); answers the three contracts.
+async fn assert_contracts(app: &TestApp, state: &str, member: bool) -> Vec<PublicPage> {
     let policy = app.booted.app.config.public_policy.clone();
     let mut pages = Vec::new();
     for (slug, name) in PAGES {
@@ -61,20 +46,13 @@ async fn assert_matches_retained(app: &TestApp, state: &str, member: bool) -> Ve
         assert_eq!(page.policy.contact_email, policy.contact_email, "{state} {slug}");
         assert_eq!(page.policy.effective_date, policy.effective_date, "{state} {slug}");
 
-        // The retained URL now goes to the SPA's page; its renderer still draws the original.
+        // The retained URL now goes to the SPA's page.
         let retained = app.anonymous().get(&format!("/{slug}")).await;
         assert_eq!(retained.status, StatusCode::MOVED_PERMANENTLY);
         assert_eq!(
             retained.location().map(str::to_owned),
             Some(format!("http://campfire.test/app/{slug}"))
         );
-        let body = super::tests::retained_page(app, slug);
-        assert!(body.contains(&format!("<title>{}</title>", page.title)), "{state} {slug}");
-        assert!(
-            body.contains(&format!("<meta name=\"description\" content=\"{}\">", page.description)),
-            "{state} {slug}"
-        );
-        assert_eq!(as_retained(&page.html).trim(), retained_article(&body), "{state} {slug}");
         // Every in-text link to a page the SPA has stays in the SPA.
         for retained_link in ["href=\"/privacy\"", "href=\"/terms\"", "href=\"/session/new\""] {
             assert!(!page.html.contains(retained_link), "{state} {slug}: {retained_link}");
@@ -91,7 +69,7 @@ async fn assert_matches_retained(app: &TestApp, state: &str, member: bool) -> Ve
 }
 
 #[tokio::test]
-async fn public_page_contract_matches_the_retained_render_for_each_policy() {
+async fn public_page_contract_follows_each_policy() {
     let vectors: Value =
         serde_json::from_str(include_str!("../../../../../vectors/users_public.json")).unwrap();
     for (index, state) in vectors["pages"].as_array().unwrap().iter().enumerate() {
@@ -104,7 +82,7 @@ async fn public_page_contract_matches_the_retained_render_for_each_policy() {
         let app = TestApp::boot_seed_with_env("default", seed_clock(), &vars)
             .await
             .expect("restore the frozen seeds");
-        let pages = assert_matches_retained(&app, &format!("state {index}"), true).await;
+        let pages = assert_contracts(&app, &format!("state {index}"), true).await;
         // What decides each page: the operator and address, when set, and the effective date.
         let policy = &app.booted.app.config.public_policy;
         for page in &pages {
@@ -135,7 +113,7 @@ async fn public_page_contract_matches_the_retained_render_for_each_policy() {
     let app = TestApp::boot_seed_with_env("first_run", seed_clock(), &[])
         .await
         .expect("restore the frozen seeds");
-    assert_matches_retained(&app, "first run", false).await;
+    assert_contracts(&app, "first run", false).await;
 }
 
 #[tokio::test]
@@ -180,7 +158,7 @@ async fn spa_public_pages_serve_the_signed_out_shell_to_everyone() {
 }
 
 /// The mock backend's copy of the contract (frontend/mock/s2/public-pages.json), with the policy
-/// the auth-page fixtures use.
+/// that exercises its escaping.
 #[tokio::test]
 async fn public_page_mock_fixture_matches_the_contract() {
     let app = TestApp::boot_seed_with_env(
@@ -204,13 +182,13 @@ async fn public_page_mock_fixture_matches_the_contract() {
     }
     let text = serde_json::to_string_pretty(&Value::Object(pages)).unwrap() + "\n";
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/mock/s2/public-pages.json");
-    if std::env::var("UPDATE_AUTH_PAGE_FIXTURES").as_deref() == Ok("1") {
+    if std::env::var("UPDATE_PUBLIC_PAGE_FIXTURE").as_deref() == Ok("1") {
         std::fs::write(&path, &text).unwrap();
     } else {
         assert_eq!(
             std::fs::read_to_string(&path).ok().as_deref(),
             Some(text.as_str()),
-            "the public page mock fixture differs. Rerun with UPDATE_AUTH_PAGE_FIXTURES=1 cargo test -j 4 -p campfire --bin campfire -- public_page_mock_fixture"
+            "the public page mock fixture differs. Rerun with UPDATE_PUBLIC_PAGE_FIXTURE=1 cargo test -j 4 -p campfire --bin campfire -- public_page_mock_fixture"
         );
     }
 }

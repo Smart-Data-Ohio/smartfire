@@ -34,10 +34,9 @@ interface FirstRunOpening {
 }
 
 /**
- * `/app/first_run`: the retained first run (crates/retained_pages/templates/first_runs/show.html)
- * in the SPA. A new instance's first account, which administers the workspace: an avatar, a name,
- * an email address and a password. Once the workspace exists the page goes home, as the retained
- * one redirects; setting up signs the administrator in and enters the app.
+ * `/app/first_run`: first run. A new instance's first account, which administers the workspace: an
+ * avatar, a name, an email address and a password. Once the workspace exists the page goes home;
+ * setting up signs the administrator in and enters the app.
  */
 export function FirstRunPage() {
   const titleId = useId();

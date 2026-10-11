@@ -6,7 +6,6 @@ pub mod context;
 pub mod mail;
 pub mod messaging;
 pub mod presenters;
-pub mod request_context;
 pub mod rich_text;
 pub mod controllers {
     pub use crate::presenters;

@@ -1,6 +1,4 @@
-use super::people_tests::render_with;
-use crate::controllers::presenters::{self, test_support::*};
-use askama::Template;
+use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 fn vectors() -> Value {
@@ -11,40 +9,9 @@ fn join_json(code: &str, fields: Value) -> Req {
     Req::new(Method::POST, &format!("/api/v1/join/{code}")).json_body(&fields)
 }
 #[tokio::test]
-async fn join_page_preserves_rails_form_and_access_checks() {
+async fn join_page_preserves_rails_access_checks() {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let v = vectors();
-    let (account, help) = app
-        .db()
-        .read(|c| {
-            Ok((
-                campfire_db::Account::first(c)?,
-                presenters::accounts::help_contact(c)?,
-            ))
-        })
-        .await
-        .unwrap();
-    let actual = render_with(
-        &app,
-        |ctx| {
-            ctx.current_user = None;
-            ctx.account = presenters::view_context::account_summary(account.as_ref(), false);
-        },
-        |ctx| {
-            campfire_retained::users::New {
-                ctx,
-                join_path: campfire_routes::join(v["join"].as_str().unwrap()),
-                description: String::new(),
-                help_contact: help,
-                invite_error: None,
-            }
-            .as_content()
-            .render()
-            .unwrap()
-        },
-    );
-    crate::form_contracts::assert_forms("join", &actual, v["html"].as_str().unwrap());
-    crate::form_contracts::assert_text(&actual, &account.as_ref().unwrap().name);
     // The retained page goes to the SPA's, which answers with Rails' statuses; the code is only
     // checked there.
     let path = format!("/join/{}", v["join"].as_str().unwrap());

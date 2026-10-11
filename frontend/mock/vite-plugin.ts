@@ -16,13 +16,10 @@
  * - `vite preview --mode mock` serves the same backend in front of the built dist, and answers
  *   `/app/*` page loads with dist/index.html and the csrf meta in place of `<!--boot-->`, as the
  *   Rust shell does, so the production bundle (its CSS order, its chunking) can be checked too.
- * - `/__auth/*` serves the server-rendered pages the Rust tests write to
- *   e2e/fixtures/auth-pages (sign-in, joining, two-step sign-in...), byte for byte, so the
- *   Playwright pass can look at them without the Rust app.
  */
 import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { extname, join } from "node:path";
 import type { Duplex } from "node:stream";
 import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 import { type WebSocket, WebSocketServer } from "ws";
@@ -50,43 +47,6 @@ export interface SmartfireMockOptions {
 }
 
 const SYNC_PATH = "/api/v1/sync";
-
-const AUTH_PAGES_PREFIX = "/__auth/";
-
-const AUTH_PAGES_DIR = join(import.meta.dirname, "..", "e2e", "fixtures", "auth-pages");
-
-const AUTH_PAGE_TYPES = new Map([
-  [".html", "text/html; charset=utf-8"],
-  [".css", "text/css; charset=utf-8"],
-  [".js", "text/javascript; charset=utf-8"],
-  [".woff2", "font/woff2"],
-  [".svg", "image/svg+xml"],
-  [".png", "image/png"],
-]);
-
-/** A file from e2e/fixtures/auth-pages, untransformed; 404 for anything outside it. */
-async function serveAuthPage(path: string, response: ServerResponse) {
-  const relative = normalize(path.slice(AUTH_PAGES_PREFIX.length));
-  const type = AUTH_PAGE_TYPES.get(extname(relative));
-
-  if (relative.startsWith("..") || type === undefined) {
-    response.statusCode = 404;
-    response.end();
-
-    return;
-  }
-
-  try {
-    const body = await readFile(join(AUTH_PAGES_DIR, relative));
-
-    response.setHeader("Content-Type", type);
-    response.setHeader("Cache-Control", "no-store");
-    response.end(body);
-  } catch {
-    response.statusCode = 404;
-    response.end();
-  }
-}
 
 function readBody(request: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -301,12 +261,6 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
     server.middlewares.use((request, response, next) => {
       const path = new URL(request.url ?? "/", "http://localhost").pathname;
       const avatar = /^\/users\/(\d+)\/avatar$/.exec(path);
-
-      if (path.startsWith(AUTH_PAGES_PREFIX)) {
-        serveAuthPage(path, response).catch(next);
-
-        return;
-      }
 
       if (avatar !== null) {
         const userId = Number(avatar[1]);

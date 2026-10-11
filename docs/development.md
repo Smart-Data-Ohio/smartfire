@@ -62,8 +62,8 @@ off and carries on. Generate a pair as described under "Secrets" in the
 The React UI lives in [`frontend/`](../frontend/README.md). Run `pnpm install --frozen-lockfile`
 and `pnpm check` there to validate and build `dist/`, then rebuild the Rust binary to embed it.
 The image performs this build in a Node stage; its runtime has no Node. The SPA and JSON sync
-are always served. Retained auth and public HTML live in `crates/retained_pages/templates/`,
-and their auth assets, shared media and public bytes live in `crates/static_assets/`.
+are always served. The public pages' articles render from `crates/controllers/templates/`, and
+shared media and public bytes live in `crates/static_assets/`.
 Historical digested asset URLs retain their bytes. For local huddles, see [huddles](huddles.md).
 
 ### Running tests

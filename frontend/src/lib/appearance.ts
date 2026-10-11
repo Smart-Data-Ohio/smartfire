@@ -24,8 +24,7 @@ import { PALETTE_TOKEN_NAMES, PALETTES, type PalettePreset, paletteTokens } from
  * Only this device's own choices (the pin, density, motion, palette, font) are stored, under one
  * localStorage key: never the account's, so the next person to sign in on this browser doesn't
  * inherit them. index.html's blocking script applies the stored choices and the inline boot's
- * before the stylesheet paints; the classic pages' script (crates/assets/auth/auth.js) applies
- * the pin.
+ * before the stylesheet paints.
  */
 export type ThemePreference = "system" | "light" | "dark";
 

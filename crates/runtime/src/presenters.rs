@@ -1,5 +1,5 @@
 pub mod page;
-pub mod view_context;
+pub mod current;
 pub mod accounts;
 pub mod workspace_branding;
 pub mod status_settings;
@@ -804,11 +804,6 @@ pub fn account_user_summary(
         google_email_link_allowed,
         ..user_summary(secrets, user)
     })
-}
-
-/// `to_fs(:epoch)` as a string (milliseconds).
-pub fn epoch_string(time: jiff::Timestamp) -> String {
-    campfire_presentation::messages::support::epoch_ms(time).to_string()
 }
 
 /// `attachment.metadata[:width]`: an Integer for images, a Float for videos.

@@ -88,12 +88,6 @@ impl PageEvent {
         }
         format!("({t} {})", self.card.starts_at.format(&z, "%Z"))
     }
-    pub fn response_label(&self) -> String {
-        self.current_response
-            .as_deref()
-            .map(humanize)
-            .unwrap_or_else(|| "No response yet".into())
-    }
     pub fn counts(&self, which: &str) -> String {
         match which {
             "going" => plural(self.going, "going"),
@@ -104,39 +98,16 @@ impl PageEvent {
     pub fn path_for(&self, id: impl std::fmt::Display) -> String {
         format!("/rooms/{}/events/{id}", self.card.room_id)
     }
-    pub fn title_id(&self) -> String {
-        format!("title_event_{}", self.card.id)
-    }
-    pub fn events_path(&self) -> String {
-        format!("/rooms/{}/events", self.card.room_id)
-    }
-    pub fn remaining_text(&self) -> String {
-        self.remaining
-            .map(|n| plural(n, "occurrence"))
-            .unwrap_or_default()
-    }
     pub fn edit_path(&self) -> String {
         format!("{}/edit", self.card.path())
-    }
-    pub fn cancel_path(&self) -> String {
-        format!("{}/cancel", self.card.path())
-    }
-    pub fn attendance_path(&self) -> String {
-        format!("{}/attendance", self.card.path())
     }
 }
 
 impl IndexView {
-    pub fn back_label(&self) -> String {
-        format!("Back to {}", self.room_name)
-    }
     pub fn path(&self) -> String {
         format!("/rooms/{}/events", self.room_id)
     }
     pub fn room_path(&self) -> String {
         format!("/rooms/{}", self.room_id)
-    }
-    pub fn new_path(&self) -> String {
-        format!("{}/new", self.path())
     }
 }

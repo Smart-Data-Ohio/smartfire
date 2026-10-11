@@ -108,45 +108,13 @@ pub fn target_value(c: &serde_json::Value, rooms: &[RoomTarget]) -> String {
     }
 }
 
-pub fn yes_no(v: &serde_json::Value) -> &str {
-    if truthy(v) { "Yes" } else { "No" }
-}
-pub fn run_base(admin: &bool) -> &'static str {
-    if *admin {
-        "/account/slack_import/runs"
-    } else {
-        "/slack/imports"
-    }
-}
 impl RunSummary {
-    pub fn mode_label(&self) -> String {
-        self.mode.replace('_', " ")
-    }
 }
 
 impl SetupData {
-    pub fn secret_placeholder(&self) -> &str {
-        if self.configured {
-            "Saved — paste a new secret to replace it"
-        } else {
-            "xoxp-…"
-        }
-    }
-    pub fn submit_label(&self) -> &str {
-        if self.configured {
-            "Save new credentials"
-        } else {
-            "Save credentials"
-        }
-    }
 }
 
 impl Issue {
-    pub fn has_ref(&self) -> bool {
-        self.slack_ref
-            .as_ref()
-            .is_some_and(|s| !campfire_richtext::ruby::is_blank(s))
-    }
 }
 
 impl RunData {
@@ -193,50 +161,14 @@ impl RunData {
             .map(Vec::as_slice)
             .unwrap_or(&[])
     }
-    pub fn format_times(&mut self, zone: &crate::time::Zone) {
-        pub fn convert(zone: &crate::time::Zone, s: &str) -> String {
-            s.parse::<jiff::Timestamp>()
-                .ok()
-                .or_else(|| format!("{}Z", s.replace(' ', "T")).parse().ok())
-                .map(|t| zone.to_fs(t, "default"))
-                .unwrap_or_else(|| s.into())
-        }
-        self.created_at = convert(zone, &self.created_at);
-        self.started_at = self.started_at.as_ref().map(|s| convert(zone, s));
-        self.finished_at = self.finished_at.as_ref().map(|s| convert(zone, s));
-    }
-    pub fn error_present(&self) -> bool {
-        self.error
-            .as_ref()
-            .is_some_and(|s| !campfire_richtext::ruby::is_blank(s))
-    }
-    pub fn next_path(&self) -> String {
-        format!("{}?page={}", self.path(true), self.next_page.unwrap())
-    }
-    pub fn id_string(&self) -> String {
-        self.id.to_string()
-    }
     pub fn started(&self) -> &str {
         self.started_at.as_deref().unwrap_or(&self.created_at)
-    }
-    pub fn stat(&self, key: &str) -> String {
-        text(&self.stats[key])
     }
     pub fn count(&self, key: &str) -> String {
         text(&self.stats["counts"][key])
     }
     pub fn users(&self, key: &str) -> String {
         text(&self.stats["users"][key])
-    }
-    pub fn has_users(&self) -> bool {
-        self.stats["users"]
-            .as_object()
-            .is_some_and(|o| !o.is_empty())
-    }
-    pub fn has_counts(&self) -> bool {
-        self.stats["counts"]
-            .as_object()
-            .is_some_and(|o| !o.is_empty())
     }
     pub fn issues_label(&self) -> String {
         if truthy(&self.stats["issues_count"]) {

@@ -58,8 +58,6 @@ mod app {
     #[cfg(test)]
     mod admin_two_factor_tests;
     #[cfg(test)]
-    mod auth_page_fixture_tests;
-    #[cfg(test)]
     mod profile_security_tests;
     #[cfg(test)]
     mod round_four_security_tests;

@@ -1,5 +1,3 @@
-pub mod write_actions;
-pub mod subscriptions;
 pub mod connections;
 
 #[derive(Clone, Debug, Default)]
@@ -33,12 +31,6 @@ pub struct File {
     pub additions: i64,
     pub deletions: i64,
 }
-#[derive(Clone, Debug)]
-pub struct CardMessage {
-    pub id: i64,
-    pub room_id: i64,
-    pub thread_id: Option<i64>,
-}
 pub fn present(value: &Option<String>) -> Option<&str> {
     value
         .as_deref()
@@ -50,30 +42,5 @@ pub fn state_label(state: Option<&str>) -> &'static str {
         Some("closed") => "Closed",
         Some("draft") => "Draft",
         _ => "Open",
-    }
-}
-pub fn review_label(state: Option<&str>) -> Option<&'static str> {
-    match state {
-        Some("approved") => Some("Approved"),
-        Some("changes_requested") => Some("Changes requested"),
-        Some("review_required") => Some("Review required"),
-        _ => None,
-    }
-}
-pub fn checks_label(state: Option<&str>) -> &'static str {
-    match state {
-        Some("passing") => "Checks passing",
-        Some("pending") => "Checks pending",
-        Some("failing") => "Checks failing",
-        _ => "No checks",
-    }
-}
-pub fn frame_id(pr_id: i64, message_id: Option<i64>, thread_id: Option<i64>) -> String {
-    match message_id {
-        Some(id) => format!("card_for_message_{id}_github_pull_request_{pr_id}"),
-        None => format!(
-            "card_for_thread_{}_github_pull_request_{pr_id}",
-            thread_id.map(|id| id.to_string()).unwrap_or_default()
-        ),
     }
 }

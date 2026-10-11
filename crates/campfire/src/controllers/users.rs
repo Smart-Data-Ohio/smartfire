@@ -7,9 +7,6 @@ pub use campfire_people::controllers::users::*;
 mod preferences_tests;
 
 #[cfg(test)]
-pub(crate) mod people_tests;
-
-#[cfg(test)]
 mod profile_settings_tests;
 
 #[cfg(test)]

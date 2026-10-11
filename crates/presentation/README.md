@@ -6,6 +6,5 @@ freshness keys, and legacy JSON serializers. It sits below app and has no app, c
 or Askama dependency.
 
 The sources, registries and formatter vectors came from the retired classic presentation
-layer. Retained context and string/JSON helpers moved from `crates/view_kit` to keep this
-boundary. Serialize legacy payloads with `helpers::to_rails_json` to preserve Rails escaping
+layer. Serialize legacy payloads with `helpers::to_rails_json` to preserve Rails escaping
 and field order. Recorded vectors remain frozen.

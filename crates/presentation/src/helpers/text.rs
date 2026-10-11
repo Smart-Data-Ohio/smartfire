@@ -33,18 +33,6 @@ pub fn squish(text: &str) -> String {
         .to_string()
 }
 
-/// `String#capitalize`: first character upcased, the rest downcased.
-pub fn capitalize(text: &str) -> String {
-    let mut chars = text.chars();
-    match chars.next() {
-        Some(first) => first
-            .to_uppercase()
-            .chain(chars.flat_map(char::to_lowercase))
-            .collect(),
-        None => String::new(),
-    }
-}
-
 /// `Array#to_sentence` with the default English connectors, or a custom `two_words_connector`.
 pub fn to_sentence(items: &[String], two_words_connector: &str) -> String {
     match items {

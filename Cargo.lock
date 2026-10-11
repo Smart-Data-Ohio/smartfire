@@ -274,21 +274,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bit-set"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
-dependencies = [
- "bit-vec 0.8.0",
-]
-
-[[package]]
-name = "bit-vec"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
-
-[[package]]
 name = "bit-vec"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -397,7 +382,6 @@ dependencies = [
  "campfire_messages",
  "campfire_people",
  "campfire_presentation",
- "campfire_retained",
  "campfire_richtext",
  "campfire_rooms",
  "campfire_routes",
@@ -405,7 +389,6 @@ dependencies = [
  "campfire_spa",
  "campfire_static_assets",
  "campfire_storage",
- "campfire_view_kit",
  "flate2",
  "futures-util",
  "hmac",
@@ -607,7 +590,6 @@ dependencies = [
  "campfire_messages",
  "campfire_people",
  "campfire_presentation",
- "campfire_retained",
  "campfire_richtext",
  "campfire_rooms",
  "campfire_routes",
@@ -787,7 +769,6 @@ dependencies = [
  "campfire_db",
  "campfire_kit",
  "campfire_presentation",
- "campfire_retained",
  "campfire_richtext",
  "campfire_routes",
  "campfire_runtime",
@@ -818,16 +799,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "unicode-segmentation",
-]
-
-[[package]]
-name = "campfire_retained"
-version = "0.1.0"
-dependencies = [
- "askama",
- "campfire_routes",
- "campfire_view_kit",
- "serde_json",
 ]
 
 [[package]]
@@ -894,13 +865,11 @@ dependencies = [
  "campfire_kit",
  "campfire_mail",
  "campfire_presentation",
- "campfire_retained",
  "campfire_richtext",
  "campfire_routes",
  "campfire_spa",
  "campfire_static_assets",
  "campfire_storage",
- "campfire_view_kit",
  "futures-util",
  "http",
  "indexmap",
@@ -936,12 +905,10 @@ dependencies = [
 name = "campfire_static_assets"
 version = "0.1.0"
 dependencies = [
- "fancy-regex",
  "httpdate",
  "serde_json",
  "sha1",
  "sha2",
- "tempfile",
 ]
 
 [[package]]
@@ -964,19 +931,6 @@ dependencies = [
  "subtle",
  "tempfile",
  "thiserror",
-]
-
-[[package]]
-name = "campfire_view_kit"
-version = "0.1.0"
-dependencies = [
- "askama",
- "campfire_presentation",
- "campfire_routes",
- "campfire_static_assets",
- "rails_compat",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1320,17 +1274,6 @@ name = "fallible-streaming-iterator"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
-
-[[package]]
-name = "fancy-regex"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e24cb5a94bcae1e5408b0effca5cd7172ea3c5755049c5f3af4cd283a165298"
-dependencies = [
- "bit-set",
- "regex-automata",
- "regex-syntax",
-]
 
 [[package]]
 name = "fastrand"
@@ -3915,7 +3858,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5f6765e852b9b4dc8e2a76843e4d64d1cea8e79bcde0b6901aea8e7c7f08282"
 dependencies = [
- "bit-vec 0.9.1",
+ "bit-vec",
  "time",
 ]
 

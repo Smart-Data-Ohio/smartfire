@@ -46,40 +46,12 @@ impl Role {
 }
 
 impl UserSummary {
-    pub fn two_factor_reset_confirmation(&self) -> String {
-        format!(
-            "Reset two-step sign-in for {}? They will sign out everywhere and set it up again at next sign-in.",
-            self.name
-        )
-    }
     pub fn offer_google_email_link(&self) -> bool {
         (self.email_self_changed || !self.google_email_link_allowed)
             && self
                 .email_address
                 .as_deref()
                 .is_some_and(|email| !h::is_blank(email))
-    }
-    pub fn google_unlink_title(&self, email: &str) -> String {
-        format!("Unlink Google sign-in ({email})")
-    }
-    pub fn google_unlink_confirmation(&self) -> String {
-        format!(
-            "Unlink Google sign-in from {}? That Google account will no longer sign in as them.",
-            self.name
-        )
-    }
-    pub fn google_link_title(&self) -> String {
-        format!(
-            "Allow Google sign-in to link {}",
-            self.email_address.as_deref().unwrap_or_default()
-        )
-    }
-    pub fn google_link_confirmation(&self) -> String {
-        format!(
-            "{} chose the email {} themselves. Allow the Google account with that address to sign in as them?",
-            self.name,
-            self.email_address.as_deref().unwrap_or_default()
-        )
     }
     pub fn active(&self) -> bool {
         self.status == Status::Active
@@ -97,15 +69,4 @@ impl UserSummary {
         self.role == Role::Administrator
     }
 
-    /// `name.split(' ')[0]` (awk-style split on ASCII whitespace).
-    pub fn first_name(&self) -> &str {
-        self.name_parts().next().unwrap_or("")
-    }
-
-    /// `name.split(' ')`.
-    pub fn name_parts(&self) -> impl Iterator<Item = &str> {
-        self.name
-            .split(|c: char| c.is_ascii_whitespace())
-            .filter(|part| !part.is_empty())
-    }
 }

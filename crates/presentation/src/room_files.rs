@@ -1,4 +1,3 @@
-use crate::helpers as h;
 
 pub const TYPES: [&str; 5] = ["all", "images", "videos", "documents", "other"];
 pub struct Upload {
@@ -58,34 +57,4 @@ impl Listing {
     pub fn path(&self) -> String {
         format!("/rooms/{}/files", self.room_id)
     }
-    pub fn more_uploads_path(&self) -> String {
-        self.query_path(
-            &self.file_type,
-            Some((self.upload_page + 1).to_string()),
-            self.raw_drive_page.clone(),
-        )
-    }
-    pub fn more_drive_path(&self) -> String {
-        self.query_path(
-            &self.file_type,
-            self.raw_page.clone(),
-            Some((self.drive_page + 1).to_string()),
-        )
-    }
-}
-
-impl Listing {     pub fn query_path(&self, kind: &str, page: Option<String>, drive: Option<String>) -> String {
-        let mut params = vec![("type", h::Param::One(kind.into()))];
-        if !self.filename.is_empty() {
-            params.push(("filename", h::Param::One(self.filename.clone())));
-        }
-        if let Some(v) = page {
-            params.push(("page", h::Param::One(v)));
-        }
-        if let Some(v) = drive {
-            params.push(("drive_page", h::Param::One(v)));
-        }
-        h::with_query(&self.path(), params)
-    }
-
 }

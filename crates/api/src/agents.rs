@@ -242,7 +242,7 @@ async fn show_agent(c: &mut Ctx) -> Result {
         return Err(Error::NotFound);
     };
     let id = agent_id(c, "agent_id")?;
-    let zone = campfire_runtime::request_context::time_zone(c).await?;
+    let zone = campfire_runtime::presenters::current::time_zone(c).await?;
     let (secrets, now) = (c.app().secrets.clone(), now(c));
     let profile = c
         .app()

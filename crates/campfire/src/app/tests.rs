@@ -141,9 +141,9 @@ async fn health_check() {
 #[tokio::test]
 async fn public_files_are_served_before_routing() {
     let Some(test) = boot_seeded().await else { return };
-    let css = campfire_static_assets::stylesheet_path("auth");
-    let reply = send(&test.booted.router, get(&css)).await;
-    assert_eq!(reply.status, StatusCode::OK, "{css}");
+    let svg = campfire_static_assets::image_path("default-bot-avatar.svg");
+    let reply = send(&test.booted.router, get(&svg)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{svg}");
     // Our Rails marks fingerprinted assets immutable (RailsExt::ImmutableAssetHeaders) and serves
     // other public files briefly cached (config.public_file_server.headers); vectors/kit_security.json.
     assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
@@ -156,7 +156,7 @@ async fn public_files_are_served_before_routing() {
     assert_eq!(robots.header("cache-control"), Some("public, max-age=60, stale-while-revalidate=300"));
     assert_eq!(robots.body, include_bytes!("../../../static_assets/public/robots.txt"));
 
-    for logical in ["auth.css", "auth.js", "fonts/inter-latin-var.woff2", "default-bot-avatar.svg"] {
+    for logical in ["default-bot-avatar.svg", "56k.mp3"] {
         let path = campfire_static_assets::asset_path(logical);
         let reply = send(&test.booted.router, get(&path)).await;
         assert_eq!(reply.status, StatusCode::OK, "{logical}");

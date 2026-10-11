@@ -34,15 +34,6 @@ impl Stage {
             .find(|m| m.id == self.viewer_id)
             .expect("stage viewer is a member")
     }
-    pub fn can_manage(&self) -> bool {
-        self.viewer().role == "host" || self.viewer().administrator
-    }
-    pub fn can_moderate(&self, target: &Member) -> bool {
-        target.id != self.viewer_id && (self.viewer().administrator || !target.administrator)
-    }
-    pub fn admin_self_unmute(&self, target: &Member) -> bool {
-        target.id == self.viewer_id && self.viewer().administrator && target.muted
-    }
     pub fn group(&self, role: &str) -> Vec<&Member> {
         let mut members = self
             .members

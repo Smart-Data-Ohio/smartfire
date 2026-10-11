@@ -99,12 +99,11 @@ function PageBody({ load, retry }: PublicPageState) {
 }
 
 /**
- * `/app/about`, `/app/privacy` and `/app/terms`: the retained public pages
- * (crates/retained_pages/templates/public_pages, in layouts/public.html) for anyone, signed in or
- * out. The article is the retained template's own render, from `GET /api/v1/public_pages/:page`,
- * with its links on these pages; the header and footer are the retained layout's. Nothing else
- * in the app links here but the sign-in page, as nothing in the retained app links the public
- * pages but sign-in and the pages themselves.
+ * `/app/about`, `/app/privacy` and `/app/terms`: the public pages, for anyone, signed in or out.
+ * The article is the server's render (crates/controllers/templates/public_pages), from
+ * `GET /api/v1/public_pages/:page`, with its links on these pages; the header and footer are the
+ * retired server layout's. Nothing else in the app links here but the sign-in page and the pages
+ * themselves.
  */
 export function PublicPageView({ name }: { readonly name: PublicPageName }) {
   const { load, retry } = usePublicPage(name);

@@ -1,17 +1,15 @@
 //! Shared account, user, session and sidebar facts read from database rows.
-//! Request preferences and retained context are loaded by [`crate::request_context`].
+//! Request time zones and preferences are read by [`crate::presenters::current`].
 //!
 //! Queries the db crate doesn't have yet are written here against the reference's SQL.
 
 pub mod bot_access;
 
 use campfire_db::{Account, CachedStatements, Connection, Membership, PushSubscription, Room, RoomType, User};
-use campfire_kit::Ctx;
 use campfire_presentation::accounts::{Bot, BotAgentForm, BotForm, BotGithubAccount, BotRoom, HelpContact};
 use campfire_presentation::users::{
     MentionUser, ProfileMembership, PushSubscription as PushSubscriptionView, UserSummary,
 };
-use campfire_presentation::Platform;
 use rails_compat::Secrets;
 use rails_compat::global_id::{self, GlobalId};
 use rails_compat::unicode;
@@ -55,11 +53,6 @@ pub fn fresh_account_logo_path_in_zone(
 ) -> String {
     let v = account.map(|account| zone.to_fs(account.updated_at.jiff(), "number"));
     campfire_routes::fresh_account_logo(v.as_deref(), size)
-}
-
-/// `platform` as the views see it (`ApplicationPlatform.new(request.user_agent)`).
-pub fn platform(c: &Ctx) -> Platform {
-    crate::concerns::platform(c).to_view()
 }
 
 /// `User.administrator.first`, for `accounts/_help_contact`.
@@ -398,23 +391,6 @@ pub fn sidebar_direct_label_for_names(name: Option<&str>, member_names: &[&str])
 fn sidebar_first_name(name: &str) -> &str {
     // Ruby String#split(" "): vertical tab separates words; NBSP does not.
     name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c']).find(|part|!part.is_empty()).unwrap_or_default()
-}
-
-pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfire_presentation::helpers::AvatarIcon> {
-    use campfire_presentation::{helpers::AvatarIcon,messages::reactions::static_icon};
-    let name=name?;
-    let icon=static_icon(name);
-    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})){return icon;}
-    let title: Option<String>=conn.query_row("SELECT title FROM workspace_icons WHERE name=?",[name],|row|row.get(0)).optional().ok().flatten();
-    room_icon_with_title(Some(name),title)
-}
-
-fn room_icon_with_title(name: Option<&str>, title: Option<String>) -> Option<campfire_presentation::helpers::AvatarIcon> {
-    use campfire_presentation::{helpers::AvatarIcon,messages::reactions::static_icon};
-    let name = name?;
-    let icon = static_icon(name);
-    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})) { return icon; }
-    title.map(|title| AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
 }
 
 pub mod audit_logs;

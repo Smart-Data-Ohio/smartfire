@@ -46,10 +46,9 @@ type Load =
   | { readonly status: "ready"; readonly page: JoinPageData };
 
 /**
- * The retained join page (crates/retained_pages/templates/users/new.html) in the SPA: the
- * workspace's name, logo and description over an avatar, name, email address and password, or why
- * an invite can no longer be used; then sign-in for people who already have an account, and whom
- * to ask for help. Joining signs the new account in and enters the app.
+ * The join page: the workspace's name, logo and description over an avatar, name, email address
+ * and password, or why an invite can no longer be used; then sign-in for people who already have
+ * an account, and whom to ask for help. Joining signs the new account in and enters the app.
  */
 export function JoinPage({ target }: { readonly target: JoinTarget }) {
   const titleId = useId();
@@ -447,7 +446,7 @@ function DeadInvite({
 
 /**
  * The round picture over the form: a person until a file is chosen, then that picture, before
- * anything is uploaded (the retained auth.js preview). The file input stays in the tab order under
+ * anything is uploaded. The file input stays in the tab order under
  * the circle, which shows its focus.
  */
 function AvatarPicker({
