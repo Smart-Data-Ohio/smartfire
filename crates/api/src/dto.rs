@@ -255,7 +255,7 @@ pub fn user(
         role: match user.role {
             Role::Member => api::UserRole::Member,
             Role::Administrator => api::UserRole::Administrator,
-            Role::Bot => api::UserRole::Bot,
+            Role::Bot | Role::WebhookAuthor => api::UserRole::Bot,
         },
         status: match user.status {
             Status::Active => api::UserStatus::Active,
@@ -469,6 +469,7 @@ fn messages_and_fetches_inner(
     }
     let threads = thread_indicators(conn, messages)?;
     let mut steps = message_steps(conn, &ids)?;
+    let mut webhook_payloads = crate::webhooks::message_payloads(conn, app, &ids)?;
     messages
         .iter()
         .map(|message| {
@@ -488,6 +489,8 @@ fn messages_and_fetches_inner(
             } else {
                 None
             };
+            let (embeds, webhook) = webhook_payloads.remove(&message.id)
+                .map_or((None, None), |payload| (Some(payload.embeds), Some(payload.attribution)));
             Ok(api::MessageDTO {
                 id: message.id,
                 room_id: message.room_id,
@@ -519,6 +522,8 @@ fn messages_and_fetches_inner(
                 steps: steps.remove(&message.id).unwrap_or_default(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
+                embeds,
+                webhook,
             })
         })
         .collect::<Result<Vec<_>>>()

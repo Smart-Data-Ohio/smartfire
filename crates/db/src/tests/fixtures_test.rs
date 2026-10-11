@@ -141,7 +141,7 @@ fn tables(conn: &Connection) -> Vec<String> {
     // Workspace invites have no table in the frozen Rails schema.
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'workspace_categories', 'workspace_invites') ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'workspace_categories', 'workspace_invites', 'channel_webhooks', 'channel_webhook_messages') ORDER BY name",
         [],
         |r| r.get(0),
     )
