@@ -12,6 +12,7 @@ import {
   shot,
   swipeLeft,
   test,
+  USER_IDS,
 } from "./support.ts";
 
 /** Calls one of the mock's `/__mock/*` controls. */
@@ -157,7 +158,17 @@ test("opening a mention goes to the message", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/r\/\d+(\/(m|t)\/\d+)?/);
 });
 
-test("an ignored saved reminder stays collapsed until explicitly revealed", async ({ page }) => {
+test("an ignored saved reminder stays collapsed until explicitly revealed", async ({
+  page,
+  request,
+}) => {
+  // The loaded ignore list outranks a payload's flag, so the reminder's author is really ignored.
+  const state = await (await request.get("/__mock/state")).json();
+  const ignore = await request.put(`/api/v1/people/${USER_IDS.maya}/block`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+  });
+
+  expect(ignore.ok()).toBe(true);
   await page.route("**/api/v1/activity?*", async (route) => {
     const response = await route.fetch();
     const snapshot = await response.json();
@@ -169,6 +180,7 @@ test("an ignored saved reminder stays collapsed until explicitly revealed", asyn
       source: {
         ...original.source,
         sourceType: "saved_item",
+        creatorId: USER_IDS.maya,
         ignored: true,
         body: "Private ignored reminder text",
       },
