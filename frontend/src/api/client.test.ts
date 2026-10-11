@@ -4,6 +4,7 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientError from "effect/http/HttpClientError";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
+import type { TwoFactorRequirement } from "../gen/TwoFactorRequirement.ts";
 import { passwordSignIn, submitChallenge } from "./auth-endpoints.ts";
 import { readBoot } from "./boot.ts";
 import { ApiClient, ApiConfig, Navigation } from "./client.ts";
@@ -23,6 +24,7 @@ import {
 import { resumeSudo, submitSudo } from "./sudo-endpoints.ts";
 import { meFixture, roomDetailFixture } from "./testing.ts";
 import { completeTour } from "./tour-endpoints.ts";
+import { onTwoFactorRequirement } from "./two-factor-gate.ts";
 import { readTwoFactorSetup, submitTwoFactorSetup } from "./two-factor-setup-endpoints.ts";
 
 /** What the fake server saw. */
@@ -169,15 +171,39 @@ describe("two-factor setup HTTP statuses", () => {
     });
   }
 
-  it.effect("navigates a signed-out setup request on 401", () => {
+  it.effect("leaves a signed-out setup's 401 next action to its screen", () => {
     const body = { kind: "navigate", location: "http://campfire.test/session/new" };
     const { layer, navigations } = harness(() => json(401, body));
 
     return Effect.gen(function* () {
+      // The screen follows it, if it is still on screen when the answer arrives.
       expect(yield* readTwoFactorSetup()).toEqual(body);
-      expect(navigations).toEqual([body.location]);
+      expect(navigations).toEqual([]);
     }).pipe(Effect.provide(layer));
   });
+
+  it.effect(
+    "fails an undecodable 401 Unauthorized without leaving when the caller navigates",
+    () => {
+      const { layer, navigations } = harness(() =>
+        errorReply(401, new Unauthorized({ message: "Signed out" })),
+      );
+
+      return Effect.gen(function* () {
+        const client = yield* ApiClient;
+
+        const error = yield* client
+          .execute(
+            { method: "GET", path: "/two_factor/setup", auth: true, ownsNavigation: true },
+            Schema.decodeUnknownEffect(Schema.Number),
+          )
+          .pipe(Effect.flip);
+
+        expect(error).toEqual(new Unauthorized({ message: "Signed out" }));
+        expect(navigations).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    },
+  );
 });
 
 describe("two-factor enrollment gate", () => {
@@ -188,6 +214,8 @@ describe("two-factor enrollment gate", () => {
     });
 
     const { layer, navigations, seen } = harness(() => errorReply(403, expected));
+    const reported: TwoFactorRequirement[] = [];
+    const stop = onTwoFactorRequirement((requirement) => reported.push(requirement));
 
     return Effect.gen(function* () {
       const client = yield* ApiClient;
@@ -200,7 +228,9 @@ describe("two-factor enrollment gate", () => {
       expect(error).toMatchObject({ requirement: expected.requirement });
       expect(navigations).toEqual([]);
       expect(seen).toHaveLength(1);
-    }).pipe(Effect.provide(layer));
+      // The shell hears the requirement and routes to the setup screen itself.
+      expect(reported).toEqual([expected.requirement]);
+    }).pipe(Effect.ensuring(Effect.sync(stop)), Effect.provide(layer));
   });
 });
 

@@ -8,7 +8,9 @@
 //!   encodings, and a font or image is sent as it is.
 //! - `GET /app`, `/app/*`: the shell, behind `ApplicationController`'s before-actions, so signing
 //!   in (with the return path), two-step enforcement, deactivation and the rest apply as on a
-//!   classic page. A file at the dist's root (Vite's `public/`) is served as it is.
+//!   classic page. A file at the dist's root (Vite's `public/`) is served as it is. The setup
+//!   screen (`/app/two_factor/setup`) has the retained setup page's before-actions instead, so a
+//!   session that must set up two-step sign-in can open it.
 //! - `GET /api/v1/boot`: the shell's boot JSON and CSRF token, for the Vite dev server (whose own
 //!   `index.html` has neither) and for the SPA to refresh its token without a reload.
 //!
@@ -72,6 +74,11 @@ fn defer_json_body(_: &axum::http::Method, _: &str, _: &[u8]) -> Option<std::res
     Some(Ok(campfire_kit::ParamMap::default()))
 }
 
+/// The SPA's two-step setup screen. A session that must still set up two-step sign-in may open
+/// it as a page, as it may open the retained `/two_factor_setup`; a JSON request for it, and the
+/// rest of `/app`, stay behind the gate.
+const SETUP_SHELL: &str = "/app/two_factor/setup";
+
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
     // About, Privacy and Terms are for anyone, as their retained pages are, and show everyone
@@ -112,6 +119,8 @@ pub async fn show(c: &mut Ctx) -> Result {
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
         c.no_store();
         return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
+    } else if c.request.path() == SETUP_SHELL && !concerns::sudo::json_request(c)? {
+        two_factor::setup_shell_before(c).await?;
     } else {
         concerns::before_actions(c, Before::default()).await?;
     }

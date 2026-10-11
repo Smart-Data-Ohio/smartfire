@@ -977,6 +977,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   approvals.seed();
   ledger.seed();
 
+  const account = createAccount(ctx, () => csrf);
   const huddles = createHuddles(ctx, simulate);
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
@@ -1005,7 +1006,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...saved.routes,
     ...work.routes,
     ...settings.routes,
-    ...createAccount(ctx).routes,
+    ...account.routes,
     ...admin.routes,
     ...signIn.routes,
     ...createPeople(ctx, admin.requireSudo, agents).routes,
@@ -1107,6 +1108,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         throw plainError(422, "InvalidAuthenticityToken", "Can't verify CSRF token authenticity.");
       }
     }
+
+    // An unverified session (two-step sign-in turned off) may only set it up or sign out.
+    account.gate(method, path);
 
     const joining = /^\/rooms\/(\d+)\/(preview|join)$/.exec(path);
 
@@ -1273,6 +1277,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       case "release-sends":
         release();
+
+        return ok;
+      case "two-factor":
+        account.control({
+          enrolled: booleanField(body, "enrolled"),
+          required: booleanField(body, "required"),
+          expire: booleanField(body, "expire"),
+        });
 
         return ok;
       case "lapse-sudo":

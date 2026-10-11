@@ -57,6 +57,8 @@ describe("the screen map and the router", () => {
       "/app/two_factor/challenge",
       "/app/session/transfers/:id",
       "/app/first_run",
+      // Two-step setup: outside the signed-in screen map, like the signed-out pages.
+      "/app/two_factor/setup",
       // So are About, Privacy and Terms, for anyone; /about, /privacy and /terms stay retained.
       "/app/about",
       "/app/privacy",
