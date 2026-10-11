@@ -141,6 +141,18 @@ describe("joining", () => {
     await controller.leave();
   });
 
+  it("hands the transport the grant's audio bitrate target", async () => {
+    const { controller } = harness({
+      join: async (roomId) => ({ ...credentials(roomId), audioBitrateTarget: 384_000 }),
+    });
+
+    await controller.join(ROOM, "Lounge", null);
+
+    expect(window.__smartfireHuddle?.audioBitrate()).toBe(384_000);
+
+    await controller.leave();
+  });
+
   it("keeps the call view closed where joining shouldn't cover the conversation (a phone)", async () => {
     const { controller } = harness({ opensCallView: () => false });
 

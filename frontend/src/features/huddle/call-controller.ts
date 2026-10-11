@@ -544,7 +544,12 @@ export class CallController {
         return;
       }
 
-      await transport.connect(credentials.url, credentials.token, noise.available && noise.enabled);
+      await transport.connect(
+        credentials.url,
+        credentials.token,
+        noise.available && noise.enabled,
+        credentials.audioBitrateTarget,
+      );
 
       if (operation !== this.#operation || transport !== this.#transport) {
         await this.#drop(transport);

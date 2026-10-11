@@ -86,6 +86,26 @@ export function hasMemberList(kind: RoomKind): boolean {
   return kind !== "open" && kind !== "direct";
 }
 
+/**
+ * The voice bitrates a room may target, in bits per second (`VOICE_BITRATES` in
+ * crates/db/src/models/room.rs). They are the target the microphone encodes at, not a promise
+ * every device reaches it.
+ */
+export const VOICE_BITRATES = [48_000, 64_000, 96_000, 128_000, 256_000, 384_000] as const;
+
+/** What a room without its own voice bitrate (`null`) gets: LiveKit's 48 kbps music preset. */
+export const DEFAULT_VOICE_BITRATE = 48_000;
+
+/** Whether a room's settings offer a voice bitrate: every kind that holds calls, not a board. */
+export function hasVoiceBitrate(kind: RoomKind): boolean {
+  return kind !== "board" && kind !== "direct";
+}
+
+/** A bitrate as people read it: `96 kbps`. */
+export function kbps(bitrate: number): string {
+  return `${Math.round(bitrate / 1000)} kbps`;
+}
+
 /** The fields a person edits. `name` as typed; `iconName` normalised, `null` for none. */
 export interface RoomDraft {
   readonly name: string;
@@ -93,6 +113,8 @@ export interface RoomDraft {
   readonly userIds: readonly number[];
   /** Settings only; creation starts without a topic. */
   readonly topic?: string;
+  /** Settings only, in bits per second; `null` is the default. Absent leaves it alone. */
+  readonly voiceBitrate?: number | null;
 }
 
 /** A blank name takes the kind's default (the form's `name`), as the classic form pre-fills. */
@@ -141,7 +163,12 @@ export function updateBody(form: RoomForm, kind: ManagedKind, draft: RoomDraft):
       ? {}
       : { topic: topic === "" ? null : topic };
 
-  const changes = { ...nameChange, ...iconChange, ...topicChange };
+  const bitrateChange =
+    draft.voiceBitrate === undefined || draft.voiceBitrate === form.voiceBitrate
+      ? {}
+      : { voiceBitrate: draft.voiceBitrate };
+
+  const changes = { ...nameChange, ...iconChange, ...topicChange, ...bitrateChange };
 
   const userIds = [...new Set(draft.userIds)];
 
@@ -199,6 +226,8 @@ export function isDirty(form: RoomForm, kind: RoomKind, draft: RoomDraft): boole
   if (draft.iconName !== form.iconName) return true;
 
   if (draft.topic !== undefined && draft.topic.trim() !== (form.topic ?? "")) return true;
+
+  if (draft.voiceBitrate !== undefined && draft.voiceBitrate !== form.voiceBitrate) return true;
 
   if (!hasMemberList(kind)) return false;
 
