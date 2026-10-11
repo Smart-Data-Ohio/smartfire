@@ -582,7 +582,7 @@ export default function RoomSettingsDialog({
     ) : (
       <form
         id={formId}
-        className="room-form"
+        className={tabItems.length > 4 ? "room-form room-form-crowded" : "room-form"}
         noValidate
         onSubmit={(event) => {
           event.preventDefault();

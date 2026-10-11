@@ -707,6 +707,17 @@
     user-select: all;
   }
 
+  /* Five settings tabs (a private channel's Members, Email and Webhooks) don't fit the dialog with
+     their glyphs: labels only, so none wraps. */
+  .room-form-crowded .tab {
+    padding-inline: var(--space-3);
+    white-space: nowrap;
+  }
+
+  .room-form-crowded .tab .icon {
+    display: none;
+  }
+
   /* The form didn't load: the reason and a retry on one line. */
   .room-form-load-error {
     display: flex;
