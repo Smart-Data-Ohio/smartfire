@@ -12,7 +12,8 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { adminFailure, needsSudo, useAdmin } from "./admin-parts.tsx";
+import { stoppedAtConfirmation } from "../auth/confirmation.ts";
+import { useAdmin } from "./admin-parts.tsx";
 import { useFirstFrame } from "./first-frame.ts";
 import {
   imageProblem,
@@ -315,11 +316,10 @@ export function WorkspaceProfile() {
   const set = (kind: ProfileImageKind, next: SlotState) =>
     setSlots((current) => ({ ...current, [kind]: next }));
 
-  // A refusal shows under its slot; a lapsed password confirmation goes to the classic page.
+  // A refusal shows under its slot; one that stopped at its confirmation just puts it back.
   const refused = (kind: ProfileImageKind, error: Error) => {
-    if (needsSudo(error)) {
+    if (stoppedAtConfirmation(error)) {
       set(kind, IDLE);
-      adminFailure(`Couldn't change the ${PROFILE_SLOTS[kind].noun}`, error);
 
       return;
     }

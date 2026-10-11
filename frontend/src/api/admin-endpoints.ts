@@ -1,7 +1,7 @@
 /**
  * The S7 admin endpoints (`/api/v1/admin/*`): the classic account pages. Everyone reads the
  * workspace and its people; everything else needs an administrator. Role changes, removal, custom
- * styles and a new join link fail with `SudoRequired` once the password confirmation has lapsed.
+ * styles and a new join link wait for a fresh confirmation once the last one has lapsed.
  */
 import { Effect } from "effect";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";

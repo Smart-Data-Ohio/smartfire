@@ -11,6 +11,7 @@ import {
   ServerError,
   Unauthorized,
 } from "./errors.ts";
+import { Reauthentication } from "./reauthentication.ts";
 
 /** Where the JSON API lives: `/api/v1` on the serving origin (Vite proxies it to Rust in dev). */
 export class ApiConfig extends Context.Service<ApiConfig, { readonly baseUrl: string }>()(
@@ -59,6 +60,11 @@ export interface ApiRequest {
   readonly body?: Schema.Json;
   /** Credential refusals are decoded next actions; token refresh uses the public auth boot. */
   readonly auth?: true;
+  /**
+   * The body or the reply carries a credential (a pasted token, a key shown once). A write that
+   * needs a fresh confirmation is then never kept in storage for after a Google confirmation.
+   */
+  readonly secret?: true;
 }
 
 /** Validates a success body; a failure becomes a `ServerError`. */
@@ -66,7 +72,8 @@ export type ResponseDecoder<A> = (json: Schema.Json) => Effect.Effect<A, Schema.
 
 /**
  * The `/api/v1` client: JSON in and out, the CSRF token on every write (refreshed and retried once
- * when stale), a redirect to sign in on 401, and typed errors for everything else.
+ * when stale), a redirect to sign in on 401, a write held for a fresh confirmation replayed once
+ * the person confirms (with a `Reauthentication` service), and typed errors for everything else.
  */
 export class ApiClient extends Context.Service<
   ApiClient,
@@ -84,13 +91,14 @@ export class ApiClient extends Context.Service<
     readonly csrfToken: Effect.Effect<string | null>;
   }
 >()("smartfire/api/ApiClient") {
-  /** Needs an `HttpClient`, `ApiConfig` and `Navigation`. */
+  /** Needs an `HttpClient`, `ApiConfig` and `Navigation`; uses `Reauthentication` when given. */
   static readonly layer = Layer.effect(
     ApiClient,
     Effect.gen(function* () {
       const http = yield* HttpClient.HttpClient;
       const { baseUrl } = yield* ApiConfig;
       const navigation = yield* Navigation;
+      const reauthentication = yield* Effect.serviceOption(Reauthentication);
       const token = yield* Ref.make(readCsrfMeta());
 
       const refreshToken = (auth?: true) =>
@@ -137,7 +145,7 @@ export class ApiClient extends Context.Service<
         return yield* readFailure(response, navigation);
       });
 
-      const execute = <A>(request: ApiRequest, decode: ResponseDecoder<A>) =>
+      const once = <A>(request: ApiRequest, decode: ResponseDecoder<A>) =>
         attempt(request, decode).pipe(
           Effect.catchTag("StaleCsrfToken", () =>
             refreshToken(request.auth).pipe(
@@ -146,6 +154,28 @@ export class ApiClient extends Context.Service<
             ),
           ),
         );
+
+      // A write the server holds for a fresh confirmation waits for it, then goes again once.
+      const execute = <A>(
+        request: ApiRequest,
+        decode: ResponseDecoder<A>,
+      ): Effect.Effect<A, ApiFailure> => {
+        if (Option.isNone(reauthentication) || request.method === "GET" || request.auth === true) {
+          return once(request, decode);
+        }
+
+        const gate = reauthentication.value;
+
+        return Effect.flatMap(gate.confirmations, (sentAfter) =>
+          once(request, decode).pipe(
+            Effect.catchTag("SudoRequired", (required) =>
+              gate
+                .confirm(required, request, sentAfter)
+                .pipe(Effect.andThen(once(request, decode))),
+            ),
+          ),
+        );
+      };
 
       const csrfToken = Effect.flatMap(Ref.get(token), (held) =>
         held === null ? Effect.orElseSucceed(refreshToken(), () => null) : Effect.succeed(held),

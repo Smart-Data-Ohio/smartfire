@@ -12,7 +12,6 @@ import {
   Confirm,
   copy,
   keepDraft,
-  needsSudo,
   takeDraft,
   useAdmin,
 } from "../admin/admin-parts.tsx";
@@ -21,6 +20,7 @@ import { FieldError, SettingsGroup, SettingsPage, useBusy } from "../settings/se
 import { activeRunSentence, adminConnectionSentence, CONFIRM, optional } from "./slack-format.ts";
 import "../admin/admin.css";
 import "./slack.css";
+import { leftToConfirm, stoppedAtConfirmation } from "../auth/confirmation.ts";
 
 /** Where the Client ID waits while the classic page confirms the password (never the secret). */
 const DRAFT_KEY = "smartfire.draft.admin-slack-client-id";
@@ -127,10 +127,11 @@ function Credentials({
           toast({ title: change.notice, tone: "success" });
         },
         (failure: Error) => {
-          if (needsSudo(failure)) {
+          if (leftToConfirm(failure)) {
             keepDraft(DRAFT_KEY, clientId);
-            adminFailure("Couldn't save the credentials", failure);
+          }
 
+          if (stoppedAtConfirmation(failure)) {
             return;
           }
 

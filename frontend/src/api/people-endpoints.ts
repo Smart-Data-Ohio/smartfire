@@ -1,7 +1,7 @@
 /**
  * The S7 people endpoints: the classic directory (`users#index`), a person's page (`users#show`)
- * and its ban button. Banning needs an administrator and fails with `SudoRequired` once the
- * password confirmation has lapsed.
+ * and its ban button. Banning needs an administrator and waits for a fresh confirmation once the
+ * last one has lapsed.
  */
 import { Effect } from "effect";
 import type { PeopleDirectory } from "../gen/PeopleDirectory.ts";

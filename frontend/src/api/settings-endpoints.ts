@@ -172,7 +172,7 @@ export type TokenService = "github" | "fizzy";
 /**
  * `PUT /settings/{github,fizzy}_connection`: the service checks the token before it is stored. A
  * refusal (blank, rejected, unreachable, no Fizzy account) fails `Validation` with the classic
- * alert; a lapsed password confirmation fails `SudoRequired`.
+ * alert. A lapsed confirmation waits for a fresh one; the token is never kept across a Google one.
  */
 export const connectService = Effect.fn("api.connectService")(function* (
   service: TokenService,
@@ -181,7 +181,7 @@ export const connectService = Effect.fn("api.connectService")(function* (
   const body: IntegrationToken = { accessToken };
 
   return yield* call(
-    { method: "PUT", path: `/settings/${service}_connection`, body },
+    { method: "PUT", path: `/settings/${service}_connection`, body, secret: true },
     integrationReply,
   );
 });

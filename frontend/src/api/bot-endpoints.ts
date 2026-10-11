@@ -2,8 +2,8 @@
  * The S7 bot endpoints (`/api/v1/admin/bots/*`): the classic chat bot pages. Administrators see
  * the list and every control; the person who owns a bot's agent may open and edit that bot (not
  * its webhook URL), suspend it, reset its signing secret, and revoke its credentials and grants.
- * The writes the classic pages guard with the password fail with `SudoRequired` once its
- * confirmation has lapsed.
+ * The writes the classic pages guard with the password wait for a fresh confirmation once the last
+ * one has lapsed; those that carry a key or token are `secret`, never kept across a Google one.
  */
 import { Effect } from "effect";
 import type { Bot } from "../gen/Bot.ts";
@@ -46,7 +46,7 @@ export const bots = Effect.fn("api.bots")(function* () {
 
 /** `POST /admin/bots`: a workspace agent the viewer owns; answers its key, shown once. */
 export const createBot = Effect.fn("api.createBot")(function* (body: CreateBot) {
-  return yield* call({ method: "POST", path: "/admin/bots", body }, keyReply);
+  return yield* call({ method: "POST", path: "/admin/bots", body, secret: true }, keyReply);
 });
 
 /** `GET /admin/bots/:id`: one bot, as its classic edit page shows it. */
@@ -74,12 +74,15 @@ export const suspendBot = Effect.fn("api.suspendBot")(function* (botId: number) 
 
 /** `PUT /admin/bots/:id/key`: a new key, shown once; the old one stops working. */
 export const resetBotKey = Effect.fn("api.resetBotKey")(function* (botId: number) {
-  return yield* call({ method: "PUT", path: `/admin/bots/${botId}/key` }, keyReply);
+  return yield* call({ method: "PUT", path: `/admin/bots/${botId}/key`, secret: true }, keyReply);
 });
 
 /** `POST /admin/bots/:id/webhook_secret`: a new signing secret for its webhook deliveries. */
 export const resetSigningSecret = Effect.fn("api.resetSigningSecret")(function* (botId: number) {
-  return yield* call({ method: "POST", path: `/admin/bots/${botId}/webhook_secret` }, changeReply);
+  return yield* call(
+    { method: "POST", path: `/admin/bots/${botId}/webhook_secret`, secret: true },
+    changeReply,
+  );
 });
 
 /** `PUT /admin/bots/:id/github_connection`: a token GitHub accepts links its account. */
@@ -88,7 +91,12 @@ export const connectGithub = Effect.fn("api.connectGithub")(function* (
   accessToken: string,
 ) {
   return yield* call(
-    { method: "PUT", path: `/admin/bots/${botId}/github_connection`, body: { accessToken } },
+    {
+      method: "PUT",
+      path: `/admin/bots/${botId}/github_connection`,
+      body: { accessToken },
+      secret: true,
+    },
     changeReply,
   );
 });
@@ -112,7 +120,7 @@ export const issueCredential = Effect.fn("api.issueCredential")(function* (
   body: CreateCredential,
 ) {
   return yield* call(
-    { method: "POST", path: `/admin/bots/${botId}/credentials`, body },
+    { method: "POST", path: `/admin/bots/${botId}/credentials`, body, secret: true },
     wire<CredentialCreated>(CredentialCreatedSchema),
   );
 });

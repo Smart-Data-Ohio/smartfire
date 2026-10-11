@@ -11,7 +11,6 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { needsSudo, SUDO_PAGE } from "../admin/admin-parts.tsx";
 import { connectionSummary, withConnection, withDependents } from "./settings-format.ts";
 import {
   SettingsGroup,
@@ -34,20 +33,6 @@ const DISCONNECT_WARNING = {
     "Card previews will stop working and you will no longer be able to create cards from messages.",
   google: "Your published event entries will be removed.",
 } as const;
-
-/**
- * A failed write: a lapsed password confirmation goes to the classic page that asks for it (it
- * comes back here; a pasted token isn't kept, so it's pasted again), anything else is a toast.
- */
-function failed(title: string, error: Error): void {
-  if (needsSudo(error)) {
-    window.location.assign(SUDO_PAGE);
-
-    return;
-  }
-
-  toastFailure(title, error);
-}
 
 /** The id of a service's group on the page, where focus lands after its change. */
 const GROUP_ID = {
@@ -110,7 +95,7 @@ function TokenForm({
             setError(failure.message);
             setAttempt((count) => count + 1);
           } else {
-            failed(`Couldn't connect ${name}`, failure);
+            toastFailure(`Couldn't connect ${name}`, failure);
           }
         },
       )
@@ -328,7 +313,7 @@ export function IntegrationsSection() {
       service,
       settingsActions.disconnect(service).then(
         (change) => landed(change, service),
-        (error: Error) => failed(`Couldn't disconnect ${SERVICE_NAME[service]}`, error),
+        (error: Error) => toastFailure(`Couldn't disconnect ${SERVICE_NAME[service]}`, error),
       ),
     );
   };
