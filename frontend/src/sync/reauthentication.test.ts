@@ -6,6 +6,7 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import { ApiClient, ApiConfig, type ApiRequest, Navigation } from "../api/client.ts";
 import { ApiErrorResponse, SudoRequired } from "../api/errors.ts";
 import type { SudoMethod } from "../gen/SudoMethod.ts";
+import type { SudoRetry } from "../gen/SudoRetry.ts";
 import {
   type ConfirmationGate,
   KEPT_KEY,
@@ -30,16 +31,23 @@ interface Reply {
 
 const encodeErrorBody = Schema.encodeSync(ApiErrorResponse);
 
-const required = (methods: readonly SudoMethod[] = ["password", "totp"]) =>
+/** The server's pending request for `seen`, as `require_sudo_mode` records it. */
+const retryOf = (seen: Seen | null): SudoRetry | null =>
+  seen === null ? null : { method: seen.method, path: seen.path, returnTo: "/app/admin/styles" };
+
+const required = (
+  methods: readonly SudoMethod[] = ["password", "totp"],
+  seen: Seen | null = null,
+) =>
   new SudoRequired({
     message: "Confirm your password to continue",
-    reauthentication: { methods: [...methods], retry: null },
+    reauthentication: { methods: [...methods], retry: retryOf(seen) },
   });
 
-/** The 403 a guarded write answers while the confirmation has lapsed. */
-const held = (methods?: readonly SudoMethod[]): Reply => ({
+/** The 403 a guarded write (`seen`) answers while the confirmation has lapsed. */
+const held = (methods?: readonly SudoMethod[], seen: Seen | null = null): Reply => ({
   status: 403,
-  body: encodeErrorBody({ error: required(methods) }),
+  body: encodeErrorBody({ error: required(methods, seen) }),
 });
 
 const refused: Reply = {
@@ -49,16 +57,30 @@ const refused: Reply = {
 
 const confirmed: Reply = { status: 200, body: { kind: "confirmed", retry: null } };
 
+/** What the gate reads from the page: who is signed in, the clock, and the screen. */
+interface Page {
+  viewer: number | null;
+  now: number;
+  screen: string;
+}
+
 /**
  * The real `ApiClient` over a fake `HttpClient` (replies from `answer`, by request in order) and a
- * fresh confirmation gate on session storage.
+ * fresh confirmation gate on session storage, reading `page`.
  */
 function harness(
   answer: (seen: Seen, index: number) => Reply,
   hold: (seen: Seen) => Effect.Effect<void> = () => Effect.void,
 ) {
   const seen: Seen[] = [];
-  const gate = makeConfirmationGate(() => sessionStorage);
+  const page: Page = { viewer: 7, now: 1_000_000, screen: "/app/admin/styles" };
+
+  const gate = makeConfirmationGate({
+    storage: () => sessionStorage,
+    viewer: () => page.viewer,
+    now: () => page.now,
+    screen: () => page.screen,
+  });
 
   const http = HttpClient.make((request, url) =>
     Effect.gen(function* () {
@@ -98,7 +120,7 @@ function harness(
     ),
   );
 
-  return { layer, seen, gate };
+  return { layer, seen, gate, page };
 }
 
 const anyJson = (json: Schema.Json) => Effect.succeed(json);
@@ -352,40 +374,140 @@ describe("the confirmation gate", () => {
       expect(gate.snapshot()).toBeNull();
     }).pipe(Effect.provide(layer));
   });
+
+  it.live("leaving a screen cancels the writes it sent; the others still wait", () => {
+    const { layer, seen, gate, page } = harness(() => held());
+
+    return Effect.gen(function* () {
+      const left = yield* Effect.forkChild(send(styles));
+
+      yield* untilPrompt(gate);
+      page.screen = "/app/admin/people";
+
+      const stays = yield* Effect.forkChild(
+        send({ ...styles, path: "/admin/workspace/join_code" }),
+      );
+
+      yield* untilPrompt(gate, 2);
+      gate.screenChanged();
+
+      expect((yield* Fiber.join(left).pipe(Effect.flip))._tag).toBe("ConfirmationCancelled");
+      expect(gate.snapshot()?.writes).toBe(1);
+
+      page.screen = "/app/admin";
+      gate.screenChanged();
+
+      expect((yield* Fiber.join(stays).pipe(Effect.flip))._tag).toBe("ConfirmationCancelled");
+      // Nothing left waiting: the dialog closes, and nothing went again.
+      expect(gate.snapshot()).toBeNull();
+      expect(seen).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a write held after its screen was left fails without asking", () => {
+    const asked: number[] = [];
+
+    const { layer, seen, gate, page } = harness(
+      () => held(),
+      () =>
+        Effect.sync(() => {
+          page.screen = "/app/admin";
+        }),
+    );
+
+    gate.subscribe(() => asked.push(gate.snapshot()?.writes ?? 0));
+
+    return Effect.gen(function* () {
+      const error = yield* send(styles).pipe(Effect.flip);
+
+      expect(error._tag).toBe("ConfirmationCancelled");
+      expect(asked).toEqual([]);
+      expect(seen).toHaveLength(1);
+    }).pipe(Effect.provide(layer));
+  });
 });
+
+/** What the fake server answers `/sudo/continue` with, given its pending request and the call count. */
+type Continuation = (pending: SudoRetry | null, call: number) => Reply;
+
+const freshContinuation: Continuation = (pending) => ({
+  status: 200,
+  body: { kind: "confirmed", retry: pending },
+});
+
+/**
+ * A server that holds guarded writes (recording the last as its pending request, as
+ * `require_sudo_mode` does) until a Google confirmation, unless `refuse`. Its continuation
+ * consumes the pending request when it answers 200.
+ */
+function googleHarness({
+  continuation = freshContinuation,
+  refuse = false,
+  hold,
+}: {
+  readonly continuation?: Continuation;
+  readonly refuse?: boolean;
+  readonly hold?: (seen: Seen) => Effect.Effect<void>;
+} = {}) {
+  let fresh = false;
+  let pending: SudoRetry | null = null;
+  let continues = 0;
+
+  return harness((entry) => {
+    if (entry.path === "/api/v1/sudo/google") {
+      fresh = !refuse;
+
+      return { status: 200, body: { kind: "navigate", location: "https://accounts.test/o" } };
+    }
+
+    if (entry.path === "/api/v1/sudo/continue") {
+      continues += 1;
+
+      if (!fresh) {
+        return {
+          status: 403,
+          body: { kind: "ready", reauthentication: required().reauthentication },
+        };
+      }
+
+      const reply = continuation(pending, continues);
+
+      if (reply.status === 200) pending = null;
+
+      return reply;
+    }
+
+    if (fresh) return { status: 200, body: { saved: entry.path } };
+
+    pending = retryOf(entry);
+
+    return held(["password", "google"], entry);
+  }, hold);
+}
+
+const role: ApiRequest = { method: "PATCH", path: "/admin/people/4", body: { role: "member" } };
+
+/** Sends `writes`, waits for them all to be held, and leaves to confirm with Google. */
+const leaveForGoogle = (gate: ConfirmationGate, writes: readonly ApiRequest[]) =>
+  Effect.gen(function* () {
+    for (const write of writes) {
+      yield* Effect.forkChild(send(write));
+      yield* untilPrompt(gate, writes.indexOf(write) + 1);
+    }
+
+    expect((yield* startGoogle(gate, "/app/admin/styles?tab=css")).kind).toBe("navigate");
+    expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
+  });
 
 describe("the Google round trip", () => {
   it.live("keeps credential-free writes, fails secret ones, and replays the kept once", () => {
-    let fresh = false;
-
-    const { layer, seen, gate } = harness((entry) => {
-      if (entry.path === "/api/v1/sudo/google") {
-        fresh = true;
-
-        return { status: 200, body: { kind: "navigate", location: "https://accounts.test/o" } };
-      }
-
-      if (entry.path === "/api/v1/sudo/continue") {
-        return fresh
-          ? {
-              status: 200,
-              body: {
-                kind: "confirmed",
-                retry: {
-                  method: "PATCH",
-                  path: "/api/v1/admin/custom_styles",
-                  returnTo: "/app/admin/styles",
-                },
-              },
-            }
-          : { status: 403, body: { kind: "ready", reauthentication: required().reauthentication } };
-      }
-
-      return fresh ? { status: 200, body: { saved: true } } : held(["password", "google"]);
-    });
+    const { layer, seen, gate } = googleHarness();
 
     return Effect.gen(function* () {
       const kept = yield* Effect.forkChild(send(styles));
+
+      yield* untilPrompt(gate);
+
       const secret = yield* Effect.forkChild(send(token));
 
       yield* untilPrompt(gate, 2);
@@ -403,7 +525,10 @@ describe("the Google round trip", () => {
       const stored = sessionStorage.getItem(KEPT_KEY) ?? "";
 
       expect(stored).not.toContain("ghp_secret");
-      expect(JSON.parse(stored)).toEqual({
+      expect(JSON.parse(stored)).toMatchObject({
+        user: 7,
+        // The server's pending request: the last write it held.
+        retry: { method: "PUT", path: "/api/v1/settings/github_connection" },
         returnTo: "/app/admin/styles?tab=css",
         writes: [styles],
         dropped: 1,
@@ -413,10 +538,11 @@ describe("the Google round trip", () => {
 
       expect(yield* resumeAfterGoogle(gate)).toEqual({
         confirmed: true,
-        returnTo: "/app/admin/styles",
+        returnTo: "/app/admin/styles?tab=css",
         replayed: 1,
         failure: null,
         dropped: 1,
+        unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
 
@@ -426,27 +552,115 @@ describe("the Google round trip", () => {
     }).pipe(Effect.provide(layer));
   });
 
-  it.live("a stale or refused Google return replays nothing and forgets the writes", () => {
-    const { layer, seen, gate } = harness(() => ({
-      status: 403,
-      body: { kind: "ready", reauthentication: required().reauthentication },
-    }));
+  it.live("a Google return under someone else replays nothing and forgets the writes", () => {
+    const { layer, seen, gate, page } = googleHarness();
 
     return Effect.gen(function* () {
-      sessionStorage.setItem(
-        KEPT_KEY,
-        JSON.stringify({ returnTo: "/app/admin/people", writes: [styles], dropped: 0 }),
-      );
+      yield* leaveForGoogle(gate, [styles]);
+
+      // Signed out and in as someone else in the same tab.
+      page.viewer = 8;
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 0 });
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a continuation that names no pending write, or another, replays nothing", () => {
+    const other: SudoRetry = { method: "DELETE", path: "/api/v1/x", returnTo: "/app/" };
+
+    return Effect.forEach([null, other], (named) => {
+      const { layer, seen, gate } = googleHarness({
+        continuation: () => ({ status: 200, body: { kind: "confirmed", retry: named } }),
+      });
+
+      return Effect.gen(function* () {
+        yield* leaveForGoogle(gate, [styles]);
+        expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 0 });
+        expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+        expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+      }).pipe(Effect.provide(layer));
+    });
+  });
+
+  it.live("a hand-off older than its time limit replays nothing", () => {
+    const { layer, seen, gate, page } = googleHarness();
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+      page.now += 11 * 60_000;
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 0 });
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a failed status read keeps the writes for another try", () => {
+    const { layer, seen, gate } = googleHarness({
+      continuation: (pending, call) =>
+        call === 1 ? { status: 500, body: {} } : freshContinuation(pending, call),
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const first = yield* resumeAfterGoogle(gate);
+
+      expect(first).toMatchObject({ confirmed: false, replayed: 0 });
+      expect(first.unreachable).not.toBeNull();
+      expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 1 });
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("each kept write leaves storage as its replay begins", () => {
+    const storedAtReplay: (string | null)[] = [];
+
+    const { layer, gate } = googleHarness({
+      hold: (entry) =>
+        Effect.sync(() => {
+          if (sessionStorage.getItem(KEPT_KEY) !== null || storedAtReplay.length > 0) {
+            if (entry.path === "/api/v1/sudo/continue" || entry.path === "/api/v1/sudo/google") {
+              return;
+            }
+
+            storedAtReplay.push(sessionStorage.getItem(KEPT_KEY));
+          }
+        }),
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles, role]);
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({ confirmed: true, replayed: 2 });
+
+      const [atFirst, atSecond] = storedAtReplay;
+
+      expect(JSON.parse(atFirst ?? "{}").writes).toEqual([role]);
+      expect(atSecond).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a refused Google return replays nothing and forgets the writes", () => {
+    const { layer, seen, gate } = googleHarness({ refuse: true });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
 
       expect(yield* resumeAfterGoogle(gate)).toEqual({
         confirmed: false,
-        returnTo: "/app/admin/people",
+        returnTo: "/app/admin/styles?tab=css",
         replayed: 0,
         failure: null,
         dropped: 0,
+        unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
-      expect(seen.map((entry) => entry.path)).toEqual(["/api/v1/sudo/continue"]);
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
     }).pipe(Effect.provide(layer));
   });
 

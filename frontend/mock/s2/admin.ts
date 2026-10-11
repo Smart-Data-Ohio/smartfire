@@ -13,6 +13,7 @@ import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
 import type { Person } from "../../src/gen/Person.ts";
 import type { SudoMethod } from "../../src/gen/SudoMethod.ts";
 import type { SudoResponse } from "../../src/gen/SudoResponse.ts";
+import type { SudoRetry } from "../../src/gen/SudoRetry.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
@@ -185,6 +186,11 @@ export interface AdminModule {
   lapseSudo(on: boolean, methods?: readonly SudoMethod[], googleRefuses?: boolean): void;
   /** Throws `SudoRequired` while the confirmation has lapsed, for the bot pages' guarded writes. */
   readonly requireSudo: () => void;
+  /**
+   * Notes the API request being handled (`method`, `path` with its query) and the SPA page it came
+   * from, so a write `requireSudo` holds becomes the pending request, as `require_sudo_mode` keeps.
+   */
+  noteRequest(method: string, path: string, origin: string): void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
   readonly customStyles: () => string | null;
@@ -206,16 +212,30 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   let sudoLapsed = false;
   let sudoMethods: readonly SudoMethod[] = ["password"];
   let googleRefuses = false;
+  let handling: SudoRetry | null = null;
+  /** The last write held for a confirmation; a confirmation's answer names it once. */
+  let pendingRetry: SudoRetry | null = null;
 
   /** `require_sudo_mode`: role changes, removal, custom styles and a new join link. */
   const requireSudo = () => {
     if (sudoLapsed) {
+      pendingRetry = handling;
+
       throw new HttpError(403, {
         _tag: SUDO_REQUIRED,
         message: "Confirm your password to continue",
-        reauthentication: { methods: [...sudoMethods], retry: null },
+        reauthentication: { methods: [...sudoMethods], retry: pendingRetry },
       });
     }
+  };
+
+  /** The pending request, consumed: `continue_after_sudo` removes it as it answers. */
+  const consumeRetry = () => {
+    const retry = pendingRetry;
+
+    pendingRetry = null;
+
+    return retry;
   };
 
   /** A `/sudo` answer, at `status`. */
@@ -223,7 +243,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
   const sudoReady = (status = 200) =>
     sudoReply(
-      { kind: "ready", reauthentication: { methods: [...sudoMethods], retry: null } },
+      { kind: "ready", reauthentication: { methods: [...sudoMethods], retry: pendingRetry } },
       status,
     );
 
@@ -250,7 +270,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     sudoLapsed = false;
 
-    return sudoReply({ kind: "confirmed", retry: null });
+    return sudoReply({ kind: "confirmed", retry: consumeRetry() });
   };
 
   /**
@@ -742,10 +762,14 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   return {
     lapseSudo: (on, methods = ["password"], refuses = false) => {
       sudoLapsed = on;
+      pendingRetry = null;
       sudoMethods = methods;
       googleRefuses = refuses;
     },
     requireSudo,
+    noteRequest: (method, path, origin) => {
+      handling = { method: method.toUpperCase(), path, returnTo: origin };
+    },
     branding,
     customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,
@@ -785,7 +809,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       route("POST", /^\/sudo$/, ({ body }) => confirmSudo(body)),
       route("POST", /^\/sudo\/google$/, () => startGoogleSudo()),
       route("GET", /^\/sudo\/continue$/, () =>
-        sudoLapsed ? sudoReady(403) : sudoReply({ kind: "confirmed", retry: null }),
+        sudoLapsed ? sudoReady(403) : sudoReply({ kind: "confirmed", retry: consumeRetry() }),
       ),
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),

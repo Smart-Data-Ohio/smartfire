@@ -246,6 +246,19 @@ export interface MockServer {
   syncState(): { readonly epoch: string; readonly seq: number; readonly connections: number };
 }
 
+/** The SPA page a request came from (its Referer's path), as `require_sudo_mode` records it. */
+function refererPage(request: MockRequest): string {
+  const referer = headerOf(request.headers, "referer") ?? "";
+
+  try {
+    const path = new URL(referer).pathname;
+
+    return path.startsWith("/app/") ? path : "/app/";
+  } catch {
+    return "/app/";
+  }
+}
+
 function token(random: Random): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
@@ -1476,7 +1489,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       const path = request.path.split("?")[0] ?? "";
 
       try {
-        if (path.startsWith("/api/v1/")) return await api(request, path.slice("/api/v1".length));
+        if (path.startsWith("/api/v1/")) {
+          admin.noteRequest(request.method, request.path, refererPage(request));
+
+          return await api(request, path.slice("/api/v1".length));
+        }
 
         if (path.startsWith("/__mock/")) return control(request, path.slice("/__mock/".length));
 

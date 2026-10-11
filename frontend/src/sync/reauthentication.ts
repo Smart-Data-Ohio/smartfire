@@ -2,19 +2,23 @@
  * The fresh confirmation some writes need (`require_sudo_mode`), in place of the classic page that
  * asks for it. A write the server holds answers `SudoRequired`; the client waits here while the
  * confirmation dialog asks, then replays the write once. Writes that arrive while it asks share
- * the one dialog. Closing it fails them all with `ConfirmationCancelled`.
+ * the one dialog. Closing it fails them all with `ConfirmationCancelled`, and leaving the screen
+ * that sent a write fails that write the same way.
  *
  * Confirming with Google leaves the page. The writes that carry no credential are kept in session
- * storage (method, path and body; never a password, code or token) and replayed by the SPA's
- * `/app/sudo/continue` route once the server says the confirmation is fresh. The rest fail with
- * their `SudoRequired` before the page goes, so their forms can keep what isn't secret.
+ * storage (method, path and body; never a password, code or token) as one hand-off, bound to the
+ * person who chose Google, the server's pending request at that moment, and a time limit. The
+ * SPA's `/app/sudo/continue` replays them only when the server says the confirmation is fresh and
+ * names that same pending request, for that same person, in time. The rest fail with their
+ * `SudoRequired` before the page goes, so their forms can keep what isn't secret.
  */
 import { Effect, Layer, Option, Schema } from "effect";
 import { ApiClient, type ApiRequest } from "../api/client.ts";
 import { ConfirmationCancelled, type SudoRequired } from "../api/errors.ts";
-import { Reauthentication } from "../api/reauthentication.ts";
+import { type ConfirmationTicket, Reauthentication } from "../api/reauthentication.ts";
 import { resumeSudo, startSudoGoogle, submitSudo } from "../api/sudo-endpoints.ts";
 import type { SudoMethod } from "../gen/SudoMethod.ts";
+import type { SudoResponse } from "../gen/SudoResponse.ts";
 import type { SudoSubmission } from "../gen/SudoSubmission.ts";
 
 /** What the confirmation dialog shows while writes wait on it. */
@@ -36,21 +40,41 @@ const KeptWrite = Schema.Struct({
   body: Schema.optionalKey(Schema.Json),
 });
 
-/** What the page keeps across the Google round trip. */
-const KeptConfirmation = Schema.Struct({
-  /** The SPA page the writes came from, if the server's retry doesn't name one. */
+/** What the page keeps across one Google round trip. */
+const Handoff = Schema.Struct({
+  /** Made when Google is chosen; the continue page claims the hand-off by it, once. */
+  id: Schema.String,
+  /** Who chose Google: nobody else's continuation replays these writes. */
+  user: Schema.Number,
+  /** When (ms since the epoch) the writes stop being worth sending. */
+  expiresAt: Schema.Number,
+  /**
+   * The server's pending request when Google was chosen (`SudoRetry`, less its return): the
+   * continuation must name it, which it does once, in the session that recorded it.
+   */
+  retry: Schema.Struct({ method: Schema.String, path: Schema.String }),
+  /** The continuation named it: what's left goes again after a reload without asking it twice. */
+  accepted: Schema.Boolean,
+  /** The SPA page the writes came from. */
   returnTo: Schema.String,
+  /** The writes still to send, in order; each leaves as its replay begins. */
   writes: Schema.Array(KeptWrite),
   /** Writes left behind because they carried a credential: their forms ask again. */
   dropped: Schema.Int,
 });
 
-type KeptConfirmation = typeof KeptConfirmation.Type;
+type Handoff = typeof Handoff.Type;
 
-const decodeKept = Schema.decodeUnknownOption(Schema.fromJsonString(KeptConfirmation));
+const decodeHandoff = Schema.decodeUnknownOption(Schema.fromJsonString(Handoff));
 
 /** The session storage key of the writes kept across the Google round trip. */
 export const KEPT_KEY = "smartfire:confirmation-pending";
+
+/**
+ * How long a hand-off lasts: a Google round trip, well inside the server's 15-minute confirmation
+ * window.
+ */
+export const HANDOFF_TTL_MS = 10 * 60_000;
 
 /** Where a confirmed write goes back to when nothing better is known. */
 const HOME = "/app/";
@@ -72,6 +96,8 @@ export function spaReturnPath(path: string | null): string {
 interface Waiting {
   readonly request: ApiRequest;
   readonly required: SudoRequired;
+  /** The screen that sent it. */
+  readonly screen: string;
   readonly settle: (outcome: Effect.Effect<void, SudoRequired | ConfirmationCancelled>) => void;
 }
 
@@ -84,11 +110,37 @@ function sessionStore(): Storage | null {
   }
 }
 
+/** The SPA page showing now: a write belongs to the screen it was sent from. */
+function currentScreen(): string {
+  return globalThis.location?.pathname ?? "";
+}
+
+/** What the gate reads from the page; each has a browser default. */
+export interface GateOptions {
+  /** Where Google round trips keep their writes. */
+  readonly storage?: () => Storage | null;
+  /** The signed-in person's id; `null` before the boot names them. */
+  readonly viewer?: () => number | null;
+  readonly now?: () => number;
+  /** The screen showing now. */
+  readonly screen?: () => string;
+  /** A fresh hand-off id. */
+  readonly newId?: () => string;
+}
+
+const cancelled = (message: string) => Effect.fail(new ConfirmationCancelled({ message }));
+
 /**
  * The shared confirmation: the `Reauthentication` service the client waits on, and the plain
- * functions the dialog drives. `storage` is where Google round trips keep their writes.
+ * functions the dialog, the shell and the continue page drive.
  */
-export function makeConfirmationGate(storage: () => Storage | null = sessionStore) {
+export function makeConfirmationGate({
+  storage = sessionStore,
+  viewer = () => null,
+  now = Date.now,
+  screen = currentScreen,
+  newId = () => globalThis.crypto.randomUUID(),
+}: GateOptions = {}) {
   let waiting: readonly Waiting[] = [];
   let prompt: ConfirmationPrompt | null = null;
   let confirmations = 0;
@@ -113,14 +165,11 @@ export function makeConfirmationGate(storage: () => Storage | null = sessionStor
     }
   };
 
-  /** Settles every waiting write with `outcome` (a function, for one per write). */
-  const settleAll = (
+  /** Settles each write in `settled` with `outcome` (a function, for one per write). */
+  const settle = (
+    settled: readonly Waiting[],
     outcome: (entry: Waiting) => Effect.Effect<void, SudoRequired | ConfirmationCancelled> | null,
   ) => {
-    const settled = waiting;
-
-    publish([]);
-
     for (const entry of settled) {
       const result = outcome(entry);
 
@@ -130,27 +179,79 @@ export function makeConfirmationGate(storage: () => Storage | null = sessionStor
     }
   };
 
-  const confirm = (required: SudoRequired, request: ApiRequest, sentAfter: number) =>
+  /** Settles every waiting write, and closes the dialog. */
+  const settleAll = (
+    outcome: (entry: Waiting) => Effect.Effect<void, SudoRequired | ConfirmationCancelled> | null,
+  ) => {
+    const settled = waiting;
+
+    publish([]);
+    settle(settled, outcome);
+  };
+
+  const leftScreen = () => cancelled("The page that asked for this was left.");
+
+  const confirm = (required: SudoRequired, request: ApiRequest, ticket: ConfirmationTicket) => {
     // Confirmed while this write was on its way: it goes again without asking.
-    confirmations > sentAfter
-      ? Effect.void
-      : Effect.callback<void, SudoRequired | ConfirmationCancelled>((resume) => {
-          const entry: Waiting = { request, required, settle: resume };
+    if (confirmations > ticket.confirmations) {
+      return Effect.void;
+    }
 
-          publish([...waiting, entry]);
+    // Its screen was left while it was on its way: nobody is there to confirm it.
+    if (ticket.screen !== screen()) {
+      return leftScreen();
+    }
 
-          // The caller gave up (left the page it was on): it stops waiting, alone.
-          return Effect.sync(() => {
-            if (waiting.includes(entry)) {
-              publish(waiting.filter((other) => other !== entry));
-            }
-          });
-        });
+    return Effect.callback<void, SudoRequired | ConfirmationCancelled>((resume) => {
+      const entry: Waiting = { request, required, screen: ticket.screen, settle: resume };
+
+      publish([...waiting, entry]);
+
+      // The caller gave up: it stops waiting, alone.
+      return Effect.sync(() => {
+        if (waiting.includes(entry)) {
+          publish(waiting.filter((other) => other !== entry));
+        }
+      });
+    });
+  };
 
   const layer = Layer.succeed(Reauthentication, {
-    confirmations: Effect.sync(() => confirmations),
+    ticket: Effect.sync(() => ({ confirmations, screen: screen() })),
     confirm,
   });
+
+  /** The stored hand-off, if it decodes. */
+  const readHandoff = (): Handoff | null => {
+    try {
+      const raw = storage()?.getItem(KEPT_KEY) ?? null;
+
+      return raw === null ? null : Option.getOrNull(decodeHandoff(raw));
+    } catch {
+      return null;
+    }
+  };
+
+  /** Stores `handoff` (or forgets it, for `null`); whether storage took it. */
+  const writeHandoff = (handoff: Handoff | null): boolean => {
+    try {
+      const store = storage();
+
+      if (store === null) {
+        return false;
+      }
+
+      if (handoff === null) {
+        store.removeItem(KEPT_KEY);
+      } else {
+        store.setItem(KEPT_KEY, JSON.stringify(handoff));
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   return {
     layer,
@@ -174,54 +275,110 @@ export function makeConfirmationGate(storage: () => Storage | null = sessionStor
 
     /** The person closed the dialog: every waiting write fails, unsent. */
     cancel(): void {
-      settleAll(() =>
-        Effect.fail(new ConfirmationCancelled({ message: "The confirmation was cancelled." })),
-      );
+      settleAll(() => cancelled("The confirmation was cancelled."));
+    },
+
+    /**
+     * The SPA moved to another screen: the writes the screens left behind sent fail, unsent. The
+     * dialog closes once none wait.
+     */
+    screenChanged(): void {
+      const here = screen();
+      const gone = waiting.filter((entry) => entry.screen !== here);
+
+      if (gone.length === 0) {
+        return;
+      }
+
+      publish(waiting.filter((entry) => entry.screen === here));
+      settle(gone, leftScreen);
     },
 
     /**
      * The page is leaving to confirm with Google, from `returnTo`. Keeps the writes that carry no
-     * credential for the return (they stay waiting until the page goes); the others fail with
-     * their `SudoRequired` now.
+     * credential as a hand-off for the return (they stay waiting until the page goes); the others
+     * fail with their `SudoRequired` now. Without a person or a pending request to bind the
+     * hand-off to, or storage to keep it in, nothing is kept and every write fails so.
      */
     leave(returnTo: string): void {
       const keep = waiting.filter((entry) => entry.request.secret !== true);
+      const retry = waiting.at(-1)?.required.reauthentication.retry ?? null;
+      const user = viewer();
 
-      const kept: KeptConfirmation = {
-        returnTo: spaReturnPath(returnTo),
-        // The request as it went, less the flag that keeps credentials out of here.
-        writes: keep.map(({ request: { secret, ...write } }) => write),
-        dropped: waiting.length - keep.length,
-      };
-
-      let stored = false;
-
-      try {
-        const store = storage();
-
-        store?.setItem(KEPT_KEY, JSON.stringify(kept));
-        stored = store !== null;
-      } catch {
-        stored = false;
-      }
+      const stored =
+        retry !== null &&
+        user !== null &&
+        writeHandoff({
+          id: newId(),
+          user,
+          expiresAt: now() + HANDOFF_TTL_MS,
+          retry: { method: retry.method.toUpperCase(), path: retry.path },
+          accepted: false,
+          returnTo: spaReturnPath(returnTo),
+          // The request as it went, less the flag that keeps credentials out of here.
+          writes: keep.map(({ request: { secret, ...write } }) => write),
+          dropped: waiting.length - keep.length,
+        });
 
       settleAll((entry) =>
         stored && entry.request.secret !== true ? null : Effect.fail(entry.required),
       );
     },
 
-    /** Takes (and forgets) what the last Google round trip kept; `null` when there's none. */
-    takeKept(): KeptConfirmation | null {
-      try {
-        const store = storage();
-        const raw = store?.getItem(KEPT_KEY) ?? null;
+    /**
+     * The hand-off waiting for this person, if one is still good. One that belongs to someone
+     * else, or has run out of time, or doesn't decode is forgotten.
+     */
+    handoff(): Handoff | null {
+      const handoff = readHandoff();
 
-        store?.removeItem(KEPT_KEY);
+      if (handoff === null) {
+        writeHandoff(null);
 
-        return raw === null ? null : Option.getOrNull(decodeKept(raw));
-      } catch {
         return null;
       }
+
+      if (handoff.user !== viewer() || now() >= handoff.expiresAt) {
+        writeHandoff(null);
+
+        return null;
+      }
+
+      return handoff;
+    },
+
+    /** Marks hand-off `id` as named by the server's continuation. */
+    accept(id: string): void {
+      const handoff = readHandoff();
+
+      if (handoff?.id === id) {
+        writeHandoff({ ...handoff, accepted: true });
+      }
+    },
+
+    /**
+     * Takes hand-off `id`'s next write to send, leaving the rest stored (or forgetting the hand-off
+     * with its last). `null` when there's none left, or the hand-off has changed under it.
+     */
+    takeNext(id: string): typeof KeptWrite.Type | null {
+      const handoff = readHandoff();
+      const [next, ...rest] = handoff?.id === id ? handoff.writes : [];
+
+      if (handoff === null || next === undefined) {
+        return null;
+      }
+
+      // Gone from storage before it's sent: a reload mid-replay never sends it twice.
+      if (!writeHandoff(rest.length === 0 ? null : { ...handoff, writes: rest })) {
+        return null;
+      }
+
+      return next;
+    },
+
+    /** Forgets any hand-off. */
+    forget(): void {
+      writeHandoff(null);
     },
 
     /** Counts a confirmation made elsewhere (the Google return), for writes already on their way. */
@@ -294,39 +451,77 @@ export interface GoogleReturn {
   readonly failure: string | null;
   /** Writes left behind because they carried a credential. */
   readonly dropped: number;
+  /**
+   * Why the server couldn't say whether the confirmation is fresh (it was unreachable, say). The
+   * kept writes are all still kept: try again.
+   */
+  readonly unreachable: string | null;
 }
 
 const anyJson = (json: Schema.Json) => Effect.succeed(json);
 
+/** Whether the continuation's pending request is the one `handoff` was bound to. */
+function namesHandoff(reply: Extract<SudoResponse, { kind: "confirmed" }>, handoff: Handoff) {
+  return (
+    reply.retry !== null &&
+    reply.retry.method.toUpperCase() === handoff.retry.method &&
+    reply.retry.path === handoff.retry.path
+  );
+}
+
 /**
- * The SPA's `/app/sudo/continue`: asks whether the Google confirmation is fresh and, if it is,
- * replays the writes kept for it, each once and in order. What was kept is forgotten first, so a
- * reload never sends them twice.
+ * The SPA's `/app/sudo/continue`: asks whether the Google confirmation is fresh and, if it is and
+ * the server names the hand-off's pending request, replays the writes kept for it, each once and
+ * in order. Each write leaves storage as its replay begins, so a reload never sends one twice; a
+ * status read that fails keeps them all for another try. Any other answer forgets them.
  */
 export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(function* (
   gate: ConfirmationGate,
 ) {
-  const kept = gate.takeKept();
-  const reply = yield* resumeSudo();
-  const fallback = spaReturnPath(kept?.returnTo ?? null);
+  const handoff = gate.handoff();
+  const returnTo = spaReturnPath(handoff?.returnTo ?? null);
+  const dropped = handoff?.dropped ?? 0;
+  const outcome = { returnTo, replayed: 0, failure: null, dropped, unreachable: null };
+
+  const status = yield* resumeSudo().pipe(
+    Effect.match({
+      onSuccess: (answer) => ({ answer, unreachable: null }),
+      onFailure: (error) => ({ answer: null, unreachable: error.message }),
+    }),
+  );
+
+  if (status.answer === null) {
+    return { ...outcome, confirmed: false, unreachable: status.unreachable } satisfies GoogleReturn;
+  }
+
+  const reply = status.answer;
 
   if (reply.kind !== "confirmed") {
-    return {
-      confirmed: false,
-      returnTo: fallback,
-      replayed: 0,
-      failure: null,
-      dropped: kept?.dropped ?? 0,
-    } satisfies GoogleReturn;
+    gate.forget();
+
+    return { ...outcome, confirmed: false } satisfies GoogleReturn;
   }
 
   gate.noteConfirmed();
+
+  if (handoff === null || !(handoff.accepted || namesHandoff(reply, handoff))) {
+    gate.forget();
+
+    return {
+      ...outcome,
+      confirmed: true,
+      returnTo:
+        handoff === null && reply.retry !== null ? spaReturnPath(reply.retry.returnTo) : returnTo,
+    } satisfies GoogleReturn;
+  }
+
+  gate.accept(handoff.id);
 
   const client = yield* ApiClient;
   let replayed = 0;
   let failure: string | null = null;
 
-  for (const write of kept?.writes ?? []) {
+  for (let write = gate.takeNext(handoff.id); write !== null; write = gate.takeNext(handoff.id)) {
     const landed = yield* client.execute(write, anyJson).pipe(
       Effect.match({
         onSuccess: () => null,
@@ -341,11 +536,5 @@ export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(fun
     }
   }
 
-  return {
-    confirmed: true,
-    returnTo: reply.retry === null ? fallback : spaReturnPath(reply.retry.returnTo),
-    replayed,
-    failure,
-    dropped: kept?.dropped ?? 0,
-  } satisfies GoogleReturn;
+  return { ...outcome, confirmed: true, replayed, failure } satisfies GoogleReturn;
 });

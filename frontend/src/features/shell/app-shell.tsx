@@ -62,6 +62,8 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/search" }) !== false ||
     matchRoute({ to: "/m/$messageId" }) !== false ||
     matchRoute({ to: "/work" }) !== false ||
+    // The Google confirmation's return: a full screen while it finishes or offers to try again.
+    matchRoute({ to: "/sudo/continue" }) !== false ||
     matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
   if (roomId !== null || pushed) {
@@ -106,6 +108,13 @@ export function AppShell() {
   useEffect(() => {
     void actions.start();
   }, []);
+
+  // A write waiting for its confirmation belongs to the screen that sent it: leaving that screen
+  // (Back, a link) cancels it, and the dialog closes once nothing waits.
+  useEffect(
+    () => router.subscribe("onResolved", () => actions.confirmation.screenChanged()),
+    [router],
+  );
 
   useDocumentTitle(roomId, page);
   useClassicLinks();

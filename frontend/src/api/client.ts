@@ -166,12 +166,10 @@ export class ApiClient extends Context.Service<
 
         const gate = reauthentication.value;
 
-        return Effect.flatMap(gate.confirmations, (sentAfter) =>
+        return Effect.flatMap(gate.ticket, (ticket) =>
           once(request, decode).pipe(
             Effect.catchTag("SudoRequired", (required) =>
-              gate
-                .confirm(required, request, sentAfter)
-                .pipe(Effect.andThen(once(request, decode))),
+              gate.confirm(required, request, ticket).pipe(Effect.andThen(once(request, decode))),
             ),
           ),
         );

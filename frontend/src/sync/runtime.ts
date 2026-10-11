@@ -87,6 +87,7 @@ import type { BoardQuery } from "../store/boards.ts";
 import type { LedgerFilter } from "../store/ledger.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
+import { store } from "../store/store.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as agentActions from "./agent-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
@@ -124,8 +125,13 @@ export type { EventPrefill, GithubCardScope };
 
 const API_BASE = "/api/v1";
 
-/** The app's one confirmation: writes held for a fresh confirmation wait on its dialog. */
-export const confirmationGate = confirmationActions.makeConfirmationGate();
+/**
+ * The app's one confirmation: writes held for a fresh confirmation wait on its dialog. A Google
+ * round trip's writes are bound to the person signed in.
+ */
+export const confirmationGate = confirmationActions.makeConfirmationGate({
+  viewer: () => store.getState().me?.user.id ?? store.getState().boot?.user.id ?? null,
+});
 
 /**
  * The one Effect runtime the app shares. Code outside src/api and src/sync never imports
@@ -592,6 +598,8 @@ const confirmation = {
     runAction(confirmationActions.startGoogle(confirmationGate, returnTo)),
   /** Closes the dialog: the waiting writes fail unsent. */
   cancel: (): void => confirmationGate.cancel(),
+  /** The SPA moved to another screen: the writes the old one sent fail unsent. */
+  screenChanged: (): void => confirmationGate.screenChanged(),
   /** The Google return: replays the kept writes once the confirmation is fresh. */
   resumeAfterGoogle: (): Promise<confirmationActions.GoogleReturn> =>
     runAction(confirmationActions.resumeAfterGoogle(confirmationGate)),

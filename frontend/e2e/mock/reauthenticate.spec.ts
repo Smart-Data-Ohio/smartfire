@@ -155,6 +155,74 @@ for (const theme of THEMES) {
         await expect(page.getByText("Custom styles saved")).toHaveCount(0);
       });
 
+      test("leaving the page closes the confirmation and drops the change", async ({
+        page,
+        request,
+      }) => {
+        let patches = 0;
+
+        page.on("request", (sent) => {
+          if (sent.method() === "PATCH" && sent.url().endsWith("/api/v1/admin/custom_styles")) {
+            patches += 1;
+          }
+        });
+        await lapse(request, ["password"]);
+        await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+        await page.goto("/app/admin");
+
+        const sections = page.getByRole("navigation", { name: "Workspace sections" });
+
+        await sections.getByRole("link", { name: "Custom styles" }).click();
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("body { color: red; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await expect(confirmation(page)).toBeVisible();
+
+        await page.goBack();
+        await expect(page).toHaveURL(/\/app\/admin$/);
+        await expect(confirmation(page)).toBeHidden();
+
+        // Confirming something else later doesn't send the abandoned edit.
+        await open(page, "/app/admin/styles", theme);
+        await expect(page.getByRole("textbox", { name: "Custom CSS" })).not.toHaveValue(
+          "body { color: red; }",
+        );
+        expect(patches).toBe(1);
+      });
+
+      test("a failed return from Google keeps the change and tries again", async ({
+        page,
+        request,
+      }) => {
+        let failures = 1;
+
+        await page.route("**/api/v1/sudo/continue", (route) =>
+          failures-- > 0
+            ? route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
+            : route.fallback(),
+        );
+        await lapse(request, ["password", "google"]);
+        await open(page, "/app/admin/styles", theme);
+
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("p { margin: 0; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+
+        const retry = page.getByRole("button", { name: "Try again" });
+
+        await expect(page.getByText("Couldn't finish confirming")).toBeVisible();
+        await expect(page).toHaveURL(/\/app\/sudo\/continue$/);
+        await expectNoHorizontalOverflow(page);
+        await shot(page, "reauth-google-unreachable", theme);
+
+        await retry.click();
+        await expect(page).toHaveURL(/\/app\/admin\/styles$/);
+        await expect(page.getByText("Confirmed — your change was saved")).toBeVisible();
+        await page.locator(".settings-page h1").waitFor();
+        await expect(page.getByRole("textbox", { name: "Custom CSS" })).toHaveValue(
+          "p { margin: 0; }",
+        );
+      });
+
       test("a Google confirmation comes back and finishes the change", async ({
         page,
         request,
