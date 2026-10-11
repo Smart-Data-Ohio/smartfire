@@ -9,4 +9,8 @@ pub use campfire_controllers::controllers::public_pages::*;
 mod sign_in_google_tests;
 
 #[cfg(test)]
+#[path = "public_pages/contract_tests.rs"]
+mod contract_tests;
+
+#[cfg(test)]
 mod tests;
