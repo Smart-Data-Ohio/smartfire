@@ -9,6 +9,7 @@
  * favourite, or a channel in one of the viewer's own categories, shows there instead
  * (`sidebarSections` in features/sidebar/sections.ts).
  */
+import type { MoveWorkspaceRoom } from "../gen/MoveWorkspaceRoom.ts";
 import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
 import type { WorkspaceLayout } from "../gen/WorkspaceLayout.ts";
 import type { WorkspaceRoomPosition } from "../gen/WorkspaceRoomPosition.ts";
@@ -102,40 +103,29 @@ export function withRoomMoved(
   };
 }
 
+/** A position past any group's end: the server clamps it to the last place. */
+export const END_OF_GROUP = Number.MAX_SAFE_INTEGER;
+
 /**
- * The 0-based position `MoveWorkspaceRoom` takes for the move `withRoomMoved` draws. The server
- * counts every room in the group, including any the administrator isn't in, so the place is read
- * off the room it lands before (or after): an organized group is numbered densely, so its
- * neighbour's position is its index in the whole group.
+ * The `MoveWorkspaceRoom` body for the move `withRoomMoved` draws. The room is placed by the one
+ * it lands before, which the server finds among every room in the group, including any the
+ * administrator isn't in; a drop at the end, or before a room that has left the group since,
+ * goes to the very end.
  */
-export function serverPosition(
+export function moveRequest(
   layout: WorkspaceLayout,
   roomId: number,
   categoryId: number | null,
   beforeRoomId: number | null,
-): number {
-  const moving = placementOf(layout, roomId);
-  const others = groupRooms(layout, categoryId).filter((room) => room.roomId !== roomId);
+): MoveWorkspaceRoom {
+  const anchored =
+    beforeRoomId !== null &&
+    beforeRoomId !== roomId &&
+    placementOf(layout, beforeRoomId)?.workspaceCategoryId === categoryId;
 
-  const anchorIndex =
-    beforeRoomId === null ? -1 : others.findIndex((room) => room.roomId === beforeRoomId);
-
-  const anchor = anchorIndex === -1 ? others.at(-1) : others[anchorIndex];
-  const fallback = anchorIndex === -1 ? others.length : anchorIndex;
-
-  if (anchor?.position === null || anchor === undefined) {
-    return fallback;
-  }
-
-  // The server takes the moving room out of its group before it inserts it again.
-  const shift =
-    moving?.workspaceCategoryId === categoryId &&
-    moving.position !== null &&
-    moving.position < anchor.position
-      ? 1
-      : 0;
-
-  return (anchorIndex === -1 ? anchor.position + 1 : anchor.position) - shift;
+  return anchored
+    ? { workspaceCategoryId: categoryId, position: 0, beforeRoomId }
+    : { workspaceCategoryId: categoryId, position: END_OF_GROUP };
 }
 
 /** Whether the move would leave the room where it already is. */

@@ -15,7 +15,7 @@ import type { WorkspaceLayout } from "../gen/WorkspaceLayout.ts";
 import { mutations, store } from "../store/store.ts";
 import {
   isPlacedAt,
-  serverPosition,
+  moveRequest,
   sharedCategories,
   sharedLayout,
   withCategoriesOrdered,
@@ -37,7 +37,7 @@ let nextTemporaryId = -1;
 /** The layout as the administrator sees it now, pending changes included. */
 const view = () => sharedLayout(store.getState().sidebar);
 
-/** The layout the server has confirmed: what the next call's position is counted against. */
+/** The layout the server has confirmed: what the next call is checked against. */
 const confirmed = () => store.getState().sidebar.workspaceLayout;
 
 /** The id the server knows a category by (a new one's, once it has been created). */
@@ -85,18 +85,18 @@ export const moveRoom = Effect.fn("workspaceLayout.moveRoom")(function* (
     return;
   }
 
-  // The category's real id and the position are read when the call's turn comes, against the
-  // layout the server has by then.
+  // The category's real id, and whether the room it goes before is still there, are read when
+  // the call's turn comes, against the layout the server has by then.
   yield* pending(
     withRoomMoved(current, roomId, categoryId, beforeRoomId),
     landing(
       Effect.suspend(() => {
         const target = categoryId === null ? null : serverCategoryId(categoryId);
 
-        return api.moveWorkspaceRoom(roomId, {
-          workspaceCategoryId: target,
-          position: serverPosition(confirmed(), roomId, target, beforeRoomId),
-        });
+        return api.moveWorkspaceRoom(
+          roomId,
+          moveRequest(confirmed(), roomId, target, beforeRoomId),
+        );
       }),
       (layout) => () => layout,
     ),

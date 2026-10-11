@@ -2,7 +2,8 @@
  * The shared workspace layout (`crates/api/src/organize.rs`, `WorkspaceCategory` in
  * `crates/db/src/models/workspace_category.rs`): categories and room positions administrators
  * set for everyone, with the server's rules. Category positions count from 0 and are compacted
- * after a delete; a move renumbers its source and target groups densely; a stale category order
+ * after a delete; a move (to a position, or before a room of the target group) renumbers its
+ * source and target groups densely; a stale category order
  * is a 409; direct messages can't be placed; every write publishes `workspace.layout.updated`.
  * `/__mock/workspace-layout` stands in for another administrator's change.
  */
@@ -253,6 +254,7 @@ export function createWorkspaceLayout(ctx: S2Context): WorkspaceLayoutModule {
     const raw = field(body, "workspaceCategoryId");
     const categoryId = intField(body, "workspaceCategoryId");
     const position = intField(body, "position");
+    const beforeRoomId = intField(body, "beforeRoomId");
 
     if (raw !== null && categoryId === null) {
       throw validation("workspaceCategoryId", "Workspace category must be a number or null");
@@ -268,7 +270,15 @@ export function createWorkspaceLayout(ctx: S2Context): WorkspaceLayoutModule {
 
     const source = world().workspacePlacements.get(roomId)?.categoryId ?? null;
     const target = groupIds(world(), categoryId).filter((id) => id !== roomId);
-    const at = Math.min(Math.max(position, 0), target.length);
+
+    const at =
+      beforeRoomId === null
+        ? Math.min(Math.max(position, 0), target.length)
+        : target.indexOf(beforeRoomId);
+
+    if (at === -1) {
+      throw validation("beforeRoomId", "Before room must be a room in the target category");
+    }
 
     target.splice(at, 0, roomId);
 

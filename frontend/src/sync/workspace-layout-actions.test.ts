@@ -72,7 +72,11 @@ describe("shared layout actions", () => {
       yield* workspaceLayout.moveRoom(3, 30, 1);
 
       expect(during).toEqual([2, 3, 1]);
-      expect((yield* fake.requests).at(-1)?.body).toEqual({ workspaceCategoryId: 30, position: 1 });
+      expect((yield* fake.requests).at(-1)?.body).toEqual({
+        workspaceCategoryId: 30,
+        position: 0,
+        beforeRoomId: 1,
+      });
       expect(store.getState().sidebar.workspaceLayout).toEqual(answer);
       expect(overlay()).toBeNull();
     }).pipe(Effect.provide(FakeApi.layerClient)),

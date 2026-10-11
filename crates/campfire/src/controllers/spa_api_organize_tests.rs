@@ -1393,3 +1393,123 @@ async fn workspace_layout_validates_orders_and_preserves_personal_preferences() 
             .any(|room| room["roomId"] == ALL_TALK)
     );
 }
+
+#[tokio::test]
+async fn workspace_room_moves_before_a_room_counting_rooms_the_admin_is_not_in() {
+    let Some(a) = app(true).await else { return };
+    let category = a
+        .db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+                [DESIGNERS, DAVID],
+            )?;
+            campfire_db::WorkspaceCategory::create(tx, "Team")
+        })
+        .await
+        .unwrap();
+    let app = &a;
+    let group = |category_id: Option<i64>| async move {
+        app.db()
+            .read(move |conn| campfire_db::WorkspaceCategory::rooms(conn, category_id))
+            .await
+            .unwrap()
+    };
+    // Never organized: the server's order is by name, with Designers among David's rooms.
+    let unorganized = group(None).await;
+    assert!(unorganized.iter().all(|room| room.position.is_none()));
+    let mut expected = unorganized
+        .iter()
+        .map(|room| room.room_id)
+        .filter(|id| *id != ALL_TALK)
+        .collect::<Vec<_>>();
+    let anchor = expected.iter().position(|id| *id == DESIGNERS).unwrap();
+    expected.insert(anchor, ALL_TALK);
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{ALL_TALK}/workspace_category");
+    let layout: api::WorkspaceLayout = ok(&send(
+        &mut david,
+        Method::PUT,
+        &path,
+        json!({"workspaceCategoryId": null, "position": 0, "beforeRoomId": DESIGNERS}),
+    )
+    .await);
+    let placed = group(None).await;
+    assert_eq!(
+        placed.iter().map(|room| room.room_id).collect::<Vec<_>>(),
+        expected
+    );
+    assert!(
+        placed
+            .iter()
+            .enumerate()
+            .all(|(index, room)| room.position == Some(index as i64))
+    );
+    // David's answer leaves out the rooms he isn't in, the rest in the same order.
+    let answered = layout
+        .rooms
+        .iter()
+        .filter(|row| row.workspace_category_id.is_none())
+        .map(|row| row.room_id)
+        .collect::<Vec<_>>();
+    assert!(!answered.contains(&DESIGNERS));
+    assert_eq!(
+        answered,
+        expected
+            .iter()
+            .copied()
+            .filter(|id| answered.contains(id))
+            .collect::<Vec<_>>()
+    );
+    // Into a category, before its only room; then `position` alone still works.
+    for (room, body) in [
+        (
+            ALL_PETS,
+            json!({"workspaceCategoryId": category.id, "position": 0}),
+        ),
+        (
+            ALL_TALK,
+            json!({"workspaceCategoryId": category.id, "position": 5, "beforeRoomId": ALL_PETS}),
+        ),
+        (
+            QUIET_CORNER,
+            json!({"workspaceCategoryId": category.id, "position": i64::from(i32::MAX)}),
+        ),
+    ] {
+        ok::<api::WorkspaceLayout>(
+            &send(
+                &mut david,
+                Method::PUT,
+                &format!("/api/v1/rooms/{room}/workspace_category"),
+                body,
+            )
+            .await,
+        );
+    }
+    assert_eq!(
+        group(Some(category.id))
+            .await
+            .iter()
+            .map(|room| (room.room_id, room.position))
+            .collect::<Vec<_>>(),
+        [
+            (ALL_TALK, Some(0)),
+            (ALL_PETS, Some(1)),
+            (QUIET_CORNER, Some(2))
+        ]
+    );
+    // The room it goes before must be in the target group: not another category's, not the
+    // room itself, not one that doesn't exist. Nothing moves.
+    let before = group(None).await;
+    for before_room_id in [ALL_PETS, ALL_TALK, -1] {
+        let reply = send(
+            &mut david,
+            Method::PUT,
+            &path,
+            json!({"workspaceCategoryId": null, "position": 0, "beforeRoomId": before_room_id}),
+        )
+        .await;
+        assert_eq!(fields(&reply).len(), 1, "{}", reply.text());
+    }
+    assert_eq!(group(None).await, before);
+}

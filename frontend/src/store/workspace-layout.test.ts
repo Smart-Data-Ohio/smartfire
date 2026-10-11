@@ -8,10 +8,11 @@ import { initialState } from "./state.ts";
 import {
   addWorkspaceOverlay,
   dropWorkspaceOverlay,
+  END_OF_GROUP,
   groupRooms,
   isPlacedAt,
   landWorkspaceChange,
-  serverPosition,
+  moveRequest,
   sharedCategories,
   sharedLayout,
   withCategoriesOrdered,
@@ -129,28 +130,32 @@ describe("shared layout transforms", () => {
     expect(ids(withRoomMoved(organized, 4, 10, null), 10)).toEqual([4]);
   });
 
-  it("counts the server's position from the neighbour, so rooms the viewer can't see keep theirs", () => {
-    // Room 7 at position 1 is in Team but not in this administrator's layout.
+  it("asks the server to place a room before its neighbour, or at the very end", () => {
+    // Room 7 at position 1 is in Team but not in this administrator's layout: the server
+    // places by room, so it keeps its place.
     const gapped: WorkspaceLayout = {
       categories: [team],
       rooms: [
         { roomId: 1, workspaceCategoryId: 9, position: 0 },
         { roomId: 2, workspaceCategoryId: 9, position: 2 },
-        { roomId: 3, workspaceCategoryId: 9, position: 3 },
         { roomId: 4, workspaceCategoryId: null, position: null },
       ],
     };
 
-    expect(serverPosition(gapped, 4, 9, 2)).toBe(2);
-    expect(serverPosition(gapped, 4, 9, null)).toBe(4);
-    // Moving down within the group: the server takes it out first.
-    expect(serverPosition(gapped, 1, 9, 3)).toBe(2);
-    expect(serverPosition(gapped, 1, 9, null)).toBe(3);
-    // Moving up is unaffected.
-    expect(serverPosition(gapped, 3, 9, 1)).toBe(0);
-    // A group never organized falls back to the index among the rooms it shows.
-    expect(serverPosition(organized, 2, null, 5)).toBe(1);
-    expect(serverPosition(organized, 2, 10, null)).toBe(0);
+    expect(moveRequest(gapped, 4, 9, 2)).toEqual({
+      workspaceCategoryId: 9,
+      position: 0,
+      beforeRoomId: 2,
+    });
+    expect(moveRequest(gapped, 4, 9, null)).toEqual({
+      workspaceCategoryId: 9,
+      position: END_OF_GROUP,
+    });
+    // A neighbour that has left the group since the drop: the end rather than a refusal.
+    expect(moveRequest(gapped, 1, null, 2)).toEqual({
+      workspaceCategoryId: null,
+      position: END_OF_GROUP,
+    });
   });
 
   it("knows a drop that leaves a room in place", () => {
