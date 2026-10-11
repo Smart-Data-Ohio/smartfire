@@ -180,7 +180,8 @@ class LiveKitTransport implements CallTransport {
       if (
         error instanceof this.#lk.ConnectionError &&
         error.status === 403 &&
-        error.message.trim() === "This voice room is full"
+        // The SDK prefixes the gateway's reason ("could not establish signal connection: …").
+        error.message.trim().endsWith("This voice room is full")
       ) {
         throw new ActionError("HuddleRoomFull", "This voice room is full");
       }
