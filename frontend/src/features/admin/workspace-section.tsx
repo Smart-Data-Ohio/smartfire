@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { type FormEvent, useId, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { admin } from "../../sync/admin.ts";
@@ -330,6 +331,15 @@ export function WorkspaceSection() {
         <JoinLink />
         {workspace.canAdminister ? (
           <VanityForm key={workspace.vanitySlug} workspace={workspace} />
+        ) : null}
+        {workspace.canAdminister ? (
+          <p className="settings-hint text-faint">
+            For a link that expires or stops after a set number of people,{" "}
+            <Link to="/admin/invites" className="settings-link">
+              create a private invite
+            </Link>
+            .
+          </p>
         ) : null}
       </SettingsGroup>
       <SettingsGroup

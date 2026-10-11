@@ -21,6 +21,14 @@ export const ADMIN_SECTIONS = [
     group: "workspace",
   },
   {
+    key: "invites",
+    label: "Invites",
+    icon: "user-plus",
+    path: "/admin/invites",
+    admin: true,
+    group: "workspace",
+  },
+  {
     key: "people",
     label: "People",
     icon: "users",

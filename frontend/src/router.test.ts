@@ -48,6 +48,8 @@ describe("the screen map and the router", () => {
       "/app/agents/:id",
       "/app/settings/profile",
       "/app/admin/workspace",
+      // Private invites are new with the SPA; classic only had the shared join link.
+      "/app/admin/invites",
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",

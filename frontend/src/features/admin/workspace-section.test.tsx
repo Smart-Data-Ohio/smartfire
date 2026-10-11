@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { admin } from "../../sync/admin.ts";
 import { AdminContext } from "./admin-parts.tsx";
+import { renderInRouter } from "./testing.tsx";
 import { WorkspaceSection } from "./workspace-section.tsx";
 
 const workspace: Workspace = {
@@ -38,7 +39,7 @@ it("lets an administrator save the upload limit in MB", async () => {
   const next = { ...workspace, uploadLimitBytes: 125 * 1024 * 1024 };
   const save = vi.spyOn(admin, "updateWorkspace").mockResolvedValue(next);
   const replace = vi.fn();
-  render(
+  await renderInRouter(
     <AdminContext value={{ workspace, replace }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -51,8 +52,8 @@ it("lets an administrator save the upload limit in MB", async () => {
   await waitFor(() => expect(replace).toHaveBeenCalledWith(next));
 });
 
-it("shows the limit to members without giving them an edit control", () => {
-  render(
+it("shows the limit to members without giving them an edit control", async () => {
+  await renderInRouter(
     <AdminContext value={{ workspace: { ...workspace, canAdminister: false }, replace: () => {} }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -63,7 +64,7 @@ it("shows the limit to members without giving them an edit control", () => {
 
 it("saves a trimmed description and a vanity slug with an invite preview", async () => {
   const save = vi.spyOn(admin, "updateWorkspace").mockResolvedValue(workspace);
-  render(
+  await renderInRouter(
     <AdminContext value={{ workspace, replace: () => {} }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -84,8 +85,8 @@ it("saves a trimmed description and a vanity slug with an invite preview", async
   await waitFor(() => expect(save).toHaveBeenCalledWith({ vanitySlug: "smart-data" }));
 });
 
-it("validates reserved words, charset, boundaries and lengths before saving a slug", () => {
-  render(
+it("validates reserved words, charset, boundaries and lengths before saving a slug", async () => {
+  await renderInRouter(
     <AdminContext value={{ workspace, replace: () => {} }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -108,8 +109,8 @@ it("validates reserved words, charset, boundaries and lengths before saving a sl
   );
 });
 
-it("shows a member the workspace About text without editing controls", () => {
-  render(
+it("shows a member the workspace About text without editing controls", async () => {
+  await renderInRouter(
     <AdminContext
       value={{
         workspace: { ...workspace, canAdminister: false, description: "R&D <plain text>" },
@@ -126,8 +127,8 @@ it("shows a member the workspace About text without editing controls", () => {
   expect(screen.queryByRole("textbox", { name: "Vanity slug" })).toBeNull();
 });
 
-it("rejects HTML and oversized descriptions, but accepts 300 Unicode characters", () => {
-  render(
+it("rejects HTML and oversized descriptions, but accepts 300 Unicode characters", async () => {
+  await renderInRouter(
     <AdminContext value={{ workspace, replace: () => {} }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -155,7 +156,7 @@ it("copies a saved vanity invite and disables copying a changed slug", async () 
     vanityUrl: "https://chat.example/join/smart-data",
   };
 
-  render(
+  await renderInRouter(
     <AdminContext value={{ workspace: saved, replace: () => {} }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -171,8 +172,8 @@ it("copies a saved vanity invite and disables copying a changed slug", async () 
   );
 });
 
-it("shows the empty About state to members", () => {
-  render(
+it("shows the empty About state to members", async () => {
+  await renderInRouter(
     <AdminContext value={{ workspace: { ...workspace, canAdminister: false }, replace: () => {} }}>
       <WorkspaceSection />
     </AdminContext>,
@@ -180,4 +181,23 @@ it("shows the empty About state to members", () => {
   expect(screen.getByRole("region", { name: "About Smartfire" }).textContent).toContain(
     "No description yet.",
   );
+});
+
+it("points administrators to private invites, and members nowhere", async () => {
+  const router = await renderInRouter(
+    <AdminContext value={{ workspace, replace: () => {} }}>
+      <WorkspaceSection />
+    </AdminContext>,
+  );
+
+  fireEvent.click(screen.getByRole("link", { name: "create a private invite" }));
+  await waitFor(() => expect(router.pathname()).toBe("/admin/invites"));
+  cleanup();
+
+  await renderInRouter(
+    <AdminContext value={{ workspace: { ...workspace, canAdminister: false }, replace: () => {} }}>
+      <WorkspaceSection />
+    </AdminContext>,
+  );
+  expect(screen.queryByRole("link", { name: "create a private invite" })).toBeNull();
 });

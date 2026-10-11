@@ -1,12 +1,14 @@
 /**
  * The S7 admin endpoints (`/api/v1/admin/*`): the classic account pages. Everyone reads the
  * workspace and its people; everything else needs an administrator. Role changes, removal, custom
- * styles and a new join link wait for a fresh confirmation once the last one has lapsed.
+ * styles and a new join link wait for a fresh confirmation once the last one has lapsed. Private
+ * invites are made, listed and revoked without one, as `api::invites` serves them.
  */
 import { Effect } from "effect";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
 import type { CreateIcon } from "../gen/CreateIcon.ts";
+import type { CreateWorkspaceInvite } from "../gen/CreateWorkspaceInvite.ts";
 import type { CustomStyles } from "../gen/CustomStyles.ts";
 import type { IntegrationsHealth } from "../gen/IntegrationsHealth.ts";
 import type { PeoplePage } from "../gen/PeoplePage.ts";
@@ -16,6 +18,9 @@ import type { PersonRole } from "../gen/PersonRole.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
+import type { WorkspaceInvite } from "../gen/WorkspaceInvite.ts";
+import type { WorkspaceInviteCreated } from "../gen/WorkspaceInviteCreated.ts";
+import type { WorkspaceInviteList } from "../gen/WorkspaceInviteList.ts";
 import { call, get } from "./call.ts";
 import {
   AuditLogPage as AuditLogPageSchema,
@@ -27,6 +32,11 @@ import {
   WorkspaceIconList as WorkspaceIconListSchema,
   Workspace as WorkspaceSchema,
 } from "./schema/admin.ts";
+import {
+  WorkspaceInviteCreated as WorkspaceInviteCreatedSchema,
+  WorkspaceInviteList as WorkspaceInviteListSchema,
+  WorkspaceInvite as WorkspaceInviteSchema,
+} from "./schema/invites.ts";
 import { wire } from "./wire.ts";
 
 const workspaceReply = wire<Workspace>(WorkspaceSchema);
@@ -186,5 +196,26 @@ export const integrationsHealth = Effect.fn("api.integrationsHealth")(function* 
   return yield* call(
     get("/admin/integrations_health"),
     wire<IntegrationsHealth>(IntegrationsHealthSchema),
+  );
+});
+
+/** `GET /admin/invites`: every private invite, newest first, without their tokens. */
+export const invites = Effect.fn("api.invites")(function* () {
+  return yield* call(get("/admin/invites"), wire<WorkspaceInviteList>(WorkspaceInviteListSchema));
+});
+
+/** `POST /admin/invites`: a new invite, whose link this answer alone carries. */
+export const createInvite = Effect.fn("api.createInvite")(function* (body: CreateWorkspaceInvite) {
+  return yield* call(
+    { method: "POST", path: "/admin/invites", body, secret: true },
+    wire<WorkspaceInviteCreated>(WorkspaceInviteCreatedSchema),
+  );
+});
+
+/** `DELETE /admin/invites/:id`: the invite stops working; answers it, revoked. */
+export const revokeInvite = Effect.fn("api.revokeInvite")(function* (inviteId: number) {
+  return yield* call(
+    { method: "DELETE", path: `/admin/invites/${inviteId}` },
+    wire<WorkspaceInvite>(WorkspaceInviteSchema),
   );
 });
