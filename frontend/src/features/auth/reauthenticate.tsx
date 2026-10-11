@@ -10,6 +10,7 @@ import {
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { pageExit } from "./auth-navigation.ts";
 import "./reauthenticate.css";
 
 /** What the form is sending: one credential at a time, or the start of a Google confirmation. */
@@ -264,7 +265,7 @@ export function Choices({
     startGoogle().then(
       (start) => {
         if (start.kind === "navigate") {
-          window.location.assign(start.location);
+          pageExit.assign(start.location);
 
           return;
         }
