@@ -10,6 +10,14 @@ use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req, T
 const CATALOG: &str = "/api/v1/soundboard/sounds";
 const ADMIN: &str = "/api/v1/admin/soundboard/sounds";
 const WAV: &[u8] = include_bytes!("../../../../test-support/attachments/analysis.wav");
+const FLAC: &[u8] = include_bytes!("../../../../test-support/attachments/soundboard/audio.flac");
+const MP3: &[u8] = include_bytes!("../../../../test-support/attachments/soundboard/audio.mp3");
+const OGG: &[u8] = include_bytes!("../../../../test-support/attachments/soundboard/audio.ogg");
+const WEBM: &[u8] = include_bytes!("../../../../test-support/attachments/soundboard/audio.webm");
+const ARTWORK_MP3: &[u8] =
+    include_bytes!("../../../../test-support/attachments/soundboard/artwork.mp3");
+const VIDEO_WEBM: &[u8] =
+    include_bytes!("../../../../test-support/attachments/soundboard/video.webm");
 
 async fn upload(a: &TestApp, bytes: &[u8], filename: &str, content_type: &str) -> String {
     let staged = a
@@ -71,42 +79,15 @@ async fn legacy_upload(
 async fn soundboard_rejects_flac_with_id3_or_forged_identified_metadata() {
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("audio.flac");
-    let result = std::process::Command::new("ffmpeg")
-        .args([
-            "-v",
-            "error",
-            "-threads",
-            "1",
-            "-filter_threads",
-            "1",
-            "-f",
-            "lavfi",
-            "-i",
-            "anullsrc=r=48000:cl=mono",
-            "-t",
-            "0.1",
-            "-c:a",
-            "flac",
-        ])
-        .arg(&path)
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "{}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-    let bytes = std::fs::read(path).unwrap();
+    let bytes = FLAC;
     assert!(bytes.len() < 512 * 1024);
     let mut tagged = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
-    tagged.extend_from_slice(&bytes);
+    tagged.extend_from_slice(bytes);
     assert_eq!(
         campfire_storage::marcel::identify(&tagged, None, None),
         "audio/mpeg"
     );
-    for bytes in [&bytes, &tagged] {
+    for bytes in [bytes, tagged.as_slice()] {
         let (_, signed_id) = legacy_upload(&mut admin, bytes, "audio/mpeg", json!(true)).await;
         let reply = write(
             &mut admin,
@@ -136,45 +117,14 @@ async fn soundboard_rejects_flac_with_id3_or_forged_identified_metadata() {
 async fn soundboard_accepts_id3_tagged_and_frame_sync_mp3() {
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("audio.mp3");
-    let result = std::process::Command::new("ffmpeg")
-        .args([
-            "-v",
-            "error",
-            "-threads",
-            "1",
-            "-filter_threads",
-            "1",
-            "-f",
-            "lavfi",
-            "-i",
-            "anullsrc=r=48000:cl=mono",
-            "-t",
-            "0.1",
-            "-c:a",
-            "libmp3lame",
-            "-write_xing",
-            "0",
-            "-id3v2_version",
-            "0",
-            "-write_id3v1",
-            "0",
-        ])
-        .arg(&path)
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "{}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-    let bytes = std::fs::read(path).unwrap();
+    // ID3v2 stores its payload length as four seven-bit bytes.
+    let tag_size = MP3[6..10]
+        .iter()
+        .fold(0, |size, byte| (size << 7) | usize::from(*byte));
+    let bytes = &MP3[10 + tag_size..];
     assert_eq!(bytes[0], 0xff);
     assert_eq!(bytes[1] & 0xe0, 0xe0);
-    let mut tagged = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
-    tagged.extend_from_slice(&bytes);
-    for (index, bytes) in [&tagged, &bytes].into_iter().enumerate() {
+    for (index, bytes) in [MP3, bytes].into_iter().enumerate() {
         let (id, signed_id) = legacy_upload(&mut admin, bytes, "audio/flac", json!(true)).await;
         let reply = write(
             &mut admin,
@@ -200,7 +150,7 @@ async fn soundboard_accepts_id3_tagged_and_frame_sync_mp3() {
         let fetched = admin.get(&catalog.sounds[index].audio_url).await;
         assert_eq!(fetched.status, StatusCode::OK);
         assert_eq!(fetched.headers["content-type"], "audio/mpeg");
-        assert_eq!(&fetched.body, bytes);
+        assert_eq!(fetched.body, bytes);
     }
 }
 
@@ -359,56 +309,7 @@ async fn soundboard_uses_the_existing_direct_upload_api() {
 async fn soundboard_accepts_mp3_with_embedded_cover_art() {
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("artwork.mp3");
-    let result = std::process::Command::new("ffmpeg")
-        .args([
-            "-v",
-            "error",
-            "-threads",
-            "1",
-            "-filter_threads",
-            "1",
-            "-f",
-            "lavfi",
-            "-i",
-            "anullsrc=r=48000:cl=mono",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=black:s=16x16:r=10",
-            "-map",
-            "0:a",
-            "-map",
-            "1:v",
-            "-t",
-            "0.1",
-            "-c:a",
-            "libmp3lame",
-            "-c:v",
-            "mjpeg",
-            "-disposition:v",
-            "attached_pic",
-            "-frames:v",
-            "1",
-            "-id3v2_version",
-            "3",
-        ])
-        .arg(&path)
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "{}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-    let signed_id = upload(
-        &a,
-        &std::fs::read(&path).unwrap(),
-        "artwork.mp3",
-        "audio/mpeg",
-    )
-    .await;
+    let signed_id = upload(&a, ARTWORK_MP3, "artwork.mp3", "audio/mpeg").await;
     let reply = write(
         &mut admin,
         Method::POST,
@@ -509,40 +410,12 @@ async fn soundboard_rejects_invalid_uploads_names_and_volume_without_catalog_wri
 async fn soundboard_accepts_all_audio_formats_and_rejects_webm_with_video() {
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
-    let dir = tempfile::tempdir().unwrap();
-    for (index, format, codec, content_type) in [
-        (0, "mp3", "libmp3lame", "audio/mpeg"),
-        (1, "ogg", "libopus", "audio/ogg"),
-        (2, "webm", "libopus", "audio/webm"),
+    for (index, format, bytes, content_type) in [
+        (0, "mp3", MP3, "audio/mpeg"),
+        (1, "ogg", OGG, "audio/ogg"),
+        (2, "webm", WEBM, "audio/webm"),
     ] {
-        let path = dir.path().join(format!("audio.{format}"));
-        let result = std::process::Command::new("ffmpeg")
-            .args([
-                "-threads",
-                "1",
-                "-filter_threads",
-                "1",
-                "-v",
-                "error",
-                "-f",
-                "lavfi",
-                "-i",
-                "anullsrc=r=48000:cl=mono",
-                "-t",
-                "0.1",
-                "-c:a",
-                codec,
-            ])
-            .arg(&path)
-            .output()
-            .unwrap();
-        assert!(
-            result.status.success(),
-            "{}",
-            String::from_utf8_lossy(&result.stderr)
-        );
-        let bytes = std::fs::read(&path).unwrap();
-        let signed_id = upload(&a, &bytes, &format!("audio.{format}"), content_type).await;
+        let signed_id = upload(&a, bytes, &format!("audio.{format}"), content_type).await;
         let reply = write(
             &mut admin,
             Method::POST,
@@ -558,7 +431,7 @@ async fn soundboard_accepts_all_audio_formats_and_rejects_webm_with_video() {
         assert_eq!(fetched.body, bytes);
     }
     let mut tagged_ogg = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
-    tagged_ogg.extend_from_slice(&std::fs::read(dir.path().join("audio.ogg")).unwrap());
+    tagged_ogg.extend_from_slice(OGG);
     assert_eq!(
         campfire_storage::marcel::identify(&tagged_ogg, None, None),
         "audio/mpeg"
@@ -592,41 +465,8 @@ async fn soundboard_accepts_all_audio_formats_and_rejects_webm_with_video() {
     )
     .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    let path = dir.path().join("video.webm");
-    let result = std::process::Command::new("ffmpeg")
-        .args([
-            "-threads",
-            "1",
-            "-filter_threads",
-            "1",
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=black:s=16x16:r=10",
-            "-f",
-            "lavfi",
-            "-i",
-            "anullsrc=r=48000:cl=mono",
-            "-t",
-            "0.1",
-            "-c:v",
-            "libvpx",
-            "-c:a",
-            "libopus",
-        ])
-        .arg(&path)
-        .output()
-        .unwrap();
-    assert!(
-        result.status.success(),
-        "{}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-    let bytes = std::fs::read(path).unwrap();
-    let signed_id = upload(&a, &bytes, "video.webm", "audio/webm").await;
-    let (_, spoofed_id) = legacy_upload(&mut admin, &bytes, "audio/mpeg", json!(true)).await;
+    let signed_id = upload(&a, VIDEO_WEBM, "video.webm", "audio/webm").await;
+    let (_, spoofed_id) = legacy_upload(&mut admin, VIDEO_WEBM, "audio/mpeg", json!(true)).await;
     for signed_id in [signed_id, spoofed_id] {
         let reply = write(
             &mut admin,
