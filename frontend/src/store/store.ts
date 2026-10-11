@@ -131,11 +131,11 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
 const heldTickets: number[] = [];
 
 /** Every change ends by forgetting the row touches no request in flight is older than. */
+const settle = (state: State) => agents.reconcileAgentBadges(pruneTouches(state, heldTickets[0]));
+
+/** Applies one change; none lands once the account changed under the page (see `accountChanged`). */
 const apply = (change: (state: State) => State) =>
-  store.setState(
-    (state) => agents.reconcileAgentBadges(pruneTouches(change(state), heldTickets[0])),
-    true,
-  );
+  store.setState((state) => (state.accountChanged ? state : settle(change(state))), true);
 
 /**
  * Room-read bookkeeping for `sidebar.row.*` events about to land: a removal or a membership change
@@ -317,6 +317,9 @@ export const mutations = {
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
+  /** The server answered for another sign-in: offline for good, until the page reloads. */
+  markAccountChanged: () =>
+    apply((state) => ({ ...state, accountChanged: true, connection: "offline" })),
   mergeUsers: (users: readonly User[]) => apply((state) => reduce.mergeUsers(state, users)),
   setPresence: (list: readonly UserPresence[]) => apply((state) => reduce.setPresence(state, list)),
   setDndAllowance: (userId: number, allowed: boolean) =>
@@ -743,7 +746,7 @@ export const mutations = {
   /** Back to an empty store (tests). */
   reset: () => {
     heldTickets.length = 0;
-    apply(() => initialState);
+    store.setState(() => settle(initialState), true);
   },
 };
 

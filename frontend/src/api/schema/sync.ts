@@ -271,7 +271,9 @@ export const ServerFrame = Schema.Union([
     seq: Schema.Int,
     resumed: Schema.Boolean,
     replayThrough: Schema.Int,
-    viewerId: UserId,
+    // Optional for rolling deploys: a server from before it was added sends none, and the client
+    // then takes the welcome without the check rather than failing or reloading in a loop.
+    viewerId: Schema.optionalKey(UserId),
   }),
   Schema.Struct({ t: Schema.Literal("batch"), events: Schema.Array(SyncEvent) }),
   Schema.Struct({ t: Schema.Literal("resync"), topics: Topics, reason: Schema.String }),
@@ -281,4 +283,14 @@ export const ServerFrame = Schema.Union([
 
 export type ServerFrame = typeof ServerFrame.Type;
 
-export type ServerFramePin = Assert<Pinned<typeof ServerFrame, GeneratedServerFrame>>;
+/**
+ * A server frame as this client takes it off the wire: the generated `ServerFrame`, except that
+ * `welcome`'s `viewerId` may be missing (a server from before it, mid rolling deploy).
+ */
+export type ServerFrameWire =
+  | Exclude<GeneratedServerFrame, { t: "welcome" }>
+  | (Omit<Extract<GeneratedServerFrame, { t: "welcome" }>, "viewerId"> & {
+      viewerId?: number;
+    });
+
+export type ServerFramePin = Assert<Pinned<typeof ServerFrame, ServerFrameWire>>;

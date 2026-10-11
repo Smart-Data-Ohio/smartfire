@@ -11,7 +11,9 @@ import type { LoadStatus } from "./model.ts";
 import type { State } from "./state.ts";
 import { store } from "./store.ts";
 
-const apply = (change: (state: State) => State) => store.setState(change, true);
+/** As `mutations` do, nothing lands once the account changed under the page. */
+const apply = (change: (state: State) => State) =>
+  store.setState((state) => (state.accountChanged ? state : change(state)), true);
 
 /** Every write to the cards slice (and to the polls on messages). */
 export const cardMutations = {

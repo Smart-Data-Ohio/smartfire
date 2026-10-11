@@ -2992,6 +2992,7 @@ describe("outbox", () => {
       Effect.andThen(Deferred.await(gate), confirmed),
     );
     yield* startEngine;
+    yield* welcome(0, false);
     yield* session.openRoom(12, null);
 
     const id = yield* session.send(12, "hello");
@@ -3273,6 +3274,7 @@ describe("tombstones", () => {
 
         yield* serve([1, 2, 3].map((id) => messageFixture(id, 12)));
         yield* startEngine;
+        yield* welcome(0, false);
         yield* session.openRoom(12, null);
         yield* pushEvents({
           seq: 1,
@@ -3336,6 +3338,7 @@ describe("typing", () => {
     withSync(
       Effect.gen(function* () {
         yield* startEngine;
+        yield* welcome(0, false);
         yield* pushEvents(
           { seq: 1, topic: "room:12", type: "typing", data: { userId: 9, on: true } },
           { seq: 2, topic: "room:12", type: "typing", data: { userId: 7, on: true } },
@@ -3367,6 +3370,7 @@ describe("typing", () => {
           pushEvents({ seq, topic: "room:12", type: "typing", data: { userId: 9, on: true } });
 
         yield* startEngine;
+        yield* welcome(0, false);
         yield* typing(1);
         yield* TestClock.adjust(4000);
         yield* typing(2);
@@ -5206,6 +5210,99 @@ describe("decoding", () => {
 
         expect(unreadCount(12)).toBe(1);
         expect(yield* socket.isOpen).toBe(true);
+      }),
+    ),
+  );
+});
+
+describe("each connection's welcome", () => {
+  const cursorAt = (seq: number) => JSON.stringify({ epoch: "e1", seq });
+
+  it.effect("applies nothing sent before it, nor moves the cursor", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const reload = vi.spyOn(pageReload, "reload").mockImplementation(() => undefined);
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* pushEvents(unreadEvent(11));
+        expect(unreadCount(12)).toBe(1);
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(cursorAt(11));
+
+        // A's cursor resumes under B's cookie, and B's events come before B's welcome.
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* socket.push({
+          t: "batch",
+          events: [
+            unreadEvent(12),
+            {
+              seq: 13,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: sidebarRowFixture(99, "B's room"),
+            },
+          ],
+        });
+        yield* settle;
+
+        expect(unreadCount(12)).toBe(1);
+        expect(store.getState().sidebar.rows[99]).toBeUndefined();
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(cursorAt(11));
+        expect(reload).not.toHaveBeenCalled();
+
+        yield* welcome(11, true, "e1", 13, 8);
+
+        expect(reload).toHaveBeenCalledTimes(1);
+        expect(store.getState().sidebar.rows[99]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("closes and reconnects when it doesn't decode, applying nothing", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+
+        yield* serve([]);
+        yield* startEngine;
+
+        const before = unreadCount(12);
+
+        yield* socket.pushText(JSON.stringify({ t: "welcome", epoch: "e1" }));
+        yield* socket.pushText(JSON.stringify({ t: "batch", events: [unreadEvent(1)] }));
+        yield* settle;
+
+        expect(yield* socket.isOpen).toBe(false);
+        expect(unreadCount(12)).toBe(before);
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
+
+        // The usual backoff dials again.
+        yield* TestClock.adjust(1000);
+        expect((yield* socket.dials).length).toBe(2);
+        expect(yield* socket.isOpen).toBe(true);
+      }),
+    ),
+  );
+
+  it.effect("takes one without viewerId as from a server before it, mid rolling deploy", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const reload = vi.spyOn(pageReload, "reload").mockImplementation(() => undefined);
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* socket.push({ t: "welcome", epoch: "e1", seq: 0, resumed: false, replayThrough: 0 });
+        yield* settle;
+        yield* pushEvents(unreadEvent(1));
+
+        expect(unreadCount(12)).toBe(1);
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(cursorAt(1));
+        expect(yield* socket.isOpen).toBe(true);
+        expect(reload).not.toHaveBeenCalled();
       }),
     ),
   );

@@ -16,10 +16,10 @@ import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { boot, messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
 import { blocks } from "../api/people-endpoints.ts";
+import type { ServerFrameWire as ServerFrame } from "../api/schema/sync.ts";
 import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
-import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
@@ -260,8 +260,15 @@ export class Engine extends Context.Service<
         return me !== null && me.user.id !== userId;
       };
 
-      /** Stops the run; `run` reloads the page once everything in it has ended. */
-      const leaveForNewSignIn = Effect.asVoid(Deferred.succeed(signedOut, undefined));
+      /**
+       * Stops the page for good (no more requests or store changes), then the run; `run` reloads
+       * the page once everything in it has ended.
+       */
+      const leaveForNewSignIn = Effect.andThen(
+        Effect.sync(() => mutations.markAccountChanged()),
+        Effect.asVoid(Deferred.succeed(signedOut, undefined)),
+      );
+
       /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
@@ -849,7 +856,9 @@ export class Engine extends Context.Service<
       ) {
         // A resume is accepted on its epoch and sequence alone: a socket opened under another
         // sign-in replays that account's events. Nothing of theirs lands, not even the cursor.
-        if (signedInElsewhere(frame.viewerId)) {
+        // A server from before `viewerId` (mid rolling deploy) sends none: taken unchecked, as
+        // before, rather than reloading in a loop.
+        if (frame.viewerId !== undefined && signedInElsewhere(frame.viewerId)) {
           yield* leaveForNewSignIn;
 
           return;
@@ -905,6 +914,7 @@ export class Engine extends Context.Service<
       const handleFrames = Effect.fnUntraced(function* (
         frames: readonly ServerFrame[],
         scope: Scope.Scope,
+        welcomed: Ref.Ref<boolean>,
       ) {
         let events: SyncEvent[] = [];
 
@@ -917,6 +927,12 @@ export class Engine extends Context.Service<
         });
 
         for (const frame of frames) {
+          // Until this connection's welcome says whose it is, nothing it carries is applied.
+          if ((frame.t === "batch" || frame.t === "resync") && !(yield* Ref.get(welcomed))) {
+            yield* Effect.logWarning(`sync: dropped a ${frame.t} sent before the welcome`);
+            continue;
+          }
+
           switch (frame.t) {
             case "batch":
               events.push(...frame.events);
@@ -932,6 +948,7 @@ export class Engine extends Context.Service<
                 return false;
               }
 
+              yield* Ref.set(welcomed, true);
               break;
             case "resync":
               yield* flush;
@@ -976,6 +993,8 @@ export class Engine extends Context.Service<
             yield* setConnection("online");
 
             const bye = yield* Ref.make<boolean | null>(null);
+            /** This connection's welcome decoded and passed the viewer check. */
+            const welcomed = yield* Ref.make(false);
 
             yield* connection.incoming.pipe(
               Stream.timeoutOrElse({
@@ -984,7 +1003,7 @@ export class Engine extends Context.Service<
               }),
               Stream.groupedWithin(COALESCE_MAX, COALESCE_WINDOW),
               Stream.runForEachWhile((frames) =>
-                handleFrames(frames, scope).pipe(
+                handleFrames(frames, scope, welcomed).pipe(
                   Effect.tap((reconnect) => Ref.set(bye, reconnect)),
                   Effect.map((reconnect) => reconnect === null),
                 ),

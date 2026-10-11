@@ -4,7 +4,7 @@
  * engine stops first, then this clears what the tab kept for them and loads the page again.
  */
 
-import { store } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
 
 /** What this tab keeps in sessionStorage: drafts, the sync resume point. */
 const TAB_STORAGE_PREFIX = "smartfire.";
@@ -45,8 +45,15 @@ export function stopRunForNewSignIn(stop: () => void): () => void {
   };
 }
 
-/** Leaves for a new sign-in: stops the sync engine first when it runs (it reloads once stopped). */
+/**
+ * Leaves for a new sign-in. The page first stops for good (`accountChanged`: nothing more is
+ * requested or stored, and a notice offers the reload), so a reload the browser doesn't carry out
+ * leaves nothing working as the old account. Then it stops the sync engine when it runs (which
+ * reloads once stopped), or reloads.
+ */
 export function leaveForNewSignIn(): void {
+  mutations.markAccountChanged();
+
   if (stopRun === null) {
     reloadForNewSignIn();
   } else {

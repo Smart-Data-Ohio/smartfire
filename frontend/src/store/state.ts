@@ -47,6 +47,12 @@ export interface State {
   readonly boot: Boot | null;
   readonly me: Me | null;
   readonly connection: ConnectionStatus;
+  /**
+   * Another tab signed in as someone else, and the server answered this page as them. Set once and
+   * never cleared (only a reload starts over): the store takes no more changes, the API client
+   * refuses every request, and the shell gives way to a notice asking for the reload.
+   */
+  readonly accountChanged: boolean;
   readonly users: Readonly<Record<number, User>>;
   readonly presence: Readonly<Record<number, UserPresence>>;
   /**
@@ -156,6 +162,7 @@ export const initialState: State = {
   boot: null,
   me: null,
   connection: "connecting",
+  accountChanged: false,
   users: {},
   presence: {},
   dndAllowances: {},

@@ -4,14 +4,16 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture, userFixture } from "../api/testing.ts";
 import { BlockedSection } from "../features/settings/blocked-section.tsx";
+import { AccountChangedNotice } from "../features/shell/account-changed.tsx";
 import type { BlockList } from "../gen/BlockList.ts";
 import type { BlockState } from "../gen/BlockState.ts";
 import { mutations, store } from "../store/store.ts";
 import { ignores } from "./admin.ts";
+import { actions } from "./runtime.ts";
 import { pageReload, stopRunForNewSignIn } from "./sign-in-change.ts";
 
 const A = meFixture.user.id;
@@ -154,5 +156,55 @@ describe("Ignored people under another sign-in", () => {
     expect(screen.queryByRole("button", { name: /try again|retry/i })).toBeNull();
     expect(store.getState().ignores).toEqual(before);
     expect(store.getState().users[ONLY_B]).toBeUndefined();
+  });
+});
+
+describe("once another account answered, with the reload held back", () => {
+  /** B's write reply lands on A's page; the browser doesn't carry out the reload. */
+  async function answeredAsB() {
+    answer = { viewerId: B, userId: X, ignoredByMe: false, revision: 10 };
+    await pending(ignores.set(X, false));
+    expect(reload).toHaveBeenCalledTimes(1);
+  }
+
+  it("sends no more requests, and the connection reads offline", async () => {
+    await answeredAsB();
+
+    const sent = vi.mocked(globalThis.fetch).mock.calls.length;
+
+    answer = listOfA;
+    await expect(ignores.list()).rejects.toThrow("different account");
+    await expect(ignores.set(X, true)).rejects.toThrow("different account");
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(sent);
+    expect(store.getState()).toMatchObject({ accountChanged: true, connection: "offline" });
+
+    // Nothing brings it back online but a reload.
+    mutations.setConnection("online");
+    expect(store.getState().connection).toBe("offline");
+  });
+
+  it("installs nothing when a room is opened", async () => {
+    await answeredAsB();
+
+    const frozen = store.getState();
+    const sent = vi.mocked(globalThis.fetch).mock.calls.length;
+
+    await pending(actions.openRoom(12, null).catch(() => undefined));
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(sent);
+    expect(store.getState()).toBe(frozen);
+  });
+
+  it("puts up the notice, whose Reload reloads", () => {
+    render(<AccountChangedNotice />);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "You signed in as a different account in another tab",
+      }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });
