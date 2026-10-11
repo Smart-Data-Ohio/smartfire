@@ -330,3 +330,70 @@ fn integrations_health() {
         }),
     );
 }
+
+#[test]
+fn the_welcome_settings_and_what_a_viewer_reads() {
+    assert_wire(
+        &WelcomeAdmin {
+            settings: WelcomeSettings {
+                message: "Say **hi**".into(),
+                rooms: vec![WelcomeRoom {
+                    room_id: 3,
+                    emoji: Some("👋".into()),
+                    description: "Introduce yourself".into(),
+                }],
+                guide: vec![
+                    GuideResource { title: "Start here".into(), emoji: None, room_id: Some(3), body: None },
+                    GuideResource { title: "Hours".into(), emoji: Some(":clock:".into()), room_id: None, body: Some("9 to 5".into()) },
+                ],
+            },
+            choices: vec![WelcomeRoomChoice { id: 3, name: "general".into() }],
+        },
+        json!({
+            "settings": {
+                "message": "Say **hi**",
+                "rooms": [{"roomId": 3, "emoji": "👋", "description": "Introduce yourself"}],
+                "guide": [
+                    {"title": "Start here", "emoji": null, "roomId": 3, "body": null},
+                    {"title": "Hours", "emoji": ":clock:", "roomId": null, "body": "9 to 5"}
+                ]
+            },
+            "choices": [{"id": 3, "name": "general"}]
+        }),
+    );
+    let card = WelcomeRoomCard {
+        room_id: 3,
+        name: "general".into(),
+        emoji: None,
+        description: "Introduce yourself".into(),
+        joined: false,
+    };
+    assert_wire(
+        &WorkspaceWelcome {
+            name: "Smart Data".into(),
+            description: "".into(),
+            message_html: Some("<div class=\"markdown-body\"><p>Hi</p></div>".into()),
+            rooms: vec![card],
+            guide: vec![GuideEntry {
+                title: "Start here".into(),
+                emoji: None,
+                body_html: None,
+                room: Some(GuideRoom { id: 3, name: "general".into(), joined: true }),
+            }],
+            can_administer: false,
+        },
+        json!({
+            "name": "Smart Data",
+            "description": "",
+            "messageHtml": "<div class=\"markdown-body\"><p>Hi</p></div>",
+            "rooms": [{"roomId": 3, "name": "general", "emoji": null, "description": "Introduce yourself", "joined": false}],
+            "guide": [{
+                "title": "Start here",
+                "emoji": null,
+                "bodyHtml": null,
+                "room": {"id": 3, "name": "general", "joined": true}
+            }],
+            "canAdminister": false
+        }),
+    );
+}

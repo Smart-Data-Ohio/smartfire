@@ -84,6 +84,10 @@ pub use admin::{
     PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
 };
+pub use admin::{
+    GuideEntry, GuideResource, GuideRoom, WelcomeAdmin, WelcomeRoom, WelcomeRoomCard, WelcomeRoomChoice,
+    WelcomeSettings, WorkspaceWelcome,
+};
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
     AgentCapability, AgentDeliveryOutcome, AgentDirectory, AgentDirectoryRow, AgentExternalResult,
