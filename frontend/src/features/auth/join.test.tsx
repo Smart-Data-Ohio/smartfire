@@ -9,7 +9,7 @@ import {
   MOCK_LAST_INVITE,
 } from "../../../mock/s2/join.ts";
 import { MOCK_PLAIN_EMAIL, SIGNED_IN_LOCATION } from "../../../mock/s2/sign-in.ts";
-import { auth } from "../../sync/auth.ts";
+import { auth, type JoinNext } from "../../sync/auth.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
 import { pageExit } from "./auth-navigation.ts";
 import { renderAuth, resetSignIn } from "./testing.tsx";
@@ -150,6 +150,27 @@ describe("the join code's page", () => {
     expect(await screen.findByText("This join link isn't valid.")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
     expect(screen.getByRole("link", { name: "Sign in" })).toBeTruthy();
+  });
+
+  it("drops a join's late answer once the visitor has gone to sign in", async () => {
+    const pending = Promise.withResolvers<JoinNext>();
+
+    vi.spyOn(auth, "join").mockImplementation(() => pending.promise);
+
+    const router = await renderAuth(`/app/join/${MOCK_JOIN_CODE}`);
+
+    await fill("Ada", "ada@smartdata.example", "secret123456");
+    await create();
+    await userEvent.setup().click(screen.getByRole("link", { name: "Sign in" }));
+    await screen.findByRole("heading", { level: 1, name: "Smart Data" });
+
+    await act(async () => {
+      pending.resolve({ kind: "signedIn", location: SIGNED_IN_LOCATION });
+      await pending.promise;
+    });
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(router.pathname()).toBe("/session/new");
   });
 
   it("can be used again once Back restores it, without sending anything by itself", async () => {

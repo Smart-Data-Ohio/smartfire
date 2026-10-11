@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useEffectEvent, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import {
   type AuthNext,
@@ -40,14 +40,27 @@ export function useDocumentTitle(title: string): void {
 
 /**
  * Follows a next action that isn't a refusal: signing in (and Google, and anywhere the SPA
- * doesn't draw) is a full page load; a challenge or the sign-in page stays in the SPA. Answers
- * whether the page is leaving, so a form keeps its busy state until it goes.
+ * doesn't draw) is a full page load; a challenge or the sign-in page stays in the SPA.
+ *
+ * Only a page still on screen follows its answer. One the visitor has left (Sign in pressed while
+ * a join was sending, say) drops it, so a late answer can't pull them off the page they went to.
  */
 export function useFollowNext(): (next: Exclude<AuthNext, { readonly kind: "error" }>) => void {
   const navigate = useNavigate();
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   return useCallback(
     (next) => {
+      if (!mounted.current) return;
+
       if (next.kind === "secondFactorRequired") {
         void navigate({ to: "/two_factor/challenge", replace: true });
 
