@@ -12,7 +12,8 @@ import {
   type WorkRecord,
   ownerCandidates as workOwnerCandidates,
 } from "../s4/work-model.ts";
-import { VIEWER_ID } from "../seed.ts";
+import { VIEWER_ID, type World } from "../seed.ts";
+import { boardPostTags } from "./board-tags.ts";
 
 export const emptyWorkDetail: WorkDetail = {
   resultMarkdown: null,
@@ -33,11 +34,20 @@ export function newWorkFacts(
 
 export const ownerCandidates = workOwnerCandidates;
 
-export function tagsOf(body: Json | undefined): string[] {
+/**
+ * A post's tags from the request. On a board (`board` given) catalog names resolve to their
+ * label and a required tag falls back to the default (`BoardTagPolicy::post_tags`).
+ */
+export function tagsOf(
+  body: Json | undefined,
+  board?: { readonly world: World; readonly roomId: number },
+): string[] {
   const input = stringArrayField(body, "tags");
 
   if (input === null && field(body, "tags") !== undefined)
     throw validation("tags", "Tags must be a list");
+
+  if (board !== undefined) return boardPostTags(board.world, board.roomId, input ?? []).sort();
 
   const tags = [
     ...new Set((input ?? []).map((tag) => tag.trim().toLowerCase()).filter((tag) => tag !== "")),

@@ -686,5 +686,22 @@
     .room-subscription-head > .button {
       width: 100%;
     }
+
+    /* Four settings tabs (a board's Tags, a channel's Email) share the sheet's width on one line:
+       labels only, each tab as wide as its label needs. */
+    .room-form .tabs .t-tabs {
+      align-self: stretch;
+    }
+
+    .room-form .tab {
+      flex: 1 1 auto;
+      justify-content: center;
+      padding-inline: var(--space-2);
+      white-space: nowrap;
+    }
+
+    .room-form .tab .icon {
+      display: none;
+    }
   }
 }

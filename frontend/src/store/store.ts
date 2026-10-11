@@ -12,6 +12,7 @@ import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
+import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
@@ -243,6 +244,8 @@ export const mutations = {
   addBoardPost: (thread: Thread) => apply((state) => boards.addBoardPost(state, thread)),
   boardAutomationsChanged: (roomId: number) =>
     apply((state) => boards.boardAutomationsChanged(state, roomId)),
+  setBoardTagCatalog: (catalog: BoardTagCatalog) =>
+    apply((state) => boards.setBoardTagCatalog(state, catalog)),
   startRead: (list: string, reload = true) => {
     const read = freshness.startRead(store.getState().freshness, list, reload);
 

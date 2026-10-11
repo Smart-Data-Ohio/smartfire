@@ -1,0 +1,286 @@
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { BoardTagCatalog } from "../../gen/BoardTagCatalog.ts";
+import { initialState } from "../../store/state.ts";
+import { mutations, store } from "../../store/store.ts";
+import { actions } from "../../sync/runtime.ts";
+import { BoardTagEditor } from "./board-tag-editor.tsx";
+
+const ROOM = 900;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  store.setState(initialState, true);
+});
+
+function reordered(catalog: BoardTagCatalog, ids: readonly number[]): BoardTagCatalog {
+  return {
+    ...catalog,
+    tags: ids.flatMap((id, position) => {
+      const tag = catalog.tags.find((candidate) => candidate.id === id);
+
+      return tag === undefined ? [] : [{ ...tag, position }];
+    }),
+  };
+}
+
+/**
+ * A server that keeps one catalog and answers every write with it, as the real one does. As the
+ * sync layer does, an answer reaches the store unless one to a later request already has.
+ */
+function installCatalog(start: Omit<BoardTagCatalog, "roomId">) {
+  let catalog: BoardTagCatalog = { roomId: ROOM, ...start };
+  let issued = 0;
+  let shown = 0;
+
+  const ticket = () => {
+    issued += 1;
+
+    return issued;
+  };
+
+  const deliver = (asked: number, next: BoardTagCatalog) => {
+    if (asked > shown) {
+      shown = asked;
+      mutations.setBoardTagCatalog(next);
+    }
+
+    return next;
+  };
+
+  const save = (next: BoardTagCatalog) => {
+    catalog = next;
+
+    return next;
+  };
+
+  const answer = async (next: BoardTagCatalog = catalog) => deliver(ticket(), save(next));
+
+  vi.spyOn(actions.boards, "tagCatalog").mockImplementation(() => answer());
+
+  return {
+    current: () => catalog,
+    ticket,
+    deliver,
+    save,
+    reorder: vi
+      .spyOn(actions.boards, "reorderTags")
+      .mockImplementation((_, ids) => answer(reordered(catalog, ids))),
+    create: vi.spyOn(actions.boards, "createTag").mockImplementation((_, body) =>
+      answer({
+        ...catalog,
+        tags: [
+          ...catalog.tags,
+          { id: 50, name: body.name, emoji: body.emoji, position: catalog.tags.length },
+        ],
+      }),
+    ),
+    remove: vi.spyOn(actions.boards, "deleteTag").mockImplementation((_, id) => {
+      const tags = catalog.tags.filter((tag) => tag.id !== id);
+
+      // As `BoardTag::destroy`: the last tag takes the requirement with it.
+      return answer({
+        ...catalog,
+        tags,
+        tagsRequired: catalog.tagsRequired && tags.length > 0,
+        defaultBoardTagId: catalog.defaultBoardTagId === id ? null : catalog.defaultBoardTagId,
+      });
+    }),
+    policy: vi
+      .spyOn(actions.boards, "updateTagPolicy")
+      .mockImplementation((_, body) => answer({ ...catalog, ...body })),
+  };
+}
+
+const bug = { id: 1, name: "Bug", emoji: "🐞", position: 0 };
+
+const idea = { id: 2, name: "Idea", emoji: null, position: 1 };
+
+describe("the board tag editor", () => {
+  it("moves a tag with the keyboard and saves the whole order", async () => {
+    const server = installCatalog({ tags: [bug, idea], tagsRequired: false, defaultBoardTagId: 2 });
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    const handle = await screen.findByRole("button", { name: "Move Bug, position 1 of 2" });
+
+    expect(screen.getByText("Default")).toBeTruthy();
+
+    fireEvent.keyDown(handle, { key: "ArrowDown" });
+
+    await waitFor(() => expect(server.reorder).toHaveBeenCalledWith(ROOM, [2, 1]));
+    expect(await screen.findByRole("button", { name: "Move Bug, position 2 of 2" })).toBeTruthy();
+    expect(screen.getByText("Bug moved to position 2 of 2.")).toBeTruthy();
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Move Bug, position 2 of 2" }), {
+      key: "End",
+    });
+    expect(server.reorder).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a tag on Enter and checks the name before asking", async () => {
+    const server = installCatalog({ tags: [bug], tagsRequired: false, defaultBoardTagId: null });
+    const user = userEvent.setup();
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    const name = await screen.findByLabelText("New tag");
+
+    await user.type(name, "bug{Enter}");
+
+    expect(await screen.findByText("“Bug” is already a tag here.")).toBeTruthy();
+    expect(server.create).not.toHaveBeenCalled();
+
+    await user.clear(name);
+    await user.type(name, "  Shipped {Enter}");
+
+    await waitFor(() =>
+      expect(server.create).toHaveBeenCalledWith(ROOM, { name: "Shipped", emoji: null }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Move Shipped, position 2 of 2" }),
+    ).toBeTruthy();
+    expect(screen.getByText("2 of 20")).toBeTruthy();
+  });
+
+  it("says what a delete does and lifts a requirement the last tag held up", async () => {
+    const server = installCatalog({ tags: [bug], tagsRequired: true, defaultBoardTagId: 1 });
+    const user = userEvent.setup();
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    await user.click(await screen.findByRole("button", { name: "Bug options" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Delete/ }));
+
+    const confirm = await screen.findByRole("alertdialog", { name: "Delete “Bug”?" });
+
+    expect(within(confirm).getByText("Every post that has it loses it.")).toBeTruthy();
+    expect(within(confirm).getByText("New posts stop starting with it.")).toBeTruthy();
+    expect(
+      within(confirm).getByText("It's the last tag, so new posts stop requiring one."),
+    ).toBeTruthy();
+
+    await user.click(within(confirm).getByRole("button", { name: "Delete tag" }));
+
+    await waitFor(() => expect(server.remove).toHaveBeenCalledWith(ROOM, 1));
+    expect(await screen.findByText("No tags yet. Add the first below.")).toBeTruthy();
+    // The server lifted the requirement in the delete itself; no second write can fail or race.
+    expect(screen.getByRole("switch", { name: /Require a tag/ }).getAttribute("aria-checked")).toBe(
+      "false",
+    );
+    expect(screen.queryByText("Saving…")).toBeNull();
+    expect(server.policy).not.toHaveBeenCalled();
+  });
+
+  it("sets the default and the requirement from the rules", async () => {
+    const server = installCatalog({
+      tags: [bug, idea],
+      tagsRequired: false,
+      defaultBoardTagId: null,
+    });
+
+    const user = userEvent.setup();
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    await user.selectOptions(await screen.findByLabelText("Start new posts with"), "2");
+    await waitFor(() =>
+      expect(server.policy).toHaveBeenLastCalledWith(ROOM, {
+        tagsRequired: false,
+        defaultBoardTagId: 2,
+      }),
+    );
+
+    await user.click(screen.getByRole("switch", { name: /Require a tag on new posts/ }));
+    await waitFor(() =>
+      expect(server.policy).toHaveBeenLastCalledWith(ROOM, {
+        tagsRequired: true,
+        defaultBoardTagId: 2,
+      }),
+    );
+  });
+
+  it("builds each queued rule change on the answer to the one before it", async () => {
+    const server = installCatalog({
+      tags: [bug, idea],
+      tagsRequired: false,
+      defaultBoardTagId: null,
+    });
+
+    const first = Promise.withResolvers<void>();
+    const answer = server.policy.getMockImplementation();
+
+    server.policy.mockImplementationOnce(async (roomId, body) => {
+      await first.promise;
+
+      if (answer === undefined) throw new Error("no answer");
+
+      return answer(roomId, body);
+    });
+
+    const user = userEvent.setup();
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    await user.selectOptions(await screen.findByLabelText("Start new posts with"), "2");
+    // Shown at once, while the server hasn't answered.
+    expect(screen.getByLabelText<HTMLSelectElement>("Start new posts with").value).toBe("2");
+    await user.click(screen.getByRole("switch", { name: /Require a tag on new posts/ }));
+    expect(server.policy).toHaveBeenCalledTimes(1);
+
+    first.resolve();
+
+    await waitFor(() => expect(server.policy).toHaveBeenCalledTimes(2));
+    expect(server.policy).toHaveBeenLastCalledWith(ROOM, {
+      tagsRequired: true,
+      defaultBoardTagId: 2,
+    });
+    await waitFor(() => expect(screen.queryByText("Saving…")).toBeNull());
+    expect(screen.getByLabelText<HTMLSelectElement>("Start new posts with").value).toBe("2");
+    expect(screen.getByRole("switch", { name: /Require a tag/ }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+  });
+
+  it("bases a queued change on a catalog newer than a slow answer ahead of it", async () => {
+    const server = installCatalog({
+      tags: [bug, idea],
+      tagsRequired: false,
+      defaultBoardTagId: null,
+    });
+
+    const slow = Promise.withResolvers<void>();
+
+    server.reorder.mockImplementationOnce(async (_, ids) => {
+      // The server saves the order at once; only its answer is slow to arrive.
+      const asked = server.ticket();
+      const answer = server.save(reordered(server.current(), ids));
+
+      await slow.promise;
+
+      return server.deliver(asked, answer);
+    });
+
+    const user = userEvent.setup();
+
+    render(<BoardTagEditor roomId={ROOM} />);
+
+    fireEvent.keyDown(await screen.findByRole("button", { name: "Move Bug, position 1 of 2" }), {
+      key: "ArrowDown",
+    });
+    await user.click(screen.getByRole("switch", { name: /Require a tag on new posts/ }));
+    expect(server.policy).not.toHaveBeenCalled();
+
+    // Someone else makes Idea the default, and the refetch that follows lands first.
+    server.save({ ...server.current(), defaultBoardTagId: 2 });
+    await act(() => actions.boards.tagCatalog(ROOM));
+
+    slow.resolve();
+
+    await waitFor(() => expect(server.policy).toHaveBeenCalledTimes(1));
+    expect(server.policy).toHaveBeenCalledWith(ROOM, { tagsRequired: true, defaultBoardTagId: 2 });
+    await waitFor(() => expect(screen.queryByText("Saving…")).toBeNull());
+    expect(screen.getByLabelText<HTMLSelectElement>("Start new posts with").value).toBe("2");
+  });
+});

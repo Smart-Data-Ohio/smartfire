@@ -13,6 +13,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { isPaneShowing } from "../panes/pane-selection.ts";
 import { PaneError } from "../panes/pane-states.tsx";
 import { usePaneNavigation, useRightPaneView } from "../panes/use-right-pane.ts";
+import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import {
   type BoardQuery,
   boardQuery,
@@ -22,8 +23,9 @@ import {
   WORK_STATUSES,
 } from "./board-format.ts";
 import { PostCard, PostRow } from "./board-rows.tsx";
-import { BoardToolbar } from "./board-toolbar.tsx";
+import { BoardTagStrip, BoardToolbar } from "./board-toolbar.tsx";
 import { NewPostDialog } from "./new-post-dialog.tsx";
+import { useBoardTagCatalog } from "./use-board-tags.ts";
 import { useLiveFlip } from "./use-live-flip.ts";
 import "./boards.css";
 
@@ -284,6 +286,7 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
   const ownerOptions = useStore((state) => state.boards[roomId]?.ownerOptions ?? NONE);
   const tagCounts = useStore((state) => state.boards[roomId]?.tagCounts ?? NONE);
   const canAdminister = useStore((state) => state.boards[roomId]?.canAdminister ?? false);
+  const catalog = useBoardTagCatalog(roomId)?.tags ?? NONE;
   const panes = usePaneNavigation(roomId);
   const composing = pathname.endsWith("/posts/new");
 
@@ -333,7 +336,17 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
         canAdminister={canAdminister}
         automationsOpen={isPaneShowing(panes.view, "automations")}
         onAutomations={() => panes.toggle("automations")}
+        catalog={catalog}
+        onManageTags={() =>
+          void navigate({
+            to: "/r/$roomId/settings",
+            params: { roomId },
+            search: boardSearch(query),
+            state: settingsOverState(roomId, "tags"),
+          })
+        }
       />
+      <BoardTagStrip catalog={catalog} active={query.tag} onChange={(tag) => change({ tag })} />
       {status === "error" ? (
         <PaneError
           message={error ?? "This board couldn't be loaded."}

@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { BoardPostForm } from "../../gen/BoardPostForm.ts";
+import type { BoardTag } from "../../gen/BoardTag.ts";
+import type { BoardTagCatalog } from "../../gen/BoardTagCatalog.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { useStore } from "../../store/store.ts";
@@ -18,13 +20,21 @@ import {
   useAttachments,
 } from "../composer/attachments/use-attachments.ts";
 import { isAgent } from "../people/people.ts";
+import { MAX_TAGS, parseTags, WORK_STATUS_LABEL, WORK_STATUSES } from "./board-format.ts";
+import { BoardTagPicker } from "./board-tag-picker.tsx";
 import {
-  MAX_TAGS,
-  parseTags,
-  tagsProblem,
-  WORK_STATUS_LABEL,
-  WORK_STATUSES,
-} from "./board-format.ts";
+  addedDefault,
+  catalogTag,
+  defaultTag,
+  EMPTY_CATALOG,
+  initialSelection,
+  keptSelection,
+  postTagNames,
+  postTagsProblem,
+  REQUIRED_TAG_MESSAGE,
+  toggleSelection,
+} from "./board-tags.ts";
+import { useBoardTagCatalog } from "./use-board-tags.ts";
 
 type Fields = Readonly<Record<string, readonly string[]>>;
 
@@ -37,14 +47,28 @@ const FIELD_LABEL = new Map([
   ["tags", "Tags"],
 ]);
 
-/** The server's messages ("can't be blank") as sentences under their field ("Title can't be blank."). */
+/** The server's refusal of a post without a curated tag on a board that requires one. */
+const MISSING_CATALOG_TAG = "must include a catalog tag";
+
+/**
+ * The server's messages ("can't be blank") as sentences under their field ("Title can't be
+ * blank."). A missing required tag goes under the board's tag chips, in the form's own words.
+ */
 function sentences(fields: Fields): Fields {
-  return Object.fromEntries(
-    Object.entries(fields).map(([field, messages]) => [
-      field,
-      messages.map((message) => `${FIELD_LABEL.get(field) ?? "This"} ${message}.`),
-    ]),
-  );
+  const named: [string, readonly string[]][] = [];
+
+  for (const [field, messages] of Object.entries(fields)) {
+    const missing = field === "tags" && messages.includes(MISSING_CATALOG_TAG);
+    const rest = missing ? messages.filter((message) => message !== MISSING_CATALOG_TAG) : messages;
+
+    if (missing) named.push(["catalog", [REQUIRED_TAG_MESSAGE]]);
+
+    if (rest.length > 0) {
+      named.push([field, rest.map((message) => `${FIELD_LABEL.get(field) ?? "This"} ${message}.`)]);
+    }
+  }
+
+  return Object.fromEntries(named);
 }
 
 function fieldMessage(fields: Fields, field: string): string | undefined {
@@ -53,10 +77,17 @@ function fieldMessage(fields: Fields, field: string): string | undefined {
   return messages.length === 0 ? undefined : messages.join(" ");
 }
 
-/** What the form can tell before asking the server: a missing or long title, bad tags. */
-function localProblems(name: string, tags: readonly string[]): Fields {
+/**
+ * What the form can tell before asking the server: a missing or long title, a required board
+ * tag left out, too many tags or a bad free-text one.
+ */
+function localProblems(
+  name: string,
+  catalog: Omit<BoardTagCatalog, "roomId">,
+  tags: readonly string[],
+): Fields {
   const found: [string, readonly string[]][] = [];
-  const tagProblem = tagsProblem(tags);
+  const tagProblem = postTagsProblem(catalog, tags);
 
   if (name === "") {
     found.push(["name", ["Give the post a title."]]);
@@ -65,7 +96,7 @@ function localProblems(name: string, tags: readonly string[]): Fields {
   }
 
   if (tagProblem !== undefined) {
-    found.push(["tags", [tagProblem]]);
+    found.push([tagProblem.field, [tagProblem.message]]);
   }
 
   return Object.fromEntries(found);
@@ -145,15 +176,23 @@ function OwnerSelect({
 function TagSuggestions({
   suggestions,
   chosen,
+  total,
+  catalog,
   onAdd,
 }: {
   readonly suggestions: readonly string[];
   readonly chosen: readonly string[];
+  /** Every tag the post would get, curated ones included: five is the most. */
+  readonly total: number;
+  /** The board's curated tags have their own chips, so they aren't suggested here. */
+  readonly catalog: readonly BoardTag[];
   readonly onAdd: (tag: string) => void;
 }) {
-  const left = suggestions.filter((tag) => !chosen.includes(tag));
+  const left = suggestions.filter(
+    (tag) => !chosen.includes(tag) && catalogTag(catalog, tag) === undefined,
+  );
 
-  if (left.length === 0 || chosen.length >= MAX_TAGS) {
+  if (left.length === 0 || total >= MAX_TAGS) {
     return null;
   }
 
@@ -180,11 +219,18 @@ interface NewPostDialogProps {
 /**
  * "New post" (classic `channel_threads#new` on a board): a title, an optional Markdown brief that
  * becomes the first message, the status (Planned by default), an owner (Unassigned by default)
- * and up to five tags. Creating it opens the post in the right pane.
+ * and up to five tags: the board's curated ones as chips (its default picked to start, at least
+ * one needed when the board requires it), then free-text ones as before. The chips follow the
+ * catalog live. Creating it opens the post in the right pane.
  */
 export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialogProps) {
   const roomName = useStore((state) => state.rooms[roomId]?.detail?.displayName ?? null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  // The picked curated tags; `null` until the viewer touches a chip, so the default (which may
+  // arrive or change while the dialog is open) stays picked until then.
+  const [picked, setPicked] = useState<readonly number[] | null>(null);
+  const catalog = useBoardTagCatalog(roomId) ?? EMPTY_CATALOG;
+  const firstChipRef = useRef<HTMLButtonElement | null>(null);
   const [form, setForm] = useState<BoardPostForm | null>(null);
   const [fields, setFields] = useState<Fields>(NO_FIELDS);
   const [attempt, setAttempt] = useState(0);
@@ -212,6 +258,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
     clientIdRef.current = uuid7(Date.now());
     savingRef.current = false;
     setSaving(false);
+    setPicked(null);
 
     // Unmounting ends the opening too: the room pane is keyed by room, so a room change unmounts.
     return () => {
@@ -249,7 +296,10 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   }, [open, roomId]);
 
   const set = (patch: Partial<Draft>) => setDraft((previous) => ({ ...previous, ...patch }));
-  const tags = parseTags(draft.tags);
+  const freeTags = parseTags(draft.tags);
+  const startSelection = initialSelection(catalog);
+  const selection = picked === null ? startSelection : keptSelection(picked, catalog.tags);
+  const tags = postTagNames(catalog.tags, selection, freeTags);
 
   const dirty =
     draft.name !== EMPTY.name ||
@@ -257,6 +307,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
     draft.status !== EMPTY.status ||
     draft.ownerId !== EMPTY.ownerId ||
     draft.tags !== EMPTY.tags ||
+    selection.join(",") !== startSelection.join(",") ||
     attachments.files.length > 0;
 
   const fail = (next: Fields) => {
@@ -283,10 +334,15 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
     }
 
     const name = draft.name.trim();
-    const problems = localProblems(name, tags);
+    const problems = localProblems(name, catalog, tags);
 
     if (Object.keys(problems).length > 0) {
       fail(problems);
+
+      // A missing required tag is the one problem the title's autofocus doesn't point at.
+      if (problems.name === undefined && problems.catalog !== undefined) {
+        firstChipRef.current?.focus();
+      }
 
       return;
     }
@@ -329,6 +385,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
 
           attachments.clearSent(files);
           setDraft(EMPTY);
+          setPicked(null);
           setFields(NO_FIELDS);
           onCreated(detail.thread.id);
         },
@@ -466,9 +523,29 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
             onChange={(ownerId) => set({ ownerId })}
           />
         </div>
+        {catalog.tags.length > 0 ? (
+          <BoardTagPicker
+            tags={catalog.tags}
+            selected={selection}
+            required={catalog.tagsRequired}
+            defaultName={defaultTag(catalog)?.name}
+            added={addedDefault(catalog, tags)?.name}
+            error={fieldMessage(fields, "catalog")}
+            attempt={attempt}
+            firstRef={firstChipRef}
+            onToggle={(id) => {
+              setPicked(toggleSelection(selection, id, catalog.tags));
+              setFields((current) => {
+                const { catalog: _cleared, ...rest } = current;
+
+                return rest;
+              });
+            }}
+          />
+        ) : null}
         <TextField
-          label="Tags"
-          hint={`Optional. Up to ${MAX_TAGS}, separated by commas.`}
+          label={catalog.tags.length > 0 ? "More tags" : "Tags"}
+          hint={`Optional. Up to ${MAX_TAGS} in all, separated by commas.`}
           placeholder="bug, api"
           value={draft.tags}
           error={fieldMessage(fields, "tags")}
@@ -477,8 +554,10 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
         />
         <TagSuggestions
           suggestions={form?.tagSuggestions ?? []}
-          chosen={tags}
-          onAdd={(tag) => set({ tags: [...tags, tag].join(", ") })}
+          chosen={freeTags}
+          total={tags.length}
+          catalog={catalog.tags}
+          onAdd={(tag) => set({ tags: [...freeTags, tag].join(", ") })}
         />
       </form>
     </Dialog>
