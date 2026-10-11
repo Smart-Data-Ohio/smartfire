@@ -9,7 +9,7 @@ async fn before(c: &mut Ctx, sudo: bool) -> Result<User> {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     if sudo {
-        concerns::require_sudo_mode(c)?;
+        concerns::require_sudo_mode(c).await?;
     }
     Ok(concerns::require_current_user(c)?.clone())
 }

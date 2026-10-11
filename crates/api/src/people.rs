@@ -179,7 +179,7 @@ async fn destroy_ban(c: &mut Ctx) -> Result {
 async fn change_ban(c: &mut Ctx, banned: bool) -> Result {
     let viewer = admin::administrator(c).await?;
     let user = find_user(c, "id").await?;
-    admin::require_sudo(c)?;
+    admin::require_sudo(c).await?;
     let id = user.id;
     // Classic has no server-side self, bot or deactivated guard; keep the same write path.
     bans::set_banned(c, user, banned).await?;

@@ -9,7 +9,7 @@ use crate::concerns::{self, Before};
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let mut account = super::current_account(c).await?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
     let account = c.app().db.write(move |tx| {

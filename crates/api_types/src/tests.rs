@@ -299,8 +299,12 @@ fn api_errors_are_tagged_unions_under_error() {
         (
             ApiError::SudoRequired {
                 message: "Confirm your password".into(),
+                reauthentication: SudoState {
+                    methods: vec![SudoMethod::Password],
+                    retry: None,
+                },
             },
-            json!({"_tag": "SudoRequired", "message": "Confirm your password"}),
+            json!({"_tag": "SudoRequired", "message": "Confirm your password", "reauthentication":{"methods":["password"],"retry":null}}),
             403,
         ),
         (

@@ -21,7 +21,7 @@ use serde_json::json;
 
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    concerns::require_sudo_mode(c)?;
+    concerns::require_sudo_mode(c).await?;
     let user = require_current_user(c)?.clone();
     let token = c.param_str("access_token").unwrap_or("").to_owned();
     match connect_token(c, user, &token).await? {
@@ -75,7 +75,7 @@ pub async fn connect_token(
 
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    concerns::require_sudo_mode(c)?;
+    concerns::require_sudo_mode(c).await?;
     let user = require_current_user(c)?.clone();
     let notice = disconnect_user(c, user).await?;
     redirect(c, true, &notice)

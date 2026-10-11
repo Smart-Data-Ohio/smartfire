@@ -642,7 +642,7 @@ async fn sudo_uploaded_files_are_never_stashed_or_staged_before_confirmation() {
 
 async fn gated_probe(c: &mut Ctx) -> Result {
     crate::concerns::before_actions(c, crate::concerns::Before::default()).await?;
-    crate::concerns::sudo::require_sudo_mode(c)?;
+    crate::concerns::sudo::require_sudo_mode(c).await?;
     Ok(c.html("confirmed"))
 }
 

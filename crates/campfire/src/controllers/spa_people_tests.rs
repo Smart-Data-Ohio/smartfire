@@ -309,7 +309,12 @@ async fn ban_refusals_keep_classic_order_and_change_nothing() {
             )
             .await;
             assert_eq!(reply.status, status, "{}", reply.text());
-            assert_eq!(error(&reply), json!({"_tag": tag, "message": message}));
+            let expected = if tag == "SudoRequired" {
+                json!({"_tag":tag,"message":message,"reauthentication":{"methods":["password","totp"],"retry":{"method":method.as_str(),"path":format!("/api/v1/people/{id}/ban"),"returnTo":"/app/"}}})
+            } else {
+                json!({"_tag":tag,"message":message})
+            };
+            assert_eq!(error(&reply), expected);
             assert_eq!(dump(&a).await, before);
             assert!(settle(&capture).await.is_empty());
         }

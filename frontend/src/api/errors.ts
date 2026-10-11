@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import type { ApiError as GeneratedApiError } from "../gen/ApiError.ts";
 import type { ApiErrorResponse as GeneratedApiErrorResponse } from "../gen/ApiErrorResponse.ts";
 import type { Assert, Pinned } from "./schema/pin.ts";
+import { SudoState } from "./schema/sudo.ts";
 
 /** 401: not signed in, or the session ended. The app sends the person to sign in. */
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()("Unauthorized", {
@@ -13,9 +14,10 @@ export class Forbidden extends Schema.TaggedError<Forbidden>()("Forbidden", {
   message: Schema.String,
 }) {}
 
-/** 403: the action needs a fresh password confirmation (`/sudo/new`). */
+/** 403: confirm one of the available credentials, then retry the pending write. */
 export class SudoRequired extends Schema.TaggedError<SudoRequired>()("SudoRequired", {
   message: Schema.String,
+  reauthentication: SudoState,
 }) {}
 
 /** 403: two-factor setup or verification comes first. */
