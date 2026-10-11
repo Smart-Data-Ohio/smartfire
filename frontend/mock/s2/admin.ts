@@ -104,6 +104,9 @@ const VALIDATION: ApiError["_tag"] = "Validation";
 
 const SUDO_REQUIRED = "SudoRequired" satisfies ApiError["_tag"];
 
+/** The mock's one signed-in session, as the sudo replies name it. */
+const SESSION = 1;
+
 /** The classic page's refusal, a 422 naming no field. */
 const refusal = (message: string): HttpError =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
@@ -248,7 +251,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
   const sudoReady = (status = 200) =>
     sudoReply(
-      { kind: "ready", reauthentication: { methods: [...sudoMethods], retry: pendingRetry } },
+      {
+        kind: "ready",
+        reauthentication: { methods: [...sudoMethods], retry: pendingRetry },
+        session: SESSION,
+      },
       status,
     );
 
@@ -275,7 +282,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     sudoLapsed = false;
 
-    return sudoReply({ kind: "confirmed", retry: consumeRetry() });
+    return sudoReply({ kind: "confirmed", retry: consumeRetry(), session: SESSION });
   };
 
   /**
@@ -297,7 +304,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       googleAttempt = attempt === null ? null : { id: attempt, retry: consumeRetry() };
     }
 
-    return sudoReply({ kind: "navigate", location: "/app/sudo/continue" });
+    return sudoReply({ kind: "navigate", location: "/app/sudo/continue", session: SESSION });
   };
 
   /** `GET /sudo/continue`: names the attempt asked about while it's the one confirmed. */
@@ -305,10 +312,15 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     if (sudoLapsed) return sudoReady(403);
 
     if (attempt !== null && googleAttempt?.id === attempt) {
-      return sudoReply({ kind: "confirmed", retry: googleAttempt.retry, attempt });
+      return sudoReply({
+        kind: "confirmed",
+        retry: googleAttempt.retry,
+        attempt,
+        session: SESSION,
+      });
     }
 
-    return sudoReply({ kind: "confirmed", retry: consumeRetry() });
+    return sudoReply({ kind: "confirmed", retry: consumeRetry(), session: SESSION });
   };
 
   const current = (): State => {

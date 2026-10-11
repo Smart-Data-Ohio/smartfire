@@ -600,9 +600,17 @@ const confirmation = {
   cancel: (): void => confirmationGate.cancel(),
   /** The SPA moved to another screen: the writes the old one sent fail unsent. */
   screenChanged: (): void => confirmationGate.screenChanged(),
-  /** The Google return: replays the kept writes once the confirmation is fresh. */
-  resumeAfterGoogle: (): Promise<confirmationActions.GoogleReturn> =>
-    runAction(confirmationActions.resumeAfterGoogle(confirmationGate)),
+  /**
+   * The Google return: replays the kept writes once the server confirms their attempt. `send` is
+   * the person's "Send again" where this browser can't keep another tab from sending them too.
+   */
+  resumeAfterGoogle: (send = false): Promise<confirmationActions.GoogleReturn> =>
+    runAction(confirmationActions.resumeAfterGoogle(confirmationGate, { send })),
+  /** Confirms with Google again for the writes still kept; the caller leaves on `navigate`. */
+  confirmAgain: (): Promise<confirmationActions.GoogleStart> =>
+    runAction(confirmationActions.confirmAgain(confirmationGate)),
+  /** Gives up on the writes still kept. */
+  discardKept: (): void => confirmationActions.discardKept(confirmationGate),
 };
 
 export const actions = {

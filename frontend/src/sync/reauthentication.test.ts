@@ -9,6 +9,8 @@ import type { SudoMethod } from "../gen/SudoMethod.ts";
 import type { SudoRetry } from "../gen/SudoRetry.ts";
 import {
   type ConfirmationGate,
+  confirmAgain,
+  discardKept,
   KEPT_KEY,
   makeConfirmationGate,
   resumeAfterGoogle,
@@ -118,20 +120,23 @@ function copyOf(storage: Storage): Storage {
 function harness(
   answer: (seen: Seen, index: number) => Reply,
   hold: (seen: Seen) => Effect.Effect<void> = () => Effect.void,
+  // The page's own Web Locks (`navigator.locks`) unless the test gives the browser's.
+  lock: ((name: string) => Promise<(() => void) | null>) | "page" = browserLocks(),
 ) {
   const seen: Seen[] = [];
   const page: Page = { viewer: 7, now: 1_000_000, screen: "/app/admin/styles" };
-  const lock = browserLocks();
 
-  const gateOn = (storage: Storage) =>
-    makeConfirmationGate({
+  const gateOn = (storage: Storage) => {
+    const options = {
       storage: () => storage,
       shared: () => localStorage,
-      lock,
       viewer: () => page.viewer,
       now: () => page.now,
       screen: () => page.screen,
-    });
+    };
+
+    return makeConfirmationGate(lock === "page" ? options : { ...options, lock });
+  };
 
   const gate = gateOn(sessionStorage);
 
@@ -539,6 +544,8 @@ interface Server {
   pending: SudoRetry | null;
   /** The Google attempt it confirmed, with the pending request it took over. */
   attempt: { readonly id: string; readonly retry: SudoRetry | null } | null;
+  /** The signed-in session it names in its replies. */
+  session: number;
 }
 
 /**
@@ -558,12 +565,15 @@ function googleHarness({
   continuation = (_call, answer) => answer(),
   refuse = false,
   hold,
+  locks = "browser",
 }: {
   readonly continuation?: Continuation;
   readonly refuse?: boolean;
   readonly hold?: (seen: Seen) => Effect.Effect<void>;
+  /** Whose Web Locks the tabs use: a working browser's, or the page's own (`navigator.locks`). */
+  readonly locks?: "browser" | "page";
 } = {}) {
-  const server: Server = { fresh: false, pending: null, attempt: null };
+  const server: Server = { fresh: false, pending: null, attempt: null, session: 1 };
   let continues = 0;
 
   const answer = (entry: Seen): Reply => {
@@ -572,14 +582,23 @@ function googleHarness({
     if (!server.fresh) {
       return {
         status: 403,
-        body: { kind: "ready", reauthentication: required().reauthentication },
+        body: {
+          kind: "ready",
+          reauthentication: required().reauthentication,
+          session: server.session,
+        },
       };
     }
 
     if (asked !== null && server.attempt?.id === asked) {
       return {
         status: 200,
-        body: { kind: "confirmed", retry: server.attempt.retry, attempt: asked },
+        body: {
+          kind: "confirmed",
+          retry: server.attempt.retry,
+          attempt: asked,
+          session: server.session,
+        },
       };
     }
 
@@ -587,41 +606,48 @@ function googleHarness({
 
     server.pending = null;
 
-    return { status: 200, body: { kind: "confirmed", retry } };
+    return { status: 200, body: { kind: "confirmed", retry, session: server.session } };
   };
 
-  const built = harness((entry) => {
-    if (entry.path === "/api/v1/sudo/google") {
-      server.fresh = !refuse;
+  const built = harness(
+    (entry) => {
+      if (entry.path === "/api/v1/sudo/google") {
+        server.fresh = !refuse;
 
-      const { attempt } = decodeGoogleStart(entry.body || "{}");
+        const { attempt } = decodeGoogleStart(entry.body || "{}");
 
-      if (!refuse && attempt !== undefined) {
-        server.attempt = { id: attempt, retry: server.pending };
-        server.pending = null;
+        if (!refuse && attempt !== undefined) {
+          server.attempt = { id: attempt, retry: server.pending };
+          server.pending = null;
+        }
+
+        return {
+          status: 200,
+          body: { kind: "navigate", location: "https://accounts.test/o", session: server.session },
+        };
       }
 
-      return { status: 200, body: { kind: "navigate", location: "https://accounts.test/o" } };
-    }
+      if (entry.path === "/api/v1/sudo/continue" && entry.method === "DELETE") {
+        if (server.attempt?.id === entry.query.get("attempt")) server.attempt = null;
 
-    if (entry.path === "/api/v1/sudo/continue" && entry.method === "DELETE") {
-      if (server.attempt?.id === entry.query.get("attempt")) server.attempt = null;
+        return { status: 204, body: null };
+      }
 
-      return { status: 204, body: null };
-    }
+      if (entry.path === "/api/v1/sudo/continue") {
+        continues += 1;
 
-    if (entry.path === "/api/v1/sudo/continue") {
-      continues += 1;
+        return continuation(continues, () => answer(entry));
+      }
 
-      return continuation(continues, () => answer(entry));
-    }
+      if (server.fresh) return { status: 200, body: { saved: entry.path } };
 
-    if (server.fresh) return { status: 200, body: { saved: entry.path } };
+      server.pending = retryOf(entry);
 
-    server.pending = retryOf(entry);
-
-    return held(["password", "google"], entry);
-  }, hold);
+      return held(["password", "google"], entry);
+    },
+    hold,
+    locks === "browser" ? browserLocks() : "page",
+  );
 
   return { ...built, server };
 }
@@ -679,7 +705,9 @@ describe("the Google round trip", () => {
       expect(stored).not.toContain("ghp_secret");
       // Kept under the attempt the server was given when Google started.
       expect(JSON.parse(stored)).toEqual({
-        id: startedAttempt(seen),
+        id: expect.any(String),
+        attempt: startedAttempt(seen),
+        session: 1,
         user: 7,
         expiresAt: 1_000_000 + 10 * 60_000,
         next: 0,
@@ -698,6 +726,8 @@ describe("the Google round trip", () => {
         dropped: 1,
         abandoned: 0,
         elsewhere: 0,
+        held: null,
+        kept: 0,
         unreachable: null,
       });
       expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
@@ -728,7 +758,7 @@ describe("the Google round trip", () => {
     }).pipe(Effect.provide(layer));
   });
 
-  it.live("a continuation that names no attempt, or another, replays nothing and says so", () => {
+  it.live("a continuation that names no attempt, or another, keeps the writes unsent", () => {
     // The same pending request each time: only the attempt counts.
     const retry: SudoRetry = {
       method: "PATCH",
@@ -737,8 +767,8 @@ describe("the Google round trip", () => {
     };
 
     const bodies = [
-      { kind: "confirmed", retry },
-      { kind: "confirmed", retry, attempt: "someone-elses-attempt-0001" },
+      { kind: "confirmed", retry, session: 1 },
+      { kind: "confirmed", retry, attempt: "someone-elses-attempt-0001", session: 1 },
     ];
 
     return Effect.forEach(bodies, (body) => {
@@ -749,9 +779,11 @@ describe("the Google round trip", () => {
         expect(yield* resumeAfterGoogle(gate)).toMatchObject({
           confirmed: true,
           replayed: 0,
-          abandoned: 1,
+          abandoned: 0,
+          held: "confirm",
+          kept: 1,
         });
-        expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+        expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
         expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
       }).pipe(Effect.provide(layer));
     });
@@ -776,13 +808,14 @@ describe("the Google round trip", () => {
       server.pending = theirs;
       server.attempt = { id: "the-other-tabs-attempt-01", retry: theirs };
 
-      // This tab follows its continuation link.
+      // This tab follows its continuation link: nothing goes until it confirms for itself.
       expect(yield* resumeAfterGoogle(gate)).toMatchObject({
         confirmed: true,
         replayed: 0,
-        abandoned: 1,
+        held: "confirm",
+        kept: 1,
       });
-      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
       expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
       // The other tab's attempt is still there for it.
       expect(server.attempt?.id).toBe("the-other-tabs-attempt-01");
@@ -822,6 +855,7 @@ describe("the Google round trip", () => {
           // the new session never heard of this attempt.
           server.attempt = null;
           server.pending = null;
+          server.session = 2;
         }
 
         const resumed = yield* resumeAfterGoogle(gate);
@@ -837,6 +871,84 @@ describe("the Google round trip", () => {
           expect(writesTo(seen, "/admin/people/4")).toHaveLength(1);
         }
       }).pipe(Effect.provide(layer));
+    }),
+  );
+
+  it.live("a finished attempt lost to another tab's session write keeps the change", () => {
+    const { layer, seen, gate, server } = googleHarness();
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      // Another tab's slow 403 answered with the session as it was before Google: its cookie
+      // overwrote the finished attempt, and holds that tab's own pending request.
+      server.attempt = null;
+      server.pending = retryOf({
+        method: "PATCH",
+        path: "/api/v1/admin/people/4",
+        query: new URLSearchParams(),
+        body: "",
+      });
+
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 0,
+        abandoned: 0,
+        held: "confirm",
+        kept: 1,
+      });
+      expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+
+      // Confirm again: a new attempt, and the kept write goes under it, once.
+      expect((yield* confirmAgain(gate)).kind).toBe("navigate");
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 1,
+        held: null,
+        kept: 0,
+      });
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+      expect((yield* resumeAfterGoogle(gate)).replayed).toBe(0);
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("without Web Locks nothing replays until this tab is told to send it", () =>
+    Effect.forEach(["absent", "refused"], (locks) => {
+      const { layer, seen, gate } = googleHarness({ locks: "page" });
+
+      if (locks === "refused") {
+        Object.defineProperty(globalThis.navigator, "locks", {
+          configurable: true,
+          value: { request: () => Promise.reject(new Error("The lock can't be taken.")) },
+        });
+      }
+
+      return Effect.gen(function* () {
+        yield* leaveForGoogle(gate, [styles]);
+
+        expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+          confirmed: true,
+          replayed: 0,
+          held: "send",
+          kept: 1,
+        });
+        expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
+        expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+
+        // The person's "Send again" is this tab's claim.
+        expect(yield* resumeAfterGoogle(gate, { send: true })).toMatchObject({
+          replayed: 1,
+          held: null,
+        });
+        expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+        expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      }).pipe(
+        Effect.provide(layer),
+        Effect.ensuring(Effect.sync(() => Reflect.deleteProperty(globalThis.navigator, "locks"))),
+      );
     }),
   );
 
@@ -993,7 +1105,7 @@ describe("the Google round trip", () => {
     }).pipe(Effect.provide(layer));
   });
 
-  it.live("a refused Google return replays nothing and forgets the writes", () => {
+  it.live("a refused Google return keeps the writes and asks to confirm again", () => {
     const { layer, seen, gate } = googleHarness({ refuse: true });
 
     return Effect.gen(function* () {
@@ -1005,12 +1117,18 @@ describe("the Google round trip", () => {
         replayed: 0,
         failure: null,
         dropped: 0,
-        abandoned: 1,
+        abandoned: 0,
         elsewhere: 0,
+        held: "confirm",
+        kept: 1,
         unreachable: null,
       });
-      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
       expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+
+      // The person gives up on it.
+      discardKept(gate);
+      expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
     }).pipe(Effect.provide(layer));
   });
 

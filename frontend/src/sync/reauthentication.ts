@@ -11,11 +11,14 @@
  * under that attempt, bound to the person who chose Google and a time limit. The SPA's
  * `/app/sudo/continue` replays them only when the server says it confirmed exactly that attempt,
  * for that same person, in time; the server reads that answer again for the attempt until the page
- * acknowledges it, so a lost answer or an interrupted replay can ask again. Any other answer drops
- * them, and the page says the change wasn't sent. A duplicated tab carries a copy of the hand-off,
- * so the tabs of this browser replay an attempt one at a time (a Web Lock) and mark each write in
- * local storage as it goes: a write marked by one tab is never sent by another. The rest fail with their `SudoRequired` before
- * the page goes, so their forms can keep what isn't secret.
+ * acknowledges it, so a lost answer or an interrupted replay can ask again. Any other answer keeps
+ * them unsent and asks the person to confirm again (a new attempt; a concurrent cookie write can
+ * erase a finished one); they go only when the person discards them, another person or session
+ * signs in, or they run out of time. A duplicated tab carries a copy of the hand-off, so the tabs
+ * of this browser replay an attempt one at a time (a Web Lock) and mark each write in local
+ * storage as it goes: a write marked by one tab is never sent by another. Where the lock can't be
+ * held, nothing replays on its own: the person's "Send again" in one tab is the claim. The rest
+ * fail with their `SudoRequired` before the page goes, so their forms can keep what isn't secret.
  */
 import { Effect, Layer, Option, Schema } from "effect";
 import { ApiClient, type ApiRequest } from "../api/client.ts";
@@ -46,11 +49,15 @@ const KeptWrite = Schema.Struct({
 
 /** What the page keeps across one Google round trip. */
 const Handoff = Schema.Struct({
-  /**
-   * The attempt Google was started with: the writes go only when the server says it confirmed
-   * this attempt, which it does only in the session that started it.
-   */
+  /** The batch: its writes' marks across tabs and its lock are by this id. */
   id: Schema.String,
+  /**
+   * The latest attempt Google was started with: the writes go only when the server says it
+   * confirmed this attempt, which it does only in the session that started it.
+   */
+  attempt: Schema.String,
+  /** The signed-in session that started it: in any other, the writes are dropped. */
+  session: Schema.NullOr(Schema.Number),
   /** Who chose Google: nobody else's continuation replays these writes. */
   user: Schema.Number,
   /** When (ms since the epoch) the writes stop being worth sending. */
@@ -142,18 +149,18 @@ function localStore(): Storage | null {
 }
 
 /**
- * Holds the browser's Web Lock `name` until the returned release runs; at once where the browser
- * has no Web Locks (the local storage marks still keep a write from going twice).
+ * Holds the browser's Web Lock `name` until the returned release runs; `null` where the browser
+ * has no Web Locks or won't grant this one, so nothing replays on its own.
  */
-function webLock(name: string): Promise<() => void> {
+function webLock(name: string): Promise<(() => void) | null> {
   if (!("locks" in globalThis.navigator)) {
-    return Promise.resolve(() => undefined);
+    return Promise.resolve(null);
   }
 
   return new Promise((acquired) => {
     globalThis.navigator.locks
       .request(name, () => new Promise<void>((release) => acquired(() => release())))
-      .catch(() => acquired(() => undefined));
+      .catch(() => acquired(null));
   });
 }
 
@@ -168,8 +175,8 @@ export interface GateOptions {
   readonly storage?: () => Storage | null;
   /** Where every tab marks the writes it replayed. */
   readonly shared?: () => Storage | null;
-  /** Takes a lock every tab of this browser shares; resolves with its release. */
-  readonly lock?: (name: string) => Promise<() => void>;
+  /** Takes a lock every tab of this browser shares; resolves with its release, or `null`. */
+  readonly lock?: (name: string) => Promise<(() => void) | null>;
   /** The signed-in person's id; `null` before the boot names them. */
   readonly viewer?: () => number | null;
   readonly now?: () => number;
@@ -342,8 +349,11 @@ export function makeConfirmationGate({
   return {
     layer,
 
-    /** Holds this browser's lock on attempt `id`'s replay; resolves with its release. */
-    exclusive: (id: string): Promise<() => void> => lock(`smartfire:confirmation:${id}`),
+    /**
+     * Holds this browser's lock on batch `id`'s replay; resolves with its release, or `null`
+     * where it can't be held.
+     */
+    exclusive: (id: string): Promise<(() => void) | null> => lock(`smartfire:confirmation:${id}`),
 
     /**
      * Marks write `index` of attempt `id` as sent, for every tab: `"claimed"` when this tab may
@@ -371,6 +381,24 @@ export function makeConfirmationGate({
         return "claimed";
       } catch {
         return "unavailable";
+      }
+    },
+
+    /** Whether writes can be marked as sent for every tab. */
+    canMark(): boolean {
+      try {
+        const store = shared();
+
+        if (store === null) {
+          return false;
+        }
+
+        store.setItem(`${SENT_PREFIX}probe`, "");
+        store.removeItem(`${SENT_PREFIX}probe`);
+
+        return true;
+      } catch {
+        return false;
       }
     },
 
@@ -427,19 +455,22 @@ export function makeConfirmationGate({
     newAttempt: (): string => newId(),
 
     /**
-     * The page is leaving to confirm Google `attempt`, from `returnTo`. Keeps the writes that carry
-     * no credential as a hand-off under the attempt (they stay waiting until the page goes); the
+     * The page is leaving to confirm Google `attempt`, from `returnTo`, in signed-in `session`.
+     * Keeps the writes that carry no credential as a hand-off under the attempt (they stay
+     * waiting until the page goes); the
      * others fail with their `SudoRequired` now. Without a person to bind the hand-off to, or
      * storage to keep it in, nothing is kept and every write fails so.
      */
-    leave(returnTo: string, attempt: string): void {
+    leave(returnTo: string, attempt: string, session: number | null): void {
       const keep = waiting.filter((entry) => entry.request.secret !== true);
       const user = viewer();
 
       const stored =
         user !== null &&
         writeHandoff({
-          id: attempt,
+          id: newId(),
+          attempt,
+          session,
           user,
           expiresAt: now() + HANDOFF_TTL_MS,
           next: 0,
@@ -501,6 +532,18 @@ export function makeConfirmationGate({
       return { write: next, index: handoff.next };
     },
 
+    /**
+     * The kept writes are going with Google `attempt` now: the hand-off moves to it, with a fresh
+     * time limit. Whether there was one to move.
+     */
+    rekey(attempt: string): boolean {
+      const handoff = readHandoff();
+
+      return (
+        handoff !== null && writeHandoff({ ...handoff, attempt, expiresAt: now() + HANDOFF_TTL_MS })
+      );
+    },
+
     /** Forgets any hand-off. */
     forget(): void {
       writeHandoff(null);
@@ -554,7 +597,7 @@ export const startGoogle = Effect.fn("confirmation.startGoogle")(function* (
   const reply = yield* startSudoGoogle(attempt);
 
   if (reply.kind === "navigate") {
-    gate.leave(returnTo, attempt);
+    gate.leave(returnTo, attempt, reply.session ?? null);
 
     return { kind: "navigate", location: reply.location } satisfies GoogleStart;
   }
@@ -564,6 +607,31 @@ export const startGoogle = Effect.fn("confirmation.startGoogle")(function* (
     message: reply.kind === "error" ? reply.message : "Google confirmation didn't start.",
   } satisfies GoogleStart;
 });
+
+/**
+ * Confirms with Google again for the writes the continue page still keeps, under a new attempt.
+ * On `navigate` the caller leaves for `location`; the continue page replays them on its return.
+ */
+export const confirmAgain = Effect.fn("confirmation.confirmAgain")(function* (
+  gate: ConfirmationGate,
+) {
+  const attempt = gate.newAttempt();
+  const reply = yield* startSudoGoogle(attempt);
+
+  if (reply.kind === "navigate" && gate.rekey(attempt)) {
+    return { kind: "navigate", location: reply.location } satisfies GoogleStart;
+  }
+
+  return {
+    kind: "error",
+    message: reply.kind === "error" ? reply.message : "Google confirmation didn't start.",
+  } satisfies GoogleStart;
+});
+
+/** The person gives up on the writes the continue page keeps. */
+export function discardKept(gate: ConfirmationGate): void {
+  gate.forget();
+}
 
 /** What the Google return came to, for the continue page to say and where it goes next. */
 export interface GoogleReturn {
@@ -585,6 +653,14 @@ export interface GoogleReturn {
   /** Kept writes another tab of this browser already sent (a duplicated tab's copy). */
   readonly elsewhere: number;
   /**
+   * Why `kept` writes wait, unsent: `"confirm"` when the server didn't confirm their attempt (ask
+   * the person to confirm again), `"send"` when it did but this browser can't make sure only one
+   * tab sends them (ask the person to send them from here); `null` when none wait.
+   */
+  readonly held: "confirm" | "send" | null;
+  /** How many writes wait while `held`. */
+  readonly kept: number;
+  /**
    * Why the server couldn't say whether the confirmation is fresh (it was unreachable, say). The
    * kept writes are all still kept: try again.
    */
@@ -599,23 +675,30 @@ const anyJson = (json: Schema.Json) => Effect.succeed(json);
  * acknowledges the attempt. Each write leaves storage as its replay begins, so a reload never
  * sends one twice and the rest go after it (the server answers for the attempt again until it is
  * acknowledged); a status read that fails keeps them all for another try. Tabs of this browser
- * replay an attempt one at a time, and a write another tab sent is skipped (`elsewhere`). Any
- * other answer drops them, counted in `abandoned`.
+ * replay a batch one at a time, and a write another tab sent is skipped (`elsewhere`); where that
+ * can't be made sure of, the writes wait for the person's `send`. Any other answer keeps them for
+ * the person to confirm again, unless the session changed (`abandoned`).
  */
 export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(function* (
   gate: ConfirmationGate,
+  { send = false }: { readonly send?: boolean } = {},
 ) {
   const { handoff, expired } = gate.handoff();
 
   if (handoff === null) {
-    return yield* resume(gate, null, expired);
+    return yield* resume(gate, null, expired, { exclusive: false, send: false });
   }
 
   return yield* Effect.acquireUseRelease(
     Effect.promise(() => gate.exclusive(handoff.id)),
-    // Re-read under the lock: this tab's hand-off as it is now.
-    () => resume(gate, gate.handoff().handoff, expired),
-    (release) => Effect.sync(release),
+    // Re-read under the lock: this tab's hand-off as it is now. The person's "Send again" is
+    // this tab's claim where the lock can't be held.
+    (release) =>
+      resume(gate, gate.handoff().handoff, expired, {
+        exclusive: release !== null && gate.canMark(),
+        send,
+      }),
+    (release) => Effect.sync(() => release?.()),
   );
 });
 
@@ -623,10 +706,18 @@ const resume = Effect.fnUntraced(function* (
   gate: ConfirmationGate,
   handoff: Handoff | null,
   expired: number,
+  {
+    exclusive,
+    send,
+  }: {
+    /** Whether only this tab replays the batch: the lock is held and writes can be marked. */
+    readonly exclusive: boolean;
+    /** The person asked this tab to send them. */
+    readonly send: boolean;
+  },
 ) {
   const returnTo = spaReturnPath(handoff?.returnTo ?? null);
   const dropped = handoff?.dropped ?? 0;
-  const kept = handoff?.writes.length ?? 0;
 
   const outcome = {
     returnTo,
@@ -635,9 +726,12 @@ const resume = Effect.fnUntraced(function* (
     dropped,
     abandoned: expired,
     elsewhere: 0,
-  };
+    held: null,
+    kept: 0,
+    unreachable: null,
+  } satisfies Omit<GoogleReturn, "confirmed">;
 
-  const status = yield* resumeSudo(handoff?.id ?? null).pipe(
+  const status = yield* resumeSudo(handoff?.attempt ?? null).pipe(
     Effect.match({
       onSuccess: (answer) => ({ answer, unreachable: null }),
       onFailure: (error) => ({ answer: null, unreachable: error.message }),
@@ -649,41 +743,65 @@ const resume = Effect.fnUntraced(function* (
   }
 
   const reply = status.answer;
-  // Writes another tab already sent aren't lost, whatever this answer says.
-  const sentElsewhere = handoff === null ? 0 : gate.sentElsewhere(handoff);
+  const confirmed = reply.kind === "confirmed";
 
-  if (reply.kind !== "confirmed") {
-    gate.forget();
+  if (confirmed) {
+    gate.noteConfirmed();
+  }
 
+  if (handoff === null) {
     return {
       ...outcome,
-      confirmed: false,
-      abandoned: expired + kept - sentElsewhere,
-      elsewhere: sentElsewhere,
-      unreachable: null,
+      confirmed,
+      returnTo:
+        reply.kind === "confirmed" && reply.retry !== null
+          ? spaReturnPath(reply.retry.returnTo)
+          : returnTo,
     } satisfies GoogleReturn;
   }
 
-  gate.noteConfirmed();
+  // Writes another tab already sent aren't lost, whatever this answer says.
+  const elsewhere = gate.sentElsewhere(handoff);
+  const unsent = handoff.writes.length - elsewhere;
+  const session = reply.kind === "confirmed" || reply.kind === "ready" ? reply.session : undefined;
 
-  // Only the server's word that it confirmed this very attempt sends what was kept for it.
-  if (handoff === null || reply.attempt !== handoff.id) {
+  // Signed in again since Google was chosen: what was kept belongs to the session that ended.
+  if ((session ?? null) !== handoff.session) {
     gate.forget();
 
     return {
       ...outcome,
-      confirmed: true,
-      abandoned: expired + kept - sentElsewhere,
-      elsewhere: sentElsewhere,
-      unreachable: null,
-      returnTo:
-        handoff === null && reply.retry !== null ? spaReturnPath(reply.retry.returnTo) : returnTo,
+      confirmed,
+      abandoned: expired + unsent,
+      elsewhere,
     } satisfies GoogleReturn;
+  }
+
+  // Only the server's word that it confirmed this very attempt sends what was kept for it.
+  // Anything else (a refusal, another tab's attempt, a record a concurrent cookie write erased)
+  // keeps the writes for the person to confirm again.
+  if (reply.kind !== "confirmed" || reply.attempt !== handoff.attempt) {
+    if (unsent === 0) {
+      gate.forget();
+    }
+
+    return {
+      ...outcome,
+      confirmed,
+      elsewhere,
+      held: unsent === 0 ? null : "confirm",
+      kept: unsent,
+    } satisfies GoogleReturn;
+  }
+
+  // Confirmed, but nothing keeps another tab from sending the same writes: the person decides.
+  if (!exclusive && !send) {
+    return { ...outcome, confirmed, elsewhere, held: "send", kept: unsent } satisfies GoogleReturn;
   }
 
   const client = yield* ApiClient;
   let replayed = 0;
-  let elsewhere = 0;
+  let sentElsewhere = 0;
   let abandoned = expired;
   let failure: string | null = null;
 
@@ -691,8 +809,8 @@ const resume = Effect.fnUntraced(function* (
     const claim = gate.claimSent(handoff.id, turn.index, handoff.expiresAt);
 
     if (claim === "sent") {
-      elsewhere += 1;
-    } else if (claim === "unavailable") {
+      sentElsewhere += 1;
+    } else if (claim === "unavailable" && !send) {
       // Without the mark another tab could send it too: it isn't sent from here.
       abandoned += 1;
     } else {
@@ -712,15 +830,14 @@ const resume = Effect.fnUntraced(function* (
   }
 
   // Done with the attempt: the server stops answering for it. If this doesn't arrive, it expires.
-  yield* acknowledgeSudo(handoff.id).pipe(Effect.ignore);
+  yield* acknowledgeSudo(handoff.attempt).pipe(Effect.ignore);
 
   return {
     ...outcome,
-    confirmed: true,
+    confirmed,
     replayed,
-    elsewhere,
+    elsewhere: sentElsewhere,
     abandoned,
     failure,
-    unreachable: null,
   } satisfies GoogleReturn;
 });

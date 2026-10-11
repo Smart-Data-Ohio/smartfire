@@ -231,7 +231,51 @@ for (const theme of THEMES) {
         );
       });
 
-      test("a Google return for another attempt sends nothing and says so", async ({
+      test("a Google return for another attempt keeps the change until confirmed again", async ({
+        page,
+        request,
+      }) => {
+        let patches = 0;
+        let starts = 0;
+
+        page.on("request", (sent) => {
+          if (sent.method() === "PATCH" && sent.url().endsWith("/api/v1/admin/custom_styles")) {
+            patches += 1;
+          }
+        });
+        // This page's first attempt is abandoned; another tab's attempt is the one Google
+        // confirms. Its second goes through.
+        await page.route("**/api/v1/sudo/google", (route) => {
+          starts += 1;
+
+          return starts === 1
+            ? route.fallback({ postData: JSON.stringify({ attempt: "another-tabs-attempt-0001" }) })
+            : route.fallback();
+        });
+        await lapse(request, ["password", "google"]);
+        await open(page, "/app/admin/styles", theme);
+
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("h1 { color: red; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+
+        await expect(page.getByText("Your change hasn't been sent", { exact: true })).toBeVisible();
+        await expect(page).toHaveURL(/\/app\/sudo\/continue$/);
+        await expectNoHorizontalOverflow(page);
+        await shot(page, "reauth-google-held", theme);
+        expect(patches).toBe(1);
+
+        await page.getByRole("button", { name: "Confirm again" }).click();
+        await expect(page).toHaveURL(/\/app\/admin\/styles$/);
+        await expect(page.getByText("Confirmed — your change was saved")).toBeVisible();
+        await page.locator(".settings-page h1").waitFor();
+        await expect(page.getByRole("textbox", { name: "Custom CSS" })).toHaveValue(
+          "h1 { color: red; }",
+        );
+        expect(patches).toBe(2);
+      });
+
+      test("without Web Locks the change waits for this tab to send it", async ({
         page,
         request,
       }) => {
@@ -242,26 +286,45 @@ for (const theme of THEMES) {
             patches += 1;
           }
         });
-        // This page's attempt is abandoned; another tab's attempt is the one Google confirms.
-        await page.route("**/api/v1/sudo/google", (route) =>
-          route.fallback({ postData: JSON.stringify({ attempt: "another-tabs-attempt-0001" }) }),
-        );
+        await page.addInitScript(() => Reflect.deleteProperty(Navigator.prototype, "locks"));
         await lapse(request, ["password", "google"]);
         await open(page, "/app/admin/styles", theme);
 
-        await page.getByRole("textbox", { name: "Custom CSS" }).fill("h1 { color: red; }");
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("dl { margin: 0; }");
         await page.getByRole("button", { name: "Save changes" }).click();
         await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
 
+        await expect(page.getByText("Your change hasn't been sent", { exact: true })).toBeVisible();
+        await expect(
+          page.getByText(/can't make sure only one tab sends your change/),
+        ).toBeVisible();
+        await shot(page, "reauth-google-send-again", theme);
+        expect(patches).toBe(1);
+
+        await page.getByRole("button", { name: "Send again" }).click();
         await expect(page).toHaveURL(/\/app\/admin\/styles$/);
-        await expect(page.getByText("Your change wasn't sent")).toBeVisible();
-        await expect(page.getByText("Make the change again.")).toBeVisible();
-        await shot(page, "reauth-google-abandoned", theme);
+        await expect(page.getByText("Confirmed — your change was saved")).toBeVisible();
+        expect(patches).toBe(2);
+      });
+
+      test("a held change can be discarded", async ({ page, request }) => {
+        await page.addInitScript(() => Reflect.deleteProperty(Navigator.prototype, "locks"));
+        await lapse(request, ["password", "google"]);
+        await open(page, "/app/admin/styles", theme);
+
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("ol { margin: 0; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+        await page.getByRole("button", { name: "Discard change" }).click();
+
+        await expect(page).toHaveURL(/\/app\/admin\/styles$/);
         await page.locator(".settings-page h1").waitFor();
         await expect(page.getByRole("textbox", { name: "Custom CSS" })).not.toHaveValue(
-          "h1 { color: red; }",
+          "ol { margin: 0; }",
         );
-        expect(patches).toBe(1);
+        expect(
+          await page.evaluate(() => sessionStorage.getItem("smartfire:confirmation-pending")),
+        ).toBeNull();
       });
 
       test("a duplicated continue page never sends the change twice", async ({
