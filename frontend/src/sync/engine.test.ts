@@ -3487,7 +3487,106 @@ describe("ignores", () => {
     ),
   );
 
-  it.effect("keeps a miss stale when an older request's snapshot lands after it", () =>
+  it.effect("times out a stuck snapshot request, then a reconnect recovers the miss", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Every request hangs: each try times out at 10 s, then the set is left stale.
+        yield* api.route("GET /blocks", () => Effect.never);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* TestClock.adjust("60 seconds");
+
+        expect((yield* blockRequests) - before).toBe(4);
+        expect(stale()).toBe(true);
+
+        // Disconnected meanwhile, an ignore at 2 is missed; the reconnect can't replay it.
+        yield* api.reply("GET /blocks", listed(2, 3, 4));
+        yield* socket.drop;
+        yield* TestClock.adjust(500);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect((yield* blockRequests) - before).toBe(5);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(stale()).toBe(false);
+      }),
+    ),
+  );
+
+  it.effect("abandons a request stuck from before a reconnect that can't replay", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        // The first snapshot request hangs.
+        yield* api.route("GET /blocks", () => Effect.never);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Before it would time out, the socket drops and comes back with nothing to replay.
+        yield* api.reply("GET /blocks", listed(11, 4));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect(yield* blockRequests).toBe(2);
+        expect(store.getState().ignores.snapshot).toBe(11);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(stale()).toBe(false);
+
+        // Nothing is left pending: no further request goes out.
+        yield* TestClock.adjust("120 seconds");
+        expect(yield* blockRequests).toBe(2);
+      }),
+    ),
+  );
+
+  it.effect("keeps only B's ignores after another sign-in reconnects this tab", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* api.reply("GET /blocks", listed(100, 3));
+        yield* startEngine;
+        yield* welcome(5, false);
+        expect(store.getState().ignores).toMatchObject({ userId: 7, snapshot: 100 });
+
+        // B signs in elsewhere; this tab reconnects as B with nothing to replay.
+        yield* api.reply("GET /boot", {
+          ...workspaceBoot,
+          user: { ...workspaceBoot.user, id: 8 },
+          csrfToken: "token",
+        });
+        yield* api.reply("GET /blocks", listed(2, 4));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        const ignores = store.getState().ignores;
+
+        expect(ignores).toMatchObject({ userId: 8, snapshot: 2 });
+        expect(Object.keys(ignores.people)).toEqual(["4"]);
+        expect(stale()).toBe(false);
+      }),
+    ),
+  );
+
+  it.effect("discards A's snapshot that lands after the switch to B", () =>
     withSync(
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
@@ -3495,37 +3594,31 @@ describe("ignores", () => {
         const release = yield* Deferred.make<void>();
 
         yield* serve([]);
-        // The first snapshot, read at 10, is held.
-        yield* held(release, listed(10));
         yield* startEngine;
         yield* welcome(5, false);
+        expect(store.getState().ignores.userId).toBe(7);
 
-        // Disconnected meanwhile, an ignore at 11 is missed and the server can't replay it.
-        yield* api.route("GET /blocks", unavailable);
+        // A's next snapshot is held in flight.
+        yield* held(release, listed(101, 3, 5));
+        yield* pushEvents(blocksUpdated(6, 5, true, 101));
+        yield* settle;
+
+        yield* api.reply("GET /boot", {
+          ...workspaceBoot,
+          user: { ...workspaceBoot.user, id: 8 },
+          csrfToken: "token",
+        });
+        yield* api.reply("GET /blocks", listed(2, 4));
         yield* socket.drop;
         yield* TestClock.adjust(250);
         yield* welcome(1, false, "e2");
-
-        // The old reply lands: it covers only what came before its request.
         yield* Deferred.succeed(release, undefined);
         yield* settle;
-        expect(store.getState().ignores.snapshot).toBe(10);
-        expect(stale()).toBe(true);
 
-        // The follow-up fails every try; the set stays stale.
-        yield* TestClock.adjust("4 seconds");
-        expect(stale()).toBe(true);
+        const ignores = store.getState().ignores;
 
-        yield* api.reply("GET /blocks", listed(11, 4));
-        yield* socket.drop;
-        yield* TestClock.adjust(500);
-
-        const before = yield* blockRequests;
-
-        yield* welcome(1, true, "e2");
-
-        expect((yield* blockRequests) - before).toBe(1);
-        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(ignores).toMatchObject({ userId: 8, snapshot: 2 });
+        expect(Object.keys(ignores.people)).toEqual(["4"]);
         expect(stale()).toBe(false);
       }),
     ),

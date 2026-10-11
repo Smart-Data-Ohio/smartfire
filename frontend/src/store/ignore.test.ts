@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, sidebarRowFixture, userFixture } from "../api/testing.ts";
-import { ignoresStale, isIgnored, messageIgnored } from "./ignores.ts";
+import { blocksRequest, ignoresStale, isIgnored, messageIgnored } from "./ignores.ts";
 import {
   applyBlockState,
   applyEvents,
   applyPage,
+  identifyIgnores,
   invalidateIgnores,
   receiveMessage,
   setBlocks,
@@ -295,16 +296,71 @@ describe("ignore snapshot freshness", () => {
     expect(ignoresStale(missed.ignores)).toBe(true);
 
     // The held reply lands: its data merges, but it vouches only for generation 1.
-    const landed = setBlocks(missed, { people: [], revision: 10 }, heldAt);
+    const landed = setBlocks(
+      missed,
+      { people: [], revision: 10 },
+      { coveredAt: heldAt, userId: null },
+    );
 
     expect(landed.ignores.snapshot).toBe(10);
     expect(ignoresStale(landed.ignores)).toBe(true);
 
     // One requested after the miss clears it; an older one never moves coverage back.
-    const current = setBlocks(landed, { people: [], revision: 11 }, missed.ignores.invalidatedAt);
+    const current = setBlocks(
+      landed,
+      { people: [], revision: 11 },
+      { coveredAt: missed.ignores.invalidatedAt, userId: null },
+    );
 
     expect(ignoresStale(current.ignores)).toBe(false);
-    expect(setBlocks(current, { people: [], revision: 9 }, heldAt)).toBe(current);
+    expect(
+      setBlocks(current, { people: [], revision: 9 }, { coveredAt: heldAt, userId: null }),
+    ).toBe(current);
+  });
+});
+
+describe("whose ignore set it is", () => {
+  const listed = (revision: number, ...ids: number[]) => ({
+    people: ids.map((id) => ({
+      user: userFixture(id),
+      ignoredByMe: true,
+      createdAt: "2026-10-01T12:00:00Z",
+    })),
+    revision,
+  });
+
+  const A = 1;
+  const B = 8;
+
+  it("drops A's set for B's when another sign-in reconnects without replay", () => {
+    const ofA = identifyIgnores(initialState, A);
+    const loadedA = setBlocks(ofA, listed(100, 3), blocksRequest(ofA.ignores, A));
+
+    expect(isIgnored(loadedA.ignores, 3, undefined)).toBe(true);
+
+    // Another tab signs in as B; this one reconnects without replay and asks again.
+    const asked = invalidateIgnores(identifyIgnores(loadedA, B));
+
+    expect(asked.ignores).toMatchObject({ userId: B, snapshot: null, people: {} });
+    expect(ignoresStale(asked.ignores)).toBe(true);
+    expect(isIgnored(asked.ignores, 3, true)).toBe(true);
+
+    const loadedB = setBlocks(asked, listed(2, 4), blocksRequest(asked.ignores, A));
+
+    expect(loadedB.ignores).toMatchObject({ userId: B, snapshot: 2 });
+    expect(ignoresStale(loadedB.ignores)).toBe(false);
+    expect(isIgnored(loadedB.ignores, 4, undefined)).toBe(true);
+    expect(isIgnored(loadedB.ignores, 3, undefined)).toBe(false);
+  });
+
+  it("discards a reply read for A that lands after the switch to B", () => {
+    const ofA = identifyIgnores(initialState, A);
+    const loadedA = setBlocks(ofA, listed(100, 3), blocksRequest(ofA.ignores, A));
+    const forA = blocksRequest(invalidateIgnores(loadedA).ignores, A);
+    const switched = invalidateIgnores(identifyIgnores(loadedA, B));
+
+    expect(setBlocks(switched, listed(101, 3, 5), forA)).toBe(switched);
+    expect(ignoresStale(switched.ignores)).toBe(true);
   });
 });
 

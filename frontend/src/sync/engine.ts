@@ -20,7 +20,7 @@ import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
-import { ignoresStale } from "../store/ignores.ts";
+import { blocksRequest, ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
@@ -85,6 +85,9 @@ export const SILENCE_LIMIT_MS = 30_000;
 const BLOCKS_RETRIES = 3;
 
 const blocksRetrySchedule = Schedule.exponential("500 millis", 2).pipe(Schedule.jittered);
+
+/** How long one ignore snapshot request may take before it counts as failed. */
+const BLOCKS_REQUEST_TIMEOUT = "10 seconds";
 
 /** A connection that lasted this long resets the reconnect backoff. */
 export const STABLE_AFTER_MS = 60_000;
@@ -238,6 +241,8 @@ export class Engine extends Context.Service<
       const api = yield* Effect.context<ApiClient>();
       /** Asks for the ignore snapshot; asks made while one is pending are one ask. */
       const blocksWanted = yield* Queue.sliding<void>(1);
+      /** Abandons the ignore snapshot request in flight. */
+      const blocksRestart = yield* Queue.sliding<void>(1);
       /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
@@ -492,20 +497,30 @@ export class Engine extends Context.Service<
         Queue.offerUnsafe(blocksWanted, undefined);
       });
 
-      /** One snapshot request; it covers what was invalidated before it started. */
+      /**
+       * Abandons the snapshot request in flight, if any (a reconnect that can't replay, or a new
+       * person signed in): the ask that follows starts a fresh one.
+       */
+      const restartBlocks = Effect.sync(() => {
+        Queue.offerUnsafe(blocksRestart, undefined);
+      });
+
+      /** One snapshot request, tagged with the generation and person it's for as it starts. */
       const fetchBlocks = Effect.suspend(() => {
-        const coveredAt = store.getState().ignores.invalidatedAt;
+        const state = store.getState();
+        const request = blocksRequest(state.ignores, state.me?.user.id ?? null);
 
         return blocks().pipe(
-          Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot, coveredAt))),
+          Effect.timeout(BLOCKS_REQUEST_TIMEOUT),
+          Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot, request))),
         );
       });
 
       /**
        * Fetches the ignore snapshot one request at a time, for the engine's whole run. Asks that
        * land meanwhile share one follow-up, made only if the set is still stale once the current
-       * one lands. A fetch that fails every retry leaves the set stale and drops the asks behind
-       * it: the next resume or event asks again.
+       * one lands. A fetch that fails or times out on every try leaves the set stale and drops the
+       * asks behind it: the next resume or event asks again. `restartBlocks` abandons it early.
        */
       const followBlocks = Effect.gen(function* () {
         while (true) {
@@ -513,13 +528,19 @@ export class Engine extends Context.Service<
 
           if (!ignoresStale(store.getState().ignores)) continue;
 
-          const fetched = yield* fetchBlocks.pipe(
-            Effect.retry({ schedule: blocksRetrySchedule, times: BLOCKS_RETRIES }),
-            Effect.provideContext(api),
-            Effect.result,
+          // A restart asked for before this run began is already served by it.
+          yield* Queue.clear(blocksRestart);
+
+          const fetched = yield* Effect.raceFirst(
+            fetchBlocks.pipe(
+              Effect.retry({ schedule: blocksRetrySchedule, times: BLOCKS_RETRIES }),
+              Effect.provideContext(api),
+              Effect.result,
+            ),
+            Effect.as(Queue.take(blocksRestart), null),
           );
 
-          if (Result.isFailure(fetched)) {
+          if (fetched !== null && Result.isFailure(fetched)) {
             yield* Effect.logWarning("sync: ignore snapshot failed", fetched.failure.message);
             mutations.invalidateIgnores();
             yield* Queue.clear(blocksWanted);
@@ -542,9 +563,6 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
-            // `followBlocks` fetches it: a failing snapshot doesn't hold up the sidebar.
-            yield* requestBlocks;
-
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
                 Effect.map((data) => {
@@ -574,15 +592,33 @@ export class Engine extends Context.Service<
               yield* Ref.set(snapshotThrough, sidebarThrough);
             }
 
-            yield* boot().pipe(
+            const signedIn = yield* boot().pipe(
               Effect.tap((data) =>
                 Effect.sync(() => mutations.setWorkspaceStyles(data.customStyles)),
               ),
+              Effect.map((data) => data.user.id),
               Effect.catch((error) =>
-                Effect.logWarning("sync: workspace styles resync failed", error.message),
+                Effect.logWarning("sync: workspace styles resync failed", error.message).pipe(
+                  Effect.as(null),
+                ),
               ),
               Effect.provideContext(api),
             );
+
+            // The ignore set is per person: someone else signed in (another tab) drops it, and
+            // abandons a request still out for the last person.
+            if (signedIn !== null) {
+              const owner = store.getState().ignores.userId;
+
+              mutations.identifyIgnores(signedIn);
+
+              if (owner !== null && owner !== signedIn) {
+                yield* restartBlocks;
+              }
+            }
+
+            // Asked once the person is known, so the request is tagged for the right one.
+            yield* requestBlocks;
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
             mutations.markInboxStale();
@@ -800,6 +836,8 @@ export class Engine extends Context.Service<
         }
 
         yield* cursor.set({ epoch: frame.epoch, seq: frame.seq });
+        // Nothing replays: a snapshot request stuck from before can't vouch for what was missed.
+        yield* restartBlocks;
         yield* resync(scope, ["user", ...(yield* topics.subscribed)], frame.seq);
       });
 
