@@ -184,8 +184,7 @@ async fn index_search(c: &mut Ctx) -> Result {
                 page.messages.iter().map(|message| message.creator_id),
                 now,
             )?;
-            let (mut messages, fetches) = dto::messages_and_fetches(conn, &app, &page.messages)?;
-            dto::announcement_sources(conn, &mut messages, viewer.id)?;
+            let (messages, fetches) = dto::messages_and_fetches_for_viewer(conn, &app, &page.messages, viewer.id)?;
             let results = api::SearchResults {
                 query: squish(&raw),
                 chips: query.chips.iter().cloned().filter_map(chip).collect(),

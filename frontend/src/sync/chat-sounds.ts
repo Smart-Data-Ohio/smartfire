@@ -69,6 +69,7 @@ export function listenForChatSounds(roomId: number, viewingLatestPage: () => boo
 
       if (
         event.seq > liveAfter &&
+        !message.ignored &&
         !roomMuted(
           state.sidebar.notificationPreferences,
           roomId,

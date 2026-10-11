@@ -963,3 +963,134 @@ async fn announcement_registered_worker_performs_duplicate_jobs_once() {
     .await
     .expect("registered announcement jobs must finish");
 }
+
+#[tokio::test]
+async fn announcement_webhook_copies_preserve_ignore_policy_in_http_live_and_replay() {
+    use super::api_tests::{Sync, serve};
+    use campfire_api_types as api;
+    use campfire_db::models::{
+        announcement,
+        channel_webhook::{ChannelWebhook, WebhookMessage},
+        user_block::UserBlock,
+    };
+    use campfire_db::{Membership, Message, NewMessage};
+
+    let a = app(true)
+        .await
+        .expect("restored seed required")
+        .without_job_runner()
+        .await;
+    let author = a
+        .db()
+        .write(|tx| {
+            announcement::set_flag(tx, ALL_TALK, true)?;
+            announcement::follow(tx, ALL_TALK, HQ, DAVID)?;
+            Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            let (hook, _) = ChannelWebhook::create(tx, ALL_TALK, DAVID, "Announcements")?;
+            UserBlock::set(tx, KEVIN, hook.author_id, true)?;
+            tx.conn().execute(
+                "UPDATE memberships SET unread_at=NULL WHERE room_id=? AND user_id=?",
+                (HQ, KEVIN),
+            )?;
+            Ok((hook.id, hook.author_id))
+        })
+        .await
+        .unwrap();
+    let david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let (addr, server) = serve(&a).await;
+    let topics = [format!("room:{HQ}")];
+    let mut visible = Sync::connect(addr, &david.cookie_header(), &topics).await;
+    visible.welcome().await;
+    let mut hidden = Sync::connect(addr, &kevin.cookie_header(), &topics).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = hidden.next().await else {
+        panic!("a welcome")
+    };
+    let (publication, source_id) = a
+        .db()
+        .write(move |tx| {
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: author.1,
+                    markdown_source: Some(format!("News for <@{KEVIN}> and <@{DAVID}>")),
+                    webhook: Some(WebhookMessage {
+                        webhook_id: author.0,
+                        token_digest: None,
+                        username: Some("Release bot".into()),
+                        embeds: json!([{"title":"Release"}]),
+                    }),
+                    ..Default::default()
+                },
+            )?;
+            Ok((announcement::publish(tx, &message, DAVID)?, message.id))
+        })
+        .await
+        .unwrap();
+    crate::jobs::announcements::deliver(a.booted.app.clone(), publication)
+        .await
+        .unwrap();
+    let copy_id = a
+        .db()
+        .read(move |conn| {
+            let copies = announcement::copies(conn, publication)?;
+            assert_eq!(copies.len(), 1);
+            let id = copies[0].id;
+            let mut statement = conn.prepare(
+                "SELECT user_id FROM activity_items WHERE source_type='Message' AND source_id=?",
+            )?;
+            let recipients = statement
+                .query_map([id], |row| row.get::<_, i64>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            assert!(recipients.contains(&DAVID));
+            assert!(!recipients.contains(&KEVIN));
+            let unread: Option<campfire_db::Timestamp> = conn.query_row(
+                "SELECT unread_at FROM memberships WHERE room_id=? AND user_id=?",
+                (HQ, KEVIN),
+                |row| row.get(0),
+            )?;
+            assert!(unread.is_none());
+            Ok(id)
+        })
+        .await
+        .unwrap();
+    let created = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == copy_id);
+    let visible_event = visible.until(created, |_| false).await;
+    let hidden_event = hidden.until(created, |_| false).await;
+    assert_eq!(visible_event.seq, hidden_event.seq);
+    for (event, ignored) in [(visible_event, None), (hidden_event, Some(true))] {
+        let api::SyncPayload::MessageCreated(message) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(message.creator_id, author.1);
+        assert_eq!(message.ignored, ignored);
+        assert_eq!(message.webhook.unwrap().username.as_deref(), Some("Release bot"));
+        assert_eq!(message.embeds.unwrap()[0].title.as_deref(), Some("Release"));
+        assert_eq!(message.announcement_source.unwrap().message_id, source_id);
+    }
+    let read: api::MessageRead = parse(
+        &kevin
+            .send(get(&format!("/api/v1/messages/{copy_id}")))
+            .await,
+    );
+    assert_eq!(read.message.ignored, Some(true));
+    assert_eq!(read.message.webhook.unwrap().name, "Announcements");
+    assert_eq!(read.message.announcement_source.unwrap().message_id, source_id);
+    let mut replay = Sync::open(
+        addr,
+        &kevin.cookie_header(),
+        &topics,
+        json!({"epoch":epoch,"seq":seq}),
+    )
+    .await;
+    assert!(matches!(replay.next().await, Some(api::ServerFrame::Welcome { resumed: true, .. })));
+    let event = replay.until(created, |_| false).await;
+    let api::SyncPayload::MessageCreated(message) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(message.ignored, Some(true));
+    assert_eq!(message.webhook.unwrap().name, "Announcements");
+    assert_eq!(message.announcement_source.unwrap().message_id, source_id);
+    server.abort();
+}

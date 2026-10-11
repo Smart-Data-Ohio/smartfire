@@ -407,6 +407,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                 let rendered = copy.body_html(tx.conn())?.unwrap_or_default();
                 copy.update_body(tx, &format!("{rendered}\n{snapshot}"))?;
             }
+            super::channel_webhook::ChannelWebhook::copy_message(tx, source.id, copy.id)?;
             tx.conn().execute_cached("UPDATE announcement_deliveries SET message_id=? WHERE publication_id=? AND target_room_id=?", [copy.id,publication,room_id])?;
             changed.push((copy, true));
         }

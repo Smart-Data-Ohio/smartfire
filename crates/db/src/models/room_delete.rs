@@ -53,6 +53,9 @@ pub fn begin_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Res
     // update! validates unchanged direct names too. The icon/type are unchanged: their
     // change-conditional validations do not run. All Room STI classes require a creator.
     validate_room(tx, room)?;
+    for webhook in crate::models::channel_webhook::ChannelWebhook::list_for_room(tx.conn(), room.id)? {
+        crate::models::channel_webhook::ChannelWebhook::delete(tx, webhook.id)?;
+    }
     tx.conn().execute_cached(
         "UPDATE rooms SET deleted_at=?,direct_member_key=NULL,updated_at=? WHERE id=?",
         params![tx.now(), tx.now(), room.id],

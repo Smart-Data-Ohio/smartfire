@@ -21,30 +21,27 @@ pub async fn update(c: &mut Ctx) -> Result {
 /// The body of `update`, shared with `PUT /api/v1/rooms/:id/involvement`: sets the viewer's
 /// involvement (marking the room read when it's now muted) and makes
 /// `broadcast_visibility_changes`. The membership is read inside the write, so a message or a
-/// read landing after the controller looked it up is seen. Answers the membership as it is now,
-/// and whether this change cleared its unread state.
+/// read landing after the controller looked it up is seen. Answers the membership as it is now.
 pub async fn change(
     c: &Ctx,
     room: &Room,
     membership_id: i64,
     involvement: Option<Involvement>,
-) -> Result<(Membership, bool)> {
-    let (membership, cleared_unread) = c
+) -> Result<Membership> {
+    let membership = c
         .app()
         .db
         .write(move |tx| {
-            let mut membership = Membership::find(tx.conn(), membership_id)?;
-            let was_unread = membership.unread();
+            let mut membership = Membership::find_stored(tx.conn(), membership_id)?;
             membership.update_involvement(tx, involvement)?;
             if membership.involved_in(Involvement::Muted) { membership.read(tx)?; }
-            let cleared_unread = was_unread && !membership.unread();
-            Ok((membership, cleared_unread))
+            Membership::find(tx.conn(), membership_id)
         })
         .await
         .map_err(db_error)?;
 
     c.app().broadcasts.involvement_change(room, &membership);
-    Ok((membership, cleared_unread))
+    Ok(membership)
 }
 
 /// Our fork uses `params.require(:involvement)` before the enum cast.

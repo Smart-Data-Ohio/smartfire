@@ -131,7 +131,7 @@ fn activity_frames(t: &TestDb, from: usize) -> usize {
     t.events()[from..].iter().filter(|event| matches!(event.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable {stream, ..}) if stream == format!("user_{}_activity", id("jz")))).count()
 }
 #[test]
-fn recorder_unread_repoint_broadcasts_only_when_read_state_changes() {
+fn recorder_repoint_preserves_one_slot_for_unread_and_read_items() {
     let t = channel_thread_test::frozen();
     let thread = t.write(|tx| {
         let room = Room::create_for(
@@ -192,14 +192,9 @@ fn recorder_unread_repoint_broadcasts_only_when_read_state_changes() {
     assert!(latest.unread());
     assert_eq!(latest.updated_at, t.now());
     let frames = activity_frames(&t, from);
-    println!(
-        "Unread grouped repoint: Rust activity frames={frames}; Rails={}",
-        oracle()["unread_repoint_activity_frames"]
-    );
-    assert_eq!(
-        frames as u64,
-        oracle()["unread_repoint_activity_frames"].as_u64().unwrap()
-    );
+    // I1 supersedes Rails' zero-frame unread repoint: every authorized recording attempt
+    // uses one classic slot, even when ignore policy prevents a personally stored item.
+    assert_eq!(frames, 1);
     t.write(move |tx| {
         crate::ActivityItem::find(tx.conn(), item.id)?.mark_read(tx)?;
         Ok(())

@@ -638,17 +638,12 @@ impl ScheduledMessage {
                 .iter()
                 .map(|user| user.id)
                 .collect();
-            for member in Membership::for_room(tx.conn(), message.room_id)? {
-                if member.involvement != Some(crate::Involvement::Muted)
-                    || mentioned_ids.contains(&member.user_id)
-                {
-                    tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
-                        user_id: member.user_id,
-                        room_id: message.room_id,
-                        message_id: Some(message.id),
-                    }));
-                }
-            }
+            let user_ids = Membership::for_room(tx.conn(), message.room_id)?.into_iter()
+                .filter(|member| member.involvement != Some(crate::Involvement::Muted) || mentioned_ids.contains(&member.user_id))
+                .map(|member| member.user_id).collect();
+            tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
+                user_ids, room_id: message.room_id, message_id: Some(message.id), author_id: message.creator_id,
+            }));
         }
         // Human root posts fan out to legacy bots; thread posts never do.
         crate::models::bot_webhook_fanout::deliver(tx, &message)?;

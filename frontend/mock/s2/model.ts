@@ -219,6 +219,8 @@ export function buildMessage(
     action: draft.action,
     streaming: draft.streaming,
     embedsSuppressed: false,
+    embeds: null,
+    webhook: null,
     replyToMessageId: draft.replyToMessageId,
     forwardedFromMessageId: draft.forward?.messageId ?? null,
     forwardedAt: draft.forward?.at ?? null,

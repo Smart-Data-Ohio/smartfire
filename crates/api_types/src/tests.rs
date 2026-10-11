@@ -44,6 +44,7 @@ pub(crate) fn user() -> User {
 
 pub(crate) fn message() -> MessageDTO {
     MessageDTO {
+        ignored: None,
         id: 9001,
         room_id: 12,
         thread_id: None,
@@ -76,6 +77,8 @@ pub(crate) fn message() -> MessageDTO {
         updated_at: "2026-10-06T09:15:00.123Z".into(),
         published: false,
         announcement_source: None,
+        embeds: None,
+        webhook: None,
     }
 }
 
@@ -267,6 +270,8 @@ fn message_round_trips() {
             "action": false,
             "streaming": false,
             "embedsSuppressed": false,
+            "embeds": null,
+            "webhook": null,
             "replyToMessageId": 8999,
             "forwardedFromMessageId": null,
             "forwardedAt": null,
@@ -775,6 +780,7 @@ fn s1_events_match_the_protocol() {
                 room_id: 12,
                 message_id: Some(9001),
                 mentioned: true,
+                unchanged: None,
             }),
             json!({"type": "room.unread", "data": {"roomId": 12, "messageId": 9001, "mentioned": true}}),
         ),
@@ -783,6 +789,7 @@ fn s1_events_match_the_protocol() {
                 room_id: 12,
                 message_id: None,
                 mentioned: false,
+                unchanged: None,
             }),
             json!({"type": "room.unread", "data": {"roomId": 12, "messageId": null, "mentioned": false}}),
         ),

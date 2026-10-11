@@ -772,7 +772,7 @@ pub fn user_summary_in_zone(secrets: &Secrets, user: &User, zone: &campfire_pres
         role: match user.role {
             campfire_db::Role::Member => Role::Member,
             campfire_db::Role::Administrator => Role::Administrator,
-            campfire_db::Role::Bot => Role::Bot,
+            campfire_db::Role::Bot | campfire_db::Role::WebhookAuthor => Role::Bot,
         },
         status: match user.status {
             campfire_db::Status::Active => Status::Active,

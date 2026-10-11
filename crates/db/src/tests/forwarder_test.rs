@@ -83,6 +83,78 @@ fn forward_one(t: &TestDb, source: &Message, room: &str, note: Option<&'static s
 }
 
 #[test]
+fn forwards_snapshot_webhook_embeds_and_attribution_after_source_deletion() {
+    use crate::models::channel_webhook::{ChannelWebhook, WebhookMessage};
+    use serde_json::json;
+
+    let t = frozen();
+    let avatar_source = source(&t);
+    let avatar = t.read(|conn| Ok(avatar_source.attachment(conn)?.unwrap().1.id));
+    let (hook, _) =
+        t.write(|tx| ChannelWebhook::create(tx, id("designers"), id("david"), "Builds"));
+    let original = t.write(move |tx| {
+        ChannelWebhook::set_avatar(tx, hook.id, Some(avatar))?;
+        Message::create(tx, NewMessage {
+            room_id: hook.room_id,
+            creator_id: hook.author_id,
+            markdown_source: Some(String::new()),
+            webhook: Some(WebhookMessage {
+                webhook_id: hook.id,
+                token_digest: None,
+                username: Some("CI".into()),
+                embeds: json!([{"title":"Passed","fields":[{"name":"Status","value":"Green","inline":true}]}]),
+            }),
+            ..Default::default()
+        })
+    });
+    let thread = create_thread(&t, "watercooler", "david", None, Some("Build results"));
+    let copies = forward(
+        &t,
+        &original,
+        vec![
+            Destination::room(id("watercooler")),
+            Destination::thread(id("watercooler"), thread.id),
+        ],
+        None,
+        &Copier::default(),
+    )
+    .unwrap()
+    .unwrap();
+    t.write(move |tx| ChannelWebhook::delete(tx, hook.id));
+    let after_webhook_deletion = forward_one(&t, &original, "watercooler", None);
+    let original_id = original.id;
+    t.write(move |tx| Message::find(tx.conn(), original_id)?.destroy(tx));
+    let repeat = forward_one(&t, &after_webhook_deletion, "designers", None);
+    for message in copies
+        .into_iter()
+        .map(|copy| copy.message)
+        .chain([after_webhook_deletion, repeat])
+    {
+        let payload = t
+            .read(|conn| ChannelWebhook::message_payload(conn, message.id))
+            .expect("forward snapshot");
+        assert_eq!(
+            payload.embeds,
+            json!([{"title":"Passed","fields":[{"name":"Status","value":"Green","inline":true}]}])
+        );
+        assert_eq!(payload.name, "Builds");
+        assert_eq!(payload.username.as_deref(), Some("CI"));
+        assert_eq!(message.creator_id, id("david"));
+        assert_eq!(
+            t.read(|conn| Ok(crate::Attachment::find_for(
+                conn,
+                "Message",
+                message.id,
+                "webhook_avatar"
+            )?
+            .unwrap()
+            .blob_id)),
+            avatar
+        );
+    }
+}
+
+#[test]
 fn copies_a_body_and_attachment_snapshot_that_survives_source_edits_and_deletion() {
     let t = frozen();
     let source = source(&t);

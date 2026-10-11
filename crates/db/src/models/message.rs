@@ -91,6 +91,7 @@ pub struct NewMessage {
     pub forwarded_markdown: bool,
     /// Google Drive file ids (`drive_attachments.build(file_id:)`).
     pub drive_file_ids: Vec<String>,
+    pub webhook: Option<crate::models::channel_webhook::WebhookMessage>,
 }
 
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
@@ -567,6 +568,9 @@ impl Message {
             |r| r.get(0),
         )?;
         let mut message = Self::find(tx.conn(), id)?;
+        if let Some(input) = &attributes.webhook {
+            crate::models::channel_webhook::ChannelWebhook::record_message(tx, &message, input)?;
+        }
         if let Some((_, edited_at)) = imported_time {
             tx.conn().execute_cached(
                 "UPDATE messages SET edited_at = ? WHERE id = ?",
@@ -780,6 +784,7 @@ impl Message {
             && attributes.attachment_blob_id.is_none()
             && attributes.attachment_blob_ids.is_empty()
             && attributes.drive_file_ids.is_empty()
+            && attributes.webhook.as_ref().is_none_or(|input| input.embeds.as_array().is_none_or(Vec::is_empty))
         {
             errors.add("markdown_source", "can't be blank");
         }
@@ -1066,6 +1071,7 @@ impl Message {
             forward_note: forward_note.clone(),
             forwarded_markdown: self.forwarded_markdown,
             drive_file_ids: drive_file_ids.clone(),
+            webhook: None,
         };
         Self::validate_attributes(conn, &attributes, false)?.into_result()?;
 
@@ -1285,6 +1291,10 @@ impl Message {
             r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
             params![now, now, self.id],
         )?;
+        if let Some(avatar) = Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "webhook_avatar")? {
+            avatar.delete(tx)?;
+            tx.emit_after_commit(Event::PurgeBlob { blob_id: avatar.blob_id });
+        }
         for (attachment, _) in self.attachments(tx.conn())? {
             attachment.delete(tx)?;
             tx.emit_after_commit(Event::PurgeBlob {

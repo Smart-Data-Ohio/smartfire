@@ -118,3 +118,27 @@ fn ws13b_review_queued_ring_does_not_restart_ended_calls() {
         assert!(!db.sink.take().iter().any(|event| event.as_broadcast().is_some()), "{operation} suppressed={suppressed}: ring restarted after ended frame");
     }
 }
+
+#[test]
+fn ignore_huddle_rings_keep_the_publication_and_suppress_the_viewers_ring() {
+    use crate::models::huddle_invitations::{RingRequest, publish_ring_with_policy};
+    let recipient = crate::fixtures::identify("jason");
+    let sender = crate::fixtures::identify("david");
+    for ignored in [false, true] {
+        let db = TestDb::new();
+        let (room, membership, session) = review_direct_setup(&db);
+        db.write(move |tx| crate::models::user_block::UserBlock::set(tx, recipient, sender, ignored));
+        db.sink.take();
+        db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+        let events = db.sink.take();
+        let frames = events.iter().filter_map(|event| match event.as_broadcast()? {
+            crate::broadcasts::Broadcast::Cable { payload, stream } if stream == format!("user_{recipient}_activity") && payload.get("huddleInvitation").is_some() => Some(payload),
+            _ => None,
+        }).collect::<Vec<_>>();
+        assert_eq!(frames.len(), 1, "the same ring publication exists with or without a block");
+        assert_eq!(frames[0]["huddleInvitation"]["unchanged"].as_bool().unwrap_or(false), ignored);
+        let request = events.iter().filter_map(|event| event.as_job::<RingRequest>()).find(|r| r.recipient_id == recipient).unwrap();
+        db.write(move |tx| publish_ring_with_policy(tx, &request, None));
+        assert!(db.sink.take().iter().any(|event| matches!(event.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable { payload, .. }) if payload.get("huddleInvitation").is_some())));
+    }
+}

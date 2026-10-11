@@ -40,11 +40,36 @@ export type MessageSoundPin = Assert<Pinned<typeof MessageSound, GeneratedMessag
  * relative for the announcement source. "You reacted" is the viewer's id in `reactorIds`.
  * Edit and delete rights follow from `creatorId`, `systemNote` and the viewer's role.
  */
+const WebhookEmbed = Schema.Struct({
+  title: Schema.optionalKey(Schema.String),
+  description: Schema.optionalKey(Schema.String),
+  url: Schema.optionalKey(Schema.String),
+  color: Schema.optionalKey(Schema.Number),
+  fields: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        name: Schema.String,
+        value: Schema.String,
+        inline: Schema.optionalKey(Schema.Boolean),
+      }),
+    ),
+  ),
+  footer: Schema.optionalKey(Schema.Struct({ text: Schema.String })),
+  timestamp: Schema.optionalKey(Schema.String),
+});
+
+const MessageWebhook = Schema.Struct({
+  name: Schema.String,
+  username: Schema.NullOr(Schema.String),
+  avatarUrl: Schema.NullOr(Schema.String),
+});
+
 export const MessageDTO = Schema.Struct({
   id: MessageId,
   roomId: RoomId,
   threadId: Schema.NullOr(ThreadId),
   creatorId: UserId,
+  ignored: Schema.optionalKey(Schema.Boolean),
   clientMessageId: Schema.String,
   bodyHtml: Schema.String,
   sound: Schema.NullOr(MessageSound),
@@ -82,6 +107,8 @@ export const MessageDTO = Schema.Struct({
       }),
     ),
   ),
+  embeds: Schema.NullOr(Schema.Array(WebhookEmbed)),
+  webhook: Schema.NullOr(MessageWebhook),
 });
 
 export type MessageDTO = typeof MessageDTO.Type;

@@ -26,19 +26,23 @@ impl ActivityItem {
         tx: &mut Tx<'_>,
         user: &User,
         message: &crate::Message,
+        ignored: bool,
     ) -> Result<Option<Self>> {
         if !user.is_active() || user.is_bot() || message.creator_id == user.id {
             return Ok(None);
         }
-        Self::record_authorized_with_recipient(
-            tx,
-            user.id,
-            "Message",
-            message.id,
-            message.thread_id,
-            "thread_activity",
-            Some(user),
-        )
+        let item = if ignored {
+            None
+        } else {
+            Self::record_visible_for_recipient(
+                tx, user.id, "Message", message.id, message.thread_id, "thread_activity", Some(user),
+            )?
+        };
+        Self::publish_recording_for_user(tx, user, &super::ActivityItemRecorded {
+            id: item.as_ref().map_or(0, |item| item.id), user_id: user.id,
+            room_id: Some(message.room_id), source_type: "Message".into(), source_id: message.id,
+        });
+        Ok(item)
     }
 
     /// Rails-compatible entry point, including the merged WS11 budget-notice reader.
@@ -123,11 +127,8 @@ impl ActivityItem {
             .filter_map(|id| users.get(id))
             .filter(|user| Self::can_record_for_recipient(user, &facts, authorization))
             .collect::<Vec<_>>();
-        // Grouped thread items still need each recipient's current unhandled row.
-        if facts.thread_id.is_none()
-            || !matches!(facts.source_type, "Message" | "WorkThreadEvent")
-            || !matches!(event_type.as_str(), "thread_activity" | "work_update")
-        {
+        // Personal write policy and grouped thread rows need each recipient's current state.
+        if !matches!(facts.source_type, "Message" | "WorkThreadEvent" | "BoardSlaNudge") {
             return Self::record_ungrouped_for_recipients(tx, &recipients, &facts, event_type);
         }
         let mut items = Vec::new();
@@ -301,6 +302,32 @@ impl ActivityItem {
         event_type: &str,
         recipient: Option<&User>,
     ) -> Result<Option<Self>> {
+        let facts = match source_type {
+            "Message" => crate::sql::query_one(tx.conn(), "SELECT creator_id,room_id FROM messages WHERE id=?", [source_id], |row| Ok((row.get::<_, Option<i64>>(0)?, Some(row.get::<_, i64>(1)?))))?,
+            "WorkThreadEvent" => crate::sql::query_one(tx.conn(), "SELECT actor_id FROM work_thread_events WHERE id=?", [source_id], |row| Ok((row.get::<_, Option<i64>>(0)?, None)))?,
+            "BoardSlaNudge" => crate::sql::query_one(tx.conn(), "SELECT t.creator_id FROM board_sla_nudges n JOIN channel_threads t ON t.id=n.channel_thread_id WHERE n.id=?", [source_id], |row| Ok((row.get::<_, Option<i64>>(0)?, None)))?,
+            _ => return Self::record_visible_for_recipient(tx, user_id, source_type, source_id, thread_id, event_type, recipient),
+        };
+        let Some((author, room_id)) = facts else { return Ok(None); };
+        let ignored = author.map(|author| super::super::ignore_policy::ignored(tx.conn(), user_id, author)).transpose()?.unwrap_or(false);
+        let item = if ignored { None } else {
+            Self::record_visible_for_recipient(tx, user_id, source_type, source_id, thread_id, event_type, recipient)?
+        };
+        Self::publish_recording(tx, &super::ActivityItemRecorded {
+            id: item.as_ref().map_or(0, |item| item.id), user_id, room_id, source_type: source_type.into(), source_id,
+        })?;
+        Ok(item)
+    }
+
+    fn record_visible_for_recipient(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+        thread_id: Option<i64>,
+        event_type: &str,
+        recipient: Option<&User>,
+    ) -> Result<Option<Self>> {
         if let Some(thread_id) =
             thread_id.filter(|_| matches!(event_type, "thread_activity" | "work_update"))
         {
@@ -317,18 +344,10 @@ impl ActivityItem {
                     || before.updated_at != tx.now()
                 {
                     tx.conn().execute("UPDATE activity_items SET source_type=?,source_id=?,read_at=NULL,updated_at=? WHERE id=?",params![source_type,source_id,tx.now(),before.id])?;
-                    if before.read_at.is_none() {
-                        // Single-page app only: its row would otherwise keep the older reply.
-                        tx.emit_after_commit(crate::Event::broadcast(
-                            &super::ActivityItemTouched {
-                                id: before.id,
-                                user_id,
-                            },
-                        ));
-                    }
                 }
                 let item = Self::find(tx.conn(), before.id)?;
                 // app/models/activity_item.rb: source/updated_at changes alone do not broadcast.
+                // Policy-controlled sources publish their attempt separately, per I1.
                 if before.read_at.is_some() {
                     Self::broadcast_recorded(tx, user_id, &item, recipient)?;
                 }
@@ -344,12 +363,33 @@ impl ActivityItem {
         Ok(Some(item))
     }
 
-    fn broadcast_recorded(
+    pub(super) fn publish_recording(tx: &mut Tx<'_>, recorded: &super::ActivityItemRecorded) -> Result<()> {
+        let Some(user) = User::find_by_id(tx.conn(), recorded.user_id)? else { return Ok(()); };
+        Self::publish_recording_for_user(tx, &user, recorded);
+        Ok(())
+    }
+
+    fn publish_recording_for_user(tx: &mut Tx<'_>, user: &User, recorded: &super::ActivityItemRecorded) {
+        if !user.is_active() || user.is_bot() { return; }
+        // Classic cable broadcasts share the global sequence too. Both slots come from the
+        // unfiltered recording attempt, including ignored actors and unchanged grouped rows.
+        tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::Cable {
+            stream: format!("user_{}_activity", recorded.user_id),
+            payload: serde_json::json!({"activityItemId":recorded.id, "syncRecorded":true,
+                "recordingSource":[recorded.source_type,recorded.source_id]}),
+        });
+        tx.broadcast_after_commit_once(recorded);
+    }
+
+    pub(super) fn broadcast_recorded(
         tx: &mut Tx<'_>,
         user_id: i64,
         item: &Self,
         recipient: Option<&User>,
     ) -> Result<()> {
+        if matches!(item.source_type.as_str(), "Message" | "WorkThreadEvent" | "BoardSlaNudge") {
+            return Ok(());
+        }
         match recipient {
             Some(user) => Self::broadcast_item_for_user(tx, user, item),
             None => Self::broadcast_item(tx, user_id, item),
@@ -401,7 +441,7 @@ fn source_facts(
             Facts {
                 source_type: "WorkThreadEvent",
                 source_id: id,
-                creator_id: None,
+                creator_id: event.actor_id,
                 thread_id: Some(event.channel_thread_id),
                 recipient_ids: if check {
                     event.recipient_user_ids(tx.conn())?

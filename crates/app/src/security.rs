@@ -230,10 +230,15 @@ static BOT_KEY_IN_PATH: LazyLock<Regex> =
 /// raw token in a request path is still a credential, so it never reaches the log.
 static INVITE_TOKEN_IN_PATH: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"(/invite/)[^/\s"?#<>]+"#).unwrap());
 
+/// The incoming webhook token after `/api/webhooks/:id/`, keeping the id visible.
+static WEBHOOK_TOKEN_IN_PATH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(/api/webhooks/[^/\s"?#<>]+/)[^/\s"?#<>]+"#).unwrap());
+
 /// `LogScrubbingFormatter#scrub`
 pub fn scrub_log_line(line: &str) -> Cow<'_, str> {
     let scrubbed = BOT_KEY_IN_PATH.replace_all(line, "${1}[FILTERED]");
-    Cow::Owned(INVITE_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]").into_owned())
+    let scrubbed = INVITE_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
+    Cow::Owned(WEBHOOK_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]").into_owned())
 }
 
 /// `LogScrubbingFormatter` for the tracing subscriber: every formatted event goes through
@@ -441,6 +446,30 @@ mod tests {
         assert_eq!(scrub_log_line("GET /invites"), "GET /invites");
         assert_eq!(scrub_log_line("GET /api/invites/12"), "GET /api/invites/12");
         assert_eq!(scrub_log_line("GET /rooms/1/12-AbC/messages"), "GET /rooms/1/[FILTERED]/messages");
+    }
+
+    #[test]
+    fn webhook_tokens_are_scrubbed_from_log_lines() {
+        for (line, expected) in [
+            ("POST /api/webhooks/12/abc-_123", "POST /api/webhooks/12/[FILTERED]"),
+            ("POST /api/webhooks/12/abc123 HTTP/1.1", "POST /api/webhooks/12/[FILTERED] HTTP/1.1"),
+            ("POST /api/webhooks/12/abc123?wait=true", "POST /api/webhooks/12/[FILTERED]?wait=true"),
+            ("POST /api/webhooks/12/abc123#fragment", "POST /api/webhooks/12/[FILTERED]#fragment"),
+            ("POST /api/webhooks/12/abc123/messages", "POST /api/webhooks/12/[FILTERED]/messages"),
+            ("request failed path=\"/api/webhooks/12/abc123\"", "request failed path=\"/api/webhooks/12/[FILTERED]\""),
+            ("url=https://campfire.test/api/webhooks/12/abc123", "url=https://campfire.test/api/webhooks/12/[FILTERED]"),
+            ("POST /api/webhooks/nope/abc123", "POST /api/webhooks/nope/[FILTERED]"),
+            ("GET /api/webhooks/12", "GET /api/webhooks/12"),
+            ("POST /api/webhooks/12/", "POST /api/webhooks/12/"),
+            ("GET /api/v1/rooms/1/webhooks/12", "GET /api/v1/rooms/1/webhooks/12"),
+        ] {
+            assert_eq!(scrub_log_line(line), expected, "{line}");
+        }
+        let mut out = Vec::new();
+        ScrubbingWriter(&mut out)
+            .write_all(b"POST /api/webhooks/12/abc123\nrequest failed path=\"/api/webhooks/34/def456\" /rooms/1/12-AbC /invite/ghi789\n")
+            .unwrap();
+        assert_eq!(out, b"POST /api/webhooks/12/[FILTERED]\nrequest failed path=\"/api/webhooks/34/[FILTERED]\" /rooms/1/[FILTERED] /invite/[FILTERED]\n");
     }
 
     #[test]

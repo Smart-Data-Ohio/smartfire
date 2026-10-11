@@ -191,6 +191,8 @@ function message(id: number, roomId = ROOM, threadId: number | null = null): Mes
     action: false,
     streaming: false,
     embedsSuppressed: false,
+    embeds: null,
+    webhook: null,
     replyToMessageId: null,
     forwardedFromMessageId: null,
     forwardedAt: null,
@@ -617,6 +619,25 @@ describe("the activity inbox", () => {
     expect(next.activity.unreadCount).toBe(2);
   });
 
+  it("removes every item in one recipient publication", () => {
+    const next = events(inbox(), {
+      topic: "user",
+      type: "activity.removed",
+      data: {
+        id: 5,
+        additionalIds: [4],
+        unreadCount: 1,
+        unreadRevision: 2,
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      },
+    });
+
+    expect(next.activity.items[5]).toBeUndefined();
+    expect(next.activity.items[4]).toBeUndefined();
+    expect(ids(next, "all", "unread")).toEqual([3]);
+    expect(next.activity.unreadCount).toBe(1);
+  });
+
   it("invalidates a delayed count even when removal of an unseen item leaves the count unchanged", () => {
     const state = inbox();
 
@@ -839,6 +860,34 @@ describe("the activity inbox", () => {
     expect(unreadDelta(unread, read)).toBe(-1);
     expect(unreadDelta(read, unread)).toBe(1);
     expect(unreadDelta(read, handled)).toBe(0);
+  });
+
+  it("keeps other unread badges unchanged when an ignored reminder is acted on", () => {
+    const reminder = item(6, 60, "message_reminder");
+
+    const ignored: ActivityItem = {
+      ...reminder,
+      source: { ...reminder.source, sourceType: "saved_item", ignored: true },
+    };
+
+    let state = landActivityPage(
+      initialState,
+      "all",
+      "unread",
+      activityPage([ignored], 3),
+      "replace",
+    );
+
+    let before = ignored;
+    let token = 0;
+
+    for (const action of ["read", "unread", "handled", "unhandled"] as const) {
+      const after = nextActivityItem(before, action, at(70));
+
+      state = showActivityChange(state, after, ++token, unreadDelta(before, after));
+      expect(state.activity.unreadCount).toBe(3);
+      before = after;
+    }
   });
 
   it("opens messages, rooms and the scheduled page in the app, and the rest on classic pages", () => {

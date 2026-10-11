@@ -180,12 +180,21 @@ async fn opening_a_direct_room_answers_its_sidebar_row() {
     assert_eq!(reply.status, StatusCode::OK);
     assert_eq!(parse::<api::SidebarRow>(&reply).room.id, row.room.id);
 
-    // Only the first ten ids count, and only active people among them.
+    // Missing people refuse the whole selection, including a mixed group.
     let reply = david
         .write(json_body(
             Method::POST,
             "/api/v1/directs",
             &json!({"userIds": [JASON, KEVIN, JZ, BENDER, DEPLOY_BOT, LONELY_LOU, NEW_MEMBER, 1, 2, 3]}),
+        ))
+        .await;
+    assert_eq!(status_and_tag(&reply), (StatusCode::NOT_FOUND, "NotFound".into()));
+    // Only the first ten ids count, and only active people among them.
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [JASON, KEVIN, JZ, BENDER, DEPLOY_BOT, LONELY_LOU, NEW_MEMBER, JASON, JZ, RITA, 999999999]}),
         ))
         .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());

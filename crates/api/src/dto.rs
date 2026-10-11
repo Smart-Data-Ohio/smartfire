@@ -255,7 +255,7 @@ pub fn user(
         role: match user.role {
             Role::Member => api::UserRole::Member,
             Role::Administrator => api::UserRole::Administrator,
-            Role::Bot => api::UserRole::Bot,
+            Role::Bot | Role::WebhookAuthor => api::UserRole::Bot,
         },
         status: match user.status {
             Status::Active => api::UserStatus::Active,
@@ -474,6 +474,7 @@ fn messages_and_fetches_inner(
     }
     let threads = thread_indicators(conn, messages)?;
     let mut steps = message_steps(conn, &ids)?;
+    let mut webhook_payloads = crate::webhooks::message_payloads(conn, app, &ids)?;
     messages
         .iter()
         .map(|message| {
@@ -493,11 +494,14 @@ fn messages_and_fetches_inner(
             } else {
                 None
             };
+            let (embeds, webhook) = webhook_payloads.remove(&message.id)
+                .map_or((None, None), |payload| (Some(payload.embeds), Some(payload.attribution)));
             Ok(api::MessageDTO {
                 id: message.id,
                 room_id: message.room_id,
                 thread_id: message.thread_id,
                 creator_id: message.creator_id,
+                ignored: None,
                 client_message_id: message.client_message_id.clone(),
                 body_html: inline_mentions(&presenter.rendered_body_html(message)?),
                 sound,
@@ -526,6 +530,8 @@ fn messages_and_fetches_inner(
                 updated_at: time(message.updated_at),
                 published: published.contains(&message.id),
                 announcement_source: None,
+                embeds,
+                webhook,
             })
         })
         .collect::<Result<Vec<_>>>()
@@ -797,6 +803,7 @@ pub fn pin_list(
     conn: &Connection,
     app: &AppState,
     room_id: i64,
+    viewer_id: i64,
     now: Timestamp,
 ) -> Result<api::PinList> {
     let mut statement = conn.prepare_cached(
@@ -814,7 +821,7 @@ pub fn pin_list(
             pinned.push(message);
         }
     }
-    let messages = messages(conn, app, &pinned)?;
+    let messages = messages_for_viewer(conn, app, &pinned, viewer_id)?;
     // A pin whose message is gone (or doesn't render) is left out, so every pin has its message.
     let listed: BTreeSet<i64> = messages.iter().map(|message| message.id).collect();
     let pins: Vec<_> = pins
@@ -919,6 +926,33 @@ pub fn saved(conn: &Connection, viewer_id: i64, messages: &[Message]) -> Result<
 
 pub fn message(conn: &Connection, app: &AppState, message: &Message) -> Result<api::MessageDTO> {
     Ok(messages(conn, app, std::slice::from_ref(message))?.remove(0))
+}
+
+pub(crate) fn mark_ignored(conn: &Connection, viewer: i64, messages: &mut [api::MessageDTO]) -> Result<()> {
+    let ignored = campfire_db::models::ignore_policy::ignored_authors(conn, viewer)?;
+    for message in messages { message.ignored = ignored.contains(&message.creator_id).then_some(true); }
+    Ok(())
+}
+
+pub(crate) fn messages_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<Vec<api::MessageDTO>> {
+    let mut dtos = self::messages(conn, app, messages)?;
+    mark_ignored(conn, viewer, &mut dtos)?;
+    announcement_sources(conn, &mut dtos, viewer)?;
+    Ok(dtos)
+}
+
+pub(crate) fn messages_and_fetches_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
+    let (mut dtos, fetches) = messages_and_fetches(conn, app, messages)?;
+    mark_ignored(conn, viewer, &mut dtos)?;
+    announcement_sources(conn, &mut dtos, viewer)?;
+    Ok((dtos, fetches))
+}
+
+pub(crate) fn message_for_viewer(conn: &Connection, app: &AppState, message: &Message, viewer: i64) -> Result<api::MessageDTO> {
+    let mut dto = self::message(conn, app, message)?;
+    mark_ignored(conn, viewer, std::slice::from_mut(&mut dto))?;
+    announcement_sources(conn, std::slice::from_mut(&mut dto), viewer)?;
+    Ok(dto)
 }
 
 /// The room's members as `(user id, name)`, oldest membership first (people whose row is gone
@@ -1033,12 +1067,13 @@ pub(crate) fn notification_counts(
 /// `index_activity_items_on_unread_message_pings`); inlined, SQLite would walk the room's whole
 /// history by `room_id` to find them.
 fn notification_counts_sql(one_room: bool) -> String {
+    let visible = campfire_db::models::ignore_policy::visible_sql("?1", "m.creator_id");
     let only = |column: &str| match one_room {
         true => format!(r#" AND {column} = ?3"#),
         false => String::new(),
     };
     let sql = format!(
-        r#"WITH "bounds" AS (SELECT "ms"."room_id", "ms"."involvement", "ms"."unread_at", "ms"."last_read_message_id" AS "read_id", "read"."created_at" AS "read_created_at" FROM "memberships" "ms" LEFT JOIN "messages" "read" ON "read"."id" = "ms"."last_read_message_id" AND "read"."room_id" = "ms"."room_id" AND "read"."thread_id" IS NULL WHERE "ms"."user_id" = ?1 AND "ms"."involvement" IN ('everything', 'mentions', 'muted', 'nothing') AND "ms"."unread_at" IS NOT NULL{bounds_only}), "roots" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "b"."involvement" = 'everything' AND NOT "m"."system_note" AND "m"."creator_id" != ?1 AS "notifies" FROM "bounds" "b" INNER JOIN "messages" "m" ON "m"."room_id" = "b"."room_id" AND "m"."thread_id" IS NULL WHERE {IN_UNREAD_RANGE}), "pinged" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "m"."thread_id", "activity_items"."event_type" = 'mention' AS "mention" FROM "activity_items" INNER JOIN "messages" "m" ON "m"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ?1 AND "activity_items"."source_type" = 'Message' AND "activity_items"."read_at" IS NULL AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity'){pinged_only}), "notifying" AS (SELECT "room_id", "id", 0 AS "thread" FROM "roots" WHERE "notifies" UNION SELECT "p"."room_id", "p"."id", "p"."thread_id" IS NOT NULL FROM "pinged" "p" INNER JOIN "memberships" "ms" ON "ms"."room_id" = "p"."room_id" AND "ms"."user_id" = ?1 WHERE ("ms"."involvement" IN ('everything', 'mentions') OR ("ms"."involvement" = 'muted' AND "p"."mention")) AND CASE WHEN "p"."thread_id" IS NULL THEN "p"."id" IN (SELECT "id" FROM "roots") ELSE EXISTS (SELECT 1 FROM "thread_memberships" "tm" WHERE "tm"."thread_id" = "p"."thread_id" AND "tm"."user_id" = ?1 AND "tm"."unread_at" IS NOT NULL AND ("tm"."last_read_message_id" IS NULL OR "p"."id" > "tm"."last_read_message_id")) END) SELECT "room_id", SUM("unread"), SUM("mentions"), SUM("notifications"), SUM("threads") FROM (SELECT "room_id", 1 AS "unread", 0 AS "mentions", 0 AS "notifications", 0 AS "threads" FROM "roots" UNION ALL SELECT "room_id", 0, "mention", 0, 0 FROM "pinged" UNION ALL SELECT "room_id", 0, 0, 1, "thread" FROM "notifying") GROUP BY "room_id""#,
+        r#"WITH "bounds" AS (SELECT "ms"."room_id", "ms"."involvement", "ms"."unread_at", "ms"."last_read_message_id" AS "read_id", "read"."created_at" AS "read_created_at" FROM "memberships" "ms" LEFT JOIN "messages" "read" ON "read"."id" = "ms"."last_read_message_id" AND "read"."room_id" = "ms"."room_id" AND "read"."thread_id" IS NULL WHERE "ms"."user_id" = ?1 AND "ms"."involvement" IN ('everything', 'mentions', 'muted', 'nothing') AND "ms"."unread_at" IS NOT NULL{bounds_only}), "roots" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "b"."involvement" = 'everything' AND NOT "m"."system_note" AND "m"."creator_id" != ?1 AS "notifies" FROM "bounds" "b" INNER JOIN "messages" "m" ON "m"."room_id" = "b"."room_id" AND "m"."thread_id" IS NULL WHERE {IN_UNREAD_RANGE} AND {visible}), "pinged" AS MATERIALIZED (SELECT "m"."room_id", "m"."id", "m"."thread_id", "activity_items"."event_type" = 'mention' AS "mention" FROM "activity_items" INNER JOIN "messages" "m" ON "m"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ?1 AND "activity_items"."source_type" = 'Message' AND "activity_items"."read_at" IS NULL AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity'){pinged_only} AND {visible}), "notifying" AS (SELECT "room_id", "id", 0 AS "thread" FROM "roots" WHERE "notifies" UNION SELECT "p"."room_id", "p"."id", "p"."thread_id" IS NOT NULL FROM "pinged" "p" INNER JOIN "memberships" "ms" ON "ms"."room_id" = "p"."room_id" AND "ms"."user_id" = ?1 WHERE ("ms"."involvement" IN ('everything', 'mentions') OR ("ms"."involvement" = 'muted' AND "p"."mention")) AND CASE WHEN "p"."thread_id" IS NULL THEN "p"."id" IN (SELECT "id" FROM "roots") ELSE EXISTS (SELECT 1 FROM "thread_memberships" "tm" WHERE "tm"."thread_id" = "p"."thread_id" AND "tm"."user_id" = ?1 AND "tm"."unread_at" IS NOT NULL AND ("tm"."last_read_message_id" IS NULL OR "p"."id" > "tm"."last_read_message_id")) END) SELECT "room_id", SUM("unread"), SUM("mentions"), SUM("notifications"), SUM("threads") FROM (SELECT "room_id", 1 AS "unread", 0 AS "mentions", 0 AS "notifications", 0 AS "threads" FROM "roots" UNION ALL SELECT "room_id", 0, "mention", 0, 0 FROM "pinged" UNION ALL SELECT "room_id", 0, 0, 1, "thread" FROM "notifying") GROUP BY "room_id""#,
         bounds_only = only(r#""ms"."room_id""#),
         pinged_only = only(r#""m"."room_id""#),
     );
@@ -1152,6 +1187,7 @@ pub fn membership_row(
     membership: &Membership,
     now: Timestamp,
 ) -> Result<api::SidebarRow> {
+    let membership = Membership::find(conn, membership.id)?;
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
         Some(members(conn, room.id)?)
@@ -1168,7 +1204,7 @@ pub fn membership_row(
     };
     Ok(sidebar_row_with(
         room,
-        membership,
+        &membership,
         viewer.display_name(),
         members.as_deref(),
         counts,
@@ -1254,6 +1290,7 @@ pub fn room_detail(
     membership: &Membership,
     now: Timestamp,
 ) -> Result<api::RoomDetail> {
+    let membership = Membership::find(conn, membership.id)?;
     let members = members(conn, room.id)?;
     let member_count: i64 = conn.query_row_cached(
         r#"SELECT COUNT(*) FROM "memberships" WHERE "memberships"."room_id" = ?"#,
@@ -1270,7 +1307,7 @@ pub fn room_detail(
     };
     let member_preview_ids: Vec<i64> = members.iter().take(5).map(|(id, _)| *id).collect();
     let unread =
-        room_unread::first_unread(conn, membership)?.map(|(first_unread_message_id, count)| {
+        room_unread::first_unread(conn, &membership)?.map(|(first_unread_message_id, count)| {
             api::UnreadDivider {
                 first_unread_message_id,
                 count,
@@ -1278,7 +1315,7 @@ pub fn room_detail(
         });
     Ok(api::RoomDetail {
         room: self::room(room),
-        membership: self::membership(membership),
+        membership: self::membership(&membership),
         display_name: accounts::room_display_name(conn, room, viewer)?,
         member_count,
         pins_count: MessagePin::count_for_room(conn, room.id)?,
@@ -1597,8 +1634,7 @@ pub(crate) fn thread_detail(
         Some(id) => Message::find_by_id(conn, id)?,
         None => None,
     };
-    let (mut parents, mut fetches) = messages_and_fetches(conn, app, parent.as_slice())?;
-    announcement_sources(conn, &mut parents, viewer.id)?;
+    let (mut parents, mut fetches) = messages_and_fetches_for_viewer(conn, app, parent.as_slice(), viewer.id)?;
     let parent_message = parents.pop();
     fetches.thread_header(conn, thread, now)?;
     let facts = crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
@@ -1776,12 +1812,6 @@ pub(crate) fn announcement_sources(conn: &Connection, messages: &mut [api::Messa
         });
     }
     Ok(())
-}
-
-pub(crate) fn message_for_viewer(conn: &Connection, app: &AppState, message: &Message, viewer: i64) -> Result<api::MessageDTO> {
-    let mut dto = self::message(conn, app, message)?;
-    announcement_sources(conn, std::slice::from_mut(&mut dto), viewer)?;
-    Ok(dto)
 }
 
 #[cfg(test)]

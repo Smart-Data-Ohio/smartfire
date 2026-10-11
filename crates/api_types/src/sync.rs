@@ -109,6 +109,9 @@ pub struct SyncEvent {
 #[serde(tag = "type", content = "data")]
 #[ts(export)]
 pub enum SyncPayload {
+    /// Private to the blocker's sessions; revision orders concurrent preference changes.
+    #[serde(rename = "blocks.updated")]
+    BlocksUpdated(crate::BlockState),
     /// On the person's `user` topic: their settings changed in another session. Carries the
     /// same revision and evaluation time as the settings write's response.
     #[serde(rename = "settings.updated")]

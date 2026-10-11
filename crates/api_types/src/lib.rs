@@ -59,6 +59,7 @@ mod switcher;
 mod sync;
 mod thread;
 mod user;
+mod webhooks;
 mod work;
 
 pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
@@ -164,7 +165,7 @@ pub use organize::{
     WorkspaceRoomPosition, WriteWorkspaceCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
-pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
+pub use people::{BlockList, BlockedPerson, BlockState, DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
 pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
@@ -210,6 +211,11 @@ pub use thread::{
     UpdateThread,
 };
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
+pub use webhooks::{
+    ChannelWebhook, ChannelWebhookCredential, ChannelWebhookList, CreateChannelWebhook,
+    ExecuteWebhook, MessageWebhook, UpdateChannelWebhook, WebhookEmbed, WebhookEmbedField,
+    WebhookEmbedFooter,
+};
 pub use work::{
     CreateWorkHandoff, CreateWorkLink, UpdateWork, WorkDetail, WorkFacts, WorkFilter,
     WorkHandoffReceiver, WorkHistoryEntry, WorkHistoryHandoff, WorkHistoryKind, WorkLink,

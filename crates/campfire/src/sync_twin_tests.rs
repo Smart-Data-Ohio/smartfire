@@ -51,6 +51,7 @@ const FIXED: &[&str] = &[
     "workspace_branding::publish",
     "sync::workspace_styles_updated",
     "sync::settings_updated",
+    "sync::blocks_updated",
 ];
 
 fn read(path: &str) -> String {

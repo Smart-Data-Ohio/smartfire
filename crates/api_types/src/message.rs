@@ -22,6 +22,10 @@ pub struct MessageDTO {
     /// `null` on the room's root timeline.
     pub thread_id: Option<i64>,
     pub creator_id: i64,
+    /// Collapse for this viewer, retaining the author and content for an explicit reveal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ignored: Option<bool>,
     /// The sender's id for the message, which makes posting idempotent.
     pub client_message_id: String,
     /// The rendered body from the server's sanitizer pipeline.
@@ -102,6 +106,8 @@ pub struct MessageDTO {
     #[serde(default)]
     #[ts(optional = nullable)]
     pub announcement_source: Option<crate::AnnouncementSource>,
+    pub embeds: Option<Vec<crate::WebhookEmbed>>,
+    pub webhook: Option<crate::MessageWebhook>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

@@ -324,8 +324,9 @@ fn creation_prepends_both_renderings_and_marks_only_visible_disconnected_unmuted
     }));
     let actual = t.events()[from..]
         .iter()
-        .filter_map(|event| {
-            let (stream, payload) = event.as_broadcast()?.channel_frame()?;
+        .filter_map(|event| event.as_broadcast())
+        .flat_map(|event| event.channel_frames())
+        .filter_map(|(stream, payload)| {
             payload
                 .get("roomId")
                 .is_some()

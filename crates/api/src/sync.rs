@@ -165,7 +165,16 @@ impl SyncRenderer for Renderer {
         let Some(viewer) = campfire_db::User::find_by_id(conn, user_id)? else {
             return Ok(None);
         };
-        crate::activity::changed(conn, &app, &viewer, item_id)
+        if let Some(changed) = crate::activity::changed(conn, &app, &viewer, item_id)? {
+            return Ok(Some(changed));
+        }
+        let unread = campfire_db::ActivityItem::unread_snapshot(conn, user_id, app.db.env().now())?;
+        Ok(Some(api::ActivityItemChanged {
+            item: None,
+            unread_count: unread.count,
+            unread_revision: unread.revision,
+            evaluated_at: unread.evaluated_at.to_evaluation_time(),
+        }))
     }
 
     fn activity_unread_count(

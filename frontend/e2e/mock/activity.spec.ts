@@ -157,6 +157,36 @@ test("opening a mention goes to the message", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/r\/\d+(\/(m|t)\/\d+)?/);
 });
 
+test("an ignored saved reminder stays collapsed until explicitly revealed", async ({ page }) => {
+  await page.route("**/api/v1/activity?*", async (route) => {
+    const response = await route.fetch();
+    const snapshot = await response.json();
+    const original = snapshot.items[0];
+
+    const reminder = {
+      ...original,
+      eventType: "message_reminder",
+      source: {
+        ...original.source,
+        sourceType: "saved_item",
+        ignored: true,
+        body: "Private ignored reminder text",
+      },
+    };
+
+    await route.fulfill({
+      json: { ...snapshot, items: [reminder], unreadCount: 0, nextCursor: null },
+    });
+  });
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+  await expect(page.getByText("Private ignored reminder text")).toHaveCount(0);
+  await expect(rows(page).first()).toHaveAttribute("data-state", "read");
+  await page.getByRole("button", { name: "Show ignored message" }).click();
+  await expect(page.getByText("Private ignored reminder text")).toBeVisible();
+  await expect(rows(page).first()).toHaveAttribute("data-state", "read");
+});
+
 test("a live item slides in at the top", async ({ page, request }) => {
   await openApp(page, "activity");
   await ready(page, "Activity");

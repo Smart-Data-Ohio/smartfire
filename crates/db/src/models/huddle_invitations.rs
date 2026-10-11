@@ -60,7 +60,7 @@ fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
     if let Event::Job(job) = &mut event { job.arguments["delivered"] = serde_json::json!(1); }
     tx.emit_after_commit(event);
     let sound = !UserStatusSettings::find(tx.conn(), request.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), request)?, tx.now()) && ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), None)?;
-    publish_current_ring(tx, request, sound);
+    publish_current_ring(tx, request, sound)?;
     Ok(())
 }
 
@@ -118,7 +118,7 @@ pub fn publish_ring_with_policy(
 ) -> Result<()> {
     let Some(current) = current_ring(tx, request)? else { return Ok(()); };
     let sound = !UserStatusSettings::find(tx.conn(), current.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), &current)?, tx.now()) && ring_allowed(tx.conn(), current.recipient_id, Some(current.sender_id), tx.now(), quiet_check)?;
-    publish_current_ring(tx, &current, sound);
+    publish_current_ring(tx, &current, sound)?;
     Ok(())
 }
 
@@ -126,18 +126,21 @@ pub fn publish_ring_with_policy(
 /// The request is not a policy decision and must never be published with an assumed decision.
 pub fn publish_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: bool) -> Result<()> {
     if let Some(current) = current_ring(tx, request)? {
-        publish_current_ring(tx, &current, sound_allowed);
+        publish_current_ring(tx, &current, sound_allowed)?;
     }
     Ok(())
 }
 
-fn publish_current_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: bool) {
+fn publish_current_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: bool) -> Result<()> {
     let mut invitation = request.invitation.clone();
-    invitation["silent"] = serde_json::Value::Bool(!sound_allowed);
+    let ignored = super::ignore_policy::ignored(tx.conn(), request.recipient_id, request.sender_id)?;
+    invitation["silent"] = serde_json::Value::Bool(!sound_allowed || ignored);
+    if ignored { invitation["unchanged"] = serde_json::Value::Bool(true); }
     tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
         stream: format!("user_{}_activity", request.recipient_id),
         payload: serde_json::json!({"activityItemId":invitation["activityItemId"], "huddleInvitation":invitation}),
     }));
+    Ok(())
 }
 
 /// Legacy queued jobs recover the current row after access removal, item resolution, or call end.

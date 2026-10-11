@@ -219,6 +219,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("workspace_branding::publish", &["workspace.updated"]),
     ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
     ("sync::settings_updated", &["settings.updated"]),
+    ("sync::blocks_updated", &["blocks.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -280,7 +281,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("agent_approval::ApprovalChange", &["approval.updated"]),
     ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
-    ("activity_item::ActivityItemTouched", &["activity.item"]),
+    ("activity_item::ActivityItemRecorded", &["activity.item"]),
+    ("Broadcasts::sync_activity_recorded", &["activity.item", "sidebar.row.upserted", "sidebar.row.removed"]),
     ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
         "room_category::SidebarOrganized",
@@ -400,14 +402,45 @@ pub fn message(
     let Some(dto) = renderer.message(conn, message) else {
         return;
     };
-    publish_message_dto(server, message, dto, created);
+    match campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) {
+        Ok(blockers) => publish_message(server, message, dto, created, &blockers),
+        Err(error) => tracing::warn!(%error, message_id = message.id, "sync: ignore policy not read"),
+    }
+}
+
+fn publish_message(
+    server: &Cable,
+    message: &Message,
+    mut dto: MessageDTO,
+    created: bool,
+    blockers: &[i64],
+) {
+    // Resolve source references at delivery and replay, after recipient personalization.
+    dto.announcement_source = None;
+    let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
+    if !server.sync_wanted() {
+        return;
+    }
+    let mut publication = SyncPublication::new(
+        Audience::Topic(message_topic(message)),
+        serde_json::to_string(&payload(dto.clone())).expect("sync payloads serialize"),
+    );
+    if !blockers.is_empty() {
+        dto.ignored = Some(true);
+        publication.personalized = Some((
+            blockers.iter().copied().collect(),
+            serde_json::to_string(&payload(dto)).expect("sync payloads serialize"),
+        ));
+    }
+    server.sync_publish(publication);
 }
 
 /// Validate publication even without subscribers, before claims or held jobs are released.
 pub fn checked_message(server: &Cable, slot: &RendererSlot, conn: &Connection, message: &Message, created: bool) -> bool {
     let Some(renderer) = slot.0.renderer.get() else { return false; };
     let Some(dto) = renderer.message(conn, message) else { return false; };
-    publish_message_dto(server, message, dto, created);
+    let Ok(blockers) = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) else { return false; };
+    publish_message(server, message, dto, created, &blockers);
     true
 }
 
@@ -416,18 +449,11 @@ pub fn checked_messages(server: &Cable, slot: &RendererSlot, conn: &Connection, 
     let renderer = slot.0.renderer.get()?;
     let dtos = renderer.messages(conn, messages)?;
     if dtos.len() != messages.len() { return None; }
+    let blockers = campfire_db::models::ignore_policy::blockers_for_authors(conn, messages.iter().map(|message| message.creator_id)).ok()?;
     for (message, dto) in messages.iter().zip(dtos) {
-        publish_message_dto(server, message, dto, true);
+        publish_message(server, message, dto, true, blockers.get(&message.creator_id).map_or(&[], Vec::as_slice));
     }
     Some(messages.iter().map(|message| message.id).collect())
-}
-
-// Source references are resolved at delivery, including replay. The ring keeps only the
-// shared conversation payload, whose topic is authorized again when a client resumes.
-fn publish_message_dto(server: &Cable, message: &Message, mut dto: MessageDTO, created: bool) {
-    dto.announcement_source = None;
-    let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
-    publish(server, Audience::Topic(message_topic(message)), &payload(dto));
 }
 
 /// `message.updated`, read afresh later:
@@ -547,48 +573,60 @@ pub fn room_unread(
     message_id: Option<i64>,
     mentioned: bool,
 ) {
+    room_unread_with_policy(server, user_id, room_id, message_id, mentioned, false);
+}
+
+pub fn room_unread_with_policy(
+    server: &Cable,
+    user_id: i64,
+    room_id: i64,
+    message_id: Option<i64>,
+    mentioned: bool,
+    unchanged: bool,
+) {
     if !server.sync_wanted() {
         return;
     }
     let payload = SyncPayload::RoomUnread(RoomUnread {
         room_id,
-        message_id,
-        mentioned,
+        message_id: if unchanged { None } else { message_id },
+        mentioned: mentioned && !unchanged,
+        unchanged: unchanged.then_some(true),
     });
     send_unread_change(server, user_id, room_id, &payload);
 }
 
-/// The twin of a `Broadcast::UnreadRoom` the database layer emits: `room.unread` with the message
-/// that made the room unread, and whether it mentions the person (read from `db` when there is
-/// one; without a database, unmentioned).
+/// Resolve the source policy once for the complete fan-out, including title-only board posts.
 pub fn unread_room(
     server: &Cable,
     db: Option<&Database>,
-    user_id: i64,
+    user_ids: &[i64],
     room_id: i64,
     message_id: Option<i64>,
+    author_id: i64,
 ) {
     if !server.sync_wanted() {
         return;
     }
-    let mentioned = match (db, message_id) {
-        (Some(db), Some(message_id)) => {
-            let rich_text = db.env().rich_text.clone();
-            let mentioned = db.read_blocking(move |conn| {
-                let message = Message::find(conn, message_id)?;
-                let mentionees = message.mentionees(conn, &*rich_text)?;
-                Ok(mentionees.iter().any(|user| user.id == user_id))
-            });
-            match mentioned {
-                Ok(mentioned) => mentioned,
-                Err(error) => {
-                    return tracing::warn!(%error, message_id, "sync: unread message not read");
-                }
+    let facts = db.map(|db| {
+        db.read_blocking(|conn| {
+            let blockers = campfire_db::models::ignore_policy::blockers_of(conn, author_id)?;
+            let mentioned = message_id.map(|id| {
+                Message::find(conn, id)?.mentionees(conn, &*db.env().rich_text)
+                    .map(|users| users.into_iter().map(|user| user.id).collect::<Vec<_>>())
+            }).transpose()?.unwrap_or_default();
+            Ok((blockers, mentioned))
+        })
+    }).transpose();
+    match facts {
+        Ok(facts) => {
+            let (blockers, mentioned) = facts.unwrap_or_default();
+            for &user_id in user_ids {
+                room_unread_with_policy(server, user_id, room_id, message_id, mentioned.contains(&user_id), blockers.contains(&user_id));
             }
         }
-        _ => false,
-    };
-    room_unread(server, user_id, room_id, message_id, mentioned);
+        Err(error) => tracing::warn!(%error, "sync: unread policy not read"),
+    }
 }
 
 /// `room.read` on the person's `user` topic.
@@ -653,14 +691,15 @@ pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
 
 /// `activity.item` on the owner's `user` topic: the twin of `ActivityChannel`'s
 /// `{activityItemId}` frame on `user_<id>_activity` (a huddle ring's frame carries the id too).
-/// The frame is sent after commit, so the item is read afresh; one the owner can't see (any
-/// more) publishes nothing.
+/// The frame is sent after commit, so the item is read afresh; hidden content keeps its
+/// publication slot with a null item.
 pub fn activity_stream(
     server: &Cable,
     slot: &RendererSlot,
     stream: &str,
     payload: &serde_json::Value,
 ) {
+    if payload["syncRecorded"].as_bool() == Some(true) { return; }
     let (Some(user_id), Some(item_id)) = (
         stream
             .strip_prefix("user_")
@@ -681,6 +720,11 @@ pub fn activity_stream(
 /// reply while still unread). Only read for an owner with a sync socket open; others get a gap
 /// marker, so a resume of theirs refetches.
 pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, item_id: i64) {
+    activity_item_in_room_later(server, slot, user_id, item_id, None);
+}
+
+/// The recording source supplies the room even when the personal item was not stored.
+pub fn activity_item_in_room_later(server: &Cable, slot: &RendererSlot, user_id: i64, item_id: i64, room_id: Option<i64>) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
@@ -709,7 +753,7 @@ pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, it
         // A message's item counts toward its room's red pill (`notificationCount`): a thread
         // reply pings without making the room unread, and reading the item clears it.
         // Read afresh later, under the room's lock, as every row is ([`RoomRows::publish`]).
-        match item_room_id(conn, item_id) {
+        match room_id.map(Some).map_or_else(|| item_room_id(conn, item_id), Ok) {
             Ok(Some(room_id)) => {
                 sidebar_rows_later(&server, &slot, room_id, Some(vec![user_id]));
             }
@@ -737,8 +781,15 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
         return;
     };
     // Only owners with a sync socket open; the others get a gap marker.
-    let items = removed
-        .items
+    let items = if let Some(recipient_ids) = &removed.recipient_ids {
+        recipient_ids.iter().map(|&user_id| (
+            removed.items.iter().filter(|&&(_, owner)| owner == user_id).map(|&(id, _)| id).collect::<Vec<_>>(),
+            user_id,
+        )).collect()
+    } else {
+        removed.items.iter().map(|&(id, user_id)| (vec![id], user_id)).collect::<Vec<_>>()
+    };
+    let items = items
         .into_iter()
         .filter(|&(_, user_id)| {
             let connected = server.sync_connected(user_id);
@@ -757,7 +808,9 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
         let Some(server) = server.upgrade() else {
             return;
         };
-        for (id, user_id) in items {
+        for (ids, user_id) in items {
+            let id = ids.first().copied().unwrap_or(0);
+            let additional_ids = (ids.len() > 1).then(|| ids.into_iter().skip(1).collect());
             let count = render.activity_unread_count(conn, user_id);
             match count {
                 Ok(Some(unread)) => send(
@@ -765,6 +818,7 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
                     Audience::User(user_id),
                     &SyncPayload::ActivityRemoved(campfire_api_types::ActivityItemRemoved {
                         id,
+                        additional_ids,
                         unread_count: unread.count,
                         unread_revision: unread.revision,
                         evaluated_at: unread.evaluated_at.to_evaluation_time(),
@@ -1711,6 +1765,10 @@ pub fn settings_updated(server: &Cable, settings: campfire_api_types::Settings) 
     );
 }
 
+pub fn blocks_updated(server: &Cable, viewer: i64, state: campfire_api_types::BlockState) {
+    send(server, Audience::User(viewer), &SyncPayload::BlocksUpdated(state), |publication| publication);
+}
+
 pub fn user_updated(server: &Cable, user: campfire_api_types::User) {
     if !server.sync_wanted() {
         return;
@@ -1865,7 +1923,7 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
         let Some(renderer) = slot.get(&server) else {
             return;
         };
-        let read = (|| -> campfire_db::Result<Vec<(i64, campfire_api_types::ApprovalUpdated)>> {
+        let read = (|| -> campfire_db::Result<Vec<(i64, SyncPayload)>> {
             let items: Vec<(i64, i64)> = conn
                 .prepare_cached(
                     "SELECT id, user_id FROM activity_items WHERE source_type = 'AgentApproval' \
@@ -1882,11 +1940,15 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
                 let Some(user) = campfire_db::User::find_by_id(conn, user_id)? else {
                     continue;
                 };
-                if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?.is_none() {
+                if campfire_db::ActivityItem::find_authorized(conn, &user, item_id)?.is_none() {
                     continue;
                 }
                 if let Some(update) = renderer.approval_updated(conn, approval_id, user_id)? {
-                    updates.push((user_id, update));
+                    let payload = if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?.is_none() {
+                        let Some(unchanged) = renderer.activity_item(conn, user_id, item_id)? else { continue; };
+                        SyncPayload::ActivityItem(unchanged)
+                    } else { SyncPayload::ApprovalUpdated(update) };
+                    updates.push((user_id, payload));
                 }
             }
             Ok(updates)
@@ -1897,7 +1959,7 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
                     send(
                         &server,
                         Audience::User(user_id),
-                        &SyncPayload::ApprovalUpdated(update),
+                        &update,
                         |publication| publication,
                     );
                 }

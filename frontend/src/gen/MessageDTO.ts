@@ -5,9 +5,11 @@ import type { Attachment } from "./Attachment";
 import type { Boost } from "./Boost";
 import type { MessageCard } from "./MessageCard";
 import type { MessageSound } from "./MessageSound";
+import type { MessageWebhook } from "./MessageWebhook";
 import type { Poll } from "./Poll";
 import type { Reaction } from "./Reaction";
 import type { ThreadIndicator } from "./ThreadIndicator";
+import type { WebhookEmbed } from "./WebhookEmbed";
 
 /**
  * A message on a room's timeline or in a thread. The announcement source is viewer-relative; whether the viewer may
@@ -24,6 +26,10 @@ export type MessageDTO = { id: number, roomId: number,
  * `null` on the room's root timeline.
  */
 threadId: number | null, creatorId: number,
+/**
+ * Collapse for this viewer, retaining the author and content for an explicit reveal.
+ */
+ignored?: boolean,
 /**
  * The sender's id for the message, which makes posting idempotent.
  */
@@ -136,4 +142,4 @@ updatedAt: string, published?: boolean,
 /**
  * Null when this is not a delivered copy or the viewer cannot see the source room.
  */
-announcementSource?: AnnouncementSource | null, };
+announcementSource?: AnnouncementSource | null, embeds: Array<WebhookEmbed> | null, webhook: MessageWebhook | null, };

@@ -104,6 +104,11 @@ impl Broadcasts {
         sync::activity_item_later(&self.server, &self.sync, user_id, item_id);
     }
 
+    /// A recording slot, including the room of a source with no personally stored item.
+    pub fn sync_activity_recorded(&self, recorded: campfire_db::models::activity_item::ActivityItemRecorded) {
+        sync::activity_item_in_room_later(&self.server, &self.sync, recorded.user_id, recorded.id, recorded.room_id);
+    }
+
     /// `activity.removed` for removed inbox items.
     pub fn sync_activity_removed(&self, removed: ActivityItemsRemoved) {
         sync::activity_removed_later(&self.server, &self.sync, removed);
@@ -287,13 +292,15 @@ impl Broadcasts {
                 .iter()
                 .map(|user| user.id)
                 .collect();
+            let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
             for &user_id in &user_ids {
-                sync::room_unread(
+                sync::room_unread_with_policy(
                     &self.server,
                     user_id,
                     room.id,
                     Some(message.id),
                     mentioned.contains(&user_id),
+                    blockers.contains(&user_id),
                 );
             }
             // A direct row previews its newest root, so every member's row changes with one.
@@ -377,9 +384,11 @@ fn unread_user_ids(
     let mut memberships = Membership::for_room(conn, room.id)?;
     let ids = memberships.iter().map(|membership| membership.user_id).collect::<Vec<_>>();
     let users = UserStatusSettings::for_ids(conn, &ids)?;
-    memberships.retain(|membership| !users.get(&membership.user_id).is_some_and(|user| {
-        user.notification_preferences.muted(room.id, now)
-    }));
+    memberships.retain(|membership| {
+        !users.get(&membership.user_id).is_some_and(|user| {
+                user.notification_preferences.muted(room.id, now)
+            })
+    });
     let muted = |membership: &Membership| {
         users.get(&membership.user_id)
             .map(|user| user.notification_preferences.involvement(room.id, membership.involvement))

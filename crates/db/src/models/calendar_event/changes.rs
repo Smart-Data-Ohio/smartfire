@@ -230,7 +230,7 @@ impl CalendarEvent {
                 )?;
                 if changed {
                     for recipient in saved
-                        .notification_recipient_ids(tx.conn())?
+                        .activity_recipient_ids(tx.conn())?
                         .into_iter()
                         .filter(|u| Some(*u) != actor)
                     {
@@ -605,7 +605,7 @@ impl CalendarEvent {
         self.handle_unread(tx)?;
         if notify {
             for user in self
-                .notification_recipient_ids(tx.conn())?
+                .activity_recipient_ids(tx.conn())?
                 .into_iter()
                 .filter(|u| Some(*u) != actor)
             {

@@ -97,6 +97,8 @@ pub struct SyncPublication {
     pub audience: Audience,
     /// The serialized `SyncPayload`: a JSON object `{"type":…,"data":…}`.
     pub payload: String,
+    /// These recipients receive this payload instead, under the same sequence and audience.
+    pub personalized: Option<(HashSet<i64>, String)>,
     /// Not delivered to this person's connections (typing isn't echoed to the typist).
     pub except_user: Option<i64>,
     /// Events with the same key replace each other in a connection's pending batch: only the
@@ -113,6 +115,7 @@ impl SyncPublication {
         Self {
             audience,
             payload,
+            personalized: None,
             except_user: None,
             coalesce: None,
             unsubscribe: None,
@@ -133,6 +136,7 @@ pub(crate) struct Entry {
     pub at: Instant,
     /// `{"seq":…,"topic":…,"type":…,"data":…}`
     pub json: Box<str>,
+    pub personalized: Option<(HashSet<i64>, Box<str>)>,
     /// A marker, not an event: the audience's events were skipped here, so a connection that
     /// reads it refetches instead ([`Ring::push_gap`]).
     pub gap: bool,
@@ -148,6 +152,13 @@ impl Entry {
             Audience::User(id) => *id == user_id,
             Audience::Everyone => true,
             Audience::Topic(topic) => follows(topic),
+        }
+    }
+
+    fn json_for(&self, user_id: i64) -> &str {
+        match &self.personalized {
+            Some((users, json)) if users.contains(&user_id) => json,
+            _ => &self.json,
         }
     }
 }
@@ -213,12 +224,15 @@ impl Ring {
         let SyncPublication {
             audience,
             payload,
+            personalized,
             except_user,
             coalesce,
             unsubscribe,
             ephemeral,
         } = publication;
         let json = encode_event(seq, audience.topic(), &payload);
+        let personalized = personalized
+            .map(|(users, payload)| (users, encode_event(seq, audience.topic(), &payload)));
         let now = Instant::now();
         let entry = Arc::new(Entry {
             seq,
@@ -229,6 +243,7 @@ impl Ring {
             ephemeral,
             at: now,
             json,
+            personalized,
             gap: false,
         });
         self.append(entry, now);
@@ -248,6 +263,7 @@ impl Ring {
             ephemeral: false,
             at: now,
             json: "".into(),
+            personalized: None,
             gap: true,
         });
         self.append(entry, now);
@@ -519,6 +535,35 @@ mod tests {
     }
 
     #[test]
+    fn personalized_payload_replays_under_the_public_sequence_and_audience() {
+        let ring = ring(10, Duration::from_secs(60));
+        let mut event = publication("room:1", 3);
+        event.personalized = Some((
+            [2, 4].into_iter().collect(),
+            r#"{"type":"x","data":"ignored"}"#.into(),
+        ));
+        ring.push(7, event);
+        let Read::Events(events, head) = ring.read(0) else {
+            panic!()
+        };
+        assert_eq!(events.len(), 1);
+        assert_eq!(head, 7);
+        assert_eq!(
+            events[0].json_for(1),
+            r#"{"seq":7,"topic":"room:1","type":"x","data":3}"#
+        );
+        for viewer in [2, 4] {
+            assert_eq!(
+                events[0].json_for(viewer),
+                r#"{"seq":7,"topic":"room:1","type":"x","data":"ignored"}"#
+            );
+            assert!(events[0].delivered_to(viewer, |topic| topic == "room:1"));
+            assert!(!events[0].delivered_to(viewer, |_| false));
+        }
+        assert_eq!(seqs(ring.read(0)), vec![7]);
+    }
+
+    #[test]
     fn reads_past_the_cursor_in_sequence_order() {
         let ring = ring(10, Duration::from_secs(60));
         for seq in [2, 5, 9] {
@@ -642,6 +687,7 @@ mod tests {
             ephemeral: false,
             at: Instant::now(),
             json: "{}".into(),
+            personalized: None,
             gap: false,
         };
         let follows_room_1 = |topic: &str| topic == "room:1";

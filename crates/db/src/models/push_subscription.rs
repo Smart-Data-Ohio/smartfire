@@ -282,9 +282,10 @@ impl PushSubscription {
         creator_id: i64,
         now: Timestamp,
     ) -> Result<Vec<Self>> {
+        let visible = super::ignore_policy::visible_sql("memberships.user_id", "?3");
         query_all(
             conn,
-            r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'everything'"#,
+            &format!(r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'everything' AND {visible}"#),
             params![Membership::connection_cutoff(now), room_id, creator_id],
             Self::from_row,
         )
@@ -301,8 +302,9 @@ impl PushSubscription {
         if mentionee_ids.is_empty() {
             return Ok(Vec::new());
         }
+        let visible = super::ignore_policy::visible_sql("memberships.user_id", "?3");
         let sql = format!(
-            r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" IN ('mentions', 'muted') AND "push_subscriptions"."user_id" IN ({})"#,
+            r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" IN ('mentions', 'muted') AND "push_subscriptions"."user_id" IN ({}) AND {visible}"#,
             placeholders(mentionee_ids.len())
         );
         let mut values: Vec<rusqlite::types::Value> = vec![
@@ -343,8 +345,9 @@ impl PushSubscription {
             Some(id) if message.reply_notify_author => Message::find_by_id(conn, id)?.map(|m| m.creator_id),
             _ => None,
         };
+        let visible = super::ignore_policy::visible_sql("m.user_id", "?2");
         let subscriptions = query_all(conn,
-            "SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND (m.involvement IS NULL OR m.involvement!='invisible') AND (m.connected_at IS NULL OR m.connected_at < ?)",
+            &format!("SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND (m.involvement IS NULL OR m.involvement!='invisible') AND (m.connected_at IS NULL OR m.connected_at < ?) AND {visible}"),
             params![room.id, message.creator_id, Membership::connection_cutoff(now)], Self::from_row)?;
         let ids: Vec<i64> = subscriptions.iter().map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
         let users = UserStatusSettings::for_ids(conn, &ids)?;

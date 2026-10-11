@@ -2,6 +2,8 @@
 
 pub mod account;
 pub mod announcement;
+pub mod ignore_policy;
+pub mod user_block;
 pub mod workspace_invite;
 pub mod slack_import;
 pub mod slack;
@@ -51,6 +53,7 @@ pub mod ban;
 pub mod boost;
 pub mod bot_webhook_fanout;
 pub mod channel_thread;
+pub mod channel_webhook;
 pub mod work_thread_event;
 pub mod work_thread_link;
 pub use work_thread_link::{NewWorkThreadLink, WorkThreadLink};

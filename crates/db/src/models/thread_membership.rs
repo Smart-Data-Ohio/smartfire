@@ -91,13 +91,24 @@ impl ThreadMembership {
     }
 
     /// `thread.memberships.find_by(user_id:)` (`ChannelThread#membership_for`)
-    pub fn find_by_thread_and_user(conn: &Connection, thread_id: i64, user_id: i64) -> Result<Option<Self>> {
+    pub fn find_by_thread_and_user(
+        conn: &Connection,
+        thread_id: i64,
+        user_id: i64,
+    ) -> Result<Option<Self>> {
+        let unread = super::ignore_policy::thread_unread_sql();
         query_one(
             conn,
-            r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."thread_id" = ? AND "thread_memberships"."user_id" = ? LIMIT 1"#,
+            &format!("SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE thread_id=? AND user_id=? LIMIT 1"),
             [thread_id, user_id],
-            Self::from_row,
+            Self::from_policy_row,
         )
+    }
+
+    fn from_policy_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        let mut membership = Self::from_row(row)?;
+        membership.unread_at = row.get("visible_unread_at")?;
+        Ok(membership)
     }
 
     /// `thread.memberships`, in id order.
@@ -111,23 +122,29 @@ impl ThreadMembership {
     }
 
     /// The viewer's memberships for a page of threads, read together.
-    pub fn for_user_threads(conn: &Connection, user_id: i64, thread_ids: &[i64]) -> Result<Vec<Self>> {
+    pub fn for_user_threads(
+        conn: &Connection,
+        user_id: i64,
+        thread_ids: &[i64],
+    ) -> Result<Vec<Self>> {
         if thread_ids.is_empty() {
             return Ok(Vec::new());
         }
+        let unread = super::ignore_policy::thread_unread_sql();
         query_all(
             conn,
-            "SELECT * FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))",
+            &format!("SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))"),
             params![user_id, serde_json::json!(thread_ids).to_string()],
-            Self::from_row,
+            Self::from_policy_row,
         )
     }
 
     /// `user.thread_memberships.unread`
     pub fn unread_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
+        let unread = super::ignore_policy::thread_unread_sql();
         query_all(
             conn,
-            r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."user_id" = ? AND "thread_memberships"."unread_at" IS NOT NULL ORDER BY "thread_memberships"."id" ASC"#,
+            &format!("SELECT thread_memberships.* FROM thread_memberships WHERE user_id=? AND {unread} ORDER BY id"),
             [user_id],
             Self::from_row,
         )
@@ -187,23 +204,20 @@ impl ThreadMembership {
         super::user::profile_settings::bump_revision(tx, self.user_id)
     }
 
-    /// `read`: `update!(unread_at: nil)`, a no-op when already read. It also records the newest
+    /// `read`: clears the stored unread state even when policy hides it, and records the newest
     /// message read through (`last_read_message_id`, never moving back): every message committed
     /// so far has a lower id than any later one, so the pings it read stay read.
     pub fn read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
-        if self.unread_at.is_none() {
-            return Ok(());
-        }
         Self::validate(tx.conn(), self.thread_id, self.user_id)?.into_result()?;
         let now = tx.now();
-        let read_through: Option<i64> = tx.conn().query_row_cached(
-            r#"UPDATE "thread_memberships" SET "unread_at" = NULL, "last_read_message_id" = MAX(COALESCE("last_read_message_id", 0), COALESCE((SELECT MAX("id") FROM "messages"), 0)), "updated_at" = ? WHERE "thread_memberships"."id" = ? RETURNING "last_read_message_id""#,
+        let (read_through, updated_at): (Option<i64>, Timestamp) = tx.conn().query_row_cached(
+            r#"UPDATE "thread_memberships" SET "unread_at" = NULL, "last_read_message_id" = MAX(COALESCE("last_read_message_id", 0), COALESCE((SELECT MAX("id") FROM "messages"), 0)), "updated_at" = CASE WHEN "unread_at" IS NULL THEN "updated_at" ELSE ? END WHERE "thread_memberships"."id" = ? RETURNING "last_read_message_id", "updated_at""#,
             params![now, self.id],
-            |r| r.get(0),
+            |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
         self.unread_at = None;
         self.last_read_message_id = read_through;
-        self.updated_at = now;
+        self.updated_at = updated_at;
         Ok(())
     }
 

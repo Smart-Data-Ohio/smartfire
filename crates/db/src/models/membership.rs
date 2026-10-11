@@ -175,11 +175,32 @@ impl Membership {
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         query_one(
             conn,
-            r#"SELECT * FROM "memberships" WHERE "memberships"."id" = ? LIMIT 1"#,
+            &(Self::policy_select() + " WHERE memberships.id=? LIMIT 1"),
             [id],
-            Self::from_row,
+            Self::from_policy_row,
         )?
         .or_not_found("Membership")
+    }
+
+    /// Persisted state for write decisions and publication eligibility, before personal filtering.
+    pub fn find_stored(conn: &Connection, id: i64) -> Result<Self> {
+        query_one(conn, "SELECT * FROM memberships WHERE id=?", [id], Self::from_row)?
+            .or_not_found("Membership")
+    }
+
+    fn policy_columns() -> String {
+        let unread = super::ignore_policy::room_unread_sql();
+        format!("memberships.*, CASE WHEN {unread} THEN memberships.unread_at END AS visible_unread_at")
+    }
+
+    fn policy_select() -> String {
+        format!("SELECT {} FROM memberships", Self::policy_columns())
+    }
+
+    fn from_policy_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        let mut membership = Self::from_row(row)?;
+        membership.unread_at = row.get("visible_unread_at")?;
+        Ok(membership)
     }
 
     /// `room.memberships.create!(user:)`, with the schema's default involvement.
@@ -213,9 +234,9 @@ impl Membership {
     pub fn for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,
-            r#"SELECT * FROM "memberships" WHERE "memberships"."user_id" = ?"#,
+            &(Self::policy_select() + " WHERE memberships.user_id=?"),
             [user_id],
-            Self::from_row,
+            Self::from_policy_row,
         )
     }
 
@@ -270,9 +291,9 @@ impl Membership {
     ) -> Result<Option<Self>> {
         query_one(
             conn,
-            r#"SELECT * FROM "memberships" WHERE "memberships"."room_id" = ? AND "memberships"."user_id" = ? LIMIT 1"#,
+            &(Self::policy_select() + " WHERE memberships.room_id=? AND memberships.user_id=? LIMIT 1"),
             [room_id, user_id],
-            Self::from_row,
+            Self::from_policy_row,
         )
     }
 
@@ -298,9 +319,9 @@ impl Membership {
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Self::policy_columns(), Room::PREFIXED_COLUMNS),
             [user_id],
-            |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
+            |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
         )
     }
 
@@ -308,9 +329,9 @@ impl Membership {
     pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Self::policy_columns(), Room::PREFIXED_COLUMNS),
             [user_id],
-            |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
+            |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
         )
     }
 
@@ -326,8 +347,9 @@ impl Membership {
     /// `user.memberships.unread.count`: the push badge.
     pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
         let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
+        let unread = super::ignore_policy::room_unread_sql();
         let rooms: Vec<i64> = sql::query_all(conn,
-            "SELECT room_id FROM memberships WHERE user_id=? AND unread_at IS NOT NULL",
+            &format!("SELECT room_id FROM memberships WHERE user_id=? AND {unread}"),
             [user_id], |row| row.get(0))?;
         Ok(rooms.into_iter().filter(|room| !preferences.muted(*room, now)).count() as i64)
     }
@@ -537,7 +559,10 @@ impl Membership {
     pub fn read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.validate_organization(tx.conn(), self.room_category_id)?;
         let last_read_message_id = self.latest_root_message_id(tx.conn())?;
-        if self.unread_at.is_none() && self.last_read_message_id == last_read_message_id {
+        let stored = query_one(tx.conn(), "SELECT * FROM memberships WHERE id=?", [self.id], Self::from_row)?
+            .or_not_found("Membership")?;
+        if stored.unread_at.is_none() && stored.last_read_message_id == last_read_message_id {
+            *self = stored;
             return Ok(());
         }
         let now = tx.now();
