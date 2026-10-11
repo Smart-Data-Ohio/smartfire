@@ -11,7 +11,7 @@ import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import { forbidden, noContent, notFound, ok, validation } from "../http.ts";
 import { field, intField, isBoolean, isRecord, type Json } from "../json.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { locate, topicOf } from "../s2/model.ts";
+import { locate, topicOf, touched } from "../s2/model.ts";
 import { type RoomRecord, timestamp, VIEWER_ID, type World } from "../seed.ts";
 
 const follows = new WeakMap<World, AnnouncementFollow[]>();
@@ -198,6 +198,7 @@ export function createAnnouncements(ctx: S2Context): Announcements {
 
     const attributed: MessageDTO = {
       ...copy,
+      updatedAt: touched(ctx.now(), copy.updatedAt),
       announcementSource: {
         roomId: source.roomId,
         messageId: source.id,
@@ -237,7 +238,12 @@ export function createAnnouncements(ctx: S2Context): Announcements {
       );
     }
 
-    const published: MessageDTO = { ...message, published: true };
+    // Like `message.touch`, so the client takes the newer row.
+    const published: MessageDTO = {
+      ...message,
+      published: true,
+      updatedAt: touched(ctx.now(), message.updatedAt),
+    };
 
     location.list[location.index] = published;
     ctx.publish([{ topic: topicOf(published), type: "message.updated", data: published }]);

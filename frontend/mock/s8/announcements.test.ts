@@ -64,6 +64,7 @@ describe("announcement mock", () => {
     );
 
     expect(published.published).toBe(true);
+    expect(Date.parse(published.updatedAt)).toBeGreaterThan(Date.parse(source.updatedAt));
 
     const copy = events
       .flatMap((event) => (event.type === "message.updated" ? [event.data] : []))
