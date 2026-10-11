@@ -86,13 +86,6 @@ impl SyncRenderer for Renderer {
             .ok()
     }
 
-    fn message_for_viewer(&self, conn: &Connection, message: &Message, viewer: i64) -> Option<api::MessageDTO> {
-        let app = self.app.upgrade()?;
-        dto::message_for_viewer(conn, &app, message, viewer)
-            .inspect_err(|error| tracing::warn!(%error, "sync: announcement reference not rendered"))
-            .ok()
-    }
-
     fn messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<api::MessageDTO>> {
         let app = self.app.upgrade()?;
         dto::digest_messages(conn, &app, messages)
@@ -517,6 +510,42 @@ impl Session {
 
 #[async_trait::async_trait]
 impl SyncSession for Session {
+    async fn event_for_viewer(&mut self, wire: &str) -> Option<String> {
+        let mut event: api::SyncEvent = serde_json::from_str(wire).ok()?;
+        let message = match &mut event.payload {
+            api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => {
+                message
+            }
+            _ => return Some(wire.to_owned()),
+        };
+        let app = self.app.upgrade()?;
+        let (viewer, room_id, message_id) = (self.user.id, message.room_id, message.id);
+        let source = app.db
+            .read_snapshot(move |conn| {
+                if Room::find_for_user(conn, viewer, room_id)?.is_none() {
+                    return Ok(None);
+                }
+                Ok(Some(campfire_db::models::announcement::source_for_viewer(conn, message_id, viewer)?))
+            })
+            .await;
+        match source {
+            Ok(Some(source)) => {
+                message.announcement_source = source.map(|source| api::AnnouncementSource {
+                    room_id: source.room_id,
+                    message_id: source.message_id,
+                    room_name: source.room_name,
+                });
+            }
+            Ok(None) => return None,
+            Err(error) => {
+                tracing::warn!(%error, message_id, "sync: message delivery not authorized");
+                app.cable.sync_skipped_for(viewer);
+                return None;
+            }
+        }
+        serde_json::to_string(&event).ok()
+    }
+
     async fn authorize(&mut self, topic: &str) -> bool {
         let (Some(app), Some(conversation)) = (self.app.upgrade(), Conversation::parse(topic))
         else {

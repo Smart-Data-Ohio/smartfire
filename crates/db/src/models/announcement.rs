@@ -243,6 +243,11 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
         |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<i64>>(1)?)),
     )?;
     let body = source.body_html(tx.conn())?;
+    let legacy_attachment_snapshot = body
+        .as_deref()
+        .map(campfire_richtext::legacy_markdown::non_mention_attachments)
+        .transpose()
+        .map_err(|error| crate::Error::Other(error.to_string()))?;
     let blobs = source
         .attachments(tx.conn())?
         .into_iter()
@@ -285,6 +290,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     } else {
                         body.clone()
                     },
+                    legacy_attachment_snapshot: legacy_attachment_snapshot.clone(),
                     embeds_suppressed: Some(source.embeds_suppressed),
                     drive_file_ids: Some(drive_ids.clone()),
                     forward_note: Some(source.forward_note.clone()),
@@ -293,7 +299,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
             )?;
             changed.push((copy, false));
         } else {
-            let copy = Message::create(
+            let mut copy = Message::create(
                 tx,
                 NewMessage {
                     room_id,
@@ -319,6 +325,14 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     ..Default::default()
                 },
             )?;
+            if source.markdown_source.is_some()
+                && let Some(snapshot) = legacy_attachment_snapshot
+                    .as_deref()
+                    .filter(|snapshot| !snapshot.is_empty())
+            {
+                let rendered = copy.body_html(tx.conn())?.unwrap_or_default();
+                copy.update_body(tx, &format!("{rendered}\n{snapshot}"))?;
+            }
             tx.conn().execute_cached("UPDATE announcement_deliveries SET message_id=? WHERE publication_id=? AND target_room_id=?", [copy.id,publication,room_id])?;
             changed.push((copy, true));
         }

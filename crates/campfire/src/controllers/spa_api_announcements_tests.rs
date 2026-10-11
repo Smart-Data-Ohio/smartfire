@@ -4,6 +4,228 @@ use serde_json::{Value, json};
 use super::api_tests::{app, get, json_body, parse};
 use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, HQ, JASON, KEVIN};
 
+async fn replay_announcement(revoked_room: Option<i64>) {
+    use super::api_tests::{Sync, serve};
+    use campfire_api_types as api;
+    use campfire_db::models::announcement;
+    use campfire_db::{Message, NewMessage};
+    let a = app(true)
+        .await
+        .expect("restored seed required")
+        .without_job_runner()
+        .await;
+    let david = a.sign_in(DAVID).await;
+    let (addr, server) = serve(&a).await;
+    let topics = [format!("room:{HQ}")];
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &topics).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+        panic!("a welcome")
+    };
+    let (publication, source_id) = a
+        .db()
+        .write(|tx| {
+            announcement::set_flag(tx, ALL_TALK, true)?;
+            announcement::follow(tx, ALL_TALK, HQ, DAVID)?;
+            let source = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    body: Some("<p>Replay news</p>".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((announcement::publish(tx, &source, DAVID)?, source.id))
+        })
+        .await
+        .unwrap();
+    crate::jobs::announcements::deliver(a.booted.app.clone(), publication)
+        .await
+        .unwrap();
+    let copy_id = a
+        .db()
+        .read(move |c| Ok(announcement::copies(c, publication)?[0].id))
+        .await
+        .unwrap();
+    let copy_created = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == copy_id);
+    let live = sync.until(copy_created, |_| false).await;
+    let api::SyncPayload::MessageCreated(message) = live.payload else {
+        unreachable!()
+    };
+    assert_eq!(message.announcement_source.unwrap().message_id, source_id);
+    drop(sync);
+    if let Some(room_id) = revoked_room {
+        a.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                    (room_id, DAVID),
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+    campfire_app::cable::broadcasts::read_room(&a.booted.app.cable, DAVID, ALL_TALK);
+    let mut resumed = Sync::open(
+        addr,
+        &david.cookie_header(),
+        &topics,
+        json!({"epoch": epoch, "seq": seq}),
+    )
+    .await;
+    assert!(matches!(
+        resumed.next().await,
+        Some(api::ServerFrame::Welcome { resumed: true, .. })
+    ));
+    if revoked_room == Some(HQ) {
+        resumed.until(
+            |event| matches!(&event.payload, api::SyncPayload::RoomRead(read) if read.room_id == ALL_TALK),
+            copy_created,
+        ).await;
+    } else {
+        let replay = resumed.until(copy_created, |_| false).await;
+        let api::SyncPayload::MessageCreated(message) = replay.payload else {
+            unreachable!()
+        };
+        if revoked_room.is_some() {
+            assert!(
+                message.announcement_source.is_none(),
+                "revoked source access must hide the replayed reference"
+            );
+        } else {
+            assert_eq!(message.announcement_source.unwrap().message_id, source_id);
+        }
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn announcement_replay_hides_a_revoked_source_reference() {
+    replay_announcement(Some(ALL_TALK)).await;
+}
+
+#[tokio::test]
+async fn announcement_replay_excludes_a_revoked_target_room() {
+    replay_announcement(Some(HQ)).await;
+}
+
+#[tokio::test]
+async fn announcement_replay_keeps_an_authorized_source_reference() {
+    replay_announcement(None).await;
+}
+
+#[tokio::test]
+async fn announcement_message_dto_paths_keep_viewer_authorized_references() {
+    use campfire_db::models::announcement;
+    use campfire_db::{ActivityItem, Message, NewMessage};
+    let a = app(true)
+        .await
+        .expect("restored seed required")
+        .without_job_runner()
+        .await;
+    let (copy_id, source_id) = a
+        .db()
+        .write(|tx| {
+            announcement::set_flag(tx, ALL_TALK, true)?;
+            announcement::follow(tx, ALL_TALK, HQ, DAVID)?;
+            let source = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("auditnews".into()),
+                    ..Default::default()
+                },
+            )?;
+            let publication = announcement::publish(tx, &source, DAVID)?;
+            let copy = announcement::deliver(tx, publication)?.remove(0).0;
+            campfire_db::MessagePin::pin(tx, &copy, KEVIN)?.unwrap();
+            for viewer in [DAVID, KEVIN] {
+                ActivityItem::refresh_unread(tx, viewer, "Message", copy.id, "mention")?;
+            }
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                (ALL_TALK, KEVIN),
+            )?;
+            Ok((copy.id, source.id))
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{HQ}/threads"),
+            &json!({
+                "parentMessageId": copy_id, "name": null,
+                "message": {"clientMessageId": "audit-discussion", "markdownSource": "Discuss"},
+            }),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let created = parse::<Value>(&reply);
+    assert_eq!(
+        created["detail"]["parentMessage"]["announcementSource"]["messageId"],
+        source_id
+    );
+    let thread_id = created["detail"]["thread"]["id"].as_i64().unwrap();
+    for (browser, visible) in [(&mut david, true), (&mut kevin, false)] {
+        let saved = browser
+            .write(json_body(
+                Method::POST,
+                "/api/v1/saved",
+                &json!({"messageId": copy_id}),
+            ))
+            .await;
+        assert_eq!(saved.status, StatusCode::CREATED, "{}", saved.text());
+        for path in [
+            format!("/api/v1/rooms/{HQ}/pins"),
+            "/api/v1/search?q=auditnews".into(),
+            "/api/v1/saved".into(),
+        ] {
+            let reply = browser.send(get(&path)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+            let response = parse::<Value>(&reply);
+            let copy = response["messages"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|message| message["id"] == copy_id)
+                .unwrap();
+            assert_eq!(!copy["announcementSource"].is_null(), visible, "{path}");
+            if visible {
+                assert_eq!(copy["announcementSource"]["messageId"], source_id);
+            }
+        }
+        let detail: Value = parse(
+            &browser
+                .send(get(&format!("/api/v1/threads/{thread_id}")))
+                .await,
+        );
+        assert_eq!(
+            !detail["parentMessage"]["announcementSource"].is_null(),
+            visible
+        );
+        let activity: Value = parse(&browser.send(get("/api/v1/activity")).await);
+        let item = activity["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["source"]["messageId"] == copy_id)
+            .unwrap();
+        assert_eq!(item["source"]["roomId"], HQ);
+        assert_eq!(item["source"]["body"], "auditnews");
+        assert!(
+            !item["source"]["title"]
+                .as_str()
+                .unwrap()
+                .contains("All Talk")
+        );
+    }
+}
+
 #[tokio::test]
 async fn announcement_flag_reuses_room_management_permissions() {
     let a = app(true).await.expect("restored seed required");

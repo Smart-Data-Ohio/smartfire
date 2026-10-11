@@ -357,3 +357,144 @@ fn announcement_forwarded_content_keeps_its_note_and_note_edits() {
         assert_eq!(copy.forward_note.as_deref(), Some("Revised context"));
     }
 }
+
+#[test]
+fn announcement_attachment_only_edits_enqueue_and_propagate() {
+    let (t, _, _, _, message) = setup();
+    let source_id = message.id;
+    let publication = t.write(move |tx| announcement::publish(tx, &message, id("david")));
+    t.write(move |tx| announcement::deliver(tx, publication));
+    let mut blobs = Vec::new();
+    for name in ["original", "replacement"] {
+        blobs.push(t.write(move |tx| {
+            Ok(crate::Blob::create(
+                tx,
+                &crate::Blob {
+                    id: 0,
+                    key: format!("announcement-{name}"),
+                    filename: format!("{name}.txt"),
+                    content_type: Some("text/plain".into()),
+                    metadata: None,
+                    service_name: "local".into(),
+                    byte_size: 4,
+                    checksum: None,
+                    created_at: tx.now(),
+                },
+            )?
+            .id)
+        }));
+    }
+    for blob_id in [Some(blobs[0]), Some(blobs[1]), None] {
+        t.sink.take();
+        t.write(move |tx| {
+            let mut source = Message::find(tx.conn(), source_id)?;
+            source.replace_attachment(tx, blob_id)?;
+            source.edit(tx, MessageChanges::default())
+        });
+        let jobs: Vec<_> = t
+            .sink
+            .events()
+            .iter()
+            .filter_map(|event| event.as_job::<SyncJob>())
+            .collect();
+        assert_eq!(
+            jobs.len(),
+            1,
+            "an attachment-only edit must enqueue propagation"
+        );
+        for job in jobs {
+            t.write(move |tx| announcement::deliver(tx, job.publication_id));
+        }
+        for copy in t.read(move |c| announcement::copies(c, publication)) {
+            let attachments = t.read(move |c| copy.attachments(c));
+            assert_eq!(
+                attachments
+                    .iter()
+                    .map(|(_, blob)| blob.id)
+                    .collect::<Vec<_>>(),
+                blob_id.into_iter().collect::<Vec<_>>()
+            );
+        }
+    }
+    t.sink.take();
+    t.write(move |tx| Message::find(tx.conn(), source_id)?.replace_attachment(tx, None));
+    assert!(
+        !t.sink
+            .events()
+            .iter()
+            .any(|event| event.as_job::<SyncJob>().is_some())
+    );
+}
+
+#[test]
+fn announcement_markdown_edits_preserve_legacy_inline_attachments() {
+    const ATTACHMENT: &str = r#"<action-text-attachment content-type="image/png" url="https://example.com/news.png" filename="news.png"></action-text-attachment>"#;
+    let (t, _, _, _, message) = setup();
+    let source_id = message.id;
+    t.write(move |tx| {
+        Message::find(tx.conn(), source_id)?.update_body(tx, &format!("<p>News</p>\n{ATTACHMENT}"))
+    });
+    let publication = t.write(move |tx| {
+        announcement::publish(tx, &Message::find(tx.conn(), source_id)?, id("david"))
+    });
+    t.write(move |tx| announcement::deliver(tx, publication));
+    for text in ["Updated news", "Revised news"] {
+        t.write(move |tx| {
+            Message::find(tx.conn(), source_id)?.edit(
+                tx,
+                MessageChanges {
+                    markdown_source: Some(text.into()),
+                    legacy_attachment_snapshot: Some(ATTACHMENT.into()),
+                    ..Default::default()
+                },
+            )
+        });
+        for _ in 0..2 {
+            t.write(move |tx| announcement::deliver(tx, publication));
+        }
+        let expected = format!("<p>{text}</p>\n{ATTACHMENT}");
+        assert_eq!(
+            t.read(move |c| Message::find(c, source_id)?.body_html(c))
+                .as_deref(),
+            Some(expected.as_str())
+        );
+        for copy in t.read(move |c| announcement::copies(c, publication)) {
+            assert_eq!(copy.markdown_source.as_deref(), Some(text));
+            assert_eq!(
+                t.read(move |c| copy.body_html(c)).as_deref(),
+                Some(expected.as_str())
+            );
+        }
+    }
+}
+
+#[test]
+fn announcement_publication_preserves_legacy_inline_attachments_in_markdown() {
+    const ATTACHMENT: &str = r#"<action-text-attachment content-type="image/png" url="https://example.com/news.png" filename="news.png"></action-text-attachment>"#;
+    let (t, _, _, _, message) = setup();
+    let source_id = message.id;
+    t.write(move |tx| {
+        Message::find(tx.conn(), source_id)?.edit(
+            tx,
+            MessageChanges {
+                markdown_source: Some("News".into()),
+                legacy_attachment_snapshot: Some(ATTACHMENT.into()),
+                ..Default::default()
+            },
+        )
+    });
+    let publication = t.write(move |tx| {
+        announcement::publish(tx, &Message::find(tx.conn(), source_id)?, id("david"))
+    });
+    let expected = format!("<p>News</p>\n{ATTACHMENT}");
+    for _ in 0..2 {
+        t.write(move |tx| announcement::deliver(tx, publication));
+        for copy in t.read(move |c| announcement::copies(c, publication)) {
+            assert_eq!(copy.markdown_source.as_deref(), Some("News"));
+            assert_eq!(
+                t.read(move |c| copy.body_html(c)).as_deref(),
+                Some(expected.as_str())
+            );
+        }
+    }
+}

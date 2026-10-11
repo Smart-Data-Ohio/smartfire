@@ -1203,6 +1203,7 @@ impl Message {
         } else {
             blob_id
         }.filter(|id| !grouped_blob_ids.contains(id));
+        let changed = current.as_ref().map(|attachment| attachment.blob_id) != blob_id;
         let mut errors = Errors::default();
         Self::validate_attachment_count(grouped_blob_ids.len() + usize::from(blob_id.is_some()), &mut errors);
         errors.into_result()?;
@@ -1226,6 +1227,9 @@ impl Message {
             Attachment::create(tx, RECORD_TYPE, self.id, "attachment", blob_id)?;
             self.touch(tx)?;
             super::message_attachment_processing::schedule(tx, self.id, blob_id);
+        }
+        if changed {
+            crate::models::announcement::enqueue_update(tx, self.id)?;
         }
         Ok(())
     }

@@ -1594,6 +1594,7 @@ pub(crate) fn thread_detail(
         None => None,
     };
     let (mut parents, mut fetches) = messages_and_fetches(conn, app, parent.as_slice())?;
+    announcement_sources(conn, &mut parents, viewer.id)?;
     let parent_message = parents.pop();
     fetches.thread_header(conn, thread, now)?;
     let facts = crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
