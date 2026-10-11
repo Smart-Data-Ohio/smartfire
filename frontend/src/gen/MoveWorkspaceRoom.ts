@@ -5,4 +5,9 @@
  * Answers the administrator's visible [`WorkspaceLayout`].
  * Position is zero-based and clamped. Null category means uncategorized; direct rooms are 422.
  */
-export type MoveWorkspaceRoom = { workspaceCategoryId: number | null, position: number, };
+export type MoveWorkspaceRoom = { workspaceCategoryId: number | null, position: number,
+/**
+ * Place the room just before this one instead of at `position`, counting every room in the
+ * group, including any the administrator isn't in. It must be in the target group, or 422.
+ */
+beforeRoomId?: number, };
