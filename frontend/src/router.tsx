@@ -20,6 +20,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
+import { parseSignInSearch } from "./features/auth/auth-navigation.ts";
 import { parseTwoFactorSetupSearch } from "./features/auth/two-factor-search.ts";
 import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
@@ -118,6 +119,7 @@ const shellRoute = createRoute({
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "session/new",
+  validateSearch: parseSignInSearch,
   ...chunked(() =>
     import("./features/auth/sign-in.tsx").then((module) => ({ default: module.SignInPage })),
   ),
@@ -144,6 +146,24 @@ const transferRoute = createRoute({
   path: "session/transfers/$transferId",
   ...chunked(() =>
     import("./features/auth/transfer.tsx").then((module) => ({ default: module.TransferRoute })),
+  ),
+});
+
+/** `/app/join/:joinCode`: joining with the workspace's join code (users/new). */
+const joinRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "join/$joinCode",
+  ...chunked(() =>
+    import("./features/auth/join.tsx").then((module) => ({ default: module.JoinCodeRoute })),
+  ),
+});
+
+/** `/app/invite/:token`: joining with a workspace invite. */
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "invite/$token",
+  ...chunked(() =>
+    import("./features/auth/join.tsx").then((module) => ({ default: module.InviteRoute })),
   ),
 });
 
@@ -698,6 +718,8 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   challengeRoute,
   transferRoute,
+  joinRoute,
+  inviteRoute,
   firstRunRoute,
   twoFactorSetupRoute,
   aboutRoute,

@@ -54,7 +54,7 @@ export const addressBar = {
   },
 };
 
-/** One `/api/v1` request. Bodies (but one multipart form) and replies are JSON. */
+/** One `/api/v1` request. Bodies and replies are JSON, except a `form` (it carries a file). */
 export interface ApiRequest {
   readonly method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   /** Below the API base, e.g. `/rooms/12/messages`; from the origin's root with `root`. */
@@ -67,8 +67,8 @@ export interface ApiRequest {
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: Schema.Json;
   /**
-   * A `multipart/form-data` body instead of `body`, for the one signed-out form that carries a
-   * file (first run's avatar). Signed-in uploads go through direct uploads.
+   * A `multipart/form-data` body instead of `body`, for the signed-out forms that carry a file
+   * (the join form's and first run's avatar). Signed-in uploads go through direct uploads.
    */
   readonly form?: FormData;
   /** Credential refusals are decoded next actions; token refresh uses the public auth boot. */
@@ -136,7 +136,10 @@ export class ApiClient extends Context.Service<
           return yield* readSuccess(response, decode);
         }
 
-        if (request.auth === true && [400, 401, 403, 404, 422, 429].includes(response.status)) {
+        if (
+          request.auth === true &&
+          [400, 401, 403, 404, 410, 422, 429].includes(response.status)
+        ) {
           return yield* readSuccess(response, decode).pipe(
             Effect.tap((body) => {
               if (response.status !== 401 || request.ownsNavigation === true) return Effect.void;
