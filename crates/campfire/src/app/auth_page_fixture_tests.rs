@@ -108,6 +108,11 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
         "sign-in",
         "sign-in-google-alert",
         "join",
+        "invite",
+        "invite-expired",
+        "invite-exhausted",
+        "invite-revoked",
+        "invite-unknown",
         "first-run",
         "two-factor-setup",
         "two-factor-challenge-alert",
@@ -129,6 +134,11 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                     "sign-in"
                         | "sign-in-google-alert"
                         | "join"
+                        | "invite"
+                        | "invite-expired"
+                        | "invite-exhausted"
+                        | "invite-revoked"
+                        | "invite-unknown"
                         | "first-run"
                         | "two-factor-challenge-alert"
                         | "transfer"
@@ -164,12 +174,24 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                         };
                         shell(&ctx, page.page_title(), page.as_head(), page.as_content())
                     }
-                    "join" => {
+                    "join" | "invite" | "invite-expired" | "invite-exhausted"
+                    | "invite-revoked" | "invite-unknown" => {
                         let page = users::New {
                             ctx: &ctx,
-                            join_code: "fixture-join-code".into(),
+                            join_path: if name == "join" {
+                                campfire_routes::join("fixture-join-code")
+                            } else {
+                                "/invite/fixture-invite-token".into()
+                            },
                             description: "A place for R&D.".into(),
                             help_contact: None,
+                            invite_error: match name {
+                                "invite-expired" => Some("It has expired."),
+                                "invite-exhausted" => Some("All its uses have been taken."),
+                                "invite-revoked" => Some("It has been revoked."),
+                                "invite-unknown" => Some("The invite could not be found."),
+                                _ => None,
+                            },
                         };
                         shell(&ctx, page.page_title(), page.as_head(), page.as_content())
                     }
