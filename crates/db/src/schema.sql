@@ -82,7 +82,7 @@ CREATE INDEX "index_memberships_on_user_id" ON "memberships" ("user_id");
 CREATE TABLE "room_categories" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "collapsed" boolean DEFAULT FALSE NOT NULL, "created_at" datetime(6) NOT NULL, "name" varchar NOT NULL, "position" integer DEFAULT 0 NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
 CREATE INDEX "index_room_categories_on_user_and_position" ON "room_categories" ("user_id", "position");
 CREATE INDEX "index_room_categories_on_user_id" ON "room_categories" ("user_id");
-CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL, "client_room_id" varchar, topic TEXT, workspace_category_id INTEGER REFERENCES workspace_categories(id) ON DELETE SET NULL, workspace_position INTEGER, tags_required BOOLEAN NOT NULL DEFAULT 0, default_board_tag_id INTEGER REFERENCES board_tags(id) ON DELETE SET NULL);
+CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL, "client_room_id" varchar, topic TEXT, workspace_category_id INTEGER REFERENCES workspace_categories(id) ON DELETE SET NULL, workspace_position INTEGER, tags_required BOOLEAN NOT NULL DEFAULT 0, default_board_tag_id INTEGER REFERENCES board_tags(id) ON DELETE SET NULL, announcement INTEGER NOT NULL DEFAULT 0);
 CREATE UNIQUE INDEX "index_rooms_on_direct_member_key" ON "rooms" ("direct_member_key") WHERE direct_member_key IS NOT NULL AND deleted_at IS NULL;
 CREATE UNIQUE INDEX "index_rooms_on_inbound_email_token" ON "rooms" ("inbound_email_token");
 CREATE TABLE "streams" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "ended_at" datetime(6), "membership_id" integer NOT NULL, "quality" varchar NOT NULL, "room_id" integer NOT NULL, "started_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
@@ -1025,3 +1025,25 @@ CREATE TRIGGER channel_webhooks_revoke_author AFTER DELETE ON channel_webhooks B
   DELETE FROM memberships WHERE user_id=OLD.author_id;
   DELETE FROM active_storage_attachments WHERE record_type='ChannelWebhook' AND record_id=OLD.id;
 END;
+CREATE TABLE announcement_follows (
+  source_room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  target_room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  creator_id INTEGER NOT NULL REFERENCES users(id),
+  created_at datetime(6) NOT NULL,
+  PRIMARY KEY (source_room_id, target_room_id),
+  CHECK (source_room_id != target_room_id)
+);
+CREATE INDEX announcement_follows_on_target ON announcement_follows(target_room_id);
+CREATE TABLE announcement_publications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  source_message_id INTEGER UNIQUE REFERENCES messages(id) ON DELETE SET NULL,
+  publisher_id INTEGER NOT NULL REFERENCES users(id),
+  published_at datetime(6) NOT NULL
+);
+CREATE TABLE announcement_deliveries (
+  publication_id INTEGER NOT NULL REFERENCES announcement_publications(id) ON DELETE CASCADE,
+  target_room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  message_id INTEGER UNIQUE REFERENCES messages(id) ON DELETE CASCADE,
+  PRIMARY KEY (publication_id, target_room_id)
+);
+CREATE INDEX announcement_deliveries_on_target ON announcement_deliveries(target_room_id);

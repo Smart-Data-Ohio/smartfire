@@ -98,7 +98,7 @@ fn forwards_snapshot_webhook_embeds_and_attribution_after_source_deletion() {
             room_id: hook.room_id,
             creator_id: hook.author_id,
             markdown_source: Some(String::new()),
-            webhook: Some(WebhookMessage {
+            webhook: Some(WebhookMessage::Post {
                 webhook_id: hook.id,
                 token_digest: None,
                 username: Some("CI".into()),

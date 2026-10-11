@@ -415,6 +415,8 @@ fn publish_message(
     created: bool,
     blockers: &[i64],
 ) {
+    // Resolve source references at delivery and replay, after recipient personalization.
+    dto.announcement_source = None;
     let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
     if !server.sync_wanted() {
         return;

@@ -381,6 +381,7 @@ pub fn room(room: &Room) -> api::Room {
         created_at: time(room.created_at),
         updated_at: time(room.updated_at),
         topic: room.topic.clone(),
+        announcement: room.announcement,
     }
 }
 
@@ -447,14 +448,18 @@ fn messages_and_fetches_inner(
     let mut polls = crate::cards::polls(conn, &ids, now, &*app.storage.verifier)?;
     let mut fetches = crate::cards::Fetches::default();
     let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
-    let pinned: BTreeSet<i64> = ids_query(
+    // Publication state shares the pin batch; ordinary dispatches add no read statements.
+    let flags: Vec<(i64, bool, bool)> = ids_query(
         conn,
-        r#"SELECT "message_pins"."message_id" FROM "message_pins" WHERE "message_pins"."message_id" IN ({})"#,
+        r#"SELECT m.id, pin.message_id IS NOT NULL, publication.id IS NOT NULL FROM messages m
+           LEFT JOIN message_pins pin ON pin.message_id=m.id
+           LEFT JOIN announcement_publications publication ON publication.source_message_id=m.id
+           WHERE m.id IN ({})"#,
         &ids,
-        |row| row.get(0),
-    )?
-    .into_iter()
-    .collect();
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+    let pinned: BTreeSet<i64> = flags.iter().filter(|(_, pinned, _)| *pinned).map(|(id, _, _)| *id).collect();
+    let published: BTreeSet<i64> = flags.iter().filter(|(_, _, published)| *published).map(|(id, _, _)| *id).collect();
     let file_rows: Vec<(i64, String, i64)> = ids_query(
         conn,
         r#"SELECT record_id, name, blob_id FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
@@ -523,6 +528,8 @@ fn messages_and_fetches_inner(
                 steps: steps.remove(&message.id).unwrap_or_default(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
+                published: published.contains(&message.id),
+                announcement_source: None,
                 embeds,
                 webhook,
             })
@@ -930,18 +937,21 @@ pub(crate) fn mark_ignored(conn: &Connection, viewer: i64, messages: &mut [api::
 pub(crate) fn messages_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<Vec<api::MessageDTO>> {
     let mut dtos = self::messages(conn, app, messages)?;
     mark_ignored(conn, viewer, &mut dtos)?;
+    announcement_sources(conn, &mut dtos, viewer)?;
     Ok(dtos)
 }
 
 pub(crate) fn messages_and_fetches_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
     let (mut dtos, fetches) = messages_and_fetches(conn, app, messages)?;
     mark_ignored(conn, viewer, &mut dtos)?;
+    announcement_sources(conn, &mut dtos, viewer)?;
     Ok((dtos, fetches))
 }
 
 pub(crate) fn message_for_viewer(conn: &Connection, app: &AppState, message: &Message, viewer: i64) -> Result<api::MessageDTO> {
     let mut dto = self::message(conn, app, message)?;
     mark_ignored(conn, viewer, std::slice::from_mut(&mut dto))?;
+    announcement_sources(conn, std::slice::from_mut(&mut dto), viewer)?;
     Ok(dto)
 }
 
@@ -1793,6 +1803,15 @@ fn room_file_rows(
         });
     }
     Ok(files)
+}
+
+pub(crate) fn announcement_sources(conn: &Connection, messages: &mut [api::MessageDTO], viewer: i64) -> Result<()> {
+    for message in messages {
+        message.announcement_source = campfire_db::models::announcement::source_for_viewer(conn, message.id, viewer)?.map(|source| api::AnnouncementSource {
+            room_id: source.room_id, message_id: source.message_id, room_name: source.room_name,
+        });
+    }
+    Ok(())
 }
 
 #[cfg(test)]
