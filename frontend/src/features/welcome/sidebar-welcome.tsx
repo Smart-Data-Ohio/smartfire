@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { usePhoneLayout } from "../panes/use-right-pane.ts";
+import { setDestination } from "../shell/view-store.ts";
 import { setWelcomeDismissed } from "./welcome-actions.ts";
 import { WelcomeCard } from "./welcome-card.tsx";
 import { useWelcomeDismissed } from "./welcome-dismissal.ts";
@@ -23,7 +24,8 @@ export function SidebarWelcome() {
 
 /**
  * The workspace menu's "Show welcome": brings a dismissed welcome card back and goes Home, where
- * it shows. `null` while there's no card to bring back.
+ * it shows: the Home destination too, since on phones the card tops Home's list, not the DMs
+ * one. `null` while there's no card to bring back.
  */
 export function useShowWelcome(): (() => void) | null {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ export function useShowWelcome(): (() => void) | null {
 
   return () => {
     setWelcomeDismissed(false);
+    setDestination("home");
     void navigate({ to: "/" });
   };
 }

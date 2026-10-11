@@ -235,5 +235,12 @@ test.describe("on a phone", () => {
     await expect(list.getByRole("region", { name: "Welcome to Smart Data" })).toHaveCount(0);
     // Focus moves on to what followed the card, not lost to the page.
     await expect(list.getByRole("link", { name: "Server guide" })).toBeFocused();
+
+    // From the DMs tab, Show welcome goes back to the Home list, where the card is.
+    await page.getByRole("button", { name: "DMs" }).click();
+    await expect(page.locator(".sidebar-workspace")).toContainText("Direct messages");
+    await page.locator(".sidebar-workspace").click();
+    await page.getByRole("menuitem", { name: "Show welcome" }).click();
+    await expect(list.getByRole("region", { name: "Welcome to Smart Data" })).toBeVisible();
   });
 });
