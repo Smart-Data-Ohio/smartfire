@@ -173,6 +173,8 @@ export interface MessageDraft {
   readonly systemNote: boolean;
   readonly forward: ForwardOrigin | null;
   readonly cards?: MessageDTO["cards"];
+  /** Set when a room webhook posts it (mock/s8/channel-webhooks.ts). */
+  readonly webhook?: MessageDTO["webhook"];
 }
 
 /** A plain draft: no reply, attachment or forward. */
@@ -220,7 +222,7 @@ export function buildMessage(
     streaming: draft.streaming,
     embedsSuppressed: false,
     embeds: null,
-    webhook: null,
+    webhook: draft.webhook ?? null,
     replyToMessageId: draft.replyToMessageId,
     forwardedFromMessageId: draft.forward?.messageId ?? null,
     forwardedAt: draft.forward?.at ?? null,

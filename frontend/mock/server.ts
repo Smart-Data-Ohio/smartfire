@@ -101,6 +101,7 @@ import { createHuddles } from "./s5/huddles.ts";
 import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createWorkLinks } from "./s6/work-links.ts";
+import { createChannelWebhooks } from "./s8/channel-webhooks.ts";
 import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomIntegrations } from "./s8/room-integrations.ts";
@@ -1020,6 +1021,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...ledger.routes,
     ...createRoomManagement(ctx, admin, huddles).routes,
     ...createRoomIntegrations(ctx).routes,
+    ...createChannelWebhooks(ctx).routes,
     ...events.routes,
     ...huddles.routes,
     ...cards.routes,
