@@ -120,3 +120,7 @@ export type AgentGrantId = typeof AgentGrantId.Type;
 export const SlackRunId = Schema.Int.pipe(Schema.brand("SlackRunId"));
 
 export type SlackRunId = typeof SlackRunId.Type;
+
+export const WorkspaceInviteId = Schema.Int.pipe(Schema.brand("WorkspaceInviteId"));
+
+export type WorkspaceInviteId = typeof WorkspaceInviteId.Type;

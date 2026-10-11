@@ -251,6 +251,91 @@
     color: var(--accent);
   }
 
+  /* A curated tag: its emoji instead of the "#", on a rounder pill that reads as a label. */
+  .board-tag[data-curated] {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding-inline: var(--space-1-5) var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--bg-raised);
+    color: var(--text);
+  }
+
+  .board-tag[data-curated]::before {
+    content: none;
+  }
+
+  .board-tag-emoji {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  /* ── Curated tag bar, under the toolbar ─────────────────────────────────── */
+
+  .board-tag-strip {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-1-5) var(--space-3) var(--space-1-5) var(--space-5);
+    border: 0;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  /* The button is the tap target; the pill inside is what shows. */
+  .board-tag-filter {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    border-radius: var(--radius-pill);
+  }
+
+  .board-tag-filter-face {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 26px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    transition:
+      background-color var(--duration-micro-exit) var(--ease-exit),
+      box-shadow var(--duration-micro-exit) var(--ease-exit),
+      color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .board-tag-filter:hover .board-tag-filter-face {
+    background: var(--bg-hover);
+    color: var(--text);
+    transition-duration: var(--duration-micro);
+  }
+
+  .board-tag-filter[aria-pressed="true"] .board-tag-filter-face {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 60%);
+    color: var(--accent);
+  }
+
+  .board-tag-filter:focus-visible {
+    outline: none;
+  }
+
+  .board-tag-filter:focus-visible .board-tag-filter-face {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .board-tag-filter:active .board-tag-filter-face {
+    scale: var(--scale-press);
+  }
+
   .board-unread-dot {
     flex-shrink: 0;
     width: 8px;
@@ -696,6 +781,346 @@
   .board-suggestion:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 1px;
+  }
+
+  .field-required {
+    margin-left: var(--space-1);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* ── The new post's curated tag chips ───────────────────────────────────── */
+
+  .board-tag-picker {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .board-tag-picker-legend {
+    margin-bottom: var(--space-1-5);
+    padding: 0;
+  }
+
+  .board-tag-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The options row borrows the field shake; it isn't an input, so it keeps no box. */
+  .board-tag-options.t-input,
+  .board-tag-options.t-input.is-error {
+    height: auto;
+    box-shadow: none;
+  }
+
+  .board-tag-option {
+    display: inline-flex;
+    border-radius: var(--radius-pill);
+  }
+
+  .board-tag-option-face {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 30px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    transition:
+      background-color var(--duration-micro-exit) var(--ease-exit),
+      box-shadow var(--duration-micro-exit) var(--ease-exit),
+      color var(--duration-micro-exit) var(--ease-exit),
+      padding var(--duration-small) var(--ease-enter);
+  }
+
+  .board-tag-option .board-tag-emoji {
+    font-size: 14px;
+  }
+
+  /* The check takes no room until the chip is picked, then slides in after the name. */
+  .board-tag-option-check {
+    width: 0;
+    opacity: 0;
+    transition:
+      width var(--duration-small) var(--ease-enter),
+      opacity var(--duration-small) var(--ease-enter);
+  }
+
+  .board-tag-option:hover .board-tag-option-face {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    color: var(--text);
+    transition-duration: var(--duration-micro);
+  }
+
+  .board-tag-option[aria-pressed="true"] .board-tag-option-face {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 55%);
+    color: var(--accent);
+  }
+
+  .board-tag-option[aria-pressed="true"] .board-tag-option-check {
+    width: 12px;
+    opacity: 1;
+  }
+
+  .board-tag-picker.is-error .board-tag-option-face {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--danger), transparent 40%);
+  }
+
+  .board-tag-option:focus-visible {
+    outline: none;
+  }
+
+  .board-tag-option:focus-visible .board-tag-option-face {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .board-tag-option:active .board-tag-option-face {
+    scale: var(--scale-press);
+  }
+
+  /* ── The tag editor, in a board's settings ──────────────────────────────── */
+
+  .tag-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .tag-editor-empty {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-faint);
+    font-size: var(--text-sidebar);
+  }
+
+  .tag-editor-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    list-style: none;
+  }
+
+  .tag-editor-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-1) var(--space-1) 0;
+    border-radius: var(--radius-sm);
+    transition:
+      background-color var(--duration-micro-exit) var(--ease-exit),
+      box-shadow var(--duration-small) var(--ease-enter);
+  }
+
+  .tag-editor-row + .tag-editor-row {
+    box-shadow: 0 -1px 0 var(--border);
+  }
+
+  .tag-editor-row[data-dragging] {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .tag-editor-handle {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 24px;
+    height: 32px;
+    border-radius: var(--radius-xs);
+    color: var(--text-faint);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .tag-editor-row[data-dragging] .tag-editor-handle {
+    color: var(--accent);
+    cursor: grabbing;
+  }
+
+  .tag-editor-handle:hover {
+    color: var(--text-muted);
+  }
+
+  .tag-editor-handle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .tag-editor-emoji {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-faint);
+    font-size: 17px;
+    line-height: 1;
+    transition:
+      box-shadow var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .tag-editor-emoji[data-empty] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .tag-editor-emoji:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--accent);
+    color: var(--accent);
+  }
+
+  .tag-editor-emoji:active:not(:disabled) {
+    scale: var(--scale-press);
+  }
+
+  .tag-editor-emoji:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .tag-editor-emoji:disabled {
+    opacity: 0.5;
+  }
+
+  .tag-editor-name {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .tag-editor-label {
+    overflow: hidden;
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tag-editor-badge {
+    flex-shrink: 0;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+    line-height: 18px;
+  }
+
+  .tag-editor-more {
+    flex-shrink: 0;
+  }
+
+  .tag-editor-rename {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .tag-editor-rename > .field {
+    flex: 1;
+    min-width: 10rem;
+  }
+
+  /* The row has the tag's name already; the field's label stays for screen readers. */
+  .tag-editor-rename .field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tag-editor-rename .field-error:empty {
+    display: none;
+  }
+
+  .tag-editor-rename-actions {
+    display: flex;
+    gap: var(--space-1-5);
+    padding-top: 4px;
+  }
+
+  .tag-editor-add {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-2);
+  }
+
+  /* Both line up with the field's input, under its label. */
+  .tag-editor-add > .tag-editor-emoji,
+  .tag-editor-add-button {
+    margin-top: calc(var(--leading-ui) + var(--space-1-5) + (var(--control-lg) - 32px) / 2);
+  }
+
+  .tag-editor-add > .tag-editor-emoji {
+    width: 32px;
+    height: 32px;
+  }
+
+  .tag-editor-policy {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  .tag-editor-default .field-hint {
+    color: var(--text-muted);
+  }
+
+  .tag-editor-saving {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .tag-editor-consequences {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
   }
 
   /* ── A post's work, in the right pane ──────────────────────────────────── */
@@ -1360,6 +1785,65 @@
     .board-form-row {
       grid-template-columns: 1fr;
     }
+
+    /* One sideways-scrolling row, edge to edge, rather than a wrapping block of chips. */
+    .board-tag-strip {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-inline: var(--space-3);
+      scrollbar-width: none;
+      overscroll-behavior-x: contain;
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+    }
+
+    .board-tag-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tag-editor-add {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .tag-editor-add-button {
+      grid-column: 1 / -1;
+      width: 100%;
+      margin-top: 0;
+    }
+  }
+
+  /* Touch phones: every tag control is a full 44 px target; the pills inside keep their size. */
+  @media (width < 720px) and (pointer: coarse) {
+    .board-tag-strip {
+      padding-block: 0;
+    }
+
+    .board-tag-filter,
+    .board-tag-option {
+      min-height: var(--touch-target);
+    }
+
+    .board-tag-option-face {
+      height: 36px;
+    }
+
+    .tag-editor-handle {
+      width: var(--touch-target);
+      height: var(--touch-target);
+    }
+
+    .tag-editor-emoji,
+    .tag-editor-add > .tag-editor-emoji {
+      width: var(--touch-target);
+      height: var(--touch-target);
+    }
+
+    .tag-editor-add > .tag-editor-emoji {
+      margin-top: calc(var(--leading-ui) + var(--space-1-5));
+    }
+
+    .tag-editor-row {
+      min-height: 52px;
+    }
   }
 
   @keyframes board-chip-in {
@@ -1372,6 +1856,11 @@
   @media (prefers-reduced-motion: reduce) {
     .board-chip {
       animation: none;
+    }
+
+    .board-tag-option-face,
+    .board-tag-option-check {
+      transition: none;
     }
 
     .board-card:hover {

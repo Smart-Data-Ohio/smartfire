@@ -20,6 +20,7 @@ import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
+import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { CancelEvent } from "../gen/CancelEvent.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
@@ -61,6 +62,7 @@ import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomLeft } from "../gen/RoomLeft.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
 import type { RoomRemoved } from "../gen/RoomRemoved.ts";
+import type { SaveBoardTag } from "../gen/SaveBoardTag.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
@@ -71,6 +73,7 @@ import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
+import type { UpdateBoardTagPolicy } from "../gen/UpdateBoardTagPolicy.ts";
 import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
@@ -688,6 +691,18 @@ export const actions = {
       runAction(boardActions.open(roomId, query)),
     loadMore: (roomId: number): Promise<void> => runAction(boardActions.loadMore(roomId)),
     postForm: (roomId: number): Promise<BoardPostForm> => runAction(boardActions.postForm(roomId)),
+    tagCatalog: (roomId: number): Promise<BoardTagCatalog> =>
+      runAction(boardActions.tagCatalog(roomId)),
+    createTag: (roomId: number, input: SaveBoardTag): Promise<BoardTagCatalog> =>
+      runAction(boardActions.createTag(roomId, input)),
+    updateTag: (roomId: number, tagId: number, input: SaveBoardTag): Promise<BoardTagCatalog> =>
+      runAction(boardActions.updateTag(roomId, tagId, input)),
+    deleteTag: (roomId: number, tagId: number): Promise<BoardTagCatalog> =>
+      runAction(boardActions.deleteTag(roomId, tagId)),
+    reorderTags: (roomId: number, tagIds: readonly number[]): Promise<BoardTagCatalog> =>
+      runAction(boardActions.reorderTags(roomId, tagIds)),
+    updateTagPolicy: (roomId: number, input: UpdateBoardTagPolicy): Promise<BoardTagCatalog> =>
+      runAction(boardActions.updateTagPolicy(roomId, input)),
     createPost: (roomId: number, input: boardActions.BoardPostInput): Promise<ThreadDetail> =>
       runAction(boardActions.createPost(roomId, input)),
   },

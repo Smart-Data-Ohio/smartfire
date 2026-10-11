@@ -51,6 +51,7 @@ if (SHOTS) {
     await shot(page, "admin-workspace", theme);
 
     for (const [link, heading, name] of [
+      ["Invites", "Invites", "admin-invites"],
       ["People", "People", "admin-people"],
       ["Workspace icons", "Workspace icons", "admin-icons"],
       ["Custom styles", "Custom CSS", "admin-styles"],
@@ -200,7 +201,7 @@ test.describe("on a phone", () => {
 
     const list = nav(page);
 
-    await expect(list.getByRole("link")).toHaveCount(8);
+    await expect(list.getByRole("link")).toHaveCount(9);
     await expectTouchTargets(page, ".settings-nav");
     await expectNoHorizontalOverflow(page);
     await shot(page, "admin-list", "light");

@@ -6,12 +6,16 @@ declare module "@tanstack/react-router" {
   interface HistoryState {
     /** Settings opened from a page in the app: closing goes back to the entry under it. */
     readonly smartfireSettingsOver?: number;
+    /** The settings tab to open on, when not General (the board toolbar's "Manage board tags"). */
+    readonly smartfireSettingsTab?: "tags";
   }
 }
 
 /** The history state for opening `roomId`'s settings from a page in the app. */
-export function settingsOverState(roomId: number) {
-  return { smartfireSettingsOver: roomId };
+export function settingsOverState(roomId: number, tab?: "tags") {
+  return tab === undefined
+    ? { smartfireSettingsOver: roomId }
+    : { smartfireSettingsOver: roomId, smartfireSettingsTab: tab };
 }
 
 const RoomSettingsDialog = lazy(() => import("./room-settings-dialog.tsx"));
@@ -33,6 +37,7 @@ export function RoomSettingsHost({ roomId }: { readonly roomId: number }) {
   const router = useRouter();
   const matchRoute = useMatchRoute();
   const over = useLocation({ select: (location) => location.state.smartfireSettingsOver });
+  const initialTab = useLocation({ select: (location) => location.state.smartfireSettingsTab });
   const open = matchRoute({ to: "/r/$roomId/settings" }) !== false;
 
   const kind = useStore(
@@ -62,6 +67,7 @@ export function RoomSettingsHost({ roomId }: { readonly roomId: number }) {
       <RoomSettingsDialog
         roomId={roomId}
         open={open}
+        initialTab={initialTab}
         onOpenChange={(next) => {
           if (next) {
             return;

@@ -2,6 +2,7 @@ import type { BoardListing } from "../../src/gen/BoardListing.ts";
 import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { BoardStatusFilter } from "../../src/gen/BoardStatusFilter.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
+import { caselessEqual } from "../../src/lib/case-fold.ts";
 import { notFound, ok, validation } from "../http.ts";
 import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
 import { firstId, route, type S2Context } from "../s2/context.ts";
@@ -12,6 +13,7 @@ import type { Uploads } from "../s2/uploads.ts";
 import type { Work } from "../s4/work.ts";
 import { rowTimestamp, VIEWER_ID } from "../seed.ts";
 import { autoAssignedBoardOwner, createBoardAutomations } from "./automations.ts";
+import { boardTagCatalog, canonicalBoardTag, createBoardTags } from "./board-tags.ts";
 import { BOARD_ROOM_ID } from "./seed.ts";
 import { emptyWorkDetail, newWorkFacts, ownerCandidates, tagsOf } from "./work.ts";
 
@@ -27,6 +29,8 @@ function statusOf(raw: Json | undefined, fallback: WorkStatus): WorkStatus {
 }
 
 export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads, work: Work) {
+  const tagCatalog = createBoardTags(ctx);
+
   const boardRoom = (roomId: number) => {
     const room = ctx.roomOr404(roomId);
 
@@ -53,6 +57,12 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
       .map(([name, count]) => ({ name, count }));
   };
 
+  const catalogFields = (roomId: number) => {
+    const { tags, tagsRequired, defaultBoardTagId } = boardTagCatalog(ctx.world(), roomId);
+
+    return { tags, tagsRequired, defaultBoardTagId };
+  };
+
   const postForm = (roomId: number): BoardPostForm => {
     boardRoom(roomId);
     const candidates = ownerCandidates(ctx.world(), roomId);
@@ -61,9 +71,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
       ownerCandidates: candidates,
       tagSuggestions: tagCounts(roomId).map(({ name }) => name),
       users: ctx.usersFor(candidates.map(({ userId }) => userId)),
-      tags: [],
-      tagsRequired: false,
-      defaultBoardTagId: null,
+      ...catalogFields(roomId),
     };
   };
 
@@ -76,7 +84,15 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
     const rawOwner = query.get("owner") ?? "anyone";
     const owner = /^(anyone|me|agents|[1-9]\d*)$/.test(rawOwner) ? rawOwner : "anyone";
-    const tag = (query.get("tag") ?? "").trim().toLowerCase();
+
+    // The server lower-cases the tag with Ruby's (Unicode 15) table; this runtime's toLowerCase
+    // may know newer characters, so only ASCII is lower-cased here (free-text tags are ASCII), and
+    // the filter compares through the server's case folding, which takes in the rest.
+    const asked = (query.get("tag") ?? "")
+      .trim()
+      .replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+
+    const tag = asked === "" ? "" : canonicalBoardTag(ctx.world(), roomId, asked);
     const rawPage = Number(query.get("page") ?? 1);
     const page = Number.isFinite(rawPage) ? Math.max(1, Math.min(20, Math.trunc(rawPage))) : 1;
     const all = posts(roomId);
@@ -98,7 +114,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
         if (/^\d+$/.test(owner) && work.owner?.id !== Number(owner)) return false;
 
-        return tag === "" || work.tags.includes(tag);
+        return tag === "" || work.tags.some((held) => caselessEqual(held, tag));
       })
       .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) || b.id - a.id);
 
@@ -126,9 +142,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
         agent: user.role === "bot" || user.agent !== null,
       })),
       tagCounts: tagCounts(roomId),
-      tags: [],
-      tagsRequired: false,
-      defaultBoardTagId: null,
+      ...catalogFields(roomId),
       digest: room.boardDigest ?? null,
       canAdminister:
         room.room.creatorId === VIEWER_ID ||
@@ -189,7 +203,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
     if ([...name].length > 100)
       throw validation("name", "Name is too long (maximum is 100 characters)");
     const status = statusOf(field(body, "status"), "planned");
-    const tags = tagsOf(body);
+    const tags = tagsOf(body, { world: ctx.world(), roomId });
     const ownerId = checkedOwner(roomId, body);
 
     const owner =
@@ -270,6 +284,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
   return {
     routes: [
       ...createBoardAutomations(ctx).routes,
+      ...tagCatalog.routes,
       route("GET", /^\/rooms\/(\d+)\/board$/, (request) =>
         ok(listing(firstId(request), request.query)),
       ),
@@ -283,6 +298,9 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
       if (action === "board-update")
         return ok(work.updateAs(intField(body, "threadId") ?? 9001, body, actorId));
+
+      if (action === "board-tags")
+        return tagCatalog.control(intField(body, "roomId") ?? BOARD_ROOM_ID, body);
 
       if (action === "board-create")
         return createPost(

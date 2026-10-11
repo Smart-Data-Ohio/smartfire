@@ -112,12 +112,17 @@ export const MAX_TAG_LENGTH = 30;
 
 const TAG_GRAMMAR = /^[a-z0-9][a-z0-9-]*$/;
 
-/** "bug, API ,bug" → ["bug", "api"]: stripped, lower-cased, blanks and repeats dropped. */
+/**
+ * "bug, API ,bug" → ["bug", "api"]: stripped, lower-cased, blanks and repeats dropped. Only ASCII
+ * is lower-cased: free-text tags are ASCII, and anything else is a curated label typed out, which
+ * the server matches through its own case folding. The runtime's toLowerCase may know newer
+ * characters than the server, and would turn such a label into a name it doesn't recognise.
+ */
 export function parseTags(text: string): string[] {
   const tags: string[] = [];
 
   for (const part of text.split(",")) {
-    const tag = part.trim().toLowerCase();
+    const tag = part.trim().replace(/[A-Z]+/g, (letters) => letters.toLowerCase());
 
     if (tag !== "" && !tags.includes(tag)) {
       tags.push(tag);

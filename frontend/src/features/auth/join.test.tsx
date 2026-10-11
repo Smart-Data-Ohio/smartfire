@@ -1,14 +1,18 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  INVITE_REASONS,
   MOCK_DEAD_INVITES,
   MOCK_INVITE,
   MOCK_JOIN_CODE,
   MOCK_LAST_INVITE,
 } from "../../../mock/s2/join.ts";
-import { MOCK_PLAIN_EMAIL, SIGNED_IN_LOCATION } from "../../../mock/s2/sign-in.ts";
+import {
+  MOCK_PLAIN_EMAIL,
+  MOCK_TWO_FACTOR_EMAIL,
+  SIGNED_IN_LOCATION,
+} from "../../../mock/s2/sign-in.ts";
+import { admin } from "../../sync/admin.ts";
 import { auth, type JoinNext } from "../../sync/auth.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
 import { pageExit } from "./auth-navigation.ts";
@@ -202,22 +206,68 @@ describe("an invite's page", () => {
   });
 
   it.each([
-    ["expired", MOCK_DEAD_INVITES.expired],
-    ["exhausted", MOCK_DEAD_INVITES.exhausted],
-    ["revoked", MOCK_DEAD_INVITES.revoked],
-    ["unknown", "never-issued"],
-  ] as const)("says a %s invite can't be used", async (refusal, token) => {
-    await renderAuth(`/app/invite/${token}`);
+    [
+      "expired",
+      MOCK_DEAD_INVITES.expired,
+      "This invite has expired",
+      "Invites last only as long as whoever made them chose.",
+      "Ask the person who sent it for a fresh link.",
+    ],
+    [
+      "exhausted",
+      MOCK_DEAD_INVITES.exhausted,
+      "This invite is full",
+      "It was made for a set number of people, and they've all joined.",
+      "Ask the person who sent it for a new link.",
+    ],
+    [
+      "revoked",
+      MOCK_DEAD_INVITES.revoked,
+      "This invite was turned off",
+      "A workspace administrator revoked it, so it can't be used to join.",
+      "If you expected to join, ask them for a new invite.",
+    ],
+    [
+      "unknown",
+      "never-issued",
+      "We couldn't find this invite",
+      "The link may be incomplete, or mistyped.",
+      "Check that you copied the whole link, or ask for a new one.",
+    ],
+  ] as const)(
+    "says why a %s invite can't be used, and what to do",
+    async (refusal, token, title, what, next) => {
+      await renderAuth(`/app/invite/${token}`);
 
-    expect(await screen.findByText("This invite is no longer valid.")).toBeTruthy();
+      expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
+      expect(screen.getByRole("alert").textContent).toBe(what);
+      expect(screen.getByText(next)).toBeTruthy();
+      expect(document.querySelector(`[data-refusal="${refusal}"]`)).not.toBeNull();
+      expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
+      expect(screen.getByRole("link", { name: "Sign in" })).toBeTruthy();
+
+      // The next step is a ready email to the help contact, about this workspace.
+      const ask = screen.getByRole("link", { name: "Email Riel" });
+
+      expect(ask.getAttribute("href")).toBe(
+        `mailto:${MOCK_TWO_FACTOR_EMAIL}?subject=${encodeURIComponent("A new invite to Smart Data")}`,
+      );
+      expect(document.title).toMatch(/^Join Smart Data/);
+    },
+  );
+
+  it("follows an invite made on the invites page until it is revoked", async () => {
+    const created = await admin.createInvite({ expiry: "1h", maxUses: 1 });
+
+    await renderAuth(`/app/invite/${created.token}`);
+    expect(await screen.findByRole("heading", { level: 1, name: "Join Smart Data" })).toBeTruthy();
+    cleanup();
+
+    await admin.revokeInvite(created.invite.id);
+    await renderAuth(`/app/invite/${created.token}`);
     expect(
-      screen.getByText(
-        `${INVITE_REASONS[refusal]} Ask a workspace administrator for a new invite.`,
-      ),
+      await screen.findByRole("heading", { level: 1, name: "This invite was turned off" }),
     ).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1, name: "Join Smart Data" })).toBeTruthy();
-    expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Sign in" })).toBeTruthy();
   });
 
   it("says so when its last use is taken while the form is open", async () => {
@@ -236,8 +286,9 @@ describe("an invite's page", () => {
     });
     await create();
 
-    expect(await screen.findByText("This invite is no longer valid.")).toBeTruthy();
-    expect(screen.getByText(/All its uses have been taken\./)).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "This invite is full" }),
+    ).toBeTruthy();
     expect(network.server.joined().map((person) => person.name)).toEqual(["Early"]);
     expect(assign).not.toHaveBeenCalled();
   });

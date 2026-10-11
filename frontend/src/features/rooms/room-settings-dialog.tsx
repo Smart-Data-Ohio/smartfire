@@ -11,6 +11,7 @@ import { type TabItem, Tabs, tabId } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
+import { BoardTagEditor } from "../boards/board-tag-editor.tsx";
 import { GithubSubscriptions } from "./github-subscriptions.tsx";
 import { InboundEmailSection } from "./inbound-email.tsx";
 import { MemberList } from "./member-list.tsx";
@@ -30,6 +31,8 @@ interface RoomSettingsDialogProps {
   readonly roomId: number;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+  /** The tab to open on (a board's Tags, from its toolbar); General otherwise. */
+  readonly initialTab?: "tags" | undefined;
 }
 
 type Load =
@@ -40,7 +43,7 @@ type Load =
 /** A refetch of membership after subscribe or unsubscribe. Save waits until it succeeds. */
 type MemberSync = "idle" | "pending" | "error";
 
-type Tab = "general" | "members" | "github" | "email";
+type Tab = "general" | "members" | "tags" | "github" | "email";
 
 const NOUN = {
   open: "channel",
@@ -97,7 +100,8 @@ function Pending({ load }: { readonly load: Load }) {
 /**
  * A room's settings (`/app/r/:id/settings`, the classic `rooms/<kind>/:id/edit` pages): its name
  * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. A board
- * has the same name, icon and members, and a way through to its automations. Every room, including
+ * has the same name, icon and members, a way through to its automations, and (for those who may
+ * edit it) its curated tags, which save as they change. Every room, including
  * a board, can subscribe GitHub repositories here; inbound email is offered except on a board.
  * The creator and administrators can change them; everyone else reads the room and is refused the
  * two integrations. Nothing about the room itself is written until "Save changes"; then the room's
@@ -107,6 +111,7 @@ export default function RoomSettingsDialog({
   roomId,
   open,
   onOpenChange,
+  initialTab,
 }: RoomSettingsDialogProps) {
   const navigate = useNavigate();
   const router = useRouter();
@@ -176,6 +181,7 @@ export default function RoomSettingsDialog({
   };
 
   // Each opening reads the room afresh: someone else may have changed it since.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the tab only matters as it opens
   useEffect(() => {
     if (!open) {
       return;
@@ -184,7 +190,7 @@ export default function RoomSettingsDialog({
     let live = true;
 
     setLoad({ status: "loading" });
-    setTab("general");
+    setTab(initialTab ?? "general");
     setProblem(null);
     setIconError(undefined);
     actions.rooms.editForm(roomId).then(
@@ -220,14 +226,23 @@ export default function RoomSettingsDialog({
   const noun = NOUN[kind];
   const members = hasMemberList(kind);
   const emailable = kind !== "board";
+  const taggable = kind === "board" && form !== null && form.canSubmit;
 
   const shownTab: Tab =
-    (tab === "members" && !members) || (tab === "email" && !emailable) ? "general" : tab;
+    (tab === "members" && !members) ||
+    (tab === "email" && !emailable) ||
+    (tab === "tags" && !taggable)
+      ? "general"
+      : tab;
 
   const tabItems: TabItem[] = [{ value: "general", label: "General", icon: "settings" }];
 
   if (members) {
     tabItems.push({ value: "members", label: `Members · ${draft.userIds.length}`, icon: "users" });
+  }
+
+  if (taggable) {
+    tabItems.push({ value: "tags", label: "Tags", icon: "hash" });
   }
 
   tabItems.push({ value: "github", label: "GitHub", icon: "code" });
@@ -580,7 +595,12 @@ export default function RoomSettingsDialog({
           items={tabItems}
           value={shownTab}
           onValueChange={(value) => {
-            if (value === "members" || value === "github" || value === "email") {
+            if (
+              value === "members" ||
+              value === "tags" ||
+              value === "github" ||
+              value === "email"
+            ) {
               setTab(value);
             } else {
               setTab("general");
@@ -608,6 +628,7 @@ export default function RoomSettingsDialog({
               readOnly={readOnly}
             />
           ) : null}
+          {shownTab === "tags" ? <BoardTagEditor roomId={roomId} /> : null}
           {shownTab === "github" ? (
             <GithubSubscriptions roomId={roomId} onMembership={reconcileMembership} />
           ) : null}
