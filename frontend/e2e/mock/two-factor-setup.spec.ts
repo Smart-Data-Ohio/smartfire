@@ -137,3 +137,26 @@ matrix("a full load of the setup screen while setup is required", async ({ page,
   await page.getByRole("button", { name: "I've saved these codes" }).click();
   await expect(page).toHaveURL(/\/app\/r\/1$/);
 });
+
+test("Back asks before leaving unsaved backup codes", async ({ page }) => {
+  await twoFactor(page, { enrolled: false });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/app/settings/security");
+  await page.getByRole("link", { name: "Set up two-step sign-in" }).click();
+  await verify(page, "123456");
+
+  const codes = page.getByRole("list", { name: "Backup codes" });
+  const ask = page.getByRole("alertdialog", { name: "Leave without your backup codes?" });
+
+  await expect(codes).toBeVisible();
+  await page.goBack();
+  await expect(ask).toBeVisible();
+  await ask.getByRole("button", { name: "Stay" }).click();
+  await expect(ask).toBeHidden();
+  await expect(page).toHaveURL(/\/app\/two_factor\/setup/);
+  await expect(codes).toBeVisible();
+
+  await page.goBack();
+  await ask.getByRole("button", { name: "Leave without them" }).click();
+  await expect(page).toHaveURL(/\/app\/settings\/security$/);
+});

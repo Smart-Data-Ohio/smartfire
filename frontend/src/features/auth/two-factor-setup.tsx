@@ -1,8 +1,10 @@
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { useBlocker, useRouter, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
+import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import { isSpaPath, spaUrlFor } from "../../lib/screens.ts";
 import { type SetupAnswer, type SetupState, twoFactorSetup } from "../../sync/two-factor-setup.ts";
 import { Button } from "../../ui/button.tsx";
+import { Dialog } from "../../ui/dialog.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { Toaster } from "../../ui/toast.tsx";
@@ -76,6 +78,10 @@ export function TwoFactorSetupPage() {
   const [screen, setScreen] = useState<Screen>({ step: "loading" });
   const [busy, setBusy] = useState<"confirm" | "signOut" | null>(null);
   const alive = useRef(true);
+
+  // The view fills the visible viewport, which an overlaid (iOS) keyboard shrinks while viewport
+  // units hold, so it follows the keyboard as the shell and the sign-in pages do.
+  useKeyboardInset();
 
   useEffect(() => {
     alive.current = true;
@@ -441,11 +447,19 @@ interface CodesStepProps {
 
 /**
  * The backup codes, shown this once: copy them, download them, then say they're saved. Until then
- * leaving the page asks first, since nobody can show them again.
+ * leaving asks first, since nobody can show them again: closing or reloading the tab through the
+ * browser's own prompt, and Back or any other move within the app through a confirmation.
  */
 function CodesStep({ titleId, codes, signedOut, onDone }: CodesStepProps) {
   const text = codes.join("\n");
   const saved = useRef(false);
+
+  const leaving = useBlocker({
+    shouldBlockFn: () => !saved.current,
+    // The unload listener below asks for a reload or a closed tab.
+    enableBeforeUnload: false,
+    withResolver: true,
+  });
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -510,6 +524,26 @@ function CodesStep({ titleId, codes, signedOut, onDone }: CodesStepProps) {
           I've saved these codes
         </Button>
       </div>
+      <Dialog
+        open={leaving.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) leaving.reset?.();
+        }}
+        role="alertdialog"
+        size="sm"
+        title="Leave without your backup codes?"
+        description="They won't be shown again. Copy or download them first if you haven't."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => leaving.reset?.()} data-autofocus>
+              Stay
+            </Button>
+            <Button variant="danger" onClick={() => leaving.proceed?.()}>
+              Leave without them
+            </Button>
+          </>
+        }
+      />
     </>
   );
 }

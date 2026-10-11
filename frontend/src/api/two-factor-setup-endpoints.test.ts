@@ -33,9 +33,15 @@ describe("two-factor setup contracts", () => {
       });
       expect((yield* readTwoFactorSetup()).kind).toBe("navigate");
       expect(yield* fake.requests).toMatchObject([
-        { method: "GET", path: "/two_factor/setup", auth: true },
-        { method: "POST", path: "/two_factor/setup", auth: true, body: { code: "123 456" } },
-        { method: "GET", path: "/two_factor/setup", auth: true },
+        { method: "GET", path: "/two_factor/setup", auth: true, ownsNavigation: true },
+        {
+          method: "POST",
+          path: "/two_factor/setup",
+          auth: true,
+          ownsNavigation: true,
+          body: { code: "123 456" },
+        },
+        { method: "GET", path: "/two_factor/setup", auth: true, ownsNavigation: true },
       ]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );

@@ -11,6 +11,10 @@ import type { Sidebar } from "../gen/Sidebar.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { User } from "../gen/User.ts";
 import { ApiClient, type ApiRequest } from "./client.ts";
+
+/** The address bar the app's real client leaves through: a test spies on its `assign`. */
+export { addressBar } from "./client.ts";
+
 import { type ApiFailure, NotFound, ServerError } from "./errors.ts";
 import { Sidebar as SidebarSchema } from "./schema/sidebar.ts";
 import { wire } from "./wire.ts";

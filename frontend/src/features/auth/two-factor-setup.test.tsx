@@ -1,4 +1,5 @@
 import {
+  createBrowserHistory,
   createMemoryHistory,
   createRootRoute,
   createRoute,
@@ -6,10 +7,11 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SETUP_WRONG, SIGNED_OUT_LOCATION } from "../../../mock/s2/account.ts";
+import { addressBar } from "../../api/testing.ts";
 import { settings } from "../../sync/settings.ts";
 import { type SetupAnswer, twoFactorSetup } from "../../sync/two-factor-setup.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
@@ -66,7 +68,23 @@ function GatedRoom() {
   return <p>Room destination</p>;
 }
 
-async function mount(path: string) {
+/** The window's history at `from`, with `path` pushed on top (by the router's history, so it can
+ * step back and forth over both). */
+function windowHistory(from: string, path: string) {
+  window.history.replaceState(null, "", from);
+
+  const history = createBrowserHistory();
+
+  history.push(path);
+
+  return history;
+}
+
+/**
+ * Mounts the routes at `path`. With `from`, in the window's own history, `from` a page behind it:
+ * only the browser's history lets a blocker hold Back.
+ */
+async function mount(path: string, from?: string) {
   const root = createRootRoute({ component: Outlet });
 
   const setup = createRoute({
@@ -82,7 +100,10 @@ async function mount(path: string) {
     component: GatedRoom,
   });
 
-  const history = createMemoryHistory({ initialEntries: [path] });
+  const history =
+    from === undefined
+      ? createMemoryHistory({ initialEntries: [path] })
+      : windowHistory(from, path);
 
   const router = createRouter({
     routeTree: root.addChildren([setup, room]),
@@ -245,6 +266,84 @@ describe("the setup screen", () => {
     expect(screen.getByText("Room destination")).toBeTruthy();
     await act(async () => pending.resolve({ kind: "navigate", location: "/app/settings" }));
     expect(leave).not.toHaveBeenCalled();
+  });
+});
+
+describe("leaving the setup screen", () => {
+  it("drops a late sign-in answer once the screen has gone, through the real client", async () => {
+    const assign = vi.spyOn(addressBar, "assign").mockImplementation(() => undefined);
+    const handle = network.server.handle.bind(network.server);
+    const release = Promise.withResolvers<void>();
+
+    // The setup's read is slow, then answers that the session has ended.
+    vi.spyOn(network.server, "handle").mockImplementation(async (request) => {
+      if (request.method === "GET" && request.path.startsWith("/api/v1/two_factor/setup")) {
+        await release.promise;
+
+        return { status: 401, json: { kind: "navigate", location: "/session/new" } };
+      }
+
+      return handle(request);
+    });
+
+    const router = await mount("/app/two_factor/setup");
+
+    await act(() => router.navigate({ to: "/r/$roomId", params: { roomId: 4 } }));
+    expect(screen.getByText("Room destination")).toBeTruthy();
+    await act(async () => {
+      release.resolve();
+      await new Promise((settled) => setTimeout(settled, 20));
+    });
+    expect(assign).not.toHaveBeenCalled();
+    expect(leave).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe("/r/4");
+  });
+
+  it("follows the same answer while the screen is up", async () => {
+    const assign = vi.spyOn(addressBar, "assign").mockImplementation(() => undefined);
+    const handle = network.server.handle.bind(network.server);
+
+    vi.spyOn(network.server, "handle").mockImplementation((request) =>
+      request.method === "GET" && request.path.startsWith("/api/v1/two_factor/setup")
+        ? Promise.resolve({ status: 401, json: { kind: "navigate", location: "/session/new" } })
+        : handle(request),
+    );
+    await mount("/app/two_factor/setup");
+    await waitFor(() => expect(leave).toHaveBeenCalledTimes(1));
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("asks before Back leaves unsaved backup codes", async () => {
+    await twoFactor({ enrolled: false });
+
+    const router = await mount("/app/two_factor/setup?return_to=%2Fapp%2Fr%2F4", "/app/r/4");
+
+    await screen.findByRole("img", { name: "QR code for your authenticator app" });
+    await enter("123456");
+    await screen.findByRole("list", { name: "Backup codes" });
+
+    await act(async () => router.history.back());
+
+    const ask = await screen.findByRole("alertdialog", {
+      name: "Leave without your backup codes?",
+    });
+
+    expect(screen.getByRole("list", { name: "Backup codes" })).toBeTruthy();
+    fireEvent.click(within(ask).getByRole("button", { name: "Stay" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(router.state.location.pathname).toBe("/two_factor/setup");
+    expect(screen.getByRole("list", { name: "Backup codes" })).toBeTruthy();
+    // The browser has stepped forward again, back to the codes.
+    await waitFor(() => expect(window.location.pathname).toBe("/app/two_factor/setup"));
+
+    await act(async () => router.history.back());
+    fireEvent.click(
+      within(
+        await screen.findByRole("alertdialog", { name: "Leave without your backup codes?" }),
+      ).getByRole("button", { name: "Leave without them" }),
+    );
+    expect(await screen.findByText("Room destination")).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/r/4");
   });
 });
 

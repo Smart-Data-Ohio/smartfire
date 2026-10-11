@@ -171,15 +171,39 @@ describe("two-factor setup HTTP statuses", () => {
     });
   }
 
-  it.effect("navigates a signed-out setup request on 401", () => {
+  it.effect("leaves a signed-out setup's 401 next action to its screen", () => {
     const body = { kind: "navigate", location: "http://campfire.test/session/new" };
     const { layer, navigations } = harness(() => json(401, body));
 
     return Effect.gen(function* () {
+      // The screen follows it, if it is still on screen when the answer arrives.
       expect(yield* readTwoFactorSetup()).toEqual(body);
-      expect(navigations).toEqual([body.location]);
+      expect(navigations).toEqual([]);
     }).pipe(Effect.provide(layer));
   });
+
+  it.effect(
+    "fails an undecodable 401 Unauthorized without leaving when the caller navigates",
+    () => {
+      const { layer, navigations } = harness(() =>
+        errorReply(401, new Unauthorized({ message: "Signed out" })),
+      );
+
+      return Effect.gen(function* () {
+        const client = yield* ApiClient;
+
+        const error = yield* client
+          .execute(
+            { method: "GET", path: "/two_factor/setup", auth: true, ownsNavigation: true },
+            Schema.decodeUnknownEffect(Schema.Number),
+          )
+          .pipe(Effect.flip);
+
+        expect(error).toEqual(new Unauthorized({ message: "Signed out" }));
+        expect(navigations).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    },
+  );
 });
 
 describe("two-factor enrollment gate", () => {
