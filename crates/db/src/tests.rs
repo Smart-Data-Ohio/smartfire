@@ -14,6 +14,7 @@ mod board_automations_test;
 mod account_test;
 mod user_block_test;
 mod workspace_invite_test;
+mod channel_webhook_test;
 mod slack_import_test;
 mod slack_test;
 mod activity_item_test;

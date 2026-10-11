@@ -52,6 +52,7 @@ pub mod ban;
 pub mod boost;
 pub mod bot_webhook_fanout;
 pub mod channel_thread;
+pub mod channel_webhook;
 pub mod work_thread_event;
 pub mod work_thread_link;
 pub use work_thread_link::{NewWorkThreadLink, WorkThreadLink};

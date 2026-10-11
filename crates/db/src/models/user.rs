@@ -29,6 +29,8 @@ pub enum Role {
     Member = 0,
     Administrator = 1,
     Bot = 2,
+    /// A message author scoped by a channel webhook, never a user account.
+    WebhookAuthor = 3,
 }
 
 impl Role {
@@ -37,6 +39,7 @@ impl Role {
             Role::Member => "member",
             Role::Administrator => "administrator",
             Role::Bot => "bot",
+            Role::WebhookAuthor => "webhook_author",
         }
     }
 
@@ -101,7 +104,8 @@ integer_enum_sql!(
     Role,
     Role::Member = 0,
     Role::Administrator = 1,
-    Role::Bot = 2
+    Role::Bot = 2,
+    Role::WebhookAuthor = 3
 );
 integer_enum_sql!(
     Status,
@@ -451,6 +455,12 @@ impl User {
         }, false)
     }
 
+    pub(crate) fn create_webhook_author(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
+        Self::create_with_open_room_grant(tx, NewUser {
+            name: name.into(), role: Role::WebhookAuthor, ..Default::default()
+        }, false)
+    }
+
     fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
         attributes.pronouns = profile_text(attributes.pronouns, "pronouns", 40)?;
         attributes.nickname = profile_text(attributes.nickname, "nickname", 32)?;
@@ -469,14 +479,14 @@ impl User {
                 attributes.name,
                 password_digest,
                 attributes.role,
-                Status::Active,
+                if attributes.role == Role::WebhookAuthor { Status::Deactivated } else { Status::Active },
                 now,
                 attributes.pronouns,
                 attributes.nickname
             ],
             |r| r.get(0),
         )?;
-        if grant { tx.after_commit(move |tx| grant_membership_to_open_rooms(tx, id)); }
+        if grant && attributes.role != Role::WebhookAuthor { tx.after_commit(move |tx| grant_membership_to_open_rooms(tx, id)); }
         Self::find(tx.conn(), id)
     }
 
@@ -537,6 +547,10 @@ impl User {
         let plain_bot_token = self.plain_bot_token.clone();
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
+        self.ensure_account_user()?;
+        if changes.role == Some(Role::WebhookAuthor) {
+            return Err(crate::Error::RecordNotFound("User"));
+        }
         // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
         let zone = changes.time_zone
             .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
@@ -677,6 +691,7 @@ impl User {
         changes: UserChanges,
         webhook_url: Option<&str>,
     ) -> Result<()> {
+        Self::find(tx.conn(), self.id)?.ensure_account_user()?;
         let webhook = Webhook::find_by_user(tx.conn(), self.id)?;
         match (webhook_url.filter(|u| !u.trim().is_empty()), webhook) {
             (Some(url), Some(mut webhook)) => webhook.update_url(tx, url)?,
@@ -693,6 +708,7 @@ impl User {
     /// bot_token_digest:` stores the digest alone and clears any retired plaintext; the new key
     /// is known on `self` afterwards.
     pub fn reset_bot_key(&mut self, tx: &mut Tx<'_>) -> Result<String> {
+        Self::find(tx.conn(), self.id)?.ensure_account_user()?;
         let token = generate_bot_token();
         let digest = digest_bot_token(&token);
         let now = tx.now();
@@ -808,6 +824,7 @@ impl User {
     }
 
     pub fn unban(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        Self::find(tx.conn(), self.id)?.ensure_account_user()?;
         tx.conn().execute_cached(
             r#"DELETE FROM "bans" WHERE "bans"."user_id" = ?"#,
             [self.id],
@@ -957,11 +974,18 @@ impl User {
     }
 
     pub fn is_bot(&self) -> bool {
-        self.role == Role::Bot
+        matches!(self.role, Role::Bot | Role::WebhookAuthor)
+    }
+
+    fn ensure_account_user(&self) -> Result<()> {
+        if self.role == Role::WebhookAuthor {
+            return Err(crate::Error::RecordNotFound("User"));
+        }
+        Ok(())
     }
 
     pub fn is_active(&self) -> bool {
-        self.status == Status::Active
+        self.status == Status::Active && self.role != Role::WebhookAuthor
     }
 
     pub fn is_deactivated(&self) -> bool {

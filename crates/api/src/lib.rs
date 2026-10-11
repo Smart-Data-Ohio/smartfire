@@ -32,6 +32,7 @@ pub mod events;
 mod error;
 pub mod admin;
 pub mod bots;
+pub mod webhooks;
 pub mod boards;
 mod branding_images;
 pub mod board_automations;
@@ -500,6 +501,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(admin::routes())
         .merge(invites::routes())
         .merge(bots::routes())
+        .merge(webhooks::routes())
         .merge(slack::routes())
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))
 }

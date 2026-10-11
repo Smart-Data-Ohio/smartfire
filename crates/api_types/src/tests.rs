@@ -75,6 +75,8 @@ pub(crate) fn message() -> MessageDTO {
         steps: vec![],
         created_at: "2026-10-06T09:15:00.123Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
+        embeds: None,
+        webhook: None,
     }
 }
 
@@ -264,6 +266,8 @@ fn message_round_trips() {
             "action": false,
             "streaming": false,
             "embedsSuppressed": false,
+            "embeds": null,
+            "webhook": null,
             "replyToMessageId": 8999,
             "forwardedFromMessageId": null,
             "forwardedAt": null,

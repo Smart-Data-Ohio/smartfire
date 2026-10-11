@@ -99,6 +99,8 @@ pub struct MessageDTO {
     /// Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
     /// replies (`touch`), so a later `updatedAt` always holds the newer copy.
     pub updated_at: Timestamp,
+    pub embeds: Option<Vec<crate::WebhookEmbed>>,
+    pub webhook: Option<crate::MessageWebhook>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

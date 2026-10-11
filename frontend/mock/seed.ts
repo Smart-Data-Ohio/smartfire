@@ -805,6 +805,8 @@ export function seedWorld(now: number, random: Random): World {
       action: false,
       streaming: false,
       embedsSuppressed: false,
+      embeds: null,
+      webhook: null,
       replyToMessageId: null,
       forwardedFromMessageId: null,
       forwardedAt: null,
