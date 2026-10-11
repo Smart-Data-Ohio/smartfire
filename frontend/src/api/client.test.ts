@@ -172,7 +172,7 @@ describe("two-factor setup HTTP statuses", () => {
   }
 
   it.effect("leaves a signed-out setup's 401 next action to its screen", () => {
-    const body = { kind: "navigate", location: "http://campfire.test/session/new" };
+    const body = { kind: "navigate", location: "http://campfire.test/app/session/new" };
     const { layer, navigations } = harness(() => json(401, body));
 
     return Effect.gen(function* () {
@@ -245,12 +245,12 @@ describe("sudo HTTP statuses", () => {
   });
 
   it.effect("navigates to sign-in when a sudo before-action refuses the session", () => {
-    const next = { kind: "navigate", location: "http://campfire.test/session/new" };
+    const next = { kind: "navigate", location: "http://campfire.test/app/session/new" };
     const { layer, navigations } = harness(() => json(401, next));
 
     return Effect.gen(function* () {
       expect(yield* resumeSudo(null)).toEqual(next);
-      expect(navigations).toEqual(["http://campfire.test/session/new"]);
+      expect(navigations).toEqual(["http://campfire.test/app/session/new"]);
     }).pipe(Effect.provide(layer));
   });
 

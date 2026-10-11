@@ -215,7 +215,7 @@ describe("/app/sudo/new", () => {
   it("signed out, leaves it to the sign-in redirect", async () => {
     vi.spyOn(actions.confirmation, "status").mockResolvedValue({
       kind: "navigate",
-      location: "/session/new",
+      location: "/app/session/new",
     });
     await open();
 
