@@ -268,11 +268,13 @@ export function IgnoredNotice({
     <div className="message-ignored" data-revealed={revealed || undefined}>
       <span className="message-ignored-line">
         <Icon name="eye-off" size={14} className="message-ignored-icon" />
-        <span>{ignoredLabel(count)}</span>
-        <span aria-hidden="true">—</span>
-        <Button variant="link" size="sm" aria-expanded={revealed} onClick={onToggle}>
-          {revealed ? "Hide" : "Show"}
-        </Button>
+        <span className="message-ignored-text">{ignoredLabel(count)}</span>
+        <span className="message-ignored-toggle">
+          <span aria-hidden="true">—</span>
+          <Button variant="link" size="sm" aria-expanded={revealed} onClick={onToggle}>
+            {revealed ? "Hide" : "Show"}
+          </Button>
+        </span>
       </span>
     </div>
   );
