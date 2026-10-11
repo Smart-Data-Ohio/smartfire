@@ -8,12 +8,14 @@ pub enum SignedOutRoute {
     Join,
     /// `/app/invite/:token`, the retained `/invite/:token`.
     Invite,
+    FirstRun,
 }
 
 pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
     match path {
         "/app/session/new" => Some(SignedOutRoute::SignIn),
         "/app/two_factor/challenge" => Some(SignedOutRoute::Challenge),
+        "/app/first_run" => Some(SignedOutRoute::FirstRun),
         _ => [
             ("/app/session/transfers/", SignedOutRoute::Transfer),
             ("/app/join/", SignedOutRoute::Join),
@@ -59,6 +61,10 @@ mod tests {
             signed_out_route("/app/invite/token"),
             Some(SignedOutRoute::Invite)
         );
+        assert_eq!(
+            signed_out_route("/app/first_run"),
+            Some(SignedOutRoute::FirstRun)
+        );
         for path in [
             "/session/new",
             "/app/",
@@ -70,6 +76,8 @@ mod tests {
             "/app/join/a/b",
             "/app/invite/",
             "/app/invite/a/b",
+            "/first_run",
+            "/app/first_run/extra",
         ] {
             assert_eq!(signed_out_route(path), None, "{path}");
         }

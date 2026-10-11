@@ -26,7 +26,7 @@ import { extname, join, normalize } from "node:path";
 import type { Duplex } from "node:stream";
 import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 import { type WebSocket, WebSocketServer } from "ws";
-import { formJson, type Json, parseJson } from "./json.ts";
+import { formJson, isMultipart, type Json, parseJson } from "./json.ts";
 import { BOT_ID, USERS_WITH_PHOTOS } from "./seed.ts";
 import {
   createMockServer,
@@ -132,29 +132,19 @@ function avatarSvg(userId: number): string {
 async function serveHttp(mock: MockServer, request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url ?? "/", "http://localhost");
   const raw = await readBody(request);
-  const contentType = request.headers["content-type"] ?? "";
+  const contentType = request.headers["content-type"];
+  const multipart = isMultipart(contentType);
+  const text = multipart ? "" : raw.toString("utf8");
 
-  // The join form's multipart body (it carries the avatar), read as the vitest transport does.
-  if (contentType.startsWith("multipart/form-data")) {
-    const form = await new Response(new Uint8Array(raw), {
-      headers: { "Content-Type": contentType },
-    }).formData();
-
-    const result = await mock.handle({
-      method: request.method ?? "GET",
-      path: url.pathname,
-      query: url.searchParams,
-      body: formJson(form),
-      headers: headersOf(request),
-    });
-
-    sendJson(response, result.status, result.json);
-
-    return;
-  }
-
-  const text = raw.toString("utf8");
-  const body = text.trim() === "" ? undefined : parseJson(text);
+  const body = multipart
+    ? formJson(
+        await new Response(new Uint8Array(raw), {
+          headers: { "content-type": contentType ?? "" },
+        }).formData(),
+      )
+    : text.trim() === ""
+      ? undefined
+      : parseJson(text);
 
   if (text.trim() !== "" && body === undefined) {
     sendJson(response, 400, { error: { message: "The request body isn't JSON" } });

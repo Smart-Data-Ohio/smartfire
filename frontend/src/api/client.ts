@@ -66,7 +66,10 @@ export interface ApiRequest {
   readonly root?: true;
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: Schema.Json;
-  /** A multipart body instead of `body`: the join form, whose avatar can't go as JSON. */
+  /**
+   * A `multipart/form-data` body instead of `body`, for the signed-out forms that carry a file
+   * (the join form's and first run's avatar). Signed-in uploads go through direct uploads.
+   */
   readonly form?: FormData;
   /** Credential refusals are decoded next actions; token refresh uses the public auth boot. */
   readonly auth?: true;

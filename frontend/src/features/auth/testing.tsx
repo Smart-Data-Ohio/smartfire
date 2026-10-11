@@ -14,6 +14,7 @@ import { act, render } from "@testing-library/react";
 import type { MockNetwork } from "../../test/mock-network.ts";
 import { parseSignInSearch } from "./auth-navigation.ts";
 import { ChallengePage } from "./challenge.tsx";
+import { FirstRunPage } from "./first-run.tsx";
 import { InviteRoute, JoinCodeRoute } from "./join.tsx";
 import { AboutPage, PrivacyPage, TermsPage } from "./public-page.tsx";
 import { SignInPage } from "./sign-in.tsx";
@@ -47,6 +48,7 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
       path: "session/transfers/$transferId",
       component: TransferRoute,
     }),
+    createRoute({ getParentRoute: () => root, path: "first_run", component: FirstRunPage }),
     createRoute({ getParentRoute: () => root, path: "about", component: AboutPage }),
     createRoute({ getParentRoute: () => root, path: "privacy", component: PrivacyPage }),
     createRoute({ getParentRoute: () => root, path: "terms", component: TermsPage }),
@@ -69,6 +71,7 @@ export interface SignInChange {
   readonly google?: boolean;
   readonly firstRunPending?: boolean;
   readonly pending?: boolean;
+  readonly firstRunUnavailable?: boolean;
 }
 
 /** Starts the mock over, then applies `change` to its sign-in state. */

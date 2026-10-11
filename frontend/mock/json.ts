@@ -89,16 +89,24 @@ export function parseJson(text: string): Json | undefined {
 }
 
 /**
- * A multipart form as the mock's handlers read bodies: each text part a string, each file part
- * its name, type and size (the join form's avatar).
+ * A `multipart/form-data` body as the mock reads it: each text field as a string, each file as
+ * `{ filename, contentType, byteSize }`. The SPA posts two: the join form's text fields and
+ * avatar, and first run's avatar with the rest as JSON in a text field.
  */
 export function formJson(form: FormData): JsonRecord {
   const record: Record<string, Json> = {};
 
   form.forEach((value, key) => {
     record[key] =
-      value instanceof File ? { filename: value.name, type: value.type, size: value.size } : value;
+      value instanceof File
+        ? { filename: value.name, contentType: value.type, byteSize: value.size }
+        : value;
   });
 
   return record;
+}
+
+/** Whether a `Content-Type` names a multipart form. */
+export function isMultipart(contentType: string | null | undefined): boolean {
+  return contentType?.toLowerCase().startsWith("multipart/form-data") ?? false;
 }

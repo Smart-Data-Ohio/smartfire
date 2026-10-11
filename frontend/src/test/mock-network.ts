@@ -11,7 +11,7 @@
  * ```
  */
 import { vi } from "vitest";
-import { formJson, type Json, parseJson } from "../../mock/json.ts";
+import { formJson, isMultipart, type Json, parseJson } from "../../mock/json.ts";
 import {
   createMockServer,
   isBinaryPath,
@@ -488,7 +488,9 @@ export function installMockNetwork(server?: MockServer): MockNetwork {
     const body =
       init?.body !== undefined
         ? await bodyOf(init.body)
-        : parseJson((await original?.text()) ?? "");
+        : original !== null && isMultipart(original.headers.get("content-type"))
+          ? formJson(await original.formData())
+          : parseJson((await original?.text()) ?? "");
 
     const response = await backend.handle({
       method,
