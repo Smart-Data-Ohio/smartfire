@@ -21,6 +21,7 @@ import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { parseSignInSearch } from "./features/auth/auth-navigation.ts";
+import { SudoContinue } from "./features/auth/sudo-continue.tsx";
 import { parseTwoFactorSetupSearch } from "./features/auth/two-factor-search.ts";
 import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
@@ -213,6 +214,13 @@ const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "/",
   component: HomeView,
+});
+
+/** `/app/sudo/continue`: back from a Google confirmation; the writes kept for it go again. */
+const sudoContinueRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "sudo/continue",
+  component: SudoContinue,
 });
 
 /** `/app/r/$roomId`: a room's timeline (channel, DM, voice and stage share it). */
@@ -727,6 +735,7 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   shellRoute.addChildren([
     homeRoute,
+    sudoContinueRoute,
     activityRoute,
     savedRoute,
     scheduledRoute,

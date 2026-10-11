@@ -2,4 +2,20 @@
 import type { SudoRetry } from "./SudoRetry";
 import type { SudoState } from "./SudoState";
 
-export type SudoResponse = { "kind": "ready", reauthentication: SudoState, } | { "kind": "confirmed", retry: SudoRetry | null, } | { "kind": "navigate", location: string, } | { "kind": "error", message: string, };
+export type SudoResponse = { "kind": "ready", reauthentication: SudoState,
+/**
+ * The signed-in session, so the SPA can tell a Google hand-off from another session's.
+ */
+session?: number, } | { "kind": "confirmed", retry: SudoRetry | null,
+/**
+ * The Google attempt this session confirmed, when the continuation asked for it by id.
+ */
+attempt?: string,
+/**
+ * The signed-in session, so the SPA can tell a Google hand-off from another session's.
+ */
+session?: number, } | { "kind": "navigate", location: string,
+/**
+ * The signed-in session, so the SPA can tell a Google hand-off from another session's.
+ */
+session?: number, } | { "kind": "error", message: string, };

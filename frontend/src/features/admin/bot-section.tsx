@@ -8,6 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { leftToConfirm } from "../auth/confirmation.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import {
   FieldError,
@@ -16,15 +17,7 @@ import {
   SettingsPage,
   useBusy,
 } from "../settings/settings-parts.tsx";
-import {
-  adminFailure,
-  Confirm,
-  keepDraft,
-  needsSudo,
-  takeDraft,
-  uploaded,
-  useAdmin,
-} from "./admin-parts.tsx";
+import { adminFailure, Confirm, keepDraft, takeDraft, uploaded, useAdmin } from "./admin-parts.tsx";
 import { type BotForm, botChange, botForm, CONFIRM, SUSPENDED } from "./bot-format.ts";
 import { BotPicture, CopyLine, KeyDialog, useBotId } from "./bot-parts.tsx";
 
@@ -268,7 +261,7 @@ export function BotSection() {
             return;
           }
 
-          if (needsSudo(error))
+          if (leftToConfirm(error))
             keepDraft(draftKey(id), new URLSearchParams({ ...form }).toString());
 
           adminFailure("Couldn't save the bot", error);

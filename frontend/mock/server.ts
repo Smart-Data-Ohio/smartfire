@@ -18,6 +18,7 @@ import type { ReadState } from "../src/gen/ReadState.ts";
 import type { RoomDetail } from "../src/gen/RoomDetail.ts";
 import type { Sidebar } from "../src/gen/Sidebar.ts";
 import type { SidebarRow } from "../src/gen/SidebarRow.ts";
+import type { SudoMethod } from "../src/gen/SudoMethod.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
@@ -35,7 +36,15 @@ import {
   respond,
   validation,
 } from "./http.ts";
-import { booleanField, field, intField, type Json, type JsonRecord, stringField } from "./json.ts";
+import {
+  booleanField,
+  field,
+  intField,
+  type Json,
+  type JsonRecord,
+  stringArrayField,
+  stringField,
+} from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
 import { createAccount } from "./s2/account.ts";
@@ -239,6 +248,19 @@ export interface MockServer {
   dispose(): void;
   /** The sync epoch and last sequence number. */
   syncState(): { readonly epoch: string; readonly seq: number; readonly connections: number };
+}
+
+/** The SPA page a request came from (its Referer's path), as `require_sudo_mode` records it. */
+function refererPage(request: MockRequest): string {
+  const referer = headerOf(request.headers, "referer") ?? "";
+
+  try {
+    const path = new URL(referer).pathname;
+
+    return path.startsWith("/app/") ? path : "/app/";
+  } catch {
+    return "/app/";
+  }
 }
 
 function token(random: Random): string {
@@ -1292,10 +1314,17 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         });
 
         return ok;
-      case "lapse-sudo":
-        admin.lapseSudo(flag("on", true));
+      case "lapse-sudo": {
+        const methods = stringArrayField(body, "methods")?.filter(
+          (method): method is SudoMethod =>
+            method === "password" || method === "totp" || method === "google",
+        );
+
+        admin.lapseSudo(flag("on", true), methods, flag("googleRefuses", false));
 
         return ok;
+      }
+
       case "sign-in":
         signIn.configure({
           google: booleanField(body, "google"),
@@ -1491,7 +1520,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       const path = request.path.split("?")[0] ?? "";
 
       try {
-        if (path.startsWith("/api/v1/")) return await api(request, path.slice("/api/v1".length));
+        if (path.startsWith("/api/v1/")) {
+          admin.noteRequest(request.method, request.path, refererPage(request));
+
+          return await api(request, path.slice("/api/v1".length));
+        }
 
         if (path.startsWith("/__mock/")) return control(request, path.slice("/__mock/".length));
 

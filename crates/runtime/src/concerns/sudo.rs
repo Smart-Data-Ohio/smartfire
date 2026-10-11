@@ -1,5 +1,5 @@
 //! `SudoMode` and the WS14 hand-off for Google re-authentication.
-use super::{require_current_user, session_keys};
+use super::{current_session, require_current_user, session_keys};
 use crate::app::AppCtx;
 use campfire_api_types::{ApiError, ApiErrorResponse, SudoMethod, SudoRetry, SudoState};
 use campfire_db::AuthAudit;
@@ -93,6 +93,78 @@ pub fn retry(c: &mut Ctx) -> Option<SudoRetry> {
         )
         .into(),
     })
+}
+
+/// Whether `attempt` can name an SPA Google confirmation: 16 to 64 letters, digits, `-` or `_`.
+pub fn valid_attempt(attempt: &str) -> bool {
+    (16..=64).contains(&attempt.len())
+        && attempt
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+}
+
+/// The signed-in session's id: SPA Google confirmations are bound to it.
+pub fn session_id(c: &Ctx) -> Option<i64> {
+    current_session(c).map(|session| session.id)
+}
+
+/// The SPA's Google confirmation for `attempt` finished in this session: keeps who confirmed, in
+/// which session, when, and the pending request it answers (consuming it), for the continuation
+/// to name.
+pub fn record_attempt(c: &mut Ctx, attempt: &str) -> Result<()> {
+    let user_id = require_current_user(c)?.id;
+    let session_id = session_id(c);
+    let retry = serde_json::to_value(retry(c)).map_err(Error::internal)?;
+    let at = c.now().as_second();
+    c.session().remove(session_keys::SUDO_PENDING_KEY);
+    c.session().insert(
+        session_keys::SUDO_ATTEMPT_KEY,
+        serde_json::json!({
+            "id": attempt, "user_id": user_id, "session_id": session_id, "at": at, "retry": retry
+        }),
+    );
+    Ok(())
+}
+
+/// The pending request `attempt` answered, while this session's record of it belongs to the
+/// signed-in member and session and is under `SUDO_ATTEMPT_TTL` old; `None` otherwise. Reading it again gives
+/// the same answer until the SPA acknowledges it or it expires.
+pub fn attempt_retry(c: &mut Ctx, attempt: &str) -> Result<Option<Option<SudoRetry>>> {
+    let user_id = require_current_user(c)?.id;
+    let now = c.now();
+    let Some(record) = c.session().get(session_keys::SUDO_ATTEMPT_KEY).cloned() else {
+        return Ok(None);
+    };
+    let fresh = record["at"]
+        .as_i64()
+        .and_then(|at| jiff::Timestamp::from_second(at).ok())
+        .is_some_and(|at| at > now - session_keys::SUDO_ATTEMPT_TTL);
+    if !fresh {
+        c.session().remove(session_keys::SUDO_ATTEMPT_KEY);
+        return Ok(None);
+    }
+    if !names(c, &record, attempt) || record["user_id"].as_i64() != Some(user_id) {
+        return Ok(None);
+    }
+    Ok(Some(serde_json::from_value(record["retry"].clone()).unwrap_or(None)))
+}
+
+/// Whether `record` is `attempt`'s, finished in the signed-in session.
+fn names(c: &Ctx, record: &serde_json::Value, attempt: &str) -> bool {
+    let session_id = session_id(c);
+    record["id"].as_str() == Some(attempt)
+        && session_id.is_some()
+        && record["session_id"].as_i64() == session_id
+}
+
+/// The SPA has what `attempt` confirmed: its record goes (only from the session that finished it).
+pub fn acknowledge_attempt(c: &mut Ctx, attempt: &str) {
+    let Some(record) = c.session().get(session_keys::SUDO_ATTEMPT_KEY).cloned() else {
+        return;
+    };
+    if names(c, &record, attempt) {
+        c.session().remove(session_keys::SUDO_ATTEMPT_KEY);
+    }
 }
 
 pub async fn methods(c: &Ctx) -> Result<Vec<SudoMethod>> {

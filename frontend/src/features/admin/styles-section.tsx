@@ -10,13 +10,13 @@ import { previewWorkspaceStyles } from "../../lib/workspace-styles.ts";
 import { admin } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { leftToConfirm } from "../auth/confirmation.ts";
 import { PaneError } from "../panes/pane-states.tsx";
 import { SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import {
   AdministratorsOnly,
   adminFailure,
   keepDraft,
-  needsSudo,
   takeDraft,
   useAdmin,
 } from "./admin-parts.tsx";
@@ -92,7 +92,7 @@ export function StylesSection() {
           toast({ title: "Custom styles saved", tone: "success" });
         },
         (error: Error) => {
-          if (needsSudo(error)) keepDraft(DRAFT_KEY, css);
+          if (leftToConfirm(error)) keepDraft(DRAFT_KEY, css);
 
           adminFailure("Couldn't save the custom styles", error);
         },

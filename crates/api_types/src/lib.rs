@@ -64,6 +64,7 @@ pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmissio
 pub use auth::{TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 pub use auth::SignInHelpContact;
 pub use auth::{FirstRunState, FirstRunSubmission};
+pub use auth::SudoGoogleStart;
 pub use auth::{InviteRefusal, JoinPage, WorkspaceJoin};
 
 pub use actions::{

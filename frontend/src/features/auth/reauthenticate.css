@@ -1,0 +1,68 @@
+/*
+ * The fresh-confirmation dialog (reauthenticate.tsx): the classic "Confirm it's you" page's
+ * password, authenticator code and Google choices, stacked with an "or" between them.
+ */
+@layer app {
+  .reauth {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .reauth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .reauth-form .field-error:empty {
+    display: none;
+  }
+
+  .reauth-wide {
+    width: 100%;
+  }
+
+  .reauth-or {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .reauth-or::before,
+  .reauth-or::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .reauth-google {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+  }
+
+  .reauth-google-mark {
+    flex: none;
+  }
+
+  .reauth-note {
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .reauth-alert {
+    color: var(--danger-text);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .reauth-alert:empty {
+    display: none;
+  }
+}

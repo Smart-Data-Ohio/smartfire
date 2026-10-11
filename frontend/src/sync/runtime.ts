@@ -66,6 +66,7 @@ import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { SubscribeGithubRepository } from "../gen/SubscribeGithubRepository.ts";
+import type { SudoSubmission } from "../gen/SudoSubmission.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
@@ -86,6 +87,7 @@ import type { BoardQuery } from "../store/boards.ts";
 import type { LedgerFilter } from "../store/ledger.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
+import { store } from "../store/store.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as agentActions from "./agent-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
@@ -103,6 +105,7 @@ import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import * as confirmationActions from "./reauthentication.ts";
 import * as roomActions from "./room-actions.ts";
 import { ActionError, type ActionFailure, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
@@ -116,9 +119,19 @@ import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
 import * as workActions from "./work-actions.ts";
 
+export type { ConfirmationPrompt, GoogleReturn } from "./reauthentication.ts";
+
 export type { EventPrefill, GithubCardScope };
 
 const API_BASE = "/api/v1";
+
+/**
+ * The app's one confirmation: writes held for a fresh confirmation wait on its dialog. A Google
+ * round trip's writes are bound to the person signed in.
+ */
+export const confirmationGate = confirmationActions.makeConfirmationGate({
+  viewer: () => store.getState().me?.user.id ?? store.getState().boot?.user.id ?? null,
+});
 
 /**
  * The one Effect runtime the app shares. Code outside src/api and src/sync never imports
@@ -130,7 +143,7 @@ export const runtime = ManagedRuntime.make(
     Layer.provideMerge(
       Layer.mergeAll(
         ApiConfig.layer(API_BASE),
-        ApiClient.layerBrowser(API_BASE),
+        ApiClient.layerBrowser(API_BASE).pipe(Layer.provide(confirmationGate.layer)),
         SyncSocket.layerWebSocket,
         Lifecycle.layerBrowser,
       ),
@@ -572,6 +585,40 @@ const events = {
 };
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
+/**
+ * The confirmation dialog's actions. Each resolves; a refused credential resolves with the reason
+ * to show, and only a failed request rejects.
+ */
+const confirmation = {
+  /** `null` once confirmed (the waiting writes go again), else the reason it wasn't. */
+  submit: (submission: SudoSubmission): Promise<string | null> =>
+    runAction(confirmationActions.submit(confirmationGate, submission)),
+  /** Starts a Google confirmation from the SPA page `returnTo`; the caller leaves on `navigate`. */
+  startGoogle: (returnTo: string): Promise<confirmationActions.GoogleStart> =>
+    runAction(confirmationActions.startGoogle(confirmationGate, returnTo)),
+  /** Closes the dialog: the waiting writes fail unsent. */
+  cancel: (): void => confirmationGate.cancel(),
+  /** The SPA moved to another screen: the writes the old one sent fail unsent. */
+  screenChanged: (): void => confirmationGate.screenChanged(),
+  /**
+   * The Google return: replays the kept writes once the server confirms their attempt and this
+   * tab can claim them; trying again only claims them again. `signal` stops it (Discard, or
+   * leaving the page); `onWait` hears that another tab holds the batch.
+   */
+  resumeAfterGoogle: (options?: {
+    readonly signal?: AbortSignal;
+    readonly onWait?: () => void;
+  }): Promise<confirmationActions.GoogleReturn> =>
+    runAction(confirmationActions.resumeAfterGoogle(confirmationGate, options)),
+  /** How many writes the Google return still keeps, and their page; `null` when none. */
+  kept: () => confirmationGate.kept(),
+  /** Confirms with Google again for the writes still kept; the caller leaves on `navigate`. */
+  confirmAgain: (): Promise<confirmationActions.GoogleStart> =>
+    runAction(confirmationActions.confirmAgain(confirmationGate)),
+  /** Gives up on the writes still kept. */
+  discardKept: (): void => confirmationActions.discardKept(confirmationGate),
+};
+
 export const actions = {
   chatSounds: { listen: listenForChatSounds, play: playChatSound },
   boards: {
@@ -616,6 +663,7 @@ export const actions = {
   rooms,
   cards,
   events,
+  confirmation,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

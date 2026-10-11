@@ -1,8 +1,8 @@
 /**
  * The S7 Slack importer endpoints: `/api/v1/admin/slack/*` (administrators: the app credentials
  * and the workspace runs) and `/api/v1/slack/*` (everyone: their own personal runs and their Slack
- * connection). Saving or removing the credentials and disconnecting fail with `SudoRequired` once
- * the password confirmation has lapsed; a start the classic page would refuse fails with
+ * connection). Saving or removing the credentials and disconnecting wait for a fresh confirmation
+ * once the last one has lapsed; a start the classic page would refuse fails with
  * `Validation` and the classic alert. Connecting a Slack account stays a classic OAuth round trip.
  */
 import { Effect } from "effect";
@@ -52,7 +52,7 @@ export const slackSetup = Effect.fn("api.slackSetup")(function* () {
 export const saveSlackCredentials = Effect.fn("api.saveSlackCredentials")(function* (
   body: SaveSlackCredentials,
 ) {
-  return yield* call({ method: "PUT", path: "/admin/slack", body }, setupChangeReply);
+  return yield* call({ method: "PUT", path: "/admin/slack", body, secret: true }, setupChangeReply);
 });
 
 /** `DELETE /admin/slack`: removes the credentials and every member's connection. */

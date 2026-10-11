@@ -1,6 +1,7 @@
 /**
  * What the admin screens call: plain promises over the S7 admin endpoints. Failures reject with an
- * `ActionError`: `SudoRequired` when the classic page would ask for the password first,
+ * `ActionError`: `ConfirmationCancelled` when the person closes the confirmation a guarded write
+ * asks for, `SudoRequired` when they leave to confirm with Google and the write can't be kept,
  * `Validation` with the classic page's message (and `fields`) when a change is refused.
  */
 import {

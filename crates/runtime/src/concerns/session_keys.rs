@@ -33,6 +33,11 @@ pub const TWO_FACTOR_PENDING_TTL: SignedDuration = SignedDuration::from_mins(10)
 pub const SUDO_VERIFIED_KEY: &str = "sudo_verified_at";
 /// `SudoMode::PENDING_SESSION_KEY`
 pub const SUDO_PENDING_KEY: &str = "sudo_pending_request";
+/// The SPA's Google confirmation this session finished: its attempt id, who confirmed, when, and the
+/// pending request it consumed. No Rails counterpart; the retained page never sets it.
+pub const SUDO_ATTEMPT_KEY: &str = "sudo_google_attempt";
+/// How long a finished attempt answers its continuation (inside `SUDO_TIMEOUT`).
+pub const SUDO_ATTEMPT_TTL: SignedDuration = SignedDuration::from_mins(10);
 /// `SudoMode::SUDO_TIMEOUT = 15.minutes`
 pub const SUDO_TIMEOUT: SignedDuration = SignedDuration::from_mins(15);
 /// `SudoMode::MAX_STORED_PARAMS_BYTES`
@@ -233,10 +238,15 @@ pub fn consume_google_reauthentication(session: &mut Session, now: Timestamp) ->
 // --- Starting a session ------------------------------------------------------------------------
 
 /// What `start_new_session_for` drops first: a different member signing in on this browser must
-/// not inherit the previous one's confirmations.
+/// not inherit the previous one's confirmations. The SPA's Google confirmation in flight goes too
+/// (its flow is bound to the session that started it); the retained page's flow stays, as in Rails.
 pub fn clear_confirmations(session: &mut Session) {
-    for key in [SUDO_VERIFIED_KEY, SUDO_PENDING_KEY, REAUTH_KEY] {
+    for key in [SUDO_VERIFIED_KEY, SUDO_PENDING_KEY, SUDO_ATTEMPT_KEY, REAUTH_KEY] {
         session.remove(key);
+    }
+    let flow = campfire_app::integrations::google::sign_in::FLOW_SESSION_KEY;
+    if session.get(flow).is_some_and(|flow| flow["google_json"] == true) {
+        session.remove(flow);
     }
 }
 
@@ -380,6 +390,23 @@ mod tests {
         }
         assert!(session.contains_key(TWO_FACTOR_PENDING_USER_KEY));
         assert!(session.contains_key(RETURN_TO_KEY));
+    }
+
+    #[test]
+    fn a_new_session_drops_the_spas_google_confirmation_in_flight_but_not_the_retained_one() {
+        let vectors = vectors();
+        let flow = campfire_app::integrations::google::sign_in::FLOW_SESSION_KEY;
+        let mut session = rails_session(&vectors);
+        session.insert(flow, json!({ "purpose": "sudo", "google_json": true, "attempt": "attempt-0000000000000001" }));
+        session.insert(SUDO_ATTEMPT_KEY, json!({ "id": "attempt-0000000000000001" }));
+        clear_confirmations(&mut session);
+        assert!(!session.contains_key(flow));
+        assert!(!session.contains_key(SUDO_ATTEMPT_KEY));
+
+        // The retained page's flow (and sign-in's own) is left as Rails leaves it.
+        session.insert(flow, json!({ "purpose": "sudo" }));
+        clear_confirmations(&mut session);
+        assert!(session.contains_key(flow));
     }
 
     #[test]
