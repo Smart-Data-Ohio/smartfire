@@ -4,9 +4,11 @@ import type { Attachment } from "./Attachment";
 import type { Boost } from "./Boost";
 import type { MessageCard } from "./MessageCard";
 import type { MessageSound } from "./MessageSound";
+import type { MessageWebhook } from "./MessageWebhook";
 import type { Poll } from "./Poll";
 import type { Reaction } from "./Reaction";
 import type { ThreadIndicator } from "./ThreadIndicator";
+import type { WebhookEmbed } from "./WebhookEmbed";
 
 /**
  * A message on a room's timeline or in a thread. Viewer-independent: whether the viewer may
@@ -131,4 +133,4 @@ steps: Array<AgentStep>, createdAt: string,
  * Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
  * replies (`touch`), so a later `updatedAt` always holds the newer copy.
  */
-updatedAt: string, };
+updatedAt: string, embeds: Array<WebhookEmbed> | null, webhook: MessageWebhook | null, };

@@ -16,6 +16,7 @@ use crate::database::Tx;
 use crate::error::{Error, Result};
 use crate::models::{ChannelThread, Membership, Message, NewMessage, Room};
 use crate::models::active_storage::Blob;
+use crate::models::channel_webhook::ChannelWebhook;
 
 /// `Messages::Forwarder::MAX_DESTINATIONS`
 pub const MAX_DESTINATIONS: usize = 5;
@@ -190,12 +191,14 @@ fn create_forward(
             }
             // `ThreadMembership.join!`, then `update!(closed_at: nil, last_activity_at:)`.
             let message = thread.post_message(tx, creator_id, attributes)?;
+            ChannelWebhook::copy_message(tx, source.id, message.id)?;
             copier.process(tx, &message)?;
             thread.reload(tx.conn())?;
             Ok(Ok(Forwarded { message, room, thread: Some(thread) }))
         }
         None => {
             let message = Message::create(tx, attributes)?;
+            ChannelWebhook::copy_message(tx, source.id, message.id)?;
             copier.process(tx, &message)?;
             Ok(Ok(Forwarded { message, room, thread: None }))
         }

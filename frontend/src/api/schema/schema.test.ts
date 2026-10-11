@@ -43,6 +43,8 @@ const messageJson = {
   action: false,
   streaming: false,
   embedsSuppressed: false,
+  embeds: null,
+  webhook: null,
   replyToMessageId: 8999,
   forwardedFromMessageId: null,
   forwardedAt: null,
