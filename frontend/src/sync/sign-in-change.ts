@@ -52,12 +52,15 @@ export function stopRunForNewSignIn(stop: () => void): () => void {
  * reloads once stopped), or reloads.
  */
 export function leaveForNewSignIn(): void {
-  mutations.markAccountChanged();
-
-  if (stopRun === null) {
-    reloadForNewSignIn();
-  } else {
-    stopRun();
+  try {
+    mutations.markAccountChanged();
+  } finally {
+    // The engine stop and the reload run whatever the freeze ran into.
+    if (stopRun === null) {
+      reloadForNewSignIn();
+    } else {
+      stopRun();
+    }
   }
 }
 

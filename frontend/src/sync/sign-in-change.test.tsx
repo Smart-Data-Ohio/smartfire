@@ -11,10 +11,10 @@ import { BlockedSection } from "../features/settings/blocked-section.tsx";
 import { AccountChangedNotice } from "../features/shell/account-changed.tsx";
 import type { BlockList } from "../gen/BlockList.ts";
 import type { BlockState } from "../gen/BlockState.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, onAccountChange, store } from "../store/store.ts";
 import { ignores } from "./admin.ts";
 import { actions } from "./runtime.ts";
-import { pageReload, stopRunForNewSignIn } from "./sign-in-change.ts";
+import { leaveForNewSignIn, pageReload, stopRunForNewSignIn } from "./sign-in-change.ts";
 
 const A = meFixture.user.id;
 
@@ -206,5 +206,68 @@ describe("once another account answered, with the reload held back", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Reload" }));
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("what ends with the page's account", () => {
+  /** A hook that throws, as a broken teardown would. */
+  function failing(): void {
+    throw new Error("teardown failed");
+  }
+
+  it("still ends the other hooks and stops the engine when one hook throws", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const alerts = vi.fn();
+    const stop = vi.fn();
+
+    const removals = [
+      onAccountChange("test-call", failing),
+      onAccountChange("test-alerts", alerts),
+    ];
+
+    const release = stopRunForNewSignIn(stop);
+
+    try {
+      leaveForNewSignIn();
+
+      expect(alerts).toHaveBeenCalledOnce();
+      expect(stop).toHaveBeenCalledOnce();
+      expect(logged).toHaveBeenCalledOnce();
+      expect(store.getState().accountChanged).toBe(true);
+    } finally {
+      release();
+
+      for (const remove of removals) {
+        remove();
+      }
+
+      logged.mockRestore();
+    }
+  });
+
+  it("still reloads, with no engine running, when a hook throws", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const remove = onAccountChange("test-call", failing);
+
+    try {
+      leaveForNewSignIn();
+    } finally {
+      remove();
+      logged.mockRestore();
+    }
+
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a hook registered twice with the same function when the first removal runs", () => {
+    const end = vi.fn();
+    const removeFirst = onAccountChange("test-twice", end);
+    const removeSecond = onAccountChange("test-twice", end);
+
+    removeFirst();
+    mutations.markAccountChanged();
+    removeSecond();
+
+    expect(end).toHaveBeenCalledOnce();
   });
 });

@@ -94,8 +94,11 @@ import * as workspaceLayout from "./workspace-layout.ts";
  */
 export const store = createStore<State>()(() => initialState);
 
-/** What `onAccountChange` registered, by key; it lives as long as the store does. */
-const accountChangeHooks = new Map<string, () => void>();
+/**
+ * What `onAccountChange` registered, by key; it lives as long as the store does. Each
+ * registration is its own entry, so a removal knows its own even when the same `end` came twice.
+ */
+const accountChangeHooks = new Map<string, { readonly end: () => void }>();
 
 /**
  * Runs `end` when another account answers the page (`markAccountChanged`), for what must stop
@@ -104,10 +107,12 @@ const accountChangeHooks = new Map<string, () => void>();
  * Returns the removal.
  */
 export function onAccountChange(key: string, end: () => void): () => void {
-  accountChangeHooks.set(key, end);
+  const registration = { end };
+
+  accountChangeHooks.set(key, registration);
 
   return () => {
-    if (accountChangeHooks.get(key) === end) {
+    if (accountChangeHooks.get(key) === registration) {
       accountChangeHooks.delete(key);
     }
   };
@@ -344,8 +349,13 @@ export const mutations = {
 
     apply((state) => ({ ...state, accountChanged: true, connection: "offline" }));
 
-    for (const end of [...accountChangeHooks.values()]) {
-      end();
+    // One hook failing must not keep the others from ending what they hold.
+    for (const [key, { end }] of [...accountChangeHooks]) {
+      try {
+        end();
+      } catch (error) {
+        console.error(`Ending "${key}" for another account failed`, error);
+      }
     }
   },
   mergeUsers: (users: readonly User[]) => apply((state) => reduce.mergeUsers(state, users)),
