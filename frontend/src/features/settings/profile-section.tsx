@@ -11,6 +11,9 @@ import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { PROFILE_FORMATS, USER_BANNER_SLOT } from "../admin/profile-format.ts";
+import { ProfileSlot, type Shown, useImageSlot } from "../admin/profile-slot.tsx";
+import { ProfileHero } from "../people/profile-banner.tsx";
 import { fieldError } from "./settings-format.ts";
 import {
   FieldError,
@@ -125,6 +128,60 @@ function AvatarPicker() {
 }
 
 /**
+ * The profile banner: how it sits over your avatar, as others see it, then a way to upload,
+ * replace or remove it. The chosen file shows at once while it uploads; a refusal shows in place.
+ */
+function BannerPicker() {
+  const { settings, replace } = useSettings();
+  const { profile } = settings;
+
+  const slot = useImageSlot({
+    save: settingsActions.setBanner,
+    remove: settingsActions.removeBanner,
+    onChange: replace,
+    savedTitle: `${USER_BANNER_SLOT.title} updated`,
+  });
+
+  const server: Shown = { url: profile.bannerUrl, stillUrl: profile.bannerStillUrl };
+  const shown = slot.shown(server);
+
+  return (
+    <div className="settings-banner">
+      <figure className="settings-banner-preview">
+        <ProfileHero
+          userId={profile.userId}
+          name={profile.name}
+          url={shown.url}
+          stillUrl={shown.stillUrl}
+          file={shown.file ?? null}
+          size="card"
+        >
+          <Avatar
+            key={profile.avatarUrl}
+            name={profile.name}
+            userId={profile.userId}
+            src={profile.avatarUrl}
+            size={64}
+            decorative
+          />
+        </ProfileHero>
+        <figcaption className="settings-banner-name">{profile.name}</figcaption>
+      </figure>
+      <ProfileSlot
+        kind="banner"
+        slot={USER_BANNER_SLOT}
+        image={server}
+        pending={slot.pending}
+        error={slot.error}
+        onFile={slot.upload}
+        onRemove={slot.remove}
+      />
+      <p className="profile-formats text-meta">{PROFILE_FORMATS}</p>
+    </div>
+  );
+}
+
+/**
  * Profile: avatar, name, email (with the current password when it changes and the account has
  * one), a new password, bio and GitHub username, saved together as the classic form does.
  */
@@ -200,6 +257,7 @@ export function ProfileSection() {
   return (
     <SettingsPage title="Profile" description="How you appear to everyone in the workspace.">
       <AvatarPicker />
+      <BannerPicker />
       <form className="settings-form" onSubmit={submit} noValidate>
         <TextField
           label="Name"
