@@ -16,9 +16,11 @@ import type {
   RoomOptions,
   ScreenShareCaptureOptions,
   TrackPublication,
+  TrackPublishOptions,
 } from "livekit-client";
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { loadForUpdate } from "../../../service-worker/update-required.ts";
+import { microphonePublishOptions } from "./audio-quality.ts";
 import { canShareScreen, permissionDenied } from "./devices.ts";
 import { createLevelMeter, type LevelMeter } from "./meter.ts";
 import {
@@ -65,7 +67,12 @@ export function loadLiveKit(): Promise<LiveKit> {
 }
 
 export async function createLiveKitTransport(): Promise<CallTransport> {
-  return new LiveKitTransport(await loadLiveKit());
+  return liveKitTransport(await loadLiveKit());
+}
+
+/** A transport over an SDK already loaded (a test's, with its `Room` kept off the network). */
+export function liveKitTransport(lk: LiveKit): CallTransport {
+  return new LiveKitTransport(lk);
 }
 
 /** getDisplayMedia reports unusable constraints as NotSupportedError or TypeError. */
@@ -145,13 +152,21 @@ class LiveKitTransport implements CallTransport {
   readonly #captured = new Map<number, LocalTrack[]>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
+  /** The microphone's encoding target, from the grant this connection joined with. */
+  #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
 
   constructor(lk: LiveKit) {
     this.#lk = lk;
   }
 
-  async connect(url: string, token: string, noiseSuppression: boolean): Promise<void> {
+  async connect(
+    url: string,
+    token: string,
+    noiseSuppression: boolean,
+    audioBitrate: number,
+  ): Promise<void> {
     this.#noiseWanted = noiseSuppression;
+    this.#microphonePublish = microphonePublishOptions(audioBitrate);
 
     const room = new this.#lk.Room(this.#roomOptions());
 
@@ -249,8 +264,17 @@ class LiveKitTransport implements CallTransport {
     }
   }
 
+  /**
+   * The SDK publishes the microphone the first time it's enabled; the room's voice bitrate rides
+   * along as that publication's options (the room defaults fill in the rest). Later toggles
+   * mute and unmute the same publication, so its encoding stays.
+   */
   async setMicrophone(enabled: boolean): Promise<void> {
-    await this.#room?.localParticipant.setMicrophoneEnabled(enabled, this.#audioCapture());
+    await this.#room?.localParticipant.setMicrophoneEnabled(
+      enabled,
+      this.#audioCapture(),
+      this.#microphonePublish,
+    );
     this.#watchMicrophone();
   }
 

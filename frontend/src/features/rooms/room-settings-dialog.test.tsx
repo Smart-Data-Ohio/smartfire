@@ -698,6 +698,90 @@ describe("channel topic settings", () => {
   });
 });
 
+describe("voice bitrate settings", () => {
+  it("shows the default, and saves a bitrate-only change", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(closedForm());
+
+    const update = vi
+      .spyOn(actions.rooms, "update")
+      .mockRejectedValue(new ActionError("ServerError", "held"));
+
+    const user = userEvent.setup();
+    await mount(CLOSED);
+    const field = await screen.findByRole("combobox", { name: "Voice bitrate" });
+    expect(field).toHaveProperty("value", "");
+    expect(within(field).getByRole("option", { name: "Default (48 kbps)" })).toBeTruthy();
+
+    expect(
+      within(field)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual([
+      "Default (48 kbps)",
+      "48 kbps",
+      "64 kbps",
+      "96 kbps",
+      "128 kbps",
+      "256 kbps",
+      "384 kbps",
+    ]);
+
+    expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    await user.selectOptions(field, "384 kbps");
+    expect(screen.getByText("Unsaved changes")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(update).toHaveBeenCalledWith(CLOSED, {
+      type: "closed",
+      userIds: [1, 2],
+      voiceBitrate: 384_000,
+    });
+  });
+
+  it("resets a room's bitrate to the default", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(closedForm({ voiceBitrate: 96_000 }));
+
+    const update = vi
+      .spyOn(actions.rooms, "update")
+      .mockRejectedValue(new ActionError("ServerError", "held"));
+
+    const user = userEvent.setup();
+    await mount(CLOSED);
+    const field = await screen.findByRole("combobox", { name: "Voice bitrate" });
+    expect(field).toHaveProperty("value", "96000");
+    await user.selectOptions(field, "Default (48 kbps)");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(update).toHaveBeenCalledWith(CLOSED, {
+      type: "closed",
+      userIds: [1, 2],
+      voiceBitrate: null,
+    });
+  });
+
+  it("is only offered to those who may change the room, and never on a board", async () => {
+    const edit = vi.spyOn(actions.rooms, "editForm");
+
+    edit.mockResolvedValue(closedForm({ canSubmit: false, voiceBitrate: 128_000 }));
+    await mount(CLOSED);
+    await screen.findByRole("textbox", { name: "Topic" });
+    expect(screen.queryByRole("combobox", { name: "Voice bitrate" })).toBeNull();
+    cleanup();
+
+    edit.mockResolvedValue(boardForm());
+    await mount(BOARD);
+    await screen.findByRole("dialog", { name: "Board settings" });
+    await screen.findByRole("textbox", { name: "Topic" });
+    expect(screen.queryByRole("combobox", { name: "Voice bitrate" })).toBeNull();
+    cleanup();
+
+    edit.mockResolvedValue(closedForm({ type: "voice", voiceBitrate: 256_000 }));
+    await mount(CLOSED);
+    const field = await screen.findByRole("combobox", { name: "Voice bitrate" });
+    expect(field).toHaveProperty("value", "256000");
+  });
+});
+
 describe("webhook settings", () => {
   const WEBHOOK: ChannelWebhook = {
     id: 21,
