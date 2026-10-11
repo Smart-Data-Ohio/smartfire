@@ -7,9 +7,9 @@ use campfire_db::{Message, NewMessage, Session, TwoFactorSetupSecret, User};
 async fn confirm(app: &TestApp) -> Browser<'_> {
     let mut browser = app.david();
     let response = browser
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .confirm_sudo("secret123456")
         .await;
-    assert_eq!(response.status, StatusCode::FOUND);
+    assert_eq!(response.status, StatusCode::OK);
     // Parity's authenticated target session uses loopback; Rails refuses to ban private IPs.
     // These original cases use public target addresses, so keep the browser seed out of that
     // unrelated validation branch without changing the administrator's session.

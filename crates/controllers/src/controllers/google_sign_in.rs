@@ -35,7 +35,8 @@ async fn workspace(c: &mut Ctx) -> Result<()> {
         .await
         .map_err(Error::internal)?;
     if !ready {
-        return halt(c.redirect_to(&c.url_for("/first_run"))?);
+        let first_run = concerns::auth_page_url(c, "/app/first_run", "/first_run");
+        return halt(c.redirect_to(&first_run)?);
     }
     Ok(())
 }
@@ -111,7 +112,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
     if !valid {
         return redirect(
             c,
-            "/session/new",
+            "/app/session/new",
             "Google sign-in expired. Try again or sign in with email and password.",
             false,
         );
@@ -119,7 +120,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
     if c.params.get("error").is_some_and(|p| p.is_present()) {
         return redirect(
             c,
-            "/session/new",
+            "/app/session/new",
             "Google sign-in was cancelled. Try again or sign in with email and password.",
             false,
         );
@@ -127,7 +128,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
     if canceled(c) {
         return redirect(
             c,
-            "/session/new",
+            "/app/session/new",
             "Google sign-in failed. Try again or sign in with email and password.",
             false,
         );
@@ -137,7 +138,7 @@ pub async fn callback(c: &mut Ctx) -> Result {
         Err(GoogleError::Rejected(reason)) => rejected(c, reason).await,
         Err(GoogleError::Unavailable) => redirect(
             c,
-            "/session/new",
+            "/app/session/new",
             "Google sign-in is unavailable right now. Try again or sign in with email and password.",
             false,
         ),
@@ -175,7 +176,7 @@ async fn rejected(c: &mut Ctx, reason: &str) -> Result {
         "deactivated"|"banned"=>"This account is no longer active. Contact your administrator or sign in with email and password.".into(),
         _=>"Google sign-in failed. Try again or sign in with email and password.".into()
     };
-    redirect(c, "/session/new", &message, false)
+    redirect(c, "/app/session/new", &message, false)
 }
 pub(super) fn domain_list(c: &Ctx) -> String {
     let domains = c
@@ -245,7 +246,7 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
         c.session()
             .insert(concerns::session_keys::RETURN_TO_KEY, return_url);
         concerns::session_keys::stash_two_factor_pending(c.session(), user.id, "google", now);
-        c.redirect_to(&c.url_for("/two_factor_challenge"))
+        c.redirect_to(&c.url_for("/app/two_factor/challenge"))
     }
 }
 async fn step_up_profile(c: &Ctx, purpose: &str) -> campfire_kit::Result<&'static str> {
@@ -266,7 +267,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
         let path = if user.is_some() {
             if purpose == "sudo" { super::sudos::google_return_path(c).unwrap_or("/users/me/profile") } else { step_up_profile(c, purpose).await? }
         } else {
-            "/session/new"
+            "/app/session/new"
         };
         let message = match purpose {
             "link" => "Google linking expired. Try again.",
@@ -277,7 +278,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
     }
     let user = user.unwrap();
     let path = if purpose == "sudo" {
-        super::sudos::google_return_path(c).unwrap_or("/sudo/new")
+        super::sudos::google_return_path(c).unwrap_or("/app/sudo/new")
     } else {
         step_up_profile(c, purpose).await?
     };

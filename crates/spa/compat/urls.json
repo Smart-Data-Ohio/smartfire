@@ -107,7 +107,7 @@
         {"id": "root.default_next", "method": "GET", "path": "/", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": true, "expect": {"status": 302, "location": "/app/"}},
         {"id": "root.default_classic", "method": "GET", "path": "/", "auth": "jason", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}},
         {"id": "root.switch_off_ignored", "method": "GET", "path": "/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}},
-        {"id": "root.anonymous", "method": "GET", "path": "/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": true, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "root.anonymous", "method": "GET", "path": "/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": true, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "root.next.classic_escape", "method": "GET", "path": "/?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/"}}
       ]
     },
@@ -129,7 +129,7 @@
         {"id": "room.next.redirect", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}},
         {"id": "room.head.next", "method": "HEAD", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}", "body_empty": true}},
         {"id": "room.classic.page", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}},
-        {"id": "room.anonymous", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "room.anonymous", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "room.nonmember", "method": "GET", "path": "/rooms/{DIRECT_KB}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DIRECT_KB}"}}
       ]
     },
@@ -573,7 +573,7 @@
         {"id": "automations.admin.next.bypass", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
         {"id": "automations.nonmember.redirect", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
         {"id": "automations.nonmember.next", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/automations"}},
-        {"id": "automations.anonymous", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "automations.anonymous", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}/automations", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -599,7 +599,7 @@
         {"id": "events.edit", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/edit", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}/edit"}},
         {"id": "events.attendance", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{DESIGNERS}/events/{EVENT_DESIGNERS}/attendance"}},
         {"id": "events.ics.406", "method": "GET", "path": "/rooms/{DESIGNERS}/events/{EVENT_DESIGNERS}.ics", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "content_type_prefix": "text/html", "body_empty": true}},
-        {"id": "events.anonymous", "method": "GET", "path": "/rooms/{DESIGNERS}/events", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "events.anonymous", "method": "GET", "path": "/rooms/{DESIGNERS}/events", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -851,7 +851,7 @@
       "cases": [
         {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "{SPA_RELOAD}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
         {"id": "app.noslash", "method": "GET", "path": "/app", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}},
-        {"id": "app.anonymous", "method": "GET", "path": "/app/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "app.anonymous", "method": "GET", "path": "/app/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "app.switch_off_ignored", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}
       ]
     },
@@ -872,7 +872,7 @@
       "cases": [
         {"id": "app_people.0", "method": "GET", "path": "/app/people?sort=name", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_people.1", "method": "GET", "path": "/app/people/{JASON}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "app_people.anonymous", "method": "GET", "path": "/app/people?sort=name", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "app_people.anonymous", "method": "GET", "path": "/app/people?sort=name", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -905,7 +905,7 @@
         {"id": "app_admin.12", "method": "GET", "path": "/app/admin/slack/runs", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_admin.13", "method": "GET", "path": "/app/admin/slack/runs/{SLACK_RUN}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_admin.14", "method": "GET", "path": "/app/admin/slack/runs/{SLACK_RUN}/plan", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "app_admin.anonymous", "method": "GET", "path": "/app/admin", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "app_admin.anonymous", "method": "GET", "path": "/app/admin", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -935,7 +935,7 @@
         {"id": "app_settings.9", "method": "GET", "path": "/app/settings/devices", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_settings.10", "method": "GET", "path": "/app/settings/slack", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_settings.11", "method": "GET", "path": "/app/settings/slack/{SLACK_PERSONAL}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "app_settings.anonymous", "method": "GET", "path": "/app/settings", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "app_settings.anonymous", "method": "GET", "path": "/app/settings", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -958,7 +958,7 @@
         {"id": "app_destinations.2", "method": "GET", "path": "/app/scheduled", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_destinations.3", "method": "GET", "path": "/app/search?q=launch", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_destinations.4", "method": "GET", "path": "/app/work", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "app_destinations.anonymous", "method": "GET", "path": "/app/activity", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "app_destinations.anonymous", "method": "GET", "path": "/app/activity", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -977,7 +977,7 @@
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
         {"id": "app_messages.0", "method": "GET", "path": "/app/m/{MSG_DAVID}?highlight=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "app_messages.anonymous", "method": "GET", "path": "/app/m/{MSG_DAVID}?highlight=1", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "app_messages.anonymous", "method": "GET", "path": "/app/m/{MSG_DAVID}?highlight=1", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -1002,7 +1002,7 @@
         {"id": "app_rooms.4", "method": "GET", "path": "/app/r/{CLOSED_ROOM}/files", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_rooms.5", "method": "GET", "path": "/app/r/{CLOSED_ROOM}/pins", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
         {"id": "app_rooms.6", "method": "GET", "path": "/app/r/{CLOSED_ROOM}/notifications", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"], "absent": ["{CLASSIC_SHELL}"]}},
-        {"id": "app_rooms.anonymous", "method": "GET", "path": "/app/r/{CLOSED_ROOM}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "app_rooms.anonymous", "method": "GET", "path": "/app/r/{CLOSED_ROOM}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}}
       ]
     },
     {
@@ -1060,21 +1060,23 @@
       "category": "auth",
       "classic_endpoint": "sessions#new",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Auth stays server-rendered (no React conversion). API 401s navigate here with return_to."},
+      "after_cutover": {"action": "alias", "target": "/app/session/new, /app/session/transfers/:id", "notes": "The SPA's signed-out pages replace the retained sign-in and transfer pages. GET keeps its query string (return_to, email_address) with a 302; a posted form gets a 303 and is not acted on. DELETE /session stays."},
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "Signed-in visitors still get the sign-in page (no bounce). JSON background polls get an empty 401, never a redirect or 406. Sign-out is a 302 (contrast the 303 UI switch). Transfer validation happens on PUT, so any transfer id GETs the form.",
+      "notes": "Signed-in visitors still go to the sign-in page (no bounce). JSON background polls get an empty 401, never a redirect or 406. Sign-out is a 302 (contrast the 303 UI switch). Transfer validation happens on the SPA's PUT, so any transfer id redirects, and the retained PUT signs nobody in.",
       "bookmark_notes": "Sign-in link; keep stable.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "session.new.anon", "method": "GET", "path": "/session/new", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["<body class=\"auth\">", "Sign in to your workspace"]}},
-        {"id": "session.new.signedin", "method": "GET", "path": "/session/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Sign in to your workspace"], "location_absent": true}},
+        {"id": "session.new.anon", "method": "GET", "path": "/session/new", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
+        {"id": "session.new.query", "method": "GET", "path": "/session/new?email_address=nobody%40example.com&return_to=%2Fapp%2Fr%2F1", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new?email_address=nobody%40example.com&return_to=%2Fapp%2Fr%2F1"}},
+        {"id": "session.new.signedin", "method": "GET", "path": "/session/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "session.new.json401", "method": "GET", "path": "/session/new", "headers": {"accept": "application/json"}, "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 401, "body_empty": true, "location_absent": true}},
-        {"id": "session.create.rejected", "method": "POST", "path": "/session", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "form": {"email_address": "nobody@example.com", "password": "wrong"}, "expect": {"status": 401, "content_type_prefix": "text/html", "markers": ["Too many requests or unauthorized."]}},
+        {"id": "session.create.rejected", "method": "POST", "path": "/session", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "form": {"email_address": "nobody@example.com", "password": "wrong"}, "expect": {"status": 303, "location": "/app/session/new"}},
         {"id": "session.destroy", "method": "DELETE", "path": "/session", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 302, "location": "/"}},
-        {"id": "session.destroy.anon", "method": "DELETE", "path": "/session", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "session.transfer.bogus", "method": "GET", "path": "/session/transfers/bogus", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["/session/transfers/bogus"]}}
+        {"id": "session.destroy.anon", "method": "DELETE", "path": "/session", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
+        {"id": "session.transfer.bogus", "method": "GET", "path": "/session/transfers/bogus", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/transfers/bogus"}},
+        {"id": "session.transfer.put", "method": "PUT", "path": "/session/transfers/bogus", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 303, "location": "/app/session/transfers/bogus"}}
       ]
     },
     {
@@ -1084,16 +1086,17 @@
       "category": "auth",
       "classic_endpoint": "sudos#new",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Keep auto-submit replay and pending request semantics; permit validated root SPA return referers at prefix drop."},
+      "after_cutover": {"action": "alias", "target": "/app/sudo/new", "notes": "The SPA's confirmation page reads GET /api/v1/sudo and confirms with POST /api/v1/sudo. A held form submission is not replayed: after confirming, the person is asked to try it again. A posted retained form gets a 303 and is not checked."},
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "Sudo-required SPA API errors navigate here.",
+      "notes": "The HTML sudo gate redirects to the SPA's page; JSON sudo-required errors carry the reauthentication state.",
       "bookmark_notes": "Not bookmarked; reached via sudo-gated flows.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "sudo.new", "method": "GET", "path": "/sudo/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["<body class=\"auth\">", "Confirm it's you"]}},
-        {"id": "sudo.new.anon", "method": "GET", "path": "/sudo/new", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "sudo.new", "method": "GET", "path": "/sudo/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/sudo/new", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
+        {"id": "sudo.new.anon", "method": "GET", "path": "/sudo/new", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
+        {"id": "sudo.create.form", "method": "POST", "path": "/sudo", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"password": "wrong"}, "expect": {"status": 303, "location": "/app/sudo/new"}}
       ]
     },
     {
@@ -1103,19 +1106,21 @@
       "category": "auth",
       "classic_endpoint": "two_factor/setups#show",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Retain enrollment HTML and the redirect-only reauth flow. Settings JSON does not replace enrollment. Keep pending-user cookie/session keys and rate limits."},
+      "after_cutover": {"action": "alias", "target": "/app/two_factor/setup, /app/two_factor/challenge", "notes": "Enrollment and the challenge are the SPA's pages over /api/v1/two_factor/*. Posted retained forms (setup, challenge, backup codes, remembered devices) get a 303 and change nothing; management forms land on /app/settings/security. POST /two_factor_reauthentication stays. Keep pending-user cookie/session keys and rate limits."},
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "David and Kevin both have confirmed 2FA in this frozen seed, so setup bounces to profile. The real-server smoke covers fresh enrollment through the setup page. Signed-in visitors bounce off the challenge to /. Existing 2FA tests cover POST reauthentication.",
+      "notes": "David and Kevin both have confirmed 2FA in this frozen seed, so setup bounces to profile. The real-server smoke covers fresh enrollment through the setup page. The challenge URL redirects to the SPA's page, which sends signed-in visitors to /. Existing 2FA tests cover POST reauthentication.",
       "bookmark_notes": "Not bookmarked; reached via auth flows.",
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "2fa.setup.enrolled", "method": "GET", "path": "/two_factor_setup", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/users/me/profile"}},
         {"id": "2fa.setup.kevin_enrolled", "method": "GET", "path": "/two_factor_setup", "auth": "kevin", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/users/me/profile"}},
-        {"id": "2fa.setup.anon", "method": "GET", "path": "/two_factor_setup", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "2fa.challenge.signedin", "method": "GET", "path": "/two_factor_challenge", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}},
-        {"id": "2fa.challenge.anon", "method": "GET", "path": "/two_factor_challenge", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}}
+        {"id": "2fa.setup.anon", "method": "GET", "path": "/two_factor_setup", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
+        {"id": "2fa.challenge.signedin", "method": "GET", "path": "/two_factor_challenge", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/two_factor/challenge", "follow_location": {"status": 302, "location": "/"}}},
+        {"id": "2fa.challenge.anon", "method": "GET", "path": "/two_factor_challenge", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/two_factor/challenge"}},
+        {"id": "2fa.challenge.form", "method": "POST", "path": "/two_factor_challenge", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "form": {"code": "123456"}, "expect": {"status": 303, "location": "/app/two_factor/challenge"}},
+        {"id": "2fa.backup_codes.form", "method": "POST", "path": "/two_factor_backup_codes", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"reauth": "wrong"}, "expect": {"status": 303, "location": "/app/settings/security"}}
       ]
     },
     {
@@ -1125,16 +1130,17 @@
       "category": "auth",
       "classic_endpoint": "users#new",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Keep the join form action (POST /users)."},
+      "after_cutover": {"action": "alias", "target": "/app/join/:join_code, /app/invite/:token", "notes": "The SPA's join pages check the code or invite and create the account through /api/v1/join and /api/v1/invite. A posted retained form gets a 303 and creates nothing."},
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "Signed-in visitors bounce to /. JOIN_CODE is resolved from the booted seed at runtime.",
+      "notes": "Signed-in visitors bounce to /. Anyone else goes to the SPA's join page, which answers a wrong code with its 404 page. JOIN_CODE is resolved from the booted seed at runtime.",
       "bookmark_notes": "Invite links carry the join code.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "join.valid", "method": "GET", "path": "/join/{JOIN_CODE}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Create your account to start chatting."]}},
-        {"id": "join.invalid", "method": "GET", "path": "/join/wrong-code", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
+        {"id": "join.valid", "method": "GET", "path": "/join/{JOIN_CODE}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/join/{JOIN_CODE}", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
+        {"id": "join.invalid", "method": "GET", "path": "/join/wrong-code", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/join/wrong-code", "follow_location": {"status": 404, "markers": ["{SPA_BOOT}"]}}},
+        {"id": "join.form", "method": "POST", "path": "/join/{JOIN_CODE}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "form": {"user[name]": "Nobody", "user[email_address]": "nobody@example.com", "user[password]": "secret123456"}, "expect": {"status": 303, "location": "/app/join/{JOIN_CODE}"}},
         {"id": "join.signedin", "method": "GET", "path": "/join/{JOIN_CODE}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}}
       ]
     },
@@ -1145,18 +1151,18 @@
       "category": "auth",
       "classic_endpoint": "first_runs#show",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Keep the bootstrap operation."},
+      "after_cutover": {"action": "alias", "target": "/app/first_run", "notes": "The SPA's first-run page sets up through /api/v1/first_run. A posted retained form gets a 303 and creates nothing."},
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "With an account present the page redirects to /. The first_run seed (no users) renders the form, and its sign-in page bounces there.",
+      "notes": "With an account present the page redirects to /. The first_run seed (no users) redirects to the SPA's page, and its sign-in page bounces there.",
       "bookmark_notes": "Fresh installs only.",
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "firstrun.seeded.anon", "method": "GET", "path": "/first_run", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}},
         {"id": "firstrun.seeded.signedin", "method": "GET", "path": "/first_run", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}},
-        {"id": "firstrun.fresh", "method": "GET", "path": "/first_run", "seed": "first_run", "auth": "anonymous", "preference": null, "spa_enabled": false, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Create the first account"]}},
-        {"id": "firstrun.fresh.session", "method": "GET", "path": "/session/new", "seed": "first_run", "auth": "anonymous", "preference": null, "spa_enabled": false, "spa_default_next": false, "expect": {"status": 302, "location": "/first_run"}}
+        {"id": "firstrun.fresh", "method": "GET", "path": "/first_run", "seed": "first_run", "auth": "anonymous", "preference": null, "spa_enabled": false, "spa_default_next": false, "expect": {"status": 302, "location": "/app/first_run", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
+        {"id": "firstrun.fresh.session", "method": "GET", "path": "/session/new", "seed": "first_run", "auth": "anonymous", "preference": null, "spa_enabled": false, "spa_default_next": false, "expect": {"status": 302, "location": "/app/first_run"}}
       ]
     },
     {
@@ -1166,7 +1172,7 @@
       "category": "oauth",
       "classic_endpoint": "slack/oauth#start",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs, new SPA return targets", "notes": "Keep flows; change return URLs at prefix drop. Keep aliases for already-running OAuth and step-up flows. Callback code already selects SPA settings for next users."},
+      "after_cutover": {"action": "retain", "target": "same URLs, new SPA return targets", "notes": "Keep flows and their registered callback URLs. Sign-in, sudo and two-step returns are the SPA's pages. Keep aliases for already-running OAuth and step-up flows. Callback code already selects SPA settings for next users."},
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
@@ -1174,20 +1180,20 @@
       "bookmark_notes": "Not bookmarked; in-flight flows only.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "oauth.slack.start.anon", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
-        {"id": "oauth.slack.start.nosudo", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/sudo/new"}},
+        {"id": "oauth.slack.start.anon", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
+        {"id": "oauth.slack.start.nosudo", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/sudo/new"}},
         {"id": "oauth.slack.start.sudo.classic", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "sudo": true, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "oauth.slack.start.sudo.next", "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "sudo": true, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "oauth.slack.callback.classic", "method": "GET", "path": "/slack/oauth/callback", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack"}},
         {"id": "oauth.slack.callback.next", "method": "GET", "path": "/slack/oauth/callback", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/slack"}},
-        {"id": "oauth.google.connect.anon", "method": "POST", "path": "/google/connect", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "oauth.google.connect.anon", "method": "POST", "path": "/google/connect", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "oauth.google.connect.unconfigured", "method": "POST", "path": "/google/connect", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 404}},
-        {"id": "oauth.google.callback.anon", "method": "GET", "path": "/google/callback", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "oauth.google.callback.anon", "method": "GET", "path": "/google/callback", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "oauth.google.callback.unconfigured", "method": "GET", "path": "/google/callback", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
-        {"id": "oauth.github.connect.anon", "method": "GET", "path": "/github/app/connect", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "oauth.github.connect.anon", "method": "GET", "path": "/github/app/connect", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "oauth.github.connect.unconfigured", "method": "GET", "path": "/github/app/connect", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
         {"id": "oauth.github.callback.unconfigured", "method": "GET", "path": "/github/app/callback", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
-        {"id": "oauth.google.link.anon", "method": "POST", "path": "/user/profile/google_sign_in_link", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
+        {"id": "oauth.google.link.anon", "method": "POST", "path": "/user/profile/google_sign_in_link", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "oauth.google.link.unconfigured", "method": "POST", "path": "/user/profile/google_sign_in_link", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 404}},
         {"id": "oauth.google.signin.signedin", "method": "POST", "path": "/session/google", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 302, "location": "/"}},
         {"id": "oauth.google.signin.anon", "method": "POST", "path": "/session/google", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 404}},
@@ -1198,8 +1204,8 @@
         {"auth": "david", "before": [{"capture_query": {"GITHUB_OAUTH_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://github.com/login/oauth/authorize", "status": 302}, "method": "GET", "path": "/github/app/connect"}], "expect": {"location": "/app/settings/integrations", "status": 302, "session": {"flash": {"flashes": {"notice": "GitHub connected as contract-octocat."}}}}, "fixture_profile": "oauth", "id": "oauth.github.callback.configured.next", "method": "GET", "path": "/github/app/callback?code=contract-code&state={GITHUB_OAUTH_STATE}", "preference": "next", "spa_enabled": true, "sudo": true},
         {"after": [{"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"connection": {"state": "connected"}, "teamName": "URL contract R3", "teamKnown": true}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/admin/slack"}], "auth": "david", "before": [{"capture_query": {"SLACK_OAUTH_STATE": "state"}, "expect": {"location_prefix": "https://slack.com/oauth/v2/authorize", "status": 302}, "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import"}], "expect": {"status": 302, "location": "/app/admin/slack"}, "fixture_profile": "oauth_slack_r3", "id": "oauth.slack.callback.configured.classic", "method": "GET", "path": "/slack/oauth/callback?code=contract-code&state={SLACK_OAUTH_STATE}", "preference": "classic", "spa_default_next": false, "spa_enabled": true, "sudo": true},
         {"after": [{"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"connection": {"state": "connected"}, "teamName": "URL contract R3", "teamKnown": true}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/admin/slack"}], "auth": "david", "before": [{"capture_query": {"SLACK_OAUTH_STATE": "state"}, "expect": {"location_prefix": "https://slack.com/oauth/v2/authorize", "status": 302}, "method": "GET", "path": "/slack/oauth/start?return_to=/account/slack_import"}], "expect": {"location": "/app/admin/slack", "session": {"flash": {"flashes": {"notice": "Slack connected."}}}, "status": 302}, "fixture_profile": "oauth_slack_r3", "id": "oauth.slack.callback.configured.next", "method": "GET", "path": "/slack/oauth/callback?code=contract-code&state={SLACK_OAUTH_STATE}", "preference": "next", "spa_default_next": false, "spa_enabled": true, "sudo": true},
-        {"after": [{"method": "POST", "path": "/two_factor_challenge", "csrf": true, "form": {"code": "{GOOGLE_SIGNIN_TOTP}"}, "expect": {"status": 302, "location": "/app/"}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/two_factor_challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.classic", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": false, "spa_enabled": true},
-        {"after": [{"method": "POST", "path": "/two_factor_challenge", "csrf": true, "form": {"code": "{GOOGLE_SIGNIN_TOTP}"}, "expect": {"status": 302, "location": "/app/"}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/two_factor_challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.next", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": true, "spa_enabled": true}
+        {"after": [{"method": "POST", "path": "/api/v1/two_factor/challenge", "csrf": true, "headers": {"accept": "application/json", "content-type": "application/json"}, "json": "{\"code\": \"{GOOGLE_SIGNIN_TOTP}\", \"rememberDevice\": false}", "expect": {"status": 200, "content_type_prefix": "application/json", "json": {"kind": "signedIn", "location": "http://campfire.test/app/"}}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/app/two_factor/challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.classic", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": false, "spa_enabled": true},
+        {"after": [{"method": "POST", "path": "/api/v1/two_factor/challenge", "csrf": true, "headers": {"accept": "application/json", "content-type": "application/json"}, "json": "{\"code\": \"{GOOGLE_SIGNIN_TOTP}\", \"rememberDevice\": false}", "expect": {"status": 200, "content_type_prefix": "application/json", "json": {"kind": "signedIn", "location": "http://campfire.test/app/"}}}, {"expect": {"content_type_prefix": "application/json", "status": 200, "json": {"user": {"id": 127326141}, "emailAddress": "david@37signals.com"}}, "headers": {"accept": "application/json"}, "method": "GET", "path": "/api/v1/me"}], "auth": "anonymous", "before": [{"capture_query": {"GOOGLE_SIGNIN_NONCE": "nonce", "GOOGLE_SIGNIN_STATE": "state"}, "csrf": true, "expect": {"location_prefix": "https://accounts.google.com/o/oauth2/v2/auth", "status": 302}, "form": {}, "method": "POST", "path": "/session/google"}], "expect": {"location": "/app/two_factor/challenge", "status": 302}, "fixture_profile": "oauth_google_r3", "id": "oauth.google.signin.configured.next", "method": "GET", "path": "/session/google/callback?code={GOOGLE_SIGNIN_NONCE}&state={GOOGLE_SIGNIN_STATE}", "preference": null, "spa_default_next": true, "spa_enabled": true}
       ]
     },
     {
@@ -1209,17 +1215,17 @@
       "category": "public",
       "classic_endpoint": "public_pages#about",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Keep public content and URLs outside the chat SPA."},
+      "after_cutover": {"action": "alias", "target": "/app/about, /app/privacy, /app/terms", "notes": "The signed-out SPA shell draws the public pages for anyone. The retained URLs answer 301."},
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "Bypass the workspace callback chain (no sign-in). Non-HTML formats answer an empty 404, never 406.",
+      "notes": "Bypass the workspace callback chain (no sign-in). Pages move for good (301) to the SPA's copies. Non-HTML formats answer an empty 404, never 406.",
       "bookmark_notes": "Footer links.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "public.about", "method": "GET", "path": "/about", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Smartfire | About"]}},
-        {"id": "public.privacy", "method": "GET", "path": "/privacy", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Smartfire | Privacy Policy"]}},
-        {"id": "public.terms", "method": "GET", "path": "/terms", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Smartfire | Terms of Service"]}},
+        {"id": "public.about", "method": "GET", "path": "/about", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/about", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
+        {"id": "public.privacy", "method": "GET", "path": "/privacy", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/privacy", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
+        {"id": "public.terms", "method": "GET", "path": "/terms", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/terms", "follow_location": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}},
         {"id": "public.json404", "method": "GET", "path": "/about", "headers": {"accept": "application/json"}, "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}}
       ]
     },

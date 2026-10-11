@@ -1,34 +1,8 @@
 //! Pinned Rails request/flash/audit/identity observations for complete Google controller cases.
 use super::*;
-use crate::controllers::presenters::test_support::{Reply, with_fixed_render_secrets};
+use crate::controllers::presenters::test_support::{Reply, spa_auth_locations, with_fixed_render_secrets};
 use campfire_kit::{Crypto, FrozenClock, RailsCrypto};
 use std::time::Duration;
-fn page(reply: &Reply, expected: &Value, name: &str) -> Value {
-    assert_eq!(
-        reply.status.as_u16() as u64,
-        expected["status"].as_u64().unwrap(),
-        "{name}: status"
-    );
-    let rails = expected["body"].as_str().unwrap();
-    let same = if crate::form_contracts::reskinned(&reply.text()) {
-        crate::form_contracts::same_page(&reply.text(), rails)
-    } else {
-        crate::app::asset_goldens::compare(name, &reply.text(), rails)
-    };
-    if !same {
-        if let Ok(dir) = std::env::var("WS14G_PAGE_DIFF_DIR") {
-            std::fs::create_dir_all(&dir).unwrap();
-            std::fs::write(format!("{dir}/{name}.actual"), reply.text()).unwrap();
-            std::fs::write(
-                format!("{dir}/{name}.expected"),
-                expected["body"].as_str().unwrap(),
-            )
-            .unwrap();
-        }
-        panic!("{name}: complete HTML");
-    }
-    json!({"status":reply.status.as_u16(),"body":expected["body"]})
-}
 fn session(a: &TestApp, b: &Browser<'_>) -> Value {
     let raw = b.cookie_header().split(';').find_map(|s| {
         s.trim()
@@ -43,6 +17,72 @@ fn session(a: &TestApp, b: &Browser<'_>) -> Value {
         )
     })
     .unwrap_or(json!({}))
+}
+/// SPA cutover: what the retained sign-in page showed, read from the SPA sign-in page's signed-out
+/// boot instead: its status, whether it offers Google, and the domains it names (as the Rails
+/// page's sentence, `to_sentence`).
+fn sign_in_page(page: &Reply) -> Value {
+    let boot = crate::controllers::spa::signed_out_contracts_tests::inline_boot(page);
+    let methods = &boot["signInMethods"];
+    let domains = methods["googleDomains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|domain| format!("@{}", domain.as_str().unwrap()))
+        .collect::<Vec<_>>();
+    let sentence = match domains.as_slice() {
+        _ if methods["google"] != true => None,
+        [] => None,
+        [one] => Some(one.clone()),
+        [first, second] => Some(format!("{first} and {second}")),
+        [rest @ .., last] => Some(format!("{}, and {last}", rest.join(", "))),
+    };
+    json!({"status":page.status.as_u16(),"google_mark":methods["google"],"domain_sentence":sentence})
+}
+/// SPA cutover: the SPA signs in with `POST /api/v1/session` and goes where the JSON reply says
+/// (the challenge page when a second factor is due); Rails' form post redirected there. This
+/// records that navigation as the redirect it replaced.
+async fn spa_password_sign_in(b: &mut Browser<'_>, email: &str, password: &str) -> Reply {
+    let mut reply = b.password_sign_in(email, password).await;
+    if reply.status == StatusCode::OK {
+        let body = reply.json();
+        let location = match body["kind"].as_str() {
+            Some("signedIn") => body["location"].as_str().unwrap().to_owned(),
+            Some("secondFactorRequired") => "http://campfire.test/app/two_factor/challenge".into(),
+            _ => panic!("sign-in reply: {body}"),
+        };
+        reply.status = StatusCode::FOUND;
+        reply.headers.insert("location", location.parse().unwrap());
+    }
+    reply
+}
+/// SPA cutover: a JSON write's feedback (its error message, or the notice of a change) in the
+/// observation's `flash`, where Rails' form post left it in the flash for the page it redirected to.
+fn spa_json_feedback(observed: &mut Value, reply: &Reply) {
+    let body: Value = serde_json::from_slice(&reply.body).unwrap_or(Value::Null);
+    // The settings API nests its refusal under `error`; the sudo API's is a top-level `message`.
+    let refusal = body["error"]["message"].as_str().or(body["message"].as_str());
+    if let Some(alert) = refusal.filter(|_| reply.status == StatusCode::UNPROCESSABLE_ENTITY) {
+        observed["flash"] = json!({"alert":alert});
+    } else if let Some(notice) = body["notice"].as_str() {
+        observed["flash"] = json!({"notice":notice});
+    }
+}
+/// SPA cutover: the pinned Rails redirect of a form post that the SPA now sends as JSON, as that
+/// JSON reply: a refusal is a 422 and a change a 200 (both stay on the SPA page, so no location),
+/// and a signed-out request a 401.
+fn spa_json_write(expected: &mut Value) {
+    if expected["status"] != 302 {
+        return;
+    }
+    expected["status"] = if expected["flash"].get("alert").is_some() {
+        json!(422)
+    } else if expected["flash"].get("notice").is_some() {
+        json!(200)
+    } else {
+        json!(401)
+    };
+    expected["location"] = Value::Null;
 }
 async fn observation(
     a: &TestApp,
@@ -198,7 +238,6 @@ async fn run_cases(oracle: Value) {
         ),
         oracle["filtered_code"]
     );
-    let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
     for original in oracle["rows"].as_array().unwrap() {
         let mut row = original.clone();
         let purpose = row["spec"]["purpose"].as_str().unwrap().to_owned();
@@ -209,11 +248,43 @@ async fn run_cases(oracle: Value) {
         }
         if row["spec"]["continuation"] == true {
             row["result"].as_object_mut().unwrap().remove("same_member");
+            // SPA cutover: the retained sudo prompt page (`start.prompt`) is the SPA's; its JSON
+            // is checked below.
+            row["start"].as_object_mut().unwrap().remove("prompt");
 
         }
         if row["result"]["password_login"]["location"] == "http://campfire.test/account/edit" {
             row["result"]["password_login"]["location"] = json!("http://campfire.test/app/admin");
         }
+        // SPA cutover: the retained sign-in, two-step and sudo pages the rows name are the SPA's.
+        spa_auth_locations(&mut row);
+        if let Some(protected) = row["result"].get_mut("protected").and_then(Value::as_array_mut) {
+            // SPA cutover: the profile's two-step changes are the SPA settings' JSON writes.
+            protected.iter_mut().for_each(spa_json_write);
+        }
+        if purpose == "sudo" {
+            // SPA cutover: the SPA's sudo page starts Google with JSON. One Google can't serve is
+            // refused in place (422) rather than redirected to the retained page with the alert;
+            // a callback that finds its flow returns to the SPA's continuation with the feedback
+            // the retained page showed (or, for an expired flow, that it expired) where Rails
+            // replayed the held form, went home or back to the retained sudo page.
+            let scenario = row["spec"]["scenario"].as_str().unwrap().to_owned();
+            if row["start"].get("bound_entropy").is_none() {
+                row["start"]["status"] = json!(422);
+                spa_json_write(&mut row["result"]);
+            } else if !matches!(scenario.as_str(), "signed_out" | "other_member") {
+                let result = row["result"].as_object_mut().unwrap();
+                result.remove("body");
+                result.insert("status".into(), json!(302));
+                result.insert("location".into(), json!("http://campfire.test/app/sudo/continue"));
+                if scenario == "expired_flow" {
+                    result.insert("flash".into(), json!({"alert":"Confirmation expired. Try again."}));
+                }
+            }
+        }
+        // SPA cutover: the sign-in page a refused callback lands on is the SPA's, checked below
+        // by its boot's alert; the pinned retained page (`follow`) is not served any more.
+        row["result"].as_object_mut().unwrap().remove("follow");
         let now = jiff::Timestamp::from_second(oracle["now"].as_i64().unwrap()).unwrap();
         let clock = Arc::new(FrozenClock::new(now));
         let mut a = TestApp::boot_with_clock(clock.clone()).await.unwrap();
@@ -316,13 +387,15 @@ async fn run_cases(oracle: Value) {
                 })
                 .await
                 .unwrap();
-            b.get(&format!("/join/{code}")).await;
-            b.write(Req::new(Method::POST, &format!("/join/{code}")).form(&[
-                ("user[name]", "Pre-claimer"),
-                ("user[email_address]", "newhire@smartdata.net"),
-                ("user[password]", "secret123456"),
-            ]))
-            .await;
+            // SPA cutover: the SPA's join page signs up through the JSON API.
+            let joined = b
+                .write(Req::new(Method::POST, &format!("/api/v1/join/{code}")).json_body(&json!({
+                    "name": "Pre-claimer",
+                    "emailAddress": "newhire@smartdata.net",
+                    "password": "secret123456",
+                })))
+                .await;
+            assert!(joined.status.is_success(), "{}", joined.text());
             b.write(Req::new(Method::DELETE, "/session")).await;
         }
         if scenario == "calendar_only" {
@@ -337,13 +410,16 @@ async fn run_cases(oracle: Value) {
         if scenario == "admin_link_required_return_to" {
             b.get("/account/edit").await;
         }
-        let initial_page = b
-            .get(if purpose == "sign_in" {
-                "/session/new"
-            } else {
-                "/users/me/profile"
-            })
-            .await;
+        let initial_page = if purpose == "sign_in" {
+            // SPA cutover: the retained sign-in page goes to the SPA's.
+            assert_eq!(
+                b.get("/session/new").await.location(),
+                Some("http://campfire.test/app/session/new")
+            );
+            b.get("/app/session/new").await
+        } else {
+            b.get("/users/me/profile").await
+        };
         let device = if matches!(scenario, "consume_device" | "consume_all_devices") {
             Some(
                 a.db()
@@ -379,25 +455,41 @@ async fn run_cases(oracle: Value) {
             .unwrap();
         let path = match purpose {
             "reauth" => "/two_factor_reauthentication",
-            "sudo" => "/sudo/google",
+            // SPA cutover: the SPA's sudo page starts Google confirmation with JSON.
+            "sudo" => "/api/v1/sudo/google",
             "link" => "/user/profile/google_sign_in_link",
             _ => "/session/google",
         };
         let mut gate = None;
-        let mut prompt = None;
         if continuation {
             let reply = b.write(Req::new(Method::DELETE, "/fizzy/connection")).await;
             gate = Some(json!({"status":reply.status.as_u16(),"location":reply.location()}));
-            let reply = with_fixed_render_secrets(b.get("/sudo/new")).await;
-            prompt = Some(page(
-                &reply,
-                &row["start"]["prompt"],
-                "Google-only sudo prompt",
-            ));
-            assert!(!reply.text().contains("name=\"password\""));
-            assert!(reply.text().contains("action=\"/sudo/google\""));
+            // The SPA's sudo page offers Google and no password, as the pinned Rails page did.
+            assert_eq!(
+                b.get("/sudo/new").await.location(),
+                Some("http://campfire.test/app/sudo/new")
+            );
+            let ready = b
+                .send(Req::new(Method::GET, "/api/v1/sudo").header("accept", "application/json"))
+                .await;
+            assert_eq!(ready.status, StatusCode::OK, "{}", ready.text());
+            let methods = ready.json()["reauthentication"]["methods"].clone();
+            assert!(methods.as_array().unwrap().contains(&json!("google")), "{methods}");
+            assert!(!methods.as_array().unwrap().contains(&json!("password")), "{methods}");
         }
-        let start_reply = b.write(Req::new(Method::POST, path)).await;
+        let mut start_reply = if purpose == "sudo" {
+            b.write(Req::new(Method::POST, path).header("accept", "application/json"))
+                .await
+        } else {
+            b.write(Req::new(Method::POST, path)).await
+        };
+        if purpose == "sudo" && start_reply.status == StatusCode::OK {
+            // SPA cutover: the SPA navigates to the authorization URL its JSON names, where the
+            // retained form post was redirected there.
+            let location = start_reply.json()["location"].as_str().unwrap().to_owned();
+            start_reply.status = StatusCode::FOUND;
+            start_reply.headers.insert("location", location.parse().unwrap());
+        }
         let mut started = json!({"status":start_reply.status.as_u16()});
         if scenario == "unconfigured_callback" {
             started["body"] = json!(start_reply.text());
@@ -405,12 +497,8 @@ async fn run_cases(oracle: Value) {
         if let Some(gate) = gate {
             started["gate"] = gate;
         }
-        if let Some(prompt) = prompt {
-            started["prompt"] = prompt;
-        }
         if purpose == "sign_in" {
-            let html = initial_page.text();
-            started["page"] = json!({"status":initial_page.status.as_u16(), "google_mark":html.contains("Sign in with Google"), "domain_sentence":domains.captures(&html).map(|c|c[1].to_owned())});
+            started["page"] = sign_in_page(&initial_page);
         }
         let q = start_reply
             .location()
@@ -445,7 +533,7 @@ async fn run_cases(oracle: Value) {
                 b.get(if scenario == "other_member" {
                     "/users/me/profile"
                 } else {
-                    "/session/new"
+                    "/app/session/new"
                 })
                 .await;
             }
@@ -591,7 +679,7 @@ async fn run_cases(oracle: Value) {
                         .unwrap()
                 );
                 b.write(Req::new(Method::DELETE, "/session")).await;
-                b.get("/session/new").await;
+                b.get("/app/session/new").await;
                 let next = start(&mut b, "/session/google").await;
                 let mut next_claims =
                     super::claims(&a, &next, "controller-member", "new-member@smartdata.net");
@@ -601,15 +689,31 @@ async fn run_cases(oracle: Value) {
             }
             let mut observed = observation(&a, &b, &cb, &before, &r, 0, &password).await;
             if matches!(scenario, "token_shape" | "key_shape") {
-                let reply = with_fixed_render_secrets(b.get(cb.location().unwrap())).await;
-                observed["follow"] = page(&reply, &row["result"]["follow"], scenario);
+                let reply = b.get(cb.location().unwrap()).await;
+                assert_eq!(reply.status, StatusCode::OK, "{scenario}");
+                assert_eq!(
+                    crate::controllers::spa::signed_out_contracts_tests::inline_boot(&reply)["flash"],
+                    json!({"kind":"alert","message":row["result"]["flash"]["alert"]}),
+                    "{scenario}"
+                );
             }
             if continuation {
-                if cb.status == StatusCode::OK {
-                    let expected = json!({"status":200,"body":row["result"]["body"]});
-                    observed["body"] =
-                        page(&cb, &expected, "Google sudo continuation")["body"].clone();
-                    assert!(cb.text().contains("action=\"/fizzy/connection\""));
+                // SPA cutover: the SPA's continuation names the held write for its page to send
+                // again, where Rails' replay page (`result.body`) re-posted it.
+                let resumed = b
+                    .send(
+                        Req::new(Method::GET, "/api/v1/sudo/continue")
+                            .header("accept", "application/json"),
+                    )
+                    .await;
+                if original["result"]["status"] == 200 {
+                    assert_eq!(resumed.status, StatusCode::OK, "{}", resumed.text());
+                    assert_eq!(
+                        resumed.json()["retry"],
+                        json!({"method":"DELETE","path":"/fizzy/connection","returnTo":"/app/"})
+                    );
+                } else {
+                    assert_eq!(resumed.status, StatusCode::FORBIDDEN, "{}", resumed.text());
                 }
                 let calls = r.calls.lock().unwrap().len();
                 let reply = b.write(Req::new(Method::DELETE, "/fizzy/connection")).await;
@@ -626,10 +730,7 @@ async fn run_cases(oracle: Value) {
                     observed["return_to"] = session(&a, &b)["return_to_after_authenticating"].clone();
                     b.get(cb.location().unwrap()).await;
                     let calls = r.calls.lock().unwrap().len();
-                    let reply = b.write(Req::new(Method::POST, "/session").form(&[
-                        ("email_address", "legacy@smartdata.net"),
-                        ("password", "secret123456"),
-                    ])).await;
+                    let reply = spa_password_sign_in(&mut b, "legacy@smartdata.net", "secret123456").await;
                     observed["password_login"] = observation(&a, &b, &reply, &before, &r, calls, &password).await;
                     observed["password_login"]["return_to"] = session(&a, &b)["return_to_after_authenticating"].clone();
                 }
@@ -639,21 +740,18 @@ async fn run_cases(oracle: Value) {
                 ) {
                     b.get(cb.location().unwrap()).await;
                     b.write(Req::new(Method::DELETE, "/session")).await;
-                    b.get("/session/new").await;
+                    b.get("/app/session/new").await;
                     let call_before = r.calls.lock().unwrap().len();
-                    let response = b
-                        .write(Req::new(Method::POST, "/session").form(&[
-                            (
-                                "email_address",
-                                if scenario == "legacy_password" {
-                                    "legacy@smartdata.net"
-                                } else {
-                                    email
-                                },
-                            ),
-                            ("password", "secret123456"),
-                        ]))
-                        .await;
+                    let response = spa_password_sign_in(
+                        &mut b,
+                        if scenario == "legacy_password" {
+                            "legacy@smartdata.net"
+                        } else {
+                            email
+                        },
+                        "secret123456",
+                    )
+                    .await;
                     let mut password_login =
                         observation(&a, &b, &response, &before, &r, call_before, &password).await;
                     password_login["lifecycle"] = lifecycle_observation(&a, &history).await;
@@ -669,33 +767,38 @@ async fn run_cases(oracle: Value) {
                     "after_reauth_expiry" => 601,
                     _ => 0,
                 }));
+                // SPA cutover: the SPA's security settings make these changes through the JSON
+                // API, which the retained profile's forms no longer reach.
+                let settings = |method: Method, path: &str, reauth: &str| {
+                    Req::new(method, &format!("/api/v1/settings/two_factor{path}"))
+                        .json_body(&json!({ "reauth": reauth }))
+                };
                 let mut requests = match scenario {
-                    "consume_device" => vec![Req::new(
+                    "consume_device" => vec![settings(
                         Method::DELETE,
-                        &format!("/two_factor_remembered_devices/{}", device.unwrap()),
+                        &format!("/devices/{}", device.unwrap()),
+                        "",
                     )],
-                    "consume_all_devices" => {
-                        vec![Req::new(Method::DELETE, "/two_factor_remembered_devices")]
-                    }
-                    "consume_disable" => vec![Req::new(Method::DELETE, "/two_factor_setup")],
+                    "consume_all_devices" => vec![settings(Method::DELETE, "/devices", "")],
+                    "consume_disable" => vec![settings(Method::DELETE, "", "")],
                     "consume_backup" => vec![
-                        Req::new(Method::POST, "/two_factor_backup_codes"),
-                        Req::new(Method::POST, "/two_factor_backup_codes"),
+                        settings(Method::POST, "/backup_codes", ""),
+                        settings(Method::POST, "/backup_codes", ""),
                     ],
                     "wrong_credential_preserves" => vec![
-                        Req::new(Method::POST, "/two_factor_backup_codes")
-                            .form(&[("reauth", "wrong-credential")]),
-                        Req::new(Method::POST, "/two_factor_backup_codes"),
+                        settings(Method::POST, "/backup_codes", "wrong-credential"),
+                        settings(Method::POST, "/backup_codes", ""),
                     ],
-                    _ => vec![Req::new(Method::POST, "/two_factor_backup_codes")],
+                    _ => vec![settings(Method::POST, "/backup_codes", "")],
                 };
                 let mut protected = Vec::new();
                 for request in requests.drain(..) {
                     let call_before = r.calls.lock().unwrap().len();
                     let response = b.write(request).await;
-                    protected.push(
-                        observation(&a, &b, &response, &before, &r, call_before, &password).await,
-                    );
+                    let mut observed =
+                        observation(&a, &b, &response, &before, &r, call_before, &password).await;
+                    spa_json_feedback(&mut observed, &response);
+                    protected.push(observed);
                 }
                 observed["protected"] = json!(protected);
             }
@@ -708,6 +811,7 @@ async fn run_cases(oracle: Value) {
             observed
         } else {
             let mut observed = observation(&a, &b, &start_reply, &before, &r, 0, &password).await;
+            spa_json_feedback(&mut observed, &start_reply);
             if scenario == "unconfigured_callback" {
                 let reply = b.get("/session/google/callback?state=fixture-state&code=fixture-code").await;
                 observed = observation(&a, &b, &reply, &before, &r, 0, &password).await;
@@ -716,13 +820,9 @@ async fn run_cases(oracle: Value) {
                 assert_eq!(reply.body, row["result"]["body"].as_str().unwrap().as_bytes(), "unconfigured callback must match the complete Rails body");
             }
             if scenario == "unconfigured_password" {
-                b.get("/session/new").await;
-                let response = b
-                    .write(Req::new(Method::POST, "/session").form(&[
-                        ("email_address", "kevin@37signals.com"),
-                        ("password", "secret123456"),
-                    ]))
-                    .await;
+                b.get("/app/session/new").await;
+                let response =
+                    spa_password_sign_in(&mut b, "kevin@37signals.com", "secret123456").await;
                 observed["password_login"] =
                     observation(&a, &b, &response, &before, &r, 0, &password).await;
             }

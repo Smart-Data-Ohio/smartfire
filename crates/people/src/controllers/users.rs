@@ -18,22 +18,24 @@ pub mod sessions;
 use campfire_api_types::{InviteRefusal, JoinPage, SignInHelpContact, SignInWorkspace, WorkspaceJoin};
 use campfire_db::{Account, NewUser, User};
 use campfire_db::models::workspace_invite::{InviteState, WorkspaceInvite};
-use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, format, halt, permit_keys};
+use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, halt, permit_keys};
 
 use super::auth::{self, ResponseMode};
 use super::presenters::attachments::{self, Assignment, Record};
 use super::presenters::{self};
 use crate::app::AppCtx;
-use crate::controllers::presenters::page::{retained_page};
 use crate::concerns::{self, Before, cast_integer};
 
-// Joining with the join code (`/join/:join_code`) or a workspace invite (`/invite/:token`). The
-// retained form and the SPA's JSON endpoints (`/api/v1/join/:join_code`, `/api/v1/invite/:token`)
-// run the same callbacks, checks and user creation; only the answer's shape differs.
+// Joining with the join code or a workspace invite is the SPA's (`/app/join/:join_code`,
+// `/app/invite/:token`), through its JSON endpoints (`/api/v1/join/:join_code`,
+// `/api/v1/invite/:token`). The retained URLs (`/join/:join_code`, `/invite/:token`) go there.
 
-/// `require_unauthenticated_access only: %i[ new create ]`, `before_action :verify_join_code`
+/// `require_unauthenticated_access only: %i[ new create ]`: a signed-in visitor goes home, anyone
+/// else to the SPA's join page, which checks the code.
 pub async fn new(c: &mut Ctx) -> Result {
-    join_new(c, ResponseMode::Html).await
+    before_actions(c, "users#new", ResponseMode::Html).await?;
+    let path = spa_join_path(c, false);
+    concerns::redirect_to_signed_out_spa(c, &path, StatusCode::FOUND)
 }
 
 pub async fn new_json(c: &mut Ctx) -> Result {
@@ -41,8 +43,10 @@ pub async fn new_json(c: &mut Ctx) -> Result {
     auth::complete(c, result)
 }
 
+/// The retained join form goes, unread, to the SPA's join page: no account is made.
 pub async fn create(c: &mut Ctx) -> Result {
-    join_create(c, ResponseMode::Html).await
+    let path = spa_join_path(c, false);
+    concerns::redirect_to_signed_out_spa(c, &path, StatusCode::SEE_OTHER)
 }
 
 pub async fn create_json(c: &mut Ctx) -> Result {
@@ -50,8 +54,11 @@ pub async fn create_json(c: &mut Ctx) -> Result {
     auth::complete(c, result)
 }
 
+/// As [`new`], for the SPA's invite page.
 pub async fn invite_new(c: &mut Ctx) -> Result {
-    invite_new_response(c, ResponseMode::Html).await
+    before_actions(c, "users#new", ResponseMode::Html).await?;
+    let path = spa_join_path(c, true);
+    concerns::redirect_to_signed_out_spa(c, &path, StatusCode::FOUND)
 }
 
 pub async fn invite_new_json(c: &mut Ctx) -> Result {
@@ -59,8 +66,17 @@ pub async fn invite_new_json(c: &mut Ctx) -> Result {
     auth::complete(c, result)
 }
 
+/// As [`create`]: the invite isn't redeemed.
 pub async fn invite_create(c: &mut Ctx) -> Result {
-    invite_create_response(c, ResponseMode::Html).await
+    let path = spa_join_path(c, true);
+    concerns::redirect_to_signed_out_spa(c, &path, StatusCode::SEE_OTHER)
+}
+
+/// The SPA's join (`/app/join/:join_code`) or invite (`/app/invite/:token`) page for this
+/// request's code or token.
+fn spa_join_path(c: &Ctx, invite: bool) -> String {
+    let (prefix, key) = if invite { ("/app/invite/", "token") } else { ("/app/join/", "join_code") };
+    format!("{prefix}{}", campfire_routes::escape(c.param_str(key).unwrap_or_default(), false))
 }
 
 pub async fn invite_create_json(c: &mut Ctx) -> Result {
@@ -72,7 +88,7 @@ async fn join_new(c: &mut Ctx, mode: ResponseMode) -> Result {
     before_actions(c, "users#new", mode).await?;
     let account = verify_join_code(c).await?;
     let description = account.settings().description().to_string();
-    join_page(c, StatusCode::OK, campfire_routes::join(&account.join_code), description, None, mode).await
+    join_page(c, StatusCode::OK, description, None).await
 }
 
 async fn join_create(c: &mut Ctx, mode: ResponseMode) -> Result {
@@ -83,7 +99,7 @@ async fn join_create(c: &mut Ctx, mode: ResponseMode) -> Result {
 
 async fn invite_new_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     before_actions(c, "users#new", mode).await?;
-    verify_invite(c, mode).await?;
+    verify_invite(c).await?;
     let description = c
         .app()
         .db
@@ -92,12 +108,12 @@ async fn invite_new_response(c: &mut Ctx, mode: ResponseMode) -> Result {
         .map_err(Error::internal)?
         .map(|account| account.settings().description().to_string())
         .unwrap_or_default();
-    join_page(c, StatusCode::OK, c.request.path().to_owned(), description, None, mode).await
+    join_page(c, StatusCode::OK, description, None).await
 }
 
 async fn invite_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     before_actions(c, "users#create", mode).await?;
-    verify_invite(c, mode).await?;
+    verify_invite(c).await?;
     create_user(c, Some(c.param_str("token").unwrap_or_default().to_owned()), mode).await
 }
 
@@ -106,26 +122,14 @@ async fn before_actions(c: &mut Ctx, endpoint: &'static str, mode: ResponseMode)
     auth::before_actions(c, endpoint, Before::default().require_unauthenticated_access(), mode).await
 }
 
-async fn join_page(c: &mut Ctx, status: StatusCode, join_path: String, description: String, refusal: Option<InviteRefusal>, mode: ResponseMode) -> Result {
-    if mode == ResponseMode::Json {
-        let (workspace, help_contact) = join_workspace(c, description).await?;
-        let page = match refusal {
-            None => JoinPage::Join { workspace, help_contact },
-            Some(refusal) => JoinPage::InviteInvalid { workspace, help_contact, refusal, reason: refusal_reason(refusal).to_owned() },
-        };
-        return auth::json(c, status, &page);
-    }
-    c.respond_to(&[&format::HTML])?;
-    c.no_store();
-    let help_contact = c.app().db.read(presenters::accounts::help_contact).await.map_err(Error::internal)?;
-    let invite_error = refusal.map(refusal_reason);
-    retained_page!(c, status, |ctx| campfire_retained::users::New {
-        ctx,
-        join_path: join_path.clone(),
-        description: description.clone(),
-        help_contact: help_contact.clone(),
-        invite_error
-    }).await
+/// The join or invite page's JSON: the workspace, and why an invite can't be used, if it can't.
+async fn join_page(c: &mut Ctx, status: StatusCode, description: String, refusal: Option<InviteRefusal>) -> Result {
+    let (workspace, help_contact) = join_workspace(c, description).await?;
+    let page = match refusal {
+        None => JoinPage::Join { workspace, help_contact },
+        Some(refusal) => JoinPage::InviteInvalid { workspace, help_contact, refusal, reason: refusal_reason(refusal).to_owned() },
+    };
+    auth::json(c, status, &page)
 }
 
 /// The workspace's name, logo and description, and the help contact, as the join page shows them.
@@ -162,9 +166,9 @@ fn refusal_reason(refusal: InviteRefusal) -> &'static str {
     }
 }
 
-async fn verify_invite(c: &mut Ctx, mode: ResponseMode) -> Result<()> {
+async fn verify_invite(c: &mut Ctx) -> Result<()> {
     let Some(refusal) = invite_refusal(c).await? else { return Ok(()) };
-    halt(join_page(c, refusal_status(refusal), String::new(), String::new(), Some(refusal), mode).await?)
+    halt(join_page(c, refusal_status(refusal), String::new(), Some(refusal)).await?)
 }
 
 /// Why `params[:token]` can't enroll anyone, if it can't.
@@ -225,12 +229,12 @@ async fn create_user(c: &mut Ctx, invite_token: Option<String>, mode: ResponseMo
             mode.signed_in(c, &root)
         }
         Ok(None) => {
-            verify_invite(c, mode).await?;
+            verify_invite(c).await?;
             Err(Error::NotFound)
         }
         // rescue ActiveRecord::RecordNotUnique: `redirect_to new_session_url(email_address: user_params[:email_address])`
         Err(error) if presenters::accounts::is_record_not_unique(&error) => {
-            let mut location = c.url_for(&campfire_routes::new_session());
+            let mut location = c.url_for("/app/session/new");
             if let Some(email_address) = email_address {
                 location.push_str(&format!("?email_address={}", campfire_presentation::helpers::url::cgi_escape(&email_address)));
             }

@@ -188,7 +188,7 @@ export interface AdminModule {
    */
   /**
    * Lapses (or renews) the confirmation, offering `methods`; `retry` is a request the server's
-   * classic gate held meanwhile (a full page sent to `/sudo/new`), for its answers to name.
+   * classic gate held meanwhile (a full page sent to `/app/sudo/new`), for its answers to name.
    */
   lapseSudo(
     on: boolean,

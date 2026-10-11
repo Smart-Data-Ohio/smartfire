@@ -1,7 +1,9 @@
 //! WS16 owner handoff: WS14g callbacks through HTTP, then Slack opt-in and ownership.
 use super::*;
 use crate::{
-    controllers::presenters::test_support::{Reply, with_fixed_render_secrets},
+    controllers::presenters::test_support::{
+        Reply, spa_auth_location, spa_auth_locations, with_fixed_render_secrets,
+    },
     integrations::{
         slack::{self, conversations, users, writer},
         test_support::{FakeServer, Route},
@@ -242,6 +244,38 @@ async fn send(
     params: &[(&str, &str)],
     bad_csrf: bool,
 ) -> Reply {
+    let body = url::form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(params.iter().copied())
+        .finish();
+    exchange(b, address, method, path, Encoding::Form(body), bad_csrf).await
+}
+/// The SPA's JSON request for the same step, over the same real TCP connection and cookie jar.
+async fn send_json(
+    b: &mut Browser<'_>,
+    address: SocketAddr,
+    method: Method,
+    path: &str,
+    body: Value,
+    bad_csrf: bool,
+) -> Reply {
+    exchange(b, address, method, path, Encoding::Json(body.to_string()), bad_csrf).await
+}
+enum Encoding {
+    Form(String),
+    Json(String),
+}
+async fn exchange(
+    b: &mut Browser<'_>,
+    address: SocketAddr,
+    method: Method,
+    path: &str,
+    encoding: Encoding,
+    bad_csrf: bool,
+) -> Reply {
+    let (accept, content_type, params) = match encoding {
+        Encoding::Form(body) => ("text/html", "application/x-www-form-urlencoded", body),
+        Encoding::Json(body) => ("application/json", "application/json", body),
+    };
     let stream = tokio::net::TcpStream::connect(address).await.unwrap();
     let (mut sender, connection) =
         hyper::client::conn::http1::handshake(hyper_util::rt::TokioIo::new(stream))
@@ -252,7 +286,7 @@ async fn send(
         .method(method.clone())
         .uri(path)
         .header("Host", "campfire.test")
-        .header("Accept", "text/html")
+        .header("Accept", accept)
         .header("Cookie", b.cookie_header())
         .header("Connection", "close");
     let body = if method == Method::GET {
@@ -267,10 +301,8 @@ async fn send(
         };
         request = request
             .header("X-CSRF-Token", csrf)
-            .header("Content-Type", "application/x-www-form-urlencoded");
-        url::form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(params.iter().copied())
-            .finish()
+            .header("Content-Type", content_type);
+        params
     };
     let response = sender
         .send_request(
@@ -379,7 +411,8 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
                 entropy[16..32].fill(2);
                 entropy[32..].fill(3);
             }
-            if request.uri().path() == "/sudo/google" {
+            // SPA cutover: the SPA starts sudo Google confirmation through the JSON API.
+            if request.uri().path() == "/api/v1/sudo/google" {
                 entropy[..16].fill(4);
                 entropy[16..32].fill(5);
                 entropy[32..].fill(6);
@@ -477,15 +510,101 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
             | "replay-page" => (Method::GET, "/slack/imports".into(), vec![]),
             _ => panic!("unknown Rails interaction: {name}"),
         };
-        let mut reply = send(
-            &mut b,
-            address,
-            method.clone(),
-            &path,
-            &params,
-            name.ends_with("csrf"),
-        )
-        .await;
+        // SPA cutover: the retained sign-in, setup and sudo pages now redirect to the SPA, and
+        // the SPA enrolls and starts sudo Google confirmation through JSON. Each of these steps
+        // asserts the retained page's redirect, then makes the SPA's request for the same step;
+        // its body (and JSON media type) is the SPA's, so status, redirect, flash and ownership
+        // are what is compared with Rails.
+        let spa_step = matches!(
+            name,
+            "login"
+                | "enrollment-setup"
+                | "enrollment-csrf"
+                | "enrollment-confirm"
+                | "sudo-prompt"
+                | "sudo-csrf"
+                | "google-sudo-start"
+        );
+        let mut reply = match name {
+            "login" | "enrollment-setup" | "sudo-prompt" => {
+                let retained = send(&mut b, address, Method::GET, &path, &[], false).await;
+                let spa = if name == "enrollment-setup" {
+                    "http://campfire.test/app/two_factor/setup".to_owned()
+                } else {
+                    spa_auth_location(&format!("http://campfire.test{path}"))
+                };
+                assert_eq!(
+                    (retained.status, retained.location()),
+                    (StatusCode::FOUND, Some(spa.as_str())),
+                    "{name}: retained page"
+                );
+                match name {
+                    "login" => send(&mut b, address, Method::GET, "/app/session/new", &[], false).await,
+                    "enrollment-setup" => {
+                        send_json(&mut b, address, Method::GET, "/api/v1/two_factor/setup", json!({}), false).await
+                    }
+                    _ => send_json(&mut b, address, Method::GET, "/api/v1/sudo", json!({}), false).await,
+                }
+            }
+            "enrollment-csrf" | "enrollment-confirm" => {
+                send_json(
+                    &mut b,
+                    address,
+                    Method::POST,
+                    "/api/v1/two_factor/setup",
+                    json!({ "code": code }),
+                    name.ends_with("csrf"),
+                )
+                .await
+            }
+            "sudo-csrf" | "google-sudo-start" => {
+                let mut reply = send_json(
+                    &mut b,
+                    address,
+                    Method::POST,
+                    "/api/v1/sudo/google",
+                    json!({}),
+                    name.ends_with("csrf"),
+                )
+                .await;
+                // The SPA follows a navigate reply where the retained form redirected.
+                if reply.status == StatusCode::OK {
+                    assert_eq!(reply.json()["kind"], "navigate", "{name}");
+                    let location = reply.json()["location"].as_str().unwrap().to_owned();
+                    reply.status = StatusCode::FOUND;
+                    reply
+                        .headers
+                        .insert(axum::http::header::LOCATION, location.parse().unwrap());
+                }
+                reply
+            }
+            _ => {
+                send(
+                    &mut b,
+                    address,
+                    method.clone(),
+                    &path,
+                    &params,
+                    name.ends_with("csrf"),
+                )
+                .await
+            }
+        };
+        match name {
+            "enrollment-confirm" => {
+                assert_eq!(reply.json()["kind"], "recoveryCodes", "{name}");
+                assert_eq!(reply.json()["codes"].as_array().unwrap().len(), 10, "{name}");
+            }
+            "sudo-prompt" => assert!(
+                reply.json()["reauthentication"]["methods"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!("google")),
+                "{name}: {}",
+                reply.text()
+            ),
+            _ => {}
+        }
         let application_page = method == Method::GET && path.starts_with("/slack/imports") && row["status"] == 200;
         if application_page {
             assert_eq!(reply.status, StatusCode::FOUND, "{name}: classic alias");
@@ -501,18 +620,31 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
             "{name}: status; {}",
             reply.text()
         );
-        let expected_location = if row["location"] == "http://campfire.test/" {
+        let mut expected_location = if row["location"] == "http://campfire.test/" {
             json!("http://campfire.test/app/")
         } else if path.starts_with("/slack/oauth/callback") && row["location"] == "http://campfire.test/slack/imports" {
             json!("http://campfire.test/app/settings/slack")
         } else { row["location"].clone() };
+        // SPA cutover: redirects to retained auth pages now go to the SPA's pages.
+        spa_auth_locations(&mut expected_location);
+        // SPA cutover: a JSON-started sudo confirmation returns to the SPA, which resumes the
+        // pending request (checked through the continue API below).
+        if name == "google-sudo-confirm" {
+            expected_location = json!("http://campfire.test/app/sudo/continue");
+        }
         assert_eq!(json!(reply.location()), expected_location, "{name}: redirect");
-        assert_eq!(
-            json!(reply.content_type()),
-            row["content_type"],
-            "{name}: media type"
-        );
-        if !application_page && !crate::form_contracts::same_page(&reply.text(), row["body"].as_str().unwrap()) {
+        let json_step = spa_step
+            && reply
+                .content_type()
+                .is_some_and(|t| t.starts_with("application/json"));
+        if !json_step {
+            assert_eq!(
+                json!(reply.content_type()),
+                row["content_type"],
+                "{name}: media type"
+            );
+        }
+        if !application_page && !spa_step && !crate::form_contracts::same_page(&reply.text(), row["body"].as_str().unwrap()) {
             let dir = std::env::temp_dir().join("claim-diff");
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(format!("{name}.actual")), reply.body.clone()).unwrap();
@@ -539,6 +671,18 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
             row["state"],
             "{name}: ownership"
         );
+        if name == "google-sudo-confirm" {
+            // SPA cutover: the continue API names the request Rails redirected to, once.
+            let continued = send_json(&mut b, address, Method::GET, "/api/v1/sudo/continue", json!({}), false).await;
+            assert_eq!(continued.status, StatusCode::OK, "{name}: continue; {}", continued.text());
+            let retry = &continued.json()["retry"];
+            assert_eq!(
+                (retry["method"].clone(), format!("http://campfire.test{}", retry["path"].as_str().unwrap())),
+                (json!("GET"), row["location"].as_str().unwrap().to_owned()),
+                "{name}: continue; {}",
+                continued.text()
+            );
+        }
         if name == "google-start" || name == "google-sudo-start" {
             google = url::Url::parse(reply.location().unwrap())
                 .unwrap()

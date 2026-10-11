@@ -1,6 +1,6 @@
 //! Original per-test CSV-limit replacements, through the unchanged action body.
 use crate::controllers::presenters::test_support::*;
-use axum::http::{Method, StatusCode};
+use axum::http::StatusCode;
 use campfire_kit::{ActionFn, Ctx};
 use serde_json::{Value, json};
 #[derive(Clone)]
@@ -56,10 +56,10 @@ async fn run(name: &str, limit: i64) {
     let mut browser = app.david();
     assert_eq!(
         browser
-            .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+            .confirm_sudo("secret123456")
             .await
             .status,
-        StatusCode::FOUND
+        StatusCode::OK
     );
     let csv = browser.get("/account/audit_log.csv").await;
     assert_eq!(csv.status, StatusCode::OK, "original cap CSV status");

@@ -128,7 +128,7 @@ async fn boundary(name: &'static str) {
     let id = user.id;
     assert_eq!(json!(id), expected["user_id"]);
     let mut browser = a.anonymous();
-    browser.get("/session/new").await;
+    browser.get("/app/session/new").await;
     let q = start(&mut browser, "/session/google").await;
     answer(
         &r,
@@ -143,8 +143,12 @@ async fn boundary(name: &'static str) {
         callback(&mut browser, &q["state"]).await.status,
         StatusCode::FOUND
     );
+    // SPA cutover: the SPA's setup screen reads (and issues) the setup secret through JSON.
     assert_eq!(
-        browser.get("/two_factor_setup").await.status,
+        browser
+            .send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
+            .await
+            .status,
         StatusCode::OK
     );
     let fixture = expected.clone();
@@ -193,10 +197,11 @@ async fn boundary(name: &'static str) {
         )
         .unwrap()
     };
-    let reply = with_fixed_render_secrets(
-        browser.write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)])),
-    )
-    .await;
+    // SPA cutover: the SPA's setup screen enrolls with JSON; the retained form now goes to the
+    // SPA without enrolling.
+    let reply = browser
+        .write(Req::new(Method::POST, "/api/v1/two_factor/setup").json_body(&json!({ "code": code })))
+        .await;
     let statements = a
         .db()
         .write(|tx| {
@@ -238,8 +243,26 @@ async fn boundary(name: &'static str) {
         state["sessions"].as_array().unwrap().len(),
         groups.len()
     );
-    let (actual, rails) = comparable(response(&reply), expected["response"].clone());
-    assert_eq!(actual, rails, "{name}: complete response");
+    // SPA cutover: the reply is JSON, so it is compared with the pinned retained page by status
+    // (and no redirect), with what the page showed checked in its JSON.
+    assert_eq!(
+        json!({"status":reply.status.as_u16(),"location":reply.location()}),
+        json!({"status":expected["response"]["status"],"location":expected["response"]["location"]}),
+        "{name}: response"
+    );
+    match reply.status {
+        StatusCode::OK => {
+            assert_eq!(reply.json()["kind"], "recoveryCodes", "{}", reply.text());
+            assert_eq!(reply.json()["codes"].as_array().unwrap().len(), 10);
+        }
+        StatusCode::UNPROCESSABLE_ENTITY => assert_eq!(
+            reply.json()["message"],
+            "That code didn't work. Check your authenticator app and try again.",
+            "{}",
+            reply.text()
+        ),
+        _ => {}
+    }
     assert_eq!(state, expected["state"], "{name}: retained rows");
     assert_eq!(
         json!(groups),
@@ -255,9 +278,14 @@ async fn boundary(name: &'static str) {
         })
         .await
         .unwrap();
+    let mut after = expected["after"].clone();
+    if after["status"] == 200 {
+        // SPA cutover: the retained setup page goes to the SPA's setup screen.
+        after = json!({"status":302,"location":"http://campfire.test/app/two_factor/setup","content_type":"text/html; charset=utf-8","body":""});
+    }
     let (actual, rails) = comparable(
         response(&with_fixed_render_secrets(browser.get("/two_factor_setup")).await),
-        expected["after"].clone(),
+        after,
     );
     assert_eq!(actual, rails, "{name}: next setup response");
 }

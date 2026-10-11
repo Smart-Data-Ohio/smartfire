@@ -218,11 +218,13 @@ describe("/app/sudo/new", () => {
   it("signed out (the server's 200 sign-in hand-off), goes on to sign in", async () => {
     vi.spyOn(actions.confirmation, "status").mockResolvedValue({
       kind: "navigate",
-      location: "http://campfire.test/session/new",
+      location: "http://campfire.test/app/session/new",
     });
     await open();
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://campfire.test/session/new"));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("http://campfire.test/app/session/new"),
+    );
     expect(screen.queryByRole("heading", { name: "Confirm it's you" })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -231,14 +233,16 @@ describe("/app/sudo/new", () => {
     await sudo(true, connectRetry);
     vi.spyOn(actions.confirmation, "confirmHere").mockResolvedValue({
       kind: "signedOut",
-      location: "http://campfire.test/session/new",
+      location: "http://campfire.test/app/session/new",
     });
     await open();
 
     await userEvent.type(await screen.findByLabelText("Password"), PASSWORD);
     await userEvent.click(screen.getByRole("button", { name: "Confirm password" }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://campfire.test/session/new"));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("http://campfire.test/app/session/new"),
+    );
   });
 
   it("left while the confirmation is on its way, the answer acts on nothing", async () => {

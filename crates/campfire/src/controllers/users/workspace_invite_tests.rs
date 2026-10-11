@@ -10,6 +10,15 @@ fn frozen_clock() -> campfire_kit::SharedClock {
     ))
 }
 
+/// The join fields as the SPA's page posts them (`POST /api/v1/invite/{token}`).
+fn invite_json(token: &str, name: &str, email: &str) -> Req {
+    Req::new(Method::POST, &format!("/api/v1/invite/{token}")).json_body(&json!({
+        "name": name,
+        "emailAddress": email,
+        "password": "secret123456",
+    }))
+}
+
 async fn invite(app: &TestApp) -> (WorkspaceInvite, String) {
     app.db()
         .write(|tx| WorkspaceInvite::create(tx, DAVID, InviteExpiry::OneHour, Some(1)))
@@ -26,29 +35,35 @@ async fn workspace_invite_enrollment_keeps_join_form_memberships_sessions_and_du
         .await;
     let (invite, token) = invite(&app).await;
     let path = format!("/invite/{token}");
+    let spa = format!("http://campfire.test/app{path}");
     let before = app.db().read(User::count).await.unwrap();
     let mut browser = app.anonymous();
+    // The retained page and form go to the SPA's join page; the form creates nothing.
     let page = browser.get(&path).await;
+    assert_eq!((page.status, page.location()), (StatusCode::FOUND, Some(spa.as_str())));
+    let retained = browser
+        .write(Req::new(Method::POST, &path).form(&[
+            ("user[name]", "Invited"),
+            ("user[email_address]", "invited@example.com"),
+            ("user[password]", "secret123456"),
+        ]))
+        .await;
+    assert_eq!((retained.status, retained.location()), (StatusCode::SEE_OTHER, Some(spa.as_str())));
+    assert_eq!(app.db().read(User::count).await.unwrap(), before);
+    let page = browser.send(Req::new(Method::GET, &format!("/api/v1{path}")).header("accept", "application/json")).await;
     assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains(&format!("action=\"{path}\"")));
-    assert!(
-        page.text()
-            .contains("Create your account to start chatting.")
-    );
+    assert_eq!(page.json()["kind"], "join");
+    assert_eq!(browser.get(&format!("/app{path}")).await.status, StatusCode::OK);
     assert_eq!(
         app.david().get(&path).await.location(),
         Some("http://campfire.test/")
     );
     let duplicate = browser
-        .write(Req::new(Method::POST, &path).form(&[
-            ("user[name]", "Duplicate"),
-            ("user[email_address]", "david@37signals.com"),
-            ("user[password]", "secret123456"),
-        ]))
+        .write(invite_json(&token, "Duplicate", "david@37signals.com"))
         .await;
     assert_eq!(
-        duplicate.location(),
-        Some("http://campfire.test/session/new?email_address=david%4037signals.com")
+        duplicate.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new?email_address=david%4037signals.com"})
     );
     assert_eq!(
         app.db()
@@ -59,15 +74,16 @@ async fn workspace_invite_enrollment_keeps_join_form_memberships_sessions_and_du
             .uses,
         0
     );
+    let fields = json!({
+        "name": "Invited",
+        "emailAddress": "invited@example.com",
+        "password": "secret123456",
+        "role": "administrator",
+    });
     let signup = browser
-        .write(Req::new(Method::POST, &path).form(&[
-            ("user[name]", "Invited"),
-            ("user[email_address]", "invited@example.com"),
-            ("user[password]", "secret123456"),
-            ("user[role]", "administrator"),
-        ]))
+        .write(Req::new(Method::POST, &format!("/api/v1{path}")).json_body(&fields))
         .await;
-    assert_eq!(signup.location(), Some("http://campfire.test/"));
+    assert_eq!(signup.json(), json!({"kind":"signedIn","location":"http://campfire.test/"}));
     let user = app
         .db()
         .read(|c| {
@@ -79,11 +95,10 @@ async fn workspace_invite_enrollment_keeps_join_form_memberships_sessions_and_du
         })
         .await
         .unwrap();
-    let enrolled = browser.get("/two_factor_setup").await;
-    assert!(
-        enrolled
-            .text()
-            .contains(&format!("name=\"current-user-id\" content=\"{user}\""))
+    let enrolled = browser.get("/app/two_factor/setup").await;
+    assert_eq!(
+        crate::controllers::spa::signed_out_contracts_tests::inline_boot(&enrolled)["user"]["id"],
+        user
     );
     app.db()
         .read(move |c| {
@@ -147,10 +162,11 @@ async fn workspace_invite_dead_and_unknown_gets_and_posts_render_clear_states() 
             })
             .await
             .unwrap();
+        // The stored digest is no token: the SPA's page answers it as unknown.
         let digest = WorkspaceInvite::digest(&token);
         assert_eq!(
             app.anonymous()
-                .get(&format!("/invite/{digest}"))
+                .get(&format!("/app/invite/{digest}"))
                 .await
                 .status,
             StatusCode::NOT_FOUND
@@ -166,17 +182,26 @@ async fn workspace_invite_dead_and_unknown_gets_and_posts_render_clear_states() 
             StatusCode::GONE
         };
         let path = format!("/invite/{token}");
+        let spa = format!("http://campfire.test/app{path}");
         let mut browser = app.anonymous();
+        // The retained page and form go to the SPA's page, unchecked; it answers the state.
+        let page = browser.get(&path).await;
+        assert_eq!((page.status, page.location()), (StatusCode::FOUND, Some(spa.as_str())), "{state}");
+        let post = browser
+            .write(Req::new(Method::POST, &path).form(&[("user[name]", "Must not create")]))
+            .await;
+        assert_eq!((post.status, post.location()), (StatusCode::SEE_OTHER, Some(spa.as_str())), "{state}");
+        assert_eq!(browser.get(&format!("/app{path}")).await.status, status, "{state}");
         for reply in [
-            browser.get(&path).await,
             browser
-                .write(Req::new(Method::POST, &path).form(&[("user[name]", "Must not create")]))
+                .send(Req::new(Method::GET, &format!("/api/v1{path}")).header("accept", "application/json"))
+                .await,
+            browser
+                .write(invite_json(&token, "Must not create", "dead@example.com"))
                 .await,
         ] {
-            assert_eq!(reply.status, status);
-            assert!(reply.text().contains("This invite is no longer valid."));
-            assert!(!reply.text().contains("Create account</button>"));
-            assert!(!reply.text().contains("auth-form"));
+            assert_eq!(reply.status, status, "{state}");
+            assert_eq!(reply.json()["kind"], "inviteInvalid", "{state}");
         }
     }
     assert_eq!(app.db().read(User::count).await.unwrap(), before + 1);
@@ -197,32 +222,28 @@ async fn workspace_invite_concurrent_signups_render_the_losing_join_state() {
         .without_job_runner()
         .await;
     let (invite, token) = invite(&app).await;
-    let path = format!("/invite/{token}");
+    let path = format!("/app/invite/{token}");
     let mut first = app.anonymous();
     let mut second = app.anonymous();
     first.get(&path).await;
     second.get(&path).await;
+    first.authenticity_token().await;
+    second.authenticity_token().await;
     let before = app.db().read(User::count).await.unwrap();
     let (first, second) = tokio::join!(
-        first.write(Req::new(Method::POST, &path).form(&[
-            ("user[name]", "First signup"),
-            ("user[password]", "secret123456")
-        ])),
-        second.write(Req::new(Method::POST, &path).form(&[
-            ("user[name]", "Second signup"),
-            ("user[password]", "secret123456")
-        ])),
+        first.write(invite_json(&token, "First signup", "first@example.com")),
+        second.write(invite_json(&token, "Second signup", "second@example.com")),
     );
     let mut statuses = [first.status, second.status];
     statuses.sort();
-    assert_eq!(statuses, [StatusCode::FOUND, StatusCode::GONE]);
+    assert_eq!(statuses, [StatusCode::OK, StatusCode::GONE]);
     let loser = if first.status == StatusCode::GONE {
         first
     } else {
         second
     };
-    assert!(loser.text().contains("This invite is no longer valid."));
-    assert!(!loser.text().contains("auth-form"));
+    assert_eq!(loser.json()["kind"], "inviteInvalid");
+    assert_eq!(loser.json()["refusal"], "exhausted");
     assert_eq!(app.db().read(User::count).await.unwrap(), before + 1);
     assert_eq!(
         app.db()

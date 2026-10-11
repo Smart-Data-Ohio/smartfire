@@ -57,7 +57,7 @@ async fn ws17_test_notification_cannot_target_another_users_subscription_or_bypa
             .write(Req::new(Method::POST, &path(id)))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }
 #[tokio::test]

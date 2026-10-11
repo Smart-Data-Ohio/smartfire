@@ -2,14 +2,12 @@
 use super::auth::{self, ResponseMode};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
-use crate::controllers::presenters::page::retained_page;
 use campfire_api_types::{TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::{TwoFactorCredential, TwoFactorRememberedDevice, User};
 use campfire_kit::{
     Cookie, Ctx, Error, RateLimit, Redirect, Result, SameSite, StatusCode, format, halt,
 };
-use campfire_retained::two_factor;
 use jiff::SignedDuration;
 use rails_compat::{ar_encryption::ArEncryption, totp};
 use serde_json::json;
@@ -50,15 +48,21 @@ pub fn no_store(c: &mut Ctx) {
     c.headers.insert("pragma", "no-cache".parse().unwrap());
 }
 
+/// `GET /two_factor_setup`: a page navigation goes to the SPA's setup screen
+/// (`/app/two_factor/setup`) once its before-actions pass; a JSON request gets the setup state.
 pub async fn setup_show(c: &mut Ctx) -> Result {
     let mode = setup_mode(c)?;
+    if mode == ResponseMode::Html {
+        setup_shell_before(c).await?;
+        return concerns::redirect_to_signed_out_spa(c, "/app/two_factor/setup", StatusCode::FOUND);
+    }
     auth::before_actions(c, "two_factor/setups#show", Before::default(), mode).await?;
     ensure_human(c)?;
     no_store(c);
     if enabled(c).await? {
         return profile(c, mode);
     }
-    render_setup(c, StatusCode::OK, mode).await
+    render_setup(c, StatusCode::OK).await
 }
 
 /// The SPA's setup screen (`/app/two_factor/setup`) behind the retained page's before-actions:
@@ -97,14 +101,19 @@ fn complete_setup(c: &mut Ctx, result: Result) -> Result {
         && matches!(response.body, campfire_kit::response::Body::Empty)
     {
         return auth::json(c, response.status, &TwoFactorSetupResponse::Navigate {
-            location: c.url_for("/session/new"),
+            location: c.url_for("/app/session/new"),
         });
     }
     auth::complete(c, result)
 }
 
+/// `POST /two_factor_setup`. A code posted from the retained setup page goes, unread, to the
+/// SPA's security settings; a JSON request enrolls.
 pub async fn setup_create(c: &mut Ctx) -> Result {
     let mode = setup_mode(c)?;
+    if mode == ResponseMode::Html {
+        return concerns::redirect_to_signed_out_spa(c, SECURITY_SETTINGS, StatusCode::SEE_OTHER);
+    }
     auth::before_actions(c, "two_factor/setups#create", Before::default(), mode).await?;
     let user = require_current_user(c)?.clone();
     if limited(c, "two_factor/setups", "per-user", Some(user.id))? {
@@ -114,7 +123,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
         }
         c.flash()
             .now("alert", "Too many attempts. Try again in a few minutes.");
-        return render_setup(c, StatusCode::TOO_MANY_REQUESTS, mode).await;
+        return render_setup(c, StatusCode::TOO_MANY_REQUESTS).await;
     }
     ensure_human(c)?;
     no_store(c);
@@ -123,7 +132,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
             Ok(body) => c.params.insert("code", campfire_kit::Param::Str(body.code)),
             Err(Error::Halt(_)) => {
                 c.flash().now("alert", "The request body isn't valid.");
-                return render_setup(c, StatusCode::UNPROCESSABLE_ENTITY, mode).await;
+                return render_setup(c, StatusCode::UNPROCESSABLE_ENTITY).await;
             }
             Err(error) => return Err(error),
         }
@@ -150,7 +159,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
                 "alert",
                 "That code didn't work. Check your authenticator app and try again.",
             );
-            render_setup(c, StatusCode::UNPROCESSABLE_ENTITY, mode).await
+            render_setup(c, StatusCode::UNPROCESSABLE_ENTITY).await
         }
         crate::authentication::Enrollment::Confirmed {
             codes,
@@ -180,7 +189,9 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
                 .await
                 .map_err(Error::internal)?;
             let continue_url = concerns::post_authenticating_url(c).await?;
-            render_backups(c, codes, signed_out, continue_url, mode).await
+            auth::json(c, StatusCode::OK, &TwoFactorSetupResponse::RecoveryCodes {
+                codes, signed_out, continue_url,
+            })
         }
     }
 }
@@ -198,10 +209,8 @@ async fn enabled(c: &Ctx) -> Result<bool> {
         .await
         .map_err(Error::internal)
 }
-async fn render_setup(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Result {
-    if mode == ResponseMode::Html {
-        c.respond_to(&[&format::HTML])?;
-    }
+/// The setup state as JSON: a fresh secret, its QR code and manual key, and any alert.
+async fn render_setup(c: &mut Ctx, status: StatusCode) -> Result {
     let session_id = current_session(c)
         .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?
         .id;
@@ -228,41 +237,12 @@ async fn render_setup(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Re
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<_>>()
         .join(" ");
-    if mode == ResponseMode::Json {
-        let setup = TwoFactorSetupState { secret, manual_key: key, otpauth_uri: uri, qr_svg: qr };
-        let response = match c.flash().alert().map(str::to_owned) {
-            Some(message) => TwoFactorSetupResponse::Error { message, setup },
-            None => TwoFactorSetupResponse::Ready { setup },
-        };
-        return auth::json(c, status, &response);
-    }
-    retained_page!(c, status, |ctx| two_factor::Setup {
-        ctx,
-        key: key.clone(),
-        qr: qr.clone()
-    })
-    .await
-}
-async fn render_backups(
-    c: &mut Ctx,
-    codes: Vec<String>,
-    signed_out: usize,
-    continue_url: String,
-    mode: ResponseMode,
-) -> Result {
-    if mode == ResponseMode::Json {
-        return auth::json(c, StatusCode::OK, &TwoFactorSetupResponse::RecoveryCodes {
-            codes, signed_out, continue_url,
-        });
-    }
-    c.respond_to(&[&format::HTML])?;
-    retained_page!(c, StatusCode::OK, |ctx| two_factor::BackupCodes {
-        ctx,
-        codes: codes.clone(),
-        signed_out,
-        continue_url: continue_url.clone()
-    })
-    .await
+    let setup = TwoFactorSetupState { secret, manual_key: key, otpauth_uri: uri, qr_svg: qr };
+    let response = match c.flash().alert().map(str::to_owned) {
+        Some(message) => TwoFactorSetupResponse::Error { message, setup },
+        None => TwoFactorSetupResponse::Ready { setup },
+    };
+    auth::json(c, status, &response)
 }
 
 /// Shared password/transfer/WS14 Google first-factor seam. Pending state grants no session.
@@ -347,10 +327,20 @@ async fn pending(c: &mut Ctx, mode: ResponseMode) -> Result<User> {
         }
     }
     concerns::session_keys::clear_two_factor_pending(c.session());
-    halt(mode.navigate(c, &c.url_for("/session/new"))?)
+    halt(mode.navigate(c, &c.url_for("/app/session/new"))?)
 }
+/// `GET /two_factor_challenge`: the challenge page is the SPA's (`/app/two_factor/challenge`).
 pub async fn challenge_show(c: &mut Ctx) -> Result {
-    challenge_show_response(c, ResponseMode::Html).await
+    auth::before_actions(
+        c,
+        "two_factor/challenges#show",
+        Before::default().allow_unauthenticated_access(),
+        ResponseMode::Html,
+    )
+    .await?;
+    // As the retained page, which answered only HTML.
+    c.respond_to(&[&format::HTML])?;
+    concerns::redirect_to_signed_out_spa(c, "/app/two_factor/challenge", StatusCode::FOUND)
 }
 
 pub async fn challenge_show_json(c: &mut Ctx) -> Result {
@@ -370,8 +360,10 @@ async fn challenge_show_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     no_store(c);
     render_challenge(c, StatusCode::OK, mode).await
 }
+/// A code posted from the retained challenge page goes, unchecked, to the SPA's challenge page:
+/// no attempt is counted and the pending sign-in stays as it was.
 pub async fn challenge_create(c: &mut Ctx) -> Result {
-    challenge_create_response(c, ResponseMode::Html).await
+    concerns::redirect_to_signed_out_spa(c, "/app/two_factor/challenge", StatusCode::SEE_OTHER)
 }
 
 pub async fn challenge_create_json(c: &mut Ctx) -> Result {
@@ -457,7 +449,7 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     match outcome {
         crate::authentication::Challenge::Gone => {
             concerns::session_keys::clear_two_factor_pending(c.session());
-            mode.navigate(c, &c.url_for("/session/new"))
+            mode.navigate(c, &c.url_for("/app/session/new"))
         }
         crate::authentication::Challenge::Accepted(factor) => {
             concerns::session_keys::clear_two_factor_pending(c.session());
@@ -489,21 +481,20 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     }
 }
 async fn render_challenge(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Result {
-    if mode == ResponseMode::Json {
-        let alert = c.flash().alert().map(str::to_owned);
-        return match alert {
-            Some(message) => auth::field_error(c, status, "code", &message),
-            None => auth::json(
-                c,
-                status,
-                &campfire_api_types::AuthResponse::SecondFactorRequired {
-                    challenge: auth::challenge_state(),
-                },
-            ),
-        };
+    if mode == ResponseMode::Html {
+        return concerns::redirect_to_signed_out_spa(c, "/app/two_factor/challenge", StatusCode::FOUND);
     }
-    c.respond_to(&[&format::HTML])?;
-    retained_page!(c, status, |ctx| two_factor::Challenge { ctx }).await
+    let alert = c.flash().alert().map(str::to_owned);
+    match alert {
+        Some(message) => auth::field_error(c, status, "code", &message),
+        None => auth::json(
+            c,
+            status,
+            &campfire_api_types::AuthResponse::SecondFactorRequired {
+                challenge: auth::challenge_state(),
+            },
+        ),
+    }
 }
 async fn remember_device(c: &mut Ctx, user_id: i64) -> Result<()> {
     let agent = c.request.user_agent().map(str::to_string);
@@ -578,15 +569,7 @@ fn reauthentication_alert(user: &User) -> &'static str {
     }
 }
 
-/// A present form value may be a non-scalar; preserve classic coercion.
-fn reauthentication_value(c: &Ctx) -> Option<String> {
-    c.params
-        .get("reauth")
-        .filter(|p| p.is_present())
-        .map(|_| scalar(c, "reauth"))
-}
-
-/// Management outcomes shared by the classic forms and the account JSON API.
+/// Management outcomes for the account JSON API.
 pub enum ManagementOutcome {
     Notice(&'static str),
     Alert(&'static str),
@@ -599,21 +582,13 @@ pub enum ManagementOutcome {
 /// The exact classic rate-limit alert.
 pub const RATE_ALERT: &str = "Too many attempts. Try again in a few minutes.";
 
-fn rate_rejection(c: &mut Ctx) -> Result {
-    c.redirect_to_with(
-        &c.url_for("/users/me/profile"),
-        Redirect {
-            alert: Some(RATE_ALERT.into()),
-            ..Default::default()
-        },
-    )
-}
+/// The SPA's security settings, which manage two-step sign-in through the account JSON API.
+const SECURITY_SETTINGS: &str = "/app/settings/security";
+
+/// `POST /two_factor_backup_codes` from the retained profile goes, unread, to the SPA's security
+/// settings: no codes are replaced.
 pub async fn backup_create(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    let user = require_current_user(c)?.clone();
-    let reauth = reauthentication_value(c);
-    let outcome = regenerate_backup_codes(c, user, reauth.as_deref()).await?;
-    management_reply(c, outcome, false).await
+    concerns::redirect_to_signed_out_spa(c, SECURITY_SETTINGS, StatusCode::SEE_OTHER)
 }
 
 /// New backup codes, including classic limits, confirmation and cache headers.
@@ -642,12 +617,10 @@ pub async fn regenerate_backup_codes(
     Ok(ManagementOutcome::Codes(codes))
 }
 
+/// `DELETE /two_factor_setup` from the retained profile goes, unread, to the SPA's security
+/// settings: two-step sign-in stays on.
 pub async fn setup_destroy(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    let user = require_current_user(c)?.clone();
-    let reauth = reauthentication_value(c);
-    let outcome = disable_two_factor(c, user, reauth.as_deref()).await?;
-    management_reply(c, outcome, true).await
+    concerns::redirect_to_signed_out_spa(c, SECURITY_SETTINGS, StatusCode::SEE_OTHER)
 }
 
 /// Disable enrollment, replace Current.session and delete the remember cookie exactly once.
@@ -685,19 +658,14 @@ pub async fn disable_two_factor(
     ))
 }
 
+/// `DELETE /two_factor_remembered_devices/:id` from the retained profile goes, unread, to the SPA's
+/// security settings: the device stays remembered.
 pub async fn device_destroy(c: &mut Ctx) -> Result {
-    revoke_devices(c, false).await
+    concerns::redirect_to_signed_out_spa(c, SECURITY_SETTINGS, StatusCode::SEE_OTHER)
 }
+/// `DELETE /two_factor_remembered_devices`, as [`device_destroy`].
 pub async fn device_destroy_all(c: &mut Ctx) -> Result {
-    revoke_devices(c, true).await
-}
-async fn revoke_devices(c: &mut Ctx, all: bool) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
-    let user = require_current_user(c)?.clone();
-    let reauth = reauthentication_value(c);
-    let id = c.param_str("id").and_then(concerns::cast_integer);
-    let outcome = forget_devices(c, user, reauth.as_deref(), id, all).await?;
-    management_reply(c, outcome, false).await
+    concerns::redirect_to_signed_out_spa(c, SECURITY_SETTINGS, StatusCode::SEE_OTHER)
 }
 
 /// Forget one owned device or all of them, with the classic confirmation and limits.
@@ -731,33 +699,6 @@ pub async fn forget_devices(
         "Device forgotten. It will ask for a code at next sign-in."
     };
     Ok(ManagementOutcome::Notice(notice))
-}
-
-async fn management_reply(c: &mut Ctx, outcome: ManagementOutcome, disabling: bool) -> Result {
-    match outcome {
-        ManagementOutcome::RateLimited => rate_rejection(c),
-        ManagementOutcome::NotEnabled => c.redirect_to(&c.url_for("/two_factor_setup")),
-        ManagementOutcome::NotHuman => c.redirect_to(&c.url_for("/")),
-        ManagementOutcome::Codes(codes) => {
-            render_backups(c, codes, 0, c.url_for("/users/me/profile"), ResponseMode::Html).await
-        }
-        ManagementOutcome::Alert(alert) => reauth_alert(c, alert),
-        ManagementOutcome::Notice(notice) => c.redirect_to_with(
-            &c.url_for(if disabling {
-                "/two_factor_setup"
-            } else {
-                "/users/me/profile"
-            }),
-            Redirect {
-                notice: Some(notice.into()),
-                ..Default::default()
-            },
-        ),
-    }
-}
-
-fn reauth_alert(c: &mut Ctx, alert: &str) -> Result {
-    c.redirect_to_with(&c.url_for("/users/me/profile"), Redirect { alert: Some(alert.into()), ..Default::default() })
 }
 
 pub async fn reauthentication_create(c: &mut Ctx) -> Result {
@@ -823,7 +764,7 @@ pub async fn finish_google_reauthentication(
         let path = if concerns::signed_in(c) {
             reauth_profile(c).await?
         } else {
-            "/session/new"
+            "/app/session/new"
         };
         return c.redirect_to_with(
             &c.url_for(path),

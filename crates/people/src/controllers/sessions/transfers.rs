@@ -3,15 +3,14 @@
 
 use campfire_db::User;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
-use campfire_retained::sessions;
 
 use crate::app::AppCtx;
-use crate::concerns::Before;
+use crate::concerns::{self, Before};
 use crate::controllers::auth::{self, ResponseMode};
 use crate::controllers::presenters;
-use crate::controllers::presenters::page::retained_page;
 
-/// `allow_unauthenticated_access`: an auto-submitting form that PUTs back to this URL.
+/// `allow_unauthenticated_access`. The transfer page is the SPA's
+/// (`/app/session/transfers/:id`), which signs in with `PUT /api/v1/session/transfers/:id`.
 pub async fn show(c: &mut Ctx) -> Result {
     auth::before_actions(
         c,
@@ -21,17 +20,19 @@ pub async fn show(c: &mut Ctx) -> Result {
     )
     .await?;
     c.respond_to(&[&format::HTML])?;
-    // `url_for({})`: this request's own path.
-    let action = c.request.path().to_string();
-    retained_page!(c, StatusCode::OK, |ctx| sessions::TransferShow {
-        ctx,
-        action: action.clone()
-    })
-    .await
+    let path = spa_path(c);
+    concerns::redirect_to_signed_out_spa(c, &path, StatusCode::FOUND)
 }
 
+/// The retained page's auto-submitted form goes to the SPA's transfer page with the link unused:
+/// the SPA asks before it signs in.
 pub async fn update(c: &mut Ctx) -> Result {
-    update_response(c, ResponseMode::Html).await
+    let path = spa_path(c);
+    concerns::redirect_to_signed_out_spa(c, &path, StatusCode::SEE_OTHER)
+}
+
+fn spa_path(c: &Ctx) -> String {
+    format!("/app/session/transfers/{}", campfire_routes::escape(c.param_str("id").unwrap_or_default(), false))
 }
 
 pub async fn update_json(c: &mut Ctx) -> Result {

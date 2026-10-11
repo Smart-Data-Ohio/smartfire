@@ -39,16 +39,18 @@ async fn as_user(f: &mut Fresh, user: i64) {
         .collect::<Vec<_>>()
         .join("; ");
 }
+/// Confirms the password as the SPA's sudo page does (`POST /api/v1/sudo`), returning the
+/// session values it leaves.
 async fn grant_sudo_access(f: &Fresh) -> Value {
-    let (status, headers, _) = super::test_support::request_form(
+    let (status, headers, body) = request(
         f,
         "POST",
-        "/sudo",
-        &[("password", "secret123456")],
+        "/api/v1/sudo",
+        json!({"kind":"password","password":"secret123456"}),
         json!({}),
     )
     .await;
-    assert!((300..400).contains(&status));
+    assert_eq!(status, 200, "{body}");
     super::test_support::response_session(f, &headers)
 }
 fn create_message(

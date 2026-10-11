@@ -167,7 +167,7 @@ async fn ws17_notification_settings_requires_sign_in() {
             .write(Req::new(Method::PATCH, PATH).form(&[("user[dnd_enabled]", "1")]))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }
 async fn timer_request(delta: i64, enabled: bool) -> (TestApp, campfire_db::Timestamp) {

@@ -517,8 +517,8 @@ async fn writes_need_the_csrf_token_and_a_valid_body() {
     assert_eq!(signed_out.status, StatusCode::UNAUTHORIZED);
 }
 
-/// A write that needs sudo answers `SudoRequired` and leaves a visit to the SPA page that asked:
-/// confirming the password on `/sudo` comes back there.
+/// A write that needs sudo answers `SudoRequired` and names the SPA page that asked: confirming
+/// the password (`POST /api/v1/sudo`) hands back the write to retry and that page to return to.
 #[tokio::test]
 async fn sudo_comes_back_to_the_spa_page() {
     let Some(a) = app().await else { return };
@@ -539,12 +539,12 @@ async fn sudo_comes_back_to_the_spa_page() {
     assert_eq!(dump(&a).await, before, "nothing changed");
 
     let confirmed = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", PASSWORD)]))
+        .confirm_sudo(PASSWORD)
         .await;
-    assert_eq!(confirmed.status, StatusCode::FOUND, "{}", confirmed.text());
+    assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
     assert_eq!(
-        confirmed.location(),
-        Some("http://campfire.test/app/admin/workspace")
+        confirmed.json()["retry"],
+        json!({"method":"POST","path":"/api/v1/admin/workspace/join_code","returnTo":"/app/admin/workspace"})
     );
     let reset = write(
         &mut b,
@@ -569,9 +569,9 @@ async fn sudo_comes_back_to_the_spa_page() {
         .await;
     assert_eq!(error(&asked)["_tag"], "SudoRequired");
     let confirmed = other
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", PASSWORD)]))
+        .confirm_sudo(PASSWORD)
         .await;
-    assert_eq!(confirmed.location(), Some("http://campfire.test/app/"));
+    assert_eq!(confirmed.json()["retry"]["returnTo"], "/app/");
 
     // So does a page of this host outside the SPA.
     let mut classic_page = a.sign_in(DAVID).await;
@@ -587,9 +587,9 @@ async fn sudo_comes_back_to_the_spa_page() {
         .await;
     assert_eq!(error(&asked)["_tag"], "SudoRequired");
     let confirmed = classic_page
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", PASSWORD)]))
+        .confirm_sudo(PASSWORD)
         .await;
-    assert_eq!(confirmed.location(), Some("http://campfire.test/app/"));
+    assert_eq!(confirmed.json()["retry"]["returnTo"], "/app/");
 }
 
 /// Without a fresh password confirmation, the writes the classic pages guard answer
@@ -1462,17 +1462,27 @@ async fn server_vanity_join_enrols_and_survives_code_reset_until_cleared() {
         })
         .await
         .unwrap();
-    let page = a.anonymous().get("/join/smart-data").await;
-    assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains("A place for R&amp;D."));
+    // The retained URL goes to the SPA's join page, which reads `/api/v1/join/:join_code`.
+    let retained = a.anonymous().get("/join/smart-data").await;
+    assert_eq!(retained.status, StatusCode::FOUND);
+    assert_eq!(
+        retained.location(),
+        Some("http://campfire.test/app/join/smart-data")
+    );
+    let page = a.anonymous().send(get("/api/v1/join/smart-data")).await;
+    assert_eq!(page.status, StatusCode::OK, "{}", page.text());
+    assert_eq!(page.json()["workspace"]["description"], "A place for R&D.");
     let old_code = a
         .db()
         .read(|c| Ok(campfire_db::Account::first(c)?.unwrap().join_code))
         .await
         .unwrap();
-    assert!(
-        page.text()
-            .contains(&format!("action=\"/join/{old_code}\""))
+    assert_eq!(
+        a.anonymous()
+            .send(get(&format!("/api/v1/join/{old_code}")))
+            .await
+            .status,
+        StatusCode::OK
     );
     a.db()
         .write(|tx| {
@@ -1482,29 +1492,32 @@ async fn server_vanity_join_enrols_and_survives_code_reset_until_cleared() {
         })
         .await
         .unwrap();
-    let page = a.anonymous().get("/join/smart-data").await;
+    let page = a.anonymous().send(get("/api/v1/join/smart-data")).await;
     assert_eq!(page.status, StatusCode::OK);
-    assert!(
-        !page
-            .text()
-            .contains(&format!("action=\"/join/{old_code}\""))
-    );
     assert_eq!(
-        a.anonymous().get(&format!("/join/{old_code}")).await.status,
+        a.anonymous()
+            .send(get(&format!("/api/v1/join/{old_code}")))
+            .await
+            .status,
         StatusCode::NOT_FOUND
     );
     let count = a.db().read(campfire_db::User::count).await.unwrap();
     let mut browser = a.anonymous();
-    browser.get("/join/smart-data").await;
-    let joined = browser
-        .write(Req::new(Method::POST, "/join/smart-data").form(&[
-            ("user[name]", "Vanity Member"),
-            ("user[email_address]", "vanity@example.test"),
-            ("user[password]", PASSWORD),
-            ("user[role]", "administrator"),
-        ]))
-        .await;
-    assert_eq!(joined.status, StatusCode::FOUND, "{}", joined.text());
+    browser.get("/app/join/smart-data").await;
+    let joined = write(
+        &mut browser,
+        Method::POST,
+        "/api/v1/join/smart-data",
+        json!({
+            "name": "Vanity Member",
+            "emailAddress": "vanity@example.test",
+            "password": PASSWORD,
+            "role": "administrator",
+        }),
+    )
+    .await;
+    assert_eq!(joined.status, StatusCode::OK, "{}", joined.text());
+    assert_eq!(joined.json()["kind"], "signedIn");
     assert!(browser.cookie_header().contains("session_token="));
     a.db()
         .read(move |c| {
@@ -1536,17 +1549,22 @@ async fn server_vanity_join_enrols_and_survives_code_reset_until_cleared() {
     assert_eq!(saved["vanityUrl"], Value::Null);
     assert_eq!(saved["description"], "");
     assert_eq!(
-        a.anonymous().get("/join/smart-data").await.status,
+        a.anonymous()
+            .send(get("/api/v1/join/smart-data"))
+            .await
+            .status,
         StatusCode::NOT_FOUND
     );
     let mut anonymous = a.anonymous();
     assert_eq!(
-        anonymous
-            .write(
-                Req::new(Method::POST, "/join/smart-data").form(&[("user[name]", "Must not join")])
-            )
-            .await
-            .status,
+        write(
+            &mut anonymous,
+            Method::POST,
+            "/api/v1/join/smart-data",
+            json!({"name": "Must not join", "emailAddress": "nope@example.test", "password": PASSWORD}),
+        )
+        .await
+        .status,
         StatusCode::NOT_FOUND
     );
 }

@@ -62,7 +62,7 @@ async fn account_and_ban_mutations_authorize_before_writes_and_audits() {
             .await;
         assert_eq!(
             response.location(),
-            Some("http://campfire.test/sudo/new"),
+            Some("http://campfire.test/app/sudo/new"),
             "{path}"
         );
     }
@@ -103,9 +103,9 @@ async fn run_mutation_cases(selected: Option<&str>) {
     .unwrap();
     let mut browser = app.david();
     let confirmed = browser
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        .confirm_sudo("secret123456")
         .await;
-    assert_eq!(confirmed.status, StatusCode::FOUND);
+    assert_eq!(confirmed.status, StatusCode::OK);
     for case in cases["cases"]
         .as_array()
         .unwrap()

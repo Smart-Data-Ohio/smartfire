@@ -41,26 +41,26 @@ async fn spa_only_password_and_challenge_success_map_returns_to_the_spa_for_ever
                 }).await.unwrap();
                 let mut b = a.anonymous();
                 b.get(saved).await;
-                b.get("/session/new").await;
-                let reply = b
-                    .write(Req::new(Method::POST, "/session").form(&[
-                        ("email_address", "david@37signals.com"),
-                        ("password", "secret123456"),
-                    ]))
-                    .await;
+                // Sign-in runs through the SPA's page and its JSON contract now.
+                let retained = b.get("/session/new").await;
+                assert_eq!(retained.location(), Some(to("/app/session/new").as_str()));
+                b.get("/app/session/new").await;
+                let reply = b.password_sign_in("david@37signals.com", "secret123456").await;
+                assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
                 let reply = if let Some(secret) = secret {
-                    assert_eq!(reply.location(), Some(to("/two_factor_challenge").as_str()));
-                    b.get("/two_factor_challenge").await;
+                    assert_eq!(reply.json()["kind"], "secondFactorRequired", "{}", reply.text());
+                    let retained = b.get("/two_factor_challenge").await;
+                    assert_eq!(retained.location(), Some(to("/app/two_factor/challenge").as_str()));
                     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
-                    b.write(
-                        Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]),
-                    )
-                    .await
+                    let reply = b.answer_challenge(&code, false).await;
+                    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+                    reply
                 } else {
                     reply
                 };
+                assert_eq!(reply.json()["kind"], "signedIn", "{}", reply.text());
                 assert_eq!(
-                    reply.location(),
+                    reply.json()["location"].as_str(),
                     Some(to(next).as_str()),
                     "{saved}, {preference:?}, challenge={challenge}"
                 );

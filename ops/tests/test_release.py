@@ -192,8 +192,9 @@ elif name == "curl":
     if "--write-out" in args:
         path = args[-1].split("fixture.invalid", 1)[-1]
         output = pathlib.Path(args[args.index("--output") + 1])
-        if path in ("/", "/session/new"):
-            body = '<script src="/assets/auth-abc123.js"></script><link href="/assets/auth-abc123.css">'
+        landed = {"/": "/app/session/new", "/session/new": "/app/session/new", "/about": "/app/about"}.get(path, path)
+        if path in ("/", "/session/new", "/about"):
+            body = '<script src="/app/assets/index-Abc12345.js"></script><link href="/app/assets/index-Abc12345.css">'
             content_type = "text/html"
         elif path == "/app/offline.html":
             body = '<script src="/app/assets/index-Abc12345.js"></script><link href="/app/assets/index-Abc12345.css">'
@@ -204,7 +205,7 @@ elif name == "curl":
             body = "export {}" if path.endswith(".js") else "body {}"
             content_type = "text/javascript" if path.endswith(".js") else "text/css"
         output.write_text(body)
-        print("200\n" + content_type, end="")
+        print("200\nhttps://fixture.invalid" + landed + "\n" + content_type, end="")
     else:
         print("200" if serving() else "000", end="")
 elif name == "df":

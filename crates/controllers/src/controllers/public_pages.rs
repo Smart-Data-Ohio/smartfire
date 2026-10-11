@@ -1,4 +1,5 @@
-//! Public pages inherit ActionController::Base, bypassing the workspace callback chain.
+//! Public pages inherit ActionController::Base, bypassing the workspace callback chain. Their
+//! retained URLs (`/about`, `/privacy`, `/terms`) have moved to the SPA's.
 //!
 //! `GET /api/v1/public_pages/{page}` is the SPA's copy of the same pages: the article each
 //! template renders, with its links on the SPA's pages, and the `LEGAL_*` settings it read. Like
@@ -8,22 +9,21 @@ use crate::app::AppCtx;
 use campfire_api_types::{PublicPage, PublicPageName, PublicPagePolicy};
 use campfire_app::public_policy::PublicPolicy;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
-use campfire_retained::{
-    helpers as h,
-    public_pages::{self, Links, Page},
-};
+use campfire_retained::public_pages::{self, Links, Page};
 
 pub async fn about(c: &mut Ctx) -> Result {
-    show(c, Page::About)
+    show(c, "/app/about")
 }
 pub async fn privacy(c: &mut Ctx) -> Result {
-    show(c, Page::Privacy)
+    show(c, "/app/privacy")
 }
 pub async fn terms(c: &mut Ctx) -> Result {
-    show(c, Page::Terms)
+    show(c, "/app/terms")
 }
 
-fn show(c: &mut Ctx, page: Page) -> Result {
+/// The pages have moved for good to the SPA (`/app/about`, `/app/privacy`, `/app/terms`), which
+/// draws them for anyone. A request that doesn't want a page still gets the bare 404.
+fn show(c: &mut Ctx, path: &str) -> Result {
     let formats = c.formats()?;
     if !formats
         .first()
@@ -32,17 +32,7 @@ fn show(c: &mut Ctx, page: Page) -> Result {
         return Ok(c.head(StatusCode::NOT_FOUND));
     }
     c.respond_to(&[&format::HTML])?;
-    let policy = &c.app().config.public_policy;
-    let stylesheet = h::raw(format!("{}\n{}", h::auth_stylesheet_tag(), h::auth_script_tag()));
-    let body = public_pages::render(
-        page,
-        &policy.operator_name,
-        &policy.contact_email,
-        &policy.effective_date,
-        stylesheet,
-    )
-    .map_err(Error::internal)?;
-    Ok(c.render_html(StatusCode::OK, body))
+    crate::concerns::redirect_to_signed_out_spa(c, path, StatusCode::MOVED_PERMANENTLY)
 }
 
 /// `GET /api/v1/public_pages/{page}`.

@@ -36,8 +36,13 @@ async fn signup_body_matches_rails_and_is_available_until_account_exists() {
         &actual,
         vectors()["page"]["html"].as_str().unwrap(),
     );
+    // The retained page now sends the visitor to the SPA's setup page, until the account exists.
     let mut browser = app.anonymous();
-    assert_eq!(browser.get("/first_run").await.status, StatusCode::OK);
+    let page = browser.get("/first_run").await;
+    assert_eq!(
+        (page.status, page.location()),
+        (StatusCode::FOUND, Some("http://campfire.test/app/first_run"))
+    );
     app.db()
         .write(|tx| Account::create(tx, "Chat"))
         .await
@@ -46,17 +51,39 @@ async fn signup_body_matches_rails_and_is_available_until_account_exists() {
         app.anonymous().get("/first_run").await.location(),
         Some("http://campfire.test/")
     );
+    // The retained form goes, unread, to the SPA's page; it creates nothing.
+    let reply = browser
+        .write(Req::new(Method::POST, "/first_run").form(&[("user[name]", "must not create")]))
+        .await;
     assert_eq!(
-        browser
-            .write(Req::new(Method::POST, "/first_run").form(&[("user[name]", "must not create")]))
+        (reply.status, reply.location()),
+        (StatusCode::SEE_OTHER, Some("http://campfire.test/app/first_run"))
+    );
+    assert_eq!(
+        app.db()
+            .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM users", [], |r| r.get::<_, i64>(0))?))
             .await
-            .location(),
-        Some("http://campfire.test/")
+            .unwrap(),
+        0
     );
 }
+/// What first run leaves behind, in the shape of vectors/users_first_run.json's `state`.
+async fn first_run_state(app: &TestApp) -> Value {
+    app.db().read(|c|{
+        let accounts=c.prepare("SELECT name FROM accounts ORDER BY id")?.query_map([],|r|r.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?;
+        let users=User::all(c)?.iter().map(|u|json!({"name":u.name,"email":u.email_address,"role":u.role.name(),"password_present":u.password_digest.as_deref().is_some_and(|s|!s.is_empty())})).collect::<Vec<_>>();
+        let rooms=c.prepare("SELECT name,type FROM rooms ORDER BY id")?.query_map([],|r|Ok(json!([r.get::<_,String>(0)?,r.get::<_,String>(1)?])))?.collect::<Result<Vec<_>,_>>()?;
+        let count=|table:&str|c.query_row(&format!("SELECT COUNT(*) FROM {table}"),[],|r|r.get::<_,i64>(0));
+        Ok(json!({"account_names":accounts,"users":users,"rooms":rooms,"memberships":count("memberships")?,"sessions":count("sessions")?,"audits":count("audit_logs")?}))
+    }).await.unwrap()
+}
+
+/// Each pinned Rails form case: the retained form now creates nothing and goes to the SPA's page,
+/// and the same fields through the SPA's JSON contract leave Rails' state.
 #[tokio::test]
 async fn first_run_http_and_persisted_state_match_all_rails_cases() {
     for case in vectors()["cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
         let app = app().await;
         let mut browser = app.anonymous();
         let mut fields = Vec::new();
@@ -69,30 +96,48 @@ async fn first_run_http_and_persisted_state_match_all_rails_cases() {
             .iter()
             .map(|(k, v)| (k.as_str(), v.as_str()))
             .collect::<Vec<_>>();
+        let empty = first_run_state(&app).await;
         let response = browser
             .write(Req::new(Method::POST, "/first_run").form(&fields))
             .await;
         assert_eq!(
-            response.status.as_u16(),
-            case["status"].as_u64().unwrap() as u16,
-            "{}",
-            case["name"]
+            (response.status, response.location()),
+            (StatusCode::SEE_OTHER, Some("http://campfire.test/app/first_run")),
+            "{name}"
         );
-        assert_eq!(response.location(), case["location"].as_str());
-        let state=app.db().read(|c|{
-            let accounts=c.prepare("SELECT name FROM accounts ORDER BY id")?.query_map([],|r|r.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?;
-            let users=User::all(c)?.iter().map(|u|json!({"name":u.name,"email":u.email_address,"role":u.role.name(),"password_present":u.password_digest.as_deref().is_some_and(|s|!s.is_empty())})).collect::<Vec<_>>();
-            let rooms=c.prepare("SELECT name,type FROM rooms ORDER BY id")?.query_map([],|r|Ok(json!([r.get::<_,String>(0)?,r.get::<_,String>(1)?])))?.collect::<Result<Vec<_>,_>>()?;
-            let count=|table:&str|c.query_row(&format!("SELECT COUNT(*) FROM {table}"),[],|r|r.get::<_,i64>(0));
-            Ok(json!({"account_names":accounts,"users":users,"rooms":rooms,"memberships":count("memberships")?,"sessions":count("sessions")?,"audits":count("audit_logs")?}))
-        }).await.unwrap();
-        assert_eq!(state, case["state"], "{}", case["name"]);
-        if response.status == StatusCode::FOUND {
+        assert_eq!(first_run_state(&app).await, empty, "{name}");
+
+        // The same fields as the SPA submits them; `account` and `user[role]` stay ignored.
+        let token = browser.get("/api/v1/first_run").await.json()["csrfToken"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let mut submission = case["params"]["user"].clone();
+        if let Some(email) = submission.as_object_mut().and_then(|user| user.remove("email_address")) {
+            submission["emailAddress"] = email;
+        }
+        submission["account"] = case["params"]["account"].clone();
+        let reply = browser
+            .send(json_request(Method::POST, "/api/v1/first_run", submission).header("x-csrf-token", &token))
+            .await;
+        if case["status"] == 302 {
+            assert_eq!(reply.status, StatusCode::OK, "{name}: {}", reply.text());
+            assert_eq!(
+                reply.json(),
+                json!({"kind":"signedIn","location":case["location"]}),
+                "{name}"
+            );
+            assert_eq!(first_run_state(&app).await, case["state"], "{name}");
             assert!(browser.cookie_header().contains("session_token="));
             assert_eq!(
                 browser.get("/").await.location(),
-                Some("http://campfire.test/two_factor_setup")
+                Some("http://campfire.test/app/two_factor/setup?required=true")
             );
+        } else {
+            // Rails failed these (400 without `user`, 500 without a name, after committing the
+            // account); the contract refuses them before creating anything.
+            assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{name}: {}", reply.text());
+            assert_eq!(first_run_state(&app).await, empty, "{name}");
         }
     }
 }
@@ -102,28 +147,38 @@ async fn five_concurrent_first_runs_create_one_administrator_and_room() {
     let mut browsers = Vec::new();
     for _ in 0..5 {
         let mut browser = app.anonymous();
-        browser.get("/first_run").await;
-        browsers.push(browser);
+        let token = browser.get("/api/v1/first_run").await.json()["csrfToken"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        browsers.push((browser, token));
     }
     let responses = futures_util::future::join_all(browsers.into_iter().enumerate().map(
-        |(i, mut browser)| async move {
-            let name = format!("Attacker{i}");
-            let email = format!("attacker{i}@example.com");
+        |(i, (mut browser, token))| async move {
+            let submission = json!({
+                "name": format!("Attacker{i}"),
+                "emailAddress": format!("attacker{i}@example.com"),
+                "password": "password123",
+            });
             browser
-                .write(Req::new(Method::POST, "/first_run").form(&[
-                    ("user[name]", &name),
-                    ("user[email_address]", &email),
-                    ("user[password]", "password123"),
-                ]))
+                .send(
+                    json_request(Method::POST, "/api/v1/first_run", submission)
+                        .header("x-csrf-token", &token),
+                )
                 .await
         },
     ))
     .await;
-    assert!(
-        responses
-            .iter()
-            .all(|r| r.location() == Some("http://campfire.test/"))
-    );
+    // One sets up the workspace; the others are sent home, as the retained form's were.
+    let answers = responses
+        .iter()
+        .map(|r| {
+            assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+            r.json()
+        })
+        .collect::<Vec<_>>();
+    assert!(answers.iter().all(|a| a["location"] == "http://campfire.test/"), "{answers:?}");
+    assert_eq!(answers.iter().filter(|a| a["kind"] == "signedIn").count(), 1, "{answers:?}");
     app.db()
         .read(|c| {
             for table in ["accounts", "users", "rooms"] {
@@ -197,95 +252,111 @@ struct Case {
     avatar: bool,
 }
 
-/// Submits `case` as the retained form does, or as the SPA does; answers where it led.
-async fn submit(browser: &mut Browser<'_>, case: Case, json: bool) -> (Reply, String) {
-    let reply = if json {
-        let state = browser.get("/api/v1/first_run").await;
-        assert_eq!(state.status, StatusCode::OK);
-        let state = state.json();
-        assert_eq!(state["kind"], "pending");
-        let token = state["csrfToken"].as_str().unwrap().to_owned();
-        let mut submission = json!({"name": case.name});
-        if let Some(email) = case.email {
-            submission["emailAddress"] = json!(email);
-        }
-        if let Some(password) = case.password {
-            submission["password"] = json!(password);
-        }
-        let request = if case.avatar {
-            Req::new(Method::POST, "/api/v1/first_run")
-                .header("accept", "application/json")
-                .multipart(
-                    &[("submission", &submission.to_string())],
-                    ("avatar", "me.png", "image/png", AVATAR),
-                )
-        } else {
-            json_request(Method::POST, "/api/v1/first_run", submission)
-        };
-        browser.send(request.header("x-csrf-token", &token)).await
+/// Submits `case` as the retained form did: it goes, unread, to the SPA's setup page.
+async fn submit_form(browser: &mut Browser<'_>, case: Case) -> Reply {
+    let page = browser.get("/first_run").await;
+    assert_eq!(page.location(), Some("http://campfire.test/app/first_run"));
+    let fields = [
+        Some(("user[name]", case.name)),
+        case.email.map(|email| ("user[email_address]", email)),
+        case.password.map(|password| ("user[password]", password)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
+    let request = if case.avatar {
+        Req::new(Method::POST, "/first_run")
+            .multipart(&fields, ("user[avatar]", "me.png", "image/png", AVATAR))
     } else {
-        assert_eq!(browser.get("/first_run").await.status, StatusCode::OK);
-        let fields = [
-            Some(("user[name]", case.name)),
-            case.email.map(|email| ("user[email_address]", email)),
-            case.password.map(|password| ("user[password]", password)),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-        let request = if case.avatar {
-            Req::new(Method::POST, "/first_run")
-                .multipart(&fields, ("user[avatar]", "me.png", "image/png", AVATAR))
-        } else {
-            Req::new(Method::POST, "/first_run").form(&fields)
-        };
-        browser.write(request).await
+        Req::new(Method::POST, "/first_run").form(&fields)
     };
-    let location = if json {
-        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-        let answer = reply.json();
-        assert_eq!(answer["kind"], "signedIn", "{answer}");
-        answer["location"].as_str().unwrap().to_owned()
+    browser.write(request).await
+}
+
+/// Submits `case` as the SPA does; answers where it led.
+async fn submit(browser: &mut Browser<'_>, case: Case) -> (Reply, String) {
+    let state = browser.get("/api/v1/first_run").await;
+    assert_eq!(state.status, StatusCode::OK);
+    let state = state.json();
+    assert_eq!(state["kind"], "pending");
+    let token = state["csrfToken"].as_str().unwrap().to_owned();
+    let mut submission = json!({"name": case.name});
+    if let Some(email) = case.email {
+        submission["emailAddress"] = json!(email);
+    }
+    if let Some(password) = case.password {
+        submission["password"] = json!(password);
+    }
+    let request = if case.avatar {
+        Req::new(Method::POST, "/api/v1/first_run")
+            .header("accept", "application/json")
+            .multipart(
+                &[("submission", &submission.to_string())],
+                ("avatar", "me.png", "image/png", AVATAR),
+            )
     } else {
-        assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
-        reply.location().unwrap().to_owned()
+        json_request(Method::POST, "/api/v1/first_run", submission)
     };
+    let reply = browser.send(request.header("x-csrf-token", &token)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let answer = reply.json();
+    assert_eq!(answer["kind"], "signedIn", "{answer}");
+    let location = answer["location"].as_str().unwrap().to_owned();
     (reply, location)
 }
 
+/// The retained form now creates nothing; the SPA's JSON contract sets up the workspace with the
+/// rows the form wrote, and the same cookies and session whatever the submission.
 #[tokio::test]
-async fn json_first_run_creates_the_same_rows_cookies_and_session_as_the_form() {
+async fn json_first_run_creates_the_rows_cookies_and_session_the_form_did() {
+    let mut contracts = Vec::new();
     for case in [
         Case { name: "New Person", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: false },
         Case { name: "New Person", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: true },
         Case { name: "", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: false },
         Case { name: "New Person", email: Some("new@37signals.com"), password: Some(""), avatar: false },
-        // Fields the retained form accepts when absent (vectors/users_first_run.json
+        // Fields the retained form accepted when absent (vectors/users_first_run.json
         // missing_email, missing_password): no email address, no password.
         Case { name: "New Person", email: None, password: Some("secret123456"), avatar: false },
         Case { name: "New Person", email: Some("new@37signals.com"), password: None, avatar: false },
         Case { name: "New Person", email: None, password: None, avatar: true },
     ] {
-        let mut outcomes = Vec::new();
-        for json in [false, true] {
-            let app = app().await;
-            let mut browser = app.anonymous();
-            let (reply, location) = submit(&mut browser, case, json).await;
-            assert_eq!(location, "http://campfire.test/");
-            let mut session = browser_session(&app, &browser)
-                .as_object()
-                .unwrap()
-                .keys()
-                .cloned()
-                .collect::<Vec<_>>();
-            session.sort();
-            // Signed in: home goes on to the administrator's two-step setup, as after the form.
-            let home = browser.get("/").await.location().map(str::to_owned);
-            assert_eq!(home.as_deref(), Some("http://campfire.test/two_factor_setup"));
-            outcomes.push((cookie_contract(&reply), session, rows(&app).await));
-        }
-        let rows = &outcomes[0].2;
+        let label = format!("{}/{:?}/{:?}/{}", case.name, case.email, case.password, case.avatar);
+        let app = app().await;
+        let mut browser = app.anonymous();
+        let before = rows(&app).await;
+        let form = submit_form(&mut browser, case).await;
+        assert_eq!(
+            (form.status, form.location()),
+            (StatusCode::SEE_OTHER, Some("http://campfire.test/app/first_run")),
+            "{label}"
+        );
+        assert_eq!(rows(&app).await, before, "{label}");
+        assert!(!browser.cookie_header().contains("session_token="), "{label}");
+
+        let (reply, location) = submit(&mut browser, case).await;
+        assert_eq!(location, "http://campfire.test/");
+        let mut session = browser_session(&app, &browser)
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        session.sort();
+        // Signed in: home goes on to the administrator's two-step setup, as after the form.
+        let home = browser.get("/").await.location().map(str::to_owned);
+        assert_eq!(home.as_deref(), Some("http://campfire.test/app/two_factor/setup?required=true"));
+        let cookies = cookie_contract(&reply);
+        assert!(cookies.iter().any(|cookie| cookie.starts_with("session_token=set")), "{cookies:?}");
+        contracts.push((cookies, session));
+
+        let rows = rows(&app).await;
+        assert_eq!(rows["accounts"], json!([["Smartfire"]]), "{rows}");
         assert_eq!(rows["users"].as_array().unwrap().len(), 1, "{rows}");
+        assert_eq!(rows["users"][0][1], json!(case.name), "{rows}");
+        assert_eq!(rows["rooms"].as_array().unwrap().len(), 1, "{rows}");
+        assert_eq!(rows["memberships"].as_array().unwrap().len(), 1, "{rows}");
+        assert_eq!(rows["sessions"].as_array().unwrap().len(), 1, "{rows}");
         assert_eq!(
             rows["attachments"].as_array().unwrap().len(),
             usize::from(case.avatar),
@@ -302,8 +373,8 @@ async fn json_first_run_creates_the_same_rows_cookies_and_session_as_the_form() 
             json!(i64::from(case.password.is_some_and(|password| !password.is_empty()))),
             "{rows}"
         );
-        assert_eq!(outcomes[0], outcomes[1], "{}/{:?}/{:?}", case.name, case.email, case.password);
     }
+    assert!(contracts.windows(2).all(|pair| pair[0] == pair[1]), "{contracts:?}");
 }
 
 #[tokio::test]

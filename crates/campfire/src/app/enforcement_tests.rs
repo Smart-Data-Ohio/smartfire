@@ -15,19 +15,20 @@ async fn unenroll(a: &TestApp) {
         .await
         .unwrap();
 }
+/// A password-only session, signed in as the SPA's sign-in page does it.
 async fn login(a: &TestApp) -> crate::controllers::presenters::test_support::Browser<'_> {
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     assert_eq!(
-        b.write(Req::new(Method::POST, "/session").form(&[
-            ("email_address", "david@37signals.com"),
-            ("password", "secret123456")
-        ]))
-        .await
-        .location(),
-        Some("http://campfire.test/app/")
+        b.password_sign_in("david@37signals.com", "secret123456")
+            .await
+            .json(),
+        serde_json::json!({"kind":"signedIn","location":"http://campfire.test/app/"})
     );
     b
+}
+/// The JSON API's view of the challenge, as the SPA's challenge screen asks for it.
+fn challenge_state() -> Req {
+    Req::new(Method::GET, "/api/v1/two_factor/challenge").header("accept", "application/json")
 }
 async fn stale(a: &TestApp) -> crate::controllers::presenters::test_support::Browser<'_> {
     let mut b = a.sign_in(DAVID).await;
@@ -57,7 +58,7 @@ async fn unenrolled_password_session_is_gated_on_every_application_page_and_form
     ] {
         assert_eq!(
             b.get(&path).await.location(),
-            Some("http://campfire.test/two_factor_setup"),
+            Some("http://campfire.test/app/two_factor/setup?required=true"),
             "{path}"
         );
     }
@@ -67,7 +68,7 @@ async fn unenrolled_password_session_is_gated_on_every_application_page_and_form
     assert_eq!(json.status, StatusCode::FORBIDDEN);
     assert_eq!(
         json.json(),
-        serde_json::json!({"error":{"_tag":"TwoFactorRequired","message":"Set up two-step sign-in to continue","requirement":{"kind":"setup","location":"http://campfire.test/two_factor_setup"}}})
+        serde_json::json!({"error":{"_tag":"TwoFactorRequired","message":"Set up two-step sign-in to continue","requirement":{"kind":"setup","location":"http://campfire.test/app/two_factor/setup"}}})
     );
     assert_eq!(json.header("cache-control"), Some("no-store"));
     assert_eq!(
@@ -77,14 +78,14 @@ async fn unenrolled_password_session_is_gated_on_every_application_page_and_form
         )
         .await
         .location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
     // User-supplied controller/action parameters cannot turn this into an exemption.
     assert_eq!(
         b.get("/users/me/profile?controller=two_factor/setups&action=show")
             .await
             .location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
 }
 
@@ -93,19 +94,37 @@ async fn enrollment_exemptions_allow_setup_static_challenge_and_sign_out_only() 
     let a = app().await;
     unenroll(&a).await;
     let mut b = login(&a).await;
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    // The setup screen, the retained page that redirects to it and the API behind it all open
+    // without looping back through the gate.
+    let screen = b.get("/app/two_factor/setup").await;
+    assert_eq!(screen.status, StatusCode::OK, "{}", screen.text());
+    assert_eq!(screen.location(), None);
+    assert_eq!(
+        b.get("/two_factor_setup").await.location(),
+        Some("http://campfire.test/app/two_factor/setup")
+    );
+    let api = b
+        .send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
+        .await;
+    assert_eq!(api.status, StatusCode::OK, "{}", api.text());
+    assert_eq!(api.json()["kind"], "ready");
     assert_eq!(b.get("/webmanifest.json").await.status, StatusCode::OK);
     assert_eq!(b.get("/service-worker.js").await.status, StatusCode::OK);
     assert_eq!(b.get("/up").await.status, StatusCode::OK);
     assert_eq!(
         b.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/two_factor/challenge")
     );
+    assert_eq!(
+        b.send(challenge_state()).await.json(),
+        serde_json::json!({"kind":"navigate","location":"http://campfire.test/"})
+    );
+    // The retained page's other forms go, unread, to the SPA's security settings before any gate.
     assert_eq!(
         b.write(Req::new(Method::DELETE, "/two_factor_setup").form(&[("reauth", "secret123456")]))
             .await
             .location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/settings/security")
     );
     assert_eq!(
         b.write(Req::new(Method::DELETE, "/session"))
@@ -115,7 +134,7 @@ async fn enrollment_exemptions_allow_setup_static_challenge_and_sign_out_only() 
     );
     assert_eq!(
         b.get("/two_factor_setup").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }
 
@@ -139,10 +158,10 @@ async fn stale_enrolled_sessions_are_destroyed_for_html_json_and_stream() {
         if accept.contains("html") {
             assert_eq!(
                 response.location(),
-                Some("http://campfire.test/session/new")
+                Some("http://campfire.test/app/session/new")
             );
             assert!(
-                b.get("/session/new")
+                b.get("/app/session/new")
                     .await
                     .text()
                     .contains("Sign in again to verify two-step sign-in.")
@@ -160,7 +179,7 @@ async fn stale_enrolled_sessions_are_destroyed_for_html_json_and_stream() {
         );
         assert_eq!(
             b.get("/").await.location(),
-            Some("http://campfire.test/session/new")
+            Some("http://campfire.test/app/session/new")
         );
     }
 }
@@ -182,7 +201,7 @@ async fn late_restores_cannot_bypass_enrollment_and_challenge_is_still_exempt() 
     let mut b = login(&a).await;
     assert_eq!(
         b.get(&format!("/join/{code}")).await.location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
     let mut verified = a.sign_in(DAVID).await;
     assert_eq!(
@@ -191,18 +210,26 @@ async fn late_restores_cannot_bypass_enrollment_and_challenge_is_still_exempt() 
     );
     assert_eq!(
         verified.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    assert_eq!(
+        verified.send(challenge_state()).await.json(),
+        serde_json::json!({"kind":"navigate","location":"http://campfire.test/"})
     );
     // A stale enrolled session may reach the challenge, but the redirect's next request is gated.
     let a = app().await;
     let mut b = stale(&a).await;
     assert_eq!(
         b.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/")
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    assert_eq!(
+        b.send(challenge_state()).await.json(),
+        serde_json::json!({"kind":"navigate","location":"http://campfire.test/"})
     );
     assert_eq!(
         b.get("/").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
 }
 
@@ -214,7 +241,7 @@ async fn verified_sessions_browse_even_without_a_credential() {
     assert_eq!(b.get("/api/v1/settings/account").await.status, StatusCode::OK);
     assert_ne!(
         b.get("/").await.location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
 }
 
@@ -258,7 +285,7 @@ async fn admin_idle_expiry_is_strict_configurable_and_does_not_expire_members() 
             .unwrap();
         assert_eq!(
             b.get("/users/me/profile").await.location(),
-            Some("http://campfire.test/session/new")
+            Some("http://campfire.test/app/session/new")
         );
         assert_eq!(
             a.db()
@@ -313,7 +340,7 @@ async fn blobs(a: &TestApp) -> i64 {
 async fn storage_metadata_rejects_anonymous_unenrolled_and_stale_without_writes() {
     let a = app().await;
     let mut anonymous = a.anonymous();
-    anonymous.get("/session/new").await;
+    anonymous.get("/app/session/new").await;
     let count = blobs(&a).await;
     assert_eq!(
         anonymous.write(metadata()).await.status,
@@ -355,7 +382,7 @@ async fn storage_upload_gate_and_public_download_survive_real_byte_round_trip() 
         StatusCode::UNAUTHORIZED
     );
     let mut anonymous = a.anonymous();
-    anonymous.get("/session/new").await;
+    anonymous.get("/app/session/new").await;
     assert_eq!(
         anonymous
             .write(
@@ -423,18 +450,16 @@ async fn storage_accepts_actual_completed_second_factor_and_nonhuman_sessions() 
         .await
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
-    b.write(Req::new(Method::POST, "/session").form(&[
-        ("email_address", "david@37signals.com"),
-        ("password", "secret123456"),
-    ]))
-    .await;
+    assert_eq!(
+        b.password_sign_in("david@37signals.com", "secret123456")
+            .await
+            .json()["kind"],
+        "secondFactorRequired"
+    );
     let code = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-            .await
-            .location(),
-        Some("http://campfire.test/app/")
+        b.answer_challenge(&code, false).await.json(),
+        serde_json::json!({"kind":"signedIn","location":"http://campfire.test/app/"})
     );
     assert_eq!(b.write(metadata()).await.status, StatusCode::OK);
     let mut bot = a

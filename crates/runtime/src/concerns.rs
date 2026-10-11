@@ -325,6 +325,43 @@ pub fn keep_waiting_flash(c: &mut Ctx) {
     }
 }
 
+/// A retained authentication or public page's URL (bookmarks, mail links, old tabs, a form
+/// posted from a page loaded before the cutover) goes to the SPA page at `path`, with this
+/// request's query string as it came and its waiting notice or alert kept for that page. A `GET`
+/// or `HEAD` gets `status` (302, or 301 for a page that has moved for good); any other method a
+/// 303, so the browser follows with a `GET`. Callers send a form here before acting on it: nothing
+/// is signed in, consumed or changed. A request that wants JSON is the caller's to answer first.
+pub fn redirect_to_signed_out_spa(c: &mut Ctx, path: &str, status: StatusCode) -> Result {
+    let status = if c.request.is_get() || c.request.is_head() { status } else { StatusCode::SEE_OTHER };
+    let query = c.request.query_string();
+    let location = match query {
+        "" => path.to_owned(),
+        query if path.contains('?') => format!("{path}&{query}"),
+        query => format!("{path}?{query}"),
+    };
+    keep_waiting_flash(c);
+    let location = c.url_for(&location);
+    c.redirect_to_with(&location, campfire_kit::Redirect { status: Some(status), ..Default::default() })
+}
+
+/// Whether this request is a page navigation: it asks for HTML (a Turbo Stream's types include
+/// it) and isn't a JSON request. A request whose format can't be read counts as neither.
+pub fn html_navigation(c: &mut Ctx) -> bool {
+    !sudo::json_request(c).unwrap_or(true)
+        && c.format().ok().flatten().is_some_and(|f| f.symbol == "html" || f.string.contains("html"))
+}
+
+/// Where a gate sends this request: a page navigation to the SPA's page `spa`, anything else to
+/// the retained route `retained` it replaced, which still answers a JSON or other non-HTML request
+/// in its own format (a 401, a 406) rather than with the SPA's HTML. The SPA's JSON API is the
+/// exception: it never hands the redirect on, but answers with where to navigate (or a typed
+/// error), so it names the SPA's page for the page load that follows.
+pub fn auth_page_url(c: &mut Ctx, spa: &str, retained: &str) -> String {
+    let navigates = html_navigation(c) || c.request.path().starts_with("/api/v1/");
+    let path = if navigates { spa } else { retained };
+    c.url_for(path)
+}
+
 /// Whether this signed-in HTML navigation goes to the SPA, apart from which screen it is. The same
 /// gates as [`redirect_to_spa`]: the request navigates, by a person's session. A waiting flash is
 /// kept for the next hop.
@@ -584,6 +621,7 @@ pub fn expire_idle_timed_out_session(
 /// `TwoFactorEnforcement#require_two_factor_enrollment`. The callback and every late restore
 /// share this gate. Verified sessions do not query the credential; key authentication is exempt.
 pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> {
+    let setup_page = setup_page(c);
     let Some(session) = current_session(c) else { return Ok(()) };
     let Some(user) = current_user(c) else { return Ok(()) };
     if authenticated_by(c) != AuthenticatedBy::Session || !user.requires_two_factor() {
@@ -596,17 +634,17 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
         matches!(controller, "two_factor/challenges" | "pwa")
             || (controller == "two_factor/setups" && matches!(action, "show" | "create"))
             || (controller == "sessions" && action == "destroy")
-    }) || session.two_factor_verified() {
+    }) || setup_page || session.two_factor_verified() {
         return Ok(());
     }
     let user = user.clone();
     let enabled = c.app().db.read(move |conn| user.two_factor_enabled(conn)).await.map_err(Error::internal)?;
     let json = sudo::json_request(c)?;
-    let html = !json && c.format()?.is_some_and(|f| f.symbol == "html" || f.string.contains("html"));
+    let html = html_navigation(c);
     if enabled {
         terminate_current_session(c).await?;
         if html {
-            return halt(c.redirect_to_with(&c.url_for("/session/new"), campfire_kit::Redirect {
+            return halt(c.redirect_to_with(&c.url_for("/app/session/new"), campfire_kit::Redirect {
                 alert: Some("Sign in again to verify two-step sign-in.".into()),
                 ..Default::default()
             })?);
@@ -618,7 +656,7 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
             error: campfire_api_types::ApiError::TwoFactorRequired {
                 message: "Set up two-step sign-in to continue".into(),
                 requirement: campfire_api_types::TwoFactorRequirement::Setup {
-                    location: c.url_for("/two_factor_setup"),
+                    location: c.url_for(TWO_FACTOR_SETUP_PAGE),
                 },
             },
         })?)
@@ -627,10 +665,23 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
             let url = c.request.url();
             c.session().insert(session_keys::RETURN_TO_KEY, url);
         }
-        halt(c.redirect_to(&c.url_for("/two_factor_setup"))?)
+        halt(c.redirect_to(&c.url_for(&format!("{TWO_FACTOR_SETUP_PAGE}?required=true")))?)
     } else {
         halt(head(StatusCode::FORBIDDEN))
     }
+}
+
+/// The SPA's two-step setup screen, where the enrollment gate sends a session that must set up
+/// two-step sign-in.
+const TWO_FACTOR_SETUP_PAGE: &str = "/app/two_factor/setup";
+
+/// Loading the setup screen as a page is never gated on setting up, whichever route serves it, so
+/// the gate's redirect can't send it back to itself. Any other request for it (JSON, say) stays
+/// behind the gate and gets its answer.
+fn setup_page(c: &mut Ctx) -> bool {
+    (c.request.is_get() || c.request.is_head())
+        && c.request.path() == TWO_FACTOR_SETUP_PAGE
+        && html_navigation(c)
 }
 
 /// `bot_authentication`: `params[:bot_key].present?` and a matching active bot.
@@ -756,10 +807,12 @@ fn ruby_space(c: char) -> bool {
 }
 
 /// `request_authentication`: someone waiting on their second factor goes back to the challenge;
-/// anyone else to sign in, remembering the page they were after.
+/// anyone else to sign in, remembering the page they were after. A page navigation goes to the
+/// SPA's pages; any other request to the retained routes, which answer it as before (a JSON
+/// request to sign in gets a 401, not the SPA's HTML).
 pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
     if two_factor_pending_user(c).await?.is_some() {
-        let location = c.url_for("/two_factor_challenge");
+        let location = auth_page_url(c, "/app/two_factor/challenge", "/two_factor_challenge");
         return halt(c.redirect_to(&location)?);
     }
     // Only page navigations bounce back after sign in: not background polls (JSON, Turbo Stream
@@ -768,7 +821,7 @@ pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
         let url = c.request.url();
         c.session().insert(session_keys::RETURN_TO_KEY, url);
     }
-    let location = c.url_for(&campfire_routes::new_session());
+    let location = auth_page_url(c, "/app/session/new", &campfire_routes::new_session());
     halt(c.redirect_to(&location)?)
 }
 
@@ -1096,53 +1149,63 @@ pub fn ensure_can_administer(c: &mut Ctx) -> Result<()> {
 /// `allow_browser versions: VERSIONS, block: -> { render template: "sessions/incompatible_browser" }`
 pub async fn allow_browser(c: &mut Ctx) -> Result<()> {
     if platform::browser_blocked(c.request.user_agent()) {
-        return halt(render_incompatible_browser(c).await?);
+        return halt(render_incompatible_browser(c)?);
     }
     Ok(())
 }
 
-/// `render template: "sessions/incompatible_browser"` (200). Rendered from a before-action, so
-/// it's HTML whatever the request format. The layout is the controller's: turbo-rails' frame
-/// layout for a Turbo-Frame request, except in controllers that declare their own layout
-/// (`MessagesController` and its `Messages::ByBotsController`), which always use the application
-/// layout.
-async fn render_incompatible_browser(c: &mut Ctx) -> Result {
-    use askama::Template;
-    use campfire_retained::sessions::IncompatibleBrowser;
-
-    let own_layout = c
-        .current::<MatchedRoute>()
-        .is_some_and(|route| {
-            route.endpoint.starts_with("messages#")
-                || route.endpoint.starts_with("messages/by_bots#")
-        });
-    use crate::request_context::{
-        retained_document, retained_page_or_frame_in_any_format,
-    };
-
-    // An explicit `render template:`, so no format lookup: a blocked browser gets this page for
-    // /webmanifest.json, /service-worker.js or `Accept: application/json` alike (verified against
-    // the reference), never a 406. The document is the retained shell. Message controllers still
-    // force that full document when the request asks for a frame.
-    let response = if own_layout {
-        retained_document(c, StatusCode::OK, |ctx| {
-            IncompatibleBrowser { ctx }.render()
-        })
-        .await?
-    } else {
-        retained_page_or_frame_in_any_format(
-            c,
-            StatusCode::OK,
-            |ctx| IncompatibleBrowser { ctx }.render(),
-            |ctx| {
-                let page = IncompatibleBrowser { ctx };
-                campfire_retained::layouts::frame(ctx, page.as_head(), page.as_content())
-            },
-        )
-        .await?
-    };
-    Ok(response.content_type(campfire_kit::response::HTML_UTF8))
+/// `render template: "sessions/incompatible_browser"` (200), as a page of its own. Rendered from
+/// a before-action, so it's this full HTML document whatever the request format, frame or
+/// controller: a blocked browser gets it for /webmanifest.json, /service-worker.js or
+/// `Accept: application/json` alike (verified against the reference), never a 406. The browsers it
+/// is for can't run the SPA, so it loads no script and no stylesheet: its style is inline, under
+/// the request's CSP nonce, and its only requests are the browser logos.
+fn render_incompatible_browser(c: &mut Ctx) -> Result {
+    let title = if platform(c).apple_messages() { "Smartfire" } else { "Unsupported browser" };
+    let nonce = c.content_security_policy_nonce();
+    let html = incompatible_browser_page(title, nonce.as_deref());
+    Ok(c.render_as(StatusCode::OK, campfire_kit::response::HTML_UTF8, html))
 }
+
+fn incompatible_browser_page(title: &str, nonce: Option<&str>) -> String {
+    use std::fmt::Write;
+
+    let nonce = nonce.map(|nonce| format!(" nonce=\"{}\"", campfire_richtext::ruby::html_escape(nonce))).unwrap_or_default();
+    let mut browsers = String::new();
+    for (browser, version) in platform::ALLOW_BROWSER_VERSIONS {
+        let logo = campfire_static_assets::asset_path(&format!("browsers/{browser}.svg"));
+        let name = format!("{}{}", browser[..1].to_ascii_uppercase(), &browser[1..]);
+        write!(
+            browsers,
+            "<li><img src=\"{logo}\" alt=\"\" aria-hidden=\"true\" width=\"56\" height=\"56\"><strong>{name}</strong><span>{version}+</span></li>"
+        )
+        .unwrap();
+    }
+    format!(
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+         <title>{title}</title>\n<style{nonce}>{INCOMPATIBLE_BROWSER_STYLE}</style>\n</head>\n<body>\n\
+         <main>\n<h1>Upgrade to a supported web browser</h1>\n\
+         <p>Smartfire requires a modern web browser. Please use one of the browsers listed below and make sure auto-updates are enabled.</p>\n\
+         <ul>{browsers}</ul>\n</main>\n</body>\n</html>\n"
+    )
+}
+
+/// The page's own style, for browsers that predate the features the rest of the app relies on:
+/// hex colours, physical properties and flexbox with margins, no custom properties, `gap`,
+/// `:has()`, `oklch()` or `@layer`.
+const INCOMPATIBLE_BROWSER_STYLE: &str = "\
+*{box-sizing:border-box}\
+body{margin:0;padding:40px 16px;min-height:100vh;background:#f7f8f9;color:#1c1e24;\
+font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;line-height:1.5}\
+main{max-width:50ch;margin:0 auto;padding:2em;background:#fff;border:1px solid #e2e4e8;border-radius:0.8em;\
+box-shadow:0 0.4em 1.6em rgba(0,0,0,0.18);text-align:center}\
+h1{margin:0 0 1rem;font-size:1.8rem;line-height:1.2}\
+p{margin:0}\
+ul{display:flex;flex-wrap:wrap;justify-content:center;margin:1rem -0.5ch 0;padding:0;list-style:none}\
+li{display:flex;flex-direction:column;align-items:center;width:20%;min-width:8ch;margin:1rem 0.5ch 0}\
+img{display:block;width:7ch;height:auto;margin-bottom:0.5rem}\
+@media (prefers-color-scheme:dark){body{background:#16181c;color:#e7e9ee}main{background:#22252b;border-color:#33373d}}";
 
 // --- SetPlatform -------------------------------------------------------------------------------
 

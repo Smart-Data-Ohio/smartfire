@@ -1,5 +1,5 @@
 //! Real authorization, reset/audit atomicity, socket recovery and rate-limit windows.
-use crate::controllers::presenters::test_support::{BENDER, DAVID, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{BENDER, Browser, DAVID, KEVIN, Req, TestApp};
 use axum::http::{Method, StatusCode};
 use campfire_db::{
     Session, TwoFactorBackupCode, TwoFactorCredential, TwoFactorRememberedDevice, User,
@@ -40,7 +40,7 @@ async fn reset_requires_admin_authentication_real_csrf_and_active_human_target()
         anon.write(Req::new(Method::POST, &path(KEVIN)))
             .await
             .location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     let mut member = a.sign_in(KEVIN).await;
     assert_eq!(
@@ -169,20 +169,16 @@ async fn reset_removes_all_auth_rows_records_actor_target_and_requires_enrollmen
         .await
         .unwrap();
     let mut member = a.anonymous();
-    member.get("/session/new").await;
     assert_eq!(
         member
-            .write(Req::new(Method::POST, "/session").form(&[
-                ("email_address", "kevin@37signals.com"),
-                ("password", "secret123456")
-            ]))
+            .password_sign_in("kevin@37signals.com", "secret123456")
             .await
-            .location(),
-        Some("http://campfire.test/app/")
+            .json(),
+        serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/app/"})
     );
     assert_eq!(
         member.get("/").await.location(),
-        Some("http://campfire.test/two_factor_setup")
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
 }
 #[tokio::test]
@@ -287,12 +283,65 @@ async fn account_people_json_exposes_reset_facts_only_to_administrators() {
     assert_eq!(payload["people"].as_array().unwrap().iter().find(|row| row["id"] == KEVIN).unwrap()["twoFactorEnabled"], false);
 }
 
+const RATE_ALERT: &str = "Too many attempts. Try again in a few minutes.";
+const DEVICES: &str = "/api/v1/settings/two_factor/devices";
+/// Self-service attempt `n` at `endpoint` from `ip`, and whether the limits refused it. The
+/// security settings API answers a 429 `RateLimited`; the retained Google reauthentication
+/// redirects to the SPA's security settings with the alert.
+async fn self_service_limited(
+    b: &mut Browser<'_>,
+    method: &Method,
+    endpoint: &str,
+    n: usize,
+    ip: &str,
+) -> bool {
+    let reauth = if n == 11 { "secret123456" } else { "wrong" };
+    if endpoint == "/two_factor_reauthentication" {
+        let reply = b
+            .write(
+                Req::new(method.clone(), endpoint)
+                    .header("x-forwarded-for", ip)
+                    .form(&[("reauth", reauth)]),
+            )
+            .await;
+        assert_eq!(
+            reply.location(),
+            Some("http://campfire.test/app/settings/security")
+        );
+        return b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains(RATE_ALERT);
+    }
+    // Forgetting one device and all of them share a bucket.
+    let url = if endpoint == DEVICES && n.is_multiple_of(2) {
+        format!("{DEVICES}/999")
+    } else {
+        endpoint.to_owned()
+    };
+    let reply = b
+        .write(
+            Req::new(method.clone(), &url)
+                .header("x-forwarded-for", ip)
+                .json_body(&serde_json::json!({"reauth": reauth})),
+        )
+        .await;
+    let error = reply.json()["error"].clone();
+    if reply.status == StatusCode::TOO_MANY_REQUESTS {
+        assert_eq!(error["_tag"], "RateLimited");
+        assert_eq!(error["message"], RATE_ALERT);
+        return true;
+    }
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    assert_eq!(error["_tag"], "Validation");
+    false
+}
 #[tokio::test]
 async fn self_service_limits_use_ip_and_user_windows_and_remembered_actions_share_a_bucket() {
     for (method, endpoint) in [
-        (Method::POST, "/two_factor_backup_codes"),
-        (Method::DELETE, "/two_factor_setup"),
-        (Method::DELETE, "/two_factor_remembered_devices"),
+        (Method::POST, "/api/v1/settings/two_factor/backup_codes"),
+        (Method::DELETE, "/api/v1/settings/two_factor"),
+        (Method::DELETE, DEVICES),
         (Method::POST, "/two_factor_reauthentication"),
     ] {
         let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
@@ -302,60 +351,38 @@ async fn self_service_limits_use_ip_and_user_windows_and_remembered_actions_shar
             .await
             .expect("default seed");
         let mut b = a.sign_in(DAVID).await;
-        let request = |n: usize, ip: &str| {
-            let url = if endpoint == "/two_factor_remembered_devices" && n.is_multiple_of(2) {
-                "/two_factor_remembered_devices/999"
-            } else {
-                endpoint
-            };
-            Req::new(method.clone(), url)
-                .header("x-forwarded-for", ip)
-                .form(&[("reauth", if n == 11 { "secret123456" } else { "wrong" })])
-        };
         for n in 0..10 {
-            assert_eq!(
-                b.write(request(n, "198.18.0.1")).await.location(),
-                Some(if endpoint == "/two_factor_reauthentication" { "http://campfire.test/app/settings/security" } else { "http://campfire.test/users/me/profile" })
+            assert!(
+                !self_service_limited(&mut b, &method, endpoint, n, "198.18.0.1").await,
+                "{endpoint} attempt {n} fits the IP bucket"
             );
         }
-        b.write(request(11, "198.18.0.1")).await;
         assert!(
-            b.boot_flash().await["message"].as_str().unwrap_or("")
-                .contains("Too many attempts. Try again in a few minutes."),
+            self_service_limited(&mut b, &method, endpoint, 11, "198.18.0.1").await,
             "{endpoint} IP limit"
         );
         let mut other = a.sign_in(KEVIN).await;
-        other.write(request(11, "198.18.0.1")).await;
         assert!(
-            other.boot_flash().await["message"].as_str().unwrap_or("")
-                .contains("Too many attempts. Try again in a few minutes."),
+            self_service_limited(&mut other, &method, endpoint, 11, "198.18.0.1").await,
             "{endpoint} IP bucket shared across users"
         );
         clock.advance(jiff::SignedDuration::from_secs(181));
-        other.write(request(12, "198.18.0.1")).await;
         assert!(
-            !other.boot_flash().await["message"].as_str().unwrap_or("")
-                .contains("Too many attempts. Try again in a few minutes."),
+            !self_service_limited(&mut other, &method, endpoint, 12, "198.18.0.1").await,
             "{endpoint} IP window resets after three minutes"
         );
-        b.write(request(12, "198.18.0.2")).await;
         assert!(
-            b.boot_flash().await["message"].as_str().unwrap_or("")
-                .contains("Too many attempts. Try again in a few minutes."),
+            self_service_limited(&mut b, &method, endpoint, 12, "198.18.0.2").await,
             "{endpoint} user limit across IPs"
         );
         clock.advance(jiff::SignedDuration::from_secs(121));
-        b.write(request(12, "198.18.0.4")).await;
         assert!(
-            b.boot_flash().await["message"].as_str().unwrap_or("")
-                .contains("Too many attempts. Try again in a few minutes."),
+            self_service_limited(&mut b, &method, endpoint, 12, "198.18.0.4").await,
             "{endpoint} user limit survives five minutes"
         );
         clock.advance(jiff::SignedDuration::from_secs(600));
-        b.write(request(13, "198.18.0.3")).await;
         assert!(
-            !b.boot_flash().await["message"].as_str().unwrap_or("")
-                .contains("Too many attempts. Try again in a few minutes."),
+            !self_service_limited(&mut b, &method, endpoint, 13, "198.18.0.3").await,
             "{endpoint} window expires"
         );
     }
@@ -381,26 +408,18 @@ async fn challenge_ip_bucket_is_shared_and_rejects_valid_codes_until_three_minut
         (&mut david, "david@37signals.com"),
         (&mut kevin, "kevin@37signals.com"),
     ] {
-        assert_eq!(browser.get("/session/new").await.status, StatusCode::OK);
         assert_eq!(
-            browser
-                .write(
-                    Req::new(Method::POST, "/session")
-                        .form(&[("email_address", email), ("password", "secret123456")])
-                )
-                .await
-                .location(),
-            Some("http://campfire.test/two_factor_challenge")
+            browser.password_sign_in(email, "secret123456").await.json()["kind"],
+            "secondFactorRequired"
         );
     }
+    let challenge = |code: &str| {
+        Req::new(Method::POST, "/api/v1/two_factor/challenge")
+            .header("x-forwarded-for", "198.18.0.100")
+            .json_body(&serde_json::json!({"code": code, "rememberDevice": false}))
+    };
     for _ in 0..10 {
-        let reply = david
-            .write(
-                Req::new(Method::POST, "/two_factor_challenge")
-                    .header("x-forwarded-for", "198.18.0.100")
-                    .form(&[("code", "wrong")]),
-            )
-            .await;
+        let reply = david.write(challenge("wrong")).await;
         assert!(
             !reply.text().contains("Too many attempts."),
             "ten attempts fit the IP bucket"
@@ -413,13 +432,7 @@ async fn challenge_ip_bucket_is_shared_and_rejects_valid_codes_until_three_minut
         .unwrap();
     for (browser, key) in [(&mut david, &keys[0]), (&mut kevin, &keys[1])] {
         let code = totp::at(key, a.booted.app.clock.now().as_second()).unwrap();
-        let reply = browser
-            .write(
-                Req::new(Method::POST, "/two_factor_challenge")
-                    .header("x-forwarded-for", "198.18.0.100")
-                    .form(&[("code", &code)]),
-            )
-            .await;
+        let reply = browser.write(challenge(&code)).await;
         assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
         assert!(
             reply.text().contains("Too many attempts."),
@@ -436,14 +449,7 @@ async fn challenge_ip_bucket_is_shared_and_rejects_valid_codes_until_three_minut
     clock.advance(jiff::SignedDuration::from_secs(181));
     let code = totp::at(&keys[1], a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        kevin
-            .write(
-                Req::new(Method::POST, "/two_factor_challenge")
-                    .header("x-forwarded-for", "198.18.0.100")
-                    .form(&[("code", &code)])
-            )
-            .await
-            .location(),
-        Some("http://campfire.test/app/")
+        kevin.write(challenge(&code)).await.json(),
+        serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/app/"})
     );
 }

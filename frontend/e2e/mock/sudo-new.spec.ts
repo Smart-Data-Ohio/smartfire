@@ -156,12 +156,12 @@ for (const theme of THEMES) {
             route.fulfill({
               status,
               contentType: "application/json",
-              body: JSON.stringify({ kind: "navigate", location: "/session/new" }),
+              body: JSON.stringify({ kind: "navigate", location: "/app/session/new" }),
             }),
           );
           await openPage(page, theme);
 
-          await expect(page).toHaveURL(/\/session\/new/);
+          await expect(page).toHaveURL(/\/app\/session\/new/);
         });
       }
 

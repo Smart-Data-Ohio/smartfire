@@ -149,7 +149,7 @@ async fn revoke_scopes_to_owner_and_requires_csrf_then_keeps_survivor_signed_in(
     );
     assert_eq!(
         victim.get("/users/me/profile").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     a.db().read(move |c|{ let (actor,target,details):(i64,i64,String)=c.query_row("SELECT actor_id,target_id,details FROM audit_logs WHERE action='session.revoke' ORDER BY id DESC LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?;assert_eq!((actor,target),(KEVIN,KEVIN));assert_eq!(details,"{\"revoked_session_id\":\"[FILTERED]\"}");Ok(())}).await.unwrap();
 }
@@ -171,7 +171,7 @@ async fn revoke_current_signs_out_without_revoke_audit_and_removes_only_own_push
     );
     assert_eq!(
         b.get("/users/me/profile").await.location(),
-        Some("http://campfire.test/session/new")
+        Some("http://campfire.test/app/session/new")
     );
     assert_eq!(audit_count(&a, "session.revoke").await, before);
     a.db().read(|c|{assert_eq!(c.query_row("SELECT count(*) FROM push_subscriptions WHERE endpoint='https://example.com/push' AND user_id=?",[KEVIN],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT count(*) FROM push_subscriptions WHERE endpoint='https://example.com/push' AND user_id=?",[DAVID],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
@@ -284,19 +284,22 @@ async fn revocation_drains_frames_then_disconnects_and_revoked_cookie_cannot_rec
     server.abort();
 }
 
+/// A password sign-in from Chrome through the SPA's call (`POST /api/v1/session`).
 async fn password(
     b: &mut crate::controllers::presenters::test_support::Browser<'_>,
 ) -> crate::controllers::presenters::test_support::Reply {
-    b.get("/session/new").await;
+    let body = serde_json::json!({"emailAddress": "david@37signals.com", "password": "secret123456"});
     b.write(
-        Req::new(Method::POST, "/session")
+        Req::new(Method::POST, "/api/v1/session")
             .header("user-agent", CHROME)
-            .form(&[
-                ("email_address", "david@37signals.com"),
-                ("password", "secret123456"),
-            ]),
+            .json_body(&body),
     )
     .await
+}
+/// Where a completed sign-in sends the SPA (`None` for any other answer).
+fn signed_in(reply: &crate::controllers::presenters::test_support::Reply) -> Option<String> {
+    let body = reply.json();
+    (body["kind"] == "signedIn").then(|| body["location"].as_str().unwrap().to_string())
 }
 async fn stats(a: &TestApp) -> (i64, i64, i64) {
     a.db().read(|c|Ok((Session::count_for_user(c,DAVID)?,UserDevice::for_user(c,DAVID)?.len() as i64,c.query_row("SELECT count(*) FROM activity_items WHERE user_id=? AND event_type='new_sign_in'",[DAVID],|r|r.get(0))?))).await.unwrap()
@@ -319,7 +322,7 @@ async fn completed_sign_ins_record_devices_first_and_known_are_quiet_new_alerts_
         .unwrap();
     let mut first = a.anonymous();
     let reply = password(&mut first).await;
-    assert_eq!(reply.location(), Some("http://campfire.test/app/"));
+    assert_eq!(signed_in(&reply).as_deref(), Some("http://campfire.test/app/"));
     let cookie = reply
         .headers
         .get_all("set-cookie")
@@ -344,7 +347,7 @@ async fn completed_sign_ins_record_devices_first_and_known_are_quiet_new_alerts_
         .unwrap();
     let mut second = a.anonymous();
     assert_eq!(
-        password(&mut second).await.location(),
+        signed_in(&password(&mut second).await).as_deref(),
         Some("http://campfire.test/app/")
     );
     assert_eq!((stats(&a).await.1, stats(&a).await.2), (2, 1));
@@ -368,10 +371,7 @@ async fn pending_first_factor_records_nothing_until_challenge_completes() {
         .unwrap();
     let before = stats(&a).await;
     let mut b = a.anonymous();
-    assert_eq!(
-        password(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(password(&mut b).await.json()["kind"], "secondFactorRequired");
     assert_eq!(stats(&a).await, before);
     let enc = rails_compat::ar_encryption::ArEncryption::new(&a.booted.app.secrets);
     let secret = a
@@ -387,8 +387,10 @@ async fn pending_first_factor_records_nothing_until_challenge_completes() {
         .await
         .unwrap();
     let code = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
-    b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-        .await;
+    assert_eq!(
+        b.answer_challenge(&code, false).await.json()["kind"],
+        "signedIn"
+    );
     assert_eq!(stats(&a).await, (before.0 + 1, before.1 + 1, before.2 + 1));
 }
 #[tokio::test]
@@ -429,7 +431,7 @@ async fn configured_sign_in_uses_ws10_and_enqueue_failure_rolls_back_every_auth_
         .await
         .unwrap();
     assert_eq!(
-        password(&mut b).await.location(),
+        signed_in(&password(&mut b).await).as_deref(),
         Some("http://campfire.test/app/")
     );
     a.db().read(|c|{let args:String=c.query_row("SELECT args FROM ws9_sign_in_mail",[],|r|r.get(0))?;let value:serde_json::Value=serde_json::from_str(&args).unwrap();let id=c.query_row("SELECT id FROM activity_items WHERE user_id=? AND event_type='new_sign_in' ORDER BY id DESC LIMIT 1",[DAVID],|r|r.get::<_,i64>(0))?;assert_eq!(value,serde_json::json!({"notification":{"NewSignIn":{"activity_item_id":id}}}));Ok(())}).await.unwrap();

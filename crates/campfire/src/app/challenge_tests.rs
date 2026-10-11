@@ -1,8 +1,16 @@
-//! Real second-factor and sensitive self-service requests over the pinned seed.
-use crate::controllers::presenters::test_support::{DAVID, JASON, Req, TestApp};
+//! Real second-factor and sensitive self-service requests over the pinned seed. Sign-in and the
+//! challenge go through the SPA's JSON API (`/api/v1/session`, `/api/v1/two_factor/challenge`),
+//! and two-step management through the account settings API (`/api/v1/settings/two_factor`).
+use crate::controllers::presenters::test_support::{Browser, DAVID, JASON, Reply, Req, TestApp};
 use axum::http::{Method, StatusCode};
 use campfire_db::{Session, TwoFactorBackupCode, TwoFactorCredential, TwoFactorRememberedDevice};
 use rails_compat::{ar_encryption::ArEncryption, totp};
+use serde_json::json;
+const CHALLENGE: &str = "/api/v1/two_factor/challenge";
+const BACKUP_CODES: &str = "/api/v1/settings/two_factor/backup_codes";
+const TWO_FACTOR: &str = "/api/v1/settings/two_factor";
+const DEVICES: &str = "/api/v1/settings/two_factor/devices";
+const REFUSED: &str = "Enter your authenticator code or password to continue.";
 async fn app() -> TestApp {
     TestApp::boot()
         .await
@@ -16,15 +24,52 @@ async fn prepare(a: &TestApp) -> (i64, String, Vec<String>) {
         Ok((c.id, c.secret(&enc)?, TwoFactorBackupCode::regenerate_set(tx,c.id)?))
     }).await.unwrap()
 }
-async fn sign_in(
-    b: &mut crate::controllers::presenters::test_support::Browser<'_>,
-) -> crate::controllers::presenters::test_support::Reply {
-    b.get("/session/new").await;
-    b.write(Req::new(Method::POST, "/session").form(&[
-        ("email_address", "david@37signals.com"),
-        ("password", "secret123456"),
-    ]))
-    .await
+async fn sign_in(b: &mut Browser<'_>) -> Reply {
+    b.password_sign_in("david@37signals.com", "secret123456")
+        .await
+}
+/// A JSON sign-in or challenge reply as its `kind`, followed by its `location` when it has one.
+fn outcome(reply: &Reply) -> String {
+    let body = reply.json();
+    let kind = body["kind"].as_str().unwrap_or_else(|| panic!("{}", reply.text()));
+    match body["location"].as_str() {
+        Some(location) => format!("{kind} {location}"),
+        None => kind.to_owned(),
+    }
+}
+/// The pending sign-in's state, as the SPA's challenge page loads it.
+async fn challenge_state(b: &mut Browser<'_>) -> Reply {
+    b.send(Req::new(Method::GET, CHALLENGE).header("accept", "application/json"))
+        .await
+}
+fn challenge(code: &str) -> Req {
+    Req::new(Method::POST, CHALLENGE).json_body(&json!({"code": code, "rememberDevice": false}))
+}
+/// A two-step management write from the security settings, confirmed with `reauth`.
+fn manage(method: Method, path: &str, reauth: &str) -> Req {
+    Req::new(method, path).json_body(&json!({"reauth": reauth}))
+}
+/// The settings API's error, as `(status, _tag, message)`.
+fn refusal(reply: &Reply) -> (StatusCode, String, String) {
+    let error = &reply.json()["error"];
+    (
+        reply.status,
+        error["_tag"].as_str().unwrap_or_default().to_owned(),
+        error["message"].as_str().unwrap_or_default().to_owned(),
+    )
+}
+async fn regenerations(a: &TestApp) -> i64 {
+    a.db()
+        .read(|c| Ok(c.query_row(
+            "SELECT count(*) FROM audit_logs WHERE action='two_factor.backup_codes.regenerate'",
+            [],
+            |r| r.get::<_, i64>(0)
+        )?))
+        .await
+        .unwrap()
+}
+fn refused() -> (StatusCode, String, String) {
+    (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into(), REFUSED.into())
 }
 #[tokio::test]
 async fn challenge_first_factor_grants_no_session_and_totp_starts_verified_session() {
@@ -41,10 +86,7 @@ async fn challenge_first_factor_grants_no_session_and_totp_starts_verified_sessi
         .await
         .unwrap();
     let mut b = a.anonymous();
-    assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     assert_eq!(
         a.db()
             .read(|c| Ok(Session::for_user(c, DAVID)?.len()))
@@ -54,16 +96,20 @@ async fn challenge_first_factor_grants_no_session_and_totp_starts_verified_sessi
     );
     assert_eq!(
         b.get("/").await.location(),
-        Some("http://campfire.test/two_factor_challenge")
+        Some("http://campfire.test/app/two_factor/challenge")
     );
-    let prompt = b.get("/two_factor_challenge").await;
+    assert_eq!(
+        b.get("/two_factor_challenge").await.location(),
+        Some("http://campfire.test/app/two_factor/challenge"),
+        "the retained page sends the pending sign-in to the SPA's challenge"
+    );
+    let prompt = challenge_state(&mut b).await;
     assert_eq!(prompt.status, StatusCode::OK);
     assert_eq!(prompt.header("cache-control"), Some("no-store"));
+    assert_eq!(outcome(&prompt), "secondFactorRequired");
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
-    let ok = b
-        .write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-        .await;
-    assert_eq!(ok.location(), Some("http://campfire.test/app/"));
+    let ok = b.answer_challenge(&code, false).await;
+    assert_eq!(outcome(&ok), "signedIn http://campfire.test/app/");
     a.db().read(move |c| {
         let created = Session::for_user(c,DAVID)?.into_iter().filter(|s| !before_ids.contains(&s.id)).collect::<Vec<_>>();
         assert_eq!(created.len(), 1);
@@ -72,18 +118,13 @@ async fn challenge_first_factor_grants_no_session_and_totp_starts_verified_sessi
         Ok(())
     }).await.unwrap();
     assert_eq!(
-        b.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/")
+        outcome(&challenge_state(&mut b).await),
+        "navigate http://campfire.test/"
     );
     b.write(Req::new(Method::DELETE, "/session")).await;
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
-    assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-            .await
-            .status,
+        b.answer_challenge(&code, false).await.status,
         StatusCode::UNPROCESSABLE_ENTITY
     );
 }
@@ -92,25 +133,15 @@ async fn challenge_backup_is_single_use_and_locked_attempts_spend_nothing() {
     let a = app().await;
     let (id, secret, codes) = prepare(&a).await;
     let mut b = a.anonymous();
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
-    assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &codes[0])]))
-            .await
-            .location(),
-        Some("http://campfire.test/app/")
+        outcome(&b.answer_challenge(&codes[0], false).await),
+        "signedIn http://campfire.test/app/"
     );
     b.write(Req::new(Method::DELETE, "/session")).await;
-    assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     for n in 1..=5 {
-        let response = b
-            .write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &codes[0])]))
-            .await;
+        let response = b.answer_challenge(&codes[0], false).await;
         assert_eq!(
             response.status,
             if n == 5 {
@@ -123,9 +154,7 @@ async fn challenge_backup_is_single_use_and_locked_attempts_spend_nothing() {
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     for code in [&code, &codes[1]] {
         assert_eq!(
-            b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", code)]))
-                .await
-                .status,
+            b.answer_challenge(code, false).await.status,
             StatusCode::TOO_MANY_REQUESTS
         );
     }
@@ -143,18 +172,13 @@ async fn challenge_requires_live_pending_user_and_csrf() {
     let (_, secret, _) = prepare(&a).await;
     let mut b = a.anonymous();
     assert_eq!(
-        b.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/session/new")
+        outcome(&challenge_state(&mut b).await),
+        "navigate http://campfire.test/app/session/new"
     );
-    assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.send(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-            .await
-            .status,
+        b.send(challenge(&code)).await.status,
         StatusCode::UNPROCESSABLE_ENTITY
     );
     a.db()
@@ -166,10 +190,8 @@ async fn challenge_requires_live_pending_user_and_csrf() {
         .await
         .unwrap();
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-            .await
-            .location(),
-        Some("http://campfire.test/session/new")
+        outcome(&b.answer_challenge(&code, false).await),
+        "navigate http://campfire.test/app/session/new"
     );
 }
 #[tokio::test]
@@ -185,10 +207,8 @@ async fn self_service_requires_fresh_credentials_and_scopes_devices() {
     let device_id = device.id;
     for code in ["", "wrong", &codes[0]] {
         assert_eq!(
-            b.write(Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", code)]))
-                .await
-                .location(),
-            Some("http://campfire.test/users/me/profile")
+            refusal(&b.write(manage(Method::POST, BACKUP_CODES, code)).await),
+            refused()
         );
     }
     assert!(
@@ -198,25 +218,33 @@ async fn self_service_requires_fresh_credentials_and_scopes_devices() {
             .unwrap(),
         "reauthentication never consumes backups"
     );
+    let retained = b
+        .write(Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", "secret123456")]))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
     assert_eq!(
-        b.write(
-            Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", "secret123456")])
-        )
-        .await
-        .status,
-        StatusCode::OK
+        retained.location(),
+        Some("http://campfire.test/app/settings/security"),
+        "the retained profile form replaces no codes"
     );
+    assert_eq!(regenerations(&a).await, 0);
+    let regenerated = b
+        .write(manage(Method::POST, BACKUP_CODES, "secret123456"))
+        .await;
+    assert_eq!(regenerated.status, StatusCode::OK, "{}", regenerated.text());
+    assert_eq!(regenerated.json()["codes"].as_array().unwrap().len(), 10);
+    // Someone else's device id is no device of David's: the write succeeds and forgets nothing.
+    let forgotten = b
+        .write(manage(
+            Method::DELETE,
+            &format!("{DEVICES}/{}", device.id),
+            "secret123456",
+        ))
+        .await;
+    assert_eq!(forgotten.status, StatusCode::OK, "{}", forgotten.text());
     assert_eq!(
-        b.write(
-            Req::new(
-                Method::DELETE,
-                &format!("/two_factor_remembered_devices/{}", device.id)
-            )
-            .form(&[("reauth", "secret123456")])
-        )
-        .await
-        .location(),
-        Some("http://campfire.test/users/me/profile")
+        forgotten.json()["notice"],
+        "Device forgotten. It will ask for a code at next sign-in."
     );
     assert!(
         a.db()
@@ -232,7 +260,7 @@ async fn disable_refuses_unverified_session_even_with_correct_password() {
     let a = app().await;
     prepare(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    b.get("/sudo/new").await; // establish CSRF before deliberately making this session stale
+    b.authenticity_token().await; // establish CSRF before deliberately making this session stale
     a.db()
         .write(|tx| {
             tx.conn().execute(
@@ -244,11 +272,13 @@ async fn disable_refuses_unverified_session_even_with_correct_password() {
         .await
         .unwrap();
     let response = b
-        .write(Req::new(Method::DELETE, "/two_factor_setup").form(&[("reauth", "secret123456")]))
+        .write(manage(Method::DELETE, TWO_FACTOR, "secret123456"))
         .await;
     assert_eq!(
-        response.location(),
-        Some("http://campfire.test/session/new")
+        refusal(&response).0,
+        StatusCode::UNAUTHORIZED,
+        "{}",
+        response.text()
     );
     assert!(
         a.db()
@@ -266,17 +296,36 @@ async fn disable_resets_all_verification_remembered_devices_and_audits() {
         .write(|tx| TwoFactorRememberedDevice::create_for(tx, DAVID, None, None))
         .await
         .unwrap();
+    let retained = b
+        .write(Req::new(Method::DELETE, "/two_factor_setup").form(&[("reauth", "secret123456")]))
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
     assert_eq!(
-        b.write(Req::new(Method::DELETE, "/two_factor_setup").form(&[("reauth", "wrong")]))
+        retained.location(),
+        Some("http://campfire.test/app/settings/security")
+    );
+    assert!(
+        a.db()
+            .read(|c| Ok(TwoFactorCredential::for_user(c, DAVID)?.unwrap().enabled()))
             .await
-            .location(),
-        Some("http://campfire.test/users/me/profile")
+            .unwrap(),
+        "the retained profile form leaves two-step sign-in on"
     );
     assert_eq!(
-        b.write(Req::new(Method::DELETE, "/two_factor_setup").form(&[("reauth", "secret123456")]))
-            .await
-            .location(),
-        Some("http://campfire.test/two_factor_setup")
+        refusal(&b.write(manage(Method::DELETE, TWO_FACTOR, "wrong")).await),
+        refused()
+    );
+    let disabled = b
+        .write(manage(Method::DELETE, TWO_FACTOR, "secret123456"))
+        .await;
+    assert_eq!(disabled.status, StatusCode::OK, "{}", disabled.text());
+    assert_eq!(
+        disabled.json()["notice"],
+        "Two-step sign-in is off. Set it up again to keep signing in."
+    );
+    assert_eq!(
+        b.get("/").await.location(),
+        Some("http://campfire.test/app/two_factor/setup?required=true")
     );
     a.db().read(|c| {
         assert!(TwoFactorCredential::for_user(c,DAVID)?.is_none());
@@ -297,32 +346,26 @@ async fn challenge_pending_expires_at_ten_minutes_and_reset_cannot_complete() {
         .expect("build the default parity seed");
     prepare(&a).await;
     let mut b = a.anonymous();
-    assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     clock.advance(jiff::SignedDuration::from_secs(600));
     assert_eq!(
-        b.get("/two_factor_challenge").await.status,
-        StatusCode::OK,
+        outcome(&challenge_state(&mut b).await),
+        "secondFactorRequired",
         "the expiry second remains valid in Rails"
     );
     clock.advance(jiff::SignedDuration::from_secs(1));
     assert_eq!(
-        b.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/session/new")
+        outcome(&challenge_state(&mut b).await),
+        "navigate http://campfire.test/app/session/new"
     );
-    assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
     a.db()
         .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
         .await
         .unwrap();
     assert_eq!(
-        b.get("/two_factor_challenge").await.location(),
-        Some("http://campfire.test/session/new")
+        outcome(&challenge_state(&mut b).await),
+        "navigate http://campfire.test/app/session/new"
     );
 }
 #[tokio::test]
@@ -341,9 +384,7 @@ async fn challenge_lockouts_escalate_refresh_one_item_and_limits_block_across_ip
         for n in 0..5 {
             let response = b
                 .write(
-                    Req::new(Method::POST, "/two_factor_challenge")
-                        .header("x-forwarded-for", &format!("198.18.{window}.{n}"))
-                        .form(&[("code", "invalid")]),
+                    challenge("invalid").header("x-forwarded-for", &format!("198.18.{window}.{n}")),
                 )
                 .await;
             assert_eq!(
@@ -361,11 +402,7 @@ async fn challenge_lockouts_escalate_refresh_one_item_and_limits_block_across_ip
         }
     }
     let response = b
-        .write(
-            Req::new(Method::POST, "/two_factor_challenge")
-                .header("x-forwarded-for", "198.18.7.7")
-                .form(&[("code", "invalid")]),
-        )
+        .write(challenge("invalid").header("x-forwarded-for", "198.18.7.7"))
         .await;
     assert_eq!(response.status, StatusCode::TOO_MANY_REQUESTS);
     assert!(
@@ -380,10 +417,8 @@ async fn challenge_lockouts_escalate_refresh_one_item_and_limits_block_across_ip
     sign_in(&mut b).await;
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", &code)]))
-            .await
-            .location(),
-        Some("http://campfire.test/app/")
+        outcome(&b.answer_challenge(&code, false).await),
+        "signedIn http://campfire.test/app/"
     );
     a.db()
         .read(move |c| {
@@ -401,30 +436,24 @@ async fn remembered_cookie_is_secure_and_revocation_restores_challenge() {
     let a = app().await;
     let (_, secret, _) = prepare(&a).await;
     let mut b = a.anonymous();
-    b.send(Req::new(Method::GET, "/session/new").header("x-forwarded-proto", "https"))
-        .await;
+    let https_sign_in = || {
+        Req::new(Method::POST, "/api/v1/session")
+            .header("x-forwarded-proto", "https")
+            .json_body(&json!({"emailAddress": "david@37signals.com", "password": "secret123456"}))
+    };
     assert_eq!(
-        b.write(
-            Req::new(Method::POST, "/session")
-                .header("x-forwarded-proto", "https")
-                .form(&[
-                    ("email_address", "david@37signals.com"),
-                    ("password", "secret123456")
-                ])
-        )
-        .await
-        .location(),
-        Some("https://campfire.test/two_factor_challenge")
+        outcome(&b.write(https_sign_in()).await),
+        "secondFactorRequired"
     );
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     let result = b
         .write(
-            Req::new(Method::POST, "/two_factor_challenge")
+            Req::new(Method::POST, CHALLENGE)
                 .header("x-forwarded-proto", "https")
-                .form(&[("code", &code), ("remember_device", "1")]),
+                .json_body(&json!({"code": code, "rememberDevice": true})),
         )
         .await;
-    assert_eq!(result.location(), Some("https://campfire.test/app/"));
+    assert_eq!(outcome(&result), "signedIn https://campfire.test/app/");
     let cookie = result
         .headers
         .get_all("set-cookie")
@@ -437,33 +466,39 @@ async fn remembered_cookie_is_secure_and_revocation_restores_challenge() {
     }
     b.write(Req::new(Method::DELETE, "/session").header("x-forwarded-proto", "https"))
         .await;
-    b.send(Req::new(Method::GET, "/session/new").header("x-forwarded-proto", "https"))
-        .await;
-    let result = b
-        .write(
-            Req::new(Method::POST, "/session")
-                .header("x-forwarded-proto", "https")
-                .form(&[
-                    ("email_address", "david@37signals.com"),
-                    ("password", "secret123456"),
-                ]),
-        )
-        .await;
-    assert_eq!(result.location(), Some("https://campfire.test/app/"));
     assert_eq!(
-        b.write(
+        outcome(&b.write(https_sign_in()).await),
+        "signedIn https://campfire.test/app/"
+    );
+    let remembered = || async {
+        a.db()
+            .read(|c| Ok(TwoFactorRememberedDevice::for_user(c, DAVID)?.len()))
+            .await
+            .unwrap()
+    };
+    let before = remembered().await;
+    let retained = b
+        .write(
             Req::new(Method::DELETE, "/two_factor_remembered_devices")
-                .form(&[("reauth", "secret123456")])
+                .form(&[("reauth", "secret123456")]),
         )
-        .await
-        .location(),
-        Some("http://campfire.test/users/me/profile")
+        .await;
+    assert_eq!(retained.status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        retained.location(),
+        Some("http://campfire.test/app/settings/security")
+    );
+    assert_eq!(remembered().await, before, "the retained profile form forgets nothing");
+    let forgotten = b
+        .write(manage(Method::DELETE, DEVICES, "secret123456"))
+        .await;
+    assert_eq!(forgotten.status, StatusCode::OK, "{}", forgotten.text());
+    assert_eq!(
+        forgotten.json()["notice"],
+        "All devices forgotten. Every browser will ask for a code at next sign-in."
     );
     b.write(Req::new(Method::DELETE, "/session")).await;
-    assert_eq!(
-        sign_in(&mut b).await.location(),
-        Some("http://campfire.test/two_factor_challenge")
-    );
+    assert_eq!(outcome(&sign_in(&mut b).await), "secondFactorRequired");
 }
 #[tokio::test]
 async fn totp_reauthentication_is_spent_and_never_accepts_backup_or_wrong_password() {
@@ -471,16 +506,12 @@ async fn totp_reauthentication_is_spent_and_never_accepts_backup_or_wrong_passwo
     let (id, secret, _) = prepare(&a).await;
     let mut b = a.sign_in(DAVID).await;
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
-    let result = b
-        .write(Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", &code)]))
-        .await;
-    assert_eq!(result.status, StatusCode::OK);
+    let result = b.write(manage(Method::POST, BACKUP_CODES, &code)).await;
+    assert_eq!(result.status, StatusCode::OK, "{}", result.text());
     assert_eq!(result.header("cache-control"), Some("no-store"));
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", &code)]))
-            .await
-            .location(),
-        Some("http://campfire.test/users/me/profile")
+        refusal(&b.write(manage(Method::POST, BACKUP_CODES, &code)).await),
+        refused()
     );
     assert!(
         a.db()
@@ -591,29 +622,20 @@ async fn google_step_up_seam_checks_owner_subject_freshness_and_consumes_once() 
         if armed {
             let mut b = a.anonymous();
             b.absorb_cookie_header(&format!("{session_cookie}; {state_cookie}"));
-            b.get("/sudo/new").await;
-            assert_eq!(
-                b.write(
-                    Req::new(Method::POST, "/two_factor_backup_codes")
-                        .form(&[("reauth", "incorrect")])
-                )
-                .await
-                .location(),
-                Some("http://campfire.test/users/me/profile")
-            );
-            let response = b
-                .write(Req::new(Method::POST, "/two_factor_backup_codes"))
-                .await;
+            b.authenticity_token().await;
+            let incorrect = b.write(manage(Method::POST, BACKUP_CODES, "incorrect")).await;
+            assert_eq!(refusal(&incorrect).0, StatusCode::UNPROCESSABLE_ENTITY);
+            // A blank confirmation spends the Google step-up, as the classic empty form did.
+            let response = b.write(manage(Method::POST, BACKUP_CODES, "")).await;
             assert_eq!(
                 response.status,
                 StatusCode::OK,
-                "a wrong in-request credential preserves the pending Google step-up"
+                "a wrong in-request credential preserves the pending Google step-up: {}",
+                response.text()
             );
             assert_eq!(
-                b.write(Req::new(Method::POST, "/two_factor_backup_codes"))
-                    .await
-                    .location(),
-                Some("http://campfire.test/users/me/profile")
+                refusal(&b.write(manage(Method::POST, BACKUP_CODES, "")).await).0,
+                StatusCode::UNPROCESSABLE_ENTITY
             );
         }
     }
@@ -632,38 +654,32 @@ async fn self_service_limits_and_google_unavailability_are_enforced() {
     );
     for n in 0..10 {
         assert_eq!(
-            b.write(
-                Req::new(Method::POST, "/two_factor_backup_codes")
-                    .header("x-forwarded-for", &format!("198.18.1.{n}"))
-                    .form(&[("reauth", "wrong")])
-            )
-            .await
-            .location(),
-            Some("http://campfire.test/users/me/profile")
+            refusal(
+                &b.write(
+                    manage(Method::POST, BACKUP_CODES, "wrong")
+                        .header("x-forwarded-for", &format!("198.18.1.{n}"))
+                )
+                .await
+            ),
+            refused()
         );
     }
     let result = b
         .write(
-            Req::new(Method::POST, "/two_factor_backup_codes")
-                .header("x-forwarded-for", "198.18.3.3")
-                .form(&[("reauth", "secret123456")]),
+            manage(Method::POST, BACKUP_CODES, "secret123456")
+                .header("x-forwarded-for", "198.18.3.3"),
         )
         .await;
     assert_eq!(
-        result.location(),
-        Some("http://campfire.test/users/me/profile")
+        refusal(&result),
+        (
+            StatusCode::TOO_MANY_REQUESTS,
+            "RateLimited".into(),
+            "Too many attempts. Try again in a few minutes.".into()
+        ),
+        "the per-user limit holds across IPs"
     );
-    assert_eq!(
-        a.db()
-            .read(|c| Ok(c.query_row(
-                "SELECT count(*) FROM audit_logs WHERE action='two_factor.backup_codes.regenerate'",
-                [],
-                |r| r.get::<_, i64>(0)
-            )?))
-            .await
-            .unwrap(),
-        0
-    );
+    assert_eq!(regenerations(&a).await, 0);
 }
 
 #[tokio::test]
@@ -760,9 +776,7 @@ async fn configured_lockout_uses_ws10_queue_and_enqueue_failure_rolls_back_locko
     sign_in(&mut b).await;
     for _ in 0..4 {
         assert_eq!(
-            b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", "wrong")]))
-                .await
-                .status,
+            b.answer_challenge("wrong", false).await.status,
             StatusCode::UNPROCESSABLE_ENTITY
         );
     }
@@ -782,9 +796,7 @@ async fn configured_lockout_uses_ws10_queue_and_enqueue_failure_rolls_back_locko
         .await
         .unwrap();
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", "wrong")]))
-            .await
-            .status,
+        b.answer_challenge("wrong", false).await.status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
     a.db().read(move |conn| {
@@ -803,9 +815,7 @@ async fn configured_lockout_uses_ws10_queue_and_enqueue_failure_rolls_back_locko
         .await
         .unwrap();
     assert_eq!(
-        b.write(Req::new(Method::POST, "/two_factor_challenge").form(&[("code", "wrong")]))
-            .await
-            .status,
+        b.answer_challenge("wrong", false).await.status,
         StatusCode::TOO_MANY_REQUESTS
     );
     a.db()

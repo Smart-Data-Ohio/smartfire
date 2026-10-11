@@ -280,7 +280,7 @@ describe("leaving the setup screen", () => {
       if (request.method === "GET" && request.path.startsWith("/api/v1/two_factor/setup")) {
         await release.promise;
 
-        return { status: 401, json: { kind: "navigate", location: "/session/new" } };
+        return { status: 401, json: { kind: "navigate", location: "/app/session/new" } };
       }
 
       return handle(request);
@@ -305,7 +305,7 @@ describe("leaving the setup screen", () => {
 
     vi.spyOn(network.server, "handle").mockImplementation((request) =>
       request.method === "GET" && request.path.startsWith("/api/v1/two_factor/setup")
-        ? Promise.resolve({ status: 401, json: { kind: "navigate", location: "/session/new" } })
+        ? Promise.resolve({ status: 401, json: { kind: "navigate", location: "/app/session/new" } })
         : handle(request),
     );
     await mount("/app/two_factor/setup");

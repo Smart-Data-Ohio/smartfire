@@ -31,7 +31,7 @@ async fn github_connections_security_enforces_sudo_admin_active_bot_and_single_u
         )
         .await;
         assert_eq!(status, 302);
-        assert_eq!(headers["location"], "http://example.org/sudo/new");
+        assert_eq!(headers["location"], "http://example.org/app/sudo/new");
     }
     let (status, headers, _) = request(
         &fresh,

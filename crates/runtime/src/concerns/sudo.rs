@@ -62,7 +62,8 @@ pub async fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
         request["params"] = serde_json::Value::Null;
         c.session().insert(session_keys::SUDO_PENDING_KEY, request);
     }
-    let location = c.url_for(&campfire_routes::new_sudo());
+    // A page navigation confirms on the SPA's page; anything else gets the retained route's answer.
+    let location = super::auth_page_url(c, "/app/sudo/new", &campfire_routes::new_sudo());
     halt(c.redirect_to(&location)?)
 }
 

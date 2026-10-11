@@ -464,6 +464,17 @@ impl Browser {
         self.send(request, body).await
     }
 
+    /// A JSON call as the SPA makes it, with the session's token in `X-CSRF-Token`.
+    async fn post_json(&mut self, path: &str, body: serde_json::Value) -> (axum::http::StatusCode, String) {
+        let session = self.cookies.get(campfire_kit::session::SESSION_KEY).expect("a page established the browser's session");
+        let token = crate::controllers::presenters::test_support::masked_session_token(&self.secrets, session).expect("the page gave the session a CSRF token");
+        let request = axum::http::Request::post(path)
+            .header(campfire_kit::csrf::HEADER, token)
+            .header("accept", "application/json")
+            .header("content-type", "application/json");
+        self.send(request, body.to_string()).await
+    }
+
     async fn send(&mut self, request: axum::http::request::Builder, body: String) -> (axum::http::StatusCode, String) {
         use tower::ServiceExt as _;
         let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
@@ -508,12 +519,13 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
         .unwrap();
     take_jobs(&app).await;
     let mut browser = Browser::new(&router, app.secrets.clone());
-    let (status, body) = browser.get("/session/new").await;
+    let (status, body) = browser.get("/app/session/new").await;
     assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
-    let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
-    assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
-    let (status, _) = browser.get("/two_factor_setup").await;
-    assert_eq!(status, axum::http::StatusCode::OK);
+    let (status, body) = browser.post_json("/api/v1/session", serde_json::json!({"emailAddress": "person@example.com", "password": "secret123456"})).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "signed in: {body}");
+    assert!(body.contains(r#""kind":"signedIn""#), "signed in: {body}");
+    let (status, body) = browser.send(axum::http::Request::get("/api/v1/two_factor/setup").header("accept", "application/json"), String::new()).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
     let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.secrets);
     let enrollment_now = campfire_db::Timestamp::from_jiff(app.clock.now());
     let secret = app.db.read(move |conn| {
@@ -521,7 +533,7 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
         campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?.expect("live enrollment").secret(&encryption)
     }).await.unwrap();
     let code = rails_compat::totp::at(&secret, app.clock.now().as_second()).unwrap();
-    let (status, body) = browser.post("/two_factor_setup", "text/html", &[("code", &code)]).await;
+    let (status, body) = browser.post_json("/api/v1/two_factor/setup", serde_json::json!({"code": code})).await;
     assert_eq!(status, axum::http::StatusCode::OK, "completed enrollment: {body}");
     let path = format!("/rooms/{room}/messages");
     let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];

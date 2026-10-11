@@ -546,7 +546,7 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
             let reply = anonymous.get(&path).await;
             assert_eq!(
                 reply.location(),
-                Some(to("/session/new").as_str()),
+                Some(to("/app/session/new").as_str()),
                 "{path}"
             );
             assert!(!reply.text().contains(SECRET), "{path}");
@@ -566,7 +566,7 @@ async fn retired_html_shapes_redirect_and_machine_formats_remain_separate() {
     }
     let reply=a.david().send(Req::new(Method::GET,&format!("{path}.json"))).await;
     assert_eq!(reply.status,StatusCode::NOT_ACCEPTABLE);
-    assert_eq!(a.anonymous().get(&path).await.location(),Some(to("/session/new").as_str()));
+    assert_eq!(a.anonymous().get(&path).await.location(),Some(to("/app/session/new").as_str()));
 }
 
 
@@ -776,7 +776,9 @@ async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
         assert_eq!(reply.location(), Some(to(spa).as_str()), "{classic}");
     }
 
-    // The classic form's save runs as before and answers with the classic redirect.
+    // The classic form's save runs as before and answers with the classic redirect, once sudo
+    // is confirmed (its gate is the SPA's page now).
+    assert_eq!(david.confirm_sudo("secret123456").await.status, StatusCode::OK);
     let save = david
         .write(
             Req::new(Method::PATCH, "/account/custom_styles")

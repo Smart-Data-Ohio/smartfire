@@ -1,13 +1,14 @@
 /**
  * Where a sign-in operation's answer leads. Signing in, Google and anything outside the signed-out
- * pages are full page loads (the signed-in app boots afresh); the retained sign-in and challenge
- * URLs the server names stay on their SPA counterparts, so a visitor who started here stays here.
+ * pages are full page loads (the signed-in app boots afresh); the sign-in, challenge and first-run
+ * URLs the server names (and their historic forms, which redirect to them) stay on their SPA pages,
+ * so a visitor who started here stays here.
  */
 
 /** A signed-out page's route, under the router's `/app/` base. */
 export type SignedOutPage = "/session/new" | "/two_factor/challenge" | "/first_run";
 
-/** The SPA page for each retained auth page the server can send a visitor to. */
+/** The SPA page for each auth page the server can send a visitor to, historic URLs included. */
 const SPA_AUTH_PAGES = new Map<string, SignedOutPage>([
   ["/session/new", "/session/new"],
   ["/app/session/new", "/session/new"],

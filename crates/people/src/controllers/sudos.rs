@@ -2,11 +2,9 @@
 use super::auth;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, require_current_user, session_keys, sudo};
-use crate::controllers::presenters::page::retained_page;
-use campfire_api_types::{SudoGoogleStart, SudoMethod, SudoResponse, SudoSubmission};
+use campfire_api_types::{SudoGoogleStart, SudoResponse, SudoSubmission};
 use campfire_db::SudoVerifier;
 use campfire_kit::{Ctx, Error, Param, RateLimit, Redirect, Result, StatusCode, format, halt};
-use campfire_retained::sudos;
 use jiff::SignedDuration;
 use rusqlite::OptionalExtension;
 
@@ -19,6 +17,11 @@ async fn before_actions(c: &mut Ctx, endpoint: &'static str) -> Result<()> {
     auth::before_actions(c, endpoint, Before::default(), mode).await
 }
 
+/// The SPA's confirmation page (`/app/sudo/new`), which reads `GET /api/v1/sudo`.
+const SPA_SUDO: &str = "/app/sudo/new";
+
+/// `GET /sudo/new`: a page navigation goes to the SPA's confirmation page; a JSON request gets
+/// the confirmation methods.
 pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, "sudos#new").await?;
     render_new(c, StatusCode::OK).await
@@ -133,7 +136,7 @@ fn complete(c: &mut Ctx, result: Result) -> Result {
             if matches!(response.body, campfire_kit::response::Body::Empty) {
                 let body = if response.status == StatusCode::UNAUTHORIZED {
                     SudoResponse::Navigate {
-                        location: c.url_for(&campfire_routes::new_session()),
+                        location: c.url_for("/app/session/new"),
                         session: None,
                     }
                 } else {
@@ -190,7 +193,12 @@ pub fn google_return_path(c: &Ctx) -> Option<&'static str> {
     c.current::<GoogleJson>().map(|_| "/app/sudo/continue")
 }
 
+/// `POST /sudo`. A form posted from the retained confirmation page goes, unread, to the SPA's
+/// (`/app/sudo/new`): nothing is checked or counted. A JSON request confirms.
 pub async fn create(c: &mut Ctx) -> Result {
+    if !sudo::json_request(c)? {
+        return concerns::redirect_to_signed_out_spa(c, SPA_SUDO, StatusCode::SEE_OTHER);
+    }
     before_actions(c, "sudos#create").await?;
     rate_limit(c).await?;
     if sudo::json_request(c)? {
@@ -296,7 +304,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     }
 }
 
+/// `POST /sudo/google`. As [`create`]: only a JSON request starts a Google confirmation.
 pub async fn google(c: &mut Ctx) -> Result {
+    if !sudo::json_request(c)? {
+        return concerns::redirect_to_signed_out_spa(c, SPA_SUDO, StatusCode::SEE_OTHER);
+    }
     before_actions(c, "sudos#google").await?;
     rate_limit(c).await?;
     let json_mode = sudo::json_request(c)?;
@@ -352,7 +364,7 @@ pub async fn google(c: &mut Ctx) -> Result {
     }
     redirect_alert(
         c,
-        &campfire_routes::new_sudo(),
+        SPA_SUDO,
         "Google confirmation is not available for your account.",
     )
 }
@@ -375,7 +387,7 @@ pub async fn finish_google(
         let path = if concerns::signed_in(c) {
             campfire_routes::user_profile()
         } else {
-            campfire_routes::new_session()
+            "/app/session/new".to_owned()
         };
         return redirect_alert(c, &path, "Confirmation expired. Try again.");
     };
@@ -386,14 +398,14 @@ pub async fn finish_google(
     {
         return redirect_alert(
             c,
-            &campfire_routes::new_sudo(),
+            SPA_SUDO,
             "Confirmation expired. Try again.",
         );
     }
     if !auth_time.is_some_and(|time| time > (c.now().as_second() - 330) as f64) {
         return redirect_alert(
             c,
-            &campfire_routes::new_sudo(),
+            SPA_SUDO,
             "Google confirmation failed. Try again.",
         );
     }
@@ -421,7 +433,7 @@ pub async fn finish_google(
     } else {
         redirect_alert(
             c,
-            &campfire_routes::new_sudo(),
+            SPA_SUDO,
             "That Google account is not the one linked to your account.",
         )
     }
@@ -455,24 +467,19 @@ fn redirect_alert(c: &mut Ctx, path: &str, alert: &str) -> Result {
     )
 }
 
+/// Where a confirmation goes next: the page that asked for it, or, for a held form submission,
+/// home with a prompt to submit it again. Nothing is replayed.
 pub async fn continue_after_sudo(c: &mut Ctx) -> Result {
     match session_keys::continue_after_sudo(c.session(), &campfire_routes::root()) {
         session_keys::SudoContinuation::Redirect(path)
         | session_keys::SudoContinuation::Origin(path) => c.redirect_to(&path),
-        session_keys::SudoContinuation::Replay {
-            method,
-            path,
-            params,
-        } => {
-            c.respond_to(&[&format::HTML])?;
-            retained_page!(c, StatusCode::OK, |ctx| sudos::Continue {
-                ctx,
-                method: method.clone(),
-                path: path.clone(),
-                params: params.clone()
-            })
-            .await
-        }
+        session_keys::SudoContinuation::Replay { .. } => c.redirect_to_with(
+            &c.url_for(&campfire_routes::root()),
+            Redirect {
+                alert: Some("Confirmed. Try that again.".into()),
+                ..Redirect::default()
+            },
+        ),
     }
 }
 
@@ -486,8 +493,15 @@ async fn reject(c: &mut Ctx, status: StatusCode, alert: &str) -> Result {
             },
         );
     }
-    c.flash().now("alert", alert);
-    render_new(c, status).await
+    let location = c.url_for(SPA_SUDO);
+    c.redirect_to_with(
+        &location,
+        Redirect {
+            status: Some(StatusCode::SEE_OTHER),
+            alert: Some(alert.into()),
+            ..Redirect::default()
+        },
+    )
 }
 
 async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
@@ -504,17 +518,7 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
         );
     }
     c.respond_to(&[&format::HTML])?;
-    let methods = sudo::methods(c).await?;
-    let password = methods.contains(&SudoMethod::Password);
-    let totp = methods.contains(&SudoMethod::Totp);
-    let google = methods.contains(&SudoMethod::Google);
-    retained_page!(c, status, |ctx| sudos::New {
-        ctx,
-        password,
-        totp,
-        google
-    })
-    .await
+    concerns::redirect_to_signed_out_spa(c, SPA_SUDO, StatusCode::FOUND)
 }
 
 async fn rate_limit(c: &mut Ctx) -> Result<()> {

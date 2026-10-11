@@ -143,7 +143,7 @@ export function createJoin(
     if (EXISTING.has(emailAddress.trim().toLowerCase())) {
       return answer(200, {
         kind: "navigate",
-        location: `/session/new?email_address=${encodeURIComponent(emailAddress)}`,
+        location: `/app/session/new?email_address=${encodeURIComponent(emailAddress)}`,
       });
     }
 

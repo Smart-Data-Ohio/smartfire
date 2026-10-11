@@ -255,10 +255,29 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
         let html = local_html(html, &mut files);
         files.insert(format!("{name}.html"), html.into_bytes());
     }
-    for name in ["about", "privacy", "terms"] {
+    // The public pages' URLs have moved to the SPA's (`/app/about` etc.); their retained
+    // renderer still draws the standalone page these fixtures pin, with the stylesheet it served.
+    let policy = &app.booted.app.config.public_policy;
+    for (name, page) in [
+        ("about", campfire_retained::public_pages::Page::About),
+        ("privacy", campfire_retained::public_pages::Page::Privacy),
+        ("terms", campfire_retained::public_pages::Page::Terms),
+    ] {
         let reply = app.anonymous().get(&format!("/{name}")).await;
-        assert_eq!(reply.status, axum::http::StatusCode::OK);
-        let html = local_html(reply.text(), &mut files);
+        assert_eq!(reply.status, axum::http::StatusCode::MOVED_PERMANENTLY);
+        assert_eq!(
+            reply.location(),
+            Some(format!("http://campfire.test/app/{name}").as_str())
+        );
+        let html = campfire_retained::public_pages::render(
+            page,
+            &policy.operator_name,
+            &policy.contact_email,
+            &policy.effective_date,
+            h::raw(format!("{}\n{}", h::auth_stylesheet_tag(), h::auth_script_tag())),
+        )
+        .unwrap();
+        let html = local_html(html, &mut files);
         files.insert(format!("{name}.html"), html.into_bytes());
     }
     assert!(

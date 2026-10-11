@@ -1,5 +1,6 @@
 //! PR #195: signed identity selection and enrollment failure against pinned Rails.
 use super::*;
+use crate::controllers::presenters::test_support::spa_auth_locations;
 use campfire_db::{NewUser, Role, google_identity::GoogleIdentity};
 
 fn oracle() -> Value {
@@ -14,6 +15,8 @@ async fn sigma_case(index: usize) {
     if expected["response"]["location"] == "http://campfire.test/" {
         expected["response"]["location"] = json!("http://campfire.test/app/");
     }
+    // SPA cutover: the retained sign-in page a refused claim lands on is the SPA's.
+    spa_auth_locations(&mut expected["response"]);
     let name = expected["name"].as_str().unwrap().to_owned();
     let subject = format!("review-{name}");
     let (a, r, _slack) = app().await;
@@ -58,7 +61,7 @@ async fn sigma_case(index: usize) {
         .await
         .unwrap();
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     answer(
         &r,
@@ -132,7 +135,7 @@ async fn google_enrollment_audit_failure_matches_rails_over_http() {
         .unwrap();
     let id = user.id;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
+    b.get("/app/session/new").await;
     let q = start(&mut b, "/session/google").await;
     answer(
         &r,
@@ -149,7 +152,13 @@ async fn google_enrollment_audit_failure_matches_rails_over_http() {
     );
     let verified: i64 = a.db().read(move |conn| Ok(conn.query_row("SELECT COUNT(*) FROM sessions WHERE user_id=? AND two_factor_verified_at IS NOT NULL", [id], |row| row.get(0))?)).await.unwrap();
     assert_eq!(verified, 0, "real Google first factor starts unverified");
-    assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
+    // SPA cutover: the SPA's setup screen reads (and issues) the setup secret through JSON.
+    assert_eq!(
+        b.send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
+            .await
+            .status,
+        StatusCode::OK
+    );
     a.db().write(|tx| {
         tx.conn().execute_batch("CREATE TRIGGER refuse_review_enable BEFORE INSERT ON audit_logs WHEN NEW.action='two_factor.enable' BEGIN SELECT RAISE(ABORT,'review audit unavailable'); END")?;
         Ok(())
@@ -159,13 +168,15 @@ async fn google_enrollment_audit_failure_matches_rails_over_http() {
         a.booted.app.clock.now().as_second(),
     )
     .unwrap();
+    // SPA cutover: the SPA's setup screen enrolls with JSON, so the failure is compared with the
+    // pinned retained page by status (and no redirect); its body is the API's.
     let reply = b
-        .write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
+        .write(Req::new(Method::POST, "/api/v1/two_factor/setup").json_body(&json!({ "code": code })))
         .await;
     assert_eq!(
-        response(&reply),
-        expected["response"],
-        "enrollment failure response bytes"
+        json!({"status":reply.status.as_u16(),"location":reply.location()}),
+        json!({"status":expected["response"]["status"],"location":expected["response"]["location"]}),
+        "enrollment failure response"
     );
     let state = a.db().read(move |conn| {
         let enrolled = campfire_db::User::find(conn, id)?.two_factor_enabled(conn)?;

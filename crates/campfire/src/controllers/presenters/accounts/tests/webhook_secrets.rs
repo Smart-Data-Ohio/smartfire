@@ -114,7 +114,7 @@ async fn legacy_secret_rotation_requires_sudo_and_audits_without_plaintext() {
     let path = format!("/account/bots/{id}/webhook_secret");
     assert_redirect(
         &admin.form("post", &path, &[]).await,
-        "http://campfire.test/sudo/new",
+        "http://campfire.test/app/sudo/new",
     );
     assert!(secret(&test, id).await.is_none());
     admin.grant_sudo_access();
@@ -284,7 +284,7 @@ async fn agent_secret_rotation_calls_ws11_for_admin_and_owner_without_rotating_l
         browser.sign_in(&test.label(viewer)).await;
         assert_redirect(
             &browser.form("post", &path, &[]).await,
-            "http://campfire.test/sudo/new",
+            "http://campfire.test/app/sudo/new",
         );
         assert_eq!(agent_secret(&test, bot_id).await, before);
         browser.grant_sudo_access();

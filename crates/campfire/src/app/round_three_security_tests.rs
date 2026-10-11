@@ -111,52 +111,67 @@ async fn object_password_uses_raw_presence_for_device_revocation_and_audit() {
     password_case("hash").await;
     password_case("empty_hash").await;
 }
+/// The SPA's sign-in call (`POST /api/v1/session`) with `emailAddress` as given.
+fn sign_in_attempt(email_address: &Value) -> Req {
+    json_request(
+        Method::POST,
+        "/api/v1/session",
+        &json!({"emailAddress":email_address,"password":"wrong"}),
+    )
+    .header("accept", "application/json")
+}
+/// Rails audited a sign-in whose `email_address` was an array or nil with Ruby's inspect of it
+/// (`["david@37signals.com"]`) before filtering. The retained form post no longer signs in, and
+/// the SPA's call takes `emailAddress` only as a string: anything else is an unreadable request,
+/// refused before any attempt is made, so there is no sign-in failure to audit.
 #[tokio::test]
-async fn failed_sign_in_audits_ruby_array_string_before_filtering() {
+async fn failed_sign_in_with_a_non_string_email_is_refused_before_any_attempt() {
     for name in ["array", "two", "escaped", "empty_array", "nil"] {
         let case = &vectors()["email"][name];
         let a = app().await;
         clear_audits(&a).await;
         let mut b = a.anonymous();
-        b.get("/session/new").await;
-        let response = b
+        let retained = b
             .write(json_request(
                 Method::POST,
                 "/session",
                 &json!({"email_address":case["value"],"password":"wrong"}),
             ))
             .await;
-        assert_eq!(json!(response.status.as_u16()), case["status"], "{name}");
-        assert_eq!(audits(&a).await, case["audits"], "{name}");
+        assert_eq!(retained.status, StatusCode::SEE_OTHER, "{name}");
+        assert_eq!(audits(&a).await, json!([]), "{name}");
+        let response = b.write(sign_in_attempt(&case["value"])).await;
+        assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY, "{name}");
+        assert_eq!(
+            response.json(),
+            json!({"kind":"error","fieldErrors":{"base":["The request body isn't valid."]}}),
+            "{name}"
+        );
+        assert_eq!(audits(&a).await, json!([]), "{name}");
     }
 }
+/// A rate-limited sign-in is refused and audited even when its body can't be read, so a
+/// non-string `emailAddress` (which Rails audited as Ruby's inspect of it) is audited with no
+/// address, as `[unrecognized]`.
 #[tokio::test]
-async fn rate_limited_sign_in_audits_ruby_array_string_before_filtering() {
+async fn rate_limited_sign_in_with_a_non_string_email_audits_no_address() {
     let case = &vectors()["rate"];
     let a = app().await;
     clear_audits(&a).await;
     let mut b = a.anonymous();
-    b.get("/session/new").await;
     for _ in 0..10 {
         assert_eq!(
-            b.write(request(Method::POST, "/session").form(&[
-                ("email_address", "david@37signals.com"),
-                ("password", "wrong")
-            ]))
-            .await
-            .status,
+            b.write(sign_in_attempt(&json!("david@37signals.com")))
+                .await
+                .status,
             StatusCode::UNAUTHORIZED
         );
     }
-    let response = b
-        .write(json_request(
-            Method::POST,
-            "/session",
-            &json!({"email_address":case["value"],"password":"wrong"}),
-        ))
-        .await;
+    let response = b.write(sign_in_attempt(&case["value"])).await;
     assert_eq!(json!(response.status.as_u16()), case["status"]);
-    assert_eq!(audits(&a).await, case["audits"]);
+    let mut expected = case["audits"].clone();
+    expected[1]["actor_label"] = json!("[unrecognized]");
+    assert_eq!(audits(&a).await, expected);
 }
 #[tokio::test]
 async fn submitted_time_zone_marks_choice_only_after_successful_save() {
@@ -229,10 +244,10 @@ async fn admin_browser(a: &TestApp) -> Browser<'_> {
     let mut b = a.sign_in(DAVID).await;
     b.get("/users/me/profile").await;
     assert_eq!(
-        b.write(request(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+        b.confirm_sudo("secret123456")
             .await
             .status,
-        StatusCode::FOUND
+        StatusCode::OK
     );
     clear_audits(a).await;
     b

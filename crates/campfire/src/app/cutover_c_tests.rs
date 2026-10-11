@@ -3,7 +3,6 @@ use super::google_api_tests::{self as google, Recorded};
 use crate::controllers::presenters::test_support::{DAVID, KEVIN, Req, TestApp};
 use axum::http::Method;
 use campfire_db::{Message, NewMessage, Timestamp, fixtures};
-use campfire_richtext::dom::{Dom, NodeId};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -34,17 +33,6 @@ async fn app_with_env(env: &[(&str, &str)]) -> TestApp {
 }
 fn id(name: &str) -> i64 {
     fixtures::identify(name)
-}
-fn dom(html: &str) -> (Dom, NodeId) {
-    let mut d = Dom::new();
-    let root = d.parse_fragment(html).unwrap();
-    (d, root)
-}
-fn nodes(d: &Dom, root: NodeId, filter: impl Fn(&Dom, NodeId) -> bool) -> Vec<NodeId> {
-    d.descendants(root)
-        .into_iter()
-        .filter(|&n| filter(d, n))
-        .collect()
 }
 async fn grant(app: &TestApp, scope: &str) {
     google::grant(
@@ -175,14 +163,13 @@ async fn cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifie
     let a = app().await;
     let mut b = a.sign_in(DAVID).await;
     let before = audit_success(&a).await;
-    let response = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-        .await;
+    let response = b.confirm_sudo("secret123456").await;
     assert_eq!(audit_success(&a).await - before, 1);
     assert_eq!(
-        (response.status.as_u16(), response.location()),
-        (302, Some("http://campfire.test/"))
+        response.json(),
+        json!({"kind":"confirmed","retry":null,"session":response.json()["session"]})
     );
+    assert_eq!(response.status.as_u16(), 200);
     let continued = b.write(Req::new(Method::POST, "/account/join_code")).await;
     assert_eq!(
         (continued.status.as_u16(), continued.location()),
@@ -212,10 +199,11 @@ async fn cutover_c_sudo_registered_extra_verifier_is_retained_once_and_unsupport
             .count(),
         1
     );
+    // The SPA's confirmation names only the methods it implements.
     assert_eq!(
         a.sign_in(DAVID)
             .await
-            .write(Req::new(Method::POST, "/sudo").form(&[("verifier", "passkey")]))
+            .write(Req::new(Method::POST, "/api/v1/sudo").json_body(&json!({"kind":"passkey"})))
             .await
             .status,
         422
@@ -237,14 +225,10 @@ async fn cutover_c_sudo_enrolled_user_can_still_confirm_with_password() {
         })
         .await
         .unwrap();
-    let response = a
-        .sign_in(DAVID)
-        .await
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-        .await;
+    let response = a.sign_in(DAVID).await.confirm_sudo("secret123456").await;
     assert_eq!(
-        (response.status.as_u16(), response.location()),
-        (302, Some("http://campfire.test/"))
+        (response.status.as_u16(), response.json()["kind"].clone()),
+        (200, json!("confirmed"))
     );
 }
 #[tokio::test]
@@ -265,12 +249,9 @@ async fn cutover_c_sudo_signing_in_again_drops_previous_confirmation() {
     let mut b = a.sign_in(DAVID).await;
     b.grant_sudo().await;
     let r = b
-        .write(Req::new(Method::POST, "/session").form(&[
-            ("email_address", "david@37signals.com"),
-            ("password", "secret123456"),
-        ]))
+        .password_sign_in("david@37signals.com", "secret123456")
         .await;
-    assert_eq!(r.status, 302);
+    assert_eq!(r.status, 200, "{}", r.text());
     // Satisfy the second factor on the newly created session, as Rails' helper does;
     // this never grants sudo access and preserves the actual re-sign-in cookie.
     a.db()
@@ -288,11 +269,11 @@ async fn cutover_c_sudo_signing_in_again_drops_previous_confirmation() {
     let gated = b.write(Req::new(Method::POST, "/account/join_code")).await;
     assert_eq!(
         (gated.status.as_u16(), gated.location()),
-        (302, Some("http://campfire.test/sudo/new"))
+        (302, Some("http://campfire.test/app/sudo/new"))
     );
 }
 #[tokio::test]
-async fn cutover_c_sudo_replay_form_rebuilds_nested_user_role() {
+async fn cutover_c_sudo_held_nested_user_role_patch_is_named_for_the_retry() {
     let a = app().await;
     let mut b = a.sign_in(DAVID).await;
     let path = format!("/account/users/{KEVIN}");
@@ -301,24 +282,32 @@ async fn cutover_c_sudo_replay_form_rebuilds_nested_user_role() {
         .await;
     assert_eq!(
         (gated.status.as_u16(), gated.location()),
-        (302, Some("http://campfire.test/sudo/new"))
+        (302, Some("http://campfire.test/app/sudo/new"))
     );
-    let r = b
-        .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
-        .await;
-    assert_eq!(r.status, 200);
-    let (d, root) = dom(&r.text());
-    let forms = nodes(&d, root, |d, n| {
-        d.local_name(n) == Some("form") && d.attr(n, "action") == Some(path.as_str())
-    });
-    assert_eq!(forms.len(), 1);
+    async fn role(a: &TestApp) -> rusqlite::Result<i64> {
+        Ok(a.db()
+            .read(|c| {
+                Ok(c.query_row("SELECT role FROM users WHERE id=?", [KEVIN], |r| {
+                    r.get::<_, i64>(0)
+                })?)
+            })
+            .await
+            .unwrap())
+    }
+    let before = role(&a).await.unwrap();
+    // The confirmation names the held write for the SPA to send again; it runs nothing itself.
+    let r = b.confirm_sudo("secret123456").await;
+    assert_eq!(r.status, 200, "{}", r.text());
     assert_eq!(
-        nodes(&d, forms[0], |d, n| d.local_name(n) == Some("input")
-            && d.attr(n, "name") == Some("user[role]")
-            && d.attr(n, "value") == Some("administrator"))
-        .len(),
-        1
+        r.json()["retry"],
+        json!({"method":"PATCH","path":path,"returnTo":"/app/"})
     );
+    assert_eq!(role(&a).await.unwrap(), before);
+    let resent = b
+        .write(Req::new(Method::PATCH, &path).form(&[("user[role]", "administrator")]))
+        .await;
+    assert!(resent.status.is_redirection(), "{}", resent.text());
+    assert_ne!(role(&a).await.unwrap(), before);
 }
 // Reaches the shared store through the same Ctx used by the production router.
 async fn clear_rate_limit(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
@@ -355,14 +344,13 @@ async fn cutover_c_sudo_confirmation_limit_is_reset_by_clearing_the_shared_store
             .uri(path)
             .header("host", "campfire.test")
             .header("cookie", &cookie)
-            .header("content-type", "application/x-www-form-urlencoded")
+            .header("accept", "application/json")
+            .header("content-type", "application/json")
+            .header(campfire_kit::csrf::HEADER, &csrf)
             .body(axum::body::Body::from(if path == "/clear" {
                 String::new()
             } else {
-                format!(
-                    "authenticity_token={}&password=wrong",
-                    crate::controllers::presenters::test_support::encode(&csrf)
-                )
+                json!({"kind":"password","password":"wrong"}).to_string()
             }))
             .unwrap()
     };
@@ -525,7 +513,7 @@ async fn cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_mark
     let r = b.get(&format!("/rooms/{}", id("watercooler"))).await;
     assert_eq!(
         (r.status.as_u16(), r.location()),
-        (302, Some("http://campfire.test/session/new"))
+        (302, Some("http://campfire.test/app/session/new"))
     );
 }
 mod calendar_jobs;

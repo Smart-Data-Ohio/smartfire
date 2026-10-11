@@ -250,17 +250,22 @@ assert!(f.server.received().is_empty());
     )
     .await;
     assert_eq!(code, 302);
-    assert_eq!(headers["location"], "http://example.org/sudo/new");
-    let (code, headers, _) = wire_request_with_session(
+    assert_eq!(headers["location"], "http://example.org/app/sudo/new");
+    // Confirm as the SPA's sudo page does; the held GET is named for it to follow.
+    let (code, headers, body) = wire_request_with_session(
         &f,
         "POST",
-        "/sudo",
-        json!({"password":"fixture-personal-password"}),
+        "/api/v1/sudo",
+        json!({"kind":"password","password":"fixture-personal-password"}),
         false,
         response_session(&f, &headers),
     )
     .await;
-    assert_eq!(code, 302);
+    assert_eq!(code, 200, "{body}");
+    assert_eq!(
+        serde_json::from_str::<Value>(&body).unwrap()["retry"]["path"],
+        "/slack/oauth/start?return_to=/slack/imports"
+    );
     let (code, headers, _) = wire_request_with_session(
         &f,
         "GET",
@@ -449,21 +454,22 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
     )
     .await;
     assert_eq!(code, 302);
-    assert_eq!(headers["location"], "http://example.org/sudo/new");
+    assert_eq!(headers["location"], "http://example.org/app/sudo/new");
     let values = response_session(&f, &headers);
-    let (code, headers, _) = wire_request_with_session(
+    let (code, headers, body) = wire_request_with_session(
         &f,
         "POST",
-        "/sudo",
-        json!({"password":"fixture-password"}),
+        "/api/v1/sudo",
+        json!({"kind":"password","password":"fixture-password"}),
         false,
         values,
     )
     .await;
-    assert_eq!(code, 302);
+    assert_eq!(code, 200, "{body}");
+    // The held write is named for the SPA to send again; it was made from this page.
     assert_eq!(
-        headers["location"],
-        "http://example.org/account/slack_import"
+        serde_json::from_str::<Value>(&body).unwrap()["retry"],
+        json!({"method":"PATCH","path":"/account/slack_import","returnTo":"/app/"})
     );
     let values = response_session(&f, &headers);
     assert!(values["sudo_verified_at"].is_number());

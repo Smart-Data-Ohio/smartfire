@@ -1,6 +1,6 @@
 //! Original room and account audit clauses: actual router, actual writer, reloaded rows.
 use crate::controllers::presenters::test_support::*;
-use axum::http::{Method, StatusCode};
+use axum::http::StatusCode;
 use campfire_db::{Room, RoomType};
 use serde_json::{Value, json};
 fn oracle() -> Value {
@@ -82,12 +82,10 @@ async fn run(name: &'static str) {
             if who == DAVID {
                 assert_eq!(
                     browser
-                        .write(
-                            Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")])
-                        )
+                        .confirm_sudo("secret123456")
                         .await
                         .status,
-                    StatusCode::FOUND
+                    StatusCode::OK
                 );
             }
             entry.insert(browser);

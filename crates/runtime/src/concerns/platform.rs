@@ -153,6 +153,15 @@ impl ApplicationPlatform {
     }
 }
 
+/// `AllowBrowser::VERSIONS`, minus the browsers it blocks outright (`ie: false`): what the
+/// incompatible-browser page lists.
+pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [
+    ("safari", "17.2"),
+    ("chrome", "120"),
+    ("firefox", "121"),
+    ("opera", "104"),
+];
+
 /// `ActionController::AllowBrowser::BrowserBlocker#blocked?` with Campfire's
 /// `AllowBrowser::VERSIONS = { safari: 17.2, chrome: 120, firefox: 121, opera: 104, ie: false }`.
 /// Rails raises (a 500) for a versioned agent with a nil browser; that is not blocked here.

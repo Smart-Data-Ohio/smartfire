@@ -71,7 +71,7 @@ async fn direct_selection_guards_precede_nested_id_parsing() {
         assert_eq!(reply.location(),Some("http://campfire.test/"));
     }
     let path=format!("/rooms/directs/{id}/add_members");
-    assert_eq!(app.anonymous().send(Req::new(Method::POST,&path)).await.location(),Some("http://campfire.test/session/new"));
+    assert_eq!(app.anonymous().send(Req::new(Method::POST,&path)).await.location(),Some("http://campfire.test/app/session/new"));
     assert_eq!(app.anonymous().write(Req::new(Method::POST,&format!("{path}?bot_key={BENDER_KEY}"))).await.status,StatusCode::FORBIDDEN);
     assert_eq!(app.david().send(Req::new(Method::POST,&path)).await.status,StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(app.db().read(move|conn|Room::find(conn,id)?.user_ids(conn)).await.unwrap().len(),3);

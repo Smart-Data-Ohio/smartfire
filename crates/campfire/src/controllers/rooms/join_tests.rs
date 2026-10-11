@@ -47,7 +47,7 @@ async fn join_requires_human_authentication_and_csrf_and_failed_insert_leaves_no
     let app=TestApp::boot().await.expect("seed required");
     nonmember(&app).await;
     let path=format!("/rooms/{HQ}/join");
-    assert_eq!(app.anonymous().send(Req::new(Method::POST,&path)).await.location(),Some("http://campfire.test/session/new"));
+    assert_eq!(app.anonymous().send(Req::new(Method::POST,&path)).await.location(),Some("http://campfire.test/app/session/new"));
     assert_eq!(app.anonymous().send(Req::new(Method::POST,&format!("{path}?bot_key={BENDER_KEY}"))).await.status,StatusCode::FORBIDDEN);
     assert_eq!(app.david().send(Req::new(Method::POST,&path)).await.status,StatusCode::UNPROCESSABLE_ENTITY);
     app.db().write(|tx|{tx.conn().execute_batch("CREATE TRIGGER reject_join BEFORE INSERT ON memberships BEGIN SELECT RAISE(ABORT,'injected join failure'); END;")?;Ok(())}).await.unwrap();

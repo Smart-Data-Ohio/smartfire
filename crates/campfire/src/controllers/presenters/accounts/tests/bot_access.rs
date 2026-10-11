@@ -98,7 +98,7 @@ async fn credentials_create_requires_sudo_and_reveals_digest_backed_secret_once(
     let fields = [("agent_credential[name]", "CI runner")];
     assert_redirect(
         &admin.form("post", &path, &fields).await,
-        "http://campfire.test/sudo/new",
+        "http://campfire.test/app/sudo/new",
     );
     admin.grant_sudo_access();
     let response = admin.form("post", &path, &fields).await;
@@ -138,7 +138,7 @@ async fn credentials_owner_lists_and_revokes_but_cannot_issue() {
     let revoke = format!("{path}/{credential_id}");
     assert_redirect(
         &viewer.form("delete", &revoke, &[]).await,
-        "http://campfire.test/sudo/new",
+        "http://campfire.test/app/sudo/new",
     );
     viewer.grant_sudo_access();
     for _ in 0..2 {
@@ -257,7 +257,7 @@ async fn grants_create_is_idempotent_and_revocation_disables_legacy_fallback() {
     ];
     assert_redirect(
         &admin.form("post", &path, &fields).await,
-        "http://campfire.test/sudo/new",
+        "http://campfire.test/app/sudo/new",
     );
     admin.grant_sudo_access();
     for _ in 0..2 {

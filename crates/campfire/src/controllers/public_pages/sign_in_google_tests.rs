@@ -54,22 +54,38 @@ async fn configured_sign_in_keeps_public_links_and_rails_form_contracts() {
         );
         crate::form_contracts::assert_forms(case["name"].as_str().unwrap(), &actual, case["body"].as_str().unwrap());
         crate::form_contracts::assert_text(&actual, &account.as_ref().unwrap().name);
-        let page = app.anonymous().get("/session/new").await;
+        // SPA cutover: the retained sign-in page now redirects to the SPA's, whose inline boot
+        // carries the Google configuration the retained page drew; the public links and the
+        // Google form contract stay asserted on the retained renderer above.
+        let mut browser = app.anonymous();
+        let retained = browser.get("/session/new").await;
+        assert_eq!(retained.status, axum::http::StatusCode::FOUND);
+        assert_eq!(retained.location(), Some("http://campfire.test/app/session/new"));
+        let page = browser.get("/app/session/new").await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
-        let body = page.text();
+        let methods = crate::controllers::spa::signed_out_contracts_tests::inline_boot(&page)
+            ["signInMethods"]
+            .clone();
         let configured = case["configured"].as_bool().unwrap();
         assert_eq!(
-            body.contains("Sign in with Google"),
-            configured,
+            methods["google"].as_bool(),
+            Some(configured),
             "{}: configuration",
             case["name"]
         );
+        assert_eq!(
+            actual.contains("Sign in with Google"),
+            configured,
+            "{}: retained configuration",
+            case["name"]
+        );
         if configured {
-            assert!(body.contains("action=\"/session/google\""));
+            assert!(actual.contains("action=\"/session/google\""));
+            assert_eq!(methods["googleDomains"], case["domains"], "{}: domains", case["name"]);
             for domain in case["domains"].as_array().unwrap() {
-                assert!(body.contains(&format!("@{}", domain.as_str().unwrap())));
+                assert!(actual.contains(&format!("@{}", domain.as_str().unwrap())));
             }
         }
-        super::tests::assert_public_links(&body);
+        super::tests::assert_public_links(&actual);
     }
 }
