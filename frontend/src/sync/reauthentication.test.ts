@@ -67,6 +67,26 @@ interface Page {
   viewer: number | null;
   now: number;
   screen: string;
+  /** Whether local storage takes writes (it reads either way). */
+  markable: boolean;
+}
+
+/** `storage` as a browser that refuses to write it shows it: readable, every write throws. */
+function unwritable(storage: Storage): Storage {
+  const refuse = () => {
+    throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+  };
+
+  return {
+    get length() {
+      return storage.length;
+    },
+    clear: refuse,
+    getItem: (key) => storage.getItem(key),
+    key: (index) => storage.key(index),
+    removeItem: refuse,
+    setItem: refuse,
+  };
 }
 
 /** One browser's Web Locks: a single holder per name, the others waiting their turn. */
@@ -124,12 +144,12 @@ function harness(
   lock: ((name: string) => Promise<(() => void) | null>) | "page" = browserLocks(),
 ) {
   const seen: Seen[] = [];
-  const page: Page = { viewer: 7, now: 1_000_000, screen: "/app/admin/styles" };
+  const page: Page = { viewer: 7, now: 1_000_000, screen: "/app/admin/styles", markable: true };
 
   const gateOn = (storage: Storage) => {
     const options = {
       storage: () => storage,
-      shared: () => localStorage,
+      shared: () => (page.markable ? localStorage : unwritable(localStorage)),
       viewer: () => page.viewer,
       now: () => page.now,
       screen: () => page.screen,
@@ -915,7 +935,7 @@ describe("the Google round trip", () => {
     }).pipe(Effect.provide(layer));
   });
 
-  it.live("without Web Locks nothing replays until this tab is told to send it", () =>
+  it.live("without Web Locks nothing replays, however often it's tried", () =>
     Effect.forEach(["absent", "refused"], (locks) => {
       const { layer, seen, gate } = googleHarness({ locks: "page" });
 
@@ -929,21 +949,19 @@ describe("the Google round trip", () => {
       return Effect.gen(function* () {
         yield* leaveForGoogle(gate, [styles]);
 
-        expect(yield* resumeAfterGoogle(gate)).toMatchObject({
-          confirmed: true,
-          replayed: 0,
-          held: "send",
-          kept: 1,
-        });
+        for (const _tried of [1, 2]) {
+          expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+            confirmed: true,
+            replayed: 0,
+            held: "claim",
+            kept: 1,
+          });
+        }
+
         expect(sessionStorage.getItem(KEPT_KEY)).toContain("custom_styles");
         expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
 
-        // The person's "Send again" is this tab's claim.
-        expect(yield* resumeAfterGoogle(gate, { send: true })).toMatchObject({
-          replayed: 1,
-          held: null,
-        });
-        expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+        discardKept(gate);
         expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
       }).pipe(
         Effect.provide(layer),
@@ -951,6 +969,106 @@ describe("the Google round trip", () => {
       );
     }),
   );
+
+  it.live("no tab sends a kept write it can't mark as sent for every tab", () => {
+    const { layer, seen, gate, page, duplicate } = googleHarness();
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const copy = duplicate();
+
+      // Session storage still works; local storage takes no writes.
+      page.markable = false;
+
+      const first = yield* resumeAfterGoogle(gate);
+
+      expect(first).toMatchObject({ confirmed: true, replayed: 0, held: "claim", kept: 1 });
+
+      const second = yield* resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer));
+
+      expect(second).toMatchObject({ replayed: 0, held: "claim", kept: 1 });
+      expect(yield* confirmAgain(copy.gate).pipe(Effect.provide(copy.layer))).toMatchObject({
+        kind: "navigate",
+      });
+      expect(yield* resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer))).toMatchObject({
+        replayed: 0,
+        held: "claim",
+        kept: 1,
+      });
+      // Only the write as first held: the kept copy never went.
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+
+      // Once writes can be marked again, trying again sends it once, from the tab that confirmed
+      // last; the other one's attempt is gone, and it sees the mark.
+      page.markable = true;
+      expect(yield* resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer))).toMatchObject({
+        replayed: 1,
+        held: null,
+      });
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        replayed: 0,
+        elsewhere: 1,
+        held: null,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("confirming again never outlives the marks of what another tab sent", () => {
+    const stalled = Deferred.makeUnsafe<void>();
+    let replays = 0;
+
+    const { layer, seen, gate, page, server, duplicate } = googleHarness({
+      // The first tab's replay of the first write never returns: it closes there.
+      hold: (entry) => {
+        if (entry.method === "PATCH" && entry.path === "/api/v1/admin/custom_styles") {
+          replays += 1;
+
+          return replays === 2 ? Deferred.await(stalled) : Effect.void;
+        }
+
+        return Effect.void;
+      },
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles, role]);
+
+      const copy = duplicate();
+      const first = yield* Effect.forkChild(resumeAfterGoogle(gate));
+
+      while (writesTo(seen, "/admin/custom_styles").length < 2) {
+        yield* Effect.sleep(1);
+      }
+
+      yield* Fiber.interrupt(first);
+      // Another tab's session write erased the finished attempt.
+      server.attempt = null;
+
+      const inCopy = <A, E>(effect: Effect.Effect<A, E, ApiClient>) =>
+        effect.pipe(Effect.provide(copy.layer));
+
+      expect(yield* inCopy(resumeAfterGoogle(copy.gate))).toMatchObject({
+        held: "confirm",
+        kept: 1,
+        elsewhere: 1,
+      });
+
+      // Confirmed again at minute 9, back at minute 11: past the batch's time limit.
+      page.now += 9 * 60_000;
+      expect((yield* inCopy(confirmAgain(copy.gate))).kind).toBe("navigate");
+      page.now += 2 * 60_000;
+      expect((yield* inCopy(confirmAgain(copy.gate))).kind).toBe("error");
+      expect(yield* inCopy(resumeAfterGoogle(copy.gate))).toMatchObject({
+        replayed: 0,
+        held: null,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+      expect(writesTo(seen, "/admin/people/4")).toHaveLength(1);
+      expect(seen.filter((entry) => entry.path === "/api/v1/sudo/google")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
 
   it.live("a status read whose body is lost reads the same answer again", () => {
     const { layer, seen, gate, server } = googleHarness({

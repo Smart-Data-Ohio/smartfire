@@ -275,7 +275,7 @@ for (const theme of THEMES) {
         expect(patches).toBe(2);
       });
 
-      test("without Web Locks the change waits for this tab to send it", async ({
+      test("without Web Locks the change is never sent, only kept or discarded", async ({
         page,
         request,
       }) => {
@@ -296,15 +296,14 @@ for (const theme of THEMES) {
 
         await expect(page.getByText("Your change hasn't been sent", { exact: true })).toBeVisible();
         await expect(
-          page.getByText(/can't make sure only one tab sends your change/),
+          page.getByText(/couldn't make sure only one tab sends your change/),
         ).toBeVisible();
-        await shot(page, "reauth-google-send-again", theme);
-        expect(patches).toBe(1);
+        await shot(page, "reauth-google-unclaimed", theme);
 
-        await page.getByRole("button", { name: "Send again" }).click();
-        await expect(page).toHaveURL(/\/app\/admin\/styles$/);
-        await expect(page.getByText("Confirmed — your change was saved")).toBeVisible();
-        expect(patches).toBe(2);
+        await page.getByRole("button", { name: "Try again" }).click();
+        await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
+        await expect(page.getByText("Your change hasn't been sent", { exact: true })).toBeVisible();
+        expect(patches).toBe(1);
       });
 
       test("a held change can be discarded", async ({ page, request }) => {

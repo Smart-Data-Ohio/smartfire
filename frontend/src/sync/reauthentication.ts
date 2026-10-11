@@ -356,14 +356,16 @@ export function makeConfirmationGate({
     exclusive: (id: string): Promise<(() => void) | null> => lock(`smartfire:confirmation:${id}`),
 
     /**
-     * Marks write `index` of attempt `id` as sent, for every tab: `"claimed"` when this tab may
-     * send it, `"sent"` when a tab already did, `"unavailable"` when storage can't say.
+     * Marks write `index` of batch `id` as sent, for every tab: `"claimed"` when the mark is
+     * stored (read back) and this tab may send it, `"sent"` when a tab already did,
+     * `"unavailable"` when storage can't say, or the batch is past `expiresAt` (its marks are
+     * forgotten then), so it isn't sent.
      */
     claimSent(id: string, index: number, expiresAt: number): "claimed" | "sent" | "unavailable" {
       try {
         const store = shared();
 
-        if (store === null) {
+        if (store === null || now() >= expiresAt) {
           return "unavailable";
         }
 
@@ -378,7 +380,7 @@ export function makeConfirmationGate({
           JSON.stringify({ expiresAt, sent: [...(record?.sent ?? []), index] }),
         );
 
-        return "claimed";
+        return sentRecord(id)?.sent.includes(index) === true ? "claimed" : "unavailable";
       } catch {
         return "unavailable";
       }
@@ -507,41 +509,42 @@ export function makeConfirmationGate({
       };
     },
 
-    /**
-     * Takes hand-off `id`'s next write to send, with its place in the batch, leaving the rest
-     * stored (or forgetting the hand-off with its last). `null` when there's none left, or the
-     * hand-off has changed under it.
-     */
-    takeNext(id: string): KeptTurn | null {
+    /** Hand-off `id`'s next write to send, with its place in the batch; `null` when none. */
+    nextKept(id: string): KeptTurn | null {
       const handoff = readHandoff();
-      const [next, ...rest] = handoff?.id === id ? handoff.writes : [];
+      const next = handoff?.id === id ? handoff.writes[0] : undefined;
 
-      if (handoff === null || next === undefined) {
-        return null;
-      }
-
-      // Gone from storage before it's sent: a reload mid-replay never sends it twice.
-      if (
-        !writeHandoff(
-          rest.length === 0 ? null : { ...handoff, next: handoff.next + 1, writes: rest },
-        )
-      ) {
-        return null;
-      }
-
-      return { write: next, index: handoff.next };
+      return handoff === null || next === undefined ? null : { write: next, index: handoff.next };
     },
 
     /**
-     * The kept writes are going with Google `attempt` now: the hand-off moves to it, with a fresh
-     * time limit. Whether there was one to move.
+     * Takes write `index` of hand-off `id` out of storage, leaving the rest (or forgetting the
+     * hand-off with its last). Whether it was the next and left: gone before it's sent, a reload
+     * mid-replay never sends it twice.
+     */
+    take(id: string, index: number): boolean {
+      const handoff = readHandoff();
+
+      if (handoff?.id !== id || handoff.next !== index) {
+        return false;
+      }
+
+      const rest = handoff.writes.slice(1);
+
+      return writeHandoff(
+        rest.length === 0 ? null : { ...handoff, next: handoff.next + 1, writes: rest },
+      );
+    },
+
+    /**
+     * The kept writes are going with Google `attempt` now: the hand-off moves to it, keeping its
+     * time limit (the marks of what other tabs sent last only that long). Whether there was one,
+     * still in time, to move.
      */
     rekey(attempt: string): boolean {
       const handoff = readHandoff();
 
-      return (
-        handoff !== null && writeHandoff({ ...handoff, attempt, expiresAt: now() + HANDOFF_TTL_MS })
-      );
+      return handoff !== null && now() < handoff.expiresAt && writeHandoff({ ...handoff, attempt });
     },
 
     /** Forgets any hand-off. */
@@ -615,11 +618,17 @@ export const startGoogle = Effect.fn("confirmation.startGoogle")(function* (
 export const confirmAgain = Effect.fn("confirmation.confirmAgain")(function* (
   gate: ConfirmationGate,
 ) {
+  if (gate.handoff().handoff === null) {
+    return { kind: "error", message: EXPIRED_COPY } satisfies GoogleStart;
+  }
+
   const attempt = gate.newAttempt();
   const reply = yield* startSudoGoogle(attempt);
 
-  if (reply.kind === "navigate" && gate.rekey(attempt)) {
-    return { kind: "navigate", location: reply.location } satisfies GoogleStart;
+  if (reply.kind === "navigate") {
+    return gate.rekey(attempt)
+      ? ({ kind: "navigate", location: reply.location } satisfies GoogleStart)
+      : ({ kind: "error", message: EXPIRED_COPY } satisfies GoogleStart);
   }
 
   return {
@@ -627,6 +636,8 @@ export const confirmAgain = Effect.fn("confirmation.confirmAgain")(function* (
     message: reply.kind === "error" ? reply.message : "Google confirmation didn't start.",
   } satisfies GoogleStart;
 });
+
+const EXPIRED_COPY = "This change waited too long to be confirmed. Discard it and make it again.";
 
 /** The person gives up on the writes the continue page keeps. */
 export function discardKept(gate: ConfirmationGate): void {
@@ -654,10 +665,11 @@ export interface GoogleReturn {
   readonly elsewhere: number;
   /**
    * Why `kept` writes wait, unsent: `"confirm"` when the server didn't confirm their attempt (ask
-   * the person to confirm again), `"send"` when it did but this browser can't make sure only one
-   * tab sends them (ask the person to send them from here); `null` when none wait.
+   * the person to confirm again), `"claim"` when it did but this tab couldn't hold the browser's
+   * lock on them and mark them sent for every tab (nothing else keeps another tab from sending
+   * them too: try again, or discard them); `null` when none wait.
    */
-  readonly held: "confirm" | "send" | null;
+  readonly held: "confirm" | "claim" | null;
   /** How many writes wait while `held`. */
   readonly kept: number;
   /**
@@ -675,29 +687,24 @@ const anyJson = (json: Schema.Json) => Effect.succeed(json);
  * acknowledges the attempt. Each write leaves storage as its replay begins, so a reload never
  * sends one twice and the rest go after it (the server answers for the attempt again until it is
  * acknowledged); a status read that fails keeps them all for another try. Tabs of this browser
- * replay a batch one at a time, and a write another tab sent is skipped (`elsewhere`); where that
- * can't be made sure of, the writes wait for the person's `send`. Any other answer keeps them for
- * the person to confirm again, unless the session changed (`abandoned`).
+ * replay a batch one at a time, and a write goes only once its mark (read back) says this tab
+ * sent it: one another tab sent is skipped (`elsewhere`). Where the lock or the mark can't be
+ * had, nothing goes and the writes wait (`"claim"`) for another try. Any other answer keeps them
+ * for the person to confirm again, unless the session changed (`abandoned`).
  */
 export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(function* (
   gate: ConfirmationGate,
-  { send = false }: { readonly send?: boolean } = {},
 ) {
   const { handoff, expired } = gate.handoff();
 
   if (handoff === null) {
-    return yield* resume(gate, null, expired, { exclusive: false, send: false });
+    return yield* resume(gate, null, expired, false);
   }
 
   return yield* Effect.acquireUseRelease(
     Effect.promise(() => gate.exclusive(handoff.id)),
-    // Re-read under the lock: this tab's hand-off as it is now. The person's "Send again" is
-    // this tab's claim where the lock can't be held.
-    (release) =>
-      resume(gate, gate.handoff().handoff, expired, {
-        exclusive: release !== null && gate.canMark(),
-        send,
-      }),
+    // Re-read under the lock: this tab's hand-off as it is now.
+    (release) => resume(gate, gate.handoff().handoff, expired, release !== null && gate.canMark()),
     (release) => Effect.sync(() => release?.()),
   );
 });
@@ -706,15 +713,8 @@ const resume = Effect.fnUntraced(function* (
   gate: ConfirmationGate,
   handoff: Handoff | null,
   expired: number,
-  {
-    exclusive,
-    send,
-  }: {
-    /** Whether only this tab replays the batch: the lock is held and writes can be marked. */
-    readonly exclusive: boolean;
-    /** The person asked this tab to send them. */
-    readonly send: boolean;
-  },
+  /** Whether this tab holds the browser's lock on the batch and can mark writes sent. */
+  exclusive: boolean,
 ) {
   const returnTo = spaReturnPath(handoff?.returnTo ?? null);
   const dropped = handoff?.dropped ?? 0;
@@ -794,25 +794,44 @@ const resume = Effect.fnUntraced(function* (
     } satisfies GoogleReturn;
   }
 
-  // Confirmed, but nothing keeps another tab from sending the same writes: the person decides.
-  if (!exclusive && !send) {
-    return { ...outcome, confirmed, elsewhere, held: "send", kept: unsent } satisfies GoogleReturn;
+  // Confirmed, but nothing keeps another tab from sending the same writes: none go from here.
+  if (!exclusive) {
+    return { ...outcome, confirmed, elsewhere, held: "claim", kept: unsent } satisfies GoogleReturn;
   }
 
   const client = yield* ApiClient;
   let replayed = 0;
   let sentElsewhere = 0;
-  let abandoned = expired;
   let failure: string | null = null;
 
-  for (let turn = gate.takeNext(handoff.id); turn !== null; turn = gate.takeNext(handoff.id)) {
+  for (let turn = gate.nextKept(handoff.id); turn !== null; turn = gate.nextKept(handoff.id)) {
     const claim = gate.claimSent(handoff.id, turn.index, handoff.expiresAt);
+
+    // Without its mark another tab could send it too: it and the rest wait, unsent.
+    if (claim === "unavailable") {
+      const left = gate.handoff();
+
+      const kept =
+        left.handoff === null ? 0 : left.handoff.writes.length - gate.sentElsewhere(left.handoff);
+
+      return {
+        ...outcome,
+        confirmed,
+        replayed,
+        abandoned: expired + left.expired,
+        elsewhere: sentElsewhere,
+        failure,
+        held: kept === 0 ? null : "claim",
+        kept,
+      } satisfies GoogleReturn;
+    }
+
+    if (!gate.take(handoff.id, turn.index)) {
+      break;
+    }
 
     if (claim === "sent") {
       sentElsewhere += 1;
-    } else if (claim === "unavailable" && !send) {
-      // Without the mark another tab could send it too: it isn't sent from here.
-      abandoned += 1;
     } else {
       const landed = yield* client.execute(turn.write, anyJson).pipe(
         Effect.match({
@@ -837,7 +856,6 @@ const resume = Effect.fnUntraced(function* (
     confirmed,
     replayed,
     elsewhere: sentElsewhere,
-    abandoned,
     failure,
   } satisfies GoogleReturn;
 });

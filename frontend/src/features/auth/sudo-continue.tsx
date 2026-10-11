@@ -83,25 +83,26 @@ type Shown =
   | { readonly kind: "stalled" }
   | {
       readonly kind: "held";
-      readonly reason: "confirm" | "send";
+      readonly reason: "confirm" | "claim";
       readonly kept: number;
       readonly returnTo: string;
     };
 
 /** What a held change's page says, by why it waits. */
-function heldCopy(reason: "confirm" | "send", kept: number): string {
-  const change = kept === 1 ? "your change" : "your changes";
+function heldCopy(reason: "confirm" | "claim", kept: number): string {
+  const [change, it, hasnt] =
+    kept === 1 ? ["your change", "it", "hasn't"] : ["your changes", "them", "haven't"];
 
   return reason === "confirm"
-    ? `The confirmation that came back wasn't the one this page asked for, so ${change} hasn't been sent. Confirm it's you again to send it.`
-    : `This browser can't make sure only one tab sends ${change}, so it hasn't been sent. Send it from this tab, or discard it.`;
+    ? `The confirmation that came back wasn't the one this page asked for, so ${change} ${hasnt} been sent. Confirm it's you again to send ${it}.`
+    : `This browser couldn't make sure only one tab sends ${change}, so ${kept === 1 ? "it" : "they"} ${hasnt} been sent. Try again, or discard ${it} and make ${it} again.`;
 }
 
 /**
  * `/app/sudo/continue`, where a Google confirmation started in the SPA comes back. Once the server
  * says it confirmed the attempt this tab kept writes for, they go again, each once; then it returns
  * to the page they came from. Otherwise the writes stay kept and the page asks to confirm again
- * (or, where this browser can't keep another tab from sending them too, to send them from here),
+ * (or, where this tab couldn't claim them so no other tab sends them too, to try claiming again),
  * until the person does or discards them. When the server can't be asked (or its answer is lost),
  * the page offers to try again: the server answers for the attempt again.
  */
@@ -184,8 +185,8 @@ export function SudoContinue() {
     setBusy(true);
     setError(null);
 
-    if (reason === "send") {
-      actions.confirmation.resumeAfterGoogle(true).then(
+    if (reason === "claim") {
+      actions.confirmation.resumeAfterGoogle().then(
         (result) => {
           setBusy(false);
           finish(result);
@@ -227,7 +228,7 @@ export function SudoContinue() {
       </p>
       <div className="room-error-actions">
         <Button variant="primary" disabled={busy} onClick={proceed}>
-          {reason === "send" ? "Send again" : "Confirm again"}
+          {reason === "claim" ? "Try again" : "Confirm again"}
         </Button>
         <Button
           disabled={busy}

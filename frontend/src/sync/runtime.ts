@@ -601,11 +601,11 @@ const confirmation = {
   /** The SPA moved to another screen: the writes the old one sent fail unsent. */
   screenChanged: (): void => confirmationGate.screenChanged(),
   /**
-   * The Google return: replays the kept writes once the server confirms their attempt. `send` is
-   * the person's "Send again" where this browser can't keep another tab from sending them too.
+   * The Google return: replays the kept writes once the server confirms their attempt and this
+   * tab can claim them; trying again only claims them again.
    */
-  resumeAfterGoogle: (send = false): Promise<confirmationActions.GoogleReturn> =>
-    runAction(confirmationActions.resumeAfterGoogle(confirmationGate, { send })),
+  resumeAfterGoogle: (): Promise<confirmationActions.GoogleReturn> =>
+    runAction(confirmationActions.resumeAfterGoogle(confirmationGate)),
   /** Confirms with Google again for the writes still kept; the caller leaves on `navigate`. */
   confirmAgain: (): Promise<confirmationActions.GoogleStart> =>
     runAction(confirmationActions.confirmAgain(confirmationGate)),
