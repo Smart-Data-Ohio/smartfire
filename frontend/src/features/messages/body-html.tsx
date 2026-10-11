@@ -1,5 +1,4 @@
 import { type ComponentProps, useCallback, useLayoutEffect, useRef } from "react";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { enhanceCodeBlocks } from "../../lib/code-highlight/code-blocks.ts";
 import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 // The message body styles, for pages outside a room (the Slack plan's samples).
@@ -12,7 +11,7 @@ type BodyHtmlProps = {
 } & Omit<ComponentProps<"div">, "children" | "className" | "dangerouslySetInnerHTML" | "ref">;
 
 /**
- * A message body as the server rendered it, mentions made inline. Only for HTML from the server's
+ * A message body as the server rendered it. Only for HTML from the server's
  * message presentation (crates/richtext): its sanitizer is what makes the markup safe to insert.
  * Any other attribute (a `data-*` state, say) goes on the body's element as given.
  *
@@ -30,7 +29,7 @@ type BodyHtmlProps = {
 export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
   const ref = useRef<HTMLDivElement>(null);
   // Switching motion inserts the markup again, so spoilers and code blocks follow `shown`.
-  const shown = useMotionSafeHtml(inlineMentions(html));
+  const shown = useMotionSafeHtml(html);
   const spoilers = useSpoilerReveal(shown);
 
   const attach = useCallback(

@@ -134,7 +134,7 @@ pub fn presentation_allowlist() -> SafeList {
     tags.extend(["action-text-attachment", "div", "figure", "figcaption", "img", "span"]);
     let mut attributes = MARKDOWN_ATTRIBUTES.to_vec();
     attributes.extend(ATTACHMENT_ATTRIBUTES);
-    attributes.extend(["alt", "aria-hidden", "data-turbo-frame", "data-user-id", "draggable", "height", "src", "width"]);
+    attributes.extend(["alt", "aria-hidden", "data-user-id", "draggable", "height", "src", "width"]);
     SafeList { tags, attributes }
 }
 
@@ -568,8 +568,6 @@ pub fn sanitize_presentation(html: &str, icons: &dyn IconResolver, asset_host: O
     for node in dom.descendants(root) {
         if dom.local_name(node) == Some("a") && dom.attr(node, "href").is_some_and(in_app_href) {
             dom.remove_attr(node, "target");
-            dom.set_attr(node, "data-turbo-frame", "_top");
-            dom.set_attr(node, "data-turbo-prefetch", "false");
         }
         if dom.local_name(node) != Some("img") {
             continue;
@@ -600,14 +598,12 @@ pub fn presentation(body: &str, ctx: &RenderContext, icons: &dyn IconResolver, a
     for node in attachment_nodes(&dom, root) {
         let attachment = attachables::attachment_from_node(&dom, node, ctx)?;
         if let Attachable::User(user) = attachment.attachable {
-            dom.set_inner_html(node, &attachables::render_mention_in_context(&user, ctx)).map_err(Error::Parse)?;
+            dom.set_inner_html(node, &attachables::render_mention(&user)).map_err(Error::Parse)?;
         }
     }
-    // A mention is a `<div>`. Parsed again by the sanitizer, that start tag closes the open
-    // paragraph and the spoiler span, so the name and the words after it would render in the open.
     crate::content::contain_spoiler_blocks(&mut dom, root);
     let html = sanitize_presentation(&dom.to_html(root), icons, asset_host)?;
-    Ok(format!("<div class=\"markdown-body\" data-controller=\"drive-link\">{html}</div>"))
+    Ok(format!("<div class=\"markdown-body\">{html}</div>"))
 }
 
 /// `Message::Markdown.plain_text`: HTML-shaped attachment expansion followed by block/cell rules.

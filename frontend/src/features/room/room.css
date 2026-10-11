@@ -849,15 +849,10 @@
     background: none;
   }
 
-  /* Mentions as the server renders them (users/_mention): an inline chip with the name. */
+  /* Mentions as the server renders them (crates/richtext): an inline chip with the name. */
   .message-body action-text-attachment,
   .message-body .mention {
     display: inline;
-  }
-
-  .message-body .mention .avatar,
-  .message-body .mention img {
-    display: none;
   }
 
   .message-body .mention .profile-card-name {

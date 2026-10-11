@@ -18,10 +18,7 @@ fn david() -> MentionUser {
     MentionUser {
         id: 1,
         name: "David".into(),
-        title: "David – Founder".into(),
         attachable_sgid: DAVID_SGID.into(),
-        user_path: "/users/1".into(),
-        avatar_path: "/users/1/avatar?v=1".into(),
     }
 }
 

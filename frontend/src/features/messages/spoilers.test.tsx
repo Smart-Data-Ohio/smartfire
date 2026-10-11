@@ -4,7 +4,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { workDetailFixture } from "../work/test-fixtures.ts";
 import { WorkResult } from "../work/work-details.tsx";
 import { BodyHtml } from "./body-html.tsx";
@@ -15,8 +14,8 @@ const spoiler = (inner: string) => `<span class="spoiler" data-spoiler="">${inne
 
 /** `||@[David] is the killer :party:||`: a mention chip and a custom emoji image inside. */
 const MENTION_AND_EMOJI = `<p>${spoiler(
-  '<span class="mention mention--user-1"><a class="btn avatar" href="/users/1">D</a>' +
-    '<button class="profile-card-name" type="button">David</button></span> is the killer ' +
+  '<span class="mention mention--user-1" data-user-id="1">' +
+    '<span class="profile-card-name">David</span></span> is the killer ' +
     '<img class="icon" src="/icons/party.png" alt=":party:"> <a href="https://example.com">clue</a>',
 )}</p>`;
 
@@ -287,7 +286,7 @@ function Toggled({ html }: { readonly html: string }) {
           ref={ref}
           className="message-body"
           // biome-ignore lint/security/noDangerouslySetInnerHtml: fixed test markup
-          dangerouslySetInnerHTML={{ __html: inlineMentions(html) }}
+          dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : null}
     </>

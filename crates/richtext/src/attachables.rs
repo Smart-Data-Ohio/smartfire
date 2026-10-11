@@ -20,14 +20,8 @@ const TWITTER_AVATAR_URL_PREFIX: &str = "https://pbs.twimg.com/profile_images";
 pub struct MentionUser {
     pub id: i64,
     pub name: String,
-    /// `User#title`: name and bio joined with " – ".
-    pub title: String,
     /// `user.attachable_sgid`: a freshly minted SGID for the "attachable" purpose.
     pub attachable_sgid: String,
-    /// `user_path(user)`
-    pub user_path: String,
-    /// `fresh_user_avatar_path(user)`
-    pub avatar_path: String,
 }
 
 /// A record `GlobalID.find` located.
@@ -80,12 +74,6 @@ pub trait AttachableResolver {
     /// The fork hides legacy OpenGraph cards once a first-class Twitter post row exists.
     fn twitter_post_exists_for_url(&self, _url: &str) -> bool {
         false
-    }
-
-    /// `avatar_image_tag(user, size: 48, aria: { hidden: true })`. Callers with bot icons
-    /// supply their server-rendered icon/emoji markup; normal users use the signed avatar URL.
-    fn mention_avatar_html(&self, user: &MentionUser) -> String {
-        default_mention_avatar(user)
     }
 }
 
@@ -359,7 +347,7 @@ pub fn render_attachment(
     render_content: &dyn Fn(&str) -> Result<String, Error>,
 ) -> Result<String, Error> {
     let html = match &attachment.attachable {
-        Attachable::User(user) => render_mention_in_context(user, ctx),
+        Attachable::User(user) => render_mention(user),
         Attachable::OpengraphEmbed(embed) => render_opengraph_embed(embed, ctx)?,
         // A still-valid User SGID whose row is gone raises in the fork's missing-partial lookup.
         Attachable::Missing { signed_model: Some(model) } if model == "User" => {
@@ -404,30 +392,15 @@ pub fn render_attachment(
     Ok(crate::ruby::chomp(&html).to_string())
 }
 
-/// reference/app/views/users/_mention.html.erb, with `avatar_tag` (users/avatars_helper.rb).
-fn default_mention_avatar(user: &MentionUser) -> String {
-    format!("<img aria-hidden=\"true\" src=\"{}\" width=\"48\" height=\"48\" />", html_escape(&user.avatar_path))
-}
-
+/// A mention: an inline chip with the user's name. The SPA styles `.mention` and
+/// `.profile-card-name`, highlights the viewer's `.mention--user-{id}`, and finds mentions of the
+/// viewer by `data-user-id`.
 pub fn render_mention(user: &MentionUser) -> String {
-    render_mention_with_avatar(user, &default_mention_avatar(user))
-}
-
-pub fn render_mention_in_context(user: &MentionUser, ctx: &RenderContext) -> String {
-    render_mention_with_avatar(user, &ctx.resolver.mention_avatar_html(user))
-}
-
-fn render_mention_with_avatar(user: &MentionUser, avatar: &str) -> String {
     format!(
-        "<div class=\"mention mention--user-{}\" sgid=\"{}\" data-user-id=\"{}\">\n  <a title=\"{}\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"{}/card\" href=\"{}\">{}</a>\n  <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"{}/card\">{}</button>\n</div>\n",
+        "<span class=\"mention mention--user-{}\" sgid=\"{}\" data-user-id=\"{}\"><span class=\"profile-card-name\">{}</span></span>",
         user.id,
         html_escape(&user.attachable_sgid),
         user.id,
-        html_escape(&user.title),
-        html_escape(&user.user_path),
-        html_escape(&user.user_path),
-        avatar,
-        html_escape(&user.user_path),
         html_escape(&user.name),
     )
 }

@@ -1,8 +1,9 @@
 //! Record cache keys and the message presentation version.
 
 /// Rails PR #148 (`fix/cached-fragment-csrf`), bumped when message HTML changes so message-page
-/// ETags from before the change stop matching.
-pub const PRESENTATION_CACHE_VERSION: i64 = 3;
+/// ETags from before the change stop matching. 4: mentions became inline chips without the
+/// classic profile-card controls.
+pub const PRESENTATION_CACHE_VERSION: i64 = 4;
 
 /// `Time#to_fs(:usec)` of a record's `updated_at`: its `cache_version`.
 pub fn cache_version(updated_at: jiff::Timestamp) -> String {

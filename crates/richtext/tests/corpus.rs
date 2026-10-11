@@ -1,5 +1,6 @@
 //! Differential test against the Rails pipeline: tests/corpus/expected.json was recorded from the
-//! Rails app before it was removed, and is frozen. Every output is also checked
+//! Rails app before it was removed, and is frozen, except that its presentations carry the inline
+//! mention chip that replaced the classic profile-card markup. Every output is also checked
 //! against security properties that don't depend on the oracle.
 
 use std::collections::BTreeMap;
@@ -32,10 +33,7 @@ impl Corpus {
             .map(|u| MentionUser {
                 id: u["id"].as_i64().unwrap(),
                 name: u["name"].as_str().unwrap().into(),
-                title: u["title"].as_str().unwrap().into(),
                 attachable_sgid: u["attachable_sgid"].as_str().unwrap().into(),
-                user_path: u["user_path"].as_str().unwrap().into(),
-                avatar_path: u["avatar_path"].as_str().unwrap().into(),
             })
             .collect()
     }
