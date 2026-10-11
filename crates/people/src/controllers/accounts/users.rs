@@ -14,7 +14,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let role = match c.params.require("user")?.get("role").and_then(|role| role.as_str()) {
         Some("administrator") => Role::Administrator,
         _ => Role::Member,
@@ -41,7 +41,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
     crate::integrations::google::calendar::stop_remote(c.app(), user.id).await.map_err(Error::internal)?;
     c.app()

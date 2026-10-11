@@ -27,6 +27,11 @@ const PAGES: readonly AuthPage[] = [
   { name: "sign-in", heading: /^Signal$/ },
   { name: "sign-in-google-alert", heading: /^Signal$/ },
   { name: "join", heading: /^Join Signal$/ },
+  { name: "invite", heading: /^Join Signal$/ },
+  { name: "invite-expired", heading: /^Join Signal$/ },
+  { name: "invite-exhausted", heading: /^Join Signal$/ },
+  { name: "invite-revoked", heading: /^Join Signal$/ },
+  { name: "invite-unknown", heading: /^Join Signal$/ },
   { name: "first-run", heading: /^Set up Smartfire$/ },
   { name: "two-factor-setup", heading: /^Set up two-step sign-in$/ },
   { name: "two-factor-challenge-alert", heading: /^Enter your code$/ },
@@ -42,6 +47,33 @@ const PAGES: readonly AuthPage[] = [
 
 /** Where the two self-submitting pages post. */
 const SELF_SUBMITTING = /\/(session\/transfers|account\/users)\//;
+
+for (const [state, reason] of [
+  ["expired", "It has expired."],
+  ["exhausted", "All its uses have been taken."],
+  ["revoked", "It has been revoked."],
+  ["unknown", "The invite could not be found."],
+] as const) {
+  test(`a ${state} invite explains why enrollment is unavailable`, async ({ page }) => {
+    await page.goto(`/__auth/invite-${state}.html`);
+    await expect(page.getByRole("alert")).toHaveText("This invite is no longer valid.");
+    await expect(page.getByText(reason, { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create account" })).toHaveCount(0);
+    await expect(page.locator("form")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute(
+      "href",
+      "/session/new",
+    );
+  });
+}
+
+test("an active invite keeps enrollment on its own token route", async ({ page }) => {
+  await page.goto("/__auth/invite.html");
+  await expect(page.getByRole("heading", { name: "Join Signal" })).toBeVisible();
+  await expect(page.locator("form")).toHaveAttribute("action", "/invite/fixture-invite-token");
+  await expect(page.locator("form")).toHaveAttribute("method", "post");
+  await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
+});
 
 /**
  * Opens a fixture page in `theme` with motion reduced and waits for the fonts and every finite

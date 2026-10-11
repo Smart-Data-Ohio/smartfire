@@ -16,10 +16,14 @@ import {
   NotFound,
   RateLimited,
   ServerError,
+  SudoRequired,
+  TwoFactorRequired,
   Unauthorized,
 } from "./errors.ts";
+import { resumeSudo, submitSudo } from "./sudo-endpoints.ts";
 import { meFixture, roomDetailFixture } from "./testing.ts";
 import { completeTour } from "./tour-endpoints.ts";
+import { readTwoFactorSetup, submitTwoFactorSetup } from "./two-factor-setup-endpoints.ts";
 
 /** What the fake server saw. */
 interface Seen {
@@ -129,6 +133,130 @@ afterEach(() => {
   for (const node of document.querySelectorAll('meta[name="csrf-token"], #boot')) {
     node.remove();
   }
+});
+
+describe("two-factor setup HTTP statuses", () => {
+  for (const status of [422, 429]) {
+    it.effect(`returns the setup and error wording on ${status} without navigating`, () => {
+      const body = {
+        kind: "error",
+        message:
+          status === 422
+            ? "That code didn't work. Check your authenticator app and try again."
+            : "Too many attempts. Try again in a few minutes.",
+        setup: {
+          secret: "ABCD1234",
+          manualKey: "ABCD 1234",
+          otpauthUri: "otpauth://totp/Smartfire:ada?secret=ABCD1234",
+          qrSvg: "<svg/>",
+        },
+      };
+
+      const { layer, navigations, seen } = harness(() => json(status, body));
+
+      return Effect.gen(function* () {
+        const client = yield* ApiClient;
+
+        yield* client.setCsrfToken("held-csrf");
+
+        expect(yield* submitTwoFactorSetup({ code: "123 456" })).toEqual(body);
+
+        expect(seen).toMatchObject([
+          { method: "POST", csrf: "held-csrf", body: '{"code":"123 456"}' },
+        ]);
+        expect(navigations).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    });
+  }
+
+  it.effect("navigates a signed-out setup request on 401", () => {
+    const body = { kind: "navigate", location: "http://campfire.test/session/new" };
+    const { layer, navigations } = harness(() => json(401, body));
+
+    return Effect.gen(function* () {
+      expect(yield* readTwoFactorSetup()).toEqual(body);
+      expect(navigations).toEqual([body.location]);
+    }).pipe(Effect.provide(layer));
+  });
+});
+
+describe("two-factor enrollment gate", () => {
+  it.effect("decodes a required setup without redirecting or exposing provisioning secrets", () => {
+    const expected = new TwoFactorRequired({
+      message: "Set up two-step sign-in to continue",
+      requirement: { kind: "setup", location: "http://campfire.test/two_factor_setup" },
+    });
+
+    const { layer, navigations, seen } = harness(() => errorReply(403, expected));
+
+    return Effect.gen(function* () {
+      const client = yield* ApiClient;
+
+      const error = yield* client
+        .execute({ method: "GET", path: "/settings" }, Schema.decodeUnknownEffect(Schema.String))
+        .pipe(Effect.flip);
+
+      expect(error._tag).toBe("TwoFactorRequired");
+      expect(error).toMatchObject({ requirement: expected.requirement });
+      expect(navigations).toEqual([]);
+      expect(seen).toHaveLength(1);
+    }).pipe(Effect.provide(layer));
+  });
+});
+
+describe("sudo HTTP statuses", () => {
+  it.effect("requires sign-in for a sudo 401 that cannot decode", () => {
+    const { layer, navigations } = harness(() => json(401, { kind: "error", fieldErrors: {} }));
+
+    return Effect.gen(function* () {
+      expect((yield* resumeSudo().pipe(Effect.flip))._tag).toBe("Unauthorized");
+      expect(navigations).toEqual(["/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("navigates to sign-in when a sudo before-action refuses the session", () => {
+    const next = { kind: "navigate", location: "http://campfire.test/session/new" };
+    const { layer, navigations } = harness(() => json(401, next));
+
+    return Effect.gen(function* () {
+      expect(yield* resumeSudo()).toEqual(next);
+      expect(navigations).toEqual(["http://campfire.test/session/new"]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("decodes credential failures and expiry without leaving the SPA", () => {
+    setCsrfMeta("held-token");
+
+    const refused = { kind: "error", message: "Confirmation failed. Try again." };
+    const expired = { kind: "ready", reauthentication: { methods: ["password"], retry: null } };
+
+    const { layer, navigations } = harness((_, index) =>
+      json(index === 0 ? 401 : 403, index === 0 ? refused : expired),
+    );
+
+    return Effect.gen(function* () {
+      expect(yield* submitSudo({ kind: "password", password: "wrong" })).toEqual(refused);
+      expect(yield* resumeSudo()).toEqual(expired);
+      expect(navigations).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("retains available methods and retry metadata on protected writes", () => {
+    const error = new SudoRequired({
+      message: "Confirm your password to continue",
+      reauthentication: {
+        methods: ["password", "totp"],
+        retry: { method: "PATCH", path: "/api/v1/admin/custom_styles", returnTo: "/app/admin" },
+      },
+    });
+
+    const { layer, navigations } = harness(() => errorReply(403, error));
+
+    return Effect.gen(function* () {
+      expect(yield* me().pipe(Effect.flip)).toEqual(error);
+      expect(navigations).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
 });
 
 describe("ApiClient", () => {

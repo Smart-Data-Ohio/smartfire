@@ -34,6 +34,7 @@ mod events;
 mod fizzy;
 mod huddle;
 mod join;
+mod invites;
 mod me;
 mod message;
 mod organize;
@@ -59,7 +60,9 @@ mod user;
 mod work;
 
 pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
-pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInHelpContact, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, TransferSignIn};
+pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, SudoMethod, SudoResponse, SudoRetry, SudoState, SudoSubmission, TransferSignIn};
+pub use auth::{TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
+pub use auth::SignInHelpContact;
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
@@ -140,6 +143,7 @@ pub use huddle::{
     HuddleRoleChanged, ModerateHuddle,
 };
 pub use join::{OpenRoomPreview, RoomJoin};
+pub use invites::{CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator, WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState};
 pub use me::{
     ChatSounds, DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize,
     Theme, VoiceMode,

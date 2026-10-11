@@ -431,4 +431,6 @@ pub const ACTIONS: &[&str] = &[
     "work.handoff",
     "workspace_icon.create",
     "workspace_icon.destroy",
+    "workspace_invite.create",
+    "workspace_invite.revoke",
 ];

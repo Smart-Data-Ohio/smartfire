@@ -18,6 +18,9 @@ mod profile_page_tests;
 #[cfg(test)]
 mod joining_tests;
 
+#[cfg(test)]
+mod workspace_invite_tests;
+
 
 #[cfg(test)]
 mod status_popup_tests;

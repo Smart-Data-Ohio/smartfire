@@ -235,6 +235,7 @@ fn api_alert(reply: &Reply, tag: &str, status: StatusCode, message: &str) {
         match tag {
             "Validation" => json!({"_tag": tag, "message": message, "fields": {}}),
             "RateLimited" => json!({"_tag": tag, "message": message, "retryAfter": 0}),
+            "TwoFactorRequired" => json!({"_tag": tag, "message": message, "requirement":{"kind":"setup","location":"http://campfire.test/two_factor_setup"}}),
             _ => json!({"_tag": tag, "message": message}),
         }
     );

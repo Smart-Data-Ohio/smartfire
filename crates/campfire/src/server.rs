@@ -292,6 +292,7 @@ fn router(app: &App, kit: Kit) -> Router {
         .merge(controllers::pwa::routes(IMMUTABLE_CACHE_CONTROL))
         .merge(controllers::spa::routes(IMMUTABLE_CACHE_CONTROL))
         .route("/account/banner", axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)))
+        .route("/invite/{token}", axum::routing::get(campfire_kit::action(controllers::users::invite_new)).post(campfire_kit::action(controllers::users::invite_create)))
         .merge(campfire_api::routes(app))
         // Authenticate and verify the signed byte limit before receiving the upload.
         .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::streamed_action(controllers::dispatch)).fallback(campfire_kit::action(controllers::dispatch)))

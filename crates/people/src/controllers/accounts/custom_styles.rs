@@ -10,7 +10,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut account = super::current_account(c).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let params = c.params.require("account")?.permit(&permit_keys(&["custom_styles"]));
     // ActiveModel::Type::String retains nil and casts booleans to "t"/"f".
     let custom_styles = params.get("custom_styles").map(|value| match value {

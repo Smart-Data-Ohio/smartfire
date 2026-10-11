@@ -226,9 +226,14 @@ pub fn parameter_filter() -> ParameterFilter {
 static BOT_KEY_IN_PATH: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(/rooms/\d+/)(?:\d+-[A-Za-z0-9]+|[^/\s"<>]*--[0-9a-f]+)"#).unwrap());
 
+/// The invite token as the segment after `/invite/`. The database keeps only its digest, but the
+/// raw token in a request path is still a credential, so it never reaches the log.
+static INVITE_TOKEN_IN_PATH: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"(/invite/)[^/\s"?#<>]+"#).unwrap());
+
 /// `LogScrubbingFormatter#scrub`
 pub fn scrub_log_line(line: &str) -> Cow<'_, str> {
-    BOT_KEY_IN_PATH.replace_all(line, "${1}[FILTERED]")
+    let scrubbed = BOT_KEY_IN_PATH.replace_all(line, "${1}[FILTERED]");
+    Cow::Owned(INVITE_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]").into_owned())
 }
 
 /// `LogScrubbingFormatter` for the tracing subscriber: every formatted event goes through
@@ -421,6 +426,18 @@ mod tests {
         let mut out = Vec::new();
         ScrubbingWriter(&mut out).write_all(b"GET /rooms/1/12-AbC/messages\n").unwrap();
         assert_eq!(out, b"GET /rooms/1/[FILTERED]/messages\n");
+    }
+
+    #[test]
+    fn invite_tokens_are_scrubbed_from_log_lines() {
+        assert_eq!(scrub_log_line("GET /invite/abc123"), "GET /invite/[FILTERED]");
+        assert_eq!(scrub_log_line("GET /invite/abc123 HTTP/1.1"), "GET /invite/[FILTERED] HTTP/1.1");
+        assert_eq!(scrub_log_line("GET /invite/abc123?x=1"), "GET /invite/[FILTERED]?x=1");
+        assert_eq!(scrub_log_line("POST /invite/abc123/accept"), "POST /invite/[FILTERED]/accept");
+        assert_eq!(scrub_log_line("request failed path=\"/invite/abc123\""), "request failed path=\"/invite/[FILTERED]\"");
+        assert_eq!(scrub_log_line("GET /invites"), "GET /invites");
+        assert_eq!(scrub_log_line("GET /api/invites/12"), "GET /api/invites/12");
+        assert_eq!(scrub_log_line("GET /rooms/1/12-AbC/messages"), "GET /rooms/1/[FILTERED]/messages");
     }
 
     #[test]

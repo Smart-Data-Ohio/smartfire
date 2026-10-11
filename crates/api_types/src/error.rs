@@ -20,10 +20,10 @@ pub enum ApiError {
     Unauthorized { message: String },
     /// 403: signed in, but not allowed.
     Forbidden { message: String },
-    /// 403: the action needs a fresh password confirmation (`/sudo/new`).
-    SudoRequired { message: String },
+    /// 403: confirm an available credential, then retry the pending write.
+    SudoRequired { message: String, reauthentication: crate::SudoState },
     /// 403: two-factor setup or verification is required first.
-    TwoFactorRequired { message: String },
+    TwoFactorRequired { message: String, requirement: crate::TwoFactorRequirement },
     /// 404.
     NotFound { message: String },
     /// 409: the record changed underneath the request.

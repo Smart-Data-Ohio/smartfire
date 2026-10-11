@@ -36,6 +36,7 @@ pub mod boards;
 pub mod board_automations;
 pub mod huddles;
 pub mod join;
+pub mod invites;
 pub mod message_actions;
 pub mod organize;
 pub mod room_integrations;
@@ -496,6 +497,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(people::routes())
         .merge(settings::routes())
         .merge(admin::routes())
+        .merge(invites::routes())
         .merge(bots::routes())
         .merge(slack::routes())
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))

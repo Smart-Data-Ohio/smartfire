@@ -12,8 +12,10 @@ fn fixture() -> TestDb {
     )
 }
 #[test]
-fn action_vocabulary_matches_rails() {
-    assert_eq!(json!(audit::actions()), golden()["actions"]);
+fn action_vocabulary_keeps_rails_actions_and_adds_workspace_invites() {
+    let mut expected = golden()["actions"].as_array().unwrap().clone();
+    expected.extend([json!("workspace_invite.create"), json!("workspace_invite.revoke")]);
+    assert_eq!(json!(audit::actions()), json!(expected));
 }
 #[test]
 fn nested_redaction_and_scalar_wrapping_match_rails() {
