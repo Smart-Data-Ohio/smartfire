@@ -284,6 +284,7 @@ async fn index_slash_commands(c: &mut Ctx) -> Result {
             arg_hint: command.arg_hint,
             takes_arguments: command.takes_arguments,
             agent_name: command.agent,
+            option_schema: command.option_schema,
         })
         .collect();
     c.json(StatusCode::OK, &api::SlashCommandList { commands })
@@ -312,9 +313,14 @@ async fn create_slash_command(c: &mut Ctx) -> Result {
         .write_scoped(
             move || page::enter_time_zone(zone),
             move |tx| {
-                campfire_rooms::controllers::rooms::slash_commands::dispatch(
-                    tx, &context, &text, storage,
-                )
+                let result = slash_commands::dispatch_with_options(
+                    tx, &context, &text, input.options.as_ref(),
+                )?;
+                if let Some(id) = result.message_id {
+                    let message = Message::find(tx.conn(), id)?;
+                    campfire_runtime::messaging::process_message_attachment(tx, storage, &message)?;
+                }
+                Ok(result)
             },
         )
         .await

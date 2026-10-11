@@ -1,4 +1,7 @@
 import { Schema } from "effect";
+import type { CommandOption as GeneratedCommandOption } from "../../gen/CommandOption.ts";
+import type { CommandSchema as GeneratedCommandSchema } from "../../gen/CommandSchema.ts";
+import type { CommandValues as GeneratedCommandValues } from "../../gen/CommandValues.ts";
 import type { CreateScheduledMessage as GeneratedCreateScheduledMessage } from "../../gen/CreateScheduledMessage.ts";
 import type { IconList as GeneratedIconList } from "../../gen/IconList.ts";
 import type { MessagePreview as GeneratedMessagePreview } from "../../gen/MessagePreview.ts";
@@ -52,12 +55,77 @@ export type IconList = typeof IconList.Type;
 
 export type IconListPin = Assert<Pinned<typeof IconList, GeneratedIconList>>;
 
+const optionFields = {
+  name: Schema.String,
+  description: Schema.String,
+  required: Schema.Boolean,
+};
+
+const stringChoice = Schema.Struct({ name: Schema.String, value: Schema.String });
+
+const numberChoice = Schema.Struct({ name: Schema.String, value: Schema.Number });
+
+export const CommandOption = Schema.Union([
+  Schema.Struct({
+    ...optionFields,
+    type: Schema.Literal("string"),
+    choices: Schema.optionalKey(Schema.Array(stringChoice)),
+    min_length: Schema.optionalKey(Schema.Number),
+    max_length: Schema.optionalKey(Schema.Number),
+  }),
+  Schema.Struct({
+    ...optionFields,
+    type: Schema.Literal("integer"),
+    choices: Schema.optionalKey(Schema.Array(numberChoice)),
+    min: Schema.optionalKey(Schema.Number),
+    max: Schema.optionalKey(Schema.Number),
+  }),
+  Schema.Struct({
+    ...optionFields,
+    type: Schema.Literal("number"),
+    choices: Schema.optionalKey(Schema.Array(numberChoice)),
+    min: Schema.optionalKey(Schema.Number),
+    max: Schema.optionalKey(Schema.Number),
+  }),
+  Schema.Struct({ ...optionFields, type: Schema.Literal("boolean") }),
+  Schema.Struct({ ...optionFields, type: Schema.Literal("user") }),
+  Schema.Struct({ ...optionFields, type: Schema.Literal("room") }),
+]);
+
+export const CommandSchema = Schema.Union([
+  Schema.Struct({ options: Schema.Array(CommandOption) }),
+  Schema.Struct({
+    subcommands: Schema.Array(
+      Schema.Struct({
+        name: Schema.String,
+        description: Schema.String,
+        options: Schema.Array(CommandOption),
+      }),
+    ),
+  }),
+]);
+
+export const CommandValues = Schema.Struct({
+  subcommand: Schema.NullOr(Schema.String),
+  values: Schema.Record(
+    Schema.String,
+    Schema.Union([Schema.String, Schema.Number, Schema.Boolean]),
+  ),
+});
+
+export type CommandSchemaPin = Assert<Pinned<typeof CommandSchema, GeneratedCommandSchema>>;
+
+export type CommandOptionPin = Assert<Pinned<typeof CommandOption, GeneratedCommandOption>>;
+
+export type CommandValuesPin = Assert<Pinned<typeof CommandValues, GeneratedCommandValues>>;
+
 export const SlashCommand = Schema.Struct({
   name: Schema.String,
   description: Schema.String,
   argHint: Schema.String,
   takesArguments: Schema.Boolean,
   agentName: Schema.NullOr(Schema.String),
+  optionSchema: Schema.NullOr(CommandSchema),
 });
 
 export type SlashCommand = typeof SlashCommand.Type;
@@ -76,6 +144,7 @@ export type SlashCommandListPin = Assert<
 /** The body of `POST /api/v1/rooms/:id/slash_commands`. */
 export const RunSlashCommand = Schema.Struct({
   text: Schema.String,
+  options: Schema.optionalKey(CommandValues),
   threadId: Schema.NullOr(ThreadId),
 });
 

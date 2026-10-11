@@ -8,6 +8,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
 
 use crate::{Timestamp, User};
+use campfire_slash_schema::{CommandSchema, CommandValues};
 
 /// `GET /api/v1/autocomplete/users?roomId=&query=`: people to mention
 /// (`autocompletable/users`). With `roomId` (the viewer must be a member, else 404), that room's
@@ -77,14 +78,14 @@ pub struct IconList {
 /// `GET /api/v1/rooms/:id/slash_commands?threadId=` (`autocompletable/slash_commands`): the
 /// built-ins in registry order (in a thread, `/poll` is left out), then the room's agent
 /// commands by name. The client filters as the person types.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SlashCommandList {
     pub commands: Vec<SlashCommand>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SlashCommand {
@@ -98,19 +99,25 @@ pub struct SlashCommand {
     pub takes_arguments: bool,
     /// The agent that registered it; `null` for a built-in.
     pub agent_name: Option<String>,
+    pub option_schema: Option<CommandSchema>,
 }
 
 /// `POST /api/v1/rooms/:id/slash_commands`: run a command (`rooms/slash_commands#create`).
-/// Active human members only (403 otherwise). Always 200 with a [`SlashCommandResult`].
+/// Active human members only (403 otherwise). Typed options fail with 422 validation or
+/// 404 for invisible targets; successful dispatch answers 200 with a [`SlashCommandResult`].
 ///
 /// The client's routing, as the classic composer's: `//text` posts `/text` as a message; a known
 /// command comes here; an unknown `/word` is posted as an ordinary message.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RunSlashCommand {
     /// The whole line, starting with `/`.
     pub text: String,
+    /// Typed values for a locally registered command. Omit for free-text commands.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<CommandValues>,
     /// Run in this thread of the room; `null` for the root timeline.
     pub thread_id: Option<i64>,
 }
