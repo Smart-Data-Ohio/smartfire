@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod workspace_invite;
 pub mod slack_import;
 pub mod slack;
 pub mod agent;
