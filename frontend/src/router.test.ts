@@ -58,6 +58,10 @@ describe("the screen map and the router", () => {
       "/app/session/transfers/:id",
       "/app/join/:id",
       "/app/invite/:id",
+      // So are About, Privacy and Terms, for anyone; /about, /privacy and /terms stay retained.
+      "/app/about",
+      "/app/privacy",
+      "/app/terms",
     ]);
 
     for (const route of Object.values(router.routesById)) {

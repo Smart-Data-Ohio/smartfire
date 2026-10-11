@@ -16,12 +16,18 @@ import {
   submitChallenge,
   submitJoin,
 } from "../api/auth-endpoints.ts";
+import { readPublicPage } from "../api/public-page-endpoints.ts";
 import { type AuthResponse, type JoinAnswer, SignedOutBoot } from "../api/schema/auth.ts";
+import type { PublicPage } from "../api/schema/public-pages.ts";
+import type { PublicPageName } from "../gen/PublicPageName.ts";
 import type { WorkspaceJoin } from "../gen/WorkspaceJoin.ts";
 import { runAction } from "./runtime.ts";
 
 /** The public boot: the workspace's branding, the sign-in methods and the help line. */
 export type SignedOutBootData = typeof SignedOutBoot.Type;
+
+/** About, Privacy or Terms: the retained page's article and the policy it read. */
+export type PublicPageData = typeof PublicPage.Type;
 
 /** A sign-in operation's next action. */
 export type AuthNext = typeof AuthResponse.Type;
@@ -64,4 +70,6 @@ export const auth = {
   /** Creates the account and signs it in, or says why not. */
   join: (target: JoinTarget, fields: WorkspaceJoin, avatar: File | null): Promise<JoinNext> =>
     runAction(submitJoin(target, fields, avatar)),
+  /** About, Privacy or Terms, for anyone. */
+  publicPage: (page: PublicPageName): Promise<PublicPageData> => runAction(readPublicPage(page)),
 };

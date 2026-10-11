@@ -15,6 +15,7 @@ import type { MockNetwork } from "../../test/mock-network.ts";
 import { parseSignInSearch } from "./auth-navigation.ts";
 import { ChallengePage } from "./challenge.tsx";
 import { InviteRoute, JoinCodeRoute } from "./join.tsx";
+import { AboutPage, PrivacyPage, TermsPage } from "./public-page.tsx";
 import { SignInPage } from "./sign-in.tsx";
 import { TransferRoute } from "./transfer.tsx";
 
@@ -46,6 +47,9 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
       path: "session/transfers/$transferId",
       component: TransferRoute,
     }),
+    createRoute({ getParentRoute: () => root, path: "about", component: AboutPage }),
+    createRoute({ getParentRoute: () => root, path: "privacy", component: PrivacyPage }),
+    createRoute({ getParentRoute: () => root, path: "terms", component: TermsPage }),
   ];
 
   const router = createRouter({
