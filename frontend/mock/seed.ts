@@ -29,6 +29,7 @@ import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import type { Random } from "./random.ts";
 import { emptyS2World, type S2World } from "./s2/model.ts";
 import { emptyS3World, type S3World } from "./s3/model.ts";
+import type { BoardTagState } from "./s6/board-tags.ts";
 import type { WorkLinkEvent } from "./s6/work-links.ts";
 
 const MINUTE = 60_000;
@@ -129,6 +130,8 @@ export interface RoomRecord {
     slaTimers: BoardSlaTimer[];
     nextTagRuleId: number;
   };
+  /** The board's curated tags and tag policy (`board_tags`, `rooms.tags_required`). */
+  boardTags?: BoardTagState;
   room: Room;
   /** Everyone in the room, in membership order (oldest first), viewer included. */
   memberIds: number[];

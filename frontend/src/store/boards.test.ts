@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../api/testing.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { Thread } from "../gen/Thread.ts";
@@ -14,6 +14,10 @@ import {
 import { applyEvents } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
 import { loadThreadDetail, MAX_REMOVED_THREADS } from "./threads.ts";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const threads = [
   boardThread(1, "planned", 7, ["api"]),
@@ -85,11 +89,11 @@ describe("board selectors and reducers", () => {
       boardPostIds(filter(event(state, "thread.created", badgeAgent), "agents"), BOARD),
     ).toEqual([6, 3]);
   });
-  it("uses exact lowercase tags and sorts by activity before descending id", () => {
+  it("matches whole tags under case folding, as the server does, and sorts by activity before descending id", () => {
     const state = loaded();
     expect(boardPostIds(filter(state, "anyone", "open", "api"), BOARD)).toEqual([3, 1]);
     expect(boardPostIds(filter(state, "anyone", "all", "ap"), BOARD)).toEqual([]);
-    expect(boardPostIds(filter(state, "anyone", "all", "API"), BOARD)).toEqual([]);
+    expect(boardPostIds(filter(state, "anyone", "all", "API"), BOARD)).toEqual([3, 1]);
 
     const changed = {
       ...threads[0],
@@ -99,6 +103,54 @@ describe("board selectors and reducers", () => {
 
     expect(boardPostIds(event(state, "thread.updated", changed), BOARD)).toEqual([1, 5, 4, 3, 2]);
   });
+  it("matches a curated label's capitals against the query whatever its case", () => {
+    const tagged = boardThread(1, "planned", 7, ["Bug report"]);
+    const untagged = boardThread(2, "planned", 8);
+    const query = { ...defaultBoardQuery, status: "all" as const, tag: "bug report" };
+    const pending = setBoardLoading({ ...initialState, me: meFixture }, BOARD, query);
+
+    const state = loadBoardListing(
+      pending,
+      { ...boardListing([tagged]), ...query, tag: "Bug report" },
+      1,
+    );
+
+    expect(state.boards[BOARD]?.query.tag).toBe("Bug report");
+
+    const moved = { ...tagged, lastActivityAt: "2026-10-07T11:00:00.000Z" };
+
+    expect(boardPostIds(event(state, "thread.updated", moved), BOARD)).toEqual([1]);
+    expect(boardPostIds(event(state, "thread.created", untagged), BOARD)).toEqual([1]);
+  });
+
+  it("filters under the server's full case folding, not lower-casing", () => {
+    const street = boardThread(1, "planned", 7, ["Straße"]);
+    const query = { ...defaultBoardQuery, status: "all" as const, tag: "strasse" };
+    const pending = setBoardLoading({ ...initialState, me: meFixture }, BOARD, query);
+    const state = loadBoardListing(pending, { ...boardListing([street]), ...query }, 1);
+    const moved = { ...street, lastActivityAt: "2026-10-07T11:00:00.000Z" };
+
+    expect(boardPostIds(event(state, "thread.updated", moved), BOARD)).toEqual([1]);
+  });
+
+  it("keeps a tag the runtime lower-cases but the server's folding doesn't (U+A7CE)", () => {
+    // As a Unicode 17 runtime does; the server (caseless, Unicode 16) keeps U+A7CE as it is.
+    const lower = String.prototype.toLowerCase;
+
+    vi.spyOn(String.prototype, "toLowerCase").mockImplementation(function (this: string) {
+      return lower.call(this).replaceAll("\u{a7ce}", "\u{a7cf}");
+    });
+
+    const pinwheel = boardThread(1, "planned", 7, ["\u{a7ce}"]);
+    const query = { ...defaultBoardQuery, status: "all" as const, tag: "\u{a7ce}" };
+    const pending = setBoardLoading({ ...initialState, me: meFixture }, BOARD, query);
+    const state = loadBoardListing(pending, { ...boardListing([pinwheel]), ...query }, 1);
+    const moved = { ...pinwheel, lastActivityAt: "2026-10-07T11:00:00.000Z" };
+
+    expect(state.boards[BOARD]?.query.tag).toBe("\u{a7ce}");
+    expect(boardPostIds(event(state, "thread.updated", moved), BOARD)).toEqual([1]);
+  });
+
   it("returns ordered columns and moves rows on work updates", () => {
     const state = loaded();
     expect(boardColumns(state, BOARD)).toEqual({

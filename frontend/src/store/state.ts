@@ -1,4 +1,5 @@
 import type { BlockState } from "../gen/BlockState.ts";
+import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { NotificationSettings } from "../gen/NotificationSettings.ts";
@@ -101,6 +102,11 @@ export interface State {
    * refetches when its board's count moves.
    */
   readonly boardAutomationsChanged: Readonly<Record<number, number>>;
+  /**
+   * Each board's curated tags and tag policy, by room id, as the newest answer had them: the
+   * listing, the new-post form, a catalog read or a catalog write.
+   */
+  readonly boardTagCatalogs: Readonly<Record<number, BoardTagCatalog>>;
   /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
   readonly huddles: Readonly<Record<number, HuddlePresence>>;
   /** Each loaded stage's roster and live stream, by room id. */
@@ -183,6 +189,7 @@ export const initialState: State = {
   removalCount: 0,
   forgottenRemoval: 0,
   boardAutomationsChanged: {},
+  boardTagCatalogs: {},
   huddles: {},
   stages: {},
   activity: emptyActivity,

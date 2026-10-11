@@ -44,6 +44,8 @@ export interface S2Context {
 export interface RouteRequest {
   /** The pattern's capture groups, as numbers (every S2 path parameter is an id). */
   readonly ids: readonly number[];
+  /** The matched path, for a pattern whose parameter isn't an id (an invite's token). */
+  readonly path: string;
   readonly query: URLSearchParams;
   readonly body: Json | undefined;
 }
@@ -80,7 +82,7 @@ export function dispatch(
 
     const ids = match.slice(1).map(Number);
 
-    return () => candidate.handle({ ids, query, body });
+    return () => candidate.handle({ ids, path, query, body });
   }
 
   return null;

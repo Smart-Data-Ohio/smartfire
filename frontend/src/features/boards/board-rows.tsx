@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import type { BoardTag } from "../../gen/BoardTag.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import { formatFull } from "../../lib/time.ts";
 import { useStore } from "../../store/store.ts";
@@ -38,6 +39,13 @@ function Lifecycle({ threadId }: { readonly threadId: number }) {
   );
 }
 
+const NO_TAGS: readonly BoardTag[] = [];
+
+/** The board's curated tags, so a post's pills show their emoji and order. */
+function useCatalogTags(roomId: number): readonly BoardTag[] {
+  return useStore((state) => state.boardTagCatalogs[roomId]?.tags ?? NO_TAGS);
+}
+
 function useUnread(threadId: number): boolean {
   return useStore((state) => (state.threadMemberships[threadId]?.unreadAt ?? null) !== null);
 }
@@ -49,6 +57,7 @@ function useUnread(threadId: number): boolean {
 export function PostRow({ roomId, threadId, open, activeTag }: PostProps) {
   const thread = useStore((state) => state.threads[threadId]);
   const unread = useUnread(threadId);
+  const catalog = useCatalogTags(roomId);
   const now = useNow();
 
   if (thread === undefined || thread.work === null) {
@@ -73,7 +82,7 @@ export function PostRow({ roomId, threadId, open, activeTag }: PostProps) {
             {unread ? <span className="board-unread-dot" role="img" aria-label="Unread" /> : null}
             <span className="board-row-title">{threadTitle(thread)}</span>
             <Lifecycle threadId={threadId} />
-            <TagList tags={work.tags} active={activeTag} />
+            <TagList tags={work.tags} active={activeTag} catalog={catalog} />
           </span>
           <span className="board-row-meta">
             <OwnerLine work={work} />
@@ -98,6 +107,7 @@ export function PostRow({ roomId, threadId, open, activeTag }: PostProps) {
 export function PostCard({ roomId, threadId, open, activeTag }: PostProps) {
   const thread = useStore((state) => state.threads[threadId]);
   const unread = useUnread(threadId);
+  const catalog = useCatalogTags(roomId);
   const now = useNow();
 
   if (thread === undefined || thread.work === null) {
@@ -122,7 +132,7 @@ export function PostCard({ roomId, threadId, open, activeTag }: PostProps) {
           <span className="board-card-title">{threadTitle(thread)}</span>
         </span>
         <Lifecycle threadId={threadId} />
-        <TagList tags={work.tags} active={activeTag} />
+        <TagList tags={work.tags} active={activeTag} catalog={catalog} />
         <span className="board-card-foot">
           <OwnerLine work={work} />
           <span className="board-card-counts">

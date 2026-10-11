@@ -1,5 +1,7 @@
 import { type ReactNode, useState } from "react";
 import type { AgentStep } from "../../gen/AgentStep.ts";
+import type { BoardTag } from "../../gen/BoardTag.ts";
+import type { BoardTagCatalog } from "../../gen/BoardTagCatalog.ts";
 import type { User } from "../../gen/User.ts";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
@@ -27,11 +29,11 @@ import {
   safeHttpsUrl,
   stepDuration,
   stepStatusLabel,
-  tagsProblem,
   WORK_STATUS_LABEL,
   WORK_STATUSES,
 } from "./board-format.ts";
 import { OwnerLine, StatusChip, TagList, UserFace } from "./board-parts.tsx";
+import { EMPTY_CATALOG, postTagsProblem } from "./board-tags.ts";
 import { PostLinks } from "./post-links.tsx";
 
 const RESULT_MAX = 20_000;
@@ -182,15 +184,24 @@ function OwnerFact({
   );
 }
 
+const NO_CATALOG_TAGS: readonly BoardTag[] = [];
+
 function TagsFact({
   threadId,
+  roomId,
   tags,
   editable,
 }: {
   readonly threadId: number;
+  readonly roomId: number | null;
   readonly tags: readonly string[];
   readonly editable: boolean;
 }) {
+  const catalog = useStore((state) =>
+    roomId === null ? undefined : state.boardTagCatalogs[roomId],
+  );
+
+  const catalogTags = catalog?.tags ?? NO_CATALOG_TAGS;
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
@@ -200,7 +211,11 @@ function TagsFact({
   if (!editing) {
     return (
       <span className="post-tags">
-        {tags.length === 0 ? <span className="post-fact-none">None</span> : <TagList tags={tags} />}
+        {tags.length === 0 ? (
+          <span className="post-fact-none">None</span>
+        ) : (
+          <TagList tags={tags} catalog={catalogTags} />
+        )}
         {editable ? (
           <Button
             variant="ghost"
@@ -221,7 +236,7 @@ function TagsFact({
 
   const submit = () => {
     const next = parseTags(text);
-    const problem = tagsProblem(next);
+    const problem = editedTagsProblem(catalog ?? { ...EMPTY_CATALOG, roomId: 0 }, next);
 
     if (problem !== undefined) {
       setError(problem);
@@ -280,6 +295,20 @@ function TagsFact({
       </div>
     </form>
   );
+}
+
+/**
+ * What the server would refuse about a post's edited tags: curated labels skip the free-text
+ * grammar, and a board that requires a tag needs one of its own unless its default fills in.
+ */
+function editedTagsProblem(catalog: BoardTagCatalog, names: readonly string[]): string | undefined {
+  const problem = postTagsProblem(catalog, names);
+
+  if (problem?.field === "catalog") {
+    return `Include one of this board's tags: ${catalog.tags.map((tag) => tag.name).join(", ")}.`;
+  }
+
+  return problem?.message;
 }
 
 function ResultSection({
@@ -596,6 +625,7 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
         <Fact label="Tags">
           <TagsFact
             threadId={threadId}
+            roomId={roomId}
             tags={work.tags}
             editable={permissions?.canManageWork === true}
           />

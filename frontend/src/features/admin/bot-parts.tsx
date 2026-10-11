@@ -72,7 +72,12 @@ export function CopyLine({ text, what }: { readonly text: string; readonly what:
       <code ref={shown} className="admin-code">
         {text}
       </code>
-      <Button variant="ghost" size="sm" icon="copy" onClick={() => copy(text, what, shown.current)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="copy"
+        onClick={() => void copy(text, what, shown.current)}
+      >
         <span className="visually-hidden">Copy {what.toLowerCase()}</span>
       </Button>
     </div>

@@ -149,10 +149,13 @@ async fn spa_api_board_catalog_required_default_create_edit_and_legacy() {
     let reply = david.write(json_body(Method::DELETE, &format!("{path}/tags/{id}"), &json!({}))).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let catalog: Value = parse(&reply);
+    // The last tag takes the requirement with it, in the same write: the board stays postable.
     assert_eq!(catalog["defaultBoardTagId"], Value::Null);
-    assert_eq!(catalog["tagsRequired"], true);
+    assert_eq!(catalog["tagsRequired"], false);
     let reply = david.write(json_body(Method::POST, &create, &new_post("Deleted default"))).await;
-    validation(&reply, "tags", "must include a catalog tag");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let reply = david.write(json_body(Method::PATCH, &path, &json!({"tagsRequired":true,"defaultBoardTagId":null}))).await;
+    validation(&reply, "tagsRequired", "needs at least one board tag");
 }
 
 #[tokio::test]

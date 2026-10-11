@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { userFixture } from "../../api/testing.ts";
 import type { User } from "../../gen/User.ts";
 import type { WorkFacts } from "../../gen/WorkFacts.ts";
@@ -16,6 +16,10 @@ import {
   stepStatusLabel,
   tagsProblem,
 } from "./board-format.ts";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const MAYA: User = { ...userFixture(2), name: "Maya Okafor" };
 
@@ -66,6 +70,17 @@ describe("board queries", () => {
 describe("tags", () => {
   it("normalises like the server: stripped, lower-cased, blanks and repeats dropped", () => {
     expect(parseTags(" Bug, api,, BUG ,infra ")).toEqual(["bug", "api", "infra"]);
+  });
+
+  it("leaves a typed label's other letters to the server's case folding (U+A7CE)", () => {
+    // As a Unicode 17 runtime does; the server (caseless, Unicode 16) keeps U+A7CE as it is.
+    const lower = String.prototype.toLowerCase;
+
+    vi.spyOn(String.prototype, "toLowerCase").mockImplementation(function (this: string) {
+      return lower.call(this).replaceAll("\u{a7ce}", "\u{a7cf}");
+    });
+
+    expect(parseTags("\u{a7ce}, Straße")).toEqual(["\u{a7ce}", "straße"]);
   });
 
   it("says what the server would refuse", () => {

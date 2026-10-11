@@ -1,9 +1,12 @@
 import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
+import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { SaveBoardTag } from "../gen/SaveBoardTag.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
+import type { UpdateBoardTagPolicy } from "../gen/UpdateBoardTagPolicy.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
@@ -49,6 +52,95 @@ export const saveSlaTimers = Effect.fn("boards.saveSlaTimers")(function* (
   return settings;
 });
 
+/**
+ * Catalog answers by the order their requests started: the listing, the new-post form, catalog
+ * reads and writes all carry the catalog, and an answer to an older request mustn't replace a
+ * newer one (a refetch that crossed a write, say).
+ */
+const catalogIssued = new Map<number, number>();
+
+const catalogShown = new Map<number, number>();
+
+function catalogTicket(roomId: number): number {
+  const ticket = (catalogIssued.get(roomId) ?? 0) + 1;
+
+  catalogIssued.set(roomId, ticket);
+
+  return ticket;
+}
+
+function showCatalog(ticket: number, catalog: BoardTagCatalog): void {
+  if (ticket <= (catalogShown.get(catalog.roomId) ?? 0)) return;
+
+  catalogShown.set(catalog.roomId, ticket);
+  mutations.setBoardTagCatalog(catalog);
+}
+
+function catalogOf(
+  roomId: number,
+  from: Pick<BoardTagCatalog, "tags" | "tagsRequired" | "defaultBoardTagId">,
+): BoardTagCatalog {
+  return {
+    roomId,
+    tags: from.tags,
+    tagsRequired: from.tagsRequired,
+    defaultBoardTagId: from.defaultBoardTagId,
+  };
+}
+
+/** Reads the catalog afresh: on opening the tag editor, or after `board.automations.changed`. */
+export const tagCatalog = Effect.fn("boards.tagCatalog")(function* (roomId: number) {
+  const ticket = catalogTicket(roomId);
+  const catalog = yield* api.boardTagCatalog(roomId);
+
+  showCatalog(ticket, catalog);
+
+  return catalog;
+});
+
+const catalogWrite = <E, R>(roomId: number, write: Effect.Effect<BoardTagCatalog, E, R>) =>
+  Effect.gen(function* () {
+    const ticket = catalogTicket(roomId);
+    const catalog = yield* write;
+
+    showCatalog(ticket, catalog);
+
+    return catalog;
+  });
+
+export const createTag = Effect.fn("boards.createTag")(function* (
+  roomId: number,
+  input: SaveBoardTag,
+) {
+  return yield* catalogWrite(roomId, api.createBoardTag(roomId, input));
+});
+
+export const updateTag = Effect.fn("boards.updateTag")(function* (
+  roomId: number,
+  tagId: number,
+  input: SaveBoardTag,
+) {
+  return yield* catalogWrite(roomId, api.updateBoardTag(roomId, tagId, input));
+});
+
+export const deleteTag = Effect.fn("boards.deleteTag")(function* (roomId: number, tagId: number) {
+  return yield* catalogWrite(roomId, api.deleteBoardTag(roomId, tagId));
+});
+
+export const reorderTags = Effect.fn("boards.reorderTags")(function* (
+  roomId: number,
+  tagIds: readonly number[],
+) {
+  return yield* catalogWrite(roomId, api.reorderBoardTags(roomId, { tagIds: [...tagIds] }));
+});
+
+export const updateTagPolicy = Effect.fn("boards.updateTagPolicy")(function* (
+  roomId: number,
+  input: UpdateBoardTagPolicy,
+) {
+  return yield* catalogWrite(roomId, api.updateBoardTagPolicy(roomId, input));
+});
+
 /** Room sessions own room:<id>; changing board filters does not acquire another holder. */
 export const open = Effect.fn("boards.open")(function* (roomId: number, query: BoardQuery) {
   mutations.setBoardLoading(roomId, query);
@@ -56,9 +148,13 @@ export const open = Effect.fn("boards.open")(function* (roomId: number, query: B
 
   if (board === undefined) return;
   const read = captureWorkRead(store.getState());
+  const ticket = catalogTicket(roomId);
   yield* api.board(roomId, { ...board.query, page: 1 }).pipe(
     Effect.tap((listing) =>
-      Effect.sync(() => mutations.loadBoardListing(listing, board.generation, read)),
+      Effect.sync(() => {
+        showCatalog(ticket, catalogOf(roomId, listing));
+        mutations.loadBoardListing(listing, board.generation, read);
+      }),
     ),
     Effect.catch((error) =>
       Effect.sync(() => mutations.setBoardError(roomId, board.generation, error.message)),
@@ -82,9 +178,13 @@ export const loadMore = Effect.fn("boards.loadMore")(function* (roomId: number) 
 
   if (board === undefined) return;
   const read = captureWorkRead(store.getState());
+  const ticket = catalogTicket(roomId);
   yield* api.board(roomId, { ...board.query, page: held.page + 1 }).pipe(
     Effect.tap((listing) =>
-      Effect.sync(() => mutations.loadBoardListing(listing, board.generation, read)),
+      Effect.sync(() => {
+        showCatalog(ticket, catalogOf(roomId, listing));
+        mutations.loadBoardListing(listing, board.generation, read);
+      }),
     ),
     Effect.catch((error) =>
       Effect.sync(() => mutations.setBoardError(roomId, board.generation, error.message)),
@@ -93,8 +193,10 @@ export const loadMore = Effect.fn("boards.loadMore")(function* (roomId: number) 
 });
 
 export const postForm = Effect.fn("boards.postForm")(function* (roomId: number) {
+  const ticket = catalogTicket(roomId);
   const form = yield* api.boardPostForm(roomId);
   mutations.mergeUsers(form.users);
+  showCatalog(ticket, catalogOf(roomId, form));
 
   return form;
 });

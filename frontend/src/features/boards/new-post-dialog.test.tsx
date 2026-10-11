@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { initialState } from "../../store/state.ts";
-import { store } from "../../store/store.ts";
+import { mutations, store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { boardDetail } from "../../test/board-fixtures.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
@@ -247,5 +247,130 @@ describe("the new-post dialog", () => {
     });
 
     expect(created).not.toHaveBeenCalled();
+  });
+
+  describe("with curated board tags", () => {
+    const catalog = (tagsRequired: boolean, defaultBoardTagId: number | null) => {
+      vi.spyOn(actions.boards, "postForm").mockResolvedValue({
+        ownerCandidates: [],
+        tagSuggestions: [],
+        users: [],
+        tags: [],
+        tagsRequired: false,
+        defaultBoardTagId: null,
+      });
+      vi.spyOn(actions.boards, "tagCatalog").mockImplementation(async (roomId) => {
+        const answer = store.getState().boardTagCatalogs[roomId];
+
+        if (answer === undefined) throw new Error("no catalog");
+
+        return answer;
+      });
+      mutations.setBoardTagCatalog({
+        roomId: 900,
+        tags: [
+          { id: 1, name: "Bug report", emoji: "🐞", position: 0 },
+          { id: 2, name: "Idea", emoji: null, position: 1 },
+        ],
+        tagsRequired,
+        defaultBoardTagId,
+      });
+
+      return vi.spyOn(actions.boards, "createPost").mockResolvedValue(boardDetail());
+    };
+
+    const chip = (name: string) => screen.getByRole("button", { name: new RegExp(name) });
+
+    it("starts with the default picked and sends the picks with the free-text tags", async () => {
+      const create = catalog(false, 2);
+      const user = userEvent.setup();
+
+      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+
+      expect(chip("Idea").getAttribute("aria-pressed")).toBe("true");
+      expect(chip("Bug report").getAttribute("aria-pressed")).toBe("false");
+      expect(screen.getByText("Idea is the board's default.")).toBeTruthy();
+
+      await user.click(chip("Bug report"));
+      await user.type(screen.getByLabelText("Title"), "Crash on save");
+      await user.type(screen.getByLabelText(/More tags/), "api");
+      await user.click(screen.getByRole("button", { name: "Create post" }));
+
+      await waitFor(() =>
+        expect(create).toHaveBeenCalledWith(
+          900,
+          expect.objectContaining({ tags: ["Bug report", "Idea", "api"] }),
+        ),
+      );
+    });
+
+    it("sends a required board's post with nothing picked when the server adds the default", async () => {
+      const create = catalog(true, 2);
+      const user = userEvent.setup();
+
+      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+
+      expect(screen.getByText("Idea is the board's default.")).toBeTruthy();
+
+      await user.click(chip("Idea"));
+
+      expect(screen.getByText("Idea will be added, since this board requires a tag.")).toBeTruthy();
+
+      await user.type(screen.getByLabelText("Title"), "Default fills in");
+      await user.type(screen.getByLabelText(/More tags/), "api");
+      await user.click(screen.getByRole("button", { name: "Create post" }));
+
+      await waitFor(() =>
+        expect(create).toHaveBeenCalledWith(900, expect.objectContaining({ tags: ["api"] })),
+      );
+      expect(screen.queryByText("Pick at least one of this board's tags.")).toBeNull();
+    });
+
+    it("holds the post until a required tag is picked when there's no default, and focuses the chips", async () => {
+      const create = catalog(true, null);
+      const user = userEvent.setup();
+
+      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+
+      expect(screen.getByText("Required")).toBeTruthy();
+      expect(screen.getByText("Pick at least one.")).toBeTruthy();
+
+      await user.type(screen.getByLabelText("Title"), "Untagged");
+      await user.click(screen.getByRole("button", { name: "Create post" }));
+
+      expect(await screen.findByText("Pick at least one of this board's tags.")).toBeTruthy();
+      expect(document.activeElement).toBe(chip("Bug report"));
+      expect(create).not.toHaveBeenCalled();
+      expect(screen.getByRole("group", { name: /Board tags/ }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
+
+      await user.click(chip("Bug report"));
+      await user.click(screen.getByRole("button", { name: "Create post" }));
+
+      await waitFor(() =>
+        expect(create).toHaveBeenCalledWith(900, expect.objectContaining({ tags: ["Bug report"] })),
+      );
+    });
+
+    it("follows a live catalog change: a deleted default stops being picked", async () => {
+      catalog(false, 2);
+
+      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+
+      expect(chip("Idea").getAttribute("aria-pressed")).toBe("true");
+
+      act(() =>
+        mutations.setBoardTagCatalog({
+          roomId: 900,
+          tags: [{ id: 1, name: "Bug report", emoji: "🐞", position: 0 }],
+          tagsRequired: false,
+          defaultBoardTagId: null,
+        }),
+      );
+
+      expect(screen.queryByRole("button", { name: /Idea/ })).toBeNull();
+      expect(chip("Bug report").getAttribute("aria-pressed")).toBe("false");
+    });
   });
 });
