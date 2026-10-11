@@ -8,6 +8,7 @@ pub struct RoomChanges {
     pub name: Option<Option<String>>,
     pub icon: Option<Option<String>>,
     pub topic: Option<Option<String>>,
+    pub voice_bitrate: Option<Option<i64>>,
 }
 
 pub async fn create(
@@ -53,6 +54,7 @@ pub async fn update(
             name,
             icon,
             topic: None,
+            voice_bitrate: None,
         },
         kind,
     )
@@ -78,6 +80,9 @@ pub async fn update_with_topic(
             )?;
             if let Some(topic) = changes.topic {
                 room.update_topic(tx, topic.as_deref())?;
+            }
+            if let Some(bitrate) = changes.voice_bitrate {
+                room.update_voice_bitrate(tx, bitrate)?;
             }
             Ok(room)
         })

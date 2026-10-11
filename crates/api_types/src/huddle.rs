@@ -112,6 +112,8 @@ pub struct HuddleCredentials {
     /// What the token allows, so the client knows without decoding it: listeners skip the
     /// microphone check and start with publishing off. New on the wire.
     pub can_publish: bool,
+    /// Effective room audio target in bits per second, not guaranteed codec capability.
+    pub audio_bitrate_target: i64,
 }
 
 /// `POST /api/v1/rooms/:id/huddle/moderation` (`rooms/call_moderation#mute`, `#unmute` and

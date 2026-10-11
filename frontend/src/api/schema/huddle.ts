@@ -78,6 +78,7 @@ export const HuddleCredentials = Schema.Struct({
   roomId: RoomId,
   roomName: Schema.String,
   canPublish: Schema.Boolean,
+  audioBitrateTarget: Schema.Int,
 });
 
 export type HuddleCredentials = typeof HuddleCredentials.Type;

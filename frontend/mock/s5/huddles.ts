@@ -462,6 +462,7 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
       roomId,
       roomName: ctx.displayName(record),
       canPublish: publish,
+      audioBitrateTarget: record.room.voiceBitrate ?? 48_000,
     };
   };
 
