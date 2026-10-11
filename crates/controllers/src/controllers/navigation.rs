@@ -317,7 +317,3 @@ pub async fn typed_room(c: &mut Ctx) -> Result {
     concerns::remember_last_room_visited(c, room.id);
     c.redirect_to(&c.url_for(&campfire_routes::room(room.id)))
 }
-
-pub async fn retired(c: &mut Ctx) -> Result {
-    Ok(c.head(campfire_kit::StatusCode::GONE))
-}

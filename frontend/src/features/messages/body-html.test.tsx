@@ -1,16 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { BodyHtml } from "./body-html.tsx";
 
-/** A body with a mention as the server renders it: a block `<div>` with an avatar link and name button. */
+/** A body with a mention as the server renders it: an inline chip with the name. */
 const HTML =
   '<p>Ship it, <action-text-attachment content-type="application/vnd.campfire.mention" sgid="s1">' +
-  '<div class="mention mention--user-7" sgid="s1" data-user-id="7">\n' +
-  '  <a title="Maya Okafor" class="btn avatar" href="/users/7">M</a>\n' +
-  '  <button name="button" type="button" class="profile-card-name">Maya Okafor</button>\n' +
-  "</div>\n</action-text-attachment> &amp; friends</p>";
+  '<span class="mention mention--user-7" sgid="s1" data-user-id="7">' +
+  '<span class="profile-card-name">Maya Okafor</span></span>' +
+  "</action-text-attachment> &amp; friends</p>";
 
 /** The markup a body rendered before it went through `BodyHtml`, built the way it was. */
 function inlined(className: string, stale?: true): string {
@@ -19,7 +17,7 @@ function inlined(className: string, stale?: true): string {
       className={className}
       data-stale={stale}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: the same server HTML, for comparison
-      dangerouslySetInnerHTML={{ __html: inlineMentions(HTML) }}
+      dangerouslySetInnerHTML={{ __html: HTML }}
     />,
   );
 
@@ -157,12 +155,11 @@ describe("BodyHtml", () => {
     expect(screen.getByRole("link", { name: "ending" })).toBe(link);
   });
 
-  it("keeps a mention inside the spoiler and drops its link and button", () => {
+  it("keeps a mention inside the spoiler", () => {
     const html =
       '<p><span class="spoiler" data-spoiler="">' +
-      '<span class="mention mention--user-1">' +
-      '<a class="btn avatar" href="/users/1" title="David – Founder">D</a>' +
-      '<button class="profile-card-name" type="button">David</button>' +
+      '<span class="mention mention--user-1" data-user-id="1">' +
+      '<span class="profile-card-name">David</span>' +
       "</span> is the killer</span></p>";
 
     const { container } = render(<BodyHtml html={html} className="message-body" />);

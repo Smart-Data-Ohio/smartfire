@@ -274,7 +274,7 @@ fn workspace_styles_follow_the_base_sheets_without_html_breakout() {
     let mut boot = boot();
     boot.custom_styles = Some(":root { --accent: red; } .label::after { content: \"</style><script>&\\\"\"; }".into());
     let page = render("<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>", &boot, "token", Some("nonce"));
-    let expected = "<style data-turbo-track=\"reload\">:root { --accent: red; } .label::after { content: \"\\3c /style><script>&\\\"\"; }</style>";
+    let expected = "<style id=\"workspace-styles\">:root { --accent: red; } .label::after { content: \"\\3c /style><script>&\\\"\"; }</style>";
     assert!(page.contains(expected), "{page}");
     assert!(page.find("base.css").unwrap() < page.find(expected).unwrap());
     assert_eq!(page.matches("</style>").count(), 1);
@@ -288,7 +288,7 @@ fn workspace_styles_preserve_range_queries_and_attribute_selectors() {
     let mut boot = boot();
     boot.custom_styles = Some(css.into());
     let page = render("<head><!--boot--></head>", &boot, "token", None);
-    assert!(page.contains(&format!("<style data-turbo-track=\"reload\">{css}</style>")), "{page}");
+    assert!(page.contains(&format!("<style id=\"workspace-styles\">{css}</style>")), "{page}");
 }
 
 #[test]
@@ -317,7 +317,6 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
         "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n\
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
-         <meta name=\"turbo-visit-control\" content=\"reload\" />\n\
          <link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
     ), "{page}");

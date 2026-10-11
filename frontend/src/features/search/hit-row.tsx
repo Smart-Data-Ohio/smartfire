@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { ConversationName } from "../../gen/ConversationName.ts";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 import { formatFull } from "../../lib/time.ts";
 import type { MessageDTO } from "../../store/model.ts";
@@ -139,7 +138,7 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
 
   // Marking walks the body's DOM, so it runs again only when the body or the words change.
   const html = useMemo(
-    () => (shownBody === "" ? "" : highlightHtml(inlineMentions(shownBody), terms)),
+    () => (shownBody === "" ? "" : highlightHtml(shownBody, terms)),
     [shownBody, terms],
   );
 

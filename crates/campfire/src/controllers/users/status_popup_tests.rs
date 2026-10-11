@@ -35,13 +35,10 @@ async fn popup_update_matches_rails_redirects_errors_and_current_user_state() {
             .await
             .unwrap()
             .attributes();
-        let mut request = Req::new(axum::http::Method::PATCH, case["path"].as_str().unwrap())
+        let request = Req::new(axum::http::Method::PATCH, case["path"].as_str().unwrap())
             .header("content-type", "application/json")
             .body(serde_json::to_vec(&serde_json::json!({"user":case["params"]})).unwrap())
             .header("x-csrf-token", &token);
-        if case["frame"] == true {
-            request = request.header("turbo-frame", "user_card");
-        }
         let reply = browser.send(request).await;
         assert_eq!(
             reply.status.as_u16(),

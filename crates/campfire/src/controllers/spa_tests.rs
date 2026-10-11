@@ -72,7 +72,7 @@ async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
     assert_eq!(classic.status, StatusCode::FOUND);
     let page = b.get("/app/").await;
     assert_eq!(page.status, StatusCode::OK);
-    assert!(page.text().contains("<style data-turbo-track=\"reload\">:root { --accent: red; } body::after { content: \"\\3c /style>&\"; }</style>"));
+    assert!(page.text().contains("<style id=\"workspace-styles\">:root { --accent: red; } body::after { content: \"\\3c /style>&\"; }</style>"));
     assert_eq!(boot_json(&page.text())["customStyles"], css);
     let policy = page.header("content-security-policy").unwrap();
     assert!(policy.contains("style-src 'self' 'unsafe-inline'"));

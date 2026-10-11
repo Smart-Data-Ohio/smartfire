@@ -16,7 +16,7 @@ pub enum Serializer {
     /// `ActiveSupport::MessageEncryptor::NullSerializer`: the value is a string of already
     /// serialized bytes (what the cookie jars sign and encrypt). Uses the legacy envelope.
     Null,
-    /// The `::JSON` module (`JSON.dump`/`JSON.load`), as signed ids and Turbo stream names use.
+    /// The `::JSON` module (`JSON.dump`/`JSON.load`), as signed ids use.
     Json,
     /// `SerializerWithFallback[:json]` or `[:json_allow_marshal]` with `ActiveSupport::JSON`: the
     /// app's default `message_serializer` under `load_defaults` 7.1+.

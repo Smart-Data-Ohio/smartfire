@@ -8,7 +8,7 @@ use serde::Serialize;
 const PLACEHOLDER: &str = "<!--boot-->";
 
 /// `index.html` with, in place of `<!--boot-->`: `csrf_meta_tags` (the masked global token), the
-/// `csp_meta_tag`, Turbo's `turbo-visit-control` (reload), and the boot JSON in
+/// `csp_meta_tag`, the manifest link, and the boot JSON in
 /// `<script type="application/json" id="boot">`. With a nonce, every script and `modulepreload`
 /// link carries it, as the classic layout's import-map tags do.
 pub fn render_shell(boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>) -> String {
@@ -33,9 +33,6 @@ fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonc
     if let Some(csp_nonce) = csp_nonce {
         tags.push_str(&format!("<meta name=\"csp-nonce\" content=\"{}\" />\n", escape(csp_nonce)));
     }
-    // A classic page's Turbo Drive visit that ends here (a ported screen's redirect) loads the
-    // page in full rather than swapping its body in.
-    tags.push_str("<meta name=\"turbo-visit-control\" content=\"reload\" />\n");
     tags.push_str("<link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n");
     tags.push_str(&format!("<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>", script_json(boot)));
 
@@ -52,7 +49,7 @@ fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonc
             // Classic puts workspace CSS after its sheets, unlayered. Escape only HTML's
             // style end tags, preserving CSS operators; style-src allows inline CSS, no nonce.
             let styles = style_contents(styles);
-            let tag = format!("<style data-turbo-track=\"reload\">{styles}</style>");
+            let tag = format!("<style id=\"workspace-styles\">{styles}</style>");
             match page.split_once("</head>") {
                 Some((before, after)) => format!("{before}{tag}</head>{after}"),
                 None => format!("{page}{tag}"),

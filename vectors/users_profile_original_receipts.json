@@ -1,116 +1,5 @@
 {
   "reference": "d7c7de92",
-  "pages": [
-    {
-      "zone": null,
-      "response": {
-        "status": 200,
-        "inbox": [
-          "user[inbox_preferences][github_review_requests]",
-          "user[inbox_preferences][agent_approvals]",
-          "user[inbox_preferences][agent_work]",
-          "user[inbox_preferences][event_reminders]",
-          "user[inbox_preferences][huddle_invitations]"
-        ],
-        "notification_explanations": [
-          true,
-          true
-        ],
-        "voice_mode": [
-          [
-            "voice_activity",
-            "Voice activity"
-          ]
-        ],
-        "push_to_talk_key": [
-          "`"
-        ],
-        "current_password": [
-          "current-password"
-        ],
-        "time_zone": [],
-        "meeting_dnd_checkbox": 1,
-        "meeting_dnd_explanation": true,
-        "calendar_not_configured": true,
-        "calendar_connect": false,
-        "drive_row": false
-      }
-    },
-    {
-      "zone": "Pacific Time (US & Canada)",
-      "response": {
-        "status": 200,
-        "inbox": [
-          "user[inbox_preferences][github_review_requests]",
-          "user[inbox_preferences][agent_approvals]",
-          "user[inbox_preferences][agent_work]",
-          "user[inbox_preferences][event_reminders]",
-          "user[inbox_preferences][huddle_invitations]"
-        ],
-        "notification_explanations": [
-          true,
-          true
-        ],
-        "voice_mode": [
-          [
-            "voice_activity",
-            "Voice activity"
-          ]
-        ],
-        "push_to_talk_key": [
-          "`"
-        ],
-        "current_password": [
-          "current-password"
-        ],
-        "time_zone": [
-          "America/Los_Angeles"
-        ],
-        "meeting_dnd_checkbox": 1,
-        "meeting_dnd_explanation": true,
-        "calendar_not_configured": true,
-        "calendar_connect": false,
-        "drive_row": false
-      }
-    },
-    {
-      "zone": "America/New_York",
-      "response": {
-        "status": 200,
-        "inbox": [
-          "user[inbox_preferences][github_review_requests]",
-          "user[inbox_preferences][agent_approvals]",
-          "user[inbox_preferences][agent_work]",
-          "user[inbox_preferences][event_reminders]",
-          "user[inbox_preferences][huddle_invitations]"
-        ],
-        "notification_explanations": [
-          true,
-          true
-        ],
-        "voice_mode": [
-          [
-            "voice_activity",
-            "Voice activity"
-          ]
-        ],
-        "push_to_talk_key": [
-          "`"
-        ],
-        "current_password": [
-          "current-password"
-        ],
-        "time_zone": [
-          "America/New_York"
-        ],
-        "meeting_dnd_checkbox": 1,
-        "meeting_dnd_explanation": true,
-        "calendar_not_configured": true,
-        "calendar_connect": false,
-        "drive_row": false
-      }
-    }
-  ],
   "mutations": [
     {
       "name": "original_text_size",
@@ -124,15 +13,7 @@
         "voice_mode": "voice_activity",
         "inbox_preferences": null,
         "github_login": null
-      },
-      "duplicate_error": false,
-      "enabled_notifications": [
-        "user[inbox_preferences][github_review_requests]",
-        "user[inbox_preferences][agent_approvals]",
-        "user[inbox_preferences][agent_work]",
-        "user[inbox_preferences][event_reminders]",
-        "user[inbox_preferences][huddle_invitations]"
-      ]
+      }
     },
     {
       "name": "original_notifications",
@@ -158,12 +39,7 @@
           "huddle_invitations": "true"
         },
         "github_login": null
-      },
-      "duplicate_error": false,
-      "enabled_notifications": [
-        "user[inbox_preferences][agent_work]",
-        "user[inbox_preferences][huddle_invitations]"
-      ]
+      }
     },
     {
       "name": "original_bad_notification",
@@ -179,15 +55,7 @@
         "voice_mode": "voice_activity",
         "inbox_preferences": null,
         "github_login": null
-      },
-      "duplicate_error": false,
-      "enabled_notifications": [
-        "user[inbox_preferences][github_review_requests]",
-        "user[inbox_preferences][agent_approvals]",
-        "user[inbox_preferences][agent_work]",
-        "user[inbox_preferences][event_reminders]",
-        "user[inbox_preferences][huddle_invitations]"
-      ]
+      }
     },
     {
       "name": "original_bad_voice",
@@ -201,15 +69,7 @@
         "voice_mode": "voice_activity",
         "inbox_preferences": null,
         "github_login": null
-      },
-      "duplicate_error": false,
-      "enabled_notifications": [
-        "user[inbox_preferences][github_review_requests]",
-        "user[inbox_preferences][agent_approvals]",
-        "user[inbox_preferences][agent_work]",
-        "user[inbox_preferences][event_reminders]",
-        "user[inbox_preferences][huddle_invitations]"
-      ]
+      }
     },
     {
       "name": "original_github_duplicate",
@@ -223,15 +83,7 @@
         "voice_mode": "voice_activity",
         "inbox_preferences": null,
         "github_login": null
-      },
-      "duplicate_error": true,
-      "enabled_notifications": [
-        "user[inbox_preferences][github_review_requests]",
-        "user[inbox_preferences][agent_approvals]",
-        "user[inbox_preferences][agent_work]",
-        "user[inbox_preferences][event_reminders]",
-        "user[inbox_preferences][huddle_invitations]"
-      ]
+      }
     }
   ]
 }

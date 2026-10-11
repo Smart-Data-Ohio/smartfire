@@ -14,7 +14,6 @@ pub mod message_encryptor;
 pub mod cookies;
 pub mod signed_id;
 pub mod global_id;
-pub mod turbo;
 pub mod password;
 pub mod ar_encryption;
 pub mod calendar_credentials;

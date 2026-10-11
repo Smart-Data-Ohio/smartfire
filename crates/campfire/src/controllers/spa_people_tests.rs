@@ -622,7 +622,6 @@ async fn check_profile(
             let settings = campfire_db::UserStatusSettings::find(conn, viewer)?;
             let status = presenters::status_settings::profile_status_in_zone(
                 conn,
-                &secrets,
                 id,
                 viewer,
                 now,
@@ -792,14 +791,12 @@ async fn profile_fields_follow_classic_visibility_and_request_zone() {
             .as_deref()
             .and_then(qr_code::transfer_svg)
     );
-    let secrets = a.booted.app.secrets.clone();
     let now = a.db().env().now();
     let utc = a
         .db()
         .read(move |conn| {
             presenters::status_settings::profile_status_in_zone(
                 conn,
-                &secrets,
                 KEVIN,
                 DAVID,
                 now,

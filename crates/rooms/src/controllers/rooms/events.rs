@@ -85,8 +85,6 @@ pub async fn attendance_update(c: &mut Ctx) -> Result {
         .and_then(Param::as_str)
         .map(str::to_string)
         .unwrap_or_default();
-    let message = attendance_param(c, "message_id")?;
-    let frame = c.is_turbo_frame_request() && message.is_some_and(Param::is_present);
     let user_id = require_current_user(c)?.id;
     let respondable = c
         .app()
@@ -122,23 +120,20 @@ pub async fn attendance_update(c: &mut Ctx) -> Result {
             Err(error) => return Err(db_error(error)),
         }
     }
-    if frame {
-        return Ok(c.head(StatusCode::OK));
-    }
     let path = format!("/rooms/{}/events/{}", event.room_id, event.id);
-        let url = c.url_for(&path);
-        c.redirect_to_with(
-            &url,
-            Redirect {
-                notice: if alert.is_none() {
-                    Some(format!("Response saved: {response}."))
-                } else {
-                    None
-                },
-                alert,
-                ..Default::default()
+    let url = c.url_for(&path);
+    c.redirect_to_with(
+        &url,
+        Redirect {
+            notice: if alert.is_none() {
+                Some(format!("Response saved: {response}."))
+            } else {
+                None
             },
-        )
+            alert,
+            ..Default::default()
+        },
+    )
 }
 
 pub fn ensure_manager(c: &Ctx, e: &CalendarEvent, cancel: bool) -> Result<()> {

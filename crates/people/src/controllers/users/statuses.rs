@@ -131,7 +131,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await;
     match saved {
-        Ok(()) => after_save(c, id),
+        Ok(()) => after_save(c),
         Err(campfire_db::Error::RecordInvalid(_)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
         Err(error) => Err(Error::internal(error)),
     }
@@ -146,22 +146,12 @@ fn string(value: &Param) -> Option<String> {
     }
 }
 
-pub fn after_save(c: &mut Ctx, id: i64) -> Result {
-    if c.is_turbo_frame_request() {
-        c.redirect_to_with(
-            &c.url_for(&campfire_routes::user_card(id)),
-            Redirect {
-                status: Some(StatusCode::SEE_OTHER),
-                ..Default::default()
-            },
-        )
-    } else {
-        c.redirect_to_with(
-            &c.url_for(&campfire_routes::user_profile()),
-            Redirect {
-                notice: Some("✓".into()),
-                ..Default::default()
-            },
-        )
-    }
+pub fn after_save(c: &mut Ctx) -> Result {
+    c.redirect_to_with(
+        &c.url_for(&campfire_routes::user_profile()),
+        Redirect {
+            notice: Some("✓".into()),
+            ..Default::default()
+        },
+    )
 }

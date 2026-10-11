@@ -20,12 +20,12 @@ describe("stable user mentions", () => {
     const source = "Hello <@1>";
 
     expect(renderMarkdown(source, [{ id: 1, name: "Before" }])).toContain(
-      'class="profile-card-name">Before</button>',
+      'class="profile-card-name">Before</span>',
     );
 
     const renamed = renderMarkdown(source, [{ id: 1, name: "After <script>" }]);
 
-    expect(renamed).toContain('class="profile-card-name">After &lt;script&gt;</button>');
+    expect(renamed).toContain('class="profile-card-name">After &lt;script&gt;</span>');
     expect(mentionsUser(renamed, 1)).toBe(true);
     expect(renamed).not.toContain("Before");
   });

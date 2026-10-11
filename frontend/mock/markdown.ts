@@ -27,8 +27,8 @@ export function escapeHtml(text: string): string {
 
 /**
  * A mention exactly as the server renders it (`crates/richtext/src/attachables.rs`
- * `render_mention`): an action-text attachment around the person's card. The UI finds "mentions
- * me" by `data-user-id`.
+ * `render_mention`): an action-text attachment around an inline chip with the name. The UI finds
+ * "mentions me" by `data-user-id`.
  */
 export function mentionHtml(person: Mentionable): string {
   const id = person.id;
@@ -36,11 +36,8 @@ export function mentionHtml(person: Mentionable): string {
 
   return (
     `<action-text-attachment content-type="application/vnd.campfire.mention" sgid="mock-${id}">` +
-    `<div class="mention mention--user-${id}" sgid="mock-${id}" data-user-id="${id}">` +
-    `<a title="${name}" class="btn avatar" href="/users/${id}">` +
-    `<img aria-hidden="true" src="/users/${id}/avatar" width="48" height="48" /></a>` +
-    `<button name="button" type="button" class="profile-card-name">${name}</button>` +
-    "</div></action-text-attachment>"
+    `<span class="mention mention--user-${id}" sgid="mock-${id}" data-user-id="${id}">` +
+    `<span class="profile-card-name">${name}</span></span></action-text-attachment>`
   );
 }
 

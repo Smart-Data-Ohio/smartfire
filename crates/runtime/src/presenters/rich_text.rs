@@ -8,7 +8,6 @@ use rails_compat::Secrets;
 use rails_compat::global_id::{self, ATTACHABLE_PURPOSE, GlobalId};
 use std::{cell::RefCell, collections::HashMap};
 
-use super::avatar_path;
 
 pub struct DbResolver<'a> {
     pub conn: &'a Connection,
@@ -43,13 +42,10 @@ impl<'a> DbResolver<'a> {
         MentionUser {
             id: user.id,
             name: user.display_name().to_owned(),
-            title: user.title(),
             attachable_sgid: global_id::attachable_sgid(
                 self.secrets,
                 &GlobalId::new("User", user.id),
             ),
-            user_path: campfire_routes::user(user.id),
-            avatar_path: avatar_path(self.secrets, user),
         }
     }
 

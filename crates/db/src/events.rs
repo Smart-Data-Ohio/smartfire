@@ -43,11 +43,10 @@ pub enum Event {
     /// `SomeJob.perform_later(*arguments)` for a job a domain module defines (see [`Job`]).
     Job(JobRequest),
 
-    /// A broadcast a model makes from a callback (`broadcast_*_to`, `Turbo::StreamsChannel.
-    /// broadcast_*`, `ActionCable.server.broadcast`): the model describes it as a [`Broadcast`] in
-    /// its own module, and the app's cable sink finds the handler by [`Broadcast::KIND`] and
-    /// sends it, in emit order, from the thread that committed (as Rails renders and publishes
-    /// in the committing thread). Emit it with `tx.emit_after_commit` for `after_*_commit`
+    /// A broadcast a model makes from a callback (`broadcast_*_to`, `ActionCable.server.broadcast`):
+    /// the model describes it as a [`Broadcast`] in its own module, and the app's cable sink finds
+    /// the handler by [`Broadcast::KIND`] and sends it, in emit order, from the thread that
+    /// committed (as Rails renders and publishes in the committing thread). Emit it with `tx.emit_after_commit` for `after_*_commit`
     /// callbacks. Open like [`Event::Job`], so domains don't edit a central list.
     Broadcast(BroadcastRequest),
 }

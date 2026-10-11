@@ -65,8 +65,7 @@ async fn clear_redirects_after_deleting_only_the_viewers_recents() {
     let r = app
         .david()
         .write(
-            Req::new(Method::DELETE, "/searches/clear")
-                .header("accept", "text/vnd.turbo-stream.html"),
+            Req::new(Method::DELETE, "/searches/clear"),
         )
         .await;
     assert_eq!(r.status, StatusCode::FOUND);
@@ -79,18 +78,21 @@ async fn clear_redirects_after_deleting_only_the_viewers_recents() {
 async fn clear_leaves_recents_alone_for_unsupported_formats() {
     let app = app().await;
     record(&app, "hello").await;
-    assert_eq!(
-        app.david()
-            .write(Req::new(Method::DELETE, "/searches/clear").header("accept", "application/json"))
-            .await
-            .status,
-        StatusCode::NOT_ACCEPTABLE
-    );
+    for accept in ["application/json", "text/vnd.turbo-stream.html"] {
+        assert_eq!(
+            app.david()
+                .write(Req::new(Method::DELETE, "/searches/clear").header("accept", accept))
+                .await
+                .status,
+            StatusCode::NOT_ACCEPTABLE,
+            "{accept}"
+        );
+    }
     assert!(history(&app).await.iter().any(|s| s.query == "hello"));
 }
 
 #[tokio::test]
-async fn clear_without_turbo_returns_to_the_page_it_came_from() {
+async fn clear_returns_to_the_page_it_came_from() {
     let app = app().await;
     let r = app
         .david()
@@ -198,11 +200,6 @@ async fn search_history_http_matches_pinned_rails_responses() {
                     .form(&fields),
             )
             .await;
-        if s["accept"] == "text/vnd.turbo-stream.html" {
-            assert_eq!(r.status, StatusCode::FOUND);
-            assert_eq!(r.location(), Some("http://campfire.test/searches"));
-            assert!(r.text().is_empty());
-        } else {
         assert_eq!(r.status.as_u16(), s["status"].as_u64().unwrap() as u16);
         assert_eq!(r.location(), s["location"].as_str());
         assert_eq!(r.text(), s["body"].as_str().unwrap());
@@ -215,6 +212,5 @@ async fn search_history_http_matches_pinned_rails_responses() {
                 .unwrap(),
             s["content_type"].as_str().unwrap()
         );
-        }
     }
 }

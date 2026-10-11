@@ -94,7 +94,7 @@ impl Part {
 
 impl PageParts {
     /// Splits `body` at `fragments` (cached HTML, in body order), or `None` when none of them is
-    /// in it as is (a fragment escaped into a turbo stream, say, isn't).
+    /// in it as is (a fragment escaped into JSON, say, isn't).
     pub fn new(body: &[u8], fragments: &[Arc<String>]) -> Option<Self> {
         let located = locate(body, fragments);
         if located.is_empty() {

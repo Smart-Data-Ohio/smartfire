@@ -33,7 +33,6 @@
     "QR_URL_ID": "aHR0cHM6Ly9leGFtcGxlLmNvbQ",
     "CLASSIC_SHELL": "data-controller=\"local-time lightbox",
     "SPA_BOOT": "<script type=\"application/json\" id=\"boot\"",
-    "SPA_RELOAD": "<meta name=\"turbo-visit-control\" content=\"reload\" />",
     "ERR404": "We can’t find that (404)",
     "ERR500": "Something went wrong (500)"
   },
@@ -734,7 +733,7 @@
       "bookmarks": true,
       "notifications": false,
       "known_bug": null,
-      "notes": "Ported screens. /account/edit renders for non-admins too (limited view); CSV stays classic even for next users (format exception). /account/users is a Turbo-Stream-only pagination endpoint.",
+      "notes": "Ported screens. /account/edit renders for non-admins too (limited view); CSV stays classic even for next users (format exception). /account/users sends page navigations to the SPA people page and answers other formats with 406.",
       "bookmark_notes": "Admin bookmarks; keep reachable.",
       "notification_notes": "No producer emits these.",
       "cases": [
@@ -746,7 +745,7 @@
         {"id": "account.audit.next", "method": "GET", "path": "/account/audit_log", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/audit-log"}},
         {"id": "account.health.next", "method": "GET", "path": "/account/integrations_health", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/integrations"}},
         {"id": "account.csv.stays", "method": "GET", "path": "/account/audit_log.csv", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/csv", "markers": ["time,action,actor,target_type,target,changes,ip_address,user_agent"], "location_absent": true}, "sudo": true},
-        {"id": "account.users.stream", "method": "GET", "path": "/account/users", "headers": {"accept": "text/vnd.turbo-stream.html"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/people"}},
+        {"id": "account.users.non_html", "method": "GET", "path": "/account/users", "headers": {"accept": "text/vnd.turbo-stream.html"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "location_absent": true}},
         {"id": "account.users.page.navigation", "method": "GET", "path": "/account/users?page=2", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/admin/people?page=2"}},
         {"id": "account.csv.sudo_required", "method": "GET", "path": "/account/audit_log.csv", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/sudo/new"}}
       ]
@@ -849,7 +848,7 @@
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
-        {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "{SPA_RELOAD}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
+        {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
         {"id": "app.noslash", "method": "GET", "path": "/app", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}},
         {"id": "app.anonymous", "method": "GET", "path": "/app/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/session/new"}},
         {"id": "app.switch_off_ignored", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}}
@@ -1278,17 +1277,17 @@
       "category": "misc",
       "classic_endpoint": "turbo/native/navigation#recede",
       "owner_today": "server",
-      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Retire with native consumers, or retain separately."},
+      "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Turbo Native is retired; the route rows stay and answer 404 like an undefined action."},
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "Inline HTML, no auth.",
+      "notes": "No native consumers remain.",
       "bookmark_notes": "Native clients only.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "native.recede", "method": "GET", "path": "/recede_historical_location", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 410, "body_empty": true}},
-        {"id": "native.resume", "method": "GET", "path": "/resume_historical_location", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 410, "body_empty": true}},
-        {"id": "native.refresh", "method": "GET", "path": "/refresh_historical_location", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 410, "body_empty": true}}
+        {"id": "native.recede", "method": "GET", "path": "/recede_historical_location", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
+        {"id": "native.resume", "method": "GET", "path": "/resume_historical_location", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
+        {"id": "native.refresh", "method": "GET", "path": "/refresh_historical_location", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}}
       ]
     },
     {
@@ -1425,7 +1424,6 @@
       "cases": [
         {"id": "guards.botkey", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?bot_key={BENDER_KEY}", "headers": {"accept": "text/html", "sec-fetch-mode": "navigate"}, "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": true, "expect": {"status": 403, "location_absent": true}},
         {"id": "guards.post", "method": "POST", "path": "/", "headers": {"accept": "text/html"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": true, "expect": {"status": 404, "location_absent": true}},
-        {"id": "guards.frame", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "headers": {"turbo-frame": "messages"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}},
         {"id": "guards.xhr", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "headers": {"x-requested-with": "XMLHttpRequest"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}},
         {"id": "guards.fetch", "method": "GET", "path": "/rooms/{CLOSED_ROOM}", "headers": {"accept": "*/*"}, "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}"}}
       ]

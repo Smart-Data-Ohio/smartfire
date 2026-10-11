@@ -43,8 +43,8 @@ macro_rules! mime {
     };
 }
 
-// `action_dispatch/http/mime_types.rb`, then turbo-rails' `:turbo_stream`, in registration order
-// (the order matters for `text/*` expansion).
+// `action_dispatch/http/mime_types.rb`, in registration order (the order matters for `text/*`
+// expansion).
 mime!(HTML, "html", "text/html", ["application/xhtml+xml"], ["xhtml"]);
 mime!(TEXT, "text", "text/plain", [], ["txt"]);
 mime!(JS, "js", "text/javascript", ["application/javascript", "application/x-javascript"], []);
@@ -81,14 +81,13 @@ mime!(JSON, "json", "application/json", ["text/x-json", "application/jsonrequest
 mime!(PDF, "pdf", "application/pdf", [], ["pdf"]);
 mime!(ZIP, "zip", "application/zip", [], ["zip"]);
 mime!(GZIP, "gzip", "application/gzip", ["application/x-gzip"], ["gz"]);
-mime!(TURBO_STREAM, "turbo_stream", "text/vnd.turbo-stream.html", [], []);
 /// `Mime::ALL`: the `*/*` wildcard, only meaningful in negotiation.
 pub static ALL: Mime = Mime { symbol: "*/*", string: "*/*", synonyms: &[], extensions: &[] };
 
-pub static REGISTERED: [&Mime; 37] = [
+pub static REGISTERED: [&Mime; 36] = [
     &HTML, &TEXT, &JS, &CSS, &ICS, &CSV, &VCF, &VTT, &MD, &PNG, &JPEG, &GIF, &BMP, &TIFF, &SVG, &WEBP, &MPEG, &MP3,
     &OGG, &M4A, &WEBM, &MP4, &OTF, &TTF, &WOFF, &WOFF2, &XML, &RSS, &ATOM, &YAML, &MULTIPART_FORM, &URL_ENCODED_FORM,
-    &JSON, &PDF, &ZIP, &GZIP, &TURBO_STREAM,
+    &JSON, &PDF, &ZIP, &GZIP,
 ];
 
 /// `Mime[ext]` / `Mime::Type.lookup_by_extension`.
@@ -402,9 +401,10 @@ mod tests {
     }
 
     #[test]
-    fn turbo_form_submission() {
+    fn turbo_stream_is_an_unregistered_type() {
         let turbo = "text/vnd.turbo-stream.html, text/html, application/xhtml+xml";
-        assert_eq!(fmts(Some(turbo), "/rooms/1/messages", false), vec!["turbo_stream", "html"]);
+        assert_eq!(fmts(Some(turbo), "/rooms/1/messages", false), vec!["html"]);
+        assert_eq!(fmts(Some("text/vnd.turbo-stream.html"), "/rooms/1/messages", false), Vec::<&str>::new());
     }
 
     #[test]
@@ -427,7 +427,6 @@ mod tests {
     #[test]
     fn wildcards_expand_in_registration_order() {
         assert_eq!(&fmts(Some("text/*"), "/", false)[..3], &["html", "text", "js"]);
-        assert!(fmts(Some("text/*"), "/", false).contains(&"turbo_stream"));
     }
 
     #[test]
@@ -457,7 +456,7 @@ mod tests {
 
     #[test]
     fn negotiation() {
-        assert_eq!(negotiate(&[&TURBO_STREAM, &HTML], &[&HTML, &JSON]), Some(&HTML));
+        assert_eq!(negotiate(&[&TEXT, &HTML], &[&HTML, &JSON]), Some(&HTML));
         assert_eq!(negotiate(&[&ALL], &[&HTML, &JSON]), Some(&HTML));
         assert_eq!(negotiate(&[&PNG], &[&HTML, &JSON]), None);
         assert_eq!(negotiate(&[&PNG], &[&HTML, &ALL]), Some(&PNG));

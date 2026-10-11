@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 import { formatFull } from "../../lib/time.ts";
 import { SuccessCheck } from "../../motion/success-check.tsx";
@@ -75,7 +74,7 @@ export function WorkResult({ threadId, work, updatedAt, canEdit, announce }: Wor
   const [saved, setSaved] = useState(false);
   const editRef = useRef<HTMLButtonElement | null>(null);
   const returnFocus = useRef(false);
-  const resultHtml = useMotionSafeHtml(inlineMentions(work.resultHtml ?? ""));
+  const resultHtml = useMotionSafeHtml(work.resultHtml ?? "");
   const resultRef = useSpoilerReveal(resultHtml);
 
   // Back from the editor, focus returns to the button that opened it.

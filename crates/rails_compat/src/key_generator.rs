@@ -10,8 +10,8 @@ use std::sync::Mutex;
 /// while initializers run, which memoizes it (railties `Rails::Application#key_generator`) before
 /// the `active_support.set_key_generator_hash_digest_class` hook switches
 /// `ActiveSupport::KeyGenerator.hash_digest_class` to SHA256 in `after_initialize`. Everything the
-/// app derives from `secret_key_base` (cookies, the session, signed ids, SGIDs, Turbo stream
-/// names, `message_verifier(name)`, Active Storage, the Active Record encryption keys) uses it.
+/// app derives from `secret_key_base` (cookies, the session, signed ids, SGIDs,
+/// `message_verifier(name)`, Active Storage, the Active Record encryption keys) uses it.
 /// `vectors/rails_compat.json`'s `key_generator` section pins this.
 ///
 /// Active Record encryption derives its cipher key with a separate SHA256 generator at the

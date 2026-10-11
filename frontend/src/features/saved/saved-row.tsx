@@ -1,7 +1,6 @@
 import type { KeyboardEvent } from "react";
 import type { ConversationName } from "../../gen/ConversationName.ts";
 import type { SavedItem } from "../../gen/SavedItem.ts";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -118,7 +117,7 @@ export function SavedRow({
   handlers,
 }: SavedRowProps) {
   const author = useUser(message?.creatorId);
-  const bodyHtml = useMotionSafeHtml(inlineMentions(message?.bodyHtml ?? ""));
+  const bodyHtml = useMotionSafeHtml(message?.bodyHtml ?? "");
   const bodyRef = useSpoilerReveal(bodyHtml);
   const done = item.status === "done";
   const reminder = reminderLabel(item, now);

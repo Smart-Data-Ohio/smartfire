@@ -56,7 +56,7 @@ def with_preload(lib, env):
 def run_cable_toggled(app, sess, clients, on_phase):
     """Runs the cable fan-out, calling on_phase(name) as loadgen reports each phase."""
     args = [b.LOADGEN, "cable", "--base", app.base, "--cookie", sess["cookie"], "--room", sess["room"], "--csrf", sess["csrf"],
-            "--streams", sess["streams"], "--clients", clients, "--tput-secs", "15", "--posters", "4"]
+            "--clients", clients, "--tput-secs", "15", "--posters", "4"]
     proc = subprocess.Popen(["taskset", "-c", b.LOADGEN_CPUS, *map(str, args)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     for line in proc.stderr:
         if line.startswith("PHASE "):

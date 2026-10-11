@@ -265,7 +265,7 @@ pub async fn next_ui(_c: &Ctx, _user: &User) -> Result<bool> {
 /// A signed-in person who opens a classic page the SPA has (`campfire_spa::screens`) goes to that
 /// page's SPA URL, with a 302: the old URLs (bookmarks, push and mail links) are aliases. Only for
 /// a signed-in person's `GET` or `HEAD` that navigates to an HTML page ([`navigates`]): not a
-/// Turbo frame's, a script's, a JSON request or a bare `fetch()`. A `classic` query parameter is
+/// script's, a JSON request or a bare `fetch()`. A `classic` query parameter is
 /// dropped, not obeyed. A notice or alert left for the page is kept for the SPA, whose shell shows
 /// it. It runs last in the chain, so signing in, two-step enforcement and the rest come first, and
 /// a page's own checks (room access) are the SPA's to make.
@@ -275,7 +275,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if !(c.request.is_get() || c.request.is_head()) {
         return Ok(());
     }
-    if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
+    if authenticated_by(c) != AuthenticatedBy::Session || c.request.is_xhr() {
         return Ok(());
     }
     let location = alias_location(c).await?;
@@ -365,7 +365,7 @@ pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     if !(c.request.is_get() || c.request.is_head()) {
         return Ok(false);
     }
-    if c.is_turbo_frame_request() || c.request.is_xhr() {
+    if c.request.is_xhr() {
         return Ok(false);
     }
     if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL) || !navigates(c) {
@@ -800,8 +800,8 @@ pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
         let location = auth_page_url(c, "/app/two_factor/challenge", "/two_factor_challenge");
         return halt(c.redirect_to(&location)?);
     }
-    // Only page navigations bounce back after sign in: not background polls (JSON, Turbo Stream
-    // refreshes) or form submissions.
+    // Only page navigations bounce back after sign in: not background polls (JSON) or form
+    // submissions.
     if bounce_back_after_sign_in(c)? {
         let url = c.request.url();
         c.session().insert(session_keys::RETURN_TO_KEY, url);
@@ -810,18 +810,13 @@ pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
     halt(c.redirect_to(&location)?)
 }
 
-/// `bounce_back_after_sign_in?`: `request.get? && request.format.html? &&
-/// !request.format.turbo_stream?`. (Turbo Stream's MIME type contains "html", which is what
-/// `html?` checks.)
+/// `bounce_back_after_sign_in?`: `request.get? && request.format.html?`.
 fn bounce_back_after_sign_in(c: &mut Ctx) -> Result<bool> {
     if !c.request.is_get() {
         return Ok(false);
     }
     let format = c.format()?;
-    Ok(format.is_some_and(|format| {
-        (format.symbol == "html" || format.string.contains("html"))
-            && format.symbol != "turbo_stream"
-    }))
+    Ok(format.is_some_and(|format| format.symbol == "html" || format.string.contains("html")))
 }
 
 /// `two_factor_pending_user`: the active user a still-valid pending second factor names.

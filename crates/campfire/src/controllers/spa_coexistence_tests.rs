@@ -828,17 +828,6 @@ async fn the_bot_pages_redirect_but_their_saves_stay_classic() {
     assert!(!redirected_to_spa(&save), "{:?}", save.location());
 }
 
-#[tokio::test]
-async fn the_shell_loads_in_full_from_a_turbo_visit() {
-    let Some(a) = enabled().await else { return };
-    let mut b = a.sign_in(DAVID).await;
-    let shell = b.get("/app/").await.text();
-    assert!(
-        shell.contains(r#"<meta name="turbo-visit-control" content="reload" />"#),
-        "{shell}"
-    );
-}
-
 const WATERCOOLER: i64 = 486777696;
 const DESIGNERS_ROOM: i64 = 654632876;
 const LAUNCH_THREAD: i64 = 1;

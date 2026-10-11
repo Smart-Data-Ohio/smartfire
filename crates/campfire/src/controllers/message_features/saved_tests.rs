@@ -272,7 +272,7 @@ async fn saved_http_matches_rails_exact_json_and_no_store_headers() {
     }
 }
 #[tokio::test]
-async fn saved_mutations_require_csrf_and_turbo_redirects_keep_the_filter() {
+async fn saved_mutations_require_csrf_and_redirects_keep_the_filter() {
     let (app, message, _) = fixture().await;
     let mut browser = app.david();
     assert_eq!(
@@ -298,14 +298,21 @@ async fn saved_mutations_require_csrf_and_turbo_redirects_keep_the_filter() {
             StatusCode::UNPROCESSABLE_ENTITY
         );
     }
-    let response = browser
+    let stream = browser
         .write(
             Req::new(Method::PATCH, &format!("/saved/{id}?status=done"))
                 .header("accept", "text/vnd.turbo-stream.html")
                 .form(&[("saved_item[status]", "done")]),
         )
         .await;
-    assert_eq!(response.status, StatusCode::SEE_OTHER);
+    assert_eq!(stream.status, StatusCode::NOT_ACCEPTABLE);
+    let response = browser
+        .write(
+            Req::new(Method::PATCH, &format!("/saved/{id}?status=done"))
+                .form(&[("saved_item[status]", "done")]),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::FOUND);
     assert_eq!(
         response.location(),
         Some("http://campfire.test/saved?status=done")

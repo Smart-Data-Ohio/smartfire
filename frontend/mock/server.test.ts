@@ -217,7 +217,7 @@ describe("creating messages", () => {
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
     expect(html).toContain(
-      '<div class="mention mention--user-2" sgid="mock-2" data-user-id="2"><a title="Maya Okafor" class="btn avatar" href="/users/2">',
+      '<span class="mention mention--user-2" sgid="mock-2" data-user-id="2"><span class="profile-card-name">Maya Okafor</span></span>',
     );
     expect(html).toContain('<pre><code class="language-ts">const a = 1 &lt; 2;</code></pre>');
   });

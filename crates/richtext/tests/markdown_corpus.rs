@@ -9,15 +9,11 @@ use std::collections::HashMap;
 struct Oracle {
     users: Vec<MentionUser>,
     images: HashMap<String, String>,
-    avatars: HashMap<i64, String>,
     preloaded: HashMap<String, i64>,
 }
 impl AttachableResolver for Oracle {
     fn preloaded_user_for_sgid(&self, sgid: &str) -> Option<MentionUser> {
         self.preloaded.get(sgid).and_then(|id| self.users.iter().find(|u| u.id == *id)).cloned()
-    }
-    fn mention_avatar_html(&self, user: &MentionUser) -> String {
-        self.avatars[&user.id].clone()
     }
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
         self.users.iter().find(|u| u.attachable_sgid == sgid).cloned().map_or(SignedLookup::Invalid, SignedLookup::User)
@@ -39,10 +35,7 @@ fn fixtures() -> (Value, Oracle, IconCatalog, Vec<RoomMember>) {
         .map(|u| MentionUser {
             id: u["id"].as_i64().unwrap(),
             name: u["name"].as_str().unwrap().into(),
-            title: u["title"].as_str().unwrap().into(),
             attachable_sgid: u["attachable_sgid"].as_str().unwrap().into(),
-            user_path: u["user_path"].as_str().unwrap().into(),
-            avatar_path: u["avatar_path"].as_str().unwrap().into(),
         })
         .collect::<Vec<_>>();
     let members = users
@@ -53,12 +46,6 @@ fn fixtures() -> (Value, Oracle, IconCatalog, Vec<RoomMember>) {
         .collect();
     let images = serde_json::from_value(json["embed_images"].clone()).unwrap();
     let preloaded = serde_json::from_value(json["preloaded_sgids"].clone()).unwrap();
-    let avatars = json["users"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|u| (u["id"].as_i64().unwrap(), u["avatar_html"].as_str().unwrap().to_owned()))
-        .collect();
     let mut icons = IconCatalog::default();
     for (alias, record) in json["icons"].as_object().unwrap() {
         let name = record["name"].as_str().unwrap().into();
@@ -69,14 +56,14 @@ fn fixtures() -> (Value, Oracle, IconCatalog, Vec<RoomMember>) {
             icons.custom.insert(alias.clone(), Icon::Custom { name, title, url: record["url"].as_str().unwrap().into() });
         }
     }
-    (json, Oracle { users, images, avatars, preloaded }, icons, members)
+    (json, Oracle { users, images, preloaded }, icons, members)
 }
 #[test]
 fn ruby_differential_corpus_is_byte_identical() {
     let (json, oracle, icons, members) = fixtures();
     for (user, reference) in oracle.users.iter().zip(json["users"].as_array().unwrap()) {
         assert_eq!(
-            campfire_richtext::attachables::render_mention_in_context(user, &RenderContext { resolver: &oracle, request_host: None }),
+            campfire_richtext::attachables::render_mention(user),
             reference["mention_partial"].as_str().unwrap()
         );
     }

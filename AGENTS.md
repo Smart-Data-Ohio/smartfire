@@ -25,7 +25,7 @@ The app's static inputs live at the repository root:
   `livekit-local` live in `huddle-gateway/`.
 - `fixtures/`: the Rails app's `test/fixtures`, which the tests load.
 - `test-support/`: data the tests read that reference tools once held (attachment analyzer inputs,
-  agents UI cast inputs, the post-pin status files, Node test adapters).
+  agents UI cast inputs, legacy contracts, shared test helpers).
 
 In the tests, `campfire_db::fixtures::reference_root()` is `crates/static_assets`, `reference_dir()` is
 `fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")`

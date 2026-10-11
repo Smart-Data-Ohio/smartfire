@@ -90,10 +90,7 @@ fn david() -> MentionUser {
     MentionUser {
         id: 1,
         name: "David".into(),
-        title: "David – Founder".into(),
         attachable_sgid: "eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--f7d8e8773314d3310320f3cdd08e5597bb51ca1a".into(),
-        user_path: "/users/1".into(),
-        avatar_path: "/users/1/avatar?v=1".into(),
     }
 }
 

@@ -529,16 +529,6 @@
       "location": null,
       "body": "{\"status\":406,\"error\":\"Not Acceptable\"}",
       "content_type": "application/json"
-    },
-    {
-      "method": "delete",
-      "path": "/searches/clear",
-      "input": {},
-      "accept": "text/vnd.turbo-stream.html",
-      "status": 200,
-      "location": null,
-      "body": "<turbo-stream action=\"update\" target=\"global-search-recents\"><template><div class=\"global-search__panel-header\">\n  <span id=\"global-search-recents-label\" class=\"global-search__panel-title\">Recent searches</span>\n</div>\n\n<ul id=\"global-search-listbox\" class=\"global-search__options\" role=\"listbox\" aria-labelledby=\"global-search-recents-label\" hidden>\n</ul>\n\n<p class=\"global-search__empty\" data-global-search-target=\"empty\">\n  No recent searches yet.\n</p>\n</template></turbo-stream>\n<turbo-stream action=\"update\" target=\"search-recents\"><template>  <p class=\"searches__recents-empty\">No recent searches yet.</p>\n</template></turbo-stream>\n",
-      "content_type": "text/vnd.turbo-stream.html"
     }
   ],
   "word_ranges": [

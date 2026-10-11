@@ -1,6 +1,6 @@
 import { store } from "../store/store.ts";
 
-const SELECTOR = 'style[data-turbo-track="reload"]';
+const SELECTOR = "style#workspace-styles";
 
 let saved: string | null = null;
 
@@ -17,7 +17,7 @@ function render(css: string | null): void {
 
   const style = existing ?? document.createElement("style");
 
-  style.setAttribute("data-turbo-track", "reload");
+  style.id = "workspace-styles";
   // Match shell.rs: raw CSS, with CSS escapes for HTML's end-tag delimiter. Classic's inline
   // style-src permits this element. Unlayered workspace CSS beats base layers; appearance's
   // explicit choices use the root CSSOM, above workspace defaults.

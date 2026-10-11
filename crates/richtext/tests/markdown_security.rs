@@ -43,11 +43,8 @@ fn violations(html: &str) -> Vec<String> {
                     bad.push(format!("URL {value}"));
                 }
             }
-            if key == "data-turbo-frame" && value != "_top" {
-                bad.push(format!("frame {value}"));
-            }
-            if key == "data-turbo-prefetch" && value != "false" {
-                bad.push(format!("prefetch {value}"));
+            if key.starts_with("data-turbo") {
+                bad.push(format!("attribute {key}"));
             }
             if tag == "img" && key == "src" && !["/assets/brand-abc.svg", "/icons/acme", "/users/1/avatar?v=1"].contains(&value.as_str()) {
                 bad.push(format!("unexpected image source {value}"));
@@ -194,10 +191,7 @@ fn ambiguous_inactive_and_nonmembers_do_not_resolve() {
     let user = |id, name: &str| MentionUser {
         id,
         name: name.into(),
-        title: name.into(),
         attachable_sgid: format!("sgid-{id}"),
-        user_path: format!("/users/{id}"),
-        avatar_path: "/users/1/avatar?v=1".into(),
     };
     let members = [
         RoomMember { user: user(1, "Unique"), active: true },
@@ -220,10 +214,7 @@ fn stable_user_mentions_distinguish_duplicates_and_leave_unavailable_ids_literal
     let user = |id, name: &str| MentionUser {
         id,
         name: name.into(),
-        title: name.into(),
         attachable_sgid: format!("sgid-{id}"),
-        user_path: format!("/users/{id}"),
-        avatar_path: "/users/1/avatar?v=1".into(),
     };
     let members = [
         RoomMember {
@@ -262,10 +253,7 @@ fn stable_user_mentions_stay_literal_in_code_links_and_escapes() {
         user: MentionUser {
             id: 1,
             name: "Current name".into(),
-            title: "Current name".into(),
             attachable_sgid: "sgid-1".into(),
-            user_path: "/users/1".into(),
-            avatar_path: "/users/1/avatar?v=1".into(),
         },
         active: true,
     }];

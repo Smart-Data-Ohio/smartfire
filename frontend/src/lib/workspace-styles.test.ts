@@ -9,7 +9,7 @@ import {
   previewWorkspaceStyles,
 } from "./workspace-styles.ts";
 
-const style = () => document.head.querySelector('style[data-turbo-track="reload"]');
+const style = () => document.head.querySelector("style#workspace-styles");
 
 afterEach(() => {
   applyWorkspaceStyles(null);
@@ -42,7 +42,7 @@ describe("workspace styles", () => {
 
     expect(style()?.textContent).toBe('body > .label::after { content: "\\3c /style>&"; }');
     expect(style()?.outerHTML).toBe(
-      '<style data-turbo-track="reload">body > .label::after { content: "\\3c /style>&"; }</style>',
+      '<style id="workspace-styles">body > .label::after { content: "\\3c /style>&"; }</style>',
     );
     applyWorkspaceStyles("");
     expect(style()).toBeNull();

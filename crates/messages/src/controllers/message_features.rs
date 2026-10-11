@@ -46,7 +46,6 @@ pub fn redirect(
     notice: Option<String>,
     alert: Option<String>,
     back: bool,
-    status: Option<StatusCode>,
 ) -> Result {
     if back {
         if let Some(notice) = notice {
@@ -62,7 +61,6 @@ pub fn redirect(
         Redirect {
             notice,
             alert,
-            status,
             ..Default::default()
         },
     )

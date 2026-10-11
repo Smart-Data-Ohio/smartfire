@@ -24,11 +24,6 @@
       "key_hex": "3b58a7716c63bbb680033c804081dcc837c6f03d105545f2361db6277980564e483c18a4f17b865c3efb02371533c8d9c097c8f466a6ffd980ac36ceb71bcb0e"
     },
     {
-      "salt": "turbo/signed_stream_verifier_key",
-      "length": 64,
-      "key_hex": "69b1be487a5239ce8637ba99100c422cf73db5a5e5dc12c99487398c00f5088c44ed5f1717b2b6b551863d800434da1780657e491c89f7cacd6ac34adee31c37"
-    },
-    {
       "salt": "anything",
       "length": 16,
       "key_hex": "5267adb37ff76b4896865e8a82549411"
@@ -2818,117 +2813,6 @@
       }
     }
   ],
-  "turbo_stream_names": {
-    "generate": [
-      {
-        "parts": [
-          "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6Ok9wZW4vMQ",
-          "messages"
-        ],
-        "stream_name": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6Ok9wZW4vMQ:messages",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c"
-      },
-      {
-        "parts": [
-          "rooms"
-        ],
-        "stream_name": "rooms",
-        "signed": "InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439"
-      },
-      {
-        "parts": [
-          "Z2lkOi8vY2FtcGZpcmUvVXNlci8x",
-          "rooms"
-        ],
-        "stream_name": "Z2lkOi8vY2FtcGZpcmUvVXNlci8x:rooms",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410"
-      },
-      {
-        "parts": [
-          "Z2lkOi8vY2FtcGZpcmUvVXNlci8x"
-        ],
-        "stream_name": "Z2lkOi8vY2FtcGZpcmUvVXNlci8x",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHgi--806423fe9469fa9f6d8118b18ed792f51c31541d9e2c58daf8974c6f9d6ccb6a"
-      },
-      {
-        "parts": [
-          "unicode ☃ <&>"
-        ],
-        "stream_name": "unicode ☃ <&>",
-        "signed": "InVuaWNvZGUg4piDIDwmPiI=--a9d9d4a54815df55c6858daccd993e1aa2db4b0d89569276fda52d902e2c58f2"
-      },
-      {
-        "parts": [
-          "a",
-          "b:c"
-        ],
-        "stream_name": "a:b:c",
-        "signed": "ImE6YjpjIg==--52e9c9b9497377935857a93d48508e77ec1a1492630a96513d5036e019dcaece"
-      }
-    ],
-    "verify": [
-      {
-        "case": "valid Z2lkOi8vY2FtcGZpcmUvUm9vbXM6Ok9wZW4vMQ:messages",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c",
-        "expected": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6Ok9wZW4vMQ:messages"
-      },
-      {
-        "case": "valid rooms",
-        "signed": "InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439",
-        "expected": "rooms"
-      },
-      {
-        "case": "valid Z2lkOi8vY2FtcGZpcmUvVXNlci8x:rooms",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410",
-        "expected": "Z2lkOi8vY2FtcGZpcmUvVXNlci8x:rooms"
-      },
-      {
-        "case": "valid Z2lkOi8vY2FtcGZpcmUvVXNlci8x",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHgi--806423fe9469fa9f6d8118b18ed792f51c31541d9e2c58daf8974c6f9d6ccb6a",
-        "expected": "Z2lkOi8vY2FtcGZpcmUvVXNlci8x"
-      },
-      {
-        "case": "valid unicode ☃ <&>",
-        "signed": "InVuaWNvZGUg4piDIDwmPiI=--a9d9d4a54815df55c6858daccd993e1aa2db4b0d89569276fda52d902e2c58f2",
-        "expected": "unicode ☃ <&>"
-      },
-      {
-        "case": "valid a:b:c",
-        "signed": "ImE6YjpjIg==--52e9c9b9497377935857a93d48508e77ec1a1492630a96513d5036e019dcaece",
-        "expected": "a:b:c"
-      },
-      {
-        "case": "tampered digest",
-        "signed": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a25420",
-        "expected": null
-      },
-      {
-        "case": "tampered payload",
-        "signed": "AloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c",
-        "expected": null
-      },
-      {
-        "case": "signed with rotated secret",
-        "signed": "InJvb21zIg==--fb7a8f45d793f0970e5e570387bfa0b76dfab784bcbc5ad650b062d39a67ef02",
-        "expected": null
-      },
-      {
-        "case": "garbage",
-        "signed": "garbage",
-        "expected": null
-      },
-      {
-        "case": "with purpose metadata",
-        "signed": "eyJfcmFpbHMiOnsiZGF0YSI6InJvb21zIiwicHVyIjoieCJ9fQ==--a6911604fd558a338bb5e672213d41ede3030943a8382425dbc72b8d710ef183",
-        "expected": null
-      },
-      {
-        "case": "json non-string",
-        "signed": "NDI=--f4eb1cdc7c36e14f1133236dace594efa0de27f8cbcebf65db1f7401e91671a6",
-        "expected": 42
-      }
-    ]
-  },
   "app_verifiers": {
     "generate": [
       {

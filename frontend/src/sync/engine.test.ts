@@ -1890,7 +1890,7 @@ describe("resync", () => {
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => {
             stop();
-            document.head.querySelector('style[data-turbo-track="reload"]')?.remove();
+            document.head.querySelector("style#workspace-styles")?.remove();
           }),
         );
         yield* api.reply("GET /boot", {
@@ -1900,7 +1900,7 @@ describe("resync", () => {
         });
         yield* startEngine;
         yield* welcome(5, false);
-        expect(document.head.querySelector('style[data-turbo-track="reload"]')?.textContent).toBe(
+        expect(document.head.querySelector("style#workspace-styles")?.textContent).toBe(
           "body { color: green; }",
         );
 
@@ -1913,13 +1913,13 @@ describe("resync", () => {
         yield* TestClock.adjust(250);
         yield* welcome(1, false, "e2");
 
-        expect(document.head.querySelector('style[data-turbo-track="reload"]')?.textContent).toBe(
+        expect(document.head.querySelector("style#workspace-styles")?.textContent).toBe(
           "body { color: blue; }",
         );
         yield* api.reply("GET /boot", { ...workspaceBoot, customStyles: null, csrfToken: "token" });
         yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
         yield* settle;
-        expect(document.head.querySelector('style[data-turbo-track="reload"]')).toBeNull();
+        expect(document.head.querySelector("style#workspace-styles")).toBeNull();
       }).pipe(Effect.scoped),
     ),
   );

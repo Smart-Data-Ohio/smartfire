@@ -284,11 +284,10 @@ async fn google_compound_attendance_attributes_match_rails_bytes() {
     let mut browser = a.david();
     for case in v["cases"].as_array().unwrap() {
         let get = case["location"] == "show";
-        // K15 deleted the Turbo frame and hidden input, but compound parameters must still
-        // leave an existing response intact when the supplied response is invalid.
+        // Compound parameters must leave an existing response intact when the supplied
+        // response is invalid.
         let path = format!("/rooms/{ALL_TALK}/events/{id}/attendance");
         let req = Req::new(if get { Method::GET } else { Method::PATCH }, &path)
-            .header("turbo-frame", "fixture-frame")
             .header("content-type", "application/json")
             .body(serde_json::to_vec(&case["params"]).unwrap());
         let response = if get {
@@ -308,12 +307,7 @@ async fn google_compound_attendance_attributes_match_rails_bytes() {
                 "{label}"
             );
         } else {
-            assert_eq!(
-                response.status.as_u16() as u64,
-                case["status"].as_u64().unwrap(),
-                "{label}"
-            );
-            assert!(response.body.is_empty(), "{label}: retired frame markup");
+            assert_eq!(response.status, 302, "{label}");
         }
         let attendance = browser
             .get(&format!("/api/v1/rooms/{ALL_TALK}/events/{id}/attendance"))

@@ -47,7 +47,7 @@ impl GlobalId {
         Some(GlobalId { app: app.to_string(), model_name: model_name.to_string(), id: id.to_string() })
     }
 
-    /// `GlobalID#to_param`: URL-safe Base64 without padding, as used in Turbo stream names.
+    /// `GlobalID#to_param`: URL-safe Base64 without padding, as used in Action Cable stream names.
     pub fn to_param(&self) -> String {
         encoding::urlsafe_encode_unpadded(self.to_string().as_bytes())
     }
