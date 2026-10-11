@@ -28,11 +28,29 @@ export interface IgnoreSet {
   readonly snapshot: number | null;
   /** Ignored people from the snapshot, and any person a newer change has landed for. */
   readonly people: Readonly<Record<number, IgnoreEntry>>;
-  /** A change may be missing: the next chance (a reconnect, a resume) refetches the snapshot. */
-  readonly stale: boolean;
+  /**
+   * Counts the moments a change may have been missed: a `blocks.updated` (the refetch it asks
+   * for), a reconnect that can't replay, a refetch that failed.
+   */
+  readonly invalidatedAt: number;
+  /**
+   * The newest `invalidatedAt` a landed snapshot covers: the value when its request started, so
+   * a reply to an older request can't vouch for a later miss. Only moves forward.
+   */
+  readonly coveredThrough: number;
 }
 
-export const emptyIgnores: IgnoreSet = { snapshot: null, people: {}, stale: false };
+export const emptyIgnores: IgnoreSet = {
+  snapshot: null,
+  people: {},
+  invalidatedAt: 0,
+  coveredThrough: 0,
+};
+
+/** A change may be missing: the next chance (a resume, an event) refetches the snapshot. */
+export function ignoresStale(set: IgnoreSet): boolean {
+  return set.coveredThrough < set.invalidatedAt;
+}
 
 /** The revision the set knows `userId` as of: their own entry's, else the snapshot's. */
 function knownAt(set: IgnoreSet, userId: number): number {
@@ -59,13 +77,21 @@ export function applyBlockChange(set: IgnoreSet, change: BlockState): IgnoreSet 
 }
 
 /**
- * A `GET /blocks` snapshot: every person known as of its revision or earlier takes its answer
- * (listed: ignored; absent: not); a change newer than it is kept. One older than the last
- * snapshot applied is dropped.
+ * A `GET /blocks` snapshot, from a request started when the set's `invalidatedAt` was
+ * `coveredAt`. Every person known as of its revision or earlier takes its answer (listed: ignored;
+ * absent: not); a change newer than it is kept. Data older than the last snapshot applied is
+ * dropped, but the reply still covers what was invalidated before its request: what the set holds
+ * is newer still.
  */
-export function applyBlockSnapshot(set: IgnoreSet, snapshot: BlockList): IgnoreSet {
+export function applyBlockSnapshot(
+  set: IgnoreSet,
+  snapshot: BlockList,
+  coveredAt: number,
+): IgnoreSet {
+  const coveredThrough = Math.max(set.coveredThrough, coveredAt);
+
   if (set.snapshot !== null && snapshot.revision < set.snapshot) {
-    return set;
+    return coveredThrough === set.coveredThrough ? set : { ...set, coveredThrough };
   }
 
   const people: Record<number, IgnoreEntry> = {};
@@ -80,12 +106,12 @@ export function applyBlockSnapshot(set: IgnoreSet, snapshot: BlockList): IgnoreS
     people[person.user.id] ??= { ignored: true, revision: snapshot.revision };
   }
 
-  return { snapshot: snapshot.revision, people, stale: false };
+  return { ...set, snapshot: snapshot.revision, people, coveredThrough };
 }
 
-/** A refetch failed or a change may be missing: the next reconnect or resume refetches. */
-export function markIgnoresStale(set: IgnoreSet): IgnoreSet {
-  return set.stale ? set : { ...set, stale: true };
+/** A change may have been missed: the set is stale until a snapshot requested after this lands. */
+export function invalidateIgnores(set: IgnoreSet): IgnoreSet {
+  return { ...set, invalidatedAt: set.invalidatedAt + 1 };
 }
 
 /**

@@ -114,7 +114,7 @@ import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
 import type { WorkspaceInvite } from "../gen/WorkspaceInvite.ts";
 import type { WorkspaceInviteCreated } from "../gen/WorkspaceInviteCreated.ts";
 import type { WorkspaceInviteList } from "../gen/WorkspaceInviteList.ts";
-import { mutations } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
 import { brandingOf } from "../store/workspace.ts";
 import { peoplePagesOver } from "./people-pages.ts";
 import { runAction } from "./runtime.ts";
@@ -308,13 +308,16 @@ export const peoplePages = peoplePagesOver({
  */
 export const ignores = {
   /** The people you ignore, oldest first; the snapshot also brings the store up to date. */
-  list: (): Promise<BlockList> =>
-    runAction(blocks()).then((snapshot) => {
+  list: (): Promise<BlockList> => {
+    const coveredAt = store.getState().ignores.invalidatedAt;
+
+    return runAction(blocks()).then((snapshot) => {
       mutations.mergeUsers(snapshot.people.map((person) => person.user));
-      mutations.setBlocks(snapshot);
+      mutations.setBlocks(snapshot, coveredAt);
 
       return snapshot;
-    }),
+    });
+  },
 
   /** Ignores them (`true`) or stops (`false`). */
   set: (userId: number, ignored: boolean): Promise<BlockState> =>

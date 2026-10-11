@@ -4,7 +4,7 @@ import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
 import {
   applyBlockChange,
   applyBlockSnapshot,
-  markIgnoresStale as markIgnoresStaleIn,
+  invalidateIgnores as invalidateIgnoresIn,
 } from "./ignores.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
@@ -840,8 +840,12 @@ export function receiveMessage(state: State, message: MessageDTO): State {
 }
 
 /** A `GET /blocks` snapshot: the viewer's whole ignore set, keeping any newer change. */
-export function setBlocks(state: State, snapshot: BlockList): State {
-  const ignores = applyBlockSnapshot(state.ignores, snapshot);
+export function setBlocks(
+  state: State,
+  snapshot: BlockList,
+  coveredAt = Number.NEGATIVE_INFINITY,
+): State {
+  const ignores = applyBlockSnapshot(state.ignores, snapshot, coveredAt);
 
   return ignores === state.ignores ? state : { ...state, ignores };
 }
@@ -856,11 +860,9 @@ export function applyBlockState(state: State, change: BlockState): State {
   return ignores === state.ignores ? state : { ...state, ignores };
 }
 
-/** A blocks refetch failed or a change may be missing: refetch at the next chance. */
-export function markIgnoresStale(state: State): State {
-  const ignores = markIgnoresStaleIn(state.ignores);
-
-  return ignores === state.ignores ? state : { ...state, ignores };
+/** A change may have been missed: the ignore set is stale until a later request lands. */
+export function invalidateIgnores(state: State): State {
+  return { ...state, ignores: invalidateIgnoresIn(state.ignores) };
 }
 
 /**

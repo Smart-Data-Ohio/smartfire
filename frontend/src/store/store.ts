@@ -306,9 +306,14 @@ export const mutations = {
         notificationClock: serverNow(state.sidebar.serverClock),
       },
     })),
-  setBlocks: (snapshot: BlockList) => apply((state) => reduce.setBlocks(state, snapshot)),
+  /**
+   * `coveredAt`: the ignore set's `invalidatedAt` when the request started (omitted, it vouches
+   * for nothing missed).
+   */
+  setBlocks: (snapshot: BlockList, coveredAt = Number.NEGATIVE_INFINITY) =>
+    apply((state) => reduce.setBlocks(state, snapshot, coveredAt)),
   applyBlockState: (change: BlockState) => apply((state) => reduce.applyBlockState(state, change)),
-  markIgnoresStale: () => apply(reduce.markIgnoresStale),
+  invalidateIgnores: () => apply(reduce.invalidateIgnores),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),

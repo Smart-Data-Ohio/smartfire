@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, sidebarRowFixture, userFixture } from "../api/testing.ts";
-import { isIgnored, messageIgnored } from "./ignores.ts";
-import { applyBlockState, applyEvents, applyPage, receiveMessage, setBlocks } from "./reducers.ts";
+import { ignoresStale, isIgnored, messageIgnored } from "./ignores.ts";
+import {
+  applyBlockState,
+  applyEvents,
+  applyPage,
+  invalidateIgnores,
+  receiveMessage,
+  setBlocks,
+} from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
 
 /** Whether message 9 shows collapsed, as every view reads it. */
@@ -273,6 +280,31 @@ describe("per-person ignore revisions", () => {
 
     expect(current.ignores.people).toEqual({ [A]: { ignored: true, revision: 14 } });
     expect(setBlocks(current, { people: listed(B), revision: 13 })).toBe(current);
+  });
+});
+
+describe("ignore snapshot freshness", () => {
+  it("stays stale when a reply to a request older than the miss lands", () => {
+    // A request goes out at generation 1 and is held.
+    const asked = invalidateIgnores(initialState);
+    const heldAt = asked.ignores.invalidatedAt;
+
+    // A reconnect without replay misses a change; the four refresh tries all fail.
+    const missed = invalidateIgnores(invalidateIgnores(asked));
+
+    expect(ignoresStale(missed.ignores)).toBe(true);
+
+    // The held reply lands: its data merges, but it vouches only for generation 1.
+    const landed = setBlocks(missed, { people: [], revision: 10 }, heldAt);
+
+    expect(landed.ignores.snapshot).toBe(10);
+    expect(ignoresStale(landed.ignores)).toBe(true);
+
+    // One requested after the miss clears it; an older one never moves coverage back.
+    const current = setBlocks(landed, { people: [], revision: 11 }, missed.ignores.invalidatedAt);
+
+    expect(ignoresStale(current.ignores)).toBe(false);
+    expect(setBlocks(current, { people: [], revision: 9 }, heldAt)).toBe(current);
   });
 });
 

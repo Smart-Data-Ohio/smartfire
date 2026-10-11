@@ -25,6 +25,7 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
 import { activityListOf } from "../store/activity.ts";
+import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { Boot } from "../store/model.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
@@ -3416,11 +3417,31 @@ describe("ignores", () => {
       data: { userId, ignoredByMe, revision },
     }) as const;
 
+  const listed = (revision: number, ...ids: number[]) => ({
+    people: ids.map((id) => ({
+      user: userFixture(id),
+      ignoredByMe: true,
+      createdAt: "2026-10-01T12:00:00Z",
+    })),
+    revision,
+  });
+
+  const unavailable = () =>
+    Effect.fail(new ServerError({ status: 503, message: "Try again later" }));
+
   const blockRequests = Effect.gen(function* () {
     const api = yield* FakeApi;
 
     return (yield* api.requests).filter((request) => request.path === "/blocks").length;
   });
+
+  const stale = () => ignoresStale(store.getState().ignores);
+
+  /** Answers `GET /blocks` with `json` once `release` completes. */
+  const held = (release: Deferred.Deferred<void>, json: Schema.Json) =>
+    Effect.flatMap(FakeApi, (api) =>
+      api.route("GET /blocks", () => Deferred.await(release).pipe(Effect.as(json))),
+    );
 
   it.effect("retries a failed snapshot, then refetches it on the next resume", () =>
     withSync(
@@ -3431,11 +3452,10 @@ describe("ignores", () => {
         yield* serve([]);
         yield* startEngine;
         yield* welcome(5, false);
-        expect(store.getState().ignores).toMatchObject({ snapshot: 0, stale: false });
+        expect(store.getState().ignores.snapshot).toBe(0);
+        expect(stale()).toBe(false);
 
-        yield* api.route("GET /blocks", () =>
-          Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
-        );
+        yield* api.route("GET /blocks", unavailable);
 
         const before = yield* blockRequests;
 
@@ -3444,12 +3464,9 @@ describe("ignores", () => {
         yield* TestClock.adjust("4 seconds");
 
         expect((yield* blockRequests) - before).toBe(4);
-        expect(store.getState().ignores.stale).toBe(true);
+        expect(stale()).toBe(true);
 
-        yield* api.reply("GET /blocks", {
-          people: [{ user: userFixture(3), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" }],
-          revision: 2,
-        });
+        yield* api.reply("GET /blocks", listed(2, 3));
         yield* socket.drop;
         yield* TestClock.adjust(250);
 
@@ -3458,13 +3475,143 @@ describe("ignores", () => {
         yield* welcome(6, true);
 
         expect((yield* blockRequests) - resumed).toBe(1);
-        expect(store.getState().ignores).toMatchObject({ snapshot: 2, stale: false });
+        expect(store.getState().ignores.snapshot).toBe(2);
+        expect(stale()).toBe(false);
 
         // A clean resume after that makes no further snapshot request.
         yield* socket.drop;
         yield* TestClock.adjust(500);
         yield* welcome(6, true);
         expect((yield* blockRequests) - resumed).toBe(1);
+      }),
+    ),
+  );
+
+  it.effect("keeps a miss stale when an older request's snapshot lands after it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        // The first snapshot, read at 10, is held.
+        yield* held(release, listed(10));
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Disconnected meanwhile, an ignore at 11 is missed and the server can't replay it.
+        yield* api.route("GET /blocks", unavailable);
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        // The old reply lands: it covers only what came before its request.
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+        expect(store.getState().ignores.snapshot).toBe(10);
+        expect(stale()).toBe(true);
+
+        // The follow-up fails every try; the set stays stale.
+        yield* TestClock.adjust("4 seconds");
+        expect(stale()).toBe(true);
+
+        yield* api.reply("GET /blocks", listed(11, 4));
+        yield* socket.drop;
+        yield* TestClock.adjust(500);
+
+        const before = yield* blockRequests;
+
+        yield* welcome(1, true, "e2");
+
+        expect((yield* blockRequests) - before).toBe(1);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(stale()).toBe(false);
+      }),
+    ),
+  );
+
+  it.effect("runs one fetch with its retries however many events ask during it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* api.route("GET /blocks", unavailable);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* pushEvents(blocksUpdated(7, 4, true, 2));
+        yield* TestClock.adjust("600 millis");
+        yield* pushEvents(blocksUpdated(8, 5, true, 3));
+        yield* TestClock.adjust("10 seconds");
+
+        expect((yield* blockRequests) - before).toBe(4);
+        expect(stale()).toBe(true);
+      }),
+    ),
+  );
+
+  it.effect("makes exactly one follow-up for an ask that lands mid-flight", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* held(release, listed(1, 3));
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* settle;
+        expect((yield* blockRequests) - before).toBe(1);
+
+        yield* pushEvents(blocksUpdated(7, 4, true, 2));
+        yield* pushEvents(blocksUpdated(8, 4, false, 3));
+        yield* settle;
+        expect((yield* blockRequests) - before).toBe(1);
+
+        yield* api.reply("GET /blocks", listed(3, 3));
+        yield* Deferred.succeed(release, undefined);
+        yield* TestClock.adjust("5 seconds");
+
+        expect((yield* blockRequests) - before).toBe(2);
+        expect(store.getState().ignores.snapshot).toBe(3);
+        expect(stale()).toBe(false);
+      }),
+    ),
+  );
+
+  it.effect("cancels pending retries when the engine stops", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+        yield* api.route("GET /blocks", unavailable);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* settle;
+        expect((yield* blockRequests) - before).toBe(1);
+
+        yield* Fiber.interrupt(running);
+        yield* TestClock.adjust("10 seconds");
+
+        expect((yield* blockRequests) - before).toBe(1);
       }),
     ),
   );

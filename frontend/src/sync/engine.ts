@@ -20,6 +20,7 @@ import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
@@ -80,7 +81,7 @@ function middleOf(timeline: Timeline | undefined): number | null {
 /** The server pings after 15 s idle; this long without any frame means the socket is dead. */
 export const SILENCE_LIMIT_MS = 30_000;
 
-/** Retries of a failed ignore snapshot before it waits for the next resume. */
+/** Retries of a failed ignore snapshot before it waits for the next resume or event. */
 const BLOCKS_RETRIES = 3;
 
 const blocksRetrySchedule = Schedule.exponential("500 millis", 2).pipe(Schedule.jittered);
@@ -235,6 +236,8 @@ export class Engine extends Context.Service<
       const presence = yield* Presence;
       const lifecycle = yield* Lifecycle;
       const api = yield* Effect.context<ApiClient>();
+      /** Asks for the ignore snapshot; asks made while one is pending are one ask. */
+      const blocksWanted = yield* Queue.sliding<void>(1);
       /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
@@ -483,20 +486,45 @@ export class Engine extends Context.Service<
         );
       };
 
-      /**
-       * The ignore snapshot, retried with backoff. The set is marked stale first, so a refetch
-       * that never lands (it fails every try, or the connection drops under it) is made again on
-       * the next resume; a snapshot that lands clears the mark.
-       */
-      const refreshBlocks = Effect.suspend(() => {
-        mutations.markIgnoresStale();
+      /** Asks `followBlocks` for the ignore snapshot: a change may have been missed. */
+      const requestBlocks = Effect.sync(() => {
+        mutations.invalidateIgnores();
+        Queue.offerUnsafe(blocksWanted, undefined);
+      });
+
+      /** One snapshot request; it covers what was invalidated before it started. */
+      const fetchBlocks = Effect.suspend(() => {
+        const coveredAt = store.getState().ignores.invalidatedAt;
 
         return blocks().pipe(
-          Effect.retry({ schedule: blocksRetrySchedule, times: BLOCKS_RETRIES }),
-          Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot))),
-          Effect.catch((error) => Effect.logWarning("sync: ignore snapshot failed", error.message)),
-          Effect.provideContext(api),
+          Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot, coveredAt))),
         );
+      });
+
+      /**
+       * Fetches the ignore snapshot one request at a time, for the engine's whole run. Asks that
+       * land meanwhile share one follow-up, made only if the set is still stale once the current
+       * one lands. A fetch that fails every retry leaves the set stale and drops the asks behind
+       * it: the next resume or event asks again.
+       */
+      const followBlocks = Effect.gen(function* () {
+        while (true) {
+          yield* Queue.take(blocksWanted);
+
+          if (!ignoresStale(store.getState().ignores)) continue;
+
+          const fetched = yield* fetchBlocks.pipe(
+            Effect.retry({ schedule: blocksRetrySchedule, times: BLOCKS_RETRIES }),
+            Effect.provideContext(api),
+            Effect.result,
+          );
+
+          if (Result.isFailure(fetched)) {
+            yield* Effect.logWarning("sync: ignore snapshot failed", fetched.failure.message);
+            mutations.invalidateIgnores();
+            yield* Queue.clear(blocksWanted);
+          }
+        }
       });
 
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
@@ -514,8 +542,8 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
-            // Forked: a failing snapshot waits out its retries without holding up the sidebar.
-            yield* Effect.forkIn(refreshBlocks, scope);
+            // `followBlocks` fetches it: a failing snapshot doesn't hold up the sidebar.
+            yield* requestBlocks;
 
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
@@ -763,8 +791,8 @@ export class Engine extends Context.Service<
             yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
 
             // Replay covers events missed while away, but not a snapshot that never landed.
-            if (store.getState().ignores.stale) {
-              yield* Effect.forkIn(refreshBlocks, scope);
+            if (ignoresStale(store.getState().ignores)) {
+              yield* requestBlocks;
             }
           }
 
@@ -970,6 +998,7 @@ export class Engine extends Context.Service<
 
           yield* Effect.forkIn(Effect.scoped(expire), scope);
           yield* Effect.forkIn(Effect.scoped(followRooms), scope);
+          yield* Effect.forkIn(followBlocks, scope);
           yield* Effect.forkIn(presence.run, scope);
           yield* connectLoop(scope);
         }),
