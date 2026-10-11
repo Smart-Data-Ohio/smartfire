@@ -140,6 +140,9 @@ fn halted(c: &Ctx, response: &Response) -> Option<ApiError> {
         if location.contains("two_factor") {
             ApiError::TwoFactorRequired {
                 message: "Finish two-step sign-in to continue".into(),
+                requirement: campfire_api_types::TwoFactorRequirement::Challenge {
+                    location: c.url_for("/two_factor_challenge"),
+                },
             }
         } else {
             ApiError::Unauthorized {
@@ -150,6 +153,9 @@ fn halted(c: &Ctx, response: &Response) -> Option<ApiError> {
         if two_factor_setup_pending(c) {
             ApiError::TwoFactorRequired {
                 message: "Set up two-step sign-in to continue".into(),
+                requirement: campfire_api_types::TwoFactorRequirement::Setup {
+                    location: c.url_for("/two_factor_setup"),
+                },
             }
         } else {
             ApiError::Forbidden {

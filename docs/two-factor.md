@@ -26,10 +26,11 @@ that already completed the second factor.
 2. Scan the QR code, or enter the manual key if you cannot scan.
 3. Enter the 6-digit code from the app.
 
-Every visit to the setup page issues a fresh secret bound to your
+Visits to the setup page reuse a live secret bound to your
 current session, and confirming only ever uses that session's pending
-secret — a secret displayed in one browser cannot be confirmed from
-another. Pending secrets expire after 15 minutes. A mistyped code does
+secret. A secret displayed in one browser cannot be confirmed from
+another. Pending secrets expire after 30 minutes, and visits extend that
+expiry. An expired setup issues a new secret. A mistyped code does
 not rotate the secret, so you can retry without re-scanning.
 
 Next you get **10 backup codes**. Each one signs you in once if you
