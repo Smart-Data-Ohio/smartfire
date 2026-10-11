@@ -250,6 +250,27 @@ test("focus goes to the heading of a folded category a starred room is dropped i
   await expect(heading(page, "shared-1")).toBeFocused();
 });
 
+test("focus goes to the heading of a folded category a channel is dropped into", async ({
+  page,
+}) => {
+  await control(page.request, "workspace-layout", PRODUCT_LAYOUT);
+  await openApp(page, `r/${ROOM_IDS.general}`);
+
+  // A channel that is read and not selected shows nowhere in a folded category.
+  await heading(page, "shared-1").click();
+  await expect(heading(page, "shared-1")).toHaveAttribute("aria-expanded", "false");
+
+  await row(section(page, "channels"), "product-updates").focus();
+  await page.keyboard.press("Space");
+  await arrowUpTo(page, "Product, after quiet, for everyone");
+  await page.keyboard.press("Enter");
+
+  await expect(
+    section(page, "channels").locator("[data-drag-handle]", { hasText: /^product-updates$/ }),
+  ).toHaveCount(0);
+  await expect(heading(page, "shared-1")).toBeFocused();
+});
+
 test("a shared category's heading is dragged into place", async ({ page }) => {
   await control(page.request, "workspace-layout", PRODUCT_LAYOUT);
   await openApp(page, `r/${ROOM_IDS.general}`);

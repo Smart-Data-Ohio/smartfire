@@ -12,7 +12,7 @@ import type { RoomCategory } from "../../store/model.ts";
 import { isInSlot, organizedSidebar } from "../../store/organize.ts";
 import { store } from "../../store/store.ts";
 import { isSettledAt } from "../../store/workspace-layout.ts";
-import { liveHandle } from "./focus-targets.ts";
+import { movedRowFocus } from "./focus-targets.ts";
 import {
   categoryIndex,
   categoryTargets,
@@ -86,6 +86,19 @@ function handleKey(item: DragItem): string {
     case "shared-category":
       return `shared-${item.category.id}`;
   }
+}
+
+/** The section a room dropped on `target` lands in, when that names one by itself. */
+function targetSection(target: DropTarget | null): string | null {
+  if (target?.kind === "shared" && target.categoryId !== null) {
+    return `shared-${target.categoryId}`;
+  }
+
+  if (target?.kind === "room" && target.slot.kind === "category") {
+    return `category-${target.slot.categoryId}`;
+  }
+
+  return null;
 }
 
 /** The categories a category drag reorders: the viewer's own, or the shared ones. */
@@ -189,7 +202,7 @@ export function useSidebarDrag({
   });
 
   const stopPointer = useRef<(() => void) | null>(null);
-  const focusAfter = useRef<string | null>(null);
+  const focusAfter = useRef<{ key: string; section: string | null } | null>(null);
   const latest = useRef({ drag, categories, sharedCategories, context, onDrop });
 
   useLayoutEffect(() => {
@@ -207,16 +220,16 @@ export function useSidebarDrag({
     }
   }, [drag?.mode]);
 
-  // A keyboard drop can move the row to another section (a new element): focus follows it.
+  // A keyboard drop can move the row to another section (a new element): focus follows it, or
+  // goes to that section's heading when the section is folded.
   useLayoutEffect(() => {
-    const key = focusAfter.current;
+    const after = focusAfter.current;
 
-    if (key === null) {
+    if (after === null) {
       return;
     }
 
-    // The first live one: a folded section's own list is inert, its peek isn't.
-    const handle = liveHandle(containerRef.current, key);
+    const handle = movedRowFocus(containerRef.current, after.key, after.section);
 
     if (handle !== null) {
       focusAfter.current = null;
@@ -424,7 +437,7 @@ export function useSidebarDrag({
     const chosen = keyboard.current.targets[keyboard.current.index];
     const moved = land(item, chosen?.target ?? null);
 
-    focusAfter.current = handleKey(item);
+    focusAfter.current = { key: handleKey(item), section: targetSection(chosen?.target ?? null) };
     finish();
     announce(
       moved && chosen !== undefined
