@@ -51,8 +51,12 @@ describe("the screen map and the router", () => {
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",
-      // Two-step setup: the retained /two_factor_setup page keeps serving full page loads (the
-      // server's own enrollment redirect lands there), so it is not mapped to this screen.
+      // The signed-out pages are outside the signed-in screen map; their retained URLs keep
+      // serving the retained pages until a later slice makes these canonical.
+      "/app/session/new",
+      "/app/two_factor/challenge",
+      "/app/session/transfers/:id",
+      // Two-step setup: outside the signed-in screen map, like the signed-out pages.
       "/app/two_factor/setup",
     ]);
 

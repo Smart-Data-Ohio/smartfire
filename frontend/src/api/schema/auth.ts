@@ -26,8 +26,14 @@ export const SignedOutBoot = Schema.Struct({
     logoUrl: Schema.NullOr(Schema.String),
     description: Schema.String,
   }),
-  signInMethods: Schema.Struct({ password: Schema.Boolean, google: Schema.Boolean }),
+  signInMethods: Schema.Struct({
+    password: Schema.Boolean,
+    google: Schema.Boolean,
+    googleDomains: Schema.Array(Schema.String),
+  }),
   firstRunPending: Schema.Boolean,
+  helpContact: Schema.NullOr(Schema.Struct({ name: Schema.String, emailAddress: Schema.String })),
+  version: Schema.String,
   csrfToken: Schema.String,
 });
 

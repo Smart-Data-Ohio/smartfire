@@ -110,9 +110,39 @@ const shellRoute = createRoute({
 });
 
 /**
+ * The signed-out pages, outside the shell (no boot, no socket), each in its own chunk: the server
+ * renders their URLs for a visitor without a session (crates/spa/src/signed_out.rs).
+ * `/session/new` and the other retained auth URLs still serve the retained pages; only these
+ * `/app/` paths draw the SPA ones.
+ */
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "session/new",
+  ...chunked(() =>
+    import("./features/auth/sign-in.tsx").then((module) => ({ default: module.SignInPage })),
+  ),
+});
+
+const challengeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "two_factor/challenge",
+  ...chunked(() =>
+    import("./features/auth/challenge.tsx").then((module) => ({ default: module.ChallengePage })),
+  ),
+});
+
+const transferRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "session/transfers/$transferId",
+  ...chunked(() =>
+    import("./features/auth/transfer.tsx").then((module) => ({ default: module.TransferRoute })),
+  ),
+});
+
+/**
  * `/app/two_factor/setup?return_to=&required=`: setting up two-step sign-in, outside the shell (an
  * unverified session's requests answer the enrollment gate). Settings and the shell's gate open it
- * in the SPA; the retained `/two_factor_setup` page still serves full page loads.
+ *  in the SPA; the retained `/two_factor_setup` page still serves its own URL.
  */
 const twoFactorSetupRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -628,6 +658,9 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
+  signInRoute,
+  challengeRoute,
+  transferRoute,
   twoFactorSetupRoute,
   shellRoute.addChildren([
     homeRoute,
