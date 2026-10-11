@@ -119,7 +119,10 @@ export class ApiClient extends Context.Service<
           return yield* readSuccess(response, decode);
         }
 
-        if (request.auth === true && [400, 401, 403, 404, 410, 422, 429].includes(response.status)) {
+        if (
+          request.auth === true &&
+          [400, 401, 403, 404, 410, 422, 429].includes(response.status)
+        ) {
           return yield* readSuccess(response, decode).pipe(
             Effect.tap((body) => {
               if (response.status !== 401) return Effect.void;
