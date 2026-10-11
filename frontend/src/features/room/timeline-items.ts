@@ -29,6 +29,8 @@ export type TimelineItem =
 
 interface Previous {
   readonly creatorId: number;
+  /** A webhook message's shown name: one webhook posting under two names makes two groups. */
+  readonly persona: string | null;
   readonly millis: number;
   readonly day: string;
   readonly quiet: boolean;
@@ -39,11 +41,17 @@ export function messageKey(clientMessageId: string): string {
   return `c-${clientMessageId}`;
 }
 
-function continues(previous: Previous | null, creatorId: number, millis: number): boolean {
+function continues(
+  previous: Previous | null,
+  creatorId: number,
+  persona: string | null,
+  millis: number,
+): boolean {
   return (
     previous !== null &&
     !previous.quiet &&
     previous.creatorId === creatorId &&
+    previous.persona === persona &&
     millis - previous.millis < GROUP_WINDOW_MS
   );
 }
@@ -86,7 +94,12 @@ export function timelineItems({
     items.push({ kind: "earlier", key: "earlier" });
   }
 
-  const place = (creatorId: number, createdAt: string, quiet: boolean): boolean => {
+  const place = (
+    creatorId: number,
+    createdAt: string,
+    quiet: boolean,
+    persona: string | null = null,
+  ): boolean => {
     const millis = toMillis(createdAt);
     const day = dayKey(millis);
     let breaks = false;
@@ -96,9 +109,9 @@ export function timelineItems({
       breaks = true;
     }
 
-    const groupStart = breaks || quiet || !continues(previous, creatorId, millis);
+    const groupStart = breaks || quiet || !continues(previous, creatorId, persona, millis);
 
-    previous = { creatorId, millis, day, quiet };
+    previous = { creatorId, persona, millis, day, quiet };
 
     return groupStart;
   };
@@ -117,7 +130,11 @@ export function timelineItems({
       forced = true;
     }
 
-    const groupStart = place(message.creatorId, message.createdAt, message.systemNote) || forced;
+    const persona =
+      message.webhook === null ? null : (message.webhook.username ?? message.webhook.name);
+
+    const groupStart =
+      place(message.creatorId, message.createdAt, message.systemNote, persona) || forced;
 
     items.push({ kind: "message", key: messageKey(message.clientMessageId), message, groupStart });
   }

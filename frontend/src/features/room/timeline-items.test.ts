@@ -108,6 +108,24 @@ describe("timelineItems", () => {
     ]);
   });
 
+  it("starts a new group when one webhook posts under another name", () => {
+    const hook = (name: string, username: string | null = null) => ({
+      name,
+      username,
+      avatarUrl: null,
+    });
+
+    const items = layout([
+      { ...message(1, 9, local(6, 9, 0)), webhook: hook("Deployments") },
+      { ...message(2, 9, local(6, 9, 1)), webhook: hook("Deployments") },
+      { ...message(3, 9, local(6, 9, 2)), webhook: hook("Deployments", "Nightly") },
+      { ...message(4, 9, local(6, 9, 3)), webhook: hook("Deployments", "Nightly") },
+      { ...message(5, 9, local(6, 9, 4)), webhook: hook("Deployments") },
+    ]);
+
+    expect(summary(items)).toEqual(["intro", "day:Today", "1*", "2", "3*", "4", "5*"]);
+  });
+
   it("puts the unread divider before the first unread message and restarts the group there", () => {
     const items = layout([message(1, 7, local(6, 9, 0)), message(2, 7, local(6, 9, 1))], {
       unreadFromId: 2,

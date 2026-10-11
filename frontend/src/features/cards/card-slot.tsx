@@ -89,9 +89,9 @@ export function holdCardsChunk(): () => void {
 
 const loadedSnapshot = () => loaded !== null;
 
-/** Whether a message shows anything from the cards chunk: a poll or a card. */
+/** Whether a message shows anything from the cards chunk: a poll, a card or a webhook's embed. */
 export function hasCards(message: MessageDTO): boolean {
-  return message.poll !== null || message.cards.length > 0;
+  return message.poll !== null || message.cards.length > 0 || (message.embeds?.length ?? 0) > 0;
 }
 
 /**
