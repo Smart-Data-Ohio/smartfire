@@ -806,11 +806,6 @@ pub fn account_user_summary(
     })
 }
 
-/// `to_fs(:epoch)` as a string (milliseconds).
-pub fn epoch_string(time: jiff::Timestamp) -> String {
-    campfire_presentation::messages::support::epoch_ms(time).to_string()
-}
-
 /// `attachment.metadata[:width]`: an Integer for images, a Float for videos.
 pub fn dimension(blob: &campfire_storage::Blob, name: &str) -> Option<RubyNumber> {
     match blob.metadata.get(name)? {

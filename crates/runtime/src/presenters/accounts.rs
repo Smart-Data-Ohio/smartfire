@@ -393,21 +393,4 @@ fn sidebar_first_name(name: &str) -> &str {
     name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c']).find(|part|!part.is_empty()).unwrap_or_default()
 }
 
-pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfire_presentation::helpers::AvatarIcon> {
-    use campfire_presentation::{helpers::AvatarIcon,messages::reactions::static_icon};
-    let name=name?;
-    let icon=static_icon(name);
-    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})){return icon;}
-    let title: Option<String>=conn.query_row("SELECT title FROM workspace_icons WHERE name=?",[name],|row|row.get(0)).optional().ok().flatten();
-    room_icon_with_title(Some(name),title)
-}
-
-fn room_icon_with_title(name: Option<&str>, title: Option<String>) -> Option<campfire_presentation::helpers::AvatarIcon> {
-    use campfire_presentation::{helpers::AvatarIcon,messages::reactions::static_icon};
-    let name = name?;
-    let icon = static_icon(name);
-    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})) { return icon; }
-    title.map(|title| AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
-}
-
 pub mod audit_logs;

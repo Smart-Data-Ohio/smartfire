@@ -1,4 +1,3 @@
-pub mod subscriptions;
 pub mod connections;
 
 #[derive(Clone, Debug, Default)]
