@@ -13,7 +13,10 @@ use crate::controllers::presenters::test_support::{DAVID, JASON};
 
 const BANNER: &str = "/api/v1/settings/banner";
 
-async fn directory_user(b: &mut crate::controllers::presenters::test_support::Browser<'_>, id: i64) -> api::User {
+async fn directory_user(
+    b: &mut crate::controllers::presenters::test_support::Browser<'_>,
+    id: i64,
+) -> api::User {
     let list: api::UserList = parse(&b.send(get(&format!("/api/v1/users?ids={id}"))).await);
     list.users.into_iter().find(|user| user.id == id).unwrap()
 }
@@ -24,7 +27,12 @@ async fn a_profile_banner_is_checked_as_the_workspace_banner_is() {
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;
     let forged = write(&mut b, Method::PUT, BANNER, json!({"signedId": "forged"})).await;
-    assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", forged.text());
+    assert_eq!(
+        forged.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        forged.text()
+    );
     assert!(error(&forged)["fields"]["signedId"].is_array());
 
     let (text, _) = upload_bytes(&a, b"plain words", "notes.txt", "text/plain").await;
@@ -45,8 +53,13 @@ async fn a_profile_banner_is_checked_as_the_workspace_banner_is() {
 
     // An image already in use elsewhere (here, the avatar) can't also become the banner.
     let avatar = upload(&a, "me.png").await;
-    let _: api::Settings =
-        spa(&mut b, Method::PUT, "/api/v1/settings/avatar", json!({"signedId": avatar})).await;
+    let _: api::Settings = spa(
+        &mut b,
+        Method::PUT,
+        "/api/v1/settings/avatar",
+        json!({"signedId": avatar}),
+    )
+    .await;
     let reused = write(&mut b, Method::PUT, BANNER, json!({"signedId": avatar})).await;
     assert_eq!(
         error(&reused)["fields"]["signedId"],
@@ -76,7 +89,10 @@ async fn a_profile_banner_is_served_carried_and_removed() {
     let served = viewer.get(&url).await;
     assert_eq!(served.status, StatusCode::OK);
     assert_eq!(served.content_type(), Some("image/png"));
-    assert_eq!(viewer.get(&format!("{url}&still=1")).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        viewer.get(&format!("{url}&still=1")).await.status,
+        StatusCode::NOT_FOUND
+    );
     assert_eq!(a.anonymous().get(&url).await.status, StatusCode::FOUND);
 
     let (gif, _) = upload_bytes(&a, &animated_gif(), "moving.gif", "image/gif").await;
@@ -114,27 +130,38 @@ async fn banner_and_avatar_changes_reach_other_people() {
                 if user.id == DAVID && user.banner_url.is_some() == banner)
         }
     };
-    let private = |event: &api::SyncEvent| matches!(event.payload, api::SyncPayload::SettingsUpdated(_));
+    let private =
+        |event: &api::SyncEvent| matches!(event.payload, api::SyncPayload::SettingsUpdated(_));
 
     let signed = upload(&a, "banner.png").await;
-    let settings: api::Settings = spa(&mut b, Method::PUT, BANNER, json!({"signedId": signed})).await;
+    let settings: api::Settings =
+        spa(&mut b, Method::PUT, BANNER, json!({"signedId": signed})).await;
     let event = sync.until(updated(true), private).await;
-    let api::SyncPayload::UserUpdated(user) = event.payload else { unreachable!() };
+    let api::SyncPayload::UserUpdated(user) = event.payload else {
+        unreachable!()
+    };
     assert_eq!(user.banner_url, settings.profile.banner_url);
 
     let _: api::Settings = spa(&mut b, Method::DELETE, BANNER, Value::Null).await;
     sync.until(updated(false), private).await;
 
     let avatar = upload(&a, "me.png").await;
-    let _: api::Settings =
-        spa(&mut b, Method::PUT, "/api/v1/settings/avatar", json!({"signedId": avatar})).await;
+    let _: api::Settings = spa(
+        &mut b,
+        Method::PUT,
+        "/api/v1/settings/avatar",
+        json!({"signedId": avatar}),
+    )
+    .await;
     let event = sync
         .until(
             |event| matches!(&event.payload, api::SyncPayload::UserUpdated(user) if user.id == DAVID && user.has_avatar),
             private,
         )
         .await;
-    let api::SyncPayload::UserUpdated(user) = event.payload else { unreachable!() };
+    let api::SyncPayload::UserUpdated(user) = event.payload else {
+        unreachable!()
+    };
     assert!(user.avatar_url.contains("/avatar?v="));
     server.abort();
 }

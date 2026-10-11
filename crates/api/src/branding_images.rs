@@ -48,7 +48,11 @@ pub(crate) async fn prepare(
     let storage = c.app().storage.clone();
     let prepared = campfire_runtime::active_storage::process_branding_with_deadline(
         branding::processing_timeout(&blob),
-        move |cancel| Ok(branding::prepare_with_limit(&storage, blob, kind, &cancel, max_bytes)),
+        move |cancel| {
+            Ok(branding::prepare_with_limit(
+                &storage, blob, kind, &cancel, max_bytes,
+            ))
+        },
     )
     .await
     .map_err(|_| fail(c, validation("signedId", "couldn't be read as an image")))?;
