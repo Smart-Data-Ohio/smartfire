@@ -215,11 +215,11 @@ async fn sudo_review_google_flow_survives_a_second_gated_request() {
             Some("http://campfire.test/app/sudo/continue")
         );
         assert_eq!(
-            b.get("/api/v1/sudo/continue").await.json(),
+            without_session(b.get("/api/v1/sudo/continue").await.json()),
             json!({"kind":"confirmed","retry":{"method":"PATCH","path":path,"returnTo":"/app/admin"}})
         );
         assert_eq!(
-            b.get("/api/v1/sudo/continue").await.json(),
+            without_session(b.get("/api/v1/sudo/continue").await.json()),
             json!({"kind":"confirmed","retry":null})
         );
         assert_eq!(actions(&a).await, vec!["sudo.confirm.success"]);
@@ -298,11 +298,11 @@ async fn sudo_contract_google_round_trip_resumes_json_once_with_identical_audit(
             let resumed = b.get("/api/v1/sudo/continue").await;
             assert_eq!(resumed.status, StatusCode::OK, "{}", resumed.text());
             assert_eq!(
-                resumed.json(),
+                without_session(resumed.json()),
                 json!({"kind":"confirmed","retry":{"method":"POST","path":path,"returnTo":"/app/admin"}})
             );
             assert_eq!(
-                b.get("/api/v1/sudo/continue").await.json(),
+                without_session(b.get("/api/v1/sudo/continue").await.json()),
                 json!({"kind":"confirmed","retry":null})
             );
         } else {
@@ -1441,10 +1441,23 @@ async fn finish(a: &TestApp, r: &Recorded, b: &mut Browser<'_>, q: &std::collect
     assert_eq!(reply.location(), Some("http://campfire.test/app/sudo/continue"));
 }
 
+/// The continuation's answer for `attempt`, less the session it names (see `sudo_session`).
 async fn continuation(b: &mut Browser<'_>, attempt: &str) -> Value {
     let reply = b.get(&format!("/api/v1/sudo/continue?attempt={attempt}")).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    reply.json()
+    without_session(reply.json())
+}
+
+/// A sudo reply less the signed-in session it names.
+fn without_session(mut reply: Value) -> Value {
+    assert!(reply["session"].is_i64(), "no session in {reply}");
+    reply.as_object_mut().unwrap().remove("session");
+    reply
+}
+
+/// The signed-in session a sudo reply names.
+fn sudo_session(reply: &Value) -> i64 {
+    reply["session"].as_i64().unwrap_or_else(|| panic!("no session in {reply}"))
 }
 
 fn named(attempt: &str, path: &str) -> Value {
@@ -1613,4 +1626,31 @@ async fn sudo_attempt_a_record_answers_only_the_session_that_finished_it() {
         .await;
     b.absorb_cookie_header(&first_session);
     assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+}
+
+#[tokio::test]
+async fn sudo_attempt_replies_name_the_signed_in_session() {
+    let (a, r, _) = linked_app().await;
+    let mut b = a.sign_in(DAVID).await;
+    hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
+    let started = b
+        .write(json_request(Method::POST, "/api/v1/sudo/google", json!({ "attempt": ATTEMPT })))
+        .await
+        .json();
+    let session = sudo_session(&started);
+    let q: std::collections::BTreeMap<String, String> =
+        url::Url::parse(started["location"].as_str().unwrap())
+            .unwrap()
+            .query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+    finish(&a, &r, &mut b, &q).await;
+    let read = b.get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}")).await.json();
+    assert_eq!(sudo_session(&read), session);
+
+    // Signed in again: the page can tell its hand-off came from another session.
+    sign_in_again(&a, &mut b).await;
+    let again = b.get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}")).await.json();
+    assert_ne!(sudo_session(&again), session);
+    assert!(again.get("attempt").is_none(), "{again}");
 }

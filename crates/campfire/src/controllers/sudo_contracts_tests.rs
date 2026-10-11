@@ -139,7 +139,7 @@ async fn sudo_review_before_action_refusals_decode_and_require_sign_in() {
                 assert_eq!(reply.header("cache-control"), Some("no-store"));
                 let body: campfire_api_types::SudoResponse =
                     serde_json::from_slice(&reply.body).expect("sudo callback contract");
-                let campfire_api_types::SudoResponse::Navigate { location } = body else {
+                let campfire_api_types::SudoResponse::Navigate { location, .. } = body else {
                     panic!("sign-in navigation required")
                 };
                 location
@@ -420,7 +420,7 @@ async fn sudo_contract_methods_unavailable_totp_and_authentication_csrf_keep_htm
     let ready = browser.get("/api/v1/sudo").await;
     assert_eq!(
         ready.json(),
-        json!({"kind":"ready","reauthentication":{"methods":["password"],"retry":null}})
+        json!({"kind":"ready","reauthentication":{"methods":["password"],"retry":null},"session":ready.json()["session"].as_i64().unwrap()})
     );
     assert_eq!(ready.header("cache-control"), Some("no-store"));
     for json_mode in [false, true] {

@@ -84,15 +84,31 @@ pub struct SudoState {
 #[serde(tag = "kind", rename_all = "camelCase")]
 #[ts(export)]
 pub enum SudoResponse {
-    Ready { reauthentication: SudoState },
+    Ready {
+        reauthentication: SudoState,
+        /// The signed-in session, so the SPA can tell a Google hand-off from another session's.
+        #[ts(optional)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session: Option<i64>,
+    },
     Confirmed {
         retry: Option<SudoRetry>,
         /// The Google attempt this session confirmed, when the continuation asked for it by id.
         #[ts(optional)]
         #[serde(default, skip_serializing_if = "Option::is_none")]
         attempt: Option<String>,
+        /// The signed-in session, so the SPA can tell a Google hand-off from another session's.
+        #[ts(optional)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session: Option<i64>,
     },
-    Navigate { location: String },
+    Navigate {
+        location: String,
+        /// The signed-in session, so the SPA can tell a Google hand-off from another session's.
+        #[ts(optional)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session: Option<i64>,
+    },
     Error { message: String },
 }
 
@@ -233,13 +249,15 @@ mod tests {
                     methods: vec![SudoMethod::Password, SudoMethod::Totp, SudoMethod::Google],
                     retry: Some(retry.clone()),
                 },
+                session: Some(12),
             },
-            json!({"kind":"ready","reauthentication":{"methods":["password","totp","google"],"retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}}}),
+            json!({"kind":"ready","reauthentication":{"methods":["password","totp","google"],"retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}},"session":12}),
         );
         assert_wire(
             &SudoResponse::Confirmed {
                 retry: Some(retry.clone()),
                 attempt: None,
+                session: None,
             },
             json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"}}),
         );
@@ -247,8 +265,9 @@ mod tests {
             &SudoResponse::Confirmed {
                 retry: Some(retry),
                 attempt: Some("attempt-0000000000000001".into()),
+                session: Some(12),
             },
-            json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"},"attempt":"attempt-0000000000000001"}),
+            json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"},"attempt":"attempt-0000000000000001","session":12}),
         );
         assert_wire(
             &SudoGoogleStart {
@@ -260,14 +279,16 @@ mod tests {
             &SudoResponse::Confirmed {
                 retry: None,
                 attempt: None,
+                session: None,
             },
             json!({"kind":"confirmed","retry":null}),
         );
         assert_wire(
             &SudoResponse::Navigate {
                 location: "https://accounts.google.com/authorize".into(),
+                session: Some(12),
             },
-            json!({"kind":"navigate","location":"https://accounts.google.com/authorize"}),
+            json!({"kind":"navigate","location":"https://accounts.google.com/authorize","session":12}),
         );
         assert_wire(
             &SudoResponse::Error {

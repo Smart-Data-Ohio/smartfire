@@ -62,6 +62,7 @@ pub async fn continue_json(c: &mut Ctx) -> Result {
                 &SudoResponse::Confirmed {
                     retry,
                     attempt: Some(attempt),
+                    session: sudo::session_id(c),
                 },
             );
         }
@@ -103,6 +104,7 @@ fn complete(c: &mut Ctx, result: Result) -> Result {
                     StatusCode::OK,
                     &SudoResponse::Navigate {
                         location: location.into(),
+                        session: None,
                     },
                 );
             }
@@ -110,6 +112,7 @@ fn complete(c: &mut Ctx, result: Result) -> Result {
                 let body = if response.status == StatusCode::UNAUTHORIZED {
                     SudoResponse::Navigate {
                         location: c.url_for(&campfire_routes::new_session()),
+                        session: None,
                     }
                 } else {
                     SudoResponse::Error {
@@ -133,6 +136,7 @@ fn confirmed_json(c: &mut Ctx) -> Result {
         &SudoResponse::Confirmed {
             retry,
             attempt: None,
+            session: sudo::session_id(c),
         },
     )
 }
@@ -313,7 +317,8 @@ pub async fn google(c: &mut Ctx) -> Result {
             .get_header("location")
             .expect("Google authorization redirect")
             .to_owned();
-        return auth::json(c, StatusCode::OK, &SudoResponse::Navigate { location });
+        let session = sudo::session_id(c);
+        return auth::json(c, StatusCode::OK, &SudoResponse::Navigate { location, session });
     }
     if json_mode {
         return reject(
@@ -466,7 +471,15 @@ async fn reject(c: &mut Ctx, status: StatusCode, alert: &str) -> Result {
 async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
     if sudo::json_request(c)? {
         let reauthentication = sudo::state(c).await?;
-        return auth::json(c, status, &SudoResponse::Ready { reauthentication });
+        let session = sudo::session_id(c);
+        return auth::json(
+            c,
+            status,
+            &SudoResponse::Ready {
+                reauthentication,
+                session,
+            },
+        );
     }
     c.respond_to(&[&format::HTML])?;
     let methods = sudo::methods(c).await?;
