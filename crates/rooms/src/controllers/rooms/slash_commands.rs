@@ -61,7 +61,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .unwrap_or_default();
     let zone = features::user_zone(c).await?;
     let storage = c.app().storage.clone();
-    let result = c
+    let result = match c
         .app()
         .db
         .write_scoped(
@@ -69,7 +69,16 @@ pub async fn create(c: &mut Ctx) -> Result {
             move |tx| dispatch(tx, &context, &text, storage),
         )
         .await
-        .map_err(db_error)?;
+    {
+        Ok(result) => result,
+        Err(campfire_db::Error::FieldValidation(fields)) => {
+            return c.json(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                &serde_json::json!({"error":"Invalid slash command options","errors":fields}),
+            );
+        }
+        Err(error) => return Err(db_error(error)),
+    };
     if let Some(id) = result.message_id {
         let message = c
             .app()
