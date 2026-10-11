@@ -1,55 +1,5 @@
 {
   "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
-  "fragments": [
-    {
-      "starred": false,
-      "html": "<turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><button class=\"btn full-width\" type=\"submit\">☆ Star</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/users/712064548/star\" /></form>\n</turbo-frame>",
-      "stream": "<turbo-stream action=\"replace\" target=\"star_user_712064548\"><template><turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><button class=\"btn full-width\" type=\"submit\">☆ Star</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/users/712064548/star\" /></form>\n</turbo-frame></template></turbo-stream>"
-    },
-    {
-      "starred": true,
-      "html": "<turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn full-width\" type=\"submit\">★ Unstar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/users/712064548/star\" /></form>\n</turbo-frame>",
-      "stream": "<turbo-stream action=\"replace\" target=\"star_user_712064548\"><template><turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn full-width\" type=\"submit\">★ Unstar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/users/712064548/star\" /></form>\n</turbo-frame></template></turbo-stream>"
-    }
-  ],
-  "validations": [
-    {
-      "user_id": 127326141,
-      "starred_user_id": 127326141,
-      "errors": {
-        "starred_user": [
-          "must be someone else"
-        ]
-      }
-    },
-    {
-      "user_id": 394959859,
-      "starred_user_id": 394959859,
-      "errors": {
-        "starred_user": [
-          "must be someone else"
-        ]
-      }
-    },
-    {
-      "user_id": 127326141,
-      "starred_user_id": null,
-      "errors": {
-        "starred_user": [
-          "must exist"
-        ]
-      }
-    },
-    {
-      "user_id": null,
-      "starred_user_id": 712064548,
-      "errors": {
-        "user": [
-          "must exist"
-        ]
-      }
-    }
-  ],
   "http": [
     {
       "viewer_id": 127326141,
