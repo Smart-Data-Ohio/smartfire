@@ -11,15 +11,19 @@ import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
 import type { Icon } from "../../src/gen/Icon.ts";
 import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
 import type { Person } from "../../src/gen/Person.ts";
+import type { SudoMethod } from "../../src/gen/SudoMethod.ts";
+import type { SudoResponse } from "../../src/gen/SudoResponse.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
 import { HttpError, notFound, ok, validation } from "../http.ts";
 import { booleanField, intField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { MOCK_TOTP, RATE_ALERT } from "./account.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { customIcon } from "./emoji.ts";
 import { PROFILE_MAX_SIZE, readProfileImage } from "./profile-image.ts";
+import { MOCK_PASSWORD } from "./settings.ts";
 import type { UploadedIconFile, Uploads } from "./uploads.ts";
 
 /** Facts about a person only administrators see. */
@@ -172,8 +176,13 @@ function initialState(world: World, now: number): State {
 /** The admin module. */
 export interface AdminModule {
   readonly routes: readonly Route[];
-  /** While on, the writes the classic pages guard with the password answer `SudoRequired`. */
-  lapseSudo(on: boolean): void;
+  /**
+   * While on, the writes the classic pages guard with the password answer `SudoRequired`, until a
+   * confirmation through `/sudo` (the mock password or `123456`; a value starting `limit` is rate
+   * limited). `methods` are the ways the viewer may confirm (the password alone by default); a
+   * Google confirmation succeeds at once unless `googleRefuses`.
+   */
+  lapseSudo(on: boolean, methods?: readonly SudoMethod[], googleRefuses?: boolean): void;
   /** Throws `SudoRequired` while the confirmation has lapsed, for the bot pages' guarded writes. */
   readonly requireSudo: () => void;
   /** The workspace's name, logo and banner, for the boot JSON. */
@@ -195,6 +204,8 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
   let sudoLapsed = false;
+  let sudoMethods: readonly SudoMethod[] = ["password"];
+  let googleRefuses = false;
 
   /** `require_sudo_mode`: role changes, removal, custom styles and a new join link. */
   const requireSudo = () => {
@@ -202,9 +213,61 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       throw new HttpError(403, {
         _tag: SUDO_REQUIRED,
         message: "Confirm your password to continue",
-        reauthentication: { methods: ["password"], retry: null },
+        reauthentication: { methods: [...sudoMethods], retry: null },
       });
     }
+  };
+
+  /** A `/sudo` answer, at `status`. */
+  const sudoReply = (reply: SudoResponse, status = 200) => ok(reply, status);
+
+  const sudoReady = (status = 200) =>
+    sudoReply(
+      { kind: "ready", reauthentication: { methods: [...sudoMethods], retry: null } },
+      status,
+    );
+
+  /** `POST /sudo`: the password or an authenticator code, as `sudos#create` checks them. */
+  const confirmSudo = (body: Json | undefined) => {
+    const kind = stringField(body, "kind");
+    const value = stringField(body, kind === "password" ? "password" : "code");
+
+    if ((kind !== "password" && kind !== "totp") || value === null) {
+      return sudoReply({ kind: "error", message: "The request body isn't valid." }, 422);
+    }
+
+    if (!sudoMethods.includes(kind)) {
+      return sudoReply({ kind: "error", message: "This confirmation is not available." }, 422);
+    }
+
+    if (value.startsWith("limit")) {
+      return sudoReply({ kind: "error", message: RATE_ALERT }, 429);
+    }
+
+    if (value !== (kind === "password" ? MOCK_PASSWORD : MOCK_TOTP)) {
+      return sudoReply({ kind: "error", message: "Confirmation failed. Try again." }, 401);
+    }
+
+    sudoLapsed = false;
+
+    return sudoReply({ kind: "confirmed", retry: null });
+  };
+
+  /**
+   * `POST /sudo/google`: the mock skips Google itself. It confirms at once (unless it's set to
+   * refuse) and sends the page straight to where Google would return it.
+   */
+  const startGoogleSudo = () => {
+    if (!sudoMethods.includes("google")) {
+      return sudoReply(
+        { kind: "error", message: "Google confirmation is not available for your account." },
+        422,
+      );
+    }
+
+    if (!googleRefuses) sudoLapsed = false;
+
+    return sudoReply({ kind: "navigate", location: "/app/sudo/continue" });
   };
 
   const current = (): State => {
@@ -677,8 +740,10 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   });
 
   return {
-    lapseSudo: (on) => {
+    lapseSudo: (on, methods = ["password"], refuses = false) => {
       sudoLapsed = on;
+      sudoMethods = methods;
+      googleRefuses = refuses;
     },
     requireSudo,
     branding,
@@ -716,6 +781,12 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       current().animatedIconLimit = limit;
     },
     routes: [
+      route("GET", /^\/sudo$/, () => sudoReady()),
+      route("POST", /^\/sudo$/, ({ body }) => confirmSudo(body)),
+      route("POST", /^\/sudo\/google$/, () => startGoogleSudo()),
+      route("GET", /^\/sudo\/continue$/, () =>
+        sudoLapsed ? sudoReady(403) : sudoReply({ kind: "confirmed", retry: null }),
+      ),
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
       ...(["logo", "banner"] as const).flatMap((kind) => [

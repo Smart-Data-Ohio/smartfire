@@ -179,31 +179,6 @@ test("an animated icon uploaded here plays in a reaction, and rests on its still
   await expect(image).toHaveAttribute("src", "/icons/dance?still=1");
 });
 
-test("custom CSS waits out the password confirmation", async ({ page, request }) => {
-  const state = await (await request.get("/__mock/state")).json();
-
-  await request.post("/__mock/lapse-sudo", { headers: { "X-CSRF-Token": state.csrfToken } });
-  await page.route("**/sudo/new", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<h1>Confirm your password</h1>",
-    }),
-  );
-  await openAdmin(page, "styles");
-
-  await page.getByRole("textbox", { name: "Custom CSS" }).fill("body { color: red; }");
-  await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page).toHaveURL(/\/sudo\/new$/);
-
-  await openAdmin(page, "styles");
-
-  await expect(page.getByRole("textbox", { name: "Custom CSS" })).toHaveValue(
-    "body { color: red; }",
-  );
-  await expect(page.getByText("Your unsaved CSS is back")).toBeVisible();
-});
-
 test("the audit log filters by action", async ({ page }) => {
   await openAdmin(page, "audit-log");
 

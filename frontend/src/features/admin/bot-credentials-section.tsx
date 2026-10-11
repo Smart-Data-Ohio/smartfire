@@ -5,6 +5,7 @@ import { bots } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { leftToConfirm } from "../auth/confirmation.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import {
   FieldError,
@@ -14,7 +15,7 @@ import {
   useBusy,
 } from "../settings/settings-parts.tsx";
 import { auditTime } from "./admin-format.ts";
-import { adminFailure, keepDraft, needsSudo, takeDraft, useRowFocus } from "./admin-parts.tsx";
+import { adminFailure, keepDraft, takeDraft, useRowFocus } from "./admin-parts.tsx";
 import { CREDENTIAL_STATE, CREDENTIAL_USAGE, optional } from "./bot-format.ts";
 import { BotBack, SecretDialog, useBotId } from "./bot-parts.tsx";
 
@@ -85,7 +86,7 @@ function NewCredential({
             return;
           }
 
-          if (needsSudo(error)) {
+          if (leftToConfirm(error)) {
             keepDraft(draftKey(botId), new URLSearchParams({ name, expiresAt }).toString());
           }
 

@@ -21,18 +21,11 @@ async function openPerson(page: Page, userId: number) {
   await page.locator(".person").waitFor();
 }
 
-/** Lapses the password confirmation and stands in for the classic page that asks for it. */
-async function lapseSudo(page: Page, request: APIRequestContext) {
+/** Lapses the password confirmation: guarded writes wait for it in place. */
+async function lapseSudo(request: APIRequestContext) {
   const state = await (await request.get("/__mock/state")).json();
 
   await request.post("/__mock/lapse-sudo", { headers: { "X-CSRF-Token": state.csrfToken } });
-  await page.route("**/sudo/new", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<h1>Confirm your password</h1>",
-    }),
-  );
 }
 
 // Screenshots only: the tests below check the same pages.
@@ -227,17 +220,23 @@ test("a slow ban keeps its button focusable, and a slow DND change blocks nothin
   await expect(page.getByRole("button", { name: "Remove ban" })).toBeFocused();
 });
 
-test("a lapsed password confirmation sends a ban to the classic password page", async ({
+test("a lapsed password confirmation is asked for in place, then the ban goes through", async ({
   page,
   request,
 }) => {
   await openPerson(page, USER_IDS.sam);
-  await lapseSudo(page, request);
+  await lapseSudo(request);
 
   await page.getByRole("button", { name: "Ban Sam Whitfield" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Ban Sam Whitfield" }).click();
 
-  await expect(page).toHaveURL(/\/sudo\/new$/);
+  const confirm = page.getByRole("dialog", { name: "Confirm it's you" });
+
+  await confirm.getByLabel("Password").fill("secret123456");
+  await confirm.getByRole("button", { name: "Confirm password" }).click();
+  await expect(confirm).toBeHidden();
+  await expect(page.locator(".person")).toHaveAttribute("data-status", "banned");
+  await expect(page).toHaveURL(new RegExp(`/app/people/${USER_IDS.sam}$`));
 });
 
 test("your numeric own page opens your profile settings", async ({ page }) => {

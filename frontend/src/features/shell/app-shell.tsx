@@ -6,6 +6,7 @@ import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
+import { ReauthenticateDialog } from "../auth/reauthenticate.tsx";
 import { ProductTour } from "../help/tour.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { HuddleRoot } from "../huddle/huddle-root.tsx";
@@ -140,6 +141,7 @@ export function AppShell() {
       <GlobalOverlays />
       <ProductTour />
       <SearchHotkey />
+      <ReauthenticateDialog />
       <Toaster />
     </div>
   );

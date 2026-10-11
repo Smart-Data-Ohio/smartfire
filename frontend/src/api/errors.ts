@@ -144,5 +144,14 @@ export class ServerError extends Schema.TaggedError<ServerError>()("ServerError"
   message: Schema.String,
 }) {}
 
+/**
+ * A write that needed a fresh confirmation, and the person closed the confirmation instead. The
+ * write never reached the server; nothing changed. Client-side only: no response carries it.
+ */
+export class ConfirmationCancelled extends Schema.TaggedError<ConfirmationCancelled>()(
+  "ConfirmationCancelled",
+  { message: Schema.String },
+) {}
+
 /** Everything an `/api/v1` call can fail with. */
-export type ApiFailure = ApiError | NetworkError | ServerError;
+export type ApiFailure = ApiError | NetworkError | ServerError | ConfirmationCancelled;
