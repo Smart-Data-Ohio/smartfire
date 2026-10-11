@@ -17,6 +17,7 @@ import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./h
 import { RoomId, ThreadId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import { RoomCategoryRemoved } from "./organize.ts";
+import { BlockState } from "./people.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { UserPresence } from "./presence.ts";
 import { MessageReactions } from "./reaction.ts";
@@ -76,6 +77,7 @@ const ThreadGithubUpdated = Schema.Struct({
 /** What happened: `type` names the event and `data` carries its body. */
 export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("user.updated"), data: User }),
+  Schema.Struct({ type: Schema.Literal("blocks.updated"), data: BlockState }),
   Schema.Struct({ type: Schema.Literal("settings.updated"), data: Settings }),
   Schema.Struct({ type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.updated"), data: MessageDTO }),
@@ -136,6 +138,7 @@ const eventFields = { seq: Schema.Int, topic: Topic };
  */
 export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("user.updated"), data: User }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("blocks.updated"), data: BlockState }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("settings.updated"), data: Settings }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.updated"), data: MessageDTO }),

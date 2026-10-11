@@ -175,6 +175,7 @@ pub fn event_reminder_push(
         |r| r.get::<_, i64>(0),
     )?;
     let ids = allowed_reminders(conn, &ids, event.room_id, now)?;
+    let ids = super::ignore_policy::visible_recipients(conn, event.organizer_id, ids)?;
     Ok(Some(PushDelivery {
         payload: event.payload(conn, now)?,
         subscriptions: PushSubscription::for_users(conn, &ids)?,
@@ -260,6 +261,10 @@ pub fn board_nudge_push(
     now: Timestamp,
 ) -> Result<Option<PushDelivery>> {
     let nudge = BoardNudgeSource::find(conn, id)?;
+    let author = crate::ChannelThread::find(conn, nudge.thread_id)?.creator_id;
+    if super::ignore_policy::ignored(conn, nudge.recipient_id, author)? {
+        return Ok(None);
+    }
     let recipient = UserStatusSettings::find(conn, nudge.recipient_id)?;
     if !recipient.active_human()
         || Membership::find_by_room_and_user(conn, nudge.room_id, nudge.recipient_id)?.is_none()
@@ -281,6 +286,8 @@ pub fn board_nudge_push(
 pub struct HuddleInvitationDeliveryJob {
     pub payload: PushPayload,
     pub subscription_ids: Vec<i64>,
+    #[serde(default)]
+    pub sender_id: Option<i64>,
 }
 impl Job for HuddleInvitationDeliveryJob {
     const CLASS: &'static str = "Huddle::InvitationDeliveryJob";
@@ -289,6 +296,8 @@ impl Job for HuddleInvitationDeliveryJob {
 pub struct HuddleJoinDeliveryJob {
     pub payload: PushPayload,
     pub subscription_ids: Vec<i64>,
+    #[serde(default)]
+    pub sender_id: Option<i64>,
 }
 impl Job for HuddleJoinDeliveryJob {
     const CLASS: &'static str = "Huddle::JoinDeliveryJob";
@@ -326,6 +335,9 @@ fn huddle_recipient(
         Ok(_) => {}
     }
     if User::find_by_id(conn, sender_id)?.is_none() {
+        return Ok(None);
+    }
+    if super::ignore_policy::ignored(conn, recipient_id, sender_id)? {
         return Ok(None);
     }
     let membership = Membership::find_by_room_and_user(conn, room_id, recipient_id)?;
@@ -386,6 +398,7 @@ pub fn enqueue_huddle_invitation(
     tx.emit_after_commit(Event::job(&HuddleInvitationDeliveryJob {
         payload,
         subscription_ids,
+        sender_id: Some(sender_id),
     }));
     Ok(true)
 }
@@ -408,6 +421,7 @@ pub fn enqueue_huddle_join(
     tx.emit_after_commit(Event::job(&HuddleJoinDeliveryJob {
         payload,
         subscription_ids,
+        sender_id: Some(sender_id),
     }));
     Ok(true)
 }

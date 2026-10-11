@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { ActivityItemMutation as ActivityItemChanged } from "../../src/api/schema/activity.ts";
 import type { ActivityItem } from "../../src/gen/ActivityItem.ts";
-import type { ActivityItemChanged } from "../../src/gen/ActivityItemChanged.ts";
 import type { ActivityList } from "../../src/gen/ActivityList.ts";
 import type { ActivityTab } from "../../src/gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../../src/gen/ActivityUnreadCount.ts";

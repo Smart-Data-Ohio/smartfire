@@ -173,6 +173,11 @@ fn removing_a_membership_resets_the_users_connections() {
     assert_eq!(
         t.events(),
         vec![
+            Event::broadcast(&crate::models::activity_item::ActivityItemsRemoved {
+                items: Vec::new(),
+                recipient_ids: Some(vec![id("david")]),
+                room_id: Some(id("watercooler")),
+            }),
             Event::broadcast(&crate::RoomRemovalBroadcast {
                 user_id: id("david"),
                 room_id: id("watercooler"),

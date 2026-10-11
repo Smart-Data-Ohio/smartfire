@@ -261,17 +261,16 @@ impl ChannelThread {
                     .map(|membership| membership.id)
                     .collect::<Vec<_>>();
                 tx.conn().execute(
-                    "UPDATE memberships SET unread_at=?, updated_at=? WHERE id IN (SELECT value FROM json_each(?))",
-                    params![tx.now(), tx.now(), serde_json::json!(ids).to_string()],
+                    "UPDATE memberships SET unread_at=COALESCE(unread_at,?), updated_at=? WHERE id IN (SELECT value FROM json_each(?))",
+                    params![thread.created_at, tx.now(), serde_json::json!(ids).to_string()],
                 )?;
             }
-            for membership in recipients {
-                tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
-                    user_id: membership.user_id,
-                    room_id: room.id,
-                    message_id: None,
-                }));
-            }
+            tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
+                user_ids: recipients.into_iter().map(|membership| membership.user_id).collect(),
+                room_id: room.id,
+                message_id: None,
+                author_id: thread.creator_id,
+            }));
             Ok(())
         });
     }

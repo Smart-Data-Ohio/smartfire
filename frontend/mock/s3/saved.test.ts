@@ -140,7 +140,7 @@ describe("saved item changes", () => {
     await send(server, "POST", "/__mock/remind-due", { all: true });
 
     const reminder = events.flatMap((event) =>
-      event.type === "activity.item" && event.data.item.source.sourceId === item.id
+      event.type === "activity.item" && event.data.item?.source.sourceId === item.id
         ? [event.data]
         : [],
     )[0];
@@ -150,12 +150,12 @@ describe("saved item changes", () => {
     expect(events).toContainEqual(
       expect.objectContaining({
         type: "activity.removed",
-        data: expect.objectContaining({ id: reminder?.item.id }),
+        data: expect.objectContaining({ id: reminder?.item?.id }),
       }),
     );
 
     const removed = events.find(
-      (event) => event.type === "activity.removed" && event.data.id === reminder?.item.id,
+      (event) => event.type === "activity.removed" && event.data.id === reminder?.item?.id,
     );
 
     expect(removed?.type === "activity.removed" ? removed.data.unreadRevision : null).toBe(
@@ -167,7 +167,7 @@ describe("saved item changes", () => {
       "/api/v1/activity?status=unread&type=reminders",
     );
 
-    expect(reminders.items.map((entry) => entry.id)).not.toContain(reminder?.item.id);
+    expect(reminders.items.map((entry) => entry.id)).not.toContain(reminder?.item?.id);
     expect(events.filter((event) => event.type === "saved.changed").at(-1)?.data).toEqual({
       messageId: messages.generalChart,
       item: null,

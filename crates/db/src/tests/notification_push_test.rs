@@ -154,3 +154,21 @@ fn ws17_huddle_join_only_one_process_claims_and_reruns_preserve_timestamp() {
         2
     );
 }
+
+#[test]
+fn ignore_queued_board_nudge_rechecks_its_authors_policy_at_delivery() {
+    let golden = vectors();
+    let now = stamp(golden["now"].as_str().unwrap());
+    let row = golden["rows"].as_array().unwrap().iter().find(|row| row["name"] == "board_nudge").unwrap();
+    let t = TestDb::with_clock(TestClock::frozen_at(now), 4);
+    let sql = row["setup_sql"].as_str().unwrap().to_owned();
+    t.write(move |tx| { tx.conn().execute_batch(&sql)?; Ok(()) });
+    let nudge_id = row["nudge_id"].as_i64().unwrap();
+    t.read(|conn| { assert!(board_nudge_push(conn, nudge_id, now)?.is_some()); Ok(()) });
+    t.write(move |tx| {
+        let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
+        let author = crate::ChannelThread::find(tx.conn(), nudge.thread_id)?.creator_id;
+        crate::models::user_block::UserBlock::set(tx, nudge.recipient_id, author, true)
+    });
+    t.read(|conn| { assert!(board_nudge_push(conn, nudge_id, now)?.is_none()); Ok(()) });
+}

@@ -407,7 +407,7 @@ impl<U: Send + Sync + 'static> Server<U> {
         let Some(engine) = self.inner.sync.get() else {
             return Ok(None);
         };
-        self.inner.hub.sequenced(|seq| {
+        self.inner.hub.try_sequenced(|seq| {
             if engine.fences.lock().unwrap().crossed(fence, since) {
                 return Err(Stale);
             }

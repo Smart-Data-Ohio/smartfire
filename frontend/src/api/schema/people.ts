@@ -1,4 +1,7 @@
 import { Schema } from "effect";
+import type { BlockedPerson as GeneratedBlockedPerson } from "../../gen/BlockedPerson.ts";
+import type { BlockList as GeneratedBlockList } from "../../gen/BlockList.ts";
+import type { BlockState as GeneratedBlockState } from "../../gen/BlockState.ts";
 import type { DirectoryPerson as GeneratedDirectoryPerson } from "../../gen/DirectoryPerson.ts";
 import type { PeopleDirectory as GeneratedPeopleDirectory } from "../../gen/PeopleDirectory.ts";
 import type { PersonProfile as GeneratedPersonProfile } from "../../gen/PersonProfile.ts";
@@ -6,11 +9,13 @@ import type { PersonStatus as GeneratedPersonStatus } from "../../gen/PersonStat
 import { UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Presence } from "./presence.ts";
+import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
 /** A row of the classic people directory (`users#index`). */
 export const DirectoryPerson = Schema.Struct({
   userId: UserId,
+  ignoredByMe: Schema.Boolean,
   online: Schema.Boolean,
   starred: Schema.Boolean,
   agent: Schema.Boolean,
@@ -43,6 +48,7 @@ export type PersonStatusPin = Assert<Pinned<typeof PersonStatus, GeneratedPerson
 /** `GET /api/v1/people/:id` (and each ban change's answer): what the classic page shows. */
 export const PersonProfile = Schema.Struct({
   user: User,
+  ignoredByMe: Schema.Boolean,
   status: Schema.NullOr(PersonStatus),
   dndAllowed: Schema.NullOr(Schema.Boolean),
   emailAddress: Schema.NullOr(Schema.String),
@@ -55,3 +61,26 @@ export const PersonProfile = Schema.Struct({
 export type PersonProfile = typeof PersonProfile.Type;
 
 export type PersonProfilePin = Assert<Pinned<typeof PersonProfile, GeneratedPersonProfile>>;
+
+export const BlockedPerson = Schema.Struct({
+  user: User,
+  ignoredByMe: Schema.Boolean,
+  createdAt: Timestamp,
+});
+
+export type BlockedPersonPin = Assert<Pinned<typeof BlockedPerson, GeneratedBlockedPerson>>;
+
+export const BlockList = Schema.Struct({
+  people: Schema.Array(BlockedPerson),
+  revision: Schema.Int,
+});
+
+export type BlockListPin = Assert<Pinned<typeof BlockList, GeneratedBlockList>>;
+
+export const BlockState = Schema.Struct({
+  userId: UserId,
+  ignoredByMe: Schema.Boolean,
+  revision: Schema.Int,
+});
+
+export type BlockStatePin = Assert<Pinned<typeof BlockState, GeneratedBlockState>>;

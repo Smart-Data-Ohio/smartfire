@@ -127,6 +127,7 @@ export const HuddleNotice = Schema.Union([
     userName: Schema.String,
     inCall: Schema.Boolean,
     rejoin: Schema.Boolean,
+    unchanged: Schema.optionalKey(Schema.Boolean),
   }),
   Schema.Struct({
     kind: Schema.Literal("left"),
@@ -134,6 +135,7 @@ export const HuddleNotice = Schema.Union([
     roomName: Schema.String,
     userId: UserId,
     userName: Schema.String,
+    unchanged: Schema.optionalKey(Schema.Boolean),
   }),
   Schema.Struct({ kind: Schema.Literal("ended"), roomId: RoomId }),
 ]);
@@ -160,6 +162,7 @@ export const HuddleRing = Schema.Struct({
   roomName: Schema.String,
   callerName: Schema.String,
   silent: Schema.Boolean,
+  unchanged: Schema.optionalKey(Schema.Boolean),
 });
 
 export type HuddleRing = typeof HuddleRing.Type;

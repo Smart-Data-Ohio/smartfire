@@ -3,7 +3,7 @@
 /**
  * A classic directory row (`users/index.html:27-31`).
  */
-export type DirectoryPerson = { userId: number,
+export type DirectoryPerson = { userId: number, ignoredByMe: boolean,
 /**
  * The classic row's "Online" / "Offline" (`Person.online`).
  */

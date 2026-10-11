@@ -11,7 +11,7 @@ import type { ThreadIndicator } from "./ThreadIndicator";
 import type { WebhookEmbed } from "./WebhookEmbed";
 
 /**
- * A message on a room's timeline or in a thread. Viewer-independent: whether the viewer may
+ * A message on a room's timeline or in a thread. Whether the viewer may
  * edit it or is mentioned is worked out on the client.
  *
  * Permissions the client derives (`messages#ensure_can_edit` / `ensure_can_delete`):
@@ -25,6 +25,10 @@ export type MessageDTO = { id: number, roomId: number,
  * `null` on the room's root timeline.
  */
 threadId: number | null, creatorId: number,
+/**
+ * Collapse for this viewer, retaining the author and content for an explicit reveal.
+ */
+ignored?: boolean,
 /**
  * The sender's id for the message, which makes posting idempotent.
  */

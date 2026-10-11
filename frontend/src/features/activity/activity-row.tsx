@@ -1,9 +1,11 @@
-import { type KeyboardEvent, useId } from "react";
+import { type KeyboardEvent, useId, useState } from "react";
 import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { formatFull } from "../../lib/time.ts";
 import { SuccessCheck } from "../../motion/success-check.tsx";
+import { activityIsIgnored } from "../../store/activity.ts";
+import { useStore } from "../../store/store.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
@@ -24,7 +26,7 @@ interface ActivityMenuItemsProps {
 
 /** The row's menu, shared by its "More" button and its context menu. */
 export function ActivityMenuItems({ item, onOpen, onAction }: ActivityMenuItemsProps) {
-  const unread = item.state === "unread";
+  const unread = item.state === "unread" && !item.source.ignored;
   const handled = item.state === "handled";
 
   return (
@@ -101,7 +103,44 @@ interface ActivityRowProps {
  * swipe toggles handled. Keys on a focused row: ↑/↓ move, Home/End jump, ⏎ opens, U toggles read,
  * E toggles handled, Shift+F10 the menu.
  */
-export function ActivityRow({
+export function ActivityRow(props: ActivityRowProps) {
+  const source = props.item.source;
+
+  const ignored = useStore((state) => activityIsIgnored(state, props.item));
+
+  const item =
+    ignored === (source.ignored ?? false)
+      ? props.item
+      : { ...props.item, source: { ...source, ignored } };
+
+  return ignored ? (
+    <IgnoredActivityRow {...props} item={item} />
+  ) : (
+    <ActivityContents {...props} item={item} />
+  );
+}
+
+function IgnoredActivityRow(props: ActivityRowProps) {
+  const [revealed, setRevealed] = useState(false);
+
+  if (revealed) return <ActivityContents {...props} />;
+
+  return (
+    <ListRow motion={props.motion} state="read">
+      <button
+        type="button"
+        className="list-row-open activity-row"
+        aria-label="Show ignored message"
+        onClick={() => setRevealed(true)}
+      >
+        <span className="activity-main">Ignored message</span>
+        <span className="activity-time">Show message</span>
+      </button>
+    </ListRow>
+  );
+}
+
+function ActivityContents({
   item,
   now,
   motion,
@@ -113,7 +152,7 @@ export function ActivityRow({
   const bodyId = useId();
   const source = item.source;
   const creator = useUser(source.creatorId ?? undefined);
-  const unread = item.state === "unread";
+  const unread = item.state === "unread" && !source.ignored;
   const handled = item.state === "handled";
   const label = EVENT_LABEL[item.eventType];
   const { title, occurredAt } = source;
@@ -157,7 +196,7 @@ export function ActivityRow({
   return (
     <ListRow
       motion={motion}
-      state={item.state}
+      state={source.ignored && item.state === "unread" ? "read" : item.state}
       onKeyDown={onKeyDown}
       onContextMenu={(event) => {
         event.preventDefault();

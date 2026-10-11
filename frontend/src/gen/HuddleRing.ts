@@ -28,4 +28,4 @@ roomName: string, callerName: string,
  * (`kind=huddle` sound policy). Always `false` when `event` is `ended`, which is sent
  * without a sound check.
  */
-silent: boolean, };
+silent: boolean, unchanged?: boolean, };

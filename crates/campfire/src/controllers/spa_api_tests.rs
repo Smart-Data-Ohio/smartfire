@@ -421,6 +421,7 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
     assert!(again.cards_as_of >= created.cards_as_of);
     assert_eq!(
         api::MessageDTO {
+            ignored: None,
             cards_as_of: created.cards_as_of.clone(),
             ..again
         },
@@ -858,6 +859,7 @@ async fn a_classic_post_reaches_the_sync_socket_and_an_api_post_too() {
     // The same message; `cardsAsOf` is each read's own time.
     assert_eq!(
         api::MessageDTO {
+            ignored: None,
             cards_as_of: posted.cards_as_of.clone(),
             ..published
         },
@@ -1271,9 +1273,10 @@ async fn a_database_unread_carries_its_message_and_mention() {
                 [(ROOM, Some(mention)), (ALL_TALK, Some(BOOSTED)), (HQ, None)]
             {
                 tx.emit_after_commit(campfire_db::Event::broadcast(&Broadcast::UnreadRoom {
-                    user_id: DAVID,
+                    user_ids: vec![DAVID],
                     room_id,
                     message_id,
+                    author_id: JASON,
                 }));
             }
             Ok(())
@@ -1326,22 +1329,26 @@ async fn a_database_unread_carries_its_message_and_mention() {
             api::RoomUnread {
                 room_id: ROOM,
                 message_id: Some(mention),
-                mentioned: true
+                mentioned: true,
+                unchanged: None,
             },
             api::RoomUnread {
                 room_id: ALL_TALK,
                 message_id: Some(BOOSTED),
-                mentioned: false
+                mentioned: false,
+                unchanged: None,
             },
             api::RoomUnread {
                 room_id: HQ,
                 message_id: None,
-                mentioned: false
+                mentioned: false,
+                unchanged: None,
             },
             api::RoomUnread {
                 room_id: ALL_TALK,
                 message_id: Some(scheduled),
-                mentioned: false
+                mentioned: false,
+                unchanged: None,
             },
         ]
     );

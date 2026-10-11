@@ -167,7 +167,7 @@ pub use organize::{
     WorkspaceRoomPosition, WriteWorkspaceCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
-pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
+pub use people::{BlockList, BlockedPerson, BlockState, DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
 pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};

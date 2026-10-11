@@ -216,3 +216,14 @@ describe("S5 sync events", () => {
     ]);
   });
 });
+
+it("retains the suppression marker on a sequenced leave notice", () => {
+  roundTrips(HuddleNotice, {
+    kind: "left",
+    roomId: 12,
+    roomName: "general",
+    userId: 8,
+    userName: "Grace Hopper",
+    unchanged: true,
+  });
+});

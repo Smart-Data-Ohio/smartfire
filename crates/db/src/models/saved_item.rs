@@ -378,7 +378,15 @@ impl SavedItem {
         let message = Message::find(conn, item.message_id)?;
         let room = Room::find(conn, message.room_id)?;
         let title = if room.direct() { message.creator(conn)?.name } else { room.name.clone().unwrap_or_default() };
-        let text = crate::models::channel_thread::truncate(&message.plain_text_body(conn, rich_text)?, 140, "...");
+        let text = if super::ignore_policy::ignored(conn, item.user_id, message.creator_id)? {
+            "a saved message".to_owned()
+        } else {
+            crate::models::channel_thread::truncate(
+                &message.plain_text_body(conn, rich_text)?,
+                140,
+                "...",
+            )
+        };
         Ok(Some(ReminderPush {
             user_id: item.user_id,
             payload: PushPayload::new(title, format!("Reminder: {text}"), message_path(&message), Some(format!("saved-{}", item.id))),

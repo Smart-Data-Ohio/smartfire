@@ -895,24 +895,34 @@ impl ChannelThread {
         };
         let now = tx.now();
         let mut unread_user_ids = Vec::new();
+        let blockers = super::ignore_policy::blockers_of(tx.conn(), message.creator_id)?
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let room_members = Membership::for_room(tx.conn(), thread.room_id)?
+            .into_iter()
+            .map(|membership| membership.user_id)
+            .collect::<HashSet<_>>();
         for membership in ThreadMembership::for_thread(tx.conn(), thread.id)? {
             if membership.user_id == message.creator_id
-                || Membership::find_by_room_and_user(tx.conn(), thread.room_id, membership.user_id)?
-                    .is_none()
+                || !room_members.contains(&membership.user_id)
             {
                 continue;
             }
-            tx.conn().execute_cached(
-                r#"UPDATE "thread_memberships" SET "unread_at" = ?, "updated_at" = ? WHERE "thread_memberships"."id" = ?"#,
-                params![message.created_at, now, membership.id],
-            )?;
+            if !blockers.contains(&membership.user_id) {
+                tx.conn().execute_cached(
+                    r#"UPDATE "thread_memberships" SET "unread_at" = ?, "updated_at" = ? WHERE "thread_memberships"."id" = ?"#,
+                    params![message.created_at, now, membership.id],
+                )?;
+            }
             unread_user_ids.push(membership.user_id);
         }
         let mut seen = HashSet::new();
         for user_id in unread_user_ids.into_iter().filter(|id| seen.insert(*id)) {
+            let mut payload = serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id });
+            if blockers.contains(&user_id) { payload["refreshOnly"] = serde_json::json!(true); }
             tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                 stream: format!("user_{user_id}_unread_threads"),
-                payload: serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id }),
+                payload,
             }));
         }
         Ok(())
@@ -1041,7 +1051,7 @@ impl ChannelThread {
                 Ok((row.get(0)?, row.get(1)?))
             })?;
             if !importing {
-                crate::ActivityItem::emit_removed(tx, removed);
+                crate::ActivityItem::emit_removed_in_room(tx, removed, self.room_id, None)?;
             }
         }
         for sql in [
@@ -1239,7 +1249,11 @@ impl ChannelThread {
             thread.room_id, message.id, thread.id
         );
         let mut pushes = Vec::new();
+        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?
+            .into_iter()
+            .collect::<HashSet<_>>();
         for candidate in candidates {
+            if blockers.contains(&candidate.recipient.id) { continue; }
             let subscriptions = PushSubscription::for_user(conn, candidate.recipient.id)?;
             if subscriptions.is_empty() {
                 continue;

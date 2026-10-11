@@ -46,7 +46,7 @@ fn collect(db: &TestDb, pending: &mut Vec<PendingJob>, frames: &mut Vec<Value>, 
                 db.write(move |tx| notification_push::enqueue_huddle_request(tx,request));
                 collect(db,pending,frames,pushes);
             } else if [notification_push::HuddleInvitationDeliveryJob::CLASS,notification_push::HuddleJoinDeliveryJob::CLASS].contains(&job.class) {
-                pushes.push(job.arguments);
+                pushes.push(json!({"payload":job.arguments["payload"], "subscription_ids":job.arguments["subscription_ids"]}));
             } else if job.class == huddle_invitations::RingRequest::CLASS {assert_eq!(job.arguments["delivered"],1);}
             else {panic!("unexpected job escaped the inventory: {job:?}");}
         }

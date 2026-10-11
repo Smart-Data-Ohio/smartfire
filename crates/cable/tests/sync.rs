@@ -430,6 +430,7 @@ async fn a_publication_read_before_a_fencing_event_is_refused() {
         server.sync_publish_fresh(event("stale row"), "unread:1:7", read),
         Err(campfire_cable::sync::Stale)
     );
+    assert_eq!(server.sync_head(), fence, "a refused row is not a publication");
     // Another key isn't fenced, and a fresh read goes out.
     let other = server
         .sync_publish_fresh(event("other room"), "unread:1:8", read)

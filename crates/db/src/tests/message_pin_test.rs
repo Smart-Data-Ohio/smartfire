@@ -110,7 +110,7 @@ fn pin_notes_are_quiet_system_notes() {
     pin(&t, &message, "david");
     let events = &t.events()[from..];
     assert!(!events.iter().any(|e| matches!(e, Event::PushMessage { .. } | Event::Job(_))), "{events:#?}");
-    assert!(!events.iter().filter_map(|e| e.as_broadcast()).any(|b| b.channel_frame().is_some_and(|(stream, _)| stream.contains("unread"))), "no unread broadcast");
+    assert!(!events.iter().filter_map(|e| e.as_broadcast()).any(|b| b.channel_frames().into_iter().any(|(stream, _)| stream.contains("unread"))), "no unread broadcast");
     assert_eq!(unread(&t), unread_before);
     assert_eq!(t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "activity_items""#, [])), items_before);
     let note = newest_root(&t, "designers");
