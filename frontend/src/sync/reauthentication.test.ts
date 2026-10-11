@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "@effect/vitest";
-import { Deferred, Effect, Fiber, Layer, Schema } from "effect";
+import { Deferred, Effect, Fiber, Layer, Option, Schema } from "effect";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
@@ -69,6 +69,8 @@ interface Page {
   screen: string;
   /** Whether local storage takes writes (it reads either way). */
   markable: boolean;
+  /** Whether session storage takes writes (it reads either way). */
+  keepable: boolean;
 }
 
 /** `storage` as a browser that refuses to write it shows it: readable, every write throws. */
@@ -89,11 +91,14 @@ function unwritable(storage: Storage): Storage {
   };
 }
 
-/** One browser's Web Locks: a single holder per name, the others waiting their turn. */
+/**
+ * One browser's Web Locks: a single holder per name, the others waiting their turn. A wait whose
+ * `signal` aborts gives up (`null`) and never holds the lock.
+ */
 function browserLocks() {
   const tails = new Map<string, Promise<void>>();
 
-  return (name: string): Promise<() => void> => {
+  return (name: string, signal?: AbortSignal): Promise<(() => void) | null> => {
     const previous = tails.get(name) ?? Promise.resolve();
     const held = Promise.withResolvers<void>();
 
@@ -102,7 +107,16 @@ function browserLocks() {
       previous.then(() => held.promise),
     );
 
-    return previous.then(() => held.resolve);
+    return new Promise((acquired) => {
+      signal?.addEventListener("abort", () => acquired(null), { once: true });
+      void previous.then(() => {
+        if (signal?.aborted === true) {
+          held.resolve();
+        } else {
+          acquired(held.resolve);
+        }
+      });
+    });
   };
 }
 
@@ -141,14 +155,23 @@ function harness(
   answer: (seen: Seen, index: number) => Reply,
   hold: (seen: Seen) => Effect.Effect<void> = () => Effect.void,
   // The page's own Web Locks (`navigator.locks`) unless the test gives the browser's.
-  lock: ((name: string) => Promise<(() => void) | null>) | "page" = browserLocks(),
+  lock:
+    | ((name: string, signal?: AbortSignal) => Promise<(() => void) | null>)
+    | "page" = browserLocks(),
 ) {
   const seen: Seen[] = [];
-  const page: Page = { viewer: 7, now: 1_000_000, screen: "/app/admin/styles", markable: true };
+
+  const page: Page = {
+    viewer: 7,
+    now: 1_000_000,
+    screen: "/app/admin/styles",
+    markable: true,
+    keepable: true,
+  };
 
   const gateOn = (storage: Storage) => {
     const options = {
-      storage: () => storage,
+      storage: () => (page.keepable ? storage : unwritable(storage)),
       shared: () => (page.markable ? localStorage : unwritable(localStorage)),
       viewer: () => page.viewer,
       now: () => page.now,
@@ -1067,6 +1090,123 @@ describe("the Google round trip", () => {
       expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
       expect(writesTo(seen, "/admin/people/4")).toHaveLength(1);
       expect(seen.filter((entry) => entry.path === "/api/v1/sudo/google")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a claimed write goes even when its kept copy can't be taken out", () => {
+    const { layer, seen, gate, page, duplicate } = googleHarness();
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const copy = duplicate();
+
+      // Session storage reads but takes no writes; the marks still work.
+      page.keepable = false;
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 1,
+        failure: null,
+        held: null,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+
+      // It went from the first tab, so the copy saying so is true.
+      page.keepable = true;
+      expect(yield* resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer))).toMatchObject({
+        replayed: 0,
+        elsewhere: 1,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a batch that runs out while waiting for another tab says its change was lost", () => {
+    const stalled = Deferred.makeUnsafe<void>();
+    let reads = 0;
+
+    const { layer, seen, gate, page, duplicate } = googleHarness({
+      // The first tab's status read hangs, holding the batch's lock.
+      hold: (entry) => {
+        if (entry.method === "GET" && entry.path === "/api/v1/sudo/continue") {
+          reads += 1;
+
+          return reads === 1 ? Deferred.await(stalled) : Effect.void;
+        }
+
+        return Effect.void;
+      },
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const copy = duplicate();
+      const first = yield* Effect.forkChild(resumeAfterGoogle(gate));
+
+      while (reads < 1) {
+        yield* Effect.sleep(1);
+      }
+
+      const second = yield* Effect.forkChild(
+        resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer)),
+      );
+
+      yield* Effect.sleep(5);
+      page.now += 11 * 60_000;
+      Deferred.doneUnsafe(stalled, Effect.void);
+
+      expect((yield* Fiber.join(first)).replayed).toBe(0);
+      expect(yield* Fiber.join(second)).toMatchObject({ replayed: 0, abandoned: 1, held: null });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("discarding while another tab holds the lock stops waiting and sends nothing", () => {
+    const stalled = Deferred.makeUnsafe<void>();
+    let reads = 0;
+
+    const { layer, seen, gate, duplicate } = googleHarness({
+      hold: (entry) => {
+        if (entry.method === "GET" && entry.path === "/api/v1/sudo/continue") {
+          reads += 1;
+
+          return reads === 1 ? Deferred.await(stalled) : Effect.void;
+        }
+
+        return Effect.void;
+      },
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const copy = duplicate();
+      const first = yield* Effect.forkChild(resumeAfterGoogle(gate));
+
+      while (reads < 1) {
+        yield* Effect.sleep(1);
+      }
+
+      const leaving = new AbortController();
+
+      const second = yield* Effect.forkChild(
+        resumeAfterGoogle(copy.gate, { signal: leaving.signal }).pipe(Effect.provide(copy.layer)),
+      );
+
+      yield* Effect.sleep(5);
+      discardKept(copy.gate);
+      leaving.abort();
+
+      // The copy is done before the first tab lets go of the lock, having asked nothing.
+      const discarded = yield* Fiber.join(second).pipe(Effect.timeoutOption(200));
+
+      expect(Option.getOrNull(discarded)).toMatchObject({ replayed: 0, held: null });
+      expect(reads).toBe(1);
+
+      Deferred.doneUnsafe(stalled, Effect.void);
+      expect((yield* Fiber.join(first)).replayed).toBe(1);
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
     }).pipe(Effect.provide(layer));
   });
 

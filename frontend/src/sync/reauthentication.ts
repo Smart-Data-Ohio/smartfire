@@ -150,16 +150,21 @@ function localStore(): Storage | null {
 
 /**
  * Holds the browser's Web Lock `name` until the returned release runs; `null` where the browser
- * has no Web Locks or won't grant this one, so nothing replays on its own.
+ * has no Web Locks or won't grant this one, or `signal` aborts the wait for it, so nothing
+ * replays.
  */
-function webLock(name: string): Promise<(() => void) | null> {
+function webLock(name: string, signal?: AbortSignal): Promise<(() => void) | null> {
   if (!("locks" in globalThis.navigator)) {
     return Promise.resolve(null);
   }
 
   return new Promise((acquired) => {
     globalThis.navigator.locks
-      .request(name, () => new Promise<void>((release) => acquired(() => release())))
+      .request(
+        name,
+        signal === undefined ? {} : { signal },
+        () => new Promise<void>((release) => acquired(() => release())),
+      )
       .catch(() => acquired(null));
   });
 }
@@ -175,8 +180,11 @@ export interface GateOptions {
   readonly storage?: () => Storage | null;
   /** Where every tab marks the writes it replayed. */
   readonly shared?: () => Storage | null;
-  /** Takes a lock every tab of this browser shares; resolves with its release, or `null`. */
-  readonly lock?: (name: string) => Promise<(() => void) | null>;
+  /**
+   * Takes a lock every tab of this browser shares; resolves with its release, or `null` (also
+   * once `signal` aborts the wait).
+   */
+  readonly lock?: (name: string, signal?: AbortSignal) => Promise<(() => void) | null>;
   /** The signed-in person's id; `null` before the boot names them. */
   readonly viewer?: () => number | null;
   readonly now?: () => number;
@@ -351,9 +359,19 @@ export function makeConfirmationGate({
 
     /**
      * Holds this browser's lock on batch `id`'s replay; resolves with its release, or `null`
-     * where it can't be held.
+     * where it can't be held or `signal` aborts the wait.
      */
-    exclusive: (id: string): Promise<(() => void) | null> => lock(`smartfire:confirmation:${id}`),
+    exclusive: (id: string, signal?: AbortSignal): Promise<(() => void) | null> =>
+      lock(`smartfire:confirmation:${id}`, signal),
+
+    /** How many writes this person's stored hand-off keeps, and their page; reads only. */
+    kept(): { readonly writes: number; readonly returnTo: string } | null {
+      const handoff = readHandoff();
+
+      return handoff === null || handoff.user !== viewer()
+        ? null
+        : { writes: handoff.writes.length, returnTo: spaReturnPath(handoff.returnTo) };
+    },
 
     /**
      * Marks write `index` of batch `id` as sent, for every tab: `"claimed"` when the mark is
@@ -690,23 +708,67 @@ const anyJson = (json: Schema.Json) => Effect.succeed(json);
  * replay a batch one at a time, and a write goes only once its mark (read back) says this tab
  * sent it: one another tab sent is skipped (`elsewhere`). Where the lock or the mark can't be
  * had, nothing goes and the writes wait (`"claim"`) for another try. Any other answer keeps them
- * for the person to confirm again, unless the session changed (`abandoned`).
+ * for the person to confirm again, unless the session changed (`abandoned`). Once `signal` aborts
+ * (the person discarded them, or left), it stops waiting for the lock and sends nothing more;
+ * `onWait` hears when another tab holds the lock a while.
  */
 export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(function* (
   gate: ConfirmationGate,
+  { signal, onWait }: { readonly signal?: AbortSignal; readonly onWait?: () => void } = {},
 ) {
   const { handoff, expired } = gate.handoff();
 
+  if (signal?.aborted === true) {
+    return untouched(handoff?.returnTo ?? null, expired);
+  }
+
   if (handoff === null) {
-    return yield* resume(gate, null, expired, false);
+    return yield* resume(gate, null, expired, false, signal);
   }
 
   return yield* Effect.acquireUseRelease(
-    Effect.promise(() => gate.exclusive(handoff.id)),
-    // Re-read under the lock: this tab's hand-off as it is now.
-    (release) => resume(gate, gate.handoff().handoff, expired, release !== null && gate.canMark()),
+    Effect.promise(() => {
+      const claim = gate.exclusive(handoff.id, signal);
+      const notice = setTimeout(() => onWait?.(), WAIT_NOTICE_MS);
+
+      return claim.finally(() => clearTimeout(notice));
+    }),
+    (release) => {
+      if (signal?.aborted === true) {
+        return Effect.succeed(untouched(handoff.returnTo, expired));
+      }
+
+      // Re-read under the lock: this tab's hand-off as it is now, and what ran out meanwhile.
+      const now = gate.handoff();
+
+      return resume(
+        gate,
+        now.handoff,
+        expired + now.expired,
+        release !== null && gate.canMark(),
+        signal,
+        handoff.returnTo,
+      );
+    },
     (release) => Effect.sync(() => release?.()),
   );
+});
+
+/** How long the lock may take before the page says another tab holds it. */
+const WAIT_NOTICE_MS = 300;
+
+/** What a return the person gave up on (or left) came to: nothing asked, nothing sent. */
+const untouched = (returnTo: string | null, expired: number): GoogleReturn => ({
+  confirmed: false,
+  returnTo: spaReturnPath(returnTo),
+  replayed: 0,
+  failure: null,
+  dropped: 0,
+  abandoned: expired,
+  elsewhere: 0,
+  held: null,
+  kept: 0,
+  unreachable: null,
 });
 
 const resume = Effect.fnUntraced(function* (
@@ -715,8 +777,12 @@ const resume = Effect.fnUntraced(function* (
   expired: number,
   /** Whether this tab holds the browser's lock on the batch and can mark writes sent. */
   exclusive: boolean,
+  /** Aborts once the person discards the writes, or leaves: nothing more goes. */
+  signal?: AbortSignal,
+  /** The page the hand-off came from, when it ran out before this read. */
+  from: string | null = null,
 ) {
-  const returnTo = spaReturnPath(handoff?.returnTo ?? null);
+  const returnTo = spaReturnPath(handoff?.returnTo ?? from);
   const dropped = handoff?.dropped ?? 0;
 
   const outcome = {
@@ -804,36 +870,43 @@ const resume = Effect.fnUntraced(function* (
   let sentElsewhere = 0;
   let failure: string | null = null;
 
-  for (let turn = gate.nextKept(handoff.id); turn !== null; turn = gate.nextKept(handoff.id)) {
-    const claim = gate.claimSent(handoff.id, turn.index, handoff.expiresAt);
+  for (const [offset, write] of handoff.writes.entries()) {
+    const index = handoff.next + offset;
+    const rest = { ...handoff, next: index, writes: handoff.writes.slice(offset) };
 
-    // Without its mark another tab could send it too: it and the rest wait, unsent.
+    // Discarded, or left: the rest stay as they are, unsent.
+    if (signal?.aborted === true) {
+      return { ...outcome, confirmed, replayed, elsewhere: sentElsewhere, failure };
+    }
+
+    const claim = gate.claimSent(handoff.id, index, handoff.expiresAt);
+
+    // Without its mark another tab could send it too: it and the rest wait, unsent (or, run out,
+    // are lost).
     if (claim === "unavailable") {
-      const left = gate.handoff();
-
-      const kept =
-        left.handoff === null ? 0 : left.handoff.writes.length - gate.sentElsewhere(left.handoff);
+      const unsentRest = rest.writes.length - gate.sentElsewhere(rest);
+      const ranOut = gate.handoff().handoff === null;
 
       return {
         ...outcome,
         confirmed,
         replayed,
-        abandoned: expired + left.expired,
+        abandoned: expired + (ranOut ? unsentRest : 0),
         elsewhere: sentElsewhere,
         failure,
-        held: kept === 0 ? null : "claim",
-        kept,
+        held: ranOut || unsentRest === 0 ? null : "claim",
+        kept: ranOut ? 0 : unsentRest,
       } satisfies GoogleReturn;
     }
 
-    if (!gate.take(handoff.id, turn.index)) {
-      break;
-    }
+    // This tab holds the lock and the mark: the write is its to send. Taking it out of storage
+    // only tidies up (a reload finds it marked either way), so it goes even if that fails.
+    gate.take(handoff.id, index);
 
     if (claim === "sent") {
       sentElsewhere += 1;
     } else {
-      const landed = yield* client.execute(turn.write, anyJson).pipe(
+      const landed = yield* client.execute(write, anyJson).pipe(
         Effect.match({
           onSuccess: () => null,
           onFailure: (error) => error.message,
@@ -846,6 +919,11 @@ const resume = Effect.fnUntraced(function* (
         failure ??= landed;
       }
     }
+  }
+
+  // A copy storage wouldn't let go of is all marked sent by now.
+  if (gate.nextKept(handoff.id) !== null) {
+    gate.forget();
   }
 
   // Done with the attempt: the server stops answering for it. If this doesn't arrive, it expires.

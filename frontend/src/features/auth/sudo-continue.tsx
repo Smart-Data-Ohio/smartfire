@@ -26,7 +26,8 @@ function announce(result: GoogleReturn): void {
     // What was kept wasn't for this confirmation (another tab's, a new session's) or ran out.
     toast({
       title: result.abandoned === 1 ? "Your change wasn't sent" : "Your changes weren't sent",
-      description: "The confirmation didn't match the page you left. Make the change again.",
+      description:
+        "The confirmation didn't match the page you left, or came too late. Make the change again.",
       tone: "danger",
     });
 
@@ -79,7 +80,7 @@ function announce(result: GoogleReturn): void {
 
 /** What the continue page shows once it isn't loading. */
 type Shown =
-  | { readonly kind: "pending" }
+  | { readonly kind: "pending"; readonly waiting: boolean }
   | { readonly kind: "stalled" }
   | {
       readonly kind: "held";
@@ -110,15 +111,35 @@ export function SudoContinue() {
   const navigate = useNavigate();
   // The hand-off belongs to whoever chose Google: wait for the boot to say who's signed in.
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
-  const [shown, setShown] = useState<Shown>({ kind: "pending" });
+  const [shown, setShown] = useState<Shown>({ kind: "pending", waiting: false });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
   // Once per attempt, even when Strict Mode runs the effect twice.
   const ran = useRef(-1);
+  // Aborted by Discard, or by leaving the page: stops waiting for another tab, sends nothing more.
+  const stop = useRef(new AbortController());
+  const mounted = useRef(false);
+  const kept = actions.confirmation.kept();
+
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+      // Strict Mode mounts again at once; only a page really left stops.
+      queueMicrotask(() => {
+        if (!mounted.current) stop.current.abort();
+      });
+    };
+  }, []);
 
   const finish = useCallback(
     (result: GoogleReturn) => {
+      if (stop.current.signal.aborted) {
+        return;
+      }
+
       if (result.unreachable !== null) {
         setShown({ kind: "stalled" });
 
@@ -148,11 +169,47 @@ export function SudoContinue() {
     }
 
     ran.current = attempt;
-    actions.confirmation.resumeAfterGoogle().then(finish, () => setShown({ kind: "stalled" }));
+    actions.confirmation
+      .resumeAfterGoogle({
+        signal: stop.current.signal,
+        onWait: () => setShown({ kind: "pending", waiting: true }),
+      })
+      .then(finish, () => setShown({ kind: "stalled" }));
   }, [viewerId, attempt, finish]);
 
+  /** Gives up on what's kept, whatever this page is waiting on: nothing more is sent. */
+  const discard = (returnTo: string) => {
+    stop.current.abort();
+    actions.confirmation.discardKept();
+    void navigate({ href: returnTo, replace: true });
+  };
+
+  const discardButton = (count: number, returnTo: string) => (
+    <Button onClick={() => discard(returnTo)}>
+      {count === 1 ? "Discard change" : "Discard changes"}
+    </Button>
+  );
+
   if (shown.kind === "pending") {
-    return <RoutePending />;
+    if (kept === null) {
+      return <RoutePending />;
+    }
+
+    const change = kept.writes === 1 ? "change" : "changes";
+
+    return (
+      <section className="room room-error enter-fade" aria-label="Confirmation" aria-busy="true">
+        <p className="text-title">
+          {shown.waiting ? `Another tab is finishing this ${change}` : `Finishing your ${change}`}
+        </p>
+        <p className="text-muted" role="status">
+          {shown.waiting
+            ? "That tab may still send it. This page goes on once it's done; discarding here stops only this page."
+            : "Checking your confirmation…"}
+        </p>
+        <div className="room-error-actions">{discardButton(kept.writes, kept.returnTo)}</div>
+      </section>
+    );
   }
 
   if (shown.kind === "stalled") {
@@ -167,26 +224,27 @@ export function SudoContinue() {
           <Button
             variant="primary"
             onClick={() => {
-              setShown({ kind: "pending" });
+              setShown({ kind: "pending", waiting: false });
               setAttempt((count) => count + 1);
             }}
           >
             Try again
           </Button>
+          {kept === null ? null : discardButton(kept.writes, kept.returnTo)}
           <Link to="/">Go home</Link>
         </div>
       </section>
     );
   }
 
-  const { reason, kept, returnTo } = shown;
+  const { reason, kept: count, returnTo } = shown;
 
   const proceed = () => {
     setBusy(true);
     setError(null);
 
     if (reason === "claim") {
-      actions.confirmation.resumeAfterGoogle().then(
+      actions.confirmation.resumeAfterGoogle({ signal: stop.current.signal }).then(
         (result) => {
           setBusy(false);
           finish(result);
@@ -202,6 +260,11 @@ export function SudoContinue() {
 
     actions.confirmation.confirmAgain().then(
       (start) => {
+        // Discarded meanwhile: nothing is left to confirm.
+        if (stop.current.signal.aborted) {
+          return;
+        }
+
         if (start.kind === "navigate") {
           window.location.assign(start.location);
 
@@ -221,24 +284,16 @@ export function SudoContinue() {
   return (
     <section className="room room-error enter-fade" aria-label="Confirmation">
       <p className="text-title">
-        {kept === 1 ? "Your change hasn't been sent" : "Your changes haven't been sent"}
+        {count === 1 ? "Your change hasn't been sent" : "Your changes haven't been sent"}
       </p>
       <p className="text-muted" role="alert">
-        {error ?? heldCopy(reason, kept)}
+        {error ?? heldCopy(reason, count)}
       </p>
       <div className="room-error-actions">
         <Button variant="primary" disabled={busy} onClick={proceed}>
           {reason === "claim" ? "Try again" : "Confirm again"}
         </Button>
-        <Button
-          disabled={busy}
-          onClick={() => {
-            actions.confirmation.discardKept();
-            void navigate({ href: returnTo, replace: true });
-          }}
-        >
-          {kept === 1 ? "Discard change" : "Discard changes"}
-        </Button>
+        {discardButton(count, returnTo)}
       </div>
     </section>
   );

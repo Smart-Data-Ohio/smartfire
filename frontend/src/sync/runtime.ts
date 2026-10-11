@@ -602,10 +602,16 @@ const confirmation = {
   screenChanged: (): void => confirmationGate.screenChanged(),
   /**
    * The Google return: replays the kept writes once the server confirms their attempt and this
-   * tab can claim them; trying again only claims them again.
+   * tab can claim them; trying again only claims them again. `signal` stops it (Discard, or
+   * leaving the page); `onWait` hears that another tab holds the batch.
    */
-  resumeAfterGoogle: (): Promise<confirmationActions.GoogleReturn> =>
-    runAction(confirmationActions.resumeAfterGoogle(confirmationGate)),
+  resumeAfterGoogle: (options?: {
+    readonly signal?: AbortSignal;
+    readonly onWait?: () => void;
+  }): Promise<confirmationActions.GoogleReturn> =>
+    runAction(confirmationActions.resumeAfterGoogle(confirmationGate, options)),
+  /** How many writes the Google return still keeps, and their page; `null` when none. */
+  kept: () => confirmationGate.kept(),
   /** Confirms with Google again for the writes still kept; the caller leaves on `navigate`. */
   confirmAgain: (): Promise<confirmationActions.GoogleStart> =>
     runAction(confirmationActions.confirmAgain(confirmationGate)),

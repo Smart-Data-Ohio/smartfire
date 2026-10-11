@@ -396,6 +396,68 @@ for (const theme of THEMES) {
         await copy.close();
       });
 
+      test("a copy waiting on another tab can be discarded without sending", async ({
+        page,
+        context,
+        request,
+      }) => {
+        let patches = 0;
+        let reads = 0;
+        const released = Promise.withResolvers<void>();
+
+        context.on("request", (sent) => {
+          if (sent.method() === "PATCH" && sent.url().endsWith("/api/v1/admin/custom_styles")) {
+            patches += 1;
+          }
+        });
+        // The first tab's status read hangs, holding the batch's lock, until the copy is gone.
+        await context.route(/\/api\/v1\/sudo\/continue(\?|$)/, async (route) => {
+          if (route.request().method() === "GET") {
+            reads += 1;
+
+            if (reads === 1) await released.promise;
+          }
+
+          await route.fallback();
+        });
+        await lapse(request, ["password", "google"]);
+        await open(page, "/app/admin/styles", theme);
+
+        await page.getByRole("textbox", { name: "Custom CSS" }).fill("b { color: teal; }");
+        await page.getByRole("button", { name: "Save changes" }).click();
+        await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+        await expect(page).toHaveURL(/\/app\/sudo\/continue$/);
+        await expect.poll(() => reads).toBe(1);
+
+        const kept = await page.evaluate(() =>
+          sessionStorage.getItem("smartfire:confirmation-pending"),
+        );
+
+        const copy = await context.newPage();
+
+        await copy.setViewportSize(viewport);
+        await copy.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+        await copy.addInitScript((value) => {
+          if (value !== null && sessionStorage.getItem("duplicated") === null) {
+            sessionStorage.setItem("duplicated", "1");
+            sessionStorage.setItem("smartfire:confirmation-pending", value);
+          }
+        }, kept);
+        await copy.goto("/app/sudo/continue");
+
+        await expect(copy.getByText("Another tab is finishing this change")).toBeVisible();
+        await expectNoHorizontalOverflow(copy);
+        await shot(copy, "reauth-google-waiting", theme);
+        await copy.getByRole("button", { name: "Discard change" }).click();
+        await expect(copy).toHaveURL(/\/app\/admin\/styles$/);
+        expect(reads).toBe(1);
+        await copy.close();
+
+        released.resolve();
+        await expect(page.getByText("Confirmed — your change was saved")).toBeVisible();
+        expect(patches).toBe(2);
+      });
+
       test("a Google confirmation comes back and finishes the change", async ({
         page,
         request,
