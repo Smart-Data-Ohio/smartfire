@@ -24,6 +24,8 @@ fn settings() -> Settings {
             bot: false,
             pronouns: None,
             nickname: None,
+            banner_url: Some("/users/tok/banner?v=12".into()),
+            banner_still_url: Some("/users/tok/banner?v=12&still=1".into()),
         },
         appearance: AppearanceSettings {
             theme: Theme::Dark,
@@ -102,7 +104,9 @@ fn settings_wire() {
                 "githubVerified": false,
                 "bot": false,
                 "pronouns": null,
-                "nickname": null
+                "nickname": null,
+                "bannerUrl": "/users/tok/banner?v=12",
+                "bannerStillUrl": "/users/tok/banner?v=12&still=1"
             },
             "appearance": {
                 "theme": "dark",
@@ -180,6 +184,7 @@ fn settings_writes_wire() {
         }),
     );
     assert_wire(&UpdateAvatar { signed_id: "eyJf--1".into() }, json!({ "signedId": "eyJf--1" }));
+    assert_wire(&UpdateProfileBanner { signed_id: "eyJf--2".into() }, json!({ "signedId": "eyJf--2" }));
     assert_wire(
         &UpdateAppearance { theme: Some(Theme::System), text_size: None, time_zone: Some(String::new()), appearance_preferences: None },
         json!({ "theme": "system", "textSize": null, "timeZone": "", "appearancePreferences": null }),

@@ -38,6 +38,13 @@ pub struct User {
     /// The legal/account name; `name` is the shared display name.
     pub account_name: String,
     pub pronouns: Option<String>,
+    /// The profile banner (the strip above the avatar on their page and profile card), versioned
+    /// by the attached image so a new banner gets a new URL. `null` without one: the client draws
+    /// a fallback from the avatar's tint.
+    pub banner_url: Option<String>,
+    /// An animated banner's first frame, for reduced motion and resting states; `null` for a
+    /// still image or no banner.
+    pub banner_still_url: Option<String>,
 }
 
 /// `users.role`.

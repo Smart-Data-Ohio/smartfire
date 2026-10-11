@@ -47,6 +47,10 @@ pub fn routes() -> Router<Kit> {
             put(unparsed_action(update_avatar)).delete(unparsed_action(remove_avatar)),
         )
         .route(
+            "/api/v1/settings/banner",
+            put(unparsed_action(update_banner)).delete(unparsed_action(remove_banner)),
+        )
+        .route(
             "/api/v1/settings/appearance",
             patch(unparsed_action(update_appearance)),
         )
@@ -148,6 +152,14 @@ endpoint!(
 endpoint!(
     /// `DELETE /api/v1/settings/avatar`
     remove_avatar => detach_avatar
+);
+endpoint!(
+    /// `PUT /api/v1/settings/banner`
+    update_banner => attach_banner
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/banner`
+    remove_banner => detach_banner
 );
 endpoint!(
     /// `PATCH /api/v1/settings/appearance`
@@ -309,7 +321,7 @@ async fn show_settings(c: &mut Ctx) -> Result {
 pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
     let now = c.now();
     let secrets = c.app().secrets.clone();
-    let (user, status, sections, appearance, avatar_attached) = c
+    let (user, status, sections, appearance, avatar_attached, banner) = c
         .app()
         .db
         .read_snapshot(move |conn| {
@@ -318,12 +330,14 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
             let sections = profile_sections::load(conn, id, now)?;
             let appearance = profile_settings::appearance(conn, id)?;
             let attached = attachments::attached_blob(conn, "User", id, "avatar")?.is_some();
-            Ok((user, status, sections, appearance, attached))
+            let banner = crate::dto::profile_banners(conn, &[id])?.remove(&id);
+            Ok((user, status, sections, appearance, attached, banner))
         })
         .await
         .map_err(db_error)?;
     let integrations = integrations(c, id).await?;
     let now = campfire_db::Timestamp::from_jiff(now);
+    let (banner_url, banner_still_url) = crate::dto::banner_paths(&secrets, id, banner);
     Ok(api::Settings {
         revision: status.notification_preferences.settings_revision,
         evaluated_at: now.to_evaluation_time(),
@@ -343,6 +357,8 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
             bot: user.is_bot(),
             pronouns: user.pronouns.clone(),
             nickname: user.nickname.clone(),
+            banner_url,
+            banner_still_url,
         },
         appearance: api::AppearanceSettings {
             theme: theme(&appearance.theme),
@@ -665,20 +681,27 @@ async fn save_profile(c: &mut Ctx) -> Result {
     )
     .await?;
     if identity_changing {
-        let now = campfire_db::Timestamp::from_jiff(c.now());
-        let secrets = c.app().secrets.clone();
-        let (user, rooms) = c.app().db
-            .read(move |conn| {
-                let user = crate::dto::users(conn, &secrets, [id], now)?.remove(0);
-                let rooms = campfire_db::Room::for_user(conn, id)?.into_iter()
-                    .filter(campfire_db::Room::direct).collect::<Vec<_>>();
-                Ok((user, rooms))
-            })
-            .await
-            .map_err(db_error)?;
-        c.app().broadcasts.user_updated(user, &rooms);
+        publish_identity(c, id).await?;
     }
     reply(c, id).await
+}
+
+/// `user.updated` for everyone, with the person as the directory has them, and their direct
+/// conversations' sidebar rows: how a new name, avatar or banner reaches other clients.
+async fn publish_identity(c: &mut Ctx, id: i64) -> Result<()> {
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let secrets = c.app().secrets.clone();
+    let (user, rooms) = c.app().db
+        .read(move |conn| {
+            let user = crate::dto::users(conn, &secrets, [id], now)?.remove(0);
+            let rooms = campfire_db::Room::for_user(conn, id)?.into_iter()
+                .filter(campfire_db::Room::direct).collect::<Vec<_>>();
+            Ok((user, rooms))
+        })
+        .await
+        .map_err(db_error)?;
+    c.app().broadcasts.user_updated(user, &rooms);
+    Ok(())
 }
 
 async fn attach_avatar(c: &mut Ctx) -> Result {
@@ -710,6 +733,90 @@ async fn assign_avatar(c: &mut Ctx, id: i64, avatar: Assignment) -> Result {
         })
         .await
         .map_err(Error::internal)?;
+    publish_identity(c, id).await?;
+    reply(c, id).await
+}
+
+/// The profile banner goes through the workspace banner's checks and still, within the
+/// workspace's upload limit. Only a fresh upload of the person's own can become it.
+async fn attach_banner(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    let id = user.id;
+    let update: api::UpdateProfileBanner = body(c).await?;
+    let limit = campfire_runtime::active_storage::upload_limit_bytes(c.app()).await?;
+    let limit = (limit.max(0) as u64).min(campfire_storage::branding::MAX_BYTES);
+    let prepared = crate::branding_images::prepare(
+        c,
+        &update.signed_id,
+        campfire_storage::branding::Kind::Banner,
+        limit,
+    )
+    .await?;
+    let blob = prepared.blob.clone();
+    let uploader = blob
+        .metadata
+        .get("uploader_id")
+        .and_then(campfire_storage::Json::as_i64);
+    let blob_id = blob.id;
+    // Anything else the blob is attached to (a message, an avatar) keeps it as it is.
+    let used_elsewhere = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id = ?1 \
+                 AND NOT (record_type = 'User' AND record_id = ?2 AND name = 'banner'))",
+                rusqlite::params![blob_id, id],
+                |row| row.get::<_, bool>(0),
+            )?)
+        })
+        .await
+        .map_err(db_error)?;
+    if uploader.is_some_and(|uploader| uploader != id) || used_elsewhere {
+        return Err(fail(c, validation("signedId", "must be an image you uploaded")));
+    }
+    let storage = c.app().storage.clone();
+    let secrets = c.app().secrets.clone();
+    c.app()
+        .db
+        .write(move |tx| {
+            crate::branding_images::save(
+                tx,
+                &storage,
+                rails_compat::blob_branding::Marker::new(&secrets),
+                prepared,
+            )?;
+            attachments::assign(
+                tx,
+                Record::user_banner(id, &secrets),
+                "banner",
+                Assignment::Existing(blob),
+            )?;
+            profile_settings::bump_revision(tx, id)
+        })
+        .await
+        .map_err(Error::internal)?;
+    publish_identity(c, id).await?;
+    reply(c, id).await
+}
+
+async fn detach_banner(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    let id = user.id;
+    let secrets = c.app().secrets.clone();
+    let removed = c
+        .app()
+        .db
+        .write(move |tx| {
+            let removed = attachments::destroy(tx, Record::user_banner(id, &secrets), "banner")?;
+            profile_settings::bump_revision(tx, id)?;
+            Ok(removed)
+        })
+        .await
+        .map_err(Error::internal)?;
+    if removed {
+        publish_identity(c, id).await?;
+    }
     reply(c, id).await
 }
 

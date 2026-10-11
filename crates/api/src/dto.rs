@@ -31,10 +31,11 @@ fn present(value: Option<&str>) -> Option<String> {
 }
 
 /// The per-person facts a [`User`] row doesn't hold, read for a batch at once: who uploaded a
-/// picture, each agent's badge, and each bot's resolved icon.
+/// picture, each profile banner, each agent's badge, and each bot's resolved icon.
 #[derive(Default)]
 pub struct UserExtras {
     avatars: BTreeSet<i64>,
+    banners: HashMap<i64, Banner>,
     agents: HashMap<i64, api::AgentBadge>,
     icons: HashMap<i64, api::Icon>,
 }
@@ -45,6 +46,7 @@ impl UserExtras {
         let users: Vec<&User> = users.into_iter().collect();
         let ids: Vec<i64> = users.iter().map(|user| user.id).collect();
         let avatars = uploaded_avatars(conn, &ids)?;
+        let banners = profile_banners(conn, &ids)?;
         let bots: Vec<i64> = users
             .iter()
             .filter(|user| user.is_bot())
@@ -79,6 +81,7 @@ impl UserExtras {
         }
         Ok(Self {
             avatars,
+            banners,
             agents,
             icons,
         })
@@ -87,6 +90,58 @@ impl UserExtras {
     pub fn has_avatar(&self, user_id: i64) -> bool {
         self.avatars.contains(&user_id)
     }
+
+    /// The profile banner's image and first-frame paths, both `None` without one.
+    pub fn banner_paths(&self, secrets: &Secrets, user_id: i64) -> (Option<String>, Option<String>) {
+        banner_paths(secrets, user_id, self.banners.get(&user_id).copied())
+    }
+}
+
+/// An attached profile banner: its blob, and whether it moves (and so has a still).
+#[derive(Debug, Clone, Copy)]
+pub struct Banner {
+    pub blob_id: i64,
+    pub animated: bool,
+}
+
+/// The banner's image path and, when it moves, its first frame's.
+pub fn banner_paths(
+    secrets: &Secrets,
+    user_id: i64,
+    banner: Option<Banner>,
+) -> (Option<String>, Option<String>) {
+    let Some(banner) = banner else {
+        return (None, None);
+    };
+    let token = presenters::avatar_token(secrets, user_id);
+    let url = campfire_routes::fresh_user_banner(&token, banner.blob_id, false);
+    let still = banner
+        .animated
+        .then(|| campfire_routes::fresh_user_banner(&token, banner.blob_id, true));
+    (Some(url), still)
+}
+
+/// Each of `ids`' profile banner (`has_one_attached :banner`), read with its blob's metadata.
+pub fn profile_banners(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, Banner>> {
+    Ok(ids_query(
+        conn,
+        r#"SELECT "active_storage_attachments"."record_id", "active_storage_blobs"."id", "active_storage_blobs"."metadata" FROM "active_storage_attachments" INNER JOIN "active_storage_blobs" ON "active_storage_blobs"."id" = "active_storage_attachments"."blob_id" WHERE "active_storage_attachments"."record_type" = 'User' AND "active_storage_attachments"."name" = 'banner' AND "active_storage_attachments"."record_id" IN ({})"#,
+        ids,
+        |row| {
+            let metadata: Option<String> = row.get(2)?;
+            let animated = metadata
+                .and_then(|text| campfire_storage::Json::parse(&text).ok())
+                .is_some_and(|metadata| {
+                    matches!(
+                        metadata.get(campfire_storage::branding::ANIMATED_KEY),
+                        Some(campfire_storage::Json::Bool(true))
+                    )
+                });
+            Ok((row.get(0)?, Banner { blob_id: row.get(1)?, animated }))
+        },
+    )?
+    .into_iter()
+    .collect())
 }
 
 /// The badge of each agent among the bot users `user_ids`, by user id.
@@ -193,6 +248,7 @@ pub fn user(
             text,
             expires_at: settings.custom_status_expires_at.map(time),
         });
+    let (banner_url, banner_still_url) = extras.banner_paths(secrets, user.id);
     api::User {
         id: user.id,
         name: user.display_name().to_owned(),
@@ -216,6 +272,8 @@ pub fn user(
         updated_at: row_version(user.updated_at),
         account_name: user.name.clone(),
         pronouns: user.pronouns.clone(),
+        banner_url,
+        banner_still_url,
     }
 }
 

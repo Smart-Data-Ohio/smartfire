@@ -210,6 +210,14 @@ impl Record {
         }
     }
 
+    /// A person's profile banner: branding, checked and kept as the workspace banner is.
+    pub fn user_banner(id: i64, secrets: &rails_compat::Secrets) -> Self {
+        Self {
+            branding: Some(rails_compat::blob_branding::Marker::new(secrets)),
+            ..Self::user(id)
+        }
+    }
+
     pub fn workspace_icon(id: i64) -> Self {
         Self {
             record_type: "WorkspaceIcon",
