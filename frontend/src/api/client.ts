@@ -3,7 +3,7 @@ import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import type * as HttpClientResponse from "effect/http/HttpClientResponse";
-import { store } from "../store/store.ts";
+import { gatedFetch } from "../lib/network-gate.ts";
 import {
   ApiErrorResponse,
   type ApiFailure,
@@ -89,9 +89,6 @@ export interface ApiRequest {
 
 /** Validates a success body; a failure becomes a `ServerError`. */
 export type ResponseDecoder<A> = (json: Schema.Json) => Effect.Effect<A, Schema.SchemaError>;
-
-/** Why a request is refused once another account signed in under the page. */
-const ACCOUNT_CHANGED = "You signed in as a different account in another tab. Reload to continue.";
 
 /**
  * The `/api/v1` client: JSON in and out, the CSRF token on every write (refreshed and retried once
@@ -182,7 +179,7 @@ export class ApiClient extends Context.Service<
         );
 
       // A write the server holds for a fresh confirmation waits for it, then goes again once.
-      const send = <A>(
+      const execute = <A>(
         request: ApiRequest,
         decode: ResponseDecoder<A>,
       ): Effect.Effect<A, ApiFailure> => {
@@ -201,26 +198,8 @@ export class ApiClient extends Context.Service<
         );
       };
 
-      // Every request goes through here. Once the server answered this page as another account,
-      // nothing more goes out: whatever came back would be theirs, shown as the old account's.
-      const execute = <A>(
-        request: ApiRequest,
-        decode: ResponseDecoder<A>,
-      ): Effect.Effect<A, ApiFailure> =>
-        Effect.suspend(() =>
-          store.getState().accountChanged
-            ? Effect.fail(new NetworkError({ message: ACCOUNT_CHANGED }))
-            : send(request, decode),
-        );
-
-      const csrfToken = Effect.suspend(() =>
-        store.getState().accountChanged
-          ? Effect.succeed(null)
-          : Effect.flatMap(Ref.get(token), (held) =>
-              held === null
-                ? Effect.orElseSucceed(refreshToken(), () => null)
-                : Effect.succeed(held),
-            ),
+      const csrfToken = Effect.flatMap(Ref.get(token), (held) =>
+        held === null ? Effect.orElseSucceed(refreshToken(), () => null) : Effect.succeed(held),
       );
 
       return ApiClient.of({ execute, setCsrfToken: (fresh) => Ref.set(token, fresh), csrfToken });
@@ -236,14 +215,18 @@ export class ApiClient extends Context.Service<
     );
 }
 
-/** `fetch` with the session cookie (same origin only). */
+/**
+ * `fetch` with the session cookie (same origin only), each send behind the network gate: the
+ * first try, CSRF token reads and every retry all stop once another account answered the page.
+ */
 const sameOriginFetch = Layer.effect(
   HttpClient.HttpClient,
   Effect.map(HttpClient.HttpClient, (client) =>
     HttpClient.transform(client, (response) =>
-      Effect.provideService(response, FetchHttpClient.RequestInit, {
-        credentials: "same-origin",
-      }),
+      response.pipe(
+        Effect.provideService(FetchHttpClient.RequestInit, { credentials: "same-origin" }),
+        Effect.provideService(FetchHttpClient.Fetch, gatedFetch),
+      ),
     ),
   ),
 ).pipe(Layer.provide(FetchHttpClient.layer));
