@@ -56,6 +56,8 @@ describe("the screen map and the router", () => {
       "/app/session/new",
       "/app/two_factor/challenge",
       "/app/session/transfers/:id",
+      "/app/join/:id",
+      "/app/invite/:id",
     ]);
 
     for (const route of Object.values(router.routesById)) {
