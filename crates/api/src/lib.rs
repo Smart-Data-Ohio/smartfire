@@ -49,6 +49,7 @@ pub mod slack;
 pub mod stage;
 pub mod sync;
 pub mod threads;
+pub mod welcome;
 pub mod work;
 pub mod work_links;
 #[cfg(feature = "test-support")]
@@ -501,5 +502,6 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(invites::routes())
         .merge(bots::routes())
         .merge(slack::routes())
+        .merge(welcome::routes())
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))
 }
