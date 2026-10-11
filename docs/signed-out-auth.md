@@ -1,8 +1,10 @@
 # Signed-out authentication contracts
 
-Slice 44 adds JSON contracts and a public SPA boot mode. The retained auth pages and
-production sign-in navigation keep their current URLs and handlers. This slice adds no
-React pages or navigation links.
+Slice 44 adds JSON contracts and a public SPA boot mode. Slice 45 renders the sign-in,
+second-factor challenge and transfer pages at the reserved SPA routes
+(`frontend/src/features/auth/`). The retained auth pages and production sign-in navigation
+keep their current URLs and handlers; a later slice moves the canonical routes to the SPA
+pages and deletes the retained ones.
 
 ## Reserved SPA routes
 
@@ -16,7 +18,7 @@ The shell permits visitors without a session only at these auth paths:
 
 The transfer ID must occupy one nonempty path segment. Other paths under `/app/` still
 require authentication. These names follow the existing `/app/` prefix and retained
-resource names. The frontend router does not render these pages until slice 45.
+resource names.
 
 A signed-in visitor to the challenge gets the retained page's redirect to `/`. The retained
 sign-in and transfer GETs accept signed-in visitors without a redirect, so their SPA
@@ -34,19 +36,24 @@ no-store`.
 {
   "kind": "signedOut",
   "workspace": { "name": "Smart Data", "logoUrl": null, "description": "" },
-  "signInMethods": { "password": true, "google": false },
+  "signInMethods": { "password": true, "google": false, "googleDomains": [] },
   "firstRunPending": false,
+  "helpContact": { "name": "Ada", "emailAddress": "ada@example.com" },
+  "version": "2.0.0",
   "csrfToken": "masked token"
 }
 ```
 
 The workspace name is null before an account exists. The description is plain text from
 account settings. Password sign-in is always available. Google is available when its
-provider configuration is complete. `firstRunPending` uses the retained sign-in page's
-check for no users. Unlike `/session/new`, the reserved SPA sign-in shell remains available
-before first run so slice 73 can use this flag.
+provider configuration is complete, and `googleDomains` lists the domains it accepts, as the
+retained note under the Google button names them. `firstRunPending` uses the retained sign-in
+page's check for no users. Unlike `/session/new`, the reserved SPA sign-in shell remains
+available before first run; the SPA page sends the visitor on to `/first_run`, as the retained
+page does. `helpContact` is the first administrator's name and email address and `version` the
+app version, the help line the retained sign-in page prints under its card.
 
-The DTO contains no users, rooms, messages, session identity, pending identity, second-factor
+Apart from that help contact, the DTO contains no users, rooms, messages, session identity, pending identity, second-factor
 secret, recovery codes, custom workspace CSS, cable endpoint or service-worker URL.
 Authenticated `GET /api/v1/boot` keeps its existing contract and access requirement.
 
