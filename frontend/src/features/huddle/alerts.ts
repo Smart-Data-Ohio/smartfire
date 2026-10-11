@@ -105,3 +105,12 @@ export const incomingCalls = new IncomingCalls({
     void goJoin(roomId, roomName);
   },
 });
+
+// The ring and the call notices end with the page's account, as the call does; this outlives the
+// shell (and `HuddleRoot`), which gives way to a notice then.
+store.subscribe((state, previous) => {
+  if (state.accountChanged && !previous.accountChanged) {
+    callNotices.reset();
+    incomingCalls.hide();
+  }
+});

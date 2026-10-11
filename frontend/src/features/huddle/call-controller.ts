@@ -426,7 +426,8 @@ export class CallController {
    * straight away; the token stays the authority on publishing.
    */
   async join(roomId: number, roomName: string, canPublishHint: boolean | null): Promise<void> {
-    if (!Number.isInteger(roomId) || roomId <= 0) {
+    // Another account answered the page: no call starts until it reloads.
+    if (!Number.isInteger(roomId) || roomId <= 0 || store.getState().accountChanged) {
       return;
     }
 
@@ -534,6 +535,14 @@ export class CallController {
       this.#adopt(transport);
 
       const noise = this.#state.noise;
+
+      // Credentials that land after another account answered the page never reach LiveKit. The
+      // account-change hook bumps the operation, so they stop above; this is the last check.
+      if (store.getState().accountChanged) {
+        await this.#drop(transport);
+
+        return;
+      }
 
       await transport.connect(credentials.url, credentials.token, noise.available && noise.enabled);
 
@@ -2088,3 +2097,19 @@ export class CallController {
 }
 
 export const callController = new CallController(browserEnvironment);
+
+/**
+ * Ends `controller`'s call the moment another account answers the page (`accountChanged`): it
+ * leaves the room, releases the microphone, camera and screen share, stops the checks and timers,
+ * and drops a join still waiting on its credentials. A store subscription, not a React effect:
+ * the shell gives way to a notice then, and its effects go with it. Returns the unsubscribe.
+ */
+export function endCallOnAccountChange(controller: CallController): () => void {
+  return store.subscribe((state, previous) => {
+    if (state.accountChanged && !previous.accountChanged) {
+      controller.endForPageChange();
+    }
+  });
+}
+
+endCallOnAccountChange(callController);
