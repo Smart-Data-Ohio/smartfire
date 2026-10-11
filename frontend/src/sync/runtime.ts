@@ -17,6 +17,7 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
+import type { AnnouncementFollows } from "../gen/AnnouncementFollows.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { BoardAutomations } from "../gen/BoardAutomations.ts";
@@ -57,6 +58,7 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessagePage } from "../gen/MessagePage.ts";
 import type { MessageRead } from "../gen/MessageRead.ts";
 import type { PinList } from "../gen/PinList.ts";
+import type { Room } from "../gen/Room.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
 import type { RoomForm } from "../gen/RoomForm.ts";
 import type { RoomKind } from "../gen/RoomKind.ts";
@@ -96,6 +98,7 @@ import type { ScheduledListKey } from "../store/scheduled.ts";
 import { store } from "../store/store.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as agentActions from "./agent-actions.ts";
+import * as announcementActions from "./announcement-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
 import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
@@ -492,6 +495,24 @@ const rooms = {
     runAction(roomActions.rotateInboundEmail(roomId)),
 };
 
+/**
+ * Announcement rooms: the room's flag, publishing a message, and the follows that copy published
+ * messages into other rooms. Failures reject with an `ActionError`.
+ */
+const announcements = {
+  set: (roomId: number, announcement: boolean): Promise<Room> =>
+    runAction(announcementActions.setAnnouncement(roomId, announcement)),
+  /** Publishing again answers the message as it is; it never sends a second copy. */
+  publish: (messageId: number): Promise<MessageDTO> =>
+    runAction(announcementActions.publish(messageId)),
+  follows: (roomId: number): Promise<AnnouncementFollows> =>
+    runAction(announcementActions.follows(roomId)),
+  follow: (sourceRoomId: number, targetRoomId: number): Promise<AnnouncementFollows> =>
+    runAction(announcementActions.follow(sourceRoomId, targetRoomId)),
+  unfollow: (sourceRoomId: number, targetRoomId: number): Promise<void> =>
+    runAction(announcementActions.unfollow(sourceRoomId, targetRoomId)),
+};
+
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
 const cards = {
   fizzyForm: (scope: FizzyMessageScope): Promise<FizzyMessageCardForm> =>
@@ -757,6 +778,7 @@ export const actions = {
   organize,
   workspaceLayout,
   rooms,
+  announcements,
   cards,
   events,
   confirmation,
