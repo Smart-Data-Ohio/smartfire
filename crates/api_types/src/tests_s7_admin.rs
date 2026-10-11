@@ -330,3 +330,97 @@ fn integrations_health() {
         }),
     );
 }
+
+#[test]
+fn the_welcome_settings_and_what_a_viewer_reads() {
+    assert_wire(
+        &WelcomeAdmin {
+            message: "Say **hi**".into(),
+            rooms: vec![
+                WelcomeRoomEdit {
+                    room_id: Some(3),
+                    keep: None,
+                    emoji: Some("👋".into()),
+                    description: "Introduce yourself".into(),
+                },
+                WelcomeRoomEdit { room_id: None, keep: Some("opaque".into()), emoji: None, description: "".into() },
+            ],
+            guide: vec![
+                GuideResourceEdit { title: "Start here".into(), emoji: None, room_id: Some(3), keep: None, body: None },
+                GuideResourceEdit {
+                    title: "Hours".into(),
+                    emoji: Some("🕘".into()),
+                    room_id: None,
+                    keep: None,
+                    body: Some("9 to 5".into()),
+                },
+            ],
+            choices: vec![WelcomeRoomChoice { id: 3, name: "general".into() }],
+        },
+        json!({
+            "message": "Say **hi**",
+            "rooms": [
+                {"roomId": 3, "keep": null, "emoji": "👋", "description": "Introduce yourself"},
+                {"roomId": null, "keep": "opaque", "emoji": null, "description": ""}
+            ],
+            "guide": [
+                {"title": "Start here", "emoji": null, "roomId": 3, "keep": null, "body": null},
+                {"title": "Hours", "emoji": "🕘", "roomId": null, "keep": null, "body": "9 to 5"}
+            ],
+            "choices": [{"id": 3, "name": "general"}]
+        }),
+    );
+    // A section left out of the update stays as stored; `keep` may be left out of a row.
+    assert_wire(&WelcomeUpdate { message: Some("Hi".into()), rooms: None, guide: None }, json!({"message": "Hi"}));
+    let update: WelcomeUpdate =
+        serde_json::from_value(json!({"guide": [{"title": "T", "emoji": null, "roomId": 3, "body": null}]})).unwrap();
+    assert_eq!(update.message, None);
+    assert_eq!(update.guide.unwrap()[0].keep, None);
+    assert_wire(
+        &WelcomeSettings {
+            message: "Say **hi**".into(),
+            rooms: vec![WelcomeRoom { room_id: 3, emoji: None, description: "".into() }],
+            guide: vec![GuideResource { title: "Start".into(), emoji: None, room_id: Some(3), body: None }],
+        },
+        json!({
+            "message": "Say **hi**",
+            "rooms": [{"roomId": 3, "emoji": null, "description": ""}],
+            "guide": [{"title": "Start", "emoji": null, "roomId": 3, "body": null}]
+        }),
+    );
+    let card = WelcomeRoomCard {
+        room_id: 3,
+        name: "general".into(),
+        emoji: None,
+        description: "Introduce yourself".into(),
+        joined: false,
+    };
+    assert_wire(
+        &WorkspaceWelcome {
+            name: "Smart Data".into(),
+            description: "".into(),
+            message_html: Some("<div class=\"markdown-body\"><p>Hi</p></div>".into()),
+            rooms: vec![card],
+            guide: vec![GuideEntry {
+                title: "Start here".into(),
+                emoji: None,
+                body_html: None,
+                room: Some(GuideRoom { id: 3, name: "general".into(), joined: true }),
+            }],
+            can_administer: false,
+        },
+        json!({
+            "name": "Smart Data",
+            "description": "",
+            "messageHtml": "<div class=\"markdown-body\"><p>Hi</p></div>",
+            "rooms": [{"roomId": 3, "name": "general", "emoji": null, "description": "Introduce yourself", "joined": false}],
+            "guide": [{
+                "title": "Start here",
+                "emoji": null,
+                "bodyHtml": null,
+                "room": {"id": 3, "name": "general", "joined": true}
+            }],
+            "canAdminister": false
+        }),
+    );
+}

@@ -210,7 +210,10 @@ const termsRoute = createRoute({
   ),
 });
 
-/** `/app/`: the last room on wide screens, the conversation list on phones. */
+/**
+ * `/app/`: the last room on wide screens, the conversation list on phones; the workspace's
+ * welcome card first, until the person dismisses it.
+ */
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "/",
@@ -550,6 +553,17 @@ const activityRoute = createRoute({
   ),
 });
 
+/** `/app/guide`: the server guide the administrators wrote, read-only (its own chunk). */
+const guideRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "guide",
+  ...chunked(() =>
+    import("./features/welcome/guide-route.tsx").then((module) => ({
+      default: module.GuideRoute,
+    })),
+  ),
+});
+
 /** `/app/saved?status=`: saved messages (Slack's "Later"). */
 const savedRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -750,6 +764,7 @@ const routeTree = rootRoute.addChildren([
     sudoContinueRoute,
     sudoNewRoute,
     activityRoute,
+    guideRoute,
     savedRoute,
     scheduledRoute,
     workRoute,

@@ -361,7 +361,9 @@ async fn branding_image(c: &mut Ctx, signed_id: &str, kind: Kind) -> Result<Prep
     crate::branding_images::prepare(c, signed_id, kind, branding::MAX_BYTES).await
 }
 
-/// `accounts#update`: the account, its logo, then the audit of what changed.
+/// `accounts#update`: the account, its logo, then the audit of what changed. The account is read
+/// inside the transaction that writes it, so only the given settings keys change and a save of
+/// other keys (the welcome, say) queued just before isn't put back.
 async fn write_workspace(
     c: &mut Ctx,
     name: Option<String>,
@@ -370,7 +372,6 @@ async fn write_workspace(
     banner: Assignment,
     prepared: Option<Prepared>,
 ) -> Result<()> {
-    let mut account = account(c).await?;
     let logo = logo.stage(c.app()).await?;
     let banner = banner.stage(c.app()).await?;
     let audit = audit_context(c)?;
@@ -388,6 +389,7 @@ async fn write_workspace(
                     prepared,
                 )?;
             }
+            let mut account = Account::first_in(tx)?;
             let before = account.clone();
             let before_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
@@ -752,7 +754,6 @@ async fn show_custom_styles(c: &mut Ctx) -> Result {
 /// `accounts/custom_styles#update`
 async fn save_custom_styles(c: &mut Ctx) -> Result {
     administrator(c).await?;
-    let mut account = account(c).await?;
     require_sudo(c).await?;
     let update: StylesUpdate = body(c).await?;
     let audit = audit_context(c)?;
@@ -762,6 +763,7 @@ async fn save_custom_styles(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
+            let mut account = Account::first_in(tx)?;
             let before = account.clone();
             account.update(tx, None, css.as_ref().map(Option::as_deref), None)?;
             Ok((before, account))

@@ -38,6 +38,7 @@ import { SidebarSearchButton } from "../search/sidebar-search-button.tsx";
 import { UserMenu } from "../shell/user-menu.tsx";
 import { useDestination } from "../shell/view-store.ts";
 import { openOverlay } from "../switcher/overlay-store.ts";
+import { SidebarWelcome, useShowWelcome } from "../welcome/sidebar-welcome.tsx";
 import { CategoryNameField } from "./category-name-field.tsx";
 import { DeleteCategoryDialog } from "./delete-category-dialog.tsx";
 import { headingTrigger, movedRowFocus } from "./focus-targets.ts";
@@ -509,6 +510,7 @@ function WorkspaceHeader({
   readonly onNewSharedCategory?: (() => void) | undefined;
 }) {
   const canCreateRooms = useStore((state) => state.sidebar.canCreateRooms);
+  const showWelcome = useShowWelcome();
 
   return (
     <header
@@ -563,6 +565,11 @@ function WorkspaceHeader({
         {onNewSharedCategory === undefined ? null : (
           <MenuItem icon="users" onSelect={onNewSharedCategory}>
             New shared category
+          </MenuItem>
+        )}
+        {showWelcome === null ? null : (
+          <MenuItem icon="home" onSelect={showWelcome}>
+            Show welcome
           </MenuItem>
         )}
         <MenuSeparator />
@@ -1298,6 +1305,7 @@ export function Sidebar() {
         ref={scrollRef}
         data-dragging={drag === null ? undefined : drag.item.kind}
       >
+        {destination === "dms" ? null : <SidebarWelcome />}
         <SidebarDestinations />
         {sidebar.status === "error" ? (
           <p className="sidebar-error text-meta">Couldn't load your conversations.</p>

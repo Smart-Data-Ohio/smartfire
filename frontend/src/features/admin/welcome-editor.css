@@ -1,0 +1,122 @@
+/* The welcome card and server guide editor in the workspace settings. */
+@layer app {
+  .welcome-editor-set {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .welcome-editor-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
+  .welcome-editor-rows:empty {
+    display: none;
+  }
+
+  /* One room or entry: its fields in a row that wraps, the tools at the end. */
+  .welcome-editor-row {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .welcome-editor-legend {
+    float: left;
+    width: 100%;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-meta);
+  }
+
+  .welcome-editor-row > .field {
+    min-width: 0;
+  }
+
+  .welcome-editor-room {
+    flex: 1 1 200px;
+  }
+
+  .welcome-editor-emoji {
+    flex: 0 0 88px;
+  }
+
+  .welcome-editor-grow {
+    flex: 2 1 220px;
+  }
+
+  .welcome-editor-wide {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .welcome-editor-kind {
+    display: flex;
+    flex: 1 1 100%;
+    gap: var(--space-4);
+  }
+
+  .welcome-editor-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    font-size: var(--text-ui);
+  }
+
+  /* Up, down and remove share the legend's line, at its end. */
+  .welcome-editor-tools {
+    position: absolute;
+    top: var(--space-1-5);
+    right: var(--space-2);
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  @media (width < 720px) {
+    .welcome-editor-row {
+      padding: var(--space-2);
+    }
+
+    .welcome-editor-emoji,
+    .welcome-editor-grow,
+    .welcome-editor-room {
+      flex-basis: 100%;
+    }
+
+    /* Finger-sized tools need a line of their own above the fields. */
+    .welcome-editor-legend {
+      min-height: var(--touch-target);
+      padding-top: var(--space-3);
+    }
+
+    .welcome-editor-tools {
+      top: var(--space-1);
+      right: var(--space-1);
+    }
+
+    .welcome-editor-tools .button {
+      width: var(--touch-target);
+      height: var(--touch-target);
+    }
+
+    .welcome-editor-radio {
+      min-height: var(--touch-target);
+    }
+  }
+}
