@@ -148,19 +148,22 @@ for (const theme of THEMES) {
         await expect(page.getByText("Confirmed")).toHaveCount(0);
       });
 
-      test("signed out, it goes to sign in", async ({ page, request }) => {
-        await sudo(request, true, null);
-        await page.route(/\/api\/v1\/sudo(\?|$)/, (route) =>
-          route.fulfill({
-            status: 401,
-            contentType: "application/json",
-            body: JSON.stringify({ kind: "navigate", location: "/app/session/new" }),
-          }),
-        );
-        await openPage(page, theme);
+      // A session that ended answers 401; no session at all, the same hand-off at 200.
+      for (const status of [200, 401]) {
+        test(`signed out (${status}), it goes to sign in`, async ({ page, request }) => {
+          await sudo(request, true, null);
+          await page.route(/\/api\/v1\/sudo(\?|$)/, (route) =>
+            route.fulfill({
+              status,
+              contentType: "application/json",
+              body: JSON.stringify({ kind: "navigate", location: "/app/session/new" }),
+            }),
+          );
+          await openPage(page, theme);
 
-        await expect(page).toHaveURL(/\/app\/session\/new/);
-      });
+          await expect(page).toHaveURL(/\/app\/session\/new/);
+        });
+      }
 
       test("a full-page action asks in place first, then goes", async ({ page, request }) => {
         const connects: string[] = [];

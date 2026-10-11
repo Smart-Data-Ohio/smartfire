@@ -154,9 +154,10 @@ async fn sudo_gate_holds_the_write_until_confirmed_and_names_it_once() {
         gated.redirect_location(),
         Some("http://campfire.test/app/sudo/new")
     );
+    // The retained page goes to the SPA's, keeping its query and the held request.
     assert_eq!(
-        b.get("/sudo/new").await.redirect_location(),
-        Some("http://campfire.test/app/sudo/new")
+        b.get("/sudo/new?from=mail").await.redirect_location(),
+        Some("http://campfire.test/app/sudo/new?from=mail")
     );
     let held = json!({"method":"POST","path":"/account/join_code","returnTo":"/app/"});
     assert_eq!(

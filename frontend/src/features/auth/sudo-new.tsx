@@ -5,6 +5,7 @@ import type { SudoSubmission } from "../../gen/SudoSubmission.ts";
 import {
   actions,
   afterConfirming,
+  type Submitted,
   type SudoHere,
   type SudoStatus,
   spaReturnPath,
@@ -42,14 +43,38 @@ export function SudoNew() {
   const [read, setRead] = useState(0);
   // Once per read, even when Strict Mode runs the effect twice.
   const ran = useRef(-1);
+  // Set once the page is left (Back, say): an answer that arrives later acts on nothing.
+  const gone = useRef(false);
+
+  useEffect(() => {
+    gone.current = false;
+
+    return () => {
+      gone.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     document.title = `${TITLE} · Smartfire`;
   }, []);
 
+  /** Signed out (in another tab, say): on to sign in at `location`, if the page still shows. */
+  const signIn = useCallback((location: string) => {
+    if (gone.current) {
+      return;
+    }
+
+    setShown({ kind: "leaving" });
+    pageExit.assign(location);
+  }, []);
+
   /** Goes on to what the server held, or home: the confirmation is fresh. */
   const goOn = useCallback(
     (retry: Retry, confirmedHere: boolean) => {
+      if (gone.current) {
+        return;
+      }
+
       setShown({ kind: "leaving" });
 
       const { returnTo, follow } = afterConfirming({ kind: "confirmed", retry }, HOME);
@@ -73,10 +98,11 @@ export function SudoNew() {
     [navigate],
   );
 
-  const unreachable = useCallback(
-    (failure: Error) => setShown({ kind: "unreachable", message: failure.message }),
-    [],
-  );
+  const unreachable = useCallback((failure: Error) => {
+    if (!gone.current) {
+      setShown({ kind: "unreachable", message: failure.message });
+    }
+  }, []);
 
   /**
    * What the server said: `taken` once the continuation handed over what it held (the status
@@ -84,6 +110,10 @@ export function SudoNew() {
    */
   const settle = useCallback(
     (status: SudoStatus, taken: boolean) => {
+      if (gone.current) {
+        return;
+      }
+
       switch (status.kind) {
         case "confirmed":
           if (!taken && status.retry !== null) {
@@ -104,8 +134,7 @@ export function SudoNew() {
 
           return;
         case "navigate":
-          // Signed out: the client is already on its way to the sign-in page.
-          setShown({ kind: "leaving" });
+          signIn(status.location);
 
           return;
         case "error":
@@ -113,7 +142,7 @@ export function SudoNew() {
           setShown({ kind: "unreachable", message: status.message });
       }
     },
-    [goOn, unreachable],
+    [goOn, signIn, unreachable],
   );
 
   useEffect(() => {
@@ -125,14 +154,17 @@ export function SudoNew() {
     actions.confirmation.status().then((status) => settle(status, false), unreachable);
   }, [read, settle, unreachable]);
 
-  const submit = async (submission: SudoSubmission) => {
+  const submit = async (submission: SudoSubmission): Promise<Submitted> => {
     const reply = await actions.confirmation.confirmHere(submission);
 
-    if (reply.kind === "confirmed") {
-      goOn(reply.retry, true);
+    if (reply.kind !== "confirmed") {
+      // Signed out meanwhile, the form goes on to sign in (only while it still shows).
+      return reply;
     }
 
-    return reply.kind === "refused" ? reply.message : null;
+    goOn(reply.retry, true);
+
+    return { kind: "confirmed" };
   };
 
   if (shown.kind === "loading" || shown.kind === "leaving") {

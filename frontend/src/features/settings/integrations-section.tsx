@@ -11,7 +11,7 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { confirmThen } from "../auth/confirm-first.ts";
+import { useConfirmFirst } from "../auth/confirm-first.ts";
 import { connectionSummary, withConnection, withDependents } from "./settings-format.ts";
 import {
   SettingsGroup,
@@ -53,10 +53,13 @@ function groupControl(service: Service): HTMLElement | null {
  * `POST /google/connect`, a full page load to Google; `drive` asks for Drive previews too. The
  * server confirms it's the person first: the dialog asks here when that's due.
  */
-function connectGoogle(drive: boolean): void {
-  void confirmThen(() =>
-    postClassicForm("/google/connect", drive ? [["features[]", "drive"]] : []),
-  );
+function useConnectGoogle(): (drive: boolean) => void {
+  const { confirmThen } = useConfirmFirst();
+
+  return (drive) =>
+    void confirmThen(() =>
+      postClassicForm("/google/connect", drive ? [["features[]", "drive"]] : []),
+    );
 }
 
 /** Pastes a personal access token for GitHub or Fizzy, as the classic panel's form does. */
@@ -156,6 +159,8 @@ function GoogleCalendar({
   readonly google: GoogleIntegration;
   readonly disconnect: ReactNode;
 }) {
+  const connectGoogle = useConnectGoogle();
+
   if (!google.calendarConfigured) {
     return <p>Google Calendar is not configured for this workspace.</p>;
   }

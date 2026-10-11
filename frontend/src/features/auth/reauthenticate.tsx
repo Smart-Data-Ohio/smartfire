@@ -6,6 +6,7 @@ import {
   type ConfirmationPrompt,
   confirmationGate,
   type GoogleStart,
+  type Submitted,
 } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -173,8 +174,8 @@ interface ChoicesProps {
   readonly onBusy: (busy: Busy) => void;
   /** Whether a credential has been typed, so a swipe down doesn't throw it away. */
   readonly onDirty: (dirty: boolean) => void;
-  /** Sends a credential: `null` once it confirmed (or the session ended), else why it didn't. */
-  readonly submit: (submission: SudoSubmission) => Promise<string | null>;
+  /** Sends a credential; on `signedOut` the form goes on to sign in. */
+  readonly submit: (submission: SudoSubmission) => Promise<Submitted>;
   /** Starts a Google confirmation; on `navigate` the form leaves for it. */
   readonly startGoogle: () => Promise<GoogleStart>;
 }
@@ -202,7 +203,25 @@ export function Choices({
   const [googleError, setGoogleError] = useState("");
   const passwordField = useRef<HTMLInputElement>(null);
   const codeField = useRef<HTMLInputElement>(null);
+  // Set once the form is gone (the page left, the dialog closed): an answer that comes later
+  // leaves for nowhere.
+  const gone = useRef(false);
   const has = (method: SudoMethod) => methods.includes(method);
+
+  useEffect(() => {
+    gone.current = false;
+
+    return () => {
+      gone.current = true;
+    };
+  }, []);
+
+  /** Leaves for `location` (Google, or sign-in), if the form still shows. */
+  const leave = (location: string) => {
+    if (!gone.current) {
+      pageExit.assign(location);
+    }
+  };
 
   useEffect(() => onDirty(password !== "" || code !== ""), [password, code, onDirty]);
 
@@ -240,11 +259,17 @@ export function Choices({
     setGoogleError("");
     onBusy(kind);
     submit(kind === "password" ? { kind, password: value } : { kind, code: value }).then(
-      (refusal) => {
+      (sent) => {
+        if (sent.kind === "signedOut") {
+          leave(sent.location);
+
+          return;
+        }
+
         onBusy(null);
 
-        if (refusal !== null) {
-          refuse(kind, refusal);
+        if (sent.kind === "refused") {
+          refuse(kind, sent.message);
         }
       },
       (failure: Error) => {
@@ -265,13 +290,16 @@ export function Choices({
     startGoogle().then(
       (start) => {
         if (start.kind === "navigate") {
-          pageExit.assign(start.location);
+          leave(start.location);
 
           return;
         }
 
         onBusy(null);
-        setGoogleError(start.message);
+
+        if (start.kind === "error") {
+          setGoogleError(start.message);
+        }
       },
       (failure: Error) => {
         onBusy(null);

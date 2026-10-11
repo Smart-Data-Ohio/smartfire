@@ -167,6 +167,8 @@ function harness(
     | "page" = browserLocks(),
 ) {
   const seen: Seen[] = [];
+  /** Where the client itself sent the page (a 401's sign-in hand-off). */
+  const assigned: string[] = [];
 
   const page: Page = {
     viewer: 7,
@@ -234,7 +236,10 @@ function harness(
           ApiConfig.layer("/api/v1"),
           Layer.succeed(Navigation, {
             location: Effect.succeed("/app/admin/styles"),
-            assign: () => Effect.void,
+            assign: (url) =>
+              Effect.sync(() => {
+                assigned.push(url);
+              }),
           }),
           tab.layer,
         ),
@@ -247,7 +252,7 @@ function harness(
     return { gate: tab, layer: layerOf(tab) };
   };
 
-  return { layer: layerOf(gate), seen, gate, page, duplicate };
+  return { layer: layerOf(gate), seen, assigned, gate, page, duplicate };
 }
 
 const anyJson = (json: Schema.Json) => Effect.succeed(json);
@@ -395,11 +400,14 @@ describe("the confirmation gate", () => {
 
       yield* untilPrompt(gate);
 
-      expect(yield* submit(gate, { kind: "password", password: "wrong" })).toBe(
-        "Confirmation failed. Try again.",
-      );
+      expect(yield* submit(gate, { kind: "password", password: "wrong" })).toEqual({
+        kind: "refused",
+        message: "Confirmation failed. Try again.",
+      });
       expect(gate.snapshot()?.writes).toBe(1);
-      expect(yield* submit(gate, { kind: "password", password: "right" })).toBeNull();
+      expect(yield* submit(gate, { kind: "password", password: "right" })).toEqual({
+        kind: "confirmed",
+      });
       expect(yield* Fiber.join(write)).toEqual({ css: "ok" });
       expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
     }).pipe(Effect.provide(layer));
@@ -428,14 +436,16 @@ describe("the confirmation gate", () => {
 
       yield* untilPrompt(gate);
       expect(gate.snapshot()?.methods).toEqual(["totp"]);
-      expect(yield* submit(gate, { kind: "totp", code: "000000" })).toBe(
-        "Confirmation failed. Try again.",
-      );
-      expect(yield* submit(gate, { kind: "totp", code: "limit" })).toBe(
-        "Too many attempts. Try again in a few minutes.",
-      );
+      expect(yield* submit(gate, { kind: "totp", code: "000000" })).toEqual({
+        kind: "refused",
+        message: "Confirmation failed. Try again.",
+      });
+      expect(yield* submit(gate, { kind: "totp", code: "limit" })).toEqual({
+        kind: "refused",
+        message: "Too many attempts. Try again in a few minutes.",
+      });
       expect(gate.snapshot()?.writes).toBe(1);
-      expect(yield* submit(gate, { kind: "totp", code: "123456" })).toBeNull();
+      expect(yield* submit(gate, { kind: "totp", code: "123456" })).toEqual({ kind: "confirmed" });
       expect(yield* Fiber.join(write)).toEqual({ css: "ok" });
     }).pipe(Effect.provide(layer));
   });
@@ -590,6 +600,58 @@ describe("the confirmation gate", () => {
       expect(seen).toHaveLength(1);
     }).pipe(Effect.provide(layer));
   });
+
+  it.live("a write whose screen was left and come back to fails without asking", () => {
+    const answer = Deferred.makeUnsafe<void>();
+
+    const { layer, gate, page } = harness(
+      () => held(),
+      () => Deferred.await(answer),
+    );
+
+    return Effect.gen(function* () {
+      const write = yield* Effect.forkChild(send(styles));
+
+      yield* Effect.sleep(5);
+      page.screen = "/app/r/1";
+      gate.screenChanged();
+      page.screen = "/app/admin/styles";
+      gate.screenChanged();
+      yield* Deferred.succeed(answer, undefined);
+
+      // The same page, but another visit: nobody there sent it.
+      expect((yield* Fiber.join(write).pipe(Effect.flip))._tag).toBe("ConfirmationCancelled");
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live(
+    "signed out meanwhile, a password fails the waiting writes and says where to sign in",
+    () => {
+      const { layer, gate, assigned } = harness((entry) =>
+        entry.path === "/api/v1/sudo"
+          ? {
+              status: 200,
+              body: { kind: "navigate", location: "http://campfire.test/session/new" },
+            }
+          : held(),
+      );
+
+      return Effect.gen(function* () {
+        const write = yield* Effect.forkChild(send(styles));
+
+        yield* untilPrompt(gate);
+        expect(yield* submit(gate, { kind: "password", password: "right" })).toEqual({
+          kind: "signedOut",
+          location: "http://campfire.test/session/new",
+        });
+        expect((yield* Fiber.join(write).pipe(Effect.flip))._tag).toBe("ConfirmationCancelled");
+        // The dialog closes; the form follows the location, never the client.
+        expect(gate.snapshot()).toBeNull();
+        expect(assigned).toEqual([]);
+      }).pipe(Effect.provide(layer));
+    },
+  );
 
   it.live("a write whose screen was left fails even once a confirmation landed elsewhere", () => {
     const latch = Deferred.makeUnsafe<void>();
@@ -1691,11 +1753,14 @@ describe("a full-page action checked first", () => {
         secrets: 0,
         again: 1,
       });
-      expect(yield* submit(gate, { kind: "password", password: "wrong" })).toBe(
-        "Confirmation failed. Try again.",
-      );
+      expect(yield* submit(gate, { kind: "password", password: "wrong" })).toEqual({
+        kind: "refused",
+        message: "Confirmation failed. Try again.",
+      });
       expect(gate.snapshot()?.again).toBe(1);
-      expect(yield* submit(gate, { kind: "password", password: "right" })).toBeNull();
+      expect(yield* submit(gate, { kind: "password", password: "right" })).toEqual({
+        kind: "confirmed",
+      });
       expect(yield* Fiber.join(check)).toEqual({ kind: "go" });
       expect(gate.snapshot()).toBeNull();
     }).pipe(Effect.provide(layer));
@@ -1718,6 +1783,134 @@ describe("a full-page action checked first", () => {
       gate.screenChanged();
       expect(yield* Fiber.join(left)).toEqual({ kind: "stay" });
       expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("signed out, says where to sign in, whether the server answers 200 or 401", () => {
+    let status = 200;
+
+    const { layer, gate, assigned } = googleHarness({
+      respond: (entry) =>
+        entry.path === "/api/v1/sudo"
+          ? { status, body: { kind: "navigate", location: "http://campfire.test/session/new" } }
+          : null,
+    });
+
+    return Effect.gen(function* () {
+      for (const answered of [200, 401]) {
+        status = answered;
+        expect(yield* confirmFirst(gate)).toEqual({
+          kind: "signedOut",
+          location: "http://campfire.test/session/new",
+        });
+      }
+
+      // The caller follows it, from the screen it was asked on; the client never does.
+      expect(assigned).toEqual([]);
+      expect(gate.snapshot()).toBeNull();
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("does nothing when the screen that asked was left before the answer came", () => {
+    let answer = Deferred.makeUnsafe<void>();
+
+    const { layer, gate, page, server } = googleHarness({
+      hold: (entry) => (entry.path === "/api/v1/sudo" ? Deferred.await(answer) : Effect.void),
+    });
+
+    return Effect.gen(function* () {
+      for (const fresh of [true, false]) {
+        answer = Deferred.makeUnsafe<void>();
+        server.fresh = fresh;
+        page.screen = "/app/settings/integrations";
+
+        const check = yield* Effect.forkChild(confirmFirst(gate));
+
+        yield* Effect.sleep(5);
+        page.screen = "/app/r/1";
+        gate.screenChanged();
+        yield* Deferred.succeed(answer, undefined);
+
+        // Neither goes (fresh) nor opens the dialog on the room (not fresh).
+        expect(yield* Fiber.join(check)).toEqual({ kind: "stay" });
+        expect(gate.snapshot()).toBeNull();
+      }
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("leaving and coming back before the answer, the old check does nothing", () => {
+    let answer = Deferred.makeUnsafe<void>();
+
+    const { layer, gate, page, server } = googleHarness({
+      hold: (entry) => (entry.path === "/api/v1/sudo" ? Deferred.await(answer) : Effect.void),
+    });
+
+    return Effect.gen(function* () {
+      for (const fresh of [true, false]) {
+        answer = Deferred.makeUnsafe<void>();
+        server.fresh = fresh;
+
+        const check = yield* Effect.forkChild(confirmFirst(gate));
+
+        yield* Effect.sleep(5);
+        page.screen = "/app/r/1";
+        gate.screenChanged();
+        page.screen = "/app/admin/styles";
+        gate.screenChanged();
+        yield* Deferred.succeed(answer, undefined);
+
+        expect(yield* Fiber.join(check)).toEqual({ kind: "stay" });
+        expect(gate.snapshot()).toBeNull();
+      }
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a Google start whose screen was left before the answer leaves for nowhere", () => {
+    let answer = Deferred.makeUnsafe<void>();
+
+    const { layer, gate, page, assigned } = googleHarness({
+      hold: (entry) =>
+        entry.path === "/api/v1/sudo/google" ? Deferred.await(answer) : Effect.void,
+    });
+
+    return Effect.gen(function* () {
+      for (const start of [() => startGoogle(gate, "/app/admin/styles"), () => googleHere(gate)]) {
+        answer = Deferred.makeUnsafe<void>();
+        page.screen = "/app/admin/styles";
+        gate.screenChanged();
+
+        const started = yield* Effect.forkChild(start());
+
+        yield* Effect.sleep(5);
+        page.screen = "/app/r/1";
+        gate.screenChanged();
+        yield* Deferred.succeed(answer, undefined);
+
+        expect(yield* Fiber.join(started)).toEqual({ kind: "left" });
+        expect(sessionStorage.getItem(KEPT_KEY)).toBeNull();
+      }
+
+      expect(assigned).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a Google start answered with a sign-in hand-off leaves it to the form", () => {
+    const { layer, gate, assigned } = googleHarness({
+      respond: (entry) =>
+        entry.path === "/api/v1/sudo/google"
+          ? {
+              status: 401,
+              body: { kind: "navigate", location: "http://campfire.test/session/new" },
+            }
+          : null,
+    });
+
+    return Effect.gen(function* () {
+      expect(yield* googleHere(gate)).toEqual({
+        kind: "navigate",
+        location: "http://campfire.test/session/new",
+      });
+      expect(assigned).toEqual([]);
     }).pipe(Effect.provide(layer));
   });
 
@@ -1824,6 +2017,32 @@ describe("/app/sudo/new", () => {
     }).pipe(Effect.provide(layer));
   });
 
+  it.live("signed out, hands the page where to sign in, without the client leaving", () => {
+    const { layer, gate, assigned } = googleHarness({
+      respond: (entry) =>
+        entry.path.startsWith("/api/v1/sudo")
+          ? {
+              status: entry.method === "GET" ? 200 : 401,
+              body: { kind: "navigate", location: "http://campfire.test/session/new" },
+            }
+          : null,
+    });
+
+    return Effect.gen(function* () {
+      expect(yield* sudoStatus()).toEqual({
+        kind: "navigate",
+        location: "http://campfire.test/session/new",
+      });
+      expect(yield* takeHeld()).toMatchObject({ kind: "navigate" });
+      expect(yield* confirmHere(gate, { kind: "password", password: "right" })).toEqual({
+        kind: "signedOut",
+        location: "http://campfire.test/session/new",
+      });
+      // The page follows it while it still shows; the client never goes on its own.
+      expect(assigned).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+
   it.live("says the server couldn't be asked rather than failing", () => {
     const { layer } = googleHarness({
       respond: () => down,
@@ -1852,12 +2071,12 @@ describe("/app/sudo/new", () => {
   });
 
   it.live("Google starts with no attempt and keeps nothing", () => {
-    const { layer, seen, server } = googleHarness();
+    const { layer, seen, server, gate } = googleHarness();
 
     server.pending = exportRetry;
 
     return Effect.gen(function* () {
-      expect(yield* googleHere()).toEqual({
+      expect(yield* googleHere(gate)).toEqual({
         kind: "navigate",
         location: "https://accounts.test/o",
       });
@@ -1872,7 +2091,7 @@ describe("/app/sudo/new", () => {
     server.pending = exportRetry;
 
     return Effect.gen(function* () {
-      yield* googleHere();
+      yield* googleHere(gate);
 
       expect(yield* resumeAfterGoogle(gate)).toMatchObject({
         confirmed: true,
@@ -1889,7 +2108,7 @@ describe("/app/sudo/new", () => {
     server.pending = connectRetry;
 
     return Effect.gen(function* () {
-      yield* googleHere();
+      yield* googleHere(gate);
 
       expect(yield* resumeAfterGoogle(gate)).toMatchObject({
         confirmed: true,
@@ -1918,7 +2137,7 @@ describe("/app/sudo/new", () => {
     server.pending = connectRetry;
 
     return Effect.gen(function* () {
-      yield* googleHere();
+      yield* googleHere(gate);
 
       expect(yield* resumeAfterGoogle(gate)).toMatchObject({
         confirmed: false,

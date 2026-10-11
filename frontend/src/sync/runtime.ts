@@ -123,6 +123,7 @@ export type {
   ConfirmationPrompt,
   GoogleReturn,
   GoogleStart,
+  Submitted,
   SudoHere,
   SudoStatus,
 } from "./reauthentication.ts";
@@ -598,8 +599,8 @@ const events = {
  * to show, and only a failed request rejects.
  */
 const confirmation = {
-  /** `null` once confirmed (the waiting writes go again), else the reason it wasn't. */
-  submit: (submission: SudoSubmission): Promise<string | null> =>
+  /** Sends a password or code from the dialog: confirmed, the waiting writes go again. */
+  submit: (submission: SudoSubmission): Promise<confirmationActions.Submitted> =>
     runAction(confirmationActions.submit(confirmationGate, submission)),
   /** Starts a Google confirmation from the SPA page `returnTo`; the caller leaves on `navigate`. */
   startGoogle: (returnTo: string): Promise<confirmationActions.GoogleStart> =>
@@ -621,16 +622,17 @@ const confirmation = {
   /** How many writes the Google return still keeps, and their page; `null` when none. */
   kept: () => confirmationGate.kept(),
   /** Confirms with Google again for the writes still kept; the caller leaves on `navigate`. */
-  confirmAgain: (): Promise<confirmationActions.GoogleStart> =>
+  confirmAgain: (): Promise<confirmationActions.GoogleAgain> =>
     runAction(confirmationActions.confirmAgain(confirmationGate)),
   /** Gives up on the writes still kept. */
   discardKept: (): void => confirmationActions.discardKept(confirmationGate),
   /**
    * Before a full-page action the server confirms first: `"go"` once a fresh confirmation is in
-   * place (asking in the dialog when it isn't); otherwise the action doesn't go.
+   * place (asking in the dialog when it isn't); otherwise the action doesn't go. `signal` stops it
+   * (the control that asked went away): the dialog closes, and it rejects.
    */
-  confirmFirst: (): Promise<confirmationActions.ConfirmFirst> =>
-    runAction(confirmationActions.confirmFirst(confirmationGate)),
+  confirmFirst: (signal?: AbortSignal): Promise<confirmationActions.ConfirmFirst> =>
+    runtime.runPromise(asAction(confirmationActions.confirmFirst(confirmationGate)), { signal }),
   /**
    * `/app/sudo/new`: whether a confirmation is fresh, and what the server holds for after it (a
    * look: nothing held is let go).
@@ -645,7 +647,7 @@ const confirmation = {
     runAction(confirmationActions.confirmHere(confirmationGate, submission)),
   /** `/app/sudo/new`: starts Google with no writes kept; the return asks the server what it holds. */
   googleHere: (): Promise<confirmationActions.GoogleStart> =>
-    runAction(confirmationActions.googleHere()),
+    runAction(confirmationActions.googleHere(confirmationGate)),
 };
 
 export const actions = {
