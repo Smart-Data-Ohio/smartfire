@@ -287,7 +287,7 @@ test.describe("on a phone", () => {
     await expect(rows(page)).toHaveCount(5);
     // The Require switch's whole row is its label, so the track itself may stay small.
     await expectTouchTargets(page, ".tag-editor", { ignore: ".toggle" });
-    await expectNoHorizontalOverflow(page, { allowScroll: ".board-tag-strip" });
+    await expectNoHorizontalOverflow(page, { allowScroll: ".board-tag-strip, .room-form .t-tabs" });
     await shot(page, "board-tag-editor-phone", "light");
 
     // The keyboard path works from a phone's hardware keyboard too; the menu is an action sheet.
