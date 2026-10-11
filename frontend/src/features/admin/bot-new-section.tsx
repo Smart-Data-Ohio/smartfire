@@ -5,6 +5,7 @@ import { bots } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { leftToConfirm } from "../auth/confirmation.ts";
 import {
   FieldError,
   fieldsOf,
@@ -16,7 +17,6 @@ import {
   AdministratorsOnly,
   adminFailure,
   keepDraft,
-  needsSudo,
   takeDraft,
   uploaded,
   useAdmin,
@@ -116,7 +116,8 @@ export function BotNewSection() {
           return;
         }
 
-        if (needsSudo(error)) keepDraft(DRAFT_KEY, new URLSearchParams({ ...draft }).toString());
+        if (leftToConfirm(error))
+          keepDraft(DRAFT_KEY, new URLSearchParams({ ...draft }).toString());
 
         adminFailure("Couldn't create the bot", error);
       }),

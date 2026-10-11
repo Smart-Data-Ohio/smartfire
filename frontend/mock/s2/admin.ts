@@ -11,15 +11,20 @@ import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
 import type { Icon } from "../../src/gen/Icon.ts";
 import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
 import type { Person } from "../../src/gen/Person.ts";
+import type { SudoMethod } from "../../src/gen/SudoMethod.ts";
+import type { SudoResponse } from "../../src/gen/SudoResponse.ts";
+import type { SudoRetry } from "../../src/gen/SudoRetry.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
-import { HttpError, notFound, ok, validation } from "../http.ts";
+import { HttpError, noContent, notFound, ok, validation } from "../http.ts";
 import { booleanField, intField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { MOCK_TOTP, RATE_ALERT } from "./account.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { customIcon } from "./emoji.ts";
 import { PROFILE_MAX_SIZE, readProfileImage } from "./profile-image.ts";
+import { MOCK_PASSWORD } from "./settings.ts";
 import type { UploadedIconFile, Uploads } from "./uploads.ts";
 
 /** Facts about a person only administrators see. */
@@ -99,6 +104,9 @@ const VALIDATION: ApiError["_tag"] = "Validation";
 
 const SUDO_REQUIRED = "SudoRequired" satisfies ApiError["_tag"];
 
+/** The mock's one signed-in session, as the sudo replies name it. */
+const SESSION = 1;
+
 /** The classic page's refusal, a 422 naming no field. */
 const refusal = (message: string): HttpError =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
@@ -172,10 +180,20 @@ function initialState(world: World, now: number): State {
 /** The admin module. */
 export interface AdminModule {
   readonly routes: readonly Route[];
-  /** While on, the writes the classic pages guard with the password answer `SudoRequired`. */
-  lapseSudo(on: boolean): void;
+  /**
+   * While on, the writes the classic pages guard with the password answer `SudoRequired`, until a
+   * confirmation through `/sudo` (the mock password or `123456`; a value starting `limit` is rate
+   * limited). `methods` are the ways the viewer may confirm (the password alone by default); a
+   * Google confirmation succeeds at once unless `googleRefuses`.
+   */
+  lapseSudo(on: boolean, methods?: readonly SudoMethod[], googleRefuses?: boolean): void;
   /** Throws `SudoRequired` while the confirmation has lapsed, for the bot pages' guarded writes. */
   readonly requireSudo: () => void;
+  /**
+   * Notes the API request being handled (`method`, `path` with its query) and the SPA page it came
+   * from, so a write `requireSudo` holds becomes the pending request, as `require_sudo_mode` keeps.
+   */
+  noteRequest(method: string, path: string, origin: string): void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
   /** The workspace's description, for the signed-out boot. */
@@ -197,16 +215,114 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
   let sudoLapsed = false;
+  let sudoMethods: readonly SudoMethod[] = ["password"];
+  let googleRefuses = false;
+  let handling: SudoRetry | null = null;
+  /** The last write held for a confirmation; a confirmation's answer names it once. */
+  let pendingRetry: SudoRetry | null = null;
+  /**
+   * The Google attempt confirmed last, with the pending request it took over: the continuation
+   * names it, and answers for it again until the page acknowledges it.
+   */
+  let googleAttempt: { readonly id: string; readonly retry: SudoRetry | null } | null = null;
 
   /** `require_sudo_mode`: role changes, removal, custom styles and a new join link. */
   const requireSudo = () => {
     if (sudoLapsed) {
+      pendingRetry = handling;
+
       throw new HttpError(403, {
         _tag: SUDO_REQUIRED,
         message: "Confirm your password to continue",
-        reauthentication: { methods: ["password"], retry: null },
+        reauthentication: { methods: [...sudoMethods], retry: pendingRetry },
       });
     }
+  };
+
+  /** The pending request, consumed: `continue_after_sudo` removes it as it answers. */
+  const consumeRetry = () => {
+    const retry = pendingRetry;
+
+    pendingRetry = null;
+
+    return retry;
+  };
+
+  /** A `/sudo` answer, at `status`. */
+  const sudoReply = (reply: SudoResponse, status = 200) => ok(reply, status);
+
+  const sudoReady = (status = 200) =>
+    sudoReply(
+      {
+        kind: "ready",
+        reauthentication: { methods: [...sudoMethods], retry: pendingRetry },
+        session: SESSION,
+      },
+      status,
+    );
+
+  /** `POST /sudo`: the password or an authenticator code, as `sudos#create` checks them. */
+  const confirmSudo = (body: Json | undefined) => {
+    const kind = stringField(body, "kind");
+    const value = stringField(body, kind === "password" ? "password" : "code");
+
+    if ((kind !== "password" && kind !== "totp") || value === null) {
+      return sudoReply({ kind: "error", message: "The request body isn't valid." }, 422);
+    }
+
+    if (!sudoMethods.includes(kind)) {
+      return sudoReply({ kind: "error", message: "This confirmation is not available." }, 422);
+    }
+
+    if (value.startsWith("limit")) {
+      return sudoReply({ kind: "error", message: RATE_ALERT }, 429);
+    }
+
+    if (value !== (kind === "password" ? MOCK_PASSWORD : MOCK_TOTP)) {
+      return sudoReply({ kind: "error", message: "Confirmation failed. Try again." }, 401);
+    }
+
+    sudoLapsed = false;
+
+    return sudoReply({ kind: "confirmed", retry: consumeRetry(), session: SESSION });
+  };
+
+  /**
+   * `POST /sudo/google`: the mock skips Google itself. It confirms the body's attempt at once
+   * (unless it's set to refuse) and sends the page straight to where Google would return it.
+   */
+  const startGoogleSudo = (body: Json | undefined) => {
+    if (!sudoMethods.includes("google")) {
+      return sudoReply(
+        { kind: "error", message: "Google confirmation is not available for your account." },
+        422,
+      );
+    }
+
+    const attempt = stringField(body, "attempt");
+
+    if (!googleRefuses) {
+      sudoLapsed = false;
+      googleAttempt = attempt === null ? null : { id: attempt, retry: consumeRetry() };
+    }
+
+    return sudoReply({ kind: "navigate", location: "/app/sudo/continue", session: SESSION });
+  };
+
+  /** `GET /sudo/continue`: names the attempt asked about while it's the one confirmed. */
+  const continueSudo = (attempt: string | null) => {
+    if (sudoLapsed) return sudoReady(403);
+
+    if (attempt !== null && googleAttempt?.id === attempt) {
+      return sudoReply({
+        kind: "confirmed",
+        retry: googleAttempt.retry,
+        attempt,
+        session: SESSION,
+      });
+    }
+
+    return sudoReply({ kind: "confirmed", retry: consumeRetry(), session: SESSION });
   };
 
   const current = (): State => {
@@ -679,10 +795,17 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
   });
 
   return {
-    lapseSudo: (on) => {
+    lapseSudo: (on, methods = ["password"], refuses = false) => {
       sudoLapsed = on;
+      pendingRetry = null;
+      googleAttempt = null;
+      sudoMethods = methods;
+      googleRefuses = refuses;
     },
     requireSudo,
+    noteRequest: (method, path, origin) => {
+      handling = { method: method.toUpperCase(), path, returnTo: origin };
+    },
     branding,
     description: () => current().description,
     customStyles: () => current().css,
@@ -719,6 +842,15 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       current().animatedIconLimit = limit;
     },
     routes: [
+      route("GET", /^\/sudo$/, () => sudoReady()),
+      route("POST", /^\/sudo$/, ({ body }) => confirmSudo(body)),
+      route("POST", /^\/sudo\/google$/, ({ body }) => startGoogleSudo(body)),
+      route("GET", /^\/sudo\/continue$/, ({ query }) => continueSudo(query.get("attempt"))),
+      route("DELETE", /^\/sudo\/continue$/, ({ query }) => {
+        if (googleAttempt?.id === query.get("attempt")) googleAttempt = null;
+
+        return noContent();
+      }),
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
       ...(["logo", "banner"] as const).flatMap((kind) => [

@@ -69,7 +69,7 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/api/v1/two_factor/setup", axum::routing::get(campfire_kit::action(two_factor::setup_show_json)).post(campfire_kit::unparsed_action(two_factor::setup_create_json)))
         .route("/api/v1/sudo", axum::routing::get(campfire_kit::action(super::sudos::new_json)).post(campfire_kit::unparsed_action(super::sudos::create_json)))
         .route("/api/v1/sudo/google", axum::routing::post(campfire_kit::action(super::sudos::google_json)))
-        .route("/api/v1/sudo/continue", axum::routing::get(campfire_kit::action(super::sudos::continue_json)))
+        .route("/api/v1/sudo/continue", axum::routing::get(campfire_kit::action(super::sudos::continue_json)).delete(campfire_kit::action(super::sudos::acknowledge_json)))
 }
 
 /// Leaves a JSON body to the action's own DTO decoding (and its body token to the forgery check),

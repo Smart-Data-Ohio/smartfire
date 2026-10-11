@@ -3,6 +3,7 @@ import type { Settings } from "../../gen/Settings.ts";
 import { ActionError } from "../../sync/run.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { stoppedAtConfirmation } from "../auth/confirmation.ts";
 import { useTitleInHeader } from "./sections-layout.tsx";
 import type { Choice } from "./settings-format.ts";
 
@@ -67,8 +68,15 @@ export function useBusy(): Busy {
   return { busy: (...keys) => keys.some((key) => saving.has(key)), track };
 }
 
-/** Tells the person a write failed, with the server's reason. */
+/**
+ * Tells the person a write failed, with the server's reason. A write that stopped at its fresh
+ * confirmation (closed, or left for Google) says nothing: the dialog already did.
+ */
 export function toastFailure(title: string, error: Error): void {
+  if (stoppedAtConfirmation(error)) {
+    return;
+  }
+
   toast({ title, description: error.message, tone: "danger" });
 }
 

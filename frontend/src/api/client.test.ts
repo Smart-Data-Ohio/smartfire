@@ -239,7 +239,7 @@ describe("sudo HTTP statuses", () => {
     const { layer, navigations } = harness(() => json(401, { kind: "error", fieldErrors: {} }));
 
     return Effect.gen(function* () {
-      expect((yield* resumeSudo().pipe(Effect.flip))._tag).toBe("Unauthorized");
+      expect((yield* resumeSudo(null).pipe(Effect.flip))._tag).toBe("Unauthorized");
       expect(navigations).toEqual(["/app/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
     }).pipe(Effect.provide(layer));
   });
@@ -249,7 +249,7 @@ describe("sudo HTTP statuses", () => {
     const { layer, navigations } = harness(() => json(401, next));
 
     return Effect.gen(function* () {
-      expect(yield* resumeSudo()).toEqual(next);
+      expect(yield* resumeSudo(null)).toEqual(next);
       expect(navigations).toEqual(["http://campfire.test/session/new"]);
     }).pipe(Effect.provide(layer));
   });
@@ -266,7 +266,7 @@ describe("sudo HTTP statuses", () => {
 
     return Effect.gen(function* () {
       expect(yield* submitSudo({ kind: "password", password: "wrong" })).toEqual(refused);
-      expect(yield* resumeSudo()).toEqual(expired);
+      expect(yield* resumeSudo(null)).toEqual(expired);
       expect(navigations).toEqual([]);
     }).pipe(Effect.provide(layer));
   });

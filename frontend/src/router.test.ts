@@ -51,6 +51,8 @@ describe("the screen map and the router", () => {
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",
+      // Where a Google confirmation started from the SPA's dialog comes back; no page of its own.
+      "/app/sudo/continue",
       // The signed-out pages are outside the signed-in screen map; their retained URLs keep
       // serving the retained pages until a later slice makes these canonical.
       "/app/session/new",

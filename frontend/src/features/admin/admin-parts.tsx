@@ -6,11 +6,11 @@ import {
   UploadTask,
 } from "../../lib/upload/direct-upload.ts";
 import { store } from "../../store/store.ts";
-import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { stoppedAtConfirmation } from "../auth/confirmation.ts";
 import { type RowParts, useKeepRowFocus } from "../destinations/row-focus.ts";
 
 /** The loaded workspace and the way a section hands back the server's answer to a write. */
@@ -32,22 +32,12 @@ export function useAdmin(): AdminState {
   return state;
 }
 
-/** Where the classic app asks for the password again; it comes back to this page afterwards. */
-export const SUDO_PAGE = "/sudo/new";
-
-/** Whether a write needs the password confirmed first. */
-export function needsSudo(error: Error): boolean {
-  return error instanceof ActionError && error.tag === "SudoRequired";
-}
-
 /**
- * Tells the person a write failed, with the server's reason. A lapsed password confirmation goes
- * to the classic confirmation page instead, as the classic form would; it comes back here.
+ * Tells the person a write failed, with the server's reason. A write that stopped at its fresh
+ * confirmation (closed, or left for Google) says nothing: the dialog already did.
  */
 export function adminFailure(title: string, error: Error): void {
-  if (needsSudo(error)) {
-    window.location.assign(SUDO_PAGE);
-
+  if (stoppedAtConfirmation(error)) {
     return;
   }
 
@@ -77,8 +67,8 @@ export async function uploaded(file: File): Promise<string> {
 }
 
 /**
- * The unsaved edit kept under `key` across the password round trip, taken (and forgotten) once;
- * `null` when there's none.
+ * The unsaved edit kept under `key` across a Google confirmation's round trip, taken (and
+ * forgotten) once; `null` when there's none.
  */
 export function takeDraft(key: string): string | null {
   try {
@@ -92,7 +82,10 @@ export function takeDraft(key: string): string | null {
   }
 }
 
-/** Keeps `draft` under `key` for the page to restore after the password round trip. */
+/**
+ * Keeps `draft` under `key` for the page to restore after a Google confirmation's round trip: for
+ * a write that carries a credential, so isn't kept itself. Never put the credential in `draft`.
+ */
 export function keepDraft(key: string, draft: string): void {
   try {
     sessionStorage.setItem(key, draft);

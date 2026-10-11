@@ -6,6 +6,7 @@ import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
+import { ReauthenticateDialog } from "../auth/reauthenticate.tsx";
 import { useTwoFactorSetupGate } from "../auth/two-factor-gate.ts";
 import { ProductTour } from "../help/tour.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
@@ -62,6 +63,8 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/search" }) !== false ||
     matchRoute({ to: "/m/$messageId" }) !== false ||
     matchRoute({ to: "/work" }) !== false ||
+    // The Google confirmation's return: a full screen while it finishes or offers to try again.
+    matchRoute({ to: "/sudo/continue" }) !== false ||
     matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
   if (roomId !== null || pushed) {
@@ -107,6 +110,13 @@ export function AppShell() {
     void actions.start();
   }, []);
 
+  // A write waiting for its confirmation belongs to the screen that sent it: leaving that screen
+  // (Back, a link) cancels it, and the dialog closes once nothing waits.
+  useEffect(
+    () => router.subscribe("onResolved", () => actions.confirmation.screenChanged()),
+    [router],
+  );
+
   useDocumentTitle(roomId, page);
   useTwoFactorSetupGate();
   useClassicLinks();
@@ -142,6 +152,7 @@ export function AppShell() {
       <GlobalOverlays />
       <ProductTour />
       <SearchHotkey />
+      <ReauthenticateDialog />
       <Toaster />
     </div>
   );
