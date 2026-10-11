@@ -2,6 +2,7 @@
 //! join code, and a user's page.
 
 pub mod avatars;
+pub mod banners;
 pub mod stars;
 pub mod bans;
 pub mod dnd_allowances;
