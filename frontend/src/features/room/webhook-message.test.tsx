@@ -74,6 +74,31 @@ describe("a webhook's message", () => {
     expect(gutter?.textContent).toBe("D");
   });
 
+  it("heads a forward of one with the person who forwarded it, and keeps the webhook inside", () => {
+    mutations.mergeUsers([userFixture(AUTHOR, "Priya")]);
+    row(
+      webhookMessage({
+        webhook: { name: "CI", username: null, avatarUrl: null },
+        forwardedFromMessageId: 40,
+        forwardedAt: "2026-10-06T00:01:00.000Z",
+        forwardNote: "I checked this deployment.",
+      }),
+    );
+
+    const header = screen.getByRole("banner");
+
+    expect(header.querySelector(".message-author")?.textContent).toBe("Priya");
+    expect(within(header).queryByText("App")).toBeNull();
+    expect(within(header).queryByText("CI")).toBeNull();
+    expect(screen.getByRole("article").getAttribute("aria-label")).toMatch(/^Priya, /);
+
+    const forwarded = screen.getByRole("article").querySelector(".message-forward");
+
+    expect(forwarded?.querySelector(".message-forward-author")?.textContent).toBe(" · CI");
+    expect(forwarded?.querySelector('.agent-badge[data-tone="app"]')?.textContent).toBe("App");
+    expect(screen.getByText("I checked this deployment.")).toBeTruthy();
+  });
+
   it("leaves a person's message as it was", () => {
     mutations.mergeUsers([userFixture(AUTHOR, "Priya")]);
     row(messageFixture(42, 1, { creatorId: AUTHOR }));

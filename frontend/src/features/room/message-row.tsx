@@ -15,7 +15,8 @@ import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-co
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
 import { useViewerId } from "../messages/use-message.ts";
-import { AgentBadge } from "../people/agent-badge.tsx";
+import { postingWebhook, webhookName } from "../messages/webhook-attribution.ts";
+import { AgentBadge, AppTag } from "../people/agent-badge.tsx";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ThreadIndicator } from "../threads/thread-indicator.tsx";
@@ -37,11 +38,6 @@ interface HeaderProps {
   readonly webhook?: MessageWebhook | null;
 }
 
-/** The name a webhook message shows: the per-message override, else the webhook's at delivery. */
-export function webhookName(webhook: MessageWebhook): string {
-  return webhook.username ?? webhook.name;
-}
-
 /**
  * Name (an agent's opens its profile), agent badge and time: the first row of a group. A webhook's
  * message shows the webhook's name and Discord's APP tag instead, with no profile to open.
@@ -61,11 +57,7 @@ function MessageHeader({ creatorId, createdAt, edited, webhook = null }: HeaderP
       ) : (
         <>
           <span className="message-author">{webhookName(webhook)}</span>
-          <span className="agent-badges">
-            <span className="agent-badge" data-tone="app" title="Posted by a webhook">
-              App
-            </span>
-          </span>
+          <AppTag />
         </>
       )}
       <Tooltip content={formatFull(createdAt)} describe={false}>
@@ -146,8 +138,9 @@ export function MessageRow({
   const row = useRowInteractions(message, inThread, onNavigate);
   const edited = message.editedAt !== null;
 
-  const name =
-    message.webhook === null ? (creator?.name ?? UNKNOWN_NAME) : webhookName(message.webhook);
+  // Only a message the webhook posted itself: a forward of one is the forwarder's.
+  const webhook = postingWebhook(message);
+  const name = webhook === null ? (creator?.name ?? UNKNOWN_NAME) : webhookName(webhook);
 
   // A pinned message or a reply always shows who wrote it, under its flag or quote line.
   const header = groupStart || message.pinned || message.replyToMessageId !== null;
@@ -177,7 +170,7 @@ export function MessageRow({
         creatorId={message.creatorId}
         createdAt={message.createdAt}
         groupStart={header}
-        webhook={message.webhook}
+        webhook={webhook}
       />
       <div className="message-main">
         <MessageFlags pinned={message.pinned} saved={row.saved} />
@@ -187,7 +180,7 @@ export function MessageRow({
             creatorId={message.creatorId}
             createdAt={message.createdAt}
             edited={edited}
-            webhook={message.webhook}
+            webhook={webhook}
           />
         ) : null}
         {streaming ? (
