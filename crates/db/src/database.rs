@@ -2020,25 +2020,66 @@ mod tests {
     /// wakes the checkpointer, which copies it into the database file on its own.
     #[test]
     fn the_checkpointer_copies_the_wal_into_the_database() {
+        assert_checkpointer_copies_the_wal(0);
+    }
+
+    #[test]
+    fn the_checkpointer_copies_the_wal_with_a_large_schema() {
+        assert_checkpointer_copies_the_wal(AUTOCHECKPOINT_PAGES);
+    }
+
+    fn assert_checkpointer_copies_the_wal(extra_tables: i32) {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.sqlite3");
+        let env = Env::default();
+        let mut conn = open_connection(&path, false).unwrap();
+        schema::prepare(&mut conn, "production", &*env.clock).unwrap();
+        let setup = conn.transaction().unwrap();
+        setup
+            .execute_batch("CREATE TABLE filler (data BLOB)")
+            .unwrap();
+        for i in 0..extra_tables {
+            setup
+                .execute_batch(&format!("CREATE TABLE extra_schema_{i} (id INTEGER)"))
+                .unwrap();
+        }
+        setup.commit().unwrap();
+        // Schema frames must not count toward the workload's checkpoint threshold or baseline.
+        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
+            .unwrap();
+        drop(conn);
+
         let mut config = Config::new(&path);
         config.readers = 1;
-        let db = Database::open(config, Env::default()).unwrap();
-        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?))
-            .unwrap();
+        let db = Database::open(config, env).unwrap();
         let before = main_file_len(&path);
-
-        // ~1,200 pages of 4 KiB, over a few commits.
-        for _ in 0..6 {
-            db.write_blocking(|tx| {
-                Ok(tx.conn().execute_batch("WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 200) INSERT INTO filler SELECT randomblob(3900) FROM n")?)
+        let committed_path = path.clone();
+        let expected = db
+            .write_blocking(move |tx| {
+                let page_size: u64 = tx.conn().query_row("PRAGMA page_size", [], |r| r.get(0))?;
+                tx.conn().execute(
+                    "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?1) \
+                     INSERT INTO filler SELECT randomblob(?2) FROM n",
+                    rusqlite::params![AUTOCHECKPOINT_PAGES + 200, page_size - 200],
+                )?;
+                let pages: u64 = tx.conn().query_row("PRAGMA page_count", [], |r| r.get(0))?;
+                let expected = pages * page_size;
+                assert!(expected >= before + AUTOCHECKPOINT_PAGES as u64 * page_size);
+                // The writer wakes the checkpointer only after this job, including after_commit.
+                tx.after_commit(move |_| {
+                    assert_eq!(
+                        main_file_len(&committed_path),
+                        before,
+                        "commit checkpointed on the writer"
+                    );
+                    Ok(())
+                });
+                Ok(expected)
             })
             .unwrap();
-        }
 
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-        while main_file_len(&path) < before + 1000 * 4096 {
+        while main_file_len(&path) != expected {
             assert!(
                 std::time::Instant::now() < deadline,
                 "the WAL was never checkpointed"
