@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import type { BlockedPerson } from "../../gen/BlockedPerson.ts";
+import { isIgnored } from "../../store/ignores.ts";
 import { useStore } from "../../store/store.ts";
 import { ignores } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
@@ -66,7 +67,7 @@ function IgnoredRow({
  */
 export function BlockedSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
-  const preferences = useStore((state) => state.ignoredPeople);
+  const ignoreSet = useStore((state) => state.ignores);
   const { busy, track } = useBusy();
   const now = useNow();
 
@@ -95,7 +96,7 @@ export function BlockedSection() {
 
   const people =
     load.status === "ready"
-      ? load.people.filter((person) => preferences[person.user.id]?.ignoredByMe !== false)
+      ? load.people.filter((person) => isIgnored(ignoreSet, person.user.id, person.ignoredByMe))
       : [];
 
   return (

@@ -5,7 +5,7 @@ import { useStore } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { CardSlot } from "../cards/card-slot.tsx";
-import { UNKNOWN_NAME, useUser } from "../people/people.ts";
+import { UNKNOWN_NAME, useIgnored, useUser } from "../people/people.ts";
 import { AttachmentGallery } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
@@ -280,7 +280,10 @@ export function IgnoredNotice({
   );
 }
 
-/** One message outside a timeline (a thread's parent): collapsed behind the line if ignored. */
+/**
+ * One message outside a timeline (a thread's parent): collapsed behind the line while you ignore
+ * its author, as the store's ignore set has it (the message's own flag only until it loads).
+ */
 export function IgnoredGate({
   message,
   children,
@@ -289,8 +292,9 @@ export function IgnoredGate({
   readonly children: ReactNode;
 }) {
   const [shown, setShown] = useState(false);
+  const ignored = useIgnored(message.creatorId, message.ignored);
 
-  if (message.ignored !== true) {
+  if (!ignored) {
     return children;
   }
 
@@ -310,10 +314,22 @@ export interface IgnoredReveal {
   readonly toggle: (ids: readonly number[], open: boolean) => void;
 }
 
-/** A timeline's shown ignored runs, by message id; local to the screen, never saved. */
-export function useIgnoredReveal(focusMessageId: number | null): IgnoredReveal {
+/**
+ * A timeline's shown ignored runs, by message id; local to the screen, never saved. `navigation`
+ * names the navigation that brought the reader here (the history entry's key): each one that
+ * lands on a permalink opens its run again, even after the reader hid it on an earlier visit.
+ */
+export function useIgnoredReveal(focusMessageId: number | null, navigation: string): IgnoredReveal {
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set());
-  const [hiddenFocus, setHiddenFocus] = useState<number | null>(null);
+  const target = `${navigation}:${focusMessageId ?? ""}`;
+  const [seen, setSeen] = useState(target);
+  const [focusHidden, setFocusHidden] = useState(false);
+
+  // A new navigation or permalink: whatever the reader hid before, this one shows its target.
+  if (seen !== target) {
+    setSeen(target);
+    setFocusHidden(false);
+  }
 
   const toggle = (ids: readonly number[], open: boolean) => {
     setRevealed((current) => {
@@ -328,13 +344,13 @@ export function useIgnoredReveal(focusMessageId: number | null): IgnoredReveal {
     });
 
     if (focusMessageId !== null && ids.includes(focusMessageId)) {
-      setHiddenFocus(open ? null : focusMessageId);
+      setFocusHidden(!open);
     }
   };
 
   return {
     revealed,
-    focusId: focusMessageId === hiddenFocus ? null : focusMessageId,
+    focusId: focusHidden && seen === target ? null : focusMessageId,
     toggle,
   };
 }

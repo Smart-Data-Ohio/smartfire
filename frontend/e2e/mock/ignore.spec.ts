@@ -58,6 +58,16 @@ test("ignoring someone collapses their messages, and settings lists them until y
 
   await expect(page.getByRole("link", { name: "Maya Okafor" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
+
+  // The write's `blocks.updated` echo refetches the list; she must stay gone after it lands.
+  const echo = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" && response.url().endsWith("/api/v1/blocks"),
+  );
+
   await stop.click();
+  await expect(page.getByText("You're not ignoring anyone")).toBeVisible();
+  await echo;
+  await expect(page.getByRole("link", { name: "Maya Okafor" })).toHaveCount(0);
   await expect(page.getByText("You're not ignoring anyone")).toBeVisible();
 });

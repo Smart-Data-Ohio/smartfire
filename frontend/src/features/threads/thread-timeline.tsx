@@ -1,3 +1,4 @@
+import { useLocation } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
@@ -191,7 +192,13 @@ export function ThreadTimeline({
   const now = Date.now();
   const loaded = ready && timeline.status === "ready";
   const introFirst = intro !== undefined;
-  const reveal = useIgnoredReveal(focusMessageId);
+
+  const navigation = useLocation({
+    select: (location) => location.state.__TSR_key ?? location.href,
+  });
+
+  const reveal = useIgnoredReveal(focusMessageId, navigation);
+  const ignores = useStore((state) => state.ignores);
 
   const items = loaded
     ? timelineItems({
@@ -202,6 +209,7 @@ export function ThreadTimeline({
         introFirst,
         revealed: reveal.revealed,
         focusId: reveal.focusId,
+        ignores,
       })
     : [];
 

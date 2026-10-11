@@ -1,4 +1,5 @@
 import { dayKey, formatDay, toMillis } from "../../lib/time.ts";
+import { emptyIgnores, type IgnoreSet, messageIgnored } from "../../store/ignores.ts";
 import type { MessageDTO, PendingMessage, Timeline } from "../../store/model.ts";
 
 /** Consecutive messages from one author within this window share a header. */
@@ -76,6 +77,11 @@ interface TimelineInput {
   readonly revealed?: ReadonlySet<number>;
   /** The permalinked message, whose run opens so the link lands on it. */
   readonly focusId?: number | null;
+  /**
+   * Who the viewer ignores (the store's set). Until it loads, a message's own `ignored` flag
+   * decides.
+   */
+  readonly ignores?: IgnoreSet;
 }
 
 const NOTHING_REVEALED: ReadonlySet<number> = new Set();
@@ -83,8 +89,8 @@ const NOTHING_REVEALED: ReadonlySet<number> = new Set();
 /**
  * Lays a room's loaded window out as rows: the room intro at the very start, a spinner row at an
  * edge that's still loading, day dividers, the unread divider before the first unread message,
- * and messages grouped by author. Consecutive messages the server marked `ignored` collapse into
- * one line (a day or the unread divider ends the run). Pending sends follow the confirmed messages
+ * and messages grouped by author. Consecutive messages from people the viewer ignores collapse
+ * into one line (a day or the unread divider ends the run). Pending sends follow the confirmed messages
  * once the window reaches the present or while its replacement page loads.
  */
 export function timelineItems({
@@ -95,6 +101,7 @@ export function timelineItems({
   introFirst = false,
   revealed = NOTHING_REVEALED,
   focusId = null,
+  ignores = emptyIgnores,
 }: TimelineInput): TimelineItem[] {
   const items: TimelineItem[] = [];
   let previous: Previous | null = null;
@@ -205,7 +212,7 @@ export function timelineItems({
       forced = true;
     }
 
-    if (message.ignored === true) {
+    if (messageIgnored(ignores, message)) {
       hold(message);
       continue;
     }

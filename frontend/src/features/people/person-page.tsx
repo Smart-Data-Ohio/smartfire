@@ -13,7 +13,7 @@ import { adminFailure, Confirm } from "../admin/admin-parts.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { svgDataUrl } from "../settings/settings-format.ts";
-import { usePresenceStatus } from "./people.ts";
+import { useIgnored, usePresenceStatus } from "./people.ts";
 import {
   BAN_CONFIRMATION,
   botPage,
@@ -180,10 +180,10 @@ function Profile({
   // back still shows; the page's own copy only until the store has one.
   const dndAllowed = active && !own ? (stored ?? profile.dndAllowed) : null;
 
-  const storedIgnore = useStore((state) => state.ignoredPeople[profile.user.id]?.ignoredByMe);
-  // Whether you ignore them as the store last heard (another session may have changed it), the
-  // page's own copy until it has.
-  const ignored = !own && (storedIgnore ?? profile.ignoredByMe);
+  // Whether you ignore them, as the store's ignore set has it (another session may have changed
+  // it since this page loaded); the page's own copy only until the set loads.
+  const ignoredNow = useIgnored(profile.user.id, profile.ignoredByMe);
+  const ignored = !own && ignoredNow;
 
   // Leaving the page stops a ban's follow-up fetches.
   useEffect(() => {

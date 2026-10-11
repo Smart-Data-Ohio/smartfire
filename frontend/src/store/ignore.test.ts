@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { messageFixture, sidebarRowFixture } from "../api/testing.ts";
+import { messageFixture, sidebarRowFixture, userFixture } from "../api/testing.ts";
+import { messageIgnored } from "./ignores.ts";
 import { applyEvents, applyPage, receiveMessage, setBlocks } from "./reducers.ts";
-import { initialState } from "./state.ts";
+import { initialState, type State } from "./state.ts";
+
+/** Whether message 9 shows collapsed, as every view reads it. */
+function collapsed(state: State): boolean {
+  const message = state.messages[9];
+
+  return message !== undefined && messageIgnored(state.ignores, message);
+}
 
 describe("personal ignore sync", () => {
   it("refreshes a missed unignore on reconnect and preserves changes newer than the snapshot", () => {
@@ -31,9 +39,9 @@ describe("personal ignore sync", () => {
       0,
     );
 
-    expect(setBlocks(blocked, { people: [], revision: 2 }).messages[9]?.ignored).toBe(true);
+    expect(collapsed(setBlocks(blocked, { people: [], revision: 2 }))).toBe(true);
     const reconnected = setBlocks(blocked, { people: [], revision: 4 });
-    expect(reconnected.messages[9]?.ignored).toBe(false);
+    expect(collapsed(reconnected)).toBe(false);
 
     const replayed = applyEvents(
       reconnected,
@@ -48,8 +56,9 @@ describe("personal ignore sync", () => {
       0,
     );
 
-    expect(replayed.messages[9]?.ignored).toBe(false);
+    expect(collapsed(replayed)).toBe(false);
   });
+
   it("marks cached messages on other sessions and ignores stale preference events", () => {
     const original = { ...messageFixture(9, 4), creatorId: 2 };
 
@@ -79,7 +88,7 @@ describe("personal ignore sync", () => {
       0,
     );
 
-    expect(blocked.messages[9]?.ignored).toBe(true);
+    expect(collapsed(blocked)).toBe(true);
 
     const stale = applyEvents(
       blocked,
@@ -94,7 +103,7 @@ describe("personal ignore sync", () => {
       0,
     );
 
-    expect(stale.messages[9]?.ignored).toBe(true);
+    expect(collapsed(stale)).toBe(true);
 
     const unblocked = applyEvents(
       stale,
@@ -109,7 +118,7 @@ describe("personal ignore sync", () => {
       0,
     );
 
-    expect(unblocked.messages[9]?.ignored).toBe(false);
+    expect(collapsed(unblocked)).toBe(false);
     expect(unblocked.messages[9]?.bodyHtml).toBe(original.bodyHtml);
   });
 
@@ -142,7 +151,7 @@ describe("personal ignore sync", () => {
       "replace",
     );
 
-    expect(loaded.messages[9]?.ignored).toBe(true);
+    expect(collapsed(loaded)).toBe(true);
 
     const unblocked = applyEvents(
       loaded,
@@ -163,7 +172,50 @@ describe("personal ignore sync", () => {
       updatedAt: "2026-10-11T12:00:00.000Z",
     });
 
-    expect(arrived.messages[9]?.ignored).toBe(false);
+    expect(collapsed(arrived)).toBe(false);
+  });
+
+  it("drops an echo or a stale snapshot, and reads missing as not ignored once loaded", () => {
+    const loaded = setBlocks(initialState, {
+      people: [{ user: userFixture(2), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" }],
+      revision: 4,
+    });
+
+    expect(loaded.ignores).toMatchObject({ loaded: true, revision: 4, people: { 2: true } });
+
+    const stopped = applyEvents(
+      loaded,
+      [
+        {
+          seq: 1,
+          topic: "user",
+          type: "blocks.updated",
+          data: { userId: 2, ignoredByMe: false, revision: 5 },
+        },
+      ],
+      0,
+    );
+
+    const echoed = setBlocks(stopped, { people: [], revision: 5 });
+
+    expect(echoed.ignores.people[2]).toBeUndefined();
+    expect(
+      collapsed(
+        applyPage(
+          echoed,
+          4,
+          {
+            messages: [messageFixture(9, 4, { creatorId: 2, ignored: true })],
+            users: [],
+            saved: [],
+            before: null,
+            after: null,
+          },
+          "replace",
+        ),
+      ),
+    ).toBe(false);
+    expect(setBlocks(echoed, { people: [], revision: 3 }).ignores).toBe(echoed.ignores);
   });
 });
 

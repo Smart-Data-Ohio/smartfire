@@ -25,8 +25,13 @@ const LIST: BlockList = {
   ],
 };
 
+/** Mounts the section, its list landing in the store as the facade's does. */
 async function mount(list: BlockList) {
-  vi.spyOn(ignores, "list").mockResolvedValue(list);
+  vi.spyOn(ignores, "list").mockImplementation(() => {
+    mutations.setBlocks(list);
+
+    return Promise.resolve(list);
+  });
 
   const root = createRootRoute({ component: BlockedSection });
 
@@ -71,7 +76,32 @@ it("stops ignoring someone and drops them from the list", async () => {
   expect(set).toHaveBeenCalledWith(2, false);
   await waitFor(() => expect(screen.queryByRole("link", { name: "Maya" })).toBeNull());
   expect(screen.getByRole("link", { name: "Jason" })).toBeTruthy();
-  expect(store.getState().ignoredPeople[2]?.ignoredByMe).toBe(false);
+  expect(store.getState().ignores.people[2]).toBe(false);
+});
+
+it("keeps a stopped person gone when the write's sync echo refetches the list", async () => {
+  await mount(LIST);
+
+  vi.spyOn(ignores, "set").mockImplementation((userId, ignored) => {
+    const change = { userId, ignoredByMe: ignored, revision: 5 };
+
+    mutations.applyBlockState(change);
+
+    return Promise.resolve(change);
+  });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Stop ignoring Maya" }));
+  await waitFor(() => expect(screen.queryByRole("link", { name: "Maya" })).toBeNull());
+
+  // The echo's `GET /blocks` at the write's revision: Maya isn't on it, so nothing says "ignored".
+  act(() => mutations.setBlocks({ revision: 5, people: LIST.people.slice(1) }));
+
+  expect(screen.queryByRole("link", { name: "Maya" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Jason" })).toBeTruthy();
+
+  // A snapshot older than the write, landing late, doesn't bring her back either.
+  act(() => mutations.setBlocks(LIST));
+  expect(screen.queryByRole("link", { name: "Maya" })).toBeNull();
 });
 
 it("drops someone you stopped ignoring elsewhere as the change lands", async () => {

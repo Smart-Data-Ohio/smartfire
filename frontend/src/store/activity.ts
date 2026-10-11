@@ -19,6 +19,7 @@ import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
+import { isIgnored } from "./ignores.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   type Cursor,
@@ -844,10 +845,7 @@ export function unreadDelta(before: ActivityItem, after: ActivityItem): number {
 }
 
 export function activityIsIgnored(state: State, item: ActivityItem): boolean {
-  const creator = item.source.creatorId;
-  const preference = creator === null ? undefined : state.ignoredPeople[creator]?.ignoredByMe;
-
-  return preference ?? item.source.ignored ?? false;
+  return isIgnored(state.ignores, item.source.creatorId, item.source.ignored);
 }
 
 /**

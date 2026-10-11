@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
@@ -170,7 +170,13 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   });
 
   const now = Date.now();
-  const reveal = useIgnoredReveal(focusMessageId);
+
+  const navigation = useLocation({
+    select: (location) => location.state.__TSR_key ?? location.href,
+  });
+
+  const reveal = useIgnoredReveal(focusMessageId, navigation);
+  const ignores = useStore((state) => state.ignores);
 
   const items = timelineItems({
     timeline,
@@ -179,6 +185,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     now,
     revealed: reveal.revealed,
     focusId: reveal.focusId,
+    ignores,
   });
 
   // The row of the viewer's latest send from here: its key is the same pending and confirmed.

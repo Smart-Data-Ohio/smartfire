@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { messageFixture } from "../../api/testing.ts";
+import { messageFixture, userFixture } from "../../api/testing.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
 import { mutations, store, useStore } from "../../store/store.ts";
 import { timelineItems } from "../room/timeline-items.ts";
+import { threadDetailFixture } from "../work/test-fixtures.ts";
 import { IgnoredGate, IgnoredNotice, ignoredLabel, useIgnoredReveal } from "./message-content.tsx";
 
 const ROOM = 4;
@@ -17,18 +18,22 @@ afterEach(() => {
 function Rows({
   ids,
   focus = null,
+  navigation = "first",
 }: {
   readonly ids: readonly number[];
   readonly focus?: number | null;
+  readonly navigation?: string;
 }) {
   const messages = useStore((state) => state.messages);
-  const reveal = useIgnoredReveal(focus);
+  const ignores = useStore((state) => state.ignores);
+  const reveal = useIgnoredReveal(focus, navigation);
 
   const items = timelineItems({
     timeline: { ...emptyTimeline, status: "ready", ids },
     messages,
     pending: [],
     now: Date.now(),
+    ignores,
     revealed: reveal.revealed,
     focusId: reveal.focusId,
   });
@@ -157,5 +162,67 @@ describe("ignored messages", () => {
     );
     expect(screen.queryByRole("button", { name: /Show|Hide/ })).toBeNull();
     expect(screen.getByText("Parent body")).toBeTruthy();
+  });
+
+  it("shows a permalink's target again on every navigation to it, even after Hide", () => {
+    install([
+      messageFixture(2, ROOM, { creatorId: 9, ignored: true }),
+      messageFixture(3, ROOM),
+      messageFixture(4, ROOM, { creatorId: 9, ignored: true }),
+    ]);
+
+    const { rerender } = render(<Rows ids={[2, 3, 4]} focus={2} navigation="a" />);
+
+    expect(screen.getByText("Message 2")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Hide" }));
+    expect(screen.queryByText("Message 2")).toBeNull();
+
+    rerender(<Rows ids={[2, 3, 4]} focus={4} navigation="b" />);
+    expect(screen.getByText("Message 4")).toBeTruthy();
+    expect(screen.queryByText("Message 2")).toBeNull();
+
+    rerender(<Rows ids={[2, 3, 4]} focus={2} navigation="c" />);
+    expect(screen.getByText("Message 2")).toBeTruthy();
+  });
+
+  it("keeps a thread's parent open when a late detail still calls its author ignored", () => {
+    const parent = messageFixture(2, ROOM, { creatorId: 9, threadId: 50 });
+
+    install([parent]);
+    mutations.setBlocks({
+      revision: 4,
+      people: [{ user: userFixture(9), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" }],
+    });
+    mutations.applyBlockState({ userId: 9, ignoredByMe: false, revision: 5 });
+
+    function Parent() {
+      const message = useStore((state) => state.messages[2]);
+
+      return message === undefined ? null : (
+        <IgnoredGate message={message}>
+          <p>Parent body</p>
+        </IgnoredGate>
+      );
+    }
+
+    render(
+      <>
+        <Parent />
+        <Rows ids={[2]} />
+      </>,
+    );
+
+    // The detail was requested before the unignore and answers after it, newer than what's held.
+    act(() =>
+      mutations.loadThreadDetail({
+        ...threadDetailFixture(50, null, null),
+        parentMessage: { ...parent, ignored: true, updatedAt: "2026-10-11T12:00:00.000Z" },
+      }),
+    );
+
+    expect(store.getState().messages[2]?.ignored).toBe(true);
+    expect(screen.getByText("Parent body")).toBeTruthy();
+    expect(screen.getByText("Message 2")).toBeTruthy();
+    expect(screen.queryByText(/from someone you ignore/)).toBeNull();
   });
 });
