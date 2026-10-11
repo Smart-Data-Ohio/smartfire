@@ -94,10 +94,12 @@ interface TitleProps {
   readonly iconName: string | null;
   readonly otherId: number | undefined;
   readonly topic: string | null;
+  /** An announcement room: the megaphone stands in for the kind's glyph, with a tag on wide screens. */
+  readonly announcement: boolean;
 }
 
 /** Wide screens: the glyph and name (a DM: the person and their status inline). */
-function WideTitle({ roomId, kind, name, iconName, otherId, topic }: TitleProps) {
+function WideTitle({ roomId, kind, name, iconName, otherId, topic, announcement }: TitleProps) {
   const { toggle } = usePaneNavigation(roomId);
 
   return (
@@ -123,10 +125,17 @@ function WideTitle({ roomId, kind, name, iconName, otherId, topic }: TitleProps)
             onPointerEnter={preloadRoomSettings}
             onFocus={preloadRoomSettings}
           >
-            <RoomGlyph kind={kind} iconName={iconName} size={18} className="room-title-icon" />
+            <RoomGlyph
+              kind={kind}
+              iconName={iconName}
+              announcement={announcement}
+              size={18}
+              className="room-title-icon"
+            />
             <h1 className="room-title-name">{name}</h1>
             <Icon name="chevron-down" size={14} className="room-title-chevron" />
           </Link>
+          {announcement ? <span className="room-announcement-tag">Announcement</span> : null}
           {topic === null ? null : (
             <button
               type="button"
@@ -147,7 +156,7 @@ function WideTitle({ roomId, kind, name, iconName, otherId, topic }: TitleProps)
  * Phones: the name over a muted line (a channel's member count, a person's status), all one
  * button that opens the room's details, as Slack's and Discord's mobile headers do.
  */
-function PhoneTitle({ roomId, kind, name, iconName, otherId }: TitleProps) {
+function PhoneTitle({ roomId, kind, name, iconName, otherId, announcement }: TitleProps) {
   const { toggle } = usePaneNavigation(roomId);
   const memberCount = useStore((state) => state.rooms[roomId]?.detail?.memberCount ?? null);
 
@@ -156,6 +165,7 @@ function PhoneTitle({ roomId, kind, name, iconName, otherId }: TitleProps) {
       <DirectSubtitle userId={otherId} linked={false} />
     ) : memberCount === null ? null : (
       <span className="room-header-topic">
+        {announcement ? "Announcements · " : null}
         {memberCount} {memberCount === 1 ? "member" : "members"}
       </span>
     );
@@ -171,7 +181,13 @@ function PhoneTitle({ roomId, kind, name, iconName, otherId }: TitleProps) {
         {kind === "direct" && otherId !== undefined ? (
           <UserAvatar userId={otherId} size={32} presence decorative />
         ) : (
-          <RoomGlyph kind={kind} iconName={iconName} size={20} className="room-title-icon" />
+          <RoomGlyph
+            kind={kind}
+            iconName={iconName}
+            announcement={announcement}
+            size={20}
+            className="room-title-icon"
+          />
         )}
         <span className="room-title-text">
           <span className="room-title-name">{name}</span>
@@ -221,7 +237,7 @@ function PhoneOverflowItems({
 
 /**
  * The conversation's page header, Slack's: the room's glyph and name (a DM shows the person,
- * their presence and status), then the tools: on wide screens a DM's people actions, the call,
+ * their presence and status; an announcement room the megaphone and its tag), then the tools: on wide screens a DM's people actions, the call,
  * the bell, the calendar, the pane toggles (threads, pins, files and the member stack) and
  * search; on phones the back button, the call and a ⋯ menu holding the rest, and the name opens
  * the room's details.
@@ -234,6 +250,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const name = detail?.displayName ?? row?.displayName ?? null;
   const iconName = detail?.room.iconName ?? row?.room.iconName ?? null;
   const topic = detail === null ? (row?.room.topic ?? null) : detail.room.topic;
+  const announcement = (detail?.room.announcement ?? row?.room.announcement) === true;
   const directIds = detail?.directMemberIds ?? row?.directMemberIds ?? [];
   const otherId = kind === "direct" && directIds.length === 1 ? directIds[0] : undefined;
   // A DM's people actions for the phone's ⋯ menu (none in other rooms); wide screens show
@@ -257,6 +274,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         iconName={iconName}
         otherId={otherId}
         topic={topic}
+        announcement={announcement}
       />
     ) : (
       <WideTitle
@@ -266,6 +284,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         iconName={iconName}
         otherId={otherId}
         topic={topic}
+        announcement={announcement}
       />
     );
 
