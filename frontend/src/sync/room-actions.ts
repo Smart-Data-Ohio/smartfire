@@ -1,11 +1,13 @@
 import { Clock, Effect, Predicate, Result } from "effect";
 import { room } from "../api/endpoints.ts";
 import * as api from "../api/room-endpoints.ts";
+import type { CreateChannelWebhook } from "../gen/CreateChannelWebhook.ts";
 import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { RoomForm } from "../gen/RoomForm.ts";
 import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
 import type { SubscribeGithubRepository } from "../gen/SubscribeGithubRepository.ts";
+import type { UpdateChannelWebhook } from "../gen/UpdateChannelWebhook.ts";
 import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
@@ -202,4 +204,44 @@ export const inboundEmail = Effect.fn("rooms.inboundEmail")(function* (roomId: n
 
 export const rotateInboundEmail = Effect.fn("rooms.rotateInboundEmail")(function* (roomId: number) {
   return yield* api.rotateInboundEmail(roomId);
+});
+
+export const channelWebhooks = Effect.fn("rooms.channelWebhooks")(function* (roomId: number) {
+  return yield* api.channelWebhooks(roomId);
+});
+
+export const createChannelWebhook = Effect.fn("rooms.createChannelWebhook")(function* (
+  roomId: number,
+  body: CreateChannelWebhook,
+) {
+  return yield* api.createChannelWebhook(roomId, body);
+});
+
+export const updateChannelWebhook = Effect.fn("rooms.updateChannelWebhook")(function* (
+  roomId: number,
+  webhookId: number,
+  body: UpdateChannelWebhook,
+) {
+  return yield* api.updateChannelWebhook(roomId, webhookId, body);
+});
+
+export const deleteChannelWebhook = Effect.fn("rooms.deleteChannelWebhook")(function* (
+  roomId: number,
+  webhookId: number,
+) {
+  return yield* api.deleteChannelWebhook(roomId, webhookId);
+});
+
+export const regenerateChannelWebhook = Effect.fn("rooms.regenerateChannelWebhook")(function* (
+  roomId: number,
+  webhookId: number,
+) {
+  return yield* api.regenerateChannelWebhook(roomId, webhookId);
+});
+
+export const testChannelWebhook = Effect.fn("rooms.testChannelWebhook")(function* (
+  roomId: number,
+  webhookId: number,
+) {
+  return yield* api.testChannelWebhook(roomId, webhookId);
 });
