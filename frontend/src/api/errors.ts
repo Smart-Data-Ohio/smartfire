@@ -3,6 +3,7 @@ import type { ApiError as GeneratedApiError } from "../gen/ApiError.ts";
 import type { ApiErrorResponse as GeneratedApiErrorResponse } from "../gen/ApiErrorResponse.ts";
 import type { Assert, Pinned } from "./schema/pin.ts";
 import { SudoState } from "./schema/sudo.ts";
+import { TwoFactorRequirement } from "./schema/two-factor-setup.ts";
 
 /** 401: not signed in, or the session ended. The app sends the person to sign in. */
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()("Unauthorized", {
@@ -23,7 +24,7 @@ export class SudoRequired extends Schema.TaggedError<SudoRequired>()("SudoRequir
 /** 403: two-factor setup or verification comes first. */
 export class TwoFactorRequired extends Schema.TaggedError<TwoFactorRequired>()(
   "TwoFactorRequired",
-  { message: Schema.String },
+  { message: Schema.String, requirement: TwoFactorRequirement },
 ) {}
 
 export class NotFound extends Schema.TaggedError<NotFound>()("NotFound", {

@@ -601,7 +601,8 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
     }
     let user = user.clone();
     let enabled = c.app().db.read(move |conn| user.two_factor_enabled(conn)).await.map_err(Error::internal)?;
-    let html = c.format()?.is_some_and(|f| f.symbol == "html" || f.string.contains("html"));
+    let json = sudo::json_request(c)?;
+    let html = !json && c.format()?.is_some_and(|f| f.symbol == "html" || f.string.contains("html"));
     if enabled {
         terminate_current_session(c).await?;
         if html {
@@ -611,6 +612,16 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
             })?);
         }
         halt(head(StatusCode::UNAUTHORIZED))
+    } else if json {
+        c.no_store();
+        halt(c.json(StatusCode::FORBIDDEN, &campfire_api_types::ApiErrorResponse {
+            error: campfire_api_types::ApiError::TwoFactorRequired {
+                message: "Set up two-step sign-in to continue".into(),
+                requirement: campfire_api_types::TwoFactorRequirement::Setup {
+                    location: c.url_for("/two_factor_setup"),
+                },
+            },
+        })?)
     } else if html {
         if c.request.is_get() {
             let url = c.request.url();

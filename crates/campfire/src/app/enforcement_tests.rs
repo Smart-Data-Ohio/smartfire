@@ -65,7 +65,11 @@ async fn unenrolled_password_session_is_gated_on_every_application_page_and_form
         .send(Req::new(Method::GET, "/").header("accept", "application/json"))
         .await;
     assert_eq!(json.status, StatusCode::FORBIDDEN);
-    assert!(json.body.is_empty());
+    assert_eq!(
+        json.json(),
+        serde_json::json!({"error":{"_tag":"TwoFactorRequired","message":"Set up two-step sign-in to continue","requirement":{"kind":"setup","location":"http://campfire.test/two_factor_setup"}}})
+    );
+    assert_eq!(json.header("cache-control"), Some("no-store"));
     assert_eq!(
         b.send(
             Req::new(Method::GET, &format!("/rooms/{ALL_TALK}"))

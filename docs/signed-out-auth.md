@@ -95,3 +95,32 @@ for an arbitrary redirect destination.
 `frontend/src/api/auth-endpoints.ts` decodes these next actions. Its auth requests interpret
 credential 401 responses as field errors and refresh CSRF through `/api/v1/session/boot`.
 The existing application client keeps its sign-in redirect for ordinary API 401 responses.
+
+## TOTP enrollment contracts
+
+`GET /api/v1/two_factor/setup` starts or resumes the signed-in human's session-bound setup.
+`POST /api/v1/two_factor/setup` confirms `TwoFactorSetupSubmission`, which contains `code`.
+The write requires the same CSRF proof as the retained form. Both endpoints use
+`TwoFactorSetupResponse`:
+
+- `ready` carries `setup` with `secret`, `manualKey`, `otpauthUri`, and the retained page's exact `qrSvg`.
+- `error` carries `message` and `setup`. Wrong or expired codes keep HTTP 422. Attempt limits keep HTTP 429.
+- `recoveryCodes` carries `codes`, `signedOut`, and `continueUrl` after successful confirmation.
+- `navigate` carries the retained redirect destination when setup is already complete or the caller must sign in.
+
+All provisioning and recovery-code responses have `Cache-Control: no-store` and `Pragma: no-cache`.
+Visits extend a live secret's 30-minute expiry. Expired or abandoned setups reject confirmation
+and issue new provisioning material. Confirmation consumes the setup, stores ten recovery-code
+digests, verifies the current session, revokes other sessions, and records the retained audit.
+Codes appear only in the successful POST response. Subsequent GETs or POSTs navigate to the profile.
+
+An unenrolled session's protected JSON requests receive HTTP 403 with `ApiError::TwoFactorRequired`.
+Its `requirement` is `{kind: "setup", location: ".../two_factor_setup"}` and contains no secret.
+HTML requests still redirect and save their return destination. Requests that require the
+sign-in challenge use the `challenge` requirement instead. An enabled account's unverified
+session is still terminated and must sign in again.
+
+Initial enrollment does not require sudo confirmation in the retained flow. Existing
+backup-code, disable, and remembered-device actions retain their request-local password,
+authenticator, or Google confirmation. Other sensitive writes continue using the existing
+sudo contracts. These endpoints and client functions add no setup UI.
