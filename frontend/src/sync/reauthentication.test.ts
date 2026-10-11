@@ -23,6 +23,7 @@ import {
   startGoogle,
   submit,
   sudoStatus,
+  takeHeld,
 } from "./reauthentication.ts";
 
 /** What the fake server saw. */
@@ -703,6 +704,23 @@ function googleHarness({
       const instead = respond(entry, server);
 
       if (instead !== null) return instead;
+
+      // The status: a look at what is held, never taking it.
+      if (entry.path === "/api/v1/sudo" && entry.method === "GET") {
+        return server.fresh
+          ? {
+              status: 200,
+              body: { kind: "confirmed", retry: server.pending, session: server.session },
+            }
+          : {
+              status: 200,
+              body: {
+                kind: "ready",
+                reauthentication: { methods: ["password", "totp"], retry: server.pending },
+                session: server.session,
+              },
+            };
+      }
 
       if (entry.path === "/api/v1/sudo/google") {
         server.fresh = !refuse;
@@ -1654,7 +1672,9 @@ describe("a full-page action checked first", () => {
     return Effect.gen(function* () {
       expect(yield* confirmFirst(gate)).toEqual({ kind: "go" });
       expect(gate.snapshot()).toBeNull();
-      expect(continuations(seen)).toEqual([["GET", null]]);
+      // A look only: the continuation, which lets go of what is held, isn't read.
+      expect(continuations(seen)).toEqual([]);
+      expect(seen.map((entry) => `${entry.method} ${entry.path}`)).toEqual(["GET /api/v1/sudo"]);
     }).pipe(Effect.provide(layer));
   });
 
@@ -1703,7 +1723,7 @@ describe("a full-page action checked first", () => {
 
   it.live("says why when the server can't be asked", () => {
     const { layer, gate } = googleHarness({
-      respond: (entry) => (entry.path === "/api/v1/sudo/continue" ? down : null),
+      respond: (entry) => (entry.path === "/api/v1/sudo" ? down : null),
     });
 
     return Effect.gen(function* () {
@@ -1783,11 +1803,22 @@ describe("/app/sudo/new", () => {
     server.pending = exportRetry;
 
     return Effect.gen(function* () {
-      expect(yield* sudoStatus()).toMatchObject({ kind: "ready" });
+      expect(yield* sudoStatus()).toMatchObject({
+        kind: "ready",
+        reauthentication: { retry: exportRetry },
+      });
 
       server.fresh = true;
-      expect(yield* sudoStatus()).toMatchObject({ kind: "confirmed", retry: exportRetry });
-      // Consumed: the next read has nothing held.
+
+      // Only looks: what is held stays held, however often it's read.
+      for (const _ of [1, 2]) {
+        expect(yield* sudoStatus()).toMatchObject({ kind: "confirmed", retry: exportRetry });
+      }
+
+      expect(server.pending).toEqual(exportRetry);
+      // Acting on it takes it, once.
+      expect(yield* takeHeld()).toMatchObject({ kind: "confirmed", retry: exportRetry });
+      expect(server.pending).toBeNull();
       expect(yield* sudoStatus()).toMatchObject({ kind: "confirmed", retry: null });
       expect(gate.snapshot()).toBeNull();
     }).pipe(Effect.provide(layer));

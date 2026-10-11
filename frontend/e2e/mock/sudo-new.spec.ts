@@ -150,7 +150,7 @@ for (const theme of THEMES) {
 
       test("signed out, it goes to sign in", async ({ page, request }) => {
         await sudo(request, true, null);
-        await page.route(/\/api\/v1\/sudo\/continue(\?|$)/, (route) =>
+        await page.route(/\/api\/v1\/sudo(\?|$)/, (route) =>
           route.fulfill({
             status: 401,
             contentType: "application/json",

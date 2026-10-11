@@ -792,3 +792,143 @@ async fn sudo_contract_every_spa_sensitive_write_returns_methods_and_retry() {
         assert!(session(&app, &browser)["sudo_pending_request"]["params"].is_null());
     }
 }
+
+/// Rewrites `browser`'s cookie session with `change`, as the browser would carry it.
+fn edit_session(app: &TestApp, browser: &mut Browser<'_>, change: impl FnOnce(&mut Value)) {
+    let mut state = session(app, browser);
+    change(&mut state);
+    let crypto = RailsCrypto::new(app.booted.app.secrets.clone());
+    browser.absorb_cookie_header(&format!(
+        "_campfire_session={}",
+        campfire_kit::cookies::escape(&crypto.encrypt_cookie("_campfire_session", &state, None))
+    ));
+}
+
+const GUARDED: &str = "/api/v1/admin/workspace/join_code";
+
+/// A guarded write the gate holds, sent from the SPA's admin page.
+fn guarded() -> Req {
+    request(Method::POST, GUARDED, json!({}))
+        .header("referer", "http://campfire.test/app/admin?tab=workspace")
+}
+
+#[tokio::test]
+async fn sudo_contract_status_reports_a_fresh_confirmation_and_only_peeks_at_the_held_request() {
+    let app = TestApp::boot_frozen().await.unwrap();
+    let mut browser = app.sign_in(DAVID).await;
+    let ready = browser.get("/api/v1/sudo").await;
+    let session_id = ready.json()["session"].as_i64().unwrap();
+    assert_eq!(ready.status, StatusCode::OK);
+    assert_eq!(
+        ready.json(),
+        json!({"kind":"ready","reauthentication":{"methods":["password","totp"],"retry":null},"session":session_id})
+    );
+    assert_eq!(browser.write(guarded()).await.status, StatusCode::FORBIDDEN);
+    let retry = json!({"method":"POST","path":GUARDED,"returnTo":"/app/admin"});
+    // Not fresh: `ready`, naming what is held, as often as it's asked.
+    for _ in 0..2 {
+        let ready = browser.get("/api/v1/sudo").await;
+        assert_eq!(ready.status, StatusCode::OK);
+        assert_eq!(
+            ready.json(),
+            json!({"kind":"ready","reauthentication":{"methods":["password","totp"],"retry":retry},"session":session_id})
+        );
+    }
+    // Fresh, with a Google attempt in flight: `confirmed`, and nothing it reads is let go.
+    browser.grant_sudo().await;
+    edit_session(&app, &mut browser, |state| {
+        state["sudo_google_attempt"] = json!({"id":"attempt-in-flight-0001","user_id":DAVID,"session_id":session_id,"at":app.booted.app.clock.now().as_second(),"retry":null});
+        state["google_sign_in_request"] = json!({"purpose":"sudo","google_json":true,"session_id":session_id});
+    });
+    let before = session(&app, &browser);
+    for _ in 0..2 {
+        let fresh = browser.get("/api/v1/sudo").await;
+        assert_eq!(fresh.status, StatusCode::OK, "{}", fresh.text());
+        assert_eq!(fresh.header("cache-control"), Some("no-store"));
+        assert_eq!(
+            fresh.json(),
+            json!({"kind":"confirmed","retry":retry,"session":session_id})
+        );
+        assert_eq!(session(&app, &browser), before);
+    }
+    // The continuation still hands it over, once.
+    let continued = browser.get("/api/v1/sudo/continue").await;
+    assert_eq!(continued.status, StatusCode::OK, "{}", continued.text());
+    assert_eq!(continued.json()["kind"], "confirmed");
+    assert_eq!(continued.json()["retry"], retry);
+    assert_eq!(
+        browser.get("/api/v1/sudo").await.json(),
+        json!({"kind":"confirmed","retry":null,"session":session_id})
+    );
+    assert_eq!(
+        session(&app, &browser)["sudo_google_attempt"],
+        before["sudo_google_attempt"]
+    );
+}
+
+#[tokio::test]
+async fn sudo_contract_another_sessions_held_request_is_never_named() {
+    let app = TestApp::boot_frozen().await.unwrap();
+    let mut first = app.sign_in(DAVID).await;
+    assert_eq!(first.write(guarded()).await.status, StatusCode::FORBIDDEN);
+    // Another signed-in session carries the first one's cookie session, held request and all.
+    let mut second = app.sign_in(DAVID).await;
+    let carried = first
+        .cookie_header()
+        .split("; ")
+        .find(|cookie| cookie.starts_with("_campfire_session="))
+        .unwrap()
+        .to_owned();
+    second.absorb_cookie_header(&carried);
+    assert!(session(&app, &second).get("sudo_pending_request").is_some());
+    let ready = second.get("/api/v1/sudo").await;
+    assert_eq!(ready.json()["kind"], "ready");
+    assert_eq!(ready.json()["reauthentication"]["retry"], Value::Null);
+    second.grant_sudo().await;
+    assert_eq!(second.get("/api/v1/sudo").await.json()["retry"], Value::Null);
+    assert_eq!(
+        second.get("/api/v1/sudo/continue").await.json()["retry"],
+        Value::Null
+    );
+    // Its own session still names it.
+    assert_eq!(
+        first.get("/api/v1/sudo").await.json()["reauthentication"]["retry"]["path"],
+        GUARDED
+    );
+}
+
+#[tokio::test]
+async fn sudo_contract_status_signed_out_asks_to_sign_in() {
+    // No session at all: the same sign-in hand-off every sudo JSON read gives.
+    let app = TestApp::boot_frozen().await.unwrap();
+    for path in ["/api/v1/sudo", "/api/v1/sudo/continue"] {
+        let reply = app.anonymous().get(path).await;
+        assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+        assert_eq!(
+            reply.json(),
+            json!({"kind":"navigate","location":"http://campfire.test/session/new"}),
+            "{path}"
+        );
+    }
+
+    // A session that no longer counts as signed in gets the usual 401.
+    let mut browser = app.sign_in(DAVID).await;
+    browser.authenticity_token().await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET two_factor_verified_at=NULL WHERE user_id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = browser.write(request(Method::GET, "/api/v1/sudo", json!({}))).await;
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/session/new"})
+    );
+}

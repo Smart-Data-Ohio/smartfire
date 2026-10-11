@@ -789,7 +789,7 @@ async fn sudo_mode_stashes_the_request_until_confirmed() {
     assert_eq!(prompt.header("location"), Some("http://campfire.test/sudo/new"));
     let cookie = Fresh::session_cookie(&prompt).unwrap();
     let stashed = app.session(&cookie);
-    assert_eq!(stashed["sudo_pending_request"], json!({ "method": "GET", "path": "/danger?x=1", "params": null, "origin": "/rooms/1" }));
+    assert_eq!(stashed["sudo_pending_request"], json!({ "method": "GET", "path": "/danger?x=1", "params": null, "origin": "/rooms/1", "session_id": null }));
 
     let confirmed = send(request("GET", "/confirm").header(header::COOKIE, format!("_campfire_session={cookie}")).body(Body::empty()).unwrap()).await;
     let cookie = Fresh::session_cookie(&confirmed).unwrap();

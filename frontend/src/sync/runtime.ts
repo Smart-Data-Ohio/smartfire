@@ -631,9 +631,15 @@ const confirmation = {
    */
   confirmFirst: (): Promise<confirmationActions.ConfirmFirst> =>
     runAction(confirmationActions.confirmFirst(confirmationGate)),
-  /** `/app/sudo/new`: whether a confirmation is fresh, and what the server holds for after it. */
+  /**
+   * `/app/sudo/new`: whether a confirmation is fresh, and what the server holds for after it (a
+   * look: nothing held is let go).
+   */
   status: (): Promise<confirmationActions.SudoStatus> =>
     runAction(confirmationActions.sudoStatus()),
+  /** `/app/sudo/new`: takes what the server holds, to act on it now (it's let go). */
+  takeHeld: (): Promise<confirmationActions.SudoStatus> =>
+    runAction(confirmationActions.takeHeld()),
   /** `/app/sudo/new`: confirms with a credential; nothing waits in memory to go again. */
   confirmHere: (submission: SudoSubmission): Promise<confirmationActions.SudoHere> =>
     runAction(confirmationActions.confirmHere(confirmationGate, submission)),

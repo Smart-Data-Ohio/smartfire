@@ -24,9 +24,31 @@ pub async fn new(c: &mut Ctx) -> Result {
     render_new(c, StatusCode::OK).await
 }
 
+/// `GET /api/v1/sudo`: `confirmed` while this session's confirmation is fresh, else `ready` with
+/// the methods. Either names the request the gate holds for this session (`retry`) as a peek:
+/// reading it never consumes the held request, the Google attempt record or the flow. Only the
+/// continuation acts on (and so consumes) what is held.
 pub async fn new_json(c: &mut Ctx) -> Result {
     c.params.insert("format", Param::Str("json".into()));
-    let result = new(c).await;
+    let result = async {
+        before_actions(c, "sudos#new").await?;
+        let now = c.now();
+        if session_keys::sudo_verified(c.session(), now) {
+            let retry = sudo::retry(c);
+            let session = sudo::session_id(c);
+            return auth::json(
+                c,
+                StatusCode::OK,
+                &SudoResponse::Confirmed {
+                    retry,
+                    attempt: None,
+                    session,
+                },
+            );
+        }
+        render_new(c, StatusCode::OK).await
+    }
+    .await;
     complete(c, result)
 }
 

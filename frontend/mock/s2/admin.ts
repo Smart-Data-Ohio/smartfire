@@ -318,6 +318,15 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     return sudoReply({ kind: "navigate", location: "/app/sudo/continue", session: SESSION });
   };
 
+  /**
+   * `GET /sudo`: `confirmed` while the confirmation is fresh, else `ready`; either names the
+   * pending request without consuming it.
+   */
+  const sudoStatus = () =>
+    sudoLapsed
+      ? sudoReady()
+      : sudoReply({ kind: "confirmed", retry: pendingRetry, session: SESSION });
+
   /** `GET /sudo/continue`: names the attempt asked about while it's the one confirmed. */
   const continueSudo = (attempt: string | null) => {
     if (sudoLapsed) return sudoReady(403);
@@ -851,7 +860,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       current().animatedIconLimit = limit;
     },
     routes: [
-      route("GET", /^\/sudo$/, () => sudoReady()),
+      route("GET", /^\/sudo$/, () => sudoStatus()),
       route("POST", /^\/sudo$/, ({ body }) => confirmSudo(body)),
       route("POST", /^\/sudo\/google$/, ({ body }) => startGoogleSudo(body)),
       route("GET", /^\/sudo\/continue$/, ({ query }) => continueSudo(query.get("attempt"))),

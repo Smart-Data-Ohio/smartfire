@@ -25,7 +25,13 @@ import { ApiClient, type ApiRequest } from "../api/client.ts";
 import { ConfirmationCancelled, SudoRequired } from "../api/errors.ts";
 import { type ConfirmationTicket, Reauthentication } from "../api/reauthentication.ts";
 import type { SudoResponse, SudoRetry as SudoRetrySchema } from "../api/schema/sudo.ts";
-import { acknowledgeSudo, resumeSudo, startSudoGoogle, submitSudo } from "../api/sudo-endpoints.ts";
+import {
+  acknowledgeSudo,
+  readSudo,
+  resumeSudo,
+  startSudoGoogle,
+  submitSudo,
+} from "../api/sudo-endpoints.ts";
 import type { SudoMethod } from "../gen/SudoMethod.ts";
 import type { SudoSubmission } from "../gen/SudoSubmission.ts";
 
@@ -701,7 +707,8 @@ export type ConfirmationGate = ReturnType<typeof makeConfirmationGate>;
 export const confirmFirst = Effect.fn("confirmation.confirmFirst")(function* (
   gate: ConfirmationGate,
 ): Effect.fn.Return<ConfirmFirst, never, ApiClient> {
-  const reply = yield* resumeSudo(null).pipe(
+  // Only a look: what the server holds for another tab's Google return stays held.
+  const reply = yield* readSudo().pipe(
     Effect.match({
       onSuccess: (answer) => answer,
       onFailure: (error) => ({ kind: "error", message: error.message }) as const,
@@ -738,17 +745,32 @@ export type SudoStatus =
   | typeof SudoResponse.Type
   | { readonly kind: "unreachable"; readonly message: string };
 
-/**
- * `/app/sudo/new`'s read: whether the confirmation is fresh (`confirmed`, with what the server
- * held for after it) or what it can be confirmed with (`ready`). A fresh one is consumed: what
- * the server held is the page's to continue with now.
- */
-export const sudoStatus = Effect.fn("confirmation.status")(function* () {
-  return yield* resumeSudo(null).pipe(
+/** The server's answer, or why it couldn't be had. */
+const orUnreachable = <E extends { readonly message: string }, R>(
+  read: Effect.Effect<typeof SudoResponse.Type, E, R>,
+) =>
+  read.pipe(
     Effect.catch((error) =>
       Effect.succeed({ kind: "unreachable", message: error.message } satisfies SudoStatus),
     ),
   );
+
+/**
+ * `/app/sudo/new`'s read: whether the confirmation is fresh (`confirmed`) or what it can be
+ * confirmed with (`ready`), and what the server holds for after it. Only a look: nothing held is
+ * let go (another tab's Google return may need it).
+ */
+export const sudoStatus = Effect.fn("confirmation.status")(function* () {
+  return yield* orUnreachable(readSudo());
+});
+
+/**
+ * `/app/sudo/new` acting on what the server holds, once the confirmation is fresh: the
+ * continuation hands it over and lets it go (the one read that does). `ready` if the confirmation
+ * lapsed meanwhile.
+ */
+export const takeHeld = Effect.fn("confirmation.takeHeld")(function* () {
+  return yield* orUnreachable(resumeSudo(null));
 });
 
 /** What a credential sent from `/app/sudo/new` came to. */

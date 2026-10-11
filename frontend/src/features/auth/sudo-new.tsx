@@ -73,10 +73,25 @@ export function SudoNew() {
     [navigate],
   );
 
+  const unreachable = useCallback(
+    (failure: Error) => setShown({ kind: "unreachable", message: failure.message }),
+    [],
+  );
+
+  /**
+   * What the server said: `taken` once the continuation handed over what it held (the status
+   * read only looks, so another tab's Google return keeps what it needs until this page acts).
+   */
   const settle = useCallback(
-    (status: SudoStatus) => {
+    (status: SudoStatus, taken: boolean) => {
       switch (status.kind) {
         case "confirmed":
+          if (!taken && status.retry !== null) {
+            actions.confirmation.takeHeld().then((held) => settle(held, true), unreachable);
+
+            return;
+          }
+
           goOn(status.retry, false);
 
           return;
@@ -98,7 +113,7 @@ export function SudoNew() {
           setShown({ kind: "unreachable", message: status.message });
       }
     },
-    [goOn],
+    [goOn, unreachable],
   );
 
   useEffect(() => {
@@ -107,12 +122,8 @@ export function SudoNew() {
     }
 
     ran.current = read;
-    actions.confirmation
-      .status()
-      .then(settle, (failure: Error) =>
-        setShown({ kind: "unreachable", message: failure.message }),
-      );
-  }, [read, settle]);
+    actions.confirmation.status().then((status) => settle(status, false), unreachable);
+  }, [read, settle, unreachable]);
 
   const submit = async (submission: SudoSubmission) => {
     const reply = await actions.confirmation.confirmHere(submission);
