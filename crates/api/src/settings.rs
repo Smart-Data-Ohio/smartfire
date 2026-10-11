@@ -728,6 +728,9 @@ async fn assign_avatar(c: &mut Ctx, id: i64, avatar: Assignment) -> Result {
     c.app()
         .db
         .write(move |tx| {
+            if let Assignment::Existing(blob) = &avatar {
+                claim_own_image(tx, blob.id, id, "avatar")?;
+            }
             attachments::assign(tx, Record::user(id), "avatar", avatar)?;
             profile_settings::bump_revision(tx, id)
         })
@@ -753,33 +756,12 @@ async fn attach_banner(c: &mut Ctx) -> Result {
     )
     .await?;
     let blob = prepared.blob.clone();
-    let uploader = blob
-        .metadata
-        .get("uploader_id")
-        .and_then(campfire_storage::Json::as_i64);
-    let blob_id = blob.id;
-    // Anything else the blob is attached to (a message, an avatar) keeps it as it is.
-    let used_elsewhere = c
-        .app()
-        .db
-        .read(move |conn| {
-            Ok(conn.query_row(
-                "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id = ?1 \
-                 AND NOT (record_type = 'User' AND record_id = ?2 AND name = 'banner'))",
-                rusqlite::params![blob_id, id],
-                |row| row.get::<_, bool>(0),
-            )?)
-        })
-        .await
-        .map_err(db_error)?;
-    if uploader.is_some_and(|uploader| uploader != id) || used_elsewhere {
-        return Err(fail(c, validation("signedId", "must be an image you uploaded")));
-    }
     let storage = c.app().storage.clone();
     let secrets = c.app().secrets.clone();
     c.app()
         .db
         .write(move |tx| {
+            claim_own_image(tx, blob.id, id, "banner")?;
             crate::branding_images::save(
                 tx,
                 &storage,
@@ -798,6 +780,35 @@ async fn attach_banner(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     publish_identity(c, id).await?;
     reply(c, id).await
+}
+
+/// Refuses, as `signedId`, a blob that isn't `user_id`'s own direct upload or that is attached
+/// anywhere but their `name` slot (a message, their other image). It runs in the writer
+/// transaction that attaches the blob, so nothing can claim it in between.
+fn claim_own_image(
+    tx: &mut campfire_db::Tx<'_>,
+    blob_id: i64,
+    user_id: i64,
+    name: &'static str,
+) -> campfire_db::Result<()> {
+    let blob = campfire_storage::Blob::find(tx.conn(), blob_id)
+        .map_err(attachments::storage_error)?
+        .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+    let uploader = blob
+        .metadata
+        .get("uploader_id")
+        .and_then(campfire_storage::Json::as_i64);
+    let attached: bool = tx.conn().query_row(
+        "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id = ?1 \
+         AND NOT (record_type = 'User' AND record_id = ?2 AND name = ?3))",
+        rusqlite::params![blob_id, user_id, name],
+        |row| row.get(0),
+    )?;
+    let mut errors = Errors::default();
+    if uploader != Some(user_id) || attached {
+        errors.add("signed_id", "must be an image you uploaded");
+    }
+    errors.into_result()
 }
 
 async fn detach_banner(c: &mut Ctx) -> Result {

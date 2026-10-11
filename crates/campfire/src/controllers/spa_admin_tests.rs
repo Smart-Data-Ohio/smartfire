@@ -267,6 +267,38 @@ pub(super) async fn upload(a: &TestApp, name: &str) -> String {
     campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None)
 }
 
+/// `upload`, as `owner`'s own direct upload.
+pub(super) async fn owned_upload(a: &TestApp, name: &str, owner: i64) -> String {
+    let signed_id = upload(a, name).await;
+    let id = campfire_storage::paths::verify_signed_blob_id(
+        &*a.booted.app.storage.verifier,
+        &signed_id,
+        a.booted.app.clock.now(),
+    )
+    .unwrap();
+    set_uploader(a, id, owner).await;
+    signed_id
+}
+
+/// Records `owner` as blob `id`'s uploader, as a direct upload by them does.
+pub(super) async fn set_uploader(a: &TestApp, id: i64, owner: i64) {
+    a.db()
+        .write(move |tx| {
+            let mut blob = campfire_storage::Blob::find(tx.conn(), id)
+                .unwrap()
+                .unwrap();
+            blob.metadata
+                .set("uploader_id", campfire_storage::Json::Int(owner));
+            tx.conn().execute(
+                "UPDATE active_storage_blobs SET metadata = ?1 WHERE id = ?2",
+                (blob.metadata.encode(), id),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
 /// What one write did: the database afterwards and everything it published.
 pub(super) struct Outcome {
     pub(super) before: Value,
