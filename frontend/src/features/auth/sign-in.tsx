@@ -1,3 +1,4 @@
+import { useSearch } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { type AuthNext, auth, type SignedOutBootData } from "../../sync/auth.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
@@ -64,7 +65,9 @@ function SignInForm({ boot }: { readonly boot: SignedOutBootData }) {
   const titleId = useId();
   const follow = useFollowNext();
   const passwordRef = useRef<HTMLInputElement | null>(null);
-  const [email, setEmail] = useState("");
+  // The retained page fills in `?email_address=` (a join form's address that has an account).
+  const filled = useSearch({ strict: false, select: (search) => search.email_address });
+  const [email, setEmail] = useState(filled ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);

@@ -8,12 +8,16 @@ import { Option, Schema } from "effect";
 import {
   consumeTransfer,
   googleSignIn,
+  type JoinTarget,
   passwordSignIn,
   readChallenge,
+  readJoinPage,
   signedOutBoot,
   submitChallenge,
+  submitJoin,
 } from "../api/auth-endpoints.ts";
-import { type AuthResponse, SignedOutBoot } from "../api/schema/auth.ts";
+import { type AuthResponse, type JoinAnswer, SignedOutBoot } from "../api/schema/auth.ts";
+import type { WorkspaceJoin } from "../gen/WorkspaceJoin.ts";
 import { runAction } from "./runtime.ts";
 
 /** The public boot: the workspace's branding, the sign-in methods and the help line. */
@@ -21,6 +25,11 @@ export type SignedOutBootData = typeof SignedOutBoot.Type;
 
 /** A sign-in operation's next action. */
 export type AuthNext = typeof AuthResponse.Type;
+
+/** A join endpoint's answer: the join page's state, or a next action. */
+export type JoinNext = typeof JoinAnswer.Type;
+
+export type { JoinTarget };
 
 const decodeInline = Schema.decodeUnknownOption(Schema.fromJsonString(SignedOutBoot));
 
@@ -50,4 +59,9 @@ export const auth = {
   verify: (code: string, rememberDevice: boolean): Promise<AuthNext> =>
     runAction(submitChallenge({ code, rememberDevice })),
   transfer: (id: string): Promise<AuthNext> => runAction(consumeTransfer(id)),
+  /** The join or invite page: the form, a dead invite's reason, or where to go instead. */
+  joinPage: (target: JoinTarget): Promise<JoinNext> => runAction(readJoinPage(target)),
+  /** Creates the account and signs it in, or says why not. */
+  join: (target: JoinTarget, fields: WorkspaceJoin, avatar: File | null): Promise<JoinNext> =>
+    runAction(submitJoin(target, fields, avatar)),
 };

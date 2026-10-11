@@ -1,5 +1,5 @@
 /**
- * Test support for the signed-out pages: the three routes in a memory router under `/app/`, as
+ * Test support for the signed-out pages: their routes in a memory router under `/app/`, as
  * src/router.tsx mounts them, and the mock's sign-in controls.
  */
 import {
@@ -12,7 +12,9 @@ import {
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
 import type { MockNetwork } from "../../test/mock-network.ts";
+import { parseSignInSearch } from "./auth-navigation.ts";
 import { ChallengePage } from "./challenge.tsx";
+import { InviteRoute, JoinCodeRoute } from "./join.tsx";
 import { SignInPage } from "./sign-in.tsx";
 import { TransferRoute } from "./transfer.tsx";
 
@@ -26,7 +28,14 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
   const root = createRootRoute({ component: Outlet });
 
   const routes = [
-    createRoute({ getParentRoute: () => root, path: "session/new", component: SignInPage }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "session/new",
+      validateSearch: parseSignInSearch,
+      component: SignInPage,
+    }),
+    createRoute({ getParentRoute: () => root, path: "join/$joinCode", component: JoinCodeRoute }),
+    createRoute({ getParentRoute: () => root, path: "invite/$token", component: InviteRoute }),
     createRoute({
       getParentRoute: () => root,
       path: "two_factor/challenge",

@@ -26,6 +26,32 @@ export function signedOutPageFor(location: string): SignedOutPage | null {
   return SPA_AUTH_PAGES.get(url.pathname) ?? null;
 }
 
+/** The sign-in page's query: the address to fill in (a join form's existing account). */
+export interface SignInSearch {
+  readonly email_address?: string;
+}
+
+/** The sign-in page's query as the URL has it. */
+interface RawSignInSearch {
+  readonly email_address?: unknown;
+}
+
+/** `?email_address=` as the retained sign-in page reads it; anything else is dropped. */
+export function parseSignInSearch(search: RawSignInSearch): SignInSearch {
+  const email = search.email_address;
+
+  return email === undefined || email === null || email === ""
+    ? {}
+    : { email_address: String(email) };
+}
+
+/** The sign-in query a server-named location carries. */
+export function signInSearchFor(location: string): SignInSearch {
+  const url = new URL(location, window.location.href);
+
+  return parseSignInSearch({ email_address: url.searchParams.get("email_address") ?? undefined });
+}
+
 /** The one way these pages leave the SPA; tests replace `assign`. */
 export const pageExit = {
   assign(url: string): void {

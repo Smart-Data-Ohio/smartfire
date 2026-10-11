@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { AuthResponse as WireResponse } from "../../gen/AuthResponse.ts";
 import type { ChallengeState as WireChallenge } from "../../gen/ChallengeState.ts";
+import type { JoinPage as WireJoinPage } from "../../gen/JoinPage.ts";
 import type { SignedOutBoot as WireBoot } from "../../gen/SignedOutBoot.ts";
 import type { Assert, Pinned } from "./pin.ts";
 
@@ -19,23 +20,50 @@ export const AuthResponse = Schema.Union([
   }),
 ]);
 
+const SignInWorkspace = Schema.Struct({
+  name: Schema.NullOr(Schema.String),
+  logoUrl: Schema.NullOr(Schema.String),
+  description: Schema.String,
+});
+
+const SignInHelpContact = Schema.NullOr(
+  Schema.Struct({ name: Schema.String, emailAddress: Schema.String }),
+);
+
 export const SignedOutBoot = Schema.Struct({
   kind: Schema.Literal("signedOut"),
-  workspace: Schema.Struct({
-    name: Schema.NullOr(Schema.String),
-    logoUrl: Schema.NullOr(Schema.String),
-    description: Schema.String,
-  }),
+  workspace: SignInWorkspace,
   signInMethods: Schema.Struct({
     password: Schema.Boolean,
     google: Schema.Boolean,
     googleDomains: Schema.Array(Schema.String),
   }),
   firstRunPending: Schema.Boolean,
-  helpContact: Schema.NullOr(Schema.Struct({ name: Schema.String, emailAddress: Schema.String })),
+  helpContact: SignInHelpContact,
   version: Schema.String,
   csrfToken: Schema.String,
 });
+
+/** What the join and invite pages show: the form, or why the invite can't be used. */
+export const JoinPage = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("join"),
+    workspace: SignInWorkspace,
+    helpContact: SignInHelpContact,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("inviteInvalid"),
+    workspace: SignInWorkspace,
+    helpContact: SignInHelpContact,
+    refusal: Schema.Literals(["expired", "exhausted", "revoked", "unknown"]),
+    reason: Schema.String,
+  }),
+]);
+
+/** A join endpoint's answer: the page's state, or a next action (an access gate, a signup). */
+export const JoinAnswer = Schema.Union([...JoinPage.members, ...AuthResponse.members]);
+
+export type JoinPagePin = Assert<Pinned<typeof JoinPage, WireJoinPage>>;
 
 export type AuthResponsePin = Assert<Pinned<typeof AuthResponse, WireResponse>>;
 

@@ -46,6 +46,7 @@ import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
 import { createDrive, pickerFiles } from "./s2/drive.ts";
+import { createJoin, type MockJoined } from "./s2/join.ts";
 import { createMessages } from "./s2/messages.ts";
 import {
   buildMessage,
@@ -183,6 +184,8 @@ export interface MockServer {
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
   csrfToken(): string;
+  /** Everyone who joined through the join and invite pages in this world, oldest first. */
+  joined(): readonly MockJoined[];
   /**
    * The boot JSON the Rust shell inlines in `<script type="application/json" id="boot">` (boot
    * without its CSRF token, which the meta tag carries), escaped for a script element.
@@ -937,6 +940,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const admin = createAdmin(ctx, uploads);
   const signIn = createSignIn(ctx, admin, () => csrf);
+  const join = createJoin(ctx, admin);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
@@ -1008,6 +1012,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createAccount(ctx).routes,
     ...admin.routes,
     ...signIn.routes,
+    ...join.routes,
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
@@ -1487,6 +1492,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
+    joined: () => join.joined(),
     inlineBoot: () => {
       const { csrfToken: _meta, ...inline } = boot();
 

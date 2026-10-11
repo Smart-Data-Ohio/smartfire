@@ -45,7 +45,7 @@ export class Navigation extends Context.Service<
   });
 }
 
-/** One `/api/v1` request. Bodies and replies are JSON. */
+/** One `/api/v1` request. Bodies and replies are JSON, except a `form` (it carries a file). */
 export interface ApiRequest {
   readonly method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   /** Below the API base, e.g. `/rooms/12/messages`; from the origin's root with `root`. */
@@ -57,6 +57,8 @@ export interface ApiRequest {
   readonly root?: true;
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: Schema.Json;
+  /** A multipart body instead of `body`: the join form, whose avatar can't go as JSON. */
+  readonly form?: FormData;
   /** Credential refusals are decoded next actions; token refresh uses the public auth boot. */
   readonly auth?: true;
 }
@@ -117,7 +119,7 @@ export class ApiClient extends Context.Service<
           return yield* readSuccess(response, decode);
         }
 
-        if (request.auth === true && [400, 401, 404, 422, 429].includes(response.status)) {
+        if (request.auth === true && [400, 401, 404, 410, 422, 429].includes(response.status)) {
           return yield* readSuccess(response, decode).pipe(
             Effect.catchTag("ServerError", (error) =>
               response.status === 422 ? readFailure(response, navigation) : Effect.fail(error),
@@ -200,6 +202,8 @@ function toHttpRequest(
 
   if (request.body !== undefined) {
     built = HttpClientRequest.bodyJsonUnsafe(built, request.body);
+  } else if (request.form !== undefined) {
+    built = HttpClientRequest.bodyFormData(built, request.form);
   }
 
   return built;

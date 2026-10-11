@@ -26,7 +26,7 @@ import { extname, join, normalize } from "node:path";
 import type { Duplex } from "node:stream";
 import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 import { type WebSocket, WebSocketServer } from "ws";
-import { type Json, parseJson } from "./json.ts";
+import { formJson, type Json, parseJson } from "./json.ts";
 import { BOT_ID, USERS_WITH_PHOTOS } from "./seed.ts";
 import {
   createMockServer,
@@ -131,7 +131,29 @@ function avatarSvg(userId: number): string {
 
 async function serveHttp(mock: MockServer, request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url ?? "/", "http://localhost");
-  const text = (await readBody(request)).toString("utf8");
+  const raw = await readBody(request);
+  const contentType = request.headers["content-type"] ?? "";
+
+  // The join form's multipart body (it carries the avatar), read as the vitest transport does.
+  if (contentType.startsWith("multipart/form-data")) {
+    const form = await new Response(new Uint8Array(raw), {
+      headers: { "Content-Type": contentType },
+    }).formData();
+
+    const result = await mock.handle({
+      method: request.method ?? "GET",
+      path: url.pathname,
+      query: url.searchParams,
+      body: formJson(form),
+      headers: headersOf(request),
+    });
+
+    sendJson(response, result.status, result.json);
+
+    return;
+  }
+
+  const text = raw.toString("utf8");
   const body = text.trim() === "" ? undefined : parseJson(text);
 
   if (text.trim() !== "" && body === undefined) {

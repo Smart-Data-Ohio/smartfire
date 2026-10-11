@@ -87,3 +87,18 @@ export function parseJson(text: string): Json | undefined {
     return undefined;
   }
 }
+
+/**
+ * A multipart form as the mock's handlers read bodies: each text part a string, each file part
+ * its name, type and size (the join form's avatar).
+ */
+export function formJson(form: FormData): JsonRecord {
+  const record: Record<string, Json> = {};
+
+  form.forEach((value, key) => {
+    record[key] =
+      value instanceof File ? { filename: value.name, type: value.type, size: value.size } : value;
+  });
+
+  return record;
+}

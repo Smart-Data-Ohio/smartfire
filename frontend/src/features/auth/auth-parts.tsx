@@ -10,7 +10,7 @@ import {
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Popover } from "../../ui/popover.tsx";
-import { pageExit, signedOutPageFor } from "./auth-navigation.ts";
+import { pageExit, signedOutPageFor, signInSearchFor } from "./auth-navigation.ts";
 import type { Translation } from "./translations.ts";
 import "./auth.css";
 
@@ -58,6 +58,9 @@ export function useFollowNext(): (next: Exclude<AuthNext, { readonly kind: "erro
 
       if (page === null) {
         pageExit.assign(next.location);
+      } else if (page === "/session/new" && next.kind === "navigate") {
+        // An address that already has an account goes to sign-in with it filled in.
+        void navigate({ to: page, search: signInSearchFor(next.location), replace: true });
       } else {
         void navigate({ to: page, replace: true });
       }
@@ -244,16 +247,27 @@ export function AuthFooter({ boot }: { readonly boot: SignedOutBootData }) {
           Terms of Service
         </a>
       </nav>
-      {contact === null ? null : (
-        <div className="auth-view-help">
-          <a href={`mailto:${contact.emailAddress}`} title={`Email ${contact.name}`}>
-            <Icon name="life-buoy" size={14} />
-            <span>{contact.emailAddress}</span>
-          </a>
-          <span>Smartfire™ version {boot.version}</span>
-        </div>
-      )}
+      {contact === null ? null : <AuthHelp contact={contact} version={boot.version} />}
     </>
+  );
+}
+
+/** The first administrator to ask for help, and the version (the retained `_help_contact`). */
+export function AuthHelp({
+  contact,
+  version,
+}: {
+  readonly contact: { readonly name: string; readonly emailAddress: string };
+  readonly version: string;
+}) {
+  return (
+    <div className="auth-view-help">
+      <a href={`mailto:${contact.emailAddress}`} title={`Email ${contact.name}`}>
+        <Icon name="life-buoy" size={14} />
+        <span>{contact.emailAddress}</span>
+      </a>
+      <span>Smartfire™ version {version}</span>
+    </div>
   );
 }
 
