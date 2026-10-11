@@ -9,6 +9,9 @@
  * `123456` and the backup code `MOCK_BACKUP_CODE`. An email address or code starting `limit` is
  * rate limited. The sign-in link `mock-transfer-token` signs in, `mock-transfer-two-factor` goes
  * on to the challenge, and any other link is invalid.
+ *
+ * About, Privacy and Terms answer what the Rust contract does for the auth-page fixtures' policy:
+ * public-pages.json is written by crates/campfire's public_page_mock_fixture test.
  */
 import type { AuthResponse } from "../../src/gen/AuthResponse.ts";
 import type { SignedOutBoot } from "../../src/gen/SignedOutBoot.ts";
@@ -17,6 +20,7 @@ import { stringField } from "../json.ts";
 import { MOCK_TOTP } from "./account.ts";
 import type { AdminModule } from "./admin.ts";
 import { type Route, route, type S2Context } from "./context.ts";
+import PUBLIC_PAGES from "./public-pages.json" with { type: "json" };
 import { MOCK_PASSWORD } from "./settings.ts";
 
 /** Signs in with the mock password, straight into the app. */
@@ -133,6 +137,12 @@ export function createSignIn(
     },
     routes: [
       route("GET", /^\/session\/boot$/, () => ({ status: 200, json: boot() })),
+      route("GET", /^\/public_pages\/about$/, () => ({ status: 200, json: PUBLIC_PAGES.about })),
+      route("GET", /^\/public_pages\/privacy$/, () => ({
+        status: 200,
+        json: PUBLIC_PAGES.privacy,
+      })),
+      route("GET", /^\/public_pages\/terms$/, () => ({ status: 200, json: PUBLIC_PAGES.terms })),
       route("POST", /^\/session$/, ({ body }) => {
         const email = (stringField(body, "emailAddress") ?? "").trim().toLowerCase();
         const password = stringField(body, "password") ?? "";

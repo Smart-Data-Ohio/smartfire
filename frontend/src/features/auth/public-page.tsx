@@ -12,7 +12,12 @@ type PageLoad =
   | { readonly status: "ready"; readonly page: PublicPageData };
 
 /** The page's contract, as it loads, and a way to ask again after a failure. */
-function usePublicPage(name: PublicPageName): { readonly load: PageLoad; readonly retry: () => void } {
+interface PublicPageState {
+  readonly load: PageLoad;
+  readonly retry: () => void;
+}
+
+function usePublicPage(name: PublicPageName): PublicPageState {
   const [load, setLoad] = useState<PageLoad>({ status: "loading" });
 
   const fetchPage = useCallback(() => {
@@ -62,6 +67,37 @@ function PageLink({ to, children }: { readonly to: string; readonly children: Re
   );
 }
 
+/** The article once it has loaded; until then, a wait or a failure to try again from. */
+function PageBody({ load, retry }: PublicPageState) {
+  if (load.status === "ready") {
+    return (
+      <article
+        className="public-view-prose"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: the retained page's own Askama render (escaped LEGAL_* values, fixed text), the HTML /about, /privacy and /terms serve
+        dangerouslySetInnerHTML={{ __html: load.page.html }}
+      />
+    );
+  }
+
+  if (load.status === "error") {
+    return (
+      <div className="public-view-state" role="alert">
+        <p>{load.message}</p>
+        <Button variant="primary" onClick={retry}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <p className="auth-view-wait public-view-state" role="status">
+      <Spinner />
+      One moment…
+    </p>
+  );
+}
+
 /**
  * `/app/about`, `/app/privacy` and `/app/terms`: the retained public pages
  * (crates/retained_pages/templates/public_pages, in layouts/public.html) for anyone, signed in or
@@ -107,25 +143,7 @@ export function PublicPageView({ name }: { readonly name: PublicPageName }) {
         className="public-view-wrap public-view-main"
         aria-busy={load.status === "loading" || undefined}
       >
-        {load.status === "ready" ? (
-          <article
-            className="public-view-prose"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: the retained page's own Askama render (escaped LEGAL_* values, fixed text), the HTML /about, /privacy and /terms serve
-            dangerouslySetInnerHTML={{ __html: load.page.html }}
-          />
-        ) : load.status === "error" ? (
-          <div className="public-view-state" role="alert">
-            <p>{load.message}</p>
-            <Button variant="primary" onClick={retry}>
-              Try again
-            </Button>
-          </div>
-        ) : (
-          <p className="auth-view-wait public-view-state" role="status">
-            <Spinner />
-            One moment…
-          </p>
-        )}
+        <PageBody load={load} retry={retry} />
       </main>
       <footer className="public-view-footer">
         <div className="public-view-wrap">

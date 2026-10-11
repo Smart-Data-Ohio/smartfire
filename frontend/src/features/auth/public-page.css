@@ -26,10 +26,13 @@
     background: var(--bg-raised);
     box-shadow: var(--shadow-overlay);
     translate: 0 -200%;
+    opacity: 0;
   }
 
+  /* Out of sight, shadow and all, until a keyboard reaches it. */
   .public-view-skip:focus-visible {
     translate: 0;
+    opacity: 1;
   }
 
   .public-view-wrap {
@@ -157,6 +160,7 @@
     background: var(--bg-hover);
     font-family: var(--font-mono);
     font-size: 0.9em;
+    white-space: nowrap;
   }
 
   .public-view-prose .public-lede {

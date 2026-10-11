@@ -138,6 +138,35 @@ const transferRoute = createRoute({
   ),
 });
 
+/**
+ * About, Privacy and Terms, outside the shell for anyone: signed out, the server renders their
+ * URLs with the signed-out boot (crates/spa/src/signed_out.rs). `/about`, `/privacy` and `/terms`
+ * still serve the retained pages until a later slice makes these canonical.
+ */
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "about",
+  ...chunked(() =>
+    import("./features/auth/public-page.tsx").then((module) => ({ default: module.AboutPage })),
+  ),
+});
+
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "privacy",
+  ...chunked(() =>
+    import("./features/auth/public-page.tsx").then((module) => ({ default: module.PrivacyPage })),
+  ),
+});
+
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "terms",
+  ...chunked(() =>
+    import("./features/auth/public-page.tsx").then((module) => ({ default: module.TermsPage })),
+  ),
+});
+
 /** `/app/`: the last room on wide screens, the conversation list on phones. */
 const homeRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -648,6 +677,9 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   challengeRoute,
   transferRoute,
+  aboutRoute,
+  privacyRoute,
+  termsRoute,
   shellRoute.addChildren([
     homeRoute,
     activityRoute,

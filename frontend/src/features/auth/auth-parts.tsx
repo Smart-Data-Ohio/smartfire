@@ -225,8 +225,8 @@ const FLAG_LANGUAGES = new Map([
 ]);
 
 /**
- * Under the sign-in card: the public pages (in a new tab, as the retained page opens them), then
- * the first administrator to ask for help and the version.
+ * Under the sign-in card: the public pages' SPA copies (in a new tab, as the retained page opens
+ * them), then the first administrator to ask for help and the version.
  */
 export function AuthFooter({ boot }: { readonly boot: SignedOutBootData }) {
   const contact = boot.helpContact;
@@ -234,13 +234,13 @@ export function AuthFooter({ boot }: { readonly boot: SignedOutBootData }) {
   return (
     <>
       <nav className="auth-view-links" aria-label="About this workspace">
-        <a href="/about" target="_blank" rel="noopener">
+        <a href="/app/about" target="_blank" rel="noopener">
           About
         </a>
-        <a href="/privacy" target="_blank" rel="noopener">
+        <a href="/app/privacy" target="_blank" rel="noopener">
           Privacy Policy
         </a>
-        <a href="/terms" target="_blank" rel="noopener">
+        <a href="/app/terms" target="_blank" rel="noopener">
           Terms of Service
         </a>
       </nav>
