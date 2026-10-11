@@ -279,3 +279,107 @@ async fn put_involvement(c: &mut Ctx) -> Result {
         },
     )
 }
+
+endpoint!(create_workspace_category => post_workspace_category);
+endpoint!(update_workspace_category => patch_workspace_category);
+endpoint!(destroy_workspace_category => delete_workspace_category);
+endpoint!(order_workspace_categories => put_workspace_order);
+endpoint!(move_workspace_room => put_workspace_room);
+
+fn workspace_category(row: campfire_db::WorkspaceCategory) -> api::WorkspaceCategory {
+    api::WorkspaceCategory {
+        id: row.id,
+        name: row.name,
+        position: row.position,
+    }
+}
+
+async fn post_workspace_category(c: &mut Ctx) -> Result {
+    crate::admin::administrator(c).await?;
+    let api::WriteWorkspaceCategory { name } = body(c).await?;
+    let row = c
+        .app()
+        .db
+        .write(move |tx| campfire_db::WorkspaceCategory::create(tx, &name))
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::CREATED, &workspace_category(row))
+}
+
+async fn patch_workspace_category(c: &mut Ctx) -> Result {
+    crate::admin::administrator(c).await?;
+    let id = path_category_id(c)?;
+    let api::WriteWorkspaceCategory { name } = body(c).await?;
+    let row = c
+        .app()
+        .db
+        .write(move |tx| campfire_db::WorkspaceCategory::find(tx.conn(), id)?.rename(tx, &name))
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &workspace_category(row))
+}
+
+async fn delete_workspace_category(c: &mut Ctx) -> Result {
+    crate::admin::administrator(c).await?;
+    let id = path_category_id(c)?;
+    c.app()
+        .db
+        .write(move |tx| campfire_db::WorkspaceCategory::find(tx.conn(), id)?.destroy(tx))
+        .await
+        .map_err(db_error)?;
+    Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+async fn put_workspace_order(c: &mut Ctx) -> Result {
+    let viewer = crate::admin::administrator(c).await?;
+    let api::ReorderWorkspaceCategories { category_ids } = body(c).await?;
+    let layout = c
+        .app()
+        .db
+        .write(move |tx| {
+            if campfire_db::WorkspaceCategory::reorder(tx, &category_ids)?.is_none() {
+                return Ok(None);
+            }
+            crate::sync::workspace_layout(tx.conn(), viewer.id).map(Some)
+        })
+        .await
+        .map_err(db_error)?;
+    let Some(layout) = layout else {
+        return Err(fail(
+            c,
+            api::ApiError::Conflict {
+                message: "Workspace categories changed. Refresh and try again.".into(),
+            },
+        ));
+    };
+    c.json(StatusCode::OK, &layout)
+}
+
+async fn put_workspace_room(c: &mut Ctx) -> Result {
+    let viewer = crate::admin::administrator(c).await?;
+    let (_, room) = set_room(c).await?;
+    let room_id = room.id;
+    let api::MoveWorkspaceRoom {
+        workspace_category_id,
+        position,
+    } = body(c).await?;
+    let layout = c
+        .app()
+        .db
+        .write(move |tx| {
+            // Membership can change after the request's initial read.
+            if Membership::find_by_room_and_user(tx.conn(), room_id, viewer.id)?.is_none() {
+                return Err(campfire_db::Error::RecordNotFound("Room"));
+            }
+            campfire_db::WorkspaceCategory::move_room(
+                tx,
+                room_id,
+                workspace_category_id,
+                position,
+            )?;
+            crate::sync::workspace_layout(tx.conn(), viewer.id)
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &layout)
+}

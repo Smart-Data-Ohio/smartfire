@@ -455,3 +455,15 @@ fn stale_rule_edits_preserve_the_other_writers_dirty_columns() {
     assert_eq!(fresh.tag, "urgent");
     assert_eq!(fresh.assignee_id, id("jz"));
 }
+
+#[test]
+fn rule_matches_unicode_case_equivalent_catalog_tag() {
+    let (t, room) = setup();
+    t.write(move |tx| crate::BoardTag::create(tx, room.id, "Straße", None));
+    rule(&t, room.id, "strasse", "jz");
+    let thread = post(&t, room.id, vec!["strasse".into()], None);
+    assert_eq!(
+        t.read(move |conn| ChannelThread::find(conn, thread.id)).work_owner_id,
+        Some(id("jz"))
+    );
+}

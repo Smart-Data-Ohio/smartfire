@@ -4,7 +4,7 @@ use campfire_api_types as api;
 use campfire_app::app::{AppCtx, AppState};
 use campfire_db::models::channel_thread::{BOARD_POSTS_PER_PAGE, board_page_number};
 use campfire_db::{
-    ChannelThread, Connection, Membership, Message, NewChannelThread, NewMessage, Room, User,
+    BoardTag, BoardTagPolicy, ChannelThread, Connection, Membership, Message, NewChannelThread, NewMessage, Room, Tx, User,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
 use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob};
@@ -29,6 +29,113 @@ endpoint!(
     /// `POST /api/v1/rooms/:room_id/posts`
     create => create_post
 );
+endpoint!(catalog => list_catalog);
+endpoint!(create_tag => post_tag);
+endpoint!(update_tag => patch_tag);
+endpoint!(destroy_tag => delete_tag);
+endpoint!(reorder_tags => put_tag_order);
+endpoint!(update_policy => patch_policy);
+
+fn tag_catalog(conn: &Connection, room_id: i64) -> campfire_db::Result<api::BoardTagCatalog> {
+    let policy = BoardTagPolicy::for_room(conn, room_id)?;
+    Ok(api::BoardTagCatalog {
+        room_id,
+        tags: BoardTag::for_room(conn, room_id)?.into_iter().map(|tag| api::BoardTag {
+            id: tag.id, name: tag.name, emoji: tag.emoji, position: tag.position,
+        }).collect(),
+        tags_required: policy.tags_required,
+        default_board_tag_id: policy.default_board_tag_id,
+    })
+}
+
+async fn render_catalog(c: &mut Ctx, room_id: i64, status: StatusCode) -> Result {
+    let catalog = c.app().db.read(move |conn| tag_catalog(conn, room_id)).await.map_err(db_error)?;
+    c.json(status, &catalog)
+}
+
+async fn list_catalog(c: &mut Ctx) -> Result {
+    let (room, _) = scope(c).await?;
+    render_catalog(c, room.id, StatusCode::OK).await
+}
+
+async fn edit_scope(c: &mut Ctx) -> Result<(Room, User)> {
+    let (room, viewer) = scope(c).await?;
+    if !viewer.can_administer(Some(room.creator_id), false) {
+        return Err(fail(c, api::ApiError::Forbidden { message: "Not allowed".into() }));
+    }
+    Ok((room, viewer))
+}
+
+async fn write_catalog(
+    c: &mut Ctx,
+    room: Room,
+    viewer: User,
+    status: StatusCode,
+    write: impl FnOnce(&mut Tx<'_>) -> campfire_db::Result<()> + Send + 'static,
+) -> Result {
+    let (room_id, viewer_id) = (room.id, viewer.id);
+    let result = c.app().db.write(move |tx| {
+        // Recheck authority after waiting for the writer, like the post creation path.
+        let room = Room::find_for_user(tx.conn(), viewer_id, room_id)?.filter(Room::board);
+        let viewer = User::find_by_id(tx.conn(), viewer_id)?.filter(|user| user.is_active() && !user.is_bot());
+        let (Some(room), Some(viewer)) = (room, viewer) else { return Ok(Err(not_found())); };
+        if !viewer.can_administer(Some(room.creator_id), false) {
+            return Ok(Err(api::ApiError::Forbidden { message: "Not allowed".into() }));
+        }
+        write(tx)?;
+        Ok(Ok(()))
+    }).await;
+    match result {
+        Ok(Ok(())) => (),
+        Ok(Err(error)) => return Err(fail(c, error)),
+        Err(campfire_db::Error::RecordInvalid(errors)) => return Err(fail(c, record_invalid(&errors, &[]))),
+        Err(error) => return Err(db_error(error)),
+    }
+    c.app().broadcasts.board_automations_changed(room_id);
+    render_catalog(c, room_id, status).await
+}
+
+async fn post_tag(c: &mut Ctx) -> Result {
+    let (room, viewer) = edit_scope(c).await?;
+    let input: api::SaveBoardTag = body(c).await?;
+    let room_id = room.id;
+    write_catalog(c, room, viewer, StatusCode::CREATED, move |tx| {
+        BoardTag::create(tx, room_id, &input.name, input.emoji.as_deref()).map(|_| ())
+    }).await
+}
+
+async fn patch_tag(c: &mut Ctx) -> Result {
+    let (room, viewer) = edit_scope(c).await?;
+    let input: api::SaveBoardTag = body(c).await?;
+    let id = c.param_str("id").and_then(campfire_runtime::concerns::cast_integer).ok_or(campfire_kit::Error::NotFound)?;
+    let room_id = room.id;
+    write_catalog(c, room, viewer, StatusCode::OK, move |tx| {
+        BoardTag::update(tx, room_id, id, &input.name, input.emoji.as_deref()).map(|_| ())
+    }).await
+}
+
+async fn delete_tag(c: &mut Ctx) -> Result {
+    let (room, viewer) = edit_scope(c).await?;
+    let id = c.param_str("id").and_then(campfire_runtime::concerns::cast_integer).ok_or(campfire_kit::Error::NotFound)?;
+    let room_id = room.id;
+    write_catalog(c, room, viewer, StatusCode::OK, move |tx| BoardTag::destroy(tx, room_id, id)).await
+}
+
+async fn put_tag_order(c: &mut Ctx) -> Result {
+    let (room, viewer) = edit_scope(c).await?;
+    let input: api::ReorderBoardTags = body(c).await?;
+    let room_id = room.id;
+    write_catalog(c, room, viewer, StatusCode::OK, move |tx| BoardTag::reorder(tx, room_id, &input.tag_ids)).await
+}
+
+async fn patch_policy(c: &mut Ctx) -> Result {
+    let (room, viewer) = edit_scope(c).await?;
+    let input: api::UpdateBoardTagPolicy = body(c).await?;
+    let room_id = room.id;
+    write_catalog(c, room, viewer, StatusCode::OK, move |tx| {
+        BoardTagPolicy::update(tx, room_id, input.tags_required, input.default_board_tag_id).map(|_| ())
+    }).await
+}
 
 async fn scope(c: &mut Ctx) -> Result<(Room, User)> {
     before_actions(c).await?;
@@ -94,6 +201,8 @@ async fn list_board(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
+            let catalog = tag_catalog(conn, room.id)?;
+            let tag = BoardTag::canonical_name(conn, room.id, &tag)?.unwrap_or(tag);
             let mut posts = ChannelThread::board_posts_for(
                 conn,
                 room.id,
@@ -141,6 +250,9 @@ async fn list_board(c: &mut Ctx) -> Result {
                 digest: digest(conn, &app, room.id)?,
                 can_administer: viewer.can_administer(Some(room.creator_id), false),
                 users,
+                tags: catalog.tags,
+                tags_required: catalog.tags_required,
+                default_board_tag_id: catalog.default_board_tag_id,
             })
         })
         .await
@@ -155,6 +267,7 @@ async fn new_post(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
+            let catalog = tag_catalog(conn, room.id)?;
             let owner_candidates = crate::work::owner_candidates(conn, room.id)?;
             Ok(api::BoardPostForm {
                 users: dto::users(
@@ -168,6 +281,9 @@ async fn new_post(c: &mut Ctx) -> Result {
                     .into_iter()
                     .map(|(name, _)| name)
                     .collect(),
+                tags: catalog.tags,
+                tags_required: catalog.tags_required,
+                default_board_tag_id: catalog.default_board_tag_id,
             })
         })
         .await

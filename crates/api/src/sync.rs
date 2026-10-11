@@ -120,6 +120,14 @@ impl SyncRenderer for Renderer {
         row
     }
 
+    fn workspace_layout(
+        &self,
+        conn: &Connection,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<api::WorkspaceLayout>> {
+        workspace_layout(conn, user_id).map(Some)
+    }
+
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
         let app = self.app.upgrade()?;
         let now = app.db.env().now();
@@ -640,6 +648,39 @@ impl SyncSession for Session {
         }
         self.publish_presence(&app).await;
     }
+}
+
+/// The shared hierarchy in the same snapshot as the member's sidebar or live publication.
+pub(crate) fn workspace_layout(
+    conn: &Connection,
+    user_id: i64,
+) -> campfire_db::Result<api::WorkspaceLayout> {
+    let viewer = campfire_db::User::find(conn, user_id)?;
+    let rooms = campfire_db::WorkspaceCategory::visible_rooms(conn, user_id)?;
+    Ok(api::WorkspaceLayout {
+        categories: campfire_db::WorkspaceCategory::ordered(conn)?
+            .into_iter()
+            .filter(|category| {
+                viewer.is_administrator()
+                    || rooms
+                        .iter()
+                        .any(|room| room.workspace_category_id == Some(category.id))
+            })
+            .map(|row| api::WorkspaceCategory {
+                id: row.id,
+                name: row.name,
+                position: row.position,
+            })
+            .collect(),
+        rooms: rooms
+            .into_iter()
+            .map(|row| api::WorkspaceRoomPosition {
+                room_id: row.room_id,
+                workspace_category_id: row.workspace_category_id,
+                position: row.position,
+            })
+            .collect(),
+    })
 }
 
 #[cfg(test)]
