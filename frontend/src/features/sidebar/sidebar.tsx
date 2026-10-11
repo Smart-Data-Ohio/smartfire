@@ -711,6 +711,17 @@ type Editing =
   | { readonly kind: "rename-shared"; readonly categoryId: number }
   | null;
 
+/** The new category field's name: for a room, or a shared one. */
+function newCategoryLabel(
+  editing: Extract<Editing, { readonly kind: "create" | "create-shared" }>,
+): string {
+  if (editing.kind === "create-shared") {
+    return "New shared category name";
+  }
+
+  return editing.row === null ? "New category name" : `New category for ${editing.row.displayName}`;
+}
+
 /** Where focus should go once the sidebar has rendered the change that calls for it. */
 interface FocusRequest {
   /** The element, once it's there (`null` keeps the request for the next render). */
@@ -1196,42 +1207,25 @@ export function Sidebar() {
   };
 
   const createField =
-    editing?.kind === "create" ? (
+    editing?.kind === "create" || editing?.kind === "create-shared" ? (
       <div className="sidebar-section sidebar-new-category">
         <CategoryNameField
-          label={
-            editing.row === null
-              ? "New category name"
-              : `New category for ${editing.row.displayName}`
-          }
-          placeholder="New category"
+          label={newCategoryLabel(editing)}
+          placeholder={editing.kind === "create" ? "New category" : "New shared category"}
           onSubmit={(name, refocus) => {
-            create(name, editing.row, refocus);
-            setEditing(null);
-          }}
-          onCancel={(refocus) => {
-            setEditing(null);
-
-            if (refocus) {
-              focusAfterCancel(editing.opener, editing.row);
+            if (editing.kind === "create") {
+              create(name, editing.row, refocus);
+            } else {
+              createShared(name, refocus);
             }
-          }}
-        />
-      </div>
-    ) : editing?.kind === "create-shared" ? (
-      <div className="sidebar-section sidebar-new-category">
-        <CategoryNameField
-          label="New shared category name"
-          placeholder="New shared category"
-          onSubmit={(name, refocus) => {
-            createShared(name, refocus);
+
             setEditing(null);
           }}
           onCancel={(refocus) => {
             setEditing(null);
 
             if (refocus) {
-              focusAfterCancel(editing.opener, null);
+              focusAfterCancel(editing.opener, editing.kind === "create" ? editing.row : null);
             }
           }}
         />

@@ -145,11 +145,13 @@ describe("roomTargets", () => {
 describe("drops on the shared layout", () => {
   const PRODUCT = { id: 30, name: "Product", position: 0 };
   const design = row(5, "design");
+
   const product: SidebarSection = {
     ...section("shared", "Product", [design]),
     key: "shared-30",
     sharedCategory: PRODUCT,
   };
+
   const withShared = [favorites, launch, product, channels, voice, direct];
   const homes = new Map([[1, 30]]);
   const member: DropContext = { admin: false, sharedHome: (roomId) => homes.get(roomId) ?? null };

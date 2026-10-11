@@ -18,7 +18,15 @@ import {
   ok,
   validation,
 } from "../http.ts";
-import { field, intField, isNumber, isRecord, type Json, stringField } from "../json.ts";
+import {
+  field,
+  intField,
+  isNumber,
+  isRecord,
+  type Json,
+  stringArrayField,
+  stringField,
+} from "../json.ts";
 import { type Route, route, type S2Context } from "../s2/context.ts";
 import { type RoomRecord, VIEWER_ID, type World } from "../seed.ts";
 import { CATEGORY_NAME_LIMIT } from "./organize.ts";
@@ -72,21 +80,25 @@ export function workspaceLayoutOf(world: World): WorkspaceLayout {
   const admin = world.users.get(VIEWER_ID)?.role === "administrator";
 
   const rooms: WorkspaceRoomPosition[] = [...world.rooms.values()]
-    .filter(
-      (record) =>
-        placeable(record) &&
-        record.memberIds.includes(VIEWER_ID) &&
-        record.membership.involvement !== "invisible",
-    )
-    .map((record) => {
+    .flatMap((record) => {
+      if (
+        !placeable(record) ||
+        !record.memberIds.includes(VIEWER_ID) ||
+        record.membership.involvement === "invisible"
+      ) {
+        return [];
+      }
+
       const placement = world.workspacePlacements.get(record.room.id);
 
-      return {
-        roomId: record.room.id,
-        workspaceCategoryId: placement?.categoryId ?? null,
-        position: placement?.position ?? null,
-        name: (record.room.name ?? "").toLowerCase(),
-      };
+      return [
+        {
+          roomId: record.room.id,
+          workspaceCategoryId: placement?.categoryId ?? null,
+          position: placement?.position ?? null,
+          name: (record.room.name ?? "").toLowerCase(),
+        },
+      ];
     })
     .sort(
       (left, right) =>
@@ -275,13 +287,15 @@ export function createWorkspaceLayout(ctx: S2Context): WorkspaceLayoutModule {
   };
 
   const control = (body: Json | undefined): WorkspaceLayout => {
-    const names = field(body, "categories");
+    const names = stringArrayField(body, "categories");
     const rooms = field(body, "rooms");
 
-    if (Array.isArray(names)) {
-      world().workspaceCategories = names.flatMap((name, position) =>
-        typeof name === "string" ? [{ id: position + 1, name, position }] : [],
-      );
+    if (names !== null) {
+      world().workspaceCategories = names.map((name, position) => ({
+        id: position + 1,
+        name,
+        position,
+      }));
       world().workspacePlacements.clear();
     }
 

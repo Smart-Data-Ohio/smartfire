@@ -128,6 +128,22 @@ function isNoOp(item: DragItem, target: DropTarget, held: HeldCategories): boole
   return target.kind === "room" && isInSlot(view, row, target.slot);
 }
 
+/** Every place a keyboard drag can take `item`, top to bottom. */
+function keyboardTargets(
+  item: DragItem,
+  sections: readonly SidebarSection[],
+  held: HeldCategories & { readonly context: DropContext },
+): readonly LabelledTarget[] {
+  switch (item.kind) {
+    case "room":
+      return roomTargets(sections, item.row, held.context);
+    case "category":
+      return categoryTargets(held.categories, item.category);
+    case "shared-category":
+      return categoryTargets(held.sharedCategories, item.category, "shared-category");
+  }
+}
+
 /** The vertical middles of `elements`, in viewport coordinates. */
 function midpoints(elements: readonly HTMLElement[]): number[] {
   return elements.map((element) => {
@@ -372,12 +388,7 @@ export function useSidebarDrag({
     const shown = sectionsRef.current;
     const held = latest.current;
 
-    const targets =
-      item.kind === "room"
-        ? roomTargets(shown, item.row, held.context)
-        : item.kind === "category"
-          ? categoryTargets(held.categories, item.category)
-          : categoryTargets(held.sharedCategories, item.category, "shared-category");
+    const targets = keyboardTargets(item, shown, held);
 
     // It starts where it is: the target that would leave it in place.
     const here = targets.findIndex(({ target }) => isNoOp(item, target, held));

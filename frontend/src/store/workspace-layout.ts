@@ -79,6 +79,7 @@ export function withRoomMoved(
   beforeRoomId: number | null,
 ): WorkspaceLayout {
   const source = placementOf(layout, roomId)?.workspaceCategoryId ?? null;
+
   const ids = (group: number | null) =>
     groupRooms(layout, group)
       .map((room) => room.roomId)
@@ -115,8 +116,10 @@ export function serverPosition(
 ): number {
   const moving = placementOf(layout, roomId);
   const others = groupRooms(layout, categoryId).filter((room) => room.roomId !== roomId);
+
   const anchorIndex =
     beforeRoomId === null ? -1 : others.findIndex((room) => room.roomId === beforeRoomId);
+
   const anchor = anchorIndex === -1 ? others.at(-1) : others[anchorIndex];
   const fallback = anchorIndex === -1 ? others.length : anchorIndex;
 
@@ -149,6 +152,7 @@ export function isPlacedAt(
   }
 
   const before = groupRooms(layout, categoryId).map((room) => room.roomId);
+
   const after = groupRooms(withRoomMoved(layout, roomId, categoryId, beforeRoomId), categoryId).map(
     (room) => room.roomId,
   );
