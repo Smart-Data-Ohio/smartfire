@@ -49,6 +49,9 @@ export function WelcomeCard({ welcome, compact = false }: WelcomeCardProps) {
     (state) => state.boot?.account.logoStillUrl ?? state.boot?.account.logoUrl ?? null,
   );
 
+  // In the list on phones the sidebar's own "Server guide" row sits just below the card.
+  const guideLink = welcome.guide.length > 0 && !compact;
+
   const dismiss = () => {
     const next = nextFocusable(ref.current);
 
@@ -117,9 +120,9 @@ export function WelcomeCard({ welcome, compact = false }: WelcomeCardProps) {
           </ul>
         </div>
       )}
-      {welcome.guide.length === 0 && !welcome.canAdminister ? null : (
+      {guideLink || welcome.canAdminister ? (
         <footer className="welcome-card-foot">
-          {welcome.guide.length === 0 ? null : (
+          {!guideLink ? null : (
             <Link to="/guide" className="welcome-card-link">
               <Icon name="map-pin" size={14} />
               Server guide
@@ -132,7 +135,7 @@ export function WelcomeCard({ welcome, compact = false }: WelcomeCardProps) {
             </Link>
           ) : null}
         </footer>
-      )}
+      ) : null}
     </section>
   );
 }
