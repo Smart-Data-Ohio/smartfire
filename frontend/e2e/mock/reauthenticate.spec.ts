@@ -38,6 +38,18 @@ async function open(page: Page, path: string, theme: Theme): Promise<void> {
   await page.locator(".settings-page h1").waitFor();
 }
 
+/** Lets the sheet's entrance finish so a shot is settled. */
+async function settle(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => animation)),
+    ),
+  );
+}
+
 function confirmation(page: Page) {
   return page.getByRole("dialog", { name: "Confirm it's you" });
 }
@@ -46,6 +58,7 @@ function confirmation(page: Page) {
 async function confirmBy(page: Page, method: "password" | "totp", name: string, theme: Theme) {
   const dialog = confirmation(page);
   const field = dialog.getByLabel(method === "password" ? "Password" : "Authenticator code");
+
   const submit = dialog.getByRole("button", {
     name: method === "password" ? "Confirm password" : "Confirm code",
   });
@@ -53,11 +66,13 @@ async function confirmBy(page: Page, method: "password" | "totp", name: string, 
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel("Password")).toBeFocused();
   await expectNoHorizontalOverflow(page);
+  await settle(page);
   await shot(page, `${name}-asked`, theme);
 
   await field.fill(method === "password" ? "not-the-password" : "000000");
   await submit.click();
   await expect(dialog.getByText("Confirmation failed. Try again.")).toBeVisible();
+  await settle(page);
   await expect(field).toHaveValue("");
   await expect(field).toBeFocused();
   await expect(field).toHaveAttribute("aria-invalid", "true");
@@ -150,6 +165,7 @@ for (const theme of THEMES) {
         await page.getByRole("textbox", { name: "Custom CSS" }).fill("main { color: blue; }");
         await page.getByRole("button", { name: "Save changes" }).click();
         await expect(confirmation(page)).toBeVisible();
+        await settle(page);
         await shot(page, "reauth-google-asked", theme);
 
         const resumed = page.waitForRequest(
