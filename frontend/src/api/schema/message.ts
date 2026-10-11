@@ -37,8 +37,8 @@ export type MessageSoundPin = Assert<Pinned<typeof MessageSound, GeneratedMessag
 
 /**
  * A message on a room's timeline or in a thread. `bodyHtml` is already sanitized. Viewer
- * independent: "you reacted" is the viewer's id in `reactorIds`, edit and delete rights follow
- * from `creatorId`, `systemNote` and the viewer's role.
+ * relative for the announcement source. "You reacted" is the viewer's id in `reactorIds`.
+ * Edit and delete rights follow from `creatorId`, `systemNote` and the viewer's role.
  */
 export const MessageDTO = Schema.Struct({
   id: MessageId,
@@ -72,6 +72,16 @@ export const MessageDTO = Schema.Struct({
   steps: Schema.Array(AgentStep),
   createdAt: Timestamp,
   updatedAt: Timestamp,
+  published: Schema.optionalKey(Schema.Boolean),
+  announcementSource: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.Struct({
+        roomId: RoomId,
+        messageId: MessageId,
+        roomName: Schema.NullOr(Schema.String),
+      }),
+    ),
+  ),
 });
 
 export type MessageDTO = typeof MessageDTO.Type;

@@ -29,6 +29,9 @@ use super::Cable;
 pub trait SyncRenderer: Send + Sync + 'static {
     /// The message as `GET /api/v1/rooms/:id/messages` serves it.
     fn message(&self, conn: &Connection, message: &Message) -> Option<MessageDTO>;
+    fn message_for_viewer(&self, conn: &Connection, message: &Message, _viewer: i64) -> Option<MessageDTO> {
+        self.message(conn, message)
+    }
     /// A bounded group serialized from the same read snapshot.
     fn messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<MessageDTO>> {
         messages.iter().map(|message| self.message(conn, message)).collect()
@@ -400,26 +403,14 @@ pub fn message(
     let Some(dto) = renderer.message(conn, message) else {
         return;
     };
-    let payload = if created {
-        SyncPayload::MessageCreated(dto)
-    } else {
-        SyncPayload::MessageUpdated(dto)
-    };
-    send(
-        server,
-        Audience::Topic(message_topic(message)),
-        &payload,
-        |publication| publication,
-    );
+    publish_message_dto(server, renderer.as_ref(), conn, message, dto, created);
 }
 
 /// Validate publication even without subscribers, before claims or held jobs are released.
 pub fn checked_message(server: &Cable, slot: &RendererSlot, conn: &Connection, message: &Message, created: bool) -> bool {
     let Some(renderer) = slot.0.renderer.get() else { return false; };
     let Some(dto) = renderer.message(conn, message) else { return false; };
-    let payload = if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
-    publish(server, Audience::Topic(message_topic(message)), &payload);
-    true
+    publish_message_dto(server, renderer.as_ref(), conn, message, dto, created)
 }
 
 /// Serialize the entire batch before acknowledging any digest publication IDs.
@@ -428,9 +419,27 @@ pub fn checked_messages(server: &Cable, slot: &RendererSlot, conn: &Connection, 
     let dtos = renderer.messages(conn, messages)?;
     if dtos.len() != messages.len() { return None; }
     for (message, dto) in messages.iter().zip(dtos) {
-        publish(server, Audience::Topic(message_topic(message)), &SyncPayload::MessageCreated(dto));
+        if !publish_message_dto(server, renderer.as_ref(), conn, message, dto, true) { return None; }
     }
     Some(messages.iter().map(|message| message.id).collect())
+}
+
+// Announcement names are permission-dependent. Publish copies separately to each member's
+// implicit user topic; the shared conversation payload never contains a source room's name.
+fn publish_message_dto(server: &Cable, renderer: &dyn SyncRenderer, conn: &Connection, message: &Message, dto: MessageDTO, created: bool) -> bool {
+    let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
+    let copies = campfire_db::models::announcement::is_copy(conn, message.id);
+    match copies {
+        Ok(false) => publish(server, Audience::Topic(message_topic(message)), &payload(dto)),
+        Ok(true) => {
+            let Ok(room) = message.room(conn) else { return false; };
+            let Ok(members) = room.user_ids(conn) else { return false; };
+            let Some(messages) = members.into_iter().map(|viewer| renderer.message_for_viewer(conn, message, viewer).map(|dto| (viewer,dto))).collect::<Option<Vec<_>>>() else { return false; };
+            for (viewer,dto) in messages { publish(server, Audience::User(viewer), &payload(dto)); }
+        }
+        Err(error) => { tracing::warn!(%error, "sync: announcement publication not rendered"); return false; }
+    }
+    true
 }
 
 /// `message.updated`, read afresh later:

@@ -18,6 +18,7 @@ macro_rules! endpoint {
 }
 
 pub mod activity;
+pub mod announcements;
 pub mod agents;
 pub mod cards;
 pub mod fizzy;
@@ -98,6 +99,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             post(unparsed_action(fizzy::create)),
         )
         .route("/api/v1/sidebar", get(action(endpoints::sidebar)))
+        .route("/api/v1/rooms/{room_id}/announcement", put(unparsed_action(announcements::set)))
+        .route("/api/v1/rooms/{room_id}/announcement_follows", get(action(announcements::index)).post(unparsed_action(announcements::create)))
+        .route("/api/v1/rooms/{room_id}/announcement_follows/{target_room_id}", delete(action(announcements::destroy)))
+        .route("/api/v1/messages/{message_id}/publish", post(action(announcements::publish)))
         .route("/api/v1/rooms", post(unparsed_action(room_management::create)))
         .route("/api/v1/rooms/new", get(action(room_management::new)))
         .route("/api/v1/rooms/{room_id}/edit", get(action(room_management::edit)))

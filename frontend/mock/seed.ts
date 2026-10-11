@@ -808,6 +808,8 @@ export function seedWorld(now: number, random: Random): World {
       steps: [],
       createdAt,
       updatedAt: editedAt ?? createdAt,
+      published: false,
+      announcementSource: null,
     });
     messagesByRoom.set(draft.roomId, list);
   }
@@ -835,6 +837,7 @@ export function seedWorld(now: number, random: Random): World {
         createdAt,
         updatedAt: newest === undefined ? createdAt : newest.createdAt,
         topic: null,
+        announcement: false,
       },
       memberIds: [...seed.memberIds],
       membership,

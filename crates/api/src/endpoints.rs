@@ -238,7 +238,8 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
                 Some(newest) if Message::exists_after(conn, timeline, newest)? => Some(newest.id),
                 _ => None,
             };
-            let (dtos, fetches) = dto::messages_and_fetches(conn, &app, &messages)?;
+            let (mut dtos, fetches) = dto::messages_and_fetches(conn, &app, &messages)?;
+            dto::announcement_sources(conn, &mut dtos, viewer_id)?;
             // The authors, and the repliers the thread indicators name, so their avatars need
             // no `GET /users`.
             let people = dtos.iter().flat_map(|message| {
@@ -371,10 +372,11 @@ async fn post_message(c: &mut Ctx) -> Result {
         }
     };
     let app = c.app().clone();
+    let viewer_id = campfire_runtime::concerns::require_current_user(c)?.id;
     let dto = c
         .app()
         .db
-        .read(move |conn| dto::message(conn, &app, &message))
+        .read(move |conn| dto::message_for_viewer(conn, &app, &message, viewer_id))
         .await
         .map_err(db_error)?;
     c.json(status, &dto)

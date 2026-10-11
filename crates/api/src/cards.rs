@@ -926,10 +926,11 @@ async fn post_poll(c: &mut Ctx) -> Result {
 
 async fn render_message(c: &mut Ctx, message: Message, status: StatusCode) -> Result {
     let app = c.app().clone();
+    let viewer_id = campfire_runtime::concerns::require_current_user(c)?.id;
     let dto = c
         .app()
         .db
-        .read(move |conn| dto::message(conn, &app, &message))
+        .read(move |conn| dto::message_for_viewer(conn, &app, &message, viewer_id))
         .await
         .map_err(db_error)?;
     c.json(status, &dto)

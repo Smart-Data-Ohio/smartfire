@@ -919,6 +919,7 @@ impl Message {
         if !self.streaming {
             self.sync_external_references(tx, true)?;
         }
+        crate::models::announcement::enqueue_update(tx, self.id)?;
         Ok(())
     }
 
@@ -1149,6 +1150,7 @@ impl Message {
                 crate::ActivityItem::reconcile_message_mentions(tx, self, &previous)?;
             }
         }
+        crate::models::announcement::enqueue_update(tx, self.id)?;
         Ok(())
     }
 
@@ -1267,6 +1269,7 @@ impl Message {
         with_conversation: bool,
         importing: bool,
     ) -> Result<()> {
+        crate::models::announcement::enqueue_delete(tx, self.id)?;
         let quoting_ids = crate::models::message_reference::incoming_ids(tx.conn(), self.id)?;
         let now = tx.now();
         tx.conn().execute_cached(

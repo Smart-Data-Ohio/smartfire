@@ -16,6 +16,8 @@
 //! - enums are lowercase string literals.
 
 mod actions;
+mod announcements;
+pub use announcements::*;
 mod activity;
 mod admin;
 mod agents;

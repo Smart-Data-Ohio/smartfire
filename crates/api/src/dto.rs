@@ -323,6 +323,7 @@ pub fn room(room: &Room) -> api::Room {
         created_at: time(room.created_at),
         updated_at: time(room.updated_at),
         topic: room.topic.clone(),
+        announcement: room.announcement,
     }
 }
 
@@ -461,6 +462,8 @@ fn messages_and_fetches_inner(
                 steps: steps.remove(&message.id).unwrap_or_default(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
+                published: campfire_db::models::announcement::publication_id(conn, message.id)?.is_some(),
+                announcement_source: None,
             })
         })
         .collect::<Result<Vec<_>>>()
@@ -1701,6 +1704,21 @@ fn room_file_rows(
         });
     }
     Ok(files)
+}
+
+pub(crate) fn announcement_sources(conn: &Connection, messages: &mut [api::MessageDTO], viewer: i64) -> Result<()> {
+    for message in messages {
+        message.announcement_source = campfire_db::models::announcement::source_for_viewer(conn, message.id, viewer)?.map(|source| api::AnnouncementSource {
+            room_id: source.room_id, message_id: source.message_id, room_name: source.room_name,
+        });
+    }
+    Ok(())
+}
+
+pub(crate) fn message_for_viewer(conn: &Connection, app: &AppState, message: &Message, viewer: i64) -> Result<api::MessageDTO> {
+    let mut dto = self::message(conn, app, message)?;
+    announcement_sources(conn, std::slice::from_mut(&mut dto), viewer)?;
+    Ok(dto)
 }
 
 #[cfg(test)]

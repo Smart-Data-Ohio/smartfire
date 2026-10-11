@@ -86,6 +86,13 @@ impl SyncRenderer for Renderer {
             .ok()
     }
 
+    fn message_for_viewer(&self, conn: &Connection, message: &Message, viewer: i64) -> Option<api::MessageDTO> {
+        let app = self.app.upgrade()?;
+        dto::message_for_viewer(conn, &app, message, viewer)
+            .inspect_err(|error| tracing::warn!(%error, "sync: announcement reference not rendered"))
+            .ok()
+    }
+
     fn messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<api::MessageDTO>> {
         let app = self.app.upgrade()?;
         dto::digest_messages(conn, &app, messages)

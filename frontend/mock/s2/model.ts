@@ -235,6 +235,8 @@ export function buildMessage(
     steps: [],
     createdAt,
     updatedAt: createdAt,
+    published: false,
+    announcementSource: null,
   };
 
   return draft.attachments === undefined

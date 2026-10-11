@@ -101,10 +101,11 @@ async fn post_card(c: &mut Ctx) -> Result {
     .map_err(|error| fail(c, failure(error)))?;
     let app = c.app().clone();
     let reply = created.reply;
+    let viewer_id = campfire_runtime::concerns::require_current_user(c)?.id;
     let message = c
         .app()
         .db
-        .read(move |conn| dto::message(conn, &app, &reply))
+        .read(move |conn| dto::message_for_viewer(conn, &app, &reply, viewer_id))
         .await
         .map_err(|error| {
             fail(

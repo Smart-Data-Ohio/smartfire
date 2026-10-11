@@ -25,6 +25,7 @@ export const Room = Schema.Struct({
   createdAt: Timestamp,
   updatedAt: Timestamp,
   topic: Schema.NullOr(Schema.String),
+  announcement: Schema.optionalKey(Schema.Boolean),
 });
 
 export type Room = typeof Room.Type;

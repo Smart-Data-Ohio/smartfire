@@ -117,7 +117,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
                     && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname"))
                     && !(table == "rooms" && matches!(name.as_str(), "tags_required" | "default_board_tag_id"))
             })
-            .filter(|(_, name)| !(table == "rooms" && name.as_str() == "topic"))
+            .filter(|(_, name)| !(table == "rooms" && matches!(name.as_str(), "topic" | "announcement")))
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
@@ -141,7 +141,7 @@ fn tables(conn: &Connection) -> Vec<String> {
     // Workspace invites have no table in the frozen Rails schema.
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'workspace_categories', 'workspace_invites') ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'workspace_categories', 'workspace_invites', 'announcement_follows', 'announcement_publications', 'announcement_deliveries') ORDER BY name",
         [],
         |r| r.get(0),
     )

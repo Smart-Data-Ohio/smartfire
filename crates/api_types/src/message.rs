@@ -5,7 +5,7 @@ use crate::{
     AgentStep, Attachment, Boost, MessageCard, Poll, Reaction, ThreadIndicator, Timestamp,
 };
 
-/// A message on a room's timeline or in a thread. Viewer-independent: whether the viewer may
+/// A message on a room's timeline or in a thread. The announcement source is viewer-relative; whether the viewer may
 /// edit it or is mentioned is worked out on the client.
 ///
 /// Permissions the client derives (`messages#ensure_can_edit` / `ensure_can_delete`):
@@ -95,6 +95,13 @@ pub struct MessageDTO {
     /// Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
     /// replies (`touch`), so a later `updatedAt` always holds the newer copy.
     pub updated_at: Timestamp,
+    #[serde(default)]
+    #[ts(as = "Option<bool>", optional)]
+    pub published: bool,
+    /// Null when this is not a delivered copy or the viewer cannot see the source room.
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub announcement_source: Option<crate::AnnouncementSource>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
