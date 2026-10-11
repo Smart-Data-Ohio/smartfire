@@ -4,6 +4,10 @@ pub enum SignedOutRoute {
     SignIn,
     Transfer,
     Challenge,
+    /// `/app/join/:join_code`, the retained `/join/:join_code`.
+    Join,
+    /// `/app/invite/:token`, the retained `/invite/:token`.
+    Invite,
     FirstRun,
 }
 
@@ -12,10 +16,17 @@ pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
         "/app/session/new" => Some(SignedOutRoute::SignIn),
         "/app/two_factor/challenge" => Some(SignedOutRoute::Challenge),
         "/app/first_run" => Some(SignedOutRoute::FirstRun),
-        _ => path
-            .strip_prefix("/app/session/transfers/")
-            .filter(|id| !id.is_empty() && !id.contains('/'))
-            .map(|_| SignedOutRoute::Transfer),
+        _ => [
+            ("/app/session/transfers/", SignedOutRoute::Transfer),
+            ("/app/join/", SignedOutRoute::Join),
+            ("/app/invite/", SignedOutRoute::Invite),
+        ]
+        .into_iter()
+        .find_map(|(prefix, route)| {
+            path.strip_prefix(prefix)
+                .filter(|segment| !segment.is_empty() && !segment.contains('/'))
+                .map(|_| route)
+        }),
     }
 }
 
@@ -43,6 +54,14 @@ mod tests {
             Some(SignedOutRoute::Challenge)
         );
         assert_eq!(
+            signed_out_route("/app/join/abc-123"),
+            Some(SignedOutRoute::Join)
+        );
+        assert_eq!(
+            signed_out_route("/app/invite/token"),
+            Some(SignedOutRoute::Invite)
+        );
+        assert_eq!(
             signed_out_route("/app/first_run"),
             Some(SignedOutRoute::FirstRun)
         );
@@ -53,6 +72,10 @@ mod tests {
             "/app/session/transfers/",
             "/app/session/transfers/a/b",
             "/app/two_factor/challenge/extra",
+            "/app/join/",
+            "/app/join/a/b",
+            "/app/invite/",
+            "/app/invite/a/b",
             "/first_run",
             "/app/first_run/extra",
         ] {

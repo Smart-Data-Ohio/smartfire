@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useEffect, useEffectEvent, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import {
   type AuthNext,
@@ -10,7 +10,7 @@ import {
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Popover } from "../../ui/popover.tsx";
-import { pageExit, signedOutPageFor } from "./auth-navigation.ts";
+import { pageExit, signedOutPageFor, signInSearchFor } from "./auth-navigation.ts";
 import type { Translation } from "./translations.ts";
 import "./auth.css";
 
@@ -40,14 +40,27 @@ export function useDocumentTitle(title: string): void {
 
 /**
  * Follows a next action that isn't a refusal: signing in (and Google, and anywhere the SPA
- * doesn't draw) is a full page load; a challenge or the sign-in page stays in the SPA. Answers
- * whether the page is leaving, so a form keeps its busy state until it goes.
+ * doesn't draw) is a full page load; a challenge or the sign-in page stays in the SPA.
+ *
+ * Only a page still on screen follows its answer. One the visitor has left (Sign in pressed while
+ * a join was sending, say) drops it, so a late answer can't pull them off the page they went to.
  */
 export function useFollowNext(): (next: Exclude<AuthNext, { readonly kind: "error" }>) => void {
   const navigate = useNavigate();
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   return useCallback(
     (next) => {
+      if (!mounted.current) return;
+
       if (next.kind === "secondFactorRequired") {
         void navigate({ to: "/two_factor/challenge", replace: true });
 
@@ -58,6 +71,9 @@ export function useFollowNext(): (next: Exclude<AuthNext, { readonly kind: "erro
 
       if (page === null) {
         pageExit.assign(next.location);
+      } else if (page === "/session/new" && next.kind === "navigate") {
+        // An address that already has an account goes to sign-in with it filled in.
+        void navigate({ to: page, search: signInSearchFor(next.location), replace: true });
       } else {
         void navigate({ to: page, replace: true });
       }
@@ -244,16 +260,27 @@ export function AuthFooter({ boot }: { readonly boot: SignedOutBootData }) {
           Terms of Service
         </a>
       </nav>
-      {contact === null ? null : (
-        <div className="auth-view-help">
-          <a href={`mailto:${contact.emailAddress}`} title={`Email ${contact.name}`}>
-            <Icon name="life-buoy" size={14} />
-            <span>{contact.emailAddress}</span>
-          </a>
-          <span>Smartfire™ version {boot.version}</span>
-        </div>
-      )}
+      {contact === null ? null : <AuthHelp contact={contact} version={boot.version} />}
     </>
+  );
+}
+
+/** The first administrator to ask for help, and the version (the retained `_help_contact`). */
+export function AuthHelp({
+  contact,
+  version,
+}: {
+  readonly contact: { readonly name: string; readonly emailAddress: string };
+  readonly version: string;
+}) {
+  return (
+    <div className="auth-view-help">
+      <a href={`mailto:${contact.emailAddress}`} title={`Email ${contact.name}`}>
+        <Icon name="life-buoy" size={14} />
+        <span>{contact.emailAddress}</span>
+      </a>
+      <span>Smartfire™ version {version}</span>
+    </div>
   );
 }
 

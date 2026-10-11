@@ -90,8 +90,8 @@ export function parseJson(text: string): Json | undefined {
 
 /**
  * A `multipart/form-data` body as the mock reads it: each text field as a string, each file as
- * `{ filename, contentType, byteSize }`. The one form the SPA posts (first run's avatar) is
- * otherwise JSON in a text field.
+ * `{ filename, contentType, byteSize }`. The SPA posts two: the join form's text fields and
+ * avatar, and first run's avatar with the rest as JSON in a text field.
  */
 export function formJson(form: FormData): JsonRecord {
   const record: Record<string, Json> = {};

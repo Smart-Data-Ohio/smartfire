@@ -1,7 +1,8 @@
 /*
- * The signed-out pages (sign-in, the second step, the sign-in link, first run): one centred card on the app
- * background, as the retained pages draw it (src/auth/pages.css), from the SPA's tokens, fields and
- * buttons. Every message has a reserved line, so nothing below it moves when one appears.
+ * The signed-out pages (sign-in, the second step, the sign-in link, joining, first run): one centred
+ * card on the app background, as the retained pages draw it (src/auth/pages.css), from the SPA's
+ * tokens, fields and buttons. Every message has a reserved line, so nothing below it moves when one
+ * appears.
  */
 
 @layer app {
@@ -215,6 +216,17 @@
     outline-offset: 2px;
   }
 
+  /* The join form's avatar sits in the form itself, above its fields. */
+  .auth-view-form > .auth-view-avatar {
+    flex-shrink: 0;
+    align-self: center;
+    margin-block-end: var(--space-2);
+  }
+
+  .auth-view-avatar:has(input:disabled) {
+    cursor: default;
+  }
+
   .auth-view-avatar-preview {
     width: 100%;
     height: 100%;
@@ -234,6 +246,20 @@
     background: var(--bg-raised);
     box-shadow: var(--shadow-raised);
     color: var(--text);
+  }
+
+  .auth-view-note a {
+    color: var(--text-muted);
+  }
+
+  .auth-view-note a:hover {
+    color: var(--text);
+  }
+
+  .auth-view-note a:focus-visible {
+    border-radius: var(--radius-xs);
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
   }
 
   /* One line, whatever it says, so the fields under it never move. */
@@ -368,6 +394,11 @@
     font-size: var(--text-meta);
     line-height: var(--leading-meta);
     text-align: center;
+  }
+
+  /* Without the public pages' links (the join page), the help line keeps the card's gap. */
+  .auth-view-card + .auth-view-help {
+    margin-block-start: 0;
   }
 
   .auth-view-help a {

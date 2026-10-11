@@ -58,6 +58,8 @@ describe("the screen map and the router", () => {
       "/app/session/new",
       "/app/two_factor/challenge",
       "/app/session/transfers/:id",
+      "/app/join/:id",
+      "/app/invite/:id",
       "/app/first_run",
       // Two-step setup: outside the signed-in screen map, like the signed-out pages.
       "/app/two_factor/setup",

@@ -8,18 +8,27 @@ import { Option, Schema } from "effect";
 import {
   consumeTransfer,
   googleSignIn,
+  type JoinTarget,
   passwordSignIn,
   readChallenge,
   readFirstRun,
+  readJoinPage,
   signedOutBoot,
   submitChallenge,
   submitFirstRun,
+  submitJoin,
 } from "../api/auth-endpoints.ts";
 import { readPublicPage } from "../api/public-page-endpoints.ts";
-import { type AuthResponse, type FirstRunState, SignedOutBoot } from "../api/schema/auth.ts";
+import {
+  type AuthResponse,
+  type FirstRunState,
+  type JoinAnswer,
+  SignedOutBoot,
+} from "../api/schema/auth.ts";
 import type { PublicPage } from "../api/schema/public-pages.ts";
 import type { FirstRunSubmission } from "../gen/FirstRunSubmission.ts";
 import type { PublicPageName } from "../gen/PublicPageName.ts";
+import type { WorkspaceJoin } from "../gen/WorkspaceJoin.ts";
 import { runAction } from "./runtime.ts";
 
 /** The public boot: the workspace's branding, the sign-in methods and the help line. */
@@ -30,6 +39,11 @@ export type PublicPageData = typeof PublicPage.Type;
 
 /** A sign-in operation's next action. */
 export type AuthNext = typeof AuthResponse.Type;
+
+/** A join endpoint's answer: the join page's state, or a next action. */
+export type JoinNext = typeof JoinAnswer.Type;
+
+export type { JoinTarget };
 
 /** Whether first run is still open. */
 export type FirstRunOpen = typeof FirstRunState.Type;
@@ -62,6 +76,11 @@ export const auth = {
   verify: (code: string, rememberDevice: boolean): Promise<AuthNext> =>
     runAction(submitChallenge({ code, rememberDevice })),
   transfer: (id: string): Promise<AuthNext> => runAction(consumeTransfer(id)),
+  /** The join or invite page: the form, a dead invite's reason, or where to go instead. */
+  joinPage: (target: JoinTarget): Promise<JoinNext> => runAction(readJoinPage(target)),
+  /** Creates the account and signs it in, or says why not. */
+  join: (target: JoinTarget, fields: WorkspaceJoin, avatar: File | null): Promise<JoinNext> =>
+    runAction(submitJoin(target, fields, avatar)),
   /** Whether the workspace can still be set up. */
   firstRunState: (): Promise<FirstRunOpen> => runAction(readFirstRun()),
   /** Sets up the workspace and its first administrator, signed in as them. */

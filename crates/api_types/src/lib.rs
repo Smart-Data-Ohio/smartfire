@@ -65,6 +65,7 @@ pub use auth::{TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState
 pub use auth::SignInHelpContact;
 pub use auth::{FirstRunState, FirstRunSubmission};
 pub use auth::SudoGoogleStart;
+pub use auth::{InviteRefusal, JoinPage, WorkspaceJoin};
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
