@@ -5,7 +5,7 @@ use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use super::admin_tests::{app, error, get, parse, write};
-use crate::controllers::presenters::test_support::{DAVID, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req, TestApp};
 
 const CATALOG: &str = "/api/v1/soundboard/sounds";
 const ADMIN: &str = "/api/v1/admin/soundboard/sounds";
@@ -28,6 +28,135 @@ async fn upload(a: &TestApp, bytes: &[u8], filename: &str, content_type: &str) -
         .await
         .unwrap();
     campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None)
+}
+
+async fn legacy_upload(
+    admin: &mut Browser<'_>,
+    bytes: &[u8],
+    content_type: &str,
+    identified: Value,
+) -> (i64, String) {
+    let reply = write(
+        admin,
+        Method::POST,
+        "/rails/active_storage/direct_uploads",
+        json!({"blob": {
+            "filename":"sound.mp3", "byte_size":bytes.len(),
+            "checksum":campfire_storage::key::checksum(bytes), "content_type":content_type,
+            "metadata":{"identified":identified}
+        }}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let upload: Value = parse(&reply);
+    let reply = admin
+        .send(
+            Req::new(
+                Method::PUT,
+                upload["direct_upload"]["url"].as_str().unwrap(),
+            )
+            .header("content-type", content_type)
+            .header("content-length", &bytes.len().to_string())
+            .body(bytes),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    (
+        upload["id"].as_i64().unwrap(),
+        upload["signed_id"].as_str().unwrap().to_owned(),
+    )
+}
+
+#[tokio::test]
+async fn soundboard_rejects_flac_with_forged_identified_metadata() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("audio.flac");
+    let result = std::process::Command::new("ffmpeg")
+        .args([
+            "-v",
+            "error",
+            "-threads",
+            "1",
+            "-filter_threads",
+            "1",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=48000:cl=mono",
+            "-t",
+            "0.1",
+            "-c:a",
+            "flac",
+        ])
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let bytes = std::fs::read(path).unwrap();
+    assert!(bytes.len() < 512 * 1024);
+    let (_, signed_id) = legacy_upload(&mut admin, &bytes, "audio/mpeg", json!(true)).await;
+    let reply = write(
+        &mut admin,
+        Method::POST,
+        ADMIN,
+        json!({"name":"Spoof","signedId":signed_id}),
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert!(error(&reply)["fields"]["audio"].is_array());
+    assert_eq!(
+        parse::<api::SoundboardCatalog>(&admin.send(get(CATALOG)).await).sounds,
+        []
+    );
+}
+
+#[tokio::test]
+async fn soundboard_saves_detected_wav_type_despite_forged_upload_metadata() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    for (index, content_type, identified) in [
+        (0, "audio/mpeg", json!(true)),
+        (1, "audio/flac", json!("yes")),
+        (2, "application/octet-stream", json!(1)),
+    ] {
+        let (id, signed_id) = legacy_upload(&mut admin, WAV, content_type, identified).await;
+        let reply = write(
+            &mut admin,
+            Method::POST,
+            ADMIN,
+            json!({"name":format!("WAV {index}"),"signedId":signed_id}),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let stored_type: String = a
+            .db()
+            .read(move |conn| {
+                Ok(conn.query_row(
+                    "SELECT content_type FROM active_storage_blobs WHERE id=?",
+                    [id],
+                    |row| row.get(0),
+                )?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(stored_type, "audio/wav");
+        let catalog: api::SoundboardCatalog = parse(&reply);
+        let fetched = admin.get(&catalog.sounds[index].audio_url).await;
+        assert_eq!(fetched.status, StatusCode::OK);
+        assert_eq!(fetched.headers["content-type"], "audio/wav");
+        assert_eq!(fetched.body, WAV);
+    }
 }
 
 #[tokio::test]
@@ -383,26 +512,24 @@ async fn soundboard_accepts_all_audio_formats_and_rejects_webm_with_video() {
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
-    let signed_id = upload(
-        &a,
-        &std::fs::read(path).unwrap(),
-        "video.webm",
-        "audio/webm",
-    )
-    .await;
-    let reply = write(
-        &mut admin,
-        Method::POST,
-        ADMIN,
-        json!({"name":"Video","signedId":signed_id}),
-    )
-    .await;
-    assert_eq!(
-        reply.status,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "{}",
-        reply.text()
-    );
+    let bytes = std::fs::read(path).unwrap();
+    let signed_id = upload(&a, &bytes, "video.webm", "audio/webm").await;
+    let (_, spoofed_id) = legacy_upload(&mut admin, &bytes, "audio/mpeg", json!(true)).await;
+    for signed_id in [signed_id, spoofed_id] {
+        let reply = write(
+            &mut admin,
+            Method::POST,
+            ADMIN,
+            json!({"name":"Video","signedId":signed_id}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+    }
     assert_eq!(
         parse::<api::SoundboardCatalog>(&admin.send(get(CATALOG)).await)
             .sounds
