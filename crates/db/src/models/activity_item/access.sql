@@ -26,6 +26,8 @@ AND activity_work_memberships.user_id = activity_items.user_id
 LEFT JOIN board_sla_nudges AS activity_sla_nudges
 ON activity_sla_nudges.id = activity_items.source_id
 AND activity_items.source_type = 'BoardSlaNudge'
+LEFT JOIN channel_threads AS activity_sla_threads
+ON activity_sla_threads.id = activity_sla_nudges.channel_thread_id
 LEFT JOIN memberships AS activity_sla_memberships
 ON activity_sla_memberships.room_id = activity_sla_nudges.room_id
 AND activity_sla_memberships.user_id = activity_items.user_id

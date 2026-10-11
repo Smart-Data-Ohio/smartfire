@@ -29,6 +29,7 @@ export const RoomUnread = Schema.Struct({
   roomId: RoomId,
   messageId: Schema.NullOr(MessageId),
   mentioned: Schema.Boolean,
+  unchanged: Schema.optionalKey(Schema.Boolean),
 });
 
 export type RoomUnread = typeof RoomUnread.Type;

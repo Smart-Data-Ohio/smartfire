@@ -21,11 +21,12 @@ fn user_json() -> Value {
 fn directory_and_rows_round_trip() {
     let person = DirectoryPerson {
         user_id: 7,
+        ignored_by_me: false,
         online: true,
         starred: true,
         agent: false,
     };
-    let wire = json!({"userId": 7, "online": true, "starred": true, "agent": false});
+    let wire = json!({"userId": 7, "ignoredByMe": false, "online": true, "starred": true, "agent": false});
     assert_wire(&person, wire.clone());
     assert_wire(
         &PeopleDirectory {
@@ -75,6 +76,7 @@ fn profile_and_status_round_trip() {
         assert_wire(
             &PersonProfile {
                 user: user(),
+                ignored_by_me: false,
                 status: Some(status.clone()),
                 dnd_allowed: Some(allowed),
                 email_address: Some("ada@example.com".into()),
@@ -84,7 +86,7 @@ fn profile_and_status_round_trip() {
                 can_manage_bot: false,
             },
             json!({
-                "user": user_json(), "status": wire, "dndAllowed": allowed,
+                "user": user_json(), "ignoredByMe": false, "status": wire, "dndAllowed": allowed,
                 "emailAddress": "ada@example.com",
                 "transferUrl": "https://chat.example/session/transfers/token",
                 "transferQrSvg": "<svg>transfer</svg>", "canBan": true, "canManageBot": false
@@ -94,6 +96,7 @@ fn profile_and_status_round_trip() {
     assert_wire(
         &PersonProfile {
             user: user(),
+            ignored_by_me: false,
             status: None,
             dnd_allowed: None,
             email_address: None,
@@ -102,7 +105,7 @@ fn profile_and_status_round_trip() {
             can_ban: false,
             can_manage_bot: false,
         },
-        json!({"user": user_json(), "status": null, "dndAllowed": null,
+        json!({"user": user_json(), "ignoredByMe": false, "status": null, "dndAllowed": null,
         "emailAddress": null, "transferUrl": null, "transferQrSvg": null, "canBan": false,
         "canManageBot": false}),
     );

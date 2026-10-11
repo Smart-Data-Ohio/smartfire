@@ -14,15 +14,18 @@ pub enum Broadcast {
     MembershipChanged { membership_id: i64 },
     UserStatus { user_id: i64 },
     Cable { stream: String, payload: serde_json::Value },
-    UnreadRoom { user_id: i64, room_id: i64, message_id: Option<i64> },
+    UnreadRoom { user_ids: Vec<i64>, room_id: i64, message_id: Option<i64>, author_id: i64 },
 }
 impl Broadcast {
-    pub fn channel_frame(&self) -> Option<(String, serde_json::Value)> {
+    pub fn channel_frames(&self) -> Vec<(String, serde_json::Value)> {
         match self {
-            Self::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
-            Self::UnreadRoom { user_id, room_id, .. } => Some((unread_rooms_stream_name(*user_id), serde_json::json!({"roomId": room_id}))),
-            _ => None,
+            Self::Cable { stream, payload } => vec![(stream.clone(), payload.clone())],
+            Self::UnreadRoom { user_ids, room_id, .. } => user_ids.iter().map(|user_id| (
+                unread_rooms_stream_name(*user_id), serde_json::json!({"roomId": room_id}),
+            )).collect(),
+            _ => Vec::new(),
         }
     }
+
 }
 impl crate::events::Broadcast for Broadcast { const KIND: &'static str = "Messaging#broadcast"; }

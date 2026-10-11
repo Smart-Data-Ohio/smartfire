@@ -238,7 +238,7 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
                 Some(newest) if Message::exists_after(conn, timeline, newest)? => Some(newest.id),
                 _ => None,
             };
-            let (dtos, fetches) = dto::messages_and_fetches(conn, &app, &messages)?;
+            let (dtos, fetches) = dto::messages_and_fetches_for_viewer(conn, &app, &messages, viewer_id)?;
             // The authors, and the repliers the thread indicators name, so their avatars need
             // no `GET /users`.
             let people = dtos.iter().flat_map(|message| {

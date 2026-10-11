@@ -540,8 +540,8 @@ fn receiving_marks_other_members_unread_broadcasts_and_enqueues_the_push() {
     assert!(!t.read(|c| ChannelThread::find(c, thread_id)?.unread_for(c, id("jason"))));
 }
 
-/// Reading a thread records the newest message it was read through, and a no-op read (already
-/// read) leaves it.
+/// Reading a thread records the unfiltered committed-message floor, even when already read.
+/// An already-read thread keeps its timestamp and future replies still become unread.
 #[test]
 fn reading_a_thread_records_how_far_it_was_read() {
     let t = frozen();
@@ -557,11 +557,12 @@ fn reading_a_thread_records_how_far_it_was_read() {
     assert_eq!((jason.unread_at, jason.last_read_message_id), (None, Some(first.id)));
 
     t.travel(5);
-    post_root(&t, "designers", "jz", "Elsewhere");
+    let elsewhere = post_root(&t, "designers", "jz", "Elsewhere");
     let mut again = jason.clone();
     t.write(move |tx| again.read(tx).map(|()| again));
     let unchanged = t.read(|c| ThreadMembership::find_by_thread_and_user(c, thread_id, id("jason"))).unwrap();
-    assert_eq!(unchanged.last_read_message_id, Some(first.id), "an already-read thread's read is a no-op");
+    assert_eq!(unchanged.last_read_message_id, Some(elsewhere.id));
+    assert_eq!(unchanged.updated_at, jason.updated_at);
 
     t.travel(5);
     let second = post_reply(&t, thread_id, "jz", "Two");

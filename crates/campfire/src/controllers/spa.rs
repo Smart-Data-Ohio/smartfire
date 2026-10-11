@@ -123,6 +123,10 @@ mod account_tests;
 mod people_tests;
 
 #[cfg(test)]
+#[path = "spa_ignore_tests.rs"]
+mod ignore_tests;
+
+#[cfg(test)]
 #[path = "spa_api_room_management_tests.rs"]
 mod api_room_management_tests;
 
@@ -149,3 +153,7 @@ mod api_drive_tests;
 #[cfg(test)]
 #[path = "spa_tour_tests.rs"]
 mod tour_tests;
+
+#[cfg(test)]
+#[path = "spa_welcome_tests.rs"]
+mod welcome_tests;

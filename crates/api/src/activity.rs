@@ -48,6 +48,7 @@ pub(crate) fn items(
     rows: &[ActivityItem],
 ) -> campfire_db::Result<Vec<api::ActivityItem>> {
     let sources = presenter::Sources::load_spa(conn, rows)?;
+    let ignored = campfire_db::models::ignore_policy::ignored_authors(conn, viewer.id)?;
     let mut items = Vec::with_capacity(rows.len());
     for row in rows {
         let (view, refs) = match presenter::spa_row(conn, app, row, viewer, &sources) {
@@ -61,7 +62,8 @@ pub(crate) fn items(
             }
             Err(error) => return Err(error),
         };
-        match wire_row(row, view, refs) {
+        let source_ignored = refs.creator_id.is_some_and(|id| ignored.contains(&id));
+        match wire_row(row, view, refs, source_ignored) {
             Ok(item) => items.push(item),
             Err(error) => {
                 tracing::warn!(%error, item_id = row.id, "activity: row left out of the list");
@@ -75,6 +77,7 @@ fn wire_row(
     row: &ActivityItem,
     view: campfire_presentation::activity::Item,
     refs: presenter::SourceRefs,
+    ignored: bool,
 ) -> campfire_db::Result<api::ActivityItem> {
     let occurred_at = view
         .created_at
@@ -96,6 +99,7 @@ fn wire_row(
             message_id: refs.message_id,
             event_id: refs.event_id,
             creator_id: refs.creator_id,
+            ignored: ignored.then_some(true),
             title: refs.approval_title.unwrap_or(view.title),
             body: refs.approval_body.unwrap_or(view.body),
             occurred_at: dto::time(occurred_at),
@@ -140,12 +144,11 @@ pub(crate) fn changed(
     viewer: &User,
     item_id: i64,
 ) -> campfire_db::Result<Option<api::ActivityItemChanged>> {
-    let Some(row) = ActivityItem::find_accessible(conn, viewer, item_id)? else {
-        return Ok(None);
+    let item = match ActivityItem::find_accessible(conn, viewer, item_id)? {
+        Some(row) => items(conn, app, viewer, std::slice::from_ref(&row))?.pop(),
+        None => None,
     };
-    let Some(item) = items(conn, app, viewer, std::slice::from_ref(&row))?.pop() else {
-        return Ok(None);
-    };
+    if item.is_none() { return Ok(None); }
     let unread = ActivityItem::unread_snapshot(conn, viewer.id, app.db.env().now())?;
     Ok(Some(api::ActivityItemChanged {
         item,

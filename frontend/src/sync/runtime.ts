@@ -12,6 +12,7 @@ import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { prepareGooglePicker } from "../api/google-picker.ts";
 import { readMessage } from "../api/message-endpoints.ts";
+import { welcome as readWelcome } from "../api/welcome-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
@@ -90,6 +91,7 @@ import type { WorkLinkForm } from "../gen/WorkLinkForm.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
+import type { WorkspaceWelcome } from "../gen/WorkspaceWelcome.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ApprovalFilter } from "../store/approvals.ts";
 import type { BoardQuery } from "../store/boards.ts";
@@ -704,6 +706,30 @@ const confirmation = {
     runAction(confirmationActions.googleHere(confirmationGate)),
 };
 
+/**
+ * Calls `listener` whenever the welcome card and guide may have changed for this viewer: an
+ * administrator's save reaches every client as `workspace.updated` (the branding event), and a
+ * resync of the `user` topic may have skipped one.
+ */
+export function onWelcomeStale(listener: () => void): () => void {
+  const offEvents = onSyncEvents((events) => {
+    if (events.some((event) => event.type === "workspace.updated")) {
+      listener();
+    }
+  });
+
+  const offResync = onResync((topics) => {
+    if (topics.includes("user")) {
+      listener();
+    }
+  });
+
+  return () => {
+    offEvents();
+    offResync();
+  };
+}
+
 export const actions = {
   chatSounds: { listen: listenForChatSounds, play: playChatSound },
   boards: {
@@ -797,6 +823,9 @@ export const actions = {
    * focus) and adds the sidebar row when the membership is visible.
    */
   joinOpenRoom: (roomId: number): Promise<void> => runtime.runPromise(session.joinOpenRoom(roomId)),
+
+  /** The workspace's welcome card and server guide, with only the rooms this viewer can reach. */
+  welcome: (): Promise<WorkspaceWelcome> => runAction(readWelcome()),
 
   /** Loads an open room again (its Try again); doesn't subscribe or say present a second time. */
   reloadRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>

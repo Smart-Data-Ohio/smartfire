@@ -81,6 +81,9 @@ pub fn prepare_push(
     if !policy_allowed {
         return Ok(None);
     }
+    if super::ignore_policy::ignored(tx.conn(), request.recipient_id, request.sender_id)? {
+        return Ok(None);
+    }
     let excluded = if request.kind == PushKind::HuddleJoin {
         "'invisible','nothing','muted'"
     } else {
@@ -149,6 +152,7 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
     let Some(joiner) = joiner.filter(|u|u.is_active() && !u.is_bot()) else { return Ok(()); };
     let rung: BTreeSet<i64> = query_all(tx.conn(), "SELECT DISTINCT a.user_id FROM activity_items a JOIN huddle_grants g ON g.id=a.source_id WHERE a.source_type='HuddleGrant' AND a.event_type='huddle_started' AND a.handled_at IS NULL AND a.created_at>=? AND g.room_id=?", params![tx.now().ago(SignedDuration::from_secs(60)), room.id], |r| r.get(0))?.into_iter().collect();
     let rejoin: bool = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE id!=? AND room_id=? AND user_id=? AND revoked_at>=? AND last_seen_at>=?)", params![grant.id, room.id, joiner.id, tx.now().ago(SignedDuration::from_secs(5)), tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW))], |r| r.get(0))?;
+    let blockers = super::ignore_policy::blockers_of(tx.conn(), joiner.id)?.into_iter().collect::<BTreeSet<_>>();
     for membership in memberships {
         if membership.user_id == joiner.id {
             continue;
@@ -170,11 +174,9 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
         {
             continue;
         }
-        notice(
-            tx,
-            viewer.id,
-            json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, viewer.display_name(), &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.display_name(), "inCall":viewer_in_call, "rejoin":rejoin}),
-        );
+        let mut frame = json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, viewer.display_name(), &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.display_name(), "inCall":viewer_in_call, "rejoin":rejoin});
+        if blockers.contains(&viewer.id) { frame["unchanged"] = json!(true); }
+        notice(tx, viewer.id, frame);
         if !viewer_in_call && *invitations_enabled {
             enqueue_huddle_push(
                 tx,
@@ -207,12 +209,13 @@ pub fn notify_leave(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
     let mut in_call = in_call_user_ids(tx.conn(), room.id, tx.now())?;
     in_call.remove(&leaver.id);
     let members = room_users(tx.conn(), room.id)?;
+    let blockers = super::ignore_policy::blockers_of(tx.conn(), leaver.id)?.into_iter().collect::<BTreeSet<_>>();
     if !in_call.is_empty() {
         for id in &in_call {
             if let Some(viewer) = human(tx.conn(), *id)?
                 && !NotificationPreferences::load(tx.conn(), viewer.id)?.muted(room.id, tx.now())
             {
-                leave_notice(tx, &room, &leaver, &viewer, &members);
+                leave_notice(tx, &room, &leaver, &viewer, &members, blockers.contains(&viewer.id));
             }
         }
         if room.direct() {
@@ -221,7 +224,7 @@ pub fn notify_leave(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
                     continue;
                 }
                 if let Some(viewer) = human(tx.conn(), membership.user_id)? {
-                    leave_notice(tx, &room, &leaver, &viewer, &members);
+                    leave_notice(tx, &room, &leaver, &viewer, &members, blockers.contains(&viewer.id));
                 }
             }
         }
@@ -380,12 +383,10 @@ fn activity(tx: &mut Tx<'_>, viewer: i64, id: i64, payload: serde_json::Value) {
         payload: json!({"activityItemId":id, "huddleInvitation":payload}),
     }));
 }
-fn leave_notice(tx: &mut Tx<'_>, room: &Room, leaver: &User, viewer: &User, members: &[User]) {
-    notice(
-        tx,
-        viewer.id,
-        json!({"eventType":"huddle_left", "roomId":room.id, "roomName":display_name(room,viewer.id,viewer.display_name(),members,true), "joinerId":leaver.id, "joinerName":leaver.display_name()}),
-    );
+fn leave_notice(tx: &mut Tx<'_>, room: &Room, leaver: &User, viewer: &User, members: &[User], ignored: bool) {
+    let mut frame = json!({"eventType":"huddle_left", "roomId":room.id, "roomName":display_name(room,viewer.id,viewer.display_name(),members,true), "joinerId":leaver.id, "joinerName":leaver.display_name()});
+    if ignored { frame["unchanged"] = json!(true); }
+    notice(tx, viewer.id, frame);
 }
 fn human(conn: &Connection, id: i64) -> Result<Option<User>> {
     Ok(User::find_by_id(conn, id)?.filter(|u| u.is_active() && !u.is_bot()))

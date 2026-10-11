@@ -837,10 +837,17 @@ export function nextActivityItem(
 
 /** How the badge moves when an item goes from `before` to `after`. */
 export function unreadDelta(before: ActivityItem, after: ActivityItem): number {
-  const was = before.state === "unread" ? 1 : 0;
-  const is = after.state === "unread" ? 1 : 0;
+  const was = before.state === "unread" && !before.source.ignored ? 1 : 0;
+  const is = after.state === "unread" && !after.source.ignored ? 1 : 0;
 
   return is - was;
+}
+
+export function activityIsIgnored(state: State, item: ActivityItem): boolean {
+  const creator = item.source.creatorId;
+  const preference = creator === null ? undefined : state.ignoredPeople[creator]?.ignoredByMe;
+
+  return preference ?? item.source.ignored ?? false;
 }
 
 /**

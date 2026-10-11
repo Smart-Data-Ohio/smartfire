@@ -162,7 +162,7 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
             Event::Broadcast(_) => match event.as_broadcast() {
                 Some(Broadcast::MessageCreated { .. }) => broadcasts.push(json!("message")),
                 Some(Broadcast::UserStatus { .. }) => broadcasts.push(json!("status")),
-                Some(broadcast) => if let Some((stream, payload)) = broadcast.channel_frame() { broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload})); },
+                Some(broadcast) => for (stream, payload) in broadcast.channel_frames() { broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload})); },
                 None => {},
             },
             _ => {},

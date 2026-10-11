@@ -519,7 +519,7 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     assert_eq!(back.involvement, api::Involvement::Everything);
     sync.until(row_of(ALL_TALK), |_| false).await;
 
-    // Muting a room that's already read changes no unread state: no `room.read`, just the row.
+    // Muting an already-read room still tells the other tabs it is read.
     ok::<api::InvolvementChange>(
         &send(
             &mut david,
@@ -529,9 +529,10 @@ async fn involvement_answers_the_membership_and_mutes_read() {
         )
         .await,
     );
-    sync.until(
+    both(
+        &mut sync,
+        |e| matches!(&e.payload, api::SyncPayload::RoomRead(r) if r.room_id == ALL_TALK),
         |e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == ALL_TALK && r.membership.involvement == api::Involvement::Muted),
-        |e| matches!(&e.payload, api::SyncPayload::RoomRead(_)),
     )
     .await;
 
@@ -868,7 +869,7 @@ async fn mute_while_unread_changes(a: &TestApp, david: &mut Browser<'_>, unread:
 }
 
 #[tokio::test]
-async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
+async fn a_mute_sends_room_read_regardless_of_concurrent_unread_changes() {
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;
     let set_unread = |unread: bool| {
@@ -887,11 +888,11 @@ async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
 
-    // Unread when looked up, read by another tab before the write: nothing to clear.
+    // Unread when looked up, read by another tab before the write: publish read anyway.
     set_unread(true).await.unwrap();
     let muted: api::Membership = involvement(&mute_while_unread_changes(&a, &mut david, false).await);
     assert_eq!(muted.unread_at, None);
-    sync.until(muted_row, room_read).await;
+    both(&mut sync, room_read, muted_row).await;
     // Unmuting publishes the row again; no `room.read` arrives before it either.
     let path = format!("/api/v1/rooms/{ALL_TALK}/involvement");
     ok::<api::InvolvementChange>(

@@ -90,6 +90,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { createWelcome } from "./s3/welcome.ts";
 import { createWorkspaceLayout, workspaceLayoutOf } from "./s3/workspace-layout.ts";
 import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
 import { createApprovals } from "./s4/approvals.ts";
@@ -1014,6 +1015,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const fizzy = createFizzy(ctx, threads);
 
   const workspaceLayout = createWorkspaceLayout(ctx);
+  const welcome = createWelcome(ctx, admin, openPreview);
 
   const routes = [
     ...agents.routes,
@@ -1049,6 +1051,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
     ...workspaceLayout.routes,
+    ...welcome.routes,
   ];
 
   composer.arm();
@@ -1432,6 +1435,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
       case "workspace-layout":
         return { status: 200, json: workspaceLayout.control(body) };
+      case "welcome":
+        return { status: 200, json: welcome.control(body) };
       case "viewer-role": {
         const role = text("role");
         const viewer = world.users.get(VIEWER_ID);

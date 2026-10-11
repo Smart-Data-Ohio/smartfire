@@ -41,6 +41,10 @@ pub struct RoomUnread {
     pub message_id: Option<i64>,
     /// The message mentions this member (`mentionees`), so the mention count goes up too.
     pub mentioned: bool,
+    /// The source was ignored; consume the publication without changing unread state.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub unchanged: Option<bool>,
 }
 
 /// The `room.read` event on a person's `user` topic: they read the room in another tab

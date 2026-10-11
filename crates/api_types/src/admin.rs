@@ -340,3 +340,170 @@ pub struct IntegrationsHealth {
     pub agent_delivery: DeliveryHealth,
     pub email: EmailHealth,
 }
+
+/// A room the welcome card suggests, as administrators set it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeRoom {
+    pub room_id: i64,
+    /// One Unicode emoji shown on the card; `null` for none.
+    pub emoji: Option<String>,
+    /// Up to 100 characters of plain text.
+    pub description: String,
+}
+
+/// One server guide entry as administrators set it: a link to a room (`roomId`) or a short
+/// markdown note (`body`), never both.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GuideResource {
+    pub title: String,
+    pub emoji: Option<String>,
+    pub room_id: Option<i64>,
+    pub body: Option<String>,
+}
+
+/// The welcome screen and server guide as stored in `accounts.settings` under `welcome`. Never
+/// sent as is: administrators get [`WelcomeAdmin`], everyone else [`WorkspaceWelcome`]. An empty
+/// message with no rooms turns the welcome card off; an empty guide hides the guide page.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeSettings {
+    /// Short markdown, up to 1,000 characters.
+    pub message: String,
+    /// Up to 5 suggested rooms, in order.
+    pub rooms: Vec<WelcomeRoom>,
+    /// Up to 10 resources, in order.
+    pub guide: Vec<GuideResource>,
+}
+
+/// A suggested room in the editor. `roomId` names a room this administrator can see. A saved room
+/// they can't see comes with `roomId: null` and an opaque `keep` token instead, so neither its id
+/// nor its name reaches them; sending the token back keeps that room in the row. Exactly one of
+/// the two is set.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeRoomEdit {
+    pub room_id: Option<i64>,
+    #[serde(default)]
+    pub keep: Option<String>,
+    /// One Unicode emoji shown on the card; `null` for none.
+    pub emoji: Option<String>,
+    /// Up to 100 characters of plain text.
+    pub description: String,
+}
+
+/// A guide entry in the editor: a room link (`roomId`, or `keep` for a saved room this
+/// administrator can't see, as in [`WelcomeRoomEdit`]) or a short markdown note (`body`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GuideResourceEdit {
+    pub title: String,
+    pub emoji: Option<String>,
+    pub room_id: Option<i64>,
+    #[serde(default)]
+    pub keep: Option<String>,
+    pub body: Option<String>,
+}
+
+/// `PATCH /api/v1/admin/welcome`: replaces the sections it names and leaves the rest as stored,
+/// so the welcome and the guide save on their own. A refusal is `Validation` with `fields` among
+/// `message`, `rooms` and `guide`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeUpdate {
+    /// Short markdown, up to 1,000 characters.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Up to 5 suggested rooms, in order.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rooms: Option<Vec<WelcomeRoomEdit>>,
+    /// Up to 10 resources, in order.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guide: Option<Vec<GuideResourceEdit>>,
+}
+
+/// A room an administrator may suggest or link to: one they belong to, or an open room.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeRoomChoice {
+    pub id: i64,
+    pub name: String,
+}
+
+/// `GET /api/v1/admin/welcome` (administrators only), and the answer to the `PATCH`: the
+/// configuration as this administrator may see it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeAdmin {
+    pub message: String,
+    pub rooms: Vec<WelcomeRoomEdit>,
+    pub guide: Vec<GuideResourceEdit>,
+    /// The rooms the editor offers, by name.
+    pub choices: Vec<WelcomeRoomChoice>,
+}
+
+/// A suggested room as one viewer sees it: only rooms they belong to or may join are sent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WelcomeRoomCard {
+    pub room_id: i64,
+    pub name: String,
+    pub emoji: Option<String>,
+    pub description: String,
+    /// The viewer belongs to the room (open it); otherwise it's an open room they may join.
+    pub joined: bool,
+}
+
+/// A guide entry as one viewer sees it. A room link the viewer can't open or join is left out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GuideEntry {
+    pub title: String,
+    pub emoji: Option<String>,
+    /// The note, rendered and sanitized as a message's markdown is; `null` for a room link.
+    pub body_html: Option<String>,
+    /// The linked room, for a room link.
+    pub room: Option<GuideRoom>,
+}
+
+/// The room a guide entry links to, as one viewer sees it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GuideRoom {
+    pub id: i64,
+    pub name: String,
+    /// The viewer belongs to the room; otherwise it's an open room they may join.
+    pub joined: bool,
+}
+
+/// `GET /api/v1/welcome`: the welcome card and server guide for the signed-in person. Nothing
+/// configured is an empty message, no rooms and no guide.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceWelcome {
+    pub name: String,
+    /// The workspace description (plain text), empty when unset.
+    pub description: String,
+    /// The welcome message, rendered and sanitized; `null` when there is none.
+    pub message_html: Option<String>,
+    pub rooms: Vec<WelcomeRoomCard>,
+    pub guide: Vec<GuideEntry>,
+    /// The viewer may edit these in the workspace settings.
+    pub can_administer: bool,
+}

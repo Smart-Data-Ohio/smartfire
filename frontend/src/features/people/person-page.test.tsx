@@ -31,6 +31,7 @@ async function mount(
     transferUrl: null,
     transferQrSvg: null,
     canBan: false,
+    ignoredByMe: false,
     canManageBot: false,
   });
 

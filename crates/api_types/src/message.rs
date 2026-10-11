@@ -5,7 +5,7 @@ use crate::{
     AgentStep, Attachment, Boost, MessageCard, Poll, Reaction, ThreadIndicator, Timestamp,
 };
 
-/// A message on a room's timeline or in a thread. Viewer-independent: whether the viewer may
+/// A message on a room's timeline or in a thread. Whether the viewer may
 /// edit it or is mentioned is worked out on the client.
 ///
 /// Permissions the client derives (`messages#ensure_can_edit` / `ensure_can_delete`):
@@ -22,6 +22,10 @@ pub struct MessageDTO {
     /// `null` on the room's root timeline.
     pub thread_id: Option<i64>,
     pub creator_id: i64,
+    /// Collapse for this viewer, retaining the author and content for an explicit reveal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ignored: Option<bool>,
     /// The sender's id for the message, which makes posting idempotent.
     pub client_message_id: String,
     /// The rendered body from the server's sanitizer pipeline.

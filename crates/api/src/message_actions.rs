@@ -129,9 +129,10 @@ fn locked_error(c: &mut Ctx) -> Error {
 
 async fn render_message(c: &Ctx, message: Message) -> Result<api::MessageDTO> {
     let app = c.app().clone();
+    let viewer = concerns::require_current_user(c)?.id;
     c.app()
         .db
-        .read(move |conn| dto::message(conn, &app, &message))
+        .read(move |conn| dto::message_for_viewer(conn, &app, &message, viewer))
         .await
         .map_err(db_error)
 }
@@ -197,7 +198,7 @@ async fn show_message(c: &mut Ctx) -> Result {
         .db
         .read(move |conn| {
             let messages = std::slice::from_ref(&message);
-            let (mut dtos, fetches) = dto::messages_and_fetches(conn, &app, messages)?;
+            let (mut dtos, fetches) = dto::messages_and_fetches_for_viewer(conn, &app, messages, viewer.id)?;
             let dto = dtos.remove(0);
             let repliers = dto
                 .thread
@@ -391,12 +392,12 @@ async fn delete_pin(c: &mut Ctx) -> Result {
 
 async fn index_pins(c: &mut Ctx) -> Result {
     before_actions(c).await?;
-    let (_, room) = set_room(c).await?;
+    let (membership, room) = set_room(c).await?;
     let (app, now) = (c.app().clone(), now(c));
     let list = c
         .app()
         .db
-        .read(move |conn| dto::pin_list(conn, &app, room.id, now))
+        .read(move |conn| dto::pin_list(conn, &app, room.id, membership.user_id, now))
         .await
         .map_err(db_error)?;
     c.json(StatusCode::OK, &list)
@@ -512,7 +513,7 @@ async fn index_saved(c: &mut Ctx) -> Result {
             )?;
             Ok(api::SavedItemList {
                 items: rows.iter().map(dto::saved_item).collect(),
-                messages: dto::messages(conn, &app, &message_rows)?,
+                messages: dto::messages_for_viewer(conn, &app, &message_rows, viewer.id)?,
                 users,
                 conversations,
                 next_cursor,

@@ -5,7 +5,7 @@ import type { User } from "./User";
 /**
  * `GET /api/v1/people/{id}` (`users#show`): what the classic page shows this viewer.
  */
-export type PersonProfile = { user: User,
+export type PersonProfile = { user: User, ignoredByMe: boolean,
 /**
  * `profile_status_in_zone`, worded in the request's time zone. Set for a person who isn't
  * deactivated, including banned people; `None` for bots (`users/show.html:21,45-49`).

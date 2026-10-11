@@ -11,6 +11,8 @@ const PersonalAppearance = Schema.Struct({
   density: Schema.optionalKey(Schema.Literals(["comfortable", "compact"])),
   motion: Schema.optionalKey(Schema.Literals(["system", "reduce", "full"])),
   tokens: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  /** The workspace's welcome card, put away from Home; Settings and the guide bring it back. */
+  welcome: Schema.optionalKey(Schema.Literal("dismissed")),
 });
 
 export type PersonalAppearance = typeof PersonalAppearance.Type;

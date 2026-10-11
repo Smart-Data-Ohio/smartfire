@@ -125,6 +125,15 @@ impl Hub {
         publish(state.sequence)
     }
 
+    /// A refused publication keeps the current sequence. Check and publish under the hub lock.
+    pub(crate) fn try_sequenced<R, E>(&self, publish: impl FnOnce(u64) -> Result<R, E>) -> Result<R, E> {
+        let mut state = self.state.lock().unwrap();
+        let sequence = state.sequence + 1;
+        let result = publish(sequence)?;
+        state.sequence = sequence;
+        Ok(result)
+    }
+
     /// The latest publication sequence taken: every publication from here on gets a later one.
     pub(crate) fn sequence(&self) -> u64 {
         self.state.lock().unwrap().sequence

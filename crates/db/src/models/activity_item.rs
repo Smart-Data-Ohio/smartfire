@@ -22,6 +22,9 @@ use crate::time::Timestamp;
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ActivityItemsRemoved {
     pub items: Vec<(i64, i64)>,
+    /// Some uses an unfiltered roster, including an empty roster; None is a legacy source.
+    #[serde(default)]
+    pub recipient_ids: Option<Vec<i64>>,
     /// A retained message's room, so removing a mention also refreshes its sidebar counts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub room_id: Option<i64>,
@@ -31,17 +34,20 @@ impl crate::events::Broadcast for ActivityItemsRemoved {
     const KIND: &'static str = "ActivityItem#sync_removed";
 }
 
-/// An unread grouped thread item re-pointed at a newer reply (`record_authorized`). The classic
-/// inbox isn't told (`app/models/activity_item.rb` broadcasts state changes only); the cable sink
-/// publishes the single-page app's `activity.item` so its row shows the newer reply.
+/// A recording attempt for an authorized recipient. Publication eligibility comes from the
+/// source's unfiltered roster, independent of whether the personal item was created or grouped.
+/// A zero id consumes an ignored actor's slot without changing the visible inbox.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct ActivityItemTouched {
+pub struct ActivityItemRecorded {
     pub id: i64,
     pub user_id: i64,
+    pub room_id: Option<i64>,
+    pub source_type: String,
+    pub source_id: i64,
 }
 
-impl crate::events::Broadcast for ActivityItemTouched {
-    const KIND: &'static str = "ActivityItem#sync_touched";
+impl crate::events::Broadcast for ActivityItemRecorded {
+    const KIND: &'static str = "ActivityItem#sync_recorded";
 }
 
 /// `ActivityItem::EVENT_TYPES`
@@ -369,8 +375,18 @@ impl ActivityItem {
 
     /// `has_many :activity_items, as: :source, dependent: :destroy`
     pub(crate) fn destroy_for_source(tx: &mut Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
+        let room = match source_type {
+            "Message" => crate::sql::query_one(tx.conn(), "SELECT room_id FROM messages WHERE id=?", [source_id], |row| row.get::<_, i64>(0))?,
+            "WorkThreadEvent" => crate::sql::query_one(tx.conn(), "SELECT t.room_id FROM work_thread_events e JOIN channel_threads t ON t.id=e.channel_thread_id WHERE e.id=?", [source_id], |row| row.get::<_, i64>(0))?,
+            "BoardSlaNudge" => crate::sql::query_one(tx.conn(), "SELECT room_id FROM board_sla_nudges WHERE id=?", [source_id], |row| row.get::<_, i64>(0))?,
+            _ => None,
+        };
         let removed = Self::delete_for_source(tx, source_type, source_id)?;
-        Self::emit_removed(tx, removed);
+        if let Some(room_id) = room {
+            Self::emit_removed_in_room(tx, removed, room_id, None)?;
+        } else {
+            Self::emit_removed(tx, removed);
+        }
         Ok(())
     }
 
@@ -407,7 +423,17 @@ impl ActivityItem {
             params![room_id, user_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )?;
-        Self::emit_removed(tx, hidden);
+        Self::emit_removed_in_room(tx, hidden, room_id, user_id)?;
+        Ok(())
+    }
+
+    /// Publication slots come from the room roster, never the number of personal items.
+    pub(crate) fn emit_removed_in_room(tx: &mut Tx<'_>, items: Vec<(i64, i64)>, room_id: i64, user_id: Option<i64>) -> Result<()> {
+        let recipient_ids = match user_id {
+            Some(user_id) => vec![user_id],
+            None => crate::Membership::for_room(tx.conn(), room_id)?.into_iter().map(|member| member.user_id).collect(),
+        };
+        tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items, recipient_ids: Some(recipient_ids), room_id: Some(room_id) }));
         Ok(())
     }
 
@@ -432,7 +458,7 @@ impl ActivityItem {
     /// Tells the owners' other tabs that these `(id, user_id)` items went with their source.
     pub(crate) fn emit_removed(tx: &mut Tx<'_>, items: Vec<(i64, i64)>) {
         if !items.is_empty() {
-            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items, room_id: None }));
+            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items, recipient_ids: None, room_id: None }));
         }
     }
 }

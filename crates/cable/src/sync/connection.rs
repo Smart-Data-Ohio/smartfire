@@ -481,7 +481,7 @@ impl<U> Connection<U> {
                     if i > 0 {
                         frame.push(',');
                     }
-                    frame.push_str(&entry.json);
+                    frame.push_str(entry.json_for(self.user_id));
                 }
                 frame.push_str("]}");
                 Frame::from(frame)

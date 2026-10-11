@@ -1,0 +1,344 @@
+/* The workspace's welcome card (Home, and the top of the list on phones) and the server guide. */
+@layer app {
+  /* ── Home ──────────────────────────────────────────────────────────────── */
+
+  .welcome-home {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-height: 0;
+    padding: var(--space-6) var(--space-5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .welcome-home > * {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .welcome-home-continue {
+    padding-inline: var(--space-1);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  /* ── Card ──────────────────────────────────────────────────────────────── */
+
+  .welcome-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .welcome-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .welcome-card-logo {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+  }
+
+  .welcome-card-monogram {
+    display: grid;
+    place-items: center;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+  }
+
+  .welcome-card-titles {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    min-width: 0;
+  }
+
+  .welcome-card-title {
+    color: var(--text-strong);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-title);
+    overflow-wrap: anywhere;
+  }
+
+  .welcome-card-description {
+    color: var(--text-muted);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    overflow-wrap: anywhere;
+  }
+
+  .welcome-card-dismiss {
+    flex-shrink: 0;
+    margin: calc(var(--space-1) * -1) calc(var(--space-1) * -1) 0 0;
+  }
+
+  .welcome-card-message {
+    color: var(--text);
+  }
+
+  .welcome-card-rooms {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .welcome-card-subtitle {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+    line-height: var(--leading-meta);
+    text-transform: uppercase;
+  }
+
+  .welcome-room-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    list-style: none;
+  }
+
+  .welcome-room {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 52px;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .welcome-room + .welcome-room {
+    border-top: 1px solid var(--border);
+  }
+
+  .welcome-room-glyph {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .welcome-room-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .welcome-room-name {
+    overflow: hidden;
+    color: var(--text-strong);
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-body);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .welcome-room-name::before {
+    content: "#";
+    color: var(--text-faint);
+  }
+
+  .welcome-room-description {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    overflow-wrap: anywhere;
+  }
+
+  .welcome-room-join {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+
+  .welcome-room-action {
+    flex-shrink: 0;
+    min-width: 64px;
+  }
+
+  .welcome-room-error {
+    max-width: 180px;
+    color: var(--danger-text);
+    text-align: end;
+  }
+
+  .welcome-card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .welcome-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-meta);
+    text-decoration: none;
+  }
+
+  .welcome-card-link:hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .welcome-card-link:focus-visible {
+    border-radius: var(--radius-xs);
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* At the top of the conversation list on phones: flush with the rows, a little tighter. */
+  .welcome-card[data-compact] {
+    gap: var(--space-3);
+    margin: 0 var(--space-2) var(--space-3);
+    padding: var(--space-4);
+    box-shadow: none;
+  }
+
+  /* ── Guide ─────────────────────────────────────────────────────────────── */
+
+  .guide-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .guide-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 720px;
+    padding: var(--space-5);
+  }
+
+  .guide-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .guide-entry-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+  }
+
+  .guide-entry-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    color: var(--text-strong);
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-body);
+    overflow-wrap: anywhere;
+  }
+
+  .guide-entry-emoji {
+    flex-shrink: 0;
+  }
+
+  .guide-entry-body {
+    color: var(--text);
+  }
+
+  .guide-entry-room {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .guide-entry-room-glyph {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .guide-entry-room-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .guide-empty {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .guide-reopen {
+    margin: 0;
+  }
+
+  /* ── Phones ────────────────────────────────────────────────────────────── */
+
+  @media (width < 720px) {
+    .welcome-home {
+      padding: var(--space-4) var(--space-3);
+    }
+
+    .guide-column {
+      padding: var(--space-3);
+    }
+
+    /* Finger-sized: the dismiss button, Open and Join, and the card's links. */
+    .welcome-card-dismiss {
+      width: var(--touch-target);
+      height: var(--touch-target);
+      margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0 0;
+    }
+
+    .welcome-room-action {
+      min-height: var(--touch-target);
+    }
+
+    .welcome-card-link {
+      min-height: var(--touch-target);
+    }
+
+    .welcome-room {
+      padding-inline: var(--space-2);
+    }
+  }
+}

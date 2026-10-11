@@ -14,6 +14,7 @@ import {
 import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { boot, messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
+import { blocks } from "../api/people-endpoints.ts";
 import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
@@ -149,7 +150,7 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
       missing.add(event.data.creatorId);
     }
 
-    if (event.type === "activity.item") {
+    if (event.type === "activity.item" && event.data.item !== null) {
       const creatorId = event.data.item.source.creatorId;
 
       if (creatorId !== null && known[creatorId] === undefined) {
@@ -492,6 +493,14 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
+            yield* blocks().pipe(
+              Effect.tap((snapshot) => Effect.sync(() => mutations.setBlocks(snapshot))),
+              Effect.catch((error) =>
+                Effect.logWarning("sync: ignore snapshot failed", error.message),
+              ),
+              Effect.provideContext(api),
+            );
+
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
                 Effect.map((data) => {
@@ -656,6 +665,11 @@ export class Engine extends Context.Service<
         }
 
         mutations.applyEvents(fresh, now);
+
+        if (fresh.some((event) => event.type === "blocks.updated")) {
+          yield* Effect.forkIn(resync(scope, ["user"]), scope);
+        }
+
         emitSyncEvents(fresh, yield* Ref.get(replayThrough));
         const open = new Set(yield* topics.subscribed);
 

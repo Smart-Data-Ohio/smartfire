@@ -44,6 +44,7 @@ pub(crate) fn user() -> User {
 
 pub(crate) fn message() -> MessageDTO {
     MessageDTO {
+        ignored: None,
         id: 9001,
         room_id: 12,
         thread_id: None,
@@ -772,6 +773,7 @@ fn s1_events_match_the_protocol() {
                 room_id: 12,
                 message_id: Some(9001),
                 mentioned: true,
+                unchanged: None,
             }),
             json!({"type": "room.unread", "data": {"roomId": 12, "messageId": 9001, "mentioned": true}}),
         ),
@@ -780,6 +782,7 @@ fn s1_events_match_the_protocol() {
                 room_id: 12,
                 message_id: None,
                 mentioned: false,
+                unchanged: None,
             }),
             json!({"type": "room.unread", "data": {"roomId": 12, "messageId": null, "mentioned": false}}),
         ),

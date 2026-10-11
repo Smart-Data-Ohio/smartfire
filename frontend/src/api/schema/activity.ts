@@ -123,6 +123,7 @@ export const ActivitySource = Schema.Struct({
   messageId: Schema.NullOr(MessageId),
   eventId: Schema.NullOr(EventId),
   creatorId: Schema.NullOr(UserId),
+  ignored: Schema.optionalKey(Schema.Boolean),
   title: Schema.String,
   body: Schema.String,
   occurredAt: Timestamp,
@@ -198,7 +199,7 @@ export type UpdateActivityItemPin = Assert<
 
 /** A state change's or `open`'s reply, and the `activity.item` event. */
 export const ActivityItemChanged = Schema.Struct({
-  item: ActivityItem,
+  item: Schema.NullOr(ActivityItem),
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
   evaluatedAt: EvaluationTimestamp,
@@ -210,9 +211,18 @@ export type ActivityItemChangedPin = Assert<
   Pinned<typeof ActivityItemChanged, GeneratedActivityItemChanged>
 >;
 
+/** Successful item mutations always return the authorized item. */
+export const ActivityItemMutation = Schema.Struct({
+  ...ActivityItemChanged.fields,
+  item: ActivityItem,
+});
+
+export type ActivityItemMutation = typeof ActivityItemMutation.Encoded;
+
 /** The `activity.removed` event: the item went with its source. */
 export const ActivityItemRemoved = Schema.Struct({
   id: ActivityItemId,
+  additionalIds: Schema.optionalKey(Schema.Array(ActivityItemId)),
   unreadCount: Schema.Int,
   unreadRevision: Schema.Int,
   evaluatedAt: EvaluationTimestamp,
