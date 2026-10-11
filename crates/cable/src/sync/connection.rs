@@ -345,6 +345,7 @@ impl<U> Connection<U> {
             seq: seq as i64,
             resumed,
             replay_through: self.cursor as i64,
+            viewer_id: self.user_id,
         }
     }
 
@@ -758,6 +759,7 @@ mod tests {
                 seq: 5,
                 resumed: false,
                 replay_through: 5,
+                viewer_id: 1,
             }
         );
         // From past it, the resume goes on.
@@ -804,6 +806,7 @@ mod tests {
                 seq: 4,
                 resumed: false,
                 replay_through: 4,
+                viewer_id: 1,
             }
         );
         assert!(
@@ -825,6 +828,7 @@ mod tests {
                 seq: 3,
                 resumed: true,
                 replay_through: 4,
+                viewer_id: 1,
             }
         );
         assert_eq!(
@@ -836,6 +840,27 @@ mod tests {
             [4]
         );
         assert!(connection.flush_at.is_some_and(|at| at <= Instant::now()));
+    }
+
+    #[test]
+    fn every_welcome_names_the_viewer_it_answers_for() {
+        let mut connection = connection(SyncConfig::default());
+        connection.user_id = 42;
+        publish(&connection, 1, Audience::User(42));
+        let fresh = connection.engine.ring.resume(None);
+        assert!(matches!(
+            connection.welcome(fresh),
+            ServerFrame::Welcome { resumed: false, viewer_id: 42, .. }
+        ));
+        // A resume is accepted on epoch and sequence alone, so it names the viewer too.
+        let start = connection
+            .engine
+            .ring
+            .resume(Some((connection.engine.ring.epoch(), 0)));
+        assert!(matches!(
+            connection.welcome(start),
+            ServerFrame::Welcome { resumed: true, viewer_id: 42, .. }
+        ));
     }
 
     #[test]
@@ -853,6 +878,7 @@ mod tests {
                 seq: 0,
                 resumed: true,
                 replay_through: 1,
+                viewer_id: 1,
             }
         );
         assert_eq!(

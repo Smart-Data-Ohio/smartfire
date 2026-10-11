@@ -45,7 +45,7 @@ import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refre
 import * as session from "./session.ts";
 import { settings } from "./settings.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
-import { pageReload } from "./sign-in-change.ts";
+import { answeredForThisPage, pageReload } from "./sign-in-change.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -100,11 +100,17 @@ const pushEvents = (...events: readonly SyncEvent[]) =>
     yield* settle;
   });
 
-const welcome = (seq: number, resumed: boolean, epoch = "e1", replayThrough = seq) =>
+const welcome = (
+  seq: number,
+  resumed: boolean,
+  epoch = "e1",
+  replayThrough = seq,
+  viewerId = meFixture.user.id,
+) =>
   Effect.gen(function* () {
     const socket = yield* MemorySocket;
 
-    yield* socket.push({ t: "welcome", epoch, seq, resumed, replayThrough });
+    yield* socket.push({ t: "welcome", epoch, seq, resumed, replayThrough, viewerId });
     yield* settle;
   });
 
@@ -3646,6 +3652,80 @@ describe("ignores", () => {
         expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
         // B's sidebar was never read, so it never rendered over A's page.
         expect((yield* api.requests).filter((r) => r.path === "/sidebar").length).toBe(sidebars);
+      }),
+    ),
+  );
+
+  it.effect("reloads before a resume answered for B replays any of B's events", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+
+        const requests = (yield* api.requests).length;
+
+        // The cookie now signs in B; A's cursor resumes, and the server replays B's events.
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* socket.push({
+          t: "welcome",
+          epoch: "e1",
+          seq: 5,
+          resumed: true,
+          replayThrough: 6,
+          viewerId: 8,
+        });
+        yield* socket.push({
+          t: "batch",
+          events: [
+            {
+              seq: 6,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: sidebarRowFixture(99, "B's room"),
+            },
+          ],
+        });
+        yield* settle;
+
+        expect(reloads).toEqual([false]);
+        expect(running.pollUnsafe()).toBeDefined();
+        expect(store.getState().sidebar.rows[99]).toBeUndefined();
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
+        // Nothing was read for B either.
+        expect((yield* api.requests).length).toBe(requests);
+      }),
+    ),
+  );
+
+  it.effect("stops before reloading when a reply read outside it finds B", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+
+        // Settings read `/blocks` and the server answered for B.
+        expect(answeredForThisPage(8)).toBe(false);
+        yield* settle;
+
+        expect(reloads).toEqual([false]);
+        expect(running.pollUnsafe()).toBeDefined();
       }),
     ),
   );

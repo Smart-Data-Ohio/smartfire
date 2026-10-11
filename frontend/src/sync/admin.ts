@@ -118,6 +118,7 @@ import { mutations, store } from "../store/store.ts";
 import { brandingOf } from "../store/workspace.ts";
 import { peoplePagesOver } from "./people-pages.ts";
 import { runAction } from "./runtime.ts";
+import { answeredForThisPage } from "./sign-in-change.ts";
 
 /**
  * A workspace reply, with its name, logo and banner applied to the rail and sidebar at once (the
@@ -302,6 +303,17 @@ export const peoplePages = peoplePagesOver({
 });
 
 /**
+ * Every `/blocks` reply and ignore write reply passes here: one the server answered for someone
+ * else (another sign-in) stops the page for its reload and never settles, so nothing of theirs
+ * reaches the store or the screen meanwhile.
+ */
+function forThisPage<Reply extends { readonly viewerId: number }>(reply: Reply): Promise<Reply> {
+  return answeredForThisPage(reply.viewerId)
+    ? Promise.resolve(reply)
+    : new Promise<Reply>(() => undefined);
+}
+
+/**
  * Ignoring someone. Each reply lands in the store first, so every timeline collapses (or opens)
  * their messages at once; the sync echo of the same change is then dropped by its revision, and
  * refreshes the sidebar's counts.
@@ -311,19 +323,23 @@ export const ignores = {
   list: (): Promise<BlockList> => {
     const coveredAt = store.getState().ignores.invalidatedAt;
 
-    return runAction(blocks()).then((snapshot) => {
-      mutations.mergeUsers(snapshot.people.map((person) => person.user));
-      mutations.setBlocks(snapshot, coveredAt);
+    return runAction(blocks())
+      .then(forThisPage)
+      .then((snapshot) => {
+        mutations.mergeUsers(snapshot.people.map((person) => person.user));
+        mutations.setBlocks(snapshot, coveredAt);
 
-      return snapshot;
-    });
+        return snapshot;
+      });
   },
 
   /** Ignores them (`true`) or stops (`false`). */
   set: (userId: number, ignored: boolean): Promise<BlockState> =>
-    runAction(setIgnored(userId, ignored)).then((change) => {
-      mutations.applyBlockState(change);
+    runAction(setIgnored(userId, ignored))
+      .then(forThisPage)
+      .then((change) => {
+        mutations.applyBlockState(change);
 
-      return change;
-    }),
+        return change;
+      }),
 };

@@ -4,6 +4,8 @@
  * engine stops first, then this clears what the tab kept for them and loads the page again.
  */
 
+import { store } from "../store/store.ts";
+
 /** What this tab keeps in sessionStorage: drafts, the sync resume point. */
 const TAB_STORAGE_PREFIX = "smartfire.";
 
@@ -29,4 +31,42 @@ export function reloadForNewSignIn(): void {
   }
 
   pageReload.reload();
+}
+
+/** How the running sync engine stops for a new sign-in (it reloads once stopped); null while none runs. */
+let stopRun: (() => void) | null = null;
+
+/** Has a new sign-in stop the engine's run, which then reloads; returns the undo for its end. */
+export function stopRunForNewSignIn(stop: () => void): () => void {
+  stopRun = stop;
+
+  return () => {
+    if (stopRun === stop) stopRun = null;
+  };
+}
+
+/** Leaves for a new sign-in: stops the sync engine first when it runs (it reloads once stopped). */
+export function leaveForNewSignIn(): void {
+  if (stopRun === null) {
+    reloadForNewSignIn();
+  } else {
+    stopRun();
+  }
+}
+
+/**
+ * The check for every reply that says whose it is (`/blocks` and the ignore writes): whether the
+ * server answered for who this page is signed in as. When it answered for someone else, the page
+ * leaves for them, and nothing in the reply may be used.
+ */
+export function answeredForThisPage(viewerId: number): boolean {
+  const me = store.getState().me;
+
+  if (me === null || me.user.id === viewerId) {
+    return true;
+  }
+
+  leaveForNewSignIn();
+
+  return false;
 }

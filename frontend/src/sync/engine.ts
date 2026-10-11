@@ -45,7 +45,7 @@ import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { recoverResyncedRooms, roomVisitToken } from "./session.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
-import { reloadForNewSignIn } from "./sign-in-change.ts";
+import { answeredForThisPage, reloadForNewSignIn, stopRunForNewSignIn } from "./sign-in-change.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import {
@@ -534,9 +534,11 @@ export class Engine extends Context.Service<
         return blocks().pipe(
           Effect.timeout(BLOCKS_REQUEST_TIMEOUT),
           Effect.flatMap((snapshot) =>
-            signedInElsewhere(snapshot.viewerId)
-              ? leaveForNewSignIn
-              : Effect.sync(() => mutations.setBlocks(snapshot, coveredAt)),
+            Effect.sync(() => {
+              if (answeredForThisPage(snapshot.viewerId)) {
+                mutations.setBlocks(snapshot, coveredAt);
+              }
+            }),
           ),
         );
       });
@@ -726,6 +728,11 @@ export class Engine extends Context.Service<
         events: readonly SyncEvent[],
         scope: Scope.Scope,
       ) {
+        // The run is stopping for another sign-in: whatever is left of the socket isn't ours.
+        if (yield* Deferred.isDone(signedOut)) {
+          return;
+        }
+
         const point = yield* cursor.get;
         const covered = yield* Ref.get(snapshotThrough);
         const activitySnapshot = yield* Ref.get(activitySnapshotThrough);
@@ -840,6 +847,14 @@ export class Engine extends Context.Service<
         frame: Extract<ServerFrame, { t: "welcome" }>,
         scope: Scope.Scope,
       ) {
+        // A resume is accepted on its epoch and sequence alone: a socket opened under another
+        // sign-in replays that account's events. Nothing of theirs lands, not even the cursor.
+        if (signedInElsewhere(frame.viewerId)) {
+          yield* leaveForNewSignIn;
+
+          return;
+        }
+
         yield* Ref.set(replayThrough, frame.replayThrough);
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
@@ -911,6 +926,12 @@ export class Engine extends Context.Service<
             case "welcome":
               yield* flush;
               yield* welcome(frame, scope);
+
+              // Answered for someone else: stop reading, with no reconnect, and let `run` reload.
+              if (yield* Deferred.isDone(signedOut)) {
+                return false;
+              }
+
               break;
             case "resync":
               yield* flush;
@@ -1077,6 +1098,12 @@ export class Engine extends Context.Service<
           Effect.gen(function* () {
             const scope = yield* Effect.scope;
 
+            // A reply read outside the engine (settings, a profile) that finds another sign-in
+            // stops this run the same way, so the reload still waits for everything to end.
+            yield* Effect.acquireRelease(
+              Effect.sync(() => stopRunForNewSignIn(() => Effect.runSync(leaveForNewSignIn))),
+              (release) => Effect.sync(release),
+            );
             yield* Effect.forkIn(Effect.scoped(expire), scope);
             yield* Effect.forkIn(Effect.scoped(followRooms), scope);
             yield* Effect.forkIn(followBlocks, scope);

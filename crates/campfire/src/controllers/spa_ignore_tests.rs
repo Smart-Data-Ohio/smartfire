@@ -362,6 +362,32 @@ async fn ignore_refuses_new_contact_generically_but_allows_blocker_and_existing_
 }
 
 #[tokio::test]
+async fn ignore_sync_welcome_names_the_viewer_on_fresh_and_resumed_sockets() {
+    use campfire_api_types as api;
+    let Some(a) = app(true).await else { return };
+    let david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let (addr, server) = serve(&a).await;
+    let mut fresh = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, resumed: false, viewer_id, .. }) =
+        fresh.next().await
+    else {
+        panic!("expected a fresh welcome");
+    };
+    assert_eq!(viewer_id, DAVID);
+    // David's cursor resumed under Kevin's cookie (a sign-in change between sockets): the
+    // ring accepts it on epoch and sequence alone, so the welcome must say whose it is.
+    let mut resumed =
+        Sync::open(addr, &kevin.cookie_header(), &[], json!({"epoch": epoch, "seq": seq})).await;
+    let Some(api::ServerFrame::Welcome { resumed: true, viewer_id, .. }) = resumed.next().await
+    else {
+        panic!("expected a resumed welcome");
+    };
+    assert_eq!(viewer_id, KEVIN);
+    server.abort();
+}
+
+#[tokio::test]
 async fn ignore_changes_sync_only_to_blockers_other_sessions() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
