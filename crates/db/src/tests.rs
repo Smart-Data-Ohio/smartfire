@@ -12,6 +12,7 @@ mod board_tag_assignment_test;
 mod board_sla_nudge_test;
 mod board_automations_test;
 mod account_test;
+mod workspace_invite_test;
 mod slack_import_test;
 mod slack_test;
 mod activity_item_test;
