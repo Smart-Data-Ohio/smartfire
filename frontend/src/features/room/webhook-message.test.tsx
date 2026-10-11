@@ -99,6 +99,55 @@ describe("a webhook's message", () => {
     expect(screen.getByText("I checked this deployment.")).toBeTruthy();
   });
 
+  describe("forwarded again: CI posts, Priya forwards it, Bob forwards Priya's", () => {
+    const BOB = 501;
+    const ci = { name: "CI", username: null, avatarUrl: null };
+
+    // The server copies CI's snapshot onto every forward and folds Priya's note into the body.
+    const priyas = webhookMessage({
+      id: 41,
+      webhook: ci,
+      forwardedFromMessageId: 40,
+      forwardedAt: "2026-10-06T00:01:00.000Z",
+      forwardNote: "I checked this deployment.",
+    });
+
+    const bobs = webhookMessage({
+      id: 42,
+      creatorId: BOB,
+      webhook: ci,
+      forwardedFromMessageId: 41,
+      forwardedAt: "2026-10-06T00:02:00.000Z",
+      forwardNote: null,
+    });
+
+    beforeEach(() => {
+      mutations.mergeUsers([userFixture(AUTHOR, "Priya"), userFixture(BOB, "Bob")]);
+    });
+
+    it("credits Priya inside Bob's forward while her message is loaded", () => {
+      store.setState((state) => ({ messages: { ...state.messages, [priyas.id]: priyas } }));
+      row(bobs);
+
+      const article = screen.getByRole("article");
+
+      expect(screen.getByRole("banner").querySelector(".message-author")?.textContent).toBe("Bob");
+      expect(article.querySelector(".message-forward-author")?.textContent).toBe(" · Priya");
+      expect(article.querySelector('.agent-badge[data-tone="app"]')).toBeNull();
+      expect(within(article).queryByText(/CI/)).toBeNull();
+    });
+
+    it("falls back to the webhook the copy carries when her message isn't loaded", () => {
+      row(bobs);
+
+      const article = screen.getByRole("article");
+
+      expect(screen.getByRole("banner").querySelector(".message-author")?.textContent).toBe("Bob");
+      expect(article.querySelector(".message-forward-author")?.textContent).toBe(" · CI");
+      expect(article.querySelector('.agent-badge[data-tone="app"]')?.textContent).toBe("App");
+    });
+  });
+
   it("leaves a person's message as it was", () => {
     mutations.mergeUsers([userFixture(AUTHOR, "Priya")]);
     row(messageFixture(42, 1, { creatorId: AUTHOR }));

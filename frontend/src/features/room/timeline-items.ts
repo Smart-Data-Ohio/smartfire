@@ -1,6 +1,6 @@
 import { dayKey, formatDay, toMillis } from "../../lib/time.ts";
 import type { MessageDTO, PendingMessage, Timeline } from "../../store/model.ts";
-import { postingWebhook, webhookName } from "../messages/webhook-attribution.ts";
+import { displayedAuthor } from "../messages/webhook-attribution.ts";
 
 /** Consecutive messages from one author within this window share a header. */
 export const GROUP_WINDOW_MS = 5 * 60_000;
@@ -131,9 +131,9 @@ export function timelineItems({
       forced = true;
     }
 
-    // A forward of a webhook's message is the forwarder's, and groups with their own.
-    const webhook = postingWebhook(message);
-    const persona = webhook === null ? null : webhookName(webhook);
+    // A forward of a webhook's message, at any depth, is the forwarder's, and groups with their own.
+    const author = displayedAuthor(message);
+    const persona = author.kind === "webhook" ? author.name : null;
 
     const groupStart =
       place(message.creatorId, message.createdAt, message.systemNote, persona) || forced;

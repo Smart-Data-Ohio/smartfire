@@ -15,7 +15,7 @@ import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-co
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
 import { useViewerId } from "../messages/use-message.ts";
-import { postingWebhook, webhookName } from "../messages/webhook-attribution.ts";
+import { displayedAuthor, webhookName } from "../messages/webhook-attribution.ts";
 import { AgentBadge, AppTag } from "../people/agent-badge.tsx";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -138,9 +138,10 @@ export function MessageRow({
   const row = useRowInteractions(message, inThread, onNavigate);
   const edited = message.editedAt !== null;
 
-  // Only a message the webhook posted itself: a forward of one is the forwarder's.
-  const webhook = postingWebhook(message);
-  const name = webhook === null ? (creator?.name ?? UNKNOWN_NAME) : webhookName(webhook);
+  // Only a message the webhook posted itself: a forward of one, at any depth, is the forwarder's.
+  const author = displayedAuthor(message);
+  const webhook = author.kind === "webhook" ? author.webhook : null;
+  const name = author.kind === "webhook" ? author.name : (creator?.name ?? UNKNOWN_NAME);
 
   // A pinned message or a reply always shows who wrote it, under its flag or quote line.
   const header = groupStart || message.pinned || message.replyToMessageId !== null;

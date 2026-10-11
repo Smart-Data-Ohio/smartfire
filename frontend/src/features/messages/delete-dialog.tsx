@@ -4,6 +4,7 @@ import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { plainText } from "./commands.ts";
 import { fileSummary, messageFiles } from "./message-files.ts";
+import { displayedAuthor } from "./webhook-attribution.ts";
 
 interface DeleteDialogProps {
   readonly message: MessageDTO;
@@ -19,7 +20,13 @@ export default function DeleteDialog({
   onOpenChange,
   onConfirm,
 }: DeleteDialogProps) {
-  const author = store.getState().users[message.creatorId]?.name ?? "Someone";
+  const shown = displayedAuthor(message);
+
+  const author =
+    shown.kind === "webhook"
+      ? shown.name
+      : (store.getState().users[shown.userId]?.name ?? "Someone");
+
   const text = plainText(message);
   const own = store.getState().me?.user.id === message.creatorId;
 

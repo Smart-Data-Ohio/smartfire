@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import type { MessageWebhook } from "../../gen/MessageWebhook.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -12,7 +11,7 @@ import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
 import { fileSummary, messageFiles } from "./message-files.ts";
 import { SoundMessage } from "./sound-message.tsx";
-import { forwardedWebhook, webhookName } from "./webhook-attribution.ts";
+import { type DisplayedAuthor, displayedAuthor, forwardedAuthor } from "./webhook-attribution.ts";
 
 /** How much of a quoted message the reply line shows before it trails off. */
 const QUOTE_CHARS = 140;
@@ -110,7 +109,9 @@ export function ReplyQuote({
     replyToMessageId === null ? undefined : state.messages[replyToMessageId],
   );
 
-  const author = useUser(source?.creatorId);
+  const shown = source === undefined ? undefined : displayedAuthor(source);
+  const user = useUser(shown?.kind === "person" ? shown.userId : undefined);
+  const author = shown?.kind === "webhook" ? shown.name : (user?.name ?? UNKNOWN_NAME);
 
   if (replyTargetDeletedAt != null) {
     return (
@@ -138,7 +139,7 @@ export function ReplyQuote({
     <div className="message-reply">
       <Icon name="corner-up-left" size={12} className="message-reply-icon" />
       <QuoteLink source={source}>
-        <span className="message-reply-author">{author?.name ?? UNKNOWN_NAME}</span>
+        <span className="message-reply-author">{author}</span>
         <span className="message-reply-text">{snippet(source)}</span>
       </QuoteLink>
     </div>
@@ -157,39 +158,38 @@ function Files({ message }: { readonly message: MessageDTO }) {
   return <AttachmentGallery attachments={messageFiles(message)} />;
 }
 
-/** Where a forward came from, when the source message is in the store. */
-/** A forwarded webhook message's author: the webhook's name and APP tag, from the copy itself. */
-function ForwardedWebhook({ webhook }: { readonly webhook: MessageWebhook }) {
-  return (
-    <>
-      <span className="message-forward-author"> · {webhookName(webhook)}</span>
-      <AppTag />
-    </>
-  );
+/**
+ * The forwarded block's "· author": a webhook's name with its APP tag, or a person's name. A
+ * person comes from the loaded source only, so the store has its creator's row.
+ */
+function ForwardAuthor({ author }: { readonly author: DisplayedAuthor }) {
+  const user = useUser(author.kind === "person" ? author.userId : undefined);
+
+  if (author.kind === "webhook") {
+    return (
+      <>
+        <span className="message-forward-author"> · {author.name}</span>
+        <AppTag />
+      </>
+    );
+  }
+
+  return <span className="message-forward-author"> · {user?.name ?? UNKNOWN_NAME}</span>;
 }
 
-function ForwardSource({
-  sourceId,
-  webhook,
-}: {
-  readonly sourceId: number | null;
-  /** The source's webhook, kept on the copy: its author even when the source isn't loaded. */
-  readonly webhook: MessageWebhook | null;
-}) {
+/** Where a forward came from (its room, when the source is in the store) and who wrote it. */
+function ForwardSource({ copy }: { readonly copy: MessageDTO }) {
+  const sourceId = copy.forwardedFromMessageId;
   const source = useStore((state) => (sourceId === null ? undefined : state.messages[sourceId]));
-  const author = useUser(source?.creatorId);
+  const author = forwardedAuthor(copy, source);
 
   const roomName = useStore((state) =>
     source === undefined ? undefined : state.sidebar.rows[source.roomId]?.displayName,
   );
 
-  if (source === undefined) {
-    return webhook === null ? null : <ForwardedWebhook webhook={webhook} />;
-  }
-
   return (
     <>
-      {roomName === undefined ? null : (
+      {source === undefined || roomName === undefined ? null : (
         <>
           {" from "}
           <Link
@@ -202,11 +202,7 @@ function ForwardSource({
           </Link>
         </>
       )}
-      {webhook === null ? (
-        <span className="message-forward-author"> · {author?.name ?? UNKNOWN_NAME}</span>
-      ) : (
-        <ForwardedWebhook webhook={webhook} />
-      )}
+      {author === null ? null : <ForwardAuthor author={author} />}
     </>
   );
 }
@@ -254,10 +250,7 @@ export function MessageContent({ message, trailing, inThread = false }: MessageC
           <Icon name="forward" size={12} />
           <span>
             Forwarded
-            <ForwardSource
-              sourceId={message.forwardedFromMessageId}
-              webhook={forwardedWebhook(message)}
-            />
+            <ForwardSource copy={message} />
           </span>
         </div>
         <div className="message-body-row">
