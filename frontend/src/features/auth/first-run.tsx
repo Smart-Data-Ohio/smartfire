@@ -9,9 +9,11 @@ import {
   AuthHeader,
   AuthScreen,
   refusalMessage,
+  type SignedOutFlash,
   TranslateButton,
   useDocumentTitle,
   useFollowNext,
+  useInlineFlash,
   useRestoredFromCache,
 } from "./auth-parts.tsx";
 import { EMAIL_TRANSLATIONS, NAME_TRANSLATIONS, PASSWORD_TRANSLATIONS } from "./translations.ts";
@@ -40,13 +42,14 @@ interface FirstRunOpening {
 export function FirstRunPage() {
   const titleId = useId();
   const { opening, retry } = useFirstRunOpening();
+  const flash = useInlineFlash();
 
   useDocumentTitle(TITLE);
 
-  if (opening.status === "ready") return <FirstRunForm />;
+  if (opening.status === "ready") return <FirstRunForm flash={flash} />;
 
   return (
-    <AuthScreen labelledBy={titleId} busy={opening.status === "loading"}>
+    <AuthScreen labelledBy={titleId} busy={opening.status === "loading"} flash={flash}>
       <AuthHeader titleId={titleId} title={TITLE} />
       {opening.status === "error" ? (
         <div className="auth-view-stack" role="alert">
@@ -113,7 +116,7 @@ function useFirstRunOpening(): FirstRunOpening {
   return { opening, retry: () => setOpening({ status: "loading" }) };
 }
 
-function FirstRunForm() {
+function FirstRunForm({ flash }: { readonly flash: SignedOutFlash | null }) {
   const titleId = useId();
   const follow = useFollowNext();
   const [name, setName] = useState("");
@@ -154,7 +157,7 @@ function FirstRunForm() {
   };
 
   return (
-    <AuthScreen labelledBy={titleId}>
+    <AuthScreen labelledBy={titleId} flash={flash}>
       <AuthHeader
         titleId={titleId}
         title={TITLE}

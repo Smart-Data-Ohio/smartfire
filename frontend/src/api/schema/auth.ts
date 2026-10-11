@@ -43,6 +43,10 @@ export const SignedOutBoot = Schema.Struct({
   helpContact: SignInHelpContact,
   version: Schema.String,
   csrfToken: Schema.String,
+  /** A redirect's notice or alert (a refused Google sign-in), for this page load only. */
+  flash: Schema.NullOr(
+    Schema.Struct({ kind: Schema.Literals(["notice", "alert"]), message: Schema.String }),
+  ),
 });
 
 /** What the join and invite pages show: the form, or why the invite can't be used. */

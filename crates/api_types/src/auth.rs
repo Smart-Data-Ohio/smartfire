@@ -213,6 +213,25 @@ pub struct SignedOutBoot {
     /// The version the retained sign-in page prints under the help contact.
     pub version: String,
     pub csrf_token: String,
+    /// The notice or alert a redirect left for this page load (a refused Google sign-in, say), as
+    /// the retained auth layout shows it above the card. Read once: the next load has none.
+    pub flash: Option<FlashMessage>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FlashMessage {
+    pub kind: FlashMessageKind,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum FlashMessageKind {
+    Notice,
+    Alert,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -419,8 +438,12 @@ mod tests {
                 }),
                 version: "1.2.3".into(),
                 csrf_token: "masked".into(),
+                flash: Some(FlashMessage {
+                    kind: FlashMessageKind::Alert,
+                    message: "Google sign-in failed.".into(),
+                }),
             },
-            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked"}),
+            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked","flash":{"kind":"alert","message":"Google sign-in failed."}}),
         );
         assert_wire(
             &PasswordSignIn {

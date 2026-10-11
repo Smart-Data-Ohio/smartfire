@@ -194,7 +194,7 @@ describe("the mock's two-step setup", () => {
     expect(errorOf(gated).tag).toBe("TwoFactorRequired");
     expect(field(field(gated, "error"), "requirement")).toEqual({
       kind: "setup",
-      location: "/two_factor_setup",
+      location: "/app/two_factor/setup",
     });
 
     const ready = Schema.decodeUnknownSync(TwoFactorSetupResponse)(await get<Json>(server, SETUP));

@@ -1302,6 +1302,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
           firstRunPending: booleanField(body, "firstRunPending"),
           pending: booleanField(body, "pending"),
           firstRunUnavailable: booleanField(body, "firstRunUnavailable"),
+          alert: stringField(body, "alert"),
+          notice: stringField(body, "notice"),
         });
 
         return ok;

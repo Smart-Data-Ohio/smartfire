@@ -30,7 +30,7 @@ use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKi
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
-use campfire_api_types::{SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
+use campfire_api_types::{FlashMessage, FlashMessageKind, SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
 use campfire_people::controllers::{auth, sessions, two_factor, users};
 use campfire_spa::{SignedOutRoute, is_public_page, signed_out_route};
 
@@ -158,6 +158,11 @@ async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
         Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
         None => None,
     };
+    // A redirect's notice or alert (a refused Google sign-in), shown by this load only.
+    let flash = c.flash();
+    let message = flash.notice().map(|message| FlashMessage { kind: FlashMessageKind::Notice, message: message.to_owned() })
+        .or_else(|| flash.alert().map(|message| FlashMessage { kind: FlashMessageKind::Alert, message: message.to_owned() }));
+    flash.discard(None);
     Ok(SignedOutBoot {
         kind: SignedOut::SignedOut,
         workspace: SignInWorkspace {
@@ -175,6 +180,7 @@ async fn load_signed_out_boot(c: &mut Ctx) -> Result<SignedOutBoot> {
         help_contact: help_contact.map(|owner| SignInHelpContact { name: owner.name, email_address: owner.email_address }),
         version: c.app().config.app_version.clone(),
         csrf_token: c.authenticity_tokens().global(),
+        flash: message,
     })
 }
 

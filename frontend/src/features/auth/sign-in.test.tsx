@@ -61,6 +61,7 @@ describe("branding", () => {
       helpContact: null,
       version: "2.0.0",
       csrfToken: network.server.csrfToken(),
+      flash: null,
     });
     document.body.append(boot);
 

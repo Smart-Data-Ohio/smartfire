@@ -245,8 +245,9 @@ async fn unenrolled_public_shells_match_retained_forms_and_preserve_return_path(
             if spa {
                 let boot = inline_boot(&reply);
                 assert_eq!(boot["kind"], "signedOut");
-                // The help contact and the version joined the five original keys with slice 45.
-                assert_eq!(boot.as_object().unwrap().len(), 7);
+                // The help contact and the version joined the five original keys with slice 45,
+                // and a redirect's flash with the retained pages' cutover.
+                assert_eq!(boot.as_object().unwrap().len(), 8);
             } else {
                 assert!(reply.text().contains("<form"));
             }
@@ -461,6 +462,7 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
             [
                 "csrfToken",
                 "firstRunPending",
+                "flash",
                 "helpContact",
                 "kind",
                 "signInMethods",
@@ -491,6 +493,46 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
             .text()
             .contains("name=\"email_address\"")
     );
+}
+
+#[tokio::test]
+async fn signed_out_boot_carries_a_redirects_flash_for_one_load() {
+    use crate::integrations::google::sign_in::{Config, SignIn};
+    let app = app().await;
+    app.booted.app.google.install(SignIn::new(
+        Config {
+            client_id: "fixture-client".into(),
+            client_secret: "fixture-secret".into(),
+            domains: vec!["smartdata.net".into()],
+        },
+        crate::net::Network::system(),
+    ));
+    let alert = json!({
+        "kind": "alert",
+        "message": "Google sign-in expired. Try again or sign in with email and password."
+    });
+    let mut browser = app.anonymous();
+    // A callback with no flow in progress alerts and sends the visitor to sign in.
+    let callback = "/session/google/callback?state=stale&code=fixture";
+    let reply = browser.get(callback).await;
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/session/new"),
+        "{}",
+        reply.text()
+    );
+    let page = browser.get("/app/session/new").await;
+    assert_eq!(page.status, StatusCode::OK, "{}", page.text());
+    assert_eq!(inline_boot(&page)["flash"], alert);
+    let boot = browser.get("/api/v1/session/boot").await;
+    assert_eq!(boot.json()["flash"], Value::Null);
+    assert_eq!(inline_boot(&browser.get("/app/session/new").await)["flash"], Value::Null);
+    // The JSON boot reads it the same way, once.
+    browser.get(callback).await;
+    let boot = browser.get("/api/v1/session/boot").await;
+    assert_eq!(boot.json()["flash"], alert);
+    assert_eq!(inline_boot(&browser.get("/app/session/new").await)["flash"], Value::Null);
+    assert_eq!(browser.get("/api/v1/session/boot").await.json()["flash"], Value::Null);
 }
 
 #[tokio::test]

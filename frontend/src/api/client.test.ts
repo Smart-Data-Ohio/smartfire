@@ -240,7 +240,7 @@ describe("sudo HTTP statuses", () => {
 
     return Effect.gen(function* () {
       expect((yield* resumeSudo().pipe(Effect.flip))._tag).toBe("Unauthorized");
-      expect(navigations).toEqual(["/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
+      expect(navigations).toEqual(["/app/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
     }).pipe(Effect.provide(layer));
   });
 
@@ -448,7 +448,7 @@ describe("ApiClient", () => {
 
     return Effect.gen(function* () {
       expect(yield* Effect.flip(me())).toEqual(new Unauthorized({ message: "Signed out" }));
-      expect(navigations).toEqual(["/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
+      expect(navigations).toEqual(["/app/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
     }).pipe(Effect.provide(layer));
   });
 
