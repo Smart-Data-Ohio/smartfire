@@ -11,12 +11,24 @@ import { pushSubscription } from "../settings/sessions-section.tsx";
 import { svgDataUrl } from "../settings/settings-format.ts";
 import "./two-factor-setup.css";
 
+/** Classic pages the SPA shows under another name, as the server's own return to the SPA maps them. */
+const SPA_HOMES = new Map([
+  ["/", "/app/"],
+  ["/users/me/profile", "/app/settings"],
+]);
+
 /** Where a server destination opens: its SPA page when the SPA has one, else the URL itself. */
 export function spaDestination(url: string): string {
   const parsed = new URL(url, window.location.origin);
 
   if (parsed.origin !== window.location.origin) {
     return url;
+  }
+
+  const home = SPA_HOMES.get(parsed.pathname);
+
+  if (home !== undefined) {
+    return home;
   }
 
   if (isSpaPath(parsed.pathname)) {
@@ -332,7 +344,9 @@ function SetupStep({ setup, error, attempt, busy, onConfirm }: SetupStepProps) {
   // On a desktop the code field is where typing starts; a phone keeps its keyboard down so the
   // steps above stay in view.
   useEffect(() => {
-    if (window.matchMedia?.("(pointer: fine)").matches) field.current?.focus();
+    if ("matchMedia" in window && window.matchMedia("(pointer: fine)").matches) {
+      field.current?.focus();
+    }
   }, []);
 
   const copyKey = () => {

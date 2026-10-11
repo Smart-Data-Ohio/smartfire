@@ -14,6 +14,7 @@
 import type { AccountSettings } from "../../src/gen/AccountSettings.ts";
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { RoomMembershipRow } from "../../src/gen/RoomMembershipRow.ts";
+import type { SignedOutBoot } from "../../src/gen/SignedOutBoot.ts";
 import type { TwoFactorSettings } from "../../src/gen/TwoFactorSettings.ts";
 import type { TwoFactorSetupResponse } from "../../src/gen/TwoFactorSetupResponse.ts";
 import type { TwoFactorSetupState } from "../../src/gen/TwoFactorSetupState.ts";
@@ -51,10 +52,10 @@ const FORGOT_ALL = "All devices forgotten. Every browser will ask for a code at 
 export const SETUP_WRONG = "That code didn't work. Check your authenticator app and try again.";
 
 /** Where the server sends an enrolled account's setup request: the profile. */
-export const SETUP_PROFILE = "http://localhost/users/me/profile";
+export const SETUP_PROFILE = "/users/me/profile";
 
 /** Where the server's sign-out sends the browser. */
-export const SIGNED_OUT_LOCATION = "http://localhost/";
+export const SIGNED_OUT_LOCATION = "/";
 
 /** The enrollment gate's refusal, as `enforce_two_factor_for_restored_session` answers JSON. */
 const TWO_FACTOR_REQUIRED = "TwoFactorRequired" satisfies ApiError["_tag"];
@@ -62,11 +63,16 @@ const TWO_FACTOR_REQUIRED = "TwoFactorRequired" satisfies ApiError["_tag"];
 const SETUP_REQUIRED: ApiError = {
   _tag: TWO_FACTOR_REQUIRED,
   message: "Set up two-step sign-in to continue",
-  requirement: { kind: "setup", location: "http://localhost/two_factor_setup" },
+  requirement: { kind: "setup", location: "/two_factor_setup" },
 };
 
 /** What an unverified session may still do: set up, or sign out. */
-const GATE_EXEMPT = new Set(["GET /two_factor/setup", "POST /two_factor/setup", "DELETE /session"]);
+const GATE_EXEMPT = new Set([
+  "GET /session/boot",
+  "GET /two_factor/setup",
+  "POST /two_factor/setup",
+  "DELETE /session",
+]);
 
 /** A stand-in QR drawing for a setup key; the screen only ever shows it as an image. */
 function setupQrSvg(secret: string): string {
@@ -139,8 +145,8 @@ export interface AccountModule {
   readonly control: (change: TwoFactorControl) => void;
 }
 
-/** Creates the account module. */
-export function createAccount(ctx: S2Context): AccountModule {
+/** Creates the account module; `csrfToken` is the server's current token, for the public boot. */
+export function createAccount(ctx: S2Context, csrfToken: () => string): AccountModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
 
@@ -251,7 +257,7 @@ export function createAccount(ctx: S2Context): AccountModule {
       kind: "recoveryCodes",
       codes,
       signedOut: 1,
-      continueUrl: "http://localhost/app/",
+      continueUrl: "/app/",
     });
   };
 
@@ -291,6 +297,18 @@ export function createAccount(ctx: S2Context): AccountModule {
       route("POST", /^\/two_factor\/setup$/, ({ body }) =>
         confirmSetup(stringField(body, "code") ?? ""),
       ),
+      // The public boot the auth requests refresh their token from (setup and sign-out use it).
+      route("GET", /^\/session\/boot$/, () => {
+        const boot: SignedOutBoot = {
+          kind: "signedOut",
+          workspace: { name: "Smartfire", logoUrl: null, description: "" },
+          signInMethods: { password: true, google: false },
+          firstRunPending: false,
+          csrfToken: csrfToken(),
+        };
+
+        return ok(boot);
+      }),
       route("DELETE", /^\/session$/, () => ok({ kind: "navigate", location: SIGNED_OUT_LOCATION })),
       route("GET", /^\/settings\/account$/, () => ok(account())),
       route("POST", /^\/settings\/two_factor\/backup_codes$/, ({ body }) => {

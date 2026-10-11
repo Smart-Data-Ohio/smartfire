@@ -975,7 +975,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   approvals.seed();
   ledger.seed();
 
-  const account = createAccount(ctx);
+  const account = createAccount(ctx, () => csrf);
   const huddles = createHuddles(ctx, simulate);
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
