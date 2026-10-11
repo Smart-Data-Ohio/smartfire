@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useAppearance } from "../../lib/appearance.ts";
 import { usePhoneLayout } from "../panes/use-right-pane.ts";
 import { setWelcomeDismissed } from "./welcome-actions.ts";
 import { WelcomeCard } from "./welcome-card.tsx";
+import { useWelcomeDismissed } from "./welcome-dismissal.ts";
 import { hasWelcomeCard, useWelcome } from "./welcome-store.ts";
 
 /**
@@ -12,7 +12,7 @@ import { hasWelcomeCard, useWelcome } from "./welcome-store.ts";
 export function SidebarWelcome() {
   const phone = usePhoneLayout();
   const { welcome } = useWelcome();
-  const { welcomeDismissed } = useAppearance();
+  const welcomeDismissed = useWelcomeDismissed();
 
   if (!phone || welcomeDismissed || !hasWelcomeCard(welcome)) {
     return null;
@@ -28,7 +28,7 @@ export function SidebarWelcome() {
 export function useShowWelcome(): (() => void) | null {
   const navigate = useNavigate();
   const { welcome } = useWelcome();
-  const { welcomeDismissed } = useAppearance();
+  const welcomeDismissed = useWelcomeDismissed();
 
   if (!welcomeDismissed || !hasWelcomeCard(welcome)) {
     return null;

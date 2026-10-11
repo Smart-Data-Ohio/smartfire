@@ -67,7 +67,7 @@ export function createWelcomeStore(source: WelcomeSource): WelcomeStore {
 }
 
 export const welcomeStore = createWelcomeStore({
-  read: actions.welcome,
+  read: () => actions.welcome(),
   onStale: onWelcomeStale,
 });
 

@@ -526,6 +526,13 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
+/** Calls `listener` each time the appearance is applied again; answers the unsubscribe. */
+export function onAppearanceChange(listener: () => void): () => void {
+  listeners.add(listener);
+
+  return () => listeners.delete(listener);
+}
+
 /** The appearance as last applied. */
 export function appearanceSnapshot(): Appearance {
   return current;

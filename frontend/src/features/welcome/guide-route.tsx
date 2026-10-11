@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import type { GuideEntry } from "../../gen/GuideEntry.ts";
-import { useAppearance } from "../../lib/appearance.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { BodyHtml } from "../messages/body-html.tsx";
 import { PageLoading } from "../shell/page-loading.tsx";
 import { setWelcomeDismissed } from "./welcome-actions.ts";
+import { useWelcomeDismissed } from "./welcome-dismissal.ts";
 import { RoomAction } from "./welcome-room.tsx";
 import { hasWelcomeCard, useWelcome } from "./welcome-store.ts";
 import "./welcome.css";
@@ -48,7 +48,7 @@ function Entry({ entry }: { readonly entry: GuideEntry }) {
  */
 export function GuideRoute() {
   const { status, welcome } = useWelcome();
-  const { welcomeDismissed } = useAppearance();
+  const welcomeDismissed = useWelcomeDismissed();
 
   const edit =
     welcome?.canAdminister === true ? (
