@@ -55,9 +55,6 @@ async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
             },
             &path,
         );
-        if case["frame"] == true {
-            req = req.header("turbo-frame", "response_for_message_601");
-        }
         req = if let Some(form) = case["form"].as_str() {
             req.header("content-type", "application/x-www-form-urlencoded")
                 .body(form.as_bytes().to_vec())
@@ -70,7 +67,7 @@ async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
         } else {
             david.write(req).await
         };
-        let label = format!("{} frame={}", case["name"], case["frame"]);
+        let label = case["name"].to_string();
         if response.status.as_u16() as u64 != case["status"].as_u64().unwrap() {
             let probe_rows = rows.clone();
             let current = app
@@ -154,36 +151,28 @@ async fn attendance_controller_security_blocks_nonmembers_and_bots() {
     assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
 }
 #[tokio::test]
-async fn attendance_controller_renders_and_updates_the_requested_frame() {
+async fn attendance_updates_redirect_to_the_event_even_when_refused() {
     let Some(app) = TestApp::boot().await else {
         return;
     };
     let event = event(&app).await;
     let path = format!("/rooms/{ALL_TALK}/events/{}/attendance", event.id);
-    let frame = format!("response_for_message_601_event_{}", event.id);
+    let target = format!("http://campfire.test/rooms/{ALL_TALK}/events/{}", event.id);
     let mut david = app.david();
     let saved = david
-        .write(
-            Req::new(Method::PATCH, &path)
-                .header("turbo-frame", &frame)
-                .form(&[("response", "maybe"), ("message_id", "601")]),
-        )
+        .write(Req::new(Method::PATCH, &path).form(&[("response", "maybe"), ("message_id", "601")]))
         .await;
-    assert_eq!(saved.status, StatusCode::OK);
-    assert_eq!(saved.location(), None);
+    assert_eq!(saved.status, StatusCode::FOUND);
+    assert_eq!(saved.location(), Some(target.as_str()));
 
     let invalid = david
-        .write(
-            Req::new(Method::PATCH, &path)
-                .header("turbo-frame", &frame)
-                .form(&[
-                    ("attendance[response]", "invalid"),
-                    ("attendance[message_id]", "601"),
-                ]),
-        )
+        .write(Req::new(Method::PATCH, &path).form(&[
+            ("attendance[response]", "invalid"),
+            ("attendance[message_id]", "601"),
+        ]))
         .await;
-    assert_eq!(invalid.status, StatusCode::OK);
-
+    assert_eq!(invalid.status, StatusCode::FOUND);
+    assert_eq!(invalid.location(), Some(target.as_str()));
 
     let id = event.id;
     app.db()
@@ -191,15 +180,10 @@ async fn attendance_controller_renders_and_updates_the_requested_frame() {
         .await
         .unwrap();
     let closed = david
-        .write(
-            Req::new(Method::PATCH, &path)
-                .header("turbo-frame", &frame)
-                .form(&[("response", "going"), ("message_id", "601")]),
-        )
+        .write(Req::new(Method::PATCH, &path).form(&[("response", "going"), ("message_id", "601")]))
         .await;
-    assert_eq!(closed.status, StatusCode::OK);
-
-
+    assert_eq!(closed.status, StatusCode::FOUND);
+    assert_eq!(closed.location(), Some(target.as_str()));
 }
 #[tokio::test]
 async fn attendance_controller_redirects_and_copies_future_responses() {

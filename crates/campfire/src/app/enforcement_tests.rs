@@ -71,15 +71,15 @@ async fn unenrolled_password_session_is_gated_on_every_application_page_and_form
         serde_json::json!({"error":{"_tag":"TwoFactorRequired","message":"Set up two-step sign-in to continue","requirement":{"kind":"setup","location":"http://campfire.test/app/two_factor/setup"}}})
     );
     assert_eq!(json.header("cache-control"), Some("no-store"));
-    assert_eq!(
-        b.send(
+    // Any other format gets a bare 403.
+    let stream = b
+        .send(
             Req::new(Method::GET, &format!("/rooms/{ALL_TALK}"))
-                .header("accept", "text/vnd.turbo-stream.html")
+                .header("accept", "text/vnd.turbo-stream.html"),
         )
-        .await
-        .location(),
-        Some("http://campfire.test/app/two_factor/setup?required=true")
-    );
+        .await;
+    assert_eq!(stream.status, StatusCode::FORBIDDEN);
+    assert!(stream.body.is_empty());
     // User-supplied controller/action parameters cannot turn this into an exemption.
     assert_eq!(
         b.get("/users/me/profile?controller=two_factor/setups&action=show")
@@ -155,7 +155,7 @@ async fn stale_enrolled_sessions_are_destroyed_for_html_json_and_stream() {
         let response = b
             .send(Req::new(Method::GET, "/").header("accept", accept))
             .await;
-        if accept.contains("html") {
+        if accept == "text/html" {
             assert_eq!(
                 response.location(),
                 Some("http://campfire.test/app/session/new")

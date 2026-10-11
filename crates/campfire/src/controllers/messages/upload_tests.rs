@@ -18,12 +18,21 @@ async fn signed_root_and_thread_attachments_match_rails_response_and_blob_rows()
             let filename = filename.to_string();
             app.db().write(move |tx| {tx.conn().execute("UPDATE active_storage_blobs SET filename = ? WHERE id = 13", [filename])?;Ok(())}).await.unwrap();
         }
-        let response = app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),row["path"].as_str().unwrap())
+        // Rails answered the root posts as Turbo streams; they now go to the JSON endpoint, which
+        // answers a created message with a bare 201.
+        let path = row["path"].as_str().unwrap();
+        let stream = path.ends_with(".turbo_stream");
+        let path = path.replace(".turbo_stream", ".json");
+        let response = app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),&path)
             .header("content-type","application/json").header("accept","application/json").body(row["input"].to_string())).await;
         let name = row["name"].as_str().unwrap();
-    if row["content_type"].as_str().is_some_and(|mime| mime.contains("turbo-stream")) {
-        assert_eq!(response.status.as_u16(), if row["status"] == 200 { 201 } else { row["status"].as_u64().unwrap() as u16 });
-        assert!(response.text().is_empty());
+    if stream {
+        if row["status"] == 200 {
+            assert_eq!(response.status, StatusCode::CREATED, "{name}");
+            assert!(response.text().is_empty(), "{name}");
+        } else {
+            assert!(!response.status.is_success(), "{name}: {}", response.status);
+        }
     } else {
         assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{name}: {}",response.text());
         assert_eq!(response.header("cache-control"),row["cache_control"].as_str(),"{name}");

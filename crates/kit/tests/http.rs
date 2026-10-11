@@ -770,10 +770,13 @@ async fn respond_to_negotiates_like_rails() {
     let html = send(&app, get("/messages").header(header::ACCEPT, browser).body(AxumBody::empty()).unwrap()).await;
     assert_eq!(html.header("content-type"), Some("text/html; charset=utf-8"));
 
+    // Turbo Stream is not a registered type: alongside HTML it is skipped, alone it is refused.
     let turbo = "text/vnd.turbo-stream.html, text/html, application/xhtml+xml";
     let stream = send(&app, post("/messages").header(header::ACCEPT, turbo).body(AxumBody::empty()).unwrap()).await;
     assert_eq!(stream.header("content-type"), Some("text/html; charset=utf-8"));
     assert_eq!(stream.text(), "<p>messages</p>");
+    let stream_only = send(&app, post("/messages").header(header::ACCEPT, "text/vnd.turbo-stream.html").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(stream_only.status, StatusCode::NOT_ACCEPTABLE);
 
     let json = send(&app, get("/messages.json").body(AxumBody::empty()).unwrap()).await;
     assert_eq!(json.header("content-type"), Some("application/json; charset=utf-8"));
@@ -887,9 +890,9 @@ async fn stale_and_expires_in() {
     let listed = send(&app, get("/fresh").header(header::IF_NONE_MATCH, format!("\"other\", {etag}")).body(AxumBody::empty()).unwrap()).await;
     assert_eq!(listed.status, StatusCode::NOT_MODIFIED);
 
-    // Turbo Frame requests get a different ETag (turbo-rails' frame etagger).
+    // A `Turbo-Frame` header no longer changes the ETag.
     let frame = send(&app, get("/fresh").header("turbo-frame", "x").body(AxumBody::empty()).unwrap()).await;
-    assert_ne!(frame.header("etag").unwrap(), etag);
+    assert_eq!(frame.header("etag").unwrap(), etag);
 }
 
 #[tokio::test]

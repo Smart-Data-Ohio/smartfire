@@ -513,15 +513,6 @@ impl Ctx {
         }
     }
 
-    /// `turbo_frame_request?`
-    pub fn is_turbo_frame_request(&self) -> bool {
-        self.turbo_frame_request_id().is_some_and(|id| !id.trim().is_empty())
-    }
-
-    pub fn turbo_frame_request_id(&self) -> Option<&str> {
-        self.request.header("turbo-frame")
-    }
-
     // --- Rendering -----------------------------------------------------------------------------
 
     /// `render html:` / a template, as `text/html; charset=utf-8`.
@@ -540,9 +531,8 @@ impl Ctx {
 
     /// A rendered template, labelled with *the template's* format: Rails sets `rendered_format`
     /// from the template the lookup found, not from the request, so an `.html.erb`-only action
-    /// answers `text/html` even when the `Accept` header prefers `text/vnd.turbo-stream.html`
-    /// (every Turbo form submission, and the redirect fetch follows). Pick the template with
-    /// [`Ctx::respond_to`] (the implicit render's lookup) when an action has several.
+    /// answers `text/html` even when the `Accept` header prefers another type. Pick the template
+    /// with [`Ctx::respond_to`] (the implicit render's lookup) when an action has several.
     pub fn render(&mut self, status: StatusCode, template: Format, body: impl Into<Bytes>) -> Response {
         self.rendered_format = Some(template);
         self.render_as(status, &format!("{}; charset=utf-8", template.string), body)
@@ -702,7 +692,7 @@ impl Ctx {
     }
 
     /// `[validator, *etaggers]` digested like `ActiveSupport::Digest.hexdigest(expand_cache_key(...))`.
-    /// The etaggers are turbo-rails' frame etagger, `ETagWithTemplateDigest` and `ETagWithFlash`.
+    /// The etaggers are `ETagWithTemplateDigest` and `ETagWithFlash`.
     fn combine_etags(&mut self, validator: Option<String>, freshness: &Freshness) -> String {
         let mut parts: Vec<String> = validator.into_iter().collect();
         if let Some(template) = &freshness.template {
@@ -722,10 +712,6 @@ impl Ctx {
                 }
             }
             parts.push(flash.keys().map(|key|format!("{key}/{}",expand(flash.get(key).unwrap()))).collect::<Vec<_>>().join("/"));
-        }
-        // Rails installs the template/flash etaggers before turbo-rails' FrameRequest.
-        if self.is_turbo_frame_request() {
-            parts.push("frame".into());
         }
         hex::encode(&Sha256::digest(parts.join("/"))[..16])
     }

@@ -69,7 +69,7 @@
   ],
   "http": [
     {
-      "name": "frame_save",
+      "name": "save",
       "path": "/users/me/status",
       "params": {
         "presence_setting": "dnd",
@@ -77,9 +77,8 @@
         "custom_status_text": "On a train",
         "custom_status_expires_in": "hour_1"
       },
-      "frame": true,
-      "status": 303,
-      "location": "http://campfire.test/users/127326141/card",
+      "status": 302,
+      "location": "http://campfire.test/users/me/profile",
       "state": {
         "presence_setting": "dnd",
         "custom_status_emoji": "🚂",
@@ -93,7 +92,6 @@
       "params": {
         "presence_setting": "invisible"
       },
-      "frame": false,
       "status": 302,
       "location": "http://campfire.test/users/me/profile",
       "state": {
@@ -104,14 +102,13 @@
       }
     },
     {
-      "name": "frame_clear",
+      "name": "clear",
       "path": "/users/me/status",
       "params": {
         "clear_custom_status": "1"
       },
-      "frame": true,
-      "status": 303,
-      "location": "http://campfire.test/users/127326141/card",
+      "status": 302,
+      "location": "http://campfire.test/users/me/profile",
       "state": {
         "presence_setting": "auto",
         "custom_status_emoji": null,
@@ -120,12 +117,11 @@
       }
     },
     {
-      "name": "frame_bad_presence",
+      "name": "bad_presence",
       "path": "/users/me/status",
       "params": {
         "presence_setting": "away"
       },
-      "frame": true,
       "status": 422,
       "location": null,
       "state": {
@@ -136,12 +132,11 @@
       }
     },
     {
-      "name": "frame_bad_expiry",
+      "name": "bad_expiry",
       "path": "/users/me/status",
       "params": {
         "custom_status_expires_in": "wrong"
       },
-      "frame": true,
       "status": 422,
       "location": null,
       "state": {
@@ -157,9 +152,8 @@
       "params": {
         "custom_status_text": "Self only"
       },
-      "frame": true,
-      "status": 303,
-      "location": "http://campfire.test/users/127326141/card",
+      "status": 302,
+      "location": "http://campfire.test/users/me/profile",
       "state": {
         "presence_setting": "auto",
         "custom_status_emoji": "🚀",

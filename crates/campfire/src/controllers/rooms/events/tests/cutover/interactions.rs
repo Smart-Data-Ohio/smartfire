@@ -66,17 +66,15 @@ async fn cutover_interaction_repeating_schedule_invites_once_and_copies_response
     );
 }
 #[tokio::test]
-async fn cutover_interaction_announcement_card_response_stays_in_requested_frame() {
+async fn cutover_interaction_announcement_card_response_saves_and_returns_to_the_event() {
     let app = app().await;
     let eid = schedule(&app, "Card session", None, false).await;
     let message_id = app.db().read(move |conn| {
         Ok(conn.query_row("SELECT message_id FROM event_references WHERE event_id=? ORDER BY message_id LIMIT 1", [eid], |row| row.get::<_, i64>(0))?)
     }).await.unwrap().to_string();
     let mut jason = app.sign_in(JASON).await;
-    let saved = jason.write(Req::new(Method::PATCH, &format!("{}/attendance", path(eid))).header("turbo-frame", "event_attendance").form(&[("response", "going"), ("message_id", &message_id)])).await;
-    assert_eq!(saved.status, StatusCode::OK);
-    assert_eq!(saved.location(), None);
-    assert!(saved.headers.get("turbo-location").is_none());
-    assert!(saved.body.is_empty());
+    let saved = jason.write(Req::new(Method::PATCH, &format!("{}/attendance", path(eid))).form(&[("response", "going"), ("message_id", &message_id)])).await;
+    assert_eq!(saved.status, StatusCode::FOUND);
+    assert_eq!(saved.location(), Some(format!("http://campfire.test{}", path(eid)).as_str()));
     assert_eq!(app.db().read(move |c| CalendarEvent::find(c, eid)?.response_for(c, Some(JASON))).await.unwrap().as_deref(), Some("going"));
 }

@@ -582,9 +582,10 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
         "rails/health#show" => arc(health::show),
-        "turbo/native/navigation#recede" => arc(navigation::retired),
-        "turbo/native/navigation#resume" => arc(navigation::retired),
-        "turbo/native/navigation#refresh" => arc(navigation::retired),
+        // The retired Turbo Native stubs keep their route rows and answer like an undefined action.
+        "turbo/native/navigation#recede"
+        | "turbo/native/navigation#resume"
+        | "turbo/native/navigation#refresh" => arc(action_not_found),
         // `config.action_mailbox.ingress = :relay`: the other ingresses aren't configured. The
         // relay endpoint is wired to WS10 below.
         "action_mailbox/ingresses/relay/inbound_emails#create" => arc(crate::mail::relay),

@@ -82,16 +82,14 @@ pub async fn create(c: &mut Ctx) -> Result {
         .write(move |tx| SavedItem::save_for(tx, user_id, message.id, remind_at))
         .await;
     match saved {
-        Ok(item) => match c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])? {
+        Ok(item) => match c.respond_to(&[&format::HTML, &format::JSON])? {
             f if *f == format::JSON => payload(c, &item, StatusCode::CREATED),
-            f if *f == format::TURBO_STREAM => Ok(c.head(StatusCode::OK)),
             _ => features::redirect(
                 c,
                 &campfire_routes::saved_items(),
                 Some("Saved for later".into()),
                 None,
                 true,
-                None,
             ),
         },
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -141,16 +139,9 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(page::db_error)?;
-    match c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])? {
+    match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => payload(c, &item, StatusCode::OK),
-        f => features::redirect(
-            c,
-            &filter_path(c),
-            None,
-            None,
-            false,
-            (*f == format::TURBO_STREAM).then_some(StatusCode::SEE_OTHER),
-        ),
+        _ => features::redirect(c, &filter_path(c), None, None, false),
     }
 }
 pub async fn destroy(c: &mut Ctx) -> Result {
@@ -161,16 +152,9 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .write(move |tx| item.destroy(tx))
         .await
         .map_err(page::db_error)?;
-    match c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])? {
+    match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => Ok(c.head(StatusCode::NO_CONTENT)),
-        f => features::redirect(
-            c,
-            &filter_path(c),
-            None,
-            None,
-            false,
-            (*f == format::TURBO_STREAM).then_some(StatusCode::SEE_OTHER),
-        ),
+        _ => features::redirect(c, &filter_path(c), None, None, false),
     }
 }
 fn payload(c: &mut Ctx, item: &SavedItem, status: StatusCode) -> Result {
@@ -178,10 +162,9 @@ fn payload(c: &mut Ctx, item: &SavedItem, status: StatusCode) -> Result {
         "remind_at":item.remind_at.map(features::json_time), "reminded_at":item.reminded_at.map(features::json_time), "url":c.url_for(&format!("{}.json", campfire_routes::saved_item(item.id)))}))
 }
 async fn invalid(c: &mut Ctx, value: &serde_json::Value, alert: &str, back: bool) -> Result {
-    match c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])? {
+    match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => c.json(StatusCode::UNPROCESSABLE_ENTITY, value),
-        f if *f == format::TURBO_STREAM && back => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
-        f => features::redirect(
+        _ => features::redirect(
             c,
             &if back {
                 campfire_routes::saved_items()
@@ -191,7 +174,6 @@ async fn invalid(c: &mut Ctx, value: &serde_json::Value, alert: &str, back: bool
             None,
             Some(alert.into()),
             back,
-            (*f == format::TURBO_STREAM).then_some(StatusCode::SEE_OTHER),
         ),
     }
 }

@@ -19,7 +19,6 @@ pub async fn create(c: &mut Ctx) -> Result {
             Some("Enter a word to search for.".into()),
             None,
             true,
-            None,
         );
     }
     let query = display_query(c).unwrap_or_default();
@@ -35,14 +34,14 @@ pub async fn create(c: &mut Ctx) -> Result {
 }
 pub async fn clear(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::TURBO_STREAM])?;
+    c.respond_to(&[&campfire_kit::format::HTML])?;
     let user_id = require_current_user(c)?.id;
     c.app()
         .db
         .write(move |tx| Search::destroy_all_for_user(tx, user_id))
         .await
         .map_err(db_error)?;
-    super::message_features::redirect(c, &campfire_routes::searches(), None, None, true, None)
+    super::message_features::redirect(c, &campfire_routes::searches(), None, None, true)
 }
 // The existing root presenter/partial remains owned by WS8b-m. Supply search's
 // show_room_icon local only on a cache miss; a shared fragment hit stays unchanged.

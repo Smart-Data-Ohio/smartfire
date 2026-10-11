@@ -374,11 +374,7 @@ async fn pin_requests_match_rails_and_keep_the_note_quiet_and_idempotent() {
                 .header("accept", "text/vnd.turbo-stream.html"),
         )
         .await;
-    assert_eq!(reply.status, StatusCode::SEE_OTHER);
-    assert_eq!(
-        reply.location(),
-        Some(format!("http://campfire.test/rooms/{ALL_TALK}/pins").as_str())
-    );
+    assert_eq!(reply.status, StatusCode::NOT_ACCEPTABLE);
 }
 
 #[tokio::test]

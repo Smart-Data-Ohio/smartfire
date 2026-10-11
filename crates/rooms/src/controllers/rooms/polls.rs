@@ -44,7 +44,6 @@ pub async fn create(c: &mut Ctx) -> Result {
                     None,
                     Some(error),
                     false,
-                    None,
                 ),
             };
         }
@@ -67,7 +66,6 @@ pub async fn create(c: &mut Ctx) -> Result {
             Some("Poll posted.".into()),
             None,
             false,
-            None,
         ),
     }
 }
@@ -159,7 +157,7 @@ pub async fn vote(c: &mut Ctx) -> Result {
     }
     match c.respond_to(&[&format::JSON, &format::HTML])? {
         f if *f == format::JSON => payload(c, poll, StatusCode::OK).await,
-        _ => features::redirect(c, &campfire_routes::room(room.id), None, None, false, None),
+        _ => features::redirect(c, &campfire_routes::room(room.id), None, None, false),
     }
 }
 
@@ -228,7 +226,6 @@ async fn invalid(c: &mut Ctx, room_id: i64, error: Error, _poll: Option<Poll>) -
             None,
             Some(message),
             false,
-            None,
         ),
     }
 }

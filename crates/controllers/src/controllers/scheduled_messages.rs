@@ -180,7 +180,6 @@ pub async fn create(c: &mut Ctx) -> Result {
                 )),
                 None,
                 false,
-                None,
             ),
         },
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -262,7 +261,6 @@ pub async fn update(c: &mut Ctx) -> Result {
                 Some("Scheduled message updated.".into()),
                 None,
                 false,
-                None,
             ),
         },
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -305,7 +303,6 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             Some("Scheduled message cancelled.".into()),
             None,
             false,
-            None,
         ),
     }
 }
@@ -362,7 +359,6 @@ pub async fn send_now(c: &mut Ctx) -> Result {
             ),
             None,
             false,
-            None,
         ),
     }
 }
@@ -401,7 +397,6 @@ async fn invalid(
             None,
             Some(alert.into()),
             back,
-            None,
         ),
     }
 }

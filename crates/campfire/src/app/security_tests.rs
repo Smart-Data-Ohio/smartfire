@@ -774,7 +774,7 @@ async fn page_navigations_bounce_back_after_sign_in() {
     let session = app.session(&Fresh::session_cookie(&page).unwrap());
     assert_eq!(session["return_to_after_authenticating"], "http://campfire.test/users/me/profile?tab=1");
 
-    for accept in ["application/json", "text/vnd.turbo-stream.html, text/html"] {
+    for accept in ["application/json", "text/vnd.turbo-stream.html"] {
         let poll = app.send(request("GET", "/users/me/profile").header(header::ACCEPT, accept).body(Body::empty()).unwrap()).await;
         let session = Fresh::session_cookie(&poll).map(|raw| app.session(&raw));
         assert!(session.is_none_or(|session| session.get("return_to_after_authenticating").is_none()), "{accept}");
