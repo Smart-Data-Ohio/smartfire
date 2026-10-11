@@ -5,11 +5,13 @@ import { TwoFactorSetupResponse } from "./schema/two-factor-setup.ts";
 
 const decodeSetup = Schema.decodeUnknownEffect(TwoFactorSetupResponse);
 
+// The setup screen follows a `navigate` answer itself, once it has checked it's still on screen.
+
 export const readTwoFactorSetup = Effect.fn("readTwoFactorSetup")(function* () {
   const client = yield* ApiClient;
 
   return yield* client.execute(
-    { method: "GET", path: "/two_factor/setup", auth: true },
+    { method: "GET", path: "/two_factor/setup", auth: true, ownsNavigation: true },
     decodeSetup,
   );
 });
@@ -20,7 +22,7 @@ export const submitTwoFactorSetup = Effect.fn("submitTwoFactorSetup")(function* 
   const client = yield* ApiClient;
 
   return yield* client.execute(
-    { method: "POST", path: "/two_factor/setup", body, auth: true },
+    { method: "POST", path: "/two_factor/setup", body, auth: true, ownsNavigation: true },
     decodeSetup,
   );
 });

@@ -26,7 +26,7 @@ type Pending =
  * server drops the subscription too (the classic sessions controller does the same); the browser
  * unsubscribes only once the server has signed it out.
  */
-async function pushSubscription(): Promise<PushSubscription | null> {
+export async function pushSubscription(): Promise<PushSubscription | null> {
   if (!("serviceWorker" in navigator)) {
     return null;
   }

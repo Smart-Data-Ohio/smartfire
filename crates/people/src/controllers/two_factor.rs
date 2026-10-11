@@ -61,6 +61,20 @@ pub async fn setup_show(c: &mut Ctx) -> Result {
     render_setup(c, StatusCode::OK, mode).await
 }
 
+/// The SPA's setup screen (`/app/two_factor/setup`) behind the retained page's before-actions:
+/// signed in, a person, not yet enrolled (an enrolled account goes to its profile, as the
+/// retained page sends it). It shares the retained page's endpoint, so the enrollment gate lets
+/// it through exactly as it does `/two_factor_setup`, and nothing else under `/app`.
+pub async fn setup_shell_before(c: &mut Ctx) -> Result<()> {
+    auth::before_actions(c, "two_factor/setups#show", Before::default(), ResponseMode::Html).await?;
+    ensure_human(c)?;
+    no_store(c);
+    if enabled(c).await? {
+        return halt(profile(c, ResponseMode::Html)?);
+    }
+    Ok(())
+}
+
 fn setup_mode(c: &mut Ctx) -> Result<ResponseMode> {
     Ok(if concerns::sudo::json_request(c)? { ResponseMode::Json } else { ResponseMode::Html })
 }

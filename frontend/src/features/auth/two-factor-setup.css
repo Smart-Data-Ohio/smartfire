@@ -1,0 +1,270 @@
+/*
+ * The two-step setup screen: one centred card on the app background, as the retained setup and
+ * backup-code pages draw it (src/auth/pages.css), from the SPA's tokens, fields and buttons. The
+ * code's message line is reserved, so nothing below it moves when a refusal appears.
+ */
+
+@layer app {
+  /* Its own scroll container over the visible viewport: the app's stylesheet locks the body for
+     the shell, and a phone keyboard or a short window leaves the card taller than the screen. The
+     auto margins centre the card while it fits and let it scroll from the top once it doesn't. */
+  .two-factor-view {
+    position: fixed;
+    inset: var(--viewport-top-inset) 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: var(--viewport-height);
+    padding: calc(var(--space-10) + var(--safe-top)) calc(var(--space-4) + var(--safe-right))
+      calc(var(--space-10) + var(--safe-bottom)) calc(var(--space-4) + var(--safe-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg-app);
+  }
+
+  .two-factor-card {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: var(--space-6);
+    width: min(100%, 460px);
+    margin-block: auto;
+    padding: var(--space-8);
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+    box-shadow: var(--shadow-raised);
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 var(--distance-rise);
+    }
+  }
+
+  @media (width < 720px) {
+    .two-factor-view {
+      padding: calc(var(--space-4) + var(--safe-top)) calc(var(--space-3) + var(--safe-right))
+        calc(var(--space-8) + var(--safe-bottom)) calc(var(--space-3) + var(--safe-left));
+    }
+
+    .two-factor-card {
+      margin-block-start: 0;
+      padding: var(--space-6) var(--space-5);
+    }
+  }
+
+  /* ── Header ── */
+
+  .two-factor-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .two-factor-title {
+    font-size: var(--text-page);
+    line-height: var(--leading-page);
+  }
+
+  .two-factor-title:focus {
+    outline: none;
+  }
+
+  .two-factor-lede {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .two-factor-note {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    text-align: center;
+  }
+
+  /* ── The steps: numbered, the QR code on white, the key ── */
+
+  .two-factor-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    counter-reset: step;
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    list-style: none;
+  }
+
+  .two-factor-steps > li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding-inline-start: var(--space-8);
+    counter-increment: step;
+  }
+
+  .two-factor-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    inset-block-start: -1px;
+    inset-inline-start: 0;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Scanners want dark modules on light, so the code keeps a white plate in both themes. The
+     plate is sized before the image arrives, so a new key never moves the steps below. */
+  .two-factor-qr {
+    display: block;
+    width: calc(168px + 2 * var(--space-3));
+    height: calc(168px + 2 * var(--space-3));
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--neutral-0);
+    box-shadow: 0 0 0 1px var(--shadow-ring);
+  }
+
+  .two-factor-key-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 100%;
+  }
+
+  .two-factor-key {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: var(--text-ui);
+    letter-spacing: 0.06em;
+    overflow-wrap: anywhere;
+  }
+
+  .two-factor-hint {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  /* On a phone the QR code is on the same screen as the app, so the app can be opened directly. */
+  .two-factor-open-app {
+    display: none;
+  }
+
+  @media (width < 720px) {
+    .two-factor-open-app {
+      display: inline-flex;
+    }
+  }
+
+  /* ── The code ── */
+
+  .two-factor-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .two-factor-form .input {
+    width: 100%;
+  }
+
+  /* A one-time code reads as a code: centred, monospaced, spaced. */
+  .input.two-factor-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-composer);
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+
+  .input.two-factor-code::placeholder {
+    letter-spacing: 0.08em;
+  }
+
+  /* Two lines held for the refusal: the longest wraps on a phone, and nothing below may move. */
+  .two-factor-form .field-error {
+    min-height: calc(2 * var(--leading-sidebar));
+  }
+
+  .two-factor-wide {
+    width: 100%;
+  }
+
+  .two-factor-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .two-factor-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .two-factor-row > * {
+    flex: 1;
+  }
+
+  .two-factor-centre {
+    align-self: center;
+  }
+
+  /* ── Backup codes ── */
+
+  .two-factor-codes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2) var(--space-4);
+    margin: 0;
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    list-style: none;
+    text-align: center;
+  }
+
+  .two-factor-codes code {
+    font-size: var(--text-body);
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Loading and a failed load ── */
+
+  .two-factor-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding-inline-start: var(--space-8);
+  }
+
+  .two-factor-failed {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    text-align: center;
+  }
+}

@@ -414,10 +414,7 @@ test("too many tries are refused in place", async ({ page }) => {
   await expect(ask.getByText("Too many attempts. Try again in a few minutes.")).toBeVisible();
 });
 
-test("turning two-step sign-in off goes to the setup page", async ({ page }) => {
-  await page.route("**/two_factor_setup", (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<h1>Set up two-step</h1>" }),
-  );
+test("turning two-step sign-in off goes to the setup screen", async ({ page }) => {
   await openSettings(page, "security");
 
   await page.getByRole("button", { name: "Turn off" }).click();
@@ -426,7 +423,10 @@ test("turning two-step sign-in off goes to the setup page", async ({ page }) => 
 
   await ask.getByLabel("Authenticator code or password").fill("123456");
   await ask.getByRole("button", { name: "Turn off" }).click();
-  await expect(page.getByRole("heading", { name: "Set up two-step" })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/two_factor\/setup\?.*required=true/);
+  await expect(page.getByRole("heading", { name: "Set up two-step sign-in" })).toBeVisible();
+  // The session can't go back to settings until it's set up again.
+  await expect(page.getByRole("button", { name: "Back to settings" })).toHaveCount(0);
 });
 
 test("the sign-in link's QR code is drawn in the page, never fetched by URL", async ({ page }) => {
