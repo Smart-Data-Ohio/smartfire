@@ -91,13 +91,15 @@ function Gutter({
 }) {
   return (
     <div className="message-gutter">
-      {groupStart && webhook?.avatarUrl != null ? (
+      {groupStart && webhook !== null ? (
+        // The webhook's own picture, else its initials: its bot account isn't listed anywhere,
+        // so the store may not hold it.
         <Avatar
           name={webhookName(webhook)}
           userId={creatorId}
-          src={webhook.avatarUrl}
           size={36}
           decorative
+          {...(webhook.avatarUrl === null ? {} : { src: webhook.avatarUrl })}
         />
       ) : groupStart ? (
         <AgentProfileLink userId={creatorId} duplicate>

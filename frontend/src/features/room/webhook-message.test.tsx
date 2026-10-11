@@ -66,6 +66,14 @@ describe("a webhook's message", () => {
     expect(screen.getByRole("article").querySelector('img[src="/blobs/ci.png"]')).not.toBeNull();
   });
 
+  it("draws the webhook's initials when it has no picture and its account isn't loaded", () => {
+    row(webhookMessage());
+
+    const gutter = screen.getByRole("article").querySelector(".message-gutter");
+
+    expect(gutter?.textContent).toBe("D");
+  });
+
   it("leaves a person's message as it was", () => {
     mutations.mergeUsers([userFixture(AUTHOR, "Priya")]);
     row(messageFixture(42, 1, { creatorId: AUTHOR }));
