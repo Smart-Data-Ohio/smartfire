@@ -1,12 +1,12 @@
-//! Reserved SPA auth routes. Historic auth URLs still serve their retained pages.
+//! Reserved SPA auth routes. The historic auth URLs (`/session/new` and the rest) redirect here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SignedOutRoute {
     SignIn,
     Transfer,
     Challenge,
-    /// `/app/join/:join_code`, the retained `/join/:join_code`.
+    /// `/app/join/:join_code`, where `/join/:join_code` redirects.
     Join,
-    /// `/app/invite/:token`, the retained `/invite/:token`.
+    /// `/app/invite/:token`, where `/invite/:token` redirects.
     Invite,
     FirstRun,
 }

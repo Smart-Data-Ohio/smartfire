@@ -79,9 +79,9 @@ fn defer_json_body(_: &axum::http::Method, _: &str, _: &[u8]) -> Option<std::res
     Some(Ok(campfire_kit::ParamMap::default()))
 }
 
-/// The SPA's two-step setup screen. A session that must still set up two-step sign-in may open
-/// it as a page, as it may open the retained `/two_factor_setup`; a JSON request for it, and the
-/// rest of `/app`, stay behind the gate.
+/// The SPA's two-step setup screen, where the enrollment gate and `/two_factor_setup` send a
+/// session that must still set up two-step sign-in. It may open it as a page; a JSON request for
+/// it, and the rest of `/app`, stay behind the gate.
 const SETUP_SHELL: &str = "/app/two_factor/setup";
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.

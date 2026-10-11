@@ -615,7 +615,7 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
         matches!(controller, "two_factor/challenges" | "pwa")
             || (controller == "two_factor/setups" && matches!(action, "show" | "create"))
             || (controller == "sessions" && action == "destroy")
-    }) || session.two_factor_verified() {
+    }) || setup_page(c) || session.two_factor_verified() {
         return Ok(());
     }
     let user = user.clone();
@@ -625,7 +625,7 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
     if enabled {
         terminate_current_session(c).await?;
         if html {
-            return halt(c.redirect_to_with(&c.url_for("/session/new"), campfire_kit::Redirect {
+            return halt(c.redirect_to_with(&c.url_for("/app/session/new"), campfire_kit::Redirect {
                 alert: Some("Sign in again to verify two-step sign-in.".into()),
                 ..Default::default()
             })?);
@@ -637,7 +637,7 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
             error: campfire_api_types::ApiError::TwoFactorRequired {
                 message: "Set up two-step sign-in to continue".into(),
                 requirement: campfire_api_types::TwoFactorRequirement::Setup {
-                    location: c.url_for("/two_factor_setup"),
+                    location: c.url_for(TWO_FACTOR_SETUP_PAGE),
                 },
             },
         })?)
@@ -646,10 +646,20 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
             let url = c.request.url();
             c.session().insert(session_keys::RETURN_TO_KEY, url);
         }
-        halt(c.redirect_to(&c.url_for("/two_factor_setup"))?)
+        halt(c.redirect_to(&c.url_for(&format!("{TWO_FACTOR_SETUP_PAGE}?required=true")))?)
     } else {
         halt(head(StatusCode::FORBIDDEN))
     }
+}
+
+/// The SPA's two-step setup screen, where the enrollment gate sends a session that must set up
+/// two-step sign-in.
+const TWO_FACTOR_SETUP_PAGE: &str = "/app/two_factor/setup";
+
+/// Opening the setup screen itself is never gated on setting up, whichever route serves it, so the
+/// gate's redirect can't send it back to itself.
+fn setup_page(c: &Ctx) -> bool {
+    (c.request.is_get() || c.request.is_head()) && c.request.path() == TWO_FACTOR_SETUP_PAGE
 }
 
 /// `bot_authentication`: `params[:bot_key].present?` and a matching active bot.
@@ -774,11 +784,11 @@ fn ruby_space(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
 }
 
-/// `request_authentication`: someone waiting on their second factor goes back to the challenge;
-/// anyone else to sign in, remembering the page they were after.
+/// `request_authentication`: someone waiting on their second factor goes back to the SPA's
+/// challenge; anyone else to the SPA's sign-in, remembering the page they were after.
 pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
     if two_factor_pending_user(c).await?.is_some() {
-        let location = c.url_for("/two_factor_challenge");
+        let location = c.url_for("/app/two_factor/challenge");
         return halt(c.redirect_to(&location)?);
     }
     // Only page navigations bounce back after sign in: not background polls (JSON, Turbo Stream
@@ -787,7 +797,7 @@ pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
         let url = c.request.url();
         c.session().insert(session_keys::RETURN_TO_KEY, url);
     }
-    let location = c.url_for(&campfire_routes::new_session());
+    let location = c.url_for("/app/session/new");
     halt(c.redirect_to(&location)?)
 }
 

@@ -156,7 +156,7 @@ impl ResponseMode {
 
     pub fn challenge(self, c: &mut Ctx) -> Result {
         if self == Self::Html {
-            return c.redirect_to(&c.url_for("/two_factor_challenge"));
+            return c.redirect_to(&c.url_for("/app/two_factor/challenge"));
         }
         json(
             c,
