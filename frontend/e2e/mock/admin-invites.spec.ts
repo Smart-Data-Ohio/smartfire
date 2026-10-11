@@ -120,6 +120,8 @@ matrix("creates an invite, copies its link once, and revokes it", async ({ page,
   await ask.getByRole("button", { name: "Revoke invite" }).click();
   await expect(ask).toBeHidden();
   await expect(rows(page).first()).toContainText("Revoked");
+  // Its Revoke button went away: focus stays on its row, not on the page.
+  await expect(rows(page).first()).toBeFocused();
   await expect(
     rows(page)
       .first()

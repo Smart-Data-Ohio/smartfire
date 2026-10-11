@@ -47,6 +47,7 @@ import {
   USE_CHOICES,
   type UseLimit,
   usesLabel,
+  withMade,
 } from "./invite-format.ts";
 
 type Load =
@@ -268,6 +269,18 @@ function InviteRow({
 }
 
 /**
+ * Where focus goes when the revoke confirmation for invite `id` closes: its Revoke button while it
+ * can take focus (a cancel), else its row (the revoke is running or done, and the button is
+ * disabled or gone). `null` when the row left the list too, for the row focus to land nearby.
+ */
+function revokeFocus(root: HTMLElement | null, id: number | null): HTMLElement | null {
+  const row = id === null ? null : (root?.querySelector<HTMLElement>(`[data-row="${id}"]`) ?? null);
+  const button = row?.querySelector<HTMLElement>("[data-row-control='revoke']:not(:disabled)");
+
+  return button ?? row;
+}
+
+/**
  * `/app/admin/invites`: private invite links, Discord's server invites. An administrator makes a
  * link that expires and may be used only so many times, sees it once to copy, and can revoke it;
  * the list shows every invite with who made it, its uses and where it stands. The shared join
@@ -283,9 +296,14 @@ export function InvitesSection() {
   const container = useRowFocus();
   const now = useNow();
 
+  /** Invites made on this page, newest first: kept when the list answers from before them. */
+  const made = useRef<readonly WorkspaceInvite[]>([]);
+  /** The invite whose revoke was last asked: focus goes back to its row. */
+  const revoking = useRef<number | null>(null);
+
   const fetchInvites = useCallback(() => {
     admin.invites().then(
-      ({ invites }) => setLoad({ status: "ready", invites }),
+      ({ invites }) => setLoad({ status: "ready", invites: withMade(made.current, invites) }),
       (error: Error) => setLoad({ status: "error", message: error.message }),
     );
   }, []);
@@ -314,9 +332,11 @@ export function InvitesSection() {
     );
 
   const onCreated = (next: Created) => {
+    // Still loading, the list may answer from before this invite: it is merged in then.
+    made.current = [next.invite, ...made.current];
     setLoad((current) =>
       current.status === "ready"
-        ? { status: "ready", invites: [next.invite, ...current.invites] }
+        ? { status: "ready", invites: withMade([next.invite], current.invites) }
         : current,
     );
     // The new invite is live: a filter that would hide it goes back to all.
@@ -329,7 +349,7 @@ export function InvitesSection() {
       `invite-${invite.id}`,
       admin.revokeInvite(invite.id).then(
         (next) => {
-          // Its Revoke button goes away; the row keeps the focus.
+          // Its Revoke button goes away; the row keeps the focus (the confirmation's returnFocus).
           replace(next);
           toast({ title: "Invite revoked", tone: "success" });
         },
@@ -377,7 +397,10 @@ export function InvitesSection() {
                     invite={invite}
                     now={now}
                     busy={busy(`invite-${invite.id}`)}
-                    onRevoke={setAsking}
+                    onRevoke={(invite) => {
+                      revoking.current = invite.id;
+                      setAsking(invite);
+                    }}
                   />
                 ))}
               </CardTable>
@@ -408,6 +431,7 @@ export function InvitesSection() {
               }
         }
         onCancel={() => setAsking(null)}
+        returnFocus={() => revokeFocus(container.current, revoking.current)}
       />
     </SettingsPage>
   );

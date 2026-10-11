@@ -2,6 +2,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Workspace } from "../../gen/Workspace.ts";
+import { admin } from "../../sync/admin.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
 import { AdminContext } from "./admin-parts.tsx";
 import { InvitesSection } from "./invites-section.tsx";
@@ -163,6 +164,31 @@ describe("the invites section", () => {
     expect(screen.queryByText(link.textContent ?? "")).toBeNull();
   });
 
+  it("keeps an invite made while the list was still loading", async () => {
+    const user = userEvent.setup();
+    const before = await admin.invites();
+    let release = () => {};
+
+    // The list answers late, with what was there before the new invite.
+    vi.spyOn(admin, "invites").mockReturnValue(
+      new Promise((resolve) => {
+        release = () => resolve(before);
+      }),
+    );
+
+    await renderSection();
+    await user.click(screen.getByRole("button", { name: "Create invite link" }));
+
+    const dialog = await screen.findByRole("alertdialog", { name: "Your invite link" });
+
+    await user.click(within(dialog).getByRole("button", { name: "Done" }));
+    release();
+
+    await waitFor(async () => expect(await rows()).toHaveLength(5));
+    expect(cell(await firstRow(), "Uses")).toBe("0, no limit");
+    expect(within(await firstRow()).getByRole("button", { name: /^Revoke/ })).toBeTruthy();
+  });
+
   it("asks before revoking, and a revoked invite keeps its row", async () => {
     const user = userEvent.setup();
 
@@ -184,16 +210,20 @@ describe("the invites section", () => {
     await user.click(within(ask).getByRole("button", { name: "Cancel" }));
     expect(cell(active, "Status")).toBe("Active");
 
-    await user.click(within(active).getByRole("button", { name: /^Revoke/ }));
-    await user.click(
-      within(await screen.findByRole("alertdialog", { name: "Revoke this invite?" })).getByRole(
-        "button",
-        { name: "Revoke invite" },
-      ),
-    );
+    // From the keyboard.
+    within(active)
+      .getByRole("button", { name: /^Revoke/ })
+      .focus();
+    await user.keyboard("{Enter}");
+    within(await screen.findByRole("alertdialog", { name: "Revoke this invite?" }))
+      .getByRole("button", { name: "Revoke invite" })
+      .focus();
+    await user.keyboard("{Enter}");
 
     await waitFor(async () => expect(cell(await firstRow(), "Status")).toMatch(/^Revoked/));
     expect(within(await firstRow()).queryByRole("button", { name: /^Revoke/ })).toBeNull();
+    // Its Revoke button is gone, so focus stays on its row rather than dropping to the page.
+    await waitFor(async () => expect(document.activeElement).toBe(await firstRow()));
   });
 
   it("points to the workspace page for the shared join link", async () => {

@@ -136,6 +136,7 @@ function selectContents(element: HTMLElement | null | undefined): void {
 export function Confirm({
   ask,
   onCancel,
+  returnFocus = null,
 }: {
   readonly ask: {
     readonly title: string;
@@ -145,6 +146,11 @@ export function Confirm({
     readonly run: () => void;
   } | null;
   readonly onCancel: () => void;
+  /**
+   * Where focus goes on close, before the opener: for an action that disables or removes the
+   * button that asked (a row's Revoke), so focus doesn't drop to the page. `null` leaves it out.
+   */
+  readonly returnFocus?: (() => HTMLElement | null) | null;
 }) {
   return (
     <Dialog
@@ -152,6 +158,7 @@ export function Confirm({
       onOpenChange={(open) => {
         if (!open) onCancel();
       }}
+      {...(returnFocus === null ? {} : { returnFocus, returnFocusFirst: true })}
       role="alertdialog"
       size="sm"
       title={ask?.title ?? ""}

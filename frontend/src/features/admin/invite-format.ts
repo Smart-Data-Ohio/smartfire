@@ -82,6 +82,19 @@ export function filterInvites(
 }
 
 /**
+ * The list with invites made on the page that it doesn't have yet (it answered from before them)
+ * first, newest first; an invite it has is taken as it says.
+ */
+export function withMade(
+  made: readonly WorkspaceInvite[],
+  listed: readonly WorkspaceInvite[],
+): WorkspaceInvite[] {
+  const known = new Set(listed.map((invite) => invite.id));
+
+  return [...made.filter((invite) => !known.has(invite.id)), ...listed];
+}
+
+/**
  * A moment in the list, short enough for a table cell: "Oct 9, 3:00 PM", with the year only when
  * it isn't this one ("Dec 30, 2025, 3:00 PM").
  */

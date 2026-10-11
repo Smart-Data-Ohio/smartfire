@@ -11,6 +11,7 @@ import {
   shortTime,
   timeLeft,
   usesLabel,
+  withMade,
 } from "./invite-format.ts";
 
 const NOW = Date.parse("2026-10-11T12:00:00.000Z");
@@ -42,6 +43,17 @@ describe("invite format", () => {
     expect(inviteState(invite({ expiresAt: at(1000) }), NOW)).toBe("active");
     expect(inviteState(invite({ expiresAt: at(-1000) }), NOW)).toBe("expired");
     expect(inviteState(invite({ expiresAt: at(-1000), state: "revoked" }), NOW)).toBe("revoked");
+  });
+
+  it("keeps invites made on the page that the list answered without", () => {
+    const listed = [invite({ id: 2 }), invite({ id: 1 })];
+    const revoked = invite({ id: 3, state: "revoked" });
+
+    expect(withMade([invite({ id: 4 }), invite({ id: 3 })], listed).map(({ id }) => id)).toEqual([
+      4, 3, 2, 1,
+    ]);
+    // The list's own answer wins for one it already has.
+    expect(withMade([invite({ id: 3 })], [revoked, ...listed])).toEqual([revoked, ...listed]);
   });
 
   it("filters by the state at the moment", () => {
