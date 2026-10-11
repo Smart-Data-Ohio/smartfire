@@ -45,12 +45,11 @@ describe("a webhook's message", () => {
     mutations.mergeUsers([{ ...userFixture(AUTHOR, "Old name"), role: "bot" }]);
     row(webhookMessage());
 
-    const header = screen.getByRole("article").querySelector("header");
+    const header = screen.getByRole("banner");
 
-    expect(header).not.toBeNull();
-    expect(within(header as HTMLElement).getByText("Deployments")).toBeTruthy();
-    expect(within(header as HTMLElement).getByText("App")).toBeTruthy();
-    expect(within(header as HTMLElement).queryByText("Bot")).toBeNull();
+    expect(within(header).getByText("Deployments")).toBeTruthy();
+    expect(within(header).getByText("App")).toBeTruthy();
+    expect(within(header).queryByText("Bot")).toBeNull();
     expect(screen.queryByText("Old name")).toBeNull();
     expect(screen.getByRole("article").getAttribute("aria-label")).toMatch(/^Deployments, /);
   });
