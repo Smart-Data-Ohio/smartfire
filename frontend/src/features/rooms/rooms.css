@@ -645,6 +645,68 @@
     gap: var(--space-2);
   }
 
+  /* Webhooks: one row per webhook (avatar, name, who made it), and the URL shown once. */
+  .room-webhook-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .room-webhook-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .room-webhook-meta {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .room-webhook-rename {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .room-webhook-secret {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .room-webhook-secret-title {
+    margin: 0;
+    font-weight: var(--weight-medium);
+  }
+
+  .room-webhook-url {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .room-webhook-url code {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+    font-family: var(--font-mono);
+    font-size: var(--text-sidebar);
+    overflow-wrap: anywhere;
+    user-select: all;
+  }
+
   /* The form didn't load: the reason and a retry on one line. */
   .room-form-load-error {
     display: flex;
@@ -687,8 +749,19 @@
       width: 100%;
     }
 
-    /* Four settings tabs (a board's Tags, a channel's Email) share the sheet's width on one line:
-       labels only, each tab as wide as its label needs. */
+    .room-webhook-url {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    /* A webhook's four actions in two columns rather than a stack of four. */
+    .room-integration-actions.room-webhook-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Up to five settings tabs (a board's Tags, a channel's Email and Webhooks) share the sheet's
+       width on one line: labels only, each tab as wide as its label needs. */
     .room-form .tabs .t-tabs {
       align-self: stretch;
     }
