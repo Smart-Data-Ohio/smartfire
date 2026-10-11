@@ -228,6 +228,14 @@ pub fn workspace_logo(blob_id: i64, still: bool) -> String {
     )
 }
 
+/// A person's profile banner by their avatar token, versioned by the attached blob.
+pub fn fresh_user_banner(avatar_token: impl Display, blob_id: i64, still: bool) -> String {
+    format!(
+        "/users/{avatar_token}/banner?v={blob_id}{}",
+        if still { "&still=1" } else { "" }
+    )
+}
+
 /// The workspace banner, versioned by the attached blob rather than the account timestamp.
 pub fn fresh_account_banner(blob_id: i64, still: bool) -> String {
     format!(

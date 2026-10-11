@@ -26,6 +26,7 @@ import {
   UNBAN_CONFIRMATION,
 } from "./people-format.ts";
 import { useHasAgentPage } from "./people-page.tsx";
+import { ProfileHero } from "./profile-banner.tsx";
 import { UserAvatar } from "./user-avatar.tsx";
 import "./people.css";
 
@@ -292,7 +293,9 @@ function Profile({
   if (deactivated) {
     return (
       <div className="person" data-status="deactivated">
-        <UserAvatar userId={user.id} size={96} />
+        <ProfileHero userId={user.id} name={user.name} url={null} stillUrl={null}>
+          <UserAvatar userId={user.id} size={96} />
+        </ProfileHero>
         <p className="text-muted">{user.name} is no longer on this account</p>
       </div>
     );
@@ -300,7 +303,14 @@ function Profile({
 
   return (
     <div className="person" data-status={user.status}>
-      <UserAvatar userId={user.id} size={96} />
+      <ProfileHero
+        userId={user.id}
+        name={user.name}
+        url={user.bannerUrl}
+        stillUrl={user.bannerStillUrl}
+      >
+        <UserAvatar userId={user.id} size={96} />
+      </ProfileHero>
       {user.status === "banned" ? <span className="people-badge">Banned</span> : null}
       {profile.emailAddress === null ? null : (
         <a className="person-email" href={`mailto:${profile.emailAddress}`}>

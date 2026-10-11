@@ -91,6 +91,8 @@ function user(id: number): User {
     updatedAt: at(0),
     accountName: `Person ${id}`,
     pronouns: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
   };
 }
 

@@ -10,13 +10,13 @@ use super::api_tests::{Sync, serve};
 use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, TestApp};
 
 // These tests inspect the process-wide branding limiter and install deadline hooks.
-static BRANDING_TESTS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub(super) static BRANDING_TESTS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[path = "spa_workspace_branding_analysis_tests.rs"]
 mod analysis_tests;
 
 /// Two 1x1 frames, black then white, looping forever.
-fn animated_gif() -> Vec<u8> {
+pub(super) fn animated_gif() -> Vec<u8> {
     gif_with_canvas(1, 1, 2)
 }
 
@@ -93,7 +93,7 @@ pub(super) fn png(width: u32, height: u32, apng: bool) -> Vec<u8> {
     png
 }
 
-async fn upload_bytes(
+pub(super) async fn upload_bytes(
     a: &TestApp,
     bytes: &[u8],
     filename: &str,

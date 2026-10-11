@@ -57,6 +57,8 @@ const agentUserJson = {
   updatedAt: "2026-09-26T12:26:46.848000Z",
   accountName: "Scout",
   pronouns: null,
+  bannerUrl: null,
+  bannerStillUrl: null,
 } as const;
 
 const stepJson = {

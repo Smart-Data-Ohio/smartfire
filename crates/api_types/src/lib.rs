@@ -185,7 +185,7 @@ pub use settings::{
     IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, NotificationLevel, RoomNotificationUpdate, RoomMuteDuration, RoomMuteUpdate, OooPreset,
     ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
     RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
-    TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,
+    TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateProfileBanner,
     UpdateNotifications, UpdateProfile, UpdateStatus,
 };
 pub use slack::{

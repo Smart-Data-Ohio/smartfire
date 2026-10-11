@@ -183,6 +183,8 @@ export function createRoomIntegrations(ctx: S2Context): RoomIntegrations {
       updatedAt: rowTimestamp(now),
       accountName: "GitHub",
       pronouns: null,
+      bannerUrl: null,
+      bannerStillUrl: null,
     };
 
     world.users.set(GITHUB_BOT_ID, bot);

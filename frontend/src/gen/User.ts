@@ -45,4 +45,15 @@ updatedAt: string,
 /**
  * The legal/account name; `name` is the shared display name.
  */
-accountName: string, pronouns: string | null, };
+accountName: string, pronouns: string | null,
+/**
+ * The profile banner (the strip above the avatar on their page and profile card), versioned
+ * by the attached image so a new banner gets a new URL. `null` without one: the client draws
+ * a fallback from the avatar's tint.
+ */
+bannerUrl: string | null,
+/**
+ * An animated banner's first frame, for reduced motion and resting states; `null` for a
+ * still image or no banner.
+ */
+bannerStillUrl: string | null, };

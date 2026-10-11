@@ -19,6 +19,7 @@ import {
   pushPublicKey,
   pushSubscriptions,
   removeAvatar,
+  removeBanner,
   removePushSubscription,
   revokeOtherSessions,
   revokeSession,
@@ -28,6 +29,7 @@ import {
   testPush,
   updateAppearance,
   updateAvatar,
+  updateBanner,
   updateCalls,
   updateNotifications,
   updateProfile,
@@ -165,6 +167,11 @@ export const settings = {
     write(settingsSnapshot(() => runAction(updateAvatar(signedId)))),
 
   removeAvatar: (): Promise<Settings> => write(settingsSnapshot(() => runAction(removeAvatar()))),
+
+  setBanner: (signedId: string): Promise<Settings> =>
+    write(settingsSnapshot(() => runAction(updateBanner(signedId)))),
+
+  removeBanner: (): Promise<Settings> => write(settingsSnapshot(() => runAction(removeBanner()))),
 
   updateAppearance: (change: Partial<UpdateAppearance>): Promise<Settings> =>
     write(

@@ -23,7 +23,7 @@ import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { MOCK_TOTP, RATE_ALERT } from "./account.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { customIcon } from "./emoji.ts";
-import { PROFILE_MAX_SIZE, readProfileImage } from "./profile-image.ts";
+import { checkProfileImage, type ProfileImage, readProfileImage } from "./profile-image.ts";
 import { MOCK_PASSWORD } from "./settings.ts";
 import type { UploadedIconFile, Uploads } from "./uploads.ts";
 
@@ -35,11 +35,7 @@ interface Private {
   offerGoogleEmailLink: boolean;
 }
 
-/** An uploaded logo or banner: its URL, and its first frame's when it's animated. */
-interface Image {
-  readonly url: string;
-  readonly stillUrl: string | null;
-}
+type Image = ProfileImage;
 
 interface State {
   name: string;
@@ -79,11 +75,6 @@ const ACTIONS = [
 const TARGET_TYPES = ["Account", "User", "WorkspaceIcon"];
 
 const ICON_NAME = /^[a-z0-9_]{2,32}$/;
-
-/** What a logo or banner may be, as the server checks it. */
-const PROFILE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
-
-const PROFILE_MAX_BYTES = 10 * 1024 * 1024;
 
 /** What a workspace icon may be: still SVG or PNG, or a GIF or WebP that may move. */
 const ICON_TYPES = new Set(["image/svg+xml", "image/png", "image/gif", "image/webp"]);
@@ -470,24 +461,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     const attachment = uploads.attachment(signedId);
     const bytes = ctx.world().blobs.get(signedId)?.bytes ?? new Uint8Array();
-    const info = PROFILE_TYPES.has(attachment.contentType) ? readProfileImage(bytes) : null;
+    const image = checkProfileImage(attachment, bytes, kind);
 
-    if (info === null) {
-      throw invalid({ signedId: ["must be a PNG, JPEG, GIF or WebP image"] });
-    }
+    if ("error" in image) throw invalid({ signedId: [image.error] });
 
-    if (attachment.byteSize > PROFILE_MAX_BYTES) {
-      throw invalid({ signedId: ["must be 10 MB or smaller"] });
-    }
-
-    const [maxWidth, maxHeight] = PROFILE_MAX_SIZE[kind];
-
-    if (info.width > maxWidth || info.height > maxHeight) {
-      throw invalid({ signedId: [`must be at most ${maxWidth} × ${maxHeight} pixels`] });
-    }
-
-    // An animated GIF or WebP gets a still: the mock's thumbnail stands in for its first frame.
-    return { url: attachment.url, stillUrl: info.animated ? attachment.thumbnailUrl : null };
+    return image;
   };
 
   /** A logo or banner change: audited as the classic settings change, then published. */

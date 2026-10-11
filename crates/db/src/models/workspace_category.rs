@@ -160,6 +160,41 @@ impl WorkspaceCategory {
         category_id: Option<i64>,
         position: i64,
     ) -> Result<()> {
+        Self::place_room(tx, room_id, category_id, |target| {
+            Ok(position.clamp(0, target.len() as i64) as usize)
+        })
+    }
+
+    /// Like [`Self::move_room`], placed just before `before_room_id`, which must already be in the
+    /// target group. Counting rooms the administrator can't see is then the server's business.
+    /// An anchor the caller may not name (`anchor_visible` false) is refused exactly as one that
+    /// doesn't exist, so the answer says nothing about rooms they can't see.
+    pub fn move_room_before(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        category_id: Option<i64>,
+        before_room_id: i64,
+        anchor_visible: bool,
+    ) -> Result<()> {
+        Self::place_room(tx, room_id, category_id, |target| {
+            target
+                .iter()
+                .position(|id| anchor_visible && *id == before_room_id)
+                .ok_or_else(|| {
+                    let mut errors = Errors::default();
+                    errors.add("before_room_id", "must be a room in the target category");
+                    crate::Error::RecordInvalid(errors)
+                })
+        })
+    }
+
+    /// Inserts the room where `index` says among the target group's other rooms, then renumbers.
+    fn place_room(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        category_id: Option<i64>,
+        index: impl FnOnce(&[i64]) -> Result<usize>,
+    ) -> Result<()> {
         let room = Room::find(tx.conn(), room_id)?;
         if room.deleted_at.is_some() {
             return Err(crate::Error::RecordNotFound("Room"));
@@ -182,7 +217,7 @@ impl WorkspaceCategory {
             .map(|room| room.room_id)
             .filter(|id| *id != room_id)
             .collect::<Vec<_>>();
-        let position = position.clamp(0, target.len() as i64) as usize;
+        let position = index(&target)?;
         target.insert(position, room_id);
         if source != category_id {
             let source_ids = Self::rooms(tx.conn(), source)?

@@ -33,6 +33,7 @@ import type { UpdateAvatar as GeneratedUpdateAvatar } from "../../gen/UpdateAvat
 import type { UpdateCalls as GeneratedUpdateCalls } from "../../gen/UpdateCalls.ts";
 import type { UpdateNotifications as GeneratedUpdateNotifications } from "../../gen/UpdateNotifications.ts";
 import type { UpdateProfile as GeneratedUpdateProfile } from "../../gen/UpdateProfile.ts";
+import type { UpdateProfileBanner as GeneratedUpdateProfileBanner } from "../../gen/UpdateProfileBanner.ts";
 import type { UpdateStatus as GeneratedUpdateStatus } from "../../gen/UpdateStatus.ts";
 import { PushSubscriptionId, RememberedDeviceId, RoomId, SessionId, UserId } from "./ids.ts";
 import { PresenceSetting, TextSize, Theme, VoiceMode } from "./me.ts";
@@ -70,6 +71,8 @@ export const ProfileSettings = Schema.Struct({
   bot: Schema.Boolean,
   pronouns: Schema.NullOr(Schema.String),
   nickname: Schema.NullOr(Schema.String),
+  bannerUrl: Schema.NullOr(Schema.String),
+  bannerStillUrl: Schema.NullOr(Schema.String),
 });
 
 export type ProfileSettings = typeof ProfileSettings.Type;
@@ -262,6 +265,13 @@ export type UpdateProfilePin = Assert<Pinned<typeof UpdateProfile, GeneratedUpda
 export const UpdateAvatar = Schema.Struct({ signedId: Schema.String });
 
 export type UpdateAvatarPin = Assert<Pinned<typeof UpdateAvatar, GeneratedUpdateAvatar>>;
+
+/** `PUT /api/v1/settings/banner`: a direct-uploaded image's signed id. */
+export const UpdateProfileBanner = Schema.Struct({ signedId: Schema.String });
+
+export type UpdateProfileBannerPin = Assert<
+  Pinned<typeof UpdateProfileBanner, GeneratedUpdateProfileBanner>
+>;
 
 /** `PATCH /api/v1/settings/appearance`. An empty time zone clears it. */
 export const UpdateAppearance = Schema.Struct({

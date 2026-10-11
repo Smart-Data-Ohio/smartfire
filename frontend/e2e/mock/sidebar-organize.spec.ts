@@ -309,6 +309,14 @@ test("the drag's floating copy only fades in when motion is reduced", async ({ p
 });
 
 test("a keyboard drag: Space picks up, arrows move, Enter drops", async ({ page }) => {
+  // A member's: an administrator's also stops between the rooms of the shared layout, for
+  // everyone (sidebar-shared.spec.ts).
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  await page.request.post("/__mock/viewer-role", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { role: "member" },
+  });
   await openApp(page, `r/${ROOM_IDS.general}`);
 
   const list = sidebar(page);
