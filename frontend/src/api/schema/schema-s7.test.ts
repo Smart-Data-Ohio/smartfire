@@ -19,6 +19,7 @@ import {
   UpdateCalls,
   UpdateNotifications,
   UpdateProfile,
+  UpdateProfileBanner,
   UpdateStatus,
 } from "./settings.ts";
 
@@ -39,6 +40,8 @@ const settingsJson = {
     bot: false,
     pronouns: null,
     nickname: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
   },
   appearance: {
     theme: "dark",
@@ -151,6 +154,7 @@ describe("S7 settings schemas", () => {
       nickname: null,
     });
     roundTrips(UpdateAvatar, { signedId: "eyJf--1" });
+    roundTrips(UpdateProfileBanner, { signedId: "eyJf--2" });
     roundTrips(UpdateAppearance, {
       theme: "system",
       textSize: null,

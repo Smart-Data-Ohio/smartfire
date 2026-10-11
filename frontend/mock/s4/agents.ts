@@ -406,6 +406,8 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       updatedAt: held?.updatedAt ?? rowTimestamp(now - seed.createdDaysAgo * DAY),
       accountName: seed.name,
       pronouns: held?.pronouns ?? null,
+      bannerUrl: null,
+      bannerStillUrl: null,
     };
   };
 

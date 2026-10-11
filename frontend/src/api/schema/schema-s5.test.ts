@@ -33,6 +33,8 @@ const userJson = {
   updatedAt: "2026-09-26T12:26:46.848000Z",
   accountName: "Ada Lovelace",
   pronouns: null,
+  bannerUrl: null,
+  bannerStillUrl: null,
 } as const;
 
 const participantJson = {

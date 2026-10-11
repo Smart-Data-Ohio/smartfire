@@ -224,6 +224,11 @@ pub struct WriteWorkspaceCategory {
 pub struct MoveWorkspaceRoom {
     pub workspace_category_id: Option<i64>,
     pub position: i64,
+    /// Place the room just before this one instead of at `position`, counting every room in the
+    /// group, including any the administrator isn't in. It must be in the target group, or 422.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub before_room_id: Option<i64>,
 }
 
 /// Admin-only `PUT /api/v1/workspace_categories/order`: every category once, or 409 without writes.

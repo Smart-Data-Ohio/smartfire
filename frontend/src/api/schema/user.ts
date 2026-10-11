@@ -46,6 +46,10 @@ export const User = Schema.Struct({
   updatedAt: RowTimestamp,
   accountName: Schema.String,
   pronouns: Schema.NullOr(Schema.String),
+  /** The profile banner, versioned by its image; `null` without one. */
+  bannerUrl: Schema.NullOr(Schema.String),
+  /** An animated banner's first frame; `null` for a still banner or none. */
+  bannerStillUrl: Schema.NullOr(Schema.String),
 });
 
 export type User = typeof User.Type;

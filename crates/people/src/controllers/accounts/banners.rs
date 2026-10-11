@@ -16,11 +16,23 @@ pub async fn show(c: &mut Ctx) -> Result {
 
 pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
     let account = super::current_account(c).await?;
-    let id = account.id;
+    send_image(c, "Account", account.id, name, format!("workspace-{name}")).await
+}
+
+/// A logo or banner attached to `record_type` `id` as `name`: the original of an animated
+/// image, its first frame for `still=1`, or a bounded resize of a still one. A person's profile
+/// banner is served as the workspace banner is.
+pub(crate) async fn send_image(
+    c: &mut Ctx,
+    record_type: &'static str,
+    id: i64,
+    name: &'static str,
+    etag_prefix: String,
+) -> Result {
     let blob = c
         .app()
         .db
-        .read(move |conn| attachments::attached_blob(conn, "Account", id, name))
+        .read(move |conn| attachments::attached_blob(conn, record_type, id, name))
         .await
         .map_err(Error::internal)?
         .ok_or(Error::NotFound)?;
@@ -38,7 +50,7 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
     let original = animated && !still;
     if let Some(response) = c.fresh_when(Freshness {
         etag: Some(format!(
-            "workspace-{name}-{}-{}-{small}",
+            "{etag_prefix}-{}-{}-{small}",
             blob.id,
             if original {
                 "original"

@@ -59,6 +59,19 @@ export const removeAvatar = Effect.fn("api.removeAvatar")(function* () {
   return yield* call({ method: "DELETE", path: "/settings/avatar" }, settingsReply);
 });
 
+/** `PUT /settings/banner`: a finished direct upload's signed id becomes the profile banner. */
+export const updateBanner = Effect.fn("api.updateBanner")(function* (signedId: string) {
+  return yield* call(
+    { method: "PUT", path: "/settings/banner", body: { signedId } },
+    settingsReply,
+  );
+});
+
+/** `DELETE /settings/banner`: back to the avatar-tinted strip. */
+export const removeBanner = Effect.fn("api.removeBanner")(function* () {
+  return yield* call({ method: "DELETE", path: "/settings/banner" }, settingsReply);
+});
+
 /** `PATCH /settings/appearance`: the account's theme, text size and time zone. */
 export const updateAppearance = Effect.fn("api.updateAppearance")(function* (
   body: UpdateAppearance,

@@ -975,6 +975,26 @@
     gap: var(--space-2);
   }
 
+  /* The profile banner: a card-sized preview over the avatar, then its upload slot. */
+  .settings-banner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 480px;
+  }
+
+  .settings-banner-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+  }
+
+  .settings-banner-name {
+    font-weight: var(--weight-semibold);
+  }
+
   /* ── Phones: list, then detail ─────────────────────────────────────────── */
 
   /* The root is the list of sections; a section is a page pushed over it (SectionsLayout), so

@@ -1,21 +1,39 @@
+import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
 import { byFavoritePosition, organizedSidebar } from "../../store/organize.ts";
 import type { SidebarState } from "../../store/state.ts";
+import { sharedCategories, sharedLayout } from "../../store/workspace-layout.ts";
 
 /** What a section holds, which decides what can be dropped in it. */
-export type SidebarSectionKind = "favorites" | "category" | "channels" | "voice" | "direct";
+export type SidebarSectionKind =
+  | "favorites"
+  | "category"
+  | "shared"
+  | "channels"
+  | "voice"
+  | "direct";
 
 /** One collapsible group of sidebar rows. */
 export interface SidebarSection {
-  /** Stable across renders: "favorites", "category-3", "channels", "voice", "direct". */
+  /**
+   * Stable across renders: "favorites", "category-3" (yours), "shared-4" (the workspace's),
+   * "channels", "voice", "direct".
+   */
   readonly key: string;
   readonly kind: SidebarSectionKind;
   readonly title: string;
   readonly rows: readonly SidebarRow[];
-  /** The user category this section shows, or `null` for the built-in ones. */
+  /** The user category this section shows, or `null` for the others. */
   readonly category: RoomCategory | null;
+  /** The shared workspace category this section shows, or `null` for the others. */
+  readonly sharedCategory: WorkspaceCategory | null;
   /** A user category the server remembers as collapsed. */
   readonly collapsed: boolean;
+}
+
+export interface SectionOptions {
+  /** An administrator sees every shared category, empty ones too, so there is somewhere to drop. */
+  readonly admin?: boolean;
 }
 
 function byNewest(left: SidebarRow, right: SidebarRow): number {
@@ -31,7 +49,7 @@ function builtIn(
   title: string,
   rows: readonly SidebarRow[],
 ): SidebarSection {
-  return { key, kind: key, title, rows, category: null, collapsed: false };
+  return { key, kind: key, title, rows, category: null, sharedCategory: null, collapsed: false };
 }
 
 function categorySection(category: RoomCategory, rows: readonly SidebarRow[]): SidebarSection {
@@ -41,24 +59,49 @@ function categorySection(category: RoomCategory, rows: readonly SidebarRow[]): S
     title: category.name,
     rows,
     category,
+    sharedCategory: null,
     collapsed: category.collapsed,
   };
 }
 
+function sharedSection(category: WorkspaceCategory, rows: readonly SidebarRow[]): SidebarSection {
+  return {
+    key: `shared-${category.id}`,
+    kind: "shared",
+    title: category.name,
+    rows,
+    category: null,
+    sharedCategory: category,
+    collapsed: false,
+  };
+}
+
 /**
- * Groups the sidebar the way the classic one does (`sidebar_in_zone`): Favourites by position,
- * then every user category (empty ones too, so there is somewhere to drop), then Channels, Voice,
- * and Direct messages newest first. Pending organising changes are drawn in, and invisible rooms
- * stay out. Empty Favourites and Voice are dropped; Channels and Direct messages always show
- * (they hold the "add" affordances).
+ * Groups the sidebar. Personal organisation comes first and wins: Favourites by position, then
+ * every user category (empty ones too, so there is somewhere to drop). Every other room follows
+ * the workspace's shared layout: the shared categories in the administrators' order, each room in
+ * its shared position, then Channels and Voice for the rooms in no shared category (in their
+ * shared order too, rooms never organized after the rest by name), and Direct messages newest
+ * first. A shared category with nothing left to show is dropped, except for administrators (a
+ * drag shows the dragged room's own again: `dragSections` in organize-model.ts).
+ * Pending organising changes are drawn in, and invisible rooms stay out. Empty Favourites and
+ * Voice are dropped; Channels and Direct messages always show (they hold the "add" affordances).
  */
-export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[] {
+export function sidebarSections(
+  sidebar: SidebarState,
+  { admin = false }: SectionOptions = {},
+): readonly SidebarSection[] {
   const view = organizedSidebar(sidebar);
+  const layout = sharedLayout(sidebar);
+  const shared = sharedCategories(layout);
+  const sharedIds = new Set(shared.map((category) => category.id));
+  const places = new Map(layout.rooms.map((place) => [place.roomId, place]));
   const favorites: SidebarRow[] = [];
   const channels: SidebarRow[] = [];
   const voice: SidebarRow[] = [];
   const direct: SidebarRow[] = [];
   const categorized = new Map<number, SidebarRow[]>();
+  const placed = new Map<number, SidebarRow[]>();
   const categoryIds = new Set(view.categories.map((category) => category.id));
 
   for (const roomId of view.order) {
@@ -69,6 +112,7 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
     }
 
     const { membership, room } = row;
+    const sharedId = places.get(room.id)?.workspaceCategoryId ?? null;
 
     if (membership.favoritePosition !== null) {
       favorites.push(row);
@@ -79,6 +123,11 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
       categorized.set(membership.roomCategoryId, list);
     } else if (room.kind === "direct") {
       direct.push(row);
+    } else if (sharedId !== null && sharedIds.has(sharedId)) {
+      const list = placed.get(sharedId) ?? [];
+
+      list.push(row);
+      placed.set(sharedId, list);
     } else if (room.kind === "voice" || room.kind === "stage") {
       voice.push(row);
     } else {
@@ -86,7 +135,20 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
     }
   }
 
+  // Shared positions first; rooms never organized keep the server's name order after them.
+  const sharedPosition = (row: SidebarRow) =>
+    places.get(row.room.id)?.position ?? Number.POSITIVE_INFINITY;
+
+  const bySharedPosition = (left: SidebarRow, right: SidebarRow) => {
+    const a = sharedPosition(left);
+    const b = sharedPosition(right);
+
+    return a === b ? 0 : a < b ? -1 : 1;
+  };
+
   favorites.sort(byFavoritePosition);
+  channels.sort(bySharedPosition);
+  voice.sort(bySharedPosition);
   direct.sort(byNewest);
 
   const sections: SidebarSection[] = [];
@@ -97,6 +159,14 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
 
   for (const category of view.categories) {
     sections.push(categorySection(category, categorized.get(category.id) ?? []));
+  }
+
+  for (const category of shared) {
+    const rows = (placed.get(category.id) ?? []).sort(bySharedPosition);
+
+    if (admin || rows.length > 0) {
+      sections.push(sharedSection(category, rows));
+    }
   }
 
   sections.push(builtIn("channels", "Channels", channels));
