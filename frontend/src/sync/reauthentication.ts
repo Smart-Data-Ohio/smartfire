@@ -95,7 +95,15 @@ export const KEPT_KEY = "smartfire:confirmation-pending";
 export const SENT_PREFIX = "smartfire:confirmation-sent:";
 
 /** Which of an attempt's writes (by place in the batch) a tab has sent, and until when it matters. */
-const SentRecord = Schema.Struct({ expiresAt: Schema.Number, sent: Schema.Array(Schema.Int) });
+/**
+ * Batch marks every tab reads: `sent` are the writes a tab claimed (none replays them again),
+ * `delivered` those whose send the server answered.
+ */
+const SentRecord = Schema.Struct({
+  expiresAt: Schema.Number,
+  sent: Schema.Array(Schema.Int),
+  delivered: Schema.optionalKey(Schema.Array(Schema.Int)),
+});
 
 const decodeSent = Schema.decodeUnknownOption(Schema.fromJsonString(SentRecord));
 
@@ -212,6 +220,8 @@ export function makeConfirmationGate({
   let waiting: readonly Waiting[] = [];
   let prompt: ConfirmationPrompt | null = null;
   let confirmations = 0;
+  // Writes a return that couldn't finish reported lost, for the one that does to say.
+  let lost = 0;
   const listeners = new Set<() => void>();
 
   const publish = (next: readonly Waiting[]) => {
@@ -374,12 +384,17 @@ export function makeConfirmationGate({
     },
 
     /**
-     * Marks write `index` of batch `id` as sent, for every tab: `"claimed"` when the mark is
-     * stored (read back) and this tab may send it, `"sent"` when a tab already did,
-     * `"unavailable"` when storage can't say, or the batch is past `expiresAt` (its marks are
-     * forgotten then), so it isn't sent.
+     * Marks write `index` of batch `id` as claimed, for every tab: `"claimed"` when the mark is
+     * stored (read back) and this tab may send it, `"sent"` when a tab already sent it and the
+     * server answered, `"unconfirmed"` when a tab claimed it but its answer never came (it isn't
+     * sent again), `"unavailable"` when storage can't say, or the batch is past `expiresAt` (its
+     * marks are forgotten then), so it isn't sent.
      */
-    claimSent(id: string, index: number, expiresAt: number): "claimed" | "sent" | "unavailable" {
+    claimSent(
+      id: string,
+      index: number,
+      expiresAt: number,
+    ): "claimed" | "sent" | "unconfirmed" | "unavailable" {
       try {
         const store = shared();
 
@@ -390,12 +405,12 @@ export function makeConfirmationGate({
         const record = sentRecord(id);
 
         if (record?.sent.includes(index) === true) {
-          return "sent";
+          return record.delivered?.includes(index) === true ? "sent" : "unconfirmed";
         }
 
         store.setItem(
           `${SENT_PREFIX}${id}`,
-          JSON.stringify({ expiresAt, sent: [...(record?.sent ?? []), index] }),
+          JSON.stringify({ ...record, expiresAt, sent: [...(record?.sent ?? []), index] }),
         );
 
         return sentRecord(id)?.sent.includes(index) === true ? "claimed" : "unavailable";
@@ -422,14 +437,39 @@ export function makeConfirmationGate({
       }
     },
 
-    /** How many of `handoff`'s kept writes a tab has already sent. */
-    sentElsewhere(handoff: Handoff): number {
+    /** The server took the send of write `index` of batch `id`: marks it delivered. */
+    markDelivered(id: string, index: number): void {
       try {
-        const sent = sentRecord(handoff.id)?.sent ?? [];
+        const record = sentRecord(id);
 
-        return handoff.writes.filter((_, offset) => sent.includes(handoff.next + offset)).length;
+        if (record !== null) {
+          shared()?.setItem(
+            `${SENT_PREFIX}${id}`,
+            JSON.stringify({ ...record, delivered: [...(record.delivered ?? []), index] }),
+          );
+        }
       } catch {
-        return 0;
+        // Unmarked, it reads as a send whose answer never came: true enough.
+      }
+    },
+
+    /**
+     * Of `handoff`'s kept writes, how many a tab already claimed (`claimed`, none goes again),
+     * and how many of those never had the server's answer (`unconfirmed`).
+     */
+    claims(handoff: Handoff) {
+      try {
+        const record = sentRecord(handoff.id);
+        const indices = handoff.writes.map((_, offset) => handoff.next + offset);
+        const claimed = indices.filter((index) => record?.sent.includes(index) === true);
+
+        return {
+          claimed: claimed.length,
+          unconfirmed: claimed.filter((index) => record?.delivered?.includes(index) !== true)
+            .length,
+        };
+      } catch {
+        return { claimed: 0, unconfirmed: 0 };
       }
     },
 
@@ -570,6 +610,30 @@ export function makeConfirmationGate({
       writeHandoff(null);
     },
 
+    /**
+     * Carries the writes `result` reports lost to the return the continue page announces: one
+     * that couldn't finish (the server unreachable, or writes held) passes them on; the next
+     * that does reports them all, once.
+     */
+    carryLost(result: GoogleReturn): GoogleReturn {
+      if (result.unreachable !== null || result.held !== null) {
+        lost += result.abandoned;
+
+        return result;
+      }
+
+      const abandoned = result.abandoned + lost;
+
+      lost = 0;
+
+      return { ...result, abandoned };
+    },
+
+    /** The person discarded what was kept: nothing lost is left to report. */
+    dropLost(): void {
+      lost = 0;
+    },
+
     /** Counts a confirmation made elsewhere (the Google return), for writes already on their way. */
     noteConfirmed(): void {
       confirmations += 1;
@@ -660,6 +724,7 @@ const EXPIRED_COPY = "This change waited too long to be confirmed. Discard it an
 /** The person gives up on the writes the continue page keeps. */
 export function discardKept(gate: ConfirmationGate): void {
   gate.forget();
+  gate.dropLost();
 }
 
 /** What the Google return came to, for the continue page to say and where it goes next. */
@@ -681,6 +746,11 @@ export interface GoogleReturn {
   readonly abandoned: number;
   /** Kept writes another tab of this browser already sent (a duplicated tab's copy). */
   readonly elsewhere: number;
+  /**
+   * Kept writes a tab (another, or this one before a reload) started sending but never heard
+   * back about: they aren't sent again, and may or may not have saved.
+   */
+  readonly unconfirmed: number;
   /**
    * Why `kept` writes wait, unsent: `"confirm"` when the server didn't confirm their attempt (ask
    * the person to confirm again), `"claim"` when it did but this tab couldn't hold the browser's
@@ -714,7 +784,14 @@ const anyJson = (json: Schema.Json) => Effect.succeed(json);
  */
 export const resumeAfterGoogle = Effect.fn("confirmation.resumeAfterGoogle")(function* (
   gate: ConfirmationGate,
-  { signal, onWait }: { readonly signal?: AbortSignal; readonly onWait?: () => void } = {},
+  options: { readonly signal?: AbortSignal; readonly onWait?: () => void } = {},
+) {
+  return gate.carryLost(yield* resumeOnce(gate, options));
+});
+
+const resumeOnce = Effect.fnUntraced(function* (
+  gate: ConfirmationGate,
+  { signal, onWait }: { readonly signal?: AbortSignal; readonly onWait?: () => void },
 ) {
   const { handoff, expired } = gate.handoff();
 
@@ -766,6 +843,7 @@ const untouched = (returnTo: string | null, expired: number): GoogleReturn => ({
   dropped: 0,
   abandoned: expired,
   elsewhere: 0,
+  unconfirmed: 0,
   held: null,
   kept: 0,
   unreachable: null,
@@ -792,6 +870,7 @@ const resume = Effect.fnUntraced(function* (
     dropped,
     abandoned: expired,
     elsewhere: 0,
+    unconfirmed: 0,
     held: null,
     kept: 0,
     unreachable: null,
@@ -826,9 +905,10 @@ const resume = Effect.fnUntraced(function* (
     } satisfies GoogleReturn;
   }
 
-  // Writes another tab already sent aren't lost, whatever this answer says.
-  const elsewhere = gate.sentElsewhere(handoff);
-  const unsent = handoff.writes.length - elsewhere;
+  // Writes another tab already claimed aren't lost, whatever this answer says.
+  const { claimed, unconfirmed } = gate.claims(handoff);
+  const elsewhere = claimed - unconfirmed;
+  const unsent = handoff.writes.length - claimed;
   const session = reply.kind === "confirmed" || reply.kind === "ready" ? reply.session : undefined;
 
   // Signed in again since Google was chosen: what was kept belongs to the session that ended.
@@ -840,6 +920,7 @@ const resume = Effect.fnUntraced(function* (
       confirmed,
       abandoned: expired + unsent,
       elsewhere,
+      unconfirmed,
     } satisfies GoogleReturn;
   }
 
@@ -855,6 +936,7 @@ const resume = Effect.fnUntraced(function* (
       ...outcome,
       confirmed,
       elsewhere,
+      unconfirmed,
       held: unsent === 0 ? null : "confirm",
       kept: unsent,
     } satisfies GoogleReturn;
@@ -862,13 +944,35 @@ const resume = Effect.fnUntraced(function* (
 
   // Confirmed, but nothing keeps another tab from sending the same writes: none go from here.
   if (!exclusive) {
-    return { ...outcome, confirmed, elsewhere, held: "claim", kept: unsent } satisfies GoogleReturn;
+    return {
+      ...outcome,
+      confirmed,
+      elsewhere,
+      unconfirmed,
+      held: "claim",
+      kept: unsent,
+    } satisfies GoogleReturn;
   }
 
   const client = yield* ApiClient;
   let replayed = 0;
   let sentElsewhere = 0;
+  let unanswered = 0;
   let failure: string | null = null;
+
+  // Discard, or leaving the page: whatever the replay would send next (a token refresh's retry,
+  // say) doesn't go. A request already on its way can't be called back.
+  const stopped = Effect.callback<"stopped">((resume) => {
+    if (signal === undefined) return;
+
+    if (signal.aborted) {
+      resume(Effect.succeed("stopped"));
+
+      return;
+    }
+
+    signal.addEventListener("abort", () => resume(Effect.succeed("stopped")), { once: true });
+  });
 
   for (const [offset, write] of handoff.writes.entries()) {
     const index = handoff.next + offset;
@@ -876,7 +980,14 @@ const resume = Effect.fnUntraced(function* (
 
     // Discarded, or left: the rest stay as they are, unsent.
     if (signal?.aborted === true) {
-      return { ...outcome, confirmed, replayed, elsewhere: sentElsewhere, failure };
+      return {
+        ...outcome,
+        confirmed,
+        replayed,
+        elsewhere: sentElsewhere,
+        unconfirmed: unanswered,
+        failure,
+      };
     }
 
     const claim = gate.claimSent(handoff.id, index, handoff.expiresAt);
@@ -884,7 +995,7 @@ const resume = Effect.fnUntraced(function* (
     // Without its mark another tab could send it too: it and the rest wait, unsent (or, run out,
     // are lost).
     if (claim === "unavailable") {
-      const unsentRest = rest.writes.length - gate.sentElsewhere(rest);
+      const unsentRest = rest.writes.length - gate.claims(rest).claimed;
       const ranOut = gate.handoff().handoff === null;
 
       return {
@@ -893,6 +1004,7 @@ const resume = Effect.fnUntraced(function* (
         replayed,
         abandoned: expired + (ranOut ? unsentRest : 0),
         elsewhere: sentElsewhere,
+        unconfirmed: unanswered,
         failure,
         held: ranOut || unsentRest === 0 ? null : "claim",
         kept: ranOut ? 0 : unsentRest,
@@ -905,15 +1017,24 @@ const resume = Effect.fnUntraced(function* (
 
     if (claim === "sent") {
       sentElsewhere += 1;
+    } else if (claim === "unconfirmed") {
+      unanswered += 1;
     } else {
       const landed = yield* client.execute(write, anyJson).pipe(
         Effect.match({
           onSuccess: () => null,
           onFailure: (error) => error.message,
         }),
+        Effect.race(stopped),
       );
 
+      if (landed === "stopped") {
+        continue;
+      }
+
+      // Only a send the server took is marked delivered; a refused one reads as unconfirmed.
       if (landed === null) {
+        gate.markDelivered(handoff.id, index);
         replayed += 1;
       } else {
         failure ??= landed;
@@ -934,6 +1055,7 @@ const resume = Effect.fnUntraced(function* (
     confirmed,
     replayed,
     elsewhere: sentElsewhere,
+    unconfirmed: unanswered,
     failure,
   } satisfies GoogleReturn;
 });

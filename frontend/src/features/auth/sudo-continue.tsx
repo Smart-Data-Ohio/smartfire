@@ -44,6 +44,19 @@ function announce(result: GoogleReturn): void {
     return;
   }
 
+  if (result.unconfirmed > 0) {
+    // Claimed by a tab that never heard back: it isn't sent again, and may not have saved.
+    toast({
+      title:
+        result.unconfirmed === 1 ? "Check that your change saved" : "Check that your changes saved",
+      description:
+        "Another tab, or this page before it reloaded, started sending it but never heard back.",
+      tone: "danger",
+    });
+
+    return;
+  }
+
   if (result.replayed > 0) {
     toast({
       title:
@@ -217,8 +230,9 @@ export function SudoContinue() {
       <section className="room room-error enter-fade" aria-label="Confirmation">
         <p className="text-title">Couldn't finish confirming</p>
         <p className="text-muted" role="alert">
-          The server didn't answer, so your change hasn't been saved yet. It's still waiting: try
-          again to finish it.
+          {kept === null
+            ? "The server didn't answer. Try again to finish confirming."
+            : "The server didn't answer, so your change hasn't been saved yet. It's still waiting: try again to finish it."}
         </p>
         <div className="room-error-actions">
           <Button

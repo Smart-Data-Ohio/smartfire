@@ -609,7 +609,10 @@ function googleHarness({
   refuse = false,
   hold,
   locks = "browser",
+  respond = () => null,
 }: {
+  /** What the server answers instead of itself, where this gives a reply. */
+  readonly respond?: (entry: Seen, server: Server) => Reply | null;
   readonly continuation?: Continuation;
   readonly refuse?: boolean;
   readonly hold?: (seen: Seen) => Effect.Effect<void>;
@@ -654,6 +657,10 @@ function googleHarness({
 
   const built = harness(
     (entry) => {
+      const instead = respond(entry, server);
+
+      if (instead !== null) return instead;
+
       if (entry.path === "/api/v1/sudo/google") {
         server.fresh = !refuse;
 
@@ -769,6 +776,7 @@ describe("the Google round trip", () => {
         dropped: 1,
         abandoned: 0,
         elsewhere: 0,
+        unconfirmed: 0,
         held: null,
         kept: 0,
         unreachable: null,
@@ -1075,7 +1083,9 @@ describe("the Google round trip", () => {
       expect(yield* inCopy(resumeAfterGoogle(copy.gate))).toMatchObject({
         held: "confirm",
         kept: 1,
-        elsewhere: 1,
+        // The first tab claimed it but closed before the answer: not sent again, not called sent.
+        elsewhere: 0,
+        unconfirmed: 1,
       });
 
       // Confirmed again at minute 9, back at minute 11: past the batch's time limit.
@@ -1207,6 +1217,103 @@ describe("the Google round trip", () => {
       Deferred.doneUnsafe(stalled, Effect.void);
       expect((yield* Fiber.join(first)).replayed).toBe(1);
       expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a write discarded during its token refresh is never sent again", () => {
+    const booted = Deferred.makeUnsafe<void>();
+    let boots = 0;
+
+    const { layer, seen, gate } = googleHarness({
+      // The replay's token is stale; the fresh one is slow to come.
+      respond: (entry, server) => {
+        if (entry.path === "/api/v1/boot") return { status: 200, body: { csrfToken: "fresh" } };
+
+        return server.fresh && writesTo(seen, "/admin/custom_styles").length === 2
+          ? { status: 422, body: null }
+          : null;
+      },
+      hold: (entry) => {
+        if (entry.path !== "/api/v1/boot") return Effect.void;
+
+        boots += 1;
+
+        return Deferred.await(booted);
+      },
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const leaving = new AbortController();
+      const replay = yield* Effect.forkChild(resumeAfterGoogle(gate, { signal: leaving.signal }));
+
+      while (boots < 1) {
+        yield* Effect.sleep(1);
+      }
+
+      discardKept(gate);
+      leaving.abort();
+      Deferred.doneUnsafe(booted, Effect.void);
+      expect((yield* Fiber.join(replay)).replayed).toBe(0);
+      yield* Effect.sleep(5);
+      // The held write and the stale replay: nothing went after Discard.
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a write another tab claimed but never finished isn't reported as sent", () => {
+    const stalled = Deferred.makeUnsafe<void>();
+
+    const { layer, seen, gate, duplicate } = googleHarness({
+      // The first tab's replay never answers: it closes there.
+      hold: (entry) =>
+        entry.method === "PATCH" && writesTo(seen, "/admin/custom_styles").length === 2
+          ? Deferred.await(stalled)
+          : Effect.void,
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+
+      const copy = duplicate();
+      const first = yield* Effect.forkChild(resumeAfterGoogle(gate));
+
+      while (writesTo(seen, "/admin/custom_styles").length < 2) {
+        yield* Effect.sleep(1);
+      }
+
+      yield* Fiber.interrupt(first);
+      expect(yield* resumeAfterGoogle(copy.gate).pipe(Effect.provide(copy.layer))).toMatchObject({
+        confirmed: true,
+        replayed: 0,
+        elsewhere: 0,
+        unconfirmed: 1,
+      });
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(2);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.live("a change lost before a failed status read is still reported after it", () => {
+    const { layer, seen, gate, page } = googleHarness({
+      continuation: (call, answer) => (call === 1 ? { status: 503, body: {} } : answer()),
+    });
+
+    return Effect.gen(function* () {
+      yield* leaveForGoogle(gate, [styles]);
+      page.now += 11 * 60_000;
+
+      const first = yield* resumeAfterGoogle(gate);
+
+      expect(first.unreachable).not.toBeNull();
+      expect(yield* resumeAfterGoogle(gate)).toMatchObject({
+        confirmed: true,
+        replayed: 0,
+        abandoned: 1,
+      });
+      // Reported once.
+      expect((yield* resumeAfterGoogle(gate)).abandoned).toBe(0);
+      expect(writesTo(seen, "/admin/custom_styles")).toHaveLength(1);
     }).pipe(Effect.provide(layer));
   });
 
@@ -1377,6 +1484,7 @@ describe("the Google round trip", () => {
         dropped: 0,
         abandoned: 0,
         elsewhere: 0,
+        unconfirmed: 0,
         held: "confirm",
         kept: 1,
         unreachable: null,
