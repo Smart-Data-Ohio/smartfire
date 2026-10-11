@@ -299,15 +299,20 @@ fn api_errors_are_tagged_unions_under_error() {
         (
             ApiError::SudoRequired {
                 message: "Confirm your password".into(),
+                reauthentication: SudoState {
+                    methods: vec![SudoMethod::Password],
+                    retry: None,
+                },
             },
-            json!({"_tag": "SudoRequired", "message": "Confirm your password"}),
+            json!({"_tag": "SudoRequired", "message": "Confirm your password", "reauthentication":{"methods":["password"],"retry":null}}),
             403,
         ),
         (
             ApiError::TwoFactorRequired {
                 message: "Set up two-factor".into(),
+                requirement: TwoFactorRequirement::Setup { location: "/two_factor_setup".into() },
             },
-            json!({"_tag": "TwoFactorRequired", "message": "Set up two-factor"}),
+            json!({"_tag": "TwoFactorRequired", "message": "Set up two-factor", "requirement":{"kind":"setup","location":"/two_factor_setup"}}),
             403,
         ),
         (

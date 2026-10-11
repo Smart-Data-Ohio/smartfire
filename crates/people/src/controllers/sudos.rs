@@ -1,21 +1,134 @@
 //! `app/controllers/sudos_controller.rb`; Google transport/token verification belongs to WS14.
+use super::auth;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, require_current_user, session_keys, sudo};
 use crate::controllers::presenters::page::retained_page;
+use campfire_api_types::{SudoMethod, SudoResponse, SudoSubmission};
 use campfire_db::SudoVerifier;
-use campfire_kit::{Ctx, Error, RateLimit, Redirect, Result, StatusCode, format, halt};
+use campfire_kit::{Ctx, Error, Param, RateLimit, Redirect, Result, StatusCode, format, halt};
 use campfire_retained::sudos;
 use jiff::SignedDuration;
 use rusqlite::OptionalExtension;
 
+async fn before_actions(c: &mut Ctx, endpoint: &'static str) -> Result<()> {
+    let mode = if sudo::json_request(c)? {
+        auth::ResponseMode::Json
+    } else {
+        auth::ResponseMode::Html
+    };
+    auth::before_actions(c, endpoint, Before::default(), mode).await
+}
+
 pub async fn new(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    before_actions(c, "sudos#new").await?;
     render_new(c, StatusCode::OK).await
 }
 
+pub async fn new_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", Param::Str("json".into()));
+    let result = new(c).await;
+    complete(c, result)
+}
+
+pub async fn create_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", Param::Str("json".into()));
+    let result = create(c).await;
+    complete(c, result)
+}
+
+pub async fn google_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", Param::Str("json".into()));
+    let result = google(c).await;
+    complete(c, result)
+}
+
+pub async fn continue_json(c: &mut Ctx) -> Result {
+    c.params.insert("format", Param::Str("json".into()));
+    let result = async {
+        before_actions(c, "sudos#continue").await?;
+        let now = c.now();
+        if !session_keys::sudo_verified(c.session(), now) {
+            return render_new(c, StatusCode::FORBIDDEN).await;
+        }
+        confirmed_json(c)
+    }
+    .await;
+    complete(c, result)
+}
+
+fn complete(c: &mut Ctx, result: Result) -> Result {
+    match result {
+        Err(Error::Halt(response)) => {
+            if let Some(location) = response.get_header("location") {
+                return auth::json(
+                    c,
+                    StatusCode::OK,
+                    &SudoResponse::Navigate {
+                        location: location.into(),
+                    },
+                );
+            }
+            if matches!(response.body, campfire_kit::response::Body::Empty) {
+                let body = if response.status == StatusCode::UNAUTHORIZED {
+                    SudoResponse::Navigate {
+                        location: c.url_for(&campfire_routes::new_session()),
+                    }
+                } else {
+                    SudoResponse::Error {
+                        message: "This request is not allowed.".into(),
+                    }
+                };
+                return auth::json(c, response.status, &body);
+            }
+            Ok(*response)
+        }
+        result => result,
+    }
+}
+
+fn confirmed_json(c: &mut Ctx) -> Result {
+    let retry = sudo::retry(c);
+    session_keys::continue_after_sudo(c.session(), &campfire_routes::root());
+    auth::json(c, StatusCode::OK, &SudoResponse::Confirmed { retry })
+}
+
+#[derive(Clone)]
+struct GoogleJson;
+
+/// Keep the consumed OAuth flow's response mode for the shared confirmation operation.
+pub fn restore_google_response_mode(c: &mut Ctx, flow: &serde_json::Value) {
+    if flow["purpose"] == "sudo" && flow["google_json"] == true {
+        c.set_current(GoogleJson);
+    }
+}
+
+pub fn google_return_path(c: &Ctx) -> Option<&'static str> {
+    c.current::<GoogleJson>().map(|_| "/app/sudo/continue")
+}
+
 pub async fn create(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    before_actions(c, "sudos#create").await?;
     rate_limit(c).await?;
+    if sudo::json_request(c)? {
+        let input = match auth::body::<SudoSubmission>(c).await {
+            Ok(input) => input,
+            Err(Error::Halt(_)) => {
+                return reject(
+                    c,
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "The request body isn't valid.",
+                )
+                .await;
+            }
+            Err(error) => return Err(error),
+        };
+        let (verifier, key, value) = match input {
+            SudoSubmission::Password { password } => ("password", "password", password),
+            SudoSubmission::Totp { code } => ("totp", "totp_code", code),
+        };
+        c.params.insert("verifier", Param::Str(verifier.into()));
+        c.params.insert(key, Param::Str(value));
+    }
     let verifier = c
         .params
         .get("verifier")
@@ -84,7 +197,11 @@ pub async fn create(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     if verified {
-        continue_after_sudo(c).await
+        if sudo::json_request(c)? {
+            confirmed_json(c)
+        } else {
+            continue_after_sudo(c).await
+        }
     } else {
         reject(
             c,
@@ -96,13 +213,35 @@ pub async fn create(c: &mut Ctx) -> Result {
 }
 
 pub async fn google(c: &mut Ctx) -> Result {
-    concerns::before_actions(c, Before::default()).await?;
+    before_actions(c, "sudos#google").await?;
     rate_limit(c).await?;
+    let json_mode = sudo::json_request(c)?;
     let user_id = require_current_user(c)?.id;
     if let Some(google) = c.app().sudo.google()
         && linked_subject(c, user_id).await?.is_some()
     {
-        return google.start(c, user_id);
+        let response = google.start(c, user_id)?;
+        if !json_mode {
+            return Ok(response);
+        }
+        let key = crate::integrations::google::sign_in::FLOW_SESSION_KEY;
+        if let Some(mut flow) = c.session().get(key).cloned() {
+            flow["google_json"] = serde_json::Value::Bool(true);
+            c.session().insert(key, flow);
+        }
+        let location = response
+            .get_header("location")
+            .expect("Google authorization redirect")
+            .to_owned();
+        return auth::json(c, StatusCode::OK, &SudoResponse::Navigate { location });
+    }
+    if json_mode {
+        return reject(
+            c,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Google confirmation is not available for your account.",
+        )
+        .await;
     }
     redirect_alert(
         c,
@@ -153,7 +292,11 @@ pub async fn finish_google(
         .await
         .map_err(Error::internal)?;
     if matches {
-        continue_after_sudo(c).await
+        if let Some(path) = google_return_path(c) {
+            c.redirect_to(&c.url_for(path))
+        } else {
+            continue_after_sudo(c).await
+        }
     } else {
         redirect_alert(
             c,
@@ -180,6 +323,7 @@ async fn linked_subject(c: &Ctx, user_id: i64) -> Result<Option<String>> {
 }
 
 fn redirect_alert(c: &mut Ctx, path: &str, alert: &str) -> Result {
+    let path = google_return_path(c).unwrap_or(path);
     let location = c.url_for(path);
     c.redirect_to_with(
         &location,
@@ -212,28 +356,29 @@ pub async fn continue_after_sudo(c: &mut Ctx) -> Result {
 }
 
 async fn reject(c: &mut Ctx, status: StatusCode, alert: &str) -> Result {
+    if sudo::json_request(c)? {
+        return auth::json(
+            c,
+            status,
+            &SudoResponse::Error {
+                message: alert.into(),
+            },
+        );
+    }
     c.flash().now("alert", alert);
     render_new(c, status).await
 }
 
 async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
+    if sudo::json_request(c)? {
+        let reauthentication = sudo::state(c).await?;
+        return auth::json(c, status, &SudoResponse::Ready { reauthentication });
+    }
     c.respond_to(&[&format::HTML])?;
-    let user = require_current_user(c)?.clone();
-    let password = user
-        .password_digest
-        .as_ref()
-        .is_some_and(|digest| !digest.trim().is_empty());
-    let app = c.app().clone();
-    let totp = c
-        .app()
-        .db
-        .read(move |conn| app.sudo.verifier_available(conn, "totp", user.id))
-        .await
-        .map_err(Error::internal)?;
-    let google = c.app().sudo.google().is_some()
-        && linked_subject(c, require_current_user(c)?.id)
-            .await?
-            .is_some();
+    let methods = sudo::methods(c).await?;
+    let password = methods.contains(&SudoMethod::Password);
+    let totp = methods.contains(&SudoMethod::Totp);
+    let google = methods.contains(&SudoMethod::Google);
     retained_page!(c, status, |ctx| sudos::New {
         ctx,
         password,

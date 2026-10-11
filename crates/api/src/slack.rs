@@ -446,7 +446,7 @@ async fn show_setup(c: &mut Ctx) -> Result {
 /// `accounts/slack_imports#update`: administrators, with the password confirmed.
 async fn configure(c: &mut Ctx) -> Result {
     let user = administrator(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     let form: api::SaveSlackCredentials = body(c).await?;
     let client_id = campfire_richtext::ruby::strip(&form.client_id).to_owned();
     let secret = form
@@ -462,7 +462,7 @@ async fn configure(c: &mut Ctx) -> Result {
 /// `accounts/slack_imports#destroy`: administrators, with the password confirmed.
 async fn remove(c: &mut Ctx) -> Result {
     let user = administrator(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     if !setup::remove(c, &user).await? {
         return Err(refusal(c, "Finish or cancel the running import first."));
     }
@@ -473,7 +473,7 @@ async fn remove(c: &mut Ctx) -> Result {
 /// confirmed.
 async fn drop_connection(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    require_sudo(c)?;
+    require_sudo(c).await?;
     if !classic::disconnect_user(c, user).await? {
         return Err(refusal(
             c,

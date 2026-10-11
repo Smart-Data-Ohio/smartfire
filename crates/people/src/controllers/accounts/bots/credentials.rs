@@ -11,7 +11,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let bot = super::find_active_bot(c, "bot_id").await?;
     concerns::ensure_can_administer(c)?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let agent = super::ensure_agent(c, &bot).await?;
     let params = c
         .params
@@ -108,7 +108,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let bot = super::find_active_bot(c, "bot_id").await?;
     super::ensure_can_manage_bot(c, &bot).await?;
-    concerns::sudo::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c).await?;
     let agent = super::ensure_agent(c, &bot).await?;
     let id = c
         .param_str("id")
