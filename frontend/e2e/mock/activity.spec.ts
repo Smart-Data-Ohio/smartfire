@@ -164,6 +164,7 @@ test("an ignored saved reminder stays collapsed until explicitly revealed", asyn
 }) => {
   // The loaded ignore list outranks a payload's flag, so the reminder's author is really ignored.
   const state = await (await request.get("/__mock/state")).json();
+
   const ignore = await request.put(`/api/v1/people/${USER_IDS.maya}/block`, {
     headers: { "X-CSRF-Token": state.csrfToken },
   });
