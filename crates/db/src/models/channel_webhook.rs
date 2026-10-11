@@ -111,9 +111,7 @@ impl ChannelWebhook {
             if crate::Room::find(tx.conn(), room_id)?.deleted() {
                 return Err(crate::Error::RecordNotFound("Room"));
             }
-            let author = User::create_integration_bot(tx, name)?;
-            // The webhook grants room scope; this inactive author has no login or roster membership.
-            tx.conn().execute("UPDATE users SET status=1,bot_token_digest=NULL,bot_token=NULL WHERE id=?", [author.id])?;
+            let author = User::create_webhook_author(tx, name)?;
 
             let token = Self::token();
             tx.conn().execute(
@@ -244,6 +242,17 @@ impl ChannelWebhook {
                 ))
             })
             .collect()
+    }
+
+    pub(crate) fn copy_message(tx: &Tx<'_>, source_id: i64, message_id: i64) -> Result<()> {
+        tx.conn().execute(
+            "INSERT INTO channel_webhook_messages(message_id,name,username,embeds_json) SELECT ?,name,username,embeds_json FROM channel_webhook_messages WHERE message_id=?",
+            params![message_id, source_id],
+        )?;
+        if let Some(avatar) = Attachment::find_for(tx.conn(), "Message", source_id, "webhook_avatar")? {
+            Attachment::create(tx, "Message", message_id, "webhook_avatar", avatar.blob_id)?;
+        }
+        Ok(())
     }
 
     pub fn message_payload(

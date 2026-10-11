@@ -25,6 +25,175 @@ fn execute(hook: &Value, wait: bool) -> String {
 }
 
 #[tokio::test]
+async fn channel_webhook_author_cannot_be_unbanned_or_managed_after_deletion() {
+    let a = app(true)
+        .await
+        .expect("restored seed")
+        .without_job_runner()
+        .await;
+    let hook = setup(&a, HQ).await;
+    let hook_id = hook["webhook"]["id"].as_i64().unwrap();
+    let author = a
+        .db()
+        .read(move |conn| {
+            Ok(
+                campfire_db::models::channel_webhook::ChannelWebhook::find(conn, hook_id)?
+                    .unwrap()
+                    .author_id,
+            )
+        })
+        .await
+        .unwrap();
+    let mut admin = a.sign_in(DAVID).await;
+    admin.grant_sudo().await;
+    for deleted in [false, true] {
+        if deleted {
+            let response = admin
+                .write(json_body(
+                    Method::DELETE,
+                    &format!("/api/v1/rooms/{HQ}/webhooks/{hook_id}"),
+                    &Value::Null,
+                ))
+                .await;
+            assert_eq!(
+                response.status,
+                StatusCode::NO_CONTENT,
+                "{}",
+                response.text()
+            );
+        }
+        for (method, path, body) in [
+            (
+                Method::DELETE,
+                format!("/api/v1/people/{author}/ban"),
+                Value::Null,
+            ),
+            (
+                Method::PATCH,
+                format!("/api/v1/admin/people/{author}"),
+                json!({"role":"administrator"}),
+            ),
+            (
+                Method::PUT,
+                format!("/api/v1/admin/bots/{author}/key"),
+                Value::Null,
+            ),
+            (
+                Method::PATCH,
+                format!("/api/v1/admin/bots/{author}"),
+                json!({"name":"Visible"}),
+            ),
+            (
+                Method::POST,
+                format!("/api/v1/admin/people/{author}/two_factor_reset"),
+                Value::Null,
+            ),
+        ] {
+            let response = admin.write(json_body(method, &path, &body)).await;
+            assert_eq!(
+                response.status,
+                StatusCode::NOT_FOUND,
+                "{path}: {}",
+                response.text()
+            );
+        }
+        for path in ["/api/v1/people", "/api/v1/directs/candidates"] {
+            let response = admin.send(get(path)).await;
+            assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+            let page: Value = parse(&response);
+            assert!(
+                !page["users"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|user| user["id"] == author)
+            );
+        }
+        let response = admin
+            .write(json_body(
+                Method::POST,
+                "/api/v1/directs",
+                &json!({"userIds":[author]}),
+            ))
+            .await;
+        assert!(response.status.is_success(), "{}", response.text());
+        assert!(
+            a.db()
+                .read(move |conn| Ok(campfire_db::Membership::for_user(conn, author)?.is_empty()))
+                .await
+                .unwrap()
+        );
+        let user = a
+            .db()
+            .read(move |conn| campfire_db::User::find(conn, author))
+            .await
+            .unwrap();
+        assert!(user.is_deactivated());
+        assert!(user.bot_token_digest.is_none());
+        assert!(user.email_address.is_none() && user.password_digest.is_none());
+    }
+}
+
+#[tokio::test]
+async fn channel_webhook_forward_keeps_embeds_and_attribution_in_saved_items() {
+    let a = app(true)
+        .await
+        .expect("restored seed")
+        .without_job_runner()
+        .await;
+    let hook = setup(&a, HQ).await;
+    let mut guest = a.anonymous();
+    let response = guest.send(json_body(Method::POST, &execute(&hook, true), &json!({"username":"CI", "embeds":[{"title":"Passed","description":"All checks green"}]}))).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let original: Value = parse(&response);
+    let original_id = original["id"].as_i64().unwrap();
+    let mut admin = a.sign_in(DAVID).await;
+    let response = admin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{original_id}/forwards"),
+            &json!({"destinations":[{"roomId":HQ}],"note":"FYI"}),
+        ))
+        .await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let forwarded: Value = parse(&response);
+    let copy = &forwarded["forwards"][0];
+    assert_eq!(
+        copy["embeds"],
+        json!([{"title":"Passed","description":"All checks green"}])
+    );
+    assert_eq!(copy["webhook"], original["webhook"]);
+    assert_eq!(copy["creatorId"], DAVID);
+    let copy_id = copy["id"].as_i64().unwrap();
+    for message_id in [original_id, copy_id] {
+        let response = admin
+            .write(json_body(
+                Method::POST,
+                "/api/v1/saved",
+                &json!({"messageId":message_id}),
+            ))
+            .await;
+        assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    }
+    let response = admin.send(get("/api/v1/saved")).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let saved: Value = parse(&response);
+    for message_id in [original_id, copy_id] {
+        let message = saved["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|message| message["id"] == message_id)
+            .unwrap();
+        assert_eq!(
+            message["embeds"],
+            json!([{"title":"Passed","description":"All checks green"}])
+        );
+        assert_eq!(message["webhook"], original["webhook"]);
+    }
+}
+
+#[tokio::test]
 async fn channel_webhook_json_wait_sync_unread_and_digest() {
     let a = app(true)
         .await

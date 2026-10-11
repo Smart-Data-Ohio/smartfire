@@ -1,7 +1,90 @@
 use super::{TestDb, id};
 use crate::models::channel_webhook::{ChannelWebhook, WebhookMessage};
-use crate::{Message, NewMessage, Room, RoomType, User};
+use crate::{Message, NewMessage, PasswordDigest, Role, Room, RoomType, Status, User, UserChanges};
 use serde_json::json;
+
+#[test]
+fn channel_webhook_author_refuses_account_mutations_after_deletion() {
+    let t = TestDb::new();
+    let (hook, _) =
+        t.write(|tx| ChannelWebhook::create(tx, id("watercooler"), id("david"), "Hidden author"));
+    let author_id = hook.author_id;
+    for deleted in [false, true] {
+        if deleted {
+            t.write(move |tx| ChannelWebhook::delete(tx, hook.id));
+        }
+        assert!(matches!(
+            t.try_write(move |tx| User::find(tx.conn(), author_id)?.unban(tx)),
+            Err(crate::Error::RecordNotFound("User"))
+        ));
+        for changes in [
+            UserChanges {
+                status: Some(Status::Active),
+                ..Default::default()
+            },
+            UserChanges {
+                role: Some(Role::Member),
+                ..Default::default()
+            },
+            UserChanges {
+                role: Some(Role::Administrator),
+                ..Default::default()
+            },
+            UserChanges {
+                role: Some(Role::Bot),
+                ..Default::default()
+            },
+            UserChanges {
+                name: Some("Visible author".into()),
+                ..Default::default()
+            },
+            UserChanges {
+                email_address: Some(Some("hook@example.test".into())),
+                ..Default::default()
+            },
+            UserChanges {
+                password_digest: Some(PasswordDigest::create("secret123456", 4).unwrap()),
+                ..Default::default()
+            },
+        ] {
+            assert!(matches!(
+                t.try_write(move |tx| User::find(tx.conn(), author_id)?.update(tx, changes)),
+                Err(crate::Error::RecordNotFound("User"))
+            ));
+        }
+        assert!(matches!(
+            t.try_write(move |tx| User::find(tx.conn(), author_id)?.reset_bot_key(tx)),
+            Err(crate::Error::RecordNotFound("User"))
+        ));
+        assert!(matches!(
+            t.try_write(move |tx| User::find(tx.conn(), author_id)?.update_bot(
+                tx,
+                UserChanges::default(),
+                Some("https://example.test/outgoing")
+            )),
+            Err(crate::Error::RecordNotFound("User"))
+        ));
+        let author = t.read(move |conn| User::find(conn, author_id));
+        assert_eq!(author.role, Role::WebhookAuthor);
+        assert!(author.is_bot() && author.is_deactivated());
+        assert_eq!(author.name, "Hidden author");
+        assert!(
+            author.email_address.is_none()
+                && author.password_digest.is_none()
+                && author.bot_token_digest.is_none()
+        );
+        assert!(
+            !t.read(User::active_ordered)
+                .iter()
+                .any(|u| u.id == author_id)
+        );
+        assert!(
+            !t.read(|conn| User::active_filtered_by_ordered(conn, "Hidden"))
+                .iter()
+                .any(|u| u.id == author_id)
+        );
+    }
+}
 
 #[test]
 fn channel_webhook_identity_digest_rotation_and_avatar() {

@@ -255,7 +255,7 @@ pub fn user(
         role: match user.role {
             Role::Member => api::UserRole::Member,
             Role::Administrator => api::UserRole::Administrator,
-            Role::Bot => api::UserRole::Bot,
+            Role::Bot | Role::WebhookAuthor => api::UserRole::Bot,
         },
         status: match user.status {
             Status::Active => api::UserStatus::Active,
