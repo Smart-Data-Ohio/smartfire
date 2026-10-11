@@ -175,11 +175,24 @@ impl Membership {
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         query_one(
             conn,
-            r#"SELECT * FROM "memberships" WHERE "memberships"."id" = ? LIMIT 1"#,
+            &(Self::policy_select() + " WHERE memberships.id=? LIMIT 1"),
             [id],
-            Self::from_row,
+            Self::from_policy_row,
         )?
         .or_not_found("Membership")
+    }
+
+    fn policy_select() -> String {
+        let unread = super::ignore_policy::room_unread_sql();
+        format!(
+            "SELECT memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM memberships"
+        )
+    }
+
+    fn from_policy_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        let mut membership = Self::from_row(row)?;
+        membership.unread_at = row.get("visible_unread_at")?;
+        Ok(membership)
     }
 
     /// `room.memberships.create!(user:)`, with the schema's default involvement.
@@ -213,9 +226,9 @@ impl Membership {
     pub fn for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,
-            r#"SELECT * FROM "memberships" WHERE "memberships"."user_id" = ?"#,
+            &(Self::policy_select() + " WHERE memberships.user_id=?"),
             [user_id],
-            Self::from_row,
+            Self::from_policy_row,
         )
     }
 
@@ -270,9 +283,9 @@ impl Membership {
     ) -> Result<Option<Self>> {
         query_one(
             conn,
-            r#"SELECT * FROM "memberships" WHERE "memberships"."room_id" = ? AND "memberships"."user_id" = ? LIMIT 1"#,
+            &(Self::policy_select() + " WHERE memberships.room_id=? AND memberships.user_id=? LIMIT 1"),
             [room_id, user_id],
-            Self::from_row,
+            Self::from_policy_row,
         )
     }
 
@@ -326,8 +339,9 @@ impl Membership {
     /// `user.memberships.unread.count`: the push badge.
     pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
         let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
+        let unread = super::ignore_policy::room_unread_sql();
         let rooms: Vec<i64> = sql::query_all(conn,
-            "SELECT room_id FROM memberships WHERE user_id=? AND unread_at IS NOT NULL",
+            &format!("SELECT room_id FROM memberships WHERE user_id=? AND {unread}"),
             [user_id], |row| row.get(0))?;
         Ok(rooms.into_iter().filter(|room| !preferences.muted(*room, now)).count() as i64)
     }

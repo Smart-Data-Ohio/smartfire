@@ -3,6 +3,58 @@ use super::presenters::test_support::{Req, TestApp};
 use campfire_kit::Method;
 use serde_json::{Value, json};
 
+#[tokio::test]
+async fn ignore_dm_rest_and_mcp_return_the_same_missing_user_refusal() {
+    use super::presenters::test_support::{BENDER, DAVID};
+    let app = setup().await.without_job_runner().await;
+    app.db()
+        .write(|tx| {
+            campfire_db::models::user_block::UserBlock::set(tx, DAVID, BENDER, true)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    for mcp in [false, true] {
+        let mut answers = Vec::new();
+        for user in [0, DAVID] {
+            let body = if mcp {
+                json!({"jsonrpc":"2.0","id":454,"method":"tools/call","params":{"name":"open_dm","arguments":{"user_id":user,"body":"Hello"}}})
+            } else {
+                json!({"user_id":user,"body":"Hello"})
+            };
+            let reply = app
+                .anonymous()
+                .send(
+                    Req::new(
+                        Method::POST,
+                        if mcp { "/agents/mcp" } else { "/agents/dms" },
+                    )
+                    .header("authorization", &["Bearer", SECRET].join(" "))
+                    .header("accept", "application/json")
+                    .header("content-type", "application/json")
+                    .body(body.to_string()),
+                )
+                .await;
+            answers.push((reply.status, reply.body));
+        }
+        assert_eq!(answers[0], answers[1], "MCP={mcp}");
+        if mcp {
+            let body: Value = serde_json::from_slice(&answers[0].1).unwrap();
+            assert_eq!(body["result"]["isError"], true);
+            assert_eq!(
+                body["result"]["structuredContent"]["error"],
+                "User not found"
+            );
+        } else {
+            assert_eq!(answers[0].0.as_u16(), 404);
+            assert!(
+                answers[0].1.is_empty(),
+                "REST hides unavailable-person details"
+            );
+        }
+    }
+}
+
 async fn request(app: &TestApp, case: &Value) -> super::presenters::test_support::Reply {
     let mut req = Req::new(
         Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),

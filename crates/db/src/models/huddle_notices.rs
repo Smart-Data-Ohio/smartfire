@@ -81,6 +81,9 @@ pub fn prepare_push(
     if !policy_allowed {
         return Ok(None);
     }
+    if super::ignore_policy::ignored(tx.conn(), request.recipient_id, request.sender_id)? {
+        return Ok(None);
+    }
     let excluded = if request.kind == PushKind::HuddleJoin {
         "'invisible','nothing','muted'"
     } else {
@@ -149,8 +152,9 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
     let Some(joiner) = joiner.filter(|u|u.is_active() && !u.is_bot()) else { return Ok(()); };
     let rung: BTreeSet<i64> = query_all(tx.conn(), "SELECT DISTINCT a.user_id FROM activity_items a JOIN huddle_grants g ON g.id=a.source_id WHERE a.source_type='HuddleGrant' AND a.event_type='huddle_started' AND a.handled_at IS NULL AND a.created_at>=? AND g.room_id=?", params![tx.now().ago(SignedDuration::from_secs(60)), room.id], |r| r.get(0))?.into_iter().collect();
     let rejoin: bool = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE id!=? AND room_id=? AND user_id=? AND revoked_at>=? AND last_seen_at>=?)", params![grant.id, room.id, joiner.id, tx.now().ago(SignedDuration::from_secs(5)), tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW))], |r| r.get(0))?;
+    let blockers = super::ignore_policy::blockers_of(tx.conn(), joiner.id)?.into_iter().collect::<BTreeSet<_>>();
     for membership in memberships {
-        if membership.user_id == joiner.id {
+        if membership.user_id == joiner.id || blockers.contains(&membership.user_id) {
             continue;
         }
         let Some((viewer, invitations_enabled, preferences)) = viewers.iter().find(|(u,_,_)|u.id == membership.user_id && u.is_active() && !u.is_bot()) else {

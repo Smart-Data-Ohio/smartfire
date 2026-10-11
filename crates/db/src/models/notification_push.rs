@@ -175,6 +175,7 @@ pub fn event_reminder_push(
         |r| r.get::<_, i64>(0),
     )?;
     let ids = allowed_reminders(conn, &ids, event.room_id, now)?;
+    let ids = super::ignore_policy::visible_recipients(conn, event.organizer_id, ids)?;
     Ok(Some(PushDelivery {
         payload: event.payload(conn, now)?,
         subscriptions: PushSubscription::for_users(conn, &ids)?,
@@ -326,6 +327,9 @@ fn huddle_recipient(
         Ok(_) => {}
     }
     if User::find_by_id(conn, sender_id)?.is_none() {
+        return Ok(None);
+    }
+    if super::ignore_policy::ignored(conn, recipient_id, sender_id)? {
         return Ok(None);
     }
     let membership = Membership::find_by_room_and_user(conn, room_id, recipient_id)?;

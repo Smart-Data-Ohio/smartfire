@@ -407,18 +407,29 @@ pub fn message(
     }
 }
 
-fn publish_message(server: &Cable, message: &Message, mut dto: MessageDTO, created: bool, blockers: &[i64]) {
-    let topic = message_topic(message);
+fn publish_message(
+    server: &Cable,
+    message: &Message,
+    mut dto: MessageDTO,
+    created: bool,
+    blockers: &[i64],
+) {
     let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
-    if blockers.is_empty() {
-        publish(server, Audience::Topic(topic), &payload(dto));
-    } else {
-        publish(server, Audience::TopicExcept { topic: topic.clone(), users: blockers.to_vec() }, &payload(dto.clone()));
-        dto.ignored = Some(true);
-        for &user_id in blockers {
-            publish(server, Audience::TopicUser { topic: topic.clone(), user_id }, &payload(dto.clone()));
-        }
+    if !server.sync_wanted() {
+        return;
     }
+    let mut publication = SyncPublication::new(
+        Audience::Topic(message_topic(message)),
+        serde_json::to_string(&payload(dto.clone())).expect("sync payloads serialize"),
+    );
+    if !blockers.is_empty() {
+        dto.ignored = Some(true);
+        publication.personalized = Some((
+            blockers.iter().copied().collect(),
+            serde_json::to_string(&payload(dto)).expect("sync payloads serialize"),
+        ));
+    }
+    server.sync_publish(publication);
 }
 
 /// Validate publication even without subscribers, before claims or held jobs are released.

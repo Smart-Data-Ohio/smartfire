@@ -21,8 +21,24 @@ pub struct ActivityUnread {
 }
 
 fn access_sql() -> String {
-    let visible = crate::models::ignore_policy::visible_sql("activity_items.user_id", "activity_messages.creator_id");
-    format!("{} AND (activity_items.source_type != 'Message' OR {visible})", include_str!("access.sql"))
+    let visible =
+        crate::models::ignore_policy::visible_sql("activity_items.user_id", activity_author_sql());
+    format!(
+        "{} AND (activity_items.source_type = 'SavedItem' OR {visible})",
+        include_str!("access.sql")
+    )
+}
+
+fn activity_author_sql() -> &'static str {
+    "COALESCE(activity_messages.creator_id, activity_saved_messages.creator_id, activity_work_events.actor_id, activity_huddle_grants.user_id, activity_events.organizer_id, activity_approval_agents.user_id, activity_budget_agents.user_id, activity_scheduled_messages.user_id)"
+}
+
+fn unread_activity_sql() -> String {
+    let visible =
+        crate::models::ignore_policy::visible_sql("activity_items.user_id", activity_author_sql());
+    format!(
+        " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL AND {visible}"
+    )
 }
 
 fn unmuted_activity_sql() -> String {
@@ -31,10 +47,14 @@ fn unmuted_activity_sql() -> String {
 }
 
 impl ActivityItem {
-    pub fn unread_snapshot(conn: &Connection, user_id: i64, now: Timestamp) -> Result<ActivityUnread> {
+    pub fn unread_snapshot(
+        conn: &Connection,
+        user_id: i64,
+        now: Timestamp,
+    ) -> Result<ActivityUnread> {
         let count =
             access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
+                + &unread_activity_sql()
                 + &unmuted_activity_sql();
         let sql = format!("SELECT ({count}), activity_revision FROM users WHERE id = ?1");
         Ok(crate::sql::query_one(conn, &sql, rusqlite::params![user_id, now], |row| {
@@ -65,7 +85,7 @@ impl ActivityItem {
         }
         let sql =
             access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL"
+                + &unread_activity_sql()
                 + &unmuted_activity_sql();
         Ok(conn.query_row(&sql, rusqlite::params![user.id, now], |row| row.get(0))?)
     }

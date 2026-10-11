@@ -12,6 +12,7 @@ import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import {
   type ActivityAction,
+  activityIsIgnored,
   activityListOf,
   activityLoadStart,
   nextActivityItem,
@@ -135,8 +136,16 @@ const change = (
   serial.run(
     activityItemId,
     Effect.gen(function* () {
-      const generation = store.getState().activity.generation;
-      const before = store.getState().activity.items[activityItemId];
+      const state = store.getState();
+      const generation = state.activity.generation;
+      const held = state.activity.items[activityItemId];
+      const ignored = held !== undefined && activityIsIgnored(state, held);
+
+      const before =
+        held === undefined || ignored === (held.source.ignored ?? false)
+          ? held
+          : { ...held, source: { ...held.source, ignored } };
+
       const token = nextToken++;
       let optimistic: ActivityItem | null = null;
 

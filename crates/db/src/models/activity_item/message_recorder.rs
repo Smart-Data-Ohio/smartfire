@@ -120,9 +120,12 @@ pub fn candidates(
         }
     }
     let thread_map: HashMap<_, _> = threads.into_iter().collect();
+    let blockers = crate::models::ignore_policy::blockers_of(conn, message.creator_id)?
+        .into_iter()
+        .collect::<HashSet<_>>();
     let mut recipients = Vec::new();
     for id in ids {
-        if id == message.creator_id || crate::models::ignore_policy::ignored(conn, id, message.creator_id)? {
+        if id == message.creator_id || blockers.contains(&id) {
             continue;
         }
         let policy = NotificationPolicy {

@@ -91,13 +91,24 @@ impl ThreadMembership {
     }
 
     /// `thread.memberships.find_by(user_id:)` (`ChannelThread#membership_for`)
-    pub fn find_by_thread_and_user(conn: &Connection, thread_id: i64, user_id: i64) -> Result<Option<Self>> {
+    pub fn find_by_thread_and_user(
+        conn: &Connection,
+        thread_id: i64,
+        user_id: i64,
+    ) -> Result<Option<Self>> {
+        let unread = super::ignore_policy::thread_unread_sql();
         query_one(
             conn,
-            r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."thread_id" = ? AND "thread_memberships"."user_id" = ? LIMIT 1"#,
+            &format!("SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE thread_id=? AND user_id=? LIMIT 1"),
             [thread_id, user_id],
-            Self::from_row,
+            Self::from_policy_row,
         )
+    }
+
+    fn from_policy_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        let mut membership = Self::from_row(row)?;
+        membership.unread_at = row.get("visible_unread_at")?;
+        Ok(membership)
     }
 
     /// `thread.memberships`, in id order.
@@ -111,23 +122,29 @@ impl ThreadMembership {
     }
 
     /// The viewer's memberships for a page of threads, read together.
-    pub fn for_user_threads(conn: &Connection, user_id: i64, thread_ids: &[i64]) -> Result<Vec<Self>> {
+    pub fn for_user_threads(
+        conn: &Connection,
+        user_id: i64,
+        thread_ids: &[i64],
+    ) -> Result<Vec<Self>> {
         if thread_ids.is_empty() {
             return Ok(Vec::new());
         }
+        let unread = super::ignore_policy::thread_unread_sql();
         query_all(
             conn,
-            "SELECT * FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))",
+            &format!("SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))"),
             params![user_id, serde_json::json!(thread_ids).to_string()],
-            Self::from_row,
+            Self::from_policy_row,
         )
     }
 
     /// `user.thread_memberships.unread`
     pub fn unread_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
+        let unread = super::ignore_policy::thread_unread_sql();
         query_all(
             conn,
-            r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."user_id" = ? AND "thread_memberships"."unread_at" IS NOT NULL ORDER BY "thread_memberships"."id" ASC"#,
+            &format!("SELECT thread_memberships.* FROM thread_memberships WHERE user_id=? AND {unread} ORDER BY id"),
             [user_id],
             Self::from_row,
         )

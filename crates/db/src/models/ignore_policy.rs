@@ -32,6 +32,11 @@ pub fn blockers_of(conn: &Connection, author: i64) -> Result<Vec<i64>> {
     )
 }
 
+pub fn visible_recipients(conn: &Connection, author: i64, recipients: Vec<i64>) -> Result<Vec<i64>> {
+    let blockers = blockers_of(conn, author)?.into_iter().collect::<BTreeSet<_>>();
+    Ok(recipients.into_iter().filter(|id| !blockers.contains(id)).collect())
+}
+
 pub fn blockers_for_authors(
     conn: &Connection,
     authors: impl IntoIterator<Item = i64>,
@@ -57,6 +62,20 @@ pub fn blockers_for_authors(
 pub fn visible_sql(viewer: &str, author: &str) -> String {
     format!(
         "NOT EXISTS (SELECT 1 FROM user_blocks ignored_person WHERE ignored_person.blocker_id={viewer} AND ignored_person.blocked_id={author})"
+    )
+}
+
+pub fn thread_unread_sql() -> String {
+    let visible = visible_sql("thread_memberships.user_id", "unread_message.creator_id");
+    format!(
+        "thread_memberships.unread_at IS NOT NULL AND (NOT EXISTS (SELECT 1 FROM user_blocks WHERE blocker_id=thread_memberships.user_id) OR EXISTS (SELECT 1 FROM messages unread_message WHERE unread_message.thread_id=thread_memberships.thread_id AND NOT unread_message.system_note AND unread_message.creator_id!=thread_memberships.user_id AND (thread_memberships.last_read_message_id IS NULL OR unread_message.id>thread_memberships.last_read_message_id) AND {visible}))"
+    )
+}
+
+pub fn room_unread_sql() -> String {
+    let visible = visible_sql("memberships.user_id", "unread_message.creator_id");
+    format!(
+        "memberships.unread_at IS NOT NULL AND (NOT EXISTS (SELECT 1 FROM user_blocks WHERE blocker_id=memberships.user_id) OR EXISTS (SELECT 1 FROM messages unread_message LEFT JOIN messages read_message ON read_message.id=memberships.last_read_message_id AND read_message.room_id=memberships.room_id AND read_message.thread_id IS NULL WHERE unread_message.room_id=memberships.room_id AND unread_message.thread_id IS NULL AND NOT unread_message.system_note AND unread_message.creator_id!=memberships.user_id AND CASE WHEN memberships.last_read_message_id IS NULL THEN unread_message.created_at>=memberships.unread_at ELSE (unread_message.created_at,unread_message.id)>(COALESCE(read_message.created_at,memberships.unread_at),memberships.last_read_message_id) END AND {visible}))"
     )
 }
 

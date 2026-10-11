@@ -23,6 +23,7 @@ fn activity_item() -> ActivityItem {
             message_id: Some(9001),
             event_id: None,
             creator_id: Some(7),
+            ignored: None,
             title: "general".into(),
             body: "Hello there @Grace".into(),
             occurred_at: "2026-10-06T09:15:00.123Z".into(),

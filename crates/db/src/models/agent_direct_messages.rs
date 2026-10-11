@@ -54,6 +54,15 @@ pub fn open_and_post(
         return Ok(fail("Cannot open a DM with an inactive account", 422));
     }
     let agent = Agent::find(tx.conn(), agent_id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
+    let members = [agent.user_id, target.id];
+    let existing = Room::find_direct_for(tx.conn(), &members)?;
+    if existing.is_none() {
+        match super::ignore_policy::require_contact(tx.conn(), agent.user_id, &[target.id]) {
+            Ok(()) => (),
+            Err(crate::Error::RecordNotFound("User")) => return Ok(fail("User not found", 404)),
+            Err(error) => return Err(error),
+        }
+    }
     if !agent_access::has_capability_anywhere(tx.conn(), agent.id, "post_messages")? {
         return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
     }
@@ -63,8 +72,6 @@ pub fn open_and_post(
             403,
         ));
     }
-    let members = [agent.user_id, target.id];
-    let existing = Room::find_direct_for(tx.conn(), &members)?;
     let new_room = existing.is_none();
     let room = if let Some(room) = existing {
         room

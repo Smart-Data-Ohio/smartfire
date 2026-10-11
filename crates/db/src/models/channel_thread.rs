@@ -895,11 +895,17 @@ impl ChannelThread {
         };
         let now = tx.now();
         let mut unread_user_ids = Vec::new();
+        let blockers = super::ignore_policy::blockers_of(tx.conn(), message.creator_id)?
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let room_members = Membership::for_room(tx.conn(), thread.room_id)?
+            .into_iter()
+            .map(|membership| membership.user_id)
+            .collect::<HashSet<_>>();
         for membership in ThreadMembership::for_thread(tx.conn(), thread.id)? {
             if membership.user_id == message.creator_id
-                || super::ignore_policy::ignored(tx.conn(), membership.user_id, message.creator_id)?
-                || Membership::find_by_room_and_user(tx.conn(), thread.room_id, membership.user_id)?
-                    .is_none()
+                || blockers.contains(&membership.user_id)
+                || !room_members.contains(&membership.user_id)
             {
                 continue;
             }
@@ -1240,8 +1246,11 @@ impl ChannelThread {
             thread.room_id, message.id, thread.id
         );
         let mut pushes = Vec::new();
+        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?
+            .into_iter()
+            .collect::<HashSet<_>>();
         for candidate in candidates {
-            if super::ignore_policy::ignored(conn, candidate.recipient.id, message.creator_id)? { continue; }
+            if blockers.contains(&candidate.recipient.id) { continue; }
             let subscriptions = PushSubscription::for_user(conn, candidate.recipient.id)?;
             if subscriptions.is_empty() {
                 continue;

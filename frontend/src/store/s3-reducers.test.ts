@@ -839,6 +839,34 @@ describe("the activity inbox", () => {
     expect(unreadDelta(read, handled)).toBe(0);
   });
 
+  it("keeps other unread badges unchanged when an ignored reminder is acted on", () => {
+    const reminder = item(6, 60, "message_reminder");
+
+    const ignored: ActivityItem = {
+      ...reminder,
+      source: { ...reminder.source, sourceType: "saved_item", ignored: true },
+    };
+
+    let state = landActivityPage(
+      initialState,
+      "all",
+      "unread",
+      activityPage([ignored], 3),
+      "replace",
+    );
+
+    let before = ignored;
+    let token = 0;
+
+    for (const action of ["read", "unread", "handled", "unhandled"] as const) {
+      const after = nextActivityItem(before, action, at(70));
+
+      state = showActivityChange(state, after, ++token, unreadDelta(before, after));
+      expect(state.activity.unreadCount).toBe(3);
+      before = after;
+    }
+  });
+
   it("opens messages, rooms and the scheduled page in the app, and the rest on classic pages", () => {
     const mention = item(1, 10);
     const huddle = item(2, 20, "huddle_started");

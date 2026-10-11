@@ -429,6 +429,7 @@ impl CalendarEvent {
             params![self.room_id, self.organizer_id],
             |r| r.get::<_, i64>(0),
         )?;
+        let ids = super::ignore_policy::visible_recipients(after.conn(), self.organizer_id, ids)?;
         for user_id in ids {
             // Rails' create_or_find_by! commits each recipient independently.
             // A later failure stops fan-out and announcement, retaining earlier
@@ -462,14 +463,15 @@ impl CalendarEvent {
     }
     /// Current notified going/maybe active human members, re-read in the triggering write.
     pub fn notification_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
-        query_all(
+        let ids = query_all(
             conn,
             "SELECT u.id FROM users u JOIN event_attendances a ON a.user_id=u.id \
             JOIN memberships m ON m.user_id=u.id AND m.room_id=? WHERE a.event_id=? AND a.response IN ('going','maybe') \
             AND u.status=0 AND u.role<>2 AND m.involvement IN ('mentions','everything') ORDER BY u.id",
             params![self.room_id, self.id],
             |r| r.get(0),
-        )
+        )?;
+        super::ignore_policy::visible_recipients(conn, self.organizer_id, ids)
     }
     pub fn sync_calendar_entries(&self, tx: &mut Tx<'_>) -> Result<()> {
         let ids = query_all(

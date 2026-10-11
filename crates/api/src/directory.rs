@@ -108,6 +108,14 @@ fn capacity(c: &mut Ctx) -> Error {
     )
 }
 
+fn contact_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db::Result<Vec<i64>> {
+    let users = User::where_ids(conn, ids)?;
+    if ids.iter().any(|id| !users.iter().any(|user| user.id == *id)) {
+        return Err(campfire_db::Error::RecordNotFound("User"));
+    }
+    Ok(users.into_iter().filter(User::is_active).map(|user| user.id).collect())
+}
+
 /// `rooms/directs#create`: the first [`MAX_MEMBERS`] ids and the viewer, active people only.
 async fn post_direct(c: &mut Ctx) -> Result {
     before_actions(c).await?;
@@ -119,11 +127,7 @@ async fn post_direct(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let users: Vec<i64> = User::where_ids(tx.conn(), &ids)?
-                .into_iter()
-                .filter(User::is_active)
-                .map(|user| user.id)
-                .collect();
+            let users = contact_user_ids(tx.conn(), &ids)?;
             if ids.iter().any(|id| *id != viewer) && !users.iter().any(|id| *id != viewer) {
                 return Err(campfire_db::Error::RecordNotFound("User"));
             }
@@ -218,11 +222,7 @@ async fn post_direct_members(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let users: Vec<i64> = User::where_ids(tx.conn(), &ids)?
-                .into_iter()
-                .filter(User::is_active)
-                .map(|user| user.id)
-                .collect();
+            let users = contact_user_ids(tx.conn(), &ids)?;
             let added = updated.add_direct_members(tx, &users, actor)?;
             added
                 .iter()

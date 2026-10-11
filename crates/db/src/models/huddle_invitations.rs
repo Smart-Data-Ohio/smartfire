@@ -143,6 +143,9 @@ fn publish_current_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: b
 /// Legacy queued jobs recover the current row after access removal, item resolution, or call end.
 /// Synchronous ActivityItem callbacks instead use their saved instance below.
 fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest>> {
+    if super::ignore_policy::ignored(tx.conn(), request.recipient_id, request.sender_id)? {
+        return Ok(None);
+    }
     let Some(viewer) = User::find_by_id(tx.conn(), request.recipient_id)?.filter(|u| u.is_active() && !u.is_bot()) else { return Ok(None); };
     let item_id = request.invitation["activityItemId"].as_i64().unwrap_or_default();
     let current = if item_id != 0 {
@@ -262,7 +265,9 @@ pub(crate) fn after_issued(
         params![room.id, grant.user_id],
         User::from_row,
     )?;
+    let blockers = super::ignore_policy::blockers_of(tx.conn(), grant.user_id)?.into_iter().collect::<std::collections::HashSet<_>>();
     for recipient in recipients {
+        if blockers.contains(&recipient.id) { continue; }
         crate::database::run_write(tx.conn(), tx.env(), |tx| {
             invite_recipient(tx, grant, &room, &recipient, dedup)
         })?;

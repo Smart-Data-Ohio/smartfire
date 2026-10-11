@@ -1,6 +1,382 @@
 use super::*;
 
 #[test]
+fn ignore_non_message_notification_sources_suppress_current_and_queued_delivery() {
+    use crate::models::{notification_push, user_block::UserBlock};
+    use crate::{CalendarEvent, NewCalendarEvent, PushPayload};
+    let t = TestDb::new();
+    let (viewer, author) = (id("jason"), id("david"));
+    let event = t.write(move |tx| {
+        CalendarEvent::create(
+            tx,
+            NewCalendarEvent {
+                room_id: id("designers"),
+                organizer_id: author,
+                title: "Ignored event".into(),
+                starts_at: Some(tx.now().since(jiff::SignedDuration::from_mins(10))),
+                time_zone: "UTC".into(),
+                ..Default::default()
+            },
+        )
+    });
+    let event_id = event.id;
+    t.write(move |tx| {
+        CalendarEvent::respond(tx, event_id, viewer, "going", false)?;
+        UserBlock::set(tx, viewer, author, true)?;
+        Ok(())
+    });
+    t.read(|conn| {
+        assert!(!event.notification_recipient_ids(conn)?.contains(&viewer));
+        assert!(
+            !CalendarEvent::reminder_push_source(conn, event_id, t.now())?
+                .unwrap()
+                .recipient_ids
+                .contains(&viewer)
+        );
+        Ok(())
+    });
+    t.write(move |tx| {
+        let payload = PushPayload::new(
+            "Ignored huddle".into(),
+            "Ignored sender".into(),
+            "/rooms/1".into(),
+            None,
+        );
+        assert!(!notification_push::enqueue_huddle_invitation(
+            tx,
+            id("designers"),
+            viewer,
+            author,
+            payload
+        )?);
+        Ok(())
+    });
+}
+
+#[test]
+fn ignore_work_activity_filters_old_items_and_stops_new_notifications() {
+    use crate::models::{channel_thread::WorkChanges, user_block::UserBlock};
+    use crate::{
+        ActivityItem, ChannelThread, NewChannelThread, ThreadInvolvement, ThreadMembership, User,
+    };
+    let t = TestDb::new();
+    let (viewer, author) = (id("jason"), id("david"));
+    let thread = t.write(move |tx| {
+        let thread = ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: id("designers"),
+                creator_id: author,
+                name: Some("Ignore work events".into()),
+                work_status: Some("planned".into()),
+                ..Default::default()
+            },
+        )?;
+        ThreadMembership::join(tx, thread.id, viewer)?
+            .update_involvement(tx, ThreadInvolvement::Everything)?;
+        Ok(thread)
+    });
+    let thread_id = thread.id;
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread_id)?.update_work(
+            tx,
+            &User::find(tx.conn(), author)?,
+            WorkChanges {
+                status: Some(Some("in_progress".into())),
+                ..Default::default()
+            },
+        )
+    });
+    t.read(|conn| {
+        assert_eq!(
+            ActivityItem::unread_count(conn, &User::find(conn, viewer)?, t.now())?,
+            1
+        );
+        Ok(())
+    });
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE activity_items SET read_at=? WHERE user_id=?",
+            rusqlite::params![tx.now(), viewer],
+        )?;
+        UserBlock::set(tx, viewer, author, true)
+    });
+    t.read(|conn| {
+        let user = User::find(conn, viewer)?;
+        assert!(ActivityItem::accessible_to(conn, &user)?.is_empty());
+        assert_eq!(ActivityItem::unread_count(conn, &user, t.now())?, 0);
+        Ok(())
+    });
+    let before = t.events().len();
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread_id)?.update_work(
+            tx,
+            &User::find(tx.conn(), author)?,
+            WorkChanges {
+                status: Some(Some("done".into())),
+                ..Default::default()
+            },
+        )
+    });
+    assert!(t.events()[before..].iter().filter_map(|event| event.as_broadcast()).all(|event| !matches!(event, crate::broadcasts::Broadcast::Cable { stream, .. } if stream == format!("user_{viewer}_activity"))));
+    t.read(|conn| {
+        let unread: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM activity_items WHERE user_id=? AND read_at IS NULL",
+            [viewer],
+            |row| row.get(0),
+        )?;
+        assert_eq!(unread, 0, "ignored work cannot rearm a handled inbox row");
+        Ok(())
+    });
+}
+
+#[test]
+fn ignore_existing_room_and_thread_unread_and_push_badges_follow_policy() {
+    use crate::models::user_block::UserBlock;
+    use crate::{ChannelThread, Membership, NewMessage, PushSubscription, ThreadMembership};
+    let t = TestDb::new();
+    let (viewer, author, room) = (id("jason"), id("david"), id("designers"));
+    t.write(move |tx| {
+        for mut membership in Membership::for_user(tx.conn(), viewer)? {
+            membership.read(tx)?;
+        }
+        Ok(())
+    });
+    let thread =
+        channel_thread_test::create_thread(&t, "designers", "david", None, Some("Unread ignore"));
+    let thread_id = thread.id;
+    t.write(move |tx| {
+        ThreadMembership::join(tx, thread_id, viewer)?.read(tx)?;
+        crate::Message::create(
+            tx,
+            NewMessage {
+                room_id: room,
+                creator_id: author,
+                body: Some("Unread root".into()),
+                ..Default::default()
+            },
+        )?;
+        ChannelThread::find(tx.conn(), thread_id)?.post_message(
+            tx,
+            author,
+            NewMessage {
+                body: Some("Unread reply".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok(())
+    });
+    let check = |unread| {
+        t.read(|conn| {
+            assert_eq!(
+                ChannelThread::find(conn, thread_id)?.unread_for(conn, viewer)?,
+                unread
+            );
+            assert_eq!(
+                ThreadMembership::unread_for_user(conn, viewer)?
+                    .iter()
+                    .any(|m| m.thread_id == thread_id),
+                unread
+            );
+            assert_eq!(
+                ThreadMembership::for_user_threads(conn, viewer, &[thread_id])?[0].unread(),
+                unread
+            );
+            assert_eq!(
+                Membership::unread_count(conn, viewer, t.now())?,
+                i64::from(unread)
+            );
+            assert_eq!(
+                Membership::find_by_room_and_user(conn, room, viewer)?
+                    .unwrap()
+                    .unread(),
+                unread
+            );
+            assert_eq!(
+                PushSubscription::for_user(conn, viewer)?[0].badge(conn, t.now())?,
+                i64::from(unread)
+            );
+            Ok(())
+        })
+    };
+    check(true);
+    t.write(move |tx| UserBlock::set(tx, viewer, author, true));
+    check(false);
+    t.write(move |tx| UserBlock::set(tx, viewer, author, false));
+    check(true);
+    t.write(move |tx| {
+        UserBlock::set(tx, viewer, author, true)?;
+        crate::Message::create(
+            tx,
+            NewMessage {
+                room_id: room,
+                creator_id: id("kevin"),
+                body: Some("Visible root".into()),
+                ..Default::default()
+            },
+        )?;
+        ChannelThread::find(tx.conn(), thread_id)?.post_message(
+            tx,
+            id("kevin"),
+            NewMessage {
+                body: Some("Visible reply".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok(())
+    });
+    check(true);
+}
+
+#[test]
+fn ignore_saved_reminder_fires_without_message_text_or_unread_count() {
+    use crate::models::user_block::UserBlock;
+    use crate::{ActivityItem, Message, NewMessage, NewSavedItem, SavedItem, User};
+    let t = TestDb::new();
+    let (viewer, author) = (id("jason"), id("david"));
+    let saved = t.write(move |tx| {
+        let message = Message::create(
+            tx,
+            NewMessage {
+                room_id: id("designers"),
+                creator_id: author,
+                body: Some("Private ignored text".into()),
+                ..Default::default()
+            },
+        )?;
+        SavedItem::create(
+            tx,
+            NewSavedItem {
+                user_id: viewer,
+                message_id: message.id,
+                remind_at: Some(tx.now().since(jiff::SignedDuration::from_mins(1))),
+                ..Default::default()
+            },
+        )
+    });
+    t.write(move |tx| UserBlock::set(tx, viewer, author, true));
+    t.clock
+        .travel_to(t.now().since(jiff::SignedDuration::from_mins(2)));
+    t.write(move |tx| SavedItem::dispatch_reminder(tx, saved.id, tx.now()));
+    t.read(|conn| {
+        let user = User::find(conn, viewer)?;
+        assert_eq!(
+            ActivityItem::accessible_to(conn, &user)?.len(),
+            1,
+            "explicit reminder survives"
+        );
+        assert_eq!(ActivityItem::unread_count(conn, &user, t.now())?, 0);
+        assert_eq!(
+            ActivityItem::unread_snapshot(conn, viewer, t.now())?.count,
+            0
+        );
+        let push = SavedItem::reminder_push(conn, &BasicRichText, saved.id, &|_| true)?.unwrap();
+        assert_eq!(push.payload.body, "Reminder: a saved message");
+        Ok(())
+    });
+}
+
+#[test]
+fn ignore_fanouts_load_blockers_once_for_any_roster_size() {
+    use crate::{
+        ChannelThread, Message, NewMessage, NewUser, Room, RoomType, ThreadInvolvement,
+        ThreadMembership, User,
+    };
+    for size in [3, 30] {
+        let t = TestDb::new();
+        let (room, thread, message) = t.write(move |tx| {
+            let mut users = vec![id("david")];
+            for n in 0..size {
+                users.push(
+                    User::create(
+                        tx,
+                        NewUser {
+                            name: format!("Recipient {n}"),
+                            ..Default::default()
+                        },
+                    )?
+                    .id,
+                );
+            }
+            let room = Room::create_for(
+                tx,
+                RoomType::Closed,
+                Some("Policy queries"),
+                users[0],
+                &users,
+            )?;
+            let thread = ChannelThread::create(
+                tx,
+                crate::NewChannelThread {
+                    room_id: room.id,
+                    creator_id: users[0],
+                    name: Some("Fanout".into()),
+                    ..Default::default()
+                },
+            )?;
+            for &user in &users[1..] {
+                ThreadMembership::join(tx, thread.id, user)?
+                    .update_involvement(tx, ThreadInvolvement::Everything)?;
+            }
+            let body = users[1..]
+                .iter()
+                .map(|id| crate::rich_text::mention_attachment_for(*id))
+                .collect::<Vec<_>>()
+                .join(" ");
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: users[0],
+                    thread_id: Some(thread.id),
+                    body: Some(body),
+                    ..Default::default()
+                },
+            )?;
+            Ok((room, thread, message))
+        });
+        for lane in ["room", "activity", "thread", "push"] {
+            let queries = t.db.capture_queries();
+            let message = message.clone();
+            let thread = thread.clone();
+            t.write(move |tx| {
+                match lane {
+                    "room" => crate::models::agent_posting::broadcast_unread_room(tx, &message)?,
+                    "activity" => {
+                        crate::models::activity_item::message_recorder::candidates(
+                            tx.conn(),
+                            tx.rich_text(),
+                            &message,
+                            tx.now(),
+                        )?;
+                    }
+                    "thread" => ChannelThread::receive(tx, thread.id, &message)?,
+                    "push" => {
+                        ChannelThread::push_recipients(
+                            tx.conn(),
+                            tx.rich_text(),
+                            thread.id,
+                            message.id,
+                            &|_| true,
+                        )?;
+                    }
+                    _ => unreachable!(),
+                }
+                Ok(())
+            });
+            t.db.stop_capturing_queries();
+            let count = queries
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|sql| sql.contains("FROM user_blocks"))
+                .count();
+            assert_eq!(count, 1, "{lane}: {size} recipients in room {}", room.id);
+        }
+    }
+}
+
+#[test]
 fn ignore_pair_is_unique_and_cannot_reference_self() {
     let t = TestDb::new();
     let (viewer, author) = (id("david"), id("kevin"));

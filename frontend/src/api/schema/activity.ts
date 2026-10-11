@@ -123,6 +123,7 @@ export const ActivitySource = Schema.Struct({
   messageId: Schema.NullOr(MessageId),
   eventId: Schema.NullOr(EventId),
   creatorId: Schema.NullOr(UserId),
+  ignored: Schema.optionalKey(Schema.Boolean),
   title: Schema.String,
   body: Schema.String,
   occurredAt: Timestamp,

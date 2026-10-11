@@ -35,7 +35,7 @@ eventId: number | null,
  * work event's actor, the agent's user, or the scheduled message's owner. `null` for
  * sign-ins, lockouts and a work event without an actor.
  */
-creatorId: number | null,
+creatorId: number | null, ignored?: boolean,
 /**
  * The row's heading: the viewer-relative room name, then ` · ` and the thread name or the
  * event title where there is one; `"{bot} · daily {label} budget"`; `"Two-step sign-in"`;

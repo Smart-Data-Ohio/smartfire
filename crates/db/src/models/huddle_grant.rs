@@ -407,12 +407,13 @@ impl HuddleGrant {
     /// Rails direct_huddle_recipients: other active humans whose current DM
     /// membership is neither muted nor invisible. No inbox preference shortcut.
     pub fn activity_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
-        query_all(conn,
+        let ids = query_all(conn,
             "SELECT DISTINCT u.id FROM users u JOIN memberships m ON m.user_id=u.id
              JOIN rooms r ON r.id=m.room_id WHERE r.id=? AND r.type='Rooms::Direct'
              AND u.id!=? AND u.status=0 AND u.role!=2
              AND (m.involvement IS NULL OR m.involvement NOT IN ('nothing','invisible')) ORDER BY u.id",
-            params![self.room_id,self.user_id], |row| row.get(0))
+            params![self.room_id,self.user_id], |row| row.get(0))?;
+        super::ignore_policy::visible_recipients(conn, self.user_id, ids)
     }
 
     pub fn participant_identities_for(
