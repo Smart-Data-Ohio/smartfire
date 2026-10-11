@@ -227,6 +227,15 @@ impl Record {
         }
     }
 
+    pub fn soundboard_sound(id: i64) -> Self {
+        Self {
+            record_type: "SoundboardSound",
+            table: "soundboard_sounds",
+            id,
+            branding: None,
+        }
+    }
+
     pub fn account(id: i64, secrets: &rails_compat::Secrets) -> Self {
         Self {
             record_type: "Account",

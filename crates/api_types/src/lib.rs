@@ -35,6 +35,8 @@ mod error;
 mod events;
 mod fizzy;
 mod huddle;
+mod soundboard;
+pub use soundboard::{CreateSoundboardSound, SoundboardCatalog, SoundboardSound, UpdateSoundboardSound};
 mod join;
 mod invites;
 mod me;

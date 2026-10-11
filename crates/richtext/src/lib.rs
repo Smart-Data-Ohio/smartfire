@@ -16,6 +16,7 @@ pub mod attachables;
 pub mod autolink;
 pub mod content;
 pub mod dom;
+pub mod emoji;
 pub mod filters;
 pub mod legacy_markdown;
 pub mod markdown;
