@@ -9,6 +9,7 @@ function command(name: string, argHint = ""): SlashCommand {
     argHint,
     takesArguments: argHint !== "",
     agentName: null,
+    optionSchema: null,
   };
 }
 

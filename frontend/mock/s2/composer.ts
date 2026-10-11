@@ -239,6 +239,7 @@ export function createComposer(
               argHint: command.argHint,
               takesArguments: command.takesArguments,
               agentName: null,
+              optionSchema: null,
             },
           ],
     );
@@ -249,6 +250,7 @@ export function createComposer(
       argHint: "",
       takesArguments: true,
       agentName: command.agentName,
+      optionSchema: command.optionSchema ?? null,
     }));
 
     return { commands: [...builtIns, ...agents] };

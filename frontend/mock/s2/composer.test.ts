@@ -177,6 +177,25 @@ describe("slash commands", () => {
       argHint: "",
     });
 
+    expect(
+      engineering.commands.find((command) => command.name === "deploy-status")?.optionSchema,
+    ).toEqual({
+      options: [
+        {
+          name: "environment",
+          description: "Deploy environment",
+          type: "string",
+          required: false,
+          choices: [
+            { name: "Staging", value: "staging" },
+            { name: "Production", value: "production" },
+          ],
+        },
+      ],
+    });
+    expect(engineering.commands.at(-1)?.optionSchema).toBeNull();
+    expect(engineering.commands[0]?.optionSchema).toBeNull();
+
     const inThread = await get<SlashCommandList>(
       server,
       `/api/v1/rooms/${rooms.general}/slash_commands?threadId=${threads.generalActive}`,

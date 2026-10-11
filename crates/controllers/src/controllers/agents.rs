@@ -326,17 +326,19 @@ pub async fn register_command(c: &mut Ctx) -> Result {
         .and_then(Param::to_s)
         .as_deref()
         .and_then(campfire_db::account::cast_boolean);
+    let option_schema = field(c, "option_schema");
     let result = c
         .app()
         .db
         .write(move |tx| {
-            campfire_db::models::agent_slash_command::register(
+            campfire_db::models::agent_slash_command::register_with_schema(
                 tx,
                 identity.agent_id,
                 room,
                 &name,
                 description.as_deref(),
                 takes_arguments,
+                option_schema,
             )
         })
         .await

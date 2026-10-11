@@ -148,7 +148,7 @@ pub struct Context {
     pub huddles_configured: bool,
 }
 pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<CommandResult> {
-    dispatch_with_time_zone(tx, context, text, false)
+    dispatch_with_time_zone(tx, context, text, false, None)
 }
 /// Rails requests run after ApplicationController's user-zone callback. Direct
 /// service calls keep Time.current's ambient UTC zone for duration shortcuts.
@@ -157,13 +157,22 @@ pub fn dispatch_in_user_time_zone(
     context: &Context,
     text: &str,
 ) -> Result<CommandResult> {
-    dispatch_with_time_zone(tx, context, text, true)
+    dispatch_with_time_zone(tx, context, text, true, None)
+}
+pub fn dispatch_with_options(
+    tx: &mut Tx<'_>,
+    context: &Context,
+    text: &str,
+    options: Option<&campfire_slash_schema::CommandValues>,
+) -> Result<CommandResult> {
+    dispatch_with_time_zone(tx, context, text, true, options)
 }
 fn dispatch_with_time_zone(
     tx: &mut Tx<'_>,
     context: &Context,
     text: &str,
     use_user_time_zone: bool,
+    options: Option<&campfire_slash_schema::CommandValues>,
 ) -> Result<CommandResult> {
     let Some(c) = command_pattern().captures(strip(text)) else {
         return Ok(CommandResult::error("Type / to see available commands."));
@@ -171,7 +180,9 @@ fn dispatch_with_time_zone(
     let name = c["name"].to_ascii_lowercase();
     let args = strip(c.name("args").map(|m| m.as_str()).unwrap_or(""));
     let Some(command) = lookup(&name) else {
-        if let Some(result) = crate::models::agent_slash_command::invoke(tx, context, &name, args)?
+        if let Some(result) = crate::models::agent_slash_command::invoke_with_options(
+            tx, context, &name, args, options,
+        )?
         {
             return Ok(result);
         };

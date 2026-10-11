@@ -462,6 +462,7 @@ dependencies = [
 name = "campfire_api_types"
 version = "0.1.0"
 dependencies = [
+ "campfire_slash_schema",
  "serde",
  "serde_json",
  "ts-rs",
@@ -618,6 +619,7 @@ dependencies = [
  "bnum",
  "campfire_db",
  "campfire_richtext",
+ "campfire_slash_schema",
  "campfire_storage",
  "caseless",
  "crc32fast",
@@ -886,6 +888,15 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "campfire_slash_schema"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "ts-rs",
 ]
 
 [[package]]
