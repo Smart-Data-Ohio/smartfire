@@ -1415,15 +1415,30 @@ async fn workspace_room_moves_before_a_room_counting_rooms_the_admin_is_not_in()
             .await
             .unwrap()
     };
-    // Never organized: the server's order is by name, with Designers among David's rooms.
+    // Never organized: the server's order is by name, with Designers among David's rooms. He
+    // drops All Talk before the first room of his after it, so Designers is counted ahead of it.
     let unorganized = group(None).await;
     assert!(unorganized.iter().all(|room| room.position.is_none()));
+    let visible = a
+        .db()
+        .read(|conn| campfire_db::WorkspaceCategory::visible_rooms(conn, DAVID))
+        .await
+        .unwrap()
+        .iter()
+        .map(|room| room.room_id)
+        .collect::<Vec<_>>();
     let mut expected = unorganized
         .iter()
         .map(|room| room.room_id)
         .filter(|id| *id != ALL_TALK)
         .collect::<Vec<_>>();
-    let anchor = expected.iter().position(|id| *id == DESIGNERS).unwrap();
+    let hidden = expected.iter().position(|id| *id == DESIGNERS).unwrap();
+    let anchor = expected[hidden..]
+        .iter()
+        .position(|id| visible.contains(id))
+        .map(|offset| hidden + offset)
+        .expect("one of David's rooms sorts after Designers");
+    let before_room_id = expected[anchor];
     expected.insert(anchor, ALL_TALK);
     let mut david = a.sign_in(DAVID).await;
     let path = format!("/api/v1/rooms/{ALL_TALK}/workspace_category");
@@ -1431,7 +1446,7 @@ async fn workspace_room_moves_before_a_room_counting_rooms_the_admin_is_not_in()
         &mut david,
         Method::PUT,
         &path,
-        json!({"workspaceCategoryId": null, "position": 0, "beforeRoomId": DESIGNERS}),
+        json!({"workspaceCategoryId": null, "position": 0, "beforeRoomId": before_room_id}),
     )
     .await);
     let placed = group(None).await;
@@ -1501,7 +1516,8 @@ async fn workspace_room_moves_before_a_room_counting_rooms_the_admin_is_not_in()
     // The room it goes before must be in the target group: not another category's, not the
     // room itself, not one that doesn't exist. Nothing moves.
     let before = group(None).await;
-    for before_room_id in [ALL_PETS, ALL_TALK, -1] {
+    let mut refusals = Vec::new();
+    for before_room_id in [ALL_PETS, ALL_TALK, -1, DESIGNERS] {
         let reply = send(
             &mut david,
             Method::PUT,
@@ -1510,6 +1526,10 @@ async fn workspace_room_moves_before_a_room_counting_rooms_the_admin_is_not_in()
         )
         .await;
         assert_eq!(fields(&reply).len(), 1, "{}", reply.text());
+        refusals.push(reply.text());
     }
     assert_eq!(group(None).await, before);
+    // Designers is in the target group, but David isn't in it: refused word for word as a room
+    // that doesn't exist, so the answer doesn't tell him it is there.
+    assert_eq!(refusals[3], refusals[2]);
 }

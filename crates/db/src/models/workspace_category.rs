@@ -167,16 +167,19 @@ impl WorkspaceCategory {
 
     /// Like [`Self::move_room`], placed just before `before_room_id`, which must already be in the
     /// target group. Counting rooms the administrator can't see is then the server's business.
+    /// An anchor the caller may not name (`anchor_visible` false) is refused exactly as one that
+    /// doesn't exist, so the answer says nothing about rooms they can't see.
     pub fn move_room_before(
         tx: &mut Tx<'_>,
         room_id: i64,
         category_id: Option<i64>,
         before_room_id: i64,
+        anchor_visible: bool,
     ) -> Result<()> {
         Self::place_room(tx, room_id, category_id, |target| {
             target
                 .iter()
-                .position(|id| *id == before_room_id)
+                .position(|id| anchor_visible && *id == before_room_id)
                 .ok_or_else(|| {
                     let mut errors = Errors::default();
                     errors.add("before_room_id", "must be a room in the target category");

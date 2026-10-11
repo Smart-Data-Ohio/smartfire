@@ -437,7 +437,7 @@ fn workspace_rooms_move_before_a_room_in_the_target_group() {
         .map(|(id, _)| *id)
         .collect::<Vec<_>>();
     let anchor = *unorganized.iter().rfind(|room| **room != id("hq")).unwrap();
-    t.write(move |tx| WorkspaceCategory::move_room_before(tx, id("hq"), None, anchor));
+    t.write(move |tx| WorkspaceCategory::move_room_before(tx, id("hq"), None, anchor, true));
     let mut expected = unorganized
         .iter()
         .copied()
@@ -455,16 +455,34 @@ fn workspace_rooms_move_before_a_room_in_the_target_group() {
     );
     t.write(move |tx| WorkspaceCategory::move_room(tx, id("pets"), Some(category.id), 0));
     t.write(move |tx| {
-        WorkspaceCategory::move_room_before(tx, id("designers"), Some(category.id), id("pets"))
+        WorkspaceCategory::move_room_before(
+            tx,
+            id("designers"),
+            Some(category.id),
+            id("pets"),
+            true,
+        )
     });
     assert_eq!(
         placements(&t, Some(category.id)),
         [(id("designers"), Some(0)), (id("pets"), Some(1))]
     );
-    for before in [id("hq"), id("designers"), -1] {
+    // Another group's room, the room itself, none at all, or one the caller may not name.
+    for (before, visible) in [
+        (id("hq"), true),
+        (id("designers"), true),
+        (-1, true),
+        (id("pets"), false),
+    ] {
         assert!(matches!(
             t.try_write(move |tx| {
-                WorkspaceCategory::move_room_before(tx, id("designers"), Some(category.id), before)
+                WorkspaceCategory::move_room_before(
+                    tx,
+                    id("designers"),
+                    Some(category.id),
+                    before,
+                    visible,
+                )
             }),
             Err(Error::RecordInvalid(errors)) if !errors.on("before_room_id").is_empty()
         ));
