@@ -95,21 +95,26 @@ export function keepDraft(key: string, draft: string): void {
 }
 
 /**
- * Copies `text`, saying so. Where there is no clipboard (an origin that isn't secure) or it
- * refuses, `shown` (the element showing the text) is selected for a manual copy instead.
+ * Copies `text`, saying so, and answers whether it was copied. Where there is no clipboard (an
+ * origin that isn't secure) or it refuses, `shown` (the element showing the text) is selected for
+ * a manual copy instead.
  */
-export function copy(text: string, what: string, shown?: HTMLElement | null): void {
+export function copy(text: string, what: string, shown?: HTMLElement | null): Promise<boolean> {
   const manual = () => {
     selectContents(shown);
     toast({ title: "Couldn't copy — select it manually", tone: "danger" });
+
+    return false;
   };
 
   try {
-    void navigator.clipboard
-      .writeText(text)
-      .then(() => toast({ title: `${what} copied`, tone: "success" }), manual);
+    return navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `${what} copied`, tone: "success" });
+
+      return true;
+    }, manual);
   } catch {
-    manual();
+    return Promise.resolve(manual());
   }
 }
 
@@ -131,6 +136,7 @@ function selectContents(element: HTMLElement | null | undefined): void {
 export function Confirm({
   ask,
   onCancel,
+  returnFocus = null,
 }: {
   readonly ask: {
     readonly title: string;
@@ -140,6 +146,11 @@ export function Confirm({
     readonly run: () => void;
   } | null;
   readonly onCancel: () => void;
+  /**
+   * Where focus goes on close, before the opener: for an action that disables or removes the
+   * button that asked (a row's Revoke), so focus doesn't drop to the page. `null` leaves it out.
+   */
+  readonly returnFocus?: (() => HTMLElement | null) | null;
 }) {
   return (
     <Dialog
@@ -147,6 +158,7 @@ export function Confirm({
       onOpenChange={(open) => {
         if (!open) onCancel();
       }}
+      {...(returnFocus === null ? {} : { returnFocus, returnFocusFirst: true })}
       role="alertdialog"
       size="sm"
       title={ask?.title ?? ""}
@@ -245,10 +257,30 @@ export function CardTable({
   );
 }
 
-/** A row of a CardTable: a card on phones. */
-export function CardRow({ children }: { readonly children: ReactNode }) {
-  // biome-ignore lint/a11y/noRedundantRoles: as CardTable's
-  return <tr role="row">{children}</tr>;
+/**
+ * A row of a CardTable: a card on phones. `row` marks it for `useRowFocus` (its controls then carry
+ * `data-row-control`); `state` is styling's hook (`data-state`).
+ */
+export function CardRow({
+  row,
+  state,
+  children,
+}: {
+  readonly row?: number;
+  readonly state?: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <tr
+      // biome-ignore lint/a11y/noRedundantRoles: as CardTable's
+      role="row"
+      data-row={row}
+      data-state={state}
+      tabIndex={row === undefined ? undefined : -1}
+    >
+      {children}
+    </tr>
+  );
 }
 
 /**

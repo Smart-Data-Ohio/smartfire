@@ -5,8 +5,9 @@
  *
  * In the mock the join code is `MOCK_JOIN_CODE` (any other code is wrong). The invite
  * `MOCK_INVITE` has room for everyone, `MOCK_LAST_INVITE` for one more person, and the
- * `MOCK_DEAD_INVITES` are expired, used up and revoked; any other token is unknown. An address
- * that already has an account (the sign-in module's two) goes to sign-in.
+ * `MOCK_DEAD_INVITES` are expired, used up and revoked; an invite made on the invites page works
+ * until it runs out or is revoked, and any other token is unknown. An address that already has an
+ * account (the sign-in module's two) goes to sign-in.
  */
 import type { AuthResponse } from "../../src/gen/AuthResponse.ts";
 import type { InviteRefusal } from "../../src/gen/InviteRefusal.ts";
@@ -15,6 +16,7 @@ import type { MockResponse } from "../http.ts";
 import { field, isRecord, type Json, stringField } from "../json.ts";
 import type { AdminModule } from "./admin.ts";
 import { type Route, route, type S2Context } from "./context.ts";
+import type { InvitesModule } from "./invites.ts";
 import { MOCK_PLAIN_EMAIL, MOCK_TWO_FACTOR_EMAIL, SIGNED_IN_LOCATION } from "./sign-in.ts";
 
 export const MOCK_JOIN_CODE = "mock-join-code";
@@ -74,6 +76,7 @@ function fileName(value: Json | undefined): string | null {
 export function createJoin(
   ctx: S2Context,
   admin: Pick<AdminModule, "branding" | "description">,
+  invites: Pick<InvitesModule, "refusal" | "use">,
 ): JoinModule {
   let state: State | null = null;
   let stateWorld: ReturnType<S2Context["world"]> | null = null;
@@ -155,6 +158,8 @@ export function createJoin(
 
   const INVITE_PATH = /^\/invite\/([^/]+)$/;
 
+  const tokenOf = (path: string) => decodeURIComponent(INVITE_PATH.exec(path)?.[1] ?? "");
+
   return {
     joined: () => current().joined,
     routes: [
@@ -180,8 +185,22 @@ export function createJoin(
           });
         }),
       ]),
-      route("GET", INVITE_PATH, () => dead("unknown")),
-      route("POST", INVITE_PATH, () => dead("unknown")),
+      // An invite made on the invites page, else an unknown token.
+      route("GET", INVITE_PATH, ({ path }) => {
+        const refusal = invites.refusal(tokenOf(path));
+
+        if (refusal === undefined) return dead("unknown");
+
+        return refusal === null ? answer(200, page()) : dead(refusal);
+      }),
+      route("POST", INVITE_PATH, ({ path, body }) => {
+        const token = tokenOf(path);
+        const refusal = invites.refusal(token);
+
+        if (refusal === undefined) return dead("unknown");
+
+        return refusal === null ? signUp(body, () => invites.use(token)) : dead(refusal);
+      }),
     ],
   };
 }

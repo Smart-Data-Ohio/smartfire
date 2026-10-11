@@ -443,6 +443,128 @@
     flex-basis: 100%;
   }
 
+  /* Invites: the new-invite choices side by side, the link shown once, and each invite's state
+     as a mark and a word; a dead invite's row steps back. */
+  .admin-invite-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 220px));
+    gap: var(--space-3);
+  }
+
+  .admin-invites {
+    gap: var(--space-3);
+  }
+
+  .admin-invite-filter {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .admin-invite-link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .admin-invite-link-box {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: 0 0 0 1px var(--border);
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .admin-invite-link-box[data-copied] {
+    box-shadow: 0 0 0 1px var(--success);
+  }
+
+  /* The whole link shows, wrapped: nothing of it hides off to the side. */
+  .admin-invite-link-url {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    overflow-wrap: anywhere;
+    user-select: all;
+  }
+
+  .admin-invite-state-cell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-0-5);
+  }
+
+  .admin-invite-state {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    gap: var(--space-1);
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-pill);
+    font-weight: var(--weight-medium);
+  }
+
+  .admin-invite-state[data-state="active"] {
+    background: color-mix(in oklab, var(--success) 14%, transparent);
+    color: var(--success-text);
+  }
+
+  .admin-invite-state[data-state="expired"] {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+  }
+
+  .admin-invite-state[data-state="exhausted"] {
+    background: color-mix(in oklab, var(--warning) 16%, transparent);
+    color: var(--warning-text);
+  }
+
+  .admin-invite-state[data-state="revoked"] {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  /* The invites fit the settings column: cells wrap rather than scroll. */
+  .admin-invites .admin-audit-table td {
+    white-space: normal;
+  }
+
+  .admin-invites .admin-audit-table td:first-child {
+    min-width: 9ch;
+  }
+
+  .admin-invites .admin-audit-table td[data-label="Uses"] {
+    white-space: nowrap;
+  }
+
+  .admin-invites .admin-audit-table thead th:last-child {
+    text-align: right;
+  }
+
+  .admin-audit-table tr[data-state]:not([data-state="active"]) td {
+    color: var(--text-muted);
+  }
+
+  .admin-audit-table td.admin-invite-actions {
+    padding-block: var(--space-1);
+    text-align: right;
+  }
+
+  .admin-invite-revoke {
+    --button-fg: var(--danger-text);
+  }
+
+  .admin-invite-shared {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    align-self: flex-start;
+  }
+
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
   @media (width < 720px) {
@@ -592,6 +714,39 @@
 
     .admin-audit-table[data-cards] .admin-audit-changes {
       min-width: 0;
+    }
+
+    .admin-invite-choices {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-invite-link-box {
+      flex-direction: column;
+      align-items: stretch;
+      padding: var(--space-3);
+    }
+
+    .admin-invite-link-box .button {
+      --button-height: var(--touch-target);
+    }
+
+    /* A card's Revoke sits at its foot, full size for a thumb; a dead invite's empty cell goes. */
+    .admin-audit-table[data-cards] td.admin-invite-actions {
+      justify-content: flex-end;
+      margin-top: var(--space-1);
+      padding: 0;
+    }
+
+    .admin-audit-table[data-cards] td.admin-invite-actions::before {
+      content: none;
+    }
+
+    .admin-audit-table[data-cards] td.admin-invite-actions:empty {
+      display: none;
+    }
+
+    .admin-invite-revoke {
+      --button-height: var(--touch-target);
     }
   }
 }
