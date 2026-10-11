@@ -45,7 +45,7 @@ export class Navigation extends Context.Service<
   });
 }
 
-/** One `/api/v1` request. Bodies and replies are JSON. */
+/** One `/api/v1` request. Bodies (but one multipart form) and replies are JSON. */
 export interface ApiRequest {
   readonly method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   /** Below the API base, e.g. `/rooms/12/messages`; from the origin's root with `root`. */
@@ -57,6 +57,11 @@ export interface ApiRequest {
   readonly root?: true;
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: Schema.Json;
+  /**
+   * A `multipart/form-data` body instead of `body`, for the one signed-out form that carries a
+   * file (first run's avatar). Signed-in uploads go through direct uploads.
+   */
+  readonly form?: FormData;
   /** Credential refusals are decoded next actions; token refresh uses the public auth boot. */
   readonly auth?: true;
 }
@@ -200,6 +205,8 @@ function toHttpRequest(
 
   if (request.body !== undefined) {
     built = HttpClientRequest.bodyJsonUnsafe(built, request.body);
+  } else if (request.form !== undefined) {
+    built = HttpClientRequest.bodyFormData(built, request.form);
   }
 
   return built;

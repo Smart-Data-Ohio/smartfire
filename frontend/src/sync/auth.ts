@@ -10,10 +10,13 @@ import {
   googleSignIn,
   passwordSignIn,
   readChallenge,
+  readFirstRun,
   signedOutBoot,
   submitChallenge,
+  submitFirstRun,
 } from "../api/auth-endpoints.ts";
-import { type AuthResponse, SignedOutBoot } from "../api/schema/auth.ts";
+import { type AuthResponse, type FirstRunState, SignedOutBoot } from "../api/schema/auth.ts";
+import type { FirstRunSubmission } from "../gen/FirstRunSubmission.ts";
 import { runAction } from "./runtime.ts";
 
 /** The public boot: the workspace's branding, the sign-in methods and the help line. */
@@ -21,6 +24,9 @@ export type SignedOutBootData = typeof SignedOutBoot.Type;
 
 /** A sign-in operation's next action. */
 export type AuthNext = typeof AuthResponse.Type;
+
+/** Whether first run is still open. */
+export type FirstRunOpen = typeof FirstRunState.Type;
 
 const decodeInline = Schema.decodeUnknownOption(Schema.fromJsonString(SignedOutBoot));
 
@@ -50,4 +56,9 @@ export const auth = {
   verify: (code: string, rememberDevice: boolean): Promise<AuthNext> =>
     runAction(submitChallenge({ code, rememberDevice })),
   transfer: (id: string): Promise<AuthNext> => runAction(consumeTransfer(id)),
+  /** Whether the workspace can still be set up. */
+  firstRunState: (): Promise<FirstRunOpen> => runAction(readFirstRun()),
+  /** Sets up the workspace and its first administrator, signed in as them. */
+  firstRun: (submission: FirstRunSubmission, avatar: File | null): Promise<AuthNext> =>
+    runAction(submitFirstRun(submission, avatar)),
 };

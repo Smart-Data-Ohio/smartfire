@@ -27,6 +27,43 @@ pub struct ChallengeSubmission {
     pub remember_device: bool,
 }
 
+/// `POST /api/v1/first_run`: the first administrator, as the retained `/first_run` form's `user`
+/// fields. Sent as the JSON body, or with an avatar as `multipart/form-data`: this JSON in a
+/// `submission` field and the picture in an `avatar` file field. Answers an [`AuthResponse`]:
+/// `signedIn` when set up, `navigate` home once the workspace already exists.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FirstRunSubmission {
+    /// Required: the retained form fails without one (after committing the account).
+    pub name: String,
+    /// Omitted (or null) leaves the administrator without an email address, as a retained
+    /// submission without the field does; an empty string is kept as one.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email_address: Option<String>,
+    /// Omitted, null or empty leaves the administrator without a password, as the retained
+    /// form does.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+}
+
+/// `GET /api/v1/first_run`: whether the workspace can still be set up.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum FirstRunState {
+    /// No workspace yet: the form is open, and writes carry this token.
+    Pending { csrf_token: String },
+    /// Already set up: where the retained page redirects (home).
+    Navigate { location: String },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -204,6 +241,45 @@ mod tests {
                 push_subscription_endpoint: None,
             },
             json!({"pushSubscriptionEndpoint":null}),
+        );
+        assert_wire(
+            &FirstRunSubmission {
+                name: "Ada".into(),
+                email_address: Some("ada@example.com".into()),
+                password: Some(String::new()),
+            },
+            json!({"name":"Ada","emailAddress":"ada@example.com","password":""}),
+        );
+        assert_wire(
+            &FirstRunSubmission {
+                name: "Ada".into(),
+                email_address: None,
+                password: None,
+            },
+            json!({"name":"Ada"}),
+        );
+        assert_eq!(
+            serde_json::from_value::<FirstRunSubmission>(
+                json!({"name":"Ada","emailAddress":null,"password":null})
+            )
+            .unwrap(),
+            FirstRunSubmission {
+                name: "Ada".into(),
+                email_address: None,
+                password: None,
+            }
+        );
+        assert_wire(
+            &FirstRunState::Pending {
+                csrf_token: "masked".into(),
+            },
+            json!({"kind":"pending","csrfToken":"masked"}),
+        );
+        assert_wire(
+            &FirstRunState::Navigate {
+                location: "/".into(),
+            },
+            json!({"kind":"navigate","location":"/"}),
         );
         assert_wire(&GoogleSignInStart {}, json!({}));
         assert_wire(&TransferSignIn {}, json!({}));

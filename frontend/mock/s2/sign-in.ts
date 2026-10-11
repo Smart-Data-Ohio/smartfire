@@ -9,11 +9,16 @@
  * `123456` and the backup code `MOCK_BACKUP_CODE`. An email address or code starting `limit` is
  * rate limited. The sign-in link `mock-transfer-token` signs in, `mock-transfer-two-factor` goes
  * on to the challenge, and any other link is invalid.
+ *
+ * First run (slice 73) is open while `firstRunPending` is set; setting up closes it. A name
+ * starting `fail` is refused as an unreadable submission, so the page's refusal shows, and
+ * `firstRunUnavailable` fails the next check as an unreachable server would.
  */
 import type { AuthResponse } from "../../src/gen/AuthResponse.ts";
+import type { FirstRunState } from "../../src/gen/FirstRunState.ts";
 import type { SignedOutBoot } from "../../src/gen/SignedOutBoot.ts";
 import type { MockResponse } from "../http.ts";
-import { stringField } from "../json.ts";
+import { type Json, parseJson, stringField } from "../json.ts";
 import { MOCK_TOTP } from "./account.ts";
 import type { AdminModule } from "./admin.ts";
 import { type Route, route, type S2Context } from "./context.ts";
@@ -46,6 +51,9 @@ export const CODE_RATE_ALERT = "Too many attempts. Try again in a few minutes.";
 
 export const INVALID_TRANSFER = "This sign-in link is invalid or expired.";
 
+/** `auth::decode`'s refusal of a submission it can't read. */
+export const UNREADABLE_SUBMISSION = "The request body isn't valid.";
+
 const GOOGLE_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth?client_id=mock";
 
 interface State {
@@ -53,6 +61,10 @@ interface State {
   pending: boolean;
   google: boolean;
   firstRunPending: boolean;
+  /** The last first-run submission as it arrived, for tests. */
+  firstRun: Json;
+  /** The next first-run check answers 503, as a server that can't be reached would. */
+  firstRunUnavailable: boolean;
 }
 
 /** The sign-in module. */
@@ -63,7 +75,10 @@ export interface SignInModule {
     readonly google: boolean | null;
     readonly firstRunPending: boolean | null;
     readonly pending: boolean | null;
+    readonly firstRunUnavailable: boolean | null;
   }): void;
+  /** The last first-run submission as it arrived (JSON, or the multipart form's fields). */
+  firstRun(): Json;
 }
 
 const answer = (status: number, json: AuthResponse): MockResponse => ({ status, json });
@@ -80,6 +95,29 @@ const SIGNED_IN: AuthResponse = { kind: "signedIn", location: SIGNED_IN_LOCATION
 
 const BACK_TO_SIGN_IN: AuthResponse = { kind: "navigate", location: "/session/new" };
 
+/** Where first run sends a visitor once the workspace exists: home, as `prevent_repeats` does. */
+const HOME: AuthResponse = { kind: "navigate", location: "/" };
+
+/**
+ * The first-run submission, from its JSON body or (with an avatar) from the multipart form's
+ * `submission` field; `null` when it isn't one.
+ */
+function firstRunSubmission(body: Json | undefined): { readonly name: string } | null {
+  const multipart = stringField(body, "submission");
+  const submission = multipart === null ? body : parseJson(multipart);
+  const name = stringField(submission, "name");
+
+  if (
+    name === null ||
+    stringField(submission, "emailAddress") === null ||
+    stringField(submission, "password") === null
+  ) {
+    return null;
+  }
+
+  return { name };
+}
+
 /** Creates the sign-in module. */
 export function createSignIn(
   ctx: S2Context,
@@ -93,7 +131,13 @@ export function createSignIn(
     const world = ctx.world();
 
     if (state === null || stateWorld !== world) {
-      state = { pending: false, google: false, firstRunPending: false };
+      state = {
+        pending: false,
+        google: false,
+        firstRunPending: false,
+        firstRun: null,
+        firstRunUnavailable: false,
+      };
       stateWorld = world;
     }
 
@@ -124,12 +168,14 @@ export function createSignIn(
   };
 
   return {
+    firstRun: () => current().firstRun,
     configure(change) {
       const held = current();
 
       held.google = change.google ?? held.google;
       held.firstRunPending = change.firstRunPending ?? held.firstRunPending;
       held.pending = change.pending ?? held.pending;
+      held.firstRunUnavailable = change.firstRunUnavailable ?? held.firstRunUnavailable;
     },
     routes: [
       route("GET", /^\/session\/boot$/, () => ({ status: 200, json: boot() })),
@@ -184,6 +230,40 @@ export function createSignIn(
         return answer(200, CHALLENGE);
       }),
       route("PUT", /^\/session\/transfers\/[^/]+$/, () => refusal(400, "base", INVALID_TRANSFER)),
+      route("GET", /^\/first_run$/, () => {
+        const held = current();
+
+        if (held.firstRunUnavailable) {
+          held.firstRunUnavailable = false;
+
+          return { status: 503, json: { error: { message: "Service Unavailable" } } };
+        }
+
+        const state: FirstRunState = held.firstRunPending
+          ? { kind: "pending", csrfToken: csrfToken() }
+          : { kind: "navigate", location: "/" };
+
+        return { status: 200, json: state };
+      }),
+      route("POST", /^\/first_run$/, ({ body }) => {
+        const held = current();
+
+        if (!held.firstRunPending) return answer(200, HOME);
+
+        held.firstRun = body ?? null;
+
+        const submission = firstRunSubmission(body);
+
+        if (submission === null || submission.name.startsWith("fail")) {
+          return refusal(422, "base", UNREADABLE_SUBMISSION);
+        }
+
+        held.firstRunPending = false;
+
+        // The real server answers home, which takes a new administrator to two-step setup; the
+        // mock has neither, so it answers the app it always serves signed in.
+        return answer(200, SIGNED_IN);
+      }),
     ],
   };
 }

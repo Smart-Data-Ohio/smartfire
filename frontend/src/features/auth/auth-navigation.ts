@@ -5,7 +5,7 @@
  */
 
 /** A signed-out page's route, under the router's `/app/` base. */
-export type SignedOutPage = "/session/new" | "/two_factor/challenge";
+export type SignedOutPage = "/session/new" | "/two_factor/challenge" | "/first_run";
 
 /** The SPA page for each retained auth page the server can send a visitor to. */
 const SPA_AUTH_PAGES = new Map<string, SignedOutPage>([
@@ -13,6 +13,8 @@ const SPA_AUTH_PAGES = new Map<string, SignedOutPage>([
   ["/app/session/new", "/session/new"],
   ["/two_factor_challenge", "/two_factor/challenge"],
   ["/app/two_factor/challenge", "/two_factor/challenge"],
+  ["/first_run", "/first_run"],
+  ["/app/first_run", "/first_run"],
 ]);
 
 /** The SPA page for a server-named location, or `null` when it is a full page load. */
@@ -35,6 +37,3 @@ export const pageExit = {
     window.location.replace(url);
   },
 };
-
-/** The retained first-run page, which the sign-in page hands a fresh install to. */
-export const FIRST_RUN_PATH = "/first_run";

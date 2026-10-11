@@ -111,8 +111,8 @@ const shellRoute = createRoute({
 /**
  * The signed-out pages, outside the shell (no boot, no socket), each in its own chunk: the server
  * renders their URLs for a visitor without a session (crates/spa/src/signed_out.rs).
- * `/session/new` and the other retained auth URLs still serve the retained pages; only these
- * `/app/` paths draw the SPA ones.
+ * `/session/new`, `/first_run` and the other retained auth URLs still serve the retained pages;
+ * only these `/app/` paths draw the SPA ones.
  */
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -127,6 +127,14 @@ const challengeRoute = createRoute({
   path: "two_factor/challenge",
   ...chunked(() =>
     import("./features/auth/challenge.tsx").then((module) => ({ default: module.ChallengePage })),
+  ),
+});
+
+const firstRunRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "first_run",
+  ...chunked(() =>
+    import("./features/auth/first-run.tsx").then((module) => ({ default: module.FirstRunPage })),
   ),
 });
 
@@ -648,6 +656,7 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   challengeRoute,
   transferRoute,
+  firstRunRoute,
   shellRoute.addChildren([
     homeRoute,
     activityRoute,

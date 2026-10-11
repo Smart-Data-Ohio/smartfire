@@ -1,5 +1,5 @@
 /**
- * Test support for the signed-out pages: the three routes in a memory router under `/app/`, as
+ * Test support for the signed-out pages: the four routes in a memory router under `/app/`, as
  * src/router.tsx mounts them, and the mock's sign-in controls.
  */
 import {
@@ -13,6 +13,7 @@ import {
 import { act, render } from "@testing-library/react";
 import type { MockNetwork } from "../../test/mock-network.ts";
 import { ChallengePage } from "./challenge.tsx";
+import { FirstRunPage } from "./first-run.tsx";
 import { SignInPage } from "./sign-in.tsx";
 import { TransferRoute } from "./transfer.tsx";
 
@@ -37,6 +38,7 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
       path: "session/transfers/$transferId",
       component: TransferRoute,
     }),
+    createRoute({ getParentRoute: () => root, path: "first_run", component: FirstRunPage }),
   ];
 
   const router = createRouter({
@@ -56,6 +58,7 @@ export interface SignInChange {
   readonly google?: boolean;
   readonly firstRunPending?: boolean;
   readonly pending?: boolean;
+  readonly firstRunUnavailable?: boolean;
 }
 
 /** Starts the mock over, then applies `change` to its sign-in state. */
