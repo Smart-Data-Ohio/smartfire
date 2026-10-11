@@ -540,7 +540,25 @@ export function seedS2(world: World, now: number, random: Random): void {
   world.dndAllowed.add(USER_IDS.maya);
 
   world.agentCommands.set(ROOM_IDS.engineering, [
-    { name: "deploy-status", description: "Summarize the latest deploy", agentName: "Ember" },
+    {
+      name: "deploy-status",
+      description: "Summarize the latest deploy",
+      agentName: "Ember",
+      optionSchema: {
+        options: [
+          {
+            name: "environment",
+            description: "Deploy environment",
+            type: "string",
+            required: false,
+            choices: [
+              { name: "Staging", value: "staging" },
+              { name: "Production", value: "production" },
+            ],
+          },
+        ],
+      },
+    },
     { name: "triage", description: null, agentName: "Ember" },
   ]);
 }

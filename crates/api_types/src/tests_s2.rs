@@ -434,6 +434,7 @@ fn slash_commands_round_trip() {
                 arg_hint: "<when> <text>".into(),
                 takes_arguments: true,
                 agent_name: None,
+                option_schema: None,
             }],
         },
         json!({"commands": [{
@@ -441,12 +442,13 @@ fn slash_commands_round_trip() {
             "description": "Post and remind yourself about it later",
             "argHint": "<when> <text>",
             "takesArguments": true,
-            "agentName": null,
+            "agentName": null, "optionSchema": null,
         }]}),
     );
     assert_wire(
         &RunSlashCommand {
             text: "/shrug fine".into(),
+            options: None,
             thread_id: None,
         },
         json!({"text": "/shrug fine", "threadId": null}),

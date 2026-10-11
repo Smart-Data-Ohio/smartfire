@@ -78,3 +78,52 @@ Registration and invocation both require the agent to hold
 `read_messages` polling gate like every other event type. Names are
 lowercase, unique per room across agents, and cannot shadow built-ins.
 See [AI agents](agents.md#slash-commands).
+
+
+## Typed local agent commands
+
+The agent's existing `POST /rooms/:room_id/agents/slash_commands` and MCP
+`register_slash_command` accept `option_schema`. Omit it to keep the current
+schema, or send `null` to restore free-text arguments. Registration retains the
+agent-token, room membership, and `post_messages` checks.
+
+A schema contains either `options` or `subcommands`. Each subcommand has a
+`name`, `description`, and `options` list. Nesting subcommands is unsupported.
+An option has a lowercase `name`, a `description`, a `type`, and a `required`
+boolean. Types are `string`, `integer`, `number`, `boolean`, `user`, and `room`.
+Required options precede optional options. Each list has at most 25 entries
+with unique names. Names use 1–32 characters from `[a-z0-9_-]`, and descriptions
+use 1–100 characters.
+
+String and numeric options can have up to 25 `choices`, each with a display
+`name` and a matching typed `value`. Numeric options accept `min` and `max`.
+String options accept `min_length` and `max_length`, counted in Unicode
+characters. Other types reject these fields. Registration stores canonical
+JSON and returns field-addressed errors under `errors.option_schema...`.
+
+The composer listing includes the parsed `optionSchema` for each command,
+with `null` for built-ins and free-text commands. Typed entry UI belongs to
+slice 66. The backend accepts this invocation now:
+
+```json
+{
+  "text": "/deploy staging",
+  "threadId": null,
+  "options": {
+    "subcommand": "run",
+    "values": { "target": "staging", "count": 2, "enabled": false }
+  }
+}
+```
+
+Use a null `subcommand` for an options-only schema. User and room values are
+numeric IDs. Users must be active in the workspace, and rooms must be alive
+and visible through the invoker's membership. Invalid values return the usual
+422 `Validation` envelope with `options.values.<name>` fields. Invisible
+references return the usual 404 `NotFound` envelope. Rejected invocations
+create no events or webhook jobs.
+
+Both polling and webhook payloads retain `command.arguments` and add
+`command.options`, containing the validated subcommand and values. Commands
+with a NULL schema retain their existing payload and free-text behavior.
+The schema is local registration data and has no app manifest or catalog.

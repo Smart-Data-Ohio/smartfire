@@ -161,6 +161,60 @@ async fn agent_commands_invoke_through_the_room_and_persist_the_rails_event() {
     assert_eq!(event, oracle["event"]);
 }
 #[tokio::test]
+async fn agent_commands_with_unreadable_option_schema_return_validation() {
+    let app = app().await.without_job_runner().await;
+    app.db()
+        .write(|tx| {
+            let agent_id = tx.conn().query_row(
+                "SELECT id FROM agents WHERE user_id=?",
+                [BENDER],
+                |r| r.get(0),
+            )?;
+            let command = campfire_db::AgentSlashCommand::create(
+                tx,
+                campfire_db::NewAgentSlashCommand {
+                    agent_id,
+                    room_id: ALL_TALK,
+                    name: "broken".into(),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "UPDATE agent_slash_commands SET option_schema='{' WHERE id=?",
+                [command.id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let response = slash(&mut app.david(), ALL_TALK, "/broken").await;
+    assert_eq!(
+        response.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        response.text()
+    );
+    assert_eq!(
+        response.json(),
+        serde_json::json!({
+            "error": "Invalid slash command options",
+            "errors": {"options": ["command option schema is unavailable"]}
+        })
+    );
+    let count: i64 = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+}
+#[tokio::test]
 async fn slash_writes_require_csrf_and_scope_threads() {
     let app = app().await;
     let r = app
