@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { SudoMethod } from "../../gen/SudoMethod.ts";
 import type { SudoRetry } from "../../gen/SudoRetry.ts";
 import { mutations } from "../../store/store.ts";
-import { actions, type SudoHere, type SudoStatus } from "../../sync/runtime.ts";
+import { actions, type GoogleStart, type SudoHere, type SudoStatus } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
 import { pageExit } from "./auth-navigation.ts";
@@ -265,6 +265,29 @@ describe("/app/sudo/new", () => {
     expect(assign).not.toHaveBeenCalled();
     expect(pathname()).toBe("/");
     expect(toastTitles()).toEqual([]);
+  });
+
+  it("left while Google is starting, it doesn't leave for Google", async () => {
+    await sudo(true, connectRetry, ["google"]);
+
+    let answer: (start: GoogleStart) => void = () => undefined;
+
+    vi.spyOn(actions.confirmation, "googleHere").mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+
+    const pathname = await open();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm with Google" }));
+    await act(() => router.navigate({ to: "/" }));
+    expect(await screen.findByText("Page /")).toBeTruthy();
+
+    await act(async () => answer({ kind: "navigate", location: "https://accounts.test/o" }));
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(pathname()).toBe("/");
   });
 
   it("left while the first read is on its way, the answer acts on nothing", async () => {

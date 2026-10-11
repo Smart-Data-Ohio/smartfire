@@ -5,6 +5,7 @@ import type { SudoSubmission } from "../../gen/SudoSubmission.ts";
 import {
   actions,
   afterConfirming,
+  type Submitted,
   type SudoHere,
   type SudoStatus,
   spaReturnPath,
@@ -153,16 +154,17 @@ export function SudoNew() {
     actions.confirmation.status().then((status) => settle(status, false), unreachable);
   }, [read, settle, unreachable]);
 
-  const submit = async (submission: SudoSubmission) => {
+  const submit = async (submission: SudoSubmission): Promise<Submitted> => {
     const reply = await actions.confirmation.confirmHere(submission);
 
-    if (reply.kind === "confirmed") {
-      goOn(reply.retry, true);
-    } else if (reply.kind === "signedOut") {
-      signIn(reply.location);
+    if (reply.kind !== "confirmed") {
+      // Signed out meanwhile, the form goes on to sign in (only while it still shows).
+      return reply;
     }
 
-    return reply.kind === "refused" ? reply.message : null;
+    goOn(reply.retry, true);
+
+    return { kind: "confirmed" };
   };
 
   if (shown.kind === "loading" || shown.kind === "leaving") {

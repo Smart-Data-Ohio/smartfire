@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SudoMethod } from "../../gen/SudoMethod.ts";
 import { mutations } from "../../store/store.ts";
@@ -83,6 +83,40 @@ async function cancelDialog() {
   await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
   await waitFor(() =>
     expect(screen.queryByRole("dialog", { name: "Confirm it's you" })).toBeNull(),
+  );
+}
+
+/** Answers `POST /api/v1/sudo` (a password or code) with `reply` instead of the mock. */
+function answerSudo(reply: { readonly status: number; readonly json: Record<string, string> }) {
+  const real = network.server.handle.bind(network.server);
+
+  vi.spyOn(network.server, "handle").mockImplementation((request) =>
+    request.method === "POST" && request.path === "/api/v1/sudo"
+      ? Promise.resolve(reply)
+      : real(request),
+  );
+}
+
+/** Waits `ms` of real time. */
+const pause = (ms: number) => act(() => new Promise((resolve) => setTimeout(resolve, ms)));
+
+/** Closes the Drive picker `PickerHost` shows. */
+let closePicker: () => void = () => undefined;
+
+/** The Drive picker, open until `closePicker`. */
+function PickerHost() {
+  const [open, setOpen] = useState(true);
+
+  closePicker = () => setOpen(false);
+
+  return (
+    <DrivePicker
+      roomId={1}
+      attachedFileIds={[]}
+      open={open}
+      onOpenChange={setOpen}
+      onAttach={() => undefined}
+    />
   );
 }
 
@@ -319,6 +353,89 @@ describe("confirming before a full-page action", () => {
     await waitFor(() => expect(left).toEqual(["GET http://campfire.test/session/new"]));
     expect(toastSnapshot()).toEqual([]);
     expect(screen.queryByRole("dialog", { name: "Confirm it's you" })).toBeNull();
+  });
+
+  it("a navigation that never happens lets the controls go again after a moment", async () => {
+    await callers[0].show();
+
+    const button = await callers[0].control();
+
+    await userEvent.click(button);
+    await waitFor(() => expect(left).toEqual([callers[0].target]));
+    await userEvent.click(button);
+    await pause(50);
+    expect(left).toEqual([callers[0].target]);
+
+    // Still here and showing (a "Leave site?" prompt kept it, or the answer was empty).
+    await pause(3100);
+    await userEvent.click(button);
+    await waitFor(() => expect(left).toEqual([callers[0].target, callers[0].target]));
+  });
+
+  it("while the page unloads, the controls stay quiet", async () => {
+    await callers[0].show();
+
+    const button = await callers[0].control();
+
+    await userEvent.click(button);
+    await waitFor(() => expect(left).toEqual([callers[0].target]));
+    window.dispatchEvent(new Event("pagehide"));
+    await pause(3100);
+    await userEvent.click(button);
+    await pause(50);
+    expect(left).toEqual([callers[0].target]);
+  });
+
+  it("leaving the screen lets the controls go again at once", async () => {
+    await callers[0].show();
+    await userEvent.click(await callers[0].control());
+    await waitFor(() => expect(left).toEqual([callers[0].target]));
+
+    // Another screen, then back: a new visit, nothing pending.
+    cleanup();
+    await callers[0].show();
+    await userEvent.click(await callers[0].control());
+    await waitFor(() => expect(left).toEqual([callers[0].target, callers[0].target]));
+  });
+
+  it("closing the Drive picker closes the dialog its check opened, and nothing goes", async () => {
+    await lapse();
+    vi.spyOn(actions.drive, "preparePicker").mockRejectedValue(new ActionError("NotFound", "404"));
+    vi.spyOn(actions.drive, "search").mockResolvedValue({ files: [] });
+    await show(<PickerHost />);
+    await userEvent.click(await screen.findByRole("button", { name: "Enable Drive previews" }));
+    await screen.findByRole("dialog", { name: "Confirm it's you" });
+
+    act(() => closePicker());
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Confirm it's you" })).toBeNull(),
+    );
+    expect(confirmationGate.snapshot()).toBeNull();
+    expect(left).toEqual([]);
+    expect(toastSnapshot()).toEqual([]);
+  });
+
+  it("signed out while the dialog asks, the password goes on to sign in", async () => {
+    await lapse();
+    await callers[0].show();
+    await userEvent.click(await callers[0].control());
+
+    const dialog = await screen.findByRole("dialog", { name: "Confirm it's you" });
+
+    // Another tab signed out: the server hands over to sign in, at 200.
+    answerSudo({
+      status: 200,
+      json: { kind: "navigate", location: "http://campfire.test/session/new" },
+    });
+    await userEvent.type(within(dialog).getByLabelText("Password"), PASSWORD);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Confirm password" }));
+
+    await waitFor(() => expect(left).toEqual(["GET http://campfire.test/session/new"]));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Confirm it's you" })).toBeNull(),
+    );
+    expect(confirmationGate.snapshot()).toBeNull();
   });
 
   it("goes only once for a double click", async () => {

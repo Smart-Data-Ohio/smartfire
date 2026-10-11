@@ -40,13 +40,15 @@ export const submitSudo = Effect.fn("submitSudo")(function* (
 /**
  * `POST /sudo/google`, for the SPA's `attempt` id: the continuation names it once Google confirms.
  * Without one (`/app/sudo/new`, which keeps no writes) the continuation asks only whether it did.
+ * The caller follows a `navigate` itself.
  */
 export const startSudoGoogle = Effect.fn("startSudoGoogle")(function* (attempt: string | null) {
   const client = yield* ApiClient;
   const body: SudoGoogleStart = attempt === null ? {} : { attempt };
 
+  // Every caller leaves for the answer's location itself (Google, or sign-in), if still there.
   return yield* client.execute(
-    { method: "POST", path: "/sudo/google", body, auth: true },
+    { method: "POST", path: "/sudo/google", body, auth: true, ownsNavigation: true },
     decodeSudo,
   );
 });

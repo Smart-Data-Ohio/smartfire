@@ -248,6 +248,23 @@ export function makeConfirmationGate({
 }: GateOptions = {}) {
   let waiting: readonly Waiting[] = [];
   let prompt: ConfirmationPrompt | null = null;
+  // Each move to another screen is a new visit: a screen left and come back to isn't the one a
+  // write or a full-page action was sent from.
+  let visits = 0;
+  let lastScreen = screen();
+
+  /** The visit showing now: the screen, and how many moves came before it. */
+  const visit = (): string => {
+    const now = screen();
+
+    if (now !== lastScreen) {
+      lastScreen = now;
+      visits += 1;
+    }
+
+    return `${visits} ${now}`;
+  };
+
   let confirmations = 0;
   // Writes a return that couldn't finish reported lost, for the one that does to say.
   let lost = 0;
@@ -302,7 +319,7 @@ export function makeConfirmationGate({
   const confirm = (required: SudoRequired, request: ApiRequest, ticket: ConfirmationTicket) => {
     // Its screen was left while it was on its way: nobody is there to want it, even when a
     // confirmation landed since.
-    if (ticket.screen !== screen()) {
+    if (ticket.screen !== visit()) {
       return leftScreen();
     }
 
@@ -330,7 +347,7 @@ export function makeConfirmationGate({
     });
 
   const layer = Layer.succeed(Reauthentication, {
-    ticket: Effect.sync(() => ({ confirmations, screen: screen() })),
+    ticket: Effect.sync(() => ({ confirmations, screen: visit() })),
     confirm,
   });
 
@@ -534,7 +551,7 @@ export function makeConfirmationGate({
      * dialog closes once none wait.
      */
     screenChanged(): void {
-      const here = screen();
+      const here = visit();
       const gone = waiting.filter((entry) => entry.screen !== here);
 
       if (gone.length === 0) {
@@ -546,13 +563,13 @@ export function makeConfirmationGate({
     },
 
     /**
-     * A full-page action from screen `from` needs a fresh confirmation the server says isn't
+     * A full-page action from visit `from` needs a fresh confirmation the server says isn't
      * there (`reauthentication`): waits on the dialog with the held writes. Succeeds once
      * confirmed here; fails if cancelled, `from` was or is left, or the person leaves for Google
      * (they do it again once back).
      */
     confirmNavigation: (reauthentication: SudoRequired["reauthentication"], from: string) =>
-      from === screen()
+      from === visit()
         ? wait(
             null,
             new SudoRequired({ message: "Confirm your password to continue", reauthentication }),
@@ -560,8 +577,19 @@ export function makeConfirmationGate({
           )
         : leftScreen(),
 
-    /** The screen showing now: what a full-page action captures before it asks the server. */
-    here: (): string => screen(),
+    /**
+     * The visit showing now: what an action that may leave the page notes before it asks the
+     * server, to act only if the person is still there.
+     */
+    here: (): string => visit(),
+
+    /**
+     * The person signed out (in another tab, say): every waiting write fails unsent, and the
+     * dialog closes, for the page to go on to sign in.
+     */
+    signedOut(): void {
+      settleAll(() => cancelled("You were signed out."));
+    },
 
     /** A fresh id for a Google attempt. */
     newAttempt: (): string => newId(),
@@ -791,7 +819,8 @@ export const takeHeld = Effect.fn("confirmation.takeHeld")(function* () {
 export type SudoHere =
   | { readonly kind: "confirmed"; readonly retry: SudoRetry | null }
   | { readonly kind: "refused"; readonly message: string }
-  | { readonly kind: "signedOut"; readonly location: string };
+  | { readonly kind: "signedOut"; readonly location: string }
+  | { readonly kind: "left" };
 
 /**
  * Confirms from `/app/sudo/new`, where no write waits in memory: the server's held request comes
@@ -802,6 +831,7 @@ export const confirmHere = Effect.fn("confirmation.confirmHere")(function* (
   gate: ConfirmationGate,
   submission: SudoSubmission,
 ) {
+  const from = gate.here();
   // The page follows a sign-in hand-off itself, and only while it still shows.
   const reply = yield* submitSudo(submission, { ownsNavigation: true });
 
@@ -813,8 +843,10 @@ export const confirmHere = Effect.fn("confirmation.confirmHere")(function* (
     case "error":
       return { kind: "refused", message: reply.message } satisfies SudoHere;
     case "navigate":
-      // The session ended: where to sign in.
-      return { kind: "signedOut", location: reply.location } satisfies SudoHere;
+      // The session ended: where to sign in, if the page still shows.
+      return gate.here() === from
+        ? ({ kind: "signedOut", location: reply.location } satisfies SudoHere)
+        : ({ kind: "left" } satisfies SudoHere);
     case "ready":
       return { kind: "refused", message: "Confirmation failed. Try again." } satisfies SudoHere;
   }
@@ -824,8 +856,13 @@ export const confirmHere = Effect.fn("confirmation.confirmHere")(function* (
  * Starts Google from `/app/sudo/new`. No writes wait (and a hand-off another page kept stays
  * as it is): the continue page asks the server whether it confirmed, and what it held.
  */
-export const googleHere = Effect.fn("confirmation.googleHere")(function* () {
+export const googleHere = Effect.fn("confirmation.googleHere")(function* (gate: ConfirmationGate) {
+  const from = gate.here();
   const reply = yield* startSudoGoogle(null);
+
+  if (gate.here() !== from) {
+    return { kind: "left" } satisfies GoogleStart;
+  }
 
   if (reply.kind === "navigate") {
     return { kind: "navigate", location: reply.location } satisfies GoogleStart;
@@ -837,32 +874,49 @@ export const googleHere = Effect.fn("confirmation.googleHere")(function* () {
   } satisfies GoogleStart;
 });
 
-/** What a password or code submission came to: `null` when confirmed, else the reason to show. */
+/** What a password or code sent from the dialog came to. */
+export type Submitted =
+  | { readonly kind: "confirmed" }
+  | { readonly kind: "refused"; readonly message: string }
+  /** The session ended: the waiting writes failed; the dialog goes on to sign in. */
+  | { readonly kind: "signedOut"; readonly location: string }
+  /** The screen that asked was left before the answer came: nothing more to do. */
+  | { readonly kind: "left" };
+
+/** Sends a password or code from the dialog: confirmed, the waiting writes go again. */
 export const submit = Effect.fn("confirmation.submit")(function* (
   gate: ConfirmationGate,
   submission: SudoSubmission,
 ) {
-  const reply = yield* submitSudo(submission);
+  const from = gate.here();
+  // The dialog follows a sign-in hand-off itself, and only from the screen it was sent on.
+  const reply = yield* submitSudo(submission, { ownsNavigation: true });
 
   switch (reply.kind) {
     case "confirmed":
       gate.confirmed();
 
-      return null;
+      return { kind: "confirmed" } satisfies Submitted;
     case "error":
-      return reply.message;
+      return { kind: "refused", message: reply.message } satisfies Submitted;
     case "navigate":
-      // The session ended; the client is already on its way to sign in.
-      return null;
+      gate.signedOut();
+
+      return gate.here() === from
+        ? ({ kind: "signedOut", location: reply.location } satisfies Submitted)
+        : ({ kind: "left" } satisfies Submitted);
     case "ready":
-      return "Confirmation failed. Try again.";
+      return { kind: "refused", message: "Confirmation failed. Try again." } satisfies Submitted;
   }
 });
 
 /** Where to go to confirm with Google, or the reason it can't start. */
-export type GoogleStart =
+export type GoogleAgain =
   | { readonly kind: "navigate"; readonly location: string }
   | { readonly kind: "error"; readonly message: string };
+
+/** A Google start from a screen, which may be left before the answer comes (then nothing leaves). */
+export type GoogleStart = GoogleAgain | { readonly kind: "left" };
 
 /**
  * Starts a Google confirmation from the SPA page `returnTo`. On `navigate` the waiting writes are
@@ -873,7 +927,12 @@ export const startGoogle = Effect.fn("confirmation.startGoogle")(function* (
   returnTo: string,
 ) {
   const attempt = gate.newAttempt();
+  const from = gate.here();
   const reply = yield* startSudoGoogle(attempt);
+
+  if (gate.here() !== from) {
+    return { kind: "left" } satisfies GoogleStart;
+  }
 
   if (reply.kind === "navigate") {
     gate.leave(returnTo, attempt, reply.session ?? null);
@@ -895,7 +954,7 @@ export const confirmAgain = Effect.fn("confirmation.confirmAgain")(function* (
   gate: ConfirmationGate,
 ) {
   if (gate.handoff().handoff === null) {
-    return { kind: "error", message: EXPIRED_COPY } satisfies GoogleStart;
+    return { kind: "error", message: EXPIRED_COPY } satisfies GoogleAgain;
   }
 
   const attempt = gate.newAttempt();
@@ -903,14 +962,14 @@ export const confirmAgain = Effect.fn("confirmation.confirmAgain")(function* (
 
   if (reply.kind === "navigate") {
     return gate.rekey(attempt)
-      ? ({ kind: "navigate", location: reply.location } satisfies GoogleStart)
-      : ({ kind: "error", message: EXPIRED_COPY } satisfies GoogleStart);
+      ? ({ kind: "navigate", location: reply.location } satisfies GoogleAgain)
+      : ({ kind: "error", message: EXPIRED_COPY } satisfies GoogleAgain);
   }
 
   return {
     kind: "error",
     message: reply.kind === "error" ? reply.message : "Google confirmation didn't start.",
-  } satisfies GoogleStart;
+  } satisfies GoogleAgain;
 });
 
 const EXPIRED_COPY = "This change waited too long to be confirmed. Discard it and make it again.";
