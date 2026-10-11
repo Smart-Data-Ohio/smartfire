@@ -68,7 +68,7 @@ async fn legacy_upload(
 }
 
 #[tokio::test]
-async fn soundboard_rejects_flac_with_forged_identified_metadata() {
+async fn soundboard_rejects_flac_with_id3_or_forged_identified_metadata() {
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let dir = tempfile::tempdir().unwrap();
@@ -100,25 +100,108 @@ async fn soundboard_rejects_flac_with_forged_identified_metadata() {
     );
     let bytes = std::fs::read(path).unwrap();
     assert!(bytes.len() < 512 * 1024);
-    let (_, signed_id) = legacy_upload(&mut admin, &bytes, "audio/mpeg", json!(true)).await;
-    let reply = write(
-        &mut admin,
-        Method::POST,
-        ADMIN,
-        json!({"name":"Spoof","signedId":signed_id}),
-    )
-    .await;
+    let mut tagged = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
+    tagged.extend_from_slice(&bytes);
     assert_eq!(
-        reply.status,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "{}",
-        reply.text()
+        campfire_storage::marcel::identify(&tagged, None, None),
+        "audio/mpeg"
     );
-    assert!(error(&reply)["fields"]["audio"].is_array());
+    for bytes in [&bytes, &tagged] {
+        let (_, signed_id) = legacy_upload(&mut admin, bytes, "audio/mpeg", json!(true)).await;
+        let reply = write(
+            &mut admin,
+            Method::POST,
+            ADMIN,
+            json!({"name":"Spoof","signedId":signed_id}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+        assert_eq!(
+            error(&reply)["fields"]["audio"],
+            json!(["must be a readable MP3, Ogg, WAV or audio-only WebM file"])
+        );
+    }
     assert_eq!(
         parse::<api::SoundboardCatalog>(&admin.send(get(CATALOG)).await).sounds,
         []
     );
+}
+
+#[tokio::test]
+async fn soundboard_accepts_id3_tagged_and_frame_sync_mp3() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("audio.mp3");
+    let result = std::process::Command::new("ffmpeg")
+        .args([
+            "-v",
+            "error",
+            "-threads",
+            "1",
+            "-filter_threads",
+            "1",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=48000:cl=mono",
+            "-t",
+            "0.1",
+            "-c:a",
+            "libmp3lame",
+            "-write_xing",
+            "0",
+            "-id3v2_version",
+            "0",
+            "-write_id3v1",
+            "0",
+        ])
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let bytes = std::fs::read(path).unwrap();
+    assert_eq!(bytes[0], 0xff);
+    assert_eq!(bytes[1] & 0xe0, 0xe0);
+    let mut tagged = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
+    tagged.extend_from_slice(&bytes);
+    for (index, bytes) in [&tagged, &bytes].into_iter().enumerate() {
+        let (id, signed_id) = legacy_upload(&mut admin, bytes, "audio/flac", json!(true)).await;
+        let reply = write(
+            &mut admin,
+            Method::POST,
+            ADMIN,
+            json!({"name":format!("MP3 {index}"),"signedId":signed_id}),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let stored_type: String = a
+            .db()
+            .read(move |conn| {
+                Ok(conn.query_row(
+                    "SELECT content_type FROM active_storage_blobs WHERE id=?",
+                    [id],
+                    |row| row.get(0),
+                )?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(stored_type, "audio/mpeg");
+        let catalog: api::SoundboardCatalog = parse(&reply);
+        let fetched = admin.get(&catalog.sounds[index].audio_url).await;
+        assert_eq!(fetched.status, StatusCode::OK);
+        assert_eq!(fetched.headers["content-type"], "audio/mpeg");
+        assert_eq!(&fetched.body, bytes);
+    }
 }
 
 #[tokio::test]
@@ -468,7 +551,36 @@ async fn soundboard_accepts_all_audio_formats_and_rejects_webm_with_video() {
         )
         .await;
         assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let catalog: api::SoundboardCatalog = parse(&reply);
+        let fetched = admin.get(&catalog.sounds[index].audio_url).await;
+        assert_eq!(fetched.status, StatusCode::OK);
+        assert_eq!(fetched.headers["content-type"], content_type);
+        assert_eq!(fetched.body, bytes);
     }
+    let mut tagged_ogg = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
+    tagged_ogg.extend_from_slice(&std::fs::read(dir.path().join("audio.ogg")).unwrap());
+    assert_eq!(
+        campfire_storage::marcel::identify(&tagged_ogg, None, None),
+        "audio/mpeg"
+    );
+    let signed_id = upload(&a, &tagged_ogg, "tagged.mp3", "audio/mpeg").await;
+    let reply = write(
+        &mut admin,
+        Method::POST,
+        ADMIN,
+        json!({"name":"Mismatched container","signedId":signed_id}),
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert_eq!(
+        error(&reply)["fields"]["audio"],
+        json!(["must be a readable MP3, Ogg, WAV or audio-only WebM file"])
+    );
     let mut maximum = WAV.to_vec();
     maximum.resize(512 * 1024, 0);
     let signed_id = upload(&a, &maximum, "maximum.wav", "audio/wav").await;

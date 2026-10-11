@@ -113,9 +113,9 @@ async fn uploaded_audio(c: &mut Ctx, signed_id: &str) -> Result<Blob> {
         }
         // Soundboard formats come only from stored bytes, even for preidentified uploads.
         let detected = campfire_storage::marcel::identify(&std::fs::read(&path)?, None, None);
-        let content_type = audio_type(&detected).to_owned();
+        let detected_type = audio_type(&detected);
         if !(AudioFacts {
-            content_type: content_type.clone(),
+            content_type: detected_type.to_owned(),
             byte_size: blob.byte_size,
         })
         .errors()
@@ -123,14 +123,34 @@ async fn uploaded_audio(c: &mut Ctx, signed_id: &str) -> Result<Blob> {
         {
             return Ok(None);
         }
-        let metadata = campfire_storage::analyze::Analyzer::Video.metadata(&path)?;
-        if metadata.get("audio") != Some(&Json::Bool(true))
-            || (content_type == "audio/webm" && metadata.get("video") != Some(&Json::Bool(false)))
+        let probe = campfire_storage::analyze::probe(&path)?;
+        let content_type = match probe
+            .get("format")
+            .and_then(|format| format.get("format_name"))
+            .and_then(Json::as_str)
+        {
+            Some("mp3") => "audio/mpeg",
+            Some("ogg") => "audio/ogg",
+            Some("wav") => "audio/wav",
+            Some("matroska,webm") => "audio/webm",
+            _ => return Ok(None),
+        };
+        let Some(Json::Array(streams)) = probe.get("streams") else {
+            return Ok(None);
+        };
+        let has_stream = |kind| {
+            streams
+                .iter()
+                .any(|stream| stream.get("codec_type").and_then(Json::as_str) == Some(kind))
+        };
+        if content_type != detected_type
+            || !has_stream("audio")
+            || (content_type == "audio/webm" && has_stream("video"))
         {
             return Ok(None);
         }
         let mut blob = blob;
-        blob.content_type = Some(content_type);
+        blob.content_type = Some(content_type.to_owned());
         blob.metadata.set("identified", Json::Bool(true));
         Ok::<_, campfire_storage::Error>(Some(blob))
     })
@@ -148,8 +168,7 @@ async fn uploaded_audio(c: &mut Ctx, signed_id: &str) -> Result<Blob> {
     })
 }
 
-// Marcel uses legacy WAV names and classifies every WebM container as video. ffprobe checks
-// that the file has an audio stream and WebM has no video stream before this type is saved.
+// Normalize Marcel's MIME aliases before comparing them with ffprobe's container.
 fn audio_type(content_type: &str) -> &str {
     match content_type {
         "audio/x-wav" | "audio/vnd.wav" => "audio/wav",
