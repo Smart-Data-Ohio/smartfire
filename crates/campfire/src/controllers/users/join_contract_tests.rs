@@ -144,7 +144,7 @@ async fn invite_html_and_json_enroll_identically_and_count_one_use() {
         let app = app().await;
         let (invite, token) = invite(&app, Some(5)).await;
         let mut browser = app.anonymous();
-        let path = if json { format!("/api/v1/invites/{token}") } else { format!("/invite/{token}") };
+        let path = if json { format!("/api/v1/invite/{token}") } else { format!("/invite/{token}") };
         let reply = browser.write(signup(json, &path, "Invited", "invited@example.com")).await;
         let location = if json {
             assert_eq!(reply.json(), json!({"kind":"signedIn","location":"http://campfire.test/"}));
@@ -184,7 +184,7 @@ async fn json_join_pages_describe_the_workspace_and_keep_the_retained_gates() {
         json!({"kind":"join","workspace":{"name":account_name,"logoUrl":null,"description":""},"helpContact":{"name":help.name,"emailAddress":help.email_address}})
     );
     let (_, token) = invite(&app, None).await;
-    let page = browser.send(json_get(&format!("/api/v1/invites/{token}"))).await;
+    let page = browser.send(json_get(&format!("/api/v1/invite/{token}"))).await;
     assert_eq!(page.status, StatusCode::OK);
     assert_eq!(page.json()["kind"], "join");
 
@@ -210,7 +210,7 @@ async fn json_join_pages_describe_the_workspace_and_keep_the_retained_gates() {
     for path in [format!("/join/{code}"), format!("/app/join/{code}"), format!("/app/invite/{token}")] {
         assert_eq!(david.get(&path).await.location(), Some("http://campfire.test/"), "{path}");
     }
-    for path in [format!("/api/v1/join/{code}"), format!("/api/v1/invites/{token}")] {
+    for path in [format!("/api/v1/join/{code}"), format!("/api/v1/invite/{token}")] {
         assert_eq!(david.send(json_get(&path)).await.json(), json!({"kind":"navigate","location":"http://campfire.test/"}), "{path}");
         let post = david.write(signup(true, &path, "Signed in", "signed-in@example.com")).await;
         assert_eq!(post.json(), json!({"kind":"navigate","location":"http://campfire.test/"}), "{path}");
@@ -253,7 +253,7 @@ async fn json_invite_refusals_match_the_retained_reasons_and_statuses() {
         let html = browser.get(&format!("/invite/{token}")).await;
         assert_eq!(html.status, status);
         assert!(html.text().contains(reason), "{state}");
-        let path = format!("/api/v1/invites/{token}");
+        let path = format!("/api/v1/invite/{token}");
         for reply in [
             browser.send(json_get(&path)).await,
             browser.write(signup(true, &path, "Must not create", "dead@example.com")).await,
@@ -277,7 +277,7 @@ async fn json_join_refusals_keep_the_retained_duplicate_redirect_body_and_forger
     let (invite, token) = invite(&app, Some(1)).await;
     let before = app.db().read(User::count).await.unwrap();
     let mut browser = app.anonymous();
-    for path in [format!("/api/v1/join/{code}"), format!("/api/v1/invites/{token}")] {
+    for path in [format!("/api/v1/join/{code}"), format!("/api/v1/invite/{token}")] {
         // An existing address goes to sign-in with it filled in; the invite keeps its use.
         let duplicate = browser.write(signup(true, &path, "Another David", "david@37signals.com")).await;
         assert_eq!(
@@ -296,7 +296,7 @@ async fn json_join_refusals_keep_the_retained_duplicate_redirect_body_and_forger
         let forged = browser.send(signup(true, &path, "Forged", "forged@example.com")).await;
         assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY);
         let forged = browser
-            .send(signup(false, &path.replace("/api/v1/join/", "/join/").replace("/api/v1/invites/", "/invite/"), "Forged", "forged@example.com"))
+            .send(signup(false, &path.replace("/api/v1/join/", "/join/").replace("/api/v1/invite/", "/invite/"), "Forged", "forged@example.com"))
             .await;
         assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY);
     }

@@ -22,7 +22,7 @@ export type JoinTarget =
 const joinPath = (target: JoinTarget): string =>
   target.via === "code"
     ? `/join/${encodeURIComponent(target.code)}`
-    : `/invites/${encodeURIComponent(target.token)}`;
+    : `/invite/${encodeURIComponent(target.token)}`;
 
 export const signedOutBoot = Effect.fn("signedOutBoot")(function* () {
   const client = yield* ApiClient;
@@ -90,14 +90,14 @@ export const signOut = Effect.fn("signOut")(function* (body: SignOut) {
   );
 });
 
-/** `GET /join/:code` or `/invites/:token`: the page's state, or where a signed-in visitor goes. */
+/** `GET /join/:code` or `/invite/:token`: the page's state, or where a signed-in visitor goes. */
 export const readJoinPage = Effect.fn("readJoinPage")(function* (target: JoinTarget) {
   const client = yield* ApiClient;
 
   return yield* client.execute({ method: "GET", path: joinPath(target), auth: true }, decodeJoin);
 });
 
-/** `POST /join/:code` or `/invites/:token`: the fields, and the avatar as a file part. */
+/** `POST /join/:code` or `/invite/:token`: the fields, and the avatar as a file part. */
 export const submitJoin = Effect.fn("submitJoin")(function* (
   target: JoinTarget,
   fields: WorkspaceJoin,

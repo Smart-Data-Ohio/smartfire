@@ -99,6 +99,35 @@ use the same SPA mapping and redirect checks as the retained flow. A `return_to`
 the sign-in page does not override that state. Neither endpoint introduces a body field
 for an arbitrary redirect destination.
 
+## Joining the workspace
+
+Slice 46 adds the join code's page and a workspace invite's page to the SPA
+(`frontend/src/features/auth/join.tsx`). The retained pages keep their canonical routes.
+
+| SPA path | JSON contract | Retained page |
+| --- | --- | --- |
+| `/app/join/:join_code` | `GET`/`POST /api/v1/join/:join_code` | `/join/:join_code` |
+| `/app/invite/:token` | `GET`/`POST /api/v1/invite/:token` | `/invite/:token` |
+
+The invite path stays singular so the log scrubber's `/invite/` rule filters the token from
+every one of the three paths. The shell answers with the retained page's status: 404 for a
+wrong join code or an unknown invite, 410 for an expired, used-up or revoked invite, and a
+redirect to `/` for a signed-in visitor.
+
+`GET` returns a `JoinPage`. `join` carries the workspace (name, logo, description) and the help
+contact. `inviteInvalid` carries the same, plus `refusal` (`expired`, `exhausted`, `revoked`,
+`unknown`) and the retained page's `reason` text, under the retained status. A wrong join code
+is an `error` with an empty field-error map and 404.
+
+`POST` takes `WorkspaceJoin` (`name`, `emailAddress`, `password`) as JSON or as multipart with
+an optional `avatar` file part. The SPA sends multipart, because direct uploads require a
+session. Both paths share the retained `users#create` code: validation, user creation, the
+atomic invite use count, open-room memberships, the avatar, the session and its cookies. CSRF
+uses the body-token check in `auth.rs`. Success is `signedIn` to `/`. An address that already has
+an account is `navigate` to `/session/new?email_address=...`, which the SPA maps to its sign-in
+page with the address filled in. An invite that dies while the form is open answers
+`inviteInvalid`. The retained `users#create` has no rate limit, so the JSON path adds none.
+
 `frontend/src/api/auth-endpoints.ts` decodes these next actions. Its auth requests interpret
 credential 401 responses as field errors and refresh CSRF through `/api/v1/session/boot`.
 The existing application client keeps its sign-in redirect for ordinary API 401 responses.

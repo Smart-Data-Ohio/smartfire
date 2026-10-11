@@ -153,7 +153,7 @@ export function createJoin(
     return answer(200, { kind: "signedIn", location: SIGNED_IN_LOCATION });
   };
 
-  const INVITE_PATH = /^\/invites\/([^/]+)$/;
+  const INVITE_PATH = /^\/invite\/([^/]+)$/;
 
   return {
     joined: () => current().joined,
@@ -165,12 +165,12 @@ export function createJoin(
       route("GET", /^\/join\/[^/]+$/, () => wrongCode),
       route("POST", /^\/join\/[^/]+$/, () => wrongCode),
       ...[MOCK_INVITE, MOCK_LAST_INVITE, ...Object.values(MOCK_DEAD_INVITES)].flatMap((known) => [
-        route("GET", new RegExp(`^/invites/${known}$`), () => {
+        route("GET", new RegExp(`^/invite/${known}$`), () => {
           const refusal = refusalOf(known);
 
           return refusal === null ? answer(200, page()) : dead(refusal);
         }),
-        route("POST", new RegExp(`^/invites/${known}$`), ({ body }) => {
+        route("POST", new RegExp(`^/invite/${known}$`), ({ body }) => {
           const refusal = refusalOf(known);
 
           if (refusal !== null) return dead(refusal);

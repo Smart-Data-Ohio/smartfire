@@ -204,7 +204,7 @@ describe("an invite's page", () => {
     await fill("Late", "late@smartdata.example", "secret123456");
 
     // Someone else takes the last use first.
-    await fetch(`/api/v1/invites/${MOCK_LAST_INVITE}`, {
+    await fetch(`/api/v1/invite/${MOCK_LAST_INVITE}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": network.server.csrfToken() },
       body: JSON.stringify({

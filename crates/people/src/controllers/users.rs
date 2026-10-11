@@ -28,7 +28,7 @@ use crate::controllers::presenters::page::{retained_page};
 use crate::concerns::{self, Before, cast_integer};
 
 // Joining with the join code (`/join/:join_code`) or a workspace invite (`/invite/:token`). The
-// retained form and the SPA's JSON endpoints (`/api/v1/join/:join_code`, `/api/v1/invites/:token`)
+// retained form and the SPA's JSON endpoints (`/api/v1/join/:join_code`, `/api/v1/invite/:token`)
 // run the same callbacks, checks and user creation; only the answer's shape differs.
 
 /// `require_unauthenticated_access only: %i[ new create ]`, `before_action :verify_join_code`
