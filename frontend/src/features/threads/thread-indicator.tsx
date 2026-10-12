@@ -17,8 +17,7 @@ const NO_IDS: readonly number[] = [];
  * 2 hours ago" and, on hover, "View thread"; a dot when the thread is unread for the viewer. It
  * follows `thread.indicator` events (the message's `thread` changes) and the viewer's membership,
  * and opens the thread in the right pane. A tracked thread's status, owner and links follow it,
- * and a private thread shows its lock (once the thread itself is held: the indicator doesn't
- * carry its visibility).
+ * and a private thread shows its lock from the summary's visibility.
  */
 export function ThreadIndicator({ message }: { readonly message: MessageDTO }) {
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ export function ThreadIndicator({ message }: { readonly message: MessageDTO }) {
   // are fetched when it opens, others once listed or opened).
   const thread = useStore((state) => (threadId === null ? undefined : state.threads[threadId]));
   const work = thread?.work ?? null;
-  const secret = thread?.visibility === "private";
+  const secret = indicator?.visibility === "private";
 
   if (indicator === null || indicator.replyCount === 0) {
     return null;

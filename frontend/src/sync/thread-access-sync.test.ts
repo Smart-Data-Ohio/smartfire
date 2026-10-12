@@ -32,16 +32,14 @@ const updated = (topic: string, thread: Thread = secret): SyncEvent => ({
   data: thread,
 });
 
-const held = { threads: { 88: secret }, threadPanes: {} };
+const held = { threadPanes: {} };
 
 describe("threadAccessChanges", () => {
   it("counts a removal on the viewer's own topic as lost access, and not one on a room topic", () => {
     expect(
-      threadAccessChanges(
-        { removedThreads: {}, ...held },
-        { removedThreads: { 88: 1 } },
-        [removed],
-      ),
+      threadAccessChanges({ removedThreads: {}, ...held }, { removedThreads: { 88: 1 } }, [
+        removed,
+      ]),
     ).toEqual({
       lost: [88],
       regained: [],
@@ -88,7 +86,7 @@ describe("threadAccessChanges", () => {
     ).toEqual({ lost: [88], regained: [] });
   });
 
-  it("counts an update for a thread never held, or whose pane failed, as regained", () => {
+  it("recovers a failed pane without a tombstone, but not an ordinary private update", () => {
     const after = { removedThreads: {} };
     const failed = {
       status: "error" as const,
@@ -99,16 +97,13 @@ describe("threadAccessChanges", () => {
     };
 
     expect(
-      threadAccessChanges({ removedThreads: {}, threads: {}, threadPanes: {} }, after, [
+      threadAccessChanges({ removedThreads: {}, threadPanes: {} }, after, [updated("user")])
+        .regained,
+    ).toEqual([]);
+    expect(
+      threadAccessChanges({ removedThreads: {}, threadPanes: { 88: failed } }, after, [
         updated("user"),
       ]).regained,
-    ).toEqual([88]);
-    expect(
-      threadAccessChanges(
-        { removedThreads: {}, threads: { 88: secret }, threadPanes: { 88: failed } },
-        after,
-        [updated("user")],
-      ).regained,
     ).toEqual([88]);
     // Held and readable: an ordinary update regains nothing.
     expect(

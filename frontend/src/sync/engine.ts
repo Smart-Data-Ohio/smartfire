@@ -763,6 +763,7 @@ export class Engine extends Context.Service<
           const topic = threadTopic(threadId);
 
           if (open.has(topic)) {
+            mutations.setThreadPaneLoading(threadId);
             yield* topics.forgetRejected(topic);
             yield* Effect.forkIn(
               resyncThread(threadId).pipe(

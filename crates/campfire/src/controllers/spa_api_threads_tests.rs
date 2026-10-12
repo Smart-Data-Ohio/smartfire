@@ -1206,6 +1206,45 @@ async fn private_threads_require_access_members_and_visibility_is_immutable() {
 }
 
 #[tokio::test]
+async fn reply_summary_visibility_is_sent_only_to_current_thread_readers() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created = david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("summary-visibility", "A private reply")}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let created: Value = parse(&created);
+    let id = created["detail"]["thread"]["id"].as_i64().unwrap();
+    assert_eq!(created["detail"]["parentMessage"]["thread"]["visibility"], "private");
+
+    let page_path = format!("/api/v1/rooms/{DESIGNERS}/messages");
+    let root = |page: Value| page["messages"].as_array().unwrap().iter()
+        .find(|message| message["id"] == UNTHREADED).unwrap().clone();
+    let parent = root(parse(&david.send(get(&page_path)).await));
+    assert_eq!(parent["thread"]["visibility"], "private");
+    assert_eq!(parent["thread"]["replyCount"], 1);
+    assert_eq!(parent["thread"]["replierIds"], json!([DAVID]));
+    let hidden = root(parse(&kevin.send(get(&page_path)).await));
+    assert_eq!(hidden["thread"], Value::Null);
+
+    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    let shared = root(parse(&kevin.send(get(&page_path)).await));
+    assert_eq!(shared["thread"], parent["thread"]);
+    let public_page: Value = parse(&kevin.send(get(&page_path)).await);
+    let public = public_page["messages"].as_array().unwrap().iter()
+        .find(|message| message["id"] == THREAD_PARENT).unwrap();
+    assert_eq!(public["thread"]["visibility"], "public");
+
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{KEVIN}"), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT);
+    let hidden = root(parse(&kevin.send(get(&page_path)).await));
+    assert_eq!(hidden["thread"], Value::Null);
+}
+
+#[tokio::test]
 async fn private_thread_removal_cancels_an_open_sync_subscription() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

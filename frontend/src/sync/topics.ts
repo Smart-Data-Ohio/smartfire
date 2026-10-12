@@ -68,7 +68,7 @@ export class Topics extends Context.Service<
     readonly acquire: (topic: string) => Effect.Effect<void>;
     readonly release: (topic: string) => Effect.Effect<void>;
     /**
-     * Forgets a room topic the server refused before the membership existed. A hot entry would
+     * Forgets a topic the server refused before the membership existed. A hot entry would
      * otherwise count as subscribed, so coming back would not send `sub` again. A view that
      * still holds the topic subscribes now.
      */

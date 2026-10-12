@@ -1,14 +1,7 @@
 /**
- * What a batch of sync events did to the viewer's access to private threads, for the engine's
- * follow-ups: a `thread.removed` on the viewer's own `user` topic took a thread away, and a private
- * `thread.updated` there for a thread this page couldn't read gave one back (the viewer was
- * added again).
- *
- * A removal and a grant can share one batch (a reconnect replays both), so "removed" means removed
- * before the batch or earlier in it, and "lifted" is read from the state after the whole batch.
- * A thread also counts as unreadable when this page never held it or its pane failed to load:
- * its removal then predates the page (or its replay), so no removal is remembered for it, yet
- * the server refused the pane's subscription all the same.
+ * A private update on `user` restores access after a recorded removal or a rejected pane load.
+ * A reload while removed has no tombstone, but the denied pane still records its failed load.
+ * The final batch state decides whether a grant survives a later removal in the same replay.
  */
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { State } from "../store/state.ts";
@@ -21,7 +14,7 @@ export interface ThreadAccessChanges {
 }
 
 export function threadAccessChanges(
-  before: Pick<State, "removedThreads" | "threads" | "threadPanes">,
+  before: Pick<State, "removedThreads" | "threadPanes">,
   after: Pick<State, "removedThreads">,
   events: readonly SyncEvent[],
 ): ThreadAccessChanges {
@@ -38,10 +31,7 @@ export function threadAccessChanges(
     if (event.type === "thread.updated" && event.data.visibility === "private") {
       const id = event.data.id;
       const wasRemoved = before.removedThreads[id] !== undefined || lost.has(id);
-      const unreadable =
-        wasRemoved ||
-        before.threads[id] === undefined ||
-        before.threadPanes[id]?.status === "error";
+      const unreadable = wasRemoved || before.threadPanes[id]?.status === "error";
 
       if (unreadable && after.removedThreads[id] === undefined) {
         regained.add(id);
