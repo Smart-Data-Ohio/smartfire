@@ -13,8 +13,8 @@ import { userFixture } from "../../api/testing.ts";
 import type { AgentApproval } from "../../gen/AgentApproval.ts";
 import type { AgentLedgerEvent } from "../../gen/AgentLedgerEvent.ts";
 import type { AgentLedgerEventType } from "../../gen/AgentLedgerEventType.ts";
-import { approvalListKey } from "../../store/approvals.ts";
-import { ledgerListKey } from "../../store/ledger.ts";
+import { approvalListKey, approvalListOf } from "../../store/approvals.ts";
+import { ledgerListKey, ledgerListOf } from "../../store/ledger.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -262,6 +262,7 @@ describe("S4 client contracts", () => {
         nextCursor: null,
       },
       "replace",
+      approvalListOf(store.getState(), approvalListKey(9, "all")).generation,
     );
 
     await inRouter(<AgentApprovals agentId={9} filter="all" onFilterChange={() => undefined} />);
@@ -285,6 +286,7 @@ describe("S4 client contracts", () => {
       9,
       { events: [entry()], users: [], nextCursor: "next-page" },
       "replace",
+      ledgerListOf(store.getState(), key).generation,
     );
 
     const view = renderHook(() => useAgentLedger(9, "all"));
@@ -295,7 +297,13 @@ describe("S4 client contracts", () => {
     expect(more).toHaveBeenCalledWith(9, "all");
 
     act(() =>
-      mutations.landLedgerPage(key, 9, { events: [], users: [], nextCursor: null }, "more"),
+      mutations.landLedgerPage(
+        key,
+        9,
+        { events: [], users: [], nextCursor: null },
+        "more",
+        ledgerListOf(store.getState(), key).generation,
+      ),
     );
 
     expect(view.result.current.rows).toHaveLength(1);

@@ -156,10 +156,31 @@ function inbox(): State {
   const read = [item(2, 20, "mention", "read")];
   const handled = [item(1, 10, "mention", "handled")];
 
-  let state = landActivityPage(initialState, "all", "unread", activityPage(unread, 3), "replace");
+  let state = landActivityPage(
+    initialState,
+    "all",
+    "unread",
+    activityPage(unread, 3),
+    "replace",
+    activityLoadStart(initialState, "all", "unread"),
+  );
 
-  state = landActivityPage(state, "all", "read", activityPage(read, 3), "replace");
-  state = landActivityPage(state, "all", "handled", activityPage(handled, 3), "replace");
+  state = landActivityPage(
+    state,
+    "all",
+    "read",
+    activityPage(read, 3),
+    "replace",
+    activityLoadStart(state, "all", "read"),
+  );
+  state = landActivityPage(
+    state,
+    "all",
+    "handled",
+    activityPage(handled, 3),
+    "replace",
+    activityLoadStart(state, "all", "handled"),
+  );
 
   return landActivityPage(
     state,
@@ -167,6 +188,7 @@ function inbox(): State {
     "unread",
     activityPage([item(5, 50), item(3, 30)], 3),
     "replace",
+    activityLoadStart(state, "mentions", "unread"),
   );
 }
 
@@ -247,11 +269,29 @@ function savedPage(items: readonly SavedItem[], nextCursor: string | null = null
 function saved(): State {
   const items = [savedItem(3, 103, 30), savedItem(2, 102, 20), savedItem(1, 101, 10)];
 
-  let state = landSavedPage(initialState, "all", savedPage(items), "replace");
+  let state = landSavedPage(
+    initialState,
+    "all",
+    savedPage(items),
+    "replace",
+    savedListOf(initialState, "all").generation,
+  );
 
-  state = landSavedPage(state, "in_progress", savedPage(items), "replace");
+  state = landSavedPage(
+    state,
+    "in_progress",
+    savedPage(items),
+    "replace",
+    savedListOf(state, "in_progress").generation,
+  );
 
-  return landSavedPage(state, "done", savedPage([]), "replace");
+  return landSavedPage(
+    state,
+    "done",
+    savedPage([]),
+    "replace",
+    savedListOf(state, "done").generation,
+  );
 }
 
 // Scheduled messages.
@@ -296,15 +336,28 @@ function schedule(): State {
     scheduled(8, 2, ROOM, { state: "dropped", sendable: false, droppedAt: at(2) }),
   ];
 
-  let state = landScheduledPage(initialState, "pending", scheduledPage(pending), "replace");
+  let state = landScheduledPage(
+    initialState,
+    "pending",
+    scheduledPage(pending),
+    "replace",
+    scheduledListOf(initialState, "pending").generation,
+  );
 
-  state = landScheduledPage(state, "past", scheduledPage(past), "replace");
+  state = landScheduledPage(
+    state,
+    "past",
+    scheduledPage(past),
+    "replace",
+    scheduledListOf(state, "past").generation,
+  );
 
   return landScheduledPage(
     state,
     roomScheduledKey(ROOM),
     scheduledPage([scheduled(1, 10), scheduled(3, 30)]),
     "replace",
+    scheduledListOf(state, roomScheduledKey(ROOM)).generation,
   );
 }
 
@@ -312,7 +365,7 @@ describe("a keyset-paged list", () => {
   const ascending: IdOrder = (left, right) => left - right;
 
   function ready(ids: readonly number[], nextCursor: string | null): PagedList {
-    return pagedLanded(emptyPagedList, ids, nextCursor, "replace");
+    return pagedLanded(emptyPagedList, ids, nextCursor, "replace", emptyPagedList.generation);
   }
 
   it("places a live id at its sorted place inside the loaded window", () => {
@@ -339,10 +392,11 @@ describe("a keyset-paged list", () => {
 
   it("skips ids a next page repeats, and a reload clears stale", () => {
     const stale = pagedStale(ready([2, 4], "c"));
-    const more = pagedLanded(stale, [4, 6], null, "more");
+    const more = pagedLanded(stale, [4, 6], null, "more", stale.generation);
+    const reloading = pagedLoading(stale);
 
     expect(more).toMatchObject({ ids: [2, 4, 6], nextCursor: null, stale: true });
-    expect(pagedLanded(stale, [2], null, "replace").stale).toBe(false);
+    expect(pagedLanded(reloading, [2], null, "replace", reloading.generation).stale).toBe(false);
     expect(pagedStale(emptyPagedList)).toBe(emptyPagedList);
   });
 
@@ -355,12 +409,31 @@ describe("a keyset-paged list", () => {
     expect(pagedLanded(pagedStale(reloading), [2], null, "replace", generation).stale).toBe(true);
 
     // A failed reload keeps it stale (reopening loads it) and says the first page failed.
-    expect(pagedFailed(reloading, "Down", generation)).toMatchObject({
+    expect(pagedFailed(reloading, "Down", generation, "replace")).toMatchObject({
       stale: true,
       firstPageFailed: true,
     });
+
     // A failed next page isn't the first page's.
-    expect(pagedFailed(pagedLoadingMore(ready([2], "c")), "Down").firstPageFailed).toBe(false);
+    const paging = pagedLoadingMore(ready([2], "c"));
+
+    expect(pagedFailed(paging, "Down", paging.generation, "more").firstPageFailed).toBe(false);
+  });
+
+  it("knows a reload failed while a next page from before it was still on its way", () => {
+    const paging = pagedLoadingMore(ready([2, 4], "c"));
+    const reloading = pagedLoading(pagedStale(paging));
+
+    // The next page asked for before the reload doesn't land, and its failure changes nothing.
+    expect(pagedLanded(reloading, [6], null, "more", paging.generation)).toBe(reloading);
+    expect(pagedFailed(reloading, "Down", paging.generation, "more")).toBe(reloading);
+
+    // The reload's own failure is the first page's, whatever else is on its way.
+    expect(pagedFailed(reloading, "Down", reloading.generation, "replace")).toMatchObject({
+      firstPageFailed: true,
+      stale: true,
+      loadingMore: false,
+    });
   });
 
   it("lands a page or failure only in the generation its load started in", () => {
@@ -370,7 +443,7 @@ describe("a keyset-paged list", () => {
 
     expect(reloading.generation).toBe(started + 1);
     expect(pagedLanded(reloading, [6], null, "more", started)).toBe(reloading);
-    expect(pagedFailed(reloading, "Down", started)).toBe(reloading);
+    expect(pagedFailed(reloading, "Down", started, "replace")).toBe(reloading);
     expect(pagedLanded(reloading, [6], null, "replace", reloading.generation).ids).toEqual([6]);
   });
 });
@@ -383,6 +456,7 @@ describe("the activity inbox", () => {
       "unread",
       activityPage([item(2, 20), item(1, 10)], 7, "next"),
       "replace",
+      activityLoadStart(initialState, "all", "unread"),
     );
 
     expect(activityListOf(state, "all", "unread")).toMatchObject({
@@ -579,6 +653,7 @@ describe("the activity inbox", () => {
       "read",
       activityPage([item(5, 50, "mention", "read")], 0, "more"),
       "replace",
+      activityLoadStart(initialState, "all", "read"),
     );
 
     const next = applyActivityItem(state, item(2, 20, "mention", "read"), {
@@ -894,6 +969,7 @@ describe("the activity inbox", () => {
       "unread",
       activityPage([ignored], 3),
       "replace",
+      activityLoadStart(initialState, "all", "unread"),
     );
 
     let before = ignored;
@@ -1113,6 +1189,7 @@ describe("a private thread the viewer loses while a read is on its way", () => {
         ],
       },
       "replace",
+      savedListOf(lost, "all").generation,
     );
 
     expect(savedListOf(landed, "all").ids).toEqual([1]);
@@ -1139,13 +1216,26 @@ describe("a private thread the viewer loses while a read is on its way", () => {
       replyTarget: quote,
     });
 
-    const held = landScheduledPage(initialState, "pending", scheduledPage([reply]), "replace");
+    const held = landScheduledPage(
+      initialState,
+      "pending",
+      scheduledPage([reply]),
+      "replace",
+      scheduledListOf(initialState, "pending").generation,
+    );
+
     const lost = lose(held);
 
     expect(lost.scheduled.items[1]).toEqual({ ...reply, replyTarget: null, sendable: false });
 
     // A page or a change that was on its way says the same.
-    const late = landScheduledPage(lost, "pending", scheduledPage([reply]), "replace");
+    const late = landScheduledPage(
+      lost,
+      "pending",
+      scheduledPage([reply]),
+      "replace",
+      scheduledListOf(lost, "pending").generation,
+    );
 
     expect(late.scheduled.items[1]?.replyTarget).toBeNull();
     expect(late.scheduled.items[1]?.sendable).toBe(false);
@@ -1173,11 +1263,14 @@ describe("a private thread the viewer loses while a read is on its way", () => {
       },
     };
 
+    const kept = saved();
+
     const held = landScheduledPage(
-      saved(),
+      kept,
       "pending",
       scheduledPage([scheduled(1, 10)]),
       "replace",
+      scheduledListOf(kept, "pending").generation,
     );
 
     const loaded = landActivityPage(
@@ -1186,6 +1279,7 @@ describe("a private thread the viewer loses while a read is on its way", () => {
       "unread",
       activityPage([item(5, 50)], 1),
       "replace",
+      activityLoadStart(held, "all", "unread"),
     );
 
     const removal: DistributiveOmit<SyncEvent, "seq"> = {

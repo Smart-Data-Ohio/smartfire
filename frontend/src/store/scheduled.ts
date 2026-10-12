@@ -122,9 +122,10 @@ export function setScheduledListFailed(
   state: State,
   key: ScheduledListKey,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
 ): State {
-  return updateList(state, key, (list) => pagedFailed(list, error, generation));
+  return updateList(state, key, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /**
@@ -136,7 +137,7 @@ export function landScheduledPage(
   key: ScheduledListKey,
   page: ScheduledMessageList,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
 ): State {
   if (!pagedCurrent(scheduledListOf(state, key), generation)) {
     return state;

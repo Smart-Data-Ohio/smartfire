@@ -116,9 +116,10 @@ export function setApprovalListFailed(
   state: State,
   key: ApprovalListKey,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
 ): State {
-  return updateList(state, key, (list) => pagedFailed(list, error, generation));
+  return updateList(state, key, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /**
@@ -130,7 +131,7 @@ export function landApprovalPage(
   key: ApprovalListKey,
   page: AgentApprovalPage,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
   ticket?: number,
   read?: ApprovalRead,
 ): State {
@@ -169,7 +170,7 @@ export function landApprovalPage(
     belongsTo(key, next.approvals.items[approval.id] ?? approval) ? [approval.id] : [],
   );
 
-  const loaded = pagedLanded(held, ids, page.nextCursor, mode);
+  const loaded = pagedLanded(held, ids, page.nextCursor, mode, generation);
 
   const replayed = replay(
     next.freshness,

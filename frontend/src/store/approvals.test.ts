@@ -82,6 +82,7 @@ function loaded(): State {
     all,
     { approvals: [approval(3), approval(2), approval(1, "approved")], users: [], nextCursor: null },
     "replace",
+    approvalListOf(state, all).generation,
   );
 
   return landApprovalPage(
@@ -89,6 +90,7 @@ function loaded(): State {
     pending,
     { approvals: [approval(3), approval(2)], users: [userFixture(AGENT)], nextCursor: null },
     "replace",
+    approvalListOf(state, pending).generation,
   );
 }
 
@@ -189,7 +191,7 @@ describe("approval requests in the store", () => {
         approvalListKey(AGENT, "all"),
         { approvals: [captured], users: [], nextCursor: null },
         "replace",
-        undefined,
+        approvalListOf(observed, approvalListKey(AGENT, "all")).generation,
         undefined,
         read,
       );
@@ -288,6 +290,7 @@ describe("approval requests in the store", () => {
         nextCursor: null,
       },
       "replace",
+      approvalListOf(loading, key).generation,
     );
 
     const newer = applyApprovalUpdated(state, {
@@ -313,6 +316,7 @@ describe("approval requests in the store", () => {
       approvalListKey(AGENT, "pending"),
       { approvals: [approval(2)], users: [], nextCursor: null },
       "replace",
+      approvalListOf(optimistic, approvalListKey(AGENT, "pending")).generation,
     );
 
     expect(landed.approvals.items[2]).toBe(shown);
@@ -431,18 +435,21 @@ describe("approval requests in the store", () => {
         nextCursor: null,
       },
       "replace",
+      approvalListOf(state, approved).generation,
     );
     state = landApprovalPage(
       state,
       approvalListKey(AGENT, "all"),
       { approvals: [approval(2)], users: [], nextCursor: null },
       "replace",
+      approvalListOf(state, approvalListKey(AGENT, "all")).generation,
     );
     state = landApprovalPage(
       state,
       approvalListKey(AGENT, "pending"),
       { approvals: [approval(2)], users: [], nextCursor: null },
       "replace",
+      approvalListOf(state, approvalListKey(AGENT, "pending")).generation,
     );
 
     expect(state.approvals.items[2]?.status).toBe("approved");
@@ -479,6 +486,7 @@ describe("approval requests in the store", () => {
       approvedKey,
       { approvals: [approval(1, "approved")], users: [], nextCursor: null },
       "replace",
+      approvalListOf(state, approvedKey).generation,
     );
 
     const optimistic = decidedLocally(approval(2), "approved", 1, "Ok", NOW);
@@ -602,7 +610,15 @@ describe("the ledger in the store", () => {
     const key = ledgerListKey(AGENT, "all");
     let state = setLedgerListLoading(initialState, key, false);
 
-    state = setLedgerListFailed(state, key, AGENT, "Forbidden", true);
+    state = setLedgerListFailed(
+      state,
+      key,
+      AGENT,
+      "Forbidden",
+      true,
+      ledgerListOf(state, key).generation,
+      "replace",
+    );
 
     expect(isLedgerForbidden(state, AGENT)).toBe(true);
     expect(ledgerListOf(state, key).status).toBe("error");
@@ -614,6 +630,7 @@ describe("the ledger in the store", () => {
       AGENT,
       { events: [entry(1), entry(2)], users: [userFixture(2)], nextCursor: "next" },
       "replace",
+      ledgerListOf(state, key).generation,
     );
     state = setLedgerListLoading(state, key, true);
     state = landLedgerPage(
@@ -622,6 +639,7 @@ describe("the ledger in the store", () => {
       AGENT,
       { events: [entry(3)], users: [], nextCursor: null },
       "more",
+      ledgerListOf(state, key).generation,
     );
 
     expect(isLedgerForbidden(state, AGENT)).toBe(false);
@@ -631,7 +649,16 @@ describe("the ledger in the store", () => {
 
   it("keeps a plain failure apart from a refusal", () => {
     const key = ledgerListKey(AGENT, "suppressed");
-    const state = setLedgerListFailed(initialState, key, AGENT, "Server error", false);
+
+    const state = setLedgerListFailed(
+      initialState,
+      key,
+      AGENT,
+      "Server error",
+      false,
+      0,
+      "replace",
+    );
 
     expect(isLedgerForbidden(state, AGENT)).toBe(false);
     expect(ledgerListOf(state, key).error).toBe("Server error");

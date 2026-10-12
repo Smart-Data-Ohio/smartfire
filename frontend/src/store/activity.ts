@@ -465,14 +465,15 @@ export function setActivityListFailed(
   tab: ActivityTab,
   status: ActivityState,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
   activityGeneration = state.activity.generation,
 ): State {
   if (activityGeneration !== state.activity.generation) {
     return state;
   }
 
-  return updateList(state, tab, status, (list) => pagedFailed(list, error, generation));
+  return updateList(state, tab, status, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /** The list generation a page belongs to. */
@@ -481,7 +482,7 @@ export interface ActivityLoadStart {
   readonly activityGeneration: number;
   readonly requestSequence?: number;
   /** The state's `removalCount` when the load started. */
-  readonly removals?: number;
+  readonly removals: number;
 }
 
 /** What a load of `tab` in `status` started from; pass it back to `landActivityPage`. */
@@ -510,9 +511,9 @@ export function landActivityPage(
   status: ActivityState,
   listed: ActivityList,
   mode: "replace" | "more",
-  start?: ActivityLoadStart,
+  start: ActivityLoadStart,
 ): State {
-  if (start !== undefined && start.activityGeneration !== state.activity.generation) {
+  if (start.activityGeneration !== state.activity.generation) {
     return state;
   }
 
@@ -521,18 +522,16 @@ export function landActivityPage(
     items: listed.items.filter((item) => !isRemovedThread(state, item.source.threadId)),
   };
 
-  const outdated =
-    page.items.length < listed.items.length ||
-    (start?.removals !== undefined && state.removalCount > start.removals);
+  const outdated = page.items.length < listed.items.length || state.removalCount > start.removals;
 
   const counted = withCounts(
     state.activity,
     page,
     confirmedUnread(state.activity, acceptedCount(state.activity, page), page.items),
-    start?.requestSequence,
+    start.requestSequence,
   );
 
-  if (!pagedCurrent(activityListOf(state, tab, status), start?.generation)) {
+  if (!pagedCurrent(activityListOf(state, tab, status), start.generation)) {
     return withActivity(state, counted);
   }
 
@@ -561,7 +560,7 @@ export function landActivityPage(
       .map((item) => item.id),
     cursor,
     mode,
-    start?.generation,
+    start.generation,
   );
 
   return {

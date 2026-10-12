@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { Thread } from "../gen/Thread.ts";
-import { activityListOf, landActivityPage } from "./activity.ts";
+import { activityListOf, activityLoadStart, landActivityPage } from "./activity.ts";
 import { toggledReactions } from "./message-extras.ts";
 import type { MessageDTO, MessagePage, PendingMessage, SyncEvent } from "./model.ts";
 import {
@@ -461,8 +461,10 @@ describe("threads", () => {
       },
     });
 
+    const opened = applyThreadPage(listed, THREAD, page([reply]), "replace");
+
     const inbox = landActivityPage(
-      applyThreadPage(listed, THREAD, page([reply]), "replace"),
+      opened,
       "all",
       "unread",
       {
@@ -474,6 +476,7 @@ describe("threads", () => {
         nextCursor: null,
       },
       "replace",
+      activityLoadStart(opened, "all", "unread"),
     );
 
     const held = landSavedPage(
@@ -513,6 +516,7 @@ describe("threads", () => {
         nextCursor: null,
       },
       "replace",
+      savedListOf(inbox, "all").generation,
     );
 
     expect(held.conversationNames[`${ROOM}:${THREAD}`]?.threadName).toBe("Layoffs");

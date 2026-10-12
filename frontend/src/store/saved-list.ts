@@ -96,9 +96,10 @@ export function setSavedListFailed(
   state: State,
   filter: SavedFilter,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
 ): State {
-  return updateList(state, filter, (list) => pagedFailed(list, error, generation));
+  return updateList(state, filter, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /** Messages join the store unless deleted here or older than the copy held. */
@@ -134,7 +135,7 @@ export function landSavedPage(
   filter: SavedFilter,
   listed: SavedItemList,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
 ): State {
   if (!pagedCurrent(savedListOf(state, filter), generation)) {
     return state;

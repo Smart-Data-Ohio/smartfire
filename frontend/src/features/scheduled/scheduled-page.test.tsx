@@ -116,11 +116,13 @@ it("shows a scheduled file on the page and sends that draft now", async () => {
     "pending",
     { scheduledMessages: [item], conversations: [], nextCursor: null },
     "replace",
+    scheduledListOf(store.getState(), "pending").generation,
   );
   mutations.landScheduledPage(
     "past",
     { scheduledMessages: [], conversations: [], nextCursor: null },
     "replace",
+    scheduledListOf(store.getState(), "past").generation,
   );
   const root = createRootRoute({ component: Outlet });
   const home = createRoute({ getParentRoute: () => root, path: "/", component: ScheduledPage });
@@ -192,7 +194,7 @@ function serveScheduled(down: () => boolean) {
     const { generation } = scheduledListOf(store.getState(), key);
 
     if (down()) {
-      mutations.setScheduledListFailed(key, "Service unavailable", generation);
+      mutations.setScheduledListFailed(key, "Service unavailable", generation, "replace");
 
       return;
     }

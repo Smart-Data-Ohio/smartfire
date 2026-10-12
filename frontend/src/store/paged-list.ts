@@ -67,9 +67,9 @@ export function pagedLoading(list: PagedList): PagedList {
   };
 }
 
-/** Whether a load that started in `generation` may still land (`undefined`: no check). */
-export function pagedCurrent(list: PagedList, generation: number | undefined): boolean {
-  return generation === undefined || generation === list.generation;
+/** Whether a load that started in `generation` may still land. */
+export function pagedCurrent(list: PagedList, generation: number): boolean {
+  return generation === list.generation;
 }
 
 /** The next page is on its way. */
@@ -79,9 +79,15 @@ export function pagedLoadingMore(list: PagedList): PagedList {
 
 /**
  * A load failed: a list never shown says so; a shown one keeps its rows and the message. A load
- * from an older `generation` changes nothing.
+ * from an older `generation` changes nothing. `mode` is the request's own: a failed first page
+ * (`replace`) is what a retry asks for again, even while a next page is still on its way.
  */
-export function pagedFailed(list: PagedList, error: string, generation?: number): PagedList {
+export function pagedFailed(
+  list: PagedList,
+  error: string,
+  generation: number,
+  mode: "replace" | "more",
+): PagedList {
   if (!pagedCurrent(list, generation)) {
     return list;
   }
@@ -91,8 +97,7 @@ export function pagedFailed(list: PagedList, error: string, generation?: number)
     status: list.status === "ready" ? "ready" : "error",
     loadingMore: false,
     error,
-    // A next page fails while it's on its way; otherwise it was the first page.
-    firstPageFailed: !list.loadingMore,
+    firstPageFailed: mode === "replace",
   };
 }
 
@@ -100,14 +105,14 @@ export function pagedFailed(list: PagedList, error: string, generation?: number)
  * A page landed: `replace` makes it the list (a first load or a reload); `more` adds it at the
  * end, skipping ids already held (one may have moved in live meanwhile). A page from an older
  * `generation` changes nothing. A reload clears `stale`, unless the list was made stale again
- * while it was on its way (in its own `generation`); a page landed without one clears it.
+ * while it was on its way (in its own `generation`).
  */
 export function pagedLanded(
   list: PagedList,
   ids: readonly number[],
   nextCursor: Cursor | null,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
 ): PagedList {
   if (!pagedCurrent(list, generation)) {
     return list;
@@ -121,10 +126,7 @@ export function pagedLanded(
     status: "ready",
     loadingMore: false,
     error: null,
-    stale:
-      mode === "replace"
-        ? generation !== undefined && list.stale && list.staleGeneration >= generation
-        : list.stale,
+    stale: mode === "replace" ? list.stale && list.staleGeneration >= generation : list.stale,
     staleGeneration: list.staleGeneration,
     generation: list.generation,
     firstPageFailed: false,
