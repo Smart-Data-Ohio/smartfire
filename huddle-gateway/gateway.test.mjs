@@ -235,6 +235,27 @@ test("removes a participant if capacity is refused after the upstream signal", a
   assert.equal(await validation.text(), "This voice room is full\n");
 });
 
+for (const path of ["/rtc", "/rtc/v1"]) {
+  for (const delayed of [false, true]) {
+    test(`reports a full stage through ${path}, delayed admission ${delayed}`, async (t) => {
+      const harness = await createHarness();
+      t.after(() => harness.close());
+      harness.state.authorizeHook = async (call) => ({
+        status: delayed && call === 1 ? 200 : 409,
+        body: delayed && call === 1 ? GRANT : { error: "StageAudienceFull", message: "This stage is full" },
+      });
+      const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}${path}?access_token=${TOKEN}`);
+      assert.equal(result.status, 403);
+      const validation = await fetch(`http://127.0.0.1:${harness.gatewayPort}${path}/validate?access_token=${TOKEN}`);
+      assert.equal(validation.status, 403);
+      assert.equal(await validation.text(), "This stage is full\n");
+      assert.equal(validation.headers.get("cache-control"), "no-store");
+      assert.equal(harness.state.upstreamConnections, delayed ? 1 : 0);
+      if (delayed) await waitFor(() => harness.state.removals.length === 1);
+    });
+  }
+}
+
 test("reauthorizes after the first upstream signal and removes a revoked participant before upgrade", async (t) => {
   const harness = await createHarness({ requestTimeoutMs: 500 });
   t.after(() => harness.close());

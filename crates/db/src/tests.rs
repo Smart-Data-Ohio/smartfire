@@ -74,6 +74,7 @@ mod forwarder_test;
 mod fixtures_test;
 mod huddle_grant_test;
 mod huddle_user_limit_test;
+mod stage_audience_budget_test;
 mod huddle_grant_sequences_test;
 mod huddle_revocation_test;
 mod huddle_notices_test;

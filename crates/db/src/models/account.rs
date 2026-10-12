@@ -30,12 +30,14 @@ pub struct AccountSettings {
 
 const RESTRICT_ROOM_CREATION: &str = "restrict_room_creation_to_administrators";
 const UPLOAD_LIMIT: &str = "upload_limit_bytes";
+const STAGE_AUDIENCE_BUDGET: &str = "stage_audience_budget";
 const DESCRIPTION: &str = "description";
 const VANITY_SLUG: &str = "vanity_slug";
 /// The welcome card and server guide (U1, U4): a JSON object the API layer validates and reads.
 const WELCOME: &str = "welcome";
 const ANIMATED_EMOJI_LIMIT: &str = "animated_emoji_limit";
 pub const DEFAULT_ANIMATED_EMOJI_LIMIT: i64 = 250;
+pub const DEFAULT_STAGE_AUDIENCE_BUDGET: i64 = 300;
 pub const DEFAULT_UPLOAD_LIMIT_BYTES: i64 = 100 * 1024 * 1024;
 /// Largest integer the SPA can represent exactly.
 pub const MAX_UPLOAD_LIMIT_BYTES: i64 = 9_007_199_254_740_991;
@@ -191,6 +193,14 @@ impl AccountSettings {
             .unwrap_or(DEFAULT_UPLOAD_LIMIT_BYTES)
     }
 
+    pub fn stage_audience_budget(&self) -> i64 {
+        self.data
+            .get(STAGE_AUDIENCE_BUDGET)
+            .and_then(Value::as_i64)
+            .filter(|budget| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(budget))
+            .unwrap_or(DEFAULT_STAGE_AUDIENCE_BUDGET)
+    }
+
     pub fn animated_emoji_limit(&self) -> i64 {
         self.data
             .get(ANIMATED_EMOJI_LIMIT)
@@ -219,6 +229,17 @@ impl AccountSettings {
                             Error::Other("upload limit must be a positive safe integer".into())
                         })?;
                     self.data.insert(UPLOAD_LIMIT.into(), Value::from(bytes));
+                }
+                STAGE_AUDIENCE_BUDGET => {
+                    let budget = value
+                        .parse::<i64>()
+                        .ok()
+                        .filter(|budget| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(budget))
+                        .ok_or_else(|| {
+                            Error::Other("stage audience budget must be a positive safe integer".into())
+                        })?;
+                    self.data
+                        .insert(STAGE_AUDIENCE_BUDGET.into(), Value::from(budget));
                 }
                 ANIMATED_EMOJI_LIMIT => {
                     let limit = value

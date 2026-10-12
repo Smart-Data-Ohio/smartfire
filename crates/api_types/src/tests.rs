@@ -352,6 +352,11 @@ fn api_errors_are_tagged_unions_under_error() {
             409,
         ),
         (
+            ApiError::StageAudienceFull { message: "This stage is full".into() },
+            json!({"_tag": "StageAudienceFull", "message": "This stage is full"}),
+            409,
+        ),
+        (
             ApiError::HuddleRoomFull { message: "This voice room is full".into() },
             json!({"_tag": "HuddleRoomFull", "message": "This voice room is full"}),
             409,

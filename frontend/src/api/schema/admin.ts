@@ -44,6 +44,7 @@ export const Workspace = Schema.Struct({
   canAdminister: Schema.Boolean,
   restrictRoomCreationToAdministrators: Schema.Boolean,
   uploadLimitBytes: Schema.Int,
+  stageAudienceBudget: Schema.Int,
   version: Schema.String,
   description: Schema.String,
   vanitySlug: Schema.NullOr(Schema.String),
@@ -59,6 +60,7 @@ export const UpdateWorkspace = Schema.Struct({
   name: Schema.NullOr(Schema.String),
   restrictRoomCreationToAdministrators: Schema.NullOr(Schema.Boolean),
   uploadLimitBytes: Schema.NullOr(Schema.Int),
+  stageAudienceBudget: Schema.NullOr(Schema.Int),
   description: Schema.NullOr(Schema.String),
   vanitySlug: Schema.NullOr(Schema.String),
 });

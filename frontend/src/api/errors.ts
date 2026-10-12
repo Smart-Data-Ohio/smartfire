@@ -40,6 +40,13 @@ export class HuddleRoomFull extends Schema.TaggedError<HuddleRoomFull>()("Huddle
   message: Schema.String,
 }) {}
 
+export class StageAudienceFull extends Schema.TaggedError<StageAudienceFull>()(
+  "StageAudienceFull",
+  {
+    message: Schema.String,
+  },
+) {}
+
 export class StickerLimitReached extends Schema.TaggedError<StickerLimitReached>()(
   "StickerLimitReached",
   {
@@ -120,6 +127,7 @@ export const ApiError = Schema.Union([
   NotFound,
   Conflict,
   HuddleRoomFull,
+  StageAudienceFull,
   StickerLimitReached,
   InvalidAuthenticityToken,
   Validation,

@@ -6,6 +6,8 @@ pub enum Error {
     StickerLimitReached,
     #[error("This voice room is full")]
     HuddleRoomFull,
+    #[error("Stage audience is full")]
+    StageAudienceFull,
     #[error("Invalid slash command options")]
     FieldValidation(campfire_slash_schema::FieldErrors),
     /// `Google::SignIn::Rejected`: safe stable reason, never raw claims or credentials.

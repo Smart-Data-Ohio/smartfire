@@ -48,6 +48,14 @@ pub fn settings_changed(
             json!({"before":previous,"after":current}),
         );
     }
+    let previous = before.settings().stage_audience_budget();
+    let current = after.settings().stage_audience_budget();
+    if previous != current {
+        changes.insert(
+            "stage_audience_budget".into(),
+            json!({"before":previous,"after":current}),
+        );
+    }
     let previous = before.settings().upload_limit_bytes();
     let current = after.settings().upload_limit_bytes();
     if previous != current {
