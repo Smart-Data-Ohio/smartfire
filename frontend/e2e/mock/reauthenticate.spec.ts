@@ -314,6 +314,7 @@ for (const theme of THEMES) {
         await page.getByRole("textbox", { name: "Custom CSS" }).fill("ol { margin: 0; }");
         await page.getByRole("button", { name: "Save changes" }).click();
         await confirmation(page).getByRole("button", { name: "Confirm with Google" }).click();
+        await expect(page.getByText("Your change hasn't been sent", { exact: true })).toBeVisible();
         await page.getByRole("button", { name: "Discard change" }).click();
 
         await expect(page).toHaveURL(/\/app\/admin\/styles$/);
