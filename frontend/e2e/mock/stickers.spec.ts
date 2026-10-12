@@ -55,6 +55,7 @@ async function messageAction(row: Locator, name: "Edit" | "Save for later", phon
   } else {
     await (await hoverBar(row)).getByRole("button", { name, exact: true }).click();
   }
+
   if (name === "Save for later") {
     await expect(row.locator('[data-flag="saved"]')).toHaveText("Saved for later");
   }
@@ -157,6 +158,7 @@ matrix("clearing a sticker's caption keeps the sticker", async ({ page, phone })
   await expect(page.getByRole("alertdialog", { name: "Delete message?" })).toHaveCount(0);
   await expect(row.getByRole("img", { name: "Sticker: Wave" })).toBeVisible();
   await expect(row).not.toContainText("hello sticker");
+
   if (phone) await expectNoHorizontalOverflow(page);
 });
 
@@ -195,6 +197,7 @@ matrix("a thread starts with a sticker alone", async ({ page, phone }) => {
   await pane.getByRole("textbox", { name: "Reply…" }).press("Enter");
   await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}/t/\\d+$`));
   await expect(pane.getByRole("img", { name: "Sticker: Wave" })).toBeVisible();
+
   if (phone) await expectNoHorizontalOverflow(page);
 });
 
@@ -213,6 +216,7 @@ matrix("a thread starts with a sticker under its text", async ({ page, phone }) 
     "src",
     "/stickers/2?still=1",
   );
+
   if (phone) await expectNoHorizontalOverflow(page);
 });
 
@@ -225,13 +229,16 @@ for (const caption of ["", "A sticker caption"]) {
       await picker.getByRole("option", { name: "Dance" }).click();
       const row = timeline(page).last();
       await expect(row.getByRole("img", { name: "Sticker: Dance" })).toBeVisible();
+
       if (caption !== "") {
         await messageAction(row, "Edit", phone);
         await page.getByRole("textbox", { name: "Edit message" }).fill(caption);
         await page.getByRole("button", { name: "Save", exact: true }).click();
         await expect(row).toContainText(caption);
       }
+
       await messageAction(row, "Save for later", phone);
+
       for (const destination of ["/app/search?q=Dance", "/app/saved"]) {
         await page.goto(destination);
         const image = page.getByRole("img", { name: "Sticker: Dance" });
@@ -240,20 +247,25 @@ for (const caption of ["", "A sticker caption"]) {
         const box = await image.boundingBox();
         expect(box?.width).toBe(160);
         expect(box?.height).toBe(160);
+
         if (caption !== "") await expect(page.getByText(caption, { exact: true })).toBeVisible();
         await page.emulateMedia({ reducedMotion: "no-preference" });
         await expect(image).toHaveAttribute("src", "/stickers/2");
         await page.emulateMedia({ reducedMotion: "reduce" });
+
         if (phone) await expectNoHorizontalOverflow(page);
       }
+
       await page.goto("/app/admin/stickers");
       await page.getByRole("button", { name: "Delete Dance" }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
       await expect(page.getByRole("button", { name: "Delete Dance" })).toHaveCount(0);
+
       for (const destination of ["/app/search?q=Dance", "/app/saved"]) {
         await page.goto(destination);
         await expect(page.getByText("Dance · Sticker deleted")).toBeVisible();
         await expect(page.getByRole("img", { name: "Sticker: Dance" })).toHaveCount(0);
+
         if (phone) await expectNoHorizontalOverflow(page);
       }
     },
