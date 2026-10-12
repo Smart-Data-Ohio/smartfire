@@ -172,6 +172,203 @@ describe("huddles", () => {
 });
 
 describe("stages", () => {
+  it("publishes stage audience availability and refuses full listeners", async () => {
+    const { server } = harness();
+    const initial = await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`);
+    expect(initial.stage).toMatchObject({
+      audienceCount: 0,
+      audienceBudget: 300,
+      audienceAvailability: "open",
+    });
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.priya,
+      role: "host",
+    });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "listener",
+    });
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    await send(server, "POST", "/__mock/huddle-join", { roomId: townHall, userId: users.jonah });
+    const full = await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`);
+    expect(full.stage).toMatchObject({
+      audienceCount: 1,
+      audienceBudget: 1,
+      audienceAvailability: "full",
+    });
+    const refused = await send(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {});
+    expect(refused.status).toBe(409);
+    expect(errorOf(refused.json)).toEqual({
+      tag: "StageAudienceFull",
+      message: "This stage is full",
+    });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "speaker",
+    });
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    expect(
+      (await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage.audienceCount,
+    ).toBe(1);
+    await send(server, "POST", "/__mock/huddle-leave", { roomId: townHall, userId: users.jonah });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "listener",
+    });
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    expect(
+      (await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage.audienceCount,
+    ).toBe(1);
+  });
+
+  it("publishes capacity when the workspace audience budget changes", async () => {
+    const { server } = harness();
+    const events = collect(server, [`room:${townHall}`]);
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    await send(server, "POST", "/__mock/huddle-join", { roomId: townHall, userId: users.jonah });
+    events.length = 0;
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 2 }, 200);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "stage.updated",
+        data: expect.objectContaining({
+          roomId: townHall,
+          audienceCount: 1,
+          audienceBudget: 2,
+          audienceAvailability: "open",
+        }),
+      }),
+    );
+  });
+
+  it("keeps a demoted participant's slot and refuses genuinely new listeners", async () => {
+    const { server } = harness();
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.priya,
+      role: "host",
+    });
+    await expectStatus(
+      server,
+      "POST",
+      "/__mock/stage-role",
+      { roomId: townHall, userId: viewer, role: "speaker" },
+      200,
+    );
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    await send(server, "POST", "/__mock/huddle-join", { roomId: townHall, userId: users.jonah });
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "listener",
+    });
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    expect(
+      (await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage.audienceCount,
+    ).toBe(2);
+
+    const refused = await send(server, "POST", "/__mock/huddle-join", {
+      roomId: townHall,
+      userId: users.grace,
+    });
+
+    expect(refused.status).toBe(409);
+    expect(errorOf(refused.json).tag).toBe("StageAudienceFull");
+  });
+
+  it("renews a demoted participant's reservation on later role changes", async () => {
+    const { server, clock } = harness();
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "speaker",
+    });
+    await send(server, "POST", "/__mock/huddle-join", { roomId: townHall, userId: users.jonah });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "listener",
+    });
+    clock.advance(19_000);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "speaker",
+    });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "listener",
+    });
+    clock.advance(2_000);
+    await get<HuddlePresenceList>(server, "/api/v1/huddles");
+    expect((await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage).toMatchObject(
+      { audienceAvailability: "full" },
+    );
+
+    const refused = await send(server, "POST", "/__mock/huddle-join", {
+      roomId: townHall,
+      userId: users.grace,
+    });
+
+    expect(refused.status).toBe(409);
+    expect(errorOf(refused.json).tag).toBe("StageAudienceFull");
+  });
+
+  it("refreshes expired and cancelled reservations through presence polling", async () => {
+    const { server, clock } = harness();
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    const events = collect(server, [`room:${townHall}`]);
+    await send(server, "POST", "/__mock/huddle-join", {
+      roomId: townHall,
+      userId: users.jonah,
+      connected: false,
+    });
+    expect((await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage).toMatchObject(
+      {
+        audienceCount: 0,
+        audienceAvailability: "full",
+      },
+    );
+    events.length = 0;
+    clock.advance(21_000);
+    await get<HuddlePresenceList>(server, "/api/v1/huddles");
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "stage.updated",
+        data: expect.objectContaining({
+          audienceCount: 0,
+          audienceAvailability: "open",
+        }),
+      }),
+    );
+    await send(server, "POST", "/__mock/huddle-join", {
+      roomId: townHall,
+      userId: users.jonah,
+      connected: false,
+    });
+    events.length = 0;
+    await send(server, "POST", "/__mock/huddle-leave", { roomId: townHall, userId: users.jonah });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "stage.updated",
+        data: expect.objectContaining({
+          audienceCount: 0,
+          audienceAvailability: "open",
+        }),
+      }),
+    );
+  });
+
   it("serves the roster with the viewer as host", async () => {
     const { server } = harness();
     const detail = await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`);

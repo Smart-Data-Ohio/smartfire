@@ -1,5 +1,6 @@
 {
   "reference_pin": "78b9b154",
+  "smartfire_contract": "Stage role changes reserve replacement grants for admitted participants before reconnecting.",
   "now": 1767268800,
   "cases": [
     {
@@ -4550,6 +4551,23 @@
               "user_id": 127326141,
               "authorized": true,
               "in_call": false
+            },
+            {
+              "id": 3,
+              "created_at": "2026-01-01 12:00:00 UTC",
+              "last_issued_at": "2026-01-01 12:00:00 UTC",
+              "last_seen_at": null,
+              "membership_id": 9012,
+              "revoked_at": null,
+              "room_id": 9001,
+              "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+              "server_muted": false,
+              "session_id": 7003,
+              "stage_role": "listener",
+              "updated_at": "2026-01-01 12:00:00 UTC",
+              "user_id": 149087659,
+              "authorized": true,
+              "in_call": false
             }
           ],
           "cleanups": [
@@ -5714,6 +5732,23 @@
               "updated_at": "2026-01-01 12:00:00 UTC",
               "user_id": 149087659,
               "authorized": false,
+              "in_call": false
+            },
+            {
+              "id": 2,
+              "created_at": "2026-01-01 12:00:00 UTC",
+              "last_issued_at": "2026-01-01 12:00:00 UTC",
+              "last_seen_at": null,
+              "membership_id": 9012,
+              "revoked_at": null,
+              "room_id": 9001,
+              "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+              "server_muted": false,
+              "session_id": 7003,
+              "stage_role": "speaker",
+              "updated_at": "2026-01-01 12:00:00 UTC",
+              "user_id": 149087659,
+              "authorized": true,
               "in_call": false
             }
           ],

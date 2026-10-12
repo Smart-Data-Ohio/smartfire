@@ -133,6 +133,15 @@ async fn respond(
             .await;
         match admission {
             Ok(grant) => grant,
+            Err(campfire_db::Error::StageAudienceFull) => {
+                return c.json(
+                    StatusCode::CONFLICT,
+                    &serde_json::json!({
+                        "error": "StageAudienceFull",
+                        "message": "This stage is full",
+                    }),
+                );
+            }
             Err(campfire_db::Error::HuddleRoomFull) => {
                 return c.json(
                     StatusCode::CONFLICT,

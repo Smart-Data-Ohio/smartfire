@@ -1,5 +1,6 @@
 {
   "reference_pin": "78b9b154",
+  "smartfire_contract": "Stage role changes reserve replacement grants for admitted participants before reconnecting.",
   "now": 1767268800,
   "cases": [
     {
@@ -159,6 +160,11 @@
           "id": 17,
           "stage_role": "listener",
           "revoked_at": "2026-01-01 12:00:00 UTC"
+        },
+        {
+          "id": 18,
+          "stage_role": "speaker",
+          "revoked_at": null
         }
       ],
       "streams": [],
@@ -333,6 +339,11 @@
           "id": 17,
           "stage_role": "speaker",
           "revoked_at": "2026-01-01 12:00:00 UTC"
+        },
+        {
+          "id": 18,
+          "stage_role": "listener",
+          "revoked_at": null
         }
       ],
       "streams": [],
@@ -1396,6 +1407,11 @@
           "id": 17,
           "stage_role": "listener",
           "revoked_at": "2026-01-01 12:00:00 UTC"
+        },
+        {
+          "id": 18,
+          "stage_role": "speaker",
+          "revoked_at": null
         }
       ],
       "streams": [],
@@ -2395,6 +2411,11 @@
           "id": 17,
           "stage_role": "speaker",
           "revoked_at": "2026-01-01 12:00:00 UTC"
+        },
+        {
+          "id": 18,
+          "stage_role": "listener",
+          "revoked_at": null
         }
       ],
       "streams": [],
@@ -2569,6 +2590,11 @@
           "id": 17,
           "stage_role": "listener",
           "revoked_at": "2026-01-01 12:00:00 UTC"
+        },
+        {
+          "id": 18,
+          "stage_role": "speaker",
+          "revoked_at": null
         }
       ],
       "streams": [],
@@ -3379,6 +3405,11 @@
           "id": 17,
           "stage_role": "speaker",
           "revoked_at": "2026-01-01 12:00:00 UTC"
+        },
+        {
+          "id": 18,
+          "stage_role": "listener",
+          "revoked_at": null
         }
       ],
       "streams": [],

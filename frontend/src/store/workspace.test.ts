@@ -48,6 +48,7 @@ function workspace(extra: Partial<Workspace> = {}): Workspace {
     canAdminister: true,
     restrictRoomCreationToAdministrators: false,
     uploadLimitBytes: 100 * 1024 * 1024,
+    stageAudienceBudget: 300,
     version: "2.0.0",
     description: "",
     vanitySlug: null,

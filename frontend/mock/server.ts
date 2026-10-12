@@ -973,7 +973,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     (name) => admin.iconFile(name),
   );
 
-  const admin = createAdmin(ctx, uploads);
+  const admin = createAdmin(ctx, uploads, () => huddles.publishStages());
   const signIn = createSignIn(ctx, admin, () => csrf);
   const invites = createInvites(ctx);
   const join = createJoin(ctx, admin, invites);
@@ -1019,7 +1019,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const account = createAccount(ctx, () => csrf);
   const soundboard = createSoundboard(ctx, uploads);
-  const huddles = createHuddles(ctx, simulate, soundboard.has);
+  const huddles = createHuddles(ctx, simulate, soundboard.has, admin.stageAudienceBudget);
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
   const fizzy = createFizzy(ctx, threads);

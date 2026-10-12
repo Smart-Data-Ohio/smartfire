@@ -44,6 +44,26 @@ describe("gateway admission errors", () => {
     await transport.disconnect();
   });
 
+  it.each([false, true])(
+    "recognises stage capacity refusals with SDK wrapping %s",
+    async (wrapped) => {
+      const error = wrapped
+        ? LiveKit.ConnectionError.serverUnreachable("could not establish signal connection")
+        : LiveKit.ConnectionError.notAllowed("This stage is full\n", 403);
+
+      if (wrapped) {
+        error.message = `${error.message}: This stage is full\n`;
+        error.status = 403;
+      }
+
+      const transport = refusedTransport(error);
+      await expect(transport.connect("wss://livekit.test", "token", false, 48_000)).rejects.toEqual(
+        new ActionError("StageAudienceFull", "This stage is full"),
+      );
+      await transport.disconnect();
+    },
+  );
+
   it.each([
     LiveKit.ConnectionError.notAllowed("Forbidden\n", 403),
     LiveKit.ConnectionError.notAllowed("could not establish signal connection: Forbidden", 403),

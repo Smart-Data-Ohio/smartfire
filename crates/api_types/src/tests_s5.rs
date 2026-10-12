@@ -41,6 +41,9 @@ fn presence_json() -> serde_json::Value {
 fn stage() -> StageState {
     StageState {
         room_id: 40,
+        audience_count: 0,
+        audience_budget: 300,
+        audience_availability: StageAudienceAvailability::Open,
         members: vec![
             StageMember {
                 membership_id: 31,
@@ -71,6 +74,9 @@ fn stage() -> StageState {
 fn stage_json() -> serde_json::Value {
     json!({
         "roomId": 40,
+        "audienceCount": 0,
+        "audienceBudget": 300,
+        "audienceAvailability": "open",
         "members": [
             {"membershipId": 31, "userId": 7, "role": "host", "handRaisedAt": null, "serverMuted": false},
             {"membershipId": 32, "userId": 8, "role": "listener", "handRaisedAt": "2026-10-06T11:02:03.456Z", "serverMuted": true},

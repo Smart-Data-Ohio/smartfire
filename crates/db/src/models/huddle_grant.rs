@@ -205,20 +205,65 @@ impl HuddleGrant {
             .api_secret
             .as_deref()
             .ok_or_else(|| crate::Error::Other("LIVEKIT_API_SECRET is missing".into()))?;
-        let bytes: [u8; 32] = rand::random();
-        let identity = format!(
-            "campfire-participant-{}",
-            bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()
-        );
+        let identity = Self::new_identity();
         let room_name = rails_compat::jwt::livekit::room_name(secret, room_id);
         let now = tx.now();
         let id = tx.conn().query_row_cached("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,stage_role,server_muted,last_issued_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING id", params![identity, room_name, session_id, user_id, membership_id, room_id, stage_role, server_muted, now, now, now], |r| r.get(0))?;
         Ok((Self::find_by_id(tx.conn(), id)?.unwrap(), None))
     }
 
+    fn new_identity() -> String {
+        let bytes: [u8; 32] = rand::random();
+        format!(
+            "campfire-participant-{}",
+            bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()
+        )
+    }
+
+    /// Replace role-bound grants atomically, retaining admitted users' slots for reconnect.
+    pub(crate) fn replace_for_membership(tx: &mut Tx<'_>, id: i64, config: &HuddleConfig) -> Result<()> {
+        let member = crate::Membership::find(tx.conn(), id)?;
+        let mut grants = query_all(
+            tx.conn(),
+            "SELECT * FROM huddle_grants WHERE membership_id=? AND revoked_at IS NULL ORDER BY id",
+            [id],
+            Self::from_row,
+        )?;
+        let now = tx.now();
+        let since = now.ago(SignedDuration::from_secs(IN_CALL_WINDOW));
+        for grant in &mut grants {
+            grant.revoke(tx, true, config)?;
+        }
+        for grant in grants.into_iter().filter(|grant| {
+            grant.in_call(now) || grant.last_issued_at.is_some_and(|at| at > since)
+        }) {
+            tx.conn().execute_cached(
+                "INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,stage_role,server_muted,last_issued_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                params![Self::new_identity(), grant.room_name, grant.session_id, grant.user_id, member.id, member.room_id, member.stage_role, member.server_muted_at.is_some(), now, now, now],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// The existing presence poll releases expired stage slots in rooms the viewer can see.
+    pub fn expire_stage_reservations(tx: &mut Tx<'_>, viewer_id: i64) -> Result<()> {
+        let since = tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW));
+        let grants = query_all(
+            tx.conn(),
+            "SELECT g.* FROM huddle_grants g JOIN rooms r ON r.id=g.room_id WHERE r.type='Rooms::Stage' AND r.deleted_at IS NULL AND g.revoked_at IS NULL AND (g.last_issued_at IS NOT NULL OR g.last_seen_at IS NOT NULL) AND (g.last_issued_at IS NULL OR g.last_issued_at<=?) AND (g.last_seen_at IS NULL OR g.last_seen_at<=?) AND EXISTS(SELECT 1 FROM memberships m WHERE m.room_id=r.id AND m.user_id=?) ORDER BY g.id",
+            params![since, since, viewer_id],
+            Self::from_row,
+        )?;
+        for mut grant in grants {
+            grant.mark_out_of_call(tx, Some(since))?;
+        }
+        Ok(())
+    }
+
     fn check_capacity(tx: &Tx<'_>, room_id: i64, user_id: i64) -> Result<()> {
         let room = crate::Room::find(tx.conn(), room_id)?;
         if let Some(limit) = room.voice_user_limit
+            && !room.stage()
             && !crate::User::find(tx.conn(), user_id)?.can_administer(Some(room.creator_id), false)
         {
             // Presence and live reservations hold one slot per user, including other devices.
@@ -233,7 +278,43 @@ impl HuddleGrant {
                 return Err(crate::Error::HuddleRoomFull);
             }
         }
+        if room.stage() {
+            let exempt: bool = tx.conn().query_row_cached(
+                "SELECT EXISTS(SELECT 1 FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.room_id=? AND m.user_id=? AND (m.stage_role IN ('host','speaker') OR u.role=1 OR u.id=?))",
+                params![room_id, user_id, room.creator_id], |row| row.get(0),
+            )?;
+            if !exempt {
+                let (_, occupied, rejoining) =
+                    Self::stage_audience_usage(tx.conn(), room_id, user_id, tx.now())?;
+                if occupied >= Self::stage_audience_budget(tx.conn())? && !rejoining {
+                    return Err(crate::Error::StageAudienceFull);
+                }
+            }
+        }
         Ok(())
+    }
+
+    pub fn stage_audience_budget(conn: &Connection) -> Result<i64> {
+        Ok(crate::Account::first(conn)?.map_or(
+            super::account::DEFAULT_STAGE_AUDIENCE_BUDGET,
+            |account| account.settings().stage_audience_budget(),
+        ))
+    }
+
+    /// Distinct listeners present, occupying a slot, and whether this user already has a slot.
+    /// Pending tokens reserve a slot for the same window as voice room admission.
+    pub fn stage_audience_usage(
+        conn: &Connection,
+        room_id: i64,
+        user_id: i64,
+        now: Timestamp,
+    ) -> Result<(i64, i64, bool)> {
+        let since = now.ago(SignedDuration::from_secs(IN_CALL_WINDOW));
+        Ok(conn.query_row_cached(
+            "SELECT COUNT(DISTINCT CASE WHEN g.last_seen_at>? THEN g.user_id END),COUNT(DISTINCT g.user_id),COALESCE(MAX(g.user_id=?),0) FROM huddle_grants g JOIN memberships m ON m.id=g.membership_id AND m.room_id=g.room_id AND m.user_id=g.user_id JOIN users u ON u.id=g.user_id JOIN rooms r ON r.id=g.room_id WHERE g.room_id=? AND m.stage_role='listener' AND u.role!=1 AND u.id!=r.creator_id AND g.revoked_at IS NULL AND (g.last_seen_at>? OR g.last_issued_at>?)",
+            params![since, user_id, room_id, since, since],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?)
     }
 
     pub fn authorized(&self, conn: &Connection) -> Result<bool> {
@@ -399,13 +480,17 @@ impl HuddleGrant {
             return Ok(false);
         }
         // An explicit leave also releases an issued slot before the first sighting.
-        if tx.conn().execute_cached(
-            "UPDATE huddle_grants SET last_issued_at=NULL WHERE id=? AND (? IS NULL OR last_issued_at<=?) AND room_id IN (SELECT id FROM rooms WHERE voice_user_limit IS NOT NULL)",
+        let released = tx.conn().execute_cached(
+            "UPDATE huddle_grants SET last_issued_at=NULL WHERE id=? AND last_issued_at IS NOT NULL AND (? IS NULL OR last_issued_at<=?) AND room_id IN (SELECT id FROM rooms WHERE voice_user_limit IS NOT NULL OR type='Rooms::Stage')",
             params![self.id, seen_after, seen_after],
-        )? > 0 {
+        )? > 0;
+        if released {
             self.last_issued_at = None;
         }
         if self.last_seen_at.is_none() {
+            if released {
+                crate::models::huddle_effects::broadcast_presence(tx, self.room_id);
+            }
             return Ok(false);
         }
         let was_in_call = self.in_call(tx.now());

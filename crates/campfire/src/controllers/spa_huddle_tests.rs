@@ -1465,3 +1465,6 @@ async fn voice_user_limit_refuses_full_joins_with_a_typed_conflict_and_allows_re
     assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
     join(&mut jason, room.id).await;
 }
+
+#[path = "spa_stage_audience_budget_tests.rs"]
+mod stage_audience_budget_tests;

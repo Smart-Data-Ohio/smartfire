@@ -19,6 +19,7 @@ const workspace: Workspace = {
   canAdminister: true,
   restrictRoomCreationToAdministrators: false,
   uploadLimitBytes: 100 * 1024 * 1024,
+  stageAudienceBudget: 300,
   version: "test",
   description: "",
   vanitySlug: null,

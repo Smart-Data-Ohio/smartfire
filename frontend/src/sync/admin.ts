@@ -146,6 +146,7 @@ export const admin = {
           name: null,
           restrictRoomCreationToAdministrators: null,
           uploadLimitBytes: null,
+          stageAudienceBudget: null,
           description: null,
           vanitySlug: null,
           ...change,
