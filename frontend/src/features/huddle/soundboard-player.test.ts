@@ -249,6 +249,18 @@ describe("the soundboard player", () => {
     expect(await player.received(play(), true)).toBeNull();
   });
 
+  it("asks again for a sound whose refetch failed, rather than giving up on it", async () => {
+    const { player, played, refresh, tick } = harness();
+
+    refresh.mockRejectedValueOnce(new Error("offline"));
+
+    expect(await player.received(play({ soundId: 2 }), true)).toBe("unknown-sound");
+    tick(SENDER_INTERVAL_MS);
+    expect(await player.received(play({ soundId: 2 }), true)).toBeNull();
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(played.at(-1)?.url).toBe("/blobs/applause.wav");
+  });
+
   it("rechecks after a refetch: the viewer may have turned sounds off meanwhile", async () => {
     const { player, played, refresh, setContext } = harness();
 

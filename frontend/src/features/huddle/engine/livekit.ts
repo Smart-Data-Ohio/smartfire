@@ -154,8 +154,8 @@ class LiveKitTransport implements CallTransport {
   #statsBaseline: StatsBaseline | null = null;
   /** The microphone's encoding target, from the grant this connection joined with. */
   #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
-  /** Soundboard clips playing now, stopped when the call is left. */
-  readonly #clips = new Set<HTMLAudioElement>();
+  /** Soundboard clips started or playing now, each with its stop: run on leaving or deafening. */
+  readonly #clips = new Map<HTMLAudioElement, () => void>();
 
   constructor(lk: LiveKit) {
     this.#lk = lk;
@@ -189,11 +189,7 @@ class LiveKitTransport implements CallTransport {
     this.#meter?.stop();
     this.#meter = null;
 
-    for (const clip of [...this.#clips]) {
-      clip.pause();
-    }
-
-    this.#clips.clear();
+    this.#stopClips();
 
     for (const tracks of this.#captured.values()) {
       for (const track of tracks) {
@@ -480,6 +476,11 @@ class LiveKitTransport implements CallTransport {
   setDeafened(deafened: boolean): void {
     this.#deafened = deafened;
     this.#applyEveryone();
+
+    // Deafened hears nothing, soundboard clips included; undeafening doesn't bring them back.
+    if (deafened) {
+      this.#stopClips();
+    }
   }
 
   setNoiseSuppression(enabled: boolean): Promise<void> {
@@ -611,7 +612,9 @@ class LiveKitTransport implements CallTransport {
   }
 
   playClip(url: string, volume: number): Promise<void> {
-    if (this.#room === null) {
+    const room = this.#room;
+
+    if (room === null || this.#deafened) {
       return Promise.resolve();
     }
 
@@ -620,7 +623,6 @@ class LiveKitTransport implements CallTransport {
     const sink = this.activeDevice("audiooutput");
 
     clip.volume = Math.max(0, Math.min(1, volume));
-    this.#clips.add(clip);
 
     return new Promise<void>((resolve) => {
       const done = (): void => {
@@ -631,6 +633,13 @@ class LiveKitTransport implements CallTransport {
         resolve();
       };
 
+      // Stopping one that hasn't started yet fires no `pause`, so it settles here either way.
+      const stop = (): void => {
+        clip.pause();
+        done();
+      };
+
+      this.#clips.set(clip, stop);
       clip.addEventListener("ended", done);
       clip.addEventListener("error", done);
       clip.addEventListener("pause", done);
@@ -640,11 +649,25 @@ class LiveKitTransport implements CallTransport {
           await clip.setSinkId(sink).catch(() => undefined);
         }
 
+        // Left, deafened or rejoined while the speaker was being set: the clip was stopped.
+        if (!this.#clips.has(clip) || this.#room !== room) {
+          return;
+        }
+
         await clip.play();
       };
 
       start().catch(done);
     });
+  }
+
+  /** Stops every soundboard clip, started or still starting. */
+  #stopClips(): void {
+    for (const stop of [...this.#clips.values()]) {
+      stop();
+    }
+
+    this.#clips.clear();
   }
 
   #emit(event: TransportEvent): void {

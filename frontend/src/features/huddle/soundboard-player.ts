@@ -164,7 +164,7 @@ export interface SoundboardPlayer {
 
 export function createSoundboardPlayer(deps: PlayerDeps): SoundboardPlayer {
   const limiter = new PlayLimiter();
-  /** Sounds refetched for once already: an id still unknown after that is skipped. */
+  /** Sounds refetched for once already: an id still unknown after a fetch that worked is skipped. */
   const refetched = new Set<number>();
 
   const lookUp = async (soundId: number): Promise<SoundboardSound | undefined> => {
@@ -179,6 +179,9 @@ export function createSoundboardPlayer(deps: PlayerDeps): SoundboardPlayer {
     try {
       await deps.refresh();
     } catch {
+      // A failed fetch says nothing about the sound: the next play of it asks again.
+      refetched.delete(soundId);
+
       return undefined;
     }
 
