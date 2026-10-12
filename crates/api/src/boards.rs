@@ -241,9 +241,9 @@ async fn list_board(c: &mut Ctx) -> Result {
                 page,
                 posts: dto::thread_summaries(conn, &app.secrets, viewer.id, &room, &posts, now)?,
                 has_more,
-                any_posts: ChannelThread::board_has_posts(conn, room.id)?,
+                any_posts: ChannelThread::board_has_posts(conn, room.id, viewer.id)?,
                 owner_options,
-                tag_counts: ChannelThread::board_tag_counts(conn, room.id)?
+                tag_counts: ChannelThread::board_tag_counts(conn, room.id, Some(viewer.id))?
                     .into_iter()
                     .map(|(name, count)| api::BoardTagCount { name, count })
                     .collect(),
@@ -261,7 +261,7 @@ async fn list_board(c: &mut Ctx) -> Result {
 }
 
 async fn new_post(c: &mut Ctx) -> Result {
-    let (room, _) = scope(c).await?;
+    let (room, viewer) = scope(c).await?;
     let (secrets, now) = (c.app().secrets.clone(), now(c));
     let form = c
         .app()
@@ -277,7 +277,7 @@ async fn new_post(c: &mut Ctx) -> Result {
                     now,
                 )?,
                 owner_candidates,
-                tag_suggestions: ChannelThread::board_tag_counts(conn, room.id)?
+                tag_suggestions: ChannelThread::board_tag_counts(conn, room.id, Some(viewer.id))?
                     .into_iter()
                     .map(|(name, _)| name)
                     .collect(),

@@ -428,15 +428,16 @@ async fn index_files(c: &mut Ctx) -> Result {
     use campfire_db::models::room_files;
     before_actions(c).await?;
     let (_, room) = set_room(c).await?;
+    let viewer_id = concerns::require_current_user(c)?.id;
     let file_type = room_files::file_type(c.param_str("type").unwrap_or_default()).to_string();
     let filename =
         campfire_richtext::ruby::strip(c.param_str("filename").unwrap_or_default()).to_string();
     let page = room_files::page(c.param_str("page").unwrap_or_default());
-    let (app, now) = (c.app().clone(), now(c));
+    let app = c.app().clone();
     let list = c
         .app()
         .db
-        .read(move |conn| dto::room_files(conn, &app, room.id, &file_type, &filename, page, now))
+        .read(move |conn| dto::room_files(conn, &app, room.id, viewer_id, &file_type, &filename, page))
         .await
         .map_err(db_error)?;
     c.json(StatusCode::OK, &list)

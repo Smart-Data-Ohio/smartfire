@@ -50,7 +50,7 @@ async fn board_queries_and_after_commit_sequences_match_rails() {
         assert_eq!(serde_json::json!(ids), row["ids"]);
     }
     let counts = db
-        .read(|conn| ChannelThread::board_tag_counts(conn, 699448332))
+        .read(|conn| ChannelThread::board_tag_counts(conn, 699448332, Some(DAVID)))
         .await
         .unwrap();
     assert_eq!(

@@ -338,10 +338,11 @@ async fn delete_boost(c: &mut Ctx) -> Result {
 }
 
 async fn pin_reply(c: &mut Ctx, message: Message, status: StatusCode) -> Result {
+    let viewer = concerns::require_current_user(c)?.id;
     let state = c
         .app()
         .db
-        .read(move |conn| dto::pin_state(conn, &message))
+        .read(move |conn| dto::pin_state(conn, &message, viewer))
         .await
         .map_err(db_error)?;
     c.json(status, &state)

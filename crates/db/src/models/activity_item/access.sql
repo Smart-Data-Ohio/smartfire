@@ -66,10 +66,10 @@ ON activity_sign_in_sessions.id = activity_items.source_id
 AND activity_items.source_type = 'Session'
 WHERE users.status=0 AND users.role!=2 AND activity_items.user_id=?1
 AND (
-(activity_items.source_type = 'Message' AND activity_message_memberships.id IS NOT NULL)
-OR (activity_items.source_type = 'SavedItem' AND activity_saved_memberships.id IS NOT NULL)
-OR (activity_items.source_type = 'WorkThreadEvent' AND activity_work_memberships.id IS NOT NULL)
-OR (activity_items.source_type = 'BoardSlaNudge' AND activity_sla_memberships.id IS NOT NULL)
+(activity_items.source_type = 'Message' AND activity_message_memberships.id IS NOT NULL AND MESSAGE_THREAD_ACCESS)
+OR (activity_items.source_type = 'SavedItem' AND activity_saved_memberships.id IS NOT NULL AND SAVED_THREAD_ACCESS)
+OR (activity_items.source_type = 'WorkThreadEvent' AND activity_work_memberships.id IS NOT NULL AND WORK_THREAD_ACCESS)
+OR (activity_items.source_type = 'BoardSlaNudge' AND activity_sla_memberships.id IS NOT NULL AND SLA_THREAD_ACCESS)
 OR (activity_items.source_type = 'HuddleGrant' AND activity_huddle_memberships.id IS NOT NULL)
 OR (activity_items.source_type = 'Event' AND activity_event_memberships.id IS NOT NULL)
 OR (activity_items.source_type = 'AgentApproval'
@@ -83,7 +83,8 @@ AND (activity_budget_agents.owner_id = activity_items.user_id
 OR users.role = 1))
 OR (activity_items.source_type = 'ScheduledMessage'
 AND activity_scheduled_messages.id IS NOT NULL
-AND activity_scheduled_messages.user_id = activity_items.user_id)
+AND activity_scheduled_messages.user_id = activity_items.user_id
+AND SCHEDULED_THREAD_ACCESS)
 OR (activity_items.source_type = 'TwoFactorCredential'
 AND activity_two_factor_credentials.id IS NOT NULL
 AND activity_two_factor_credentials.user_id = activity_items.user_id)

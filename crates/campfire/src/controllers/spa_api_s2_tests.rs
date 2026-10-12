@@ -1938,3 +1938,92 @@ async fn failed_json_publication_keeps_bot_webhooks_held_without_subscribers() {
     assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'", [], |row| row.get::<_, campfire_db::Timestamp>(0))?)).await.unwrap(), before);
     assert!(before > a.db().env().now(), "publication did not acknowledge the held webhook");
 }
+
+#[tokio::test]
+async fn private_pins_use_viewer_counts_and_revoked_socket_replay_drops_private_ids() {
+    let Some(a) = app(true).await else { return };
+    let (thread_id, message_id) = a.db().write(|tx| {
+        tx.conn().execute("DELETE FROM message_pins WHERE room_id=?", [ALL_TALK])?;
+        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, name: Some("Private pin replay".into()),
+            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?;
+        thread.add_access_member(tx, DAVID, KEVIN)?;
+        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: DAVID,
+            markdown_source: Some("Private pinned content".into()), ..Default::default()
+        })?;
+        Ok((thread.id, message.id))
+    }).await.unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let topics = [format!("room:{ALL_TALK}")];
+    let cookie = kevin.cookie_header();
+    let mut sync = Sync::connect(addr, &cookie, &topics).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else { panic!("welcome"); };
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/messages/{message_id}/pin"), &json!({}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let event = sync.until(|event| matches!(&event.payload, api::SyncPayload::MessagePinned(state) if state.message_id == message_id), |_| false).await;
+    let api::SyncPayload::MessagePinned(state) = event.payload else { unreachable!(); };
+    assert_eq!(state.pin_count, 1);
+    drop(sync);
+    // Remove only the access row so the retained ring still holds the pre-revocation pin.
+    a.db().write(move |tx| {
+        tx.conn().execute("DELETE FROM thread_access_memberships WHERE thread_id=? AND user_id=?", [thread_id, KEVIN])?;
+        Ok(())
+    }).await.unwrap();
+    let detail: api::RoomDetail = parse(&kevin.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);
+    assert_eq!(detail.pins_count, 0);
+    let mut sync = Sync::open(addr, &cookie, &topics, json!({"epoch":epoch,"seq":seq})).await;
+    assert!(matches!(sync.next().await, Some(api::ServerFrame::Welcome { resumed: true, .. })));
+    let reply = david.write(json_body(Method::POST, &format!("/api/v1/messages/{DAVIDS}/pin"), &json!({}))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let event = sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::MessagePinned(state) if state.message_id == DAVIDS),
+        |event| match &event.payload {
+            api::SyncPayload::MessagePinned(state) => state.message_id == message_id,
+            api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => message.thread_id == Some(thread_id),
+            _ => false,
+        },
+    ).await;
+    let api::SyncPayload::MessagePinned(state) = event.payload else { unreachable!(); };
+    assert_eq!(state.pin_count, 1, "public pin event excludes the retained private pin");
+    server.abort();
+}
+
+
+#[tokio::test]
+async fn classic_pin_responses_count_only_the_viewers_readable_pins() {
+    let Some(a) = app(true).await else { return };
+    let private_id = a.db().write(|tx| {
+        tx.conn().execute("DELETE FROM message_pins WHERE room_id=?", [ALL_TALK])?;
+        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, name: Some("Hidden classic pin".into()),
+            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: DAVID,
+            markdown_source: Some("Hidden pin".into()), ..Default::default()
+        })?;
+        campfire_db::MessagePin::create(tx, &message, ALL_TALK, DAVID)?;
+        Ok(thread.id)
+    }).await.unwrap();
+    let mut kevin = a.sign_in(KEVIN).await;
+    let path = format!("/messages/{DAVIDS}/pin.json");
+    for (method, status, count) in [(Method::POST, StatusCode::CREATED, 1), (Method::DELETE, StatusCode::OK, 0)] {
+        let response = kevin.write(Req::new(method, &path)).await;
+        assert_eq!(response.status, status, "{}", response.text());
+        assert_eq!(response.json()["pin_count"], count);
+    }
+    a.db().write(move |tx| {
+        campfire_db::ChannelThread::find(tx.conn(), private_id)?.add_access_member(tx, DAVID, KEVIN)?;
+        Ok(())
+    }).await.unwrap();
+    let response = kevin.write(Req::new(Method::POST, &path)).await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    assert_eq!(response.json()["pin_count"], 2);
+}

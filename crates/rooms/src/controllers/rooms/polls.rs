@@ -18,9 +18,15 @@ async fn set_poll(c: &Ctx, room_id: i64) -> Result<Poll> {
         .param_str("id")
         .and_then(cast_integer)
         .ok_or(Error::NotFound)?;
+    let viewer = crate::concerns::require_current_user(c)?.id;
     c.app()
         .db
-        .read(move |conn| Poll::find_in_room(conn, room_id, id))
+        .read(move |conn| {
+            let poll = Poll::find_in_room(conn, room_id, id)?;
+            let message = Message::find(conn, poll.message_id)?;
+            if !campfire_db::message_quote::visible(conn, &message, viewer)? { return Err(campfire_db::Error::RecordNotFound("Poll")); }
+            Ok(poll)
+        })
         .await
         .map_err(db_error)
 }

@@ -97,6 +97,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let reply_id = integer(raw_reply);
     let has_reply = raw_reply.is_some();
     let room_id = room.id;
+    let viewer_id = require_current_user(c)?.id;
     let found = c
         .app()
         .db
@@ -104,10 +105,11 @@ pub async fn create(c: &mut Ctx) -> Result {
             if has_thread && thread_id.is_none() {
                 return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
             }
-            if let Some(thread_id) = thread_id
-                && ChannelThread::find(conn, thread_id)?.room_id != room_id
-            {
-                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            if let Some(thread_id) = thread_id {
+                let thread = ChannelThread::find(conn, thread_id)?;
+                if thread.room_id != room_id || !thread.readable_by(conn, viewer_id)? {
+                    return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+                }
             }
             if has_reply {
                 let reply = reply_id

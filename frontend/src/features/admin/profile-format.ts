@@ -1,15 +1,20 @@
 /** The images a workspace profile takes, as the server checks them. */
 export const PROFILE_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
 
-/** The largest logo or banner the server accepts. */
+/** The largest workspace profile image the server accepts. */
 export const PROFILE_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
-export type ProfileImageKind = "logo" | "banner";
+export type ProfileImageKind = "logo" | "banner" | "invite_splash";
 
 /** What each slot is called and the size it asks for. */
 export const PROFILE_SLOTS: Readonly<
   Record<ProfileImageKind, { readonly title: string; readonly noun: string; readonly hint: string }>
 > = {
+  invite_splash: {
+    title: "Invite splash",
+    noun: "invite splash",
+    hint: "16:9, ideally 1920 × 1080, at most 4096 × 2304. A still background on join and About pages; phones crop the sides.",
+  },
   logo: {
     title: "Icon",
     noun: "icon",
@@ -29,7 +34,7 @@ export const USER_BANNER_SLOT = {
   hint: "Wide, at least 960 × 320. Shown across the top of your profile; the sides crop on phones.",
 } as const;
 
-/** The file types and size, said once under both slots. */
+/** The file types and size, said once under the slots. */
 export const PROFILE_FORMATS =
   "PNG, JPEG, GIF or WebP, up to 10 MB and 4096 pixels wide. GIF and WebP can be animated.";
 

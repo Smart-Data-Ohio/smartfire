@@ -15,10 +15,12 @@ pub async fn index(c: &mut Ctx) -> Result {
     if room.deleted_at.is_some() { return Err(Error::NotFound); }
     let state = c.params.get("state").and_then(|value| value.to_s()).unwrap_or_default();
     let (room_id, board, now) = (room.id, room.board(), Timestamp::from_jiff(c.now()));
+    let viewer_id = require_current_user(c)?.id;
     let threads = c.app().db.read(move |conn| {
         let threads = if state == "closed" { ChannelThread::effectively_closed_for_room(conn, room_id, now)? }
             else { ChannelThread::for_room(conn, room_id)? };
-        Ok(threads.into_iter().filter(|thread| match state.as_str() {
+        let threads = threads.into_iter().map(|thread| Ok(thread.readable_by(conn, viewer_id)?.then_some(thread))).collect::<campfire_db::Result<Vec<_>>>()?.into_iter().flatten();
+        Ok(threads.filter(|thread| match state.as_str() {
             "all" | "closed" => true,
             "locked" => thread.locked_at.is_some(),
             "work" | "working" => thread.work() && thread.work_status.as_deref() != Some("done"),
@@ -42,7 +44,13 @@ pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (_room, thread) = scope(c).await?;
     let thread_id = thread.id;
-    let records = c.app().db.read(move |conn| Message::last_page(conn, Timeline::Thread(thread_id))).await.map_err(db_error)?;
+    let viewer_id = require_current_user(c)?.id;
+    let records = c.app().db.read(move |conn| {
+        if !ChannelThread::find(conn, thread_id)?.readable_by(conn, viewer_id)? {
+            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+        }
+        Message::last_page(conn, Timeline::Thread(thread_id))
+    }).await.map_err(db_error)?;
     if c.format()? == Some(&format::JSON) { c.no_store(); c.set_header("pragma", "no-cache"); }
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         let viewer = require_current_user(c)?.clone();
@@ -66,9 +74,10 @@ pub(super) async fn scope(c: &mut Ctx) -> Result<(Room, ChannelThread)> {
     if room.deleted_at.is_some() { return Err(Error::NotFound); }
     let id = c.param_str("id").and_then(cast_integer).ok_or(Error::NotFound)?;
     let room_id = room.id;
+    let viewer_id = require_current_user(c)?.id;
     let thread = c.app().db.read(move |conn| {
         let thread = ChannelThread::find(conn, id)?;
-        if thread.room_id != room_id { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
+        if thread.room_id != room_id || !thread.readable_by(conn, viewer_id)? { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
         Ok(thread)
     }).await.map_err(db_error)?;
     Ok((room, thread))
@@ -106,6 +115,10 @@ pub async fn leave(c: &mut Ctx) -> Result {
     let (room, thread) = scope(c).await?;
     let (thread_id, user_id) = (thread.id, require_current_user(c)?.id);
     c.app().db.write(move |tx| {
+        let thread = ChannelThread::find(tx.conn(), thread_id)?;
+        if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private {
+            return thread.remove_access_member(tx, user_id, user_id);
+        }
         // ThreadMembership has no destroy callbacks; this is the scoped find_by(user)&.destroy!.
         tx.conn().execute("DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?", (thread_id, user_id))?;
         Ok(())

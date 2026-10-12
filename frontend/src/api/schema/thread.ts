@@ -1,7 +1,10 @@
 import { Schema } from "effect";
+import type { AddThreadAccessMember as GeneratedAddThreadAccessMember } from "../../gen/AddThreadAccessMember.ts";
 import type { CreateThread as GeneratedCreateThread } from "../../gen/CreateThread.ts";
 import type { JoinThread as GeneratedJoinThread } from "../../gen/JoinThread.ts";
 import type { Thread as GeneratedThread } from "../../gen/Thread.ts";
+import type { ThreadAccessMember as GeneratedThreadAccessMember } from "../../gen/ThreadAccessMember.ts";
+import type { ThreadAccessMembers as GeneratedThreadAccessMembers } from "../../gen/ThreadAccessMembers.ts";
 import type { ThreadCreated as GeneratedThreadCreated } from "../../gen/ThreadCreated.ts";
 import type { ThreadDetail as GeneratedThreadDetail } from "../../gen/ThreadDetail.ts";
 import type { ThreadFilter as GeneratedThreadFilter } from "../../gen/ThreadFilter.ts";
@@ -15,6 +18,7 @@ import type { ThreadRead as GeneratedThreadRead } from "../../gen/ThreadRead.ts"
 import type { ThreadRemoved as GeneratedThreadRemoved } from "../../gen/ThreadRemoved.ts";
 import type { ThreadSummary as GeneratedThreadSummary } from "../../gen/ThreadSummary.ts";
 import type { ThreadUnread as GeneratedThreadUnread } from "../../gen/ThreadUnread.ts";
+import type { ThreadVisibility as GeneratedThreadVisibility } from "../../gen/ThreadVisibility.ts";
 import type { UpdateThread as GeneratedUpdateThread } from "../../gen/UpdateThread.ts";
 import { MessageId, RoomId, ThreadId, UserId } from "./ids.ts";
 import { CreateMessage, MessageDTO } from "./message.ts";
@@ -26,7 +30,46 @@ import { WorkDetail, WorkFacts } from "./work-parts.ts";
 
 export { ThreadIndicator, ThreadStatus } from "./thread-parts.ts";
 
-/** A channel thread as every room member sees it; `work` is `null` unless it's tracked. */
+export const ThreadVisibility = Schema.Literals(["public", "private"]);
+
+export type ThreadVisibility = typeof ThreadVisibility.Type;
+
+export type ThreadVisibilityPin = Assert<
+  Pinned<typeof ThreadVisibility, GeneratedThreadVisibility>
+>;
+
+export const ThreadAccessMember = Schema.Struct({
+  userId: UserId,
+  addedById: Schema.NullOr(UserId),
+  createdAt: Timestamp,
+});
+
+export type ThreadAccessMember = typeof ThreadAccessMember.Type;
+
+export type ThreadAccessMemberPin = Assert<
+  Pinned<typeof ThreadAccessMember, GeneratedThreadAccessMember>
+>;
+
+export const ThreadAccessMembers = Schema.Struct({
+  members: Schema.Array(ThreadAccessMember),
+  users: Schema.Array(User),
+});
+
+export type ThreadAccessMembers = typeof ThreadAccessMembers.Type;
+
+export type ThreadAccessMembersPin = Assert<
+  Pinned<typeof ThreadAccessMembers, GeneratedThreadAccessMembers>
+>;
+
+export const AddThreadAccessMember = Schema.Struct({ userId: UserId });
+
+export type AddThreadAccessMember = typeof AddThreadAccessMember.Type;
+
+export type AddThreadAccessMemberPin = Assert<
+  Pinned<typeof AddThreadAccessMember, GeneratedAddThreadAccessMember>
+>;
+
+/** A channel thread the viewer can access; `work` is `null` unless it's tracked. */
 export const Thread = Schema.Struct({
   id: ThreadId,
   roomId: RoomId,
@@ -34,6 +77,7 @@ export const Thread = Schema.Struct({
   creatorId: UserId,
   name: Schema.String,
   status: ThreadStatus,
+  visibility: ThreadVisibility,
   replyCount: Schema.Int,
   lastActivityAt: Timestamp,
   autoArchiveAfterMinutes: Schema.Int,
@@ -137,6 +181,7 @@ export type ThreadDetailPin = Assert<Pinned<typeof ThreadDetail, GeneratedThread
 /** The body of `POST /api/v1/rooms/:id/threads`: the parent and the first reply. */
 export const CreateThread = Schema.Struct({
   parentMessageId: MessageId,
+  visibility: Schema.optionalKey(ThreadVisibility),
   name: Schema.NullOr(Schema.String),
   message: CreateMessage,
 });

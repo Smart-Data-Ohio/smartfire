@@ -22,7 +22,7 @@ import {
 } from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso, type ThreadRecord, threadDto } from "../s2/model.ts";
+import { canAccessThread, iso, type ThreadRecord, threadDto } from "../s2/model.ts";
 import type { Threads } from "../s2/threads.ts";
 import { autoAssignedBoardOwner } from "../s6/automations.ts";
 import { tagsOf } from "../s6/work.ts";
@@ -136,7 +136,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     for (const thread of world.threads.values()) {
       const record = world.rooms.get(thread.roomId);
 
-      if (record === undefined || !record.memberIds.includes(VIEWER_ID)) continue;
+      if (record === undefined || !canAccessThread(world, thread)) continue;
 
       add(thread, ctx.displayName(record), record.room.kind === "board");
     }

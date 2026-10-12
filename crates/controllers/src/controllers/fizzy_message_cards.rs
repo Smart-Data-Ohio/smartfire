@@ -80,7 +80,9 @@ pub async fn source(c: &mut Ctx) -> Result<Source> {
             let thread = thread
                 .map(|id| ChannelThread::find(tx.conn(), id))
                 .transpose()?;
-            if thread.as_ref().is_some_and(|t| t.room_id != room.id) {
+            if let Some(thread) = thread.as_ref()
+                && (thread.room_id != room.id || !thread.readable_by(tx.conn(), viewer)?)
+            {
                 return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
             }
             let message = Message::find_in(

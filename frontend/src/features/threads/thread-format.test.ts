@@ -63,6 +63,7 @@ describe("threadTitle", () => {
     replyCount: 2,
     lastActivityAt: ago(HOUR),
     autoArchiveAfterMinutes: 1440,
+    visibility: "public",
     createdAt: ago(DAY),
     work: null,
   };

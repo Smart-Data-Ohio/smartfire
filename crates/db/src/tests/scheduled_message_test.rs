@@ -721,3 +721,42 @@ fn deactivated_authors_are_not_due_and_history_orders_newest_first() {
             .is_empty()
     );
 }
+
+#[test]
+fn removed_private_author_is_not_sendable_and_dispatch_drops_once() {
+    let t = frozen();
+    let row = t.write(|tx| {
+        let user = id("kevin");
+        if crate::Membership::find_by_room_and_user(tx.conn(), id("watercooler"), user)?.is_none() {
+            crate::Membership::create_default(tx, id("watercooler"), user)?;
+        }
+        let thread = ChannelThread::create(tx, crate::NewChannelThread {
+            room_id: id("watercooler"), creator_id: user,
+            visibility: crate::models::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?;
+        let row = ScheduledMessage::create(tx, NewScheduledMessage {
+            user_id: user, room_id: thread.room_id, thread_id: Some(thread.id),
+            reply_to_message_id: None, markdown_source: "Own draft".into(),
+            send_at: tx.now().since(jiff::SignedDuration::from_mins(1)),
+        })?;
+        assert!(row.sendable(tx.conn())?);
+        assert!(ScheduledMessage::sendable_ids(tx.conn(), std::slice::from_ref(&row))?.contains(&row.id));
+        thread.remove_access_member(tx, user, user)?;
+        assert!(!row.sendable(tx.conn())?);
+        assert!(ScheduledMessage::sendable_ids(tx.conn(), std::slice::from_ref(&row))?.is_empty());
+        assert!(ScheduledMessage::owned_by(tx.conn(), user, false)?.iter().any(|draft| draft.id == row.id));
+        Ok(row)
+    });
+    t.travel(120);
+    assert!(t.read(|conn| ScheduledMessage::due_candidate_ids(conn, t.now())).contains(&row.id));
+    let before = count(&t);
+    assert!(!send(&t, &row, true));
+    let dropped = reload(&t, &row);
+    assert!(dropped.dropped());
+    assert_eq!(dropped.drop_reason, None);
+    assert_eq!(dropped.markdown_source, "Own draft");
+    assert!(!send(&t, &row, true));
+    assert_eq!(count(&t), before);
+    assert!(t.read(|conn| ScheduledMessage::due_candidate_ids(conn, t.now())).iter().all(|id| *id != row.id));
+}

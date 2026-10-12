@@ -51,6 +51,14 @@ pub fn uploads(
     filename: &str,
     size: i64,
 ) -> Result<Vec<Upload>> {
+    uploads_scoped(conn, room_id, None, file_type, filename, size)
+}
+
+pub fn uploads_for_viewer(conn: &Connection, room_id: i64, viewer: i64, file_type: &str, filename: &str, size: i64) -> Result<Vec<Upload>> {
+    uploads_scoped(conn, room_id, Some(viewer), file_type, filename, size)
+}
+
+fn uploads_scoped(conn: &Connection, room_id: i64, viewer: Option<i64>, file_type: &str, filename: &str, size: i64) -> Result<Vec<Upload>> {
     let condition = match file_type {
         "images" => "b.content_type LIKE 'image/%'",
         "videos" => "b.content_type LIKE 'video/%'",
@@ -62,6 +70,9 @@ pub fn uploads(
     let mut sql = format!(
         "SELECT a.spoiler AS file_spoiler,a.blob_id,m.id AS file_message_id,m.thread_id,a.created_at AS file_created_at,u.* FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND m.room_id=? AND ({condition})"
     );
+    if let Some(viewer) = viewer {
+        sql.push_str(&format!(" AND (m.thread_id IS NULL OR {})", super::channel_thread::readable_by_sql("m.thread_id", &viewer.to_string())));
+    }
     if !filename.is_empty() {
         sql.push_str(" AND LOWER(b.filename) LIKE ? ESCAPE '\\'");
         let literal = unicode::downcase(filename)

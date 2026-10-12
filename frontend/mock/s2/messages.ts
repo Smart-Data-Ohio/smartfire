@@ -24,6 +24,8 @@ import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { reactionContent } from "./emoji.ts";
 import {
+  canAccessThread,
+  inviteThreadMentionees,
   iso,
   locate,
   MAX_PINS_PER_ROOM,
@@ -34,6 +36,7 @@ import {
   threadStatus,
   topicOf,
   touched,
+  visibleMessage,
 } from "./model.ts";
 import { checkMarkdown, filesOf, withSpoilers } from "./posting.ts";
 import type { Threads } from "./threads.ts";
@@ -138,6 +141,9 @@ export function createMessages(
     };
 
     if (current.attachments !== undefined) next.attachments = [...files];
+    if (location.thread !== null) {
+      inviteThreadMentionees(ctx.world(), location.thread, next, VIEWER_ID, updatedAt);
+    }
 
     replace(location, next);
     ctx.publish([{ topic: topicOf(next), type: "message.updated", data: next }]);
@@ -374,7 +380,11 @@ export function createMessages(
     ctx.roomOr404(roomId);
 
     const rows = [...world.pins.values()]
-      .flatMap((record) => (record.roomId === roomId ? [record.pin] : []))
+      .flatMap((record) =>
+        record.roomId === roomId && locate(world, record.pin.messageId) !== null
+          ? [record.pin]
+          : [],
+      )
       .sort((a, b) => Date.parse(b.pinnedAt) - Date.parse(a.pinnedAt) || b.messageId - a.messageId)
       .slice(0, MAX_PINS_PER_ROOM);
 
@@ -383,7 +393,7 @@ export function createMessages(
     for (const row of rows) {
       const location = locate(world, row.messageId);
 
-      if (location !== null) messages.push(location.message);
+      if (location !== null) messages.push(visibleMessage(world, location.message));
     }
 
     return {
@@ -459,7 +469,10 @@ export function createMessages(
 
   const forwardableThreads = (roomId: number): ThreadRecord[] =>
     [...ctx.world().threads.values()]
-      .filter((thread) => thread.roomId === roomId && !thread.locked)
+      .filter(
+        (thread) =>
+          thread.roomId === roomId && canAccessThread(ctx.world(), thread) && !thread.locked,
+      )
       .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) || b.id - a.id);
 
   const destinations = (): ForwardDestinationList => {
@@ -537,7 +550,12 @@ export function createMessages(
 
       const thread = world.threads.get(threadId);
 
-      if (thread === undefined || thread.roomId !== roomId || record.room.kind === "direct") {
+      if (
+        thread === undefined ||
+        thread.roomId !== roomId ||
+        !canAccessThread(world, thread) ||
+        record.room.kind === "direct"
+      ) {
         throw validation("destinations", "That thread isn't in that room");
       }
 
@@ -582,8 +600,11 @@ export function createMessages(
     const item = ctx.world().saved.get(message.id);
 
     return {
-      message,
-      users: ctx.usersFor([message.creatorId, ...(message.thread?.replierIds ?? [])]),
+      message: visibleMessage(ctx.world(), message),
+      users: ctx.usersFor([
+        message.creatorId,
+        ...(visibleMessage(ctx.world(), message).thread?.replierIds ?? []),
+      ]),
       conversation: {
         roomId: room.room.id,
         threadId: thread?.id ?? null,

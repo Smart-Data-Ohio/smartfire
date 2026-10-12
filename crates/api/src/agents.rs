@@ -807,9 +807,11 @@ async fn list_events(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let mut rows = campfire_db::models::agent_delivery::AgentEvent::history_page_before(
+            let mut rows = campfire_db::models::agent_event_access::history_page_for_viewer(
                 conn,
                 agent.id,
+                agent.user_id,
+                viewer.id,
                 outcome.as_deref(),
                 before,
             )?;

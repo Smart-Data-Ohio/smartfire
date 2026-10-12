@@ -3,6 +3,7 @@ import type { PublicPageName } from "../../gen/PublicPageName.ts";
 import { auth, type PublicPageData } from "../../sync/auth.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { useDocumentTitle } from "./auth-parts.tsx";
+import { InviteSplash } from "./invite-splash.tsx";
 import "./auth.css";
 import "./public-page.css";
 
@@ -102,17 +103,19 @@ function PageBody({ load, retry }: PublicPageState) {
  * `/app/about`, `/app/privacy` and `/app/terms`: the public pages, for anyone, signed in or out.
  * The article is the server's render (crates/controllers/templates/public_pages), from
  * `GET /api/v1/public_pages/:page`, with its links on these pages; the header and footer are the
- * retired server layout's. Nothing else in the app links here but the sign-in page and the pages
- * themselves.
+ * retired server layout's. Nothing else in the app links here but the sign-in page, the account
+ * menu's Help items and the pages themselves.
  */
 export function PublicPageView({ name }: { readonly name: PublicPageName }) {
   const { load, retry } = usePublicPage(name);
+  const workspace = load.status === "ready" ? load.page.workspace : null;
 
   useDocumentTitle(load.status === "ready" ? load.page.title : "Smartfire");
   useMetaDescription(load.status === "ready" ? load.page.description : null);
 
   return (
-    <div className="public-view">
+    <div className="public-view invite-splash-surface">
+      <InviteSplash url={workspace?.inviteSplashUrl ?? null} />
       <a className="public-view-skip" href="#public-main">
         Skip to main content
       </a>
@@ -137,11 +140,29 @@ export function PublicPageView({ name }: { readonly name: PublicPageName }) {
         </div>
       </header>
       <main
+        data-about={name === "about" || undefined}
         id="public-main"
         tabIndex={-1}
         className="public-view-wrap public-view-main"
         aria-busy={load.status === "loading" || undefined}
       >
+        {workspace === null || workspace.name === null ? null : (
+          <header className="public-view-workspace">
+            {workspace.logoUrl === null ? null : (
+              <img
+                className="auth-view-logo"
+                src={workspace.logoUrl}
+                alt=""
+                width={48}
+                height={48}
+              />
+            )}
+            <h2 className="text-page">{workspace.name}</h2>
+            {workspace.description === "" ? null : (
+              <p className="auth-view-description">{workspace.description}</p>
+            )}
+          </header>
+        )}
         <PageBody load={load} retry={retry} />
       </main>
       <footer className="public-view-footer">

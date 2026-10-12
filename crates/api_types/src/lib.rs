@@ -93,7 +93,7 @@ pub use admin::{
     AfkPolicy, AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
     EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
-    PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    PushChannelExpiry, UpdateBanner, UpdateInviteSplash, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
 };
 pub use admin::{
@@ -150,7 +150,7 @@ pub use drive::{
     DriveRecipientList, DriveShare, DriveShareResult, ShareDriveFile, ValidateDriveRecipients,
 };
 pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
-pub use error::{ApiError, ApiErrorResponse};
+pub use error::{ApiError, ApiErrorResponse, ThreadAccessRefusal};
 pub use events::{
     CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,
     EventLimits, EventList, EventRecurrenceRule, EventRepeatOption, EventScope, EventValues,
@@ -221,7 +221,7 @@ pub use thread::{
     CreateThread, JoinThread, Thread, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
     ThreadIndicatorChanged, ThreadInvolvement, ThreadList, ThreadMembership, ThreadMembershipState,
     ThreadPermissions, ThreadRead, ThreadRemoved, ThreadStatus, ThreadSummary, ThreadUnread,
-    UpdateThread,
+    UpdateThread, ThreadVisibility, ThreadAccessMember, ThreadAccessMembers, AddThreadAccessMember,
 };
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
 pub use webhooks::{

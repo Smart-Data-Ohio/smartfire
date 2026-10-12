@@ -17,7 +17,7 @@ import { notFound, ok, validation } from "../http.ts";
 import { type Json, stringField } from "../json.ts";
 import type { ScheduledHooks } from "../s2/composer.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso } from "../s2/model.ts";
+import { canAccessThread, iso } from "../s2/model.ts";
 import type { Namer } from "./conversations.ts";
 import { activityStateOf, beforeOf, keysetPage, oneOf, withActivityState } from "./model.ts";
 import { droppedSource } from "./sources.ts";
@@ -135,10 +135,18 @@ function actionOf(body: Json | undefined): ActivityAction {
 export function createActivity(ctx: S2Context): Activity {
   const items = () => ctx.world().activity;
 
+  const reachable = (item: ActivityItem): boolean => {
+    if (item.source.threadId === null) return true;
+    const thread = ctx.world().threads.get(item.source.threadId);
+
+    return thread !== undefined && canAccessThread(ctx.world(), thread);
+  };
+
   const unreadCount = () => {
     let count = 0;
 
-    for (const item of items().values()) if (activityStateOf(item) === "unread") count++;
+    for (const item of items().values())
+      if (reachable(item) && activityStateOf(item) === "unread") count++;
 
     return count;
   };
@@ -152,12 +160,13 @@ export function createActivity(ctx: S2Context): Activity {
   const itemOr404 = (id: number): ActivityItem => {
     const item = items().get(id);
 
-    if (item === undefined) throw notFound("Activity item not found");
+    if (item === undefined || !reachable(item)) throw notFound("Activity item not found");
 
     return item;
   };
 
   const publish = (item: ActivityItem) => {
+    if (!reachable(item)) return;
     const data: ActivityItemChanged = { item, ...unreadSnapshot() };
 
     ctx.publish([{ topic: "user", type: "activity.item", data }]);
@@ -170,7 +179,7 @@ export function createActivity(ctx: S2Context): Activity {
     const tab = oneOf(query.get("type"), TABS, "all");
 
     const matching = [...items().values()].filter(
-      (item) => item.state === status && inTab(tab, item.eventType),
+      (item) => reachable(item) && item.state === status && inTab(tab, item.eventType),
     );
 
     const page = keysetPage(matching, keyOf, beforeOf(query), ACTIVITY_PAGE_SIZE);

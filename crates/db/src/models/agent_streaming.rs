@@ -40,6 +40,10 @@ pub fn start(tx: &mut Tx<'_>, agent_id: i64, mut a: NewMessage) -> Result<PostRe
                 404,
             )));
         };
+        let user: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
+        if !thread.readable_by(tx.conn(), user)? {
+            return Ok(PostResult::Denied(ServiceResult::fail("Thread not found",404)));
+        }
         if thread.locked_at.is_some() {
             return Ok(PostResult::Denied(ServiceResult::fail(
                 "This thread is locked",
@@ -103,6 +107,9 @@ fn find_own(tx: &Tx<'_>, agent_id: i64, id: i64, streaming_only: bool) -> Result
             "Message not found",
             404,
         )));
+    }
+    if message.thread_id.is_some() && !crate::message_quote::visible(tx.conn(), &message, message.creator_id)? {
+        return Ok(PostResult::Denied(ServiceResult::fail("Message not found",404)));
     }
     if !agent_access::capability_for_agent(
         tx.conn(),

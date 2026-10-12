@@ -55,6 +55,11 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
     let WebhookJob { bot_id, message_id } = job;
     // A bot or message that's gone discards the job.
     let (bot, message) = app.db.read(move |conn| Ok((User::find(conn, bot_id)?, Message::find(conn, message_id)?))).await.map_err(discard_missing)?;
+    let allowed = app.db.read(move |conn| {
+        let message = Message::find(conn, message_id)?;
+        campfire_db::models::message_quote::visible(conn, &message, bot_id)
+    }).await?;
+    if !allowed { return Ok(Outcome::Done); }
     let trigger = message.clone();
     let now = app.clock.now();
     let secrets = app.secrets.clone();

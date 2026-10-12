@@ -207,6 +207,10 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                     if table == "rooms" && matches!(column.as_str(), "tags_required" | "default_board_tag_id") {
                         continue;
                     }
+                    if table == "channel_threads" && column == "visibility" {
+                        assert_eq!(row.get::<_, String>(index)?, "public", "Slack imports remain public");
+                        continue;
+                    }
                     if (table == "rooms" && column == "client_room_id")
                         || (table == "channel_threads" && column == "client_post_id")
                     {

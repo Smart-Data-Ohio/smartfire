@@ -253,6 +253,13 @@ impl ScheduledMessage {
     }
 
     pub fn create_with_attachments(tx: &mut Tx<'_>, attrs: NewScheduledMessage, blob_ids: &[i64]) -> Result<Self> {
+        if let Some(thread_id) = attrs.thread_id {
+            let thread = ChannelThread::find(tx.conn(), thread_id)?;
+            if thread.visibility == super::channel_thread::ThreadVisibility::Private
+                && !thread.readable_by(tx.conn(), attrs.user_id)? {
+                return Err(crate::Error::RecordNotFound("ChannelThread"));
+            }
+        }
         Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), true, blob_ids.len())?.into_result()?;
         let id = tx.conn().query_row_cached(
             "INSERT INTO scheduled_messages (user_id, room_id, thread_id, reply_to_message_id, markdown_source, send_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
@@ -519,14 +526,11 @@ impl ScheduledMessage {
         {
             return Ok(false);
         }
-        if let Some(thread) = self
-            .thread_id
-            .map(|id| ChannelThread::find_by_id(conn, id))
-            .transpose()?
-            .flatten()
-            && thread.room_id != self.room_id
-        {
-            return Ok(false);
+        if let Some(id) = self.thread_id {
+            let Some(thread) = ChannelThread::find_by_id(conn, id)? else { return Ok(false); };
+            if thread.room_id != self.room_id || !thread.readable_by(conn, self.user_id)? {
+                return Ok(false);
+            }
         }
         Ok(true)
     }
@@ -544,13 +548,14 @@ impl ScheduledMessage {
         let ids = rows.iter().map(|row| row.id).collect::<Vec<_>>();
         Ok(query_all(
             conn,
-            "SELECT DISTINCT s.id FROM scheduled_messages s
+            &format!("SELECT DISTINCT s.id FROM scheduled_messages s
              JOIN users u ON u.id=s.user_id JOIN rooms r ON r.id=s.room_id
              JOIN memberships m ON m.room_id=s.room_id AND m.user_id=s.user_id
              LEFT JOIN channel_threads t ON t.id=s.thread_id
              WHERE s.id IN (SELECT value FROM json_each(?))
              AND u.status=? AND u.role<>? AND r.deleted_at IS NULL
-             AND (t.id IS NULL OR t.room_id=s.room_id)",
+             AND (s.thread_id IS NULL OR (t.room_id=s.room_id AND {}))",
+                crate::models::channel_thread::readable_by_sql("s.thread_id", "s.user_id")),
             params![
                 serde_json::json!(ids).to_string(),
                 crate::models::user::Status::Active as i64,

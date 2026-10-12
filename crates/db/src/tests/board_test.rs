@@ -618,3 +618,31 @@ fn savepoint_rollback_preserves_the_outer_records_commit_callback() {
         4320
     );
 }
+
+
+#[test]
+fn private_board_creation_marks_only_readers_and_destruction_has_no_room_broadcast() {
+    let t = channel_thread_test::frozen();
+    let room = board(&t);
+    let room_id = room.id;
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=NULL,connected_at=NULL,involvement='everything' WHERE room_id=?", [room_id])?;
+        Ok(())
+    });
+    let thread = t.write(move |tx| ChannelThread::create(tx, NewChannelThread {
+        room_id, creator_id: id("jz"), name: Some("Private board post".into()), work_status: Some("planned".into()),
+        visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
+    }));
+    assert!(t.read(|conn| Ok(Membership::find_by_room_and_user(conn, room_id, id("david"))?.unwrap().unread())));
+    assert!(!t.read(|conn| Ok(Membership::find_by_room_and_user(conn, room_id, id("kevin"))?.unwrap().unread())));
+    let from = t.events().len();
+    let thread_id = thread.id;
+    t.write(move |tx| thread.destroy(tx));
+    assert!(!t.events()[from..].iter().any(|event| matches!(event.as_broadcast(), Some(Broadcast::ThreadRemoved { thread_id: id, .. }) if id == thread_id)));
+    let removals = t.events()[from..].iter().filter_map(|event| {
+        let crate::Event::Broadcast(request) = event else { return None; };
+        request.decode::<crate::channel_thread::ThreadAccessChange>().map(|change| change.unwrap())
+    }).collect::<Vec<_>>();
+    assert!(removals.iter().any(|change| change.user_id == id("jz") && !change.added));
+    assert!(!removals.iter().any(|change| change.user_id == id("kevin")));
+}

@@ -24,6 +24,8 @@ pub struct PublicPage {
     pub policy: PublicPagePolicy,
     /// The retained page's article, rendered by the same template; its links name the SPA's pages.
     pub html: String,
+    /// Workspace identity for About; absent on the policy pages.
+    pub workspace: Option<crate::SignInWorkspace>,
 }
 
 /// The installation's `LEGAL_*` settings as the pages read them: who runs the workspace, where to
@@ -48,6 +50,7 @@ mod tests {
         assert_wire(
             &PublicPage {
                 page: PublicPageName::Privacy,
+                workspace: None,
                 title: "Smartfire | Privacy Policy".into(),
                 description: "Policy.".into(),
                 policy: PublicPagePolicy {
@@ -57,7 +60,7 @@ mod tests {
                 },
                 html: "<h1>Privacy Policy</h1>".into(),
             },
-            json!({"page":"privacy","title":"Smartfire | Privacy Policy","description":"Policy.","policy":{"operatorName":"Acme","contactEmail":null,"effectiveDate":"September 18, 2026"},"html":"<h1>Privacy Policy</h1>"}),
+            json!({"workspace":null,"page":"privacy","title":"Smartfire | Privacy Policy","description":"Policy.","policy":{"operatorName":"Acme","contactEmail":null,"effectiveDate":"September 18, 2026"},"html":"<h1>Privacy Policy</h1>"}),
         );
     }
 }

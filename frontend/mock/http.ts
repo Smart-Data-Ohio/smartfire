@@ -69,6 +69,7 @@ type PlainErrorTag = Exclude<
   | "FizzyReplyFailed"
   | "SudoRequired"
   | "TwoFactorRequired"
+  | "ThreadAccess"
 >;
 
 /**

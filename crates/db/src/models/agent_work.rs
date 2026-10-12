@@ -67,7 +67,7 @@ pub fn list_board_posts(
         return Ok(Outcome::fail("Owner must be a user id, me, or agents", 422));
     }
     use rusqlite::types::Value as Bind;
-    let mut sql = "SELECT * FROM channel_threads WHERE room_id=?".to_owned();
+    let mut sql = format!("SELECT * FROM channel_threads WHERE room_id=? AND {}", super::channel_thread::readable_by_sql("channel_threads.id", &agent.user_id.to_string()));
     let mut binds = vec![Bind::Integer(room.id)];
     match status {
         "all" => (),
@@ -166,7 +166,7 @@ pub fn list_work(conn: &Connection, agent: &Agent) -> Result<Outcome<Vec<Channel
     )?;
     let mut visible = Vec::new();
     for thread in threads {
-        if agent.can(conn, "read_messages", Some(thread.room_id))? {
+        if thread.readable_by(conn, agent.user_id)? && agent.can(conn, "read_messages", Some(thread.room_id))? {
             visible.push(thread);
         }
         if visible.len() == LIST_MAX_LIMIT {
@@ -185,6 +185,7 @@ fn find_owned(conn: &Connection, agent: &Agent, id: i64) -> Result<Option<Channe
     let Some(thread) = thread else {
         return Ok(None);
     };
+    if !thread.readable_by(conn, agent.user_id)? { return Ok(None); }
     if !current_capability(conn, agent, "read_messages", thread.room_id)? {
         return Ok(None);
     }

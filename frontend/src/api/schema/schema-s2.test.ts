@@ -118,6 +118,7 @@ const threadJson = {
   replyCount: 3,
   lastActivityAt: "2026-10-06T10:00:00.000Z",
   autoArchiveAfterMinutes: 4320,
+  visibility: "public",
   createdAt: "2026-10-06T09:20:00.000Z",
   work: null,
 } as const;

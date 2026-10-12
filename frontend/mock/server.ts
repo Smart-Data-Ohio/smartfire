@@ -60,12 +60,14 @@ import { createJoin, type MockJoined } from "./s2/join.ts";
 import { createMessages } from "./s2/messages.ts";
 import {
   buildMessage,
+  canAccessThread,
   locate,
   type MessageDraft,
   pageOf,
   pinCount,
   plainDraft,
   threadStatus,
+  visibleMessage,
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
 import { createPeople } from "./s2/people.ts";
@@ -229,7 +231,8 @@ export interface MockServer {
   /** Held uploads still waiting. */
   pendingUploads(): number;
   /** `userId` replies in a thread, as if from their own client. */
-  threadPost(threadId: number, userId: number, markdown: string): MessageDTO;
+  threadPost(threadId: number, userId: number, markdown: string, streaming?: boolean): MessageDTO;
+  updateMessage(messageId: number, markdown: string, streaming: boolean, userId?: number): void;
   /** `userId` starts or stops typing in a thread (fanned out to `thread:<id>`). */
   threadTyping(threadId: number, userId: number, on: boolean): void;
   /** `userId` reacts (toggling) or boosts, as `POST /messages/:id/boosts` would for them. */
@@ -314,6 +317,72 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     epoch: epochFor(),
     viewerId: VIEWER_ID,
     memberOf: (roomId) => world.rooms.get(roomId)?.memberIds.includes(VIEWER_ID) ?? false,
+    threadAccess: (threadId) => {
+      const thread = world.threads.get(threadId);
+
+      return thread !== undefined && canAccessThread(world, thread);
+    },
+    eventForViewer: (event) => {
+      if (event.type === "scheduled.changed") {
+        const data = composer.scheduledMessage(event.data.id);
+
+        return data === null ? null : { ...event, data };
+      }
+
+      if (event.type === "thread.removed") return event;
+
+      if (event.type === "message.pinned") {
+        const location = locate(world, event.data.messageId);
+
+        if (location === null || !location.room.memberIds.includes(VIEWER_ID)) return null;
+
+        return {
+          ...event,
+          data: {
+            ...event.data,
+            roomId: location.room.room.id,
+            pinCount: pinCount(world, location.room.room.id),
+          },
+        };
+      }
+
+      const topicThread = /^thread:(\d+)$/.exec(event.topic);
+
+      const threadId =
+        topicThread !== null
+          ? Number(topicThread[1])
+          : event.type === "thread.created" || event.type === "thread.updated"
+            ? event.data.id
+            : event.type === "thread.indicator"
+              ? event.data.thread?.threadId
+              : event.type === "thread.unread" || event.type === "thread.read"
+                ? event.data.threadId
+                : event.type === "message.created" ||
+                    event.type === "message.updated" ||
+                    event.type === "message.removed" ||
+                    event.type === "message.reactions" ||
+                    event.type === "message.cards" ||
+                    event.type === "poll.updated" ||
+                    event.type === "poll.ballot" ||
+                    event.type === "agent.steps" ||
+                    event.type === "thread.github.updated"
+                  ? event.data.threadId
+                  : event.type === "activity.item"
+                    ? event.data.item?.source.threadId
+                    : undefined;
+
+      if (threadId !== undefined && threadId !== null) {
+        const thread = world.threads.get(threadId);
+
+        if (thread === undefined || !canAccessThread(world, thread)) return null;
+      }
+
+      if (event.type === "message.created" || event.type === "message.updated") {
+        return { ...event, data: visibleMessage(world, event.data) };
+      }
+
+      return event;
+    },
   });
 
   // --- reads over the world ---
@@ -689,6 +758,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       usersFor,
       saved: world.saved,
       ignored: world.ignored,
+      visibleMessage: (message) => visibleMessage(world, message),
     });
 
   // --- writes ---
@@ -760,10 +830,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return message;
   };
 
-  const updateMessage = (messageId: number, markdown: string, streaming: boolean) => {
-    const location = locate(world, messageId);
+  const updateMessage = (
+    messageId: number,
+    markdown: string,
+    streaming: boolean,
+    userId = BOT_ID,
+  ) => {
+    const location = locate(world, messageId, userId);
 
-    if (location === null) return;
+    if (location === null || location.message.creatorId !== userId) return;
 
     const current = location.message;
     const updatedAt = timestamp(Math.max(now(), Date.parse(current.updatedAt) + 1));
@@ -778,8 +853,19 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     };
 
     location.list[location.index] = message;
+
+    if (location.thread !== null && current.streaming && !streaming) {
+      threads.finalizeReply(location.thread, message);
+
+      return;
+    }
+
     hub.publish([
-      { topic: `room:${location.room.room.id}`, type: "message.updated", data: message },
+      {
+        topic: message.threadId === null ? `room:${message.roomId}` : `thread:${message.threadId}`,
+        type: "message.updated",
+        data: message,
+      },
     ]);
   };
 
@@ -789,7 +875,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const key = `${roomId}:${VIEWER_ID}:${clientMessageId}`;
     const duplicate = world.sentByClientId.get(key);
 
-    if (duplicate !== undefined) return { status: 200, json: duplicate };
+    if (duplicate !== undefined) {
+      const sourceThread =
+        duplicate.threadId == null ? null : world.threads.get(duplicate.threadId);
+
+      if (
+        duplicate.threadId != null &&
+        (sourceThread == null || !canAccessThread(world, sourceThread))
+      )
+        throw notFound("Message not found");
+
+      return { status: 200, json: duplicate };
+    }
 
     const parsed = parseMessage(body, uploads.attachment, stickers.reference);
     const replyTo = parsed.replyToMessageId;
@@ -1080,14 +1177,22 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   composer.arm();
   saved.arm();
 
-  const threadPost = (threadId: number, userId: number, markdown: string): MessageDTO => {
+  const threadPost = (
+    threadId: number,
+    userId: number,
+    markdown: string,
+    streaming = false,
+  ): MessageDTO => {
     const thread = world.threads.get(threadId);
 
     if (thread === undefined) throw notFound("Thread not found");
 
     if (thread.locked) throw forbidden("This thread is locked");
 
-    return threads.postReply(thread, plainDraft(userId, markdown, seededUuid(random)));
+    return threads.postReply(thread, {
+      ...plainDraft(userId, markdown, seededUuid(random)),
+      streaming,
+    });
   };
 
   const ambient = createAmbient(
@@ -1610,6 +1715,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     throttleUploads: (ms) => uploads.throttle(ms),
     pendingUploads: () => uploads.pending(),
     threadPost,
+    updateMessage,
     threadTyping: (threadId, userId, on) => threads.typing(threadId, userId, on),
     react: (messageId, userId, content) => messageActions.react(messageId, userId, content),
     pin: (messageId, userId, pinned = true) => messageActions.pin(messageId, userId, pinned),

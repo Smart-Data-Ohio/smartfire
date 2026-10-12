@@ -12,6 +12,7 @@ import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
 import type { Icon } from "../../src/gen/Icon.ts";
 import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
 import type { Person } from "../../src/gen/Person.ts";
+import type { SignInWorkspace } from "../../src/gen/SignInWorkspace.ts";
 import type { SudoMethod } from "../../src/gen/SudoMethod.ts";
 import type { SudoResponse } from "../../src/gen/SudoResponse.ts";
 import type { SudoRetry } from "../../src/gen/SudoRetry.ts";
@@ -43,6 +44,7 @@ interface State {
   name: string;
   logo: Image | null;
   banner: Image | null;
+  invite_splash: Image | null;
   joinCode: string;
   description: string;
   vanitySlug: string | null;
@@ -134,6 +136,7 @@ function initialState(world: World, now: number): State {
     name: "Smart Data",
     logo: null,
     banner: null,
+    invite_splash: null,
     joinCode: "mock-join-code",
     description: "",
     vanitySlug: null,
@@ -201,6 +204,7 @@ export interface AdminModule {
   noteRequest(method: string, path: string, origin: string): void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
+  readonly publicBranding: () => SignInWorkspace;
   /** The workspace's description, for the signed-out boot. */
   readonly afkPolicy: () => AfkPolicy;
   readonly description: () => string;
@@ -385,6 +389,7 @@ export function createAdmin(
       logoStillUrl: held.logo?.stillUrl ?? null,
       bannerUrl: held.banner?.url ?? null,
       bannerStillUrl: held.banner?.stillUrl ?? null,
+      inviteSplashUrl: held.invite_splash?.stillUrl ?? held.invite_splash?.url ?? null,
       joinUrl: `http://127.0.0.1/join/${held.joinCode}`,
       canAdminister: true,
       restrictRoomCreationToAdministrators: held.restrict,
@@ -467,7 +472,10 @@ export function createAdmin(
    * The uploaded image a logo or banner write names, checked as the server checks it: the bytes
    * must really be a PNG, JPEG, GIF or WebP within the size caps, whatever type was declared.
    */
-  const profileImage = (kind: "logo" | "banner", body: Json | undefined): Image => {
+  const profileImage = (
+    kind: "logo" | "banner" | "invite_splash",
+    body: Json | undefined,
+  ): Image => {
     const signedId = stringField(body, "signedId");
 
     if (signedId === null) throw invalid({ signedId: ["isn't an uploaded file"] });
@@ -482,7 +490,7 @@ export function createAdmin(
   };
 
   /** A logo or banner change: audited as the classic settings change, then published. */
-  const changed = (kind: "logo" | "banner", attached: boolean) => {
+  const changed = (kind: "logo" | "banner" | "invite_splash", attached: boolean) => {
     audit(
       "account.settings.change",
       current().name,
@@ -856,6 +864,12 @@ export function createAdmin(
       handling = { method: method.toUpperCase(), path, returnTo: origin };
     },
     branding,
+    publicBranding: () => ({
+      name: current().name,
+      logoUrl: current().logo?.url ?? null,
+      description: current().description,
+      inviteSplashUrl: current().invite_splash?.stillUrl ?? current().invite_splash?.url ?? null,
+    }),
     afkPolicy: () => current().afkPolicy,
     description: () => current().description,
     customStyles: () => current().css,
@@ -904,7 +918,7 @@ export function createAdmin(
       }),
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
-      ...(["logo", "banner"] as const).flatMap((kind) => [
+      ...(["logo", "banner", "invite_splash"] as const).flatMap((kind) => [
         route("PUT", new RegExp(`^/admin/workspace/${kind}$`), ({ body }) => {
           current()[kind] = profileImage(kind, body);
           changed(kind, true);

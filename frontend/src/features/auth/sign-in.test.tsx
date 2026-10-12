@@ -55,7 +55,12 @@ describe("branding", () => {
     boot.type = "application/json";
     boot.textContent = JSON.stringify({
       kind: "signedOut",
-      workspace: { name: "Harbor", logoUrl: "/logo.png", description: "Crew room.\nBe kind." },
+      workspace: {
+        inviteSplashUrl: null,
+        name: "Harbor",
+        logoUrl: "/logo.png",
+        description: "Crew room.\nBe kind.",
+      },
       signInMethods: { password: true, google: false, googleDomains: [] },
       firstRunPending: false,
       helpContact: null,

@@ -75,7 +75,7 @@ function fileName(value: Json | undefined): string | null {
 /** Creates the join module. */
 export function createJoin(
   ctx: S2Context,
-  admin: Pick<AdminModule, "branding" | "description">,
+  admin: Pick<AdminModule, "publicBranding" | "description">,
   invites: Pick<InvitesModule, "refusal" | "use">,
 ): JoinModule {
   let state: State | null = null;
@@ -93,9 +93,7 @@ export function createJoin(
   };
 
   const workspace = (description: string) => {
-    const branding = admin.branding();
-
-    return { name: branding.name, logoUrl: branding.logoUrl, description };
+    return { ...admin.publicBranding(), description };
   };
 
   const helpContact = { name: "Riel", emailAddress: MOCK_TWO_FACTOR_EMAIL };

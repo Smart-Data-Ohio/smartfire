@@ -47,6 +47,30 @@ impl Blob {
         .or_not_found("ActiveStorage::Blob")
     }
 
+    /// A signed identity cannot restore access to media from a revoked private thread.
+    pub fn reusable_by(conn: &Connection, blob_id: i64, user_id: i64) -> Result<bool> {
+        let roots: Vec<i64> = crate::sql::query_all(conn,
+            "WITH RECURSIVE roots(id) AS (VALUES (?1) UNION SELECT v.blob_id FROM active_storage_attachments a JOIN active_storage_variant_records v ON v.id=a.record_id JOIN roots r ON r.id=a.blob_id WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image' UNION SELECT a.record_id FROM active_storage_attachments a JOIN roots r ON r.id=a.blob_id WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image') SELECT b.id FROM roots r JOIN active_storage_blobs b ON b.id=r.id",
+            [blob_id], |row| row.get(0))?;
+        if !roots.contains(&blob_id) { return Err(crate::Error::RecordNotFound("ActiveStorage::Blob")); }
+        let ids = serde_json::json!(roots).to_string();
+        let restricted: bool = conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?)) AND COALESCE(json_extract(b.metadata,'$.private_thread_media'),0)=1) OR EXISTS (SELECT 1 FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END JOIN channel_threads t ON t.id=m.thread_id WHERE a.blob_id IN (SELECT value FROM json_each(?)) AND t.visibility='private')",
+            [&ids, &ids], |row| row.get(0))?;
+        if !restricted { return Ok(true); }
+        let messages: Vec<i64> = crate::sql::query_all(conn,
+            "SELECT m.id FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END WHERE a.blob_id IN (SELECT value FROM json_each(?))",
+            [&ids], |row| row.get(0))?;
+        for message_id in messages {
+            match crate::Message::find_reachable(conn, user_id, message_id) {
+                Ok(_) => return Ok(true),
+                Err(crate::Error::RecordNotFound(_)) => {},
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(false)
+    }
+
     /// Inserts a blob row; `self.id` and `created_at` are ignored and assigned.
     pub fn create(tx: &Tx<'_>, blob: &Blob) -> Result<Self> {
         let now = tx.now();
@@ -119,6 +143,13 @@ impl Attachment {
             params![blob_id, now, name, record_id, record_type, spoiler],
             |r| r.get(0),
         )?;
+        let private: bool = tx.conn().query_row(
+            "SELECT EXISTS (SELECT 1 FROM messages m JOIN channel_threads t ON t.id=m.thread_id WHERE t.visibility='private' AND ((?1='Message' AND m.id=?2) OR (?1='ActionText::RichText' AND m.id IN (SELECT record_id FROM action_text_rich_texts WHERE id=?2 AND record_type='Message')) OR (?1='PollOption' AND m.id IN (SELECT p.message_id FROM polls p JOIN poll_options po ON po.poll_id=p.id WHERE po.id=?2))))",
+            params![record_type, record_id], |row| row.get(0),
+        )?;
+        if private {
+            tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(COALESCE(NULLIF(metadata,''),'{}'),'$.private_thread_media',json('true')) WHERE id=?", [blob_id])?;
+        }
         Ok(Self {
             spoiler,
             id,

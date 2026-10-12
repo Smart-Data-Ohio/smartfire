@@ -133,7 +133,7 @@ function firstRunSubmission(body: Json | undefined): { readonly name: string } |
 /** Creates the sign-in module. */
 export function createSignIn(
   ctx: S2Context,
-  admin: Pick<AdminModule, "branding" | "description">,
+  admin: Pick<AdminModule, "publicBranding">,
   csrfToken: () => string,
 ): SignInModule {
   let state: State | null = null;
@@ -159,18 +159,14 @@ export function createSignIn(
 
   const boot = (): SignedOutBoot => {
     const held = current();
-    const branding = admin.branding();
+    const branding = admin.publicBranding();
     const flash = held.flash;
 
     held.flash = null;
 
     return {
       kind: "signedOut",
-      workspace: {
-        name: branding.name,
-        logoUrl: branding.logoUrl,
-        description: admin.description(),
-      },
+      workspace: branding,
       signInMethods: {
         password: true,
         google: held.google,
@@ -200,7 +196,10 @@ export function createSignIn(
     },
     routes: [
       route("GET", /^\/session\/boot$/, () => ({ status: 200, json: boot() })),
-      route("GET", /^\/public_pages\/about$/, () => ({ status: 200, json: PUBLIC_PAGES.about })),
+      route("GET", /^\/public_pages\/about$/, () => ({
+        status: 200,
+        json: { ...PUBLIC_PAGES.about, workspace: admin.publicBranding() },
+      })),
       route("GET", /^\/public_pages\/privacy$/, () => ({
         status: 200,
         json: PUBLIC_PAGES.privacy,

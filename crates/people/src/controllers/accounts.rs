@@ -11,7 +11,7 @@ pub mod logos;
 pub mod users;
 
 use campfire_db::Account;
-use campfire_kit::{Ctx, Error, Param, Redirect, Result};
+use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode};
 use campfire_kit::params::Permit;
 
 use super::presenters::attachments::{self, Assignment, Record};
@@ -48,7 +48,10 @@ pub async fn update(c: &mut Ctx) -> Result {
             Ok((before, account, before_logo, after_logo))
         })
         .await
-        .map_err(Error::internal)?;
+        .map_err(|error| match error {
+            campfire_db::Error::RecordInvalid(ref errors) if errors.on("attachment") == ["is inaccessible"] => Error::Status(StatusCode::UNPROCESSABLE_ENTITY),
+            other => Error::internal(other),
+        })?;
 
     // Rails record_settings_changes runs only after update! and its after_commit callbacks
     // return. In particular, failed NullAnalyzer metadata leaves the logo saved and no audit.

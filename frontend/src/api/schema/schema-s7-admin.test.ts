@@ -10,6 +10,7 @@ import {
   PersonRemoved,
   PersonRole,
   UpdateBanner,
+  UpdateInviteSplash,
   UpdateLogo,
   UpdatePerson,
   UpdateWorkspace,
@@ -44,6 +45,7 @@ describe("S7 admin schemas", () => {
       name: "Smart Data",
       logoUrl: "/account/logo?v=1700000000",
       logoAttached: false,
+      inviteSplashUrl: "/account/invite_splash?v=8",
       logoStillUrl: null,
       bannerUrl: "/account/banner?v=7",
       bannerStillUrl: null,
@@ -68,6 +70,7 @@ describe("S7 admin schemas", () => {
     });
     roundTrips(UpdateLogo, { signedId: "blob-1" });
     roundTrips(UpdateBanner, { signedId: "blob-2" });
+    roundTrips(UpdateInviteSplash, { signedId: "blob-3" });
     roundTrips(WorkspaceBranding, {
       name: "Smart Data",
       logoUrl: "/account/logo?v=1&animated=1",

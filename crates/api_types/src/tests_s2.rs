@@ -82,6 +82,7 @@ fn thread() -> Thread {
         creator_id: 7,
         name: "Hello there".into(),
         status: ThreadStatus::Active,
+        visibility: ThreadVisibility::Public,
         reply_count: 3,
         last_activity_at: "2026-10-06T10:00:00.000Z".into(),
         auto_archive_after_minutes: 4320,
@@ -605,6 +606,7 @@ fn threads_round_trip() {
         "creatorId": 7,
         "name": "Hello there",
         "status": "active",
+        "visibility": "public",
         "replyCount": 3,
         "lastActivityAt": "2026-10-06T10:00:00.000Z",
         "autoArchiveAfterMinutes": 4320,
@@ -682,6 +684,7 @@ fn threads_round_trip() {
     assert_wire(
         &CreateThread {
             parent_message_id: 9001,
+            visibility: None,
             name: None,
             message: CreateMessage {
                 client_message_id: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11".into(),
@@ -1002,4 +1005,37 @@ fn thread_typing_uses_the_thread_topic() {
         },
         json!({"t": "typing", "conv": "thread:88", "on": true}),
     );
+}
+
+#[test]
+fn private_thread_access_contract() {
+    assert_wire(&ThreadVisibility::Public, json!("public"));
+    assert_wire(&ThreadVisibility::Private, json!("private"));
+    let member = ThreadAccessMember {
+        user_id: 8,
+        added_by_id: Some(7),
+        created_at: "2026-10-12T10:00:00.000Z".into(),
+    };
+    assert_wire(&member, json!({"userId":8,"addedById":7,"createdAt":"2026-10-12T10:00:00.000Z"}));
+    assert_wire(&ThreadAccessMembers { members: vec![member], users: vec![] },
+        json!({"members":[{"userId":8,"addedById":7,"createdAt":"2026-10-12T10:00:00.000Z"}],"users":[]}));
+    assert_wire(&AddThreadAccessMember { user_id: 8 }, json!({"userId":8}));
+    let omitted: CreateThread = serde_json::from_value(json!({
+        "parentMessageId":9001,"name":null,"message":{
+            "clientMessageId":"private-contract","markdownSource":"First!",
+            "replyToMessageId":null,"replyNotifyAuthor":null,"attachmentSignedId":null
+        }
+    })).unwrap();
+    assert_eq!(omitted.visibility.unwrap_or_default(), ThreadVisibility::Public);
+    for (reason, wire, status) in [
+        (ThreadAccessRefusal::NotPrivate, "notPrivate", 422),
+        (ThreadAccessRefusal::InviteForbidden, "inviteForbidden", 403),
+        (ThreadAccessRefusal::RemoveForbidden, "removeForbidden", 403),
+        (ThreadAccessRefusal::ParentRoomRequired, "parentRoomRequired", 422),
+        (ThreadAccessRefusal::VisibilityImmutable, "visibilityImmutable", 422),
+    ] {
+        let error = ApiError::ThreadAccess { message: "Refused".into(), reason };
+        assert_eq!(error.status(), status);
+        assert_wire(&error, json!({"_tag":"ThreadAccess","message":"Refused","reason":wire}));
+    }
 }

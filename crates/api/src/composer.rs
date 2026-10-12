@@ -254,10 +254,11 @@ async fn room_thread(c: &Ctx, room: &Room, thread_id: Option<i64>) -> Result<Opt
         return Ok(None);
     };
     let room_id = room.id;
+    let viewer_id = concerns::require_current_user(c)?.id;
     c.app()
         .db
         .read(move |conn| match ChannelThread::find_by_id(conn, id)? {
-            Some(thread) if thread.room_id == room_id => Ok(Some(thread.id)),
+            Some(thread) if thread.room_id == room_id && thread.readable_by(conn, viewer_id)? => Ok(Some(thread.id)),
             _ => Err(campfire_db::Error::RecordNotFound("ChannelThread")),
         })
         .await
@@ -446,7 +447,11 @@ pub(crate) fn scheduled_rows(
     rows.iter()
         .map(|row| {
             let exists = match row.sent_message_id {
-                Some(id) => Message::find_by_id(conn, id)?.is_some(),
+                Some(id) => match Message::find_reachable(conn, row.user_id, id) {
+                    Ok(_) => true,
+                    Err(campfire_db::Error::RecordNotFound(_)) => false,
+                    Err(error) => return Err(error),
+                },
                 None => false,
             };
             let reply_target = row

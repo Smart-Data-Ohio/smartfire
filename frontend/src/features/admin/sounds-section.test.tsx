@@ -22,6 +22,7 @@ const workspace: Workspace = {
   bannerUrl: null,
   bannerStillUrl: null,
   logoAttached: false,
+  inviteSplashUrl: null,
   joinUrl: "/join/test",
   canAdminister: true,
   restrictRoomCreationToAdministrators: false,

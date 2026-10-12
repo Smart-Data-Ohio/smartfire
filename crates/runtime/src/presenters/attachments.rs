@@ -280,7 +280,7 @@ impl Record {
     }
 
     fn branding_marker(self, name: &str) -> Option<rails_compat::blob_branding::Marker> {
-        self.branding.filter(|_| matches!(name, "logo" | "banner"))
+        self.branding.filter(|_| matches!(name, "logo" | "banner" | "invite_splash"))
     }
 }
 
@@ -298,6 +298,16 @@ pub fn attach_existing(
     name: &str,
     blob: Blob,
 ) -> campfire_db::Result<()> {
+    let actor_id = match record.record_type {
+        "Message" => campfire_db::Message::find(tx.conn(), record.id)?.creator_id,
+        "ActionText::RichText" => tx.conn().query_row("SELECT m.creator_id FROM action_text_rich_texts rt JOIN messages m ON m.id=rt.record_id WHERE rt.id=? AND rt.record_type='Message'", [record.id], |row| row.get(0))?,
+        _ => 0,
+    };
+    if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id)? {
+        let mut errors = campfire_db::Errors::default();
+        errors.add("attachment", "is inaccessible");
+        return Err(campfire_db::Error::RecordInvalid(errors));
+    }
     if !scheduled_upload_owners(tx.conn(), blob.id)?.is_empty() {
         let mut errors = campfire_db::Errors::default();
         errors.add("attachment", "includes a private scheduled upload");
@@ -306,6 +316,9 @@ pub fn attach_existing(
     // While attached, a logo or banner is branding through its Account association, so its
     // metadata stays what Rails records; `destroy` marks it before that association goes.
     let blob = save_existing(tx, blob)?;
+    if record.record_type == "Message" {
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(COALESCE(NULLIF(metadata,''),'{}'),'$.private_thread_media',json('true')) WHERE id=? AND EXISTS (SELECT 1 FROM messages m JOIN channel_threads t ON t.id=m.thread_id WHERE m.id=? AND t.visibility='private')", rusqlite::params![blob.id, record.id])?;
+    }
     if attached_blob(tx.conn(), record.record_type, record.id, name)?
         .is_some_and(|attached| attached.id == blob.id)
     {

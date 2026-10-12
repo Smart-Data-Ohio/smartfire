@@ -5,9 +5,9 @@
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
 use campfire_db::models::agent_posting::PostingOutcome;
-use campfire_db::models::channel_thread::ThreadStatus;
+use campfire_db::models::channel_thread::{ThreadStatus, ThreadVisibility};
 use campfire_db::{
-    ChannelThread, Membership, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, User,
+    ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, User,
 };
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as posting, MessageParams, ThreadOutcome};
@@ -60,12 +60,29 @@ endpoint!(
     read => create_read
 );
 
+endpoint!(
+    /// `GET /api/v1/threads/:thread_id/members`
+    members => index_access_members
+);
+endpoint!(
+    /// `POST /api/v1/threads/:thread_id/members`
+    add_member => create_access_member
+);
+endpoint!(
+    /// `DELETE /api/v1/threads/:thread_id/members/:user_id`
+    remove_member => destroy_access_member
+);
+
 /// A refused thread change (`channel_threads#update`'s `FORBIDDEN_UPDATE`).
 pub(crate) const FORBIDDEN_UPDATE: &str = "You can't make that change to this thread";
 
 /// The thread `:thread_id` names, with its room: a thread in an alive room the viewer belongs
 /// to. Anything else is a 404, as the classic nested routes' `set_room` makes it.
 pub(crate) async fn scope(c: &mut Ctx) -> Result<(ChannelThread, Room, User)> {
+    scope_with_creator(c, false).await
+}
+
+async fn scope_with_creator(c: &mut Ctx, creator_may_manage: bool) -> Result<(ChannelThread, Room, User)> {
     let viewer = concerns::require_current_user(c)?.clone();
     let Some(id) = c.param_str("thread_id").and_then(concerns::cast_integer) else {
         return Err(fail(c, not_found()));
@@ -79,8 +96,11 @@ pub(crate) async fn scope(c: &mut Ctx) -> Result<(ChannelThread, Room, User)> {
                 return Ok(None);
             };
             let room = Room::find(conn, thread.room_id)?;
+            let creator = creator_may_manage && thread.creator_id == user_id
+                && User::find(conn, user_id)?.is_active()
+                && campfire_db::Membership::find_by_room_and_user(conn, room.id, user_id)?.is_some();
             if room.deleted_at.is_some()
-                || Membership::find_by_room_and_user(conn, room.id, user_id)?.is_none()
+                || (!creator && !thread.readable_by(conn, user_id)?)
             {
                 return Ok(None);
             }
@@ -125,6 +145,9 @@ pub(crate) async fn detail(c: &Ctx, viewer: User, thread_id: i64) -> Result<api:
         .db
         .read(move |conn| {
             let thread = ChannelThread::find(conn, thread_id)?;
+            if !thread.readable_by(conn, viewer.id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             let room = Room::find(conn, thread.room_id)?;
             dto::thread_detail(conn, &app, &viewer, &thread, &room, now)
         })
@@ -285,7 +308,10 @@ async fn create_thread(c: &mut Ctx) -> Result {
     }
     let attributes = message_params(c, input.message, Timeline::Room(room_id)).await?;
     let name = input.name.filter(|name| !name.trim().is_empty());
-    let outcome = match posting::create_or_find_thread(c, &room, parent_id, name, attributes).await
+    let outcome = match posting::create_or_find_thread(c, &room, parent_id, name, match input.visibility.unwrap_or_default() {
+        api::ThreadVisibility::Public => ThreadVisibility::Public,
+        api::ThreadVisibility::Private => ThreadVisibility::Private,
+    }, attributes).await
     {
         Ok(outcome) => outcome,
         Err(error) if db_cause(&error).is_some_and(campfire_db::Error::is_record_not_unique) => {
@@ -330,7 +356,15 @@ async fn create_thread(c: &mut Ctx) -> Result {
 async fn update_thread(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, room, viewer) = scope(c).await?;
-    let input: api::UpdateThread = body(c).await?;
+    let value: serde_json::Value = body(c).await?;
+    if value.get("visibility").is_some() {
+        return Err(fail(c, api::ApiError::ThreadAccess {
+            message: "Thread visibility cannot be changed".into(),
+            reason: api::ThreadAccessRefusal::VisibilityImmutable,
+        }));
+    }
+    let input: api::UpdateThread = serde_json::from_value(value)
+        .map_err(|error| fail(c, validation("body", &format!("isn't valid: {error}"))))?;
     if let Some(name) = &input.name {
         if name.trim().is_empty() {
             return Err(fail(c, validation("name", "can't be blank")));
@@ -373,6 +407,9 @@ async fn update_thread(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let mut thread = ChannelThread::find(tx.conn(), thread_id)?;
+            if !thread.readable_by(tx.conn(), actor.id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             // `channel_threads#update`'s permissions, read in its write.
             let settings = thread.settings_manageable_by(tx.conn(), &actor)?;
             let moderator = thread.manageable_by(tx.conn(), &actor)?;
@@ -444,11 +481,15 @@ async fn destroy_thread(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, room, viewer) = scope(c).await?;
     let thread_id = thread.id;
+    let private = thread.visibility == ThreadVisibility::Private;
     let removed = c
         .app()
         .db
         .write(move |tx| {
             let thread = ChannelThread::find(tx.conn(), thread_id)?;
+            if !thread.readable_by(tx.conn(), viewer.id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             if !thread.manageable_by(tx.conn(), &viewer)? {
                 return Ok(false);
             }
@@ -460,7 +501,9 @@ async fn destroy_thread(c: &mut Ctx) -> Result {
     if !removed {
         return Err(forbidden(c, "Only moderators can delete a thread"));
     }
-    c.app().broadcasts.thread_removed(thread_id, room.id);
+    if !private {
+        c.app().broadcasts.thread_removed(thread_id, room.id);
+    }
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 
@@ -605,4 +648,73 @@ async fn create_read(c: &mut Ctx) -> Result {
             membership: dto::thread_membership(&membership),
         },
     )
+}
+
+
+async fn access_members(c: &Ctx, thread_id: i64) -> Result<api::ThreadAccessMembers> {
+    let (secrets, now) = (c.app().secrets.clone(), now(c));
+    let viewer_id = concerns::require_current_user(c)?.id;
+    c.app().db.read(move |conn| {
+        let thread = ChannelThread::find(conn, thread_id)?;
+        if !thread.readable_by(conn, viewer_id)? {
+            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+        }
+        let members = thread.access_members(conn)?;
+        Ok(api::ThreadAccessMembers {
+            users: dto::users(conn, &secrets, members.iter().map(|member| member.user_id), now)?,
+            members: members.into_iter().map(|member| api::ThreadAccessMember {
+                user_id: member.user_id,
+                added_by_id: member.added_by_id,
+                created_at: dto::time(member.created_at),
+            }).collect(),
+        })
+    }).await.map_err(db_error)
+}
+
+async fn index_access_members(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let (thread, _, _) = scope(c).await?;
+    if thread.visibility != ThreadVisibility::Private {
+        return Err(fail(c, api::ApiError::ThreadAccess {
+            message: "Public threads do not have access members".into(),
+            reason: api::ThreadAccessRefusal::NotPrivate,
+        }));
+    }
+    let members = access_members(c, thread.id).await?;
+    c.json(StatusCode::OK, &members)
+}
+
+async fn create_access_member(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let (thread, _, viewer) = scope_with_creator(c, true).await?;
+    let input: api::AddThreadAccessMember = body(c).await?;
+    let thread_id = thread.id;
+    let (secrets, now) = (c.app().secrets.clone(), now(c));
+    let members = c.app().db.write(move |tx| {
+        let thread = ChannelThread::find(tx.conn(), thread_id)?;
+        let added = thread.add_access_member(tx, viewer.id, input.user_id)?;
+        let members = if thread.readable_by(tx.conn(), viewer.id)? {
+            thread.access_members(tx.conn())?
+        } else {
+            vec![added]
+        };
+        Ok(api::ThreadAccessMembers {
+            users: dto::users(tx.conn(), &secrets, members.iter().map(|member| member.user_id), now)?,
+            members: members.into_iter().map(|member| api::ThreadAccessMember {
+                user_id: member.user_id, added_by_id: member.added_by_id, created_at: dto::time(member.created_at),
+            }).collect(),
+        })
+    }).await.map_err(db_error)?;
+    c.json(StatusCode::OK, &members)
+}
+
+async fn destroy_access_member(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let (thread, _, viewer) = scope_with_creator(c, true).await?;
+    let user_id = c.param_str("user_id").and_then(concerns::cast_integer)
+        .ok_or_else(|| fail(c, not_found()))?;
+    c.app().db.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread.id)?.remove_access_member(tx, viewer.id, user_id)
+    }).await.map_err(db_error)?;
+    Ok(c.head(StatusCode::NO_CONTENT))
 }

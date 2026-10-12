@@ -1,6 +1,47 @@
 /* An image slot (the workspace icon and banner, a person's profile banner): a drop target with
    its thumbnail, progress, refusal and actions. */
 @layer app {
+  .profile-invite-preview {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(100%, 360px);
+    min-height: 200px;
+    margin: 0;
+    padding: var(--space-4);
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-app);
+  }
+
+  .profile-invite-background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-invite-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 100%;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-pane);
+    box-shadow: var(--shadow-raised);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-invite-card img {
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+  }
+
   .profile-slots {
     display: flex;
     flex-direction: column;
@@ -37,7 +78,8 @@
     color: var(--text-faint);
   }
 
-  .profile-slot[data-kind="banner"] .profile-slot-thumb {
+  .profile-slot[data-kind="banner"] .profile-slot-thumb,
+  .profile-slot[data-kind="invite_splash"] .profile-slot-thumb {
     width: 100px;
   }
 

@@ -205,7 +205,7 @@ pub async fn record(c: &mut Ctx) -> Result {
     let location = c.app().db.read(move |conn| {
         let message = match endpoint {
             "rooms/message_links#show" => {
-                let message = campfire_db::message_quote::source(conn, room.id, id)?;
+                let message = campfire_db::message_quote::source_for_viewer(conn, room.id, id, viewer)?;
                 if !campfire_db::message_quote::visible(conn, &message, viewer)? {
                     return Err(campfire_db::Error::RecordNotFound("Message"));
                 }
@@ -224,6 +224,7 @@ pub async fn record(c: &mut Ctx) -> Result {
                     conn, room.id, id, message_id, thread_id,
                 )?;
                 if let Some(thread) = context.thread {
+                    if !thread.readable_by(conn, viewer)? { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
                     return Ok(format!("/app/r/{}/t/{}", room.id, thread.id));
                 }
                 context.message
@@ -242,10 +243,12 @@ pub async fn record(c: &mut Ctx) -> Result {
             _ => return Err(campfire_db::Error::RecordNotFound("Page")),
         };
         Ok(match message {
-            Some(message) => message.thread_id.map_or_else(
+            Some(message) => {
+                if message.thread_id.is_some() && !campfire_db::message_quote::visible(conn, &message, viewer)? { return Err(campfire_db::Error::RecordNotFound("Message")); }
+                message.thread_id.map_or_else(
                 || format!("/app/r/{}/m/{}", message.room_id, message.id),
                 |thread| format!("/app/r/{}/t/{thread}?m={}", message.room_id, message.id),
-            ),
+            ) },
             None => format!("/app/r/{}", room.id),
         })
     }).await.map_err(|error| match error {

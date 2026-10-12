@@ -52,6 +52,42 @@ pub async fn for_account(app: &App, account: &Account) -> Result<WorkspaceBrandi
     })
 }
 
+/// Public workspace identity, shared by joining, the signed-out boot and About.
+pub async fn public_for_account(
+    app: &App,
+    account: Option<&Account>,
+) -> Result<campfire_api_types::SignInWorkspace> {
+    let Some(account) = account else {
+        return Ok(campfire_api_types::SignInWorkspace {
+            name: None,
+            logo_url: None,
+            description: String::new(),
+            invite_splash_url: None,
+        });
+    };
+    let branding = for_account(app, account).await?;
+    Ok(campfire_api_types::SignInWorkspace {
+        name: Some(branding.name),
+        logo_url: branding.logo_url,
+        description: account.settings().description().to_owned(),
+        invite_splash_url: invite_splash_url(app, account.id).await?,
+    })
+}
+
+pub async fn invite_splash_url(app: &App, account_id: i64) -> Result<Option<String>> {
+    let blob = app
+        .db
+        .read(move |conn| attachments::attached_blob(conn, "Account", account_id, "invite_splash"))
+        .await
+        .map_err(Error::internal)?;
+    Ok(blob.map(|blob| {
+        campfire_routes::fresh_account_invite_splash(
+            blob.id,
+            campfire_storage::branding::animated(&blob),
+        )
+    }))
+}
+
 /// Called after the mutation and its audit have committed. A socket failure cannot undo a save.
 pub async fn publish(app: &App) {
     if !app.cable.sync_wanted() {

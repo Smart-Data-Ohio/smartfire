@@ -2147,3 +2147,60 @@ async fn poll_media_bot_key_ranged_original_keeps_attachment_disposition() {
     assert!(disposition.starts_with("attachment") && disposition.contains("poll.gif"), "{disposition}");
     assert_eq!(disposition, full_disposition);
 }
+
+#[tokio::test]
+async fn private_thread_link_previews_require_access_to_both_source_and_holder() {
+    let a = app(true).await.expect("restored default seed");
+    let (thread_id, public_reference, private_reference, public_holder) = a.db().write(|tx| {
+        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: DESIGNERS, creator_id: DAVID, name: Some("Hidden link title".into()),
+            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        let source = campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: DESIGNERS, creator_id: DAVID, thread_id: Some(thread.id),
+            markdown_source: Some("Hidden link content".into()), ..Default::default()
+        })?;
+        let mut references = Vec::new();
+        let mut holders = Vec::new();
+        for thread_id in [None, Some(thread.id)] {
+            let holder = campfire_db::Message::create(tx, campfire_db::NewMessage {
+                room_id: DESIGNERS, creator_id: DAVID, thread_id,
+                markdown_source: Some("A message link".into()), ..Default::default()
+            })?;
+            references.push(campfire_db::message_reference::create(tx, holder.id, source.id)?);
+            holders.push(holder.id);
+        }
+        Ok((thread.id, references[0], references[1], holders[0]))
+    }).await.unwrap();
+    let mut kevin = a.sign_in(KEVIN).await;
+    assert_eq!(kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/message_links/999999999/card"))).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(kevin.get(&format!("/rooms/{DESIGNERS}/message_links/999999999")).await.status, StatusCode::NOT_FOUND);
+    for visible in [false, true, false] {
+        if visible {
+            a.db().write(move |tx| { campfire_db::ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, DAVID, KEVIN)?; Ok(()) }).await.unwrap();
+        }
+        let page: api::MessagePage = parse(&kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/messages"))).await);
+        let holder = page.messages.iter().find(|message| message.id == public_holder).unwrap();
+        assert!(!holder.cards.iter().any(|card| matches!(card, api::MessageCard::Quote(quote) if quote.reference_id == public_reference)), "shared card metadata must not reveal a private source");
+        for reference in [public_reference, private_reference] {
+            let classic = kevin.get(&format!("/rooms/{DESIGNERS}/message_links/{reference}")).await;
+            if visible {
+                assert!(classic.status.is_redirection(), "{}", classic.text());
+            } else {
+                assert_eq!(classic.status, StatusCode::NOT_FOUND, "{}", classic.text());
+            }
+            let response = kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/message_links/{reference}/card"))).await;
+            if !visible {
+                assert_eq!(response.status, StatusCode::NOT_FOUND, "{}", response.text());
+            } else {
+                assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+                let result: api::QuotePreviewResult = parse(&response);
+                assert!(matches!(result, api::QuotePreviewResult::Loaded(_)), "{result:?}");
+            }
+            if !visible { assert!(!response.text().contains("Hidden link")); }
+        }
+        if visible {
+            a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+        }
+    }
+}

@@ -350,7 +350,7 @@ pub fn conversation_names(
         };
         let thread_name = match thread_id {
             Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
-                Some(thread) if thread.room_id == room_id => Some(thread.name),
+                Some(thread) if thread.room_id == room_id && thread.readable_by(conn, viewer.id)? => Some(thread.name),
                 _ => continue,
             },
             None => None,
@@ -796,12 +796,12 @@ pub fn message_reactions(
 }
 
 /// The pin state after a pin or unpin (`PinState`).
-pub fn pin_state(conn: &Connection, message: &Message) -> Result<api::PinState> {
+pub fn pin_state(conn: &Connection, message: &Message, viewer: i64) -> Result<api::PinState> {
     Ok(api::PinState {
         message_id: message.id,
         room_id: message.room_id,
         pinned: MessagePin::pinned(conn, message.id)?,
-        pin_count: MessagePin::count_for_room(conn, message.room_id)?,
+        pin_count: MessagePin::count_for_viewer(conn, message.room_id, viewer)?,
     })
 }
 
@@ -815,7 +815,7 @@ pub fn pin_list(
     now: Timestamp,
 ) -> Result<api::PinList> {
     let mut statement = conn.prepare_cached(
-        r#"SELECT "message_pins"."message_id", "message_pins"."pinner_id", "message_pins"."created_at" FROM "message_pins" WHERE "message_pins"."room_id" = ? ORDER BY "message_pins"."created_at" DESC, "message_pins"."id" DESC LIMIT ?"#,
+        &format!(r#"SELECT message_pins.message_id,message_pins.pinner_id,message_pins.created_at FROM message_pins JOIN messages m ON m.id=message_pins.message_id WHERE message_pins.room_id=? AND (m.thread_id IS NULL OR {}) ORDER BY message_pins.created_at DESC,message_pins.id DESC LIMIT ?"#, campfire_db::channel_thread::readable_by_sql("m.thread_id", &viewer_id.to_string())),
     )?;
     let pins: Vec<(i64, i64, Timestamp)> = statement
         .query_map(
@@ -938,25 +938,60 @@ pub fn message(conn: &Connection, app: &AppState, message: &Message) -> Result<a
 
 pub(crate) fn mark_ignored(conn: &Connection, viewer: i64, messages: &mut [api::MessageDTO]) -> Result<()> {
     let ignored = campfire_db::models::ignore_policy::ignored_authors(conn, viewer)?;
-    for message in messages { message.ignored = ignored.contains(&message.creator_id).then_some(true); }
+    for message in messages {
+        message.ignored = ignored.contains(&message.creator_id).then_some(true);
+        if let Some(indicator) = &message.thread
+            && !campfire_db::ChannelThread::find(conn, indicator.thread_id)?.readable_by(conn, viewer)? {
+            message.thread = None;
+        }
+        for card in &mut message.cards {
+            if let api::MessageCard::Quote(quote) = card
+                && let Some(preview) = &quote.preview
+                && let Some(source) = Message::find_by_id(conn, preview.message_id)?
+                && !campfire_db::message_quote::visible(conn, &source, viewer)? {
+                quote.preview = None;
+            }
+        }
+    }
     Ok(())
 }
 
 pub(crate) fn messages_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<Vec<api::MessageDTO>> {
-    let mut dtos = self::messages(conn, app, messages)?;
+    let messages = readable_messages(conn, messages, viewer)?;
+    let mut dtos = self::messages(conn, app, &messages)?;
     mark_ignored(conn, viewer, &mut dtos)?;
     announcement_sources(conn, &mut dtos, viewer)?;
     Ok(dtos)
 }
 
 pub(crate) fn messages_and_fetches_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
-    let (mut dtos, fetches) = messages_and_fetches(conn, app, messages)?;
+    let messages = readable_messages(conn, messages, viewer)?;
+    let (mut dtos, fetches) = messages_and_fetches(conn, app, &messages)?;
     mark_ignored(conn, viewer, &mut dtos)?;
     announcement_sources(conn, &mut dtos, viewer)?;
     Ok((dtos, fetches))
 }
 
+fn readable_message(conn: &Connection, message: &Message, viewer: i64) -> Result<bool> {
+    let Some(thread_id) = message.thread_id else { return Ok(true) };
+    let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, thread_id)? else { return Ok(false) };
+    Ok(thread.room_id == message.room_id && thread.readable_by(conn, viewer)?)
+}
+
+fn readable_messages(conn: &Connection, messages: &[Message], viewer: i64) -> Result<Vec<Message>> {
+    let mut visible = Vec::with_capacity(messages.len());
+    for message in messages {
+        if readable_message(conn, message, viewer)? {
+            visible.push(message.clone());
+        }
+    }
+    Ok(visible)
+}
+
 pub(crate) fn message_for_viewer(conn: &Connection, app: &AppState, message: &Message, viewer: i64) -> Result<api::MessageDTO> {
+    if !readable_message(conn, message, viewer)? {
+        return Err(campfire_db::Error::RecordNotFound("Message"));
+    }
     let mut dto = self::message(conn, app, message)?;
     mark_ignored(conn, viewer, std::slice::from_mut(&mut dto))?;
     announcement_sources(conn, std::slice::from_mut(&mut dto), viewer)?;
@@ -1076,6 +1111,7 @@ pub(crate) fn notification_counts(
 /// history by `room_id` to find them.
 fn notification_counts_sql(one_room: bool) -> String {
     let visible = campfire_db::models::ignore_policy::visible_sql("?1", "m.creator_id");
+    let visible = format!("({visible}) AND (m.thread_id IS NULL OR {})", campfire_db::channel_thread::readable_by_sql("m.thread_id", "?1"));
     let only = |column: &str| match one_room {
         true => format!(r#" AND {column} = ?3"#),
         false => String::new(),
@@ -1326,7 +1362,7 @@ pub fn room_detail(
         membership: self::membership(&membership),
         display_name: accounts::room_display_name(conn, room, viewer)?,
         member_count,
-        pins_count: MessagePin::count_for_room(conn, room.id)?,
+        pins_count: MessagePin::count_for_viewer(conn, room.id, viewer.id)?,
         users: users(
             conn,
             secrets,
@@ -1493,7 +1529,7 @@ pub fn forward_destinations(
     let mut rooms = Room::for_user(conn, viewer.id)?;
     rooms.sort_by_cached_key(|room| room.name.as_ref().map(|name| name.to_ascii_lowercase()));
     let ids: Vec<i64> = rooms.iter().map(|room| room.id).collect();
-    let threads = campfire_db::ChannelThread::for_rooms(conn, &ids)?;
+    let threads = campfire_db::ChannelThread::readable_for_rooms(conn, &ids, viewer.id)?;
     let mut direct_names = HashMap::<i64, Vec<String>>::new();
     let mut statement = conn.prepare_cached(
         "SELECT memberships.room_id AS member_room_id, users.* FROM memberships \
@@ -1558,6 +1594,7 @@ pub fn thread(
         creator_id: thread.creator_id,
         name: thread.name.clone(),
         status: thread_status(thread.status_in_room(room, now)),
+        visibility: match thread.visibility { campfire_db::channel_thread::ThreadVisibility::Public => api::ThreadVisibility::Public, campfire_db::channel_thread::ThreadVisibility::Private => api::ThreadVisibility::Private },
         reply_count: thread.messages_count,
         last_activity_at: time(thread.last_activity_at),
         auto_archive_after_minutes: thread.auto_archive_after_minutes,
@@ -1696,13 +1733,14 @@ pub fn thread_list(
             })
             .collect(),
     };
+    let threads = threads.into_iter().map(|thread| thread.readable_by(conn, viewer_id).map(|readable| readable.then_some(thread))).collect::<Result<Vec<_>>>()?.into_iter().flatten().collect::<Vec<_>>();
     Ok(api::ThreadList {
         users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
         threads: thread_summaries(conn, secrets, viewer_id, room, &threads, now)?,
     })
 }
 
-/// Thread rows for a room page, with work facts and viewer memberships loaded in batches.
+/// Thread rows already filtered for the viewer by the listing query, with batched work facts.
 pub(crate) fn thread_summaries(
     conn: &Connection,
     secrets: &Secrets,
@@ -1738,15 +1776,16 @@ pub fn room_files(
     conn: &Connection,
     app: &AppState,
     room_id: i64,
+    viewer_id: i64,
     file_type: &str,
     filename: &str,
     page: i64,
-    now: Timestamp,
 ) -> Result<api::FileList> {
     use campfire_db::models::room_files;
+    let now = app.db.env().now();
     let presenter = Presenter::new(conn, app, None);
     let size = page * FILES_PAGE;
-    let rows = room_files::uploads(conn, room_id, file_type, filename, size)?;
+    let rows = room_files::uploads_for_viewer(conn, room_id, viewer_id, file_type, filename, size)?;
     let start = (((page - 1) * FILES_PAGE) as usize).min(rows.len());
     let end = (size as usize).min(rows.len());
     let files = room_file_rows(conn, &presenter, &rows[start..end])?;
@@ -1757,7 +1796,7 @@ pub fn room_files(
         let (mut seen, mut window) = (end, size);
         loop {
             window += FILES_PAGE;
-            let rows = room_files::uploads(conn, room_id, file_type, filename, window)?;
+            let rows = room_files::uploads_for_viewer(conn, room_id, viewer_id, file_type, filename, window)?;
             let upto = rows.len().min(window as usize);
             if seen < upto && !room_file_rows(conn, &presenter, &rows[seen..upto])?.is_empty() {
                 more = true;

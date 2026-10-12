@@ -20,12 +20,27 @@ pub struct ActivityUnread {
     pub evaluated_at: Timestamp,
 }
 
+fn authorized_sql() -> String {
+    let mut sql = include_str!("access.sql").to_owned();
+    for (marker, expression) in [
+        ("MESSAGE_THREAD_ACCESS", "activity_messages.thread_id"),
+        ("SAVED_THREAD_ACCESS", "activity_saved_messages.thread_id"),
+        ("WORK_THREAD_ACCESS", "activity_work_threads.id"),
+        ("SLA_THREAD_ACCESS", "activity_sla_threads.id"),
+        ("SCHEDULED_THREAD_ACCESS", "activity_scheduled_messages.thread_id"),
+    ] {
+        let access = super::super::channel_thread::readable_by_sql(expression, "activity_items.user_id");
+        sql = sql.replace(marker, &format!("({expression} IS NULL OR {access})"));
+    }
+    sql
+}
+
 fn access_sql() -> String {
     let visible =
         crate::models::ignore_policy::visible_sql("activity_items.user_id", activity_author_sql());
     format!(
         "{} AND (activity_items.source_type = 'SavedItem' OR {visible})",
-        include_str!("access.sql")
+        authorized_sql()
     )
 }
 
@@ -84,7 +99,7 @@ impl ActivityItem {
     /// Source authorization without ignore filtering, for publication eligibility only.
     pub fn find_authorized(conn: &Connection, user: &User, id: i64) -> Result<Option<Self>> {
         if !user.is_active() || user.is_bot() { return Ok(None); }
-        let sql = format!("{} AND activity_items.id=?2", include_str!("access.sql"));
+        let sql = format!("{} AND activity_items.id=?2", authorized_sql());
         crate::sql::query_one(conn, &sql, rusqlite::params![user.id, id], Self::from_row)
     }
 

@@ -281,6 +281,7 @@ pub struct SignInHelpContact {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SignInWorkspace {
+    pub invite_splash_url: Option<String>,
     pub name: Option<String>,
     pub logo_url: Option<String>,
     pub description: String,
@@ -481,6 +482,7 @@ mod tests {
             &SignedOutBoot {
                 kind: SignedOut::SignedOut,
                 workspace: SignInWorkspace {
+                    invite_splash_url: None,
                     name: None,
                     logo_url: None,
                     description: String::new(),
@@ -502,7 +504,7 @@ mod tests {
                     message: "Google sign-in failed.".into(),
                 }),
             },
-            json!({"kind":"signedOut","workspace":{"name":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked","flash":{"kind":"alert","message":"Google sign-in failed."}}),
+            json!({"kind":"signedOut","workspace":{"name":null,"inviteSplashUrl":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked","flash":{"kind":"alert","message":"Google sign-in failed."}}),
         );
         assert_wire(
             &PasswordSignIn {
@@ -578,6 +580,7 @@ mod tests {
     #[test]
     fn join_pages_round_trip() {
         let workspace = SignInWorkspace {
+            invite_splash_url: None,
             name: Some("Harbor".into()),
             logo_url: None,
             description: "Crew".into(),
@@ -587,7 +590,7 @@ mod tests {
                 workspace: workspace.clone(),
                 help_contact: None,
             },
-            json!({"kind":"join","workspace":{"name":"Harbor","logoUrl":null,"description":"Crew"},"helpContact":null}),
+            json!({"kind":"join","workspace":{"name":"Harbor","inviteSplashUrl":null,"logoUrl":null,"description":"Crew"},"helpContact":null}),
         );
         assert_wire(
             &JoinPage::InviteInvalid {
@@ -599,7 +602,7 @@ mod tests {
                 refusal: InviteRefusal::Exhausted,
                 reason: "All its uses have been taken.".into(),
             },
-            json!({"kind":"inviteInvalid","workspace":{"name":"Harbor","logoUrl":null,"description":"Crew"},"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"refusal":"exhausted","reason":"All its uses have been taken."}),
+            json!({"kind":"inviteInvalid","workspace":{"name":"Harbor","inviteSplashUrl":null,"logoUrl":null,"description":"Crew"},"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"refusal":"exhausted","reason":"All its uses have been taken."}),
         );
     }
 }

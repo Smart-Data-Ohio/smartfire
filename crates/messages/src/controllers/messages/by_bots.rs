@@ -156,9 +156,9 @@ fn ensure_body_or_attachment_present(c: &mut Ctx) -> Result<()> {
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     if c.params.get("attachment").is_some_and(|p| !p.is_null()) {
         let permitted = c.params.permit(&permit_keys(&["attachment"]));
-        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, attachment_policy: AttachmentPolicy::SignedBlob, ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, attachment_policy: AttachmentPolicy::SignedBlob { actor_id: Some(require_current_user(c)?.id) }, ..MessageParams::default() })
     } else {
-        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), attachment_policy: AttachmentPolicy::SignedBlob, ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), attachment_policy: AttachmentPolicy::SignedBlob { actor_id: Some(require_current_user(c)?.id) }, ..MessageParams::default() })
     }
 }
 

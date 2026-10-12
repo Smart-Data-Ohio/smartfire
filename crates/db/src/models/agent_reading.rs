@@ -66,7 +66,7 @@ pub fn board_posts(
     let names = if tag.is_empty() { Vec::new() } else { crate::ThreadTag::matching_names(conn, room, tag)? };
     query_all(
         conn,
-        "SELECT * FROM channel_threads WHERE room_id=? AND (?='all' OR (?='open' AND work_status IS NOT NULL AND work_status!='done') OR (? NOT IN ('all','open') AND work_status=?)) AND (?='' OR (?='me' AND work_owner_id=?) OR (?='agents' AND work_owner_id IN (SELECT user_id FROM agents)) OR (? NOT IN ('','me','agents') AND work_owner_id=?)) AND (?='' OR EXISTS(SELECT 1 FROM thread_tags WHERE channel_thread_id=channel_threads.id AND name IN (SELECT value FROM json_each(?)))) ORDER BY last_activity_at DESC,id DESC LIMIT 100",
+        &format!("SELECT * FROM channel_threads WHERE room_id=? AND {thread_access} AND (?='all' OR (?='open' AND work_status IS NOT NULL AND work_status!='done') OR (? NOT IN ('all','open') AND work_status=?)) AND (?='' OR (?='me' AND work_owner_id=?) OR (?='agents' AND work_owner_id IN (SELECT user_id FROM agents)) OR (? NOT IN ('','me','agents') AND work_owner_id=?)) AND (?='' OR EXISTS(SELECT 1 FROM thread_tags WHERE channel_thread_id=channel_threads.id AND name IN (SELECT value FROM json_each(?)))) ORDER BY last_activity_at DESC,id DESC LIMIT 100", thread_access = super::channel_thread::readable_by_sql("channel_threads.id", &user.to_string())),
         params![
             room,
             status,
@@ -94,8 +94,8 @@ pub fn owned_work(conn: &Connection, user: i64, rooms: &[i64]) -> Result<Vec<Cha
     query_all(
         conn,
         &format!(
-            "SELECT * FROM channel_threads WHERE work_status IS NOT NULL AND work_owner_id=? AND room_id IN ({}) ORDER BY updated_at DESC,id DESC LIMIT 100",
-            placeholders(rooms.len())
+            "SELECT * FROM channel_threads WHERE work_status IS NOT NULL AND work_owner_id=? AND room_id IN ({}) AND {} ORDER BY updated_at DESC,id DESC LIMIT 100",
+            placeholders(rooms.len()), super::channel_thread::readable_by_sql("channel_threads.id", &user.to_string())
         ),
         params_from_iter(values),
         ChannelThread::from_row,

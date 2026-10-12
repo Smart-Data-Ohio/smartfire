@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import PUBLIC_PAGES from "../../../mock/s2/public-pages.json" with { type: "json" };
@@ -91,7 +91,7 @@ describe("the public pages", () => {
     boot.type = "application/json";
     boot.textContent = JSON.stringify({
       kind: "signedOut",
-      workspace: { name: "Harbor", logoUrl: null, description: "" },
+      workspace: { inviteSplashUrl: null, name: "Harbor", logoUrl: null, description: "" },
       signInMethods: { password: true, google: false, googleDomains: [] },
       firstRunPending: false,
       helpContact: null,
@@ -124,3 +124,38 @@ describe("the public pages", () => {
     );
   });
 });
+
+it.each([null, "/account/invite_splash?v=42"])(
+  "shows About branding with splash %s and falls back on a broken image",
+  async (url) => {
+    await resetSignIn(network);
+    const page = await auth.publicPage("about");
+    vi.spyOn(auth, "publicPage").mockResolvedValue({
+      ...page,
+      workspace: {
+        name: "Harbor",
+        logoUrl: "/account/logo",
+        description: "Our community",
+        inviteSplashUrl: url,
+      },
+    });
+    await renderAuth("/app/about");
+    expect(await screen.findByRole("heading", { name: "Harbor", level: 2 })).toBeTruthy();
+    expect(screen.getByText("Our community")).toBeTruthy();
+    expect(document.querySelector(".public-view-workspace img")?.getAttribute("src")).toBe(
+      "/account/logo",
+    );
+    const image = document.querySelector(".invite-splash img");
+
+    if (url === null) {
+      expect(image).toBeNull();
+    } else {
+      expect(image?.getAttribute("src")).toBe(url);
+      expect(image?.getAttribute("alt")).toBe("");
+
+      if (image !== null) fireEvent.error(image);
+      expect(document.querySelector(".invite-splash img")).toBeNull();
+      expect(screen.getByRole("article")).toBeTruthy();
+    }
+  },
+);

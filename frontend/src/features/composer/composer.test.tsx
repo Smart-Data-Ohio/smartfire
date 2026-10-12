@@ -24,6 +24,7 @@ function pollThread(status: Thread["status"]): Thread {
     replyCount: 0,
     lastActivityAt: "2026-10-09T12:00:00Z",
     autoArchiveAfterMinutes: 1440,
+    visibility: "public",
     createdAt: "2026-10-09T12:00:00Z",
     work: null,
   };

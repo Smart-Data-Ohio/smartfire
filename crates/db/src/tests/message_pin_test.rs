@@ -303,3 +303,65 @@ fn pins_validate_their_message_room_and_uniqueness() {
     };
     assert_eq!(errors.on("message_id"), vec!["has already been taken"]);
 }
+
+
+#[test]
+fn private_pin_notes_and_counts_follow_current_thread_access() {
+    let t = frozen();
+    let thread = t.write(|tx| crate::ChannelThread::create(tx, crate::NewChannelThread {
+        room_id: id("designers"), creator_id: id("jz"), name: Some("Private pins".into()),
+        visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
+    }));
+    let reply = post_reply(&t, thread.id, "jz", "Private pinned message");
+    let roots_before = t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL", [id("designers")]));
+    let pinned = pin(&t, &reply, "jz");
+    let notes = t.read(|c| Message::in_thread(c, thread.id));
+    let note = notes.iter().find(|message| message.system_note).expect("pin note in private thread");
+    assert_eq!(note.thread_id, Some(thread.id));
+    assert!(note.markdown_source.as_ref().unwrap().contains(&message_path(&reply)));
+    assert_eq!(t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL", [id("designers")])), roots_before);
+    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("jz"))), 1);
+    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))), 0);
+    let tid = thread.id;
+    t.write(move |tx| { crate::Room::find(tx.conn(), id("designers"))?.grant_to(tx, &[id("kevin")])?; crate::ChannelThread::find(tx.conn(), tid)?.add_access_member(tx, id("jz"), id("kevin"))?; Ok(()) });
+    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))), 1);
+    t.write(move |tx| crate::ChannelThread::find(tx.conn(), tid)?.remove_access_member(tx, id("jz"), id("kevin")));
+    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))), 0);
+    unpin(&t, &pinned);
+    pin(&t, &reply, "jz");
+    assert_eq!(t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM messages WHERE thread_id=? AND system_note=1", [tid])), 1, "private pin notes deduplicate in their thread");
+}
+
+#[test]
+fn private_pins_do_not_consume_an_uninvited_room_members_pin_limit() {
+    let t = frozen();
+    let private_message = t.write(|tx| {
+        Room::find(tx.conn(), id("designers"))?.grant_to(tx, &[id("kevin")])?;
+        let mut thread = crate::ChannelThread::create(tx, crate::NewChannelThread {
+            room_id: id("designers"),
+            creator_id: id("jz"),
+            visibility: crate::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?;
+        let mut last = None;
+        for n in 0..MAX_PER_ROOM {
+            let message = thread.post_message(tx, id("jz"), crate::NewMessage {
+                room_id: thread.room_id,
+                creator_id: id("jz"),
+                markdown_source: Some(format!("Private pin {n}")),
+                ..Default::default()
+            })?;
+            MessagePin::pin(tx, &message, id("jz"))?.unwrap();
+            last = Some(message);
+        }
+        Ok(last.unwrap())
+    });
+    assert!(matches!(
+        t.try_write(move |tx| MessagePin::pin(tx, &private_message, id("kevin"))),
+        Err(Error::RecordNotFound("Message"))
+    ));
+    let visible = post_root(&t, "designers", "kevin", "Public pin");
+    pin(&t, &visible, "kevin");
+    assert_eq!(pin_count(&t), MAX_PER_ROOM + 1);
+    assert_eq!(t.read(|conn| MessagePin::count_for_viewer(conn, id("designers"), id("kevin"))), 1);
+}

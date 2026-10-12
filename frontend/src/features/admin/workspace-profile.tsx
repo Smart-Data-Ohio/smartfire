@@ -19,6 +19,8 @@ function serverImage(workspace: Workspace, kind: ProfileImageKind): Shown {
       : { url: null, stillUrl: null };
   }
 
+  if (kind === "invite_splash") return { url: workspace.inviteSplashUrl, stillUrl: null };
+
   return { url: workspace.bannerUrl, stillUrl: workspace.bannerStillUrl };
 }
 
@@ -94,6 +96,40 @@ function ProfilePreview({
   );
 }
 
+function InvitePreview({
+  workspace,
+  logo,
+  splash,
+}: {
+  readonly workspace: Workspace;
+  readonly logo: Shown;
+  readonly splash: Shown;
+}) {
+  const logoSrc = useShownSrc(logo);
+  const shown = useShownSrc(splash);
+  const [broken, setBroken] = useState<string | null>(null);
+  const src = shown === broken ? null : shown;
+
+  return (
+    <figure className="profile-invite-preview" aria-label="Invite preview">
+      {src === null ? null : (
+        <img
+          className="profile-invite-background"
+          src={src}
+          alt=""
+          onError={() => setBroken(src)}
+        />
+      )}
+      <div className="profile-invite-card">
+        {logoSrc === null ? null : <img src={logoSrc} alt="" width={32} height={32} />}
+        <span className="text-title">Join {workspace.name}</span>
+        {workspace.description === "" ? null : <p className="text-meta">{workspace.description}</p>}
+      </div>
+      <figcaption className="visually-hidden">The join and About background</figcaption>
+    </figure>
+  );
+}
+
 /**
  * The workspace profile, Discord's server profile: an icon for the rail and a banner for the top of
  * the sidebar, with a preview of both. Administrators upload, replace and remove them; everyone
@@ -109,6 +145,12 @@ export function WorkspaceProfile() {
       onChange: replace,
       savedTitle: `${PROFILE_SLOTS.logo.title} updated`,
     }),
+    invite_splash: useImageSlot({
+      save: admin.setInviteSplash,
+      remove: admin.removeInviteSplash,
+      onChange: replace,
+      savedTitle: "Invite splash updated",
+    }),
     banner: useImageSlot({
       save: admin.setBanner,
       remove: admin.removeBanner,
@@ -122,9 +164,10 @@ export function WorkspaceProfile() {
   return (
     <div className="profile">
       <ProfilePreview name={workspace.name} logo={shown("logo")} banner={shown("banner")} />
+      <InvitePreview workspace={workspace} logo={shown("logo")} splash={shown("invite_splash")} />
       {workspace.canAdminister ? (
         <div className="profile-slots">
-          {(["logo", "banner"] as const).map((kind) => (
+          {(["logo", "banner", "invite_splash"] as const).map((kind) => (
             <ProfileSlot
               key={kind}
               kind={kind}

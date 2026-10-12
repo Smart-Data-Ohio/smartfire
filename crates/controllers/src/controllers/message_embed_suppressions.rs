@@ -4,7 +4,7 @@ use crate::{
     concerns::{self, Before, before_actions, cast_integer, require_current_user},
     controllers::presenters::{link_embeds, page::db_error},
 };
-use campfire_db::{Message, Timeline};
+use campfire_db::Message;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -23,14 +23,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     let app = c.app().clone();
     let app2 = app.clone();
     let message=app.db.write(move |tx| {
-        let mut message=if let Some(room)=room {
-            let timeline=if let Some(thread)=thread {
-                let belongs:bool=tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM channel_threads WHERE id=?1 AND room_id=?2)",rusqlite::params![thread,room.id],|row| row.get(0))?;
-                if !belongs { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
-                Timeline::Thread(thread)
-            } else { Timeline::Room(room.id) };
-            Message::find_in(tx.conn(),timeline,id)?
-        } else { Message::find_reachable(tx.conn(),user_id,id)? };
+        let mut message=Message::find_reachable(tx.conn(),user_id,id)?;
+        if let Some(room)=room
+            && (message.room_id!=room.id || message.thread_id!=thread) {
+            return Err(campfire_db::Error::RecordNotFound("Message"));
+        }
         let locked=message.thread_id.map(|thread| tx.conn().query_row("SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=?",[thread],|row| row.get::<_,bool>(0))).transpose()?.unwrap_or(false);
         if message.creator_id!=user_id || message.system_note || locked { return Ok(None); }
         message.suppress_embeds(tx)?;

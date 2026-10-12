@@ -44,6 +44,7 @@ fn the_workspace_and_its_writes() {
             logo_url: "/account/logo?v=1700000000".into(),
             logo_still_url: None,
             banner_url: None,
+            invite_splash_url: None,
             banner_still_url: None,
             logo_attached: false,
             join_url: "https://chat.example/join/abc-123".into(),
@@ -62,7 +63,7 @@ fn the_workspace_and_its_writes() {
             "logoUrl": "/account/logo?v=1700000000",
             "logoStillUrl": null,
             "bannerUrl": null,
-            "bannerStillUrl": null,
+            "inviteSplashUrl": null, "bannerStillUrl": null,
             "logoAttached": false,
             "joinUrl": "https://chat.example/join/abc-123",
             "canAdminister": true,
@@ -75,6 +76,7 @@ fn the_workspace_and_its_writes() {
             "vanityUrl": "https://chat.example/join/smart-data"
         }),
     );
+    assert_wire(&UpdateInviteSplash { signed_id: "blob-3".into() }, json!({"signedId":"blob-3"}));
     assert_wire(
         &UpdateWorkspace {
             afk_policy: None,

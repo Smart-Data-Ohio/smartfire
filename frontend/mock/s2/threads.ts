@@ -4,8 +4,11 @@
  * `thread:<id>` and the viewer's `user` topic.
  */
 
+import { ThreadAccess } from "../../src/api/errors.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessageSticker } from "../../src/gen/MessageSticker.ts";
+import type { ThreadAccessMembers } from "../../src/gen/ThreadAccessMembers.ts";
+import type { ThreadAccessRefusal } from "../../src/gen/ThreadAccessRefusal.ts";
 import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { ThreadInvolvement } from "../../src/gen/ThreadInvolvement.ts";
@@ -16,13 +19,14 @@ import type { ThreadStatus } from "../../src/gen/ThreadStatus.ts";
 import {
   conflict,
   forbidden,
+  HttpError,
   type MockResponse,
   noContent,
   notFound,
   ok,
   validation,
 } from "../http.ts";
-import { intField, type Json, stringField } from "../json.ts";
+import { field, intField, isRecord, type Json, stringField } from "../json.ts";
 import { workDetail, workUserIds } from "../s4/work-model.ts";
 import { threadPermissions } from "../s6/work.ts";
 import { VIEWER_ID } from "../seed.ts";
@@ -30,9 +34,11 @@ import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import {
   buildMessage,
+  canAccessThread,
   DEFAULT_AUTO_ARCHIVE_MINUTES,
   defaultThreadName,
   indicatorOf,
+  inviteThreadMentionees,
   iso,
   type MessageDraft,
   pageOf,
@@ -62,6 +68,7 @@ export interface Threads {
   threadOr404(threadId: number): ThreadRecord;
   /** Posts a reply with everything that follows: indicator, thread events, unread. */
   postReply(thread: ThreadRecord, draft: MessageDraft, fresh?: boolean): MessageDTO;
+  finalizeReply(thread: ThreadRecord, message: MessageDTO): void;
   /** After a reply was deleted: the recount and the refresh events. */
   replyRemoved(thread: ThreadRecord): void;
   /** After a root message was deleted: a thread it started stays, with no parent. */
@@ -87,6 +94,8 @@ export function createThreads(
     if (thread === undefined) throw notFound("Thread not found");
 
     ctx.roomOr404(thread.roomId);
+
+    if (!canAccessThread(ctx.world(), thread)) throw notFound("Thread not found");
 
     return thread;
   };
@@ -179,6 +188,8 @@ export function createThreads(
 
   const postReply = (thread: ThreadRecord, draft: MessageDraft, fresh = false): MessageDTO => {
     const world = ctx.world();
+
+    if (!canAccessThread(world, thread, draft.creatorId)) throw notFound("Thread not found");
     const parent = parentOf(thread);
 
     const createdAt = iso(
@@ -204,27 +215,41 @@ export function createThreads(
     );
 
     thread.messages.push(message);
+    const notifications = receiveReply(thread, message);
 
     const events: Outgoing[] = [
       { topic: `thread:${thread.id}`, type: "message.created", data: message },
       ...syncIndicator(thread),
       ...(fresh ? [] : updated(thread)),
+      ...notifications,
     ];
-
-    const membership = thread.viewerMembership;
-
-    if (draft.creatorId !== VIEWER_ID && membership !== null && !draft.systemNote) {
-      thread.viewerMembership = { ...membership, unreadAt: createdAt };
-      events.push({
-        topic: "user",
-        type: "thread.unread",
-        data: { threadId: thread.id, roomId: thread.roomId, refreshOnly: false },
-      });
-    }
 
     ctx.publish(events);
 
     return message;
+  };
+
+  const receiveReply = (thread: ThreadRecord, message: MessageDTO): Outgoing[] => {
+    inviteThreadMentionees(ctx.world(), thread, message, message.creatorId, message.updatedAt);
+    const membership = thread.viewerMembership;
+
+    if (
+      message.streaming ||
+      message.systemNote ||
+      message.creatorId === VIEWER_ID ||
+      membership === null ||
+      !canAccessThread(ctx.world(), thread)
+    )
+      return [];
+    thread.viewerMembership = { ...membership, unreadAt: message.updatedAt };
+
+    return [
+      {
+        topic: "user",
+        type: "thread.unread",
+        data: { threadId: thread.id, roomId: thread.roomId, refreshOnly: false },
+      },
+    ];
   };
 
   const refresh = (thread: ThreadRecord): Outgoing => ({
@@ -259,7 +284,10 @@ export function createThreads(
       record.room.kind === "direct"
         ? []
         : [...ctx.world().threads.values()]
-            .filter((thread) => thread.roomId === roomId && keep(thread))
+            .filter(
+              (thread) =>
+                thread.roomId === roomId && canAccessThread(ctx.world(), thread) && keep(thread),
+            )
             .sort(
               (a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) || b.id - a.id,
             );
@@ -290,6 +318,7 @@ export function createThreads(
       duplicate?.threadId == null ? undefined : world.threads.get(duplicate.threadId);
 
     if (duplicate !== undefined && existing !== undefined) {
+      if (!canAccessThread(world, existing)) throw notFound("Thread not found");
       const replay: ThreadCreated = { detail: detail(existing), message: duplicate };
 
       return ok(replay);
@@ -302,9 +331,23 @@ export function createThreads(
 
     for (const thread of world.threads.values()) {
       if (thread.parentMessageId === parent.id) {
+        if (!canAccessThread(world, thread)) throw notFound("Thread not found");
         throw conflict("That message already has a thread; open it instead");
       }
     }
+
+    const rawVisibility = field(body, "visibility");
+
+    if (
+      rawVisibility !== undefined &&
+      rawVisibility !== null &&
+      rawVisibility !== "public" &&
+      rawVisibility !== "private"
+    ) {
+      throw validation("visibility", "Visibility is not included in the list");
+    }
+
+    const visibility = rawVisibility === "private" ? "private" : "public";
 
     const parsed = parseMessage(messageBody, uploads.attachment, sticker);
     const requested = stringField(body, "name")?.trim() ?? "";
@@ -325,6 +368,11 @@ export function createThreads(
       locked: false,
       lastActivityAt: createdAt,
       autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES,
+      visibility,
+      accessMembers:
+        visibility === "private"
+          ? new Map([[VIEWER_ID, { userId: VIEWER_ID, addedById: VIEWER_ID, createdAt }]])
+          : new Map(),
       createdAt,
       messages: [],
       memberIds: new Set(),
@@ -399,6 +447,11 @@ export function createThreads(
 
   const update = (threadId: number, body: Json | undefined): ThreadDetail => {
     const thread = threadOr404(threadId);
+
+    if (isRecord(body) && "visibility" in body) {
+      throw accessRefused("visibilityImmutable", "Thread visibility cannot be changed");
+    }
+
     const allowed = permissions(thread);
     const name = stringField(body, "name");
     const status = stringField(body, "status");
@@ -515,6 +568,95 @@ export function createThreads(
     return { membership: thread.viewerMembership };
   };
 
+  const accessRefused = (reason: ThreadAccessRefusal, message: string): HttpError =>
+    new HttpError(
+      reason === "inviteForbidden" || reason === "removeForbidden" ? 403 : 422,
+      new ThreadAccess({ reason, message }),
+    );
+
+  const privateThread = (threadId: number, creatorMayManage = false): ThreadRecord => {
+    const world = ctx.world();
+    const candidate = world.threads.get(threadId);
+
+    const creator =
+      creatorMayManage &&
+      candidate?.creatorId === VIEWER_ID &&
+      world.users.get(VIEWER_ID)?.status === "active" &&
+      (world.rooms.get(candidate.roomId)?.memberIds.includes(VIEWER_ID) ?? false);
+
+    const thread = creator && candidate !== undefined ? candidate : threadOr404(threadId);
+
+    if (thread.visibility !== "private") throw accessRefused("notPrivate", "This thread is public");
+
+    return thread;
+  };
+
+  const accessMembers = (thread: ThreadRecord): ThreadAccessMembers => {
+    const members = [...thread.accessMembers.values()].sort(
+      (left, right) => left.userId - right.userId,
+    );
+
+    return { members, users: ctx.usersFor(members.map((member) => member.userId)) };
+  };
+
+  const addAccessMember = (threadId: number, body: Json | undefined): ThreadAccessMembers => {
+    const thread = privateThread(threadId, true);
+    const world = ctx.world();
+    const administrator = world.users.get(VIEWER_ID)?.role === "administrator";
+
+    if (!administrator && thread.creatorId !== VIEWER_ID && !thread.accessMembers.has(VIEWER_ID)) {
+      throw accessRefused("inviteForbidden", "You can't invite people to this thread");
+    }
+
+    const userId = intField(body, "userId");
+
+    if (userId === null) throw validation("userId", "User is required");
+    const user = world.users.get(userId);
+
+    if (
+      user?.status !== "active" ||
+      !(world.rooms.get(thread.roomId)?.memberIds.includes(userId) ?? false)
+    ) {
+      throw accessRefused(
+        "parentRoomRequired",
+        "The person must be an active member of the parent room",
+      );
+    }
+
+    if (!thread.accessMembers.has(userId)) {
+      thread.accessMembers.set(userId, { userId, addedById: VIEWER_ID, createdAt: iso(ctx.now()) });
+      join(thread, userId, null);
+    }
+
+    if (canAccessThread(world, thread)) return accessMembers(thread);
+    const member = thread.accessMembers.get(userId);
+
+    if (member === undefined) throw notFound("Thread member not found");
+
+    return { members: [member], users: ctx.usersFor([userId]) };
+  };
+
+  const removeAccessMember = (threadId: number, userId: number): MockResponse => {
+    const thread = privateThread(threadId, true);
+    const administrator = ctx.world().users.get(VIEWER_ID)?.role === "administrator";
+
+    if (!administrator && thread.creatorId !== VIEWER_ID && userId !== VIEWER_ID) {
+      throw accessRefused("removeForbidden", "You can't remove people from this thread");
+    }
+
+    thread.accessMembers.delete(userId);
+
+    if (userId === VIEWER_ID) {
+      if (thread.viewerMembership !== null)
+        thread.viewerMembership = { ...thread.viewerMembership, unreadAt: null };
+      ctx.publish([
+        { topic: "user", type: "thread.removed", data: { threadId, roomId: thread.roomId } },
+      ]);
+    }
+
+    return noContent();
+  };
+
   const lookups = () => ({
     usersFor: ctx.usersFor,
     saved: ctx.world().saved,
@@ -522,6 +664,16 @@ export function createThreads(
   });
 
   return {
+    finalizeReply(thread, message) {
+      const notifications = receiveReply(thread, message);
+
+      ctx.publish([
+        ...notifications,
+        { topic: `thread:${thread.id}`, type: "message.updated", data: message },
+        ...syncIndicator(thread),
+        ...updated(thread),
+      ]);
+    },
     routes: [
       route("GET", /^\/rooms\/(\d+)\/threads$/, (request) =>
         ok(list(firstId(request), request.query)),
@@ -545,13 +697,23 @@ export function createThreads(
       ),
       route("DELETE", /^\/threads\/(\d+)\/join$/, (request) => leave(firstId(request))),
       route("POST", /^\/threads\/(\d+)\/read$/, (request) => ok(read(firstId(request)))),
+      route("GET", /^\/threads\/(\d+)\/members$/, (request) =>
+        ok(accessMembers(privateThread(firstId(request)))),
+      ),
+      route("POST", /^\/threads\/(\d+)\/members$/, (request) =>
+        ok(addAccessMember(firstId(request), request.body)),
+      ),
+      route("DELETE", /^\/threads\/(\d+)\/members\/(\d+)$/, (request) =>
+        removeAccessMember(firstId(request), request.ids[1] ?? 0),
+      ),
     ],
     threadOr404,
     postReply: (thread, draft, fresh) => postReply(thread, draft, fresh),
     replyRemoved(thread) {
       const events = [...syncIndicator(thread), ...updated(thread)];
 
-      if (thread.memberIds.size > 0) events.push(refresh(thread));
+      if (thread.memberIds.size > 0 && canAccessThread(ctx.world(), thread))
+        events.push(refresh(thread));
 
       ctx.publish(events);
     },
@@ -560,7 +722,10 @@ export function createThreads(
         if (thread.parentMessageId !== messageId) continue;
 
         thread.parentMessageId = null;
-        ctx.publish([...updated(thread), refresh(thread)]);
+        ctx.publish([
+          ...updated(thread),
+          ...(canAccessThread(ctx.world(), thread) ? [refresh(thread)] : []),
+        ]);
       }
     },
     typing(threadId, userId, on) {

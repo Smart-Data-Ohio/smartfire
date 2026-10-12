@@ -1147,3 +1147,458 @@ async fn board_post_permissions_follow_each_classic_role_and_lifecycle() {
         .await;
     assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
 }
+
+
+#[tokio::test]
+async fn private_threads_require_access_members_and_visibility_is_immutable() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created = david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-api-create", "Private first reply")}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let created: api::ThreadCreated = parse(&created);
+    let id = created.detail.thread.id;
+    assert_eq!(created.detail.thread.visibility, api::ThreadVisibility::Private);
+    for path in [format!("/api/v1/threads/{id}"), format!("/api/v1/threads/{id}/messages"),
+        format!("/api/v1/threads/{id}/members"), format!("/rooms/{DESIGNERS}/threads/{id}"),
+        format!("/rooms/{DESIGNERS}/threads/{id}/messages")] {
+        assert_eq!(kevin.send(get(&path)).await.status, StatusCode::NOT_FOUND, "{path}");
+    }
+    let list: api::ThreadList = parse(&kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/threads?state=all"))).await);
+    assert!(!list.threads.iter().any(|row| row.thread.id == id));
+    let denied = kevin.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/join"), &json!({}))).await;
+    assert_eq!(denied.status, StatusCode::NOT_FOUND);
+    let changed = david.write(json_body(Method::PATCH, &format!("/api/v1/threads/{id}"), &json!({"visibility": "public"}))).await;
+    assert!(matches!(envelope(&changed), api::ApiError::ThreadAccess {reason: api::ThreadAccessRefusal::VisibilityImmutable, ..}));
+    let denied = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": -1}))).await;
+    assert!(matches!(envelope(&denied), api::ApiError::ThreadAccess {reason: api::ThreadAccessRefusal::ParentRoomRequired, ..}));
+    let members = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(members.status, StatusCode::OK, "{}", members.text());
+    assert!(parse::<api::ThreadAccessMembers>(&members).members.iter().any(|member| member.user_id == KEVIN));
+    assert_eq!(kevin.send(get(&format!("/api/v1/threads/{id}"))).await.status, StatusCode::OK);
+    // A current access member may invite another parent room member, but cannot remove them.
+    let added = kevin.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": JZ}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    let denied = kevin.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{JZ}"), &json!({}))).await;
+    assert!(matches!(envelope(&denied), api::ApiError::ThreadAccess {reason: api::ThreadAccessRefusal::RemoveForbidden, ..}));
+    let left = kevin.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{KEVIN}"), &json!({}))).await;
+    assert_eq!(left.status, StatusCode::NO_CONTENT);
+    assert_eq!(kevin.send(get(&format!("/api/v1/threads/{id}"))).await.status, StatusCode::NOT_FOUND);
+    let hidden: api::MessagePage = parse(&kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/messages"))).await);
+    assert!(hidden.messages.iter().filter(|message| message.id == UNTHREADED).all(|message| message.thread.is_none()));
+    let mentioned = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"), &reply_body("private-api-mention", "Welcome back @[Kevin]"))).await;
+    assert_eq!(mentioned.status, StatusCode::CREATED, "{}", mentioned.text());
+    assert_eq!(kevin.send(get(&format!("/api/v1/threads/{id}"))).await.status, StatusCode::OK);
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{JZ}"), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT);
+    let message: api::MessageDTO = parse(&mentioned);
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{}", message.id), &json!({"markdownSource": "Welcome back @[Kevin] and @[JZ]"}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    let members: api::ThreadAccessMembers = parse(&david.send(get(&format!("/api/v1/threads/{id}/members"))).await);
+    assert!(members.members.iter().any(|member| member.user_id == JZ));
+    let public: api::ThreadDetail = parse(&kevin.send(get(&format!("/api/v1/threads/{THREAD}"))).await);
+    assert_eq!(public.thread.visibility, api::ThreadVisibility::Public);
+    let denied = david.send(get(&format!("/api/v1/threads/{THREAD}/members"))).await;
+    assert!(matches!(envelope(&denied), api::ApiError::ThreadAccess {reason: api::ThreadAccessRefusal::NotPrivate, ..}));
+}
+
+#[tokio::test]
+async fn private_thread_removal_cancels_an_open_sync_subscription() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let created: api::ThreadCreated = parse(&david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-sync-create", "Private sync first reply")}))).await);
+    let id = created.detail.thread.id;
+    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}"), format!("thread:{id}")]).await;
+    sync.welcome().await;
+    let outsider = a.sign_in(JZ).await;
+    let mut uninvited = Sync::connect(addr, &outsider.cookie_header(), &[format!("room:{DESIGNERS}"), format!("thread:{id}")]).await;
+    uninvited.welcome().await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"), &reply_body("private-sync-before", "Visible before removal"))).await;
+    assert_eq!(posted.status, StatusCode::CREATED);
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "private-sync-before"), |_| false).await;
+    a.booted.app.broadcasts.settle_sync().await;
+    let marker = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &reply_body("private-sync-outsider-marker", "Public marker for uninvited reader"))).await;
+    assert_eq!(marker.status, StatusCode::CREATED);
+    uninvited.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "private-sync-outsider-marker"),
+        |event| event.topic == format!("thread:{id}") || matches!(&event.payload,
+            api::SyncPayload::ThreadUpdated(thread) | api::SyncPayload::ThreadCreated(thread) if thread.id == id)
+            || matches!(&event.payload, api::SyncPayload::ThreadIndicator(change) if change.thread.as_ref().is_some_and(|thread| thread.thread_id == id))).await;
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{KEVIN}"), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT);
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::ThreadRemoved(removed) if removed.thread_id == id && event.topic == "user"), |_| false).await;
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Batch { .. }) => {},
+            Some(api::ServerFrame::Bye { reconnect: true, .. }) => break,
+            other => panic!("revocation should disconnect existing subscriptions, got {other:?}"),
+        }
+    }
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}"), format!("thread:{id}")]).await;
+    sync.welcome().await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"), &reply_body("private-sync-after", "Hidden after removal"))).await;
+    assert_eq!(posted.status, StatusCode::CREATED);
+    a.booted.app.broadcasts.settle_sync().await;
+    let marker = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &reply_body("private-sync-marker", "Room still visible"))).await;
+    assert_eq!(marker.status, StatusCode::CREATED);
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "private-sync-marker"),
+        |event| event.topic == format!("thread:{id}") || matches!(&event.payload,
+            api::SyncPayload::ThreadUpdated(thread) | api::SyncPayload::ThreadCreated(thread) if thread.id == id)
+            || matches!(&event.payload, api::SyncPayload::ThreadIndicator(change) if change.thread.as_ref().is_some_and(|thread| thread.thread_id == id))).await;
+    // Granting access again does not silently restore the old thread subscription.
+    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(added.status, StatusCode::OK);
+    a.booted.app.broadcasts.settle_sync().await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"), &reply_body("private-sync-readded", "Requires a fresh subscription"))).await;
+    assert_eq!(posted.status, StatusCode::CREATED);
+    a.booted.app.broadcasts.settle_sync().await;
+    let marker = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &reply_body("private-sync-marker-readded", "Second room marker"))).await;
+    assert_eq!(marker.status, StatusCode::CREATED);
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "private-sync-marker-readded"), |event| event.topic == format!("thread:{id}")).await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn private_thread_review_scheduled_replay_renders_current_access_and_keeps_draft() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created: api::ThreadCreated = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+                &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-replay-create", "Confidential reply target")}),
+            ))
+            .await,
+    );
+    let id = created.detail.thread.id;
+    assert_eq!(
+        david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/threads/{id}/members"),
+                &json!({"userId": KEVIN})
+            ))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+        panic!("welcome");
+    };
+    let draft: api::ScheduledMessage = parse(&kevin.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
+        &json!({"markdownSource": "My retained draft", "sendAt": "2099-01-01T12:00:00Z", "threadId": id, "replyToMessageId": created.message.id}))).await);
+    assert_eq!(
+        draft.reply_target.as_ref().unwrap().excerpt,
+        "Confidential reply target"
+    );
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::ScheduledChanged(message) if message.id == draft.id), |_| false).await;
+    assert_eq!(
+        david
+            .write(json_body(
+                Method::DELETE,
+                &format!("/api/v1/threads/{id}/members/{KEVIN}"),
+                &json!({})
+            ))
+            .await
+            .status,
+        StatusCode::NO_CONTENT
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+    let mut replay = Sync::open(
+        addr,
+        &kevin.cookie_header(),
+        &[],
+        json!({"epoch": epoch, "seq": seq}),
+    )
+    .await;
+    assert!(matches!(
+        replay.next().await,
+        Some(api::ServerFrame::Welcome { resumed: true, .. })
+    ));
+    let event = replay.until(|event| matches!(&event.payload, api::SyncPayload::ScheduledChanged(message) if message.id == draft.id), |_| false).await;
+    let api::SyncPayload::ScheduledChanged(shown) = event.payload else {
+        unreachable!()
+    };
+    assert!(
+        shown.reply_target.is_none(),
+        "revoked reply content: {:?}",
+        shown.reply_target
+    );
+    assert!(!shown.sendable);
+    assert_eq!(shown.markdown_source, "My retained draft");
+    let list: api::ScheduledMessageList =
+        parse(&kevin.send(get("/api/v1/scheduled_messages")).await);
+    assert_eq!(
+        list.scheduled_messages
+            .iter()
+            .find(|message| message.id == draft.id),
+        Some(&shown)
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn private_thread_review_classic_links_treat_hidden_ids_as_missing() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created: api::ThreadCreated = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+                &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-classic-create", "Hidden reply")}),
+            ))
+            .await,
+    );
+    let id = created.detail.thread.id;
+    let message = created.message.id;
+    let visible = david
+        .get(&format!(
+            "/rooms/{DESIGNERS}?thread={id}&message_id={message}"
+        ))
+        .await;
+    assert_eq!(
+        visible.location(),
+        Some(format!("http://campfire.test/app/r/{DESIGNERS}/t/{id}?m={message}").as_str())
+    );
+    for (hidden, missing) in [
+        (
+            format!("/rooms/{DESIGNERS}?thread={id}"),
+            format!("/rooms/{DESIGNERS}?thread=9999999999"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}?thread={id}&message_id={message}"),
+            format!("/rooms/{DESIGNERS}?thread=9999999999&message_id=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}?message_id={message}"),
+            format!("/rooms/{DESIGNERS}?message_id=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}/messages?message_id={message}"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999/messages?message_id=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}/messages/{message}"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999/messages/9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/@{message}"),
+            format!("/rooms/{DESIGNERS}/@9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/messages/{message}/fizzy_cards/new"),
+            format!("/rooms/{DESIGNERS}/messages/9999999998/fizzy_cards/new"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}/messages/{message}/fizzy_cards/new"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999/messages/9999999998/fizzy_cards/new"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/messages?before={message}"),
+            format!("/rooms/{DESIGNERS}/messages?before=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/messages?after={message}"),
+            format!("/rooms/{DESIGNERS}/messages?after=9999999998"),
+        ),
+        (
+            format!("/messages/{message}/boosts/new"),
+            "/messages/9999999998/boosts/new".into(),
+        ),
+        (
+            format!("/threads/{id}/work/handoff/new"),
+            "/threads/9999999999/work/handoff/new".into(),
+        ),
+        (
+            format!("/threads/{id}/work/links"),
+            "/threads/9999999999/work/links".into(),
+        ),
+    ] {
+        for method in [Method::GET, Method::HEAD] {
+            for accept in ["text/html", "application/json"] {
+                let hidden_reply = kevin
+                    .send(Req::new(method.clone(), &hidden).header("accept", accept))
+                    .await;
+                let missing_reply = kevin
+                    .send(Req::new(method.clone(), &missing).header("accept", accept))
+                    .await;
+                assert_eq!(hidden_reply.status, missing_reply.status, "{hidden}");
+                let normalize = |location: Option<&str>| {
+                    location.map(|location| {
+                        location
+                            .replace("9999999998", "MESSAGE")
+                            .replace(&message.to_string(), "MESSAGE")
+                            .replace("9999999999", "THREAD")
+                            .replace(&id.to_string(), "THREAD")
+                    })
+                };
+                assert_eq!(
+                    normalize(hidden_reply.location()),
+                    normalize(missing_reply.location()),
+                    "{hidden}"
+                );
+                assert_eq!(
+                    normalize(Some(&hidden_reply.text())),
+                    normalize(Some(&missing_reply.text())),
+                    "{hidden} response body"
+                );
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn private_thread_unfollow_keeps_creator_access_until_members_self_delete() {
+    let Some(a) = app(true).await else { return };
+    let mut creator = a.sign_in(KEVIN).await;
+    let created = creator.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-unfollow-create", "Private reply")}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let created: api::ThreadCreated = parse(&created);
+    let id = created.detail.thread.id;
+    assert!(created.detail.membership.is_some());
+    for _ in 0..2 {
+        let unfollowed = creator.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/join"), &json!({}))).await;
+        assert_eq!(unfollowed.status, StatusCode::NO_CONTENT, "{}", unfollowed.text());
+        let response = creator.send(get(&format!("/api/v1/threads/{id}"))).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let detail: api::ThreadDetail = parse(&response);
+        assert!(detail.membership.is_none());
+        let members: api::ThreadAccessMembers = parse(&creator.send(get(&format!("/api/v1/threads/{id}/members"))).await);
+        assert!(members.members.iter().any(|member| member.user_id == KEVIN));
+    }
+    let followed = creator.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/join"), &json!({}))).await;
+    assert_eq!(followed.status, StatusCode::OK, "{}", followed.text());
+    let left = creator.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{KEVIN}"), &json!({}))).await;
+    assert_eq!(left.status, StatusCode::NO_CONTENT, "{}", left.text());
+    assert_eq!(creator.send(get(&format!("/api/v1/threads/{id}"))).await.status, StatusCode::NOT_FOUND);
+    a.db().read(move |conn| {
+        assert!(campfire_db::Membership::find_by_room_and_user(conn, DESIGNERS, KEVIN)?.is_some());
+        assert!(!campfire_db::ChannelThread::find(conn, id)?.access_members(conn)?.iter().any(|member| member.user_id == KEVIN));
+        Ok(())
+    }).await.unwrap();
+    let added = creator.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId":JZ}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    let roster: api::ThreadAccessMembers = parse(&added);
+    assert_eq!(roster.members.iter().map(|member| member.user_id).collect::<Vec<_>>(), [JZ]);
+    assert_eq!(creator.send(get(&format!("/api/v1/threads/{id}/members"))).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(creator.send(get(&format!("/api/v1/threads/{id}"))).await.status, StatusCode::NOT_FOUND);
+    let removed = creator.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{JZ}"), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT, "{}", removed.text());
+    let restored = creator.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId":KEVIN}))).await;
+    assert_eq!(restored.status, StatusCode::OK, "{}", restored.text());
+    assert_eq!(creator.send(get(&format!("/api/v1/threads/{id}"))).await.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn thread_timelines_include_system_notes_only_for_current_readers() {
+    let Some(a) = app(true).await else { return };
+    let (public_id, public_note, private_id, private_note) = a.db().write(|tx| {
+        let public = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: DESIGNERS, creator_id: DAVID, name: Some("Public notes".into()),
+            ..Default::default()
+        })?;
+        let private = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: DESIGNERS, creator_id: DAVID, name: Some("Private notes".into()),
+            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        let mut notes = Vec::new();
+        for (thread, text) in [(&public, "Public system note"), (&private, "Private system note")] {
+            notes.push(campfire_db::Message::create(tx, campfire_db::NewMessage {
+                room_id: DESIGNERS, thread_id: Some(thread.id), creator_id: DAVID,
+                markdown_source: Some(text.into()), system_note: true, ..Default::default()
+            })?.id);
+        }
+        Ok((public.id, notes[0], private.id, notes[1]))
+    }).await.unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    for (id, note) in [(public_id, public_note), (private_id, private_note)] {
+        let response = david.send(get(&format!("/api/v1/threads/{id}/messages"))).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let page: api::MessagePage = parse(&response);
+        assert!(page.messages.iter().any(|message| message.id == note && message.system_note));
+        let classic = david.get(&format!("/rooms/{DESIGNERS}/threads/{id}/messages.json")).await;
+        assert_eq!(classic.status, StatusCode::OK, "{}", classic.text());
+        assert!(classic.text().contains(&note.to_string()));
+    }
+    let public: api::MessagePage = parse(&kevin.send(get(&format!("/api/v1/threads/{public_id}/messages"))).await);
+    assert!(public.messages.iter().any(|message| message.id == public_note && message.system_note));
+    let private_path = format!("/api/v1/threads/{private_id}/messages");
+    for visible in [false, true, false] {
+        if visible {
+            a.db().write(move |tx| {
+                campfire_db::ChannelThread::find(tx.conn(), private_id)?.add_access_member(tx, DAVID, KEVIN)?;
+                Ok(())
+            }).await.unwrap();
+        }
+        let response = kevin.send(get(&private_path)).await;
+        assert_eq!(response.status, if visible { StatusCode::OK } else { StatusCode::NOT_FOUND }, "{}", response.text());
+        let classic = kevin.get(&format!("/rooms/{DESIGNERS}/threads/{private_id}/messages.json")).await;
+        assert_eq!(classic.status, if visible { StatusCode::OK } else { StatusCode::NOT_FOUND }, "{}", classic.text());
+        if visible {
+            let page: api::MessagePage = parse(&response);
+            assert!(page.messages.iter().any(|message| message.id == private_note && message.system_note));
+            a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), private_id)?
+                .remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+        } else {
+            assert!(!response.text().contains("Private system note"));
+        }
+    }
+}
+
+#[tokio::test]
+async fn private_thread_creation_conflicts_do_not_reveal_hidden_children() {
+    let a = app(true).await.expect("the frozen default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/threads");
+    let created: api::ThreadCreated = parse(&david.write(json_body(Method::POST, &path,
+        &json!({"parentMessageId":UNTHREADED,"name":"Hidden child","visibility":"private",
+            "message":reply_body("private-conflict-owner", "Private reply")}))).await);
+    let id = created.detail.thread.id;
+    for (n, visible) in [false, true, false].into_iter().enumerate() {
+        if visible {
+            a.db().write(move |tx| { campfire_db::ChannelThread::find(tx.conn(), id)?.add_access_member(tx, DAVID, KEVIN)?; Ok(()) }).await.unwrap();
+        }
+        let response = kevin.write(json_body(Method::POST, &path,
+            &json!({"parentMessageId":UNTHREADED,"name":"Fresh child",
+                "message":reply_body(&format!("private-conflict-{n}"), "Fresh reply")}))).await;
+        assert_eq!(response.status, if visible { StatusCode::CONFLICT } else { StatusCode::NOT_FOUND }, "{}", response.text());
+        let classic = kevin.write(json_body(Method::POST, &format!("/rooms/{DESIGNERS}/threads.json"),
+            &json!({"thread":{"parent_message_id":UNTHREADED,"name":"Fresh child"},
+                "message":{"client_message_id":format!("private-classic-conflict-{n}"),"markdown_source":"Fresh reply"}}))).await;
+        assert_eq!(classic.status, if visible { StatusCode::CONFLICT } else { StatusCode::NOT_FOUND }, "{}", classic.text());
+        if visible {
+            a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+        } else {
+            assert!(!response.text().contains("already exists"));
+        }
+    }
+}

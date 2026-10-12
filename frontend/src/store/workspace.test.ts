@@ -41,6 +41,7 @@ function workspace(extra: Partial<Workspace> = {}): Workspace {
     name: "Smart Data",
     logoUrl: "/account/logo?v=1",
     logoAttached: false,
+    inviteSplashUrl: null,
     logoStillUrl: null,
     bannerUrl: null,
     bannerStillUrl: null,
