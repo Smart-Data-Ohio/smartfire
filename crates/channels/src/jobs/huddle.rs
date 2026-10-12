@@ -80,21 +80,18 @@ async fn invitation(app: App, job: Invitation, _: Execution) -> JobResult {
 }
 
 async fn presence(app: App, job: Presence, _: Execution) -> JobResult {
-    let room = app
-        .db
-        .read(move |conn| {
-            Ok(
-                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, job.0.grant_id)?
-                    .map(|grant| grant.room_id),
-            )
+    // Publish on the writer's ordered after-commit lane. An independent reader can publish
+    // an idle stage after StreamChanged and coalesce away the live state.
+    app.db
+        .write(move |tx| {
+            if let Some(grant) =
+                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(tx.conn(), job.0.grant_id)?
+            {
+                campfire_db::models::huddle_effects::broadcast_presence(tx, grant.room_id);
+            }
+            Ok(())
         })
         .await?;
-    if let Some(room_id) = room {
-        tokio::task::spawn_blocking(move || {
-            crate::channels::huddle_effects::presence(&app, room_id)
-        })
-        .await??;
-    }
     Ok(Outcome::Done)
 }
 
