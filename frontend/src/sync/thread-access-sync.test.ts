@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { Thread } from "../gen/Thread.ts";
 import { threadAccessChanges } from "./thread-access-sync.ts";
+import { beginThreadLoad } from "./thread-loads.ts";
 
 const secret: Thread = {
   id: 88,
@@ -150,7 +151,7 @@ describe("threadAccessChanges", () => {
         },
         { removedThreads: {} },
         [updated("user")],
-        new Map([[88, 1]]),
+        new Map([[88, beginThreadLoad(88, null)]]),
       ).regained,
     ).toEqual([]);
   });

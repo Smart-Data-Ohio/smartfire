@@ -2340,6 +2340,108 @@ describe("resync", () => {
     );
   }
 
+  it.effect(
+    "recovers another grant after reconnect supersedes a pending private-thread recovery",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const socket = yield* MemorySocket;
+          const api = yield* FakeApi;
+          const releaseOld = yield* Deferred.make<void>();
+          const releaseNew = yield* Deferred.make<void>();
+          const gone = new NotFound({ message: "gone" });
+          let headers = 0;
+          let pages = 0;
+
+          const original = threadDetail("active", true);
+
+          const secret: ThreadDetail = {
+            ...original,
+            thread: { ...original.thread, visibility: "private" },
+          };
+
+          const replies = (id: number) => pageFixture([messageFixture(id, 12, { threadId: 88 })]);
+
+          yield* serve([]);
+          yield* startEngine;
+          yield* welcome(5, false);
+          yield* threadActions.open(88);
+          expect(store.getState().threadPanes[88]?.status).toBe("error");
+          yield* api.route("GET /threads/88", () => {
+            headers += 1;
+
+            if (headers === 2) return Effect.fail(gone);
+
+            return Deferred.await(headers === 1 ? releaseOld : releaseNew).pipe(Effect.as(secret));
+          });
+          yield* api.route("GET /threads/88/messages", () => {
+            pages += 1;
+
+            if (pages === 2) return Effect.fail(gone);
+
+            return Deferred.await(pages === 1 ? releaseOld : releaseNew).pipe(
+              Effect.as(replies(pages === 1 ? 5 : 6)),
+            );
+          });
+
+          const grant = (seq: number): SyncEvent => ({
+            seq,
+            topic: "user",
+            type: "thread.updated",
+            data: secret.thread,
+          });
+
+          yield* pushEvents(grant(6));
+          expect(headers).toBe(1);
+          expect(pages).toBe(1);
+          expect(store.getState().threadPanes[88]?.status).toBe("loading");
+
+          // Access is removed offline. The reconnect cannot replay its removal tombstone.
+          yield* socket.drop;
+          yield* TestClock.adjust("250 millis");
+          yield* welcome(7, false);
+          yield* settle;
+          expect(headers).toBe(2);
+          expect(pages).toBe(2);
+          expect(store.getState().threadPanes[88]?.status).toBe("error");
+          expect(store.getState().removedThreads[88]).toBeUndefined();
+          expect(yield* Deferred.isDone(releaseOld)).toBe(false);
+          yield* socket.clearSent;
+
+          yield* pushEvents(grant(8));
+          expect((yield* socket.sent).filter((frame) => frame.t === "sub")).toEqual([
+            { t: "sub", topics: ["thread:88"] },
+          ]);
+          expect(headers).toBe(3);
+          expect(pages).toBe(3);
+          expect(store.getState().threadPanes[88]?.status).toBe("loading");
+
+          // Finishing the superseded recovery must not clear the new recovery's duplicate guard.
+          yield* Deferred.succeed(releaseOld, undefined);
+          yield* settle;
+          yield* pushEvents(grant(9));
+          expect((yield* socket.sent).filter((frame) => frame.t === "sub")).toEqual([
+            { t: "sub", topics: ["thread:88"] },
+          ]);
+          expect(headers).toBe(3);
+          expect(pages).toBe(3);
+          expect(store.getState().threadPanes[88]?.status).toBe("loading");
+
+          yield* Deferred.succeed(releaseNew, undefined);
+          yield* settle;
+          expect(store.getState().threadPanes[88]?.status).toBe("ready");
+          expect(store.getState().threadTimelines[88]?.ids).toEqual([6]);
+          yield* pushEvents({
+            seq: 10,
+            topic: "thread:88",
+            type: "message.created",
+            data: messageFixture(7, 12, { threadId: 88 }),
+          });
+          expect(store.getState().threadTimelines[88]?.ids).toEqual([6, 7]);
+        }),
+      ),
+  );
+
   it.effect("subscribes again when Try again reloads a denied private thread", () =>
     withSync(
       Effect.gen(function* () {

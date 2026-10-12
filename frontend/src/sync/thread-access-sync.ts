@@ -1,5 +1,6 @@
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { State } from "../store/state.ts";
+import { isLatestThreadLoad } from "./thread-loads.ts";
 
 export interface ThreadAccessChanges {
   /** Threads the viewer can no longer read. */
@@ -28,11 +29,13 @@ export function threadAccessChanges(
       const wasRemoved = before.removedThreads[id] !== undefined || lost.has(id);
       const status = before.threadPanes[id]?.status;
       const unreadable = wasRemoved || status === "loading" || status === "error";
+      const ticket = recovering.get(id);
+      const pendingRecovery = ticket !== undefined && isLatestThreadLoad(id, ticket);
 
       if (
         unreadable &&
         after.removedThreads[id] === undefined &&
-        (wasRemoved || !recovering.has(id))
+        (wasRemoved || !pendingRecovery)
       ) {
         regained.add(id);
       }
