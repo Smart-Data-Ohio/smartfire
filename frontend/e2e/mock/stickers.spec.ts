@@ -49,16 +49,14 @@ async function hoverBar(row: Locator): Promise<Locator> {
   return bar;
 }
 
-async function messageAction(row: Locator, name: string, phone: boolean) {
+async function messageAction(row: Locator, name: "Edit" | "Save for later", phone: boolean) {
   if (phone) {
-    await row.getByRole("img", { name: /Sticker:/ }).click({ button: "right" });
-    await row
-      .page()
-      .getByRole("menu", { name: "Message actions" })
-      .getByRole("menuitem", { name: new RegExp(`^${name}`) })
-      .click();
+    await row.press(name === "Edit" ? "e" : "s");
   } else {
     await (await hoverBar(row)).getByRole("button", { name, exact: true }).click();
+  }
+  if (name === "Save for later") {
+    await expect(row.locator('[data-flag="saved"]')).toHaveText("Saved for later");
   }
 }
 
