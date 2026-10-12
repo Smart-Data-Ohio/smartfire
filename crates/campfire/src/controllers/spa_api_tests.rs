@@ -18,6 +18,8 @@ use crate::controllers::presenters::test_support::{
 
 #[path = "spa_api_grouped_files_tests.rs"]
 mod grouped_files_tests;
+#[path = "spa_api_scheduled_files_tests.rs"]
+mod scheduled_files_tests;
 #[path = "spa_api_webhooks_tests.rs"]
 mod webhooks_tests;
 

@@ -122,7 +122,7 @@ export interface Uploads {
   /** Serves `PUT /rails/active_storage/disk/:token`, blobs and icons. */
   handleBinary(request: MockBinaryRequest): Promise<MockBinaryResponse>;
   /** The attachment for a finished upload's signed id; 422 otherwise. */
-  attachment(signedId: string): Attachment;
+  attachment(signedId: string, scheduledId?: number | null): Attachment;
   /** While on, upload `PUT`s wait until released. Turning it off releases them. */
   hold(on: boolean): void;
   release(): void;
@@ -352,13 +352,30 @@ export function createUploads(
         ? serveIcon(path, url.searchParams.get("still") === "1")
         : empty(404);
     },
-    attachment(signedId) {
+    attachment(signedId, scheduledId = null) {
       const blob = ctx.world().blobs.get(signedId);
 
       if (blob === undefined) throw validation("attachment", "Attachment is invalid");
 
+      if (
+        [...ctx.world().scheduled.values()].some(
+          (message) =>
+            message.id !== scheduledId &&
+            message.sentAt === null &&
+            message.attachments.some((file) => file.signedId === signedId),
+        )
+      ) {
+        throw validation("attachment", "Attachment is already attached to a scheduled message");
+      }
+
       if (blob.bytes === null)
         throw validation("attachment", "Attachment hasn't finished uploading");
+
+      if (blob.byteSize > limitBytes() || blob.bytes.length > limitBytes())
+        throw validation("attachment", "Attachment exceeds the current upload limit");
+
+      if (blob.bytes.length !== blob.byteSize)
+        throw validation("attachment", "Attachment size no longer matches its upload");
 
       return attachmentOf(blob);
     },

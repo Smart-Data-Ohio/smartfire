@@ -657,6 +657,19 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => {
+            if matches!(policy, AttachmentPolicy::SignedBlob) {
+                let private: bool = tx.conn().query_row(
+                    "SELECT json_extract(metadata, '$.scheduled_by') IS NOT NULL OR EXISTS(
+                        SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND record_type='ScheduledMessage'
+                     ) FROM active_storage_blobs WHERE id=?1",
+                    [blob.id], |row| row.get(0),
+                )?;
+                if private {
+                    let mut errors = campfire_db::Errors::default();
+                    errors.add(attribute, "includes a private scheduled upload");
+                    return Err(campfire_db::Error::RecordInvalid(errors));
+                }
+            }
             if let AttachmentPolicy::OwnedUpload { uploader_id } | AttachmentPolicy::ScheduledUpload { uploader_id, .. } = policy {
                 let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?
                     .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
@@ -669,10 +682,12 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
                     "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND (?2 IS NULL OR record_type!='ScheduledMessage' OR record_id!=?2 OR name!='attachments'))",
                     (blob.id, scheduled_id), |row| row.get(0),
                 )?;
+                let awaiting_purge = scheduled_id.is_none()
+                    && current.metadata.get("scheduled_by").and_then(campfire_storage::Json::as_i64).is_some();
                 let mut errors = campfire_db::Errors::default();
                 if owner != Some(uploader_id) {
                     errors.add(attribute, "includes an upload that isn't yours");
-                } else if attached {
+                } else if attached || awaiting_purge {
                     errors.add(attribute, "includes an upload that is already attached");
                 }
                 errors.into_result()?;
