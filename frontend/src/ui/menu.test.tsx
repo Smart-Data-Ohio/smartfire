@@ -393,3 +393,154 @@ describe("Menu as an action sheet", () => {
     });
   });
 });
+
+/**
+ * A minimal Popover API for jsdom, in the browser's order: `hidePopover` (light dismiss on an
+ * outside pointerdown, or a modal dialog opening) takes the element out of the top layer at once
+ * and fires its `toggle` as a later task. Answers the elements in the top layer.
+ */
+function emulatePopovers(): Set<Element> {
+  const shown = new Set<Element>();
+  const matches = Element.prototype.matches;
+
+  Object.assign(HTMLElement.prototype, {
+    showPopover(this: HTMLElement) {
+      shown.add(this);
+    },
+    hidePopover(this: HTMLElement) {
+      shown.delete(this);
+      window.setTimeout(() =>
+        this.dispatchEvent(Object.assign(new Event("toggle"), { newState: "closed" })),
+      );
+    },
+  });
+  vi.spyOn(Element.prototype, "matches").mockImplementation(function (this: Element, selector) {
+    return selector === ":popover-open" ? shown.has(this) : matches.call(this, selector);
+  });
+
+  return shown;
+}
+
+/** Lets queued tasks (a popover's `toggle`) run. */
+async function nextTask(ms = 0): Promise<void> {
+  await act(() => new Promise((resolve) => window.setTimeout(resolve, ms)));
+}
+
+describe("Menu in the top layer", () => {
+  let shown = new Set<Element>();
+
+  beforeEach(() => {
+    shown = emulatePopovers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(HTMLElement.prototype, "showPopover");
+    Reflect.deleteProperty(HTMLElement.prototype, "hidePopover");
+  });
+
+  /** The menu's trigger and whether it is open, as aria-expanded says and as the page shows it. */
+  function state(trigger: HTMLElement) {
+    const menu = screen.queryByRole("menu");
+
+    return {
+      expanded: trigger.getAttribute("aria-expanded"),
+      visible: menu !== null && shown.has(menu),
+    };
+  }
+
+  it("never stays open but hidden when its trigger is clicked twice in quick succession", async () => {
+    render(<MessageMenu onSelect={() => {}} />);
+
+    const trigger = screen.getByRole("button", { name: "More actions" });
+
+    fireEvent.click(trigger, { detail: 1 });
+    await nextTask(50);
+    expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+
+    // The first click: its pointerdown light-dismisses the popover, then the click closes it.
+    const menu = screen.getByRole("menu");
+
+    fireEvent.pointerDown(trigger, { pointerId: 1, button: 0 });
+    menu.hidePopover();
+    fireEvent.click(trigger, { detail: 1 });
+    // The popover's toggle arrives after the click; the second click follows ~50 ms later.
+    await nextTask();
+    fireEvent.pointerDown(trigger, { pointerId: 1, button: 0 });
+    fireEvent.click(trigger, { detail: 1 });
+    await nextTask(50);
+
+    expect(state(trigger)).toEqual({ expanded: "false", visible: false });
+
+    // A later click opens it, in the top layer.
+    await nextTask(300);
+    fireEvent.click(trigger, { detail: 1 });
+    await nextTask();
+    expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+  });
+
+  it("opens on the next click after an item opened a modal dialog over the closing menu", async () => {
+    const opened: string[] = [];
+
+    render(<MessageMenu onSelect={(item) => opened.push(item)} />);
+
+    const trigger = screen.getByRole("button", { name: "More actions" });
+
+    fireEvent.click(trigger, { detail: 1 });
+    await nextTask(50);
+
+    // Choosing the item; the dialog it opens hides the still-closing popover.
+    const menu = screen.getByRole("menu");
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit message" }));
+    menu.hidePopover();
+    await nextTask(50);
+    expect(opened).toEqual(["edit"]);
+
+    fireEvent.click(trigger, { detail: 1 });
+    await nextTask();
+    expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+  });
+
+  it("is back in the top layer when reopened during its exit, after a choice and a dismissal", () => {
+    vi.useFakeTimers();
+
+    try {
+      const chosen: string[] = [];
+
+      render(<MessageMenu onSelect={(item) => chosen.push(item)} />);
+
+      const trigger = screen.getByRole("button", { name: "More actions" });
+
+      fireEvent.click(trigger, { detail: 1 });
+      act(() => vi.advanceTimersByTime(200));
+
+      const menu = screen.getByRole("menu");
+
+      expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+
+      // Choosing an item starts the exit; the browser then hides the popover (the dialog the item
+      // opens, or a light dismiss) and its toggle lands, all inside the exit.
+      fireEvent.click(screen.getByRole("menuitem", { name: "Copy link" }));
+      menu.hidePopover();
+      act(() => vi.advanceTimersByTime(10));
+      expect(chosen).toEqual(["copy"]);
+      expect(screen.getByRole("menu")).toBe(menu);
+      expect(state(trigger)).toEqual({ expanded: "false", visible: false });
+
+      // Reopened before the exit ends: the same surface, shown again and focused.
+      fireEvent.click(trigger, { detail: 1 });
+      expect(screen.getByRole("menu")).toBe(menu);
+      expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+      expect(menu.dataset.state).toBe("open");
+      expect(document.activeElement).toBe(menu);
+
+      // The cancelled exit doesn't take it away later.
+      act(() => vi.advanceTimersByTime(500));
+      expect(screen.getByRole("menu")).toBe(menu);
+      expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
