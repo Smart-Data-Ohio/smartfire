@@ -669,7 +669,13 @@ async fn execute(
             if let Some(denial) = denial {
                 return Ok(denial);
             }
-            if args.get("body").is_none_or(blank) && args.get("markdown_source").is_none_or(blank) {
+            if let Some(id) = args.get("sticker_id") && id.as_i64().is_none() {
+                return Err(ToolError::Invalid("sticker_id must be an integer".into()));
+            }
+            if args.get("body").is_none_or(blank)
+                && args.get("markdown_source").is_none_or(blank)
+                && args.get("sticker_id").is_none()
+            {
                 return Err(ToolError::Invalid(
                     "body or markdown_source is required".into(),
                 ));

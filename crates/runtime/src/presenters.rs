@@ -23,6 +23,7 @@ pub mod fizzy_profile;
 pub mod room_unread;
 pub mod calls;
 pub mod message_payload;
+pub mod stickers;
 pub mod bot_input_casts;
 pub mod message_freshness;
 pub mod github;

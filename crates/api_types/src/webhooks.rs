@@ -81,6 +81,9 @@ impl<'de> Deserialize<'de> for UpdateChannelWebhook {
 #[ts(export)]
 pub struct ExecuteWebhook {
     pub content: Option<String>,
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sticker_id: Option<i64>,
     pub username: Option<String>,
     #[serde(default)]
     pub embeds: Vec<WebhookEmbed>,

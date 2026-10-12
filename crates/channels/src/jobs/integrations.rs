@@ -65,6 +65,8 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
     let secrets = app.secrets.clone();
     let encryption = app.ar_encryption.clone();
     let db = app.db.clone();
+    let storage = app.storage.clone();
+    let base = app.config.mail.url_origin().to_owned();
     let (bot, room, url, payload, secret) = app
         .db
         .read(move |conn| {
@@ -82,6 +84,9 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
                 &message,
                 &room_path,
                 &campfire_routes::room_at_message(room.id, message.id),
+            )?;
+            let payload = campfire_runtime::presenters::stickers::webhook_payload(
+                conn, &storage, &message, &base, payload,
             )?;
             Ok(Some((bot, room, webhook.url, payload, secret)))
         })
