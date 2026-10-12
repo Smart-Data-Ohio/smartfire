@@ -480,6 +480,7 @@ describe("a slash command that fails", () => {
     argHint: "<when> <text>",
     takesArguments: true,
     agentName: null,
+    optionSchema: null,
   };
 
   it.each([

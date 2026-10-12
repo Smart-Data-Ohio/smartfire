@@ -118,7 +118,7 @@ CREATE INDEX "index_activity_items_on_source" ON "activity_items" ("source_type"
 CREATE INDEX "index_activity_items_on_user_and_state" ON "activity_items" ("user_id", "read_at", "handled_at", "created_at");
 CREATE UNIQUE INDEX "index_activity_items_on_user_and_source" ON "activity_items" ("user_id", "source_type", "source_id");
 CREATE INDEX "index_activity_items_on_user_id_and_updated_at" ON "activity_items" ("user_id", "updated_at");
-CREATE TABLE "agent_slash_commands" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "agent_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "description" varchar, "name" varchar NOT NULL, "room_id" integer NOT NULL, "takes_arguments" boolean DEFAULT TRUE NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_873314717b"
+CREATE TABLE "agent_slash_commands" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "agent_id" integer NOT NULL, "created_at" datetime(6) NOT NULL, "description" varchar, "name" varchar NOT NULL, "room_id" integer NOT NULL, "takes_arguments" boolean DEFAULT TRUE NOT NULL, "updated_at" datetime(6) NOT NULL, option_schema TEXT, CONSTRAINT "fk_rails_873314717b"
 FOREIGN KEY ("agent_id")
   REFERENCES "agents" ("id")
 , CONSTRAINT "fk_rails_e604b7b265"
@@ -1047,3 +1047,13 @@ CREATE TABLE announcement_deliveries (
   PRIMARY KEY (publication_id, target_room_id)
 );
 CREATE INDEX announcement_deliveries_on_target ON announcement_deliveries(target_room_id);
+CREATE TABLE soundboard_sounds (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 32),
+  name_key TEXT NOT NULL UNIQUE,
+  emoji TEXT,
+  volume REAL NOT NULL DEFAULT 1.0 CHECK (volume BETWEEN 0.0 AND 1.0),
+  uploader_id INTEGER NOT NULL REFERENCES users(id),
+  created_at datetime(6) NOT NULL,
+  updated_at datetime(6) NOT NULL
+);

@@ -563,13 +563,14 @@ async fn execute(
                         let takes = text(args.get("takes_arguments"))
                             .as_deref()
                             .and_then(campfire_db::account::cast_boolean);
-                        campfire_db::models::agent_slash_command::register(
+                        campfire_db::models::agent_slash_command::register_with_schema(
                             tx,
                             agent_id,
                             room,
                             &command,
                             description.as_deref(),
                             takes,
+                            args.get("option_schema").cloned(),
                         )
                     } else {
                         campfire_db::models::agent_slash_command::unregister(
