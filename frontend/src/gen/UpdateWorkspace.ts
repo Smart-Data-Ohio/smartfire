@@ -4,15 +4,15 @@ import type { AfkPolicy } from "./AfkPolicy";
 /**
  * `PATCH /api/v1/admin/workspace` (`accounts#update`). `null` leaves a key as it is.
  */
-export type UpdateWorkspace = { 
+export type UpdateWorkspace = {
 /**
  * Null leaves the policy unchanged. A policy with roomId null disables AFK moves.
  */
-afkPolicy: AfkPolicy | null, name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null, stageAudienceBudget: number | null, 
+afkPolicy: AfkPolicy | null, name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null, stageAudienceBudget: number | null,
 /**
  * An empty string clears the description; null leaves it unchanged.
  */
-description: string | null, 
+description: string | null,
 /**
  * An empty string removes the alias; null leaves it unchanged.
  */
