@@ -4,7 +4,7 @@
  * the room (through the navigator the huddle root registers) and joins its call.
  */
 import type { HuddleRing } from "../../gen/HuddleRing.ts";
-import { store } from "../../store/store.ts";
+import { onAccountChange, store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { callController } from "./call-controller.ts";
 import { callStore } from "./call-store.ts";
@@ -104,4 +104,10 @@ export const incomingCalls = new IncomingCalls({
   join: (roomId, roomName) => {
     void goJoin(roomId, roomName);
   },
+});
+
+// The ring and the call notices end with the page's account, as the call does.
+onAccountChange("huddle-alerts", () => {
+  callNotices.reset();
+  incomingCalls.hide();
 });

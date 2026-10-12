@@ -11,6 +11,7 @@
  */
 import type { CreateUpload } from "../../gen/CreateUpload.ts";
 import type { DirectUpload } from "../../gen/DirectUpload.ts";
+import { sendRefusal } from "../network-gate.ts";
 import { md5Base64 } from "./md5.ts";
 
 export type UploadPhase = "hashing" | "starting" | "uploading" | "done" | "failed" | "cancelled";
@@ -131,6 +132,14 @@ export function putFile(
       signal.removeEventListener("abort", onAbort);
       reject(new DOMException("Upload cancelled", "AbortError"));
     };
+
+    const refusal = sendRefusal();
+
+    if (refusal !== null) {
+      reject(refusal);
+
+      return;
+    }
 
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", contentType);

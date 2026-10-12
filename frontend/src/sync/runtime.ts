@@ -126,6 +126,7 @@ import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
+import { reloadForNewSignIn } from "./sign-in-change.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -835,6 +836,9 @@ export const actions = {
 
     return started;
   },
+
+  /** Reloads as the account signed in now, dropping what this tab kept for the last one. */
+  reloadForNewSignIn,
 
   /** Subscribes, says present, and loads the room's detail and first page. */
   openRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>

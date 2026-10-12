@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CreateUpload } from "../../gen/CreateUpload.ts";
 import type { DirectUpload } from "../../gen/DirectUpload.ts";
+import { mutations } from "../../store/store.ts";
 import {
   contentTypeOf,
   putFailureMessage,
@@ -231,6 +232,22 @@ describe("UploadTask", () => {
     await done;
 
     expect(task.snapshot).toMatchObject({ phase: "failed", error: putFailureMessage(0) });
+  });
+
+  it("sends no bytes once another account answered the page", async () => {
+    const h = harness(() => reply(1));
+    const task = new UploadTask(file(), h.deps, h.onChange);
+
+    mutations.markAccountChanged();
+
+    try {
+      await task.start();
+    } finally {
+      mutations.reset();
+    }
+
+    expect(h.xhrs.every((xhr) => xhr.method === "" && xhr.body === null)).toBe(true);
+    expect(task.snapshot.phase).toBe("failed");
   });
 
   it("cancels mid-upload: the XHR aborts and the task stays cancelled", async () => {

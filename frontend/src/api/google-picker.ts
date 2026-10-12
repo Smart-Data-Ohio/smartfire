@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { DrivePick } from "../features/composer/drive-picker.ts";
 import type { DrivePickerConfig } from "../gen/DrivePickerConfig.ts";
+import { gatedFetch } from "../lib/network-gate.ts";
 
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
@@ -162,7 +163,7 @@ function loadGoogle(): Promise<void> {
 }
 
 async function tokenEmail(token: string, signal: AbortSignal): Promise<string> {
-  const response = await fetch(
+  const response = await gatedFetch(
     "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
     { headers: { Authorization: `Bearer ${token}` }, signal },
   );

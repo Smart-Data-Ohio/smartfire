@@ -1,3 +1,4 @@
+import { isIgnored } from "../../store/ignores.ts";
 import type { Presence, User } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import type { PresenceStatus } from "../../ui/avatar.tsx";
@@ -25,6 +26,14 @@ export function usePresenceStatus(userId: number | undefined): PresenceStatus | 
 
 export function useUser(userId: number | undefined): User | undefined {
   return useStore((state) => (userId === undefined ? undefined : state.users[userId]));
+}
+
+/**
+ * Whether you ignore them, through the store's ignore set; `fallback` is the flag on the payload
+ * being shown (a profile's `ignoredByMe`, a message's `ignored`), used only until the set loads.
+ */
+export function useIgnored(userId: number, fallback: boolean | undefined): boolean {
+  return useStore((state) => isIgnored(state.ignores, userId, fallback));
 }
 
 /** The name to show for someone whose profile hasn't arrived yet. */

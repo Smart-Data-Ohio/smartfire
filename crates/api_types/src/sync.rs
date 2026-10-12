@@ -73,6 +73,10 @@ pub enum ServerFrame {
         resumed: bool,
         /// Events through this ring head are reconnect replay, not live arrivals.
         replay_through: i64,
+        /// Who the server is answering for: the user signed in on this socket. A resumed cursor
+        /// is accepted by epoch and sequence alone, so a client that held another account's
+        /// state must check this before it applies anything replayed.
+        viewer_id: i64,
     },
     /// Events in sequence order, flushed every 25 ms or 64 events.
     Batch { events: Vec<SyncEvent> },

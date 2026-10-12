@@ -52,7 +52,7 @@ describe("settings words", () => {
       ["profile", "status"],
       ["notifications", "rooms"],
       ["appearance", "calls"],
-      ["security", "sessions", "devices"],
+      ["security", "sessions", "ignored", "devices"],
       ["integrations"],
     ]);
     expect(groupSections([])).toEqual([]);
