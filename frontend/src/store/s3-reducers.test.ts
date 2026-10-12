@@ -35,7 +35,9 @@ import {
   pagedLanded,
   pagedLoading,
   pagedLoadingMore,
+  pagedOutdated,
   pagedPlaced,
+  pagedReloadMark,
   pagedStale,
 } from "./paged-list.ts";
 import { applyEvents } from "./reducers.ts";
@@ -445,6 +447,35 @@ describe("a keyset-paged list", () => {
     expect(pagedLanded(reloading, [6], null, "more", started)).toBe(reloading);
     expect(pagedFailed(reloading, "Down", started, "replace")).toBe(reloading);
     expect(pagedLanded(reloading, [6], null, "replace", reloading.generation).ids).toEqual([6]);
+  });
+
+  it("asks for a reload once per invalidation, and only with no first page on its way", () => {
+    const list = ready([2, 4], null);
+    const once = pagedStale(list);
+    const reloading = pagedLoading(once);
+
+    expect(pagedReloadMark(list)).toBeNull();
+    expect(pagedReloadMark(once)).toBe(once.staleMark);
+    expect(pagedReloadMark(reloading)).toBeNull();
+
+    // Two invalidations while the reload is on its way: it lands still stale, at a new mark.
+    const again = pagedStale(pagedStale(reloading));
+    const landed = pagedLanded(again, [4], null, "replace", reloading.generation);
+
+    expect(landed.stale).toBe(true);
+    expect(pagedReloadMark(landed)).toBe(once.staleMark + 2);
+
+    // A failed reload stays at the mark it was asked for.
+    const failed = pagedFailed(pagedLoading(once), "Down", reloading.generation, "replace");
+
+    expect(pagedReloadMark(failed)).toBe(once.staleMark);
+  });
+
+  it("keeps a page that landed out of date stale without a new invalidation", () => {
+    const list = ready([2, 4], null);
+
+    expect(pagedOutdated(list)).toMatchObject({ stale: true, staleMark: list.staleMark });
+    expect(pagedReloadMark(pagedOutdated(list))).toBe(list.staleMark);
   });
 });
 

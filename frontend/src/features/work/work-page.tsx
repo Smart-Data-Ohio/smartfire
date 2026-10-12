@@ -1,7 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useId } from "react";
+import { useCallback, useEffect, useId } from "react";
 import type { WorkFilter } from "../../gen/WorkFilter.ts";
 import type { WorkListRow } from "../../gen/WorkListRow.ts";
+import { snapshotReloadSignal, useListReload } from "../../store/list-reload.ts";
 import { useStore } from "../../store/store.ts";
 import { WORK_FILTERS, workListOf } from "../../store/work.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -43,10 +44,10 @@ export function WorkPage({ filter, onFilterChange }: WorkPageProps) {
   const filterTabs = `${ids}-filter`;
   const panelId = `${ids}-panel`;
 
+  const load = useCallback(() => void actions.work.loadList(filter), [filter]);
+
   // Shown, or a new tab: load it (the rows already held stay up meanwhile).
-  useEffect(() => {
-    void actions.work.loadList(filter);
-  }, [filter]);
+  useListReload(snapshotReloadSignal(list.status), load, true);
 
   // A snapshot: coming back to this browser tab loads it again. A hidden tab doesn't.
   useEffect(() => {
@@ -74,8 +75,8 @@ export function WorkPage({ filter, onFilterChange }: WorkPageProps) {
     hasMore: false,
     error: null,
     loadMore: () => undefined,
-    reload: () => void actions.work.loadList(filter),
-    retry: () => void actions.work.loadList(filter),
+    reload: load,
+    retry: load,
   };
 
   const open = (row: WorkListRow) => {

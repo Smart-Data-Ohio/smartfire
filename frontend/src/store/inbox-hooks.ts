@@ -1,8 +1,9 @@
 /**
  * The hooks the S3 screens read the activity inbox, saved items and scheduled messages with.
- * Each list hook loads its first page when it's first shown (and again when the list went stale:
- * the sync engine missed events it couldn't replay) and keeps up with live events after that,
- * with no refetch. Reads come from the store; loads and writes go through `actions`.
+ * Each list hook loads its first page when it's first shown (and again for each invalidation while
+ * shown: the sync engine missed events it couldn't replay; see `list-reload.ts`) and keeps up
+ * with live events after that, with no refetch. Reads come from the store; loads and writes go
+ * through `actions`.
  */
 import { useEffect, useMemo } from "react";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
@@ -15,6 +16,7 @@ import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import { actions } from "../sync/runtime.ts";
 import { activityListOf } from "./activity.ts";
 import { conversationNameOf } from "./conversations.ts";
+import { pagedReloadSignal, useListReload } from "./list-reload.ts";
 import type { LoadStatus, MessageDTO, User } from "./model.ts";
 import type { PagedList } from "./paged-list.ts";
 import { savedListOf } from "./saved-list.ts";
@@ -38,15 +40,9 @@ export interface PagedView {
   readonly retry: () => void;
 }
 
-/** Loads a list's first page when shown while it's never loaded or stale. */
+/** Loads a list's first page when shown while it's never loaded, and for each invalidation. */
 function useFirstPage(list: PagedList, load: () => void): void {
-  const due = list.status === "idle" || (list.stale && list.status === "ready");
-
-  useEffect(() => {
-    if (due) {
-      load();
-    }
-  }, [due, load]);
+  useListReload(pagedReloadSignal(list), load);
 }
 
 function pagedView(list: PagedList, loadMore: () => void, reload: () => void): PagedView {

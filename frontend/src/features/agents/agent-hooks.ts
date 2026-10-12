@@ -3,7 +3,7 @@
  * already held stays on screen while it reloads) and keeps up with `agent.status` after that; the
  * approvals and ledger tabs reload their first page each time they're shown too.
  */
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { AgentApproval } from "../../gen/AgentApproval.ts";
 import type { AgentDirectoryRow } from "../../gen/AgentDirectoryRow.ts";
 import type { AgentLedgerEvent } from "../../gen/AgentLedgerEvent.ts";
@@ -15,6 +15,7 @@ import {
   ledgerListKey,
   ledgerListOf,
 } from "../../store/ledger.ts";
+import { pagedReloadSignal, snapshotReloadSignal, useListReload } from "../../store/list-reload.ts";
 import type { LoadStatus } from "../../store/model.ts";
 import type { PagedList } from "../../store/paged-list.ts";
 import { mutations, useStore } from "../../store/store.ts";
@@ -38,7 +39,7 @@ export function useAgentDirectory(): AgentDirectoryView {
   const byId = useStore((state) => state.agents.rows);
   const reload = useCallback(() => void actions.agents.loadDirectory(), []);
 
-  useEffect(reload, [reload]);
+  useListReload(snapshotReloadSignal(directory.status), reload, true);
 
   return useMemo(
     () => ({
@@ -99,24 +100,10 @@ export function useAgentApprovals(
     [agentId, filter],
   );
 
-  const stale = list.stale && list.status === "ready";
-  const shownKey = useRef<string | null>(null);
+  useEffect(() => () => mutations.retireReads(`approvals:${key}`), [key]);
 
-  useEffect(
-    () => () => {
-      shownKey.current = null;
-      mutations.retireReads(`approvals:${key}`);
-    },
-    [key],
-  );
-
-  // Once each time this list is shown, then again whenever it goes stale while shown.
-  useEffect(() => {
-    if (shownKey.current !== key || stale) {
-      shownKey.current = key;
-      callbacks.load();
-    }
-  }, [key, stale, callbacks]);
+  // Once each time this list is shown, then again for each invalidation while it's shown.
+  useListReload(pagedReloadSignal(list), callbacks.load, true);
 
   return useMemo(
     () => ({
@@ -151,10 +138,8 @@ export function useAgentLedger(agentId: number, filter: LedgerFilter): AgentLedg
     [agentId, filter],
   );
 
-  const { load } = callbacks;
-
   // Each time it's shown: there are no live updates to keep a held page current.
-  useEffect(load, [load]);
+  useListReload(pagedReloadSignal(list), callbacks.load, true);
 
   return useMemo(
     () => ({

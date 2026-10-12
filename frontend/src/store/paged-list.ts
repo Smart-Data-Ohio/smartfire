@@ -36,6 +36,13 @@ export interface PagedList {
   readonly generation: number;
   /** The last failure was the first page's (a reload), so a retry asks for it again. */
   readonly firstPageFailed: boolean;
+  /** A first page (a first load or a reload) is on its way in the current `generation`. */
+  readonly firstPageLoading: boolean;
+  /**
+   * Counts the invalidations: each one bumps it, even of a list already stale, so a hook that
+   * reloaded for one mark can tell a later one from it (see `pagedReloadMark`).
+   */
+  readonly staleMark: number;
 }
 
 export const emptyPagedList: PagedList = {
@@ -48,6 +55,8 @@ export const emptyPagedList: PagedList = {
   staleGeneration: 0,
   generation: 0,
   firstPageFailed: false,
+  firstPageLoading: false,
+  staleMark: 0,
 };
 
 /** Sorts two ids in the list's order: negative when `left` comes first. */
@@ -64,6 +73,7 @@ export function pagedLoading(list: PagedList): PagedList {
     error: null,
     generation: list.generation + 1,
     firstPageFailed: false,
+    firstPageLoading: true,
   };
 }
 
@@ -98,6 +108,7 @@ export function pagedFailed(
     loadingMore: false,
     error,
     firstPageFailed: mode === "replace",
+    firstPageLoading: mode === "replace" ? false : list.firstPageLoading,
   };
 }
 
@@ -130,6 +141,8 @@ export function pagedLanded(
     staleGeneration: list.staleGeneration,
     generation: list.generation,
     firstPageFailed: false,
+    firstPageLoading: mode === "replace" ? false : list.firstPageLoading,
+    staleMark: list.staleMark,
   };
 }
 
@@ -170,13 +183,44 @@ export function pagedPlaced(
     : { ...list, ids };
 }
 
-/** Marks a loaded list for a reload when next shown, including one whose reload is on its way. */
+/**
+ * An invalidation: marks a loaded list for a reload, including one whose reload is on its way (it
+ * lands still stale), with a new `staleMark` so a shown list reloads for it.
+ */
 export function pagedStale(list: PagedList): PagedList {
-  if (list.status === "idle" || (list.stale && list.staleGeneration === list.generation)) {
+  if (list.status === "idle") {
+    return list;
+  }
+
+  return {
+    ...list,
+    stale: true,
+    staleGeneration: list.generation,
+    staleMark: list.staleMark + 1,
+  };
+}
+
+/**
+ * Stale, but not for a new invalidation (a page that landed already out of date): reloaded when
+ * next shown, or for the next invalidation, not again now, so a server that keeps sending such
+ * pages can't make a shown list reload in a loop.
+ */
+export function pagedOutdated(list: PagedList): PagedList {
+  if (list.status === "idle") {
     return list;
   }
 
   return { ...list, stale: true, staleGeneration: list.generation };
+}
+
+/**
+ * The invalidation a shown list should reload for now: its `staleMark` while it's loaded and stale
+ * with no first page on its way, else `null`. A hook reloads once per mark (`useListReload`), so a
+ * reload that lands still stale (made stale again meanwhile) brings the next one, and a failed one
+ * waits for a new invalidation, a Retry or the list shown again.
+ */
+export function pagedReloadMark(list: PagedList): number | null {
+  return list.stale && list.status === "ready" && !list.firstPageLoading ? list.staleMark : null;
 }
 
 /** Each list in `lists` changed by `change`, keeping the same record when none changed. */

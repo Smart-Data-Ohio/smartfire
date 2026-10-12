@@ -33,6 +33,7 @@ import {
   pagedLanded,
   pagedLoading,
   pagedLoadingMore,
+  pagedOutdated,
   pagedPlaced,
   pagedStale,
   pagedWithout,
@@ -346,6 +347,7 @@ export function beginActivityGeneration(state: State, newEpoch = true): State {
       ...pagedStale(list),
       status: list.status === "ready" ? "ready" : "idle",
       loadingMore: false,
+      firstPageLoading: false,
       generation: list.generation + 1,
     })),
   });
@@ -522,7 +524,11 @@ export function landActivityPage(
     items: listed.items.filter((item) => !isRemovedThread(state, item.source.threadId)),
   };
 
-  const outdated = page.items.length < listed.items.length || state.removalCount > start.removals;
+  // A thread removed while the page was on its way is a new invalidation; a page that only held
+  // rows of threads removed before it was asked for is out of date, but reloading at once could
+  // bring the same page again.
+  const removedMeanwhile = state.removalCount > start.removals;
+  const outdated = page.items.length < listed.items.length;
 
   const counted = withCounts(
     state.activity,
@@ -570,7 +576,10 @@ export function landActivityPage(
       ...counted,
       items,
       versions,
-      lists: { ...state.activity.lists, [key]: outdated ? pagedStale(landed) : landed },
+      lists: {
+        ...state.activity.lists,
+        [key]: removedMeanwhile ? pagedStale(landed) : outdated ? pagedOutdated(landed) : landed,
+      },
     },
   };
 }
