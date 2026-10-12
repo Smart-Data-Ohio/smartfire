@@ -101,6 +101,10 @@ fn envelope(c: &Ctx, error: &Error) -> Option<ApiError> {
         },
         Error::Internal(error) => match error.downcast_ref::<campfire_db::Error>()? {
             campfire_db::Error::RecordNotFound(_) => not_found(),
+            campfire_db::Error::FieldValidation(fields) => ApiError::Validation {
+                message: "Invalid slash command options".into(),
+                fields: fields.clone(),
+            },
             campfire_db::Error::RecordInvalid(errors) => record_invalid(errors, &[]),
             _ => return None,
         },

@@ -1,6 +1,6 @@
 //! The JSON the single-page app (`frontend/`) reads from `/api/v1` and the `/api/v1/sync` socket.
 //!
-//! Plain serde structs and enums with no behaviour and no dependency on the rest of the workspace:
+//! Plain serde structs and enums, sharing the local command types with `campfire_slash_schema`:
 //! the handlers that build them from the domain models live above this crate. Each type derives
 //! ts-rs's `TS` and is exported to `frontend/src/gen/<Type>.ts` by
 //! `cargo test -p campfire_api_types export_bindings` (`pnpm gen` in `frontend/`). CI regenerates
@@ -14,6 +14,8 @@
 //! - timestamps are [`Timestamp`] strings;
 //! - an absent value is `null`, never an omitted key;
 //! - enums are lowercase string literals.
+
+pub use campfire_slash_schema::{CommandSchema, CommandValues, CommandOption, OptionValue};
 
 mod actions;
 mod announcements;
@@ -35,6 +37,8 @@ mod error;
 mod events;
 mod fizzy;
 mod huddle;
+mod soundboard;
+pub use soundboard::{CreateSoundboardSound, SoundboardCatalog, SoundboardSound, UpdateSoundboardSound};
 mod join;
 mod invites;
 mod me;

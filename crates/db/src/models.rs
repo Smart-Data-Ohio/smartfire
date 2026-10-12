@@ -178,3 +178,5 @@ pub use drive_attachment::DriveAttachment;
 
 pub mod workspace_category;
 pub use workspace_category::WorkspaceCategory;
+
+pub mod soundboard;

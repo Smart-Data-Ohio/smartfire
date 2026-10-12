@@ -4,6 +4,8 @@ use std::fmt;
 pub enum Error {
     #[error("This voice room is full")]
     HuddleRoomFull,
+    #[error("Invalid slash command options")]
+    FieldValidation(campfire_slash_schema::FieldErrors),
     /// `Google::SignIn::Rejected`: safe stable reason, never raw claims or credentials.
     #[error("Google sign-in rejected ({0})")]
     GoogleSignInRejected(&'static str),

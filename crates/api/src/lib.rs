@@ -38,6 +38,7 @@ pub mod boards;
 mod branding_images;
 pub mod board_automations;
 pub mod huddles;
+pub mod soundboard;
 pub mod join;
 pub mod invites;
 pub mod message_actions;
@@ -505,6 +506,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(people::routes())
         .merge(settings::routes())
         .merge(admin::routes())
+        .merge(soundboard::routes())
         .merge(invites::routes())
         .merge(bots::routes())
         .merge(webhooks::routes())
