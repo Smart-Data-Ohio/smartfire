@@ -1,0 +1,173 @@
+/* A typed command's fields, in the composer card where the text goes. */
+@layer app {
+  .command-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    min-inline-size: 0;
+    margin: 0;
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    border: 0;
+  }
+
+  .command-options-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .command-options-name {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: var(--weight-semibold);
+  }
+
+  .command-options-hint {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .command-options-cancel {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .command-options-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5) var(--space-2);
+    min-width: 0;
+  }
+
+  .command-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* One option: its name, then what's typed, on a chip that turns red when it's wrong. */
+  .command-option {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    min-height: var(--control-md);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition: box-shadow var(--duration-small) var(--ease-enter);
+  }
+
+  .command-option:focus-within {
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .command-option[data-invalid] {
+    box-shadow: inset 0 0 0 1px var(--danger);
+  }
+
+  .command-option-name {
+    flex-shrink: 0;
+    padding: 0 var(--space-1-5) 0 var(--space-2);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .command-option-input {
+    flex: 1;
+    align-self: stretch;
+    min-width: 8ch;
+    max-width: 100%;
+    padding: 0 var(--space-2) 0 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-ui);
+    field-sizing: content;
+  }
+
+  .command-option-input:focus-visible {
+    outline: none;
+  }
+
+  .command-option-remove {
+    flex-shrink: 0;
+  }
+
+  .command-option-error {
+    margin: 0;
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .command-options-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .command-options-add-label {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .command-options-add-button {
+    font-family: var(--font-mono);
+  }
+
+  .command-options-alert {
+    margin: 0;
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+  }
+
+  /* Phones: a field per row, as wide as the card. */
+  @media (width < 720px) {
+    .command-options {
+      padding-inline: var(--space-2);
+    }
+
+    .command-field,
+    .command-option {
+      width: 100%;
+    }
+
+    .command-option-input {
+      min-width: 0;
+    }
+  }
+
+  /* Touch phones: every field and button is a finger target, and fields type at 16 px. */
+  @media (width < 720px) and (pointer: coarse) {
+    .command-option {
+      min-height: var(--touch-target);
+    }
+
+    .command-option-input {
+      min-height: var(--touch-target);
+      font-size: var(--text-composer);
+    }
+
+    .command-options .button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+    }
+  }
+}

@@ -12,6 +12,7 @@ import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
+import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Beam } from "../../ui/beam.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
@@ -35,6 +36,7 @@ import { AutocompleteList } from "./autocomplete/autocomplete-list.tsx";
 import { loadCommands, selectable } from "./autocomplete/suggestions.ts";
 import { applyCompletion, findTrigger } from "./autocomplete/trigger.ts";
 import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
+import { CommandOptions } from "./command-options.tsx";
 import { draftKey as conversationDraftKey, readDraft, writeDraft } from "./draft.ts";
 import { attachDriveFile, type DrivePick } from "./drive-picker.ts";
 import { DrivePendingChips, DrivePicker } from "./drive-picker.tsx";
@@ -57,7 +59,23 @@ import { type SchedulePreset, sendAtLabel } from "./schedule/presets.ts";
 import { ScheduledPopover } from "./schedule/scheduled-popover.tsx";
 import { scheduled, useScheduled } from "./schedule/scheduled-store.ts";
 import { SendButton } from "./schedule/send-button.tsx";
-import { commandUsage, looksLikeCommand, routeSlash, slashName } from "./slash.ts";
+import {
+  type CommandEntry,
+  commandText,
+  commandUsage,
+  commandValues,
+  entryOptions,
+  entryText,
+  entryValid,
+  looksLikeCommand,
+  parseEntry,
+  routeSlash,
+  serverProblems,
+  slashName,
+  startEntry,
+  subcommandsOf,
+  withProblems,
+} from "./slash.ts";
 import { TypingIndicator, useAgentReplying } from "./typing-indicator.tsx";
 import "./composer.css";
 import "./schedule/schedule.css";
@@ -214,6 +232,9 @@ export function Composer({
   const [running, setRunning] = useState(false);
   const submitting = useRef(false);
   const [usage, setUsage] = useState<SlashCommand | null>(null);
+  /** A typed command being filled in: its fields stand in for the text until it runs or Esc. */
+  const [entry, setEntry] = useState<CommandEntry | null>(null);
+  const [entryFocus, setEntryFocus] = useState(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -224,12 +245,13 @@ export function Composer({
   const [driveFiles, setDriveFiles] = useState<readonly DrivePick[]>([]);
   const [driveOpen, setDriveOpen] = useState(false);
   const scheduledHere = useScheduled(roomId, threadId, !creating);
-  const trigger = focused ? findTrigger(text, caret.start, caret.end) : null;
+  const trigger = focused && entry === null ? findTrigger(text, caret.start, caret.end) : null;
   const autocomplete = useAutocomplete(roomId, threadId, trigger, !creating);
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
   const hasDrive = driveFiles.length > 0;
-  const canSend = (hasText || hasFiles || hasDrive) && !running;
+  const typedReady = entry !== null && entryValid(entry);
+  const canSend = (entry === null ? hasText || hasFiles || hasDrive : typedReady) && !running;
   // A new thread's submit holds the tray: files added now would not be in the request, and the
   // tray goes with the navigation that follows a created thread.
   const addingLocked = creating && running;
@@ -279,6 +301,17 @@ export function Composer({
       setRestore(null);
     }
   });
+
+  // The text comes back when a typed command's fields close (sent, or Esc to plain text).
+  const hadEntry = useRef(false);
+
+  useLayoutEffect(() => {
+    if (hadEntry.current && entry === null) {
+      textareaRef.current?.focus();
+    }
+
+    hadEntry.current = entry !== null;
+  }, [entry]);
 
   // The usage line for a command being typed: `/remind <when> <text>`.
   const typedCommand = creating ? null : slashName(text);
@@ -512,6 +545,94 @@ export function Composer({
     }
   };
 
+  /**
+   * Runs a typed command with its values. Fields with problems keep it open (showing them all);
+   * a refusal puts the fields back, with a 422's errors on the fields they name, unless the author
+   * has started something newer meanwhile.
+   */
+  const runEntry = async (current: CommandEntry, snapshot: ReplySnapshot = currentReply()) => {
+    if (!entryValid(current)) {
+      setEntry({ ...current, attempted: true });
+      setEntryFocus((request) => request + 1);
+
+      return;
+    }
+
+    setRunning(true);
+    actions.setTyping(roomId, false, threadId);
+    setEntry(null);
+
+    const edits = draftEdits.current;
+    const line = commandText(current);
+
+    const putBack = (restored: CommandEntry) => {
+      if (draftEdits.current === edits) {
+        setEntry((newer) => newer ?? restored);
+        setEntryFocus((request) => request + 1);
+      }
+    };
+
+    try {
+      const result = await composerActions.runSlashCommand(
+        roomId,
+        line,
+        threadId,
+        commandValues(current),
+      );
+
+      showResult(result, line, snapshot.revision, () => putBack(current));
+    } catch (error) {
+      if (error instanceof ActionError && error.tag === "Validation") {
+        const problems = serverProblems(current, error.fields);
+
+        const named =
+          problems.subcommand !== null ||
+          problems.general.length > 0 ||
+          Object.keys(problems.options).length > 0;
+
+        putBack(
+          withProblems(current, named ? problems : { ...problems, general: [error.message] }),
+        );
+
+        return;
+      }
+
+      putBack(current);
+      toast({
+        title: "That command didn't run",
+        description:
+          error instanceof Error ? error.message : "Check your connection and try again.",
+        tone: "danger",
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  /** Opens a typed command's fields; one with nothing to fill runs at once. */
+  const openEntry = (next: CommandEntry, snapshot: ReplySnapshot = currentReply()) => {
+    if (subcommandsOf(next.schema) === null && entryOptions(next)?.length === 0) {
+      void runEntry(next, snapshot);
+
+      return;
+    }
+
+    setEntry(next);
+  };
+
+  /** Esc: the fields become their plain-text line, to edit or send as typed. */
+  const cancelEntry = () => {
+    if (entry === null) {
+      return;
+    }
+
+    const line = `${entryText(entry)} `;
+
+    setEntry(null);
+    update(line);
+    setRestore({ start: line.length, end: line.length });
+  };
+
   // The reply and the draft are read before the command-list lookup: a reply picked or text
   // typed during it is newer input.
   const runCommand = async (
@@ -524,6 +645,23 @@ export function Composer({
 
     if (route.kind === "message") {
       await deliver(route.markdown, [], snapshot, submitted, []);
+
+      return;
+    }
+
+    // A typed command written out by hand (`/deploy run service:api`) runs when it's complete;
+    // otherwise its fields open with what was written in them.
+    if (route.command.optionSchema !== null) {
+      const args = route.text.replace(/^\/\S+\s*/, "");
+      const parsed = parseEntry(route.command, route.command.optionSchema, args);
+
+      clearSubmitted(submitted);
+
+      if (entryValid(parsed)) {
+        await runEntry(parsed, snapshot);
+      } else {
+        openEntry(parsed, snapshot);
+      }
 
       return;
     }
@@ -579,6 +717,12 @@ export function Composer({
   };
 
   const send = (pending?: Submission) => {
+    if (entry !== null && pending === undefined) {
+      if (!running) void runEntry(entry);
+
+      return;
+    }
+
     if (pending === undefined && !canSend) {
       return;
     }
@@ -732,6 +876,14 @@ export function Composer({
     const item = autocomplete.items[index];
 
     if (item === undefined || !selectable(item) || trigger === null || item.insert === null) {
+      return;
+    }
+
+    if (item.kind === "command" && item.command.optionSchema !== null) {
+      // The `/dep` typed so far goes: the command's fields take the text's place.
+      update("");
+      openEntry(startEntry(item.command, item.command.optionSchema));
+
       return;
     }
 
@@ -889,7 +1041,7 @@ export function Composer({
       id: "schedule",
       label: "Schedule message…",
       icon: "clock",
-      disabled: !canSend || scheduleBlocked !== null,
+      disabled: !canSend || scheduleBlocked !== null || entry !== null,
       onSelect: () => setCustomOpen(true),
     });
   }
@@ -919,7 +1071,7 @@ export function Composer({
       label: "Run a command",
       icon: "square-slash",
       groupStart: true,
-      disabled: hasText,
+      disabled: hasText || entry !== null,
       onSelect: () => apply({ value: "/", start: 1, end: 1 }),
     });
   }
@@ -936,7 +1088,7 @@ export function Composer({
     <div
       className="composer"
       ref={rootRef}
-      data-holding={hasText || hasFiles || hasDrive || undefined}
+      data-holding={hasText || hasFiles || hasDrive || entry !== null || undefined}
     >
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
@@ -990,35 +1142,46 @@ export function Composer({
               <span className="composer-usage-text">{usage.description}</span>
             </p>
           )}
-          <textarea
-            ref={textareaRef}
-            className="composer-input"
-            value={text}
-            placeholder={placeholder}
-            aria-label={placeholder}
-            aria-autocomplete="list"
-            aria-controls={autocomplete.open ? autocomplete.listboxId : undefined}
-            aria-activedescendant={
-              autocomplete.open ? autocomplete.optionId(autocomplete.activeIndex) : undefined
-            }
-            rows={1}
-            onChange={(event) => {
-              update(event.target.value);
-              setCaret({ start: event.target.selectionStart, end: event.target.selectionEnd });
-            }}
-            onSelect={syncCaret}
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-            onFocus={() => setFocused(true)}
-            onBlur={() => {
-              setFocused(false);
-              actions.setTyping(roomId, false, threadId);
-            }}
-          />
+          {entry === null ? (
+            <textarea
+              ref={textareaRef}
+              className="composer-input"
+              value={text}
+              placeholder={placeholder}
+              aria-label={placeholder}
+              aria-autocomplete="list"
+              aria-controls={autocomplete.open ? autocomplete.listboxId : undefined}
+              aria-activedescendant={
+                autocomplete.open ? autocomplete.optionId(autocomplete.activeIndex) : undefined
+              }
+              rows={1}
+              onChange={(event) => {
+                update(event.target.value);
+                setCaret({ start: event.target.selectionStart, end: event.target.selectionEnd });
+              }}
+              onSelect={syncCaret}
+              onKeyDown={onKeyDown}
+              onPaste={onPaste}
+              onFocus={() => setFocused(true)}
+              onBlur={() => {
+                setFocused(false);
+                actions.setTyping(roomId, false, threadId);
+              }}
+            />
+          ) : (
+            <CommandOptions
+              roomId={roomId}
+              entry={entry}
+              focusRequest={entryFocus}
+              onChange={(edit) => setEntry((current) => (current === null ? null : edit(current)))}
+              onSubmit={() => send()}
+              onCancel={cancelEntry}
+            />
+          )}
           <div className="composer-toolbar">
             <PlusMenu actions={plusActions} />
             <span className="composer-divider" aria-hidden="true" />
-            <div className="composer-formats">
+            <div className="composer-formats" hidden={entry !== null}>
               {FORMATS.map((entry) => (
                 <IconButton
                   key={entry.id}
@@ -1032,15 +1195,19 @@ export function Composer({
               ))}
               <span className="composer-divider" aria-hidden="true" />
             </div>
-            <ComposerEmojiButton onInsert={insertAtCaret} />
-            <IconButton
-              icon="at"
-              label="Mention someone"
-              size="sm"
-              className="composer-mention"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => insertAtCaret("@")}
-            />
+            {entry === null ? (
+              <>
+                <ComposerEmojiButton onInsert={insertAtCaret} />
+                <IconButton
+                  icon="at"
+                  label="Mention someone"
+                  size="sm"
+                  className="composer-mention"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => insertAtCaret("@")}
+                />
+              </>
+            ) : null}
             <span className="composer-spacer" />
             <span className="composer-hint" data-visible={hasText || undefined} aria-hidden="true">
               <Kbd keys={shortcutKeys("newline")} /> new line
@@ -1054,8 +1221,8 @@ export function Composer({
                 creating
                   ? null
                   : {
-                      enabled: scheduleBlocked === null,
-                      reason: scheduleBlocked,
+                      enabled: scheduleBlocked === null && entry === null,
+                      reason: entry === null ? scheduleBlocked : "Commands can't be scheduled",
                       onPreset: schedulePreset,
                       onCustom: () => setCustomOpen(true),
                     }

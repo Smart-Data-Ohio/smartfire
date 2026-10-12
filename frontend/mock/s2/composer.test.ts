@@ -9,6 +9,7 @@ import type { Sidebar } from "../../src/gen/Sidebar.ts";
 import type { SlashCommandList } from "../../src/gen/SlashCommandList.ts";
 import type { SlashCommandResult } from "../../src/gen/SlashCommandResult.ts";
 import type { UserSuggestionList } from "../../src/gen/UserSuggestionList.ts";
+import { field, type Json } from "../json.ts";
 import { SEED_IDS } from "../server.ts";
 import { SHRUG } from "./composer.ts";
 import { readProfileImage } from "./profile-image.ts";
@@ -168,6 +169,7 @@ describe("slash commands", () => {
       "shrug",
       "me",
       "play",
+      "deploy",
       "deploy-status",
       "triage",
     ]);
@@ -328,9 +330,76 @@ describe("slash commands", () => {
       status: "ephemeral",
       message: "Sent to Ember",
     });
+    expect(await run(server, rooms.engineering, "/deploy-status")).toEqual({
+      status: "ephemeral",
+      message: "Sent to Ember",
+    });
     expect(await run(server, rooms.general, "hello")).toEqual({
       status: "error",
       message: "Type / to see available commands.",
+    });
+  });
+});
+
+describe("typed slash command options", () => {
+  const fieldsOf = (json: Json) => field(field(json, "error"), "fields");
+
+  const deploy = (server: Parameters<typeof send>[0], options: Json) =>
+    send(server, "POST", `/api/v1/rooms/${rooms.engineering}/slash_commands`, {
+      text: "/deploy run",
+      threadId: null,
+      options,
+    });
+
+  it("runs a typed command whose values match its schema", async () => {
+    const { server } = harness();
+
+    const response = await deploy(server, {
+      subcommand: "run",
+      values: { service: "api", environment: "staging", replicas: 3 },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.json).toEqual({ status: "ephemeral", message: "Sent to Ember" });
+  });
+
+  it("refuses invalid values with the server's 422 fields", async () => {
+    const { server } = harness();
+
+    const response = await deploy(server, {
+      subcommand: "run",
+      values: { service: "a", environment: "moon", replicas: 11, extra: true },
+    });
+
+    expect(response.status).toBe(422);
+    expect(field(field(response.json, "error"), "_tag")).toBe("Validation");
+    expect(field(field(response.json, "error"), "message")).toBe("Invalid slash command options");
+    expect(fieldsOf(response.json)).toEqual({
+      "options.values.extra": ["is unknown"],
+      "options.values.service": ["length is out of range"],
+      "options.values.environment": ["must be one of the choices"],
+      "options.values.replicas": ["is out of range"],
+    });
+
+    const typeless = await deploy(server, {
+      subcommand: "run",
+      values: { service: "api", replicas: 2.5 },
+    });
+
+    expect(fieldsOf(typeless.json)).toEqual({
+      "options.values.environment": ["is required"],
+      "options.values.replicas": ["has the wrong type"],
+    });
+  });
+
+  it("needs a known subcommand, and none without options", async () => {
+    const { server } = harness();
+
+    expect(fieldsOf((await deploy(server, { subcommand: null, values: {} })).json)).toEqual({
+      "options.subcommand": ["is required only for commands with subcommands"],
+    });
+    expect(fieldsOf((await deploy(server, { subcommand: "stop", values: {} })).json)).toEqual({
+      "options.subcommand": ["is unknown"],
     });
   });
 });

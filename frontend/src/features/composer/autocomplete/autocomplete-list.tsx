@@ -7,13 +7,12 @@ import { Kbd } from "../../../ui/kbd.tsx";
 import { AgentBadgeFor } from "../../people/agent-badge.tsx";
 import { ROOM_KIND_ICON } from "../../room/room-icon.ts";
 import { commandUsage } from "../slash.ts";
-import { type Suggestion, selectable, TRIGGER_TITLES } from "./suggestions.ts";
-import type { TriggerKind } from "./trigger.ts";
+import { MENU_TITLES, type MenuKind, type Suggestion, selectable } from "./suggestions.ts";
 import type { Autocomplete } from "./use-autocomplete.ts";
 import "./autocomplete.css";
 
 interface Shown {
-  readonly kind: TriggerKind;
+  readonly kind: MenuKind;
   readonly items: readonly Suggestion[];
 }
 
@@ -65,7 +64,7 @@ export function AutocompleteList({ autocomplete, onPick }: AutocompleteListProps
       data-kind={kind}
     >
       <div className="autocomplete-head" aria-hidden="true">
-        <span className="autocomplete-title">{TRIGGER_TITLES[kind]}</span>
+        <span className="autocomplete-title">{MENU_TITLES[kind]}</span>
         <span className="autocomplete-keys">
           <Kbd keys={["↑", "↓"]} /> to navigate <Kbd keys={["↵"]} /> to select{" "}
           <Kbd keys={["Esc"]} /> to dismiss
@@ -74,7 +73,7 @@ export function AutocompleteList({ autocomplete, onPick }: AutocompleteListProps
       <div
         id={listboxId}
         role="listbox"
-        aria-label={TRIGGER_TITLES[kind]}
+        aria-label={MENU_TITLES[kind]}
         className="autocomplete-list"
       >
         {rows.map((item, index) => (
@@ -165,6 +164,22 @@ function SuggestionRow({ item }: { readonly item: Suggestion }) {
             <Icon name={ROOM_KIND_ICON[item.row.room.kind]} />
           </span>
           <span className="autocomplete-label">{item.row.displayName}</span>
+        </>
+      );
+    case "subcommand":
+      return (
+        <span className="autocomplete-command">
+          <span className="autocomplete-label">{item.subcommand.name}</span>
+          <span className="autocomplete-detail">{item.subcommand.description}</span>
+        </span>
+      );
+    case "choice":
+      return (
+        <>
+          <span className="autocomplete-label">{item.choice.label}</span>
+          {item.choice.label === item.insert ? null : (
+            <span className="autocomplete-detail">{item.insert}</span>
+          )}
         </>
       );
   }

@@ -5,10 +5,11 @@
 import type { Icon } from "../../../gen/Icon.ts";
 import type { SidebarRow } from "../../../gen/SidebarRow.ts";
 import type { SlashCommand } from "../../../gen/SlashCommand.ts";
+import type { Subcommand } from "../../../gen/Subcommand.ts";
 import type { User } from "../../../gen/User.ts";
 import type { SidebarState } from "../../../store/state.ts";
 import { composerActions } from "../../../sync/composer-actions.ts";
-import { filterCommands } from "../slash.ts";
+import { filterCommands, type PickedValue } from "../slash.ts";
 import { roomLink, type TriggerKind } from "./trigger.ts";
 
 export type Suggestion =
@@ -31,17 +32,34 @@ export type Suggestion =
       readonly key: string;
       readonly row: SidebarRow;
       readonly insert: string;
+    }
+  | {
+      readonly kind: "subcommand";
+      readonly key: string;
+      readonly subcommand: Subcommand;
+      readonly insert: string;
+    }
+  | {
+      readonly kind: "choice";
+      readonly key: string;
+      readonly choice: PickedValue;
+      readonly insert: string;
     };
+
+/** What a menu lists: a trigger's suggestions, or a typed command's subcommands and choices. */
+export type MenuKind = TriggerKind | "subcommand" | "choice";
 
 /** How many rows a menu shows. */
 export const MAX_SUGGESTIONS = 8;
 
-/** The menu's heading per trigger. */
-export const TRIGGER_TITLES: Readonly<Record<TriggerKind, string>> = {
+/** The menu's heading per kind. */
+export const MENU_TITLES: Readonly<Record<MenuKind, string>> = {
   mention: "People",
   emoji: "Emoji",
   command: "Commands",
   room: "Channels",
+  subcommand: "Subcommands",
+  choice: "Choices",
 };
 
 const commandCache = new Map<string, Promise<readonly SlashCommand[]>>();
@@ -136,6 +154,70 @@ export function roomSuggestions(sidebar: SidebarState, query: string): readonly 
   }
 
   return [...prefix, ...inside].slice(0, MAX_SUGGESTIONS);
+}
+
+/** A typed command's subcommands whose names contain `query`, those starting with it first. */
+export function subcommandSuggestions(
+  subcommands: readonly Subcommand[],
+  query: string,
+): readonly Suggestion[] {
+  const needle = query.trim().toLowerCase();
+  const prefix: Suggestion[] = [];
+  const inside: Suggestion[] = [];
+
+  for (const subcommand of subcommands) {
+    const bucket = subcommand.name.startsWith(needle)
+      ? prefix
+      : subcommand.name.includes(needle)
+        ? inside
+        : null;
+
+    bucket?.push({
+      kind: "subcommand",
+      key: `subcommand-${subcommand.name}`,
+      subcommand,
+      insert: subcommand.name,
+    });
+  }
+
+  return [...prefix, ...inside];
+}
+
+/** An option's choices whose labels or values contain `query`, in the schema's order. */
+export function choiceSuggestions(
+  choices: readonly PickedValue[],
+  query: string,
+): readonly Suggestion[] {
+  const needle = query.trim().toLowerCase();
+
+  return choices.flatMap((choice) =>
+    choice.label.toLowerCase().includes(needle) ||
+    String(choice.value).toLowerCase().includes(needle)
+      ? [
+          {
+            kind: "choice" as const,
+            key: `choice-${String(choice.value)}`,
+            choice,
+            insert: String(choice.value),
+          },
+        ]
+      : [],
+  );
+}
+
+/** People for a typed command's person option: every match can be picked, by id. */
+export async function personSuggestions(
+  roomId: number,
+  query: string,
+): Promise<readonly Suggestion[]> {
+  const found = await composerActions.suggestUsers(roomId, query.trim());
+
+  return found.slice(0, MAX_SUGGESTIONS).map((entry) => ({
+    kind: "mention",
+    key: `user-${entry.user.id}`,
+    user: entry.user,
+    insert: String(entry.user.id),
+  }));
 }
 
 /** Whether a row can be chosen. */
