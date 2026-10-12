@@ -366,3 +366,33 @@ test("notifications from the room header: mute dims the row, hide takes it out w
   await expect(row(list, "quiet")).toHaveCount(1);
   await expect(bell).toHaveAccessibleName("Notifications: Muted");
 });
+
+matrix("boards get their own section after Channels", async ({ page, theme, phone }) => {
+  await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
+
+  const list = sidebar(page);
+
+  await expect(heading(page, "boards")).toHaveText("Boards");
+  expect(await names(page, "boards")).toEqual(["Roadmap"]);
+  expect(await names(page, "channels")).not.toContain("Roadmap");
+
+  const keys = await list
+    .locator("[data-drop-section]")
+    .evaluateAll((all) => all.map((element) => element.getAttribute("data-drop-section")));
+
+  expect(keys.slice(keys.indexOf("channels"))).toEqual(["channels", "boards", "voice", "direct"]);
+  await settledShot(page, "boards-section", theme);
+
+  // Folding is remembered across a reload, like Channels.
+  await heading(page, "boards").click();
+  await expect(section(page, "boards")).toHaveAttribute("data-open", "false");
+  await page.reload();
+  await expect(section(page, "boards")).toHaveAttribute("data-open", "false");
+  await heading(page, "boards").click();
+  await expect(section(page, "boards")).toHaveAttribute("data-open", "true");
+
+  // Its "+" opens the create dialog on a board.
+  await section(page, "boards").hover();
+  await section(page, "boards").getByRole("button", { name: "Create a board" }).click();
+  await expect(page.getByRole("dialog")).toHaveAccessibleName("Create a board");
+});

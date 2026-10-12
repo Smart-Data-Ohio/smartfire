@@ -115,6 +115,27 @@ describe("slotForSection", () => {
     expect(slotForSection(voice, maya, 0)).toBeNull();
     expect(slotForSection(voice, lounge, 0)).toBeNull();
   });
+
+  it("keeps boards out of categories and Channels; a favourite one goes home to Boards", () => {
+    const roadmap = row(8, "Roadmap", "board");
+    const starred = row(9, "Ideas", "board", 2);
+    const boards = section("boards", "Boards", [roadmap]);
+
+    expect(slotForSection(launch, roadmap, 0)).toBeNull();
+    expect(slotForSection(channels, starred, 0)).toBeNull();
+    expect(slotForSection(boards, starred, 0)).toEqual({ kind: "unfavorite" });
+    expect(slotForSection(boards, general, 0)).toBeNull();
+    expect(
+      roomTargets([favorites, launch, channels, boards, voice, direct], starred).map(
+        (target) => target.label,
+      ),
+    ).toEqual([
+      "Top of Favourites",
+      "Favourites, after engineering",
+      "Favourites, after Maya Okafor",
+      "Boards, out of Favourites",
+    ]);
+  });
 });
 
 describe("roomTargets", () => {
@@ -192,6 +213,23 @@ describe("drops on the shared layout", () => {
     expect(acceptsRoom(channels, lounge, admin)).toBe(false);
     expect(acceptsRoom(voice, general, admin)).toBe(false);
     expect(acceptsRoom(product, maya, admin)).toBe(false);
+    // Boards take boards only, and a board goes nowhere else in the shared layout but a category.
+    const roadmap = row(8, "Roadmap", "board");
+    const boards = section("boards", "Boards", [row(9, "Ideas", "board")]);
+
+    expect(targetForSection(boards, roadmap, 0, admin)).toEqual({
+      kind: "shared",
+      categoryId: null,
+      beforeRoomId: 9,
+    });
+    expect(acceptsRoom(boards, general, admin)).toBe(false);
+    expect(acceptsRoom(channels, roadmap, admin)).toBe(false);
+    expect(acceptsRoom(voice, roadmap, admin)).toBe(false);
+    expect(targetForSection(product, roadmap, 0, admin)).toEqual({
+      kind: "shared",
+      categoryId: 30,
+      beforeRoomId: 5,
+    });
     // Personal sections stay personal, for administrators too.
     expect(targetForSection(launch, general, 0, admin)).toEqual({
       kind: "room",
@@ -225,6 +263,12 @@ describe("drops on the shared layout", () => {
     expect(dragSections(hidden, starred, member)[2]?.rows).toEqual([]);
     // Shown already, or no shared home: nothing added.
     expect(dragSections(withShared, starred, member)).toEqual(withShared);
+    // The placeholder goes ahead of Boards too, which follows Channels.
+    const boards = section("boards", "Boards", [row(8, "Roadmap", "board")]);
+
+    expect(
+      dragSections([favorites, boards, voice, direct], starred, member).map((shown) => shown.key),
+    ).toEqual(["favorites", "shared-30", "boards", "voice", "direct"]);
     expect(dragSections(hidden, row(6, "ops"), member).map((shown) => shown.key)).toEqual([
       "favorites",
       "category-1",
