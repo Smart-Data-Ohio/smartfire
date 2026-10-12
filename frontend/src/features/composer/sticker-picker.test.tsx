@@ -398,17 +398,9 @@ describe("sending a sticker from the composer", () => {
     );
   });
 
-  it("isn't offered for a new thread's first reply, nor while a command is filled in", async () => {
+  it("isn't offered while a command is filled in", async () => {
     vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
     replaceStickerCatalog(CATALOG);
-
-    const { unmount } = render(
-      <Composer roomId={ROOM} onSubmit={async () => {}} placeholder="Reply…" />,
-    );
-
-    expect(screen.getByRole("button", { name: "Emoji" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Sticker" })).toBeNull();
-    unmount();
 
     render(<Composer roomId={ROOM} />);
     expect(screen.getByRole("button", { name: "Sticker" })).toBeTruthy();

@@ -204,4 +204,34 @@ describe("grouped file previews", () => {
     expect(saved.message.markdownSource).toBe("");
     expect(saved.message.attachments).toEqual(files);
   });
+
+  it("clears a sticker message's caption without requesting deletion", async () => {
+    const user = userEvent.setup();
+    const sent = network.server.post(ROOM, SEED_IDS.viewer, "Caption");
+
+    const sticker = {
+      kind: "available",
+      id: 1,
+      name: "Wave",
+      imageUrl: "/stickers/1",
+      stillUrl: "/stickers/1",
+      animated: false,
+    } as const;
+
+    sent.sticker = sticker;
+    const onClose = vi.fn();
+    const onRequestDelete = vi.fn();
+
+    render(<MessageEditor message={sent} onClose={onClose} onRequestDelete={onRequestDelete} />);
+    await user.clear(screen.getByRole("textbox", { name: "Edit message" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    expect(onRequestDelete).not.toHaveBeenCalled();
+
+    const saved = await actions.messages.read(sent.id);
+
+    expect(saved.message.markdownSource).toBe("");
+    expect(saved.message.sticker).toEqual(sticker);
+  });
 });
