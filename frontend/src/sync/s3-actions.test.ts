@@ -8,7 +8,7 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
-import { activityListOf } from "../store/activity.ts";
+import { activityListOf, activityLoadStart } from "../store/activity.ts";
 import { savedItemForMessage, savedListOf } from "../store/saved-list.ts";
 import { roomScheduledKey, scheduledListOf } from "../store/scheduled.ts";
 import { mutations, store } from "../store/store.ts";
@@ -107,6 +107,7 @@ function seedInbox(): void {
       nextCursor: null,
     },
     "replace",
+    activityLoadStart(store.getState(), "all", "unread"),
   );
   mutations.landActivityPage(
     "all",
@@ -120,6 +121,7 @@ function seedInbox(): void {
       nextCursor: null,
     },
     "replace",
+    activityLoadStart(store.getState(), "all", "handled"),
   );
 }
 
@@ -136,9 +138,19 @@ function seedSaved(): void {
   };
 
   mutations.reset();
-  mutations.landSavedPage("all", page, "replace");
-  mutations.landSavedPage("in_progress", page, "replace");
-  mutations.landSavedPage("done", { ...page, items: [], messages: [] }, "replace");
+  mutations.landSavedPage("all", page, "replace", savedListOf(store.getState(), "all").generation);
+  mutations.landSavedPage(
+    "in_progress",
+    page,
+    "replace",
+    savedListOf(store.getState(), "in_progress").generation,
+  );
+  mutations.landSavedPage(
+    "done",
+    { ...page, items: [], messages: [] },
+    "replace",
+    savedListOf(store.getState(), "done").generation,
+  );
 }
 
 /** Pending 1 and 2 in Pending and the room's list; Past holds 9. */
@@ -150,8 +162,18 @@ function seedScheduled(): void {
   };
 
   mutations.reset();
-  mutations.landScheduledPage("pending", pending, "replace");
-  mutations.landScheduledPage(roomScheduledKey(ROOM), pending, "replace");
+  mutations.landScheduledPage(
+    "pending",
+    pending,
+    "replace",
+    scheduledListOf(store.getState(), "pending").generation,
+  );
+  mutations.landScheduledPage(
+    roomScheduledKey(ROOM),
+    pending,
+    "replace",
+    scheduledListOf(store.getState(), roomScheduledKey(ROOM)).generation,
+  );
   mutations.landScheduledPage(
     "past",
     {
@@ -167,6 +189,7 @@ function seedScheduled(): void {
       nextCursor: null,
     },
     "replace",
+    scheduledListOf(store.getState(), "past").generation,
   );
 }
 
@@ -422,6 +445,7 @@ describe("activity actions", () => {
             nextCursor: null,
           },
           "replace",
+          activityLoadStart(store.getState(), "all", "unread"),
         );
 
         return Effect.succeed({
@@ -1072,6 +1096,7 @@ describe("activity actions", () => {
             nextCursor: null,
           },
           "replace",
+          activityLoadStart(store.getState(), "all", "unread"),
         );
         const changes = [];
 
@@ -1257,6 +1282,7 @@ describe("activity actions", () => {
           nextCursor: null,
         },
         "replace",
+        activityLoadStart(store.getState(), "all", "unread"),
       );
       yield* fake.reply("PATCH /activity/2", {
         item: item(2, 30, "handled"),
@@ -1319,6 +1345,7 @@ describe("activity actions", () => {
           nextCursor: null,
         },
         "replace",
+        activityLoadStart(store.getState(), "all", "unread"),
       );
 
       const fake = yield* FakeApi;
@@ -1912,6 +1939,76 @@ describe("scheduled actions", () => {
       const last = (yield* fake.requests).at(-1);
 
       expect(last?.query).toEqual({ status: "pending", roomId: String(ROOM) });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+});
+
+describe("a scheduled list reloaded while its next page is on its way", () => {
+  afterEach(() => mutations.reset());
+
+  it.effect("records a failed reload as the first page's, and lets no older page land", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const moreStarted = yield* Deferred.make<void>();
+      const moreGate = yield* Deferred.make<void>();
+      let firstPage: "ok" | "down" = "ok";
+
+      yield* fake.route("GET /scheduled_messages", (request) => {
+        if ((request.query?.before ?? null) !== null) {
+          return Deferred.succeed(moreStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(moreGate)),
+            Effect.as({
+              scheduledMessages: [scheduledMessage(3, 30)],
+              conversations: [],
+              nextCursor: null,
+            }),
+          );
+        }
+
+        return firstPage === "down"
+          ? Effect.fail(new ServerError({ status: 503, message: "Service unavailable" }))
+          : Effect.succeed({
+              scheduledMessages: [scheduledMessage(1, 10)],
+              conversations: [],
+              nextCursor: "c",
+            });
+      });
+
+      yield* scheduled.load("pending");
+
+      const paging = yield* Effect.forkChild(scheduled.loadMore("pending"));
+
+      yield* Deferred.await(moreStarted);
+
+      // Access comes back (or anything else makes the list stale), and its reload fails.
+      mutations.markScheduledStale();
+      firstPage = "down";
+      yield* scheduled.load("pending");
+
+      const failed = scheduledListOf(store.getState(), "pending");
+
+      expect(failed).toMatchObject({ firstPageFailed: true, stale: true, ids: [1] });
+
+      // The next page asked for before the reload lands nowhere and changes nothing.
+      yield* Deferred.succeed(moreGate, undefined);
+      yield* Fiber.join(paging);
+      expect(scheduledListOf(store.getState(), "pending")).toBe(failed);
+
+      // Try again reloads the first page (see `retry`), and that clears it.
+      firstPage = "ok";
+      yield* scheduled.load("pending");
+      expect(scheduledListOf(store.getState(), "pending")).toMatchObject({
+        firstPageFailed: false,
+        stale: false,
+        ids: [1],
+        error: null,
+      });
+      expect((yield* fake.requests).map((request) => request.query?.before ?? null)).toEqual([
+        null,
+        "c",
+        null,
+        null,
+      ]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });

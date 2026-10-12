@@ -172,3 +172,7 @@ mod api_soundboard_tests;
 #[cfg(test)]
 #[path = "spa_api_sticker_tests.rs"]
 mod api_sticker_tests;
+
+#[cfg(test)]
+#[path = "spa_template_tests.rs"]
+mod template_tests;

@@ -74,6 +74,7 @@ import {
   undoSlackRun,
 } from "../api/slack-endpoints.ts";
 import { createSticker, destroySticker, updateSticker } from "../api/sticker-endpoints.ts";
+import { exportTemplate, importTemplate, previewTemplate } from "../api/template-endpoints.ts";
 import { adminWelcome, updateWelcome } from "../api/welcome-endpoints.ts";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
@@ -123,6 +124,7 @@ import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
 import type { WorkspaceInvite } from "../gen/WorkspaceInvite.ts";
 import type { WorkspaceInviteCreated } from "../gen/WorkspaceInviteCreated.ts";
 import type { WorkspaceInviteList } from "../gen/WorkspaceInviteList.ts";
+import type { WorkspaceTemplate } from "../gen/WorkspaceTemplate.ts";
 import { mutations, store } from "../store/store.ts";
 import { brandingOf } from "../store/workspace.ts";
 import { peoplePagesOver } from "./people-pages.ts";
@@ -380,4 +382,12 @@ export const ignores = {
 
         return change;
       }),
+};
+
+/** Admin file templates, confirmed against the exact preview before a transactional import. */
+export const templates = {
+  export: () => runAction(exportTemplate()),
+  preview: (contents: string) => runAction(previewTemplate(contents)),
+  import: (contents: string, expected: WorkspaceTemplate) =>
+    runAction(importTemplate({ contents, expected })),
 };

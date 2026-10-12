@@ -208,4 +208,73 @@ describe("search actions", () => {
       expect(searchStore.getState().recents.searches).toEqual(held);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
+
+  it.effect(
+    "keep a thread the viewer lost while the search was on its way out of its results",
+    () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeApi;
+        const reply = messageFixture(3, 1, { threadId: 88 });
+
+        const found: SearchResults = {
+          ...results([messageFixture(2, 1), reply]),
+          conversations: [
+            ...results([]).conversations,
+            {
+              roomId: 1,
+              threadId: 88,
+              roomKind: "open",
+              roomName: "general",
+              roomIconName: null,
+              threadName: "Just us",
+            },
+          ],
+          sections: [
+            {
+              kind: "board_posts",
+              rows: [
+                {
+                  id: 88,
+                  roomId: 1,
+                  roomKind: "open",
+                  title: "Just us",
+                  time: reply.createdAt,
+                  workStatus: null,
+                  cancelled: false,
+                },
+              ],
+            },
+          ],
+        };
+
+        // The viewer is removed from thread 88 after the search was sent, before its reply lands.
+        yield* fake.route("GET /search", () =>
+          Effect.sync(() => {
+            mutations.applyEvents(
+              [
+                {
+                  seq: 1,
+                  topic: "user",
+                  type: "thread.removed",
+                  data: { threadId: 88, roomId: 1 },
+                },
+              ],
+              Date.now(),
+            );
+
+            return found;
+          }),
+        );
+
+        yield* search.run("launch");
+
+        const list = searchStore.getState().results.launch;
+
+        expect(list?.messages.map((message) => message.id)).toEqual([2]);
+        expect(Object.values(list?.conversations ?? {}).map((name) => name.threadId)).toEqual([
+          null,
+        ]);
+        expect(list?.sections[0]?.rows).toEqual([]);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 });

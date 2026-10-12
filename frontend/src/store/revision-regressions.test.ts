@@ -155,6 +155,7 @@ function landApproval(incoming: AgentApproval): void {
     approvalListKey(AGENT, "all"),
     { approvals: [incoming], users: [], nextCursor: null },
     "replace",
+    approvalListOf(store.getState(), approvalListKey(AGENT, "all")).generation,
   );
 }
 
@@ -537,11 +538,14 @@ describe("server revisions on S4 records", () => {
   it("keeps Pending's last loaded row after an equal-membership event and a late omitting page", () => {
     const key = approvalListKey(AGENT, "pending");
 
+    const loading = setApprovalListLoading(initialState, key, false);
+
     const before = landApprovalPage(
-      setApprovalListLoading(initialState, key, false),
+      loading,
       key,
       { approvals: [approval(0, { id: 4 }), approval(0)], users: [], nextCursor: "3" },
       "replace",
+      approvalListOf(loading, key).generation,
     );
 
     const read = startRead(before.freshness, `approvals:${key}`);

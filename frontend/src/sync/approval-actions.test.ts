@@ -684,6 +684,81 @@ describe("approval actions", () => {
   );
 });
 
+describe("a new request that arrives while a list loads", () => {
+  afterEach(() => mutations.reset());
+
+  it.effect("keeps the list stale when the older page lands, so it loads again", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+      const key = approvalListKey(AGENT, "pending");
+
+      mutations.setMe(meFixture);
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as({ approvals: [pending], users: [], nextCursor: null }),
+        ),
+      );
+
+      const loading = yield* Effect.forkChild(approvals.load(AGENT, "pending"));
+
+      yield* Deferred.await(started);
+
+      // A new request publishes only its activity item, after the page was read.
+      mutations.applyEvents(
+        [
+          {
+            seq: 1,
+            topic: "user",
+            type: "activity.item",
+            data: {
+              item: {
+                id: 1,
+                eventType: "agent_approval_request",
+                state: "unread",
+                readAt: null,
+                handledAt: null,
+                createdAt: pending.createdAt,
+                updatedAt: pending.createdAt,
+                source: {
+                  sourceType: "agent_approval",
+                  sourceId: 101,
+                  roomId: 3,
+                  threadId: null,
+                  messageId: null,
+                  eventId: null,
+                  creatorId: AGENT,
+                  title: "engineering",
+                  body: "Deploy to production",
+                  occurredAt: pending.createdAt,
+                  approvalStatus: "pending",
+                  budgetCap: null,
+                  path: "/",
+                },
+              },
+              unreadCount: 1,
+              unreadRevision: 1,
+              evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+            },
+          },
+        ],
+        Date.now(),
+      );
+
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(loading);
+
+      expect(approvalListOf(store.getState(), key)).toMatchObject({
+        status: "ready",
+        ids: [100],
+        stale: true,
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+});
+
 describe("ledger actions", () => {
   afterEach(() => mutations.reset());
 

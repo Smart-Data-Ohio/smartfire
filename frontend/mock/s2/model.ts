@@ -549,3 +549,8 @@ export function pageOf(
       return slice(list, index - PAGE_SIZE, index + 1 + PAGE_SIZE, lookups);
   }
 }
+
+/** The existing room membership scope, before sidebar display preferences are applied. */
+export function memberRooms(world: World, userId: number): RoomRecord[] {
+  return [...world.rooms.values()].filter((record) => record.memberIds.includes(userId));
+}

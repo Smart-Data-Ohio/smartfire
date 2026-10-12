@@ -1,0 +1,47 @@
+{
+  "format": "smartfire-template",
+  "version": 1,
+  "categories": [
+    {
+      "name": "Template team",
+      "rooms": [
+        {
+          "kind": "open",
+          "name": "general",
+          "iconName": null,
+          "topic": "Team conversation",
+          "announcement": true,
+          "voiceBitrate": null,
+          "voiceUserLimit": null,
+          "board": null
+        },
+        {
+          "kind": "stage",
+          "name": "Town hall",
+          "iconName": null,
+          "topic": "Weekly updates",
+          "announcement": false,
+          "voiceBitrate": 96000,
+          "voiceUserLimit": 20,
+          "board": null
+        }
+      ]
+    }
+  ],
+  "rooms": [
+    {
+      "kind": "board",
+      "name": "Ideas",
+      "iconName": null,
+      "topic": "Share ideas",
+      "announcement": false,
+      "voiceBitrate": null,
+      "voiceUserLimit": null,
+      "board": {
+        "tags": [{ "name": "Idea", "emoji": "💡" }],
+        "tagsRequired": true,
+        "defaultTag": 0
+      }
+    }
+  ]
+}

@@ -63,6 +63,7 @@ import {
   canAccessThread,
   locate,
   type MessageDraft,
+  memberRooms,
   pageOf,
   pinCount,
   plainDraft,
@@ -93,6 +94,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { messageSource } from "./s3/sources.ts";
 import { createWelcome } from "./s3/welcome.ts";
 import { createWorkspaceLayout, workspaceLayoutOf } from "./s3/workspace-layout.ts";
 import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
@@ -112,6 +114,7 @@ import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomIntegrations } from "./s8/room-integrations.ts";
 import { createRoomManagement } from "./s8/rooms.ts";
+import { createTemplates } from "./s8/templates.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -528,11 +531,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const visibleRooms = (): RoomRecord[] =>
-    [...world.rooms.values()]
-      .filter(
-        (record) =>
-          record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
-      )
+    memberRooms(world, VIEWER_ID)
+      .filter((record) => record.membership.involvement !== "invisible")
       .sort((a, b) => {
         const left = (a.room.name ?? "").toLowerCase();
         const right = (b.room.name ?? "").toLowerCase();
@@ -1134,11 +1134,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const workspaceLayout = createWorkspaceLayout(ctx);
   const welcome = createWelcome(ctx, admin, openPreview);
 
+  const roomManagement = createRoomManagement(ctx, admin, huddles);
+
   const routes = [
+    ...createTemplates(ctx, admin, roomManagement).routes,
     ...agents.routes,
     ...approvals.routes,
     ...ledger.routes,
-    ...createRoomManagement(ctx, admin, huddles).routes,
+    ...roomManagement.routes,
     ...createRoomIntegrations(ctx).routes,
     ...createAnnouncements(ctx).routes,
     ...createChannelWebhooks(ctx).routes,
@@ -1620,6 +1623,24 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         const boardControl = boards.control(action, body);
 
         if (boardControl !== null) return boardControl;
+
+        const threadControl = threads.control(action, body);
+
+        if (threadControl !== null) {
+          // `notifyViewer`: the first reply also lands in the viewer's inbox, as a mention would.
+          if (action === "private-thread" && flag("notifyViewer", false)) {
+            const threadId = intField(threadControl.json, "threadId");
+
+            const reply =
+              threadId === null ? undefined : world.threads.get(threadId)?.messages.at(-1);
+
+            if (reply !== undefined) {
+              activity.record({ eventType: "mention", source: messageSource(ctx, reply) });
+            }
+          }
+
+          return threadControl;
+        }
 
         const handled = huddles.control(action, {
           int,

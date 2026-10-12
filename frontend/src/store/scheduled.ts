@@ -7,7 +7,7 @@
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ScheduledMessageFilter } from "../gen/ScheduledMessageFilter.ts";
 import type { ScheduledMessageList } from "../gen/ScheduledMessageList.ts";
-import { mergeConversationNames } from "./conversations.ts";
+import { isRemovedThread, mergeConversationNames } from "./conversations.ts";
 import {
   type Cursor,
   eachPaged,
@@ -122,9 +122,10 @@ export function setScheduledListFailed(
   state: State,
   key: ScheduledListKey,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
 ): State {
-  return updateList(state, key, (list) => pagedFailed(list, error, generation));
+  return updateList(state, key, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /**
@@ -136,7 +137,7 @@ export function landScheduledPage(
   key: ScheduledListKey,
   page: ScheduledMessageList,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
 ): State {
   if (!pagedCurrent(scheduledListOf(state, key), generation)) {
     return state;
@@ -145,7 +146,7 @@ export function landScheduledPage(
   const items = { ...state.scheduled.items };
 
   for (const message of page.scheduledMessages) {
-    items[message.id] = message;
+    items[message.id] = asStillReadable(state, message);
   }
 
   const cursor: Cursor | null = page.nextCursor;
@@ -162,6 +163,7 @@ export function landScheduledPage(
           page.scheduledMessages.map((message) => message.id),
           cursor,
           mode,
+          generation,
         ),
       },
     },
@@ -173,7 +175,7 @@ export function landScheduledPage(
  * stored, and moved into or out of every loaded list.
  */
 export function applyScheduled(state: State, message: ScheduledMessage): State {
-  const items = { ...state.scheduled.items, [message.id]: message };
+  const items = { ...state.scheduled.items, [message.id]: asStillReadable(state, message) };
 
   const lists = eachPaged(state.scheduled.lists, (list, key) =>
     pagedPlaced(list, message.id, belongsTo(key, message), scheduledOrder(items, key)),
@@ -206,4 +208,37 @@ export function markScheduledStale(state: State): State {
   return lists === state.scheduled.lists
     ? state
     : { ...state, scheduled: { ...state.scheduled, lists } };
+}
+
+/**
+ * A scheduled reply in a thread the viewer can't read any more, as the server lists it: the
+ * viewer's own text stays, but the message it quotes and the reply it posted aren't shown, and it
+ * can't be sent (`sendable_ids` needs the thread readable, and the runner drops it when due).
+ */
+function withoutThreadAccess(message: ScheduledMessage): ScheduledMessage {
+  return { ...message, replyTarget: null, sentMessageId: null, sendable: false };
+}
+
+/** `message` as the server would list it now: redacted when its thread was removed meanwhile. */
+function asStillReadable(state: State, message: ScheduledMessage): ScheduledMessage {
+  return isRemovedThread(state, message.threadId) ? withoutThreadAccess(message) : message;
+}
+
+/** The viewer lost `threadId`: the scheduled replies there keep their text and lose the rest. */
+export function forgetScheduledThread(state: State, threadId: number): State {
+  const lost = Object.values(state.scheduled.items).filter(
+    (message) => message.threadId === threadId,
+  );
+
+  if (lost.length === 0) {
+    return state;
+  }
+
+  const items = { ...state.scheduled.items };
+
+  for (const message of lost) {
+    items[message.id] = withoutThreadAccess(message);
+  }
+
+  return { ...state, scheduled: { ...state.scheduled, items } };
 }

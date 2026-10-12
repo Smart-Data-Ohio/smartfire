@@ -29,6 +29,14 @@ export const ADMIN_SECTIONS = [
     group: "workspace",
   },
   {
+    key: "templates",
+    label: "Templates",
+    icon: "file-text",
+    path: "/admin/templates",
+    admin: true,
+    group: "workspace",
+  },
+  {
     key: "people",
     label: "People",
     icon: "users",

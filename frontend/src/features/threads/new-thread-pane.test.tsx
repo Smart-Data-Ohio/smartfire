@@ -152,3 +152,98 @@ it("holds file adds while the new thread is being created, then adds again after
   fireEvent.change(picker, { target: { files: [new File(["again"], "again.txt")] } });
   await screen.findByText("again.txt");
 });
+
+it("starts a private thread once the Private switch is on, and says who will see it", async () => {
+  store.setState({ messages: { 1: messageFixture(1) } });
+  const create = vi.spyOn(actions.threads, "create").mockRejectedValue(new Error("Keep the draft"));
+  vi.spyOn(actions, "noteActivity").mockImplementation(() => undefined);
+  vi.spyOn(actions, "setTyping").mockImplementation(() => undefined);
+  vi.stubGlobal("matchMedia", (query: string) =>
+    Object.assign(new EventTarget(), { matches: false, media: query, onchange: null }),
+  );
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+
+  const root = createRootRoute({ component: () => <NewThreadPane roomId={4} parentId={1} /> });
+
+  const router = createRouter({
+    routeTree: root,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+
+  const toggle = screen.getByRole("switch", { name: /Private thread/ });
+
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  expect(screen.getByText("Everyone in the room can see it.")).toBeTruthy();
+
+  fireEvent.click(toggle);
+
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
+  expect(screen.getByRole("heading", { name: "New private thread" })).toBeTruthy();
+  expect(screen.getByText(/Only you, admins, and people you add or mention/)).toBeTruthy();
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Reply…" }), {
+    target: { value: "Just us" },
+  });
+  fireEvent.keyDown(screen.getByRole("textbox", { name: "Reply…" }), { key: "Enter" });
+
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(
+      4,
+      1,
+      "Just us",
+      expect.objectContaining({ visibility: "private" }),
+    ),
+  );
+});
+
+it("starts a public thread by default", async () => {
+  store.setState({ messages: { 1: messageFixture(1) } });
+  const create = vi.spyOn(actions.threads, "create").mockRejectedValue(new Error("Keep the draft"));
+  vi.spyOn(actions, "noteActivity").mockImplementation(() => undefined);
+  vi.spyOn(actions, "setTyping").mockImplementation(() => undefined);
+  vi.stubGlobal("matchMedia", (query: string) =>
+    Object.assign(new EventTarget(), { matches: false, media: query, onchange: null }),
+  );
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+
+  const root = createRootRoute({ component: () => <NewThreadPane roomId={4} parentId={1} /> });
+
+  const router = createRouter({
+    routeTree: root,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Reply…" }), {
+    target: { value: "Everyone" },
+  });
+  fireEvent.keyDown(screen.getByRole("textbox", { name: "Reply…" }), { key: "Enter" });
+
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(
+      4,
+      1,
+      "Everyone",
+      expect.objectContaining({ visibility: "public" }),
+    ),
+  );
+});

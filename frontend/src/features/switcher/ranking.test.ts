@@ -18,6 +18,7 @@ import {
   rankItems,
   readsUnread,
   remoteItems,
+  withoutRemovedThreads,
 } from "./ranking.ts";
 import { withRecent } from "./recents.ts";
 
@@ -357,5 +358,14 @@ describe("withRecent", () => {
     expect(recents[0]).toBe("room:15");
     expect(new Set(recents).size).toBe(recents.length);
     expect(recents.length).toBe(12);
+  });
+});
+
+describe("withoutRemovedThreads", () => {
+  it("hides a thread removed since the catalogue was read, such as a private one the viewer lost", () => {
+    const items = remoteItems(withoutRemovedThreads(CATALOGUE, { 70: 1 }));
+
+    expect(items.some((item) => item.kind === "thread")).toBe(false);
+    expect(withoutRemovedThreads(CATALOGUE, { 71: 1 })).toBe(CATALOGUE);
   });
 });
