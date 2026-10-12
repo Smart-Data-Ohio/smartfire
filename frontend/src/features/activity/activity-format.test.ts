@@ -43,40 +43,30 @@ function item(overrides: Partial<ActivitySource>): ActivityItem {
 }
 
 describe("targetFromPath", () => {
-  it("maps classic room, message and thread paths into the SPA", () => {
-    expect(targetFromPath("/rooms/12")).toEqual({ kind: "room", roomId: 12 });
-    expect(targetFromPath("/rooms/12/@9001")).toEqual({
-      kind: "message",
-      roomId: 12,
-      messageId: 9001,
-    });
-    expect(targetFromPath("/rooms/12?thread=5&message_id=77")).toEqual({
-      kind: "thread",
-      roomId: 12,
-      threadId: 5,
-      messageId: 77,
-    });
-    expect(targetFromPath("/rooms/12?thread=5")).toEqual({
-      kind: "thread",
-      roomId: 12,
-      threadId: 5,
-      messageId: null,
-    });
+  it.each([
+    ["/rooms/12", "/app/r/12"],
+    ["/rooms/12/@9001?source=mail#message_9001", "/app/r/12/m/9001?source=mail#message_9001"],
+    ["/rooms/12?thread=5&message_id=77&source=mail", "/app/r/12/t/5?m=77&source=mail"],
+    ["/rooms/12?thread=5", "/app/r/12/t/5"],
+    ["/scheduled_messages", "/app/scheduled"],
+    ["/saved/", "/app/saved"],
+    ["/agents/3/approvals", "/app/agents/3/approvals"],
+    ["/users/me/profile?classic=1#security", "/app/settings#security"],
+    ["/rooms/abc?source=old#top", "/app/rooms/abc?source=old#top"],
+    ["/app/activity?tab=agents#top", "/app/activity?tab=agents#top"],
+  ])("opens %s inside the SPA with its link context", (path, href) => {
+    expect(targetFromPath(path)).toEqual({ kind: "page", href });
   });
 
-  it("maps the scheduled and saved pages", () => {
-    expect(targetFromPath("/scheduled_messages")).toEqual({ kind: "scheduled" });
-    expect(targetFromPath("/saved/")).toEqual({ kind: "saved" });
-  });
-
-  it("leaves screens the SPA hasn't ported on the classic site", () => {
-    expect(targetFromPath("/agents/3/approvals")).toEqual({
-      kind: "classic",
-      href: "/agents/3/approvals",
-    });
-    expect(targetFromPath("/rooms/abc")).toEqual({ kind: "classic", href: "/rooms/abc" });
-    expect(targetFromPath("")).toEqual({ kind: "none" });
-  });
+  it.each([
+    "",
+    "https://example.com/rooms/12",
+    "//example.com/rooms/12",
+    "/\\example.com",
+    "javascript:alert(1)",
+  ])("refuses an unsafe activity destination %s", (path) =>
+    expect(targetFromPath(path)).toEqual({ kind: "none" }),
+  );
 });
 
 describe("activityTarget", () => {
@@ -100,12 +90,12 @@ describe("activityTarget", () => {
     });
   });
 
-  it("follows the classic path for the rest", () => {
+  it("maps remaining paths into the SPA", () => {
     expect(
       activityTarget(
         item({ sourceType: "agent_approval", roomId: null, path: "/agents/3/approvals" }),
       ),
-    ).toEqual({ kind: "classic", href: "/agents/3/approvals" });
+    ).toEqual({ kind: "page", href: "/app/agents/3/approvals" });
     expect(activityTarget(item({ sourceType: "scheduled_message" }))).toEqual({
       kind: "scheduled",
     });

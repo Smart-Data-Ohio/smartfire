@@ -515,8 +515,7 @@ pub const SCREENS: &[Screen] = &[
 
 /// A room-query id the server has checked: it belongs to that room, and the viewer can see it.
 /// The screen map passes none of these and translates every well-formed id; it has no database.
-/// A well-formed id that isn't confirmed is left on the plain room route, as a value that isn't
-/// an id is.
+/// Record parameters that aren't confirmed are removed from the room URL.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConfirmedRoomQuery {
     pub thread: Option<u64>,
@@ -576,7 +575,8 @@ pub fn profile_url(endpoint: &str, path: &str, query: Option<&str>, viewer_id: i
     spa_url(endpoint, path, query)
 }
 
-/// [`spa_url`], translating a room's `thread` and `message_id` only when `confirmed` names them.
+/// [`spa_url`], translating a room's `thread` and `message_id` only when `confirmed` names them,
+/// and removing rejected record parameters while keeping unrelated query pairs.
 pub fn spa_url_confirmed(
     endpoint: &str,
     path: &str,
@@ -612,8 +612,9 @@ fn spa_url_inner(
 
 /// Notification links open a room as `/rooms/:id?thread=&message_id=`. The SPA reads a thread at
 /// `/app/r/:id/t/:thread` (`?m=` scrolls to a reply) and a timeline message at `/app/r/:id/m/:id`.
-/// `None` when neither effective value is a record id the caller accepts, so the plain room URL
-/// keeps the query. A duplicate of a rejected value is not tried.
+/// Without confirmation, `None` when neither effective value is a record id. Confirmed queries
+/// keep only unrelated pairs when no record is accepted. A duplicate of a rejected value is
+/// not tried.
 fn room_notification_url(
     spa: &str,
     query: Option<&str>,
@@ -627,7 +628,7 @@ fn room_notification_url(
     };
     let thread = parsed.thread.filter(|id| accepted(*id, false));
     let message = parsed.message.filter(|id| accepted(*id, true));
-    if thread.is_none() && message.is_none() {
+    if thread.is_none() && message.is_none() && confirmed.is_none() {
         return None;
     }
     let mut rest = parsed.rest;
@@ -644,7 +645,7 @@ fn room_notification_url(
             url.push_str("/m/");
             url.push_str(&message.to_string());
         }
-        (None, None) => return None,
+        (None, None) => {}
     }
     if !rest.is_empty() {
         url.push('?');

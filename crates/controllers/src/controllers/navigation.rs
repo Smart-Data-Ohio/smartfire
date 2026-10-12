@@ -202,7 +202,7 @@ pub async fn record(c: &mut Ctx) -> Result {
     } else {
         (None, None)
     };
-    let location = c.app().db.read(move |conn| {
+    let mut location = c.app().db.read(move |conn| {
         let message = match endpoint {
             "rooms/message_links#show" => {
                 let message = campfire_db::message_quote::source_for_viewer(conn, room.id, id, viewer)?;
@@ -257,7 +257,16 @@ pub async fn record(c: &mut Ctx) -> Result {
     })?;
     c.respond_to(&[&format::HTML])?;
     concerns::keep_waiting_flash(c);
-    c.redirect_to(&c.url_for(&location))
+    if campfire_runtime::navigation::alias_navigation(c)? {
+        let query: Vec<_> = c.request.query_string().split('&').filter(|pair| {
+            !pair.is_empty() && !matches!(pair.split('=').next(), Some("classic" | "message_id" | "thread_id" | "m"))
+        }).collect();
+        if !query.is_empty() {
+            location.push(if location.contains('?') { '&' } else { '?' });
+            location.push_str(&query.join("&"));
+        }
+    }
+    campfire_runtime::navigation::redirect_alias(c, &location)
 }
 
 /// HTML collections open the SPA; machine requests keep the original route outcomes.
@@ -267,7 +276,9 @@ pub async fn room_index(c: &mut Ctx) -> Result {
         .is_some_and(|kind| kind == &format::HTML || kind == &format::ALL)
     {
         concerns::keep_waiting_flash(c);
-        return c.redirect_to(&c.url_for("/app/"));
+        let path = campfire_spa::screens::spa_url("welcome#show", "/", Some(c.request.query_string()))
+            .ok_or(Error::NotFound)?;
+        return campfire_runtime::navigation::redirect_alias(c, &path);
     }
     if c.current::<MatchedRoute>().ok_or(Error::NotFound)?.endpoint != "rooms#index" {
         // These collections previously matched /rooms/:id and failed the room lookup.
@@ -297,7 +308,7 @@ pub async fn refresh(c: &mut Ctx) -> Result {
     c.redirect_to(&c.url_for(&campfire_routes::room(room.id)))
 }
 
-/// Typed bookmarks retain their membership checks and hop through the generic room alias.
+/// Plain typed bookmarks keep their canonical room hop; query state opens the checked SPA target.
 pub async fn typed_room(c: &mut Ctx) -> Result {
     use campfire_rooms::controllers::rooms::{Scope, set_room};
     before_actions(c, Before::default()).await?;
@@ -318,5 +329,9 @@ pub async fn typed_room(c: &mut Ctx) -> Result {
         set_room(c, scope).await?
     };
     concerns::remember_last_room_visited(c, room.id);
+    if !c.request.query_string().is_empty() && campfire_runtime::navigation::alias_navigation(c)? {
+        let path = campfire_runtime::navigation::room_alias(c, room.id).await?;
+        return campfire_runtime::navigation::redirect_alias(c, &path);
+    }
     c.redirect_to(&c.url_for(&campfire_routes::room(room.id)))
 }

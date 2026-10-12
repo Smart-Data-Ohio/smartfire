@@ -26,5 +26,25 @@ pub async fn redirect(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let url = concerns::alias_location(c).await?.ok_or(Error::NotFound)?;
     concerns::keep_waiting_flash(c);
-    c.redirect_to(&c.url_for(&url))
+    redirect_alias(c, &url)
+}
+
+/// Alias destinations depend on the viewer, so they retain Rails' temporary redirect.
+pub fn redirect_alias(c: &mut Ctx, path: &str) -> Result {
+    c.redirect_to(&c.url_for(path))
+}
+
+pub fn alias_navigation(c: &mut Ctx) -> Result<bool> {
+    Ok(concerns::authenticated_by(c) == concerns::AuthenticatedBy::Session
+        && c.request.header("turbo-frame").is_none()
+        && concerns::coexistence_navigation(c)?)
+}
+
+/// Typed room bookmarks use the generic room's translation and record-access checks.
+pub async fn room_alias(c: &Ctx, room_id: i64) -> Result<String> {
+    let path = campfire_routes::room(room_id);
+    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
+    let confirmed = concerns::confirmed_room_query(c, &path, query).await?;
+    campfire_spa::screens::spa_url_confirmed("rooms#show", &path, query, confirmed)
+        .ok_or(Error::NotFound)
 }

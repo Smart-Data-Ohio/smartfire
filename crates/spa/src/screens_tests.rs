@@ -691,6 +691,23 @@ fn room_notification_queries_open_the_thread_or_message() {
 }
 
 #[test]
+fn confirmed_room_queries_remove_rejected_record_parameters() {
+    let refused = ConfirmedRoomQuery { thread: None, message: None };
+    for (query, target) in [
+        ("thread=9", "/app/r/12"),
+        ("message_id=4&source=mail", "/app/r/12?source=mail"),
+        ("th%72ead=%39&message%5Fid=4&note=a%20b&source=mail&source=push", "/app/r/12?note=a%20b&source=mail&source=push"),
+        ("thread=9&thread=8&message_id=4&message_id=5&classic=1&x=1", "/app/r/12?x=1"),
+    ] {
+        assert_eq!(
+            spa_url_confirmed("rooms#show", "/rooms/12", Some(query), refused).as_deref(),
+            Some(target),
+            "{query}"
+        );
+    }
+}
+
+#[test]
 fn room_notification_queries_decode_and_use_the_classic_duplicate() {
     // `%39` is `9`. `thread` is the first value (the thread panel's `URLSearchParams.get`).
     // A non-empty `thread` makes `message_id` the first value too. With no thread, `message_id`
@@ -763,7 +780,7 @@ fn room_notification_queries_decode_and_use_the_classic_duplicate() {
     };
     assert_eq!(
         spa_url_confirmed("rooms#show", "/rooms/12", Some("thread=9&x=1"), refused).as_deref(),
-        Some("/app/r/12?thread=9&x=1")
+        Some("/app/r/12?x=1")
     );
     // Confirmation applies to the effective value only. Naming the other duplicate does not
     // make it the one that opens.
@@ -779,7 +796,7 @@ fn room_notification_queries_decode_and_use_the_classic_duplicate() {
             other_thread
         )
         .as_deref(),
-        Some("/app/r/12?thread=9&thread=8")
+        Some("/app/r/12")
     );
     let other_message = ConfirmedRoomQuery {
         thread: None,
@@ -793,7 +810,7 @@ fn room_notification_queries_decode_and_use_the_classic_duplicate() {
             other_message
         )
         .as_deref(),
-        Some("/app/r/12?message_id=4&message_id=5")
+        Some("/app/r/12")
     );
     assert_eq!(
         room_query_ids(Some("thread=%39&thread=8&message_id=4&message_id=5")),

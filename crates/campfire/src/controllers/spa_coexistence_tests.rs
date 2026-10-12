@@ -499,8 +499,7 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
         assert_eq!(fetched.status, expected, "{classic}");
         assert!(!fetched.text().contains(SECRET), "{classic}");
     }
-    // The room's permalink doesn't confirm a message David can't read: it stays a query on the
-    // plain room route, `classic` dropped.
+    // The room's permalink drops the message David can't read, along with `classic`.
     for path in [
         format!("/rooms/{DIRECT_KEVIN_BENDER}?message_id={}", message.id),
         format!(
@@ -512,10 +511,7 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
         assert_eq!(
             reply.location(),
             Some(
-                to(&format!(
-                    "/app/r/{DIRECT_KEVIN_BENDER}?message_id={}",
-                    message.id
-                ))
+                to(&format!("/app/r/{DIRECT_KEVIN_BENDER}"))
                 .as_str()
             ),
             "{path}"
@@ -888,7 +884,7 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
         .await;
     assert_eq!(
         cross_thread.location(),
-        Some(to(&format!("/app/r/{WATERCOOLER}?thread={LAUNCH_THREAD}")).as_str())
+        Some(to(&format!("/app/r/{WATERCOOLER}")).as_str())
     );
     let designers_message = 935961888i64;
     let cross_message = david
@@ -899,9 +895,7 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
     assert_eq!(
         cross_message.location(),
         Some(
-            to(&format!(
-                "/app/r/{WATERCOOLER}?message_id={designers_message}"
-            ))
+            to(&format!("/app/r/{WATERCOOLER}"))
             .as_str()
         )
     );
@@ -911,7 +905,7 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
         .await;
     assert_eq!(
         inaccessible.location(),
-        Some(to(&format!("/app/r/{DESIGNERS_ROOM}?thread={BOARD_THREAD}")).as_str())
+        Some(to(&format!("/app/r/{DESIGNERS_ROOM}")).as_str())
     );
     // The thread belongs to this room. David can open it. Kevin cannot, because he
     // isn't a member: dropping the membership check would send him to the thread.
@@ -927,7 +921,7 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
         .await;
     assert_eq!(
         non_member.location(),
-        Some(to(&format!("/app/r/{RELEASE_BOARD}?thread={BOARD_THREAD}")).as_str())
+        Some(to(&format!("/app/r/{RELEASE_BOARD}")).as_str())
     );
     let (thread_id, message_id) = a
         .db()
@@ -964,14 +958,14 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
         .await;
     assert_eq!(
         deleted_thread.location(),
-        Some(to(&format!("/app/r/{WATERCOOLER}?thread={thread_id}")).as_str())
+        Some(to(&format!("/app/r/{WATERCOOLER}")).as_str())
     );
     let deleted_message = david
         .get(&format!("/rooms/{WATERCOOLER}?message_id={message_id}"))
         .await;
     assert_eq!(
         deleted_message.location(),
-        Some(to(&format!("/app/r/{WATERCOOLER}?message_id={message_id}")).as_str())
+        Some(to(&format!("/app/r/{WATERCOOLER}")).as_str())
     );
 }
 
@@ -1162,7 +1156,7 @@ async fn html_suffixes_and_trailing_slashes_resolve_the_same_navigation_alias() 
         (format!("/rooms/{room}"), format!("/app/r/{room}")),
         (
             format!("/rooms/{room}?thread={LAUNCH_THREAD}&x=1"),
-            format!("/app/r/{room}?thread={LAUNCH_THREAD}&x=1"),
+            format!("/app/r/{room}?x=1"),
         ),
         ("/users/me/profile".into(), "/app/settings".into()),
         (format!("/users/{DAVID}/profile"), "/app/settings".into()),

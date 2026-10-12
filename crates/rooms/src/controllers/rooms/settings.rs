@@ -18,7 +18,7 @@ pub async fn show(c: &mut Ctx) -> Result {
             format!("/app/r/{}", room.id)
         };
         let path = append_query(screen, query.as_deref());
-        return c.redirect_to(&c.url_for(&path));
+        return campfire_runtime::navigation::redirect_alias(c, &path);
     }
     concerns::keep_waiting_flash(c);
     let path = append_query(edit_path(&room), query.as_deref());
