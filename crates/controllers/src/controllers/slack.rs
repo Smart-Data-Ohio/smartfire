@@ -201,14 +201,5 @@ pub async fn disconnect_user(c: &Ctx, user: User) -> Result<bool> {
         .await
         .map_err(Error::internal)
 }
-/// Where the classic `Connect Slack` link starts the OAuth round trip, coming back to the
-/// administrator's setup page or the personal imports page.
-pub fn connect_path(admin: bool) -> &'static str {
-    if admin {
-        "/slack/oauth/start?return_to=%2Faccount%2Fslack_import"
-    } else {
-        "/slack/oauth/start?return_to=%2Fslack%2Fimports"
-    }
-}
 pub mod runs;
 pub mod setup;

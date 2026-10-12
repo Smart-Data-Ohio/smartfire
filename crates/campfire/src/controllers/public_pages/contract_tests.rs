@@ -172,12 +172,20 @@ async fn public_page_mock_fixture_matches_the_contract() {
     )
     .await
     .expect("restore the frozen seeds");
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../../../frontend/mock/s2/public-pages.json"
+    )).unwrap();
     let mut pages = serde_json::Map::new();
     for (slug, _) in PAGES {
         let reply = app
             .anonymous()
             .send(json_get(&format!("/api/v1/public_pages/{slug}")))
             .await;
+        assert_eq!(
+            reply.body,
+            serde_json::to_vec(&fixture[slug]).unwrap(),
+            "{slug}: the public article JSON bytes changed"
+        );
         pages.insert(slug.into(), reply.json());
     }
     let text = serde_json::to_string_pretty(&Value::Object(pages)).unwrap() + "\n";

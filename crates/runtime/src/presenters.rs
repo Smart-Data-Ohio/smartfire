@@ -1,4 +1,8 @@
 pub mod page;
+pub mod icons;
+pub mod bots;
+pub mod slack;
+pub mod work_links;
 pub mod current;
 pub mod accounts;
 pub mod workspace_branding;

@@ -1,8 +1,7 @@
-use campfire_presentation::slack::{RunSummary, SetupData};
 use super::*;
 use campfire_db::{
     audit_log::{AuditLog, NewAuditLog, Target},
-    models::slack::{SlackConnection, SlackWorkspace},
+    models::slack::SlackWorkspace,
 };
 use campfire_kit::StatusCode;
 async fn before(c: &mut Ctx, sudo: bool) -> Result<User> {
@@ -13,19 +12,6 @@ async fn before(c: &mut Ctx, sudo: bool) -> Result<User> {
     }
     Ok(concerns::require_current_user(c)?.clone())
 }
-/// The setup page's state for administrator `uid`: the app credentials, their Slack connection,
-/// the active run and the manifest.
-pub async fn data(c: &Ctx, uid: i64) -> Result<SetupData> {
-    let crypto = service(c).encryption;
-    let mut data=c.app().db.read(move|conn| {
-  let w=SlackWorkspace::current(conn)?;let connection=SlackConnection::for_user(conn,uid)?;
-  let active=conn.query_row("SELECT id,kind,mode,status FROM slack_imports WHERE status IN ('queued','running','undoing') ORDER BY created_at DESC, id DESC LIMIT 1",[],|r|Ok(RunSummary{id:r.get(0)?,kind:r.get(1)?,mode:r.get(2)?,status:r.get(3)?})).optional()?;
-  Ok(SetupData{client_id:w.as_ref().and_then(|w|w.client_id.clone()),configured:w.as_ref().map(|w|w.app_configured(&crypto)).transpose()?.unwrap_or(false),configured_by:w.as_ref().and_then(|w|w.configured_by_id).map(|id|User::find_by_id(conn,id)).transpose()?.flatten().map(|u|u.display_name().to_owned()),team_name:w.as_ref().and_then(|w|w.team_name.clone()).filter(|s|!campfire_richtext::ruby::is_blank(s)),team_known:w.as_ref().and_then(|w|w.team_id.as_deref()).is_some_and(|s|!campfire_richtext::ruby::is_blank(s)),connection_exists:connection.is_some(),connected:connection.as_ref().map(|c|c.connected(&crypto)).transpose()?.unwrap_or(false),disconnected_reason:connection.and_then(|c|c.disconnected_reason).filter(|s|!campfire_richtext::ruby::is_blank(s)),active_run:active,..Default::default()})
- }).await.map_err(Error::internal)?;
-    data.manifest = oauth::manifest(&c.url_for(""));
-    Ok(data)
-}
-use rusqlite::OptionalExtension;
 pub async fn update(c: &mut Ctx) -> Result {
     let user = before(c, true).await?;
     let client_id = campfire_richtext::ruby::strip(&param(c, "client_id")).to_owned();

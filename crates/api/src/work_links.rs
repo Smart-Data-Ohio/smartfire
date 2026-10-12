@@ -5,7 +5,7 @@ use campfire_app::app::AppCtx;
 use campfire_app::integrations::github::{
     jobs::FetchPullRequestJob, pull_requests::PullRequest, references,
 };
-use campfire_controllers::controllers::work_threads::links::resolve_drive_title;
+use campfire_runtime::presenters::work_links::resolve_drive_title;
 use campfire_db::{CalendarEvent, ChannelThread, Event, NewWorkThreadLink, User, WorkThreadLink};
 use campfire_kit::{Ctx, Result, StatusCode};
 use campfire_runtime::concerns;

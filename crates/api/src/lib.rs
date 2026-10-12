@@ -48,6 +48,7 @@ pub mod organize;
 pub mod room_integrations;
 pub mod room_management;
 pub mod people;
+pub mod public_pages;
 pub mod search;
 pub mod settings;
 pub mod slack;
@@ -87,6 +88,7 @@ pub fn install(app: &Arc<AppState>) {
 /// The `/api/v1` routes and the sync socket.
 pub fn routes(app: &AppState) -> Router<Kit> {
     Router::new()
+        .route("/api/v1/public_pages/{page}", get(action(public_pages::show_json)))
         .route("/api/v1/me", get(action(endpoints::me)))
         .route(
             "/api/v1/rooms/{room_id}/messages/{message_id}/fizzy_cards/new",

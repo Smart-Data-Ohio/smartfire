@@ -1,5 +1,6 @@
 //! rooms/events_controller.rb and rooms/events/attendances_controller.rb.
 pub mod input;
+use campfire_runtime::presenters::events::viewer_zone;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, db_error as default_db_error};
@@ -241,19 +242,4 @@ pub async fn cancel(c: &mut Ctx) -> Result {
             "Event was already cancelled."
         },
     )
-}
-
-pub async fn viewer_zone(c: &Ctx, id: i64) -> Result<String> {
-    c.app()
-        .db
-        .read(move |conn| {
-            Ok(conn
-                .query_row("SELECT time_zone FROM users WHERE id=?", [id], |r| {
-                    r.get::<_, Option<String>>(0)
-                })?
-                .filter(|z| campfire_db::slash_commands::time_parser::known_calendar_zone(z))
-                .unwrap_or_else(|| "UTC".into()))
-        })
-        .await
-        .map_err(db_error)
 }

@@ -4,7 +4,7 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_controllers::controllers::autocompletable::icons;
+use campfire_runtime::presenters::icons;
 use campfire_db::{
     ChannelThread, Message, NewScheduledMessage, Room, ScheduledMessage, UserStatusSettings,
     autocomplete_users, command_suggestions, slash_commands,

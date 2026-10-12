@@ -642,7 +642,7 @@ async fn slack_personal_show_reads_later_stats_once_for_both_undo_controls() {
             let run = campfire_db::models::slack_import::SlackImport::find(conn, 853)?.unwrap();
             conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace));
             SCANS.with(|count| count.set(0));
-            let result = super::super::runs::data(
+            let result = campfire_runtime::presenters::slack::data(
                 conn,
                 run,
                 campfire_db::Timestamp::parse_db("2026-01-01 12:00:00").unwrap(),
