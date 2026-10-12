@@ -12,9 +12,25 @@ export function conversationKey(roomId: number, threadId: number | null): string
   return `${roomId}:${threadId ?? ""}`;
 }
 
-/** Names from a list join the store; the list's copy is the latest. */
+/**
+ * Whether `threadId` was deleted or taken from the viewer and not given back (`removedThreads`).
+ * A reply to a request sent before that still lists the thread's content; it mustn't land.
+ */
+export function isRemovedThread(
+  state: Pick<State, "removedThreads">,
+  threadId: number | null,
+): boolean {
+  return threadId !== null && state.removedThreads[threadId] !== undefined;
+}
+
+/**
+ * Names from a list join the store; the list's copy is the latest. A removed thread's name stays
+ * out: a list that was on its way when the viewer lost it still names it.
+ */
 export function mergeConversationNames(state: State, names: readonly ConversationName[]): State {
-  if (names.length === 0) {
+  const kept = names.filter((name) => !isRemovedThread(state, name.threadId));
+
+  if (kept.length === 0) {
     return state;
   }
 
@@ -23,7 +39,7 @@ export function mergeConversationNames(state: State, names: readonly Conversatio
     conversationNames: {
       ...state.conversationNames,
       ...Object.fromEntries(
-        names.map((name) => [conversationKey(name.roomId, name.threadId), name] as const),
+        kept.map((name) => [conversationKey(name.roomId, name.threadId), name] as const),
       ),
     },
   };

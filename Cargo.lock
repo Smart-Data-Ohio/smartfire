@@ -455,6 +455,7 @@ dependencies = [
  "campfire_runtime",
  "campfire_static_assets",
  "campfire_storage",
+ "caseless",
  "jiff",
  "rails_compat",
  "regex",

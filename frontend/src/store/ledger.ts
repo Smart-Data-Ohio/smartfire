@@ -76,9 +76,10 @@ export function setLedgerListFailed(
   agentId: number,
   error: string,
   forbidden: boolean,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
 ): State {
-  const failed = updateList(state, key, (list) => pagedFailed(list, error, generation));
+  const failed = updateList(state, key, (list) => pagedFailed(list, error, generation, mode));
 
   if (!forbidden || isLedgerForbidden(failed, agentId)) {
     return failed;
@@ -100,7 +101,7 @@ export function landLedgerPage(
   agentId: number,
   page: AgentLedgerPage,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
 ): State {
   if (!pagedCurrent(ledgerListOf(state, key), generation)) {
     return state;
@@ -120,6 +121,7 @@ export function landLedgerPage(
       page.events.map((event) => event.id),
       page.nextCursor,
       mode,
+      generation,
     ),
   };
 

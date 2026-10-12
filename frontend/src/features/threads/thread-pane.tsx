@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
+import { THREAD_ACCESS_LOST } from "../../store/threads.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -14,10 +15,18 @@ import { toast } from "../../ui/toast-store.ts";
 import { PostWork } from "../boards/post-work.tsx";
 import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
-import { PaneError } from "../panes/pane-states.tsx";
+import { PaneEmpty, PaneError } from "../panes/pane-states.tsx";
 import { HandoffArrival } from "../work/handoff-arrival.tsx";
 import { LinksArrival } from "../work/links-arrival.tsx";
 import { TrackAsWorkItem, WorkBar, WorkLive } from "../work/work-bar.tsx";
+import { PrivateTag, usePrivateThread } from "./private-thread.tsx";
+import {
+  accessRights,
+  LeaveThreadDialog,
+  ThreadMembersButton,
+  ThreadMembersDialog,
+  useThreadAccess,
+} from "./thread-access.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
 import { foreignThreadHref } from "./thread-target.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
@@ -79,7 +88,7 @@ function attempt(write: Promise<void>, failure: string): Promise<boolean> {
   );
 }
 
-/** "# general" in the header, with the thread's status when it isn't active. */
+/** "# general" in the header, with "Private" and the thread's status when it isn't active. */
 function ThreadSubtitle({
   roomId,
   threadId,
@@ -88,10 +97,12 @@ function ThreadSubtitle({
   readonly threadId: number;
 }) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
+  const secret = usePrivateThread(threadId);
 
   return (
     <>
       <RoomName roomId={roomId} />
+      {secret ? <PrivateTag /> : null}
       {status === "active" ? null : (
         <span className="thread-status" data-status={status}>
           <Icon name={status === "locked" ? "lock" : "archive"} size={12} />
@@ -142,11 +153,16 @@ interface ThreadMenuProps {
   readonly onRename: () => void;
   readonly onAutoArchive: () => void;
   readonly onDelete: () => void;
+  /** A private thread's member list; `null` on a public one. */
+  readonly onMembers: (() => void) | null;
+  /** Leaving a private thread the viewer was added to; `null` when they can't. */
+  readonly onLeave: (() => void) | null;
 }
 
 /**
- * Copy link, then what the viewer's permissions allow: rename, set how long an idle thread stays
- * open, close or reopen, lock or unlock, delete, and track as work.
+ * Copy link and, in a private thread, its members and leaving it; then what the viewer's
+ * permissions allow: rename, set how long an idle thread stays open, close or reopen, lock or
+ * unlock, delete, and track as work.
  */
 function ThreadMenu({
   roomId,
@@ -156,6 +172,8 @@ function ThreadMenu({
   onRename,
   onAutoArchive,
   onDelete,
+  onMembers,
+  onLeave,
 }: ThreadMenuProps) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
 
@@ -199,6 +217,16 @@ function ThreadMenu({
       <MenuItem icon="link" onSelect={() => copyLink(roomId, threadId)}>
         Copy link
       </MenuItem>
+      {onMembers === null ? null : (
+        <MenuItem icon="users" onSelect={onMembers}>
+          Members…
+        </MenuItem>
+      )}
+      {onLeave === null ? null : (
+        <MenuItem icon="user-x" tone="danger" onSelect={onLeave}>
+          Leave thread…
+        </MenuItem>
+      )}
       {moderates ? <MenuSeparator /> : null}
       {permissions?.canRename === true ? (
         <MenuItem icon="pencil" onSelect={onRename}>
@@ -627,12 +655,20 @@ export function ThreadPane({
   );
 
   const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
+  const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
+  const administrator = useStore((state) => state.me?.user.role === "administrator");
   const [renaming, setRenaming] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showingMembers, setShowingMembers] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const navigate = useNavigate();
   const noun = useNoun(roomId);
   const status = pane?.status ?? "loading";
+  const secret = usePrivateThread(threadId);
+  const access = useThreadAccess(threadId, secret && status === "ready");
+
+  const rights = accessRights(viewerId, administrator, thread?.creatorId ?? null, access.members);
   // A reply's permalink: the pane opens around it and highlights it.
   const focusMessageId = useSearch({ strict: false }).m ?? null;
   const focusRef = useRef(focusMessageId);
@@ -683,6 +719,18 @@ export function ThreadPane({
     const message = pane?.error ?? "This thread couldn't be loaded.";
     const deleted = message === DELETED;
 
+    if (message === THREAD_ACCESS_LOST) {
+      return (
+        <PaneFrame title={capitalized(noun)} subtitle={<RoomName roomId={roomId} />}>
+          <PaneEmpty
+            icon="lock"
+            title={message}
+            text="Someone who can still see it can add you back."
+          />
+        </PaneFrame>
+      );
+    }
+
     return (
       <PaneFrame
         title={capitalized(noun)}
@@ -707,6 +755,12 @@ export function ThreadPane({
       tools={
         status === "ready" ? (
           <>
+            {secret ? (
+              <ThreadMembersButton
+                count={access.members?.length ?? null}
+                onOpen={() => setShowingMembers(true)}
+              />
+            ) : null}
             <FollowButton threadId={threadId} />
             <ThreadMenu
               roomId={roomId}
@@ -716,6 +770,8 @@ export function ThreadPane({
               onRename={() => setRenaming(true)}
               onAutoArchive={() => setArchiving(true)}
               onDelete={() => setDeleting(true)}
+              onMembers={secret ? () => setShowingMembers(true) : null}
+              onLeave={secret && rights.canLeave ? () => setLeaving(true) : null}
             />
           </>
         ) : null
@@ -744,6 +800,29 @@ export function ThreadPane({
         open={deleting}
         onOpenChange={setDeleting}
       />
+      {secret ? (
+        <>
+          <ThreadMembersDialog
+            roomId={roomId}
+            threadId={threadId}
+            access={access}
+            open={showingMembers}
+            onOpenChange={setShowingMembers}
+            onLeave={() => {
+              setShowingMembers(false);
+              setLeaving(true);
+            }}
+          />
+          <LeaveThreadDialog
+            threadId={threadId}
+            open={leaving}
+            onOpenChange={setLeaving}
+            onLeft={() =>
+              void navigate({ to: "/r/$roomId", params: { roomId }, search: parseBoardSearch })
+            }
+          />
+        </>
+      ) : null}
       <WorkLive threadId={threadId} />
       <HandoffArrival threadId={threadId} />
       <LinksArrival threadId={threadId} />

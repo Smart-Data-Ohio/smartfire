@@ -32,6 +32,7 @@ pub mod endpoints;
 pub mod events;
 mod error;
 pub mod admin;
+pub mod templates;
 pub mod bots;
 pub mod webhooks;
 pub mod boards;
@@ -525,6 +526,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(people::routes())
         .merge(settings::routes())
         .merge(admin::routes())
+        .merge(templates::routes())
         .merge(soundboard::routes())
         .merge(stickers::routes())
         .merge(invites::routes())

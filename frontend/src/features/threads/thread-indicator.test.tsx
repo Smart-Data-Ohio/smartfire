@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MessageDTO } from "../../store/model.ts";
 import { initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
-import { membershipFixture, messageFixture } from "./test-fixtures.ts";
+import { membershipFixture, messageFixture, threadFixture } from "./test-fixtures.ts";
 import { ThreadIndicator } from "./thread-indicator.tsx";
 
 /** The indicator in a small router with the room and thread routes it links between. */
@@ -95,5 +95,29 @@ describe("ThreadIndicator", () => {
     await renderIndicator(indicated(0));
 
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows a lock on a private thread's summary and says so to a screen reader", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    store.setState({ threads: { 5: threadFixture(5, { visibility: "private" }) } });
+
+    await renderIndicator(indicated(2));
+
+    const button = screen.getByRole("button", { name: /View thread/ });
+
+    expect(button.getAttribute("aria-label")).toMatch(/^Private thread\. 2 replies/);
+    expect(button.querySelector(".thread-private-glyph")).not.toBeNull();
+  });
+
+  it("shows no lock on a public thread's summary", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    store.setState({ threads: { 5: threadFixture(5) } });
+
+    await renderIndicator(indicated(2));
+
+    const button = screen.getByRole("button", { name: /View thread/ });
+
+    expect(button.getAttribute("aria-label")).not.toMatch(/Private/);
+    expect(button.querySelector(".thread-private-glyph")).toBeNull();
   });
 });

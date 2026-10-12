@@ -29,16 +29,19 @@ pub use crate::messaging::{canonicalize_body, process_attachment, save_staged};
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_root_room(c).await?;
-    if campfire_runtime::navigation::alias_navigation(c)? {
-        let path = campfire_runtime::navigation::room_alias(c, room.id).await?;
-        return campfire_runtime::navigation::redirect_alias(c, &path);
-    }
     let messages = find_paged_messages(c, &room).await?;
     let json = c.format()? == Some(&format::JSON);
     if json { c.no_store(); }
-    if messages.is_empty() {
+    let navigation = campfire_runtime::navigation::alias_navigation(c)?;
+    let paginating = ["before", "after"].iter()
+        .any(|key| c.params.get(key).is_some_and(|value| value.is_present()));
+    if messages.is_empty() && (!navigation || paginating) {
         if !json { c.expires_now(); }
         return Ok(c.head(StatusCode::NO_CONTENT));
+    }
+    if navigation {
+        let path = campfire_runtime::navigation::room_alias(c, room.id).await?;
+        return campfire_runtime::navigation::redirect_alias(c, &path);
     }
     if json { return Err(Error::UnknownFormat); }
     c.redirect_to(&c.url_for(&format!("/app/r/{}", room.id)))

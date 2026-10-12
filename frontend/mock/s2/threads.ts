@@ -26,7 +26,7 @@ import {
   ok,
   validation,
 } from "../http.ts";
-import { field, intField, isRecord, type Json, stringField } from "../json.ts";
+import { booleanField, field, intField, isRecord, type Json, stringField } from "../json.ts";
 import { workDetail, workUserIds } from "../s4/work-model.ts";
 import { threadPermissions } from "../s6/work.ts";
 import { VIEWER_ID } from "../seed.ts";
@@ -42,6 +42,7 @@ import {
   iso,
   type MessageDraft,
   pageOf,
+  plainDraft,
   THREAD_NAME_LIMIT,
   type ThreadRecord,
   threadDto,
@@ -79,6 +80,12 @@ export interface Threads {
   detail(thread: ThreadRecord): ThreadDetail;
   /** The `thread.updated` events for the thread, on `room:<id>` and `thread:<id>`. */
   updated(thread: ThreadRecord): Outgoing[];
+  /**
+   * The private-thread controls, as other people's clients would act: `private-thread` starts
+   * one, `thread-access` adds or removes someone, `thread-readable` says whether someone can see
+   * a thread. `null` for any other control.
+   */
+  control(action: string, body: Json | undefined): MockResponse | null;
 }
 
 /** Creates the threads module. `held` applies the send hold to posting requests. */
@@ -162,13 +169,52 @@ export function createThreads(
     ];
   };
 
+  /**
+   * `thread_changed`: a public thread's record on its room and thread topics; a private one's only
+   * to its current readers, on their own `user` topic (the hub keeps it from anyone else).
+   */
   const updated = (thread: ThreadRecord): Outgoing[] => {
     const data = threadDto(thread, ctx.now());
+
+    if (thread.visibility === "private") return [{ topic: "user", type: "thread.updated", data }];
 
     return [
       { topic: `room:${thread.roomId}`, type: "thread.updated", data },
       { topic: `thread:${thread.id}`, type: "thread.updated", data },
     ];
+  };
+
+  /** `thread_changed` for a new thread: as `updated`, as `thread.created` and without the thread topic. */
+  const createdEvent = (thread: ThreadRecord): Outgoing => ({
+    topic: thread.visibility === "private" ? "user" : `room:${thread.roomId}`,
+    type: "thread.created",
+    data: threadDto(thread, ctx.now()),
+  });
+
+  /**
+   * `Broadcasts::thread_access_changed` as the viewer sees it. Removed, the viewer gets
+   * `thread.removed` on their `user` topic, which also ends their subscription to the thread; added,
+   * they hear of it from the thread's record, which every current reader gets. The viewer's sidebar
+   * row is sent again either way.
+   */
+  const accessChanged = (thread: ThreadRecord, userId: number, added: boolean): Outgoing[] => {
+    const room = ctx.world().rooms.get(thread.roomId);
+    const events: Outgoing[] = [];
+
+    if (!added && userId === VIEWER_ID) {
+      events.push({
+        topic: "user",
+        type: "thread.removed",
+        data: { threadId: thread.id, roomId: thread.roomId },
+        unsubscribe: `thread:${thread.id}`,
+      });
+    }
+
+    if (userId === VIEWER_ID && room !== undefined) {
+      events.push({ topic: "user", type: "sidebar.row.upserted", data: ctx.sidebarRow(room) });
+    }
+
+    return [...events, ...updated(thread)];
   };
 
   const join = (thread: ThreadRecord, userId: number, involvement: ThreadInvolvement | null) => {
@@ -380,9 +426,7 @@ export function createThreads(
     };
 
     world.threads.set(thread.id, thread);
-    ctx.publish([
-      { topic: `room:${roomId}`, type: "thread.created", data: threadDto(thread, ctx.now()) },
-    ]);
+    ctx.publish([createdEvent(thread)]);
 
     const message = postReply(
       thread,
@@ -626,6 +670,7 @@ export function createThreads(
     if (!thread.accessMembers.has(userId)) {
       thread.accessMembers.set(userId, { userId, addedById: VIEWER_ID, createdAt: iso(ctx.now()) });
       join(thread, userId, null);
+      ctx.publish(accessChanged(thread, userId, true));
     }
 
     if (canAccessThread(world, thread)) return accessMembers(thread);
@@ -644,17 +689,115 @@ export function createThreads(
       throw accessRefused("removeForbidden", "You can't remove people from this thread");
     }
 
-    thread.accessMembers.delete(userId);
-
-    if (userId === VIEWER_ID) {
-      if (thread.viewerMembership !== null)
+    if (thread.accessMembers.delete(userId)) {
+      if (userId === VIEWER_ID && thread.viewerMembership !== null)
         thread.viewerMembership = { ...thread.viewerMembership, unreadAt: null };
-      ctx.publish([
-        { topic: "user", type: "thread.removed", data: { threadId, roomId: thread.roomId } },
-      ]);
+      ctx.publish(accessChanged(thread, userId, false));
     }
 
     return noContent();
+  };
+
+  /**
+   * `creatorId` starts a private thread on the newest root message in `roomId` that has none,
+   * with a first reply, sharing it with the viewer when `withViewer`. Like the server, the
+   * thread's events reach only the people who can see it.
+   */
+  const startPrivate = (body: Json | undefined): MockResponse => {
+    const world = ctx.world();
+    const roomId = intField(body, "roomId");
+    const creatorId = intField(body, "creatorId");
+    const record = roomId === null ? undefined : world.rooms.get(roomId);
+
+    if (record === undefined || creatorId === null || !record.memberIds.includes(creatorId)) {
+      throw validation("roomId", "The creator must be a member of the room");
+    }
+
+    const taken = new Set([...world.threads.values()].map((thread) => thread.parentMessageId));
+
+    const parent = record.messages.findLast(
+      (message) => message.threadId === null && !message.systemNote && !taken.has(message.id),
+    );
+
+    if (parent === undefined) throw notFound("No message to start a thread on");
+
+    const createdAt = iso(Math.max(ctx.now(), Date.parse(parent.createdAt) + 1));
+
+    const accessMembers = new Map([
+      [creatorId, { userId: creatorId, addedById: creatorId, createdAt }],
+    ]);
+
+    if (booleanField(body, "withViewer") === true) {
+      accessMembers.set(VIEWER_ID, { userId: VIEWER_ID, addedById: creatorId, createdAt });
+    }
+
+    const thread: ThreadRecord = {
+      id: world.nextThreadId++,
+      roomId: record.room.id,
+      parentMessageId: parent.id,
+      creatorId,
+      name: stringField(body, "name") ?? defaultThreadName(parent),
+      closed: false,
+      locked: false,
+      lastActivityAt: createdAt,
+      autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES,
+      visibility: "private",
+      accessMembers,
+      createdAt,
+      messages: [],
+      memberIds: new Set(accessMembers.keys()),
+      viewerMembership: accessMembers.has(VIEWER_ID)
+        ? { threadId: 0, involvement: "mentions", unreadAt: null, joinedAt: createdAt }
+        : null,
+    };
+
+    if (thread.viewerMembership !== null) {
+      thread.viewerMembership = { ...thread.viewerMembership, threadId: thread.id };
+    }
+
+    world.threads.set(thread.id, thread);
+    ctx.publish([createdEvent(thread)]);
+    postReply(
+      thread,
+      plainDraft(creatorId, stringField(body, "markdown") ?? "Just between us.", ctx.uuid()),
+      true,
+    );
+
+    return ok({ threadId: thread.id, parentMessageId: parent.id }, 201);
+  };
+
+  /** `actorId` adds (`added`) or removes `userId`; the viewer's own events follow. */
+  const changeAccess = (body: Json | undefined): MockResponse => {
+    const world = ctx.world();
+    const thread = world.threads.get(intField(body, "threadId") ?? 0);
+    const userId = intField(body, "userId");
+    const actorId = intField(body, "actorId") ?? thread?.creatorId ?? VIEWER_ID;
+
+    if (thread === undefined || thread.visibility !== "private" || userId === null) {
+      throw notFound("Private thread not found");
+    }
+
+    if (booleanField(body, "added") === false) {
+      if (thread.accessMembers.delete(userId)) {
+        if (userId === VIEWER_ID && thread.viewerMembership !== null)
+          thread.viewerMembership = { ...thread.viewerMembership, unreadAt: null };
+        ctx.publish(accessChanged(thread, userId, false));
+      }
+
+      return noContent();
+    }
+
+    if (!(world.rooms.get(thread.roomId)?.memberIds.includes(userId) ?? false)) {
+      throw accessRefused("parentRoomRequired", "The person must be a member of the room");
+    }
+
+    if (!thread.accessMembers.has(userId)) {
+      thread.accessMembers.set(userId, { userId, addedById: actorId, createdAt: iso(ctx.now()) });
+      join(thread, userId, null);
+      ctx.publish(accessChanged(thread, userId, true));
+    }
+
+    return ok(accessMembers(thread));
   };
 
   const lookups = () => ({
@@ -664,6 +807,23 @@ export function createThreads(
   });
 
   return {
+    control(action, body) {
+      if (action === "private-thread") return startPrivate(body);
+
+      if (action === "thread-access") return changeAccess(body);
+
+      if (action === "thread-readable") {
+        const thread = ctx.world().threads.get(intField(body, "threadId") ?? 0);
+
+        if (thread === undefined) throw notFound("Thread not found");
+
+        return ok({
+          readable: canAccessThread(ctx.world(), thread, intField(body, "userId") ?? VIEWER_ID),
+        });
+      }
+
+      return null;
+    },
     finalizeReply(thread, message) {
       const notifications = receiveReply(thread, message);
 

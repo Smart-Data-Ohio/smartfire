@@ -9,6 +9,7 @@ import {
   conversationKey,
   failFirstPage,
   failMore,
+  forgetThread,
   initialSearchState,
   MAX_CACHED_QUERIES,
   type SearchState,
@@ -219,5 +220,46 @@ describe("recent searches", () => {
 
     expect(setRecentsFailed(ready).recents.status).toBe("ready");
     expect(setRecentsFailed(setRecentsLoading(initialSearchState)).recents.status).toBe("error");
+  });
+});
+
+describe("forgetThread", () => {
+  it("drops a lost thread's replies, name and section row from every cached query", () => {
+    const reply = messageFixture(11, 1, { threadId: 70 });
+    const root = messageFixture(12, 1);
+
+    const results = page([reply, root], null, {
+      conversations: [room(1), room(1, 70)],
+      sections: [
+        {
+          kind: "work_threads",
+          rows: [
+            {
+              id: 70,
+              roomId: 1,
+              roomKind: "open",
+              title: "thread 70",
+              time: reply.createdAt,
+              workStatus: null,
+              cancelled: false,
+            },
+          ],
+        },
+      ],
+    });
+
+    const forgot = forgetThread(loaded("launch", results), 70);
+    const list = forgot.results.launch;
+
+    expect(list?.messages.map((message) => message.id)).toEqual([12]);
+    expect(list?.conversations[conversationKey(1, 70)]).toBeUndefined();
+    expect(list?.conversations[conversationKey(1, null)]).toBeDefined();
+    expect(list?.sections[0]?.rows).toEqual([]);
+  });
+
+  it("leaves the state alone when no query holds the thread", () => {
+    const state = loaded("launch", page([messageFixture(12, 1)]));
+
+    expect(forgetThread(state, 70)).toBe(state);
   });
 });

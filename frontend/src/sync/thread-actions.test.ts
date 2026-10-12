@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, Layer } from "effect";
-import { ServerError } from "../api/errors.ts";
-import { FakeApi, messageFixture, pageFixture } from "../api/testing.ts";
+import { ServerError, ThreadAccess } from "../api/errors.ts";
+import { FakeApi, messageFixture, pageFixture, userFixture } from "../api/testing.ts";
 import { threadDetailFixture } from "../features/work/test-fixtures.ts";
 import { mutations, store } from "../store/store.ts";
 import { SyncLink } from "./link.ts";
@@ -607,4 +607,60 @@ describe("thread reply paging", () => {
       }).pipe(Effect.provide(FakeApi.layerClient)),
     );
   }
+});
+
+describe("private threads", () => {
+  afterEach(() => mutations.reset());
+
+  it.effect("asks for a private thread only when one is chosen", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`POST /rooms/${ROOM}/threads`, {
+        detail: threadDetailFixture(THREAD, null, null),
+        message: reply(90),
+      });
+      yield* threads.create(ROOM, 1, "Just us", { visibility: "private" });
+      yield* threads.create(ROOM, 2, "Everyone", { visibility: "public" });
+
+      const [first, second] = (yield* fake.requests).map((request) => request.body);
+
+      expect(first).toMatchObject({ visibility: "private" });
+      expect(second).not.toHaveProperty("visibility");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("adds a member and keeps the people the answer names", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`POST /threads/${THREAD}/members`, {
+        members: [{ userId: 3, addedById: 7, createdAt: "2026-10-06T08:00:00.000Z" }],
+        users: [userFixture(3, "Katherine Johnson")],
+      });
+
+      const list = yield* threads.invite(THREAD, 3);
+
+      expect(list.members.map((member) => member.userId)).toEqual([3]);
+      expect((yield* fake.requests).at(-1)?.body).toEqual({ userId: 3 });
+      expect(store.getState().users[3]?.name).toBe("Katherine Johnson");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("words a refusal for the person who tried", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.route(`DELETE /threads/${THREAD}/members/3`, () =>
+        Effect.fail(
+          new ThreadAccess({
+            reason: "removeForbidden",
+            message: "Only the creator and administrators can remove others",
+          }),
+        ),
+      );
+
+      const failure = yield* Effect.flip(threads.removeMember(THREAD, 3));
+
+      expect(failure).toBeInstanceOf(ThreadAccess);
+      expect(failure.message).toBe(threads.THREAD_ACCESS_REFUSALS.removeForbidden);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 });

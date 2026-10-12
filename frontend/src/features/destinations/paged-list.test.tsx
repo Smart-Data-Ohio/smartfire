@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PagedList, type PagedState } from "./paged-list.tsx";
 
@@ -10,6 +10,7 @@ function state(overrides: Partial<PagedState>): PagedState {
     error: null,
     loadMore: vi.fn(),
     reload: vi.fn(),
+    retry: vi.fn(),
     ...overrides,
   };
 }
@@ -57,5 +58,9 @@ describe("a paged list with no rows loaded", () => {
     expect(screen.getByRole("alert").textContent).toContain("Couldn't load more");
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
     expect(paged.loadMore).not.toHaveBeenCalled();
+
+    // Try again asks for what failed, which the list's state decides.
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(paged.retry).toHaveBeenCalledTimes(1);
   });
 });

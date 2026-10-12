@@ -308,7 +308,7 @@ pub async fn refresh(c: &mut Ctx) -> Result {
     c.redirect_to(&c.url_for(&campfire_routes::room(room.id)))
 }
 
-/// Typed bookmarks retain their membership checks and open the matching SPA room directly.
+/// Plain typed bookmarks keep their canonical room hop; query state opens the checked SPA target.
 pub async fn typed_room(c: &mut Ctx) -> Result {
     use campfire_rooms::controllers::rooms::{Scope, set_room};
     before_actions(c, Before::default()).await?;
@@ -329,7 +329,7 @@ pub async fn typed_room(c: &mut Ctx) -> Result {
         set_room(c, scope).await?
     };
     concerns::remember_last_room_visited(c, room.id);
-    if campfire_runtime::navigation::alias_navigation(c)? {
+    if !c.request.query_string().is_empty() && campfire_runtime::navigation::alias_navigation(c)? {
         let path = campfire_runtime::navigation::room_alias(c, room.id).await?;
         return campfire_runtime::navigation::redirect_alias(c, &path);
     }

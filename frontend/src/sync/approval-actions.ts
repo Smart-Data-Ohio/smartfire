@@ -26,9 +26,9 @@ function statusOf(filter: ApprovalFilter) {
   return filter === "all" ? null : filter;
 }
 
-function failLoad(key: ApprovalListKey, generation: number) {
+function failLoad(key: ApprovalListKey, generation: number, mode: "replace" | "more") {
   return (error: { readonly message: string }) =>
-    Effect.sync(() => mutations.setApprovalListFailed(key, error.message, generation));
+    Effect.sync(() => mutations.setApprovalListFailed(key, error.message, generation, mode));
 }
 
 function needsRefetch(error: ApiFailure): boolean {
@@ -61,7 +61,7 @@ export const load = Effect.fn("approvals.load")(function* (
               mutations.landApprovalPage(key, page, "replace", generation, ticket, read),
             ),
           ),
-          Effect.catch(failLoad(key, generation)),
+          Effect.catch(failLoad(key, generation, "replace")),
         );
       }),
     `approvals:${key}`,
@@ -111,7 +111,7 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
             mutations.landApprovalPage(key, page, "more", list.generation, ticket, read),
           ),
         ),
-        Effect.catch(failLoad(key, list.generation)),
+        Effect.catch(failLoad(key, list.generation, "more")),
       ),
     `approvals:${key}`,
     false,

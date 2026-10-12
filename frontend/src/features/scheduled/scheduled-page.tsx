@@ -59,6 +59,13 @@ function combined(pending: PagedState, past: PagedState): PagedState {
       pending.reload();
       past.reload();
     },
+    // The footer shows the pending list's failure first, so its retry goes first too.
+    retry:
+      pending.error !== null || !onPast
+        ? pending.retry
+        : past.status === "error"
+          ? past.reload
+          : past.retry,
   };
 }
 

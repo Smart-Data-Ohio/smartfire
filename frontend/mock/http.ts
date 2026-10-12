@@ -22,6 +22,7 @@ export interface MockRequest {
 }
 
 export interface MockResponse {
+  readonly headers?: Readonly<Record<string, string>>;
   readonly status: number;
   readonly json: Json;
 }

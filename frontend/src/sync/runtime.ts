@@ -76,9 +76,11 @@ import type { SavedStatus } from "../gen/SavedStatus.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { SubscribeGithubRepository } from "../gen/SubscribeGithubRepository.ts";
 import type { SudoSubmission } from "../gen/SudoSubmission.ts";
+import type { ThreadAccessMembers } from "../gen/ThreadAccessMembers.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { ThreadVisibility } from "../gen/ThreadVisibility.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateBoardTagPolicy } from "../gen/UpdateBoardTagPolicy.ts";
 import type { UpdateChannelWebhook } from "../gen/UpdateChannelWebhook.ts";
@@ -261,6 +263,7 @@ const threads = {
       readonly attachmentSpoilers?: readonly boolean[];
       readonly clientMessageId?: string;
       readonly driveFileIds?: readonly string[];
+      readonly visibility?: ThreadVisibility;
     },
   ): Promise<number> => runAction(threadActions.create(roomId, parentMessageId, markdown, options)),
   update: (threadId: number, body: UpdateThread): Promise<void> =>
@@ -274,6 +277,15 @@ const threads = {
     runAction(threadActions.list(roomId, filter)),
   /** The viewer's memberships in the room's active threads, so reply indicators can show unread. */
   prefetchMemberships: (roomId: number): Promise<void> => runAction(prefetchMemberships(roomId)),
+  /** Who a private thread is shared with (access, not following). */
+  accessMembers: (threadId: number): Promise<ThreadAccessMembers> =>
+    runAction(threadActions.accessMembers(threadId)),
+  /** Shares a private thread with someone in its room. */
+  invite: (threadId: number, userId: number): Promise<ThreadAccessMembers> =>
+    runAction(threadActions.invite(threadId, userId)),
+  /** Removes someone from a private thread; the viewer's own id leaves it. */
+  removeMember: (threadId: number, userId: number): Promise<void> =>
+    runAction(threadActions.removeMember(threadId, userId)),
 };
 
 /**

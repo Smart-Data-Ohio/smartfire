@@ -4,8 +4,10 @@ import { messagePlainText } from "../../lib/spoiler-text.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
+import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { Toggle } from "../../ui/toggle.tsx";
 import { Composer, type ComposerDraft } from "../composer/composer.tsx";
 import { newThreadDraftKey } from "../composer/draft.ts";
 import { PaneFrame } from "../panes/pane-frame.tsx";
@@ -26,9 +28,11 @@ export function defaultThreadName(markdown: string | null, bodyHtml: string): st
 }
 
 /**
- * `/r/$roomId/t/new?parent=`: the root message on top, an optional name, and the composer whose
- * first reply starts the thread; the pane then moves to the new thread (replacing the draft in
- * history). If the message already has a thread (someone beat us to it), that one opens instead.
+ * `/r/$roomId/t/new?parent=`: the root message on top, an optional name, whether it's private,
+ * and the composer whose first reply starts the thread; the pane then moves to the new thread
+ * (replacing the draft in history). If the message already has a thread (someone beat us to
+ * it), that one opens instead. A private thread stays private: only the people added to it (and
+ * those its replies mention) and admins can see it.
  */
 export function NewThreadPane({
   roomId,
@@ -42,6 +46,7 @@ export function NewThreadPane({
   const timelineReady = useStore((state) => state.timelines[roomId]?.status === "ready");
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const [name, setName] = useState("");
+  const [secret, setSecret] = useState(false);
   // One id for every attempt from this pane, so a retry after a lost reply can't start a second
   // thread: the server answers the one the first attempt made.
   const [clientMessageId] = useState(() => uuid7(Date.now()));
@@ -83,6 +88,7 @@ export function NewThreadPane({
         attachmentSpoilers: draft.attachmentSpoilers,
         driveFileIds: draft.driveFileIds,
         clientMessageId,
+        visibility: secret ? "private" : "public",
       })
       .then(
         (threadId) => {
@@ -106,7 +112,7 @@ export function NewThreadPane({
 
   return (
     <PaneFrame
-      title="New thread"
+      title={secret ? "New private thread" : "New thread"}
       footer={
         parent === undefined ? undefined : (
           <Composer
@@ -148,6 +154,23 @@ export function NewThreadPane({
               maxLength={100}
               placeholder={placeholder}
               onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <div className="new-thread-private">
+            <Toggle
+              checked={secret}
+              onCheckedChange={setSecret}
+              label={
+                <span className="new-thread-private-label">
+                  <Icon name="lock" size={14} />
+                  Private thread
+                </span>
+              }
+              description={
+                secret
+                  ? "Only you, admins, and people you add or mention can see it. You can't make it public later."
+                  : "Everyone in the room can see it."
+              }
             />
           </div>
         </div>

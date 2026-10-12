@@ -16,13 +16,14 @@ import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../gen/ApprovalUpdated.ts";
 import { nextObservation, observationOf } from "../lib/request-observation.ts";
-import { membership, observeMembership, placeId, replay } from "./freshness.ts";
+import { membership, observeMembership, placeId, replay, retireReads } from "./freshness.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   eachPaged,
   emptyPagedList,
   type IdOrder,
   type PagedList,
+  pagedAbandoned,
   pagedCurrent,
   pagedFailed,
   pagedLanded,
@@ -108,6 +109,21 @@ function updateList(
   };
 }
 
+/**
+ * The list's view left: its reads retire, so their pages won't land, and the list stops saying a
+ * load is on its way (the next view loads it again).
+ */
+export function retireApprovalReads(state: State, key: ApprovalListKey): State {
+  const retired = {
+    ...state,
+    freshness: retireReads(state.freshness, `approvals:${key}`).freshness,
+  };
+
+  const list = approvalListOf(state, key);
+
+  return pagedAbandoned(list) === list ? retired : updateList(retired, key, pagedAbandoned);
+}
+
 export function setApprovalListLoading(state: State, key: ApprovalListKey, more: boolean): State {
   return updateList(state, key, more ? pagedLoadingMore : pagedLoading);
 }
@@ -116,9 +132,10 @@ export function setApprovalListFailed(
   state: State,
   key: ApprovalListKey,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
 ): State {
-  return updateList(state, key, (list) => pagedFailed(list, error, generation));
+  return updateList(state, key, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /**
@@ -130,7 +147,7 @@ export function landApprovalPage(
   key: ApprovalListKey,
   page: AgentApprovalPage,
   mode: "replace" | "more",
-  generation?: number,
+  generation: number,
   ticket?: number,
   read?: ApprovalRead,
 ): State {
@@ -169,7 +186,7 @@ export function landApprovalPage(
     belongsTo(key, next.approvals.items[approval.id] ?? approval) ? [approval.id] : [],
   );
 
-  const loaded = pagedLanded(held, ids, page.nextCursor, mode);
+  const loaded = pagedLanded(held, ids, page.nextCursor, mode, generation);
 
   const replayed = replay(
     next.freshness,

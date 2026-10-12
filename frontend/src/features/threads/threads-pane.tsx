@@ -11,6 +11,7 @@ import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx
 import { usePaneNavigation } from "../panes/use-right-pane.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { WorkLinks, WorkSummary } from "../work/work-facts.tsx";
+import { PrivateGlyph } from "./private-thread.tsx";
 import {
   lastReplyLabel,
   replyCountLabel,
@@ -68,6 +69,7 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
         <UserAvatar userId={thread.creatorId} size={32} decorative />
         <span className="thread-row-main">
           <span className="thread-row-name">
+            {thread.visibility === "private" ? <PrivateGlyph /> : null}
             <span className="thread-row-title">{threadTitle(thread)}</span>
             {unread ? <span className="thread-row-dot" aria-label="Unread" role="img" /> : null}
           </span>
@@ -104,7 +106,8 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
 
 /**
  * The Threads pane: the room's threads by tab (Active, Following, Closed, All), most recently
- * active first, each with its starter, reply count, last activity, status and unread dot. The
+ * active first, each with its starter, reply count, last activity, status, unread dot and, for
+ * a private thread (listed only to the people who can see it), a lock. The
  * list follows thread events live; choosing one opens it on top of the pane.
  */
 export function ThreadsPane({ roomId }: { readonly roomId: number }) {

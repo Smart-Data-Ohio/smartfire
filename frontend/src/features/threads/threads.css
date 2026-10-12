@@ -399,4 +399,218 @@
     background: var(--accent-soft);
     color: var(--accent);
   }
+
+  /* ── Private threads ───────────────────────────────────────────────────── */
+
+  /* The lock before a private thread's name, in lists and on reply summaries. */
+  .thread-private-glyph {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    color: var(--text-muted);
+  }
+
+  .thread-status[data-status="private"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .thread-members-button {
+    --button-fg: var(--text-muted);
+
+    gap: var(--space-1);
+  }
+
+  .new-thread-private {
+    margin: 0 var(--space-4) var(--space-4);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+  }
+
+  .new-thread-private-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  /* The members dialog: the add search, any refusal, then the people. */
+  .thread-access {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .thread-access-add {
+    position: relative;
+  }
+
+  .thread-access-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--control-lg);
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: text;
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .thread-access-field:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .thread-access-field:focus-within {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .thread-access-field-icon {
+    color: var(--text-faint);
+  }
+
+  .thread-access-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-input);
+    outline: none;
+  }
+
+  .thread-access-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .thread-access-matches {
+    margin-top: var(--space-1-5);
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .thread-access-matches .picker-empty {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .thread-access-match-add {
+    color: var(--text-faint);
+  }
+
+  .picker-option[data-active] .thread-access-match-add {
+    color: var(--accent);
+  }
+
+  .thread-access-note {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .thread-access-note[data-tone="danger"] {
+    color: var(--danger-text);
+  }
+
+  .thread-access-empty,
+  .thread-access-error {
+    padding: var(--space-3) 0;
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .thread-access-error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .thread-access-rows {
+    display: flex;
+    flex-direction: column;
+    max-height: min(320px, 40dvh);
+    margin: 0 calc(var(--space-2) * -1);
+    padding: var(--space-0-5) var(--space-2);
+    overflow: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+  }
+
+  .thread-access-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .thread-access-row:hover {
+    background: var(--bg-hover);
+  }
+
+  .thread-access-rows .thread-access-row .avatar {
+    --avatar-ring: var(--bg-raised);
+  }
+
+  .thread-access-rows .thread-access-row:hover .avatar {
+    --avatar-ring: var(--bg-hover);
+  }
+
+  .thread-access-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .thread-access-you {
+    color: var(--text-muted);
+    font-weight: var(--weight-regular);
+  }
+
+  .thread-access-tag {
+    flex-shrink: 0;
+    padding: 2px var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+  }
+
+  /* A phone's thumb needs the whole target: remove and leave grow to the touch size. */
+  @media (width < 720px) and (pointer: coarse) {
+    .thread-access-row {
+      min-height: var(--touch-target);
+    }
+
+    .thread-access-remove.button,
+    .thread-access-leave.button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+    }
+
+    .thread-members-button.button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+    }
+  }
 }
