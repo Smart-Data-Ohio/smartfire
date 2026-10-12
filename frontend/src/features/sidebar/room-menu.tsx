@@ -15,6 +15,7 @@ import {
 import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
+import type { IconName } from "../../ui/icons/icon.tsx";
 import {
   Menu,
   MenuGroup,
@@ -24,6 +25,7 @@ import {
   type MenuTriggerProps,
   SubMenu,
 } from "../../ui/menu.tsx";
+import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { toastFailure } from "../settings/settings-parts.tsx";
 import {
@@ -34,6 +36,7 @@ import {
   toggleFavorite,
 } from "./organize-commands.ts";
 import { involvementChoice, involvementChoices } from "./organize-model.ts";
+import { type HomeSectionKind, homeSection } from "./sections.ts";
 
 /** A row's open menu: where it hangs (a viewport box) and how it was opened. */
 export interface RoomMenuRequest {
@@ -179,6 +182,14 @@ export interface SharedMenu {
 
 const NO_SHARED: SharedMenu = { admin: false, categories: [], home: null, siblings: null };
 
+/** The section a room shared in no category shows in, as "Move for everyone" names it. */
+const UNGROUPED = {
+  channels: { label: "Channels", icon: "hash" },
+  boards: { label: "Boards", icon: ROOM_KIND_ICON.board },
+  voice: { label: "Voice", icon: "volume" },
+  direct: { label: "Direct messages", icon: ROOM_KIND_ICON.direct },
+} as const satisfies Record<HomeSectionKind, { label: string; icon: IconName }>;
+
 interface SharedItemsProps {
   readonly row: SidebarRow;
   readonly shared: SharedMenu;
@@ -191,7 +202,7 @@ interface SharedItemsProps {
 function SharedItems({ row, shared }: SharedItemsProps) {
   const { categories, home, siblings } = shared;
   const index = siblings?.indexOf(row.room.id) ?? -1;
-  const uncategorized = canCategorize(row) ? "Channels" : "Voice";
+  const uncategorized = UNGROUPED[homeSection(row)];
 
   return (
     <SubMenu label="Move for everyone" icon="users">
@@ -211,7 +222,7 @@ function SharedItems({ row, shared }: SharedItemsProps) {
           </MenuRadioItem>
         ))}
         <MenuRadioItem
-          icon={canCategorize(row) ? "hash" : "volume"}
+          icon={uncategorized.icon}
           checked={home === null}
           onSelect={() => {
             if (home !== null) {
@@ -219,7 +230,7 @@ function SharedItems({ row, shared }: SharedItemsProps) {
             }
           }}
         >
-          {uncategorized}
+          {uncategorized.label}
         </MenuRadioItem>
       </MenuGroup>
       {siblings !== null && index !== -1 && siblings.length > 1 ? (

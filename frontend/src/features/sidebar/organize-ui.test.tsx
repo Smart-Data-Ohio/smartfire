@@ -303,6 +303,29 @@ describe("a room's menu", () => {
     expect(seeded(QUIET).membership.involvement).toBe(previous);
   });
 
+  it("offers an administrator Boards, not Voice, as a board's place outside a shared category", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Menu label="Roadmap options" trigger={(props) => <Button {...props}>Open</Button>}>
+        <RoomMenuItems
+          row={row("Roadmap", { kind: "board" })}
+          categories={CATEGORIES}
+          shared={{ admin: true, categories: [], home: null, siblings: null }}
+          onNewCategory={() => {}}
+        />
+      </Menu>,
+    );
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(screen.getByRole("menuitem", { name: "Move for everyone" }));
+
+    expect(
+      screen
+        .getAllByRole("menuitemradio")
+        .map((item) => [item.textContent, item.getAttribute("aria-checked")]),
+    ).toEqual([["Boards", "true"]]);
+  });
+
   it("offers no Move to for a direct message, and Unmute and Mark as read when they apply", async () => {
     await open(row("Maya Okafor", { kind: "direct", favorite: 0, muted: true, unread: true }));
 
