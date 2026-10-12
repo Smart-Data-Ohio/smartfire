@@ -539,5 +539,8 @@ describe("choice values through the text form", () => {
     expect(commandValues(blank).values).toEqual({});
     expect(commandValues(parseEntry(DEPLOY, VERBATIM, "env:")).values).toEqual({});
     expect(commandValues(parseEntry(DEPLOY, VERBATIM, 'env:""')).values).toEqual({ env: "" });
+
+    expect(commandValues(parseEntry(DEPLOY, VERBATIM, 'env:"')).values).not.toEqual({ env: "" });
+    expect(commandValues(parseEntry(DEPLOY, VERBATIM, 'env:"x')).values).not.toEqual({ env: "" });
   });
 });

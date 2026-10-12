@@ -631,6 +631,21 @@ function unquote(value: string): string {
   }
 }
 
+/** A quoted value that doesn't close (`"` or `"x`) can't name a choice exactly. */
+function wellQuoted(value: string): boolean {
+  if (!value.startsWith('"')) {
+    return true;
+  }
+
+  try {
+    JSON.parse(value);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** A pick's label for the field: a person's or channel's name when it's known here. */
 function pickLabel(option: CommandOption, picked: PickedValue, nameOf: NameOf): string {
   if (option.type !== "user" && option.type !== "room") {
@@ -687,8 +702,11 @@ export function parseEntry(
     }
 
     const text = unquote(raw ?? "");
+
     // `name:` alone is a field left empty; only a quoted `""` is the empty value.
-    const exact = raw === undefined || raw === "" ? null : exactChoice(option, text);
+    const exact =
+      raw === undefined || raw === "" || !wellQuoted(raw) ? null : exactChoice(option, text);
+
     const picked = exact ?? typedChoice(option, text);
 
     entry = editOption(showOption(entry, key), key, {
