@@ -648,7 +648,9 @@ export function createHuddles(
 
     const replacing = (stage.roles.get(userId) === "listener") !== (role === "listener");
 
-    if (replacing && calls().calls.get(record.room.id)?.has(userId)) {
+    const connected = calls().calls.get(record.room.id)?.has(userId) === true;
+
+    if (replacing && (connected || reservedUsers(record.room.id).includes(userId))) {
       reserve(record, userId);
       calls().calls.get(record.room.id)?.delete(userId);
     }

@@ -284,6 +284,46 @@ describe("stages", () => {
     expect(errorOf(refused.json).tag).toBe("StageAudienceFull");
   });
 
+  it("renews a demoted participant's reservation on later role changes", async () => {
+    const { server, clock } = harness();
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "speaker",
+    });
+    await send(server, "POST", "/__mock/huddle-join", { roomId: townHall, userId: users.jonah });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "listener",
+    });
+    clock.advance(19_000);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "speaker",
+    });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.jonah,
+      role: "listener",
+    });
+    clock.advance(2_000);
+    await get<HuddlePresenceList>(server, "/api/v1/huddles");
+    expect((await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage).toMatchObject(
+      { audienceAvailability: "full" },
+    );
+
+    const refused = await send(server, "POST", "/__mock/huddle-join", {
+      roomId: townHall,
+      userId: users.grace,
+    });
+
+    expect(refused.status).toBe(409);
+    expect(errorOf(refused.json).tag).toBe("StageAudienceFull");
+  });
+
   it("refreshes expired and cancelled reservations through presence polling", async () => {
     const { server, clock } = harness();
     await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
