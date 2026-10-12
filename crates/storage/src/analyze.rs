@@ -67,7 +67,7 @@ pub(crate) fn image_dimensions(image: &Image) -> Json {
 }
 
 /// `ffprobe -print_format json -show_streams -show_format -v error <path>`; `{}` without ffprobe.
-fn probe(path: &Path) -> Result<Json> {
+pub fn probe(path: &Path) -> Result<Json> {
     let mut command = Command::new(content_types::ffprobe_path());
     command
         .args(["-print_format", "json", "-show_streams", "-show_format", "-v", "error"])
