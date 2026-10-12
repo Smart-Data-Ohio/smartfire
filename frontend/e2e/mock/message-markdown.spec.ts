@@ -2,6 +2,7 @@ import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { PinList } from "../../src/gen/PinList.ts";
+import type { SavedItemList } from "../../src/gen/SavedItemList.ts";
 import type { SearchResults } from "../../src/gen/SearchResults.ts";
 import {
   expect,
@@ -46,6 +47,7 @@ const DOCUMENT_BLOCKS =
   "<li>X (Twitter) posts</li><li>GitHub pull requests</li></ul></li>" +
   "<li><strong>Google Drive:</strong> pick Drive files right from the message box.</li>" +
   "</ul>" +
+  "<blockquote><p>Before the quoted rule</p><hr><p>After the quoted rule</p></blockquote>" +
   "<h3>Emoji and fun</h3>" +
   "<p>Custom emoji, stickers and GIFs.</p>";
 
@@ -58,6 +60,23 @@ function wrapped(blocks: string): string {
 const LIST_BODY = wrapped(
   `<ul>${Array.from({ length: 10 }, (_, index) => `<li>Item ${index + 1}</li>`).join("")}</ul>`,
 );
+
+/** Ten one-line Trix div blocks, as a legacy (pre-Markdown) body keeps its lines. */
+const DIV_BLOCKS = Array.from({ length: 10 }, (_, index) => `<div>Line ${index + 1}</div>`).join(
+  "",
+);
+
+/** One-line bodies of every kind a clamped preview has to cut on a line boundary. */
+const LINE_BODIES = [
+  { name: "a wrapped list", html: LIST_BODY },
+  { name: "wrapped divs", html: wrapped(DIV_BLOCKS) },
+  { name: "bare divs", html: DIV_BLOCKS },
+] as const;
+
+/** The one-line blocks of a `LINE_BODIES` body. */
+function lines(body: Locator): Locator {
+  return body.locator(":is(li, div:not(.trix-content))");
+}
 
 /** `messages` with message `id`'s body swapped for `bodyHtml`. */
 function swapBody(messages: MessageDTO[], id: number, bodyHtml: string): MessageDTO[] {
@@ -192,6 +211,19 @@ for (const rendering of RENDERINGS) {
       expect(rule.top - intro.bottom).toBeGreaterThanOrEqual(12);
       expect(h2.top - rule.bottom).toBeGreaterThanOrEqual(12);
 
+      // A rule inside a quote keeps its room on both sides too.
+      const quote = blocks.locator(":scope > blockquote");
+      const quotedRule = await metrics(quote.locator("hr"));
+
+      expect(quotedRule.marginTop).toBe(12);
+      expect(quotedRule.marginBottom).toBe(12);
+      expect(
+        quotedRule.top - (await metrics(quote.locator("p").first())).bottom,
+      ).toBeGreaterThanOrEqual(12);
+      expect(
+        (await metrics(quote.locator("p").nth(1))).top - quotedRule.bottom,
+      ).toBeGreaterThanOrEqual(12);
+
       // A heading keeps more space above it than below: it belongs to what follows.
       const aboveH2 = secondH2.top - list.bottom;
       const belowH2 = list.top - h2.bottom;
@@ -209,10 +241,10 @@ for (const rendering of RENDERINGS) {
   }
 }
 
-/** Every one of the first `count` list items in `body` shows whole: none is cut by its bottom. */
+/** Every one of the first `count` lines in `body` shows whole: none is cut by its bottom. */
 async function expectWholeLines(body: Locator, count: number): Promise<void> {
   const box = await metrics(body);
-  const items = body.locator("li");
+  const items = lines(body);
 
   for (let index = 0; index < count; index += 1) {
     const item = await metrics(items.nth(index));
@@ -223,34 +255,64 @@ async function expectWholeLines(body: Locator, count: number): Promise<void> {
   }
 }
 
-test("a pinned list shows eight whole lines", async ({ page }) => {
-  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/pins*`, async (route) => {
-    const response = await route.fetch();
-    const reply: PinList = await response.json();
+for (const lineBody of LINE_BODIES) {
+  test(`a pinned preview of ${lineBody.name} shows eight whole lines`, async ({ page }) => {
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/pins*`, async (route) => {
+      const response = await route.fetch();
+      const reply: PinList = await response.json();
 
-    await route.fulfill({
-      response,
-      json: {
-        ...reply,
-        messages: reply.messages.map((message) => ({ ...message, bodyHtml: LIST_BODY })),
-      },
+      await route.fulfill({
+        response,
+        json: {
+          ...reply,
+          messages: reply.messages.map((message) => ({ ...message, bodyHtml: lineBody.html })),
+        },
+      });
     });
+
+    await page.setViewportSize(VIEWPORT);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(`/app/r/${ROOM_IDS.general}`);
+    await openHeaderTool(page, /^Pinned messages/);
+
+    const body = page.locator("aside.right-pane .pin-card-body").first();
+
+    await expect(lines(body).first()).toHaveText(/^(Item|Line) 1$/);
+
+    // Eight 22 px lines, no step between them, and the eighth whole under the cap.
+    expect((await metrics(lines(body).nth(1))).marginTop).toBe(0);
+    expect((await metrics(body)).height).toBeCloseTo(8 * 22, 0);
+    await expectWholeLines(body, 8);
   });
 
-  await page.setViewportSize(VIEWPORT);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(`/app/r/${ROOM_IDS.general}`);
-  await openHeaderTool(page, /^Pinned messages/);
+  test(`a saved preview of ${lineBody.name} stays flat`, async ({ page }) => {
+    await page.route("**/api/v1/saved*", async (route) => {
+      const response = await route.fetch();
+      const reply: SavedItemList = await response.json();
 
-  const body = page.locator("aside.right-pane .pin-card-body").first();
+      await route.fulfill({
+        response,
+        json: {
+          ...reply,
+          messages: reply.messages.map((message) => ({ ...message, bodyHtml: lineBody.html })),
+        },
+      });
+    });
 
-  await expect(body.locator("li").first()).toHaveText("Item 1");
+    await page.setViewportSize(VIEWPORT);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/app/saved");
 
-  // Eight 22 px lines, no step between them, and the eighth whole under the cap.
-  expect((await metrics(body.locator("li").nth(1))).marginTop).toBe(0);
-  expect((await metrics(body)).height).toBeCloseTo(8 * 22, 0);
-  await expectWholeLines(body, 8);
-});
+    const body = page.locator(".saved-body.message-body").first();
+
+    await expect(lines(body).first()).toHaveText(/^(Item|Line) 1$/);
+
+    // Three 20 px lines with no step between them.
+    expect((await metrics(lines(body).nth(1))).marginTop).toBe(0);
+    expect((await metrics(body)).height).toBeCloseTo(3 * 20, 0);
+    await expectWholeLines(body, 3);
+  });
+}
 
 test("a search hit's list shows five whole lines", async ({ page, request }) => {
   const id = await post(request, "pasteddocument list");

@@ -60,7 +60,11 @@
   }
 
   /* The preview stays flat: a pasted document's headings, rule and list steps (room.css) take the
-     preview's own size and no extra space, so three lines show three lines of text. */
+     preview's own size and no extra space, so three lines show three lines of text. Every block of
+     the content container (the body or its production `trix-content` wrapper) goes flat, whatever
+     its tag: legacy Trix bodies keep their lines in plain divs. */
+  .saved-body.message-body > :where(*),
+  .saved-body.message-body > .trix-content > :where(*),
   .saved-body.message-body :is(p, ul, ol, li, pre, blockquote, h1, h2, h3, h4, h5, h6, hr) {
     margin: 0;
   }

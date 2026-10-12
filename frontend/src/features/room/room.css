@@ -615,16 +615,17 @@
     margin-top: var(--space-1);
   }
 
+  /* Any rule, a top-level one or one inside a quote or list item; after the step, so it wins. */
+  :where(.message-body hr) {
+    margin-block: var(--space-3);
+  }
+
   :where(.message-body, .message-body > .trix-content) > :is(h1, h2) {
     margin-top: var(--space-4);
   }
 
   :where(.message-body, .message-body > .trix-content) > :is(h3, h4, h5, h6) {
     margin-top: var(--space-3);
-  }
-
-  :where(.message-body, .message-body > .trix-content) > hr {
-    margin-block: var(--space-3);
   }
 
   :where(.message-body li + li, .message-body li > :is(ul, ol), .message-body li > p + p) {
