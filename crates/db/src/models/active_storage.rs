@@ -47,13 +47,18 @@ impl Blob {
         .or_not_found("ActiveStorage::Blob")
     }
 
-    /// A signed identity cannot restore access to media from a revoked private thread.
+    /// Catalog images cannot be reused, and signed identities cannot restore revoked private media.
     pub fn reusable_by(conn: &Connection, blob_id: i64, user_id: i64) -> Result<bool> {
         let roots: Vec<i64> = crate::sql::query_all(conn,
             "WITH RECURSIVE roots(id) AS (VALUES (?1) UNION SELECT v.blob_id FROM active_storage_attachments a JOIN active_storage_variant_records v ON v.id=a.record_id JOIN roots r ON r.id=a.blob_id WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image' UNION SELECT a.record_id FROM active_storage_attachments a JOIN roots r ON r.id=a.blob_id WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image') SELECT b.id FROM roots r JOIN active_storage_blobs b ON b.id=r.id",
             [blob_id], |row| row.get(0))?;
         if !roots.contains(&blob_id) { return Err(crate::Error::RecordNotFound("ActiveStorage::Blob")); }
         let ids = serde_json::json!(roots).to_string();
+        // Reattaching catalog media would let message privacy and purging affect the sticker.
+        let catalog_image: bool = conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM active_storage_attachments WHERE record_type='Sticker' AND name='image' AND blob_id IN (SELECT value FROM json_each(?)))",
+            [&ids], |row| row.get(0))?;
+        if catalog_image { return Ok(false); }
         let restricted: bool = conn.query_row(
             "SELECT EXISTS (SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?)) AND COALESCE(json_extract(b.metadata,'$.private_thread_media'),0)=1) OR EXISTS (SELECT 1 FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END JOIN channel_threads t ON t.id=m.thread_id WHERE a.blob_id IN (SELECT value FROM json_each(?)) AND t.visibility='private')",
             [&ids, &ids], |row| row.get(0))?;
