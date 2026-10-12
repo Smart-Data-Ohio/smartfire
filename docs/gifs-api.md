@@ -32,6 +32,7 @@ writes and concurrent duplicate sends do not retain unused imported blobs.
 Image GIF attachments use the stored animated original as their thumbnail URL.
 The mock uses the same contract. Client uploads cannot set reserved `klipy_`
 metadata; GIF/WebP imports require a blob-bound server signature for animated previews.
+Blob copies verify that signature and sign their new key; unverified copies discard `klipy_` metadata.
 The stored blob keeps `uploader_id`, `klipy_id`, `klipy_slug`, `klipy_title`,
 and `klipy_attribution` in existing metadata. No schema migration is needed.
 

@@ -626,7 +626,7 @@ impl<'a> Presenter<'a> {
                 }
             } else {
                 AttachmentPreview::Image {
-                    thumb_url: if crate::active_storage::verified_klipy_image_import(verifier, blob, self.now) {
+                    thumb_url: if campfire_storage::klipy::verified_image_import(verifier, blob, self.now) {
                         campfire_storage::paths::blob_redirect_path(verifier, blob, None)
                     } else {
                         self.thumb_path(blob)?

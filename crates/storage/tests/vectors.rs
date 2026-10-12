@@ -228,6 +228,32 @@ fn forwarded_filenames_match_pinned_rails() {
 }
 
 #[test]
+fn stage_copy_resigns_verified_klipy_renditions() {
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let original = storage.create_and_upload(&conn, b"rendition", Filename::new("rendition"), Some("image/gif"), now()).unwrap();
+    for content_type in ["image/gif", "image/webp", "video/mp4"] {
+        let mut source = original.clone();
+        source.content_type = Some(content_type.into());
+        let mark = storage.verifier.generate(&Json::String(source.key.clone()).encode(), "klipy_import", None);
+        source.metadata.set("klipy_mark", Json::String(mark));
+        source.metadata.set("klipy_id", Json::String("8041071659142944".into()));
+        source.metadata.set("klipy_attribution", Json::String("Powered by KLIPY".into()));
+        let staged = storage.stage_copy(&source).unwrap();
+        let copied = staged.insert(&conn, now()).unwrap();
+        let mark = copied.metadata.get("klipy_mark").and_then(Json::as_str).expect(content_type);
+        assert_eq!(storage.verifier.verified(mark, "klipy_import", now()), Some(Json::String(copied.key.clone()).encode()), "{content_type}");
+        assert_ne!(copied.metadata.get("klipy_mark"), source.metadata.get("klipy_mark"));
+        for key in ["klipy_id", "klipy_attribution"] {
+            assert_eq!(copied.metadata.get(key), source.metadata.get(key), "{content_type}: {key}");
+        }
+        assert_eq!(std::fs::read(storage.path_for(&copied)).unwrap(), b"rendition");
+    }
+}
+
+#[test]
 fn stage_copy_drops_unverified_klipy_metadata() {
     let root = tempfile::tempdir().unwrap();
     let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
