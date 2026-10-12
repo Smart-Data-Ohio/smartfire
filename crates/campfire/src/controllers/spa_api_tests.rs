@@ -743,7 +743,7 @@ impl Sync {
         sync
     }
 
-    async fn send(&mut self, frame: Value) {
+    pub(crate) async fn send(&mut self, frame: Value) {
         self.socket
             .send(WsMessage::Text(frame.to_string().into()))
             .await

@@ -32,24 +32,30 @@ const updated = (topic: string, thread: Thread = secret): SyncEvent => ({
   data: thread,
 });
 
+const held = { threads: { 88: secret }, threadPanes: {} };
+
 describe("threadAccessChanges", () => {
   it("counts a removal on the viewer's own topic as lost access, and not one on a room topic", () => {
     expect(
-      threadAccessChanges({ removedThreads: {} }, { removedThreads: { 88: 1 } }, [removed]),
+      threadAccessChanges(
+        { removedThreads: {}, ...held },
+        { removedThreads: { 88: 1 } },
+        [removed],
+      ),
     ).toEqual({
       lost: [88],
       regained: [],
     });
 
     expect(
-      threadAccessChanges({ removedThreads: {} }, { removedThreads: { 88: 1 } }, [
+      threadAccessChanges({ removedThreads: {}, ...held }, { removedThreads: { 88: 1 } }, [
         { ...removed, topic: "room:4" },
       ]).lost,
     ).toEqual([]);
   });
 
   it("counts a private thread's update that lifted its removal as regained", () => {
-    const before = { removedThreads: { 88: 1 } };
+    const before = { removedThreads: { 88: 1 }, ...held };
     const after = { removedThreads: {} };
 
     expect(threadAccessChanges(before, after, [updated("user")]).regained).toEqual([88]);
@@ -67,15 +73,46 @@ describe("threadAccessChanges", () => {
 
     // Removed, then added back, in one replay: the batch ends readable, so the pane reloads.
     expect(
-      threadAccessChanges({ removedThreads: {} }, { removedThreads: {} }, [removed, granted]),
+      threadAccessChanges({ removedThreads: {}, ...held }, { removedThreads: {} }, [
+        removed,
+        granted,
+      ]),
     ).toEqual({ lost: [88], regained: [88] });
 
     // Added, then removed: it ends unreadable, so nothing is regained.
     expect(
-      threadAccessChanges({ removedThreads: {} }, { removedThreads: { 88: 1 } }, [
+      threadAccessChanges({ removedThreads: {}, ...held }, { removedThreads: { 88: 1 } }, [
         granted,
         removed,
       ]),
     ).toEqual({ lost: [88], regained: [] });
+  });
+
+  it("counts an update for a thread never held, or whose pane failed, as regained", () => {
+    const after = { removedThreads: {} };
+    const failed = {
+      status: "error" as const,
+      error: "gone",
+      permissions: null,
+      work: null,
+      workFacts: null,
+    };
+
+    expect(
+      threadAccessChanges({ removedThreads: {}, threads: {}, threadPanes: {} }, after, [
+        updated("user"),
+      ]).regained,
+    ).toEqual([88]);
+    expect(
+      threadAccessChanges(
+        { removedThreads: {}, threads: { 88: secret }, threadPanes: { 88: failed } },
+        after,
+        [updated("user")],
+      ).regained,
+    ).toEqual([88]);
+    // Held and readable: an ordinary update regains nothing.
+    expect(
+      threadAccessChanges({ removedThreads: {}, ...held }, after, [updated("user")]).regained,
+    ).toEqual([]);
   });
 });

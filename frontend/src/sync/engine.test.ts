@@ -2237,6 +2237,108 @@ describe("resync", () => {
     ),
   );
 
+  it.effect("subscribes again to a private thread regained after the removal's reconnect", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        const secret = {
+          ...threadDetail("active", true),
+          thread: { ...threadDetail("active", true).thread, visibility: "private" as const },
+        };
+        const replies = (ids: readonly number[]) =>
+          pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/88", secret);
+        yield* api.reply("GET /threads/88/messages", replies([5, 6]));
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(88);
+
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 6]);
+
+        yield* pushEvents({
+          seq: 6,
+          topic: "user",
+          type: "thread.removed",
+          data: { threadId: 88, roomId: 12 },
+        });
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(6, true);
+        yield* socket.clearSent;
+        yield* api.reply("GET /threads/88", secret);
+        yield* api.reply("GET /threads/88/messages", replies([5, 6]));
+        yield* pushEvents({
+          seq: 7,
+          topic: "user",
+          type: "thread.updated",
+          data: secret.thread,
+        });
+        yield* settle;
+
+        expect(yield* socket.sent).toContainEqual({ t: "sub", topics: ["thread:88"] });
+
+        yield* pushEvents({
+          seq: 8,
+          topic: "thread:88",
+          type: "message.created",
+          data: messageFixture(7, 12, { threadId: 88 }),
+        });
+
+        expect(store.getState().threadTimelines[88]?.ids).toContain(7);
+      }),
+    ),
+  );
+
+  it.effect("subscribes again when a private thread opened without access is shared", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        const secret = {
+          ...threadDetail("active", true),
+          thread: { ...threadDetail("active", true).thread, visibility: "private" as const },
+        };
+        const replies = (ids: readonly number[]) =>
+          pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(88);
+
+        expect(store.getState().threadPanes[88]?.status).toBe("error");
+        yield* socket.clearSent;
+        yield* api.reply("GET /threads/88", secret);
+        yield* api.reply("GET /threads/88/messages", replies([5, 6]));
+        yield* pushEvents({
+          seq: 6,
+          topic: "user",
+          type: "thread.updated",
+          data: secret.thread,
+        });
+        yield* settle;
+
+        expect(yield* socket.sent).toContainEqual({ t: "sub", topics: ["thread:88"] });
+        expect(store.getState().threadPanes[88]?.status).toBe("ready");
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 6]);
+
+        yield* pushEvents({
+          seq: 7,
+          topic: "thread:88",
+          type: "message.created",
+          data: messageFixture(7, 12, { threadId: 88 }),
+        });
+
+        expect(store.getState().threadTimelines[88]?.ids).toContain(7);
+      }),
+    ),
+  );
+
   it.effect("installs a resynced thread's header before 501 removals land during its replies", () =>
     withSync(
       Effect.gen(function* () {

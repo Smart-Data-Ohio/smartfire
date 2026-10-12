@@ -38,13 +38,14 @@ async function renderIndicator(message: MessageDTO) {
 
 const NOW = Date.parse("2026-10-06T12:00:00.000Z");
 
-function indicated(replyCount: number) {
+function indicated(replyCount: number, visibility: "public" | "private" = "public") {
   return messageFixture(10, {
     thread: {
       threadId: 5,
       replyCount,
       lastReplyAt: new Date(NOW - 3 * 3_600_000).toISOString(),
       replierIds: [],
+      visibility,
     },
   });
 }
@@ -101,7 +102,18 @@ describe("ThreadIndicator", () => {
     vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
     store.setState({ threads: { 5: threadFixture(5, { visibility: "private" }) } });
 
-    await renderIndicator(indicated(2));
+    await renderIndicator(indicated(2, "private"));
+
+    const button = screen.getByRole("button", { name: /View thread/ });
+
+    expect(button.getAttribute("aria-label")).toMatch(/^Private thread\. 2 replies/);
+    expect(button.querySelector(".thread-private-glyph")).not.toBeNull();
+  });
+
+  it("shows the lock from the summary alone, before the thread itself is held", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+
+    await renderIndicator(indicated(2, "private"));
 
     const button = screen.getByRole("button", { name: /View thread/ });
 
