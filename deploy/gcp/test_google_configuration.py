@@ -39,11 +39,11 @@ class GoogleConfigurationTest(unittest.TestCase):
 
     def host_run(self, payload, *, wrong_revision=False, drop_existing=False):
         settings = {"host": "chat.example.com", "image": self.image, "autoUpdate": False,
-                    "env": {"WEB_CONCURRENCY": "1", "LIVEKIT_API_SECRET": "PRIVATE-LIVEKIT-SECRET"},
+                    "env": {"WEB_CONCURRENCY": "1", "LIVEKIT_API_SECRET": "PRIVATE-LIVEKIT-SECRET", "KLIPY_API_KEY": "PRIVATE-OLD-KLIPY"},
                     "secretKeyBase": "PRIVATE-SIGNING-KEY", "backup": {"path": "/backups"}}
         container = {"Config": {"Labels": {"once": json.dumps(settings)}, "Env": [
             "GIT_REVISION=" + ("c" * 40 if wrong_revision else "b" * 40),
-            "SECRET_KEY_BASE=PRIVATE-SIGNING-KEY", "WEB_CONCURRENCY=1", "LIVEKIT_API_SECRET=PRIVATE-LIVEKIT-SECRET",
+            "SECRET_KEY_BASE=PRIVATE-SIGNING-KEY", "WEB_CONCURRENCY=1", "LIVEKIT_API_SECRET=PRIVATE-LIVEKIT-SECRET", "KLIPY_API_KEY=PRIVATE-OLD-KLIPY",
         ]}, "Mounts": [{"Type": "volume", "Source": "/storage", "Destination": "/rails/storage", "RW": True}], "Image": "image-id"}
         commands = []
 
@@ -86,6 +86,38 @@ class GoogleConfigurationTest(unittest.TestCase):
                 self.assertEqual(0o600, backups[0].stat().st_mode & 0o777)
                 self.assertEqual(0o700, backups[0].parent.stat().st_mode & 0o777)
             return code, stdout.getvalue(), stderr.getvalue(), commands, settings
+
+    def test_klipy_secret_is_optional_and_empty_preserves_existing_value(self):
+        for value in [None, ""]:
+            with self.subTest(value=value):
+                if value is not None:
+                    self.environ["KLIPY_API_KEY"] = value
+                self.assertNotIn("KLIPY_API_KEY", self.payload()["environment"])
+                code, stdout, stderr, _, settings = self.host_run(self.payload())
+                self.assertEqual(0, code, stderr)
+                self.assertEqual("PRIVATE-OLD-KLIPY", settings["env"]["KLIPY_API_KEY"])
+                self.assertNotIn("PRIVATE-", stdout + stderr)
+        payload = self.payload()
+        payload["environment"]["KLIPY_API_KEY"] = ""
+        code, stdout, stderr, _, settings = self.host_run(payload)
+        self.assertEqual(0, code, stderr)
+        self.assertEqual("PRIVATE-OLD-KLIPY", settings["env"]["KLIPY_API_KEY"])
+        self.assertNotIn("PRIVATE-", stdout + stderr)
+
+    def test_klipy_secret_reaches_persistent_and_runtime_environment_without_output(self):
+        self.environ["KLIPY_API_KEY"] = "PRIVATE-NEW-KLIPY"
+        self.assertEqual("PRIVATE-NEW-KLIPY", self.payload()["environment"]["KLIPY_API_KEY"])
+        code, stdout, stderr, commands, settings = self.host_run(self.payload())
+        self.assertEqual(0, code, stderr)
+        self.assertEqual("PRIVATE-NEW-KLIPY", settings["env"]["KLIPY_API_KEY"])
+        update = next(c for c in commands if c[:2] == ["once", "update"])
+        self.assertIn("KLIPY_API_KEY=PRIVATE-NEW-KLIPY", update)
+        self.assertTrue(json.loads(stdout)["existing_environment_preserved"])
+        self.assertNotIn("PRIVATE-", stdout + stderr)
+        output = io.StringIO()
+        with patch.dict("os.environ", self.environ, clear=True), patch("sys.argv", ["google-configuration.py", "--validate"]), patch("sys.stdout", output):
+            runpy.run_path(str(DIRECTORY / "google-configuration.py"), run_name="__main__")
+        self.assertNotIn("PRIVATE-", output.getvalue())
 
     def test_normalizes_configured_domains_and_allows_disabling_sign_in(self):
         self.assertEqual("example.com,second.example", self.payload()["environment"]["GOOGLE_SIGN_IN_DOMAINS"])

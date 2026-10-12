@@ -94,7 +94,7 @@ export function createGifs(enabled: boolean) {
         preview: "image",
         url,
         downloadUrl: `${url}?disposition=attachment`,
-        thumbnailUrl: null,
+        thumbnailUrl: url,
       };
     },
     handleBinary: (request: MockBinaryRequest): MockBinaryResponse | null => {

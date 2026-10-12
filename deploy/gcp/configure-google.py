@@ -19,4 +19,4 @@ def validate(changes, host, settings):
 
 
 if __name__ == "__main__":
-    configure(ALLOWED, validate, "smartfire-google-config", configuration_name="Google configuration")
+    configure(ALLOWED, validate, "smartfire-google-config", configuration_name="Google configuration", optional={"KLIPY_API_KEY"})

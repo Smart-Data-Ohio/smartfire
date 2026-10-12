@@ -29,8 +29,12 @@ It can accompany `attachmentSignedIds` within the ten-file limit. It cannot
 accompany the legacy `attachmentSignedId`. The server resolves the slug,
 downloads a rendition, and commits its blob with the message. Rejected model
 writes and concurrent duplicate sends do not retain unused imported blobs.
+Image GIF attachments use the stored animated original as their thumbnail URL.
+The mock uses the same contract.
 The stored blob keeps `uploader_id`, `klipy_id`, `klipy_slug`, `klipy_title`,
 and `klipy_attribution` in existing metadata. No schema migration is needed.
+
+The deploy's Google integration configure step reads `KLIPY_API_KEY` from the `production` GitHub Actions environment in `Smart-Data-Ohio/smartfire`; an unset or empty secret preserves the VM's existing value.
 
 Every endpoint requires sign-in. Writes require the normal CSRF token.
 Without `KLIPY_API_KEY`, config returns `enabled: false` and discovery,
