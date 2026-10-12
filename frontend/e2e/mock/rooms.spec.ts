@@ -605,3 +605,22 @@ if (SHOTS) {
     await settledShot(page, "rooms-settings-members", theme);
   });
 }
+
+test("voice settings save and clear the user limit beside the bitrate", async ({ page }) => {
+  await openApp(page, `r/${ROOM_IDS.lounge}/settings`);
+  const dialog = page.getByRole("dialog", { name: "Channel settings" });
+  await dialog.getByRole("combobox", { name: "Voice bitrate" }).selectOption("96000");
+  await dialog.getByRole("combobox", { name: "Voice user limit" }).selectOption("5");
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.locator(".room-header").getByRole("status", { name: "2 of 5 voice participants" }),
+  ).toHaveText("2/5");
+  await page.goto(`/app/r/${ROOM_IDS.lounge}/settings`);
+  await expect(dialog.getByRole("combobox", { name: "Voice user limit" })).toHaveValue("5");
+  await expect(dialog.getByRole("combobox", { name: "Voice bitrate" })).toHaveValue("96000");
+  await dialog.getByRole("combobox", { name: "Voice user limit" }).selectOption("");
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator(".room-header").getByRole("status")).toHaveCount(0);
+});

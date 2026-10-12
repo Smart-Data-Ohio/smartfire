@@ -28,6 +28,8 @@ pub enum ApiError {
     NotFound { message: String },
     /// 409: the record changed underneath the request.
     Conflict { message: String },
+    /// 409: this huddle has no slots for another user.
+    HuddleRoomFull { message: String },
     /// 422: the request's `X-CSRF-Token` header was missing or stale. The client fetches a fresh
     /// token (`GET /api/v1/boot`'s `csrfToken`) and retries once.
     InvalidAuthenticityToken { message: String },
@@ -70,7 +72,7 @@ impl ApiError {
             | ApiError::SudoRequired { .. }
             | ApiError::TwoFactorRequired { .. } => 403,
             ApiError::NotFound { .. } => 404,
-            ApiError::Conflict { .. } | ApiError::FizzyThreadLocked { .. } => 409,
+            ApiError::Conflict { .. } | ApiError::HuddleRoomFull { .. } | ApiError::FizzyThreadLocked { .. } => 409,
             ApiError::InvalidAuthenticityToken { .. }
             | ApiError::Validation { .. }
             | ApiError::FizzyNotConnected { .. }

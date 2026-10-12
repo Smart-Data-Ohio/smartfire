@@ -115,6 +115,8 @@ export interface RoomDraft {
   readonly topic?: string;
   /** Settings only, in bits per second; `null` is the default. Absent leaves it alone. */
   readonly voiceBitrate?: number | null;
+  /** Settings only; `null` means no limit. Absent leaves it alone. */
+  readonly voiceUserLimit?: number | null;
 }
 
 /** A blank name takes the kind's default (the form's `name`), as the classic form pre-fills. */
@@ -168,7 +170,18 @@ export function updateBody(form: RoomForm, kind: ManagedKind, draft: RoomDraft):
       ? {}
       : { voiceBitrate: draft.voiceBitrate };
 
-  const changes = { ...nameChange, ...iconChange, ...topicChange, ...bitrateChange };
+  const limitChange =
+    draft.voiceUserLimit === undefined || draft.voiceUserLimit === form.voiceUserLimit
+      ? {}
+      : { voiceUserLimit: draft.voiceUserLimit };
+
+  const changes = {
+    ...nameChange,
+    ...iconChange,
+    ...topicChange,
+    ...bitrateChange,
+    ...limitChange,
+  };
 
   const userIds = [...new Set(draft.userIds)];
 
@@ -228,6 +241,9 @@ export function isDirty(form: RoomForm, kind: RoomKind, draft: RoomDraft): boole
   if (draft.topic !== undefined && draft.topic.trim() !== (form.topic ?? "")) return true;
 
   if (draft.voiceBitrate !== undefined && draft.voiceBitrate !== form.voiceBitrate) return true;
+
+  if (draft.voiceUserLimit !== undefined && draft.voiceUserLimit !== form.voiceUserLimit)
+    return true;
 
   if (!hasMemberList(kind)) return false;
 

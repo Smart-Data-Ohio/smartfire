@@ -75,6 +75,7 @@ describe("S8 room management schemas", () => {
       stageRoles: [{ userId: 7, role: "host" }],
       topic: null,
       voiceBitrate: null,
+      voiceUserLimit: null,
     });
   });
 

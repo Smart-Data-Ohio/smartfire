@@ -480,6 +480,7 @@ export function seedS3(world: World, now: number, random: Random): void {
       updatedAt: iso(now - 2 * DAY),
       topic: null,
       voiceBitrate: null,
+      voiceUserLimit: null,
     },
     memberIds: [USER_IDS.maya, USER_IDS.priya, USER_IDS.lucia, USER_IDS.grace],
     membership: {

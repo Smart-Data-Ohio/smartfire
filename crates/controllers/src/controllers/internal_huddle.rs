@@ -118,7 +118,8 @@ async fn respond(
             .is_none_or(|at| at <= now.ago(jiff::SignedDuration::from_secs(10)));
     let grant = if !authorized || seen_due {
         let domain = domain_config(config);
-        c.app()
+        let admission = c
+            .app()
             .db
             .write(move |tx| {
                 let Some(mut grant) = HuddleGrant::authorize_or_revoke(tx, id, &domain)? else {
@@ -129,8 +130,20 @@ async fn respond(
                 }
                 Ok(Some(grant))
             })
-            .await
-            .map_err(anyhow::Error::from)?
+            .await;
+        match admission {
+            Ok(grant) => grant,
+            Err(campfire_db::Error::HuddleRoomFull) => {
+                return c.json(
+                    StatusCode::CONFLICT,
+                    &serde_json::json!({
+                        "error": "HuddleRoomFull",
+                        "message": "This voice room is full",
+                    }),
+                );
+            }
+            Err(error) => return Err(anyhow::Error::from(error).into()),
+        }
     } else {
         Some(grant)
     };
@@ -139,6 +152,7 @@ async fn respond(
         None => Ok(c.head(denied)),
     }
 }
+
 pub async fn left(c: &mut Ctx) -> Result {
     if let Err(status) = before(c) {
         return Ok(c.head(status));

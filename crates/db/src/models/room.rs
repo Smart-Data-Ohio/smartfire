@@ -96,6 +96,7 @@ pub struct Room {
     pub topic: Option<String>,
     pub announcement: bool,
     pub voice_bitrate: Option<i64>,
+    pub voice_user_limit: Option<i64>,
 }
 
 /// `user.rooms`: `has_many :rooms, -> { alive }, through: :memberships` (`app/models/user.rb`).
@@ -129,12 +130,13 @@ impl Room {
             topic: row.get("topic")?,
             announcement: row.get("announcement")?,
             voice_bitrate: row.get("voice_bitrate")?,
+            voice_user_limit: row.get("voice_user_limit")?,
         })
     }
 
     /// The room's columns as `r_<column>`, for a join that reads its rows with
     /// [`Room::from_prefixed_row`].
-    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic, "rooms"."announcement" AS r_announcement, "rooms"."voice_bitrate" AS r_voice_bitrate"#;
+    pub(crate) const PREFIXED_COLUMNS: &str = r#""rooms"."id" AS r_id, "rooms"."created_at" AS r_created_at, "rooms"."creator_id" AS r_creator_id, "rooms"."deleted_at" AS r_deleted_at, "rooms"."destroy_enqueued_at" AS r_destroy_enqueued_at, "rooms"."direct_member_key" AS r_direct_member_key, "rooms"."icon_name" AS r_icon_name, "rooms"."inbound_email_token" AS r_inbound_email_token, "rooms"."name" AS r_name, "rooms"."pins_changed_at" AS r_pins_changed_at, "rooms"."type" AS r_type, "rooms"."updated_at" AS r_updated_at, "rooms"."topic" AS r_topic, "rooms"."announcement" AS r_announcement, "rooms"."voice_bitrate" AS r_voice_bitrate, "rooms"."voice_user_limit" AS r_voice_user_limit"#;
 
     pub(crate) fn from_prefixed_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -153,6 +155,7 @@ impl Room {
             topic: row.get("r_topic")?,
             announcement: row.get("r_announcement")?,
             voice_bitrate: row.get("r_voice_bitrate")?,
+            voice_user_limit: row.get("r_voice_user_limit")?,
         })
     }
 
@@ -587,6 +590,29 @@ impl Room {
 
     pub fn audio_bitrate_target(&self) -> i64 {
         self.voice_bitrate.unwrap_or(DEFAULT_VOICE_BITRATE)
+    }
+
+    pub fn validate_voice_user_limit(limit: Option<i64>) -> Result<()> {
+        let mut errors = Errors::default();
+        if limit.is_some_and(|value| !(1..=99).contains(&value)) {
+            errors.add("voice_user_limit", "must be between 1 and 99");
+        }
+        errors.into_result()
+    }
+
+    pub fn update_voice_user_limit(&mut self, tx: &mut Tx<'_>, limit: Option<i64>) -> Result<()> {
+        Self::validate_voice_user_limit(limit)?;
+        if limit == self.voice_user_limit {
+            return Ok(());
+        }
+        let now = tx.now();
+        tx.conn().execute_cached(
+            "UPDATE rooms SET voice_user_limit=?,updated_at=? WHERE id=?",
+            params![limit, now, self.id],
+        )?;
+        self.voice_user_limit = limit;
+        self.updated_at = now;
+        Ok(())
     }
 
     pub fn validate_voice_bitrate(bitrate: Option<i64>) -> Result<()> {

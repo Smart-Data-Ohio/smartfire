@@ -196,7 +196,8 @@ function adminToken(config, grant) {
   return `${header}.${payload}.${signature}`;
 }
 
-function genericBody(status) {
+function genericBody(status, code) {
+  if (code === "room_full") return "This voice room is full\n";
   if (status === 401) return "Unauthorized\n";
   if (status === 403) return "Forbidden\n";
   if (status === 404) return "Not Found\n";
@@ -217,9 +218,9 @@ function sendHttp(response, status, body = genericBody(status), contentType = "t
   response.end(body);
 }
 
-function rejectUpgrade(socket, status) {
+function rejectUpgrade(socket, status, code) {
   if (socket.destroyed) return;
-  const body = genericBody(status);
+  const body = genericBody(status, code);
   socket.end(
     `HTTP/1.1 ${status} ${http.STATUS_CODES[status] ?? "Error"}\r\n` +
       "Connection: close\r\n" +
@@ -269,6 +270,7 @@ export function createGateway(options) {
     }, config.requestTimeoutMs, signal, async (response) => {
       if (response.status !== 200) {
         await response.body?.cancel().catch(() => {});
+        if (response.status === 409) throw new GatewayError("room_full", 403);
         const status = response.status === 401 || response.status === 403 ? response.status : 503;
         throw new GatewayError("authorization_denied", status);
       }
@@ -295,6 +297,7 @@ export function createGateway(options) {
     }, config.requestTimeoutMs, signal, async (response) => {
       if (response.status !== 200) {
         await response.body?.cancel().catch(() => {});
+        if (response.status === 409) throw new GatewayError("room_full", 403);
         throw new GatewayError("grant_denied", response.status === 401 || response.status === 403 ? response.status : 503);
       }
       const body = await readBounded(response);
@@ -639,7 +642,7 @@ export function createGateway(options) {
       emit(config, "validation_authorized");
     } catch (error) {
       const status = error instanceof GatewayError ? error.status : 503;
-      sendHttp(response, status);
+      sendHttp(response, status, genericBody(status, error instanceof GatewayError ? error.code : undefined));
       emit(config, "validation_denied");
     }
   }
@@ -756,7 +759,7 @@ export function createGateway(options) {
           const removal = lease ? denyLease(lease, "postauthorization_denied") : enforceRemoval(initialGrant);
           await removal.firstAttempt;
         }
-        rejectUpgrade(socket, error instanceof GatewayError ? error.status : 503);
+        rejectUpgrade(socket, error instanceof GatewayError ? error.status : 503, error instanceof GatewayError ? error.code : undefined);
         emit(config, "upgrade_rejected");
       } finally {
         releaseReservation(pending);

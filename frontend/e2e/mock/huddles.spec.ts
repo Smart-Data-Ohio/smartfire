@@ -556,3 +556,25 @@ test.describe("on a touch phone", () => {
     await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
   });
 });
+
+test("a full voice room explains why a member cannot join", async ({ page, request }) => {
+  const state = await (await request.get("/__mock/state")).json();
+  const headers = { "X-CSRF-Token": state.csrfToken };
+  const form = await (await request.get(`/api/v1/rooms/${LOUNGE}/edit`)).json();
+
+  const saved = await request.patch(`/api/v1/rooms/${LOUNGE}`, {
+    headers,
+    data: { type: "voice", userIds: form.userIds, voiceUserLimit: 2 },
+  });
+
+  expect(saved.ok()).toBe(true);
+  await control(request, "viewer-role", { role: "member" });
+  await open(page, LOUNGE);
+  await expect(
+    page.locator(".room-header").getByRole("status", { name: "2 of 2 voice participants" }),
+  ).toHaveText("2/2");
+  await launcher(page).click();
+  await expect(
+    page.getByText("This voice room is full. Try again when someone leaves.").first(),
+  ).toBeVisible();
+});

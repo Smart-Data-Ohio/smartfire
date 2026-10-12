@@ -28,6 +28,7 @@ import {
   type MockResponse,
   noContent,
   notFound,
+  plainError,
   rateLimited,
   validation,
 } from "../http.ts";
@@ -451,6 +452,19 @@ export function createHuddles(
   const join = (roomId: number): HuddleCredentials => {
     const record = callRoom(roomId);
     const state = calls();
+    const entries = state.calls.get(roomId);
+    const limit = record.room.voiceUserLimit;
+
+    if (
+      limit !== null &&
+      (entries?.size ?? 0) >= limit &&
+      !entries?.has(VIEWER_ID) &&
+      !isAdmin(VIEWER_ID) &&
+      record.room.creatorId !== VIEWER_ID
+    ) {
+      throw plainError(409, "HuddleRoomFull", "This voice room is full");
+    }
+
     const grantId = state.nextGrantId++;
     const newIdentity = identity();
 

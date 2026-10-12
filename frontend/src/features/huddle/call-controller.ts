@@ -172,6 +172,8 @@ function joinErrorMessage(error: Error): string {
     case "Forbidden":
     case "NotFound":
       return "You no longer have access to this room.";
+    case "HuddleRoomFull":
+      return "This voice room is full. Try again when someone leaves.";
     case "Unavailable":
       return "Huddles aren’t available on this server right now.";
     default:
