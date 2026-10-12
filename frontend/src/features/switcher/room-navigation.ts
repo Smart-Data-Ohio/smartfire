@@ -1,6 +1,6 @@
 /**
  * Alt+↑/↓ and Alt+Shift+↑/↓: step through conversations in the order the sidebar shows them
- * (Favourites, categories, Channels, Voice, Direct messages), wrapping at the ends.
+ * (Favourites, categories, Channels, Boards, Voice, Direct messages), wrapping at the ends.
  */
 import type { SidebarRow } from "../../store/model.ts";
 import type { SidebarState } from "../../store/state.ts";
