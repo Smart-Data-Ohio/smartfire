@@ -852,6 +852,8 @@ async fn post_poll(c: &mut Ctx) -> Result {
     };
     let posted_room = room.clone();
     let storage = c.app().storage.clone();
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_poll_create_write(&client_message_id).await;
     let outcome = c
         .app()
         .db
@@ -872,7 +874,9 @@ async fn post_poll(c: &mut Ctx) -> Result {
             for image in &media {
                 if let PreparedPollMedia::Image(prepared) = image {
                     let attached: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [prepared.blob.id], |r| r.get(0))?;
-                    if attached { return Ok(Err(validation("optionMedia", "must be a new uploaded image"))); }
+                    if attached || !campfire_runtime::presenters::attachments::scheduled_upload_owners(tx.conn(), prepared.blob.id)?.is_empty() {
+                        return Ok(Err(validation("optionMedia", "must be a new uploaded image")));
+                    }
                 }
             }
             let thread = match input.thread_id {
