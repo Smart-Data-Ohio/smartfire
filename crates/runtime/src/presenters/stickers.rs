@@ -74,9 +74,11 @@ pub fn webhook_payload(
     conn: &Connection,
     storage: &Storage,
     message: &Message,
-    base: &str,
+    base: Option<&str>,
     body: String,
 ) -> Result<String> {
+    // Jobs have no request origin; leave the existing payload intact without a public origin.
+    let Some(base) = base else { return Ok(body) };
     let Some(sticker) = message_sticker(conn, message, StickerUrls::Signed { storage, base })?
     else {
         return Ok(body);

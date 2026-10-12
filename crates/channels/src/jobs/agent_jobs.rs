@@ -104,7 +104,7 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
     let encryption = app.ar_encryption.clone();
     let db = app.db.clone();
     let storage = app.storage.clone();
-    let base = app.config.mail.url_origin().to_owned();
+    let base = app.config.mail.app_url.clone();
     let event = e.clone();
     let threads = match app
         .db
@@ -173,7 +173,7 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
             };
             let body = match &sync_message {
                 Some(message) => campfire_runtime::presenters::stickers::webhook_payload(
-                    tx.conn(), &storage, message, &base, body,
+                    tx.conn(), &storage, message, base.as_deref(), body,
                 )?,
                 None => body,
             };
