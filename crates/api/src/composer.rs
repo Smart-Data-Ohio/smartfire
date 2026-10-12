@@ -695,7 +695,7 @@ async fn scheduled_uploads(c: &mut Ctx, single: Option<String>, ids: Vec<String>
     let mut ids = crate::endpoints::grouped_signed_ids(c, single.as_deref(), ids)?;
     ids.extend(single);
     crate::endpoints::require_grouped_uploads(c, &ids).await?;
-    attachments::stage_many(c.app(), ids.into_iter().map(Assignment::Signed).collect()).await
+    attachments::stage_many(c.app(), ids.into_iter().map(Assignment::Signed).collect(), concerns::require_current_user(c)?.id).await
 }
 
 fn scheduled_blob_ids(tx: &mut campfire_db::Tx<'_>, files: Vec<Assignment<campfire_storage::Staged>>, policy: classic::AttachmentPolicy) -> campfire_db::Result<Vec<i64>> {

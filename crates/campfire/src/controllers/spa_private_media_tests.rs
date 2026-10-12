@@ -7,6 +7,87 @@ use serde_json::json;
 const DESIGNERS: i64 = 654632876;
 const JZ: i64 = 773523953;
 
+#[tokio::test]
+async fn scheduled_files_private_media_requires_scheduler_and_current_thread_access() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut scheduler = a.sign_in(KEVIN).await;
+    let mut reader = a.sign_in(JZ).await;
+    let original = upload(&mut scheduler, "scheduled-private.png").await;
+    let derivative = upload(&mut scheduler, "scheduled-private-variant.txt").await;
+    let verifier = &*a.booted.app.storage.verifier;
+    let clock = a.booted.app.clock.now();
+    let original_id = campfire_storage::paths::verify_signed_blob_id(verifier, &original.signed_id, clock).unwrap();
+    let child_id = campfire_storage::paths::verify_signed_blob_id(verifier, &derivative.signed_id, clock).unwrap();
+    let thread_id = a.db().write(move |tx| {
+        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: DESIGNERS, creator_id: KEVIN, name: Some("Scheduled private files".into()),
+            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        thread.add_access_member(tx, KEVIN, JZ)?;
+        tx.conn().execute("INSERT INTO active_storage_variant_records(blob_id,variation_digest) VALUES(?,'scheduled-private-test')", [original_id])?;
+        campfire_db::Attachment::create(tx, "ActiveStorage::VariantRecord", tx.conn().last_insert_rowid(), "image", child_id)?;
+        Ok(thread.id)
+    }).await.unwrap();
+    let paths = a.db().read(move |conn| {
+        [original_id, child_id].into_iter().map(|id| {
+            campfire_storage::Blob::find(conn, id)
+                .map_err(|error| campfire_db::Error::Other(error.to_string()))?
+                .ok_or(campfire_db::Error::RecordNotFound("Blob"))
+        }).collect::<campfire_db::Result<Vec<_>>>()
+    }).await.unwrap().iter().map(|blob| campfire_storage::paths::blob_proxy_path(verifier, blob, None)).collect::<Vec<_>>();
+    let response = scheduler.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
+        &json!({"markdownSource": "Scheduled private file", "sendAt": "2026-03-03T16:00:00Z", "threadId": thread_id, "attachmentSignedIds": [original.signed_id]}))).await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let scheduled: api::ScheduledMessage = parse(&response);
+    for path in &paths {
+        assert_eq!(reader.send(get(path)).await.status, StatusCode::NOT_FOUND);
+        let allowed = scheduler.send(get(path)).await;
+        assert_eq!(allowed.status, StatusCode::OK);
+        assert_eq!(allowed.header("cache-control"), Some("private, no-store"));
+    }
+    let sent = scheduler.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{}/send_now", scheduled.id), &json!({}))).await;
+    assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
+    let sent: api::ScheduledMessage = parse(&sent);
+    assert!(sent.sent_message_id.is_some());
+    for path in &paths {
+        let allowed = reader.send(get(path)).await;
+        assert_eq!(allowed.status, StatusCode::OK);
+        assert_eq!(allowed.header("cache-control"), Some("private, no-store"));
+    }
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.scheduled_by',?) WHERE id=?", [KEVIN, original_id])?;
+        for id in [original_id, child_id] {
+            let blob = campfire_storage::Blob::find(tx.conn(), id)
+                .map_err(|error| campfire_db::Error::Other(error.to_string()))?
+                .ok_or(campfire_db::Error::RecordNotFound("Blob"))?;
+            let error = crate::controllers::messages::attachment_blob(tx,
+                campfire_runtime::presenters::attachments::Assignment::Existing(blob.clone()),
+                crate::controllers::messages::AttachmentPolicy::SignedBlob { actor_id: Some(KEVIN) }, "attachment").unwrap_err();
+            assert!(matches!(error, campfire_db::Error::RecordInvalid(errors) if errors.on("attachment") == ["includes a private scheduled upload"]));
+            let error = campfire_runtime::presenters::attachments::attach_existing(tx,
+                campfire_runtime::presenters::attachments::Record::user(KEVIN), "avatar", blob).unwrap_err();
+            assert!(matches!(error, campfire_db::Error::RecordInvalid(errors) if errors.on("attachment") == ["is inaccessible"]));
+        }
+        Ok(())
+    }).await.unwrap();
+    for path in &paths {
+        assert_eq!(reader.send(get(path)).await.status, StatusCode::NOT_FOUND, "thread access cannot bypass scheduler ownership");
+        assert_eq!(scheduler.send(get(path)).await.status, StatusCode::OK);
+    }
+    a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)).await.unwrap();
+    for path in &paths {
+        assert_eq!(scheduler.send(get(path)).await.status, StatusCode::NOT_FOUND, "scheduler ownership cannot bypass revoked thread access");
+    }
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_remove(metadata,'$.scheduled_by') WHERE id=?", [original_id])?;
+        Ok(())
+    }).await.unwrap();
+    for path in &paths {
+        assert_eq!(reader.send(get(path)).await.status, StatusCode::OK);
+        assert_eq!(scheduler.send(get(path)).await.status, StatusCode::NOT_FOUND);
+    }
+}
+
 async fn upload(browser: &mut Browser<'_>, name: &str) -> api::DirectUpload {
     let bytes: &[u8] = if name.ends_with(".png") {
         include_bytes!("../../../../fixtures/files/workspace_icons/square_64.png")

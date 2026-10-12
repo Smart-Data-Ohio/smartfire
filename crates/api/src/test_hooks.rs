@@ -9,6 +9,23 @@ use std::time::Duration;
 use tokio::sync::Barrier;
 
 static AFTER_DUPLICATE_CHECK: Mutex<Option<HashMap<String, Arc<Barrier>>>> = Mutex::new(None);
+static BEFORE_POLL_CREATE_WRITE: Mutex<Option<HashMap<String, WriteHold>>> = Mutex::new(None);
+
+pub fn hold_before_poll_create_write(client_message_id: &str) -> WriteHold {
+    let held = WriteHold { reached: Arc::new(Barrier::new(2)), release: Arc::new(Barrier::new(2)) };
+    let copy = WriteHold { reached: held.reached.clone(), release: held.release.clone() };
+    BEFORE_POLL_CREATE_WRITE.lock().unwrap().get_or_insert_with(HashMap::new)
+        .insert(client_message_id.to_owned(), held);
+    copy
+}
+
+pub(crate) async fn before_poll_create_write(client_message_id: &str) {
+    let held = BEFORE_POLL_CREATE_WRITE.lock().unwrap().as_mut().and_then(|held| held.remove(client_message_id));
+    if let Some(held) = held {
+        held.reached.wait().await;
+        held.release.wait().await;
+    }
+}
 
 /// Holds every message, poll or room post with this `clientMessageId` / `clientRoomId` after its
 /// pre-transaction duplicate lookup misses, until `posts` of them have got that far. Other posts

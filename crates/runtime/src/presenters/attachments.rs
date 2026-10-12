@@ -82,14 +82,14 @@ impl Assignment {
 
     /// Uploads a new file, so the save only has rows to write.
     pub async fn stage(self, app: &App) -> Result<Assignment<Staged>> {
-        self.stage_bounded(app, None).await
+        self.stage_bounded(app, None, None).await
     }
 
     pub async fn stage_with_limit(self, app: &App, limit: u64) -> Result<Assignment<Staged>> {
-        self.stage_bounded(app, Some(limit)).await
+        self.stage_bounded(app, Some(limit), None).await
     }
 
-    async fn stage_bounded(self, app: &App, limit: Option<u64>) -> Result<Assignment<Staged>> {
+    async fn stage_bounded(self, app: &App, limit: Option<u64>, scheduled_owner: Option<i64>) -> Result<Assignment<Staged>> {
         Ok(match self {
             Assignment::Unchanged => Assignment::Unchanged,
             Assignment::Delete => Assignment::Delete,
@@ -104,10 +104,7 @@ impl Assignment {
                 Assignment::Create(staged)
             }
             Assignment::Signed(signed) => {
-                let id = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, &signed, app.clock.now())
-                    .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid blob signature")))?;
-                let blob = app.db.read(move |conn| Blob::find(conn, id).map_err(storage_error)).await.map_err(Error::internal)?
-                    .ok_or(Error::NotFound)?;
+                let blob = resolve_signed_blob(app, &signed, scheduled_owner).await?;
                 if let Some(limit) = limit {
                     check_blob_size(app, &blob, limit).await?;
                 }
@@ -126,15 +123,48 @@ impl Assignment {
     }
 }
 
+/// Only the scheduler may resolve a pending upload for its draft. Public attachment slots
+/// pass no scheduler, so they cannot publish a scheduled original or one of its derivatives.
+pub async fn resolve_signed_blob(app: &App, signed: &str, scheduled_owner: Option<i64>) -> Result<Blob> {
+    let id = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, signed, app.clock.now())
+        .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid blob signature")))?;
+    let (blob, owners) = app.db.read(move |conn| {
+        Ok((Blob::find(conn, id).map_err(storage_error)?, scheduled_upload_owners(conn, id)?))
+    }).await.map_err(Error::internal)?;
+    let blob = blob.ok_or(Error::NotFound)?;
+    if owners.iter().any(|owner| Some(*owner) != scheduled_owner) {
+        return Err(Error::Status(campfire_kit::StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    Ok(blob)
+}
+
+pub fn scheduled_upload_owners(conn: &Connection, blob_id: i64) -> campfire_db::Result<Vec<i64>> {
+    let mut statement = conn.prepare_cached(
+        "WITH RECURSIVE roots(id) AS (
+            VALUES (?1)
+            UNION SELECT v.blob_id FROM active_storage_attachments a
+                JOIN active_storage_variant_records v ON v.id=a.record_id
+                JOIN roots r ON r.id=a.blob_id
+                WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image'
+            UNION SELECT a.record_id FROM active_storage_attachments a JOIN roots r ON r.id=a.blob_id
+                WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image'
+         ) SELECT json_extract(b.metadata, '$.scheduled_by') FROM roots r
+            JOIN active_storage_blobs b ON b.id=r.id WHERE json_extract(b.metadata, '$.scheduled_by') IS NOT NULL
+         UNION SELECT s.user_id FROM roots r JOIN active_storage_attachments a ON a.blob_id=r.id
+            JOIN scheduled_messages s ON s.id=a.record_id WHERE a.record_type='ScheduledMessage' AND a.name='attachments'"
+    )?;
+    Ok(statement.query_map([blob_id], |row| row.get(0))?.collect::<rusqlite::Result<_>>()?)
+}
+
 /// Stage every file before entering the message's write transaction.
-pub async fn stage_many(app: &App, assignments: Vec<Assignment>) -> Result<Vec<Assignment<Staged>>> {
+pub async fn stage_many(app: &App, assignments: Vec<Assignment>, scheduled_owner: i64) -> Result<Vec<Assignment<Staged>>> {
     if assignments.is_empty() {
         return Ok(Vec::new());
     }
     let limit = crate::active_storage::upload_limit_bytes(app).await?;
     let mut staged = Vec::with_capacity(assignments.len());
     for assignment in assignments {
-        staged.push(assignment.stage_with_limit(app, limit as u64).await?);
+        staged.push(assignment.stage_bounded(app, Some(limit as u64), Some(scheduled_owner)).await?);
     }
     Ok(staged)
 }
@@ -276,6 +306,11 @@ pub fn attach_existing(
     if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id)? {
         let mut errors = campfire_db::Errors::default();
         errors.add("attachment", "is inaccessible");
+        return Err(campfire_db::Error::RecordInvalid(errors));
+    }
+    if !scheduled_upload_owners(tx.conn(), blob.id)?.is_empty() {
+        let mut errors = campfire_db::Errors::default();
+        errors.add("attachment", "includes a private scheduled upload");
         return Err(campfire_db::Error::RecordInvalid(errors));
     }
     // While attached, a logo or banner is branding through its Account association, so its

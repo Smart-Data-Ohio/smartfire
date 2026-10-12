@@ -56,6 +56,136 @@ fn count(t: &TestDb) -> i64 {
 }
 
 #[test]
+fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
+    let t = frozen();
+    let files = tempfile::tempdir().unwrap();
+    let service = campfire_storage::DiskService::new(files.path(), "local");
+    let blobs = ["valid", "hello"].map(|content| {
+        let mut blob = campfire_storage::NewBlob::unfurl(
+            content.as_bytes(),
+            campfire_storage::Filename::new(format!("{content}.txt")),
+            Some("text/plain"),
+            service.name(),
+            false,
+        );
+        blob.metadata
+            .set("uploader_id", campfire_storage::Json::Int(id("david")));
+        service
+            .upload(&blob.key, content.as_bytes(), Some(&blob.checksum))
+            .unwrap();
+        t.write(move |tx| {
+            blob.insert(tx.conn(), tx.now().jiff())
+                .map_err(|error| Error::Other(error.to_string()))
+        })
+    });
+    let blob_ids = blobs.each_ref().map(|blob| blob.id);
+    let row = t.write(move |tx| {
+        ScheduledMessage::create_with_attachments(
+            tx,
+            NewScheduledMessage {
+                user_id: id("david"),
+                room_id: id("watercooler"),
+                thread_id: None,
+                reply_to_message_id: None,
+                markdown_source: "Files for later".into(),
+                send_at: tx.now().since(jiff::SignedDuration::from_secs(60)),
+            },
+            &blob_ids,
+        )
+    });
+    std::fs::write(service.path_for(&blobs[1].key), b"jello").unwrap();
+    assert_eq!(
+        std::fs::metadata(service.path_for(&blobs[1].key))
+            .unwrap()
+            .len(),
+        blobs[1].byte_size as u64
+    );
+    let env = Env {
+        clock: Arc::new(t.clock.clone()),
+        sink: Arc::new(t.sink.clone()),
+        attachment_service: Some(service.clone()),
+        ..Default::default()
+    };
+    let mut config = Config::new(t.db.path());
+    config.prepare = false;
+    let db = Database::open(config, env).unwrap();
+    t.travel(120);
+    let before = count(&t);
+    let message_files_before = t.read(|conn| {
+        crate::sql::count(
+            conn,
+            "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='Message'",
+            [],
+        )
+    });
+    t.sink.take();
+    assert!(
+        ScheduledMessage::dispatch_due(&db, t.now())
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(count(&t), before);
+    assert_eq!(
+        t.read(|conn| crate::sql::count(
+            conn,
+            "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='Message'",
+            []
+        )),
+        message_files_before
+    );
+    let dropped = reload(&t, &row);
+    assert!(dropped.dropped());
+    assert_eq!(dropped.sent_message_id, None);
+    assert_eq!(dropped.sent_at, None);
+    assert_eq!(
+        dropped.drop_reason.as_deref(),
+        Some("an attachment's checksum no longer matches its upload")
+    );
+    assert_eq!(
+        t.read(|conn| row.attachments(conn))
+            .iter()
+            .map(|(_, blob)| blob.id)
+            .collect::<Vec<_>>(),
+        blob_ids
+    );
+    assert_eq!(drop_item(&t, &row).event_type, "scheduled_message_dropped");
+    assert!(!t.events().iter().any(|event| matches!(
+        event.as_broadcast(),
+        Some(crate::broadcasts::Broadcast::MessageCreated { .. })
+    )));
+
+    std::fs::write(service.path_for(&blobs[1].key), b"hello").unwrap();
+    let retry = t.write(move |tx| {
+        ScheduledMessage::create_with_attachments(
+            tx,
+            NewScheduledMessage {
+                user_id: row.user_id,
+                room_id: row.room_id,
+                thread_id: None,
+                reply_to_message_id: None,
+                markdown_source: row.markdown_source,
+                send_at: tx.now().since(jiff::SignedDuration::from_secs(60)),
+            },
+            &blob_ids,
+        )
+    });
+    t.travel(120);
+    assert_eq!(
+        ScheduledMessage::dispatch_due(&db, t.now()).unwrap(),
+        [retry.id]
+    );
+    assert_eq!(count(&t), before + 1);
+    let message = posted(&t, &retry);
+    assert_eq!(
+        t.read(|conn| message.attachments(conn))
+            .iter()
+            .map(|(_, blob)| blob.id)
+            .collect::<Vec<_>>(),
+        blob_ids
+    );
+}
+
+#[test]
 fn dispatch_rechecks_scheduled_reply_target_visibility() {
     let t = frozen();
     let target = post_root(&t, "watercooler", "jason", "Target");

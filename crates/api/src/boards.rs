@@ -424,7 +424,7 @@ async fn create_post(c: &mut Ctx) -> Result {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
     };
-    let files = attachments::stage_many(c.app(), signed_ids.into_iter().map(Assignment::Signed).collect()).await?;
+    let files = attachments::stage_many(c.app(), signed_ids.into_iter().map(Assignment::Signed).collect(), campfire_runtime::concerns::require_current_user(c)?.id).await?;
     let message = if let Some(mut message) = message {
         message.drive_file_ids = Some(crate::drive::require_drive_file_ids(
             c,
