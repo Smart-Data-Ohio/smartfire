@@ -2,6 +2,7 @@ import { ScreenSharePresets, VideoPreset } from "livekit-client";
 import { describe, expect, it } from "vitest";
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import {
+  applyScreenContentHint,
   DEFAULT_SHARE_QUALITY,
   knownStreamQuality,
   STREAM_QUALITIES,
@@ -10,18 +11,21 @@ import {
 } from "./screen-quality.ts";
 
 describe("screen capture", () => {
-  it("leaves the classic three to the SDK's capture size, audio first then video only", () => {
-    for (const quality of ["720p15", "1080p15", "1080p30"] as const) {
+  it("requests each profile's capture size and frame rate, with constraint fallback", () => {
+    const profiles = [
+      { quality: "720p15", width: 1280, height: 720, frameRate: 15 },
+      { quality: "1080p15", width: 1920, height: 1080, frameRate: 15 },
+      { quality: "1080p30", width: 1920, height: 1080, frameRate: 30 },
+    ] as const;
+
+    for (const { quality, ...resolution } of profiles) {
       const attempts = screenCaptureAttempts(quality);
+      const text = { contentHint: "text", surfaceSwitching: "include", systemAudio: "exclude" };
 
       expect(attempts).toEqual([
-        { contentHint: "detail", surfaceSwitching: "include", systemAudio: "exclude", audio: true },
-        {
-          contentHint: "detail",
-          surfaceSwitching: "include",
-          systemAudio: "exclude",
-          audio: false,
-        },
+        { ...text, audio: true, resolution },
+        { ...text, audio: false, resolution },
+        { ...text, audio: false, resolution: { width: 0, height: 0 } },
       ]);
     }
   });
@@ -33,8 +37,52 @@ describe("screen capture", () => {
     expect(screenCaptureAttempts("1080p60")).toEqual([
       { ...motion, audio: true, resolution },
       { ...motion, audio: false, resolution },
-      { ...motion, audio: false },
+      { ...motion, audio: false, resolution: { width: 0, height: 0 } },
     ]);
+  });
+
+  it("keeps Safari 17 and iOS 17+ unconstrained for every profile", () => {
+    const browsers = [
+      { name: "Safari", version: "17.6", os: "macOS" },
+      { name: "Chrome", version: "130", os: "iOS", osVersion: "18.0" },
+    ] as const;
+
+    for (const browser of browsers) {
+      for (const quality of STREAM_QUALITIES) {
+        expect(
+          screenCaptureAttempts(quality, browser).map((attempt) => attempt.resolution),
+        ).toEqual([undefined, undefined]);
+      }
+    }
+    expect(
+      screenCaptureAttempts("1080p15", { name: "Safari", version: "18.4" })[0]?.resolution,
+    ).toEqual({ width: 1920, height: 1080, frameRate: 15 });
+  });
+
+  it("uses text where accepted, detail when ignored or rejected, and motion for 60 fps", () => {
+    const track = { contentHint: "detail" };
+    applyScreenContentHint(track, "1080p15");
+    expect(track.contentHint).toBe("text");
+    applyScreenContentHint(track, "1080p60");
+    expect(track.contentHint).toBe("motion");
+
+    for (const rejects of [false, true]) {
+      let hint = "";
+      const unsupported = {
+        get contentHint() {
+          return hint;
+        },
+        set contentHint(value: string) {
+          if (value === "text") {
+            if (rejects) throw new TypeError("unsupported hint");
+          } else {
+            hint = value;
+          }
+        },
+      };
+      applyScreenContentHint(unsupported, "720p15");
+      expect(unsupported.contentHint).toBe("detail");
+    }
   });
 });
 
@@ -49,7 +97,11 @@ describe("screen encoding", () => {
     for (const [quality, preset] of Object.entries(presets)) {
       const options = screenPublishOptions(knownStreamQuality(quality) ?? "720p15", VideoPreset);
 
-      expect(options).toEqual({ dtx: false, screenShareEncoding: preset.encoding });
+      expect(options).toEqual({
+        dtx: false,
+        screenShareEncoding: preset.encoding,
+        degradationPreference: "maintain-resolution",
+      });
     }
   });
 

@@ -31,6 +31,7 @@ import {
 } from "./noise.ts";
 import { loadDevicePreferences } from "./preferences.ts";
 import {
+  applyScreenContentHint,
   DEFAULT_SHARE_QUALITY,
   screenCaptureAttempts,
   screenPublishOptions,
@@ -100,19 +101,24 @@ function sinkable(context: AudioContext): context is SinkableAudioContext {
 function withCaptureFallback<T>(
   quality: StreamQuality,
   capture: (options: ScreenShareCaptureOptions) => Promise<T>,
+  browser: ReturnType<LiveKit["getBrowser"]>,
 ): Promise<T> {
-  const [first, ...rest] = screenCaptureAttempts(quality);
+  const [first, ...rest] = screenCaptureAttempts(quality, browser);
+  // The SDK assigns the hint during capture. Start with its compatible detail hint, then try
+  // text on the native track with read-back, so a rejected text hint cannot reopen the picker.
+  const attempt = (options: ScreenShareCaptureOptions): Promise<T> =>
+    capture({ ...options, contentHint: options.contentHint === "text" ? "detail" : "motion" });
 
   return rest.reduce<Promise<T>>(
-    (attempt, options) =>
-      attempt.catch((error: Error) => {
+    (pending, options) =>
+      pending.catch((error: Error) => {
         if (!displayMediaRejectedConstraints(error)) {
           throw error;
         }
 
-        return capture(options);
+        return attempt(options);
       }),
-    capture(first ?? {}),
+    attempt(first ?? {}),
   );
 }
 
@@ -360,9 +366,15 @@ class LiveKitTransport implements CallTransport {
 
     const publish = screenPublishOptions(quality, this.#lk.VideoPreset);
 
-    await withCaptureFallback(quality, (options) =>
-      local.setScreenShareEnabled(true, options, publish),
+    const publication = await withCaptureFallback(
+      quality,
+      (options) => local.setScreenShareEnabled(true, options, publish),
+      this.#lk.getBrowser(),
     );
+
+    if (publication?.track !== undefined) {
+      applyScreenContentHint(publication.track.mediaStreamTrack, quality);
+    }
   }
 
   /**
@@ -377,14 +389,22 @@ class LiveKitTransport implements CallTransport {
       return Promise.reject(new Error("screen-share-unavailable"));
     }
 
-    return withCaptureFallback(quality, (options) => local.createScreenTracks(options)).then(
-      (tracks) => {
-        this.#capturedSequence += 1;
-        this.#captured.set(this.#capturedSequence, tracks);
+    return withCaptureFallback(
+      quality,
+      (options) => local.createScreenTracks(options),
+      this.#lk.getBrowser(),
+    ).then((tracks) => {
+      for (const track of tracks) {
+        if (track.kind === this.#lk.Track.Kind.Video) {
+          applyScreenContentHint(track.mediaStreamTrack, quality);
+        }
+      }
 
-        return { id: this.#capturedSequence };
-      },
-    );
+      this.#capturedSequence += 1;
+      this.#captured.set(this.#capturedSequence, tracks);
+
+      return { id: this.#capturedSequence };
+    });
   }
 
   /** The same publish options as an ordinary share, at the stream's encoding. */

@@ -1,16 +1,14 @@
 /**
  * What each stream quality asks of the browser and the encoder, for the stage and for an ordinary
- * screen share alike. The classic three keep the classic behavior: no capture resolution (the SDK
- * fills in 1080p/30 and skips it where it can't be constrained) and the SDK's screen-share preset
- * encodings, written out so an upgrade can't quietly change them. 1080p60 is motion-first: it asks
- * for 1920×1080 at 60 fps and encodes for it, with a 720p/30 simulcast layer for small tiles and
- * thin connections.
+ * screen share alike. Each profile requests its named capture size and frame rate. The encoder
+ * ceilings stay pinned to the SDK presets; 1080p60 adds a 720p/30 layer for smaller views.
  *
  * Every capture constraint is an "ideal": a browser or screen that can't deliver 60 fps (or full
  * HD) shares at what it can rather than failing, and a browser that rejects the constraints
  * outright gets one more try without them.
  */
 import type {
+  getBrowser,
   ScreenShareCaptureOptions,
   TrackPublishOptions,
   VideoEncoding,
@@ -30,12 +28,11 @@ export const STREAM_QUALITIES = [
 export const DEFAULT_SHARE_QUALITY: StreamQuality = "1080p15";
 
 interface Profile {
-  /** The capture to ask for; `null` leaves it to the SDK. */
   readonly capture: {
     readonly width: number;
     readonly height: number;
     readonly frameRate: number;
-  } | null;
+  };
   readonly encoding: VideoEncoding;
   /** The lower simulcast layer; `null` keeps the SDK's half-size layer. */
   readonly layer: {
@@ -50,19 +47,19 @@ interface Profile {
 const PROFILES: Readonly<Record<StreamQuality, Profile>> = {
   // ScreenSharePresets.h720fps15 / h1080fps15 / h1080fps30.
   "720p15": {
-    capture: null,
+    capture: { width: 1280, height: 720, frameRate: 15 },
     encoding: { maxBitrate: 1_500_000, maxFramerate: 15, priority: "medium" },
     layer: null,
     motion: false,
   },
   "1080p15": {
-    capture: null,
+    capture: { width: 1920, height: 1080, frameRate: 15 },
     encoding: { maxBitrate: 2_500_000, maxFramerate: 15, priority: "medium" },
     layer: null,
     motion: false,
   },
   "1080p30": {
-    capture: null,
+    capture: { width: 1920, height: 1080, frameRate: 30 },
     encoding: { maxBitrate: 5_000_000, maxFramerate: 30, priority: "medium" },
     layer: null,
     motion: false,
@@ -89,27 +86,63 @@ export function knownStreamQuality(value: string | null): StreamQuality | null {
  * The getDisplayMedia attempts for a share, in order; the next one runs only after the browser
  * rejects the constraints of the one before. Tab audio comes first (capturing system audio while
  * sharing a whole screen feeds the speakers back into the call on Windows), then video only, and
- * for 1080p60 finally video without the explicit size and frame rate.
+ * finally video without size or frame-rate constraints. Safari 17 and iOS 17+ start unconstrained,
+ * matching the SDK's exception: accepting a size can silently produce a low-resolution capture.
  */
-export function screenCaptureAttempts(quality: StreamQuality): ScreenShareCaptureOptions[] {
+export function screenCaptureAttempts(
+  quality: StreamQuality,
+  browser?: ReturnType<typeof getBrowser>,
+): ScreenShareCaptureOptions[] {
   const { capture, motion } = PROFILES[quality];
 
   const base = (audio: boolean): ScreenShareCaptureOptions => ({
-    contentHint: motion ? "motion" : "detail",
+    contentHint: motion ? "motion" : "text",
     surfaceSwitching: "include",
     systemAudio: "exclude",
     audio,
   });
 
-  if (capture === null) {
+  if (
+    (browser?.name === "Safari" && browser.version.startsWith("17.")) ||
+    (browser?.os === "iOS" && Number(browser.osVersion?.split(".")[0]) >= 17)
+  ) {
     return [base(true), base(false)];
   }
 
   return [
     { ...base(true), resolution: capture },
     { ...base(false), resolution: capture },
-    base(false),
+    // Zero means uncapped to the SDK; omitting resolution would reinstate its 1080p30 default.
+    { ...base(false), resolution: { width: 0, height: 0 } },
   ];
+}
+
+/** A rejected or ignored text hint falls back on the captured track, without reopening the picker. */
+export function applyScreenContentHint(
+  track: Pick<MediaStreamTrack, "contentHint">,
+  quality: StreamQuality,
+): void {
+  if (!("contentHint" in track)) {
+    return;
+  }
+
+  const hint = PROFILES[quality].motion ? "motion" : "text";
+
+  try {
+    track.contentHint = hint;
+
+    if (track.contentHint === hint || hint === "motion") {
+      return;
+    }
+  } catch {
+    // Some implementations reject hints rather than ignoring them.
+  }
+
+  try {
+    track.contentHint = "detail";
+  } catch {
+    // Hints are advisory and must not stop a successful capture.
+  }
 }
 
 /** The SDK's own `VideoPreset`, passed in so this module doesn't load the SDK. */
@@ -131,7 +164,11 @@ export function screenPublishOptions(
   Preset: VideoPresetClass,
 ): TrackPublishOptions {
   const { encoding, layer, motion } = PROFILES[quality];
-  const options: TrackPublishOptions = { dtx: false, screenShareEncoding: { ...encoding } };
+  const options: TrackPublishOptions = {
+    dtx: false,
+    screenShareEncoding: { ...encoding },
+    degradationPreference: motion ? "maintain-framerate" : "maintain-resolution",
+  };
 
   if (layer !== null) {
     options.screenShareSimulcastLayers = [
@@ -143,10 +180,6 @@ export function screenPublishOptions(
         layer.encoding.priority,
       ),
     ];
-  }
-
-  if (motion) {
-    options.degradationPreference = "maintain-framerate";
   }
 
   return options;

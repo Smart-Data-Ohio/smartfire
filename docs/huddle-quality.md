@@ -51,7 +51,33 @@ Three follow-ups hardened the microphone path. A failed `restartTrack` retries o
 
 ### Screen sharing
 
-`setScreenShareEnabled` now requests `contentHint: "detail"`, `surfaceSwitching: "include"`, and tab audio (`audio: true`, `systemAudio: "exclude"`). Screen-share audio was already inside the token's publish grant.
+Ordinary and stage screen shares use the same profiles from
+`frontend/src/features/huddle/engine/screen-quality.ts`. The selected profile
+requests both capture size and frame rate; 1080p15 remains the default.
+
+| Profile | Requested capture | Top encoding ceiling | Lower simulcast layer |
+| --- | --- | --- | --- |
+| 720p15 | 1280×720, 15 fps | 1.5 Mbps, 15 fps | SDK half-size layer, 375 kbps, 15 fps |
+| 1080p15 | 1920×1080, 15 fps | 2.5 Mbps, 15 fps | SDK half-size layer, 625 kbps, 15 fps |
+| 1080p30 | 1920×1080, 30 fps | 5 Mbps, 30 fps | SDK half-size layer, 1.25 Mbps, 30 fps |
+| 1080p60 | 1920×1080, 60 fps | 8 Mbps, 60 fps | 1280×720, 2 Mbps, 30 fps |
+
+The first three profiles request the `text` content hint, with `detail` as the
+fallback when the native track ignores or rejects text. They explicitly use
+`maintain-resolution`. The 60 fps profile uses `motion` and `maintain-framerate`.
+Capture starts with the compatible hint before native-track read-back, so hint
+support never causes another capture picker. Width and height are ideal requests
+outside Safari; Safari uses maximum dimensions. Safari 17 and iOS 17+ start
+unconstrained, matching the pinned SDK exception for silently low-resolution
+capture. Other constraint rejections retry without audio, then with an uncapped
+resolution; cancellation and permission denial do not reopen the picker.
+
+All profiles request `surfaceSwitching: "include"` and tab audio
+(`audio: true`, `systemAudio: "exclude"`). Screen-share audio stays inside the
+existing publish grant. Profile requests are targets; check received stats to
+establish actual resolution and frame rate.
+
+`systemAudio: "exclude"`). Screen-share audio was already inside the token's publish grant.
 
 **Capture and encoding are separate ceilings.** No `resolution` is passed, so the SDK applies its own 1080p/30 capture constraint — and keeps its exemption for Safari 17, which cannot be constrained. Naming a preset's `resolution` here would have been a trap: a preset's resolution carries its frame rate, so asking for `h1080fps15.resolution` would have capped *capture* at 15 fps as well. Capture stays at 30 fps; the encoder is what limits the stream.
 
@@ -59,9 +85,10 @@ Three follow-ups hardened the microphone path. A failed `restartTrack` retries o
 
 The shared audio track publishes with `dtx: false`. Discontinuous transmission is tuned for speech and cuts the stream during perceived silence, which chops music and quiet passages in a demonstration. The microphone keeps `dtx: true`.
 
-Publishing uses `ScreenSharePresets.h1080fps15.encoding` (1920×1080, up to 2.5 Mbps, 15 fps) with `degradationPreference: "maintain-resolution"` — both the SDK's defaults, written out rather than inherited. Capturing at 30 and encoding at 15 is the SDK's own arrangement; the encoder drops every other frame rather than the capture missing them. Small code text stays readable under congestion because frames are dropped before resolution is. With simulcast on (also the SDK default) the publisher also sends a 960×540/15 layer at 625 kbps, so the uplink ceiling is about **3.1 Mbps**.
-
-**1080p/30 is the candidate to test, not the current setting.** `ScreenSharePresets.h1080fps30` would raise the top layer to 5 Mbps and the simulcast layer to 960×540/30 at 1.25 Mbps, about **6.25 Mbps** of publisher uplink — roughly double. That is a real network decision for an office link shared by several people, so it waits for the measurement work above rather than shipping on the strength of "sharper is better".
+The encoding bitrates remain unchanged from the previous profiles. Simulcast
+adds uplink traffic above the top-layer ceiling. A default 1080p15 share can use
+about 3.1 Mbps across both layers; 1080p30 about 6.25 Mbps, and 1080p60 about
+10 Mbps. These are configured maxima rather than measured bandwidth.
 
 ### Camera
 

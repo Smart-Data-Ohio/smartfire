@@ -12,7 +12,7 @@ for the media foundation.
 ## Going live
 
 Hosts and speakers see a **Go live** form in the stage panel: a quality
-select (`720p15`, `1080p15`, `1080p30`, defaulting to `1080p15`) and a
+select (`720p15`, `1080p15`, `1080p30`, `1080p60`, defaulting to `1080p15`) and a
 button. The click hands the whole sequence to the huddle panel, which
 captures the screen inside the click gesture first — Safari denies a
 capture that starts after the POST round-trip — then posts the stream
@@ -54,14 +54,18 @@ The presenter's quality maps onto the LiveKit screen-share presets:
 - `720p15`: 1280×720 at up to 1.5 Mbps and 15 fps.
 - `1080p15`: 1920×1080 at up to 2.5 Mbps and 15 fps. The default, and the
   same ceiling as an ordinary share.
-- `1080p30`: 1920×1080 at up to 5 Mbps and 30 fps. Roughly double the
-  uplink of the default; pick it for motion, not for slides.
+- `1080p30`: 1920×1080 at up to 5 Mbps and 30 fps.
+- `1080p60`: 1920×1080 at up to 8 Mbps and 60 fps, with a 720p30
+  lower layer at up to 2 Mbps. Use it for video and other motion.
 
-Like the ordinary share, capture stays at the SDK's own 1080p/30 while the
-encoder applies the preset ceiling, and congestion drops frames before
-resolution so shared text stays readable. These are requested encoding
-settings, not measured output; see the [quality assessment](huddle-quality.md)
-for what is and is not measured.
+Stage and ordinary shares request the selected capture resolution and frame
+rate explicitly. The first three profiles use the text content hint, falling
+back to detail when unsupported, and maintain resolution under congestion.
+1080p60 uses the motion hint and maintains frame rate. Safari 17 and iOS 17+
+retain the SDK's unconstrained capture exception; other browsers retry
+unconstrained only after rejecting the requested constraints. Capture requests
+and encoding ceilings do not guarantee actual output. See the
+[quality assessment](huddle-quality.md) for verification.
 
 ## Stopping and automatic ends
 
