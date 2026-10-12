@@ -210,20 +210,25 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
       <div>
         <ScheduledFiles
           files={kept}
-          onToggleSpoiler={(signedId) =>
-            setKept((files) =>
-              files.map((file) =>
-                file.signedId === signedId
-                  ? {
-                      ...file,
-                      attachment: { ...file.attachment, spoiler: !file.attachment.spoiler },
-                    }
-                  : file,
-              ),
-            )
+          onToggleSpoiler={
+            busy
+              ? undefined
+              : (signedId) =>
+                  setKept((files) =>
+                    files.map((file) =>
+                      file.signedId === signedId
+                        ? {
+                            ...file,
+                            attachment: { ...file.attachment, spoiler: !file.attachment.spoiler },
+                          }
+                        : file,
+                    ),
+                  )
           }
-          onRemove={(signedId) =>
-            setKept((files) => files.filter((file) => file.signedId !== signedId))
+          onRemove={
+            busy
+              ? undefined
+              : (signedId) => setKept((files) => files.filter((file) => file.signedId !== signedId))
           }
         />
         <AttachmentTray

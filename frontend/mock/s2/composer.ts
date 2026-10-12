@@ -741,22 +741,24 @@ export function createComposer(
 
   const scheduledFiles = (
     body: Json | undefined,
+    scheduledId: number | null = null,
     retained: ScheduledMessage["attachments"] = [],
   ): ScheduledMessage["attachments"] => {
     const single = stringField(body, "attachmentSignedId");
-    groupedFiles(body, single, uploads.attachment);
+    const attach = (signedId: string) => uploads.attachment(signedId, scheduledId);
+    groupedFiles(body, single, attach);
     const many = stringArrayField(body, "attachmentSignedIds") ?? [];
     const ids = many.length > 0 ? many : single ? [single] : [];
 
     const files = withSpoilers(
       body,
-      ids.map(uploads.attachment),
+      ids.map((signedId) => attach(signedId)),
       retained.map((file) => file.attachment),
     );
 
     return ids.map((signedId, index) => ({
       signedId,
-      attachment: files[index] ?? uploads.attachment(signedId),
+      attachment: files[index] ?? attach(signedId),
     }));
   };
 
@@ -836,11 +838,27 @@ export function createComposer(
       return drop(message, "reply target is no longer visible in the same conversation");
     }
 
+    let attachments: ScheduledMessage["attachments"];
+
+    try {
+      attachments = message.attachments.map((file) => ({
+        signedId: file.signedId,
+        attachment: {
+          ...uploads.attachment(file.signedId, message.id),
+          spoiler: file.attachment.spoiler,
+        },
+      }));
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+
+      return drop(message, error.message);
+    }
+
     const draft: MessageDraft = {
       ...plainDraft(VIEWER_ID, message.markdownSource, ctx.uuid()),
       replyToMessageId: replyPreview(message)?.messageId ?? null,
-      attachment: message.attachments[0]?.attachment ?? null,
-      attachments: message.attachments.map((file) => file.attachment),
+      attachment: attachments[0]?.attachment ?? null,
+      attachments: attachments.map((file) => file.attachment),
     };
 
     let posted: MessageDTO;
@@ -855,6 +873,7 @@ export function createComposer(
 
     const next: ScheduledMessage = {
       ...message,
+      attachments,
       state: "sent",
       sendable: false,
       sentAt: iso(ctx.now()),
@@ -978,7 +997,7 @@ export function createComposer(
             ...file,
             attachment: flags[index] ?? file.attachment,
           }))
-        : scheduledFiles(body, current.attachments);
+        : scheduledFiles(body, id, current.attachments);
 
     const markdownSource = checkMarkdown(
       stringField(body, "markdownSource") ?? current.markdownSource,
@@ -1000,6 +1019,12 @@ export function createComposer(
     if (next.replyToMessageId !== null)
       checkTarget(next.roomId, next.threadId, next.replyToMessageId);
 
+    for (const file of current.attachments) {
+      if (!attachments.some((kept) => kept.signedId === file.signedId)) {
+        ctx.world().blobs.delete(file.signedId);
+      }
+    }
+
     ctx.world().scheduled.set(id, next);
     arm(next);
     changed(next);
@@ -1011,6 +1036,8 @@ export function createComposer(
     const current = idleOr409(id);
 
     disarm(id);
+
+    for (const file of current.attachments) ctx.world().blobs.delete(file.signedId);
     ctx.world().scheduled.delete(id);
     hooks.cancelled(id);
     ctx.publish([

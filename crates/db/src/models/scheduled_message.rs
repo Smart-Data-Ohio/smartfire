@@ -341,7 +341,7 @@ impl ScheduledMessage {
             markdown_source: source.to_string(),
             send_at,
         };
-        let current = self.attachments(tx.conn())?.into_iter().map(|(attachment, _)| attachment.blob_id).collect::<Vec<_>>();
+        let current = self.attachment_slots(tx.conn())?.into_iter().map(|attachment| attachment.blob_id).collect::<Vec<_>>();
         let files = blob_ids.unwrap_or(&current);
         Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), send_at != self.send_at, files.len())?.into_result()?;
         if source != self.markdown_source
@@ -361,39 +361,60 @@ impl ScheduledMessage {
     }
 
     pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
-        query_all(conn,
-            "SELECT * FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND name='attachments' ORDER BY id",
-            [self.id], Attachment::from_row)?
-            .into_iter().map(|attachment| {
-                let blob = attachment.blob(conn)?;
-                Ok((attachment, blob))
+        self.attachment_slots(conn)?
+            .into_iter().filter_map(|attachment| {
+                match attachment.blob(conn) {
+                    Ok(blob) => Some(Ok((attachment, blob))),
+                    Err(crate::Error::RecordNotFound("ActiveStorage::Blob")) => None,
+                    Err(error) => Some(Err(error)),
+                }
             }).collect()
     }
 
+    fn attachment_slots(&self, conn: &Connection) -> Result<Vec<Attachment>> {
+        query_all(conn,
+            "SELECT * FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND name='attachments' ORDER BY id",
+            [self.id], Attachment::from_row)
+    }
+
+    /// Flags follow the validated dispatch ids, including a reordered or filtered selection.
+    pub(crate) fn attachment_spoilers_for(&self, conn: &Connection, blob_ids: &[i64]) -> Result<Vec<bool>> {
+        let slots = self.attachment_slots(conn)?;
+        blob_ids.iter().map(|blob_id| {
+            slots.iter().find(|attachment| attachment.blob_id == *blob_id)
+                .map(|attachment| attachment.spoiler)
+                .or_not_found("ActiveStorage::Attachment")
+        }).collect()
+    }
+
     pub(crate) fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
-        let current = self.attachments(tx.conn())?;
-        for (attachment, _) in &current {
+        let current = self.attachment_slots(tx.conn())?;
+        for attachment in &current {
             attachment.delete(tx)?;
             if !blob_ids.contains(&attachment.blob_id) {
                 tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
             }
         }
         for &blob_id in blob_ids {
-            let spoiler = current.iter().find(|(attachment, _)| attachment.blob_id == blob_id).is_some_and(|(attachment, _)| attachment.spoiler);
+            tx.conn().execute_cached(
+                "UPDATE active_storage_blobs SET metadata=json_set(COALESCE(metadata, '{}'), '$.scheduled_by', ?) WHERE id=?",
+                params![self.user_id, blob_id],
+            )?;
+            let spoiler = current.iter().find(|attachment| attachment.blob_id == blob_id).is_some_and(|attachment| attachment.spoiler);
             Attachment::create_with_spoiler(tx, "ScheduledMessage", self.id, "attachments", blob_id, spoiler)?;
         }
         Ok(())
     }
 
     pub fn set_attachment_spoilers(&mut self, tx: &mut Tx<'_>, flags: &[bool]) -> Result<()> {
-        let files = self.attachments(tx.conn())?;
+        let files = self.attachment_slots(tx.conn())?;
         if flags.len() != files.len() {
             let mut errors = Errors::default();
             errors.add("attachment_spoilers", "must have one flag per file");
             return errors.into_result();
         }
         let mut changed = false;
-        for ((attachment, _), &spoiler) in files.iter().zip(flags) {
+        for (attachment, &spoiler) in files.iter().zip(flags) {
             if attachment.spoiler != spoiler {
                 tx.conn().execute_cached("UPDATE active_storage_attachments SET spoiler=? WHERE id=?", params![spoiler, attachment.id])?;
                 changed = true;
@@ -405,6 +426,59 @@ impl ScheduledMessage {
             self.emit_change(tx, false);
         }
         Ok(())
+    }
+
+    fn dispatch_files(&self, tx: &Tx<'_>) -> Result<std::result::Result<Vec<i64>, String>> {
+        let slots = self.attachment_slots(tx.conn())?;
+        if slots.is_empty() {
+            return Ok(Ok(Vec::new()));
+        }
+        let Some(service) = &tx.env().attachment_service else {
+            return Ok(Err("attachment storage is unavailable".into()));
+        };
+        let limit = crate::Account::first(tx.conn())?.map_or(
+            super::account::DEFAULT_UPLOAD_LIMIT_BYTES,
+            |account| account.settings().upload_limit_bytes(),
+        );
+        let mut ids = Vec::with_capacity(slots.len());
+        for attachment in slots {
+            let Some(blob) = campfire_storage::Blob::find(tx.conn(), attachment.blob_id)
+                .map_err(|error| crate::Error::Other(error.to_string()))? else {
+                return Ok(Err("an attachment no longer exists".into()));
+            };
+            if blob.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64) != Some(self.user_id) {
+                return Ok(Err("an attachment is no longer owned by its scheduler".into()));
+            }
+            let path = service.path_for(&blob.key);
+            let received = match std::fs::metadata(&path) {
+                Ok(metadata) if metadata.is_file() => metadata.len(),
+                Ok(_) => return Ok(Err("an attachment no longer exists".into())),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(Err("an attachment no longer exists".into()));
+                }
+                Err(error) => return Err(crate::Error::Other(error.to_string())),
+            };
+            if blob.byte_size < 0 || blob.byte_size > limit || received > limit as u64 {
+                return Ok(Err("an attachment exceeds the current upload limit".into()));
+            }
+            if received != blob.byte_size as u64 {
+                return Ok(Err("an attachment's size no longer matches its upload".into()));
+            }
+            if let Some(checksum) = &blob.checksum {
+                let received_checksum = match campfire_storage::key::checksum_file(&path) {
+                    Ok(checksum) => checksum,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        return Ok(Err("an attachment no longer exists".into()));
+                    }
+                    Err(error) => return Err(crate::Error::Other(error.to_string())),
+                };
+                if &received_checksum != checksum {
+                    return Ok(Err("an attachment's checksum no longer matches its upload".into()));
+                }
+            }
+            ids.push(blob.id);
+        }
+        Ok(Ok(ids))
     }
 
     fn reply_visible(
@@ -629,15 +703,22 @@ impl ScheduledMessage {
             return Ok(false);
         }
         let reply_id = reply_source.map(|message| message.id);
-        let files = scheduled.attachments(tx.conn())?;
+        let attachment_blob_ids = match scheduled.dispatch_files(tx)? {
+            Ok(ids) => ids,
+            Err(reason) => {
+                scheduled.drop(tx, Some(&reason), now)?;
+                return Ok(false);
+            }
+        };
+        let attachment_spoilers = scheduled.attachment_spoilers_for(tx.conn(), &attachment_blob_ids)?;
         let attrs = NewMessage {
-            attachment_spoilers: files.iter().map(|(attachment, _)| attachment.spoiler).collect(),
+            attachment_spoilers,
             room_id: scheduled.room_id,
             creator_id: scheduled.user_id,
             thread_id: scheduled.thread_id,
             reply_to_message_id: reply_id,
             markdown_source: Some(scheduled.markdown_source.clone()).filter(|source| !source.trim().is_empty()),
-            attachment_blob_ids: files.iter().map(|(attachment, _)| attachment.blob_id).collect(),
+            attachment_blob_ids,
             ..Default::default()
         };
         // Validate before thread joins/reopening mutate state. SQL/rendering failures propagate
@@ -652,6 +733,12 @@ impl ScheduledMessage {
             None => Message::create(tx, attrs)?,
         };
         // The sent message now owns these blobs; deleting history must not purge them.
+        for (_, blob) in message.attachments(tx.conn())? {
+            tx.conn().execute_cached(
+                "UPDATE active_storage_blobs SET metadata=json_remove(metadata, '$.scheduled_by') WHERE id=?",
+                [blob.id],
+            )?;
+        }
         tx.conn().execute_cached("DELETE FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND name='attachments'", [id])?;
         super::message_attachment_processing::schedule_message(tx, &message)?;
         tx.conn().execute_cached("UPDATE scheduled_messages SET sent_at = ?, sent_message_id = ?, updated_at = ? WHERE id = ?",

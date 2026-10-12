@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DirectUpload } from "../../src/gen/DirectUpload.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
+import type { MessageRead } from "../../src/gen/MessageRead.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { MockServer } from "../server.ts";
@@ -37,6 +38,56 @@ function put(server: MockServer, upload: DirectUpload, contentType: string, byte
 }
 
 describe("direct uploads", () => {
+  it("allows sent uploads in public bot image slots", async () => {
+    const { server } = harness();
+    const upload = await declare(server, "sent.gif", "image/gif", GIF);
+
+    expect((await put(server, upload, "image/gif", GIF)).status).toBe(204);
+    await expectStatus<MessageDTO>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.quiet}/messages`,
+      messageBody("sent-bot-image", "", { attachmentSignedId: upload.signedId }),
+      201,
+    );
+    await expectStatus(
+      server,
+      "POST",
+      "/api/v1/admin/bots",
+      {
+        name: "Public bot",
+        avatar: upload.signedId,
+      },
+      200,
+    );
+  });
+
+  it("keeps uploaded workspace icon bytes out of shared caches", async () => {
+    const { server } = harness();
+    const bytes = GIF;
+    const upload = await declare(server, "private.gif", "image/gif", bytes);
+
+    expect((await put(server, upload, "image/gif", bytes)).status).toBe(204);
+    await expectStatus(
+      server,
+      "POST",
+      "/api/v1/admin/icons",
+      {
+        name: "private_upload",
+        title: "Private upload",
+        signedId: upload.signedId,
+      },
+      200,
+    );
+
+    for (const path of ["/icons/private_upload", "/icons/private_upload?still=1"]) {
+      const response = await server.handleBinary({ method: "GET", path, bytes: null });
+
+      expect(response.status).toBe(200);
+      expect(response.headers["Cache-Control"]).toBe("private, no-store");
+    }
+  });
+
   it("declares, uploads and attaches an image, reading its size", async () => {
     const { server } = harness();
     const upload = await declare(server, "pixel art.gif", "image/gif", GIF);
@@ -370,8 +421,10 @@ describe("attachment spoilers", () => {
     const { server } = harness();
     const first = await declare(server, "scheduled-secret.gif", "image/gif", GIF);
     const second = await declare(server, "scheduled-public.gif", "image/gif", GIF);
+    const third = await declare(server, "scheduled-added.gif", "image/gif", GIF);
     await put(server, first, "image/gif", GIF);
     await put(server, second, "image/gif", GIF);
+    await put(server, third, "image/gif", GIF);
 
     const item = await expectStatus<ScheduledMessage>(
       server,
@@ -390,21 +443,37 @@ describe("attachment spoilers", () => {
       server,
       "PATCH",
       `/api/v1/scheduled_messages/${item.id}`,
-      { attachmentSignedIds: [second.signedId, first.signedId] },
+      { attachmentSignedIds: [second.signedId, first.signedId, third.signedId] },
       200,
     );
 
-    expect(reordered.attachments.map((file) => file.attachment.spoiler)).toEqual([false, true]);
+    expect(reordered.attachments.map((file) => file.attachment.spoiler)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    await expectStatus(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/scheduled_messages`,
+      {
+        markdownSource: "",
+        sendAt: "2030-01-01T00:00:00Z",
+        attachmentSignedIds: [first.signedId],
+        attachmentSpoilers: [false],
+      },
+      422,
+    );
 
     const changed = await expectStatus<ScheduledMessage>(
       server,
       "PATCH",
       `/api/v1/scheduled_messages/${item.id}`,
-      { attachmentSpoilers: [true, false] },
+      { attachmentSpoilers: [true, false, true] },
       200,
     );
 
-    expect(changed.attachments.map((file) => file.attachment.spoiler)).toEqual([true, false]);
+    expect(changed.attachments.map((file) => file.attachment.spoiler)).toEqual([true, false, true]);
 
     const sent = await expectStatus<ScheduledMessage>(
       server,
@@ -414,6 +483,16 @@ describe("attachment spoilers", () => {
       200,
     );
 
-    expect(sent.attachments.map((file) => file.attachment.spoiler)).toEqual([true, false]);
+    expect(sent.attachments.map((file) => file.attachment.spoiler)).toEqual([true, false, true]);
+
+    const posted = await expectStatus<MessageRead>(
+      server,
+      "GET",
+      `/api/v1/messages/${sent.sentMessageId}`,
+      {},
+      200,
+    );
+
+    expect(posted.message.attachments?.map((file) => file.spoiler)).toEqual([true, false, true]);
   });
 });

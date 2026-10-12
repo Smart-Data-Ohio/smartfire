@@ -5,7 +5,7 @@ import { type ApiFailure, NetworkError, ServerError } from "../api/errors.ts";
 import { createThreadMessage } from "../api/thread-endpoints.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import { uuid7 } from "../lib/uuid7.ts";
-import type { PendingAttachment, PendingMessage } from "../store/model.ts";
+import type { AvailableSticker, PendingAttachment, PendingMessage } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
 import { SyncLink } from "./link.ts";
 
@@ -53,6 +53,8 @@ export interface SendOptions {
   readonly attachments?: readonly PendingAttachment[];
   /** Drive files pinned on this message. Left out when there are none. */
   readonly driveFileIds?: readonly string[];
+  /** A catalog sticker to send with (or instead of) the Markdown. */
+  readonly sticker?: AvailableSticker;
   /** An inline reply: the message it answers and whether that author is notified. */
   readonly reply?: { readonly messageId: number; readonly notify: boolean } | null;
   /** The `clientMessageId` to post under, when the caller follows the send; made here otherwise. */
@@ -112,10 +114,15 @@ export class Outbox extends Context.Service<
             ? { ...message, attachmentSignedIds: [...signedIds] }
             : message;
 
-        const body =
+        const withDrive =
           driveFileIds !== undefined && driveFileIds.length > 0
             ? { ...grouped, driveFileIds: [...driveFileIds] }
             : grouped;
+
+        const body =
+          pending.sticker === undefined
+            ? withDrive
+            : { ...withDrive, stickerId: pending.sticker.id };
 
         const attempt =
           pending.threadId === null
@@ -192,10 +199,13 @@ export class Outbox extends Context.Service<
               }
             : withSpoilers;
 
-        const pending: PendingMessage =
+        const withDrive: PendingMessage =
           driveFileIds !== undefined && driveFileIds.length > 0
             ? { ...grouped, driveFileIds }
             : grouped;
+
+        const pending: PendingMessage =
+          options.sticker === undefined ? withDrive : { ...withDrive, sticker: options.sticker };
 
         noteSend(pending);
         mutations.addPending(pending);

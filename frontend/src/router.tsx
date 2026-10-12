@@ -19,6 +19,7 @@ import { IntegrationsSection as AdminIntegrationsSection } from "./features/admi
 import { InvitesSection } from "./features/admin/invites-section.tsx";
 import { PeopleSection } from "./features/admin/people-section.tsx";
 import { SoundsSection } from "./features/admin/sounds-section.tsx";
+import { StickersSection } from "./features/admin/stickers-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
@@ -506,6 +507,7 @@ const adminSections = [
   createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "sounds", component: SoundsSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "stickers", component: StickersSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "audit-log", component: AuditLogSection }),
   createRoute({

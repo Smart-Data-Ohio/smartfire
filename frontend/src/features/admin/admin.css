@@ -220,6 +220,26 @@
     gap: var(--space-1);
   }
 
+  .admin-sticker-image {
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    object-fit: contain;
+    background: var(--bg-hover);
+  }
+
+  .admin-sticker-name,
+  .admin-sticker-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-sticker-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-1);
+  }
+
   .admin-code {
     font-family: var(--font-mono);
     font-size: var(--text-meta);
@@ -676,7 +696,8 @@
     }
 
     /* A thumb's targets: the row's buttons and the volume slider at full touch size. */
-    .admin-sound-actions .button {
+    .admin-sound-actions .button,
+    .admin-sticker-actions .button {
       --button-height: var(--touch-target);
 
       min-width: var(--touch-target);

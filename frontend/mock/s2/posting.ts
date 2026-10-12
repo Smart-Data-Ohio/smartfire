@@ -57,7 +57,10 @@ export function groupedFiles(
     throw validation("attachmentSignedIds", "includes a duplicate file");
   }
 
-  return withSpoilers(body, ids.map(attach));
+  return withSpoilers(
+    body,
+    ids.map((signedId) => attach(signedId)),
+  );
 }
 
 /** The `clientMessageId`, checked first so a retry is answered before anything else. */

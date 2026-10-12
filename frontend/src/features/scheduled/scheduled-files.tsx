@@ -9,8 +9,8 @@ export function ScheduledFiles({
   onToggleSpoiler,
 }: {
   readonly files: readonly ScheduledAttachment[];
-  readonly onRemove?: (signedId: string) => void;
-  readonly onToggleSpoiler?: (signedId: string) => void;
+  readonly onRemove?: ((signedId: string) => void) | undefined;
+  readonly onToggleSpoiler?: ((signedId: string) => void) | undefined;
 }) {
   if (files.length === 0) return null;
 

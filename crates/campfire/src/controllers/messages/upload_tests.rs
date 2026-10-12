@@ -38,7 +38,8 @@ async fn signed_root_and_thread_attachments_match_rails_response_and_blob_rows()
         assert_eq!(response.header("cache-control"),row["cache_control"].as_str(),"{name}");
         assert_eq!(response.content_type(),row["content_type"].as_str(),"{name}");
         assert_eq!(response.location(),row["location"].as_str(),"{name}");
-        if response.text()!=row["body"].as_str().unwrap(){rails_mismatch(&response.text(),row["body"].as_str().unwrap(),name);}
+        let actual = rails_message_body(&response.text(), row["body"].as_str().unwrap());
+        if actual!=row["body"].as_str().unwrap(){rails_mismatch(&actual,row["body"].as_str().unwrap(),name);}
     }
         let client=row["input"]["message"]["client_message_id"].as_str().unwrap().to_string();
         let state=app.db().read(move |conn| {

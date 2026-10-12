@@ -89,6 +89,49 @@ pub async fn sign_in_for_tests(app: &crate::app::App, user_id: i64) -> String {
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+/// Rails omitted single-file payload details. Only a public attachment's additive field is
+/// allowed here; spoiler and grouped payloads have their own API tests. Other bytes stay exact.
+pub fn rails_message_body(actual: &str, expected: &str) -> String {
+    use serde_json::Value;
+    let (Ok(mut actual_json), Ok(expected_json)) = (
+        serde_json::from_str::<Value>(actual),
+        serde_json::from_str::<Value>(expected),
+    ) else {
+        return actual.to_owned();
+    };
+    if expected_json.get("attachments").is_some() {
+        return actual.to_owned();
+    }
+    let Some(payload) = actual_json.as_object_mut() else {
+        return actual.to_owned();
+    };
+    let public_single = payload.get("attachments").and_then(Value::as_array).is_some_and(|files| {
+        files.len() == 1 && files[0].get("spoiler") == Some(&Value::Bool(false))
+    });
+    if !public_single {
+        return actual.to_owned();
+    }
+    payload.shift_remove("attachments");
+    serde_json::to_string(&actual_json).unwrap()
+}
+
+#[test]
+fn post_rails_attachment_payload_allows_only_one_public_file() {
+    let legacy = r#"{"id":1}"#;
+    let public = r#"{"id":1,"attachments":[{"spoiler":false}]}"#;
+    assert_eq!(rails_message_body(public, legacy), legacy);
+    assert_eq!(rails_message_body(public, public), public);
+    for payload in [
+        r#"{"id":1,"attachments":[{"spoiler":true}]}"#,
+        r#"{"id":1,"attachments":[{"spoiler":false},{"spoiler":false}]}"#,
+        r#"{"id":1,"attachments":[{}]}"#,
+        r#"{"id":1,"attachments":[]}"#,
+        "legacy html",
+    ] {
+        assert_eq!(rails_message_body(payload, legacy), payload);
+    }
+}
+
 /// Failure artifacts are output, never fixture inputs. Create their parent and a private
 /// directory even when neither TMPDIR nor any previous target directory exists.
 pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {

@@ -3095,6 +3095,42 @@ describe("outbox", () => {
     ),
   );
 
+  it.effect("posts a sticker by id and shows it on the pending row meanwhile", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        const sticker = {
+          kind: "available" as const,
+          id: 2,
+          name: "Dance",
+          imageUrl: "/stickers/2",
+          stillUrl: "/stickers/2?still=1",
+          animated: true,
+        };
+
+        yield* serve([]);
+        yield* api.route("POST /rooms/12/messages", () =>
+          Effect.fail(new Validation({ message: "Sticker must exist", fields: {} })),
+        );
+        yield* startEngine;
+        yield* session.openRoom(12, null);
+
+        const id = yield* session.send(12, "", { sticker });
+
+        expect(store.getState().pending[id]?.sticker).toEqual(sticker);
+
+        yield* settle;
+
+        const posts = (yield* api.requests).filter((request) => request.method === "POST");
+
+        expect(posts[0]?.body).toMatchObject({ markdownSource: "", stickerId: 2 });
+        // A failed sticker send keeps its sticker for Retry.
+        expect(store.getState().pending[id]).toMatchObject({ state: "failed", sticker });
+      }),
+    ),
+  );
+
   it.effect("resends after a server error, with backoff", () =>
     withSync(
       Effect.gen(function* () {
