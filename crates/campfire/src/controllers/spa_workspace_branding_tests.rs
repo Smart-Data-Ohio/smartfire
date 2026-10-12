@@ -15,6 +15,9 @@ pub(super) static BRANDING_TESTS: tokio::sync::Mutex<()> = tokio::sync::Mutex::c
 #[path = "spa_workspace_branding_analysis_tests.rs"]
 mod analysis_tests;
 
+#[path = "spa_invite_splash_tests.rs"]
+mod invite_splash_tests;
+
 /// Two 1x1 frames, black then white, looping forever.
 pub(super) fn animated_gif() -> Vec<u8> {
     gif_with_canvas(1, 1, 2)

@@ -13,9 +13,11 @@ import type { CustomStyles } from "../../src/gen/CustomStyles.ts";
 import type { DirectUpload } from "../../src/gen/DirectUpload.ts";
 import type { IconList } from "../../src/gen/IconList.ts";
 import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
+import type { JoinPage } from "../../src/gen/JoinPage.ts";
 import type { MessageReactions } from "../../src/gen/MessageReactions.ts";
 import type { PeoplePage } from "../../src/gen/PeoplePage.ts";
 import type { PersonChange } from "../../src/gen/PersonChange.ts";
+import type { PublicPage } from "../../src/gen/PublicPage.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceIconList } from "../../src/gen/WorkspaceIconList.ts";
 import { field, type Json } from "../json.ts";
@@ -207,4 +209,38 @@ describe("the mock's admin pages", () => {
     expect(list).toMatchObject({ animatedLimit: 0, animatedUsage: 0 });
     expect(list.icons.find((icon) => icon.name === "still")?.animated).toBe(false);
   });
+});
+
+it("keeps invite splash uploads and public join/About branding in parity", async () => {
+  const { server } = harness();
+  const path = "/api/v1/admin/workspace/invite_splash";
+  const initial = await get<Workspace>(server, "/api/v1/admin/workspace");
+  expect(initial.inviteSplashUrl).toBeNull();
+  const signedId = await uploaded(server, "splash.gif", "image/gif", animatedIconGif());
+  const attached = await expectStatus<Workspace>(server, "PUT", path, { signedId }, 200);
+  expect(attached.inviteSplashUrl).toMatch(/\/representations\//);
+  const about = await get<PublicPage>(server, "/api/v1/public_pages/about");
+  expect(about.workspace?.inviteSplashUrl).toBe(attached.inviteSplashUrl);
+  const join = await get<JoinPage>(server, "/api/v1/join/mock-join-code");
+  expect(join.workspace.inviteSplashUrl).toBe(attached.inviteSplashUrl);
+  const replacement = await uploaded(server, "next.gif", "image/gif", animatedIconGif());
+
+  const replaced = await expectStatus<Workspace>(
+    server,
+    "PUT",
+    path,
+    { signedId: replacement },
+    200,
+  );
+
+  expect(replaced.inviteSplashUrl).not.toBe(attached.inviteSplashUrl);
+  await expectStatus(server, "PUT", path, { signedId: "forged" }, 422);
+  expect((await get<Workspace>(server, "/api/v1/admin/workspace")).inviteSplashUrl).toBe(
+    replaced.inviteSplashUrl,
+  );
+  const removed = await expectStatus<Workspace>(server, "DELETE", path, null, 200);
+  expect(removed.inviteSplashUrl).toBeNull();
+  expect(
+    (await get<PublicPage>(server, "/api/v1/public_pages/about")).workspace?.inviteSplashUrl,
+  ).toBeNull();
 });

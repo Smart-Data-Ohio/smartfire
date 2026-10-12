@@ -10,6 +10,10 @@ export type Workspace = { afkPolicy: AfkPolicy, name: string,
  */
 logoUrl: string, logoStillUrl: string | null, bannerUrl: string | null, bannerStillUrl: string | null,
 /**
+ * Decorative join/About background, a still image, or null when unset.
+ */
+inviteSplashUrl: string | null,
+/**
  * An uploaded logo is attached (it can be removed).
  */
 logoAttached: boolean,

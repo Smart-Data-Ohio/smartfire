@@ -58,6 +58,10 @@ pub fn routes() -> Router<Kit> {
             put(unparsed_action(update_banner)).delete(action(remove_banner)),
         )
         .route(
+            "/api/v1/admin/workspace/invite_splash",
+            put(unparsed_action(update_invite_splash)).delete(action(remove_invite_splash)),
+        )
+        .route(
             "/api/v1/admin/workspace/join_code",
             post(action(reset_join_code)),
         )
@@ -125,6 +129,8 @@ endpoint!(
     /// `DELETE /api/v1/admin/workspace/banner`
     remove_banner => detach_banner
 );
+endpoint!(update_invite_splash => attach_invite_splash);
+endpoint!(remove_invite_splash => detach_invite_splash);
 endpoint!(
     /// `POST /api/v1/admin/workspace/join_code`
     reset_join_code => new_join_code
@@ -270,6 +276,7 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
         logo_still_url: branding.logo_still_url,
         banner_url: branding.banner_url,
         banner_still_url: branding.banner_still_url,
+        invite_splash_url: presenters::workspace_branding::invite_splash_url(c.app(), account.id).await?,
         logo_attached,
         join_url: c.url_for(&campfire_routes::join(&account.join_code)),
         can_administer,
@@ -374,8 +381,78 @@ async fn attach_banner(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateBanner = body(c).await?;
     let prepared = branding_image(c, &update.signed_id, Kind::Banner).await?;
-    let banner = Assignment::Existing(prepared.blob.clone());
-    write_workspace(c, None, None, Assignment::Unchanged, banner, Some(prepared)).await?;
+    write_workspace_image(c, "banner", Assignment::Existing(prepared.blob.clone()), Some(prepared)).await?;
+    reply_workspace(c).await
+}
+
+async fn attach_invite_splash(c: &mut Ctx) -> Result {
+    administrator(c).await?;
+    let update: api::UpdateInviteSplash = body(c).await?;
+    let prepared = branding_image(c, &update.signed_id, Kind::Banner).await?;
+    write_workspace_image(
+        c,
+        "invite_splash",
+        Assignment::Existing(prepared.blob.clone()),
+        Some(prepared),
+    )
+    .await?;
+    reply_workspace(c).await
+}
+
+async fn write_workspace_image(
+    c: &mut Ctx,
+    slot: &'static str,
+    image: Assignment,
+    prepared: Option<Prepared>,
+) -> Result<()> {
+    let image = image.stage(c.app()).await?;
+    let audit = audit_context(c)?;
+    let storage = c.app().storage.clone();
+    let secrets = c.app().secrets.clone();
+    c.app()
+        .db
+        .write(move |tx| {
+            if let Some(prepared) = prepared {
+                crate::branding_images::save(
+                    tx,
+                    &storage,
+                    rails_compat::blob_branding::Marker::new(&secrets),
+                    prepared,
+                )?;
+            }
+            let account = Account::first_in(tx)?;
+            let before = attachments::attached_blob(tx.conn(), "Account", account.id, slot)?
+                .map(|blob| blob.id);
+            attachments::assign(tx, Record::account(account.id, &secrets), slot, image)?;
+            let after = attachments::attached_blob(tx.conn(), "Account", account.id, slot)?
+                .map(|blob| blob.id);
+            if before != after {
+                AuditLog::record(
+                    tx,
+                    NewAuditLog {
+                        action: "account.settings.change".into(),
+                        target: Some(Target {
+                            record_type: "Account".into(),
+                            id: account.id,
+                            label: Some(account.name),
+                        }),
+                        changes: Some(json!({slot: {"before": before, "after": after}})),
+                        ..Default::default()
+                    },
+                    &audit,
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .map_err(Error::internal)?;
+    presenters::workspace_branding::publish(c.app()).await;
+    Ok(())
+}
+
+async fn detach_invite_splash(c: &mut Ctx) -> Result {
+    administrator(c).await?;
+    write_workspace_image(c, "invite_splash", Assignment::Delete, None).await?;
     reply_workspace(c).await
 }
 

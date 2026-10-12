@@ -30,7 +30,7 @@ use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKi
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
 use crate::controllers::presenters;
-use campfire_api_types::{FlashMessage, FlashMessageKind, SignInHelpContact, SignInMethods, SignInWorkspace, SignedOut, SignedOutBoot};
+use campfire_api_types::{FlashMessage, FlashMessageKind, SignInHelpContact, SignInMethods, SignedOut, SignedOutBoot};
 use campfire_people::controllers::{auth, sessions, two_factor, users};
 use campfire_spa::{SignedOutRoute, is_public_page, signed_out_route};
 
@@ -160,10 +160,7 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOut
     let (account, first_run_pending, help_contact) = c.app().db.read(|conn| {
         Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?, presenters::accounts::help_contact(conn)?))
     }).await.map_err(Error::internal)?;
-    let logo_url = match &account {
-        Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
-        None => None,
-    };
+    let workspace = presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?;
     // A redirect's notice or alert (a refused Google sign-in), shown by this load only.
     let message = if take_flash {
         let flash = c.flash();
@@ -176,11 +173,7 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOut
     };
     Ok(SignedOutBoot {
         kind: SignedOut::SignedOut,
-        workspace: SignInWorkspace {
-            name: account.as_ref().map(|account| account.name.clone()),
-            logo_url,
-            description: account.map(|account| account.settings().description().to_owned()).unwrap_or_default(),
-        },
+        workspace,
         sign_in_methods: {
             let provider = c.app().google.sign_in();
             let configured = provider.config.configured();

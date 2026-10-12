@@ -546,7 +546,9 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
                 "workspace"
             ]
         );
-        assert_eq!(boot["workspace"].as_object().unwrap().len(), 3);
+        let mut workspace_keys = boot["workspace"].as_object().unwrap().keys().map(String::as_str).collect::<Vec<_>>();
+        workspace_keys.sort();
+        assert_eq!(workspace_keys, ["description", "inviteSplashUrl", "logoUrl", "name"]);
     }
     for path in [
         "/app/",

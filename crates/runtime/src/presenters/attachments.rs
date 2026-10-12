@@ -280,7 +280,7 @@ impl Record {
     }
 
     fn branding_marker(self, name: &str) -> Option<rails_compat::blob_branding::Marker> {
-        self.branding.filter(|_| matches!(name, "logo" | "banner"))
+        self.branding.filter(|_| matches!(name, "logo" | "banner" | "invite_splash"))
     }
 }
 

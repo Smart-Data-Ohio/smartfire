@@ -21,7 +21,8 @@ export const AuthResponse = Schema.Union([
   }),
 ]);
 
-const SignInWorkspace = Schema.Struct({
+export const SignInWorkspace = Schema.Struct({
+  inviteSplashUrl: Schema.NullOr(Schema.String),
   name: Schema.NullOr(Schema.String),
   logoUrl: Schema.NullOr(Schema.String),
   description: Schema.String,
