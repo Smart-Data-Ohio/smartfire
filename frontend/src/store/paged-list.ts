@@ -46,13 +46,15 @@ export type IdOrder = (left: number, right: number) => number;
 
 /**
  * The first page (or a reload) is on its way, in a new generation: a next page still on its way
- * won't land. What's shown stays until the reload lands.
+ * won't land. What's shown stays until the reload lands. The reload answers what made the list
+ * stale so far; a list made stale while it's on its way stays stale once it lands.
  */
 export function pagedLoading(list: PagedList): PagedList {
   return {
     ...list,
     status: list.status === "ready" ? "ready" : "loading",
     error: null,
+    stale: false,
     generation: list.generation + 1,
   };
 }
@@ -87,7 +89,8 @@ export function pagedFailed(list: PagedList, error: string, generation?: number)
 /**
  * A page landed: `replace` makes it the list (a first load or a reload); `more` adds it at the
  * end, skipping ids already held (one may have moved in live meanwhile). A page from an older
- * `generation` changes nothing.
+ * `generation` changes nothing. Staleness is cleared when a reload starts (`pagedLoading`), so a
+ * page sent before the list went stale leaves it stale.
  */
 export function pagedLanded(
   list: PagedList,
@@ -108,7 +111,7 @@ export function pagedLanded(
     status: "ready",
     loadingMore: false,
     error: null,
-    stale: mode === "replace" ? false : list.stale,
+    stale: list.stale,
     generation: list.generation,
   };
 }

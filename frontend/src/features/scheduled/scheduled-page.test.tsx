@@ -9,6 +9,10 @@ import {
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import type { SyncEvent } from "../../gen/SyncEvent.ts";
+import type { Thread } from "../../gen/Thread.ts";
+import type { ScheduledListKey } from "../../store/scheduled.ts";
+import { scheduledListOf } from "../../store/scheduled.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -91,6 +95,20 @@ afterEach(() => {
   store.setState(initialState, true);
 });
 
+function renderPage() {
+  const root = createRootRoute({ component: Outlet });
+  const home = createRoute({ getParentRoute: () => root, path: "/", component: ScheduledPage });
+
+  const router = createRouter({
+    routeTree: root.addChildren([home]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(<RouterProvider router={router} />);
+
+  return router;
+}
+
 it("shows a scheduled file on the page and sends that draft now", async () => {
   vi.spyOn(actions.scheduled, "load").mockResolvedValue(undefined);
   const send = vi.spyOn(actions.scheduled, "sendNow").mockResolvedValue("sent");
@@ -118,3 +136,93 @@ it("shows a scheduled file on the page and sends that draft now", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Send now" }));
   await waitFor(() => expect(send).toHaveBeenCalledWith(4));
 });
+
+const secret: Thread = {
+  id: 88,
+  roomId: 12,
+  parentMessageId: 70,
+  creatorId: 2,
+  name: "Just us",
+  status: "active",
+  visibility: "private",
+  replyCount: 1,
+  lastActivityAt: "2026-10-12T10:00:00.000Z",
+  autoArchiveAfterMinutes: 4320,
+  createdAt: "2026-10-12T09:00:00.000Z",
+  work: null,
+};
+
+const reply = {
+  ...item,
+  id: 5,
+  threadId: secret.id,
+  replyToMessageId: 71,
+  replyTarget: {
+    messageId: 71,
+    roomId: 12,
+    threadId: secret.id,
+    creatorId: 2,
+    authorName: "Maya",
+    roomLabel: "general",
+    excerpt: "Only us",
+    createdAt: "2026-10-12T09:30:00.000Z",
+  },
+  markdownSource: "My reply",
+  excerpt: "My reply",
+  attachments: [],
+} satisfies ScheduledMessage;
+
+const removed: SyncEvent = {
+  seq: 1,
+  topic: "user",
+  type: "thread.removed",
+  data: { threadId: secret.id, roomId: 12 },
+};
+
+const granted: SyncEvent = { seq: 2, topic: "user", type: "thread.updated", data: secret };
+
+it.each([
+  ["separate batches", [[removed], [granted]]],
+  ["one batch", [[removed, granted]]],
+] as const)(
+  "sends a reply now again once the viewer is added back (%s)",
+  async (_delivery, batches) => {
+    // The server's copy: sendable, quoting the reply, as it lists it again once access returns.
+    const load = vi
+      .spyOn(actions.scheduled, "load")
+      .mockImplementation(async (key: ScheduledListKey) => {
+        mutations.setScheduledListLoading(key, false);
+
+        const { generation } = scheduledListOf(store.getState(), key);
+
+        const page = {
+          scheduledMessages: key === "pending" ? [reply] : [],
+          conversations: [],
+          nextCursor: null,
+        };
+
+        mutations.landScheduledPage(key, page, "replace", generation);
+      });
+
+    const router = renderPage();
+    const sendNow = () => screen.getByRole("button", { name: "Send now" }).hasAttribute("disabled");
+
+    await act(() => router.load());
+    await waitFor(() => expect(sendNow()).toBe(false));
+    load.mockClear();
+
+    for (const [index, batch] of batches.entries()) {
+      act(() => mutations.applyEvents(batch, Date.now()));
+
+      // Between the removal and the re-add, the reply can't be sent and quotes nothing.
+      if (index < batches.length - 1) {
+        expect(sendNow()).toBe(true);
+        expect(store.getState().scheduled.items[5]?.replyTarget).toBeNull();
+      }
+    }
+
+    await waitFor(() => expect(load).toHaveBeenCalledWith("pending"));
+    await waitFor(() => expect(sendNow()).toBe(false));
+    expect(store.getState().scheduled.items[5]?.replyTarget?.excerpt).toBe("Only us");
+  },
+);

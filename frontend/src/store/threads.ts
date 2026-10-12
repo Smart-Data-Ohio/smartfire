@@ -2,15 +2,15 @@
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadIndicatorChanged } from "../gen/ThreadIndicatorChanged.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
-import { forgetActivityThread } from "./activity.ts";
+import { forgetActivityThread, markActivityStale } from "./activity.ts";
 import { boardThreadChanged, mergeSteps, removeBoardPost } from "./boards.ts";
 import { reconcileMessage } from "./cards.ts";
 import { conversationKey } from "./conversations.ts";
 import { setSavedMark } from "./message-extras.ts";
 import type { Thread, ThreadFilter, ThreadMembership } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
-import { dropSavedForMessage } from "./saved-list.ts";
-import { forgetScheduledThread } from "./scheduled.ts";
+import { dropSavedForMessage, markSavedStale } from "./saved-list.ts";
+import { forgetScheduledThread, markScheduledStale } from "./scheduled.ts";
 import type { State } from "./state.ts";
 
 function matches(filter: ThreadFilter, thread: Thread): boolean {
@@ -240,7 +240,9 @@ function dropThread(state: State, threadId: number, roomId: number, gone: string
  * A private thread's `thread.updated` on the viewer's own `user` topic: the server sends those only
  * to people who can read it at the time, so after a removal it means the viewer was added back. The
  * tombstone lifts, so the update lands in the lists, and a pane that said access was lost shows as
- * loading while the engine loads it again.
+ * loading while the engine loads it again. The inbox lists the loss redacted (scheduled replies'
+ * quotes and sendability, saved replies, inbox items) reload when next shown, as only the server
+ * can give those back.
  */
 export function regainThread(state: State, thread: Thread): State {
   if (thread.visibility !== "private" || state.removedThreads[thread.id] === undefined) {
@@ -249,9 +251,10 @@ export function regainThread(state: State, thread: Thread): State {
 
   const { [thread.id]: _lifted, ...removedThreads } = state.removedThreads;
   const pane = state.threadPanes[thread.id];
+  const lists = markScheduledStale(markSavedStale(markActivityStale(state)));
 
   return {
-    ...state,
+    ...lists,
     removedThreads,
     threadPanes:
       pane === undefined || pane.error !== THREAD_ACCESS_LOST

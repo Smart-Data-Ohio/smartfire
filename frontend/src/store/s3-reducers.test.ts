@@ -341,7 +341,13 @@ describe("a keyset-paged list", () => {
     const more = pagedLanded(stale, [4, 6], null, "more");
 
     expect(more).toMatchObject({ ids: [2, 4, 6], nextCursor: null, stale: true });
-    expect(pagedLanded(stale, [2], null, "replace").stale).toBe(false);
+
+    const reloading = pagedLoading(stale);
+
+    expect(reloading.stale).toBe(false);
+    expect(pagedLanded(reloading, [2], null, "replace").stale).toBe(false);
+    // Made stale again while the reload was on its way: its page doesn't answer that.
+    expect(pagedLanded(pagedStale(reloading), [2], null, "replace").stale).toBe(true);
     expect(pagedStale(emptyPagedList)).toBe(emptyPagedList);
   });
 
@@ -825,11 +831,13 @@ describe("the activity inbox", () => {
   });
 
   it("marks only loaded lists stale, and keeps the rows shown while one reloads", () => {
-    const loading = setActivityListLoading(markActivityStale(inbox()), "all", "unread", false);
+    const stale = markActivityStale(inbox());
+    const loading = setActivityListLoading(stale, "all", "unread", false);
 
+    expect(activityListOf(stale, "all", "unread").stale).toBe(true);
     expect(activityListOf(loading, "all", "unread")).toMatchObject({
       status: "ready",
-      stale: true,
+      stale: false,
       ids: [5, 4, 3],
     });
     expect(activityListOf(loading, "huddles", "unread")).toBe(emptyPagedList);
@@ -1133,5 +1141,57 @@ describe("a private thread the viewer loses while a read is on its way", () => {
     expect(late.scheduled.items[1]?.sendable).toBe(false);
     expect(late.scheduled.items[1]?.markdownSource).toBe("Later 1");
     expect(applyScheduled(lost, reply).scheduled.items[1]?.replyTarget).toBeNull();
+  });
+
+  it("reloads the inbox lists it redacted once the viewer is added back, in one batch or two", () => {
+    const granted: DistributiveOmit<SyncEvent, "seq"> = {
+      topic: "user",
+      type: "thread.updated",
+      data: {
+        id: SECRET,
+        roomId: ROOM,
+        parentMessageId: 1,
+        creatorId: 2,
+        name: "Layoffs",
+        status: "active",
+        visibility: "private",
+        replyCount: 1,
+        lastActivityAt: at(5),
+        autoArchiveAfterMinutes: 4320,
+        createdAt: at(1),
+        work: null,
+      },
+    };
+
+    const held = landScheduledPage(
+      saved(),
+      "pending",
+      scheduledPage([scheduled(1, 10)]),
+      "replace",
+    );
+
+    const loaded = landActivityPage(
+      held,
+      "all",
+      "unread",
+      activityPage([item(5, 50)], 1),
+      "replace",
+    );
+
+    const removal: DistributiveOmit<SyncEvent, "seq"> = {
+      topic: "user",
+      type: "thread.removed",
+      data: { threadId: SECRET, roomId: ROOM },
+    };
+
+    for (const back of [
+      events(events(loaded, removal), granted),
+      events(loaded, removal, granted),
+    ]) {
+      expect(back.removedThreads[SECRET]).toBeUndefined();
+      expect(scheduledListOf(back, "pending").stale).toBe(true);
+      expect(savedListOf(back, "all").stale).toBe(true);
+      expect(activityListOf(back, "all", "unread").stale).toBe(true);
+    }
   });
 });
