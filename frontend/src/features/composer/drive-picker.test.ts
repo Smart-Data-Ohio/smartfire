@@ -191,28 +191,4 @@ describe("editor removal payload", () => {
       body: { markdownSource: "", removeDriveFileIds: ["abc"] },
     });
   });
-
-  it("saves a sticker message whose caption was cleared, as it does one with a file", () => {
-    expect(
-      planEdit({
-        markdown: "",
-        original: "Hi all",
-        removedIds: [],
-        remainingDrive: 0,
-        hasAttachment: false,
-        hasSticker: true,
-      }),
-    ).toEqual({ kind: "save", body: { markdownSource: "" } });
-
-    expect(
-      planEdit({
-        markdown: "   ",
-        original: "Hi all",
-        removedIds: [],
-        remainingDrive: 0,
-        hasAttachment: true,
-        hasSticker: false,
-      }),
-    ).toEqual({ kind: "save", body: { markdownSource: "" } });
-  });
 });

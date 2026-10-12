@@ -49,6 +49,19 @@ async function hoverBar(row: Locator): Promise<Locator> {
   return bar;
 }
 
+async function messageAction(row: Locator, name: string, phone: boolean) {
+  if (phone) {
+    await row.getByRole("img", { name: /Sticker:/ }).click({ button: "right" });
+    await row
+      .page()
+      .getByRole("menu", { name: "Message actions" })
+      .getByRole("menuitem", { name: new RegExp(`^${name}`) })
+      .click();
+  } else {
+    await (await hoverBar(row)).getByRole("button", { name, exact: true }).click();
+  }
+}
+
 /** Sends the seeded Wave sticker from the room composer and answers its row. */
 async function sendWave(page: Page): Promise<Locator> {
   const picker = await openPicker(page);
@@ -128,36 +141,25 @@ matrix("an administrator's new sticker is picked, sent and shown", async ({ page
   await expect(timeline(page).last().getByRole("img", { name: "Sticker: Party" })).toHaveCount(0);
 });
 
-test("clearing a sticker's caption keeps the sticker, in search and Saved too", async ({
-  page,
-}) => {
+matrix("clearing a sticker's caption keeps the sticker", async ({ page, phone }) => {
   await openApp(page, `r/${GENERAL}`);
 
   const row = await sendWave(page);
 
   // Give it a caption, then take the caption away again: no deletion is offered,
   // and the sticker stays.
-  await (await hoverBar(row)).getByRole("button", { name: "Edit" }).click();
+  await messageAction(row, "Edit", phone);
   await page.getByRole("textbox", { name: "Edit message" }).fill("hello sticker");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(row).toContainText("hello sticker");
 
-  await (await hoverBar(row)).getByRole("button", { name: "Edit" }).click();
+  await messageAction(row, "Edit", phone);
   await page.getByRole("textbox", { name: "Edit message" }).fill("");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("alertdialog", { name: "Delete message?" })).toHaveCount(0);
   await expect(row.getByRole("img", { name: "Sticker: Wave" })).toBeVisible();
   await expect(row).not.toContainText("hello sticker");
-
-  await (await hoverBar(row)).getByRole("button", { name: "Save for later" }).click();
-
-  await page.goto("/app/search?q=Wave");
-  await expect(
-    page.locator("[data-search-hit]").getByRole("img", { name: "Sticker: Wave" }).first(),
-  ).toBeVisible();
-
-  await page.goto("/app/saved");
-  await expect(page.getByRole("img", { name: "Sticker: Wave" })).toBeVisible();
+  if (phone) await expectNoHorizontalOverflow(page);
 });
 
 /** The new-thread pane for the seeded chart message, its composer ready. */
@@ -182,7 +184,7 @@ async function pickInPane(pane: Locator, name: string): Promise<void> {
   await expect(picker).toBeHidden();
 }
 
-test("a thread starts with a sticker alone", async ({ page }) => {
+matrix("a thread starts with a sticker alone", async ({ page, phone }) => {
   const pane = await openNewThread(page);
 
   await pickInPane(pane, "Wave");
@@ -195,9 +197,10 @@ test("a thread starts with a sticker alone", async ({ page }) => {
   await pane.getByRole("textbox", { name: "Reply…" }).press("Enter");
   await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}/t/\\d+$`));
   await expect(pane.getByRole("img", { name: "Sticker: Wave" })).toBeVisible();
+  if (phone) await expectNoHorizontalOverflow(page);
 });
 
-test("a thread starts with a sticker under its text", async ({ page }) => {
+matrix("a thread starts with a sticker under its text", async ({ page, phone }) => {
   const pane = await openNewThread(page);
   const composer = pane.getByRole("textbox", { name: "Reply…" });
 
@@ -212,10 +215,77 @@ test("a thread starts with a sticker under its text", async ({ page }) => {
     "src",
     "/stickers/2?still=1",
   );
+  if (phone) await expectNoHorizontalOverflow(page);
 });
+
+for (const caption of ["", "A sticker caption"]) {
+  matrix(
+    `search and Saved show a ${caption === "" ? "sticker-only" : "captioned sticker"} message`,
+    async ({ page, phone }) => {
+      await openApp(page, `r/${GENERAL}`);
+      const picker = await openPicker(page);
+      await picker.getByRole("option", { name: "Dance" }).click();
+      const row = timeline(page).last();
+      await expect(row.getByRole("img", { name: "Sticker: Dance" })).toBeVisible();
+      if (caption !== "") {
+        await messageAction(row, "Edit", phone);
+        await page.getByRole("textbox", { name: "Edit message" }).fill(caption);
+        await page.getByRole("button", { name: "Save", exact: true }).click();
+        await expect(row).toContainText(caption);
+      }
+      await messageAction(row, "Save for later", phone);
+      for (const destination of ["/app/search?q=Dance", "/app/saved"]) {
+        await page.goto(destination);
+        const image = page.getByRole("img", { name: "Sticker: Dance" });
+        await expect(image).toBeVisible();
+        await expect(image).toHaveAttribute("src", "/stickers/2?still=1");
+        const box = await image.boundingBox();
+        expect(box?.width).toBe(160);
+        expect(box?.height).toBe(160);
+        if (caption !== "") await expect(page.getByText(caption, { exact: true })).toBeVisible();
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        await expect(image).toHaveAttribute("src", "/stickers/2");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        if (phone) await expectNoHorizontalOverflow(page);
+      }
+      await page.goto("/app/admin/stickers");
+      await page.getByRole("button", { name: "Delete Dance" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+      await expect(page.getByRole("button", { name: "Delete Dance" })).toHaveCount(0);
+      for (const destination of ["/app/search?q=Dance", "/app/saved"]) {
+        await page.goto(destination);
+        await expect(page.getByText("Dance · Sticker deleted")).toBeVisible();
+        await expect(page.getByRole("img", { name: "Sticker: Dance" })).toHaveCount(0);
+        if (phone) await expectNoHorizontalOverflow(page);
+      }
+    },
+  );
+}
 
 test.describe("on a touch phone", () => {
   test.use(PHONE_TOUCH);
+
+  test("a new thread picker and its held sticker work by touch", async ({ page }) => {
+    const pane = await openNewThread(page);
+    await pane.locator(".composer").getByRole("button", { name: "Sticker" }).tap();
+    const picker = page.getByRole("dialog", { name: "Send a sticker" });
+    await expect(picker).toHaveClass(/action-sheet/);
+    await expectTouchTargets(page, ".popover.action-sheet");
+    await picker.getByRole("option", { name: "Dance" }).tap();
+    await expect(picker).toBeHidden();
+    const remove = pane.getByRole("button", { name: "Remove Dance sticker" });
+    const box = await remove.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    await expectNoHorizontalOverflow(page);
+    await remove.tap();
+    await expect(pane.getByRole("button", { name: "Send message" })).toBeDisabled();
+    await pickInPane(pane, "Wave");
+    await pane.getByRole("button", { name: "Send message" }).tap();
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}/t/\\d+$`));
+    await expect(pane.getByRole("img", { name: "Sticker: Wave" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
 
   test("the picker is a sheet of finger-sized stickers, and a tap sends one", async ({ page }) => {
     await openApp(page, `r/${GENERAL}`);
