@@ -238,7 +238,8 @@ export const SHOTS = process.env.SMARTFIRE_SHOTS === "1";
  */
 export const THEMES: readonly Theme[] = SHOTS ? ["light", "dark"] : ["light"];
 
-const SHOTS_DIR = process.env.SMARTFIRE_SHOTS_DIR ?? join(homedir(), ".cache/frontend-s2/shots");
+export const SHOTS_DIR =
+  process.env.SMARTFIRE_SHOTS_DIR ?? join(homedir(), ".cache/frontend-s2/shots");
 
 /**
  * Saves `<name>-<theme>-<desktop|tablet|phone>.png` when `SMARTFIRE_SHOTS=1`; otherwise a no-op, so the
