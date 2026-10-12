@@ -179,6 +179,12 @@ export interface CallTransport {
    * starts a new bitrate baseline (a reopened panel shouldn't average over the closed time).
    */
   sampleStats(fresh: boolean): Promise<ConnectionStats | null>;
+  /**
+   * Plays a short clip (a soundboard sound) on this browser only, on the call's speaker, at
+   * `volume` (0–1). Nothing is published and the microphone is untouched. Settles when the clip
+   * ends, fails to start, or the call is left.
+   */
+  playClip(url: string, volume: number): Promise<void>;
 }
 
 /** Builds the transport for a set of credentials (`mock:` URLs get the fake). */

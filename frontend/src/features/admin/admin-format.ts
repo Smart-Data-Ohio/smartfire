@@ -45,6 +45,14 @@ export const ADMIN_SECTIONS = [
     group: "content",
   },
   {
+    key: "sounds",
+    label: "Soundboard",
+    icon: "music",
+    path: "/admin/sounds",
+    admin: true,
+    group: "content",
+  },
+  {
     key: "bots",
     label: "Chat bots",
     icon: "bot",
@@ -153,6 +161,55 @@ export function iconFileError(message: string | undefined): string | undefined {
   return limit === undefined
     ? message
     : `The workspace already has ${limit} animated icons, its limit. Delete one, or upload a still SVG or PNG.`;
+}
+
+/** The audio files a soundboard sound may be, as the server accepts them. */
+export const SOUND_FILE_TYPES = "audio/mpeg,audio/ogg,audio/wav,audio/x-wav,audio/webm";
+
+/** How full the soundboard is: its sounds of the workspace's limit. */
+export function soundCapacity(count: number, capacity: number): string {
+  const full = count >= capacity ? " The soundboard is full: delete a sound to add another." : "";
+
+  return `Sounds: ${count} of ${capacity} used.${full}`;
+}
+
+/** What each sound field is called in front of the server's message about it. */
+const SOUND_FIELD_LABELS = new Map([
+  ["name", "Name"],
+  ["emoji", "Emoji"],
+  ["volume", "Volume"],
+  ["audio", "Audio file"],
+]);
+
+const SOUND_CAPACITY_REACHED = /^soundboard capacity reached \(limit: (\d+) sounds\)$/;
+
+/**
+ * A sound field's error as it shows: the server's `must be…` after the field's name, and its
+ * capacity message said plainly.
+ */
+export function soundFieldError(field: string, message: string | undefined): string | undefined {
+  if (message === undefined) {
+    return undefined;
+  }
+
+  const limit = SOUND_CAPACITY_REACHED.exec(message)?.[1];
+
+  if (limit !== undefined) {
+    return `The soundboard already has ${limit} sounds, its limit. Delete one to add another.`;
+  }
+
+  if (field === "audio" && message === "isn't an uploaded file") {
+    return "Choose an audio file to upload.";
+  }
+
+  const label = SOUND_FIELD_LABELS.get(field);
+
+  return label === undefined ? message : `${label} ${message}.`;
+}
+
+/** A sound's default volume (0–1) as the list shows it. */
+export function soundVolumeLabel(volume: number): string {
+  return `${Math.round(Math.max(0, Math.min(1, volume)) * 100)}%`;
 }
 
 /** No filters set. */

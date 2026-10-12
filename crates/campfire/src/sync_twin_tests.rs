@@ -40,14 +40,15 @@ const PRIMITIVES: &[&str] = &[
 ];
 
 /// Points the sources don't declare in a way this test reads: the free function every read goes
-/// through, the channel whose frames the clients send, and the API's saved items (the classic
-/// app has no broadcast for them).
+/// through, the channel whose frames the clients send, and the API's saved items and soundboard
+/// plays (the classic app has no broadcast for them).
 const FIXED: &[&str] = &[
     "broadcasts::read_room",
     "messages::rendered::broadcast_tombstones",
     "link_embeds::broadcast_message",
     "TypingNotificationsChannel",
     "campfire_api::saved_items",
+    "campfire_api::huddles::play_sound",
     "workspace_branding::publish",
     "sync::workspace_styles_updated",
     "sync::settings_updated",

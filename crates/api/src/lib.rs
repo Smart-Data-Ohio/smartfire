@@ -474,6 +474,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/huddle/moderation",
             axum::routing::post(unparsed_action(huddles::moderate)),
         )
+        .route(
+            "/api/v1/rooms/{room_id}/huddle/soundboard",
+            axum::routing::post(unparsed_action(huddles::play_sound)),
+        )
         .route("/api/v1/rooms/{room_id}/stage", get(action(stage::show)))
         .route(
             "/api/v1/rooms/{room_id}/stage/members/{membership_id}",

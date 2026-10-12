@@ -49,3 +49,29 @@ pub struct UpdateSoundboardSound {
     pub emoji: Option<String>,
     pub volume: f64,
 }
+
+/// `POST /api/v1/rooms/:room_id/huddle/soundboard` plays a sound to everyone in the room's call
+/// (`huddle.soundboard`) and answers 204. `identity` is the calling tab's, from its
+/// [`HuddleCredentials`](crate::HuddleCredentials); that tab must be in the call and able to
+/// speak. One play per identity per second, else 429.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PlaySoundboardSound {
+    pub identity: String,
+    pub sound_id: i64,
+}
+
+/// The `huddle.soundboard` event on the `user` topic of everyone in the room's call: each client
+/// plays the sound locally.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct HuddleSoundboardPlayed {
+    pub room_id: i64,
+    pub sound_id: i64,
+    /// Who played it, and from which of their tabs.
+    pub user_id: i64,
+    pub identity: String,
+    pub played_at: Timestamp,
+}

@@ -178,6 +178,17 @@ fn moderation_names_the_member_and_the_action() {
 }
 
 #[test]
+fn a_soundboard_play_names_the_tab_and_the_sound() {
+    assert_wire(
+        &PlaySoundboardSound {
+            identity: "campfire-participant-0f3a9c".into(),
+            sound_id: 5,
+        },
+        json!({"identity": "campfire-participant-0f3a9c", "soundId": 5}),
+    );
+}
+
+#[test]
 fn a_stage_lists_every_member_and_the_live_stream() {
     assert_wire(&stage(), stage_json());
     assert_wire(
@@ -383,6 +394,23 @@ fn every_s5_event_has_its_type_and_data() {
                 "roomName": "general",
                 "callerName": "Grace Hopper",
                 "silent": false,
+            }}),
+        ),
+        (
+            "user",
+            SyncPayload::HuddleSoundboard(HuddleSoundboardPlayed {
+                room_id: 12,
+                sound_id: 5,
+                user_id: 7,
+                identity: "campfire-participant-0f3a9c".into(),
+                played_at: "2026-10-11T12:00:00.000Z".into(),
+            }),
+            json!({"type": "huddle.soundboard", "data": {
+                "roomId": 12,
+                "soundId": 5,
+                "userId": 7,
+                "identity": "campfire-participant-0f3a9c",
+                "playedAt": "2026-10-11T12:00:00.000Z",
             }}),
         ),
         (

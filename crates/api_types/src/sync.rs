@@ -6,7 +6,7 @@ use ts_rs::TS;
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
     ApprovalUpdated, BoardAutomationsChanged, CustomStyles, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
-    MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
+    HuddleSoundboardPlayed, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
     RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
     ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
@@ -268,6 +268,10 @@ pub enum SyncPayload {
     /// On the recipient's `user` topic: an incoming call rings, or stops ringing.
     #[serde(rename = "huddle.ring")]
     HuddleRing(HuddleRing),
+    /// On the `user` topic of everyone in the room's call: someone in the call played a
+    /// soundboard sound (see [`HuddleSoundboardPlayed`]). New.
+    #[serde(rename = "huddle.soundboard")]
+    HuddleSoundboard(HuddleSoundboardPlayed),
     /// On `room:<id>` of a stage: its roster or live stream changed. Latest per room in a batch.
     #[serde(rename = "stage.updated")]
     StageUpdated(StageState),

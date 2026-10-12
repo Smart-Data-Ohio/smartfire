@@ -1,8 +1,8 @@
 /**
  * The huddle dock, Discord's "Voice connected" panel: pinned above your own panel at the bottom
  * of the sidebar while in a call (on phones, a bar over the conversation). Status and timer,
- * the room, the microphone (its level glowing round it), deafen, camera, screen share, the call
- * view, settings (devices, noise suppression, connection details) and leave. A failed call keeps
+ * the room, the microphone (its level glowing round it), deafen, camera, screen share, the
+ * soundboard, the call view, settings (devices, noise suppression, connection details) and leave. A failed call keeps
  * the dock up with the reason and Retry until it's closed.
  */
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
@@ -20,6 +20,7 @@ import { useCallViewCovers, useCallViewNavigation } from "./call-view-cover.ts";
 import { DevicePickers, MeterBar, ShareQualityPicker } from "./device-pickers.tsx";
 import { formatConnectionStats } from "./engine/stats.ts";
 import type { ConnectionQuality } from "./engine/transport.ts";
+import { SoundboardButton } from "./soundboard.tsx";
 import "./huddle.css";
 
 const BEAM_MS = 3_000;
@@ -364,6 +365,8 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
                 disabled={!connected || !canPublish || busy.screen || streaming}
                 onClick={() => void callController.toggleScreenShare()}
               />
+              {/* The phone bar holds five controls; its call view carries the soundboard. */}
+              {compact ? null : <SoundboardButton />}
               <IconButton
                 icon={shown ? "minimize-2" : "maximize-2"}
                 label={shown ? "Hide call" : "Show call"}

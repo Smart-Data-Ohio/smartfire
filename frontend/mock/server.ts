@@ -99,6 +99,7 @@ import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts
 import { createWork } from "./s4/work.ts";
 import { WORK_STATUSES } from "./s4/work-model.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createSoundboard } from "./s5/soundboard.ts";
 import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createWorkLinks } from "./s6/work-links.ts";
@@ -1017,7 +1018,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   ledger.seed();
 
   const account = createAccount(ctx, () => csrf);
-  const huddles = createHuddles(ctx, simulate);
+  const soundboard = createSoundboard(ctx, uploads);
+  const huddles = createHuddles(ctx, simulate, soundboard.has);
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
   const fizzy = createFizzy(ctx, threads);
@@ -1035,6 +1037,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createChannelWebhooks(ctx).routes,
     ...events.routes,
     ...huddles.routes,
+    ...soundboard.routes,
     ...cards.routes,
     ...fizzy.routes,
     ...uploads.routes,

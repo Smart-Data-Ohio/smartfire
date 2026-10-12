@@ -1354,6 +1354,20 @@ export class CallController {
     this.#refreshSnapshot();
   }
 
+  /**
+   * Plays a soundboard clip on this tab's call speaker while it is in `roomId`'s call; `null`
+   * (nothing played) otherwise. The clip is local: nothing is published.
+   */
+  playClip(roomId: number, url: string, volume: number): Promise<void> | null {
+    const transport = this.#transport;
+
+    if (transport === null || this.#state.roomId !== roomId || !livePhase(this.#state.phase)) {
+      return null;
+    }
+
+    return transport.playClip(url, volume);
+  }
+
   /** Someone's volume for this browser only, 0–200, remembered per person. */
   setParticipantVolume(userId: number, volume: number): void {
     const value = Math.max(0, Math.min(200, Math.round(volume)));

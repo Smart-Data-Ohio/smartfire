@@ -3,8 +3,8 @@
 //! invitation frames.
 use campfire_api_types::{
     HuddleNotice, HuddleParticipant, HuddlePresence, HuddleRing, HuddleRingEvent, HuddleRingState,
-    HuddleRoleChanged, StageMember, StageRole, StageState, StageStream, StageStreamStopped,
-    StreamQuality, SyncPayload,
+    HuddleRoleChanged, HuddleSoundboardPlayed, StageMember, StageRole, StageState, StageStream,
+    StageStreamStopped, StreamQuality, SyncPayload,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
 use campfire_db::models::huddle_grant::IN_CALL_WINDOW;
@@ -201,6 +201,22 @@ pub fn publish_role(server: &Cable, member: &Membership) {
         server_muted: member.server_muted_at.is_some(),
     });
     send(server, Audience::User(member.user_id), &payload, None);
+}
+
+/// `huddle.soundboard` to each person in the call (`presence`'s participants), the player
+/// included. No classic twin: `POST /api/v1/rooms/:room_id/huddle/soundboard` publishes it.
+pub fn publish_soundboard(
+    server: &Cable,
+    presence: &HuddlePresence,
+    played: HuddleSoundboardPlayed,
+) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let payload = SyncPayload::HuddleSoundboard(played);
+    for participant in &presence.participants {
+        send(server, Audience::User(participant.user_id), &payload, None);
+    }
 }
 
 /// `stage.stream.stopped` to the presenter: the twin of `Stream#broadcast_stream_stopped_event`.

@@ -15,6 +15,7 @@ import { callController } from "./call-controller.ts";
 import { callStore, useCall } from "./call-store.ts";
 import { noticeStore } from "./notices.ts";
 import { startPresencePolling } from "./presence.ts";
+import { listenForSoundboard } from "./soundboard-player.ts";
 
 function noticeBanners() {
   return noticeStore.getState().banners;
@@ -124,6 +125,8 @@ export function HuddleRoot() {
       }
     });
 
+    const stopSoundboard = listenForSoundboard();
+
     const stopSignals = onHuddleSignal((signal) => {
       if (signal.type === "huddle.role") {
         void callController.roleChanged(
@@ -147,6 +150,7 @@ export function HuddleRoot() {
       stopBanners();
       stopCall();
       stopSignals();
+      stopSoundboard();
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("blur", blurred);

@@ -4,6 +4,7 @@ import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { SoundboardPreferences } from "../huddle/soundboard.tsx";
 import { fieldError, VOICE_CHOICES } from "./settings-format.ts";
 import {
   FieldError,
@@ -91,6 +92,12 @@ export function CallsSection() {
             </Button>
           </div>
         </form>
+      </SettingsGroup>
+      <SettingsGroup
+        title="Soundboard"
+        description="How loud the sounds people play in calls are in this browser, or whether you hear them at all."
+      >
+        <SoundboardPreferences />
       </SettingsGroup>
     </SettingsPage>
   );
