@@ -436,6 +436,12 @@ export class FakeTransport implements CallTransport {
   }
 
   #teardown(): void {
+    if (this.#connected) {
+      // LiveKit unpublishes local tracks before it emits disconnected.
+      this.#microphone = false;
+      this.#emit({ type: "changed" });
+    }
+
     this.#connected = false;
     this.#unsubscribeStore?.();
     this.#unsubscribeStore = null;

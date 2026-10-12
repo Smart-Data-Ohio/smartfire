@@ -1021,7 +1021,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const account = createAccount(ctx, () => csrf);
   const soundboard = createSoundboard(ctx, uploads);
-  const huddles = createHuddles(ctx, simulate, soundboard.has, admin.stageAudienceBudget);
+
+  const huddles = createHuddles(
+    ctx,
+    simulate,
+    soundboard.has,
+    admin.afkPolicy,
+    admin.stageAudienceBudget,
+  );
+
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
   const fizzy = createFizzy(ctx, threads);

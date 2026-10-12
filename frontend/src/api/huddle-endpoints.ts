@@ -1,5 +1,6 @@
 /** The S5 endpoints: huddles (calls), moderation and stages. */
 import { Effect } from "effect";
+import type { HuddleActivity } from "../gen/HuddleActivity.ts";
 import type { HuddleCredentials } from "../gen/HuddleCredentials.ts";
 import type { HuddleDetail } from "../gen/HuddleDetail.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
@@ -39,6 +40,16 @@ export const joinHuddle = Effect.fn("api.joinHuddle")(function* (roomId: number)
   return yield* call(
     { method: "POST", path: `/rooms/${roomId}/huddle`, body: {} },
     wire<HuddleCredentials>(HuddleCredentialsSchema),
+  );
+});
+
+export const huddleActivity = Effect.fn("api.huddleActivity")(function* (
+  roomId: number,
+  body: HuddleActivity,
+) {
+  return yield* call(
+    { method: "POST", path: `/rooms/${roomId}/huddle/activity`, body: { ...body } },
+    noContent,
   );
 });
 

@@ -127,6 +127,9 @@ async fn respond(
                 };
                 if record_seen {
                     grant.record_seen(tx)?;
+                    if grant.move_if_idle(tx, &domain)? {
+                        return Ok(None);
+                    }
                 }
                 Ok(Some(grant))
             })

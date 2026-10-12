@@ -147,6 +147,7 @@ export const admin = {
     branded(
       runAction(
         updateWorkspace({
+          afkPolicy: null,
           name: null,
           restrictRoomCreationToAdministrators: null,
           uploadLimitBytes: null,

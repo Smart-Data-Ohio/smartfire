@@ -578,3 +578,41 @@ test("a full voice room explains why a member cannot join", async ({ page, reque
     page.getByText("This voice room is full. Try again when someone leaves.").first(),
   ).toBeVisible();
 });
+
+test("an AFK move leaves the source call, joins the destination and explains why", async ({
+  page,
+  request,
+}) => {
+  await open(page, GENERAL);
+  const state = await (await request.get("/__mock/state")).json();
+
+  const created = await request.post("/api/v1/rooms", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { type: "voice", name: "Source", userIds: [USER_IDS.riel], clientRoomId: "afk-source" },
+  });
+
+  expect(created.ok()).toBe(true);
+  const source = (await created.json()).room.id;
+
+  const saved = await request.patch("/api/v1/admin/workspace", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { afkPolicy: { roomId: LOUNGE, timeoutMinutes: 1 } },
+  });
+
+  expect(saved.ok()).toBe(true);
+  await open(page, source);
+  await join(page);
+  await dock(page).getByRole("button", { name: "Mute microphone", exact: true }).click();
+  await control(request, "huddle-idle", { roomId: source, seconds: 60 });
+  await expect(dock(page).getByText("Lounge", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("You were moved to Lounge after 1 minute of inactivity", { exact: true }),
+  ).toBeVisible();
+  await expect(dock(page).getByRole("status")).toContainText("Huddle active");
+  await expect(
+    dock(page).getByRole("button", { name: "Unmute microphone", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.__smartfireHuddle?.snapshot().microphoneEnabled)).toBe(
+    false,
+  );
+});

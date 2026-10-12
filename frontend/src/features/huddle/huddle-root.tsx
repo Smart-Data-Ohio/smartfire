@@ -37,7 +37,12 @@ export function HuddleRoot() {
     const stopPolling = startPresencePolling();
 
     const keyDown = (event: KeyboardEvent) => {
+      callController.activity();
       callController.keyDown(event);
+    };
+
+    const activity = () => {
+      callController.activity();
     };
 
     const keyUp = (event: KeyboardEvent) => {
@@ -65,6 +70,9 @@ export function HuddleRoot() {
     };
 
     window.addEventListener("keydown", keyDown);
+    window.addEventListener("pointerdown", activity);
+    window.addEventListener("pointermove", activity, { passive: true });
+    window.addEventListener("focus", activity);
     window.addEventListener("keyup", keyUp);
     window.addEventListener("blur", blurred);
     window.addEventListener("pagehide", pageHide);
@@ -134,6 +142,8 @@ export function HuddleRoot() {
           signal.data.stageRole,
           signal.data.serverMuted,
         );
+      } else if (signal.type === "huddle.afk.moved") {
+        void callController.afkMoved(signal.data);
       } else if (signal.type === "stage.stream.stopped") {
         void callController.streamStopped(signal.data.roomId);
       } else if (signal.type === "huddle.notice") {
@@ -152,6 +162,9 @@ export function HuddleRoot() {
       stopSignals();
       stopSoundboard();
       window.removeEventListener("keydown", keyDown);
+      window.removeEventListener("pointerdown", activity);
+      window.removeEventListener("pointermove", activity);
+      window.removeEventListener("focus", activity);
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("blur", blurred);
       window.removeEventListener("pagehide", pageHide);

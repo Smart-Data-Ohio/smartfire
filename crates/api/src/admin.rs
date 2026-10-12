@@ -261,6 +261,10 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
     let can_administer =
         concerns::current_user(c).is_some_and(|user| user.can_administer(None, false));
     let workspace = api::Workspace {
+        afk_policy: {
+            let policy = account.settings().afk_policy();
+            api::AfkPolicy { room_id: policy.room_id, timeout_minutes: policy.timeout_minutes }
+        },
         name: account.name.clone(),
         logo_url: branding.logo_url.unwrap_or_else(|| account_presenters::fresh_account_logo_path(Some(&account), None)),
         logo_still_url: branding.logo_still_url,
@@ -324,6 +328,10 @@ async fn save_workspace(c: &mut Ctx) -> Result {
                 restrict.to_string(),
             )]
         });
+    if let Some(policy) = update.afk_policy {
+        settings.get_or_insert_with(Vec::new)
+            .push(("afk_policy".into(), serde_json::to_string(&policy).expect("AFK policy encodes")));
+    }
     if let Some(bytes) = update.upload_limit_bytes {
         settings
             .get_or_insert_with(Vec::new)
@@ -433,7 +441,7 @@ async fn write_workspace(
             Ok((before, account, before_logo, after_logo, Some((before_banner, after_banner))))
         })
         .await
-        .map_err(Error::internal)?;
+        .map_err(campfire_runtime::context::db_error)?;
     c.app()
         .db
         .write(move |tx| {

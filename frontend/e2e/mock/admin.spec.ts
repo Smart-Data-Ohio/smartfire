@@ -398,3 +398,21 @@ test.describe("across the phone breakpoint", () => {
     await expect(nav(page).getByRole("link", { name: "People" })).toBeVisible();
   });
 });
+
+test("an administrator saves and disables the AFK voice policy", async ({ page }) => {
+  await openAdmin(page, "");
+  await page
+    .getByRole("combobox", { name: "AFK voice room" })
+    .selectOption(String(ROOM_IDS.lounge));
+  await page.getByRole("combobox", { name: "Idle timeout" }).selectOption("15");
+  await page.getByRole("button", { name: "Save AFK policy" }).click();
+  await expect(page.getByText("AFK policy saved", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "AFK voice room" })).toHaveValue(
+    String(ROOM_IDS.lounge),
+  );
+  await expect(page.getByRole("combobox", { name: "Idle timeout" })).toHaveValue("15");
+  await page.getByRole("combobox", { name: "AFK voice room" }).selectOption("");
+  await page.getByRole("button", { name: "Save AFK policy" }).click();
+  await expect(page.getByRole("combobox", { name: "Idle timeout" })).toBeDisabled();
+});

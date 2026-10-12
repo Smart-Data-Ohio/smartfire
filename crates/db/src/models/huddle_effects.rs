@@ -3,6 +3,19 @@ use crate::{Broadcast, Event, Tx};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AfkMoved {
+    pub user_id: i64,
+    pub identity: String,
+    pub source_room_id: i64,
+    pub room_id: i64,
+    pub room_name: String,
+    pub timeout_minutes: i64,
+}
+impl Broadcast for AfkMoved {
+    const KIND: &'static str = "HuddleGrant#broadcast_afk_move";
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Presence {
     pub room_id: i64,
 }

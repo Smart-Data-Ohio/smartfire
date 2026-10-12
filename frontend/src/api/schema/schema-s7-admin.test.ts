@@ -40,6 +40,7 @@ const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S
 describe("S7 admin schemas", () => {
   it("round-trip the workspace and its writes", () => {
     roundTrips(Workspace, {
+      afkPolicy: { roomId: null, timeoutMinutes: 5 },
       name: "Smart Data",
       logoUrl: "/account/logo?v=1700000000",
       logoAttached: false,
@@ -57,6 +58,7 @@ describe("S7 admin schemas", () => {
       vanityUrl: "https://chat.example/join/smart-data",
     });
     roundTrips(UpdateWorkspace, {
+      afkPolicy: null,
       name: null,
       restrictRoomCreationToAdministrators: true,
       uploadLimitBytes: null,
