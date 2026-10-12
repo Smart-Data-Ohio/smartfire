@@ -1,8 +1,19 @@
 import { useId, useState } from "react";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
+import {
+  CAMERA_QUALITIES,
+  type CameraCapabilities,
+  type CameraQuality,
+  knownCameraQuality,
+  supportedCameraQualities,
+} from "./engine/camera-quality.ts";
 import { audioOutputSupported, type DeviceLists, EMPTY_LABEL } from "./engine/devices.ts";
-import { type DevicePreferences, loadShareQuality } from "./engine/preferences.ts";
+import {
+  type DevicePreferences,
+  loadCameraQuality,
+  loadShareQuality,
+} from "./engine/preferences.ts";
 import { knownStreamQuality, STREAM_QUALITIES } from "./engine/screen-quality.ts";
 import type { DeviceKind } from "./engine/transport.ts";
 
@@ -64,10 +75,17 @@ interface DevicePickersProps {
   readonly onSelect: (kind: DeviceKind, deviceId: string) => void;
   /** The device check offers "no camera preview"; a call switches only between real devices. */
   readonly cameraOptional: boolean;
+  readonly cameraQuality?: CameraQualityPickerProps | undefined;
 }
 
 /** The microphone, speaker (where the browser can switch it) and camera pickers. */
-export function DevicePickers({ devices, selected, onSelect, cameraOptional }: DevicePickersProps) {
+export function DevicePickers({
+  devices,
+  selected,
+  onSelect,
+  cameraOptional,
+  cameraQuality,
+}: DevicePickersProps) {
   return (
     <div className="huddle-pickers">
       <DevicePicker kind="audioinput" devices={devices} selected={selected} onSelect={onSelect} />
@@ -85,7 +103,54 @@ export function DevicePickers({ devices, selected, onSelect, cameraOptional }: D
         selected={selected}
         onSelect={onSelect}
         none={cameraOptional ? "No camera preview" : undefined}
+        disabled={cameraQuality?.busy === true}
       />
+      {cameraQuality === undefined ? null : <CameraQualityPicker {...cameraQuality} />}
+    </div>
+  );
+}
+
+interface CameraQualityPickerProps {
+  readonly capabilities: CameraCapabilities | null;
+  readonly busy: boolean;
+  readonly onSelect: (quality: CameraQuality) => void;
+}
+
+export function CameraQualityPicker({ capabilities, busy, onSelect }: CameraQualityPickerProps) {
+  const id = useId();
+  const [quality, setQuality] = useState(loadCameraQuality);
+  const supported = supportedCameraQualities(capabilities);
+
+  return (
+    <div className="huddle-picker">
+      <label htmlFor={id} className="huddle-picker-label">
+        <Icon name="video" size={14} />
+        Camera quality
+      </label>
+      <select
+        id={id}
+        className="huddle-select"
+        value={quality}
+        disabled={busy}
+        title={busy ? "Wait for the camera to finish changing" : undefined}
+        onChange={(event) => {
+          const next = knownCameraQuality(event.currentTarget.value);
+
+          if (!busy && next !== null && supported.includes(next)) {
+            setQuality(next);
+            onSelect(next);
+          }
+        }}
+      >
+        {CAMERA_QUALITIES.filter((value) => supported.includes(value) || value === quality).map(
+          (value) => (
+            <option key={value} value={value} disabled={!supported.includes(value)}>
+              {value}
+              {supported.includes(value) ? "" : " (unavailable)"}
+            </option>
+          ),
+        )}
+      </select>
     </div>
   );
 }

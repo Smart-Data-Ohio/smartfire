@@ -5,6 +5,7 @@
  * TypeScript: nothing here knows about React or the store.
  */
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
+import type { CameraCapabilities, CameraQuality } from "./camera-quality.ts";
 
 /** LiveKit's per-participant connection quality. */
 export type ConnectionQuality = "excellent" | "good" | "poor" | "lost" | "unknown";
@@ -155,6 +156,9 @@ export interface CallTransport {
   setMicrophone(enabled: boolean): Promise<void>;
   /** On publishes a camera track; off unpublishes it, releasing the device. */
   setCamera(enabled: boolean): Promise<void>;
+  cameraCapabilities(): CameraCapabilities | null;
+  /** Applies capture and encoding together without rejoining; a muted publication stays muted. */
+  setCameraQuality(quality: CameraQuality): Promise<void>;
   /**
    * An ordinary screen share at `quality`, 1080p15 when left out (tab audio included where the
    * browser allows).

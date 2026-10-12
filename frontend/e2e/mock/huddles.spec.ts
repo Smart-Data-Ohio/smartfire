@@ -157,6 +157,52 @@ test("an ordinary screen share starts at the quality picked in call settings", a
   await expect(quality).toBeEnabled();
 });
 
+test("camera quality follows available modes and keeps the caller muted when it changes", async ({
+  page,
+}) => {
+  await open(page, GENERAL);
+  await join(page);
+  await dock(page).getByRole("button", { name: "Call settings" }).click();
+
+  const quality = dock(page).getByLabel("Camera quality", { exact: true });
+  const precedingLabel = await quality.evaluate((element) =>
+    element
+      .closest(".huddle-picker")
+      ?.previousElementSibling?.querySelector("label")
+      ?.textContent?.trim(),
+  );
+
+  expect(precedingLabel).toBe("Camera");
+  await expect(quality).toHaveValue("720p30");
+  await expect(quality.locator("option")).toHaveText(["720p30"]);
+  await dock(page).getByRole("button", { name: "Turn camera on", exact: true }).click();
+  await expect(quality.locator("option")).toHaveText(["720p30", "1080p30", "1080p60"]);
+  await dock(page).getByRole("button", { name: "Mute microphone", exact: true }).click();
+
+  await quality.selectOption("1080p60");
+
+  await expect(quality).toHaveValue("1080p60");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("campfire.huddle.cameraQuality")))
+    .toBe("1080p60");
+  await expect(
+    dock(page).getByRole("button", { name: "Unmute microphone", exact: true }),
+  ).toBeVisible();
+  await expect(
+    dock(page).getByRole("button", { name: "Turn camera off", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.__smartfireHuddle?.snapshot().microphoneEnabled)).toBe(
+    false,
+  );
+
+  await dock(page).getByRole("button", { name: "Call settings" }).click();
+  await expect(quality).toHaveCount(0);
+  await dock(page).getByRole("button", { name: "Call settings" }).click();
+  await expect(quality).toHaveValue("1080p60");
+  await expect(quality.locator("option")).toHaveText(["720p30", "1080p30", "1080p60"]);
+  await expect(page.locator(".call-tile[data-camera] video")).toHaveCount(1);
+});
+
 test("joining and leaving a huddle in a channel", async ({ page }) => {
   await open(page, GENERAL);
   await expect(launcher(page)).toHaveText("Join huddle");

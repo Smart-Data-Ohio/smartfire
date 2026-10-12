@@ -96,6 +96,8 @@ function useJoinBeam(phase: CallPhase, roomId: number | null): boolean {
 function SettingsPanel() {
   const devices = useCall((state) => state.devices);
   const selected = useCall((state) => state.selectedDevices);
+  const cameraCapabilities = useCall((state) => state.cameraCapabilities);
+  const cameraBusy = useCall((state) => state.busy.camera);
   const noise = useCall((state) => state.noise);
   const statsOpen = useCall((state) => state.statsOpen);
   const stats = useCall((state) => state.stats);
@@ -112,6 +114,15 @@ function SettingsPanel() {
         selected={selected}
         onSelect={(kind, deviceId) => void callController.selectDevice(kind, deviceId)}
         cameraOptional={false}
+        cameraQuality={
+          canPublish
+            ? {
+                capabilities: cameraCapabilities,
+                busy: cameraBusy,
+                onSelect: (quality) => void callController.setCameraQuality(quality),
+              }
+            : undefined
+        }
       />
       <MeterBar level={meter} label="Microphone level" />
       {canPublish ? (

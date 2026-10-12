@@ -7,7 +7,7 @@ Assessed September 14, 2026 against the checked-in LiveKit client 2.22.3 and cur
 
 ## Starting point
 
-The huddle implements microphone audio, screen video, and — since the [Camera](#camera) slice below — camera video. Camera publishing used to be intentionally absent from both the interface and authorization grants; the grant change, controls, and authorization tests from step 5 have now landed, and only the codec comparison there remains future work.
+The huddle implements microphone audio, screen video, and — since the [Camera](#camera) slice below — camera video. Camera publishing used to be intentionally absent from both the interface and authorization grants; the grant change, controls, and authorization tests from step 5 have now landed, and codec selection and camera profiles are described below.
 
 Smartfire explicitly enables adaptive streams and dynacast. The pinned SDK supplies browser echo cancellation, automatic gain control, noise suppression, supported voice isolation, audio redundant encoding (RED), and simulcast defaults. Its default audio preset caps bitrate at 48 kbps. Its default screen encoder uses the 1080p/15 fps preset, capped at 2.5 Mbps. These are requested capture/encoding settings, not measured output quality or guaranteed frame rates. Sources: the installed SDK's `src/room/defaults.ts` and `src/room/track/options.ts`, rebuilt according to the [frontend guide](../frontend/README.md).
 
@@ -19,7 +19,7 @@ Local tests establish actual media transport and decoded video. They do not esta
 2. **Measure quality before changing defaults.** Collect per-call RTT, packet loss, jitter, received bitrate, decoded resolution/frame rate, freezes, and direct-versus-relayed transport. Add a simple connection indicator and a details panel. Do not log join tokens, screen contents, or microphone recordings. Use a repeatable test call to compare changes. The indicator, the details panel, and the direct-versus-relayed flag have landed (see [Connection indicator](#connection-indicator)); per-video-track readings now include resolution, frame rate, codec, RID, bitrate, and freezes. Per-call history remains future work.
 3. **Make ordinary conversation reliable.** Keep echo cancellation and RED on for voice. Add microphone/output selection, a microphone meter, and a pre-call device check. Evaluate background-noise handling with headsets, laptop speakers, and representative browsers. Browser processing support varies. [Noise and echo cancellation](https://docs.livekit.io/transport/media/noise-cancellation/) The pickers, the meter, and the pre-join check have landed (see [Device controls](#device-controls)); the headset/speaker listening evaluation is still open.
 4. **Offer screen profiles for the content.** Start with a text/slides profile targeting 1080p at 15 fps and a motion profile targeting 1080p at 30 fps. Let bandwidth adaptation reduce quality. Test actual code readability at the receiving window's size; resolution alone does not prove readability. These profiles are proposals based on the pinned SDK presets. [Screen sharing](https://docs.livekit.io/transport/media/screenshare/)
-5. **Evaluate camera video separately.** Begin with a proposed 720p/30 fps target and adaptive lower layers. Compare VP8/H.264 compatibility with VP9/AV1 efficiency on the team's actual devices before selecting a default. The 720p/30 target, the explicit grant change, the controls, and the authorization tests have landed (see [Camera](#camera)); the codec comparison is still open. [Codecs and quality controls](https://docs.livekit.io/transport/media/advanced/)
+5. **Evaluate camera video separately.** Begin with a proposed 720p/30 fps target and adaptive lower layers. Compare VP8/H.264 compatibility with VP9/AV1 efficiency on the team's actual devices before selecting a default. The 720p/30 target, the explicit grant change, the controls, and the authorization tests have landed (see [Camera](#camera)); the codec preference and optional higher camera profiles have landed; real-device comparisons remain open. [Codecs and quality controls](https://docs.livekit.io/transport/media/advanced/)
 
 High-fidelity stereo should be an optional music/media mode. Its higher bitrate and reduced speech processing can help that use case, but it should not replace the conversation preset without listening tests. LiveKit documents separate hi-fi settings and recommends testing them under real conditions. [Hi-fi audio and RED](https://docs.livekit.io/transport/media/advanced/#hi-fi-audio)
 
@@ -27,7 +27,7 @@ High-fidelity stereo should be an optional music/media mode. Its higher bitrate 
 
 Two pieces of employee feedback moved ahead of the measurement work above: a shared screen could only be seen in the small floating panel, and the microphone carried too much background noise. The settings below are now requested by `frontend/src/features/huddle/engine/`. They are requested capture and encoding settings, not measured output.
 
-**Most of what is listed here equals the pinned SDK's own defaults.** `AudioPresets.music`, `dtx: true`, `red: true`, `degradationPreference: "maintain-resolution"` for a screen share, `ScreenSharePresets.h1080fps15.encoding`, and the echo-cancellation, gain-control, and `voiceIsolation` microphone constraints are what livekit-client 2.22.3 would have used anyway (`publishDefaults` and `audioDefaults` in its `src/room/defaults.ts`). Smartfire spells them out so an SDK upgrade cannot change them silently, but writing them down changed no behavior. The genuinely new behavior is the RNNoise processor, the browser `noiseSuppression` constraint following it (off while RNNoise runs, on otherwise), `contentHint: "detail"`, the screen-share audio settings, and the viewing controls.
+**Most of what is listed here equals the pinned SDK's own defaults.** `AudioPresets.music`, `dtx: true`, `red: true`, `degradationPreference: "maintain-resolution"` for a screen share, `ScreenSharePresets.h1080fps15.encoding`, and the echo-cancellation, gain-control, and `voiceIsolation` microphone constraints are what livekit-client 2.22.3 would have used anyway (`publishDefaults` and `audioDefaults` in its `src/room/defaults.ts`). Smartfire spells them out so an SDK upgrade cannot change them silently, but writing them down changed no behavior. The genuinely new behavior is the RNNoise processor, the browser `noiseSuppression` constraint following it (off while RNNoise runs, on otherwise), the screen-share audio settings and viewing controls. The October update adds explicit screen capture profiles, a native `text` hint with `detail` fallback, device-pixel subscriptions, video-track stats, codec selection, and camera quality.
 
 ### Microphone
 
@@ -77,10 +77,6 @@ All profiles request `surfaceSwitching: "include"` and tab audio
 existing publish grant. Profile requests are targets; check received stats to
 establish actual resolution and frame rate.
 
-`systemAudio: "exclude"`). Screen-share audio was already inside the token's publish grant.
-
-**Capture and encoding are separate ceilings.** No `resolution` is passed, so the SDK applies its own 1080p/30 capture constraint — and keeps its exemption for Safari 17, which cannot be constrained. Naming a preset's `resolution` here would have been a trap: a preset's resolution carries its frame rate, so asking for `h1080fps15.resolution` would have capped *capture* at 15 fps as well. Capture stays at 30 fps; the encoder is what limits the stream.
-
 `systemAudio: "exclude"` is a deliberate trade-off. Including system audio is the only way to carry sound from a native application being demonstrated, but on Windows an "Entire screen" capture with system audio also captures the huddle's own output from the speakers and feeds it back in. Browser echo cancellation does not run on a display-capture track, so that loop is not cancelled. Tab audio still covers the common case of sharing a browser tab playing a video. Somebody who needs native application audio has to route it separately today.
 
 The shared audio track publishes with `dtx: false`. Discontinuous transmission is tuned for speech and cuts the stream during perceived silence, which chops music and quiet passages in a demonstration. The microphone keeps `dtx: true`.
@@ -94,13 +90,89 @@ about 3.1 Mbps across both layers; 1080p30 about 6.25 Mbps, and 1080p60 about
 
 Joining stays audio-only. The camera is off on every join, is turned on explicitly with the **Camera** toggle after Share screen, and the choice is deliberately not remembered in `localStorage`. The button keeps the stable label "Camera" with `aria-pressed` expressing whether it is on and a tooltip naming the state ("Camera on"/"Camera off"), matching the "Mute microphone" toggle. One captioned tile appears per published camera track — the local preview (muted, mirrored with CSS) plus each remote camera — and tiles disappear on unpublish or leave. Turning the camera off unpublishes the track rather than calling `setCameraEnabled(false)`, which would only mute it and keep the device claimed; unpublishing releases the camera and removes the tile on both sides. Camera and screen share may be on at the same time; mute never touches the camera; leaving stops the camera track with the rest of local media. A denied or failed camera shows "Camera wasn’t started. Allow camera access to try again." in the persistent notice (`role="alert"`) until the camera starts or the huddle is left, leaves the microphone and the huddle connected, and leaves the button retryable.
 
-**Requested.** `frontend/src/features/huddle/engine/` `#roomOptions` now spells out the step 5 proposal:
+**Requested camera profiles.** Camera quality sits next to the camera device
+picker, using the existing picker components and classes. It is stored at
+`campfire.huddle.cameraQuality`; camera-on state remains unremembered. The default
+stays 720p30. Native `getCapabilities()` bounds hide unsupported higher modes;
+a saved unavailable mode remains disabled so switching devices does not silently
+overwrite the preference. Unknown capabilities offer only the 720p30 fallback.
+Capability maxima do not guarantee every size/fps combination; ideal capture
+constraints permit a camera's closest supported mode. Check the sampled output.
 
-- Capture: `videoCaptureDefaults` with `deviceId: { ideal: "default" }` and `resolution: VideoPresets.h720.resolution` (1280×720 at 30 fps). This is the pinned SDK's own `videoDefaults` written out (`src/room/defaults.ts`), so it pins behavior against upgrades rather than changing it.
-- Encoding: `publishDefaults.videoEncoding` is `VideoPresets.h720.encoding` — a top layer of up to 1.7 Mbps at 30 fps. With capture already constrained to 720p this matches what the SDK would derive from the captured dimensions on its own.
-- Layers: `simulcast: true`, the SDK default. With no explicit `videoSimulcastLayers`, the publisher adds the default 640×360 (450 kbps, 20 fps) and 320×180 (160 kbps, 20 fps) layers, so `adaptiveStream` can size each subscription from its rendered element.
-- Codec: unchanged. Smartfire sets no `videoCodec`, so the SDK default VP8 (with backup-codec negotiation) applies. Codec comparison remains future measurement work.
-- Degradation: the room's shared `degradationPreference: "maintain-resolution"` is the screen-share setting; the camera passes the SDK's camera-specific `"maintain-framerate"` default in its own publish options (`#setCameraEnabled`), so a talking-head tile trades resolution for smoothness under constrained bandwidth while shared code and slides stay readable. Both are the SDK's own per-source defaults, spelled out rather than inherited.
+| Profile | Requested capture | Top encoding ceiling | Lower simulcast layers |
+| --- | --- | --- | --- |
+| 720p30 | 1280×720, 30 fps | 1.7 Mbps, 30 fps | 320×180 at 160 kbps/20 fps; 640×360 at 450 kbps/20 fps |
+| 1080p30 | 1920×1080, 30 fps | 3 Mbps, 30 fps | 640×360 at 450 kbps/20 fps; 1280×720 at 1.7 Mbps/30 fps |
+| 1080p60 | 1920×1080, 60 fps | 6 Mbps, 60 fps | Same lower layers as 1080p30 |
+
+The 1.7 Mbps default is the pinned SDK's own `VideoPresets.h720`, so it was not
+raised without contrary evidence. 1080p30 uses its `h1080` preset; 1080p60 doubles
+that bitrate for twice the requested frames. These are ceilings, not measured
+quality improvements. Camera publishing keeps `maintain-framerate`.
+
+Changing quality in a call captures an owned replacement and republishes only
+camera video with the
+new encoding options; the normal successful path does not reconnect participants
+and microphone mute is preserved. Codec rejection uses the bounded recovery below.
+A muted camera stays muted with its native capture stopped. The original capture
+stays owned until replacement succeeds. Capture denial retains the original;
+unpublish or publication failure restores its prior publication. This avoids the
+pinned SDK restart path, which can leak newly acquired media when applying
+constraints fails before adoption. A camera that
+cannot be recovered is removed and the caller receives the existing notice.
+
+### Video codecs, October 12, 2026
+
+Each camera or screen publication probes `RTCRtpSender.getCapabilities("video")`
+and, where available, `MediaCapabilities.encodingInfo` for the actual capture and
+encoding target. Preference is AV1, then VP9, then VP8, subject to the pinned
+SDK's browser gates. Missing/rejected capability queries fall back cleanly; CPU
+smoothness and power-efficiency flags do not prohibit an otherwise supported
+encoder. Codec rejection during publication retains a native capture clone, waits for
+one bounded SDK full reconnect, and retries VP8 without reopening the screen
+picker. The reconnect clears a pending server AddTrack reservation and partial
+local senders; the protocol has no per-track cancellation. Other media briefly
+reconnects through the SDK and preserves its mute state. Permissions and connection failures are
+reported normally rather than mistaken for codec failures.
+
+Advanced codecs set `backupCodec: { codec: "vp8" }` and
+`backupCodecPolicy: SIMULCAST`. Dynacast permits a requested VP8 sender alongside
+the primary when a viewer cannot decode it. This receive-compatibility backup is
+separate from the local encoder retry. H.264 remains an interoperable browser
+codec but is not selected by this preference: VP8 is the requested backup.
+
+| Browser family | Native WebRTC support used as evidence | Behavior with SDK 2.22.3 |
+| --- | --- | --- |
+| Chromium desktop / Android | VP9 encode/decode; AV1 encode/decode in modern Chromium, subject to runtime capabilities | AV1 → VP9 → VP8; RID simulcast only Chromium 113+ |
+| Firefox | AV1 send/receive and simulcast added in Firefox 136; VP9 available natively | SDK explicitly excludes both AV1 and VP9 publishing, so VP8 |
+| Safari / iOS WebKit | VP9 is capability/version-dependent; AV1 decoding depends on platform/hardware | SDK excludes AV1 publishing; camera/motion can use advertised VP9, text shares use VP8 |
+| All WebRTC browsers | VP8 and H.264 are required interoperability codecs | VP8 compatibility backup |
+
+Sources: [Chrome AV1 encoder](https://developer.chrome.com/blog/av1/),
+[Chrome VP9 WebRTC](https://developer.chrome.com/blog/vp9-webrtc),
+[Firefox 136 release notes](https://www.firefox.com/en-US/firefox/136.0/releasenotes/),
+[Safari 18 features](https://webkit.org/blog/15865/webkit-features-in-safari-18-0/),
+[WebRTC required codecs](https://www.rfc-editor.org/rfc/rfc7742#section-5), and
+[the pinned SDK gates](https://github.com/livekit/client-sdk-js/blob/v2.22.3/src/room/utils.ts), and
+[Mozilla's WebRTC codec matrix](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/WebRTC_codecs).
+Browser family is a guide; actual sender/receiver capability negotiation governs
+publication and backup selection.
+
+**Text screen sharing uses RID simulcast rather than spatial SVC.** The pinned
+SDK's ordinary AV1/VP9 screen SVC path forcibly sets `L1T3` and changes the native
+hint to `motion` to avoid Chromium frame-rate/encoding bugs. Reasserting `text`
+after publication would undo that workaround. On Chromium 113+ with a connected
+server newer than 1.13.6, explicit `simulcast: true` and `scalabilityMode: "L1T3"`
+select the SDK's RID simulcast branch: distinct resolution streams each have one
+spatial layer, preserving the requested text/detail hint and maintain-resolution.
+Elsewhere text profiles choose VP8 simulcast. The motion profile can use the
+SDK's regular SVC workaround. Cameras use RID layers where supported, otherwise
+ordinary SVC for an advanced primary. See
+[the SDK publication implementation](https://github.com/livekit/client-sdk-js/blob/v2.22.3/src/room/participant/LocalParticipant.ts).
+
+`deploy/huddles` pins LiveKit server 1.13.7. Its rendered config does not override
+`room.enabled_codecs`; the server default enables VP8, H.264, VP9 and AV1. No
+server config change is needed. [Server codec defaults](https://github.com/livekit/livekit/blob/v1.13.7/pkg/config/config.go)
 
 Camera tiles have no expand or full-screen control in this slice. When a shared screen is expanded into theater mode the tiles shrink to a small thumbnail strip so they never cover the screen; the [overlap check](#how-to-verify) pins that down.
 
@@ -153,8 +225,8 @@ Every shared screen now carries an always-visible **Expand** and **Full screen**
    open Call settings, then Connection details; wait for two samples.
 2. Expand the share and enter full screen. The receiving screen row should reach
    the publisher's top resolution, usually 1920×1080 when capture delivers it.
-   FPS can be below 15 for static content; codec should read `video/VP8` in this
-   round. RID may be unavailable downstream, so compare the measured resolution.
+   FPS can be below 15 for static content. Codec should show the negotiated
+   AV1/VP9 primary or VP8 fallback; local backup rows may also show VP8. RID may be unavailable downstream, so compare the measured resolution.
 3. Collapse and confirm adaptive resolution can fall with the smaller element.
    Re-expand and check that the top layer returns. Stage Low retains its limit;
    Auto while focused and High request the top layer.
@@ -181,7 +253,10 @@ Every shared screen now carries an always-visible **Expand** and **Full screen**
 6. Toggle it back on mid-call and confirm the processor reattaches, then mute and unmute and confirm it is still attached afterwards.
 7. Listen with a noise source running — a fan, typing, a nearby conversation — and compare the toggle on and off. RNNoise removes steady broadband noise well and keyboard clicks partially; it is not a replacement for a headset in a loud room.
 8. Share an "Entire screen" on Windows with the huddle audio playing through speakers and confirm there is no feedback loop. Then share a browser tab playing a video and confirm its audio reaches the other participant.
-9. Join audio-only in two browsers and confirm no camera tiles render. Turn both cameras on and confirm each side sees its own mirrored preview plus the other side's captioned tile. In `chrome://webrtc-internals` the publishers should show three outbound camera layers (720p plus the 360p/180p simulcast layers) and each subscriber should receive the layer matching its rendered tile size.
+9. In Call settings, turn on the camera, verify supported quality choices beside
+   Camera, and change to 1080p30/60. After two samples, compare actual dimensions,
+   fps and codec, then mute the microphone and confirm quality changes preserve it.
+   Join audio-only in two browsers and confirm no camera tiles render. Turn both cameras on and confirm each side sees its own mirrored preview plus the other side's captioned tile. In `chrome://webrtc-internals` the publishers should show three outbound camera layers (720p plus the 360p/180p simulcast layers) and each subscriber should receive the layer matching its rendered tile size.
 10. With both cameras on, share a screen and expand it on the other side: the camera tiles should shrink to a thumbnail strip without covering the screen. Deny camera access in a third browser (or revoke it mid-call), confirm the huddle stays connected with the "Camera wasn’t started…" notice, allow it again, and confirm the toggle retries cleanly and the notice clears.
 11. In a fresh browser profile, join and confirm the device check appears with a moving meter and a camera preview, then Join and confirm a second join skips the check. Open Check devices mid-call, switch the microphone, and confirm audio continues and `localStorage.getItem("campfire.huddle.devices")` names the new device. Mute and confirm the meter rests at zero.
 12. Click the connection indicator and confirm round-trip time, loss, jitter, received and sent bitrate, and the transport flag all show sampled values. Compare the transport flag against `chrome://webrtc-internals`: a relayed call must read "Relayed (TURN)" and a direct call "Direct".

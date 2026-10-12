@@ -23,7 +23,12 @@ import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { loadForUpdate } from "../../../service-worker/update-required.ts";
 import { ActionError } from "../../../sync/run.ts";
 import { microphonePublishOptions } from "./audio-quality.ts";
-import { cameraCaptureOptions, cameraPublishOptions } from "./camera-quality.ts";
+import {
+  type CameraCapabilities,
+  type CameraQuality,
+  cameraCaptureOptions,
+  cameraPublishOptions,
+} from "./camera-quality.ts";
 import { canShareScreen, permissionDenied } from "./devices.ts";
 import { createLevelMeter, type LevelMeter } from "./meter.ts";
 import {
@@ -405,6 +410,97 @@ class LiveKitTransport implements CallTransport {
       await local.setCameraEnabled(false);
     } else {
       await local.unpublishTrack(track);
+    }
+  }
+
+  cameraCapabilities(): CameraCapabilities | null {
+    const track = this.#room?.localParticipant.getTrackPublication(
+      this.#lk.Track.Source.Camera,
+    )?.track;
+    try {
+      return track?.mediaStreamTrack.getCapabilities?.() ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async setCameraQuality(quality: CameraQuality): Promise<void> {
+    const room = this.#room;
+    const local = room?.localParticipant;
+    const publication = local?.getTrackPublication(this.#lk.Track.Source.Camera);
+    const track = publication?.videoTrack;
+    const previous = this.#cameraQuality;
+    const previousDefaults = room?.options.videoCaptureDefaults ?? cameraCaptureOptions(previous);
+    if (this.#room !== null) {
+      this.#room.options.videoCaptureDefaults = cameraCaptureOptions(
+        quality,
+        loadDevicePreferences().videoinput,
+      );
+    }
+    if (room === null || local === undefined || track === undefined) {
+      this.#cameraQuality = quality;
+      return;
+    }
+    const muted = track.isMuted;
+    let replacement: LocalVideoTrack | undefined;
+    const stopPending = () => {
+      track.stop();
+      replacement?.stop();
+    };
+    this.#unbind.push(stopPending);
+    try {
+      // Own the replacement before releasing the working camera. SDK restartTrack can leak a
+      // capture when its separate applyConstraints step rejects before adopting the native track.
+      replacement = await this.#lk.createLocalVideoTrack(
+        cameraCaptureOptions(quality, loadDevicePreferences().videoinput),
+      );
+      replacement.source = this.#lk.Track.Source.Camera;
+      if (
+        room !== this.#room ||
+        local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack !== track
+      ) {
+        replacement.stop();
+        return;
+      }
+      if (muted) await replacement.mute();
+      await local.unpublishTrack(track, false);
+      if (room !== this.#room) {
+        replacement.stop();
+        track.stop();
+        return;
+      }
+      await this.#publishVideo(
+        replacement,
+        cameraPublishOptions(quality, this.#lk.VideoPreset),
+        null,
+      );
+      track.stop();
+      this.#cameraQuality = quality;
+    } catch (error) {
+      replacement?.stop();
+      if (room !== this.#room) {
+        track.stop();
+        return;
+      }
+      room.options.videoCaptureDefaults = previousDefaults;
+      // unpublishTrack can remove its maps before negotiation rejects. The original capture
+      // remains owned and usable; restore its publication if the maps have already changed.
+      try {
+        if (local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack !== track) {
+          await this.#publishVideo(
+            track,
+            cameraPublishOptions(previous, this.#lk.VideoPreset),
+            null,
+          );
+        }
+      } catch {
+        await local.unpublishTrack(track).catch(() => undefined);
+        track.stop();
+      }
+      throw error;
+    } finally {
+      const index = this.#unbind.indexOf(stopPending);
+      if (index >= 0) this.#unbind.splice(index, 1);
     }
   }
 
