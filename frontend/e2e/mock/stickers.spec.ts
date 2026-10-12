@@ -294,10 +294,12 @@ test("a deleted sticker's unbroken 30-character name stays inside a phone Saved 
   // The sticker is renamed to the long name, then deleted: the message keeps the name it had.
   const state = await (await page.request.get("/__mock/state")).json();
   const headers = { "X-CSRF-Token": state.csrfToken };
+
   const renamed = await page.request.patch("/api/v1/admin/stickers/2", {
     headers,
     data: { name },
   });
+
   expect(renamed.ok()).toBe(true);
   const deleted = await page.request.delete("/api/v1/admin/stickers/2", { headers });
   expect(deleted.ok()).toBe(true);
