@@ -4,6 +4,7 @@ import { GifCategoryList, GifConfig, GifList, GifSuggestions } from "../../src/a
 import { CreateMessage, MessageDTO as MessageSchema } from "../../src/api/schema/message.ts";
 import type { GifList as GifListWire } from "../../src/gen/GifList.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
+import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import { GIF_BYTES, GIF_FIXTURES, GIF_STILL_BYTES } from "../fixtures/gifs.ts";
 import { createMockServer, SEED_IDS } from "../server.ts";
 import { expectStatus, get, harness, messageBody, send } from "./testing.ts";
@@ -26,11 +27,13 @@ describe("GIF picker API fixtures", () => {
     ]);
     expect((await get<GifListWire>(server, "/api/v1/gifs/trending?page=2")).items).toEqual([]);
     Schema.decodeUnknownSync(GifCategoryList)(await get(server, "/api/v1/gifs/categories"));
+
     for (const path of ["suggestions", "autocomplete"]) {
       expect(
         Schema.decodeUnknownSync(GifSuggestions)(await get(server, `/api/v1/gifs/${path}?q=he`)),
       ).toEqual({ suggestions: ["hello", "hello there", "cheer"] });
     }
+
     for (const item of trending.items) {
       const preview = await server.handleBinary({
         method: "GET",
@@ -41,6 +44,7 @@ describe("GIF picker API fixtures", () => {
       expect(preview.status).toBe(200);
       expect(preview.bytes).toEqual(GIF_BYTES);
       expect(preview.contentType).toBe("image/gif");
+
       if (item.stillUrl !== null) {
         expect(
           (await server.handleBinary({ method: "GET", path: item.stillUrl, bytes: null })).bytes,
@@ -51,12 +55,14 @@ describe("GIF picker API fixtures", () => {
 
   it("stores the selected fixture as a local message file and replays sends", async () => {
     const { server } = harness();
+
     const body = messageBody("fixture-gif", "", {
       gifSlug: "hello-wave",
       attachmentSignedId: null,
     });
 
     Schema.decodeUnknownSync(CreateMessage)(body);
+
     const message = await expectStatus<MessageDTO>(
       server,
       "POST",
@@ -74,6 +80,7 @@ describe("GIF picker API fixtures", () => {
     expect(
       (await server.handleBinary({ method: "GET", path: file?.url ?? "", bytes: null })).bytes,
     ).toEqual(GIF_BYTES);
+
     const replay = await expectStatus<MessageDTO>(
       server,
       "POST",
@@ -97,10 +104,35 @@ describe("GIF picker API fixtures", () => {
     ).toBe(422);
   });
 
+  it("keeps a GIF-only board brief and its retry", async () => {
+    const { server } = harness();
+    const path = `/api/v1/rooms/${SEED_IDS.boards.roomId}/posts`;
+
+    const body = {
+      name: "GIF brief",
+      status: "planned",
+      tags: [],
+      message: messageBody("board-gif", "", { gifSlug: "hello-wave" }),
+    };
+
+    const created = await expectStatus<ThreadDetail>(server, "POST", path, body, 201);
+
+    const page = await get<{ messages: MessageDTO[] }>(
+      server,
+      `/api/v1/threads/${created.thread.id}/messages`,
+    );
+
+    expect(page.messages[0]?.attachments?.[0]?.filename).toBe("Hello-Wave.gif");
+    const replay = await expectStatus<ThreadDetail>(server, "POST", path, body, 200);
+
+    expect(replay.thread.id).toBe(created.thread.id);
+  });
+
   it("offers a feature-off world and validates search inputs", async () => {
     const server = createMockServer({ gifsEnabled: false });
 
     expect(await get(server, "/api/v1/gifs/config")).toEqual({ enabled: false });
+
     for (const path of [
       "trending",
       "search?q=hello",
@@ -112,6 +144,7 @@ describe("GIF picker API fixtures", () => {
         404,
       );
     }
+
     expect(
       (
         await send(

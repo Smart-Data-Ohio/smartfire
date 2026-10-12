@@ -35,6 +35,7 @@ export const gifActions = {
       attachmentSignedId: null,
       gifSlug: input.slug,
     };
+
     const message = await runAction(
       input.threadId === undefined
         ? createMessage(input.roomId, body)

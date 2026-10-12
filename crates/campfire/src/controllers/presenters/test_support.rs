@@ -304,15 +304,14 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         fizzy: crate::integrations::fizzy::State,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(
+        Self::boot_seed_with_integrations(
             "default",
             clock,
             crate::net::Network::system(),
             &[],
             crate::huddle::Config::default(),
             (None, None),
-            Some(fizzy),
-            None,
+            (Some(fizzy), None),
         )
         .await
     }
@@ -322,15 +321,14 @@ impl TestApp {
         klipy: crate::integrations::klipy::State,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(
+        Self::boot_seed_with_integrations(
             "default",
             clock,
             crate::net::Network::system(),
             extra,
             crate::huddle::Config::default(),
             (None, None),
-            None,
-            Some(klipy),
+            (None, Some(klipy)),
         )
         .await
     }
@@ -508,20 +506,19 @@ impl TestApp {
         github_app: Option<crate::integrations::github::client::AppClient>,
         github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(
+        Self::boot_seed_with_integrations(
             name,
             clock,
             network,
             extra,
             huddle,
             (github_app, github_read),
-            None,
-            None,
+            (None, None),
         )
         .await
     }
 
-    async fn boot_seed_with_fizzy(
+    async fn boot_seed_with_integrations(
         name: &str,
         clock: campfire_kit::SharedClock,
         network: crate::net::Network,
@@ -531,8 +528,10 @@ impl TestApp {
             Option<crate::integrations::github::client::AppClient>,
             Option<crate::integrations::github::client::ReadClient>,
         ),
-        fizzy: Option<crate::integrations::fizzy::State>,
-        klipy: Option<crate::integrations::klipy::State>,
+        (fizzy, klipy): (
+            Option<crate::integrations::fizzy::State>,
+            Option<crate::integrations::klipy::State>,
+        ),
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();

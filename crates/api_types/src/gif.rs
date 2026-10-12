@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 /// `GET /api/v1/gifs/config`: whether the GIF picker is available on this server
 /// (a `KLIPY_API_KEY` is configured). When it is not, the other `/api/v1/gifs/*`
-/// routes answer `404 NotFound` and the SPA shows no GIF button.
+/// routes answer `404 NotFound`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

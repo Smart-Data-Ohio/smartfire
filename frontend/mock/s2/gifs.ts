@@ -12,6 +12,7 @@ export function createGifs(enabled: boolean) {
   const requireEnabled = () => {
     if (!enabled) throw notFound("GIFs are disabled on this server");
   };
+
   const queryOf = (query: URLSearchParams) => {
     const text = (query.get("q") ?? "").trim();
 
@@ -19,6 +20,7 @@ export function createGifs(enabled: boolean) {
 
     return text.toLowerCase();
   };
+
   const list = (query: URLSearchParams, search: boolean): MockResponse => {
     requireEnabled();
     const text = search ? queryOf(query) : "";
@@ -36,9 +38,11 @@ export function createGifs(enabled: boolean) {
 
     return { status: 200, json };
   };
+
   const suggestions = (query: URLSearchParams): MockResponse => {
     requireEnabled();
     const text = queryOf(query);
+
     const json: GifSuggestions = {
       suggestions: ["hello", "hello there", "celebration", "cheer"].filter((term) =>
         term.includes(text),
@@ -60,6 +64,7 @@ export function createGifs(enabled: boolean) {
       route("GET", /^\/gifs\/(suggestions|autocomplete)$/, ({ query }) => suggestions(query)),
       route("GET", /^\/gifs\/categories$/, () => {
         requireEnabled();
+
         const json: GifCategoryList = {
           categories: GIF_FIXTURES.map((item) => ({
             name: item.title,
@@ -99,9 +104,11 @@ export function createGifs(enabled: boolean) {
       if (!stored && url.pathname !== "/api/v1/gifs/media") return null;
 
       const media = stored ? url.pathname : url.searchParams.get("u");
+
       const item = GIF_FIXTURES.find(
         (gif) => media?.endsWith(`/${gif.slug}.gif`) || media?.endsWith(`/${gif.slug}.png`),
       );
+
       const empty = { contentType: null, bytes: new Uint8Array(), headers: {} };
 
       if (request.method !== "GET" || (!stored && !enabled) || item === undefined)

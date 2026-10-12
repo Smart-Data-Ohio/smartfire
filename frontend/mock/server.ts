@@ -1090,7 +1090,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   );
 
   const work = createWork(ctx, threads);
-  const boards = createBoards(ctx, threads, uploads, work);
+  const boards = createBoards(ctx, threads, uploads, work, gifs.attachment);
 
   const composer = createComposer(
     ctx,

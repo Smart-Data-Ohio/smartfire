@@ -43,6 +43,11 @@ pub struct Staged {
 }
 
 impl Staged {
+    pub fn with_metadata(mut self, metadata: Json) -> Self {
+        self.blob.metadata = metadata;
+        self
+    }
+
     pub fn blob(&self) -> &NewBlob {
         &self.blob
     }

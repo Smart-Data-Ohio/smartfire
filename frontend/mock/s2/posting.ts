@@ -109,6 +109,7 @@ export function parseMessage(
     throw validation("gifSlug", "cannot be combined with attachmentSignedId");
 
   const grouped = groupedFiles(body, signedId, attach);
+
   const attachments =
     grouped !== null || gifSlug !== ""
       ? withSpoilers(body, [...(grouped ?? []), ...(gifSlug === "" ? [] : [resolveGif(gifSlug)])])

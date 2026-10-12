@@ -288,7 +288,7 @@ async fn post_message(c: &mut Ctx) -> Result {
     let signed_id = input
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
-    let mut signed_ids = grouped_signed_ids(
+    let signed_ids = grouped_signed_ids(
         c,
         signed_id.as_deref(),
         input.attachment_signed_ids.unwrap_or_default(),
@@ -350,11 +350,11 @@ async fn post_message(c: &mut Ctx) -> Result {
                     validation("attachmentSignedId", "isn't a finished upload"),
                 ));
             }
-            if let Some(slug) = gif_slug {
-                let gif_signed_id = crate::gifs::stage_gif(c, creator_id, &slug).await?;
-                signed_ids.push(gif_signed_id);
-            }
             require_grouped_uploads(c, &signed_ids).await?;
+            let staged_attachments = match gif_slug {
+                Some(slug) => vec![crate::gifs::stage_gif(c, creator_id, &slug).await?],
+                None => Vec::new(),
+            };
             let markdown_source =
                 Some(input.markdown_source).filter(|source| !source.trim().is_empty());
             let attributes = MessageParams {
@@ -363,6 +363,7 @@ async fn post_message(c: &mut Ctx) -> Result {
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),
                 attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
+                staged_attachments,
                 attachment_spoilers,
                 attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: creator_id },
                 client_message_id: Some(client_message_id),

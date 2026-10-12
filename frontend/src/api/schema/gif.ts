@@ -6,6 +6,7 @@ import type { GifSuggestions as GeneratedGifSuggestions } from "../../gen/GifSug
 import type { Assert, Pinned } from "./pin.ts";
 
 export const GifConfig = Schema.Struct({ enabled: Schema.Boolean });
+
 export type GifConfigPin = Assert<Pinned<typeof GifConfig, GeneratedGifConfig>>;
 
 export const GifItem = Schema.Struct({
@@ -24,6 +25,7 @@ export const GifList = Schema.Struct({
   page: Schema.Int,
   hasNext: Schema.Boolean,
 });
+
 export type GifListPin = Assert<Pinned<typeof GifList, GeneratedGifList>>;
 
 export const GifCategoryList = Schema.Struct({
@@ -35,7 +37,9 @@ export const GifCategoryList = Schema.Struct({
     }),
   ),
 });
+
 export type GifCategoryListPin = Assert<Pinned<typeof GifCategoryList, GeneratedGifCategoryList>>;
 
 export const GifSuggestions = Schema.Struct({ suggestions: Schema.Array(Schema.String) });
+
 export type GifSuggestionsPin = Assert<Pinned<typeof GifSuggestions, GeneratedGifSuggestions>>;

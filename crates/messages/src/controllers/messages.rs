@@ -222,7 +222,7 @@ impl Default for AttachmentPolicy {
 }
 
 /// What `create_with_attachment!`/`update!` receive.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct MessageParams {
     pub clear_markdown_source: bool,
     pub sticker_id: Option<i64>,
@@ -232,6 +232,7 @@ pub struct MessageParams {
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub attachments: Vec<Assignment>,
+    pub staged_attachments: Vec<Staged>,
     pub attachment_spoilers: Vec<bool>,
     pub attachment_policy: AttachmentPolicy,
     pub client_message_id: Option<String>,
@@ -526,7 +527,8 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
-    let files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    let mut files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    files.extend(attributes.staged_attachments.into_iter().map(Assignment::Create));
     let storage = c.app().storage.clone();
     let outcome = c
         .app()
@@ -614,7 +616,8 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
-    let files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    let mut files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    files.extend(attributes.staged_attachments.into_iter().map(Assignment::Create));
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
