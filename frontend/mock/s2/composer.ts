@@ -43,7 +43,14 @@ import { beforeOf, keysetPage } from "../s3/model.ts";
 import { type RoomRecord, VIEWER_ID } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { imageIcons, searchIcons } from "./emoji.ts";
-import { iso, type MessageDraft, plainDraft, SOURCE_LIMIT, type ThreadRecord } from "./model.ts";
+import {
+  canAccessThread,
+  iso,
+  type MessageDraft,
+  plainDraft,
+  SOURCE_LIMIT,
+  type ThreadRecord,
+} from "./model.ts";
 import { checkMarkdown, groupedFiles } from "./posting.ts";
 import type { Threads } from "./threads.ts";
 import type { Uploads } from "./uploads.ts";
@@ -253,6 +260,7 @@ const COMMAND = /^\/([a-zA-Z][a-zA-Z0-9_-]*)(?:\s+([\s\S]*))?$/;
 /** The composer module. */
 export interface Composer {
   readonly routes: readonly Route[];
+  scheduledMessage(id: number): ScheduledMessage | null;
   /** Posts every pending scheduled message that's due (or every pending one, with `all`). */
   fireScheduled(all: boolean): ScheduledMessage[];
   /** Cancels the timers and arms one per pending scheduled message in the current world. */
@@ -336,7 +344,8 @@ export function createComposer(
 
     const thread = threads.threadOr404(threadId);
 
-    if (thread.roomId !== record.room.id) throw notFound("Thread not found");
+    if (thread.roomId !== record.room.id || !canAccessThread(ctx.world(), thread))
+      throw notFound("Thread not found");
 
     return thread;
   };
@@ -661,7 +670,13 @@ export function createComposer(
 
     if (message.threadId === null) return true;
 
-    return ctx.world().threads.get(message.threadId)?.roomId === message.roomId;
+    const thread = ctx.world().threads.get(message.threadId);
+
+    return (
+      thread !== undefined &&
+      thread.roomId === message.roomId &&
+      canAccessThread(ctx.world(), thread)
+    );
   };
 
   /** As the wire shows it: `sendable` worked out now for a pending one, `false` otherwise. */
@@ -821,6 +836,9 @@ export function createComposer(
       return drop(message, "its thread was deleted");
     }
 
+    if (thread !== null && !canAccessThread(world, thread))
+      return drop(message, "you no longer have access to its thread");
+
     if (thread?.locked === true) return message;
 
     const target = (thread === null ? record.messages : thread.messages).find(
@@ -883,7 +901,7 @@ export function createComposer(
     if (threadId !== null) {
       const thread = world.threads.get(threadId);
 
-      if (thread === undefined || thread.roomId !== roomId) {
+      if (thread === undefined || thread.roomId !== roomId || !canAccessThread(world, thread)) {
         throw validation("threadId", "Thread must be in this room");
       }
 
@@ -1098,6 +1116,11 @@ export function createComposer(
     },
     stop() {
       for (const id of [...timers.keys()]) disarm(id);
+    },
+    scheduledMessage(id) {
+      const message = ctx.world().scheduled.get(id);
+
+      return message === undefined ? null : shown(message);
     },
     markSending(id, on) {
       const current = scheduledOr404(id);

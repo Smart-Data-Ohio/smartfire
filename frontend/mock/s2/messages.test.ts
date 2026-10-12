@@ -114,11 +114,7 @@ describe("editing and deleting", () => {
     const response = await send(server, "DELETE", `/api/v1/messages/${messages.generalPinned}`);
 
     expect(response).toEqual({ status: 204, json: null });
-    expect(events.map((event) => event.type)).toEqual([
-      "message.removed",
-      "message.pinned",
-      "sidebar.row.upserted",
-    ]);
+    expect(events.map((event) => event.type)).toEqual(["message.removed", "sidebar.row.upserted"]);
     expect(events[0]?.data).toEqual({
       id: messages.generalPinned,
       roomId: rooms.general,

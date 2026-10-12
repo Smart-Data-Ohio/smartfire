@@ -32,6 +32,7 @@ fn message(tx: &Tx<'_>, agent: &Agent, id: i64) -> campfire_db::Result<Option<Me
     let Some(message) = Message::find_by_id(tx.conn(), id)? else {
         return Ok(None);
     };
+    if message.thread_id.is_some() && !campfire_db::message_quote::visible(tx.conn(), &message, agent.user_id)? { return Ok(None); }
     Ok(
         Membership::find_by_room_and_user(tx.conn(), message.room_id, agent.user_id)?
             .map(|_| message),
@@ -192,6 +193,8 @@ fn preflight(
                 return Ok(fail("Room is not a board", 422));
             }
             if matches!(op, "post_message" | "start_stream") && present(&args, "thread_id") {
+                let Some(thread) = campfire_db::ChannelThread::find_by_id(tx.conn(), number(&args, "thread_id"))? else { return Ok(fail("Thread not found",404)); };
+                if !thread.readable_by(tx.conn(), agent.user_id)? { return Ok(fail("Thread not found",404)); }
                 let locked=tx.conn().query_row("SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=? AND room_id=?",rusqlite::params![number(&args,"thread_id"),room.id],|r|r.get::<_,bool>(0)).optional()?;
                 let Some(locked) = locked else {
                     return Ok(fail("Thread not found", 404));

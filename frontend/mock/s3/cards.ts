@@ -40,6 +40,7 @@ import { createRandom } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import {
   buildMessage,
+  canAccessThread,
   DEFAULT_AUTO_ARCHIVE_MINUTES,
   defaultThreadName,
   indicatorOf,
@@ -963,7 +964,12 @@ export function createCards(
 
     const poll = state().polls.get(pollId);
 
-    if (poll === undefined || poll.roomId !== roomId) throw notFound("Poll not found");
+    if (
+      poll === undefined ||
+      poll.roomId !== roomId ||
+      findMessage(roomId, poll.messageId) === null
+    )
+      throw notFound("Poll not found");
 
     return poll;
   };
@@ -975,7 +981,7 @@ export function createCards(
     const lists = [
       record.messages,
       ...[...ctx.world().threads.values()].flatMap((thread) =>
-        thread.roomId === roomId ? [thread.messages] : [],
+        thread.roomId === roomId && canAccessThread(ctx.world(), thread) ? [thread.messages] : [],
       ),
     ];
 
@@ -1098,6 +1104,15 @@ export function createCards(
     const threadId = intField(body, "threadId");
 
     if (duplicate !== undefined) {
+      const existingThread =
+        duplicate.threadId == null ? null : world.threads.get(duplicate.threadId);
+
+      if (
+        duplicate.threadId != null &&
+        (existingThread == null || !canAccessThread(world, existingThread))
+      )
+        throw notFound("Thread not found");
+
       if (duplicate.threadId !== threadId)
         throw validation("clientMessageId", "is already used in another conversation");
 
@@ -1109,6 +1124,8 @@ export function createCards(
     if (threadId !== null && (thread === undefined || thread?.roomId !== roomId)) {
       throw notFound("Thread not found");
     }
+
+    if (thread != null && !canAccessThread(world, thread)) throw notFound("Thread not found");
 
     if (thread != null && threadStatus(thread, ctx.now()) !== "active") {
       throw forbidden("This thread is closed or locked");
@@ -1295,7 +1312,9 @@ export function createCards(
 
     if (threadId === undefined) return null;
 
-    return ctx.world().threads.get(threadId) ?? null;
+    const thread = ctx.world().threads.get(threadId);
+
+    return thread !== undefined && canAccessThread(ctx.world(), thread) ? thread : null;
   };
 
   /**
@@ -1336,6 +1355,8 @@ export function createCards(
       locked: false,
       lastActivityAt: createdAt,
       autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES,
+      visibility: "public",
+      accessMembers: new Map(),
       createdAt,
       messages: [],
       memberIds: new Set([VIEWER_ID]),

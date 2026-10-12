@@ -261,7 +261,13 @@ pub fn board_nudge_push(
     now: Timestamp,
 ) -> Result<Option<PushDelivery>> {
     let nudge = BoardNudgeSource::find(conn, id)?;
-    let author = crate::ChannelThread::find(conn, nudge.thread_id)?.creator_id;
+    let Some(thread) = crate::ChannelThread::find_by_id(conn, nudge.thread_id)? else {
+        return Ok(None);
+    };
+    if !thread.readable_by(conn, nudge.recipient_id)? {
+        return Ok(None);
+    }
+    let author = thread.creator_id;
     if super::ignore_policy::ignored(conn, nudge.recipient_id, author)? {
         return Ok(None);
     }

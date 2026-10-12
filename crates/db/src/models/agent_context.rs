@@ -125,6 +125,10 @@ pub fn build_batched_with_users(
     )? {
         return Ok(ServiceResult::fail(missing, 404));
     }
+    if let Some(thread) = &thread
+        && !thread.readable_by(conn, agent.user_id)? {
+        return Ok(ServiceResult::fail(missing, 404));
+    }
     if !agent_access::capability_for_agent(conn, agent.id, "read_messages", Some(room.id))? {
         return Ok(ServiceResult::fail(
             "Forbidden: agent lacks read_messages capability",

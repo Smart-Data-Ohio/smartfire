@@ -799,3 +799,32 @@ async fn user_tokens_check_duplicates_outside_the_page_and_omit_invalid_names() 
     assert_eq!(r.json().as_array().unwrap().len(), 1);
     assert!(r.json()[0].get("mention_token").is_none());
 }
+
+#[tokio::test]
+async fn classic_slash_commands_deny_removed_private_creators() {
+    let app = app().await;
+    let thread_id = app.db().write(|tx| {
+        if campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?.is_none() {
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+        }
+        Ok(ChannelThread::create(tx, NewChannelThread {
+            room_id: ALL_TALK, creator_id: KEVIN,
+            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?.id)
+    }).await.unwrap();
+    let mut browser = app.sign_in(KEVIN).await;
+    let path = format!("/rooms/{ALL_TALK}/slash_commands");
+    let request = || Req::new(Method::POST, &path).json(serde_json::json!({"text":"/shrug private","thread_id":thread_id}));
+    assert_eq!(browser.write(request()).await.status, StatusCode::OK);
+    app.db().write(move |tx| ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)).await.unwrap();
+    for text in ["/shrug denied", "/status denied"] {
+        let reply = browser.write(Req::new(Method::POST, &path).json(serde_json::json!({"text":text,"thread_id":thread_id}))).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND);
+    }
+    assert_eq!(browser.get(&format!("/autocompletable/slash_commands.json?room_id={ALL_TALK}&thread_id={thread_id}")).await.status, StatusCode::NOT_FOUND);
+    app.db().read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM messages WHERE thread_id=? AND system_note=0", [thread_id], |row| row.get::<_,i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
+}

@@ -27,11 +27,13 @@ use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
 
+mod access;
 mod agent_work;
 mod board;
 mod tag_assignment;
 mod work;
 mod work_listing;
+pub use access::{ThreadAccessChange, ThreadAccessError, ThreadAccessMembership, ThreadVisibility, readable_by_sql};
 pub use agent_work::{AgentWorkChanges, tag_names_from_value};
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
@@ -93,6 +95,7 @@ pub struct ChannelThread {
     /// The root message the thread was started from; nil for a board post or once it's deleted.
     pub parent_message_id: Option<i64>,
     pub name: String,
+    pub visibility: ThreadVisibility,
     pub auto_archive_after_minutes: i64,
     pub closed_at: Option<Timestamp>,
     pub locked_at: Option<Timestamp>,
@@ -118,6 +121,7 @@ pub struct NewChannelThread {
     pub parent_message_id: Option<i64>,
     /// Defaults from the parent message's first line (`set_default_name`), except in boards.
     pub name: Option<String>,
+    pub visibility: ThreadVisibility,
     /// Defaults to [`DEFAULT_AUTO_ARCHIVE_AFTER_MINUTES`].
     pub auto_archive_after_minutes: Option<i64>,
     /// Defaults to now (`set_default_last_activity_at`).
@@ -196,6 +200,7 @@ impl ChannelThread {
             creator_id: row.get("creator_id")?,
             parent_message_id: row.get("parent_message_id")?,
             name: row.get("name")?,
+            visibility: row.get("visibility")?,
             auto_archive_after_minutes: row.get("auto_archive_after_minutes")?,
             closed_at: row.get("closed_at")?,
             locked_at: row.get("locked_at")?,
@@ -286,6 +291,19 @@ impl ChannelThread {
         )
     }
 
+    /// Resolve the forward picker's access in the same query as its thread records.
+    pub fn readable_for_rooms(conn: &Connection, room_ids: &[i64], viewer: i64) -> Result<Vec<Self>> {
+        if room_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!("SELECT * FROM channel_threads WHERE room_id IN (SELECT value FROM json_each(?1)) AND {} ORDER BY last_activity_at DESC, id DESC", readable_by_sql("channel_threads.id", "?2")),
+            params![serde_json::json!(room_ids).to_string(), viewer],
+            Self::from_row,
+        )
+    }
+
     /// `room.channel_threads.active.ordered`: neither closed nor locked (stale ones included:
     /// `status` reads them as closed).
     pub fn active_for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
@@ -312,12 +330,17 @@ impl ChannelThread {
 
     /// `user.followed_threads`: the threads a user has a thread membership in, in live rooms.
     pub fn followed_by(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
-        query_all(
+        let threads: Vec<Self> = query_all(
             conn,
             r#"SELECT "channel_threads".* FROM "channel_threads" INNER JOIN "thread_memberships" ON "channel_threads"."id" = "thread_memberships"."thread_id" INNER JOIN "rooms" ON "rooms"."id" = "channel_threads"."room_id" WHERE "thread_memberships"."user_id" = ? AND "rooms"."deleted_at" IS NULL ORDER BY "channel_threads"."last_activity_at" DESC, "channel_threads"."id" DESC"#,
             [user_id],
             Self::from_row,
-        )
+        )?;
+        let mut visible = Vec::new();
+        for thread in threads {
+            if thread.readable_by(conn, user_id)? { visible.push(thread); }
+        }
+        Ok(visible)
     }
 
     pub fn count(conn: &Connection) -> Result<i64> {
@@ -337,6 +360,11 @@ impl ChannelThread {
         let now = tx.now();
         let client_post_id = attributes.client_post_id.clone();
         let room = Room::find(tx.conn(), attributes.room_id)?;
+        if let Some(parent_id) = attributes.parent_message_id
+            && let Some(existing) = Self::find_by_parent_message(tx.conn(), parent_id)?
+            && !existing.readable_by(tx.conn(), attributes.creator_id)? {
+            return Err(Error::RecordNotFound("ChannelThread"));
+        }
         let name = match attributes.name.filter(|name| !name.trim().is_empty()) {
             Some(name) => Some(name),
             None if room.board() => None,
@@ -358,6 +386,7 @@ impl ChannelThread {
             creator_id: attributes.creator_id,
             parent_message_id: attributes.parent_message_id,
             name: name.unwrap_or_default(),
+            visibility: attributes.visibility,
             auto_archive_after_minutes: attributes
                 .auto_archive_after_minutes
                 .unwrap_or(DEFAULT_AUTO_ARCHIVE_AFTER_MINUTES),
@@ -380,7 +409,7 @@ impl ChannelThread {
             .into_result()?;
 
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "channel_threads" ("auto_archive_after_minutes", "created_at", "creator_id", "last_activity_at", "name", "parent_message_id", "room_id", "updated_at", "work_status", "work_status_changed_at", "work_owner_id", "run_url", "client_post_id") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            r#"INSERT INTO "channel_threads" ("auto_archive_after_minutes", "created_at", "creator_id", "last_activity_at", "name", "parent_message_id", "room_id", "updated_at", "work_status", "work_status_changed_at", "work_owner_id", "run_url", "client_post_id", "visibility") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
             params![
                 thread.auto_archive_after_minutes,
                 now,
@@ -394,7 +423,8 @@ impl ChannelThread {
                 thread.work_status_changed_at,
                 thread.work_owner_id,
                 thread.run_url,
-                client_post_id
+                client_post_id,
+                thread.visibility
             ],
             |r| r.get(0),
         )?;
@@ -407,6 +437,9 @@ impl ChannelThread {
             ThreadTag::create_for_thread(tx, &thread, &name)?;
         }
         thread.id = id;
+        if thread.visibility == ThreadVisibility::Private {
+            thread.add_access_member(tx, thread.creator_id, thread.creator_id)?;
+        }
         Ok(thread)
     }
 
@@ -529,6 +562,9 @@ impl ChannelThread {
     /// anything changed (a save with no changes writes nothing).
     fn save(&mut self, tx: &mut Tx<'_>, changed: ChannelThread) -> Result<()> {
         tx.register_record("channel_threads", self.id);
+        if changed.visibility != self.visibility {
+            return Err(Error::ThreadAccess(ThreadAccessError::VisibilityImmutable));
+        }
         if changed == *self {
             return Ok(());
         }
@@ -865,6 +901,9 @@ impl ChannelThread {
         }
         Membership::find_by_room_and_user(tx.conn(), self.room_id, creator_id)?
             .or_not_found("Membership")?;
+        if !self.readable_by(tx.conn(), creator_id)? {
+            return Err(Error::RecordNotFound("ChannelThread"));
+        }
         ThreadMembership::join(tx, self.id, creator_id)?;
         let mut changed = self.clone();
         changed.closed_at = None;
@@ -902,7 +941,8 @@ impl ChannelThread {
             .into_iter()
             .map(|membership| membership.user_id)
             .collect::<HashSet<_>>();
-        for membership in ThreadMembership::for_thread(tx.conn(), thread.id)? {
+        let memberships = query_all(tx.conn(), &format!("SELECT thread_memberships.* FROM thread_memberships WHERE thread_id=? AND {} ORDER BY id", readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")), [thread.id], ThreadMembership::from_row)?;
+        for membership in memberships {
             if membership.user_id == message.creator_id
                 || !room_members.contains(&membership.user_id)
             {
@@ -1027,6 +1067,14 @@ impl ChannelThread {
         deleted_by_id: Option<i64>,
     ) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
+        if !importing && fresh.visibility == ThreadVisibility::Private {
+            for membership in Membership::for_room(tx.conn(), fresh.room_id)? {
+                if fresh.readable_by(tx.conn(), membership.user_id)? {
+                    tx.broadcast_after_commit_once(&ThreadAccessChange { thread_id: fresh.id, room_id: fresh.room_id, user_id: membership.user_id, added: false });
+                    tx.emit_after_commit(Event::DisconnectUser { user_id: membership.user_id, reconnect: true });
+                }
+            }
+        }
         tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id, importing)?;
@@ -1163,7 +1211,7 @@ impl ChannelThread {
     ) -> Result<Vec<ThreadPushCandidate>> {
         let memberships: Vec<ThreadMembership> = query_all(
             conn,
-            r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."thread_id" = ? AND "thread_memberships"."user_id" != ? ORDER BY "thread_memberships"."id" ASC"#,
+            &format!(r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."thread_id" = ? AND "thread_memberships"."user_id" != ? AND {} ORDER BY "thread_memberships"."id" ASC"#, readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")),
             [thread.id, message.creator_id],
             ThreadMembership::from_row,
         )?;

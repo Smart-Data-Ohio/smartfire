@@ -280,17 +280,22 @@ fn parent_room(conn: &Connection, a: &NewAgentStep) -> Result<Option<i64>> {
         [a.agent_id],
         |r| r.get::<_, i64>(0),
     )?;
+    let Some(user_id) = user else { return Ok(None); };
     if let Some(message_id) = a.message_id {
-        Ok(Message::find_by_id(conn, message_id)?
-            .filter(|m| Some(m.creator_id) == user)
-            .map(|m| m.room_id))
+        let Some(message) = Message::find_by_id(conn, message_id)?
+            .filter(|m| m.creator_id == user_id) else { return Ok(None); };
+        if let Some(thread_id) = message.thread_id
+            && !ChannelThread::find(conn, thread_id)?.readable_by(conn, user_id)? {
+            return Ok(None);
+        }
+        Ok(Some(message.room_id))
     } else {
-        Ok(a.channel_thread_id
+        let Some(thread) = a.channel_thread_id
             .map(|id| ChannelThread::find_by_id(conn, id))
             .transpose()?
             .flatten()
-            .filter(|t| t.work_owner_id == user)
-            .map(|t| t.room_id))
+            .filter(|t| t.work_owner_id == Some(user_id)) else { return Ok(None); };
+        Ok(thread.readable_by(conn, user_id)?.then_some(thread.room_id))
     }
 }
 fn invalid(errors: Errors) -> ServiceResult {

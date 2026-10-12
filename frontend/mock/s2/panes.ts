@@ -13,6 +13,7 @@ import type { User } from "../../src/gen/User.ts";
 import { notFound, ok, validation } from "../http.ts";
 import { type RoomRecord, VIEWER_ID } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
+import { canAccessThread } from "./model.ts";
 
 /** Files per page (`RoomFiles::PER_PAGE`). */
 export const FILES_PER_PAGE = 30;
@@ -125,7 +126,7 @@ export function createPanes(ctx: S2Context): Panes {
     const all: RoomFile[] = [];
 
     const replies = [...world.threads.values()]
-      .filter((thread) => thread.roomId === roomId)
+      .filter((thread) => thread.roomId === roomId && canAccessThread(world, thread))
       .flatMap((thread) => thread.messages);
 
     for (const message of [...record.messages, ...replies]) {
@@ -215,7 +216,7 @@ export function createPanes(ctx: S2Context): Panes {
     const roomIds = new Set(mine.map((record) => record.room.id));
 
     const threads = [...world.threads.values()]
-      .filter((thread) => roomIds.has(thread.roomId))
+      .filter((thread) => roomIds.has(thread.roomId) && canAccessThread(world, thread))
       .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt) || b.id - a.id)
       .slice(0, SWITCHER_THREADS);
 

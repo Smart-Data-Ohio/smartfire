@@ -492,3 +492,23 @@ fn board_automation_digest_preserves_rails_committed_note_if_linking_the_claim_f
         );
     }
 }
+
+#[test]
+fn private_board_posts_are_omitted_from_shared_digest() {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .unwrap();
+    let t = crate::tests::channel_thread_test::frozen();
+    let room_id = t.write(|tx| {
+        let room = crate::Room::create_for(tx, crate::RoomType::Board, Some("Private digest"), id("david"), &[id("david"), id("kevin")])?;
+        BoardSlaRule::create(tx, NewBoardSlaRule { room_id: room.id, work_status: Some("planned".into()), nudge_after_minutes: Some("60".into()), escalate_after_minutes: Some("120".into()) })?;
+        let thread = crate::ChannelThread::create(tx, crate::NewChannelThread { room_id: room.id, creator_id: id("david"), name: Some("Hidden digest title".into()), visibility: crate::channel_thread::ThreadVisibility::Private, work_status: Some("planned".into()), ..Default::default() })?;
+        tx.conn().execute("UPDATE channel_threads SET work_status_changed_at=? WHERE id=?", params![tx.now().ago(jiff::SignedDuration::from_hours(3)),thread.id])?;
+        Ok(room.id)
+    });
+    runtime.block_on(dispatch_digests(&t.db, t.now())).unwrap();
+    assert_eq!(t.read(|conn| Message::count_in_room(conn, room_id)), 0);
+    assert!(t.read(|conn| BoardStaleDigest::for_room(conn, room_id)).is_empty());
+}

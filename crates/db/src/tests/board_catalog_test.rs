@@ -2,7 +2,7 @@ use super::*;
 use crate::{BoardTag, BoardTagPolicy, ChannelThread, NewChannelThread, Room, RoomType};
 
 fn board(t: &TestDb) -> i64 {
-    t.write(|tx| Room::create_for(tx, RoomType::Board, Some("Catalog"), id("david"), &[id("david"), id("jz")])).id
+    t.write(|tx| Room::create_for(tx, RoomType::Board, Some("Catalog"), id("david"), &[id("david"), id("jz"), id("bender")])).id
 }
 
 fn post(t: &TestDb, room_id: i64, tags: &[&str]) -> Result<ChannelThread> {
@@ -56,7 +56,7 @@ fn board_catalog_rename_delete_merge_names_only_in_own_board() {
     assert_eq!(names(&t, &other_post), ["bug"]);
     let changes = t.events()[from..].iter().filter(|event| matches!(event, Event::Broadcast(request) if request.decode::<crate::models::channel_thread::ThreadWorkChange>().is_some())).count();
     assert_eq!(changes, 1, "renaming publishes the final post snapshot once");
-    let counts = t.read(|conn| ChannelThread::board_tag_counts(conn, room_id));
+    let counts = t.read(|conn| ChannelThread::board_tag_counts(conn, room_id, None));
     assert_eq!(counts, [("legacy".into(),1),("new-name".into(),1)]);
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, Some(tag.id)));
     let from = t.events().len();

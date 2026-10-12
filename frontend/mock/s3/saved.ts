@@ -14,7 +14,7 @@ import type { SavedStatus } from "../../src/gen/SavedStatus.ts";
 import { notFound, ok, validation } from "../http.ts";
 import { stringField } from "../json.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso, locate } from "../s2/model.ts";
+import { iso, locate, visibleMessage } from "../s2/model.ts";
 import type { Activity } from "./activity.ts";
 import { conversationNames } from "./conversations.ts";
 import { beforeOf, keysetPage, oneOf } from "./model.ts";
@@ -59,7 +59,7 @@ export function createSaved(ctx: S2Context, activity: Activity): Saved {
       return null;
     }
 
-    return location.message;
+    return visibleMessage(ctx.world(), location.message);
   };
 
   const itemOr404 = (savedItemId: number): SavedItem => {

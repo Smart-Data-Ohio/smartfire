@@ -200,6 +200,10 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
         .app()
         .db
         .read(move |conn| {
+            if let Timeline::Thread(thread_id) = timeline
+                && !campfire_db::ChannelThread::find(conn, thread_id)?.readable_by(conn, viewer_id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             let anchor = |id| Message::find_in(conn, timeline, id);
             // A `before`/`after` cursor whose message was deleted since pages from its id, so
             // paging doesn't stall on it. Messages are deleted outright, so a cursor that isn't

@@ -1,6 +1,6 @@
 //! `MessagePayloadHelper`: request-specific JSON, never a shared fragment-cache value.
 use campfire_db::{ChannelThread, Message, MessagePin, SavedItem, Timestamp, User};
-use campfire_db::channel_thread::{WorkReadFacts, WorkReadPermissions};
+use campfire_db::channel_thread::{ThreadVisibility, WorkReadFacts, WorkReadPermissions};
 use campfire_presentation::helpers::{AvatarIcon, IconSource};
 use campfire_presentation::messages::support::json_time;
 use serde_json::{Value, json};
@@ -8,6 +8,12 @@ use serde_json::{Value, json};
 use crate::controllers::presenters::{Presenter, Result, avatar_path};
 
 pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
+    if let Some(thread_id) = message.thread_id {
+        let thread = payload_thread(p, thread_id)?;
+        if thread.room_id != message.room_id || !thread_payload_readable(p, &thread, viewer.id)? {
+            return Err(campfire_db::Error::RecordNotFound("Message"));
+        }
+    }
     let room = payload_room(p, message.room_id)?;
     let mut body = json!({"plain_text": p.plain_text_body(message)?, "html": html(p, message)?});
     if let Some(source) = &message.markdown_source { body["markdown_source"] = source.clone().into(); }
@@ -18,17 +24,15 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
         "room": {"id": message.room_id, "icon_name": room.icon_name}
     });
     if let Some(id) = message.thread_id {
-        let record = match p.search_preloads.as_ref().and_then(|d|d.threads.as_ref()) {
-            Some(data)=>data.threads.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))?,
-            None=>ChannelThread::find(p.conn,id)?,
-        };
+        let record = payload_thread(p, id)?;
         result["thread_context"] = thread(p, &record, viewer, base)?;
     }
     let summary = match p.search_preloads.as_ref().and_then(|d|d.threads.as_ref()) {
         Some(data)=>data.by_parent.get(&message.id).and_then(|id|data.threads.get(id)).cloned(),
         None=>ChannelThread::find_by_parent_message(p.conn,message.id)?,
     };
-    if let Some(summary) = summary {
+    if let Some(summary) = summary
+        && thread_payload_readable(p, &summary, viewer.id)? {
         result["thread_summary"] = thread(p, &summary, viewer, base)?;
     }
     if message.reply_to_message_id.is_some() || message.reply_target_deleted_at.is_some() {
@@ -36,6 +40,7 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
             Some(data)=>message.reply_to_message_id.and_then(|id|data.records.sources.get(&id)).cloned(),
             None=>message.reply_to_message_id.map(|id|Message::find_by_id(p.conn,id)).transpose()?.flatten(),
         };
+        let source = source.map(|source| campfire_db::message_quote::visible(p.conn, &source, viewer.id).map(|visible| visible.then_some(source))).transpose()?.flatten();
         let mut reply = match &source {
             Some(source) => json!({"id": source.id, "url": permalink(source, base), "deleted": false, "creator": user(p, &p.user(source.creator_id)?, base)?,
                 "body": {"plain_text": p.plain_text_body(source)?, "html": html(p, source)?}}),
@@ -100,7 +105,8 @@ pub fn actions(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
         "edit_source": edit_source, "edit_format": if message.markdown() {"markdown"} else {"rich_text"},
         "copy_text": p.plain_text_body(message)?
     });
-    if let Some(summary) = summary {
+    if let Some(summary) = summary
+        && summary.readable_by(p.conn, viewer.id)? {
         result["thread_url"] = format!("{base}/rooms/{}/threads/{}", summary.room_id, summary.id).into();
         result["thread_summary"] = thread(p, &summary, viewer, base)?;
     }
@@ -119,6 +125,24 @@ fn payload_room(p:&Presenter<'_>,id:i64) -> Result<campfire_db::Room> {
     match &p.search_preloads {
         Some(data)=>data.records.rooms.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("Room")),
         None=>campfire_db::Room::find(p.conn,id),
+    }
+}
+
+fn payload_thread(p: &Presenter<'_>, id: i64) -> Result<ChannelThread> {
+    match p.search_preloads.as_ref().and_then(|data| data.threads.as_ref()) {
+        Some(data) => data.threads.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("ChannelThread")),
+        None => ChannelThread::find(p.conn, id),
+    }
+}
+
+fn thread_payload_readable(p: &Presenter<'_>, thread: &ChannelThread, viewer: i64) -> Result<bool> {
+    // Rails still presents public-thread events in soft-deleted rooms.
+    if thread.visibility == ThreadVisibility::Public {
+        return Ok(true);
+    }
+    match p.search_preloads.as_ref().and_then(|data| data.threads.as_ref()).filter(|data| data.viewer_id == viewer) {
+        Some(data) => Ok(data.readable.contains(&thread.id)),
+        None => thread.readable_by(p.conn, viewer),
     }
 }
 

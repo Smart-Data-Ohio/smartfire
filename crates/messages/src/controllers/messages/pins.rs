@@ -61,10 +61,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 async fn pin_response(c: &mut Ctx, room_id: i64, pinned: bool) -> Result {
     match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => {
+            let viewer = require_current_user(c)?.id;
             let count = c
                 .app()
                 .db
-                .read(move |conn| MessagePin::count_for_room(conn, room_id))
+                .read(move |conn| MessagePin::count_for_viewer(conn, room_id, viewer))
                 .await
                 .map_err(db_error)?;
             c.json(

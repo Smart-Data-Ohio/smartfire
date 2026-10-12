@@ -124,7 +124,12 @@ async fn create_board(c: &mut Ctx, room: Room) -> Result {
 }
 
 async fn create_channel(c: &mut Ctx, room: Room) -> Result {
-    let attributes = permitted(c, &["name", "auto_archive_after_minutes"])?;
+    let attributes = permitted(c, &["name", "auto_archive_after_minutes", "visibility"])?;
+    let visibility = match attributes.get("visibility").and_then(messages::string_column).as_deref() {
+        None | Some("public") => campfire_db::models::channel_thread::ThreadVisibility::Public,
+        Some("private") => campfire_db::models::channel_thread::ThreadVisibility::Private,
+        _ => return render_error(c, StatusCode::UNPROCESSABLE_ENTITY, "Visibility must be public or private"),
+    };
     let parent = source(c)?
         .get("parent_message_id")
         .filter(|value| value.is_present())
@@ -171,10 +176,12 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             .db
             .read(move |conn| {
                 let duplicate = Message::find_duplicate(conn, room_id, creator, &client_id)?;
-                duplicate
-                    .and_then(|message| message.thread_id)
-                    .map(|id| ChannelThread::find(conn, id))
-                    .transpose()
+                let Some(id) = duplicate.and_then(|message| message.thread_id) else { return Ok(None); };
+                let thread = ChannelThread::find(conn, id)?;
+                if !thread.readable_by(conn, creator)? {
+                    return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+                }
+                Ok(Some(thread))
             })
             .await
             .map_err(db_error)?
@@ -242,6 +249,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                         creator_id: creator,
                         parent_message_id: parent_id,
                         name,
+                        visibility,
                         auto_archive_after_minutes: minutes,
                         ..Default::default()
                     },
@@ -253,7 +261,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                             "reply_notify_author violates NOT NULL".into(),
                         ));
                     }
-                    let blob = messages::attachment_blob(tx, assignment, messages::AttachmentPolicy::SignedBlob, "attachment")?;
+                    let blob = messages::attachment_blob(tx, assignment, messages::AttachmentPolicy::SignedBlob { actor_id: Some(creator) }, "attachment")?;
                     let message = thread.post_message(
                         tx,
                         creator,
@@ -296,6 +304,9 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
 }
 
 pub async fn update(c: &mut Ctx) -> Result {
+    if source(c)?.contains_key("visibility") {
+        return render_error(c, StatusCode::FORBIDDEN, "Thread visibility cannot be changed");
+    }
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
     let attributes = permitted(
@@ -348,7 +359,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             let mut thread = ChannelThread::find(tx.conn(), thread_id)?;
             let before = thread.clone();
             let outcome = (|| {
-                if Membership::find_by_room_and_user(tx.conn(), room_id, actor.id)?.is_none() {
+                if !thread.readable_by(tx.conn(), actor.id)? {
                     return Err(campfire_db::Error::RecordNotFound("Membership"));
                 }
                 if board && archive_given {
@@ -492,13 +503,14 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let (room, thread) = scope(c).await?;
     let actor = require_current_user(c)?.clone();
     let id = thread.id;
+    let private = thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private;
     let removed = c
         .app()
         .db
         .write(move |tx| {
             let thread = ChannelThread::find(tx.conn(), id)?;
             if Room::find(tx.conn(), thread.room_id)?.deleted_at.is_some()
-                || Membership::find_by_room_and_user(tx.conn(), thread.room_id, actor.id)?.is_none()
+                || !thread.readable_by(tx.conn(), actor.id)?
             {
                 return Err(campfire_db::Error::RecordNotFound("Membership"));
             }
@@ -512,7 +524,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     match removed {
         Ok(false) => return Ok(concerns::head(StatusCode::FORBIDDEN)),
         Err(error) => return Err(db_error(error)),
-        _ => c.app().broadcasts.thread_removed(id, room.id),
+        Ok(true) if !private => c.app().broadcasts.thread_removed(id, room.id),
+        Ok(true) => {},
     }
     if c.format()? == Some(&format::HTML) {
         c.redirect_to(&c.url_for(&format!("/rooms/{}", room.id)))

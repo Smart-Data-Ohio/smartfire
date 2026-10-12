@@ -77,6 +77,7 @@ function thread(status: Thread["status"], lastActivityMinute: number, id = THREA
     replyCount: 2,
     lastActivityAt: `2026-10-06T10:${String(lastActivityMinute).padStart(2, "0")}:00.000Z`,
     autoArchiveAfterMinutes: 4320,
+    visibility: "public",
     createdAt: "2026-10-06T09:30:00.000Z",
     work: null,
   };

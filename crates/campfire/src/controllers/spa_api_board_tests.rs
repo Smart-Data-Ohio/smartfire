@@ -1805,3 +1805,46 @@ async fn spa_api_board_rows_count_every_message_as_classic() {
         parse(&david.send(get(&format!("/api/v1/threads/{PLANNED}"))).await);
     assert_eq!(detail.thread.work.unwrap().message_count, messages + 2);
 }
+
+#[tokio::test]
+async fn private_board_posts_filter_tags_counts_and_pagination_before_serialization() {
+    let a = app(true).await.expect("the frozen default seed");
+    let (room_id, thread_id) = a.db().write(|tx| {
+        let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Board, Some("Private board"), DAVID, &[DAVID, KEVIN])?;
+        let mut first = None;
+        for n in 0..51 {
+            let thread = ChannelThread::create(tx, campfire_db::NewChannelThread {
+                room_id: room.id, creator_id: DAVID, name: Some(format!("Hidden board {n}")),
+                visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                work_status: Some("planned".into()), tag_names: Some(vec!["hidden-tag".into()]), ..Default::default()
+            })?;
+            first.get_or_insert(thread.id);
+        }
+        Ok((room.id, first.unwrap()))
+    }).await.unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let path = format!("/api/v1/rooms/{room_id}/board");
+    let admin: api::BoardListing = parse(&david.send(get(&path)).await);
+    assert_eq!(admin.posts.len(), 50);
+    assert!(admin.has_more);
+    for visible in [false, true, false] {
+        if visible {
+            a.db().write(move |tx| { ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, DAVID, KEVIN)?; Ok(()) }).await.unwrap();
+        }
+        let reply = kevin.send(get(&path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let listing: api::BoardListing = parse(&reply);
+        assert_eq!(listing.posts.len(), usize::from(visible));
+        assert_eq!(listing.any_posts, visible);
+        assert!(!listing.has_more);
+        assert_eq!(listing.tag_counts.iter().map(|tag| (&*tag.name, tag.count)).collect::<Vec<_>>(), if visible { vec![("hidden-tag",1)] } else { vec![] });
+        let form: api::BoardPostForm = parse(&kevin.send(get(&format!("/api/v1/rooms/{room_id}/posts/new"))).await);
+        assert_eq!(form.tag_suggestions, if visible { vec!["hidden-tag"] } else { vec![] });
+        if visible {
+            a.db().write(move |tx| ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+        } else {
+            assert!(!reply.text().contains("Hidden board"));
+        }
+    }
+}

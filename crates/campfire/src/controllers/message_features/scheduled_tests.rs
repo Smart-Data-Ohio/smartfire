@@ -559,3 +559,28 @@ async fn review_regression_scheduled_send_emits_unread_room_frame() {
     );
 
 }
+
+#[tokio::test]
+async fn classic_private_schedule_creation_requires_current_thread_access() {
+    let app = app().await;
+    let thread_id = app.db().write(|tx| {
+        campfire_db::Room::find(tx.conn(), ALL_TALK)?.grant_to(tx, &[KEVIN])?;
+        Ok(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID,
+            visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?.id)
+    }).await.unwrap();
+    let mut browser = app.sign_in(KEVIN).await;
+    for visible in [false, true, false] {
+        if visible {
+            app.db().write(move |tx| { campfire_db::ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, DAVID, KEVIN)?; Ok(()) }).await.unwrap();
+        }
+        let response = browser.write(req(Method::POST, &format!("/rooms/{ALL_TALK}/scheduled_messages"),
+            json!({"scheduled_message":{"thread_id":thread_id,"markdown_source":"My draft","send_at":"2026-03-02T17:00:00Z"}}))).await;
+        assert_eq!(response.status, if visible { StatusCode::CREATED } else { StatusCode::NOT_FOUND }, "{}", response.text());
+        if visible {
+            app.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+        }
+    }
+}

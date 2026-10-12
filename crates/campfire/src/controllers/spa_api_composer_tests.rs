@@ -1288,3 +1288,50 @@ async fn scheduled_messages_page_by_cursor() {
         .await;
     assert_eq!(validation_fields(&reply), ["before"]);
 }
+
+#[tokio::test]
+async fn scheduled_private_drafts_keep_own_source_and_hide_current_parent_facts() {
+    let Some(a) = app(true).await else { return };
+    let (thread_id, pending_id, sent_id) = a.db().write(|tx| {
+        if campfire_db::Membership::find_by_room_and_user(tx.conn(), DESIGNERS, KEVIN)?.is_none() {
+            campfire_db::Membership::create_default(tx, DESIGNERS, KEVIN)?;
+        }
+        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: DESIGNERS, creator_id: KEVIN,
+            name: Some("Private parent title".into()),
+            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?;
+        let target = thread.post_message(tx, KEVIN, campfire_db::NewMessage { markdown_source: Some("Private reply preview".into()), ..Default::default() })?;
+        let attrs = campfire_db::NewScheduledMessage {
+            user_id: KEVIN, room_id: DESIGNERS, thread_id: Some(thread.id),
+            reply_to_message_id: Some(target.id), markdown_source: "Own source".into(),
+            send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+        };
+        let pending = campfire_db::ScheduledMessage::create(tx, attrs.clone())?;
+        let sent = campfire_db::ScheduledMessage::create(tx, attrs)?;
+        assert!(campfire_db::ScheduledMessage::dispatch(tx, sent.id, tx.now(), true)?);
+        Ok((thread.id, pending.id, sent.id))
+    }).await.unwrap();
+    let mut browser = a.sign_in(KEVIN).await;
+    let reply = browser.send(get("/api/v1/scheduled_messages")).await;
+    let list: api::ScheduledMessageList = parse(&reply);
+    let pending = list.scheduled_messages.iter().find(|row| row.id == pending_id).unwrap();
+    assert!(pending.sendable && pending.reply_target.is_some());
+    a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)).await.unwrap();
+    for (path, id) in [("/api/v1/scheduled_messages", pending_id), ("/api/v1/scheduled_messages?status=past", sent_id)] {
+        let reply = browser.send(get(path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert!(!reply.text().contains("Private parent title"));
+        assert!(!reply.text().contains("Private reply preview"));
+        let list: api::ScheduledMessageList = parse(&reply);
+        let row = list.scheduled_messages.iter().find(|row| row.id == id).unwrap();
+        assert_eq!(row.markdown_source, "Own source");
+        assert!(!row.sendable);
+        assert!(row.reply_target.is_none());
+        assert!(row.sent_message_id.is_none());
+    }
+    let reply = browser.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{pending_id}/send_now"), &json!({}))).await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    assert!(a.db().read(move |conn| campfire_db::ScheduledMessage::find(conn, pending_id)).await.unwrap().dropped());
+}

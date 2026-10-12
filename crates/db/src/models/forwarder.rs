@@ -96,6 +96,9 @@ pub fn forward_with_client_ids(
     tx: &mut Tx<'_>, source: &Message, destinations: &[Destination], note: Option<&str>,
     creator_id: i64, copier: &dyn BlobCopier, client_id: &mut dyn FnMut() -> String,
 ) -> Result<std::result::Result<Vec<Forwarded>, Refusal>> {
+    if !crate::models::message_quote::visible(tx.conn(), source, creator_id)? {
+        return Ok(Err(invalid("That message is unavailable")));
+    }
     let destinations = match normalize_destinations(tx.conn(), destinations, creator_id)? {
         Ok(destinations) => destinations,
         Err(refusal) => return Ok(Err(refusal)),
@@ -144,6 +147,9 @@ fn normalize_destinations(
                 let Some(thread) = ChannelThread::find_by_id(conn, thread_id)?.filter(|thread| thread.room_id == room.id) else {
                     return Ok(Err(invalid("That thread is unavailable")));
                 };
+                if !thread.readable_by(conn, creator_id)? {
+                    return Ok(Err(invalid("That thread is unavailable")));
+                }
                 if room.direct() {
                     return Ok(Err(invalid("Direct rooms cannot contain threads")));
                 }
@@ -186,6 +192,9 @@ fn create_forward(
     match thread {
         Some(mut thread) => {
             thread.reload(tx.conn())?;
+            if !thread.readable_by(tx.conn(), creator_id)? {
+                return Ok(Err(invalid("That thread is unavailable")));
+            }
             if thread.locked_at.is_some() {
                 return Ok(Err(invalid("That thread is locked")));
             }

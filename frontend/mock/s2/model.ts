@@ -13,15 +13,17 @@ import type { Pin } from "../../src/gen/Pin.ts";
 import type { SavedItem } from "../../src/gen/SavedItem.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { Thread } from "../../src/gen/Thread.ts";
+import type { ThreadAccessMember } from "../../src/gen/ThreadAccessMember.ts";
 import type { ThreadIndicator } from "../../src/gen/ThreadIndicator.ts";
 import type { ThreadMembership } from "../../src/gen/ThreadMembership.ts";
 import type { ThreadStatus } from "../../src/gen/ThreadStatus.ts";
+import type { ThreadVisibility } from "../../src/gen/ThreadVisibility.ts";
 import type { User } from "../../src/gen/User.ts";
 import { notFound, validation } from "../http.ts";
-import { escapeHtml, type Mentionable, renderMarkdown } from "../markdown.ts";
+import { escapeHtml, type Mentionable, mentionsUser, renderMarkdown } from "../markdown.ts";
 import { messageText } from "../s3/model.ts";
 import { type WorkRecord, workFacts } from "../s4/work-model.ts";
-import type { RoomRecord, World } from "../seed.ts";
+import { type RoomRecord, VIEWER_ID, type World } from "../seed.ts";
 import { mockSound } from "../sounds.ts";
 
 /** Messages per page, as `Message::PAGE_SIZE`. */
@@ -48,6 +50,8 @@ export interface ThreadRecord {
   /** `null` once the parent message is deleted. */
   parentMessageId: number | null;
   readonly creatorId: number;
+  readonly visibility: ThreadVisibility;
+  readonly accessMembers: Map<number, ThreadAccessMember>;
   name: string;
   /** `closed_at` is set. */
   closed: boolean;
@@ -285,6 +289,77 @@ export function countedReplies(thread: ThreadRecord): MessageDTO[] {
   return thread.messages.filter((message) => !message.systemNote && !message.streaming);
 }
 
+/** Access grants do not depend on notification membership. */
+export function canAccessThread(world: World, thread: ThreadRecord, userId = VIEWER_ID): boolean {
+  const user = world.users.get(userId);
+
+  return (
+    user?.status === "active" &&
+    (world.rooms.get(thread.roomId)?.memberIds.includes(userId) ?? false) &&
+    (thread.visibility === "public" ||
+      user.role === "administrator" ||
+      thread.accessMembers.has(userId))
+  );
+}
+
+/** Grant access before publishing a private reply or edit's mention notifications. */
+export function inviteThreadMentionees(
+  world: World,
+  thread: ThreadRecord,
+  message: MessageDTO,
+  actorId: number,
+  createdAt: string,
+): void {
+  if (
+    thread.visibility !== "private" ||
+    message.systemNote ||
+    message.streaming ||
+    !canAccessThread(world, thread, actorId)
+  )
+    return;
+
+  const members = (world.rooms.get(thread.roomId)?.memberIds ?? []).flatMap((id) => {
+    const user = world.users.get(id);
+
+    return user?.status === "active" ? [user] : [];
+  });
+
+  const noteNames = [...(message.forwardNote ?? "").matchAll(/@\[([^\]\n]+)\]/g)].map(
+    (match) => match[1],
+  );
+
+  for (const user of members) {
+    const mentioned =
+      message.forwardedFromMessageId === null
+        ? mentionsUser(message.bodyHtml, user.id)
+        : noteNames.includes(user.name) &&
+          members.filter((candidate) => candidate.name === user.name).length === 1;
+
+    if (mentioned && !thread.accessMembers.has(user.id)) {
+      thread.accessMembers.set(user.id, { userId: user.id, addedById: actorId, createdAt });
+      thread.memberIds.add(user.id);
+
+      if (user.id === VIEWER_ID && thread.viewerMembership === null) {
+        thread.viewerMembership = {
+          threadId: thread.id,
+          involvement: "mentions",
+          unreadAt: null,
+          joinedAt: createdAt,
+        };
+      }
+    }
+  }
+}
+
+export function visibleMessage(world: World, message: MessageDTO): MessageDTO {
+  if (message.thread === null) return message;
+  const thread = world.threads.get(message.thread.threadId);
+
+  return thread !== undefined && canAccessThread(world, thread)
+    ? message
+    : { ...message, thread: null };
+}
+
 /** The thread's wire DTO. */
 export function threadDto(thread: ThreadRecord, now: number): Thread {
   return {
@@ -297,6 +372,7 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     replyCount: countedReplies(thread).length,
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
+    visibility: thread.visibility,
     createdAt: thread.createdAt,
     work: workFacts(thread.work, thread.messages.length),
   };
@@ -355,7 +431,11 @@ export interface MessageLocation {
 }
 
 /** Finds a message anywhere in the world; `null` when there's none with that id. */
-export function locate(world: World, messageId: number): MessageLocation | null {
+export function locate(
+  world: World,
+  messageId: number,
+  userId = VIEWER_ID,
+): MessageLocation | null {
   for (const room of world.rooms.values()) {
     const index = room.messages.findIndex((message) => message.id === messageId);
     const message = room.messages[index];
@@ -364,6 +444,8 @@ export function locate(world: World, messageId: number): MessageLocation | null 
   }
 
   for (const thread of world.threads.values()) {
+    if (!canAccessThread(world, thread, userId)) continue;
+
     const index = thread.messages.findIndex((message) => message.id === messageId);
     const message = thread.messages[index];
     const room = world.rooms.get(thread.roomId);
@@ -386,7 +468,7 @@ export function pinCount(world: World, roomId: number): number {
   let count = 0;
 
   for (const record of world.pins.values()) {
-    if (record.roomId === roomId) count += 1;
+    if (record.roomId === roomId && locate(world, record.pin.messageId) !== null) count += 1;
   }
 
   return count;
@@ -395,6 +477,7 @@ export function pinCount(world: World, roomId: number): number {
 /** Who and what a page refers to beyond its messages. */
 export interface PageLookups {
   readonly usersFor: (ids: Iterable<number>) => User[];
+  readonly visibleMessage?: (message: MessageDTO) => MessageDTO;
   readonly saved: ReadonlyMap<number, SavedItem>;
   /** The authors the viewer ignores: their messages come marked `ignored`, content and all. */
   readonly ignored?: ReadonlyMap<number, string>;
@@ -411,6 +494,7 @@ function slice(
 
   const messages = list
     .slice(start, end)
+    .map((message) => lookups.visibleMessage?.(message) ?? message)
     .map((message) =>
       lookups.ignored?.has(message.creatorId) === true ? { ...message, ignored: true } : message,
     );

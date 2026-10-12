@@ -15,7 +15,6 @@ use campfire_app::cable::{CableUser, room_gid, thread_gid};
 use campfire_cable::sync::{SyncHandler, SyncSession};
 use campfire_db::{Connection, Membership, Message, Room, WorkspacePresenceLease};
 use campfire_runtime::concerns::expire_idle_timed_out_session;
-use rusqlite::OptionalExtension as _;
 
 use crate::dto;
 
@@ -443,13 +442,13 @@ impl Conversation {
         let room_id = match self {
             Self::Room(room_id) => room_id,
             Self::Thread(thread_id) => {
-                let room_id = conn
-                    .query_row(r#"SELECT "channel_threads"."room_id" FROM "channel_threads" WHERE "channel_threads"."id" = ? LIMIT 1"#, [thread_id], |row| row.get::<_, i64>(0))
-                    .optional()?;
-                let Some(room_id) = room_id else {
+                let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, thread_id)? else {
                     return Ok(None);
                 };
-                room_id
+                if !thread.readable_by(conn, user_id)? {
+                    return Ok(None);
+                }
+                thread.room_id
             }
         };
         Room::find_for_user(conn, user_id, room_id)
@@ -517,6 +516,62 @@ impl Session {
     }
 }
 
+fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
+    if matches!(event.payload, api::SyncPayload::ThreadRemoved(_)) {
+        return None;
+    }
+    if let Some(id) = event.topic.strip_prefix("thread:").and_then(|id| id.parse().ok()) {
+        return Some(id);
+    }
+    match &event.payload {
+        api::SyncPayload::ThreadCreated(thread) | api::SyncPayload::ThreadUpdated(thread) => Some(thread.id),
+        api::SyncPayload::ThreadIndicator(change) => change.thread.as_ref().map(|thread| thread.thread_id),
+        api::SyncPayload::ThreadUnread(change) => Some(change.thread_id),
+        api::SyncPayload::ThreadRead(change) => Some(change.thread_id),
+        api::SyncPayload::ThreadGithubUpdated(change) => Some(change.thread_id),
+        api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => message.thread_id,
+        api::SyncPayload::MessageRemoved(message) => message.thread_id,
+        api::SyncPayload::MessageReactions(reactions) => reactions.thread_id,
+        api::SyncPayload::MessageCards(cards) => cards.thread_id,
+        api::SyncPayload::PollUpdated(poll) => poll.thread_id,
+        api::SyncPayload::PollBallot(ballot) => ballot.thread_id,
+        api::SyncPayload::AgentSteps(steps) => steps.thread_id,
+        api::SyncPayload::ActivityItem(change) => change.item.as_ref().and_then(|item| item.source.thread_id),
+        api::SyncPayload::BlocksUpdated(_)
+        | api::SyncPayload::SettingsUpdated(_)
+        | api::SyncPayload::UserUpdated(_)
+        | api::SyncPayload::WorkspaceUpdated(_)
+        | api::SyncPayload::WorkspaceStylesUpdated(_)
+        | api::SyncPayload::Typing(_)
+        | api::SyncPayload::RoomUnread(_)
+        | api::SyncPayload::RoomRead(_)
+        | api::SyncPayload::SidebarRowUpserted(_)
+        | api::SyncPayload::SidebarRowRemoved(_)
+        | api::SyncPayload::Presence(_)
+        | api::SyncPayload::MessagePinned(_)
+        | api::SyncPayload::ThreadRemoved(_)
+        | api::SyncPayload::BoardAutomationsChanged(_)
+        | api::SyncPayload::SavedChanged(_)
+        | api::SyncPayload::ActivityRemoved(_)
+        | api::SyncPayload::ScheduledChanged(_)
+        | api::SyncPayload::ScheduledRemoved(_)
+        | api::SyncPayload::SidebarCategoryUpserted(_)
+        | api::SyncPayload::SidebarCategoryRemoved(_)
+        | api::SyncPayload::EventsChanged(_)
+        | api::SyncPayload::AgentStatus(_)
+        | api::SyncPayload::ApprovalUpdated(_)
+        | api::SyncPayload::HuddleAfkMoved(_)
+        | api::SyncPayload::HuddlePresence(_)
+        | api::SyncPayload::HuddleRole(_)
+        | api::SyncPayload::HuddleNotice(_)
+        | api::SyncPayload::HuddleRing(_)
+        | api::SyncPayload::HuddleSoundboard(_)
+        | api::SyncPayload::StageUpdated(_)
+        | api::SyncPayload::StageStreamStopped(_)
+        | api::SyncPayload::WorkspaceLayoutUpdated(_) => None,
+    }
+}
+
 #[async_trait::async_trait]
 impl SyncSession for Session {
     async fn events_for_viewer(&mut self, wires: &[&str]) -> Vec<String> {
@@ -530,55 +585,122 @@ impl SyncSession for Session {
             .collect();
         let mut room_ids = BTreeSet::new();
         let mut message_ids = BTreeSet::new();
+        let mut thread_ids = BTreeSet::new();
+        let mut pin_ids = BTreeSet::new();
+        let mut scheduled_ids = BTreeSet::new();
         for (_, event) in &events {
+            if let api::SyncPayload::ScheduledChanged(message) = &event.payload {
+                scheduled_ids.insert(message.id);
+            }
+            if let api::SyncPayload::MessagePinned(state) = &event.payload {
+                pin_ids.insert(state.message_id);
+            }
+            if let Some(id) = event_thread_id(event) {
+                thread_ids.insert(id);
+            }
             if let api::SyncPayload::MessageCreated(message)
             | api::SyncPayload::MessageUpdated(message) = &event.payload
             {
                 room_ids.insert(message.room_id);
                 message_ids.insert(message.id);
+                if let Some(indicator) = &message.thread {
+                    thread_ids.insert(indicator.thread_id);
+                }
             }
         }
-        if message_ids.is_empty() {
-            return events
-                .into_iter()
-                .map(|(wire, _)| wire.to_owned())
-                .collect();
+        if message_ids.is_empty() && thread_ids.is_empty() && pin_ids.is_empty() && scheduled_ids.is_empty() {
+            return events.into_iter().map(|(wire, _)| wire.to_owned()).collect();
         }
         let viewer = self.user.id;
         let access = if let Some(app) = self.app.upgrade() {
-            app.db
-                .read_snapshot(move |conn| {
-                    campfire_db::models::announcement::replay_access(
-                        conn, viewer, room_ids, message_ids,
-                    )
-                })
-                .await
-                .unwrap_or_else(|error| {
-                    tracing::warn!(%error, "sync: message batch delivery not authorized");
-                    app.cable.sync_skipped_for(viewer);
-                    Default::default()
-                })
+            let render_app = app.clone();
+            app.db.read_snapshot(move |conn| {
+                let messages = campfire_db::models::announcement::replay_access(
+                    conn, viewer, room_ids, message_ids,
+                )?;
+                let predicate = campfire_db::models::channel_thread::readable_by_sql("channel_threads.id", "?2");
+                let mut statement = conn.prepare_cached(&format!(
+                    "SELECT id FROM channel_threads WHERE id IN (SELECT value FROM json_each(?1)) AND {predicate}"
+                ))?;
+                let readable = statement.query_map(
+                    rusqlite::params![serde_json::json!(thread_ids).to_string(), viewer],
+                    |row| row.get::<_, i64>(0),
+                )?.collect::<rusqlite::Result<BTreeSet<_>>>()?;
+                let mut pins = std::collections::HashMap::new();
+                let pin_access = campfire_db::models::channel_thread::readable_by_sql("m.thread_id", "?2");
+                let mut statement = conn.prepare_cached(&format!(
+                    "SELECT m.id, m.room_id FROM messages m JOIN memberships mm ON mm.room_id=m.room_id AND mm.user_id=?2 JOIN rooms r ON r.id=m.room_id AND r.deleted_at IS NULL WHERE m.id IN (SELECT value FROM json_each(?1)) AND (m.thread_id IS NULL OR {pin_access})"
+                ))?;
+                let pin_messages = statement.query_map(
+                    rusqlite::params![serde_json::json!(pin_ids).to_string(), viewer],
+                    |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+                )?.collect::<rusqlite::Result<Vec<_>>>()?;
+                let mut counts = std::collections::HashMap::new();
+                for (message_id, room_id) in pin_messages {
+                    let count = match counts.get(&room_id) {
+                        Some(count) => *count,
+                        None => {
+                            let count = campfire_db::MessagePin::count_for_viewer(conn, room_id, viewer)?;
+                            counts.insert(room_id, count);
+                            count
+                        },
+                    };
+                    pins.insert(message_id, (room_id, count));
+                }
+                let mut scheduled_rows = Vec::new();
+                for id in scheduled_ids {
+                    if let Some(row) = campfire_db::ScheduledMessage::find_by_id(conn, id)?
+                        && row.user_id == viewer {
+                        scheduled_rows.push(row);
+                    }
+                }
+                let scheduled = crate::composer::scheduled_rows(conn, &scheduled_rows, render_app.db.env().now(), &render_app)?
+                    .into_iter().map(|message| (message.id, message)).collect::<std::collections::HashMap<_, _>>();
+                Ok((messages, readable, pins, scheduled))
+            }).await.unwrap_or_else(|error| {
+                tracing::warn!(%error, "sync: batch delivery not authorized");
+                app.cable.sync_skipped_for(viewer);
+                Default::default()
+            })
         } else {
             Default::default()
         };
-        events
-            .into_iter()
-            .filter_map(|(wire, mut event)| match &mut event.payload {
+        events.into_iter().filter_map(|(wire, mut event)| {
+            // Removal is a control event: it must reach a revoked viewer to clear their pane
+            // and unsubscribe even though their access has already gone.
+            if let Some(id) = event_thread_id(&event)
+                && !access.1.contains(&id) {
+                return None;
+            }
+            match &mut event.payload {
+                api::SyncPayload::ScheduledChanged(message) => {
+                    *message = access.3.get(&message.id)?.clone();
+                    serde_json::to_string(&event).ok()
+                }
+                api::SyncPayload::MessagePinned(state) => {
+                    let (room_id, count) = access.2.get(&state.message_id)?;
+                    state.room_id = *room_id;
+                    state.pin_count = *count;
+                    serde_json::to_string(&event).ok()
+                }
                 api::SyncPayload::MessageCreated(message)
                 | api::SyncPayload::MessageUpdated(message) => {
-                    if !access.rooms.contains(&message.room_id) {
+                    if !access.0.rooms.contains(&message.room_id) {
                         return None;
                     }
-                    message.announcement_source =
-                        access.sources.get(&message.id).map(|source| api::AnnouncementSource {
-                            room_id: source.room_id,
-                            message_id: source.message_id,
-                            room_name: source.room_name.clone(),
-                        });
+                    if message.thread.as_ref().is_some_and(|indicator| !access.1.contains(&indicator.thread_id)) {
+                        message.thread = None;
+                    }
+                    message.announcement_source = access.0.sources.get(&message.id).map(|source| api::AnnouncementSource {
+                        room_id: source.room_id,
+                        message_id: source.message_id,
+                        room_name: source.room_name.clone(),
+                    });
                     serde_json::to_string(&event).ok()
                 }
                 _ => Some(wire.to_owned()),
-            })
+            }
+        })
             .collect()
     }
 

@@ -20,6 +20,7 @@ import { type Json, stringField } from "../json.ts";
 import { mentionsUser } from "../markdown.ts";
 import { VIEWER_TIME_ZONE } from "../s2/composer.ts";
 import { type Route, route, type S2Context } from "../s2/context.ts";
+import { canAccessThread, visibleMessage } from "../s2/model.ts";
 import { filesOf } from "../s2/posting.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
 import { zonedTime } from "../s2/when.ts";
@@ -432,7 +433,7 @@ export function createSearch(ctx: S2Context): Search {
     const roomIds = new Set(rooms.map((record) => record.room.id));
 
     const replies = [...world.threads.values()]
-      .filter((thread) => roomIds.has(thread.roomId))
+      .filter((thread) => roomIds.has(thread.roomId) && canAccessThread(world, thread))
       .flatMap((thread) => thread.messages);
 
     const after = filters.afterDate === null ? null : midnight(filters.afterDate, 1);
@@ -567,7 +568,13 @@ export function createSearch(ctx: S2Context): Search {
       const record = rooms.get(thread.roomId);
       const workStatus = WORK_STATUSES.get(thread.id) ?? null;
 
-      if (record === undefined || workStatus === null || record.room.kind === "board") return [];
+      if (
+        record === undefined ||
+        !canAccessThread(world, thread) ||
+        workStatus === null ||
+        record.room.kind === "board"
+      )
+        return [];
 
       if (!inRoom(record.room.name, record.room.kind) || !named(thread.name)) return [];
 
@@ -736,7 +743,7 @@ export function createSearch(ctx: S2Context): Search {
     return {
       query: squish(raw),
       chips: [...parsed.chips],
-      messages: [...page].reverse(),
+      messages: [...page].reverse().map((message) => visibleMessage(ctx.world(), message)),
       users: ctx.usersFor(page.map((message) => message.creatorId)),
       conversations: conversationsFor(page, sections),
       nextCursor:

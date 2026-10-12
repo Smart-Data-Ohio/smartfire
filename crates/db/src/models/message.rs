@@ -102,6 +102,7 @@ pub struct NewMessage {
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
 #[derive(Debug, Clone, Default)]
 pub struct MessageChanges {
+    pub mention_inviter_id: Option<i64>,
     /// Rendered into the body before validation, like a new message's.
     pub markdown_source: Option<String>,
     /// The human edit endpoint assigns nil when switching back to a legacy body.
@@ -295,7 +296,12 @@ impl Message {
         let sql = format!(
             r#"{SELECT_REACHABLE} WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "messages"."id" = ? LIMIT 1"#
         );
-        query_one(conn, &sql, [user_id, id], Self::from_row)?.or_not_found("Message")
+        let message = query_one(conn, &sql, [user_id, id], Self::from_row)?.or_not_found("Message")?;
+        if let Some(thread_id) = message.thread_id
+            && !ChannelThread::find(conn, thread_id)?.readable_by(conn, user_id)? {
+            return Err(crate::Error::RecordNotFound("Message"));
+        }
+        Ok(message)
     }
 
     // Message::Pagination (`app/models/message/pagination.rb`)
@@ -542,6 +548,13 @@ impl Message {
         let importing = imported_time.is_some();
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate_with_associations(tx.conn(), &attributes, true, loaded_associations)?.into_result()?;
+        for blob_id in attributes.attachment_blob_id.iter().chain(&attributes.attachment_blob_ids) {
+            if !Blob::reusable_by(tx.conn(), *blob_id, attributes.creator_id)? {
+                let mut errors = Errors::default();
+                errors.add("attachment", "is inaccessible");
+                return Err(crate::Error::RecordInvalid(errors));
+            }
+        }
         let now = tx.now();
         let client_message_id = attributes
             .client_message_id
@@ -627,6 +640,7 @@ impl Message {
         }
 
         if !message.streaming {
+            if !importing { message.invite_mentionees(tx, message.creator_id)?; }
             // Bookkeeping commits with the message (lead decision, round 2). Receive only
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
@@ -1173,6 +1187,7 @@ impl Message {
             ));
         }
         if !self.streaming {
+            self.invite_mentionees(tx, changes.mention_inviter_id.unwrap_or(self.creator_id))?;
             self.update_in_index(tx)?;
             if references_changed { self.sync_all_references(tx)?; }
             if let Some(previous) = previous_mentionees {
@@ -1221,6 +1236,15 @@ impl Message {
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
     /// A streaming message saves even with no attachment change (`touch_streaming_activity`).
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
+        self.replace_attachment_for(tx, blob_id, self.creator_id)
+    }
+
+    pub fn replace_attachment_for(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>, actor_id: i64) -> Result<()> {
+        if let Some(blob_id) = blob_id && !Blob::reusable_by(tx.conn(), blob_id, actor_id)? {
+            let mut errors = Errors::default();
+            errors.add("attachment", "is inaccessible");
+            return Err(crate::Error::RecordInvalid(errors));
+        }
         let (current, publication) = crate::models::announcement::record_with_publication(
             tx.conn(), self.id, "active_storage_attachments", "attachment", Attachment::from_row,
         )?;
@@ -1569,7 +1593,7 @@ impl Message {
     /// `mentionees`: mentioned users who are members of the room. A forward's body is a
     /// snapshot whose mentions never notify anyone; only its note's `@[Name]` tokens do, each
     /// naming exactly one active member of the destination room (`forward_note_mentionees`).
-    pub fn mentionees(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<Vec<User>> {
+    fn parent_room_mentionees(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<Vec<User>> {
         if self.forwarded() {
             return forward_note_mentionees(
                 conn,
@@ -1584,6 +1608,28 @@ impl Message {
             None => Vec::new(),
         };
         mentionees_in_room(conn, self.room_id, &ids)
+    }
+
+    pub fn mentionees(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<Vec<User>> {
+        let candidates = self.parent_room_mentionees(conn, rich_text)?;
+        let Some(thread_id) = self.thread_id else { return Ok(candidates); };
+        let thread = ChannelThread::find(conn, thread_id)?;
+        let mut visible = Vec::new();
+        for candidate in candidates {
+            if thread.readable_by(conn, candidate.id)? { visible.push(candidate); }
+        }
+        Ok(visible)
+    }
+
+    fn invite_mentionees(&self, tx: &mut Tx<'_>, actor_id: i64) -> Result<()> {
+        let Some(thread_id) = self.thread_id else { return Ok(()); };
+        let thread = ChannelThread::find(tx.conn(), thread_id)?;
+        if thread.visibility != crate::models::channel_thread::ThreadVisibility::Private || self.system_note { return Ok(()); }
+        if !thread.readable_by(tx.conn(), actor_id)? { return Ok(()); }
+        for user in self.parent_room_mentionees(tx.conn(), tx.rich_text())? {
+            if user.is_active() { thread.add_access_member(tx, actor_id, user.id)?; }
+        }
+        Ok(())
     }
 
     /// `Message.find_duplicate(room:, creator:, client_message_id:)`: the message this user
@@ -1699,6 +1745,7 @@ impl Message {
             if !agent.as_ref().map(|a| a.active(tx.conn())).transpose()?.unwrap_or(false) {
                 return self.finalize_claimed_stream_quietly(tx);
             }
+            self.invite_mentionees(tx, self.creator_id)?;
             self.create_in_index(tx)?;
             self.receive_in_conversation(tx)?;
             self.push_later_in_conversation(tx);

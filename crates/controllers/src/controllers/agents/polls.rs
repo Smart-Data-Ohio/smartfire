@@ -22,7 +22,13 @@ pub(super) async fn operation(
         let poll_id = args.get("poll_id").map_or(0, ruby_i64);
         c.app()
             .db
-            .read(move |conn| Poll::find_in_room(conn, room_id, poll_id))
+            .read(move |conn| {
+                let poll = Poll::find_in_room(conn, room_id, poll_id)?;
+                let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+                let message = Message::find_reachable(conn, agent.user_id, poll.message_id)?;
+                if message.room_id != room_id { return Err(campfire_db::Error::RecordNotFound("Poll")); }
+                Ok(poll)
+            })
             .await
             .map_err(db_error)?
     } else {

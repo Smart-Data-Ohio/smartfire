@@ -40,6 +40,9 @@ mod api_s2_tests;
 #[path = "spa_api_threads_tests.rs"]
 mod api_threads_tests;
 #[cfg(test)]
+#[path = "spa_private_media_tests.rs"]
+mod private_media_tests;
+#[cfg(test)]
 #[path = "spa_api_composer_tests.rs"]
 mod api_composer_tests;
 #[cfg(test)]

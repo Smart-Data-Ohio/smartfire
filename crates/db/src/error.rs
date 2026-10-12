@@ -4,6 +4,8 @@ use std::fmt;
 pub enum Error {
     #[error("Sticker capacity reached (limit: 60 stickers)")]
     StickerLimitReached,
+    #[error(transparent)]
+    ThreadAccess(#[from] crate::models::channel_thread::ThreadAccessError),
     #[error("This voice room is full")]
     HuddleRoomFull,
     #[error("Stage audience is full")]

@@ -46,6 +46,7 @@ fn post() -> Thread {
         creator_id: 7,
         name: "Fix the login redirect".into(),
         status: ThreadStatus::Active,
+        visibility: ThreadVisibility::Public,
         reply_count: 2,
         last_activity_at: "2026-10-07T09:30:00.000Z".into(),
         auto_archive_after_minutes: 10080,

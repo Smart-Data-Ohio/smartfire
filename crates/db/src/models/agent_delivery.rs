@@ -158,6 +158,15 @@ impl AgentEvent {
         Self::create_record(tx, a, true)
     }
     fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
+        let thread_id = a.metadata.get("thread_id").and_then(Value::as_i64).or(
+            a.message_id.map(|id| crate::Message::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|message| message.thread_id)
+        );
+        if let Some(thread_id) = thread_id
+            && crate::ChannelThread::find_by_id(tx.conn(), thread_id)?.is_some_and(|thread| thread.visibility == super::channel_thread::ThreadVisibility::Private) {
+            if !a.metadata.is_object() { a.metadata = serde_json::json!({}); }
+            a.metadata["thread_id"] = serde_json::json!(thread_id);
+            a.metadata["thread_visibility"] = serde_json::json!("private");
+        }
         let mut errors = Errors::default();
         if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
             && ![
@@ -347,7 +356,12 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     let (hop, trigger) =
         super::bot_webhook_fanout::hop_and_chain_for_message_sender(tx, message, sender)?;
     let chain = trigger.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let metadata = json!({"hop":hop,"thread_id":message.thread_id});
+    let mut metadata = json!({"hop":hop,"thread_id":message.thread_id});
+    if let Some(thread_id) = message.thread_id
+        && crate::ChannelThread::find(tx.conn(), thread_id)?.visibility
+            == crate::channel_thread::ThreadVisibility::Private {
+        metadata["thread_visibility"] = json!("private");
+    }
     if let Some(agent_id) = sender {
         AgentEvent::create(
             tx,
@@ -405,6 +419,10 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
         }
     }
     for (agent_id, kind) in recipients {
+        if let Some(thread_id) = message.thread_id {
+            let user_id: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
+            if !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), user_id)? { continue; }
+        }
         let (kind, outcome, detail) = if hop >= 3 {
             (
                 "delivery_suppressed_hop_limit",
@@ -491,7 +509,16 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
             .query_row_cached("SELECT user_id FROM agents WHERE id=?", [e.agent_id], |r| {
                 r.get(0)
             })?;
-    let revoked =
+    let thread_id = e.message_id.map(|id| Message::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|message| message.thread_id)
+        .or_else(|| e.metadata.get("thread_id").and_then(serde_json::Value::as_i64));
+    let thread_readable = match thread_id {
+        Some(id) => match crate::ChannelThread::find_by_id(tx.conn(), id)? {
+            Some(thread) => thread.readable_by(tx.conn(), user)?,
+            None => false,
+        },
+        None => true,
+    };
+    let revoked = !thread_readable ||
         !exists(
             tx.conn(),
             "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?",
@@ -518,7 +545,7 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
     };
     if let Some((kind, detail)) = suppressed {
         if tx.conn().execute("UPDATE agent_events SET outcome='suppressed',detail=? WHERE id=? AND outcome='pending'",params![detail,e.id])?==1 {
-            AgentEvent::create(tx,NewEvent {agent_id:e.agent_id,room_id:e.room_id,message_id:e.message_id,actor_id:e.actor_id,event_type:kind.into(),outcome:Some("suppressed".into()),detail:Some(detail),chain_id:e.chain_id.clone(),metadata:json!({"hop":e.hop()}),..Default::default()})?;
+            AgentEvent::create(tx,NewEvent {agent_id:e.agent_id,room_id:e.room_id,message_id:e.message_id,actor_id:e.actor_id,event_type:kind.into(),outcome:Some("suppressed".into()),detail:Some(detail),chain_id:e.chain_id.clone(),metadata:e.metadata.clone(),..Default::default()})?;
         }
     } else {
         let configured = has_webhook(tx, e.agent_id)?;

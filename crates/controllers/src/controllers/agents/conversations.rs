@@ -220,7 +220,7 @@ async fn start(
             } else {
                 let prepare = |tx: &mut campfire_db::Tx<'_>, a: &mut campfire_db::NewMessage| {
                     if let Some(attachment) = attachment {
-                        blob = messages::attachment_blob(tx, attachment, messages::AttachmentPolicy::SignedBlob, "attachment")?;
+                        blob = messages::attachment_blob(tx, attachment, messages::AttachmentPolicy::SignedBlob { actor_id: Some(campfire_db::Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?.user_id) }, "attachment")?;
                         a.attachment_blob_id = blob.as_ref().map(|blob| blob.id);
                         if !in_thread && let Some(blob) = &blob {
                             crate::controllers::presenters::attachments::enqueue_analysis(tx, blob);

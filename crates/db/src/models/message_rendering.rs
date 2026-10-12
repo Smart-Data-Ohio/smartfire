@@ -357,6 +357,8 @@ impl RenderingRecords {
 /// batched before serialization; permissions still use the shared ChannelThread policy.
 #[derive(Default)]
 pub struct ThreadRenderingRecords {
+    pub viewer_id: i64,
+    pub readable: HashSet<i64>,
     pub threads: HashMap<i64, crate::ChannelThread>,
     pub by_parent: HashMap<i64, i64>,
     pub members: HashMap<i64, crate::ThreadMembership>,
@@ -367,7 +369,7 @@ pub struct ThreadRenderingRecords {
 }
 impl ThreadRenderingRecords {
     pub fn load(conn: &Connection, messages: &[Message], viewer: i64) -> Result<Self> {
-        let mut data = Self::default();
+        let mut data = Self { viewer_id: viewer, ..Default::default() };
         if messages.is_empty() {
             return Ok(data);
         }
@@ -378,19 +380,21 @@ impl ThreadRenderingRecords {
             .collect::<HashSet<_>>()
             .into_iter()
             .collect::<Vec<_>>();
+        let access = super::channel_thread::readable_by_sql("channel_threads.id", &viewer.to_string());
         let threads = rows(
             conn,
-            "SELECT * FROM channel_threads WHERE parent_message_id IN ($ids)",
+            &format!("SELECT *,{access} AS readable FROM channel_threads WHERE parent_message_id IN ($ids)"),
             &message_ids,
-            crate::ChannelThread::from_row,
+            |row| Ok((crate::ChannelThread::from_row(row)?, row.get::<_, bool>("readable")?)),
         )?;
         let contexts = rows(
             conn,
-            "SELECT * FROM channel_threads WHERE id IN ($ids)",
+            &format!("SELECT *,{access} AS readable FROM channel_threads WHERE id IN ($ids)"),
             &thread_ids,
-            crate::ChannelThread::from_row,
+            |row| Ok((crate::ChannelThread::from_row(row)?, row.get::<_, bool>("readable")?)),
         )?;
-        for thread in threads.into_iter().chain(contexts) {
+        for (thread, readable) in threads.into_iter().chain(contexts) {
+            if readable { data.readable.insert(thread.id); }
             if let Some(parent) = thread.parent_message_id {
                 data.by_parent.insert(parent, thread.id);
             }

@@ -201,3 +201,31 @@ async fn ws15e_suppression_checks_locked_threads_and_root_scoping() {
     app.db().write(move |tx| { tx.conn().execute("UPDATE channel_threads SET locked_at=NULL WHERE id=?",[thread_id])?; Ok(()) }).await.unwrap();
     assert_eq!(browser.write(Req::new(Method::POST,&thread)).await.status,StatusCode::OK,"unlocked author can suppress through the thread route");
 }
+
+#[tokio::test]
+async fn nested_suppression_rechecks_private_author_access() {
+    let app = app().await;
+    let (thread_id, message_id) = app.db().write(|tx| {
+        if campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?.is_none() {
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+        }
+        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: KEVIN,
+            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+            ..Default::default()
+        })?;
+        let message = thread.post_message(tx, KEVIN, NewMessage { markdown_source: Some("https://example.com/private".into()), ..Default::default() })?;
+        Ok((thread.id, message.id))
+    }).await.unwrap();
+    let path = format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{message_id}/embed_suppression.json");
+    let mut browser = app.sign_in(KEVIN).await;
+    assert_eq!(browser.write(Req::new(Method::POST, &path)).await.status, StatusCode::OK);
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE messages SET embeds_suppressed=0 WHERE id=?", [message_id])?;
+        campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)
+    }).await.unwrap();
+    for path in [path, format!("/messages/{message_id}/embed_suppression.json")] {
+        assert_eq!(browser.write(Req::new(Method::POST, &path)).await.status, StatusCode::NOT_FOUND);
+    }
+    assert!(!app.db().read(move |conn| Message::find(conn, message_id)).await.unwrap().embeds_suppressed);
+}

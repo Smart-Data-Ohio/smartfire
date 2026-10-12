@@ -182,6 +182,7 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
             let thread=agent_reading::thread_by_ids(p.conn,&thread_ids)?;
             let Some(thread)=thread else {return Ok(ServiceResult::fail("Thread not found",404));};
             let Some(room)=Room::find_for_user(p.conn,agent.user_id,thread.room_id)? else {return Ok(ServiceResult::fail("Thread not found",404));};
+            if !thread.readable_by(p.conn, agent.user_id)? { return Ok(ServiceResult::fail("Thread not found",404)); }
             (room,Some(thread.id))
         };
         if !agent_access::capability_for_agent(p.conn,agent_id,"read_messages",Some(room.id))? {

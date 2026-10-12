@@ -34,6 +34,7 @@ export function boardThread(
     replyCount: 0,
     lastActivityAt: "2026-10-07T10:00:00.000Z",
     autoArchiveAfterMinutes: 1440,
+    visibility: "public",
     createdAt: "2026-10-07T09:00:00.000Z",
     work: {
       status,

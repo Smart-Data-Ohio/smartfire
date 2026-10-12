@@ -129,6 +129,7 @@ pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("messages", "sticker_id"),
     ("messages", "sticker_name"),
     ("channel_threads", "client_post_id"),
+    ("channel_threads", "visibility"),
     ("rooms", "client_room_id"),
     ("rooms", "tags_required"),
     ("rooms", "default_board_tag_id"),

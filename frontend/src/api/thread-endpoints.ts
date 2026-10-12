@@ -1,9 +1,11 @@
 /** The S2 thread endpoints: list, detail, replies, create, update, follow and read state. */
 import { Effect } from "effect";
+import type { AddThreadAccessMember } from "../gen/AddThreadAccessMember.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { CreateThread } from "../gen/CreateThread.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessagePage } from "../gen/MessagePage.ts";
+import type { ThreadAccessMembers } from "../gen/ThreadAccessMembers.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
@@ -15,6 +17,7 @@ import { call, get, noContent } from "./call.ts";
 import { cursorQuery, type PageCursor } from "./endpoints.ts";
 import { MessagePage as MessagePageSchema, MessageDTO as MessageSchema } from "./schema/message.ts";
 import {
+  ThreadAccessMembers as ThreadAccessMembersSchema,
   ThreadCreated as ThreadCreatedSchema,
   ThreadDetail as ThreadDetailSchema,
   ThreadList as ThreadListSchema,
@@ -102,5 +105,35 @@ export const markThreadRead = Effect.fn("api.markThreadRead")(function* (threadI
   return yield* call(
     { method: "POST", path: `/threads/${threadId}/read` },
     wire<ThreadMembershipState>(ThreadMembershipStateSchema),
+  );
+});
+
+/** The explicit access grants of a private thread. Following is separate. */
+export const threadAccessMembers = Effect.fn("api.threadAccessMembers")(function* (
+  threadId: number,
+) {
+  return yield* call(
+    get(`/threads/${threadId}/members`),
+    wire<ThreadAccessMembers>(ThreadAccessMembersSchema),
+  );
+});
+
+export const addThreadAccessMember = Effect.fn("api.addThreadAccessMember")(function* (
+  threadId: number,
+  body: AddThreadAccessMember,
+) {
+  return yield* call(
+    { method: "POST", path: `/threads/${threadId}/members`, body },
+    wire<ThreadAccessMembers>(ThreadAccessMembersSchema),
+  );
+});
+
+export const removeThreadAccessMember = Effect.fn("api.removeThreadAccessMember")(function* (
+  threadId: number,
+  userId: number,
+) {
+  return yield* call(
+    { method: "DELETE", path: `/threads/${threadId}/members/${userId}` },
+    noContent,
   );
 });

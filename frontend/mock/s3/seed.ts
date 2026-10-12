@@ -516,6 +516,8 @@ export function seedS3(world: World, now: number, random: Random): void {
       locked: false,
       lastActivityAt: parent.createdAt,
       autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES,
+      visibility: "public",
+      accessMembers: new Map(),
       createdAt: iso(start + 1000),
       messages: [],
       memberIds: new Set([VIEWER_ID]),

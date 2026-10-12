@@ -506,3 +506,44 @@ fn ws11_step_service_validation_failure_preserves_parent_and_structured_errors()
     });
     assert!(!t.events().iter().any(|e| parent_change(e).is_some()));
 }
+
+#[test]
+fn private_step_parents_recheck_access_after_agent_removal() {
+    let t = setup();
+    t.write(|tx| {
+        let user = id("bender");
+        let agent = id("bender_agent");
+        if crate::Membership::find_by_room_and_user(tx.conn(), id("watercooler"), user)?.is_none() {
+            crate::Membership::create_default(tx, id("watercooler"), user)?;
+        }
+        for capability in ["post_messages", "manage_threads"] {
+            AgentGrant::create(tx, NewGrant { agent_id: agent, capability: capability.into(), granted_by_id: id("david"), ..Default::default() })?;
+        }
+        let mut thread = ChannelThread::create(tx, crate::NewChannelThread {
+            room_id: id("watercooler"), creator_id: user,
+            visibility: crate::models::channel_thread::ThreadVisibility::Private,
+            work_status: Some("in_progress".into()), work_owner_id: Some(user),
+            ..Default::default()
+        })?;
+        let message = thread.post_message(tx, user, crate::NewMessage { markdown_source: Some("Private result".into()), ..Default::default() })?;
+        let parents = [
+            NewAgentStep { message_id: Some(message.id), ..base() },
+            NewAgentStep { message_id: None, channel_thread_id: Some(thread.id), ..base() },
+        ];
+        let mut ids = Vec::new();
+        for attrs in &parents {
+            let result = steps::create(tx, agent, attrs.clone())?;
+            assert_eq!(result.status, 201);
+            ids.push(result.payload.unwrap()["id"].as_i64().unwrap());
+        }
+        thread.remove_access_member(tx, user, user)?;
+        for (attrs, step_id) in parents.into_iter().zip(ids) {
+            assert_eq!(steps::create(tx, agent, attrs)?.status, 404);
+            let result = steps::update(tx, agent, step_id, AgentStepChanges { output_summary: Some(Some("Changed".into())), ..Default::default() })?;
+            assert_eq!(result.status, 403);
+            assert!(result.payload.is_none());
+            assert!(AgentStep::find(tx.conn(), step_id)?.unwrap().output_summary.is_none());
+        }
+        Ok(())
+    });
+}

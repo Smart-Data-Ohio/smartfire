@@ -173,6 +173,19 @@ pub fn build(
         &format!("SELECT a.user_id,a.owner_id,{},{} FROM agents a JOIN users u ON u.id=a.user_id LEFT JOIN users o ON o.id=a.owner_id WHERE a.id=?", User::projection("u", "agent_"), User::projection("o", "owner_")),
         [event.agent_id],|r|Ok((r.get(0)?,r.get(1)?,User::from_prefixed_row(r, "agent_")?.display_name().to_owned(),
             r.get::<_, Option<i64>>("owner_id")?.map(|_| User::from_prefixed_row(r, "owner_").map(|owner| owner.display_name().to_owned())).transpose()?)))?;
+    let thread_id = event.message_id.map(|id| Message::find_by_id(conn, id)).transpose()?.flatten().and_then(|message| message.thread_id)
+        .or_else(|| event.metadata.get("thread_id").and_then(serde_json::Value::as_i64));
+    if let Some(id) = thread_id {
+        match ChannelThread::find_by_id(conn, id)? {
+            Some(thread) if !thread.readable_by(conn, user_id)? => {
+                return Ok(Payload::Unavailable("Thread access removed".into()));
+            }
+            None if event.metadata.get("thread_visibility").and_then(Value::as_str) == Some("private") => {
+                return Ok(Payload::Unavailable("Thread no longer available".into()));
+            }
+            _ => (),
+        }
+    }
     let agent = json!({"id":event.agent_id,"name":name,"owner":owner,"delivery_id":event.id});
     let metadata = &event.metadata;
     let data = if MESSAGE_TYPES.contains(&event.event_type.as_str()) {

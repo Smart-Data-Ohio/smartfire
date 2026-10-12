@@ -123,7 +123,7 @@ pub fn load(
             dm_room_id: rooms_by_user.get(&u.id).copied(),
         })
         .collect();
-    let mut statement=conn.prepare("SELECT channel_threads.id,channel_threads.name,rooms.name,rooms.id FROM channel_threads INNER JOIN rooms ON rooms.id=channel_threads.room_id WHERE rooms.deleted_at IS NULL AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id=?) ORDER BY channel_threads.last_activity_at DESC LIMIT 15")?;
+    let mut statement=conn.prepare(&format!("SELECT channel_threads.id,channel_threads.name,rooms.name,rooms.id FROM channel_threads INNER JOIN rooms ON rooms.id=channel_threads.room_id WHERE rooms.deleted_at IS NULL AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id=?) AND {} ORDER BY channel_threads.last_activity_at DESC LIMIT 15", campfire_db::channel_thread::readable_by_sql("channel_threads.id", &user.id.to_string())))?;
     let threads = statement
         .query_map([user.id], |row| {
             let id = row.get::<_, i64>(0)?;

@@ -39,7 +39,13 @@ impl TypingNotificationsChannel {
             (Some(room), Some(thread_id)) => match room::cast_id(&thread_id) {
                 Some(thread_id) => {
                     let room_id = room.id;
-                    let found = self.db.read(move |conn| threads::in_room(conn, room_id, thread_id)).await?;
+                    let user_id = sub.current_user().id;
+                    let found = self.db.read(move |conn| {
+                        match campfire_db::ChannelThread::find_by_id(conn, thread_id)? {
+                            Some(thread) => Ok(thread.room_id == room_id && thread.readable_by(conn, user_id)?),
+                            None => Ok(false),
+                        }
+                    }).await?;
                     found.then_some(Conversation::Thread(thread_id))
                 }
                 None => None,
@@ -74,7 +80,10 @@ impl TypingNotificationsChannel {
                 }
                 let allowed = match conversation {
                     Conversation::Room => true,
-                    Conversation::Thread(thread_id) => threads::in_room(conn, room_id, thread_id)?,
+                    Conversation::Thread(thread_id) => match campfire_db::ChannelThread::find_by_id(conn, thread_id)? {
+                        Some(thread) => thread.room_id == room_id && thread.readable_by(conn, user_id)?,
+                        None => false,
+                    },
                 };
                 if allowed {
                     Ok(Some(User::find(conn, user_id)?.display_name().to_owned()))

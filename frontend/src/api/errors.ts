@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { ApiError as GeneratedApiError } from "../gen/ApiError.ts";
 import type { ApiErrorResponse as GeneratedApiErrorResponse } from "../gen/ApiErrorResponse.ts";
+import type { ThreadAccessRefusal as GeneratedThreadAccessRefusal } from "../gen/ThreadAccessRefusal.ts";
 import type { Assert, Pinned } from "./schema/pin.ts";
 import { SudoState } from "./schema/sudo.ts";
 import { TwoFactorRequirement } from "./schema/two-factor-setup.ts";
@@ -13,6 +14,23 @@ export class Unauthorized extends Schema.TaggedError<Unauthorized>()("Unauthoriz
 /** 403: signed in, but not allowed. */
 export class Forbidden extends Schema.TaggedError<Forbidden>()("Forbidden", {
   message: Schema.String,
+}) {}
+
+export const ThreadAccessRefusal = Schema.Literals([
+  "notPrivate",
+  "inviteForbidden",
+  "removeForbidden",
+  "parentRoomRequired",
+  "visibilityImmutable",
+]);
+
+export type ThreadAccessRefusalPin = Assert<
+  Pinned<typeof ThreadAccessRefusal, GeneratedThreadAccessRefusal>
+>;
+
+export class ThreadAccess extends Schema.TaggedError<ThreadAccess>()("ThreadAccess", {
+  message: Schema.String,
+  reason: ThreadAccessRefusal,
 }) {}
 
 /** 403: confirm one of the available credentials, then retry the pending write. */
@@ -122,6 +140,7 @@ export class FizzyReplyFailed extends Schema.TaggedError<FizzyReplyFailed>()("Fi
 export const ApiError = Schema.Union([
   Unauthorized,
   Forbidden,
+  ThreadAccess,
   SudoRequired,
   TwoFactorRequired,
   NotFound,

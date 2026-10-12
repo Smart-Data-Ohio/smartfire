@@ -20,6 +20,8 @@ pub enum ApiError {
     Unauthorized { message: String },
     /// 403: signed in, but not allowed.
     Forbidden { message: String },
+    /// 403 or 422: a private-thread access operation was refused.
+    ThreadAccess { message: String, reason: ThreadAccessRefusal },
     /// 403: confirm an available credential, then retry the pending write.
     SudoRequired { message: String, reauthentication: crate::SudoState },
     /// 403: two-factor setup or verification is required first.
@@ -67,6 +69,17 @@ pub enum ApiError {
     Unavailable { message: String },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ThreadAccessRefusal {
+    NotPrivate,
+    InviteForbidden,
+    RemoveForbidden,
+    ParentRoomRequired,
+    VisibilityImmutable,
+}
+
 impl ApiError {
     /// The HTTP status that carries this error.
     pub fn status(&self) -> u16 {
@@ -75,6 +88,12 @@ impl ApiError {
             ApiError::Forbidden { .. }
             | ApiError::SudoRequired { .. }
             | ApiError::TwoFactorRequired { .. } => 403,
+            ApiError::ThreadAccess { reason, .. } => match reason {
+                ThreadAccessRefusal::InviteForbidden | ThreadAccessRefusal::RemoveForbidden => 403,
+                ThreadAccessRefusal::NotPrivate
+                | ThreadAccessRefusal::ParentRoomRequired
+                | ThreadAccessRefusal::VisibilityImmutable => 422,
+            },
             ApiError::NotFound { .. } => 404,
             ApiError::Conflict { .. }
             | ApiError::HuddleRoomFull { .. }

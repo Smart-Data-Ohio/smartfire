@@ -1,8 +1,9 @@
 //! The Active Storage endpoints (`activestorage/config/routes.rb`) over `campfire_storage`, as the
 //! engine's controllers serve them, plus `ActiveStorage::Blob#purge` for the purge job.
 //!
-//! Poll option media and scheduled files require their viewer's access. Uploads remain
-//! uncached until attached to a sent message, including stills and disk redirects.
+//! Poll media and private-thread attachments require current conversation access;
+//! scheduled files also require their scheduler. Restricted media and unattached uploads
+//! stay uncached, including variants, previews and disk redirects.
 //! Other downloads stay public behind signed
 //! URLs; the disk `PUT` and direct uploads require a
 //! Campfire session (`reference/config/initializers/active_storage_authentication.rb`). The disk
@@ -229,7 +230,7 @@ pub async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> 
                     WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image'
                 UNION SELECT a.record_id FROM active_storage_attachments a JOIN roots r ON r.id=a.blob_id
                     WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image'
-             ) SELECT b.id, json_extract(b.metadata, '$.poll_media') = 1,
+             ) SELECT b.id, (COALESCE(json_extract(b.metadata, '$.poll_media'), 0) = 1 OR COALESCE(json_extract(b.metadata, '$.private_thread_media'), 0) = 1),
                  json_extract(b.metadata, '$.scheduled_by'),
                  json_extract(b.metadata, '$.uploader_id') IS NOT NULL AND NOT EXISTS (
                     SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id
@@ -253,22 +254,22 @@ pub async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> 
             )?;
             schedulers.extend(scheduled.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
             let mut statement = conn.prepare_cached(
-                "SELECT m.room_id FROM active_storage_attachments a
+                "SELECT m.room_id,m.thread_id FROM active_storage_attachments a
                  JOIN poll_options o ON o.id=a.record_id JOIN polls p ON p.id=o.poll_id
                  JOIN messages m ON m.id=p.message_id
                  WHERE a.blob_id=? AND a.record_type='PollOption' AND a.name='media'"
             )?;
-            let found = statement.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            let found = statement.query_map([id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<i64>>(1)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
             restricted |= !found.is_empty();
             rooms.extend(found);
-            if marked {
-                let mut statement = conn.prepare_cached("SELECT m.room_id FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.blob_id=? AND a.record_type='Message'")?;
-                rooms.extend(statement.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
-            }
+            let mut statement = conn.prepare_cached("SELECT m.room_id,m.thread_id,COALESCE(t.visibility='private',0) FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id END LEFT JOIN channel_threads t ON t.id=m.thread_id WHERE a.blob_id=?")?;
+            let attached = statement.query_map([id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<i64>>(1)?, r.get::<_, bool>(2)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            restricted |= attached.iter().any(|(_, _, private)| *private);
+            rooms.extend(attached.into_iter().map(|(room, thread, _)| (room, thread)));
         }
-        Ok(Some((restricted || !schedulers.is_empty(), unpublished, rooms, schedulers)))
+        Ok(Some((restricted, unpublished, rooms, schedulers)))
     }).await.map_err(Error::internal)?.ok_or(Error::NotFound)?;
-    if !restricted { return Ok(unpublished); }
+    if !restricted && schedulers.is_empty() { return Ok(unpublished); }
     let (user_id, verified) = if let Some(session) = find_session_by_cookie(c).await? {
         (session.user_id, session.two_factor_verified())
     } else if crate::concerns::bot_authentication(c).await?
@@ -285,13 +286,19 @@ pub async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> 
     let allowed = c.app().db.read(move |conn| {
         let user = campfire_db::User::find(conn, user_id)?;
         if !user.is_active() || (!verified && user.requires_two_factor()) { return Ok(false); }
-        if !schedulers.is_empty() {
-            return Ok(schedulers.iter().all(|scheduler| *scheduler == user_id));
-        }
-        for room in rooms {
-            if room_scope.is_none_or(|scope| scope == room)
+        if schedulers.iter().any(|scheduler| *scheduler != user_id) { return Ok(false); }
+        if !restricted { return Ok(true); }
+        for (room, thread) in rooms {
+            let (thread_readable, private) = match thread {
+                Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
+                    Some(thread) => (thread.readable_by(conn, user_id)?, thread.visibility == campfire_db::channel_thread::ThreadVisibility::Private),
+                    None => (false, false),
+                },
+                None => (true, false),
+            };
+            if thread_readable && room_scope.is_none_or(|scope| scope == room)
                 && campfire_db::Room::find_for_user(conn, user_id, room)?.is_some()
-                && campfire_db::models::agent_access::capability_for_user(conn, user_id, "post_messages", room)? != Some(false) {
+                && campfire_db::models::agent_access::capability_for_user(conn, user_id, if private { "read_messages" } else { "post_messages" }, room)? != Some(false) {
                 return Ok(true);
             }
         }
@@ -1287,6 +1294,14 @@ pub async fn purge(app: &App, blob_id: i64) -> anyhow::Result<()> {
             }
             if branding_blob(conn, marker, &blob)? {
                 mark_branding_tree(conn, marker, blob_id)?;
+            }
+            for flag in ["poll_media", "private_thread_media"] {
+                if matches!(blob.metadata.get(flag), Some(Json::Bool(true))) {
+                    conn.execute(
+                        "WITH RECURSIVE images(id) AS (VALUES (?1) UNION SELECT a.blob_id FROM active_storage_attachments a JOIN active_storage_variant_records v ON v.id=a.record_id JOIN images i ON i.id=v.blob_id WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image' UNION SELECT a.blob_id FROM active_storage_attachments a JOIN images i ON i.id=a.record_id WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image') UPDATE active_storage_blobs SET metadata=json_set(COALESCE(NULLIF(metadata,''),'{}'),?2,json('true')) WHERE id IN (SELECT id FROM images)",
+                        rusqlite::params![blob_id, format!("$.{flag}")],
+                    )?;
+                }
             }
             let mut dependents = Vec::new();
             // before_destroy { variant_records.destroy_all }: each record's image attachment goes too.
