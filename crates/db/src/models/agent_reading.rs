@@ -101,3 +101,49 @@ pub fn owned_work(conn: &Connection, user: i64, rooms: &[i64]) -> Result<Vec<Cha
         ChannelThread::from_row,
     )
 }
+
+/// Recheck the selected rows in the snapshot that renders their response.
+pub fn visible_work_by_ids(
+    conn: &Connection,
+    agent: &crate::Agent,
+    ids: &[i64],
+    owned: bool,
+) -> Result<Vec<ChannelThread>> {
+    let thread = super::channel_thread::readable_by_sql("current_thread.id", "?3");
+    let cap =
+        super::agent_access::capability_sql("?2", "current_thread.room_id", "'read_messages'");
+    query_all(
+        conn,
+        &format!(
+            "SELECT current_thread.* FROM json_each(?1) requested JOIN channel_threads current_thread ON current_thread.id=requested.value WHERE EXISTS (SELECT 1 FROM memberships WHERE room_id=current_thread.room_id AND user_id=?3) AND ({thread}) AND ({cap}) AND (?4=0 OR (current_thread.work_status IS NOT NULL AND current_thread.work_owner_id=?3)) ORDER BY CAST(requested.key AS INTEGER)"
+        ),
+        params![
+            serde_json::json!(ids).to_string(),
+            agent.id,
+            agent.user_id,
+            owned
+        ],
+        ChannelThread::from_row,
+    )
+}
+
+pub fn work_response(
+    conn: &Connection,
+    agent_id: i64,
+    thread_id: i64,
+    creating: bool,
+) -> Result<ChannelThread> {
+    let readable =
+        super::channel_thread::readable_by_sql("response_thread.id", "response_agent.user_id");
+    let primary = super::agent_access::capability_sql(
+        "response_agent.id",
+        "response_thread.room_id",
+        "CASE WHEN ?3 THEN 'post_messages' ELSE 'read_messages' END",
+    );
+    let manage = super::agent_access::capability_sql(
+        "response_agent.id",
+        "response_thread.room_id",
+        "'manage_threads'",
+    );
+    query_one(conn,&format!("SELECT response_thread.* FROM channel_threads response_thread JOIN agents response_agent ON response_agent.id=?1 WHERE response_thread.id=?2 AND (response_agent.kind!='personal' OR (({readable}) AND ({primary}) AND ({manage})))"),params![agent_id,thread_id,creating],ChannelThread::from_row)?.ok_or(crate::Error::RecordNotFound("Work"))
+}

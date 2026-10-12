@@ -147,6 +147,16 @@ impl AgentSlashCommand {
 }
 
 fn authorized_room(tx: &Tx<'_>, agent_id: i64, room_id: i64) -> Result<Option<ServiceResult>> {
+    if exists(
+        tx.conn(),
+        "SELECT 1 FROM agents WHERE id=? AND kind='personal'",
+        [agent_id],
+    )? {
+        return Ok(Some(ServiceResult::fail(
+            "Not available to personal agents",
+            403,
+        )));
+    }
     if !exists(
         tx.conn(),
         "SELECT 1 FROM rooms r JOIN memberships m ON m.room_id=r.id JOIN agents a ON a.user_id=m.user_id WHERE r.id=? AND a.id=? AND r.deleted_at IS NULL",
@@ -305,7 +315,7 @@ pub fn invoke_with_options(
     };
     let available = exists(
         tx.conn(),
-        "SELECT 1 FROM agents a JOIN users u ON u.id=a.user_id JOIN memberships m ON m.user_id=a.user_id JOIN rooms r ON r.id=m.room_id WHERE a.id=? AND r.id=? AND r.deleted_at IS NULL AND a.suspended_at IS NULL AND u.status=0",
+        "SELECT 1 FROM agents a JOIN users u ON u.id=a.user_id JOIN memberships m ON m.user_id=a.user_id JOIN rooms r ON r.id=m.room_id WHERE a.id=? AND a.kind!='personal' AND r.id=? AND r.deleted_at IS NULL AND a.suspended_at IS NULL AND u.status=0",
         params![command.agent_id, context.room_id],
     )? && super::agent_access::capability_for_agent(
         tx.conn(),

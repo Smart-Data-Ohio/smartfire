@@ -92,6 +92,24 @@ impl AgentGrant {
         if !CAPABILITIES.contains(&a.capability.as_str()) {
             errors.add("capability", "is not included in the list");
         }
+        if exists(
+            conn,
+            "SELECT 1 FROM agents WHERE id=? AND kind='personal'",
+            [a.agent_id],
+        )? {
+            if !super::agent_access::PERSONAL_CAPABILITIES.contains(&a.capability.as_str()) {
+                errors.add("capability", "is not available to personal agents");
+            }
+            if a.room_id.is_none()
+                || !exists(
+                    conn,
+                    "SELECT 1 FROM rooms WHERE id=? AND type!='Rooms::Direct'",
+                    [a.room_id],
+                )?
+            {
+                errors.add("room", "must be a non-direct room for a personal agent");
+            }
+        }
         // Rails room_id? queries an integer attribute: zero is false.
         if let Some(id) = a.room_id
             && id != 0
@@ -199,7 +217,7 @@ impl AgentGrant {
         Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE agent_id IN (SELECT id FROM agents WHERE user_id=?) AND revoked_at IS NULL",params![tx.now(),tx.now(),user_id])?)
     }
     pub fn revoke_for_membership(tx: &Tx<'_>, user_id: i64, room_id: i64) -> Result<usize> {
-        Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE agent_id IN (SELECT id FROM agents WHERE user_id=?) AND room_id=? AND revoked_at IS NULL",params![tx.now(),tx.now(),user_id,room_id])?)
+        Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE agent_id IN (SELECT id FROM agents WHERE user_id=? OR (kind='personal' AND owner_id=?)) AND room_id=? AND revoked_at IS NULL",params![tx.now(),tx.now(),user_id,user_id,room_id])?)
     }
     pub fn revoke_for_room(tx: &Tx<'_>, room_id: i64) -> Result<usize> {
         Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE room_id=? AND revoked_at IS NULL",params![tx.now(),tx.now(),room_id])?)

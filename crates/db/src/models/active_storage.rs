@@ -57,13 +57,19 @@ impl Blob {
         let restricted: bool = conn.query_row(
             "SELECT EXISTS (SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?)) AND COALESCE(json_extract(b.metadata,'$.private_thread_media'),0)=1) OR EXISTS (SELECT 1 FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END JOIN channel_threads t ON t.id=m.thread_id WHERE a.blob_id IN (SELECT value FROM json_each(?)) AND t.visibility='private')",
             [&ids, &ids], |row| row.get(0))?;
-        if !restricted { return Ok(true); }
+        let personal=super::agent_access::is_personal_user(conn,user_id)?;
+        if personal && crate::sql::exists(conn,"SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?1)) AND (json_extract(b.metadata,'$.scheduled_by') IS NOT NULL OR (json_extract(b.metadata,'$.uploader_id') IS NOT NULL AND json_extract(b.metadata,'$.uploader_id')!=?2 AND NOT EXISTS (SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.blob_id=b.id AND a.record_type='Message' AND a.name IN ('attachment','attachments')))) UNION ALL SELECT 1 FROM active_storage_attachments a WHERE a.blob_id IN (SELECT value FROM json_each(?1)) AND a.record_type='ScheduledMessage'",params![&ids,user_id])? {return Ok(false);}
+        let poll_media=personal && crate::sql::exists(conn,"SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?1)) AND COALESCE(json_extract(b.metadata,'$.poll_media'),0)=1 UNION ALL SELECT 1 FROM active_storage_attachments a WHERE a.blob_id IN (SELECT value FROM json_each(?1)) AND a.record_type='PollOption'",[&ids])?;
+        if !restricted && !poll_media { return Ok(true); }
         let messages: Vec<i64> = crate::sql::query_all(conn,
             "SELECT m.id FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END WHERE a.blob_id IN (SELECT value FROM json_each(?))",
             [&ids], |row| row.get(0))?;
         for message_id in messages {
             match crate::Message::find_reachable(conn, user_id, message_id) {
-                Ok(_) => return Ok(true),
+                Ok(source) => {
+                    let private=source.thread_id.map(|id|crate::ChannelThread::find(conn,id)).transpose()?.is_some_and(|thread|thread.visibility==super::channel_thread::ThreadVisibility::Private);
+                    if !personal || super::agent_access::capability_for_user(conn,user_id,if private {"read_messages"} else {"post_messages"},source.room_id)? == Some(true) { return Ok(true); }
+                }
                 Err(crate::Error::RecordNotFound(_)) => {},
                 Err(error) => return Err(error),
             }

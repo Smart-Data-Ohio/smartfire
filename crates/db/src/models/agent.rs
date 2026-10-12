@@ -265,6 +265,15 @@ impl Agent {
         if a.owner_id.is_none() && (a.kind == AgentKind::Personal || exclude.is_none()) {
             errors.add("owner_id", "can't be blank");
         }
+        if a.kind == AgentKind::Personal
+            && exists(
+                conn,
+                "SELECT 1 FROM agent_grants g LEFT JOIN rooms r ON r.id=g.room_id WHERE g.agent_id=? AND (g.capability NOT IN ('read_messages','post_messages','react','manage_threads') OR g.room_id IS NULL OR r.type='Rooms::Direct')",
+                [exclude],
+            )?
+        {
+            errors.add("kind", "has incompatible grants for a personal agent");
+        }
         if !STATUSES.contains(&a.status.as_str()) {
             errors.add("status", "is not included in the list");
         }
@@ -294,6 +303,12 @@ impl Agent {
     pub fn create(tx: &Tx<'_>, a: NewAgent) -> Result<Self> {
         Self::validate(tx.conn(), &a, None)?.into_result()?;
         let id=tx.conn().query_row("INSERT INTO agents(user_id,owner_id,kind,description,provider,runtime,status,status_note,suspended_at,daily_message_cap,daily_board_post_cap,daily_external_action_cap,working_presence,working_presence_expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.user_id,a.owner_id,a.kind.name(),a.description,a.provider,a.runtime,a.status,a.status_note,a.suspended_at,a.daily_message_cap,a.daily_board_post_cap,a.daily_external_action_cap,a.working_presence,a.working_presence_expires_at,tx.now(),tx.now()],|r|r.get(0))?;
+        if a.kind == AgentKind::Personal {
+            tx.conn().execute(
+                "UPDATE users SET bot_token=NULL,bot_token_digest=NULL WHERE id=?",
+                [a.user_id],
+            )?;
+        }
         Ok(Self::find(tx.conn(), id)?.expect("inserted agent"))
     }
     fn attributes(&self) -> NewAgent {
@@ -514,7 +529,10 @@ impl Agent {
     pub fn active(&self, conn: &Connection) -> Result<bool> {
         exists(
             conn,
-            "SELECT 1 FROM agents a JOIN users u ON u.id=a.user_id WHERE a.id=? AND a.suspended_at IS NULL AND u.status=0",
+            &format!(
+                "SELECT 1 FROM agents a WHERE a.id=? AND ({})",
+                super::agent_access::agent_live("a")
+            ),
             [self.id],
         )
     }
@@ -522,7 +540,8 @@ impl Agent {
         self.suspended_at.is_some()
     }
     pub fn legacy_capabilities(&self, conn: &Connection) -> Result<bool> {
-        Ok(!exists(
+        Ok(self.kind != AgentKind::Personal
+            && !exists(
             conn,
             "SELECT 1 FROM agent_grants WHERE agent_id=?",
             [self.id],
@@ -590,7 +609,9 @@ impl Agent {
             None => "no owner recorded".into(),
             Some(owner) => match self.kind {
                 AgentKind::Personal => format!("Personal agent of {}", owner.display_name()),
-                AgentKind::Workspace => format!("Workspace agent, managed by {}", owner.display_name()),
+                AgentKind::Workspace => {
+                    format!("Workspace agent, managed by {}", owner.display_name())
+                }
             },
         })
     }

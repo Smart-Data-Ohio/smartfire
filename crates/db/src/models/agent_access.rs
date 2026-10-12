@@ -16,47 +16,90 @@ pub const CAPABILITIES: [&str; 7] = [
     "fizzy",
     "dm_anyone",
 ];
-const LEGACY_CAPABILITIES: [&str; 3] = ["read_messages", "post_messages", "react"];
+pub const PERSONAL_CAPABILITIES: [&str; 4] =
+    ["read_messages", "post_messages", "react", "manage_threads"];
 
-/// Request-local batch of Agent#can? facts, with the same policy as capability_for_agent.
-/// Membership remains the caller's check. A revoked grant disables the legacy fallback.
+/// SQL expressions here and in capability_sql are supplied by code, never requests.
+pub fn agent_live(agent: &str) -> String {
+    format!(
+        "{agent}.suspended_at IS NULL AND EXISTS (SELECT 1 FROM users live_bot WHERE live_bot.id={agent}.user_id AND live_bot.status=0) AND ({agent}.kind!='personal' OR EXISTS (SELECT 1 FROM users live_owner WHERE live_owner.id={agent}.owner_id AND live_owner.status=0))"
+    )
+}
+
+pub fn legacy_sql(agent: &str) -> String {
+    format!(
+        "{agent}.kind!='personal' AND NOT EXISTS (SELECT 1 FROM agent_grants legacy_grant WHERE legacy_grant.agent_id={agent}.id)"
+    )
+}
+
+/// The single capability policy, shared by single, batch and event readers.
+/// Workspace membership remains a caller check; personal membership is a boundary here.
+pub fn capability_sql(agent: &str, room: &str, cap: &str) -> String {
+    let live = agent_live("policy_agent");
+    let legacy = legacy_sql("policy_agent");
+    format!("EXISTS (SELECT 1 FROM agents policy_agent WHERE policy_agent.id=({agent}) AND ({live}) AND ({cap}) IN ('read_messages','post_messages','react','manage_threads','external_action','fizzy','dm_anyone') AND (
+        (policy_agent.kind!='personal' AND NOT EXISTS (SELECT 1 FROM rooms policy_deleted WHERE policy_deleted.id=({room}) AND policy_deleted.deleted_at IS NOT NULL) AND (
+            (({cap}) IN ('read_messages','post_messages','react') AND ({legacy})) OR EXISTS (SELECT 1 FROM agent_grants policy_grant WHERE policy_grant.agent_id=policy_agent.id AND policy_grant.capability=({cap}) AND policy_grant.revoked_at IS NULL AND (policy_grant.room_id IS NULL OR policy_grant.room_id=({room})))) )
+        OR (policy_agent.kind='personal' AND ({cap}) IN ('read_messages','post_messages','react','manage_threads') AND EXISTS (
+            SELECT 1 FROM rooms policy_room JOIN memberships policy_member ON policy_member.room_id=policy_room.id AND policy_member.user_id=policy_agent.user_id
+            WHERE policy_room.id=({room}) AND policy_room.deleted_at IS NULL AND (
+                (policy_room.type!='Rooms::Direct' AND EXISTS (SELECT 1 FROM memberships policy_owner WHERE policy_owner.room_id=policy_room.id AND policy_owner.user_id=policy_agent.owner_id) AND EXISTS (SELECT 1 FROM agent_grants policy_grant WHERE policy_grant.agent_id=policy_agent.id AND policy_grant.capability=({cap}) AND policy_grant.room_id=policy_room.id AND policy_grant.revoked_at IS NULL))
+                OR (policy_room.type='Rooms::Direct' AND ({cap}) IN ('read_messages','post_messages','react') AND policy_agent.owner_id!=policy_agent.user_id AND (SELECT COUNT(*) FROM memberships dm_member WHERE dm_member.room_id=policy_room.id)=2 AND EXISTS (SELECT 1 FROM memberships dm_owner WHERE dm_owner.room_id=policy_room.id AND dm_owner.user_id=policy_agent.owner_id))
+            )))
+    ))")
+}
+
+pub fn is_personal_user(conn: &Connection, user_id: i64) -> Result<bool> {
+    exists(
+        conn,
+        "SELECT 1 FROM agents WHERE user_id=? AND kind='personal'",
+        [user_id],
+    )
+}
+
+pub fn check_direct_members(conn: &Connection, member_ids: &[i64]) -> Result<()> {
+    let members: std::collections::HashSet<_> = member_ids.iter().copied().collect();
+    let personal = query_all(
+        conn,
+        "SELECT user_id,owner_id FROM agents WHERE kind='personal' AND user_id IN (SELECT value FROM json_each(?))",
+        [serde_json::json!(member_ids).to_string()],
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<i64>>(1)?)),
+    )?;
+    for (bot, owner) in personal {
+        if members.len() != 2 || owner.is_none_or(|owner| owner == bot || !members.contains(&owner))
+        {
+            return Err(crate::Error::Other("PersonalAgentDirect".into()));
+        }
+    }
+    Ok(())
+}
+
+pub fn capability_for_agent(
+    conn: &Connection,
+    agent_id: i64,
+    capability: &str,
+    room_id: Option<i64>,
+) -> Result<bool> {
+    Ok(conn.query_row(
+        &format!("SELECT {}", capability_sql("?1", "?2", "?3")),
+        params![agent_id, room_id, capability],
+        |row| row.get(0),
+    )?)
+}
+
 pub fn capabilities_for_agents(
     conn: &Connection,
     capability: &str,
     requests: &[(i64, Option<i64>)],
 ) -> Result<std::collections::HashMap<(i64, Option<i64>), bool>> {
-    if requests.is_empty() {
-        return Ok(Default::default());
-    }
-    if !CAPABILITIES.contains(&capability) {
-        return Ok(requests.iter().map(|&key| (key, false)).collect());
-    }
     Ok(query_all(
-        conn,
-        "SELECT json_extract(request.value,'$[0]'), json_extract(request.value,'$[1]'),
-         a.id IS NOT NULL AND a.suspended_at IS NULL AND u.id IS NOT NULL AND u.status=0
-         AND (r.id IS NULL OR r.deleted_at IS NULL)
-         AND ((? AND NOT EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id))
-           OR EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id
-             AND g.capability=? AND g.revoked_at IS NULL
-             AND (g.room_id IS NULL OR g.room_id=json_extract(request.value,'$[1]'))))
-         FROM json_each(?) request
-         LEFT JOIN agents a ON a.id=json_extract(request.value,'$[0]')
-         LEFT JOIN users u ON u.id=a.user_id
-         LEFT JOIN rooms r ON r.id=json_extract(request.value,'$[1]')",
-        params![
-            LEGACY_CAPABILITIES.contains(&capability),
-            capability,
-            serde_json::json!(requests).to_string()
-        ],
-        |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)),
-    )?
+        conn, &format!("SELECT json_extract(request.value,'$[0]'),json_extract(request.value,'$[1]'),{} FROM json_each(?1) request", capability_sql("json_extract(request.value,'$[0]')", "json_extract(request.value,'$[1]')", "?2")),
+        params![serde_json::json!(requests).to_string(),capability],
+        |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)))?
     .into_iter()
     .collect())
 }
 
-/// Request-local capability facts for a current user. None preserves the human/
-/// missing-agent behavior of capability_for_user; membership remains separate.
 pub fn capabilities_for_user_in_room(
     conn: &Connection,
     user_id: i64,
@@ -64,175 +107,36 @@ pub fn capabilities_for_user_in_room(
     capabilities: &[&str],
 ) -> Result<std::collections::HashMap<String, Option<bool>>> {
     Ok(query_all(
-        conn,
-        "SELECT requested.value, CASE WHEN a.id IS NULL THEN NULL ELSE
-         a.suspended_at IS NULL AND u.status=0 AND r.id IS NOT NULL AND r.deleted_at IS NULL
-         AND ((requested.value IN ('read_messages','post_messages','react')
-           AND NOT EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id))
-           OR EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id
-             AND g.capability=requested.value AND g.revoked_at IS NULL
-             AND (g.room_id IS NULL OR g.room_id=?))) END
-         FROM json_each(?) requested LEFT JOIN agents a ON a.user_id=?
-         LEFT JOIN users u ON u.id=a.user_id LEFT JOIN rooms r ON r.id=?",
-        params![
-            room_id,
-            serde_json::json!(capabilities).to_string(),
-            user_id,
-            room_id
-        ],
-        |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<bool>>(1)?)),
-    )?
+        conn, &format!("SELECT requested.value,CASE WHEN a.id IS NULL THEN NULL ELSE EXISTS (SELECT 1 FROM rooms WHERE id=?2 AND deleted_at IS NULL) AND ({}) END FROM json_each(?1) requested LEFT JOIN agents a ON a.user_id=?3",capability_sql("a.id","?2","requested.value")),
+        params![serde_json::json!(capabilities).to_string(),room_id,user_id],
+        |row| Ok((row.get(0)?, row.get(1)?)))?
     .into_iter()
-    .map(|(cap, allowed)| {
-        let allowed = if CAPABILITIES.contains(&cap.as_str()) {
-            allowed
-        } else {
-            allowed.map(|_| false)
-        };
-        (cap, allowed)
-    })
     .collect())
 }
 
-fn active_agent(conn: &Connection, agent_id: i64) -> Result<Option<(i64, bool)>> {
-    let user = query_one(
-        conn,
-        "SELECT a.user_id FROM agents a JOIN users u ON u.id=a.user_id
-         WHERE a.id=? AND a.suspended_at IS NULL AND u.status=0",
-        [agent_id],
-        |r| r.get::<_, i64>(0),
-    )?;
-    user.map(|user| {
-        Ok((
-            user,
-            !exists(
-                conn,
-                "SELECT 1 FROM agent_grants WHERE agent_id=?",
-                [agent_id],
-            )?,
-        ))
-    })
-    .transpose()
-}
-
-/// Agent#can? with a resolved optional Room association. Membership is a caller check.
-pub fn capability_for_agent(
-    conn: &Connection,
-    agent_id: i64,
-    capability: &str,
-    room_id: Option<i64>,
-) -> Result<bool> {
-    let Some((_, legacy)) = active_agent(conn, agent_id)? else {
-        return Ok(false);
-    };
-    if !CAPABILITIES.contains(&capability) {
-        return Ok(false);
-    }
-    if let Some(room) = room_id
-        && exists(
-            conn,
-            "SELECT 1 FROM rooms WHERE id=? AND deleted_at IS NOT NULL",
-            [room],
-        )?
-    {
-        return Ok(false);
-    }
-    if legacy {
-        return Ok(LEGACY_CAPABILITIES.contains(&capability));
-    }
-    exists(
-        conn,
-        "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL
-         AND (room_id IS NULL OR (? IS NOT NULL AND room_id=?))",
-        params![agent_id, capability, room_id, room_id],
-    )
-}
-
-/// Bulk Agent#can? decisions for real rooms. Membership remains a caller check.
-/// No state escapes the current reader connection.
 pub fn capabilities_for_users_in_rooms(
     conn: &Connection,
     users: &[i64],
     rooms: &[i64],
     capability: &str,
 ) -> Result<std::collections::HashSet<(i64, i64)>> {
-    use crate::sql::placeholders;
-    use crate::sql::query_all;
-    let mut allowed = std::collections::HashSet::new();
-    if users.is_empty() || rooms.is_empty() || !CAPABILITIES.contains(&capability) {
-        return Ok(allowed);
-    }
-    let agents = query_all(
+    Ok(query_all(
         conn,
-        &format!(
-            "SELECT a.id,a.user_id FROM agents a JOIN users u ON u.id=a.user_id WHERE a.user_id IN ({}) AND a.suspended_at IS NULL AND u.status=0",
-            placeholders(users.len())
-        ),
-        rusqlite::params_from_iter(users),
-        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
-    )?;
-    let ids = agents.iter().map(|(id, _)| *id).collect::<Vec<_>>();
-    if ids.is_empty() {
-        return Ok(allowed);
-    }
-    let grants = query_all(
-        conn,
-        &format!(
-            "SELECT agent_id,capability,room_id,revoked_at IS NULL FROM agent_grants WHERE agent_id IN ({})",
-            placeholders(ids.len())
-        ),
-        rusqlite::params_from_iter(ids),
-        |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, Option<i64>>(2)?,
-                r.get::<_, bool>(3)?,
-            ))
-        },
-    )?;
-    let rooms = query_all(
-        conn,
-        &format!(
-            "SELECT id FROM rooms WHERE id IN ({}) AND deleted_at IS NULL",
-            placeholders(rooms.len())
-        ),
-        rusqlite::params_from_iter(rooms),
-        |r| r.get::<_, i64>(0),
-    )?;
-    for (agent, user) in agents {
-        let legacy = !grants.iter().any(|(id, _, _, _)| *id == agent);
-        for &room in &rooms {
-            if (legacy && LEGACY_CAPABILITIES.contains(&capability))
-                || grants.iter().any(|(id, cap, scope, active)| {
-                    *id == agent
-                        && cap == capability
-                        && *active
-                        && (scope.is_none() || *scope == Some(room))
-                })
-            {
-                allowed.insert((user, room));
-            }
-        }
-    }
-    Ok(allowed)
+        &format!("SELECT a.user_id,r.id FROM agents a CROSS JOIN rooms r WHERE a.user_id IN (SELECT value FROM json_each(?1)) AND r.id IN (SELECT value FROM json_each(?2)) AND r.deleted_at IS NULL AND ({})",capability_sql("a.id","r.id","?3")
+        ),params![serde_json::json!(users).to_string(),serde_json::json!(rooms).to_string(),capability],
+        |row| Ok((row.get(0)?,row.get(1)?)))?.into_iter().collect())
 }
 
 pub fn has_capability_anywhere(conn: &Connection, agent_id: i64, capability: &str) -> Result<bool> {
-    let Some((_, legacy)) = active_agent(conn, agent_id)? else {
-        return Ok(false);
-    };
-    if !CAPABILITIES.contains(&capability) {
-        return Ok(false);
-    }
-    if legacy {
-        return Ok(LEGACY_CAPABILITIES.contains(&capability));
-    }
-    exists(
-        conn,
-        "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL",
+    Ok(conn.query_row(
+        &format!(
+            "SELECT ({}) OR EXISTS (SELECT 1 FROM rooms anywhere_room WHERE ({}))",
+            capability_sql("?1", "NULL", "?2"),
+            capability_sql("?1", "anywhere_room.id", "?2")
+        ),
         params![agent_id, capability],
-    )
+        |row| row.get(0),
+    )?)
 }
 
 /// AgentCredential.authenticate plus Agent#active?, record_use! and touch_last_seen!.
@@ -294,7 +198,10 @@ fn identity_for_credential(
     let agent_id = credential.agent_id;
     let identity = query_one(
         conn,
-        "SELECT user_id FROM agents WHERE id=? AND suspended_at IS NULL",
+        &format!(
+            "SELECT a.user_id FROM agents a WHERE a.id=? AND ({})",
+            agent_live("a")
+        ),
         [agent_id],
         |r| r.get::<_, i64>(0),
     )?;
@@ -321,37 +228,25 @@ pub fn capability_for_user(
 ) -> Result<Option<bool>> {
     let agent = query_one(
         conn,
-        "SELECT id,suspended_at FROM agents WHERE user_id=? LIMIT 1",
+        "SELECT id FROM agents WHERE user_id=? LIMIT 1",
         [user_id],
-        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<String>>(1)?)),
+        |r| r.get::<_, i64>(0),
     )?;
-    let Some((agent_id, suspended_at)) = agent else {
+    let Some(agent) = agent else {
         return Ok(None);
     };
-    if suspended_at.is_some()
-        || !User::find(conn, user_id)?.is_active()
-        || !CAPABILITIES.contains(&capability)
-    {
-        return Ok(Some(false));
-    }
     if !exists(
         conn,
-        "SELECT 1 FROM rooms WHERE id=? AND deleted_at IS NULL LIMIT 1",
+        "SELECT 1 FROM rooms WHERE id=? AND deleted_at IS NULL",
         [room_id],
     )? {
         return Ok(Some(false));
     }
-    if !exists(
+    Ok(Some(capability_for_agent(
         conn,
-        "SELECT 1 FROM agent_grants WHERE agent_id=? LIMIT 1",
-        [agent_id],
-    )? {
-        return Ok(Some(LEGACY_CAPABILITIES.contains(&capability)));
-    }
-    Ok(Some(exists(
-        conn,
-        "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL AND (room_id=? OR room_id IS NULL) LIMIT 1",
-        params![agent_id, capability, room_id],
+        agent,
+        capability,
+        Some(room_id),
     )?))
 }
 

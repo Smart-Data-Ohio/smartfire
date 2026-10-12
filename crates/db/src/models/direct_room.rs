@@ -163,6 +163,8 @@ impl Room {
             .copied()
             .filter(|id| !current.contains(id))
             .collect();
+        let members = current.iter().chain(&fresh).copied().collect::<Vec<_>>();
+        super::agent_access::check_direct_members(tx.conn(), &members)?;
         super::ignore_policy::require_contact(tx.conn(), actor, &fresh)?;
         if !self.direct_group_capable(tx.conn())? {
             return Err(crate::Error::Other("NotAGroup".into()));

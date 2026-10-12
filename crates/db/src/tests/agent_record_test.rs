@@ -214,6 +214,7 @@ fn ws11_agent_descriptions_summaries_and_suspension_revoke_live_grants() {
         assert_eq!(json!(agent.grants_summary(tx.conn())?), v["grants"]);
         AgentGrant::revoke_for_agent(tx, agent.id)?;
         assert_eq!(json!(agent.grants_summary(tx.conn())?), v["revoked"]);
+        tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=? AND room_id IS NULL",[agent.id])?;
         for (kind, key) in [
             (AgentKind::Personal, "personal"),
             (AgentKind::Workspace, "workspace"),
