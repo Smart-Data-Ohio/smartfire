@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { THREAD_IDS } from "../../mock/s2/seed.ts";
+import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
 import {
   expect,
   expectNoHorizontalOverflow,
@@ -99,6 +99,24 @@ matrix("a GIF sends into a thread", async ({ page, theme }) => {
 
   await expect(sent.getByRole("img", { name: "Celebration-Cheer.gif" })).toBeVisible();
   await shot(page, "gif-picker-thread", theme);
+});
+
+matrix("a GIF starts a new thread", async ({ page, theme }) => {
+  await open(page, `r/${GENERAL}/t/new?parent=${MESSAGE_IDS.generalChart}`, theme);
+
+  await expect(pane(page).getByRole("heading", { name: "New thread" })).toBeVisible();
+
+  const picker = await openPicker(page, pane(page).locator(".composer"));
+
+  await picker.getByRole("option", { name: "Hello Wave" }).click();
+  await expect(picker).toBeHidden();
+
+  // The pick is the first reply: the pane moves to the thread it started, GIF on show.
+  await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}/t/\\d+$`));
+  await expect(
+    timeline(pane(page)).last().getByRole("img", { name: "Hello-Wave.gif" }),
+  ).toBeVisible();
+  await shot(page, "gif-picker-new-thread", theme);
 });
 
 test("with GIFs off, the composer has no GIF button", async ({ page }) => {

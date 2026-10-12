@@ -128,6 +128,14 @@ const names = (picker: HTMLElement) =>
     .queryAllByRole("option")
     .map((option) => option.getAttribute("aria-label"));
 
+/** Tells the picker's paging sentinel it came into view, through the stubbed observer. */
+async function intersect() {
+  await act(async () => {
+    // SAFETY: the stub above records the callback; only isIntersecting is read, and no observer.
+    observe?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+  });
+}
+
 describe("the GIF columns", () => {
   it("balances the masonry columns by each GIF's height for its width", () => {
     const columns = distributeGifs([WAVE, CHEER, DANCE, CAT], 2);
@@ -230,6 +238,83 @@ describe("the GIF button", () => {
     await waitFor(() =>
       expect(names(picker)).toEqual(["Hello Wave", "Celebration Cheer", "Dance Party"]),
     );
+  });
+
+  it("pages again after the search changes while a page is loading", async () => {
+    const { trending, search } = stubReads();
+
+    let finishPageTwo: (() => void) | null = null;
+
+    trending.mockResolvedValueOnce(list([WAVE, CHEER], 1, true)).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishPageTwo = () => resolve(list([DANCE], 2, false));
+        }),
+    );
+    search
+      .mockResolvedValueOnce(list([CAT], 1, true))
+      .mockResolvedValueOnce(list([WAVE], 2, false));
+    render(<ComposerGifButton onPick={async () => {}} />);
+
+    const picker = await openPicker();
+
+    await waitFor(() => expect(names(picker)).toEqual(["Hello Wave", "Celebration Cheer"]));
+
+    // Start page two, then change the search before it lands.
+    await intersect();
+    await waitFor(() => expect(within(picker).getByText("Loading more GIFs…")).toBeTruthy());
+
+    fireEvent.change(within(picker).getByRole("combobox", { name: "Search GIFs" }), {
+      target: { value: "cat" },
+    });
+
+    await waitFor(() => expect(names(picker)).toEqual(["Cat Yawn"]), {
+      timeout: GIF_SEARCH_DEBOUNCE_MS + 2000,
+    });
+
+    // The stale page lands late: it must not stick the new results on "Loading more".
+    await act(async () => finishPageTwo?.());
+    expect(within(picker).queryByText("Loading more GIFs…")).toBeNull();
+    expect(names(picker)).toEqual(["Cat Yawn"]);
+
+    // Paging is armed again for the new query.
+    await intersect();
+    await waitFor(() => expect(search).toHaveBeenCalledWith("cat", 2));
+    await waitFor(() => expect(names(picker)).toEqual(["Cat Yawn", "Hello Wave"]));
+  });
+
+  it("shows a placeholder, never the animated preview, when a GIF has no still", async () => {
+    const { trending } = stubReads();
+
+    const noStill: GifItem = { ...CAT, stillUrl: null };
+
+    trending.mockResolvedValue(list([WAVE, noStill]));
+    render(<ComposerGifButton onPick={async () => {}} />);
+
+    const picker = await openPicker();
+
+    await waitFor(() => expect(names(picker)).toEqual(["Hello Wave", "Cat Yawn"]));
+
+    const cat = () => within(picker).getByRole("option", { name: "Cat Yawn" });
+
+    const preview = () =>
+      [...picker.querySelectorAll("img")].some(
+        (image) => image.getAttribute("src") === noStill.previewUrl,
+      );
+
+    // At rest there is only its titled placeholder: the animated preview never loads.
+    expect(cat().querySelector("img")).toBeNull();
+    expect(cat().textContent).toContain("Cat Yawn");
+    expect(preview()).toBe(false);
+
+    // Hovering (the active GIF) is the only time it animates.
+    fireEvent.pointerMove(cat());
+    expect(cat().querySelector("img")?.getAttribute("src")).toBe(noStill.previewUrl);
+
+    // Under reduced motion even the active GIF stays on the placeholder.
+    document.documentElement.dataset.motion = "reduce";
+    await waitFor(() => expect(cat().querySelector("img")).toBeNull());
+    expect(preview()).toBe(false);
   });
 
   it("moves through the grid with the arrows and sends with Enter", async () => {
@@ -391,8 +476,56 @@ describe("sending a GIF from the composer", () => {
     await waitFor(() => expect(names(picker)).toEqual(["Hello Wave", "Celebration Cheer"]));
     fireEvent.click(within(picker).getByRole("option", { name: "Hello Wave" }));
 
+    // The server counts the GIF as one file and wants one spoiler flag per file
+    // (`file_spoilers` in crates/api): an empty list is refused, `[false]` is the GIF's flag.
     await waitFor(() =>
-      expect(submit).toHaveBeenCalledWith(expect.objectContaining({ gifSlug: "hello-wave" })),
+      expect(submit).toHaveBeenCalledExactlyOnceWith({
+        markdown: "",
+        attachmentSignedId: null,
+        attachmentSignedIds: [],
+        attachmentSpoilers: [false],
+        driveFileIds: [],
+        gifSlug: "hello-wave",
+      }),
     );
+  });
+
+  it("keeps a newer draft when a GIF send lands after leaving and coming back", async () => {
+    stubReads();
+
+    let finishSend: (() => void) | null = null;
+
+    vi.spyOn(gifActions, "send").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishSend = () => resolve(messageFixture(22, ROOM));
+        }),
+    );
+
+    const key = draftKey(ROOM, null);
+
+    writeDraft(key, "look at this");
+
+    const first = render(<Composer roomId={ROOM} />);
+
+    const picker = await openPicker();
+
+    await waitFor(() => expect(names(picker)).toEqual(["Hello Wave", "Celebration Cheer"]));
+    fireEvent.click(within(picker).getByRole("option", { name: "Hello Wave" }));
+
+    // Leave the room and come back while the send is still out, then keep typing there.
+    first.unmount();
+    cleanup();
+    render(<Composer roomId={ROOM} />);
+
+    const box = screen.getByRole("textbox", { name: /Message/ });
+
+    fireEvent.change(box, { target: { value: "newer words" } });
+    expect(readDraft(key)).toBe("newer words");
+
+    await act(async () => finishSend?.());
+
+    expect(readDraft(key)).toBe("newer words");
+    expect(box).toHaveProperty("value", "newer words");
   });
 });

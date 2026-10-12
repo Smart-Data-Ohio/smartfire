@@ -10,6 +10,7 @@ import {
 import type { GifCategory } from "../../gen/GifCategory.ts";
 import type { GifItem } from "../../gen/GifItem.ts";
 import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { gifActions } from "../../sync/gif-actions.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -46,6 +47,7 @@ function fetchPage(query: string, page: number) {
  */
 export function GifPicker({ onPick }: GifPickerProps) {
   const id = useId();
+  const reducedMotion = useReducedMotion();
   const [query, setQuery] = useState("");
   const [settled, setSettled] = useState("");
   const [items, setItems] = useState<readonly GifItem[]>([]);
@@ -125,6 +127,9 @@ export function GifPicker({ onPick }: GifPickerProps) {
     const mine = sequence.current;
 
     setLoading(true);
+    // A page still out for the old query is dropped by sequence, so its "loading more"
+    // belongs to the old query too: clear it here, or paging stays stuck off.
+    setLoadingMore(false);
     setFailed(null);
     setMoreFailed(false);
     setItems([]);
@@ -401,19 +406,31 @@ export function GifPicker({ onPick }: GifPickerProps) {
                         onPointerMove={() => setActiveSlug(item.slug)}
                         onClick={() => void pick(item)}
                       >
-                        <EmojiImage
-                          className="gif-picker-image"
-                          src={item.previewUrl}
-                          still={item.stillUrl}
-                          resting={item.slug !== active?.slug}
-                          alt={item.title}
-                          title={item.attribution}
-                          width={item.width > 0 ? item.width : undefined}
-                          height={item.height > 0 ? item.height : undefined}
-                          style={{ aspectRatio: gifAspectRatio(item) }}
-                          loading="lazy"
-                          draggable={false}
-                        />
+                        {item.stillUrl === null && (reducedMotion || item.slug !== active?.slug) ? (
+                          // No still to rest on: a titled placeholder, so the animated
+                          // preview never plays at rest or under reduced motion. It
+                          // animates only as the active GIF when motion is allowed.
+                          <span
+                            className="gif-picker-placeholder"
+                            style={{ aspectRatio: gifAspectRatio(item) }}
+                          >
+                            <span className="gif-picker-placeholder-title">{item.title}</span>
+                          </span>
+                        ) : (
+                          <EmojiImage
+                            className="gif-picker-image"
+                            src={item.previewUrl}
+                            still={item.stillUrl}
+                            resting={item.slug !== active?.slug}
+                            alt={item.title}
+                            title={item.attribution}
+                            width={item.width > 0 ? item.width : undefined}
+                            height={item.height > 0 ? item.height : undefined}
+                            style={{ aspectRatio: gifAspectRatio(item) }}
+                            loading="lazy"
+                            draggable={false}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>

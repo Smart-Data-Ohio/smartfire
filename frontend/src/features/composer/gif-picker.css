@@ -143,6 +143,24 @@
     object-fit: cover;
   }
 
+  /* A GIF with no still, at rest: its aspect box and title on the sunken ground, nothing moving. */
+  .gif-picker-placeholder {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    padding: var(--space-2);
+    background: var(--bg-sunken);
+  }
+
+  .gif-picker-placeholder-title {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .gif-picker-skeleton {
     aspect-ratio: 4 / 3;
     border-radius: var(--radius-md);

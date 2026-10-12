@@ -194,8 +194,19 @@ function threadMessage(
     attachmentSignedId: options.attachmentSignedId ?? null,
   };
 
-  if (options.attachmentSpoilers !== undefined)
-    message.attachmentSpoilers = [...options.attachmentSpoilers];
+  if (options.attachmentSpoilers !== undefined) {
+    // The server counts a GIF as one file and wants one flag per file, the GIF last: flags
+    // covering only the uploads gain the GIF's (never a spoiler). No flags at all stay out,
+    // which the server also fills with `false`.
+    const uploads =
+      (options.attachmentSignedIds?.length ?? 0) +
+      (options.attachmentSignedId == null || options.attachmentSignedId === "" ? 0 : 1);
+
+    message.attachmentSpoilers =
+      options.gifSlug !== undefined && options.attachmentSpoilers.length === uploads
+        ? [...options.attachmentSpoilers, false]
+        : [...options.attachmentSpoilers];
+  }
 
   const attachmentSignedIds = options.attachmentSignedIds;
 

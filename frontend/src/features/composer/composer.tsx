@@ -42,6 +42,7 @@ import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
 import { CommandOptions } from "./command-options.tsx";
 import {
   draftKey as conversationDraftKey,
+  draftRevision,
   readDraft,
   readFieldsDraft,
   writeDraft,
@@ -131,6 +132,8 @@ interface Submission {
   readonly snapshot: ReplySnapshot;
   /** The draft as submitted (untrimmed, to compare with the composer's text later). */
   readonly text: string;
+  /** The stored draft's revision as submitted, shared across composer mounts (`draft.ts`). */
+  readonly revision: number;
   readonly fileIds: ReadonlySet<string>;
   readonly driveFileIds: ReadonlySet<string>;
 }
@@ -493,9 +496,13 @@ export function Composer({
     focusInput();
   };
 
-  /** Clears the draft only if it's still what was submitted; says whether it did. */
-  const clearSubmitted = (submitted: string): boolean => {
-    if (textRef.current !== submitted) {
+  /**
+   * Clears the draft only if it's still what was submitted; says whether it did. The revision
+   * is shared across mounts, so a send landing after the author left, came back and typed
+   * anew leaves the newer draft alone, where this composer's own text still matches.
+   */
+  const clearSubmitted = (submitted: string, revision: number): boolean => {
+    if (textRef.current !== submitted || draftRevision(key) !== revision) {
       return false;
     }
 
@@ -548,6 +555,7 @@ export function Composer({
     snapshot: ReplySnapshot,
     submitted: string,
     drive: readonly DrivePick[],
+    revision: number,
   ) => {
     if (submitting.current) return;
     submitting.current = true;
@@ -580,7 +588,7 @@ export function Composer({
       attachments.clearSent(files);
       clearSentDrive(drive);
       trackSentReply(key, snapshot, [clientMessageId]);
-      clearSubmitted(submitted);
+      clearSubmitted(submitted, revision);
     } finally {
       submitting.current = false;
       setRunning(false);
@@ -622,6 +630,7 @@ export function Composer({
    */
   const sendGif = async (item: GifItem): Promise<void> => {
     const submitted = textRef.current;
+    const revision = draftRevision(key);
     const markdown = submitted.trimEnd();
 
     if (onSubmit !== undefined) {
@@ -629,11 +638,12 @@ export function Composer({
         markdown,
         attachmentSignedId: null,
         attachmentSignedIds: [],
-        attachmentSpoilers: [],
+        // The server counts the GIF as one file and wants one flag per file; a GIF is no spoiler.
+        attachmentSpoilers: [false],
         driveFileIds: [],
         gifSlug: item.slug,
       });
-      clearSubmitted(submitted);
+      clearSubmitted(submitted, revision);
 
       return;
     }
@@ -652,7 +662,7 @@ export function Composer({
     // slash command's post is noted, and the list follows down to it.
     notePosted(threadId === null ? `room:${roomId}` : `thread:${threadId}`, sent.id);
     actions.setTyping(roomId, false, threadId);
-    clearSubmitted(submitted);
+    clearSubmitted(submitted, revision);
     focusInput();
   };
 
@@ -854,12 +864,13 @@ export function Composer({
     typed: string,
     snapshot: ReplySnapshot = currentReply(),
     submitted: string = text,
+    revision: number = draftRevision(key),
   ) => {
     const commands = await loadCommands(roomId, threadId).catch(() => []);
     const route = routeSlash(typed, commands);
 
     if (route.kind === "message") {
-      await deliver(route.markdown, [], snapshot, submitted, []);
+      await deliver(route.markdown, [], snapshot, submitted, [], revision);
 
       return;
     }
@@ -875,7 +886,7 @@ export function Composer({
         loadedName,
       );
 
-      const cleared = clearSubmitted(submitted);
+      const cleared = clearSubmitted(submitted, revision);
 
       if (entryValid(parsed)) {
         await runEntry(parsed, snapshot, cleared);
@@ -889,7 +900,7 @@ export function Composer({
     setRunning(true);
     actions.setTyping(roomId, false, threadId);
 
-    const cleared = clearSubmitted(submitted);
+    const cleared = clearSubmitted(submitted, revision);
     const edits = draftEdits.current;
 
     // A command that fails puts its text back, unless the author has started something newer.
@@ -950,6 +961,7 @@ export function Composer({
     const submission: Submission = pending ?? {
       snapshot: currentReply(),
       text,
+      revision: draftRevision(key),
       fileIds: new Set(attachments.files.map((entry) => entry.id)),
       driveFileIds: new Set(driveFiles.map((file) => file.id)),
     };
@@ -1011,7 +1023,7 @@ export function Composer({
           () => {
             attachments.clearSent(files);
             clearSentDrive(drive);
-            clearSubmitted(submission.text);
+            clearSubmitted(submission.text, submission.revision);
           },
           () => undefined,
         )
@@ -1024,12 +1036,12 @@ export function Composer({
     }
 
     if (files.length === 0 && drive.length === 0 && looksLikeCommand(markdown)) {
-      void runCommand(markdown, submission.snapshot, submission.text);
+      void runCommand(markdown, submission.snapshot, submission.text, submission.revision);
 
       return;
     }
 
-    void deliver(markdown, files, submission.snapshot, submission.text, drive);
+    void deliver(markdown, files, submission.snapshot, submission.text, drive, submission.revision);
   };
 
   // Enter while files upload: send as soon as the submitted ones are up (or stop if one fails).
@@ -1055,6 +1067,7 @@ export function Composer({
 
   const schedule = (at: Date): Promise<void> => {
     const submitted = text;
+    const revision = draftRevision(key);
     const markdown = submitted.trimEnd();
     const taken = currentReply();
     const files = attachments.files;
@@ -1080,7 +1093,7 @@ export function Composer({
         // The reply it took, not one picked while the request was out.
         cancelReplyAt(key, taken.revision);
         attachments.clearSent(files);
-        clearSubmitted(submitted);
+        clearSubmitted(submitted, revision);
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
           tone: "success",

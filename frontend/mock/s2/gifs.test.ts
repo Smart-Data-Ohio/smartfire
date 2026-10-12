@@ -4,6 +4,7 @@ import { GifCategoryList, GifConfig, GifList, GifSuggestions } from "../../src/a
 import { CreateMessage, MessageDTO as MessageSchema } from "../../src/api/schema/message.ts";
 import type { GifList as GifListWire } from "../../src/gen/GifList.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
+import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import { GIF_BYTES, GIF_FIXTURES, GIF_STILL_BYTES } from "../fixtures/gifs.ts";
 import { createMockServer, SEED_IDS } from "../server.ts";
@@ -102,6 +103,62 @@ describe("GIF picker API fixtures", () => {
         )
       ).status,
     ).toBe(422);
+  });
+
+  it("starts a thread with a GIF only with one spoiler flag for it", async () => {
+    const { server } = harness();
+
+    const page = await get<{ messages: MessageDTO[] }>(
+      server,
+      `/api/v1/rooms/${SEED_IDS.rooms.general}/messages`,
+    );
+
+    const parents = page.messages.filter((message) => message.thread === null).slice(0, 2);
+
+    expect(parents).toHaveLength(2);
+
+    const body = (parentMessageId: number, clientMessageId: string, spoilers?: boolean[]) => {
+      const message =
+        spoilers === undefined
+          ? messageBody(clientMessageId, "", {
+              gifSlug: "hello-wave",
+              attachmentSignedId: null,
+            })
+          : messageBody(clientMessageId, "", {
+              gifSlug: "hello-wave",
+              attachmentSignedId: null,
+              attachmentSpoilers: spoilers,
+            });
+
+      return { parentMessageId, name: null, message };
+    };
+
+    const path = `/api/v1/rooms/${SEED_IDS.rooms.general}/threads`;
+
+    // The GIF counts as one file (`file_spoilers` in crates/api): no flag for it is refused.
+    expect((await send(server, "POST", path, body(parents[0]?.id ?? 0, "bad", []))).status).toBe(
+      422,
+    );
+
+    const created = await expectStatus<ThreadCreated>(
+      server,
+      "POST",
+      path,
+      body(parents[0]?.id ?? 0, "thread-gif", [false]),
+      201,
+    );
+
+    const replies = await get<{ messages: MessageDTO[] }>(
+      server,
+      `/api/v1/threads/${created.detail.thread.id}/messages`,
+    );
+
+    expect(replies.messages[0]?.attachments?.[0]?.filename).toBe("Hello-Wave.gif");
+
+    // Leaving the flags out is the other way the server allows: it fills them with `false`.
+    expect(
+      (await send(server, "POST", path, body(parents[1]?.id ?? 0, "thread-gif-omitted"))).status,
+    ).toBe(201);
   });
 
   it("keeps a GIF-only board brief and its retry", async () => {
