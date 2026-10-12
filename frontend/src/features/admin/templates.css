@@ -1,0 +1,22 @@
+.template-file {
+  max-width: 100%;
+  min-width: 0;
+}
+.template-preview {
+  overflow-wrap: anywhere;
+}
+.template-preview ul {
+  padding-inline-start: var(--space-5);
+}
+.template-preview summary {
+  cursor: pointer;
+  padding-block: var(--space-3);
+}
+.template-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.template-settings dd {
+  margin: 0;
+}

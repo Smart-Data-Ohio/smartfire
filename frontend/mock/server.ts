@@ -63,6 +63,7 @@ import {
   canAccessThread,
   locate,
   type MessageDraft,
+  memberRooms,
   pageOf,
   pinCount,
   plainDraft,
@@ -113,6 +114,7 @@ import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomIntegrations } from "./s8/room-integrations.ts";
 import { createRoomManagement } from "./s8/rooms.ts";
+import { createTemplates } from "./s8/templates.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -529,11 +531,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const visibleRooms = (): RoomRecord[] =>
-    [...world.rooms.values()]
-      .filter(
-        (record) =>
-          record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
-      )
+    memberRooms(world, VIEWER_ID)
+      .filter((record) => record.membership.involvement !== "invisible")
       .sort((a, b) => {
         const left = (a.room.name ?? "").toLowerCase();
         const right = (b.room.name ?? "").toLowerCase();
@@ -1135,11 +1134,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const workspaceLayout = createWorkspaceLayout(ctx);
   const welcome = createWelcome(ctx, admin, openPreview);
 
+  const roomManagement = createRoomManagement(ctx, admin, huddles);
+
   const routes = [
+    ...createTemplates(ctx, admin, roomManagement).routes,
     ...agents.routes,
     ...approvals.routes,
     ...ledger.routes,
-    ...createRoomManagement(ctx, admin, huddles).routes,
+    ...roomManagement.routes,
     ...createRoomIntegrations(ctx).routes,
     ...createAnnouncements(ctx).routes,
     ...createChannelWebhooks(ctx).routes,

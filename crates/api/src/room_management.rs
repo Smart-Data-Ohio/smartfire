@@ -499,38 +499,9 @@ async fn create_room(c: &mut Ctx) -> Result {
                     .map(|user| user.id)
                     .collect()
             };
-            let room = if matches!(kind, api::RoomKind::Voice | api::RoomKind::Stage) {
-                let icon = call_icon(icon);
-                if icon.as_deref().is_some_and(|name| {
-                    Presenter::new(tx.conn(), &app, None)
-                        .resolve_avatar_icon(name)
-                        .is_none()
-                }) {
-                    let mut errors = campfire_db::Errors::default();
-                    errors.add("icon_name", "is not a known icon");
-                    return Err(campfire_db::Error::RecordInvalid(errors));
-                }
-                let mut room =
-                    Room::create_for(tx, room_type(kind), name.as_deref(), creator, &grantees)?;
-                if icon.is_some() {
-                    tx.conn().execute_cached(
-                        "UPDATE rooms SET icon_name=? WHERE id=?",
-                        rusqlite::params![icon, room.id],
-                    )?;
-                    room.reload(tx.conn())?;
-                }
-                room
-            } else {
-                Room::create_for_with_icon(
-                    tx,
-                    room_type(kind),
-                    name.as_deref(),
-                    icon.as_deref(),
-                    creator,
-                    &grantees,
-                    campfire_runtime::rich_text::room_icon_resolves,
-                )?
-            };
+            let room = create_in_transaction(
+                tx, &app, room_type(kind), name.as_deref(), icon.as_deref(), creator, &grantees,
+            )?;
             tx.conn().execute_cached(
                 "UPDATE rooms SET client_room_id=? WHERE id=?",
                 rusqlite::params![key, room.id],
@@ -725,4 +696,48 @@ async fn leave_room(c: &mut Ctx) -> Result {
             deleted,
         },
     )
+}
+
+/// The same insert, icon validation, membership defaults and callbacks as manual room creation.
+pub(crate) fn create_in_transaction(
+    tx: &mut campfire_db::Tx<'_>,
+    app: &campfire_app::app::AppState,
+    kind: RoomType,
+    name: Option<&str>,
+    icon: Option<&str>,
+    creator: i64,
+    grantees: &[i64],
+) -> campfire_db::Result<Room> {
+    let room = if matches!(kind, RoomType::Voice | RoomType::Stage) {
+        let icon = call_icon(icon.map(str::to_string));
+        if icon.as_deref().is_some_and(|name| {
+            Presenter::new(tx.conn(), app, None)
+                .resolve_avatar_icon(name)
+                .is_none()
+        }) {
+            let mut errors = campfire_db::Errors::default();
+            errors.add("icon_name", "is not a known icon");
+            return Err(campfire_db::Error::RecordInvalid(errors));
+        }
+        let mut room = Room::create_for(tx, kind, name, creator, grantees)?;
+        if icon.is_some() {
+            tx.conn().execute_cached(
+                "UPDATE rooms SET icon_name=? WHERE id=?",
+                rusqlite::params![icon, room.id],
+            )?;
+            room.reload(tx.conn())?;
+        }
+        room
+    } else {
+        Room::create_for_with_icon(
+            tx,
+            kind,
+            name,
+            icon,
+            creator,
+            grantees,
+            campfire_runtime::rich_text::room_icon_resolves,
+        )?
+    };
+    Ok(room)
 }

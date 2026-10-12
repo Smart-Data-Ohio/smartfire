@@ -58,6 +58,8 @@ mod read;
 mod room;
 mod room_integrations;
 mod room_management;
+mod templates;
+pub use templates::*;
 mod saved;
 mod search;
 mod settings;
