@@ -18,6 +18,7 @@ export type MenuCommand =
   | "forward"
   | "unread"
   | "fizzy"
+  | "publish"
   | "delete";
 
 /** One entry in the message menu, before it's rendered. */
@@ -28,11 +29,15 @@ export interface MenuEntry {
   /** Empty when the entry has no single-key shortcut. */
   readonly shortcut: readonly string[];
   readonly danger: boolean;
+  /** Shown but not selectable: a state, such as a message already published. */
+  readonly disabled?: boolean;
 }
 
 interface MenuContext {
   readonly permissions: MessagePermissions;
   readonly pinned: boolean;
+  /** Published from its announcement room already. */
+  readonly published?: boolean;
   readonly saved: boolean;
   readonly inThread: boolean;
 }
@@ -52,7 +57,7 @@ function entry(
  * so separators never double up.
  */
 export function menuSections(context: MenuContext): readonly (readonly MenuEntry[])[] {
-  const { permissions, pinned, saved, inThread } = context;
+  const { permissions, pinned, saved, inThread, published = false } = context;
   const respond: MenuEntry[] = [];
   const share: MenuEntry[] = [];
   const keep: MenuEntry[] = [];
@@ -69,6 +74,14 @@ export function menuSections(context: MenuContext): readonly (readonly MenuEntry
   if (permissions.react) {
     respond.push(entry("react", "Add reaction", "smile-plus", shortcutKeys("message-react")));
     respond.push(entry("boost", "Boost…", "rocket"));
+  }
+
+  if (permissions.publish) {
+    share.push(
+      published
+        ? { ...entry("publish", "Published", "check-check"), disabled: true }
+        : entry("publish", "Publish", "megaphone"),
+    );
   }
 
   if (permissions.edit) {
@@ -129,7 +142,13 @@ export function MessageMenuItems({
   inThread,
   onCommand,
 }: MessageMenuItemsProps) {
-  const sections = menuSections({ permissions, pinned: message.pinned, saved, inThread });
+  const sections = menuSections({
+    permissions,
+    pinned: message.pinned,
+    published: message.published === true,
+    saved,
+    inThread,
+  });
 
   return sections.map((section, index) => (
     <MenuSection
@@ -167,6 +186,7 @@ function MenuSection({ entries, separated, onCommand }: MenuSectionProps) {
             key={item.command}
             icon={item.icon}
             shortcut={item.shortcut}
+            disabled={item.disabled === true}
             onSelect={() => onCommand(item.command)}
           >
             {item.label}

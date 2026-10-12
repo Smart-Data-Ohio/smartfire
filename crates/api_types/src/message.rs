@@ -102,6 +102,11 @@ pub struct MessageDTO {
     #[serde(default)]
     #[ts(as = "Option<bool>", optional)]
     pub published: bool,
+    /// A delivered announcement copy, whether or not the viewer can see its source. Copies can't
+    /// be published again; `announcementSource` alone can't say so, since it's viewer-relative.
+    #[serde(default)]
+    #[ts(as = "Option<bool>", optional)]
+    pub announcement_copy: bool,
     /// Null when this is not a delivered copy or the viewer cannot see the source room.
     #[serde(default)]
     #[ts(optional = nullable)]

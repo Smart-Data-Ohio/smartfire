@@ -177,6 +177,11 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
     next = setDetailRow(next, row);
   }
 
+  // A row the snapshot dropped leaves the same way a removal does.
+  for (const row of Object.values(state.sidebar.rows)) {
+    if (rows[row.room.id] === undefined) next = keepRowFlag(next, row);
+  }
+
   return next;
 }
 
@@ -1054,6 +1059,40 @@ export function setRoomUnavailable(state: State, roomId: number, keepRow = false
   };
 }
 
+/**
+ * A row leaving hands its announcement flag to the room's detail, which then stands for the room
+ * (`storedRoom`), unless the detail is strictly newer than the row: an older read, or one from
+ * the same millisecond (the row is the authority on a tie), would otherwise bring back a stale
+ * flag until the room is read again, or for good if that read fails. A newer detail, such as a
+ * management reply that removes the row, keeps its own. With no usable timestamp, nothing moves.
+ */
+function keepRowFlag(state: State, row: SidebarRow | undefined): State {
+  const loaded = row === undefined ? undefined : state.rooms[row.room.id];
+  const detail = loaded?.detail;
+
+  if (row === undefined || loaded === undefined || detail == null) return state;
+
+  const announcement = row.room.announcement;
+
+  if (announcement === undefined || detail.room.announcement === announcement) return state;
+
+  const rowAt = Date.parse(row.room.updatedAt);
+  const detailAt = Date.parse(detail.room.updatedAt);
+
+  if (Number.isNaN(rowAt) || Number.isNaN(detailAt) || detailAt > rowAt) return state;
+
+  return {
+    ...state,
+    rooms: {
+      ...state.rooms,
+      [row.room.id]: {
+        ...loaded,
+        detail: { ...detail, room: { ...detail.room, announcement } },
+      },
+    },
+  };
+}
+
 function removeRow(state: State, roomId: number): State {
   const workspaceRooms = state.sidebar.workspaceLayout.rooms.filter(
     (room) => room.roomId !== roomId,
@@ -1066,12 +1105,12 @@ function removeRow(state: State, roomId: number): State {
     return state;
   }
 
-  const { [roomId]: _gone, ...rows } = state.sidebar.rows;
+  const { [roomId]: gone, ...rows } = state.sidebar.rows;
   const layoutChanged = workspaceRooms.length !== state.sidebar.workspaceLayout.rooms.length;
   const clock = layoutChanged ? state.rowTouches.clock + 1 : state.rowTouches.clock;
 
   return {
-    ...state,
+    ...keepRowFlag(state, gone),
     rowTouches: { ...state.rowTouches, clock },
     sidebar: {
       ...state.sidebar,

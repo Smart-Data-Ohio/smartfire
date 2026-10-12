@@ -10,6 +10,9 @@ import {
 
 const ROOM = ROOM_IDS.launchPlanning;
 
+// Six settings tabs are wider than the dialog: their strip scrolls sideways on purpose.
+const TAB_STRIP = ".room-form .t-tabs";
+
 for (const viewport of [DESKTOP, PHONE]) {
   test(`a channel webhook is created, shown once, tested and deleted at ${viewport.width}px`, async ({
     page,
@@ -34,7 +37,7 @@ for (const viewport of [DESKTOP, PHONE]) {
 
     const url = (await notice.locator("code").textContent()) ?? "";
 
-    await expectNoHorizontalOverflow(page);
+    await expectNoHorizontalOverflow(page, { allowScroll: TAB_STRIP });
     await page.screenshot({ path: testInfo.outputPath(`webhook-url-${viewport.width}.png`) });
 
     await notice.getByRole("button", { name: "Done" }).click();
@@ -44,7 +47,7 @@ for (const viewport of [DESKTOP, PHONE]) {
 
     await dialog.getByRole("button", { name: "Send a test message from Deployments" }).click();
     await expect(page.getByText("Deployments posted a test message")).toBeVisible();
-    await expectNoHorizontalOverflow(page);
+    await expectNoHorizontalOverflow(page, { allowScroll: TAB_STRIP });
     await page.screenshot({ path: testInfo.outputPath(`webhook-list-${viewport.width}.png`) });
 
     await dialog.getByRole("button", { name: "Delete Deployments" }).click();

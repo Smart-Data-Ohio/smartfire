@@ -53,6 +53,7 @@ mod tests {
     fn announcement_message_fields_round_trip_and_default_for_existing_payloads() {
         let mut message = crate::tests::message();
         message.published = true;
+        message.announcement_copy = true;
         message.announcement_source = Some(AnnouncementSource {
             room_id: 12,
             message_id: 42,
@@ -60,6 +61,7 @@ mod tests {
         });
         let mut wire = serde_json::to_value(&message).unwrap();
         assert_eq!(wire["published"], true);
+        assert_eq!(wire["announcementCopy"], true);
         assert_eq!(
             wire["announcementSource"],
             serde_json::json!({"roomId":12,"messageId":42,"roomName":"News"})
@@ -69,9 +71,11 @@ mod tests {
             message
         );
         wire.as_object_mut().unwrap().remove("published");
+        wire.as_object_mut().unwrap().remove("announcementCopy");
         wire.as_object_mut().unwrap().remove("announcementSource");
         let legacy = serde_json::from_value::<crate::MessageDTO>(wire).unwrap();
         assert!(!legacy.published);
+        assert!(!legacy.announcement_copy);
         assert!(legacy.announcement_source.is_none());
     }
 }
