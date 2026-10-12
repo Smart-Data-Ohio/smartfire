@@ -18,25 +18,16 @@ import type { ThreadRead as GeneratedThreadRead } from "../../gen/ThreadRead.ts"
 import type { ThreadRemoved as GeneratedThreadRemoved } from "../../gen/ThreadRemoved.ts";
 import type { ThreadSummary as GeneratedThreadSummary } from "../../gen/ThreadSummary.ts";
 import type { ThreadUnread as GeneratedThreadUnread } from "../../gen/ThreadUnread.ts";
-import type { ThreadVisibility as GeneratedThreadVisibility } from "../../gen/ThreadVisibility.ts";
 import type { UpdateThread as GeneratedUpdateThread } from "../../gen/UpdateThread.ts";
 import { MessageId, RoomId, ThreadId, UserId } from "./ids.ts";
 import { CreateMessage, MessageDTO } from "./message.ts";
 import type { Assert, Pinned } from "./pin.ts";
-import { ThreadIndicator, ThreadStatus } from "./thread-parts.ts";
+import { ThreadIndicator, ThreadStatus, ThreadVisibility } from "./thread-parts.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 import { WorkDetail, WorkFacts } from "./work-parts.ts";
 
-export { ThreadIndicator, ThreadStatus } from "./thread-parts.ts";
-
-export const ThreadVisibility = Schema.Literals(["public", "private"]);
-
-export type ThreadVisibility = typeof ThreadVisibility.Type;
-
-export type ThreadVisibilityPin = Assert<
-  Pinned<typeof ThreadVisibility, GeneratedThreadVisibility>
->;
+export { ThreadIndicator, ThreadStatus, ThreadVisibility } from "./thread-parts.ts";
 
 export const ThreadAccessMember = Schema.Struct({
   userId: UserId,

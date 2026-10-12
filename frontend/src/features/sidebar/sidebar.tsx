@@ -784,7 +784,7 @@ function openerOf(active: Element | null): HTMLElement | null {
 
 /**
  * The conversation list: the workspace header, then Favourites, your categories, the workspace's
- * shared categories, Channels, Voice and Direct messages, then your own panel. Rows and
+ * shared categories, Channels, Boards, Voice and Direct messages, then your own panel. Rows and
  * categories can be dragged into place (or moved from their menus), categories created, renamed,
  * folded and deleted, and each row's menu sets its notification level. Your own organisation
  * wins over the shared layout (sections.ts); administrators also arrange the shared layout, for
@@ -975,7 +975,10 @@ export function Sidebar() {
 
     const holder = sections.find(
       (section) =>
-        (section.kind === "shared" || section.kind === "channels" || section.kind === "voice") &&
+        (section.kind === "shared" ||
+          section.kind === "channels" ||
+          section.kind === "boards" ||
+          section.kind === "voice") &&
         section.rows.some((candidate) => candidate.room.id === row.room.id),
     );
 
@@ -1068,7 +1071,7 @@ export function Sidebar() {
   );
 
   /** The "+" on a section of rooms (Discord's): creates one of that section's kind. */
-  const createButton = (kind: "open" | "voice", label: string) =>
+  const createButton = (kind: "open" | "board" | "voice", label: string) =>
     canCreateRooms ? (
       <IconButton
         icon="plus"
@@ -1160,6 +1163,8 @@ export function Sidebar() {
             {newCategoryButton}
           </>
         );
+      case "boards":
+        return createButton("board", "Create a board") ?? undefined;
       case "voice":
         return createButton("voice", "Create a voice channel") ?? undefined;
       case "direct":

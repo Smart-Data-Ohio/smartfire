@@ -18,7 +18,6 @@ interface MessageEditorProps {
   readonly message: MessageDTO;
   /** The edit ended (saved, cancelled or failed to load); the row restores focus. */
   readonly onClose: () => void;
-  /** Saving an empty message with no file means deleting it: the row asks first. */
   readonly onRequestDelete: () => void;
 }
 
@@ -33,17 +32,13 @@ export type EditPlan =
       };
     };
 
-/**
- * What Save does. Unchanged text with no Drive removals just closes. An empty message with no
- * file and no Drive file left is a delete. Otherwise the request carries the Markdown and, when
- * chips were removed, those file ids.
- */
 export function planEdit(input: {
   readonly markdown: string;
   readonly original: string;
   readonly removedIds: readonly string[];
   readonly remainingDrive: number;
   readonly hasAttachment: boolean;
+  readonly hasSticker: boolean;
 }): EditPlan {
   const markdown = input.markdown.trimEnd();
 
@@ -51,7 +46,12 @@ export function planEdit(input: {
     return { kind: "close" };
   }
 
-  if (markdown.trim() === "" && !input.hasAttachment && input.remainingDrive === 0) {
+  if (
+    markdown.trim() === "" &&
+    !input.hasAttachment &&
+    !input.hasSticker &&
+    input.remainingDrive === 0
+  ) {
     return { kind: "delete" };
   }
 
@@ -173,6 +173,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
       removedIds: removedDrive,
       remainingDrive: remaining.length,
       hasAttachment: messageFiles(message).length > 0,
+      hasSticker: message.sticker !== undefined,
     });
 
     if (plan.kind === "close") {

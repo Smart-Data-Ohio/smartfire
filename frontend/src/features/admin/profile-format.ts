@@ -18,7 +18,7 @@ export const PROFILE_SLOTS: Readonly<
   logo: {
     title: "Icon",
     noun: "icon",
-    hint: "Square, at least 512 × 512. Shown round in the rail, squaring off on hover.",
+    hint: "Square is best, at least 512 × 512. Shown whole, never cropped to a circle.",
   },
   banner: {
     title: "Banner",
