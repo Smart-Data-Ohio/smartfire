@@ -478,22 +478,27 @@
 
   /* Theater mode with the room's chat beside it (theater-chat.ts): the stage on the left, the
      conversation's own timeline and composer in a column on the right, under the room's header.
-     The chat's room part becomes a column of its own here rather than `display: contents`. */
+     The chat's room part becomes a column of its own here rather than `display: contents`. The
+     room is a container, so the layout follows the room's own width (a thread pane beside it
+     takes its share), not the window's. The rows are the header, the stage when stacked (up to its
+     own height, once the chat's composer fits) and the chat. */
   .room:has(> .call-view[data-chat]) {
+    container: theater-room / inline-size;
     display: grid;
-    grid-template:
-      "head head" auto
-      "stage chat" minmax(0, 1fr)
-      / minmax(0, 1fr) clamp(360px, 36%, 440px);
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, auto) 1fr;
   }
 
   .room:has(> .call-view[data-chat]) > .room-part:first-child > * {
-    grid-area: head;
+    grid-area: 1 / 1 / 2 / -1;
   }
 
+  /* In the room's flow, under the composer (z-index 4), so its suggestions and pickers cover the
+     stage. A grid item keeps its z-index even unpositioned. */
   .call-view[data-chat] {
     position: static;
-    grid-area: stage;
+    z-index: 0;
+    grid-area: 2 / 1 / -1 / 2;
     min-width: 0;
     max-height: none;
     box-shadow: none;
@@ -502,24 +507,29 @@
   .room:has(> .call-view[data-chat]) > .room-part:last-child {
     display: flex;
     flex-direction: column;
-    grid-area: chat;
+    grid-area: 2 / 2 / -1 / -1;
+    width: clamp(360px, 36cqi, 440px);
     min-width: 0;
-    min-height: 0;
     box-shadow: -1px 0 0 var(--border);
   }
 
-  /* Narrower screens stack them, the share over the chat. Only the share stays on the stage: the
-     dock and the sidebar still show who's in the call. */
-  @media (width < 1100px) {
-    .room:has(> .call-view[data-chat]) {
-      grid-template:
-        "head" auto
-        "stage" auto
-        "chat" minmax(0, 1fr)
-        / minmax(0, 1fr);
+  /* The timeline scrolls in whatever the chat has left, so the composer alone sets the chat's
+     least height. */
+  .room:has(> .call-view[data-chat]) .timeline {
+    contain: size;
+  }
+
+  /* A narrower room stacks them, the share over the chat. Only the share stays on the stage: the
+     dock and the sidebar still show who's in the call. The share takes at most 45% of the visible
+     viewport (above an overlaid keyboard too), and shrinks to keep the composer on screen. */
+  @container theater-room (width < 760px) {
+    .call-view[data-chat] {
+      grid-area: 2 / 1 / 3 / -1;
     }
 
     .room:has(> .call-view[data-chat]) > .room-part:last-child {
+      grid-area: 3 / 1 / 4 / -1;
+      width: auto;
       box-shadow: 0 -1px 0 var(--border);
     }
 
@@ -528,8 +538,8 @@
     }
 
     .call-view[data-chat] .call-share[data-expanded] {
-      flex: none;
-      max-height: 45dvh;
+      flex: 0 1 auto;
+      max-height: calc(var(--viewport-height) * 0.45);
       aspect-ratio: 16 / 9;
     }
   }
@@ -537,13 +547,6 @@
   /* A phone: the call bar above names the room and holds the call's controls, so the share sits
      right under it and the chat (its composer at the foot) takes the rest. */
   @media (width < 720px) {
-    .room:has(> .call-view[data-chat]) {
-      grid-template:
-        "stage" auto
-        "chat" minmax(0, 1fr)
-        / minmax(0, 1fr);
-    }
-
     .room:has(> .call-view[data-chat]) > .room-part:first-child {
       display: none;
     }
