@@ -31,3 +31,15 @@ export function writeDraft(key: string, text: string): void {
     // Without storage a draft only lives while the room is open.
   }
 }
+
+/**
+ * Whether a draft is a typed command's fields: its text is then their line (`entryText`), and the
+ * composer opens it as fields again rather than as text.
+ */
+export function readFieldsDraft(key: string): boolean {
+  return readDraft(`${key}.fields`) !== "";
+}
+
+export function writeFieldsDraft(key: string, fields: boolean): void {
+  writeDraft(`${key}.fields`, fields ? "1" : "");
+}

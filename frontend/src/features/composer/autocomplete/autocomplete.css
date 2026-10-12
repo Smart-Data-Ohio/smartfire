@@ -131,8 +131,9 @@
     color: var(--agent-text);
   }
 
-  /* Commands read on two lines: usage, then what it does. */
-  .autocomplete[data-kind="command"] .autocomplete-option {
+  /* Commands and subcommands read on two lines: usage, then what it does. */
+  .autocomplete[data-kind="command"] .autocomplete-option,
+  .autocomplete[data-kind="subcommand"] .autocomplete-option {
     padding-block: var(--space-1-5);
   }
 
@@ -150,7 +151,8 @@
     min-width: 0;
   }
 
-  .autocomplete-command .autocomplete-label {
+  .autocomplete-command .autocomplete-label,
+  .autocomplete[data-kind="choice"] .autocomplete-detail {
     font-family: var(--font-mono);
     font-size: 13px;
   }
@@ -166,6 +168,13 @@
 
     .autocomplete-option {
       min-height: 40px;
+    }
+  }
+
+  /* Touch phones: every row is a full finger target. */
+  @media (width < 720px) and (pointer: coarse) {
+    .autocomplete-option {
+      min-height: var(--touch-target);
     }
   }
 }
