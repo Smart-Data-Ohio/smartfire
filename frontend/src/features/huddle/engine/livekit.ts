@@ -31,11 +31,19 @@ import {
 } from "./noise.ts";
 import { loadDevicePreferences } from "./preferences.ts";
 import {
+  applyScreenContentHint,
   DEFAULT_SHARE_QUALITY,
   screenCaptureAttempts,
   screenPublishOptions,
 } from "./screen-quality.ts";
-import { type StatsBaseline, summarizeConnectionStats } from "./stats.ts";
+import {
+  type StatEntry,
+  type StatsBaseline,
+  summarizeConnectionStats,
+  summarizeVideoStats,
+  type VideoStatsBaseline,
+  type VideoStatsInput,
+} from "./stats.ts";
 import {
   type CallParticipant,
   type CallSnapshot,
@@ -48,9 +56,9 @@ import {
   EMPTY_SNAPSHOT,
   type NoiseOutcome,
   type TransportEvent,
-  type VideoSize,
   type ViewerQuality,
 } from "./transport.ts";
+import { focusScreenPublication, VIDEO_ADAPTIVE_STREAM } from "./video-quality.ts";
 
 type LiveKit = typeof import("livekit-client");
 
@@ -100,19 +108,25 @@ function sinkable(context: AudioContext): context is SinkableAudioContext {
 function withCaptureFallback<T>(
   quality: StreamQuality,
   capture: (options: ScreenShareCaptureOptions) => Promise<T>,
+  browser: ReturnType<LiveKit["getBrowser"]>,
 ): Promise<T> {
-  const [first, ...rest] = screenCaptureAttempts(quality);
+  const [first, ...rest] = screenCaptureAttempts(quality, browser);
+
+  // The SDK assigns the hint during capture. Start with its compatible detail hint, then try
+  // text on the native track with read-back, so a rejected text hint cannot reopen the picker.
+  const attempt = (options: ScreenShareCaptureOptions): Promise<T> =>
+    capture({ ...options, contentHint: options.contentHint === "text" ? "detail" : "motion" });
 
   return rest.reduce<Promise<T>>(
-    (attempt, options) =>
-      attempt.catch((error: Error) => {
+    (pending, options) =>
+      pending.catch((error: Error) => {
         if (!displayMediaRejectedConstraints(error)) {
           throw error;
         }
 
-        return capture(options);
+        return attempt(options);
       }),
-    capture(first ?? {}),
+    attempt(first ?? {}),
   );
 }
 
@@ -153,6 +167,9 @@ class LiveKitTransport implements CallTransport {
   readonly #captured = new Map<number, LocalTrack[]>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
+  #videoStatsBaseline: VideoStatsBaseline | null = null;
+  #statsGeneration = 0;
+  readonly #focusedScreens = new Map<RemoteTrackPublication, () => void>();
   /** The microphone's encoding target, from the grant this connection joined with. */
   #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
   /** Soundboard clips started or playing now, each with its stop: run on leaving or deafening. */
@@ -200,6 +217,15 @@ class LiveKitTransport implements CallTransport {
     const room = this.#room;
 
     this.#room = null;
+    this.#statsGeneration += 1;
+    this.#statsBaseline = null;
+    this.#videoStatsBaseline = null;
+
+    for (const restore of this.#focusedScreens.values()) {
+      restore();
+    }
+
+    this.#focusedScreens.clear();
 
     for (const unbind of this.#unbind.splice(0)) {
       unbind();
@@ -353,9 +379,15 @@ class LiveKitTransport implements CallTransport {
 
     const publish = screenPublishOptions(quality, this.#lk.VideoPreset);
 
-    await withCaptureFallback(quality, (options) =>
-      local.setScreenShareEnabled(true, options, publish),
+    const publication = await withCaptureFallback(
+      quality,
+      (options) => local.setScreenShareEnabled(true, options, publish),
+      this.#lk.getBrowser(),
     );
+
+    if (publication?.track !== undefined) {
+      applyScreenContentHint(publication.track.mediaStreamTrack, quality);
+    }
   }
 
   /**
@@ -370,14 +402,22 @@ class LiveKitTransport implements CallTransport {
       return Promise.reject(new Error("screen-share-unavailable"));
     }
 
-    return withCaptureFallback(quality, (options) => local.createScreenTracks(options)).then(
-      (tracks) => {
-        this.#capturedSequence += 1;
-        this.#captured.set(this.#capturedSequence, tracks);
+    return withCaptureFallback(
+      quality,
+      (options) => local.createScreenTracks(options),
+      this.#lk.getBrowser(),
+    ).then((tracks) => {
+      for (const track of tracks) {
+        if (track.kind === this.#lk.Track.Kind.Video) {
+          applyScreenContentHint(track.mediaStreamTrack, quality);
+        }
+      }
 
-        return { id: this.#capturedSequence };
-      },
-    );
+      this.#capturedSequence += 1;
+      this.#captured.set(this.#capturedSequence, tracks);
+
+      return { id: this.#capturedSequence };
+    });
   }
 
   /** The same publish options as an ordinary share, at the stream's encoding. */
@@ -545,6 +585,8 @@ class LiveKitTransport implements CallTransport {
     }
 
     try {
+      this.#focusScreen(publication, viewerQuality === "high");
+
       if (viewerQuality === "low") {
         publication.setVideoQuality(this.#lk.VideoQuality.LOW);
       } else if (viewerQuality === "high") {
@@ -554,19 +596,16 @@ class LiveKitTransport implements CallTransport {
           requestedMaxQuality: undefined,
           requestedVideoDimensions: undefined,
         });
-        publication.emitTrackUpdate();
       }
+
+      publication.emitTrackUpdate();
     } catch {
       // Quality is a hint; a rejected hint must not break the view.
     }
   }
 
-  /**
-   * Adaptive streaming sizes a subscription from the rendered element and takes the smaller of
-   * that and any manual request, so this only matters once the element has actually grown: it
-   * asks for the full layer at once instead of waiting for the next resize observation.
-   */
-  showScreen(videoId: string, size: VideoSize | null): void {
+  /** A focused share requests HIGH; collapse returns to the current adaptive dimensions. */
+  showScreen(videoId: string, focused: boolean): void {
     const publication = this.#remotePublication(videoId);
 
     if (publication === null) {
@@ -574,13 +613,21 @@ class LiveKitTransport implements CallTransport {
     }
 
     try {
+      this.#focusScreen(publication, focused);
       publication.setVideoQuality(this.#lk.VideoQuality.HIGH);
-
-      if (size !== null) {
-        publication.setVideoDimensions(size);
-      }
+      // The setter skips identical quality values, including a collapse from focused HIGH.
+      publication.emitTrackUpdate();
     } catch {
       // A rejected hint leaves the current layer in place.
+    }
+  }
+
+  #focusScreen(publication: RemoteTrackPublication, focused: boolean): void {
+    if (focused && !this.#focusedScreens.has(publication)) {
+      this.#focusedScreens.set(publication, focusScreenPublication(publication));
+    } else if (!focused) {
+      this.#focusedScreens.get(publication)?.();
+      this.#focusedScreens.delete(publication);
     }
   }
 
@@ -591,43 +638,92 @@ class LiveKitTransport implements CallTransport {
       return null;
     }
 
+    const generation = ++this.#statsGeneration;
+
     if (fresh) {
       this.#statsBaseline = null;
+      this.#videoStatsBaseline = null;
     }
 
-    let publisherReport: RTCStatsReport | null = null;
-    let subscriberReport: RTCStatsReport | null = null;
+    const reports = new Map<LocalTrack | RemoteTrack, Promise<RTCStatsReport | null>>();
 
-    try {
-      const microphone = room.localParticipant.getTrackPublication(
-        this.#lk.Track.Source.Microphone,
-      )?.track;
+    const read = (
+      track: LocalTrack | RemoteTrack | undefined | null,
+    ): Promise<RTCStatsReport | null> => {
+      if (track == null) {
+        return Promise.resolve(null);
+      }
 
-      publisherReport = (await microphone?.getRTCStatsReport()) ?? null;
-    } catch {
-      // A missing sender report reads as unknown.
+      const cached = reports.get(track);
+
+      if (cached !== undefined) return cached;
+
+      const pending = track
+        .getRTCStatsReport()
+        .then((report) => report ?? null)
+        .catch(() => null);
+
+      reports.set(track, pending);
+
+      return pending;
+    };
+
+    const videoInputs: Promise<VideoStatsInput>[] = [];
+
+    for (const participant of [room.localParticipant, ...room.remoteParticipants.values()]) {
+      for (const publication of participant.videoTrackPublications.values()) {
+        if (publication.track === undefined) continue;
+
+        const input: Omit<VideoStatsInput, "report"> = {
+          participantId: participant.identity,
+          participantName: participant.name || participant.identity,
+          trackSid: publication.trackSid,
+          direction: participant === room.localParticipant ? "sending" : "receiving",
+          source: publication.source === this.#lk.Track.Source.ScreenShare ? "screen" : "camera",
+        };
+
+        videoInputs.push(read(publication.track).then((report) => ({ ...input, report })));
+      }
     }
 
-    try {
-      subscriberReport = (await this.#subscriberTrack(room)?.getRTCStatsReport()) ?? null;
-    } catch {
-      // Alone in a room there is nothing subscribed to.
-    }
+    const microphone = room.localParticipant.getTrackPublication(
+      this.#lk.Track.Source.Microphone,
+    )?.track;
 
-    if (room !== this.#room) {
+    const [publisherReport, subscriberReport, videos] = await Promise.all([
+      read(microphone),
+      read(this.#subscriberTrack(room)),
+      Promise.all(videoInputs),
+    ]);
+
+    if (room !== this.#room || generation !== this.#statsGeneration) {
       return null;
     }
 
+    const publisher = new Map<string, StatEntry>(publisherReport ?? []);
+    const subscriber = new Map<string, StatEntry>(subscriberReport ?? []);
+
+    for (const input of videos) {
+      const combined = input.direction === "sending" ? publisher : subscriber;
+
+      for (const [id, entry] of input.report ?? []) combined.set(id, entry);
+    }
+
+    const now = Date.now();
+
     const sample = summarizeConnectionStats(
-      publisherReport,
-      subscriberReport,
+      publisher.size === 0 ? null : publisher,
+      subscriber.size === 0 ? null : subscriber,
       this.#statsBaseline,
-      Date.now(),
+      now,
     );
 
-    this.#statsBaseline = sample.baseline;
+    const videoSample = summarizeVideoStats(videos, this.#videoStatsBaseline, now);
 
-    return sample.stats;
+    this.#statsBaseline = sample.baseline;
+    this.#videoStatsBaseline = videoSample.baseline;
+
+    return { ...sample.stats, videoTracks: videoSample.videoTracks };
   }
 
   playClip(url: string, volume: number): Promise<void> {
@@ -700,7 +796,7 @@ class LiveKitTransport implements CallTransport {
     const camera = loadDevicePreferences().videoinput;
 
     return {
-      adaptiveStream: true,
+      adaptiveStream: VIDEO_ADAPTIVE_STREAM,
       dynacast: true,
       // Spelled out rather than inherited so an SDK upgrade can't quietly change what the call
       // asks the browser to do with a microphone.
@@ -787,14 +883,22 @@ class LiveKitTransport implements CallTransport {
       RoomEvent.TrackMuted,
       RoomEvent.TrackUnmuted,
       RoomEvent.TrackPublished,
-      RoomEvent.TrackUnpublished,
       RoomEvent.LocalTrackPublished,
       RoomEvent.AudioPlaybackStatusChanged,
     ]) {
       on(event, changed);
     }
 
+    on(RoomEvent.TrackUnpublished, (publication: RemoteTrackPublication) => {
+      this.#focusScreen(publication, false);
+      changed();
+    });
+
     on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+      for (const publication of participant.trackPublications.values()) {
+        this.#focusScreen(publication, false);
+      }
+
       this.#boosted.delete(participant.identity);
       changed();
     });
