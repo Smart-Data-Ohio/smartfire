@@ -42,6 +42,7 @@ const item = {
         preview: "file",
         url: "/report",
         downloadUrl: "/report?download",
+        spoiler: false,
         thumbnailUrl: null,
       },
     },

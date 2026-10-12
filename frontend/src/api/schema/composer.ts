@@ -233,6 +233,7 @@ export const CreateScheduledMessage = Schema.Struct({
   replyToMessageId: Schema.NullOr(MessageId),
   attachmentSignedId: Schema.optionalKey(Schema.String),
   attachmentSignedIds: Schema.optionalKey(Schema.Array(Schema.String)),
+  attachmentSpoilers: Schema.optionalKey(Schema.Array(Schema.Boolean)),
 });
 
 export type CreateScheduledMessage = typeof CreateScheduledMessage.Type;
@@ -248,6 +249,7 @@ export const UpdateScheduledMessage = Schema.Struct({
   replyToMessageId: Schema.optionalKey(Schema.NullOr(MessageId)),
   attachmentSignedId: Schema.optionalKey(Schema.String),
   attachmentSignedIds: Schema.optionalKey(Schema.Array(Schema.String)),
+  attachmentSpoilers: Schema.optionalKey(Schema.Array(Schema.Boolean)),
 });
 
 export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;

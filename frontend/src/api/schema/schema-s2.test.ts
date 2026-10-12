@@ -50,6 +50,7 @@ const attachmentJson = {
   preview: "image",
   url: "/rails/active_storage/blobs/redirect/eyJf--1/roadmap.png",
   downloadUrl: "/rails/active_storage/blobs/redirect/eyJf--1/roadmap.png?disposition=attachment",
+  spoiler: false,
   thumbnailUrl: "/rails/active_storage/representations/redirect/eyJf--1/eyJr--2/roadmap.png",
 } as const;
 

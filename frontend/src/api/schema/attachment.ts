@@ -15,6 +15,7 @@ export type AttachmentPreviewPin = Assert<
 
 /** A message's one file. URLs are same-origin and need the session cookie. */
 export const Attachment = Schema.Struct({
+  spoiler: Schema.Boolean,
   filename: Schema.String,
   contentType: Schema.String,
   byteSize: Schema.Int,

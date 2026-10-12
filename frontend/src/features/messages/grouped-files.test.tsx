@@ -15,6 +15,7 @@ const first: Attachment = {
   preview: "file",
   url: "/files/first",
   downloadUrl: "/files/first?disposition=attachment",
+  spoiler: false,
   thumbnailUrl: null,
 };
 
@@ -55,6 +56,7 @@ const image = (name: string): Attachment => ({
   preview: "image",
   url: `/files/${name}`,
   downloadUrl: `/files/${name}?disposition=attachment`,
+  spoiler: false,
   thumbnailUrl: `/thumbs/${name}`,
 });
 

@@ -22,6 +22,7 @@ test("schedules files, edits the group, and sends one gallery reply", async ({ p
     },
   ]);
   await expect(page.locator('.tray-chip[data-phase="done"]')).toHaveCount(2);
+  await page.getByRole("button", { name: "Mark scheduled-two.png as spoiler" }).click();
   await page.getByRole("button", { name: "Schedule message", exact: true }).click();
   await page.getByRole("menuitem", { name: /In 1 hour/ }).click();
   await expect(page.locator(".tray-chip")).toHaveCount(0);
@@ -29,6 +30,8 @@ test("schedules files, edits the group, and sends one gallery reply", async ({ p
   const row = page.locator(".list-row").filter({ hasText: "scheduled-one.png" });
   await expect(row.getByText("scheduled-one.png", { exact: true })).toBeVisible();
   await expect(row.getByText("scheduled-two.png", { exact: true })).toBeVisible();
+  await expect(row.getByAltText("scheduled-two.png")).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Spoiler, activate to reveal" })).toBeVisible();
   await expect(row.getByText(/Replying to Grace Adeyemi/)).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(row.getByAltText("scheduled-one.png")).toBeVisible();
@@ -41,12 +44,14 @@ test("schedules files, edits the group, and sends one gallery reply", async ({ p
   await row.getByRole("button", { name: "Edit message", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit scheduled message" });
   await editor.getByRole("button", { name: "Remove scheduled-one.png" }).click();
+  await editor.getByRole("button", { name: "Mark scheduled-two.png as spoiler" }).click();
   await editor.getByLabel("Add files").setInputFiles({
     name: "scheduled-three.png",
     mimeType: "image/png",
     buffer: Buffer.from(onboardingMockupPng()),
   });
   await expect(editor.locator('.tray-chip[data-phase="done"]')).toHaveCount(1);
+  await editor.getByRole("button", { name: "Mark scheduled-three.png as spoiler" }).click();
   await editor.getByRole("button", { name: "Save changes" }).click();
   await expect(editor).not.toBeVisible();
   const edited = page.locator(".list-row").filter({ hasText: "scheduled-three.png" });
@@ -58,9 +63,11 @@ test("schedules files, edits the group, and sends one gallery reply", async ({ p
 
   const gallery = page
     .locator(".attachment-gallery")
-    .filter({ has: page.getByRole("button", { name: /scheduled-three.png/ }) });
+    .filter({ has: page.getByRole("button", { name: "Open scheduled-two.png" }) });
 
   await expect(gallery).toBeVisible();
+  await expect(gallery.locator(".attachment-image")).toHaveCount(1);
+  await gallery.getByRole("button", { name: "Spoiler, activate to reveal" }).click();
   await expect(gallery.locator(".attachment-image")).toHaveCount(2);
   const sent = page.locator("[data-message-row]").filter({ has: gallery });
   await expect(sent).toHaveCount(1);

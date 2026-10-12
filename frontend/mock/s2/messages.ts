@@ -38,7 +38,7 @@ import {
   touched,
   visibleMessage,
 } from "./model.ts";
-import { checkMarkdown, filesOf } from "./posting.ts";
+import { checkMarkdown, filesOf, withSpoilers } from "./posting.ts";
 import type { Threads } from "./threads.ts";
 
 /** A boost is at most this many characters. */
@@ -125,11 +125,13 @@ export function createMessages(
         current.sticker !== undefined,
     );
 
+    const files = withSpoilers(body, filesOf(current), filesOf(current));
     const updatedAt = touched(ctx.now(), current.updatedAt);
     const changed = markdown !== current.markdownSource;
 
     const next: MessageDTO = {
       ...current,
+      attachment: files[0] ?? null,
       bodyHtml: renderMarkdown(markdown, ctx.mentionables()),
       markdownSource: markdown,
       cards,
@@ -137,6 +139,8 @@ export function createMessages(
       editedAt: changed ? updatedAt : current.editedAt,
       updatedAt,
     };
+
+    if (current.attachments !== undefined) next.attachments = [...files];
 
     if (location.thread !== null) {
       inviteThreadMentionees(ctx.world(), location.thread, next, VIEWER_ID, updatedAt);

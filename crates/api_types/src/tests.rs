@@ -689,6 +689,7 @@ fn create_message_requests_round_trip() {
             sticker_id: None,
             attachment_signed_id: None,
             attachment_signed_ids: None,
+            attachment_spoilers: None,
             drive_file_ids: None,
         },
         json!({

@@ -4,6 +4,7 @@ import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { PendingAttachment } from "../../store/model.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { FileSpoiler, SpoilerCover } from "./file-spoiler.tsx";
 import { download, fileIcon, fileKind, fitWithin, formatBytes } from "./format.ts";
 
 /** The lightbox loads the first time someone opens an image. */
@@ -202,9 +203,14 @@ export function AttachmentGallery({
   readonly attachments: readonly Attachment[];
 }) {
   const [lightbox, setLightbox] = useState(CLOSED);
+  const [revealed, setRevealed] = useState<ReadonlySet<number>>(new Set());
   const media = attachments.filter((attachment) => attachment.preview !== "file");
   const files = attachments.filter((attachment) => attachment.preview === "file");
-  const images = media.filter((attachment) => attachment.preview === "image");
+
+  const images = media.filter(
+    (attachment, index) =>
+      attachment.preview === "image" && (!attachment.spoiler || revealed.has(index)),
+  );
 
   if (attachments.length <= 1 || media.length <= 1) {
     return attachments.map((attachment, index) => (
@@ -223,7 +229,12 @@ export function AttachmentGallery({
         {media.map((attachment, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
           <li key={`${index}:${attachment.url}`} className="attachment-cell">
-            {attachment.preview === "image" ? (
+            {attachment.spoiler && !revealed.has(index) ? (
+              <SpoilerCover
+                tile
+                onReveal={() => setRevealed((current) => new Set([...current, index]))}
+              />
+            ) : attachment.preview === "image" ? (
               <GalleryImage
                 attachment={attachment}
                 onOpen={() =>
@@ -238,7 +249,7 @@ export function AttachmentGallery({
       </ul>
       {files.map((attachment, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
-        <FileAttachment key={`${index}:${attachment.url}`} attachment={attachment} />
+        <AttachmentView key={`${index}:${attachment.url}`} attachment={attachment} />
       ))}
       <MessageLightbox images={images} state={lightbox} onChange={setLightbox} />
     </div>
@@ -247,6 +258,14 @@ export function AttachmentGallery({
 
 /** A message's one file, drawn by its preview kind. */
 export function AttachmentView({ attachment }: { readonly attachment: Attachment }) {
+  return (
+    <FileSpoiler spoiler={attachment.spoiler}>
+      <RevealedAttachment attachment={attachment} />
+    </FileSpoiler>
+  );
+}
+
+function RevealedAttachment({ attachment }: { readonly attachment: Attachment }) {
   switch (attachment.preview) {
     case "image":
       return <ImageAttachment attachment={attachment} />;
@@ -268,6 +287,20 @@ export function PendingAttachmentView({
   readonly attachment: PendingAttachment;
   /** Drawn as a square gallery tile. */
   readonly tile?: boolean;
+}) {
+  return (
+    <FileSpoiler spoiler={attachment.spoiler ?? false} tile={tile}>
+      <RevealedPendingAttachment attachment={attachment} tile={tile} />
+    </FileSpoiler>
+  );
+}
+
+function RevealedPendingAttachment({
+  attachment,
+  tile,
+}: {
+  readonly attachment: PendingAttachment;
+  readonly tile: boolean;
 }) {
   const [broken, setBroken] = useState(false);
   const image = attachment.contentType.startsWith("image/");

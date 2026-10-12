@@ -343,7 +343,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
     let blobs = source
         .attachments(tx.conn())?
         .into_iter()
-        .map(|(a, _)| (a.name, a.blob_id))
+        .map(|(a, _)| (a.name, a.blob_id, a.spoiler))
         .collect::<Vec<_>>();
     let drive_ids = query_all(
         tx.conn(),
@@ -358,7 +358,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
             let attachments = copy.attachments(tx.conn())?;
             let current = attachments
                 .iter()
-                .map(|(a, _)| (a.name.clone(), a.blob_id))
+                .map(|(a, _)| (a.name.clone(), a.blob_id, a.spoiler))
                 .collect::<Vec<_>>();
             if current != blobs {
                 for (attachment, _) in attachments {
@@ -367,8 +367,8 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                         blob_id: attachment.blob_id,
                     });
                 }
-                for (name, blob_id) in &blobs {
-                    crate::Attachment::create(tx, "Message", copy.id, name, *blob_id)?;
+                for (name, blob_id, spoiler) in &blobs {
+                    crate::Attachment::create_with_spoiler(tx, "Message", copy.id, name, *blob_id, *spoiler)?;
                 }
                 copy.touch(tx)?;
             }
@@ -406,14 +406,15 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     sticker_id: source.sticker_id,
                     sticker_name: source.sticker_name.clone(),
                     embeds_suppressed: source.embeds_suppressed,
+                    attachment_spoilers: blobs.iter().filter(|(name, _, _)| name == "attachment").chain(blobs.iter().filter(|(name, _, _)| name == "attachments")).map(|(_, _, spoiler)| *spoiler).collect(),
                     attachment_blob_id: blobs
                         .iter()
-                        .find(|(name, _)| name == "attachment")
-                        .map(|(_, id)| *id),
+                        .find(|(name, _, _)| name == "attachment")
+                        .map(|(_, id, _)| *id),
                     attachment_blob_ids: blobs
                         .iter()
-                        .filter(|(name, _)| name == "attachments")
-                        .map(|(_, id)| *id)
+                        .filter(|(name, _, _)| name == "attachments")
+                        .map(|(_, id, _)| *id)
                         .collect(),
                     drive_file_ids: drive_ids.clone(),
                     webhook: super::channel_webhook::ChannelWebhook::message_snapshot(

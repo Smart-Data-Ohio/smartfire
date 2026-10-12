@@ -168,6 +168,7 @@ fn the_new_post_form_and_create_round_trip() {
                 sticker_id: None,
                 attachment_signed_id: None,
                 attachment_signed_ids: None,
+            attachment_spoilers: None,
                 drive_file_ids: None,
             }),
         },

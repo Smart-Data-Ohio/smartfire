@@ -384,8 +384,19 @@ impl ScheduledMessage {
             [self.id], Attachment::from_row)
     }
 
+    /// Flags follow the validated dispatch ids, including a reordered or filtered selection.
+    pub(crate) fn attachment_spoilers_for(&self, conn: &Connection, blob_ids: &[i64]) -> Result<Vec<bool>> {
+        let slots = self.attachment_slots(conn)?;
+        blob_ids.iter().map(|blob_id| {
+            slots.iter().find(|attachment| attachment.blob_id == *blob_id)
+                .map(|attachment| attachment.spoiler)
+                .or_not_found("ActiveStorage::Attachment")
+        }).collect()
+    }
+
     pub(crate) fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
-        for attachment in self.attachment_slots(tx.conn())? {
+        let current = self.attachment_slots(tx.conn())?;
+        for attachment in &current {
             attachment.delete(tx)?;
             if !blob_ids.contains(&attachment.blob_id) {
                 tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
@@ -396,7 +407,30 @@ impl ScheduledMessage {
                 "UPDATE active_storage_blobs SET metadata=json_set(COALESCE(metadata, '{}'), '$.scheduled_by', ?) WHERE id=?",
                 params![self.user_id, blob_id],
             )?;
-            Attachment::create(tx, "ScheduledMessage", self.id, "attachments", blob_id)?;
+            let spoiler = current.iter().find(|attachment| attachment.blob_id == blob_id).is_some_and(|attachment| attachment.spoiler);
+            Attachment::create_with_spoiler(tx, "ScheduledMessage", self.id, "attachments", blob_id, spoiler)?;
+        }
+        Ok(())
+    }
+
+    pub fn set_attachment_spoilers(&mut self, tx: &mut Tx<'_>, flags: &[bool]) -> Result<()> {
+        let files = self.attachment_slots(tx.conn())?;
+        if flags.len() != files.len() {
+            let mut errors = Errors::default();
+            errors.add("attachment_spoilers", "must have one flag per file");
+            return errors.into_result();
+        }
+        let mut changed = false;
+        for (attachment, &spoiler) in files.iter().zip(flags) {
+            if attachment.spoiler != spoiler {
+                tx.conn().execute_cached("UPDATE active_storage_attachments SET spoiler=? WHERE id=?", params![spoiler, attachment.id])?;
+                changed = true;
+            }
+        }
+        if changed {
+            tx.conn().execute_cached("UPDATE scheduled_messages SET updated_at=? WHERE id=?", params![tx.now(), self.id])?;
+            *self = Self::find(tx.conn(), self.id)?;
+            self.emit_change(tx, false);
         }
         Ok(())
     }
@@ -681,7 +715,9 @@ impl ScheduledMessage {
                 return Ok(false);
             }
         };
+        let attachment_spoilers = scheduled.attachment_spoilers_for(tx.conn(), &attachment_blob_ids)?;
         let attrs = NewMessage {
+            attachment_spoilers,
             room_id: scheduled.room_id,
             creator_id: scheduled.user_id,
             thread_id: scheduled.thread_id,

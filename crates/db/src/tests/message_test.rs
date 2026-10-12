@@ -801,3 +801,51 @@ fn destroying_a_message_tombstones_replies_and_clears_dependents() {
     let parent: Option<i64> = t.read(move |c| crate::sql::query_one(c, r#"SELECT "parent_message_id" FROM "channel_threads" WHERE "id" = ?"#, [thread], |r| r.get(0))).flatten();
     assert_eq!(parent, None);
 }
+
+#[test]
+fn file_spoilers_belong_to_each_attachment_and_survive_text_edits() {
+    let t = TestDb::new();
+    let blobs = grouped_files_blobs(&t);
+    let blob_id = blobs[0];
+    let (covered, public) = t.write(move |tx| {
+        let covered = Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"), attachment_blob_id: Some(blob_id),
+            attachment_spoilers: vec![true], ..Default::default()
+        })?;
+        let public = Message::create(tx, NewMessage {
+            room_id: id("hq"), creator_id: id("david"), attachment_blob_id: Some(blob_id),
+            ..Default::default()
+        })?;
+        Ok((covered, public))
+    });
+    let to_edit = covered.clone();
+    t.write(move |tx| {
+        let mut edited = to_edit;
+        edited.edit(tx, crate::MessageChanges { markdown_source: Some("Caption".into()), ..Default::default() })
+    });
+    t.read(|conn| {
+        let hidden = covered.attachment(conn).unwrap().unwrap();
+        let visible = public.attachment(conn).unwrap().unwrap();
+        assert_eq!(hidden.0.blob_id, visible.0.blob_id);
+        assert!(hidden.0.spoiler);
+        assert!(!visible.0.spoiler);
+        let payload = crate::PushSubscription::payload_for(conn, &BasicRichText, &Room::find(conn, covered.room_id).unwrap(), &covered).unwrap();
+        let wire = serde_json::to_value(payload).unwrap();
+        assert!(wire.get("image").is_none());
+        assert!(wire.get("image_url").is_none());
+        assert!(!wire.to_string().contains("/blobs/"));
+        Ok(())
+    });
+    let files = blobs[..3].to_vec();
+    let mixed = t.write(move |tx| Message::create(tx, NewMessage {
+        room_id: id("hq"), creator_id: id("david"), attachment_blob_ids: files,
+        attachment_spoilers: vec![true, false, true], ..Default::default()
+    }));
+    t.read(|conn| { assert_eq!(mixed.attachments(conn)?.iter().map(|(file, _)| file.spoiler).collect::<Vec<_>>(), [true, false, true]); Ok(()) });
+    let to_edit = mixed.clone();
+    t.write(move |tx| {
+        let mut mixed = to_edit;
+        mixed.edit(tx, crate::MessageChanges { attachment_spoilers: Some(vec![false, true, false]), ..Default::default() })
+    });
+    t.read(|conn| { assert_eq!(mixed.attachments(conn)?.iter().map(|(file, _)| file.spoiler).collect::<Vec<_>>(), [false, true, false]); Ok(()) });
+}

@@ -29,4 +29,8 @@ replyToMessageId?: number | null, attachmentSignedId?: string,
 /**
  * Replace the ordered file list, including retained signed ids; an empty list removes all.
  */
-attachmentSignedIds?: Array<string>, };
+attachmentSignedIds?: Array<string>,
+/**
+ * One flag per uploaded file, in signed-id order. Omitted means public on create.
+ */
+attachmentSpoilers?: Array<boolean>, };

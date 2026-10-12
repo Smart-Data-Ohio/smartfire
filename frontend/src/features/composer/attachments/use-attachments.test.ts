@@ -162,6 +162,7 @@ describe("the attachment tray", () => {
 describe("a send's file options", () => {
   const done = (name: string, type = "text/plain"): TrayFile => ({
     id: name,
+    spoiler: false,
     file: file(name, type),
     previewUrl: type.startsWith("image/") ? `blob:${name}` : null,
     snapshot: { phase: "done", loaded: 5, total: 5, signedId: `signed-${name}`, error: null },
@@ -169,8 +170,10 @@ describe("a send's file options", () => {
 
   it("keeps a single file in the legacy slot", () => {
     expect(fileOptions([done("solo.pdf", "application/pdf")])).toEqual({
+      attachmentSpoilers: [false],
       attachmentSignedId: "signed-solo.pdf",
       attachment: {
+        spoiler: false,
         filename: "solo.pdf",
         contentType: "application/pdf",
         byteSize: 5,

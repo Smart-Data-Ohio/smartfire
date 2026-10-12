@@ -463,6 +463,7 @@ describe("Drive submissions", () => {
       markdown: "First reply",
       attachmentSignedId: null,
       attachmentSignedIds: [],
+      attachmentSpoilers: [],
       driveFileIds: ["roadmap"],
     });
     await attachDrive("Budget");
@@ -580,6 +581,7 @@ describe("several files in one send", () => {
         markdown: "",
         attachmentSignedId: null,
         attachmentSignedIds: ["signed-one.txt", "signed-two.txt", "signed-three.txt"],
+        attachmentSpoilers: [false, false, false],
         driveFileIds: [],
       }),
     );

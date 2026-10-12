@@ -375,6 +375,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
         brief: draft.brief,
         attachmentSignedId: uploaded.attachmentSignedId ?? null,
         attachmentSignedIds: uploaded.attachmentSignedIds ?? [],
+        attachmentSpoilers: uploaded.attachmentSpoilers ?? [],
         clientId: clientIdRef.current,
       })
       .then(
@@ -489,6 +490,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
             files={attachments.files}
             onRemove={attachments.remove}
             onRetry={attachments.retry}
+            onToggleSpoiler={attachments.toggleSpoiler}
           />
           <IconButton
             icon="plus"

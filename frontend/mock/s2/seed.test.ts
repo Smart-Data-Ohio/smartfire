@@ -85,6 +85,7 @@ describe("the S2 seed", () => {
       filename: "Q3-board-update.pdf",
       contentType: "application/pdf",
       preview: "file",
+      spoiler: false,
       thumbnailUrl: null,
       width: null,
     });

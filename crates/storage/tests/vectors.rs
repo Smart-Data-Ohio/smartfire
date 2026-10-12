@@ -311,7 +311,7 @@ fn blob_reads_and_metadata_writes_preserve_rails_processing_columns() {
     assert_eq!(Blob::attached(&conn, "Message", 42, "attachment").unwrap(), Some(blob.clone()));
     let files = Blob::attached_messages(&conn, &[42]).unwrap();
     assert!(!files[&42].grouped);
-    assert_eq!(files[&42].blobs, [blob.clone()]);
+    assert_eq!(files[&42].files.iter().map(|file| file.blob.clone()).collect::<Vec<_>>(), [blob.clone()]);
     let mut metadata = blob.metadata.clone();
     metadata.set("analyzed", Json::Bool(true));
     blob.update_metadata(&conn, metadata).unwrap();
@@ -335,7 +335,7 @@ fn grouped_message_files_read_both_slots_in_attachment_order() {
     let files = Blob::attached_messages(&conn, &[42]).unwrap();
     assert_eq!(files.len(), 1);
     assert!(files[&42].grouped);
-    assert_eq!(files[&42].blobs, [second, first]);
+    assert_eq!(files[&42].files.iter().map(|file| file.blob.clone()).collect::<Vec<_>>(), [second, first]);
     assert!(Blob::attached_messages(&conn, &[]).unwrap().is_empty());
 }
 

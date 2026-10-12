@@ -27,6 +27,7 @@ const WAVE: AvailableSticker = {
 };
 
 const file: Attachment = {
+  spoiler: false,
   filename: "notes.txt",
   contentType: "text/plain",
   byteSize: 5,

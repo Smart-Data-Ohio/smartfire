@@ -12,6 +12,8 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { User } from "../gen/User.ts";
 import { ApiClient, type ApiRequest } from "./client.ts";
 
+export { emitSyncEvents } from "../sync/signals.ts";
+
 /** The address bar the app's real client leaves through: a test spies on its `assign`. */
 export { addressBar } from "./client.ts";
 

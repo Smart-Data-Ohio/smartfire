@@ -5,16 +5,27 @@
 import { type FileQuery, files, members, setStarred } from "../api/pane-endpoints.ts";
 import type { FileList } from "../gen/FileList.ts";
 import type { MemberList } from "../gen/MemberList.ts";
+import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { StarState } from "../gen/StarState.ts";
 import { mutations } from "../store/store.ts";
 import { onRoomRefresh } from "./room-refresh.ts";
 import { runAction } from "./runtime.ts";
+import { onSyncEvents } from "./signals.ts";
 
 export type { FileQuery };
 
 export const panes = {
   /** Mounted member readers reload only after a room-management change. */
   onRoomRefresh,
+  /** Includes edits outside loaded timelines, with the message's complete attachment list. */
+  onMessageUpdate: (roomId: number, listener: (message: MessageDTO) => void): (() => void) =>
+    onSyncEvents((events) => {
+      for (const event of events) {
+        if (event.type === "message.updated" && event.data.roomId === roomId) {
+          listener(event.data);
+        }
+      }
+    }),
   /** Every active member with presence and the viewer's stars. */
   members: async (roomId: number): Promise<MemberList> => {
     const list = await runAction(members(roomId));

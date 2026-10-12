@@ -411,6 +411,7 @@ async fn create_post(c: &mut Ctx) -> Result {
         .filter(|id| !id.is_empty());
     let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), message.as_ref()
         .and_then(|message| message.attachment_signed_ids.clone()).unwrap_or_default())?;
+    let attachment_spoilers = crate::endpoints::file_spoilers(c, message.as_ref().and_then(|message| message.attachment_spoilers.clone()), signed_ids.len() + usize::from(signed_id.is_some()))?;
     require_grouped_uploads(c, &signed_ids).await?;
     if let Some(id) = &signed_id
         && !blob_exists(c, id).await?
@@ -467,6 +468,7 @@ async fn create_post(c: &mut Ctx) -> Result {
                 client_message_id: client_id,
                 attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                 attachment_blob_ids: blobs.iter().map(|blob| blob.id).collect(),
+                attachment_spoilers,
                 reply_to_message_id: message.reply_to_message_id,
                 reply_notify_author: message.reply_notify_author,
                 drive_file_ids: message.drive_file_ids.unwrap_or_default(),
