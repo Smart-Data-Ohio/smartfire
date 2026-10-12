@@ -44,6 +44,23 @@ export const panes = {
         }
       }
     }),
+  /** A reply changed files without publishing its message on the room topic. */
+  onFilesChanged: (roomId: number, listener: () => void): (() => void) =>
+    onSyncEvents((events) => {
+      if (
+        events.some((event) => event.type === "room.files.changed" && event.data.roomId === roomId)
+      ) {
+        listener();
+      }
+    }),
+  onThreadRemoved: (roomId: number, listener: (threadId: number) => void): (() => void) =>
+    onSyncEvents((events) => {
+      for (const event of events) {
+        if (event.type === "thread.removed" && event.data.roomId === roomId) {
+          listener(event.data.threadId);
+        }
+      }
+    }),
   /** Every active member with presence and the viewer's stars. */
   members: async (roomId: number): Promise<MemberList> => {
     const list = await runAction(members(roomId));

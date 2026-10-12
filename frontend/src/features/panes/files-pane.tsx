@@ -35,6 +35,8 @@ import { PaneEmpty, PaneError, PaneListSkeleton, PaneSearch } from "./pane-state
 /** Typing pauses this long before the search goes out. */
 const SEARCH_DELAY_MS = 250;
 
+const FILES_REFRESH_DELAY_MS = 100;
+
 interface Listing {
   readonly status: "loading" | "ready" | "error";
   readonly files: readonly RoomFile[];
@@ -209,6 +211,8 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   const [query, setQuery] = useState("");
   const [listing, setListing] = useState<Listing>(LOADING);
   const request = useRef(0);
+  const loadedPage = useRef(1);
+  const removedThreads = useRef(new Set<number>());
   const liveFiles = useRef(new Map<number, readonly RoomFile[]>());
 
   useEffect(() => {
@@ -220,6 +224,8 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   const loadPage = (page: number) => {
     const ticket = ++request.current;
 
+    loadedPage.current = page;
+    removedThreads.current.clear();
     setListing((held) => (page === 1 ? LOADING : { ...held, loadingMore: true }));
 
     panes.files(roomId, fileQuery(type, query, page)).then(
@@ -234,7 +240,9 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
         setListing((held) => ({
           status: "ready",
           files: reconcileFiles(
-            page === 1 ? list.files : appendFiles(held.files, list.files),
+            (page === 1 ? list.files : appendFiles(held.files, list.files)).filter(
+              (file) => file.threadId === null || !removedThreads.current.has(file.threadId),
+            ),
             liveFiles.current,
             { type, search: query },
             nextPage === null,
@@ -256,6 +264,62 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new room, type or search starts over at page 1
   useEffect(() => {
     liveFiles.current = new Map();
+    let refreshTimer: number | undefined;
+
+    const refresh = async () => {
+      const ticket = ++request.current;
+      const pages = loadedPage.current;
+      let files: RoomFile[] = [];
+      let nextPage: number | null = 1;
+
+      removedThreads.current.clear();
+
+      try {
+        for (let page = 1; page <= pages && nextPage !== null; page += 1) {
+          const list = await panes.files(roomId, fileQuery(type, query, page));
+
+          if (ticket !== request.current) return;
+          files = appendFiles(files, list.files);
+          nextPage =
+            list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null;
+        }
+
+        setListing({
+          status: "ready",
+          files: reconcileFiles(
+            files.filter(
+              (file) => file.threadId === null || !removedThreads.current.has(file.threadId),
+            ),
+            liveFiles.current,
+            { type, search: query },
+            nextPage === null,
+          ),
+          nextPage,
+          loadingMore: false,
+        });
+      } catch {
+        if (ticket === request.current) {
+          setListing((held) =>
+            held.status === "loading"
+              ? { ...LOADING, status: "error" }
+              : { ...held, loadingMore: false },
+          );
+        }
+      }
+    };
+
+    const stopFiles = panes.onFilesChanged(roomId, () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => void refresh(), FILES_REFRESH_DELAY_MS);
+    });
+
+    const stopThread = panes.onThreadRemoved(roomId, (threadId) => {
+      removedThreads.current.add(threadId);
+      setListing((held) => ({
+        ...held,
+        files: held.files.filter((file) => file.threadId !== threadId),
+      }));
+    });
 
     const applyLive = () =>
       setListing((held) => {
@@ -270,6 +334,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       });
 
     const stopChange = panes.onMessageChange(roomId, (message, created) => {
+      if (message.threadId !== null) return;
       setListing((held) => {
         const known = new Map<string, string>();
 
@@ -295,6 +360,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
         return files === held.files ? held : { ...held, files };
       });
     });
+
     const stopRemoved = panes.onMessageRemoved(roomId, (messageId) => {
       liveFiles.current.set(messageId, []);
       applyLive();
@@ -305,6 +371,9 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
     return () => {
       stopChange();
       stopRemoved();
+      stopFiles();
+      stopThread();
+      window.clearTimeout(refreshTimer);
       request.current += 1;
     };
   }, [roomId, type, query]);

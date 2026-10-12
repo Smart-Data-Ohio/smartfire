@@ -121,9 +121,7 @@ describe("reconcileFiles", () => {
     const live = new Map([[1, [old]]]);
 
     expect(reconcileFiles(held, live, all, false)).toBe(held);
-    expect(reconcileFiles(held, live, all, true).map((entry) => entry.messageId)).toEqual([
-      2, 1,
-    ]);
+    expect(reconcileFiles(held, live, all, true).map((entry) => entry.messageId)).toEqual([2, 1]);
   });
 
   it("inserts only files the active filter admits", () => {
@@ -131,7 +129,9 @@ describe("reconcileFiles", () => {
       ...file(3, "deck.png"),
       attachment: attachment("deck.png", "image/png", "image"),
     };
+
     const doc = file(4, "deck-notes.txt");
+
     const live = new Map([
       [3, [image]],
       [4, [doc]],

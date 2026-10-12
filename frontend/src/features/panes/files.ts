@@ -60,6 +60,7 @@ const DOCUMENT_FILTER_TYPES = [
 /** Whether a live attachment belongs on the filtered list, by its type group and name. */
 export function matchesFileFilter(attachment: Attachment, filter: FileFilter): boolean {
   const contentType = attachment.contentType.toLowerCase();
+
   const group = contentType.startsWith("image/")
     ? "images"
     : contentType.startsWith("video/")
@@ -129,6 +130,7 @@ export function reconcileFiles(
 
   const listed = new Set(held.map(fileKey));
   const last = files.at(-1);
+
   const fresh = [...updates.values()]
     .flat()
     .filter(

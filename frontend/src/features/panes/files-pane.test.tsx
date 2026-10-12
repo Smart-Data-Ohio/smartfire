@@ -72,7 +72,12 @@ function created(message: MessageDTO) {
 
 function removed(id: number, roomId = ROOM) {
   const events = [
-    { seq: 1, topic: `room:${roomId}`, type: "message.removed", data: { id, roomId, threadId: null } },
+    {
+      seq: 1,
+      topic: `room:${roomId}`,
+      type: "message.removed",
+      data: { id, roomId, threadId: null },
+    },
   ] satisfies Parameters<typeof emitSyncEvents>[0];
 
   mutations.applyEvents(events, Date.now());
@@ -134,6 +139,7 @@ afterEach(() => {
   cleanup();
   mutations.reset();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 it.each(["All", "Images"])(
@@ -425,4 +431,167 @@ it("rejects a pending response from the previous file filter", async () => {
   expect(screen.getByText("No images shared here yet.")).toBeTruthy();
   expect(container.querySelector("img")).toBeNull();
   expect(files).toHaveBeenCalledTimes(2);
+});
+
+function filesChanged(roomId = ROOM, topic = `room:${roomId}`) {
+  emitSyncEvents([{ seq: 1, topic, type: "room.files.changed", data: { roomId } }]);
+}
+
+function threadRemoved(threadId: number) {
+  emitSyncEvents([
+    {
+      seq: 2,
+      topic: "user",
+      type: "thread.removed",
+      data: { roomId: ROOM, threadId },
+    },
+  ]);
+}
+
+it("debounces reply changes and silently refreshes both loaded pages without moving the scroll", async () => {
+  const { entries, files } = paginatedFiles();
+  const { container, unmount } = await loadBothPages();
+  const body = container.querySelector(".pane-body");
+
+  if (body === null) throw new Error("Missing pane body");
+  body.scrollTop = 720;
+  const pending = Promise.withResolvers<FileList>();
+
+  files.mockImplementationOnce(() => pending.promise);
+  entries.unshift({ ...file, messageId: 1000, threadId: 8, attachment: freshAttachment });
+  vi.useFakeTimers();
+  act(() => {
+    filesChanged();
+    filesChanged();
+    filesChanged(ROOM + 1);
+  });
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.getAllByRole("listitem")).toHaveLength(60);
+  expect(body.scrollTop).toBe(720);
+  await act(async () =>
+    pending.resolve({ ...publicList, files: entries.slice(0, 30), nextPage: 2 }),
+  );
+  expect(files.mock.calls.map(([, query]) => query.page)).toEqual([1, 2, 1, 2]);
+  expect(screen.getAllByRole("listitem")).toHaveLength(60);
+  expect(screen.getByText("fresh.png")).toBeTruthy();
+  expect(screen.queryByText("59.png")).toBeNull();
+  expect(body.scrollTop).toBe(720);
+  act(filesChanged);
+  unmount();
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(4);
+});
+
+it("ignores an older refresh after a newer private reply change", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  const stale = Promise.withResolvers<FileList>();
+
+  files.mockImplementationOnce(() => stale.promise);
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  files.mockResolvedValue({ ...publicList, files: [] });
+  act(() => filesChanged(ROOM, "user"));
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  await act(async () => stale.resolve(publicList));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  expect(files).toHaveBeenCalledTimes(3);
+});
+
+it("drops a removed thread's files and keeps them out of a response already in flight", async () => {
+  const threadFile = { ...file, threadId: 8 };
+  const pending = Promise.withResolvers<FileList>();
+  const files = vi.spyOn(panes, "files").mockResolvedValue({ ...publicList, files: [threadFile] });
+
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  files.mockImplementationOnce(() => pending.promise);
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  act(() => threadRemoved(8));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  await act(async () => pending.resolve({ ...publicList, files: [threadFile] }));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+});
+
+it("keeps visible files after a failed refresh and retries on the next change", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  vi.useFakeTimers();
+  files.mockRejectedValueOnce(new Error("Offline"));
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.getByText("image.png")).toBeTruthy();
+  expect(screen.queryByText("The files couldn't be loaded.")).toBeNull();
+  files.mockResolvedValue({ ...publicList, files: [] });
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+});
+
+it("uses the active type and search when refreshing a reply's files", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  const { unmount } = await mount();
+
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  fireEvent.click(screen.getByRole("tab", { name: "Images" }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search files by name" }), {
+    target: { value: " image " },
+  });
+  await waitFor(() =>
+    expect(files).toHaveBeenLastCalledWith(ROOM, {
+      type: "images",
+      filename: "image",
+      page: 1,
+    }),
+  );
+  const calls = files.mock.calls.length;
+
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(calls + 1);
+  expect(files).toHaveBeenLastCalledWith(ROOM, { type: "images", filename: "image", page: 1 });
+  unmount();
+});
+
+it("uses refreshed thread rows instead of retaining an older thread message overlay", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  act(() => created(messageFixture(2, ROOM, { threadId: 8, attachment: freshAttachment })));
+  files.mockResolvedValue({
+    ...publicList,
+    files: [
+      { ...file, messageId: 2, threadId: 8, attachment: { ...freshAttachment, spoiler: true } },
+    ],
+  });
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.getByRole("button", { name: "Spoiler, activate to reveal" })).toBeTruthy();
+  files.mockResolvedValue({ ...publicList, files: [] });
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+});
+
+it("shows an error if a reply refresh supersedes an initial read and fails", async () => {
+  const stale = Promise.withResolvers<FileList>();
+  const files = vi.spyOn(panes, "files").mockImplementationOnce(() => stale.promise);
+
+  await mount();
+  await waitFor(() => expect(files).toHaveBeenCalledTimes(1));
+  files.mockRejectedValueOnce(new Error("Offline"));
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(screen.getByText("The files couldn't be loaded.")).toBeTruthy();
+  await act(async () => stale.resolve(publicList));
+  expect(screen.getByText("The files couldn't be loaded.")).toBeTruthy();
 });

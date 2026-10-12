@@ -265,6 +265,7 @@ export function createThreads(
 
     const events: Outgoing[] = [
       { topic: `thread:${thread.id}`, type: "message.created", data: message },
+      ...filesChanged(thread),
       ...syncIndicator(thread),
       ...(fresh ? [] : updated(thread)),
       ...notifications,
@@ -451,6 +452,17 @@ export function createThreads(
 
     return ok(created, 201);
   };
+
+  const filesChanged = (thread: ThreadRecord): Outgoing[] =>
+    canAccessThread(ctx.world(), thread)
+      ? [
+          {
+            topic: thread.visibility === "private" ? "user" : `room:${thread.roomId}`,
+            type: "room.files.changed",
+            data: { roomId: thread.roomId },
+          },
+        ]
+      : [];
 
   const reply = (threadId: number, body: Json | undefined): MockResponse => {
     const world = ctx.world();
@@ -830,6 +842,7 @@ export function createThreads(
       ctx.publish([
         ...notifications,
         { topic: `thread:${thread.id}`, type: "message.updated", data: message },
+        ...filesChanged(thread),
         ...syncIndicator(thread),
         ...updated(thread),
       ]);

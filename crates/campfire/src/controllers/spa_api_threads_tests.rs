@@ -1611,14 +1611,15 @@ async fn upload_file(browser: &mut crate::controllers::presenters::test_support:
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let upload: api::DirectUpload = parse(&reply);
     let stored = browser.send(Req::new(Method::PUT, &upload.upload_url)
-        .header("content-type", "text/plain").header("content-length", bytes.len().to_string())
+        .header("content-type", "text/plain").header("content-length", &bytes.len().to_string())
         .body(String::from_utf8(bytes.to_vec()).unwrap())).await;
     assert_eq!(stored.status, StatusCode::NO_CONTENT, "{}", stored.text());
     upload.signed_id
 }
 
 fn files_changed(event: &api::SyncEvent) -> bool {
-    matches!(&event.payload, api::SyncPayload::RoomFilesChanged(change) if change.room_id == DESIGNERS)
+    let wire = serde_json::to_value(&event.payload).unwrap();
+    wire == json!({"type": "room.files.changed", "data": {"roomId": DESIGNERS}})
 }
 
 #[tokio::test]

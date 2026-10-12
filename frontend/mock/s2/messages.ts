@@ -89,6 +89,20 @@ export function createMessages(
     return location;
   };
 
+  const filesChanged = (location: MessageLocation): Outgoing[] => {
+    const thread = location.thread;
+
+    return thread !== null && canAccessThread(ctx.world(), thread)
+      ? [
+          {
+            topic: thread.visibility === "private" ? "user" : `room:${thread.roomId}`,
+            type: "room.files.changed",
+            data: { roomId: thread.roomId },
+          },
+        ]
+      : [];
+  };
+
   const replace = (location: MessageLocation, next: MessageDTO) => {
     location.list[location.index] = next;
   };
@@ -147,7 +161,10 @@ export function createMessages(
     }
 
     replace(location, next);
-    ctx.publish([{ topic: topicOf(next), type: "message.updated", data: next }]);
+    ctx.publish([
+      { topic: topicOf(next), type: "message.updated", data: next },
+      ...filesChanged(location),
+    ]);
 
     return next;
   };
@@ -183,6 +200,7 @@ export function createMessages(
         type: "message.removed",
         data: { id: message.id, roomId: message.roomId, threadId: message.threadId },
       },
+      ...filesChanged(location),
     ];
 
     if (world.pins.delete(message.id)) {

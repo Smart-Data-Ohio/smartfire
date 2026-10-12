@@ -501,3 +501,53 @@ it("tells the viewer of a grant on their own topic, and drops the thread's topic
   expect(heard.some((event) => event.type === "message.created")).toBe(true);
   connection.close();
 });
+
+it("sends file changes only to a private thread's readers", async () => {
+  const { server } = harness();
+  await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+  const events = collect(server, [`room:${rooms.general}`]);
+
+  const hidden = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "Hidden" },
+    201,
+  );
+
+  server.threadPost(hidden.threadId, users.maya, "Hidden reply");
+  expect(events.filter((event) => event.type === "room.files.changed")).toHaveLength(0);
+  await expectStatus(
+    server,
+    "POST",
+    "/__mock/thread-access",
+    {
+      threadId: hidden.threadId,
+      userId: viewer,
+      added: true,
+    },
+    200,
+  );
+  server.threadPost(hidden.threadId, users.maya, "Shared reply");
+  expect(
+    events
+      .filter((event) => event.type === "room.files.changed")
+      .map((event) => ({
+        topic: event.topic,
+        data: event.data,
+      })),
+  ).toEqual([{ topic: "user", data: { roomId: rooms.general } }]);
+  await expectStatus(
+    server,
+    "POST",
+    "/__mock/thread-access",
+    {
+      threadId: hidden.threadId,
+      userId: viewer,
+      added: false,
+    },
+    204,
+  );
+  server.threadPost(hidden.threadId, users.maya, "Hidden again");
+  expect(events.filter((event) => event.type === "room.files.changed")).toHaveLength(1);
+});

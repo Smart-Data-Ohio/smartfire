@@ -7,7 +7,7 @@ use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
     ApprovalUpdated, BoardAutomationsChanged, CustomStyles, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
     HuddleAfkMoved, HuddleSoundboardPlayed, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
-    RoomCategory, RoomCategoryRemoved, RoomFilesChanged, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
+    RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
     ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
 };
@@ -241,11 +241,6 @@ pub enum SyncPayload {
     /// [`EventsChanged`]). New.
     #[serde(rename = "events.changed")]
     EventsChanged(EventsChanged),
-    /// On `room:<id>`, or on a private thread's readers' `user` topics: a thread reply there
-    /// was posted, edited or deleted, so the room's files may have changed (see
-    /// [`RoomFilesChanged`]). New.
-    #[serde(rename = "room.files.changed")]
-    RoomFilesChanged(RoomFilesChanged),
     /// On every active human's `user` topic: an agent's status, note, suspension or working
     /// presence changed (see [`AgentStatusChanged`]).
     #[serde(rename = "agent.status")]

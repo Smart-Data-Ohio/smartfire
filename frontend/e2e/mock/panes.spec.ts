@@ -239,6 +239,7 @@ test("the files pane shows an upload and drops it again when its message is dele
   expect(fileRequests).toEqual(loadedRequests);
 
   const state = await (await page.request.get("/__mock/state")).json();
+
   const response = await page.request.delete(`/api/v1/messages/${id}`, {
     headers: { "X-CSRF-Token": state.csrfToken },
   });
@@ -276,12 +277,14 @@ test("the files pane shows a thread reply's upload live and drops it when the re
 
   expect(upload.ok()).toBe(true);
   const { signedId, uploadUrl } = await upload.json();
+
   const stored = await page.request.put(uploadUrl, {
     headers: { "Content-Type": "image/png" },
     data: Buffer.from(bytes),
   });
 
   expect(stored.ok()).toBe(true);
+
   const posted = await page.request.post(`/api/v1/threads/${THREAD_IDS.generalActive}/messages`, {
     headers: csrf,
     data: {
@@ -299,11 +302,40 @@ test("the files pane shows a thread reply's upload live and drops it when the re
   await expect(pane(page).getByText("thread-live.png")).toBeVisible();
   await expect(rows).toHaveCount(loaded + 1);
 
+  const threadFile = rows.filter({ hasText: "thread-live.png" });
+  const edited = await page.request.patch(`/api/v1/messages/${reply.id}`, {
+    headers: csrf,
+    data: { markdownSource: "Thread live upload", attachmentSpoilers: [true] },
+  });
+
+  expect(edited.ok()).toBe(true);
+  await expect(
+    threadFile.getByRole("button", { name: "Spoiler, activate to reveal" }),
+  ).toBeVisible();
+
   const removed = await page.request.delete(`/api/v1/messages/${reply.id}`, { headers: csrf });
 
   expect(removed.ok()).toBe(true);
   await expect(pane(page).getByText("thread-live.png")).toHaveCount(0);
   await expect(rows).toHaveCount(loaded);
+
+  const another = await page.request.post(`/api/v1/threads/${THREAD_IDS.generalActive}/messages`, {
+    headers: csrf,
+    data: {
+      clientMessageId: "e2e-thread-live-file-again",
+      markdownSource: "Another thread upload",
+      attachmentSignedId: signedId,
+    },
+  });
+
+  expect(another.ok()).toBe(true);
+  await expect(pane(page).getByText("thread-live.png")).toBeVisible();
+  const deletedThread = await page.request.delete(`/api/v1/threads/${THREAD_IDS.generalActive}`, {
+    headers: csrf,
+  });
+
+  expect(deletedThread.ok()).toBe(true);
+  await expect(pane(page).getByText("thread-live.png")).toHaveCount(0);
 });
 
 matrix("the threads pane", async ({ page, theme }) => {

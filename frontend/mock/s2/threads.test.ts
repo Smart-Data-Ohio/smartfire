@@ -82,11 +82,12 @@ describe("replying", () => {
     expect(reply.threadId).toBe(threads.generalActive);
     expect(events.map((event) => `${event.type}`)).toEqual([
       "message.created",
+      "room.files.changed",
       "thread.indicator",
       "thread.updated",
       "thread.updated",
     ]);
-    expect(events[1]?.data).toMatchObject({
+    expect(events[2]?.data).toMatchObject({
       parentMessageId: messages.generalThreadRoot,
       thread: { replyCount: 7, replierIds: [viewer, users.jonah, users.priya] },
     });
@@ -185,7 +186,11 @@ describe("starting a thread", () => {
     expect(created.detail.thread.name).toMatch(/^Weekly signups/);
     expect(created.detail.membership?.involvement).toBe("mentions");
     expect(created.message.threadId).toBe(created.detail.thread.id);
-    expect(events.map((event) => event.type)).toEqual(["thread.created", "thread.indicator"]);
+    expect(events.map((event) => event.type)).toEqual([
+      "thread.created",
+      "room.files.changed",
+      "thread.indicator",
+    ]);
 
     const replay = await send(server, "POST", `/api/v1/rooms/${rooms.general}/threads`, {
       parentMessageId: parentId,
@@ -290,4 +295,41 @@ describe("managing a thread", () => {
       (await server.handle({ method: "GET", path: `/api/v1/threads/${threads.design}` })).status,
     ).toBe(404);
   });
+});
+
+it("publishes reply creation, editing and deletion to room file viewers", async () => {
+  const { server } = harness();
+  const events = collect(server, [`room:${rooms.general}`]);
+
+  const message = await expectStatus<MessageDTO>(
+    server,
+    "POST",
+    `/api/v1/threads/${threads.generalActive}/messages`,
+    messageBody("files-live", "Reply"),
+    201,
+  );
+
+  expect(events.filter((event) => event.type === "room.files.changed")).toHaveLength(1);
+  await expectStatus(
+    server,
+    "PATCH",
+    `/api/v1/messages/${message.id}`,
+    { markdownSource: "Edited" },
+    200,
+  );
+  await expectStatus(server, "DELETE", `/api/v1/messages/${message.id}`, null, 204);
+  expect(
+    events
+      .filter((event) => event.type === "room.files.changed")
+      .map((event) => ({
+        topic: event.topic,
+        data: event.data,
+      })),
+  ).toEqual(
+    Array.from({ length: 3 }, () => ({
+      topic: `room:${rooms.general}`,
+      data: { roomId: rooms.general },
+    })),
+  );
+  expect(events.some((event) => event.type === "message.created")).toBe(false);
 });
