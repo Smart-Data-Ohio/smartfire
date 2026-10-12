@@ -1,4 +1,5 @@
 import type { ChatSounds } from "../gen/ChatSounds.ts";
+import { messageIgnored } from "../store/ignores.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
 import { serverNow } from "../store/server-clock.ts";
 import { emptyTimeline } from "../store/state.ts";
@@ -69,7 +70,7 @@ export function listenForChatSounds(roomId: number, viewingLatestPage: () => boo
 
       if (
         event.seq > liveAfter &&
-        !message.ignored &&
+        !messageIgnored(state.ignores, message) &&
         !roomMuted(
           state.sidebar.notificationPreferences,
           roomId,

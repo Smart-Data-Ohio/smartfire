@@ -12,4 +12,10 @@ seq: number, resumed: boolean,
 /**
  * Events through this ring head are reconnect replay, not live arrivals.
  */
-replayThrough: number, } | { "t": "batch", events: Array<SyncEvent>, } | { "t": "resync", topics: Array<string>, reason: string, } | { "t": "bye", reconnect: boolean, reason: string, } | { "t": "ping" };
+replayThrough: number,
+/**
+ * Who the server is answering for: the user signed in on this socket. A resumed cursor
+ * is accepted by epoch and sequence alone, so a client that held another account's
+ * state must check this before it applies anything replayed.
+ */
+viewerId: number, } | { "t": "batch", events: Array<SyncEvent>, } | { "t": "resync", topics: Array<string>, reason: string, } | { "t": "bye", reconnect: boolean, reason: string, } | { "t": "ping" };

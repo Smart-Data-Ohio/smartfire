@@ -12,6 +12,7 @@ import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { BlockList } from "../gen/BlockList.ts";
+import type { BlockState } from "../gen/BlockState.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
@@ -94,6 +95,30 @@ import * as workspaceLayout from "./workspace-layout.ts";
 export const store = createStore<State>()(() => initialState);
 
 /**
+ * What `onAccountChange` registered, by key; it lives as long as the store does. Each
+ * registration is its own entry, so a removal knows its own even when the same `end` came twice.
+ */
+const accountChangeHooks = new Map<string, { readonly end: () => void }>();
+
+/**
+ * Runs `end` when another account answers the page (`markAccountChanged`), for what must stop
+ * outside React: the shell's effects go when it gives way to the notice. One hook per `key`, so
+ * a module evaluated again (a hot update) replaces its hook rather than adding a second one.
+ * Returns the removal.
+ */
+export function onAccountChange(key: string, end: () => void): () => void {
+  const registration = { end };
+
+  accountChangeHooks.set(key, registration);
+
+  return () => {
+    if (accountChangeHooks.get(key) === registration) {
+      accountChangeHooks.delete(key);
+    }
+  };
+}
+
+/**
  * The sidebar row clock now: the ticket a request opening now would hold. Requests take theirs
  * through `withRowTicket` (src/sync/row-ticket.ts), which releases it too.
  */
@@ -130,11 +155,11 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
 const heldTickets: number[] = [];
 
 /** Every change ends by forgetting the row touches no request in flight is older than. */
+const settle = (state: State) => agents.reconcileAgentBadges(pruneTouches(state, heldTickets[0]));
+
+/** Applies one change; none lands once the account changed under the page (see `accountChanged`). */
 const apply = (change: (state: State) => State) =>
-  store.setState(
-    (state) => agents.reconcileAgentBadges(pruneTouches(change(state), heldTickets[0])),
-    true,
-  );
+  store.setState((state) => (state.accountChanged ? state : settle(change(state))), true);
 
 /**
  * Room-read bookkeeping for `sidebar.row.*` events about to land: a removal or a membership change
@@ -305,10 +330,34 @@ export const mutations = {
         notificationClock: serverNow(state.sidebar.serverClock),
       },
     })),
-  setBlocks: (snapshot: BlockList) => apply((state) => reduce.setBlocks(state, snapshot)),
+  /**
+   * `coveredAt`: the ignore set's `invalidatedAt` when the request started (omitted, it vouches
+   * for nothing missed).
+   */
+  setBlocks: (snapshot: BlockList, coveredAt?: number) =>
+    apply((state) => reduce.setBlocks(state, snapshot, coveredAt)),
+  applyBlockState: (change: BlockState) => apply((state) => reduce.applyBlockState(state, change)),
+  invalidateIgnores: () => apply(reduce.invalidateIgnores),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
+  /** The server answered for another sign-in: offline for good, until the page reloads. */
+  markAccountChanged: () => {
+    if (store.getState().accountChanged) {
+      return;
+    }
+
+    apply((state) => ({ ...state, accountChanged: true, connection: "offline" }));
+
+    // One hook failing must not keep the others from ending what they hold.
+    for (const [key, { end }] of [...accountChangeHooks]) {
+      try {
+        end();
+      } catch (error) {
+        console.error(`Ending "${key}" for another account failed`, error);
+      }
+    }
+  },
   mergeUsers: (users: readonly User[]) => apply((state) => reduce.mergeUsers(state, users)),
   setPresence: (list: readonly UserPresence[]) => apply((state) => reduce.setPresence(state, list)),
   setDndAllowance: (userId: number, allowed: boolean) =>
@@ -735,7 +784,7 @@ export const mutations = {
   /** Back to an empty store (tests). */
   reset: () => {
     heldTickets.length = 0;
-    apply(() => initialState);
+    store.setState(() => settle(initialState), true);
   },
 };
 

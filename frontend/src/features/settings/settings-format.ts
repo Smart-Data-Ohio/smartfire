@@ -79,6 +79,13 @@ export const SECTIONS = [
     group: "account",
   },
   {
+    key: "ignored",
+    label: "Ignored people",
+    icon: "eye-off",
+    path: "/settings/ignored",
+    group: "account",
+  },
+  {
     key: "devices",
     label: "Push devices",
     icon: "monitor",

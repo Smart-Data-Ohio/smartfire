@@ -1,3 +1,4 @@
+import { useLocation } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
@@ -10,6 +11,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { useCardsChunkLoaded } from "../cards/card-slot.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
+import { IgnoredGate, IgnoredNotice, useIgnoredReveal } from "../messages/message-content.tsx";
 import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { PaneError } from "../panes/pane-states.tsx";
 import { DayDivider } from "../room/dividers.tsx";
@@ -80,15 +82,17 @@ function ThreadParent({
           The original message was deleted.
         </p>
       ) : (
-        <MessageRow
-          message={parent}
-          groupStart
-          mentionsMe={mentionsViewer(parent.bodyHtml, viewerId)}
-          focused={false}
-          live={false}
-          inThread
-          onNavigate={onNavigate}
-        />
+        <IgnoredGate message={parent}>
+          <MessageRow
+            message={parent}
+            groupStart
+            mentionsMe={mentionsViewer(parent.bodyHtml, viewerId)}
+            focused={false}
+            live={false}
+            inThread
+            onNavigate={onNavigate}
+          />
+        </IgnoredGate>
       )}
       <div className="thread-replies-rule">
         <span className="thread-replies-label tabular">
@@ -188,7 +192,26 @@ export function ThreadTimeline({
   const now = Date.now();
   const loaded = ready && timeline.status === "ready";
   const introFirst = intro !== undefined;
-  const items = loaded ? timelineItems({ timeline, messages, pending, now, introFirst }) : [];
+
+  const navigation = useLocation({
+    select: (location) => location.state.__TSR_key ?? location.href,
+  });
+
+  const reveal = useIgnoredReveal(focusMessageId, navigation);
+  const ignores = useStore((state) => state.ignores);
+
+  const items = loaded
+    ? timelineItems({
+        timeline,
+        messages,
+        pending,
+        now,
+        introFirst,
+        revealed: reveal.revealed,
+        focusId: reveal.focusId,
+        ignores,
+      })
+    : [];
 
   useListEdges(containerRef, listRef, items);
   const firstKey = items[0]?.key ?? null;
@@ -339,6 +362,15 @@ export function ThreadTimeline({
       case "unread":
         // Threads keep no read position, so this never comes; an empty row keeps the switch whole.
         return <div key={item.key} />;
+      case "ignored":
+        return (
+          <IgnoredNotice
+            key={item.key}
+            count={item.ids.length}
+            revealed={item.revealed}
+            onToggle={() => reveal.toggle(item.ids, !item.revealed)}
+          />
+        );
       case "pending":
         return <PendingRow key={item.key} pending={item.pending} groupStart={item.groupStart} />;
       case "message": {

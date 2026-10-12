@@ -1,13 +1,11 @@
-import { Context, Effect, Layer, Schema, type Scope, Stream } from "effect";
+import { Context, Effect, Layer, type Scope, Stream } from "effect";
 import * as Socket from "effect/socket/Socket";
+import type { ServerFrameWire as ServerFrame } from "../api/schema/sync.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
-import type { ServerFrame } from "../gen/ServerFrame.ts";
 import { decodeFrames, encodeClientFrame } from "./protocol.ts";
+import { SyncSocketError } from "./socket-error.ts";
 
-/** The sync socket couldn't open, dropped, or went silent. The engine reconnects. */
-export class SyncSocketError extends Schema.TaggedError<SyncSocketError>()("SyncSocketError", {
-  reason: Schema.String,
-}) {}
+export { SyncSocketError } from "./socket-error.ts";
 
 /** One open connection to `/api/v1/sync`. */
 export interface SyncConnection {

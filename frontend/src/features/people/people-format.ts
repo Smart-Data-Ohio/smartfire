@@ -93,6 +93,10 @@ export function directoryBadge(user: User, agent: boolean): "Agent" | "Bot" | nu
 export const BAN_CONFIRMATION =
   "Are you sure you want to ban this user? This will log them out, delete their messages, and block their IP addresses.";
 
+/** What ignoring someone does, asked before it happens. */
+export const IGNORE_CONFIRMATION =
+  "Their messages will be collapsed for you, and they won't be able to start new DMs with you. They aren't told.";
+
 /** The classic remove-ban button's question. */
 export const UNBAN_CONFIRMATION = "Are you sure you want to remove the ban on this user?";
 

@@ -8,6 +8,7 @@ import {
   AUTH_CHECK_INTERVAL_MS,
   CallController,
   type CallEnvironment,
+  endCallOnAccountChange,
   SERVER_MUTED_NOTICE,
 } from "./call-controller.ts";
 import { callStore, initialCallState } from "./call-store.ts";
@@ -412,6 +413,126 @@ describe("the connection", () => {
     expect(check).toHaveBeenCalledTimes(2);
     expect(callStore.getState().phase).toBe("connected");
     await controller.leave();
+  });
+});
+
+describe("another account answering the page", () => {
+  it("drops a join whose credentials land after the account changed, before LiveKit", async () => {
+    const connect = vi.spyOn(FakeTransport.prototype, "connect");
+    const held = Promise.withResolvers<HuddleCredentials>();
+    const { controller, transports } = harness({ join: () => held.promise });
+    const stop = endCallOnAccountChange(controller);
+
+    const joining = controller.join(ROOM, "Lounge", null);
+
+    await settle();
+    expect(callStore.getState().phase).toBe("connecting");
+
+    mutations.markAccountChanged();
+    held.resolve(credentials(ROOM));
+    await joining;
+    await settle();
+
+    expect(connect).not.toHaveBeenCalled();
+    expect(transports).toHaveLength(0);
+    expect(callStore.getState().phase).toBe("idle");
+    expect(callStore.getState().identity).toBeNull();
+    expect(callStore.getState().snapshot.microphoneEnabled).toBe(false);
+    stop();
+    connect.mockRestore();
+  });
+
+  it("never reaches LiveKit when the change lands while the transport loads", async () => {
+    const connect = vi.spyOn(FakeTransport.prototype, "connect");
+
+    const { controller, transports } = harness({
+      transport: async (_url, roomId) => {
+        // No hook ends this controller, so only the check right before `connect` stands.
+        mutations.markAccountChanged();
+
+        const transport = new FakeTransport(roomId);
+
+        transports.push(transport);
+
+        return transport;
+      },
+    });
+
+    await controller.join(ROOM, "Lounge", null);
+
+    expect(transports).toHaveLength(1);
+    expect(connect).not.toHaveBeenCalled();
+    connect.mockRestore();
+  });
+
+  it("starts no call once the account changed", async () => {
+    const { controller, calls } = harness();
+
+    mutations.markAccountChanged();
+    await controller.join(ROOM, "Lounge", null);
+
+    expect(calls).toEqual([]);
+  });
+
+  it("ends a connected call: leaves LiveKit, closes the microphone, stops the checks", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+
+    const check = vi.fn(async () => undefined);
+    const { controller, transports, calls } = harness({ check });
+    const stop = endCallOnAccountChange(controller);
+
+    await controller.join(ROOM, "Lounge", null);
+    await controller.toggleCamera();
+
+    const [transport] = transports;
+
+    if (transport === undefined) {
+      throw new Error("no transport");
+    }
+
+    expect(callStore.getState().phase).toBe("connected");
+    expect(transport.snapshot().microphoneEnabled).toBe(true);
+    expect(transport.snapshot().cameraEnabled).toBe(true);
+
+    const disconnect = vi.spyOn(transport, "disconnect");
+    const checks = check.mock.calls.length;
+
+    mutations.markAccountChanged();
+    await settle();
+
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(transport.snapshot().participants).toEqual([]);
+    expect(transport.snapshot().microphoneEnabled).toBe(false);
+    expect(transport.snapshot().cameraEnabled).toBe(false);
+    expect(callStore.getState().phase).toBe("idle");
+    // The room's sync topic goes too. (The leave report itself meets the closed network gate.)
+    expect(calls).toContain(`release ${ROOM}`);
+
+    await vi.advanceTimersByTimeAsync(AUTH_CHECK_INTERVAL_MS * 2);
+    await settle();
+
+    expect(check).toHaveBeenCalledTimes(checks);
+    stop();
+  });
+});
+
+describe("the account-change hook", () => {
+  it("stays single when its module is evaluated again", () => {
+    const first = harness().controller;
+    const second = harness().controller;
+    const endFirst = vi.spyOn(first, "endForPageChange");
+    const endSecond = vi.spyOn(second, "endForPageChange");
+    const removeFirst = endCallOnAccountChange(first);
+    const removeSecond = endCallOnAccountChange(second);
+
+    // The replaced registration's removal leaves the live one alone.
+    removeFirst();
+    mutations.markAccountChanged();
+    mutations.markAccountChanged();
+
+    expect(endFirst).not.toHaveBeenCalled();
+    expect(endSecond).toHaveBeenCalledOnce();
+    removeSecond();
   });
 });
 
