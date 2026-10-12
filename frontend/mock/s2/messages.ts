@@ -141,6 +141,7 @@ export function createMessages(
     };
 
     if (current.attachments !== undefined) next.attachments = [...files];
+
     if (location.thread !== null) {
       inviteThreadMentionees(ctx.world(), location.thread, next, VIEWER_ID, updatedAt);
     }
