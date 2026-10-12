@@ -975,10 +975,20 @@ async fn bot_sending_preserves_signed_attachments_with_stickers() {
     let private_blob = blobs[1].0;
     a.db()
         .write(move |tx| {
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: HQ,
+                    creator_id: DAVID,
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
             Message::create(
                 tx,
                 campfire_db::NewMessage {
                     room_id: HQ,
+                    thread_id: Some(thread.id),
                     creator_id: DAVID,
                     attachment_blob_id: Some(private_blob),
                     ..Default::default()
