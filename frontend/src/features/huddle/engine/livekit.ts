@@ -179,13 +179,17 @@ class LiveKitTransport implements CallTransport {
     try {
       await room.connect(url, token, { autoSubscribe: true });
     } catch (error) {
-      if (
-        error instanceof this.#lk.ConnectionError &&
-        error.status === 403 &&
+      if (error instanceof this.#lk.ConnectionError && error.status === 403) {
         // The SDK prefixes the gateway's reason ("could not establish signal connection: …").
-        error.message.trim().endsWith("This voice room is full")
-      ) {
-        throw new ActionError("HuddleRoomFull", "This voice room is full");
+        const message = error.message.trim();
+
+        if (message.endsWith("This stage is full")) {
+          throw new ActionError("StageAudienceFull", "This stage is full");
+        }
+
+        if (message.endsWith("This voice room is full")) {
+          throw new ActionError("HuddleRoomFull", "This voice room is full");
+        }
       }
 
       throw error;

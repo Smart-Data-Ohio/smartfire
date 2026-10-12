@@ -39,6 +39,7 @@ fn person_json() -> serde_json::Value {
 fn the_workspace_and_its_writes() {
     assert_wire(
         &Workspace {
+            afk_policy: crate::AfkPolicy { room_id: None, timeout_minutes: 5 },
             name: "Smart Data".into(),
             logo_url: "/account/logo?v=1700000000".into(),
             logo_still_url: None,
@@ -49,12 +50,14 @@ fn the_workspace_and_its_writes() {
             can_administer: true,
             restrict_room_creation_to_administrators: false,
             upload_limit_bytes: 104_857_600,
+            stage_audience_budget: 300,
             version: "2.0.0".into(),
             description: "Our community".into(),
             vanity_slug: Some("smart-data".into()),
             vanity_url: Some("https://chat.example/join/smart-data".into()),
         },
         json!({
+            "afkPolicy": {"roomId": null, "timeoutMinutes": 5},
             "name": "Smart Data",
             "logoUrl": "/account/logo?v=1700000000",
             "logoStillUrl": null,
@@ -65,6 +68,7 @@ fn the_workspace_and_its_writes() {
             "canAdminister": true,
             "restrictRoomCreationToAdministrators": false,
             "uploadLimitBytes": 104857600,
+            "stageAudienceBudget": 300,
             "version": "2.0.0",
             "description": "Our community",
             "vanitySlug": "smart-data",
@@ -73,13 +77,15 @@ fn the_workspace_and_its_writes() {
     );
     assert_wire(
         &UpdateWorkspace {
+            afk_policy: None,
             name: None,
             restrict_room_creation_to_administrators: Some(true),
             upload_limit_bytes: None,
+            stage_audience_budget: None,
             description: None,
             vanity_slug: None,
         },
-        json!({ "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "description": null, "vanitySlug": null }),
+        json!({ "afkPolicy": null, "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "stageAudienceBudget": null, "description": null, "vanitySlug": null }),
     );
     assert_wire(
         &UpdateLogo {

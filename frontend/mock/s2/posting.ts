@@ -3,6 +3,7 @@
  */
 import type { Attachment } from "../../src/gen/Attachment.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
+import type { MessageSticker } from "../../src/gen/MessageSticker.ts";
 import { validation } from "../http.ts";
 import { field, intField, isRecord, type Json, stringArrayField, stringField } from "../json.ts";
 import { SOURCE_LIMIT } from "./model.ts";
@@ -10,6 +11,7 @@ import { SOURCE_LIMIT } from "./model.ts";
 /** A `CreateMessage` body that passed validation. */
 export interface ParsedMessage {
   readonly clientMessageId: string;
+  readonly sticker: MessageSticker | undefined;
   readonly markdown: string;
   readonly replyToMessageId: number | null;
   /** The legacy single file, or a grouped message's first file. */
@@ -81,6 +83,9 @@ export function checkMarkdown(markdown: string | null, hasAttachment: boolean): 
 export function parseMessage(
   body: Json | undefined,
   attach: (signedId: string) => Attachment,
+  resolveSticker: (id: number) => MessageSticker = () => {
+    throw validation("stickerId", "must exist");
+  },
 ): ParsedMessage {
   const clientMessageId = clientMessageIdOf(body);
   const signedId = stringField(body, "attachmentSignedId");
@@ -89,13 +94,17 @@ export function parseMessage(
   const attachment = attachments?.[0] ?? single;
   const driveFileIds = stringArrayField(body, "driveFileIds") ?? [];
 
+  const stickerId = intField(body, "stickerId");
+  const sticker = stickerId === null ? undefined : resolveSticker(stickerId);
+
   const markdown = checkMarkdown(
     stringField(body, "markdownSource"),
-    attachment !== null || driveFileIds.length > 0,
+    attachment !== null || driveFileIds.length > 0 || sticker !== undefined,
   );
 
   return {
     clientMessageId,
+    sticker,
     markdown,
     replyToMessageId: intField(body, "replyToMessageId"),
     attachment,
@@ -109,14 +118,17 @@ export function filesOf(message: MessageDTO): readonly Attachment[] {
   return message.attachments ?? (message.attachment === null ? [] : [message.attachment]);
 }
 
-/** The draft fields for a parsed message's files (`attachments` only when it was grouped). */
+/** Files and sticker from a parsed message (`attachments` only when it was grouped). */
 export function draftFiles(parsed: ParsedMessage): {
   readonly attachment: Attachment | null;
   readonly attachments?: readonly Attachment[];
+  readonly sticker?: MessageSticker;
 } {
+  const sticker = parsed.sticker === undefined ? {} : { sticker: parsed.sticker };
+
   return parsed.attachments === null
-    ? { attachment: parsed.attachment }
-    : { attachment: parsed.attachment, attachments: parsed.attachments };
+    ? { attachment: parsed.attachment, ...sticker }
+    : { attachment: parsed.attachment, attachments: parsed.attachments, ...sticker };
 }
 
 /** Drive chips for ids the composer pinned. The name isn't stored, matching the message card. */

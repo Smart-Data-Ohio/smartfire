@@ -20,6 +20,9 @@ function presence(roomId: number, userIds: readonly number[], live = false): Hud
 
 const stage: StageState = {
   roomId: 12,
+  audienceCount: 0,
+  audienceBudget: 300,
+  audienceAvailability: "open",
   members: [
     { membershipId: 1, userId: 1, role: "host", handRaisedAt: null, serverMuted: false },
     { membershipId: 2, userId: 2, role: "listener", handRaisedAt: null, serverMuted: false },

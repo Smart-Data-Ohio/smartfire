@@ -13,7 +13,13 @@ import { BoardAutomationsChanged } from "./board-automations.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
 import { EventsChanged } from "./events.ts";
-import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./huddle.ts";
+import {
+  HuddleAfkMoved,
+  HuddleNotice,
+  HuddlePresence,
+  HuddleRing,
+  HuddleRoleChanged,
+} from "./huddle.ts";
 import { RoomId, ThreadId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import { RoomCategoryRemoved } from "./organize.ts";
@@ -118,6 +124,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("approval.updated"), data: ApprovalUpdated }),
   Schema.Struct({ type: Schema.Literal("huddle.presence"), data: HuddlePresence }),
   Schema.Struct({ type: Schema.Literal("huddle.role"), data: HuddleRoleChanged }),
+  Schema.Struct({ type: Schema.Literal("huddle.afk.moved"), data: HuddleAfkMoved }),
   Schema.Struct({ type: Schema.Literal("huddle.notice"), data: HuddleNotice }),
   Schema.Struct({ type: Schema.Literal("huddle.ring"), data: HuddleRing }),
   Schema.Struct({ type: Schema.Literal("huddle.soundboard"), data: HuddleSoundboardPlayed }),
@@ -233,6 +240,7 @@ export const SyncEvent = Schema.Union([
     data: HuddlePresence,
   }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.role"), data: HuddleRoleChanged }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.afk.moved"), data: HuddleAfkMoved }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.notice"), data: HuddleNotice }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.ring"), data: HuddleRing }),
   Schema.Struct({

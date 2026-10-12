@@ -30,6 +30,10 @@ pub struct MessageDTO {
     pub client_message_id: String,
     /// The rendered body from the server's sanitizer pipeline.
     pub body_html: String,
+    /// One catalog sticker, or its retained placeholder after deletion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub sticker: Option<crate::MessageSticker>,
     /// The classic built-in `/play` presentation; attachments take precedence.
     pub sound: Option<MessageSound>,
     /// The Markdown the body was written in, for editing; `null` for rich-text-only bodies.
@@ -216,8 +220,12 @@ pub struct CreateMessage {
     /// Chosen by the client (a UUID v7); the pending row is matched to the created message by
     /// it, whichever of the response and the `message.created` event arrives first.
     pub client_message_id: String,
+    /// The workspace sticker to send, with or without text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub sticker_id: Option<i64>,
     /// The Markdown source, rendered by the server's pipeline into `bodyHtml`. Up to
-    /// `Message::SOURCE_LIMIT` (50 000) characters. May be empty only with an attachment.
+    /// `Message::SOURCE_LIMIT` (50 000) characters. May be empty with an attachment or sticker.
     #[serde(default)]
     pub markdown_source: String,
     /// The message this one replies to, on the same timeline; `null` for none.

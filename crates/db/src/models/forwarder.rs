@@ -253,6 +253,8 @@ fn build_forward(
         forwarded_from_message_id: Some(source.id),
         forwarded_at: Some(tx.now()),
         forwarded_markdown: source.markdown() || source.forwarded_markdown,
+        sticker_id: source.sticker_id,
+        sticker_name: source.sticker_name.clone(),
         forward_note: note.map(Into::into),
         drive_file_ids: source.drive_file_ids(tx.conn())?,
         ..Default::default()

@@ -37,6 +37,8 @@ mod error;
 mod events;
 mod fizzy;
 mod huddle;
+mod sticker;
+pub use sticker::*;
 mod soundboard;
 pub use soundboard::{
     CreateSoundboardSound, HuddleSoundboardPlayed, PlaySoundboardSound, SoundboardCatalog,
@@ -88,7 +90,7 @@ pub use activity::{
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
 };
 pub use admin::{
-    AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
+    AfkPolicy, AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
     EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
     PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
@@ -157,7 +159,7 @@ pub use events::{
 pub use huddle::{
     HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
     HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
-    HuddleRoleChanged, ModerateHuddle,
+    HuddleRoleChanged, HuddleActivity, HuddleAfkMoved, ModerateHuddle,
 };
 pub use join::{OpenRoomPreview, RoomJoin};
 pub use invites::{CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator, WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState};
@@ -210,7 +212,7 @@ pub use slack::{
 };
 pub use sidebar::{RoomCategory, Sidebar, SidebarLastMessage, SidebarRow, SidebarRowRemoved};
 pub use stage::{
-    ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
+    ChangeStageRole, LowerHand, StageAudienceAvailability, StageDetail, StageMember, StageState, StageStream,
     StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
 };
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
@@ -240,6 +242,8 @@ pub type Timestamp = String;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_sticker;
 #[cfg(test)]
 mod tests_s2;
 #[cfg(test)]

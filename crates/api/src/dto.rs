@@ -510,6 +510,7 @@ fn messages_and_fetches_inner(
                 client_message_id: message.client_message_id.clone(),
                 body_html: inline_mentions(&presenter.rendered_body_html(message)?),
                 sound,
+                sticker: crate::stickers::message_sticker(conn, message)?,
                 markdown_source: message.markdown_source.clone(),
                 system_note: message.system_note,
                 action: message.action,

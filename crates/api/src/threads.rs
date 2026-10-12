@@ -222,7 +222,7 @@ async fn message_params(
     let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), input.attachment_signed_ids.unwrap_or_default())?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
-    if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.markdown_source.trim().is_empty() {
+    if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.sticker_id.is_none() && input.markdown_source.trim().is_empty() {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     if let Some(reply_to) = input.reply_to_message_id {
@@ -255,6 +255,7 @@ async fn message_params(
     }
     require_grouped_uploads(c, &signed_ids).await?;
     Ok(MessageParams {
+        sticker_id: input.sticker_id,
         markdown_source: Some(input.markdown_source).filter(|source| !source.trim().is_empty()),
         attachment: signed_id.map(Assignment::Signed),
         attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),

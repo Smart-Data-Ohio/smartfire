@@ -64,6 +64,7 @@ import {
   VIEWER_ID,
   type World,
 } from "../seed.ts";
+import { messageText } from "./model.ts";
 
 const MINUTE = 60_000;
 
@@ -338,7 +339,7 @@ export function seedCards(world: World, now: number): void {
     creatorId: source.creatorId,
     authorName: world.users.get(source.creatorId)?.name ?? "Someone",
     roomLabel,
-    excerpt,
+    excerpt: messageText(source, excerpt),
     createdAt: source.createdAt,
   });
 

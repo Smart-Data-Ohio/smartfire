@@ -58,6 +58,21 @@ export class HuddleRoomFull extends Schema.TaggedError<HuddleRoomFull>()("Huddle
   message: Schema.String,
 }) {}
 
+export class StageAudienceFull extends Schema.TaggedError<StageAudienceFull>()(
+  "StageAudienceFull",
+  {
+    message: Schema.String,
+  },
+) {}
+
+export class StickerLimitReached extends Schema.TaggedError<StickerLimitReached>()(
+  "StickerLimitReached",
+  {
+    message: Schema.String,
+    capacity: Schema.Int,
+  },
+) {}
+
 /** 422: the CSRF token was missing or stale. The client refreshes it and retries once. */
 export class InvalidAuthenticityToken extends Schema.TaggedError<InvalidAuthenticityToken>()(
   "InvalidAuthenticityToken",
@@ -131,6 +146,8 @@ export const ApiError = Schema.Union([
   NotFound,
   Conflict,
   HuddleRoomFull,
+  StageAudienceFull,
+  StickerLimitReached,
   InvalidAuthenticityToken,
   Validation,
   RateLimited,

@@ -34,6 +34,8 @@ pub struct Message {
     pub id: i64,
     pub room_id: i64,
     pub creator_id: i64,
+    pub sticker_id: Option<i64>,
+    pub sticker_name: Option<String>,
     pub client_message_id: String,
     /// The `ChannelThread` the message was posted in; nil on the room's root timeline.
     pub thread_id: Option<i64>,
@@ -64,6 +66,9 @@ pub struct Message {
 pub struct NewMessage {
     pub room_id: i64,
     pub creator_id: i64,
+    pub sticker_id: Option<i64>,
+    /// The retained name for a forward of a deleted sticker. New catalog references fill it on save.
+    pub sticker_name: Option<String>,
     /// Defaults to a random UUID (`before_create`; "Bots don't care").
     pub client_message_id: Option<String>,
     /// The stored Action Text body, if one was assigned.
@@ -178,6 +183,8 @@ impl Message {
             id: row.get("id")?,
             room_id: row.get("room_id")?,
             creator_id: row.get("creator_id")?,
+            sticker_id: row.get("sticker_id")?,
+            sticker_name: row.get("sticker_name")?,
             client_message_id: row.get("client_message_id")?,
             thread_id: row.get("thread_id")?,
             system_note: row.get("system_note")?,
@@ -556,7 +563,7 @@ impl Message {
         // `before_save :touch_streaming_activity, if: :streaming?`
         let streaming_updated_at = attributes.streaming.then_some(now);
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "messages" ("action", "board_post_opener", "client_message_id", "created_at", "creator_id", "embeds_suppressed", "forward_note", "forwarded_at", "forwarded_from_message_id", "forwarded_markdown", "markdown_source", "reply_notify_author", "reply_to_message_id", "room_id", "streaming", "streaming_updated_at", "system_note", "thread_id", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            r#"INSERT INTO "messages" ("action", "board_post_opener", "client_message_id", "created_at", "creator_id", "embeds_suppressed", "forward_note", "forwarded_at", "forwarded_from_message_id", "forwarded_markdown", "markdown_source", "reply_notify_author", "reply_to_message_id", "room_id", "streaming", "streaming_updated_at", "system_note", "thread_id", "updated_at", "sticker_id", "sticker_name") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
             params![
                 attributes.action,
                 attributes.board_post_opener,
@@ -576,7 +583,12 @@ impl Message {
                 streaming_updated_at,
                 attributes.system_note,
                 attributes.thread_id,
-                now
+                now,
+                attributes.sticker_id,
+                match attributes.sticker_id {
+                    Some(id) => Some(crate::models::sticker::Sticker::find(tx.conn(), id)?.name),
+                    None => attributes.sticker_name.clone(),
+                }
             ],
             |r| r.get(0),
         )?;
@@ -771,6 +783,11 @@ impl Message {
         if !loaded_associations && User::find_by_id(conn, attributes.creator_id)?.is_none() {
             errors.add("creator", "must exist");
         }
+        if let Some(id) = attributes.sticker_id
+            && !conn.query_row("SELECT EXISTS(SELECT 1 FROM stickers WHERE id=?)", [id], |row| row.get::<_, bool>(0))?
+        {
+            errors.add("sticker_id", "must exist");
+        }
         // `DriveAttachment`'s own validations, through the autosaved association (declared, so
         // run, before the message's). Duplicates within one message are left to the unique index,
         // as Rails' uniqueness check only sees saved rows.
@@ -798,6 +815,8 @@ impl Message {
             && attributes.attachment_blob_id.is_none()
             && attributes.attachment_blob_ids.is_empty()
             && attributes.drive_file_ids.is_empty()
+            && attributes.sticker_id.is_none()
+            && attributes.sticker_name.is_none()
             && attributes.webhook.as_ref().is_none_or(|input| input.embeds().as_array().is_none_or(Vec::is_empty))
         {
             errors.add("markdown_source", "can't be blank");
@@ -1064,6 +1083,8 @@ impl Message {
         let attributes = NewMessage {
             room_id: self.room_id,
             creator_id: self.creator_id,
+            sticker_id: self.sticker_id,
+            sticker_name: self.sticker_name.clone(),
             client_message_id: client_message_id.clone(),
             body: body.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?
@@ -1514,17 +1535,19 @@ impl Message {
                 None => self.attachment_summary(conn)?,
             };
         }
-        Ok(
-            match self
-                .forward_note
-                .as_deref()
-                .filter(|note| !note.trim().is_empty())
-            {
-                Some(note) if text.trim().is_empty() => note.to_string(),
-                Some(note) => format!("{note}\n\n{text}"),
-                None => text,
-            },
-        )
+        Ok(self.display_text(text))
+    }
+
+    /// Apply the retained sticker name and forward note after rendering text and filenames.
+    pub fn display_text(&self, mut text: String) -> String {
+        if text.trim().is_empty() && let Some(name) = &self.sticker_name {
+            text = format!("Sticker: {name}");
+        }
+        match self.forward_note.as_deref().filter(|note| !note.trim().is_empty()) {
+            Some(note) if text.trim().is_empty() => note.to_string(),
+            Some(note) => format!("{note}\n\n{text}"),
+            None => text,
+        }
     }
 
     /// `markdown?`

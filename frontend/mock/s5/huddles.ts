@@ -8,6 +8,7 @@
  * speak, a known sound, one a second per tab) and relayed as `huddle.soundboard` to the viewer
  * when they're in that call. Tests steer the other people through `control`.
  */
+import type { AfkPolicy } from "../../src/gen/AfkPolicy.ts";
 import type { HuddleCredentials } from "../../src/gen/HuddleCredentials.ts";
 import type { HuddleDetail } from "../../src/gen/HuddleDetail.ts";
 import type { HuddleModeration } from "../../src/gen/HuddleModeration.ts";
@@ -61,11 +62,15 @@ interface StageRecord {
 
 /** The calls, per world (a reset starts over with the new world). */
 interface CallWorld {
+  readonly activity: Map<string, { roomId: number; at: number }>;
+  /** Destination reservations issued by AFK enforcement for this viewer. */
+  readonly pendingMoves: Map<number, number>;
   /** Room id → user id → their entry, in join order. */
   readonly calls: Map<number, Map<number, CallEntry>>;
   /** `${roomId}:${userId}` for everyone a host muted. */
   readonly muted: Set<string>;
   readonly stages: Map<number, StageRecord>;
+  readonly reservations: Map<number, Map<number, number>>;
   nextGrantId: number;
   nextStreamId: number;
   /** `${roomId}:${identity}` → the second (ms / 1000) of its last soundboard play. */
@@ -82,6 +87,7 @@ export interface HuddleControlInput {
 
 export interface Huddles {
   readonly routes: readonly Route[];
+  readonly publishStages: () => void;
   readonly roomRoles: (record: RoomRecord) => ReadonlyMap<number, StageRole>;
   readonly reviseRoom: (record: RoomRecord, previousMembers: readonly number[]) => void;
   readonly removeRoom: (record: RoomRecord) => void;
@@ -108,6 +114,8 @@ export function createHuddles(
   ctx: S2Context,
   simulate: boolean,
   hasSound: (soundId: number) => boolean = () => true,
+  afkPolicy: () => AfkPolicy = () => ({ roomId: null, timeoutMinutes: 5 }),
+  audienceBudget: () => number = () => 300,
 ): Huddles {
   const worlds = new WeakMap<World, CallWorld>();
 
@@ -128,9 +136,12 @@ export function createHuddles(
   /** A seeded starting point: Maya and Jonah are chatting in the Lounge. */
   function seedCalls(world: World): CallWorld {
     const state: CallWorld = {
+      activity: new Map(),
+      pendingMoves: new Map(),
       calls: new Map(),
       muted: new Set(),
       stages: new Map(),
+      reservations: new Map(),
       nextGrantId: 1,
       nextStreamId: 1,
       plays: new Map(),
@@ -220,6 +231,54 @@ export function createHuddles(
   const roleOf = (record: RoomRecord, userId: number): StageRole | null =>
     record.room.kind === "stage" ? (stageOf(record).roles.get(userId) ?? "listener") : null;
 
+  const listenerCount = (record: RoomRecord, userIds: Iterable<number>): number =>
+    [...new Set(userIds)].filter(
+      (userId) =>
+        roleOf(record, userId) === "listener" &&
+        !isAdmin(userId) &&
+        userId !== record.room.creatorId,
+    ).length;
+
+  const audienceCount = (record: RoomRecord): number =>
+    listenerCount(record, calls().calls.get(record.room.id)?.keys() ?? []);
+
+  const reservedUsers = (roomId: number): number[] =>
+    [...(calls().reservations.get(roomId) ?? [])].flatMap(([userId, expires]) =>
+      expires > ctx.now() ? [userId] : [],
+    );
+
+  const occupied = (record: RoomRecord): number =>
+    listenerCount(record, [
+      ...(calls().calls.get(record.room.id)?.keys() ?? []),
+      ...reservedUsers(record.room.id),
+    ]);
+
+  const checkStageCapacity = (record: RoomRecord, userId: number): void => {
+    if (
+      record.room.kind === "stage" &&
+      roleOf(record, userId) === "listener" &&
+      !isAdmin(userId) &&
+      record.room.creatorId !== userId &&
+      !calls().calls.get(record.room.id)?.has(userId) &&
+      !reservedUsers(record.room.id).includes(userId) &&
+      occupied(record) >= audienceBudget()
+    ) {
+      throw plainError(409, "StageAudienceFull", "This stage is full");
+    }
+  };
+
+  const reserve = (record: RoomRecord, userId: number): void => {
+    checkStageCapacity(record, userId);
+    let reservations = calls().reservations.get(record.room.id);
+
+    if (reservations === undefined) {
+      reservations = new Map();
+      calls().reservations.set(record.room.id, reservations);
+    }
+
+    reservations.set(userId, ctx.now() + 20_000);
+  };
+
   const stageState = (record: RoomRecord): StageState => {
     const stage = stageOf(record);
     const muted = calls().muted;
@@ -249,6 +308,9 @@ export function createHuddles(
 
     return {
       roomId: record.room.id,
+      audienceCount: audienceCount(record),
+      audienceBudget: audienceBudget(),
+      audienceAvailability: occupied(record) >= audienceBudget() ? "full" : "open",
       members: members.map(
         (userId): StageMember => ({
           membershipId: membershipId(record, userId),
@@ -320,6 +382,7 @@ export function createHuddles(
 
   /** Puts someone in a call (another tab of theirs adds an identity). */
   const enter = (record: RoomRecord, userId: number, newIdentity: string, replace: boolean) => {
+    checkStageCapacity(record, userId);
     const state = calls();
     const roomId = record.room.id;
     let entries = state.calls.get(roomId);
@@ -332,8 +395,13 @@ export function createHuddles(
     const rejoin = entries.has(userId);
     const entry = entries.get(userId) ?? { identities: [] };
 
+    if (replace) {
+      for (const identity of entry.identities) state.activity.delete(identity);
+    }
+
     entry.identities = replace ? [newIdentity] : [...entry.identities, newIdentity];
     entries.set(userId, entry);
+    state.reservations.get(roomId)?.delete(userId);
 
     const events: Outgoing[] = [presenceEvent(record)];
 
@@ -363,8 +431,16 @@ export function createHuddles(
     const state = calls();
     const roomId = record.room.id;
     const entries = state.calls.get(roomId);
+    const identities = entries?.get(userId)?.identities ?? [];
+    const released = state.reservations.get(roomId)?.delete(userId) === true;
 
-    if (entries?.delete(userId) !== true) return false;
+    if (entries?.delete(userId) !== true) {
+      if (released && record.room.kind === "stage") ctx.publish([stageEvent(record)]);
+
+      return released;
+    }
+
+    for (const identity of identities) state.activity.delete(identity);
 
     if (entries.size === 0) state.calls.delete(roomId);
 
@@ -372,6 +448,8 @@ export function createHuddles(
 
     endStreamIfOrphaned(record, events);
     events.unshift(presenceEvent(record));
+
+    if (record.room.kind === "stage") events.push(stageEvent(record));
 
     if (userId !== VIEWER_ID) {
       events.push({
@@ -423,6 +501,23 @@ export function createHuddles(
     const rooms: HuddlePresence[] = [];
     const people = new Set<number>();
 
+    for (const [roomId, reservations] of calls().reservations) {
+      const record = ctx.world().rooms.get(roomId);
+
+      if (record === undefined || !record.memberIds.includes(VIEWER_ID)) continue;
+
+      let expired = false;
+
+      for (const [userId, expires] of reservations) {
+        if (expires <= ctx.now()) {
+          reservations.delete(userId);
+          expired = true;
+        }
+      }
+
+      if (expired && record.room.kind === "stage") ctx.publish([stageEvent(record)]);
+    }
+
     for (const roomId of calls().calls.keys()) {
       const record = ctx.world().rooms.get(roomId);
 
@@ -454,8 +549,12 @@ export function createHuddles(
     const state = calls();
     const entries = state.calls.get(roomId);
     const limit = record.room.voiceUserLimit;
+    const movedAt = state.pendingMoves.get(roomId);
+    const authorizedMove = movedAt !== undefined && ctx.now() - movedAt < 20_000;
 
     if (
+      !authorizedMove &&
+      record.room.kind !== "stage" &&
       limit !== null &&
       (entries?.size ?? 0) >= limit &&
       !entries?.has(VIEWER_ID) &&
@@ -465,8 +564,12 @@ export function createHuddles(
       throw plainError(409, "HuddleRoomFull", "This voice room is full");
     }
 
+    checkStageCapacity(record, VIEWER_ID);
+
     const grantId = state.nextGrantId++;
+    state.pendingMoves.delete(roomId);
     const newIdentity = identity();
+    state.activity.set(newIdentity, { roomId, at: ctx.now() });
 
     // One call at a time per tab: the gateway notices the old connection drop within a second.
     for (const [otherId, entries] of state.calls) {
@@ -495,6 +598,7 @@ export function createHuddles(
   };
 
   const leave = (roomId: number): void => {
+    calls().pendingMoves.delete(roomId);
     exit(callRoom(roomId), VIEWER_ID);
   };
 
@@ -560,6 +664,15 @@ export function createHuddles(
 
     if (stage.roles.get(userId) === "host" && role !== "host" && hosts <= 1) {
       throw validation("role", "A stage needs at least one host");
+    }
+
+    const replacing = (stage.roles.get(userId) === "listener") !== (role === "listener");
+
+    const connected = calls().calls.get(record.room.id)?.has(userId) === true;
+
+    if (replacing && (connected || reservedUsers(record.room.id).includes(userId))) {
+      reserve(record, userId);
+      calls().calls.get(record.room.id)?.delete(userId);
     }
 
     stage.roles.set(userId, role);
@@ -775,18 +888,82 @@ export function createHuddles(
     }
   };
 
+  const evaluateIdle = () => {
+    const policy = afkPolicy();
+
+    if (policy.roomId === null) return;
+    const destination = ctx.world().rooms.get(policy.roomId);
+
+    if (destination?.room.kind !== "voice" || !destination.memberIds.includes(VIEWER_ID)) return;
+
+    for (const [identity, activity] of calls().activity) {
+      const record = recordOf(activity.roomId);
+
+      if (
+        (record.room.kind !== "voice" && record.room.kind !== "stage") ||
+        activity.roomId === policy.roomId ||
+        !calls().calls.get(activity.roomId)?.get(VIEWER_ID)?.identities.includes(identity) ||
+        (record.room.kind === "stage" && roleOf(record, VIEWER_ID) === "listener") ||
+        ctx.now() - activity.at < policy.timeoutMinutes * 60_000
+      )
+        continue;
+      exit(record, VIEWER_ID);
+      calls().pendingMoves.set(policy.roomId, ctx.now());
+      ctx.publish([
+        {
+          topic: "user",
+          type: "huddle.afk.moved",
+          data: {
+            identity,
+            sourceRoomId: activity.roomId,
+            roomId: policy.roomId,
+            roomName: ctx.displayName(destination),
+            timeoutMinutes: policy.timeoutMinutes,
+          },
+        },
+      ]);
+    }
+  };
+
   const ok = (json: HuddlePresenceList | HuddleDetail | StageDetail | StageState) => ({
     status: 200,
     json,
   });
 
   const routes: Route[] = [
-    route("GET", /^\/huddles$/, () => ok(list())),
-    route("GET", /^\/rooms\/(\d+)\/huddle$/, (request) => ok(detail(firstId(request)))),
+    route("GET", /^\/huddles$/, () => {
+      evaluateIdle();
+
+      return ok(list());
+    }),
+    route("GET", /^\/rooms\/(\d+)\/huddle$/, (request) => {
+      evaluateIdle();
+
+      return ok(detail(firstId(request)));
+    }),
     route("POST", /^\/rooms\/(\d+)\/huddle$/, (request) => ({
       status: 201,
       json: join(firstId(request)),
     })),
+    route("POST", /^\/rooms\/(\d+)\/huddle\/activity$/, (request) => {
+      const roomId = firstId(request);
+      callRoom(roomId);
+      const identity = stringField(request.body, "identity");
+      const activity = identity === null ? undefined : calls().activity.get(identity);
+
+      if (
+        activity === undefined ||
+        identity === null ||
+        activity.roomId !== roomId ||
+        !calls().calls.get(roomId)?.get(VIEWER_ID)?.identities.includes(identity)
+      ) {
+        throw forbidden("This huddle grant is no longer active");
+      }
+
+      activity.at = ctx.now();
+
+      return noContent();
+    }),
     route("POST", /^\/rooms\/(\d+)\/huddle\/leave$/, (request) => {
       leave(firstId(request));
 
@@ -895,14 +1072,42 @@ export function createHuddles(
 
       if (record.room.kind === "stage") endStream(record, true);
       calls().stages.delete(record.room.id);
+      calls().reservations.delete(record.room.id);
+    },
+    publishStages() {
+      ctx.publish(
+        [...ctx.world().rooms.values()].flatMap((record) =>
+          record.room.kind === "stage" && record.memberIds.includes(VIEWER_ID)
+            ? [stageEvent(record)]
+            : [],
+        ),
+      );
     },
     control(action, input) {
       switch (action) {
+        case "huddle-idle": {
+          const roomId = input.int("roomId");
+
+          for (const activity of calls().activity.values()) {
+            if (activity.roomId === roomId) activity.at = ctx.now() - input.int("seconds") * 1000;
+          }
+
+          evaluateIdle();
+
+          return done;
+        }
+
         case "huddle-join": {
           const record = callRoom(input.int("roomId"));
           const userId = input.int("userId");
 
-          enter(record, userId, identity(), false);
+          if (input.flag("connected", true)) {
+            enter(record, userId, identity(), false);
+          } else {
+            reserve(record, userId);
+
+            if (record.room.kind === "stage") ctx.publish([stageEvent(record)]);
+          }
 
           return done;
         }

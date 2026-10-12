@@ -5,6 +5,7 @@ import type { Attachment } from "./Attachment";
 import type { Boost } from "./Boost";
 import type { MessageCard } from "./MessageCard";
 import type { MessageSound } from "./MessageSound";
+import type { MessageSticker } from "./MessageSticker";
 import type { MessageWebhook } from "./MessageWebhook";
 import type { Poll } from "./Poll";
 import type { Reaction } from "./Reaction";
@@ -38,6 +39,10 @@ clientMessageId: string,
  * The rendered body from the server's sanitizer pipeline.
  */
 bodyHtml: string,
+/**
+ * One catalog sticker, or its retained placeholder after deletion.
+ */
+sticker?: MessageSticker,
 /**
  * The classic built-in `/play` presentation; attachments take precedence.
  */

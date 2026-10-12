@@ -19,8 +19,12 @@ export type CreateMessage = {
  */
 clientMessageId: string,
 /**
+ * The workspace sticker to send, with or without text.
+ */
+stickerId?: number,
+/**
  * The Markdown source, rendered by the server's pipeline into `bodyHtml`. Up to
- * `Message::SOURCE_LIMIT` (50 000) characters. May be empty only with an attachment.
+ * `Message::SOURCE_LIMIT` (50 000) characters. May be empty with an attachment or sticker.
  */
 markdownSource: string,
 /**

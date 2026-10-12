@@ -127,12 +127,24 @@ async fn respond(
                 };
                 if record_seen {
                     grant.record_seen(tx)?;
+                    if grant.move_if_idle(tx, &domain)? {
+                        return Ok(None);
+                    }
                 }
                 Ok(Some(grant))
             })
             .await;
         match admission {
             Ok(grant) => grant,
+            Err(campfire_db::Error::StageAudienceFull) => {
+                return c.json(
+                    StatusCode::CONFLICT,
+                    &serde_json::json!({
+                        "error": "StageAudienceFull",
+                        "message": "This stage is full",
+                    }),
+                );
+            }
             Err(campfire_db::Error::HuddleRoomFull) => {
                 return c.json(
                     StatusCode::CONFLICT,

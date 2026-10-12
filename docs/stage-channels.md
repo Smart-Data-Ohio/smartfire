@@ -153,3 +153,22 @@ Recording and streaming to an external audience are not part of stage
 channels. In-room streaming has shipped; see [streaming](streaming.md).
 Per-speaker server mute has shipped as well (see above); what remains
 deliberately absent is a ban.
+
+## Audience budget
+
+The instance defaults to 300 audience members per stage. Like the [upload size policy](uploads.md),
+`stage_audience_budget` is a positive safe integer in the existing `accounts.settings` JSON.
+Missing or invalid stored values use 300. Administrators can set it with
+`PATCH /api/v1/admin/workspace` and `{"stageAudienceBudget": 300}`; the workspace API reads it back.
+
+Admission counts distinct listeners with a live presence or a token reserved in the last 20 seconds.
+Hosts, speakers, room creators and instance administrators neither consume slots nor face this limit.
+Reconnects and second devices reuse the person's slot. Lowering the budget leaves existing participants
+connected. The grant write and gateway admission both check the budget inside a write transaction.
+A new listener refused admission receives the typed 409 `StageAudienceFull` error.
+
+Stage detail and sync publish `audienceCount`, `audienceBudget` and `audienceAvailability` (`open` or
+`full`). The count is listeners currently present; availability also includes pending reservations.
+The stage pane shows the count against the budget and explains a full-stage refusal.
+
+This budget is a declared admission limit, not a measured capacity; a real 300-viewer capacity run is a separate task.

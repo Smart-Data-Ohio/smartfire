@@ -377,7 +377,7 @@ FOREIGN KEY ("referenced_message_id")
 CREATE UNIQUE INDEX "index_message_references_on_message_and_referenced" ON "message_references" ("message_id", "referenced_message_id");
 CREATE INDEX "index_message_references_on_message_id" ON "message_references" ("message_id");
 CREATE INDEX "index_message_references_on_referenced_message_id" ON "message_references" ("referenced_message_id");
-CREATE TABLE "messages" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "action" boolean DEFAULT FALSE NOT NULL, "board_post_opener" boolean DEFAULT FALSE NOT NULL, "client_message_id" varchar NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" integer NOT NULL, "edited_at" datetime(6), "embeds_suppressed" boolean DEFAULT FALSE NOT NULL, "forward_note" text, "forwarded_at" datetime(6), "forwarded_from_message_id" integer, "forwarded_markdown" boolean DEFAULT FALSE NOT NULL, "markdown_source" text, "reply_notify_author" boolean DEFAULT TRUE NOT NULL, "reply_target_deleted_at" datetime(6), "reply_to_message_id" integer, "room_id" integer NOT NULL, "stream_broadcast_at" datetime(6), "streaming" boolean DEFAULT FALSE NOT NULL, "streaming_updated_at" datetime(6), "system_note" boolean DEFAULT FALSE NOT NULL, "thread_id" integer, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_a8db0fb63a"
+CREATE TABLE "messages" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "action" boolean DEFAULT FALSE NOT NULL, "board_post_opener" boolean DEFAULT FALSE NOT NULL, "client_message_id" varchar NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" integer NOT NULL, "edited_at" datetime(6), "embeds_suppressed" boolean DEFAULT FALSE NOT NULL, "forward_note" text, "forwarded_at" datetime(6), "forwarded_from_message_id" integer, "forwarded_markdown" boolean DEFAULT FALSE NOT NULL, "markdown_source" text, "reply_notify_author" boolean DEFAULT TRUE NOT NULL, "reply_target_deleted_at" datetime(6), "reply_to_message_id" integer, "room_id" integer NOT NULL, "stream_broadcast_at" datetime(6), "streaming" boolean DEFAULT FALSE NOT NULL, "streaming_updated_at" datetime(6), "system_note" boolean DEFAULT FALSE NOT NULL, "thread_id" integer, "updated_at" datetime(6) NOT NULL, sticker_id INTEGER REFERENCES stickers(id) ON DELETE SET NULL, sticker_name TEXT, CONSTRAINT "fk_rails_a8db0fb63a"
 FOREIGN KEY ("room_id")
   REFERENCES "rooms" ("id")
 , CONSTRAINT "fk_rails_6d240335a7"
@@ -1057,6 +1057,17 @@ CREATE TABLE soundboard_sounds (
   created_at datetime(6) NOT NULL,
   updated_at datetime(6) NOT NULL
 );
+CREATE TABLE stickers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  name TEXT NOT NULL CHECK (length(name) BETWEEN 2 AND 30),
+  name_key TEXT NOT NULL UNIQUE,
+  description TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '',
+  uploader_id INTEGER NOT NULL REFERENCES users(id),
+  created_at datetime(6) NOT NULL,
+  updated_at datetime(6) NOT NULL
+);
+CREATE INDEX index_messages_on_sticker_id ON messages(sticker_id);
 CREATE TABLE thread_access_memberships (
   thread_id INTEGER NOT NULL REFERENCES channel_threads(id) ON DELETE CASCADE,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

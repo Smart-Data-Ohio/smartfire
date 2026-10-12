@@ -20,7 +20,7 @@ import type { AgentWebhookStatus } from "../../src/gen/AgentWebhookStatus.ts";
 import { forbidden, HttpError, notFound, ok } from "../http.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso } from "../s2/model.ts";
-import { beforeOf, keysetPage, plainText } from "../s3/model.ts";
+import { beforeOf, keysetPage, messageText } from "../s3/model.ts";
 import { ROOM_IDS, USER_IDS, VIEWER_ID } from "../seed.ts";
 import { AGENT_IDS, type Agents, HIDDEN_ROOM, viewerManages, viewerRoomName } from "./agents.ts";
 import { validation } from "./http.ts";
@@ -340,8 +340,7 @@ export function createLedger(ctx: S2Context, agents: Agents): Ledger {
           ? null
           : { ...record.external, message: open ? record.external.message : null },
       handoffSummary: open ? record.handoffSummary : null,
-      content:
-        open && record.readable && message !== null ? cut(plainText(message.markdownSource)) : null,
+      content: open && record.readable && message !== null ? cut(messageText(message)) : null,
     };
   };
 
