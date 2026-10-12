@@ -69,6 +69,22 @@ function builtIn(
   return { key, kind: key, title, rows, category: null, sharedCategory: null, collapsed: false };
 }
 
+/** Each home section's title. */
+const HOME_TITLES = {
+  channels: "Channels",
+  boards: "Boards",
+  voice: "Voice",
+  direct: "Direct messages",
+} as const satisfies Record<HomeSectionKind, string>;
+
+/** The home sections in the order the sidebar shows them. */
+export const HOME_ORDER: readonly HomeSectionKind[] = ["channels", "boards", "voice", "direct"];
+
+/** A home section with nothing in it, as a drag shows Boards or Voice when hidden for that. */
+export function emptyHomeSection(kind: HomeSectionKind): SidebarSection {
+  return builtIn(kind, HOME_TITLES[kind], []);
+}
+
 function categorySection(category: RoomCategory, rows: readonly SidebarRow[]): SidebarSection {
   return {
     key: `category-${category.id}`,
@@ -102,8 +118,8 @@ function sharedSection(category: WorkspaceCategory, rows: readonly SidebarRow[])
  * newest first. A shared category with nothing left to show is dropped, except for administrators
  * (a drag shows the dragged room's own again: `dragSections` in organize-model.ts).
  * Pending organising changes are drawn in, and invisible rooms stay out. Empty Favourites, Boards
- * and Voice are dropped; Channels and Direct messages always show (they hold the "add"
- * affordances).
+ * and Voice are dropped (a drag shows them again where the dragged room can land); Channels and
+ * Direct messages always show (they hold the "add" affordances).
  */
 export function sidebarSections(
   sidebar: SidebarState,
@@ -188,17 +204,17 @@ export function sidebarSections(
     }
   }
 
-  sections.push(builtIn("channels", "Channels", homes.channels));
+  sections.push(builtIn("channels", HOME_TITLES.channels, homes.channels));
 
   if (homes.boards.length > 0) {
-    sections.push(builtIn("boards", "Boards", homes.boards));
+    sections.push(builtIn("boards", HOME_TITLES.boards, homes.boards));
   }
 
   if (homes.voice.length > 0) {
-    sections.push(builtIn("voice", "Voice", homes.voice));
+    sections.push(builtIn("voice", HOME_TITLES.voice, homes.voice));
   }
 
-  sections.push(builtIn("direct", "Direct messages", homes.direct));
+  sections.push(builtIn("direct", HOME_TITLES.direct, homes.direct));
 
   return sections;
 }

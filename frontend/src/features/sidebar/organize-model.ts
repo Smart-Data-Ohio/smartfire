@@ -8,7 +8,7 @@ import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
 import { canCategorize, type RoomSlot } from "../../store/organize.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
-import { homeSection, type SidebarSection } from "./sections.ts";
+import { emptyHomeSection, HOME_ORDER, homeSection, type SidebarSection } from "./sections.ts";
 
 /** What is being dragged: a conversation, or a category (yours or a shared one) by its heading. */
 export type DragItem =
@@ -68,9 +68,10 @@ export const FAVORITES_PLACEHOLDER: SidebarSection = {
 };
 
 /**
- * The sections as a drag of `row` shows them: an empty Favourites to star it in, and its shared
+ * The sections as a drag of `row` shows them: an empty Favourites to star it in, its shared
  * category even when nothing else of the viewer's is left in it (a favourite was its last room),
- * so a room taken out of the shared layout can always be dropped back.
+ * and its own Boards or Voice when that is empty and would take it, so a room taken out of the
+ * shared layout or starred can always be dropped back.
  */
 export function dragSections(
   sections: readonly SidebarSection[],
@@ -81,21 +82,27 @@ export function dragSections(
     ? sections
     : [FAVORITES_PLACEHOLDER, ...sections];
 
+  return withOwnList(withSharedHome(withFavorites, row, context), row, context);
+}
+
+/** `sections` with the room's shared category, empty, when it is hidden. */
+function withSharedHome(
+  sections: readonly SidebarSection[],
+  row: SidebarRow,
+  context: DropContext,
+): readonly SidebarSection[] {
   const homeId = context.sharedHome(row.room.id);
   const home = context.sharedCategories.find((category) => category.id === homeId);
 
-  if (
-    home === undefined ||
-    withFavorites.some((section) => section.sharedCategory?.id === homeId)
-  ) {
-    return withFavorites;
+  if (home === undefined || sections.some((section) => section.sharedCategory?.id === homeId)) {
+    return sections;
   }
 
   const rank = (category: WorkspaceCategory) =>
     context.sharedCategories.findIndex((candidate) => candidate.id === category.id);
 
   // After the shared categories before it, ahead of the rest of the layout.
-  const at = withFavorites.findIndex((section) =>
+  const at = sections.findIndex((section) =>
     section.sharedCategory === null
       ? section.kind !== "favorites" && section.kind !== "category"
       : rank(section.sharedCategory) > rank(home),
@@ -112,8 +119,39 @@ export function dragSections(
   };
 
   return at === -1
-    ? [...withFavorites, placeholder]
-    : [...withFavorites.slice(0, at), placeholder, ...withFavorites.slice(at)];
+    ? [...sections, placeholder]
+    : [...sections.slice(0, at), placeholder, ...sections.slice(at)];
+}
+
+/**
+ * `sections` with the room's own list (Boards or Voice, hidden while empty) shown empty when a
+ * drop there would land: unstarring the room, or an administrator's move out of a shared
+ * category.
+ */
+function withOwnList(
+  sections: readonly SidebarSection[],
+  row: SidebarRow,
+  context: DropContext,
+): readonly SidebarSection[] {
+  const kind = homeSection(row);
+
+  if (sections.some((section) => section.kind === kind)) {
+    return sections;
+  }
+
+  const placeholder = emptyHomeSection(kind);
+
+  if (targetForSection(placeholder, row, 0, context) === null) {
+    return sections;
+  }
+
+  // Ahead of the home sections that follow it.
+  const later = HOME_ORDER.slice(HOME_ORDER.indexOf(kind) + 1);
+  const at = sections.findIndex((section) => later.some((next) => next === section.kind));
+
+  return at === -1
+    ? [...sections, placeholder]
+    : [...sections.slice(0, at), placeholder, ...sections.slice(at)];
 }
 
 /** Whether the viewer's own organisation holds the room: a favourite, or one of their categories. */
@@ -242,7 +280,8 @@ function gaps(
  * Every place a keyboard drag can take `row`, top to bottom: each gap among the favourites, then
  * each section that takes it, with a gap per room in the shared layout's sections for an
  * administrator. Favourites come first even when there are none yet, and the room's shared
- * category shows even when it would otherwise be hidden (`dragSections`).
+ * category and its own Boards or Voice show even when they would otherwise be hidden
+ * (`dragSections`).
  */
 export function roomTargets(
   sections: readonly SidebarSection[],

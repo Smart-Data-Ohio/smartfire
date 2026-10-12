@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
+import type { WorkspaceLayout } from "../../gen/WorkspaceLayout.ts";
 import type { RoomCategory, RoomKind, SidebarRow } from "../../store/model.ts";
+import { organizedSidebar, placementPatches } from "../../store/organize.ts";
+import { initialState, type SidebarState } from "../../store/state.ts";
+import { sharedCategories, sharedLayout, withRoomMoved } from "../../store/workspace-layout.ts";
 import {
   acceptsRoom,
   categoryTargets,
   type DropContext,
+  type DropTarget,
   dragSections,
   insertionIndex,
   involvementChoices,
@@ -12,7 +17,7 @@ import {
   slotForSection,
   targetForSection,
 } from "./organize-model.ts";
-import type { SidebarSection } from "./sections.ts";
+import { type SidebarSection, sidebarSections } from "./sections.ts";
 
 function row(id: number, name: string, kind: RoomKind = "open", favorite: number | null = null) {
   const entry: SidebarRow = {
@@ -312,6 +317,152 @@ describe("drops on the shared layout", () => {
       target: { kind: "shared-category", index: 1 },
       label: "After Ops, position 2 of 2",
     });
+  });
+});
+
+describe("dragging a room home when its section is empty", () => {
+  const PRODUCT = { id: 30, name: "Product", position: 0 };
+
+  function sidebarOf(rows: readonly SidebarRow[], layout?: WorkspaceLayout): SidebarState {
+    return {
+      ...initialState.sidebar,
+      status: "ready",
+      order: rows.map((entry) => entry.room.id),
+      rows: Object.fromEntries(rows.map((entry) => [entry.room.id, entry])),
+      workspaceLayout: layout ?? initialState.sidebar.workspaceLayout,
+    };
+  }
+
+  function contextOf(sidebar: SidebarState, admin: boolean): DropContext {
+    const layout = sharedLayout(sidebar);
+    const homes = new Map(layout.rooms.map((place) => [place.roomId, place.workspaceCategoryId]));
+
+    return {
+      admin,
+      sharedHome: (roomId) => homes.get(roomId) ?? null,
+      sharedCategories: sharedCategories(layout),
+    };
+  }
+
+  /** The sidebar after a viewer's own drop of `roomId` on `target` lands. */
+  function dropped(sidebar: SidebarState, roomId: number, target: DropTarget | undefined) {
+    if (target?.kind !== "room") {
+      throw new Error(`expected a personal drop, got ${JSON.stringify(target)}`);
+    }
+
+    const memberships = placementPatches(organizedSidebar(sidebar), roomId, target.slot);
+
+    return { ...sidebar, overlay: { ...sidebar.overlay, memberships } };
+  }
+
+  const keysOf = (shown: readonly SidebarSection[]) => shown.map((section) => section.key);
+
+  const layoutOf = (shown: readonly SidebarSection[]) =>
+    shown.map((section) => [section.key, section.rows.map((entry) => entry.room.id)]);
+
+  it("shows an empty Boards while your last board in it is dragged out of Favourites", () => {
+    const ideas = row(9, "Ideas", "board", 0);
+    const sidebar = sidebarOf([general, ideas]);
+    const shown = sidebarSections(sidebar);
+    const context = contextOf(sidebar, false);
+
+    // At rest, Boards with nothing in it stays hidden.
+    expect(keysOf(shown)).toEqual(["favorites", "channels", "direct"]);
+    expect(keysOf(dragSections(shown, ideas, context))).toEqual([
+      "favorites",
+      "channels",
+      "boards",
+      "direct",
+    ]);
+    // Only a board's drag brings it back.
+    expect(keysOf(dragSections(shown, general, context))).toEqual(keysOf(shown));
+
+    const targets = roomTargets(shown, ideas, context);
+
+    expect(targets.map((target) => target.label)).toEqual([
+      "Top of Favourites",
+      "Boards, out of Favourites",
+    ]);
+    expect(layoutOf(sidebarSections(dropped(sidebar, 9, targets.at(-1)?.target)))).toEqual([
+      ["channels", [1]],
+      ["boards", [9]],
+      ["direct", []],
+    ]);
+  });
+
+  it("shows an empty Voice the same way, after Boards", () => {
+    const hall = row(7, "Hall", "stage", 0);
+    const sidebar = sidebarOf([general, row(8, "Roadmap", "board"), hall]);
+    const shown = sidebarSections(sidebar);
+    const context = contextOf(sidebar, false);
+
+    expect(keysOf(dragSections(shown, hall, context))).toEqual([
+      "favorites",
+      "channels",
+      "boards",
+      "voice",
+      "direct",
+    ]);
+
+    const targets = roomTargets(shown, hall, context);
+
+    expect(targets.map((target) => target.label)).toEqual([
+      "Top of Favourites",
+      "Voice, out of Favourites",
+    ]);
+    expect(layoutOf(sidebarSections(dropped(sidebar, 7, targets.at(-1)?.target)))).toEqual([
+      ["channels", [1]],
+      ["boards", [8]],
+      ["voice", [7]],
+      ["direct", []],
+    ]);
+  });
+
+  it("lets an administrator drag a board out of a shared category into an empty Boards", () => {
+    const roadmap = row(10, "Roadmap", "board");
+
+    const layout: WorkspaceLayout = {
+      categories: [PRODUCT],
+      rooms: [{ roomId: 10, workspaceCategoryId: 30, position: 0 }],
+    };
+
+    const sidebar = sidebarOf([general, roadmap], layout);
+    const shown = sidebarSections(sidebar, { admin: true });
+    const context = contextOf(sidebar, true);
+
+    expect(keysOf(shown)).toEqual(["shared-30", "channels", "direct"]);
+    expect(keysOf(dragSections(shown, roadmap, context))).toEqual([
+      "favorites",
+      "shared-30",
+      "channels",
+      "boards",
+      "direct",
+    ]);
+
+    const targets = roomTargets(shown, roadmap, context);
+
+    expect(targets.map((target) => target.label)).toEqual([
+      "Top of Favourites",
+      "Top of Product, for everyone",
+      "Top of Boards, for everyone",
+    ]);
+
+    const target = targets.at(-1)?.target;
+
+    expect(target).toEqual({ kind: "shared", categoryId: null, beforeRoomId: null });
+
+    const moved = { ...sidebar, workspaceOverlay: withRoomMoved(layout, 10, null, null) };
+
+    expect(layoutOf(sidebarSections(moved, { admin: true }))).toEqual([
+      ["shared-30", []],
+      ["channels", [1]],
+      ["boards", [10]],
+      ["direct", []],
+    ]);
+    // Anyone else can't move it for everyone, so no Boards shows for them to drop on.
+    expect(
+      keysOf(dragSections(sidebarSections(sidebar), roadmap, contextOf(sidebar, false))),
+    ).toEqual(["favorites", "shared-30", "channels", "direct"]);
   });
 });
 
