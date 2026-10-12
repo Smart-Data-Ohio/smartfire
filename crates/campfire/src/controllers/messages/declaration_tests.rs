@@ -28,11 +28,7 @@ async fn root_edit_markers_match_rails_for_noops_attachments_formatting_reaction
         let id=ids[row["index"].as_u64().unwrap() as usize];
         let response=viewer.write(Req::new(Method::PATCH,&format!("/rooms/{ALL_TALK}/messages/{id}.json")).header("content-type","application/json").body(serde_json::json!({"message":row["input"]}).to_string())).await;
         assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{}: {}",row["name"],response.text());
-        let recorded_file = row["input"]["attachment"].as_str()
-            .filter(|signed| !signed.is_empty() && row["status"].as_u64().is_some_and(|status| (200..300).contains(&status)))
-            .map(RecordedFile::SignedId);
-        let actual = rails_message_body(&response.text(), row["body"].as_str().unwrap(), recorded_file);
-        if actual!=row["body"].as_str().unwrap(){rails_mismatch(&actual,row["body"].as_str().unwrap(),row["name"].as_str().unwrap());}
+        if response.text()!=row["body"].as_str().unwrap(){rails_mismatch(&response.text(),row["body"].as_str().unwrap(),row["name"].as_str().unwrap());}
         let (edited,updated,body)=app.db().read(move|conn|{let m=Message::find(conn,id)?;Ok((m.edited_at.map(|t|campfire_presentation::messages::support::json_time(t.jiff())),campfire_presentation::messages::support::json_time(m.updated_at.jiff()),m.body_html(conn)?.unwrap_or_default()))}).await.unwrap();
         assert_eq!(edited,row["edited_at"].as_str().map(str::to_string),"{}",row["name"]);
         assert_eq!(updated,row["updated_at"].as_str().unwrap(),"{}",row["name"]);assert_eq!(body,row["saved_body"].as_str().unwrap());

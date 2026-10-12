@@ -58,7 +58,8 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
     if message.streaming { result["streaming"] = true.into(); }
     result["url"] = permalink(message, base).into();
     let files = p.message_files(message)?;
-    if !files.files.is_empty() {
+    // Rails' body already describes one public file; only newer file metadata needs an array.
+    if files.files.len() > 1 || files.files.iter().any(|file| file.spoiler) {
         result["attachments"] = files.files.iter().map(|file| {
             let blob = &file.blob;
             let view = p.attachment_blob(message, blob, file.spoiler)?;

@@ -38,10 +38,7 @@ async fn signed_root_and_thread_attachments_match_rails_response_and_blob_rows()
         assert_eq!(response.header("cache-control"),row["cache_control"].as_str(),"{name}");
         assert_eq!(response.content_type(),row["content_type"].as_str(),"{name}");
         assert_eq!(response.location(),row["location"].as_str(),"{name}");
-        let signed = row["message"]["attachment_id"].as_i64()
-            .map(|id| campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, id, None));
-        let actual = rails_message_body(&response.text(), row["body"].as_str().unwrap(), signed.as_deref().map(RecordedFile::SignedId));
-        if actual!=row["body"].as_str().unwrap(){rails_mismatch(&actual,row["body"].as_str().unwrap(),name);}
+        if response.text()!=row["body"].as_str().unwrap(){rails_mismatch(&response.text(),row["body"].as_str().unwrap(),name);}
     }
         let client=row["input"]["message"]["client_message_id"].as_str().unwrap().to_string();
         let state=app.db().read(move |conn| {

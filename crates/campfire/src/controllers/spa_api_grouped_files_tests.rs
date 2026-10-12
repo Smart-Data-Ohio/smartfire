@@ -1547,6 +1547,54 @@ async fn scheduled_files_validate_unfinished_invalid_and_current_size_limit_befo
 }
 
 #[tokio::test]
+async fn file_spoilers_legacy_payloads_omit_public_single_files_and_keep_spa_flags() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let first = upload(&mut david, "first-public.txt").await;
+    let second = upload(&mut david, "second-public.txt").await;
+    let first_id = blob_id(&a, &first);
+    let second_id = blob_id(&a, &second);
+    for (name, single, grouped, flags, legacy_flags) in [
+        ("fileless", None, vec![], vec![], None),
+        ("legacy-single", Some(first_id), vec![], vec![], None),
+        ("grouped-single", None, vec![first_id], vec![], None),
+        ("spoiler-single", Some(first_id), vec![], vec![true], Some(vec![true])),
+        ("grouped-public", None, vec![first_id, second_id], vec![], Some(vec![false, false])),
+    ] {
+        let message = a.db().write(move |tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some(name.into()),
+            attachment_blob_id: single, attachment_blob_ids: grouped, attachment_spoilers: flags,
+            ..Default::default()
+        })).await.unwrap();
+        let id = message.id;
+        let app = a.booted.app.clone();
+        let (payload, preloaded) = a.db().read(move |conn| {
+            let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+            presenter.current_user_id = Some(DAVID);
+            presenter.cache_base_url = Some("https://payload.test".into());
+            let payload = presenter.agent_message_payload(&message)?;
+            let preloaded = presenter.preload_payload(std::slice::from_ref(&message))?.agent_message_payload(&message)?;
+            Ok((payload, preloaded))
+        }).await.unwrap();
+        let actual = payload.get("attachments").map(|files| files.as_array().unwrap().iter()
+            .map(|file| file["spoiler"].as_bool().unwrap()).collect::<Vec<_>>());
+        assert_eq!(actual, legacy_flags, "{name}");
+        assert_eq!(preloaded, payload, "{name}");
+        let read = david.send(get(&format!("/api/v1/messages/{id}"))).await;
+        assert_eq!(read.status, StatusCode::OK, "{name}: {}", read.text());
+        let message = parse::<api::MessageRead>(&read).message;
+        let files = message.attachments.unwrap_or_else(|| message.attachment.into_iter().collect());
+        let expected = match name {
+            "fileless" => vec![],
+            "spoiler-single" => vec![true],
+            "grouped-public" => vec![false, false],
+            _ => vec![false],
+        };
+        assert_eq!(files.iter().map(|file| file.spoiler).collect::<Vec<_>>(), expected, "{name}");
+    }
+}
+
+#[tokio::test]
 async fn file_spoilers_mixed_flags_dtos_edits_payloads_and_previews() {
     let a = app(true).await.expect("restored default seed").without_job_runner().await;
     let mut david = a.sign_in(DAVID).await;
