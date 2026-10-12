@@ -688,6 +688,7 @@ export function createThreads(
     if (parent === undefined) throw notFound("No message to start a thread on");
 
     const createdAt = iso(Math.max(ctx.now(), Date.parse(parent.createdAt) + 1));
+
     const accessMembers = new Map([
       [creatorId, { userId: creatorId, addedById: creatorId, createdAt }],
     ]);
