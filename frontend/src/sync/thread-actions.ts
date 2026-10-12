@@ -182,6 +182,7 @@ function threadMessage(
     readonly attachmentSpoilers?: readonly boolean[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
+    readonly gifSlug?: string | undefined;
   },
   markdown: string,
 ) {
@@ -208,6 +209,10 @@ function threadMessage(
     message.driveFileIds = [...driveFileIds];
   }
 
+  if (options.gifSlug !== undefined) {
+    message.gifSlug = options.gifSlug;
+  }
+
   return message;
 }
 
@@ -227,6 +232,7 @@ export const create = Effect.fn("threads.create")(function* (
     readonly attachmentSpoilers?: readonly boolean[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
+    readonly gifSlug?: string | undefined;
     readonly visibility?: ThreadVisibility;
   } = {},
 ) {

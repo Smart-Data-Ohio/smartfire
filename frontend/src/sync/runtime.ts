@@ -263,6 +263,7 @@ const threads = {
       readonly attachmentSpoilers?: readonly boolean[];
       readonly clientMessageId?: string;
       readonly driveFileIds?: readonly string[];
+      readonly gifSlug?: string | undefined;
       readonly visibility?: ThreadVisibility;
     },
   ): Promise<number> => runAction(threadActions.create(roomId, parentMessageId, markdown, options)),

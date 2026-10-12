@@ -911,4 +911,8 @@ export const ICONS = {
     ["path", { d: "M16 13h.01" }],
     ["path", { d: "M10 16s.8 1 2 1c1.3 0 2-1 2-1" }],
   ],
+  gif: [
+    ["rect", { width: "18", height: "14", x: "3", y: "5", rx: "2" }],
+    ["path", { d: "m10 9.5 5 2.5-5 2.5z" }],
+  ],
 } as const;

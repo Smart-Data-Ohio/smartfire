@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { GifItem } from "../../gen/GifItem.ts";
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../../gen/SlashCommandResult.ts";
 import type { Sticker } from "../../gen/Sticker.ts";
@@ -13,6 +14,7 @@ import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
+import { gifActions } from "../../sync/gif-actions.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Beam } from "../../ui/beam.tsx";
@@ -48,6 +50,7 @@ import {
 import { attachDriveFile, type DrivePick } from "./drive-picker.ts";
 import { DrivePendingChips, DrivePicker } from "./drive-picker.tsx";
 import { ComposerEmojiButton } from "./emoji-button.tsx";
+import { ComposerGifButton } from "./gif-picker.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
@@ -100,6 +103,8 @@ export interface ComposerDraft {
   readonly attachmentSpoilers: readonly boolean[];
   /** Drive files pinned on the message. Empty when there are none. */
   readonly driveFileIds: readonly string[];
+  /** A picked GIF's slug, when the submit is a GIF pick starting a thread. */
+  readonly gifSlug?: string | undefined;
 }
 
 export interface ComposerProps {
@@ -605,6 +610,44 @@ export function Composer({
         animated: sticker.animated,
       },
     });
+    focusInput();
+  };
+
+  /**
+   * Sends a GIF at once as its own message, the draft's text going with it as the message text:
+   * what was typed is the GIF's caption, so a landed send clears it (only the text it took; words
+   * typed while it was out stay), and a failed one keeps the picker open on the text. A new
+   * thread's first reply can carry a GIF too (`CreateMessage.gifSlug` works on thread openers),
+   * so there the pick is the submit, tray files aside.
+   */
+  const sendGif = async (item: GifItem): Promise<void> => {
+    const submitted = textRef.current;
+    const markdown = submitted.trimEnd();
+
+    if (onSubmit !== undefined) {
+      await onSubmit({
+        markdown,
+        attachmentSignedId: null,
+        attachmentSignedIds: [],
+        attachmentSpoilers: [],
+        driveFileIds: [],
+        gifSlug: item.slug,
+      });
+      clearSubmitted(submitted);
+
+      return;
+    }
+
+    void toPresent();
+    await gifActions.send({
+      roomId,
+      threadId: threadId ?? undefined,
+      slug: item.slug,
+      clientMessageId: uuid7(Date.now()),
+      markdownSource: markdown === "" ? undefined : markdown,
+    });
+    actions.setTyping(roomId, false, threadId);
+    clearSubmitted(submitted);
     focusInput();
   };
 
@@ -1376,6 +1419,7 @@ export function Composer({
                 <ComposerEmojiButton onInsert={insertAtCaret} />
                 {/* A new thread's first reply can't carry a sticker: it starts the thread. */}
                 {creating ? null : <ComposerStickerButton key={roomId} onPick={sendSticker} />}
+                <ComposerGifButton onPick={sendGif} />
                 <IconButton
                   icon="at"
                   label="Mention someone"
