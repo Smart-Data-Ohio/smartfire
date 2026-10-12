@@ -8,37 +8,37 @@ import type { WorkOwnerCandidate } from "./WorkOwnerCandidate";
  * The thread page's work section, for one viewer: on [`crate::ThreadDetail::work`] when the
  * thread is tracked.
  */
-export type WorkDetail = {
+export type WorkDetail = { 
 /**
  * The result as typed (up to 20,000 characters); `null` for none.
  */
-resultMarkdown: string | null,
+resultMarkdown: string | null, 
 /**
  * The result rendered as the classic board post renders it (`render_markdown` in the
  * thread's room); `null` when `resultMarkdown` is.
  */
-resultHtml: string | null,
+resultHtml: string | null, 
 /**
  * Who last edited the result; `null` when there's none, and kept when that person's
  * account is later deleted (no `users` entry then: "by someone").
  */
-resultUpdatedById: number | null,
+resultUpdatedById: number | null, 
 /**
  * The steps the owning agent reports on the thread (at most 50), in `(position, id)` order;
  * `agent.steps` on `thread:<id>` updates them.
  */
-steps: Array<AgentStep>,
+steps: Array<AgentStep>, 
 /**
  * Newest first (`work_thread_events`, `created_at DESC, id DESC`). Not paged, as in the
  * classic page.
  */
-history: Array<WorkHistoryEntry>,
+history: Array<WorkHistoryEntry>, 
 /**
  * Who the work can be assigned to, when the viewer may assign it (`canAssignWork`): the
  * room's active humans, then its active agents allowed to post there, each by lower-cased
  * name (`work_owner_candidates_for`). Empty otherwise.
  */
-ownerCandidates: Array<WorkOwnerCandidate>,
+ownerCandidates: Array<WorkOwnerCandidate>, 
 /**
  * The agents it can be handed off to, when the viewer may manage it (`canManageWork`):
  * agents in the room that may post, manage threads and read messages there, except the

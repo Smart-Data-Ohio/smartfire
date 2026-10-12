@@ -3,15 +3,15 @@
 /**
  * One workspace icon members can use as a `:shortcode:`.
  */
-export type WorkspaceIcon = { id: number,
+export type WorkspaceIcon = { id: number, 
 /**
  * The shortcode without colons.
  */
-name: string, title: string, creatorName: string,
+name: string, title: string, creatorName: string, 
 /**
  * `/icons/:name`.
  */
-imageUrl: string, animated: boolean,
+imageUrl: string, animated: boolean, 
 /**
  * First-frame PNG for animated emoji, otherwise the original image URL.
  */

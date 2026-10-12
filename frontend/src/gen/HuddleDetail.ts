@@ -8,12 +8,12 @@ import type { User } from "./User";
  * connected, and when LiveKit reports a reconnect or the tab becomes visible, to end the call at
  * once if access was lost (401, 403 or 404).
  */
-export type HuddleDetail = {
+export type HuddleDetail = { 
 /**
  * The room's name as the viewer sees it: for a direct message, its other members' names
  * (`room_display_name`).
  */
-roomName: string, presence: HuddlePresence,
+roomName: string, presence: HuddlePresence, 
 /**
  * Every participant's directory entry.
  */

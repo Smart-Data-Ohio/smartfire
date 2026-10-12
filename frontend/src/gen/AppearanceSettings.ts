@@ -7,15 +7,15 @@ import type { TimeZoneChoice } from "./TimeZoneChoice";
 /**
  * Account appearance and time zone. Explicit device overrides stay in the browser.
  */
-export type AppearanceSettings = { theme: Theme, textSize: TextSize,
+export type AppearanceSettings = { theme: Theme, textSize: TextSize, 
 /**
  * The chosen zone's identifier; `null` is "Not set (use system)".
  */
-timeZone: string | null,
+timeZone: string | null, 
 /**
  * The classic select's choices, in its order.
  */
-timeZones: Array<TimeZoneChoice>,
+timeZones: Array<TimeZoneChoice>, 
 /**
  * Versioned personal appearance; newer documents are kept opaque.
  */

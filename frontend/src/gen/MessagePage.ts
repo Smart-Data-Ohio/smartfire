@@ -13,23 +13,23 @@ import type { User } from "./User";
  * `after=<message id>` (`page_after`), `around=<message id>` (`page_around`); none gives the
  * newest page (`last_page`). An id that isn't on this room's root timeline is a 404.
  */
-export type MessagePage = { messages: Array<MessageDTO>,
+export type MessagePage = { messages: Array<MessageDTO>, 
 /**
  * Every creator of a message on the page and every replier its thread indicators name,
  * once each, so the page renders without another request.
  */
-users: Array<User>,
+users: Array<User>, 
 /**
  * The id to pass as `before` for the next older page: the oldest message here when an older
  * one exists (`exists_before`), else `null` (the start of the room).
  */
-before: number | null,
+before: number | null, 
 /**
  * The id to pass as `after` for the next newer page: the newest message here when a newer
  * one exists (`exists_after`), else `null` (the page reaches the present, and live events
  * carry on from here).
  */
-after: number | null,
+after: number | null, 
 /**
  * The viewer's saved items among the page's messages (`saved_items` for this user and
  * these message ids), so the Save action shows its state without another request.

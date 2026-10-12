@@ -3,11 +3,11 @@
 /**
  * The reply to `POST /api/v1/uploads`.
  */
-export type DirectUpload = {
+export type DirectUpload = { 
 /**
  * Attaches the blob: `CreateMessage.attachmentSignedId`. Doesn't expire.
  */
-signedId: string,
+signedId: string, 
 /**
  * Where to `PUT` the bytes (`/rails/active_storage/disk/:encoded_token`), valid for 5
  * minutes. Same origin: the session cookie goes with it; no CSRF token needed.

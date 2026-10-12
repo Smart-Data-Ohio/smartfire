@@ -4,19 +4,19 @@ import type { PresenceSetting } from "./PresenceSetting";
 /**
  * Presence, custom status, meeting status and out of office (the status form).
  */
-export type StatusSettings = { presenceSetting: PresenceSetting, customStatusEmoji: string | null, customStatusText: string | null,
+export type StatusSettings = { presenceSetting: PresenceSetting, customStatusEmoji: string | null, customStatusText: string | null, 
 /**
  * When the custom status clears itself; `null` is never.
  */
-customStatusExpiresAt: string | null, meetingStatusEnabled: boolean, oooCalendarEnabled: boolean,
+customStatusExpiresAt: string | null, meetingStatusEnabled: boolean, oooCalendarEnabled: boolean, 
 /**
  * The out-of-office end that shows (manual or from the calendar, the later one).
  */
-oooUntil: string | null,
+oooUntil: string | null, 
 /**
  * `oooUntil` is the manual one (clearing ends it).
  */
-oooManual: boolean, oooNote: string | null,
+oooManual: boolean, oooNote: string | null, 
 /**
  * The calendar fetch's last error, as the classic page words it.
  */

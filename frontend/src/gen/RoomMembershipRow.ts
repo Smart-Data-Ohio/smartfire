@@ -4,11 +4,11 @@ import type { Involvement } from "./Involvement";
 /**
  * A room in the classic profile's membership list.
  */
-export type RoomMembershipRow = { roomId: number,
+export type RoomMembershipRow = { roomId: number, 
 /**
  * `membership.room_display_name`, as the classic row shows it.
  */
-name: string,
+name: string, 
 /**
  * The same involvement the room's existing involvement API changes. `None` for a membership
  * with none stored: the classic row labels it with nothing, and no mention reaches it.

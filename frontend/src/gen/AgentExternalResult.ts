@@ -3,12 +3,12 @@
 /**
  * A GitHub or Fizzy action's result: "GitHub {action}: {status} — {message}".
  */
-export type AgentExternalResult = {
+export type AgentExternalResult = { 
 /**
  * The metadata's `action`, `status` and `message`; `null` when absent (the classic row
  * prints an empty string for the first two).
  */
-action: string | null, status: string | null,
+action: string | null, status: string | null, 
 /**
  * Also `null` when the ledger entry is gated (see [`AgentLedgerEvent::room_name`]).
  */

@@ -3,7 +3,7 @@
 /**
  * One pull-request event the classic subscription form offers.
  */
-export type GithubEventChoice = { key: string, label: string,
+export type GithubEventChoice = { key: string, label: string, 
 /**
  * Checked on the subscribe form until the person changes it.
  */

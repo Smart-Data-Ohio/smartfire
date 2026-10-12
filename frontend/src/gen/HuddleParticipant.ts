@@ -3,17 +3,17 @@
 /**
  * Someone in a room's call.
  */
-export type HuddleParticipant = { userId: number,
+export type HuddleParticipant = { userId: number, 
 /**
  * Their membership in the room: what moderation and the stage roster address.
  */
-membershipId: number,
+membershipId: number, 
 /**
  * The LiveKit identities of their live grants, oldest first: one per tab or device that's in
  * the call (`campfire-participant-<hex>`). The client maps LiveKit participants back to
  * people with these.
  */
-identities: Array<string>,
+identities: Array<string>, 
 /**
  * A host or administrator muted them (`memberships.server_muted_at`): their token can't
  * publish until they're unmuted.

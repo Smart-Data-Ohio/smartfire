@@ -3,7 +3,7 @@
 /**
  * A message converted from Slack's markup, to check the conversion before importing.
  */
-export type SlackSample = { conversation: string, slackText: string,
+export type SlackSample = { conversation: string, slackText: string, 
 /**
  * The message as Smartfire will show it (sanitized HTML).
  */

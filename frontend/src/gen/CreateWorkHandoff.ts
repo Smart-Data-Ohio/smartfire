@@ -17,11 +17,11 @@
  * - `Validation` on the package's fields: `summary` blank or past 2,000 characters; more than
  *   10 `links` or `openQuestions`, one past 500 characters, or a link that isn't an http(s) URL.
  */
-export type CreateWorkHandoff = { receiverAgentId: number, summary: string,
+export type CreateWorkHandoff = { receiverAgentId: number, summary: string, 
 /**
  * Each is trimmed; blank ones and repeats are dropped.
  */
-links: Array<string>,
+links: Array<string>, 
 /**
  * As `links`.
  */

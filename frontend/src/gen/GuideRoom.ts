@@ -3,7 +3,7 @@
 /**
  * The room a guide entry links to, as one viewer sees it.
  */
-export type GuideRoom = { id: number, name: string,
+export type GuideRoom = { id: number, name: string, 
 /**
  * The viewer belongs to the room; otherwise it's an open room they may join.
  */

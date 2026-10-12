@@ -8,11 +8,11 @@
  *
  * Fill order: 9.
  */
-export type FizzyCardRef = {
+export type FizzyCardRef = { 
 /**
  * `fizzy_cards.id`.
  */
-fizzyCardId: number, accountId: string, number: number,
+fizzyCardId: number, accountId: string, number: number, 
 /**
  * The card's web address as linked.
  */

@@ -3,7 +3,7 @@
 /**
  * One choice in the owner picker.
  */
-export type WorkOwnerCandidate = { userId: number,
+export type WorkOwnerCandidate = { userId: number, 
 /**
  * Agents only (the agent's `provider` and `description`); `null` for people and when blank.
  */

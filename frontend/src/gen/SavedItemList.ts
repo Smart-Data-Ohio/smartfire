@@ -16,20 +16,20 @@ import type { User } from "./User";
  * doesn't decode is a 422 (`ApiError::Validation` on `before`). New: the classic page lists
  * every item at once.
  */
-export type SavedItemList = { items: Array<SavedItem>,
+export type SavedItemList = { items: Array<SavedItem>, 
 /**
  * The saved messages, one per item, in full (the classic row shows a 500-character
  * plain-text excerpt; the SPA renders the message).
  */
-messages: Array<MessageDTO>,
+messages: Array<MessageDTO>, 
 /**
  * The messages' creators, once each.
  */
-users: Array<User>,
+users: Array<User>, 
 /**
  * The rooms and threads the messages are in.
  */
-conversations: Array<ConversationName>,
+conversations: Array<ConversationName>, 
 /**
  * Pass as `before` for the next page; `null` on the last (set only when an older row
  * exists: the server reads 51).

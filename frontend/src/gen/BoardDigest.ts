@@ -5,11 +5,11 @@
  * if that claim has an existing message: "Stale-work digest · October 7, 2026" over its plain
  * text. A newer unposted claim hides the previous digest, as on the classic board page.
  */
-export type BoardDigest = {
+export type BoardDigest = { 
 /**
  * The digest's day, `YYYY-MM-DD` (UTC).
  */
-date: string,
+date: string, 
 /**
  * The digest message's plain text.
  */

@@ -27,19 +27,19 @@ import type { WorkStatus } from "./WorkStatus";
  *   no status: stopping tracking a thread with an owner needs `ownerId: null` too;
  * - `Validation` on `resultMarkdown` past 20,000 characters.
  */
-export type UpdateWork = {
+export type UpdateWork = { 
 /**
  * Omit to leave alone; `null` stops tracking.
  */
-status?: WorkStatus | null,
+status?: WorkStatus | null, 
 /**
  * Omit to leave alone; `null` unassigns.
  */
-ownerId?: number | null,
+ownerId?: number | null, 
 /**
  * Omit to leave alone; `null` or blank clears the result.
  */
-resultMarkdown?: string | null,
+resultMarkdown?: string | null, 
 /**
  * Tags, replacing the set: omit to leave alone, `[]` clears them. Normalised as on
  * [`crate::CreateBoardPost::tags`]; `canManageWork` on boards, settings authority on ordinary

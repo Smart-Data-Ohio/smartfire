@@ -4,15 +4,15 @@ import type { RoomKind } from "./RoomKind";
 /**
  * A conversation: channel, direct message, voice or stage room, or board.
  */
-export type Room = { id: number, kind: RoomKind,
+export type Room = { id: number, kind: RoomKind, 
 /**
  * `null` for direct messages, which are named after their members.
  */
-name: string | null, iconName: string | null, creatorId: number, createdAt: string, updatedAt: string, topic: string | null,
+name: string | null, iconName: string | null, creatorId: number, createdAt: string, updatedAt: string, topic: string | null, 
 /**
  * Configured audio target in bits per second; null uses the current huddle default.
  */
-voiceBitrate: number | null,
+voiceBitrate: number | null, 
 /**
  * Maximum distinct huddle users; null means unlimited. Room administrators bypass it.
  */

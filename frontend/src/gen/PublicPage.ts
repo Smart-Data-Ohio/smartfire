@@ -5,15 +5,15 @@ import type { PublicPagePolicy } from "./PublicPagePolicy";
 /**
  * `GET /api/v1/public_pages/{about,privacy,terms}`, signed in or out.
  */
-export type PublicPage = { page: PublicPageName,
+export type PublicPage = { page: PublicPageName, 
 /**
  * The retained page's `<title>`.
  */
-title: string,
+title: string, 
 /**
  * The retained page's meta description.
  */
-description: string, policy: PublicPagePolicy,
+description: string, policy: PublicPagePolicy, 
 /**
  * The retained page's article, rendered by the same template; its links name the SPA's pages.
  */

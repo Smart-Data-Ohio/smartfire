@@ -5,27 +5,27 @@ import type { WorkFacts } from "./WorkFacts";
 /**
  * A thread as every room member sees it (`channel_threads`).
  */
-export type Thread = { id: number, roomId: number,
+export type Thread = { id: number, roomId: number, 
 /**
  * The root message it hangs off; `null` once that message is deleted (the thread stays).
  */
-parentMessageId: number | null, creatorId: number,
+parentMessageId: number | null, creatorId: number, 
 /**
  * Up to 100 characters; defaults to the parent's first line ("New thread" without one).
  */
-name: string, status: ThreadStatus,
+name: string, status: ThreadStatus, 
 /**
  * Replies that count (`messages_count`: not system notes, not still streaming).
  */
-replyCount: number,
+replyCount: number, 
 /**
  * Bumped by every reply, and by reopening a stale thread (`last_activity_at`).
  */
-lastActivityAt: string,
+lastActivityAt: string, 
 /**
  * Idle this long, an active thread reads as closed: 60, 1440, 4320 or 10080.
  */
-autoArchiveAfterMinutes: number, createdAt: string,
+autoArchiveAfterMinutes: number, createdAt: string, 
 /**
  * `null` unless the thread is tracked as work (see [`WorkFacts`]).
  */

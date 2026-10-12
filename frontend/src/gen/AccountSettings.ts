@@ -5,20 +5,20 @@ import type { TwoFactorSettings } from "./TwoFactorSettings";
 /**
  * `GET /api/v1/settings/account`: the classic profile's lower panels for the signed-in person.
  */
-export type AccountSettings = {
+export type AccountSettings = { 
 /**
  * Shared rooms first, then direct messages, each in the classic page's order.
  */
-sharedRooms: Array<RoomMembershipRow>, directRooms: Array<RoomMembershipRow>,
+sharedRooms: Array<RoomMembershipRow>, directRooms: Array<RoomMembershipRow>, 
 /**
  * The two-step sign-in panel. These routes answer people only, so it is always there (the
  * classic page hides it for bots).
  */
-twoFactor: TwoFactorSettings,
+twoFactor: TwoFactorSettings, 
 /**
  * The absolute sign-in transfer URL the classic `_transfer.html` shows.
  */
-transferUrl: string,
+transferUrl: string, 
 /**
  * `transfer_url`'s QR code, a whole SVG document drawn here, so the link never travels in a
  * request path the way the classic `/qr_code/:id` image's does.

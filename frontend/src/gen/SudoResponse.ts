@@ -2,24 +2,24 @@
 import type { SudoRetry } from "./SudoRetry";
 import type { SudoState } from "./SudoState";
 
-export type SudoResponse = { "kind": "ready", reauthentication: SudoState,
+export type SudoResponse = { "kind": "ready", reauthentication: SudoState, 
 /**
  * The signed-in session, so the SPA can tell a Google hand-off from another session's.
  */
-session?: number, } | { "kind": "confirmed",
+session?: number, } | { "kind": "confirmed", 
 /**
  * The request the gate holds for this session: `GET /api/v1/sudo` only peeks at it; a
  * confirmation (`POST /api/v1/sudo`) or the continuation hands it over and lets it go.
  */
-retry: SudoRetry | null,
+retry: SudoRetry | null, 
 /**
  * The Google attempt this session confirmed, when the continuation asked for it by id.
  */
-attempt?: string,
+attempt?: string, 
 /**
  * The signed-in session, so the SPA can tell a Google hand-off from another session's.
  */
-session?: number, } | { "kind": "navigate", location: string,
+session?: number, } | { "kind": "navigate", location: string, 
 /**
  * The signed-in session, so the SPA can tell a Google hand-off from another session's.
  */

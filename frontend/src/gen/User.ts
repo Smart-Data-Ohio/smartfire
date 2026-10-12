@@ -8,50 +8,50 @@ import type { UserStatus } from "./UserStatus";
 /**
  * A person or bot as every viewer sees them: the directory entry and profile card.
  */
-export type User = { id: number, name: string, role: UserRole, status: UserStatus, bio: string | null,
+export type User = { id: number, name: string, role: UserRole, status: UserStatus, bio: string | null, 
 /**
  * The avatar image path, versioned so a changed avatar gets a new URL. Always set: without
  * an uploaded picture it draws the classic initials (or a bot's icon) as an SVG.
  */
-avatarUrl: string,
+avatarUrl: string, 
 /**
  * Whether the person uploaded a picture (`has_one_attached :avatar`). When `false`, the
  * client may draw its own initials tile instead of loading `avatarUrl`.
  */
-hasAvatar: boolean,
+hasAvatar: boolean, 
 /**
  * `null` when unset or expired.
  */
-customStatus: CustomStatus | null,
+customStatus: CustomStatus | null, 
 /**
  * A bot without an uploaded avatar shows this icon instead of `avatarUrl`'s default
  * (`users.icon_name`, resolved as the classic presenters do: a brand logo, else a workspace
  * icon, else the built-in icon or emoji of that name). `null` for people, for a bot with an
  * uploaded avatar, and for a name that resolves to nothing.
  */
-avatarIcon: Icon | null,
+avatarIcon: Icon | null, 
 /**
  * Set for an agent (a bot with an `agents` row); `null` for people and for bots without
  * one, which the classic pages label "Bot". Kept current by `agent.status`.
  */
-agent: AgentBadge | null, createdAt: string,
+agent: AgentBadge | null, createdAt: string, 
 /**
  * `users.updated_at`: moves on every change to the users row, including status changes
  * from bans and unbans. UTC with exactly six fractional digits and a `Z` suffix, for example
  * `2026-10-07T10:15:00.123456Z`. String order equals time order; clients keep whichever copy
  * of a user has the later value. Whole-second and millisecond rows are padded with zeros.
  */
-updatedAt: string,
+updatedAt: string, 
 /**
  * The legal/account name; `name` is the shared display name.
  */
-accountName: string, pronouns: string | null,
+accountName: string, pronouns: string | null, 
 /**
  * The profile banner (the strip above the avatar on their page and profile card), versioned
  * by the attached image so a new banner gets a new URL. `null` without one: the client draws
  * a fallback from the avatar's tint.
  */
-bannerUrl: string | null,
+bannerUrl: string | null, 
 /**
  * An animated banner's first frame, for reduced motion and resting states; `null` for a
  * still image or no banner.

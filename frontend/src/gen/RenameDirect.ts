@@ -5,7 +5,7 @@
  * Answers the updated [`crate::RoomDetail`]. 422 when it isn't group-capable or the name is
  * over 100 characters.
  */
-export type RenameDirect = {
+export type RenameDirect = { 
 /**
  * Trimmed; blank or `null` clears it, going back to the members' names.
  */

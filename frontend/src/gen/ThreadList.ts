@@ -7,7 +7,7 @@ import type { User } from "./User";
  * the room's threads, most recently active first (`last_activity_at DESC, id DESC`). No paging.
  * Direct rooms have none.
  */
-export type ThreadList = { threads: Array<ThreadSummary>,
+export type ThreadList = { threads: Array<ThreadSummary>, 
 /**
  * The threads' creators, once each.
  */

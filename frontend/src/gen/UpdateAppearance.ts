@@ -6,11 +6,11 @@ import type { Theme } from "./Theme";
 /**
  * `PATCH /api/v1/settings/appearance` (`users/profiles#update`'s appearance fields).
  */
-export type UpdateAppearance = { theme: Theme | null, textSize: TextSize | null,
+export type UpdateAppearance = { theme: Theme | null, textSize: TextSize | null, 
 /**
  * `""` is "Not set (use system)".
  */
-timeZone: string | null,
+timeZone: string | null, 
 /**
  * Changed fields only; omitted keys stay stored and explicit nulls clear individual keys.
  */

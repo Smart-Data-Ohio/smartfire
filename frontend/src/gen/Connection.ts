@@ -3,7 +3,7 @@
 /**
  * A personal connection to GitHub or Fizzy.
  */
-export type Connection = { "state": "missing" } | { "state": "rejected", reason: string | null, } | { "state": "connected", name: string, workspace: string | null,
+export type Connection = { "state": "missing" } | { "state": "rejected", reason: string | null, } | { "state": "connected", name: string, workspace: string | null, 
 /**
  * Connected through the workspace's app rather than a personal token.
  */

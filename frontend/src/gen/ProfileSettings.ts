@@ -3,31 +3,31 @@
 /**
  * Name, email, password, bio, avatar and GitHub username (the profile form).
  */
-export type ProfileSettings = { userId: number, name: string, emailAddress: string | null, bio: string | null,
+export type ProfileSettings = { userId: number, name: string, emailAddress: string | null, bio: string | null, 
 /**
  * The avatar image path (initials when none is attached), versioned like `User.avatarUrl`.
  */
-avatarUrl: string,
+avatarUrl: string, 
 /**
  * An uploaded avatar is attached (it can be removed).
  */
-avatarAttached: boolean,
+avatarAttached: boolean, 
 /**
  * The person signs in with a password, so changing the email needs `currentPassword`.
  */
-hasPassword: boolean, githubLogin: string | null,
+hasPassword: boolean, githubLogin: string | null, 
 /**
  * Set by a linked GitHub account: read-only until GitHub is disconnected.
  */
-githubVerified: boolean,
+githubVerified: boolean, 
 /**
  * Bots have no security, sessions or transfer sections.
  */
-bot: boolean, pronouns: string | null, nickname: string | null,
+bot: boolean, pronouns: string | null, nickname: string | null, 
 /**
  * The profile banner, as `User.bannerUrl`; `null` when none is attached.
  */
-bannerUrl: string | null,
+bannerUrl: string | null, 
 /**
  * An animated banner's first frame, as `User.bannerStillUrl`.
  */

@@ -4,7 +4,7 @@
  * `POST /api/v1/rooms/:id/messages/preview`: render Markdown without posting
  * (`messages#preview`), resolving mentions against the room's members.
  */
-export type PreviewMessage = {
+export type PreviewMessage = { 
 /**
  * Up to 50 000 characters (422 beyond).
  */

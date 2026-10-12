@@ -3,7 +3,7 @@
 /**
  * A suggested room as one viewer sees it: only rooms they belong to or may join are sent.
  */
-export type WelcomeRoomCard = { roomId: number, name: string, emoji: string | null, description: string,
+export type WelcomeRoomCard = { roomId: number, name: string, emoji: string | null, description: string, 
 /**
  * The viewer belongs to the room (open it); otherwise it's an open room they may join.
  */

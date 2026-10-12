@@ -3,7 +3,7 @@
 /**
  * One audit log row. Labels are `null` when the record had none.
  */
-export type AuditLogEntry = { id: number, createdAt: string, action: string, actor: string | null, target: string | null, targetType: string | null,
+export type AuditLogEntry = { id: number, createdAt: string, action: string, actor: string | null, target: string | null, targetType: string | null, 
 /**
  * The classic page's one-line summary of what changed (blank when nothing did).
  */

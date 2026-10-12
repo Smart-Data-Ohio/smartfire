@@ -3,11 +3,11 @@
 /**
  * A problem a run recorded.
  */
-export type SlackIssue = {
+export type SlackIssue = { 
 /**
  * "warning" or "error".
  */
-level: string,
+level: string, 
 /**
  * The Slack object it is about (a channel or message id), if any.
  */

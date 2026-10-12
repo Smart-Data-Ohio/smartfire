@@ -4,11 +4,11 @@ import type { GuideRoom } from "./GuideRoom";
 /**
  * A guide entry as one viewer sees it. A room link the viewer can't open or join is left out.
  */
-export type GuideEntry = { title: string, emoji: string | null,
+export type GuideEntry = { title: string, emoji: string | null, 
 /**
  * The note, rendered and sanitized as a message's markdown is; `null` for a room link.
  */
-bodyHtml: string | null,
+bodyHtml: string | null, 
 /**
  * The linked room, for a room link.
  */

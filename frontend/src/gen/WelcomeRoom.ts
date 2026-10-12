@@ -3,11 +3,11 @@
 /**
  * A room the welcome card suggests, as administrators set it.
  */
-export type WelcomeRoom = { roomId: number,
+export type WelcomeRoom = { roomId: number, 
 /**
  * One Unicode emoji shown on the card; `null` for none.
  */
-emoji: string | null,
+emoji: string | null, 
 /**
  * Up to 100 characters of plain text.
  */

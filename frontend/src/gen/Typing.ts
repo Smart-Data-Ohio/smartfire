@@ -3,7 +3,7 @@
 /**
  * Someone started or stopped typing in the event's topic. Never echoed to the typist.
  */
-export type Typing = { userId: number,
+export type Typing = { userId: number, 
 /**
  * `false` when they sent, cleared the composer or left.
  */

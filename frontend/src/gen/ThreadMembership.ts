@@ -5,7 +5,7 @@ import type { ThreadInvolvement } from "./ThreadInvolvement";
  * The viewer's place in a thread. Created by posting in it, creating it or joining it; the
  * viewer has none in a thread they never touched.
  */
-export type ThreadMembership = { threadId: number, involvement: ThreadInvolvement,
+export type ThreadMembership = { threadId: number, involvement: ThreadInvolvement, 
 /**
  * When the newest unread reply was posted; `null` when read. Every member but the author
  * goes unread on a reply, whatever their involvement. There's no read position, so no

@@ -10,7 +10,7 @@ import type { User } from "./User";
  * then by lower-cased name. Agents whose user is deactivated are left out; banned ones stay,
  * among the inactive. Not paged: the classic page isn't either, and a workspace has few agents.
  */
-export type AgentDirectory = { agents: Array<AgentDirectoryRow>,
+export type AgentDirectory = { agents: Array<AgentDirectoryRow>, 
 /**
  * Every agent's bot user and every owner, once each.
  */

@@ -6,7 +6,7 @@ import type { ThreadInvolvement } from "./ThreadInvolvement";
  * following is `everything`, unfollowing `mentions`. `DELETE /api/v1/threads/:id/join` leaves
  * (204). Both are the viewer's alone (no other tab is told).
  */
-export type JoinThread = {
+export type JoinThread = { 
 /**
  * `null` joins with the default (`mentions`) or keeps the current one.
  */

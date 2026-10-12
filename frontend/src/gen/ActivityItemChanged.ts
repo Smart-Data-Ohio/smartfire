@@ -18,19 +18,19 @@ import type { ActivityItem } from "./ActivityItem";
  * invitation frames on the same channel instead; those ring the huddle UI and belong to the
  * huddle slice's `huddle.*` events, which don't replace this one.
  */
-export type ActivityItemChanged = {
+export type ActivityItemChanged = { 
 /**
  * None consumes an ignored source's publication without changing the visible inbox.
  */
-item: ActivityItem | null,
+item: ActivityItem | null, 
 /**
  * The owner's unread count afterwards.
  */
-unreadCount: number,
+unreadCount: number, 
 /**
  * Per-user server revision of this count. Ignore counts from older revisions.
  */
-unreadRevision: number,
+unreadRevision: number, 
 /**
  * The injected server clock used for this count, in UTC with nanoseconds.
  */

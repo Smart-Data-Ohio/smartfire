@@ -20,7 +20,7 @@ import type { User } from "./User";
  *
  * The matching `activity.item` (with the new `approvalStatus`) goes to the same people.
  */
-export type ApprovalUpdated = { approval: AgentApproval,
+export type ApprovalUpdated = { approval: AgentApproval, 
 /**
  * The agent's bot user and the decider (`decidedById`), once each, as on the page.
  */

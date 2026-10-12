@@ -12,11 +12,11 @@
  * - on `assigneeId`: "must exist" (missing or no such user), "must be an active board member
  *   able to own posts" (inactive, not a member, or an agent that can't read and post here).
  */
-export type CreateBoardTagRule = {
+export type CreateBoardTagRule = { 
 /**
  * Stripped and lower-cased by the server.
  */
-tag: string,
+tag: string, 
 /**
  * `null` is "Choose a member" left unchosen.
  */

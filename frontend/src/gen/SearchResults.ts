@@ -44,37 +44,37 @@ import type { User } from "./User";
  * or names a different sort is a 422 (`ApiError::Validation` on
  * `before`).
  */
-export type SearchResults = {
+export type SearchResults = { 
 /**
  * The query as understood: `q` with runs of whitespace collapsed (`display_query`), the
  * form recent searches store.
  */
-query: string,
+query: string, 
 /**
  * One per operator that parsed, in the order written: the filter chips.
  */
-chips: Array<SearchChip>,
+chips: Array<SearchChip>, 
 /**
  * Matching messages in reverse display order, preserving the existing wire convention.
  * The SPA reverses each page to display the requested sort. Root messages and thread
  * replies alike; a reply's `threadId` says which thread.
  */
-messages: Array<MessageDTO>,
+messages: Array<MessageDTO>, 
 /**
  * The messages' creators, once each.
  */
-users: Array<User>,
+users: Array<User>, 
 /**
  * The rooms and threads the messages and section rows are in.
  */
-conversations: Array<ConversationName>,
+conversations: Array<ConversationName>, 
 /**
  * Pass as `before` for the next page; `null` when no further match exists.
  *
  * Opaque to the client: timestamp and ID keys, plus the score for relevance.
  * Keys remain valid if that message is deleted or leaves the viewer's reach.
  */
-nextCursor: string | null,
+nextCursor: string | null, 
 /**
  * First page only, and only when `q` has words: up to 10 of each kind whose name (title or
  * description, for events) contains every word. Narrowed by `in:` and `in_id:`. Author-ID,

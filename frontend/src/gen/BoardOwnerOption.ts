@@ -5,7 +5,7 @@
  * board, in `User::active_ordered` order. The label is the user's name, with " (agent)" for an
  * agent.
  */
-export type BoardOwnerOption = {
+export type BoardOwnerOption = { 
 /**
  * In the listing's `users`.
  */

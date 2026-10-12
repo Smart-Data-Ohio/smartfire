@@ -6,15 +6,15 @@ import type { WorkStatus } from "./WorkStatus";
  * `nudge_after_minutes` notifies its owner, and after `escalate_after_minutes` escalates to the
  * board's creator. One `board_sla_rules` row. `done` never has one.
  */
-export type BoardSlaTimer = {
+export type BoardSlaTimer = { 
 /**
  * `planned`, `in_progress` or `blocked`.
  */
-status: WorkStatus,
+status: WorkStatus, 
 /**
  * 1 to 43,200.
  */
-nudgeAfterMinutes: number,
+nudgeAfterMinutes: number, 
 /**
  * Greater than `nudge_after_minutes`, at most 43,200.
  */

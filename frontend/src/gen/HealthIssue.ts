@@ -3,7 +3,7 @@
 /**
  * One problem a health section lists: what it concerns, and what went wrong.
  */
-export type HealthIssue = {
+export type HealthIssue = { 
 /**
  * As the classic page labels it: a login, `event 4 / user 7`, `owner/repo#12`, ...
  */

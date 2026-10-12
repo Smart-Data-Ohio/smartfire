@@ -216,6 +216,7 @@ fn room_and_membership_round_trip() {
             "updatedAt": "2026-10-06T09:15:00.123Z",
             "topic": null,
             "voiceBitrate": null,
+            "voiceUserLimit": null,
             "announcement": false,
         }),
     );

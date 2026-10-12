@@ -6,22 +6,22 @@ import type { User } from "./User";
 /**
  * `GET /api/v1/rooms/:room_id/automations` (`rooms/boards/automations#show`).
  */
-export type BoardAutomations = { roomId: number,
+export type BoardAutomations = { roomId: number, 
 /**
  * In creation order (`BoardTagAssignment::for_room`).
  */
-tagRules: Array<BoardTagRule>,
+tagRules: Array<BoardTagRule>, 
 /**
  * Only the statuses that have a timer, in the order planned, in progress, blocked. A status
  * missing here is off ("Leave both blank to disable a status").
  */
-slaTimers: Array<BoardSlaTimer>,
+slaTimers: Array<BoardSlaTimer>, 
 /**
  * The "Assign to" picker: the board's active members, people and agents alike, by
  * lower-cased name, as the classic form lists them. (The server still refuses an agent that
  * can't post on the board; see [`CreateBoardTagRule`].)
  */
-candidates: Array<number>,
+candidates: Array<number>, 
 /**
  * The rules' assignees and the candidates, once each.
  */

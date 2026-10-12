@@ -7,15 +7,15 @@ import type { WelcomeRoomEdit } from "./WelcomeRoomEdit";
  * so the welcome and the guide save on their own. A refusal is `Validation` with `fields` among
  * `message`, `rooms` and `guide`.
  */
-export type WelcomeUpdate = {
+export type WelcomeUpdate = { 
 /**
  * Short markdown, up to 1,000 characters.
  */
-message?: string,
+message?: string, 
 /**
  * Up to 5 suggested rooms, in order.
  */
-rooms?: Array<WelcomeRoomEdit>,
+rooms?: Array<WelcomeRoomEdit>, 
 /**
  * Up to 10 resources, in order.
  */

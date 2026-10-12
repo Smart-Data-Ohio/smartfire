@@ -5,28 +5,28 @@ import type { AgentStatus } from "./AgentStatus";
 /**
  * One agent in the directory (`agent_profile::DirectoryRecord`, `views::agents::DirectoryAgent`).
  */
-export type AgentDirectoryRow = { agentId: number,
+export type AgentDirectoryRow = { agentId: number, 
 /**
  * The agent's bot user.
  */
-userId: number, kind: AgentKind,
+userId: number, kind: AgentKind, 
 /**
  * `null` when no owner is recorded ("no owner recorded"). The client words the kind as the
  * classic row does: "Personal agent of {owner}" or "Workspace agent, managed by {owner}".
  */
-ownerId: number | null, status: AgentStatus,
+ownerId: number | null, status: AgentStatus, 
 /**
  * Up to 200 characters; `null` for none.
  */
-statusNote: string | null, suspended: boolean, createdAt: string,
+statusNote: string | null, suspended: boolean, createdAt: string, 
 /**
  * "since …" beside the status; `null` until the status first changes.
  */
-statusChangedAt: string | null,
+statusChangedAt: string | null, 
 /**
  * "last seen …"; `null` reads "never".
  */
-lastSeenAt: string | null,
+lastSeenAt: string | null, 
 /**
  * The server's revision of the agent's status facts (status, note, suspension and working
  * presence): when they last changed on the server.

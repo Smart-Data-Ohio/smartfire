@@ -6,11 +6,11 @@
  * nor its name reaches them; sending the token back keeps that room in the row. Exactly one of
  * the two is set.
  */
-export type WelcomeRoomEdit = { roomId: number | null, keep: string | null,
+export type WelcomeRoomEdit = { roomId: number | null, keep: string | null, 
 /**
  * One Unicode emoji shown on the card; `null` for none.
  */
-emoji: string | null,
+emoji: string | null, 
 /**
  * Up to 100 characters of plain text.
  */

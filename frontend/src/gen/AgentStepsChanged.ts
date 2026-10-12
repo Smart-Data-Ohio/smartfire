@@ -10,11 +10,11 @@ import type { AgentStep } from "./AgentStep";
  * work thread, on `thread:<id>`. Carries every step of the parent in `(position, id)` order;
  * the client merges them by `updatedAt` (see [`AgentStep`]).
  */
-export type AgentStepsChanged = { roomId: number,
+export type AgentStepsChanged = { roomId: number, 
 /**
  * The message parent; `null` for a thread's steps.
  */
-messageId: number | null,
+messageId: number | null, 
 /**
  * The thread parent, or the thread a message parent is a reply in; `null` for a message on
  * the room's root timeline.

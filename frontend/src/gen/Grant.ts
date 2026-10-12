@@ -3,7 +3,7 @@
 /**
  * A capability the agent holds, workspace-wide or in one room.
  */
-export type Grant = { id: number, capability: string,
+export type Grant = { id: number, capability: string, 
 /**
  * "Workspace-wide", the room's name, or "Deleted room".
  */

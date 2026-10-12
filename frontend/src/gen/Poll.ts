@@ -7,39 +7,39 @@ import type { PollOption } from "./PollOption";
  *
  * Fill order: 1.
  */
-export type Poll = { id: number, messageId: number,
+export type Poll = { id: number, messageId: number, 
 /**
  * When the server read this state (see the module's **Ordering**): keep the poll with the
  * latest one.
  */
-asOf: string,
+asOf: string, 
 /**
  * Several options may be chosen; otherwise exactly one.
  */
-multiple: boolean,
+multiple: boolean, 
 /**
  * Voters are hidden: `voterIds` stay empty, and the viewer's own choice comes from
  * `GET /api/v1/rooms/:roomId/polls/:id` ([`PollResults`]).
  */
-anonymous: boolean,
+anonymous: boolean, 
 /**
  * When voting stops by itself; `null` for never.
  */
-closesAt: string | null,
+closesAt: string | null, 
 /**
  * When the author, administrator or periodic closer stamped it closed; `null` until then.
  */
-closedAt: string | null,
+closedAt: string | null, 
 /**
  * Closed when sent (`Poll#closed?`: `closedAt` set, or `closesAt` passed). The client also
  * treats it as closed once `closesAt` passes, before `poll.updated` says so.
  */
-closed: boolean,
+closed: boolean, 
 /**
  * Votes cast across every option (`poll_votes` rows; a voter in a multiple-choice poll
  * counts once per option chosen).
  */
-totalVotes: number,
+totalVotes: number, 
 /**
  * In `(position, id)` order, 2 to 10 of them.
  */
