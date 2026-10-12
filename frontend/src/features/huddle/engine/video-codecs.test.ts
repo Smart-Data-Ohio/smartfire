@@ -1,7 +1,13 @@
 import * as LiveKit from "livekit-client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { liveKitTransport } from "./livekit.ts";
-import { installVideoMedia, offlineLiveKit, videoPublication, videoTrack } from "./sdk-testing.ts";
+import {
+  installVideoMedia,
+  offlineLiveKit,
+  screenAudioTrack,
+  videoPublication,
+  videoTrack,
+} from "./sdk-testing.ts";
 import { parseVideoCodecError, selectVideoCodec, supportsVideoSimulcast } from "./video-codecs.ts";
 
 function query(codecs: readonly string[]) {
@@ -177,7 +183,10 @@ async function publishingRoom(serverVersion = "1.13.7") {
 
       if (options !== undefined) publication.options = options;
       this.trackPublications.set(publication.trackSid, publication);
-      this.videoTrackPublications.set(publication.trackSid, publication);
+
+      if (track.kind === LiveKit.Track.Kind.Audio)
+        this.audioTrackPublications.set(publication.trackSid, publication);
+      else this.videoTrackPublications.set(publication.trackSid, publication);
 
       return publication;
     });
@@ -206,32 +215,53 @@ async function publishingRoom(serverVersion = "1.13.7") {
 }
 
 describe("publishing with codec compatibility", () => {
-  it("stops the retained stage capture on leave during codec recovery", async () => {
-    const { transport, room, publish, reconnect } = await publishingRoom();
+  it("stops shared video and audio on leave during SDK recovery republication", async () => {
+    const { transport, room, publish, screenCapture, reconnect } = await publishingRoom();
+    const screen = videoTrack();
+    screen.source = LiveKit.Track.Source.ScreenShare;
+    const audio = screenAudioTrack();
+    screenCapture.mockResolvedValueOnce([screen, audio]);
     await transport.setScreenShare(true, "1080p15");
-    const publication = room.localParticipant.getTrackPublication(LiveKit.Track.Source.ScreenShare);
-    const screen = publication?.videoTrack;
+    const local = room.localParticipant;
+    Object.assign(local, { permissions: { canPublish: true, canPublishSources: [] } });
+    vi.spyOn(room.engine.client, "currentState", "get").mockReturnValue(1);
+    vi.spyOn(room.engine, "isClosed", "get").mockReturnValue(false);
+    local.on(LiveKit.ParticipantEvent.LocalTrackUnpublished, (publication) => {
+      room.emit(LiveKit.RoomEvent.LocalTrackUnpublished, publication, local);
+    });
+    const pending = Promise.withResolvers<Awaited<ReturnType<typeof room.engine.addTrack>>>();
+    const publishing = Promise.withResolvers<void>();
 
-    if (publication === undefined || screen === undefined) throw new Error("screen missing");
-    const unpublished = Promise.withResolvers<void>();
+    const addTrack = vi.spyOn(room.engine, "addTrack").mockImplementation(() => {
+      if (addTrack.mock.calls.length === 2) publishing.resolve();
+
+      return pending.promise;
+    });
+
+    const recovery = Promise.withResolvers<void>();
+    const rejectedRecovery = expect(recovery.promise).rejects.toThrow("shutdown");
     reconnect.mockImplementation(() => {
-      void (async () => {
-        await room.localParticipant.unpublishTrack(screen, false);
-        room.emit(LiveKit.RoomEvent.LocalTrackUnpublished, publication, room.localParticipant);
-        unpublished.resolve();
-      })();
+      room.localParticipant.republishAllTracks().then(recovery.resolve, recovery.reject);
     });
     publish.mockRejectedValueOnce(new DOMException("encoder unavailable", "NotSupportedError"));
     const camera = transport.setCamera(true);
     const rejected = expect(camera).rejects.toThrow("call-ended");
 
     try {
-      await unpublished.promise;
+      await publishing.promise;
+      expect(local.trackPublications.size).toBe(0);
+      expect(screen.mediaStreamTrack.readyState).toBe("live");
+      expect(audio.mediaStreamTrack.readyState).toBe("live");
       await transport.disconnect();
+      pending.reject(new Error("shutdown"));
+      await rejectedRecovery;
       expect(screen.mediaStreamTrack.readyState).toBe("ended");
+      expect(audio.mediaStreamTrack.readyState).toBe("ended");
     } finally {
+      pending.reject(new Error("shutdown"));
       await transport.disconnect();
       await rejected;
+      await rejectedRecovery;
     }
   });
 

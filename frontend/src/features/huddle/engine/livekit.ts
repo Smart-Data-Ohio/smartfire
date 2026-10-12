@@ -206,7 +206,7 @@ class LiveKitTransport implements CallTransport {
   /** The microphone track the "ended" restore listens on (the SDK reuses it across restarts). */
   #watchedMicrophone: LocalAudioTrack | null = null;
   readonly #captured = new Map<number, LocalTrack[]>();
-  readonly #recoveringScreens = new Set<Map<string, LocalVideoTrack>>();
+  readonly #recoveringScreens = new Set<Map<string, LocalTrack>>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
   #videoStatsBaseline: VideoStatsBaseline | null = null;
@@ -751,19 +751,20 @@ class LiveKitTransport implements CallTransport {
         const media = track.mediaStreamTrack.clone();
         active = media;
         track.stop();
-        const screens = new Map<string, LocalVideoTrack>();
+        const screens = new Map<string, LocalTrack>();
 
-        for (const publication of room.localParticipant.videoTrackPublications.values()) {
+        for (const publication of room.localParticipant.trackPublications.values()) {
           if (publication.videoTrack !== undefined) {
             for (const backup of publication.videoTrack.simulcastCodecs.values())
               backup.mediaStreamTrack.stop();
           }
 
           if (
-            publication.source === this.#lk.Track.Source.ScreenShare &&
-            publication.videoTrack !== undefined
+            (publication.source === this.#lk.Track.Source.ScreenShare ||
+              publication.source === this.#lk.Track.Source.ScreenShareAudio) &&
+            publication.track !== undefined
           ) {
-            screens.set(publication.trackSid, publication.videoTrack);
+            screens.set(publication.trackSid, publication.track);
           }
         }
 
@@ -810,10 +811,12 @@ class LiveKitTransport implements CallTransport {
 
           if (room === this.#room) {
             const published = new Set(
-              [...room.localParticipant.videoTrackPublications.values()].map(
-                (publication) => publication.videoTrack?.mediaStreamTrack.id,
+              [...room.localParticipant.trackPublications.values()].map(
+                (publication) => publication.track?.mediaStreamTrack.id,
               ),
             );
+
+            let screenEnded = false;
 
             for (const screen of screens.values()) {
               if (
@@ -821,10 +824,12 @@ class LiveKitTransport implements CallTransport {
                 !published.has(screen.mediaStreamTrack.id)
               ) {
                 screen.stop();
-                this.#emit({ type: "screen-ended" });
-                break;
+
+                if (screen.source === this.#lk.Track.Source.ScreenShare) screenEnded = true;
               }
             }
+
+            if (screenEnded) this.#emit({ type: "screen-ended" });
           }
         }
       }

@@ -3,7 +3,11 @@ import { vi } from "vitest";
 
 export class VideoMediaStub extends EventTarget {
   readonly id = crypto.randomUUID();
-  readonly kind = "video";
+  readonly kind: "video" | "audio";
+  constructor(kind: "video" | "audio" = "video") {
+    super();
+    this.kind = kind;
+  }
   enabled = true;
   contentHint = "";
   readyState: MediaStreamTrackState = "live";
@@ -18,7 +22,7 @@ export class VideoMediaStub extends EventTarget {
     return { width: { max: 1920 }, height: { max: 1080 }, frameRate: { max: 60 } };
   }
   clone() {
-    return new VideoMediaStub();
+    return new VideoMediaStub(this.kind);
   }
   stop() {
     this.readyState = "ended";
@@ -39,7 +43,7 @@ export function installVideoMedia(): void {
       return this.tracks.filter((track) => track.kind === "video");
     }
     getAudioTracks() {
-      return [];
+      return this.tracks.filter((track) => track.kind === "audio");
     }
   }
 
@@ -62,7 +66,7 @@ export function videoTrack(): LiveKit.LocalVideoTrack {
 
 export function videoPublication(track: LiveKit.LocalTrack): LiveKit.LocalTrackPublication {
   const publication: unknown = Reflect.construct(LiveKit.LocalTrackPublication, [
-    LiveKit.Track.Kind.Video,
+    track.kind,
     {
       sid: track.mediaStreamTrack.id,
       name: "video",
@@ -78,6 +82,20 @@ export function videoPublication(track: LiveKit.LocalTrack): LiveKit.LocalTrackP
     throw new Error("SDK publication missing");
 
   return publication;
+}
+
+export function screenAudioTrack(): LiveKit.LocalTrack {
+  const track: unknown = Reflect.construct(LiveKit.LocalAudioTrack, [
+    new VideoMediaStub("audio"),
+    undefined,
+    false,
+  ]);
+
+  if (!(track instanceof LiveKit.LocalTrack) || track.kind !== LiveKit.Track.Kind.Audio)
+    throw new Error("SDK audio track missing");
+  track.source = LiveKit.Track.Source.ScreenShareAudio;
+
+  return track;
 }
 
 export function offlineLiveKit() {
