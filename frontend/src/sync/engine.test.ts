@@ -24,7 +24,7 @@ import type { Settings } from "../gen/Settings.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
-import { activityListOf } from "../store/activity.ts";
+import { activityListOf, activityLoadStart } from "../store/activity.ts";
 import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { Boot } from "../store/model.ts";
@@ -576,6 +576,7 @@ describe("reconnecting", () => {
             nextCursor: null,
           },
           "replace",
+          activityLoadStart(store.getState(), "all", "unread"),
         );
         yield* fake.route("PATCH /activity/40", () =>
           Deferred.succeed(firstStarted, undefined).pipe(Effect.andThen(Effect.never)),
@@ -854,6 +855,7 @@ describe("reconnecting", () => {
               nextCursor: null,
             },
             "replace",
+            activityLoadStart(store.getState(), "all", "unread"),
           );
           yield* fake.route("PATCH /activity/40", () =>
             Deferred.succeed(started, undefined).pipe(
@@ -937,6 +939,7 @@ describe("reconnecting", () => {
               nextCursor: null,
             },
             "replace",
+            activityLoadStart(store.getState(), "all", "unread"),
           );
 
           const oldItem = { ...activityItem, updatedAt: "2026-10-06T09:01:00Z" };
@@ -1451,6 +1454,7 @@ describe("resuming", () => {
               nextCursor: null,
             },
             "replace",
+            activityLoadStart(store.getState(), "all", "unread"),
           );
           yield* api.reply("GET /activity/unread_count", {
             unreadCount: 2,
@@ -1546,6 +1550,7 @@ describe("resuming", () => {
               nextCursor: null,
             },
             "replace",
+            activityLoadStart(store.getState(), "all", "unread"),
           );
           yield* api.route("GET /activity/unread_count", () =>
             Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
@@ -1724,6 +1729,7 @@ describe("resuming", () => {
                   nextCursor: null,
                 },
                 "replace",
+                activityLoadStart(store.getState(), "all", "unread"),
               );
 
               const oldCount = {
@@ -3972,6 +3978,7 @@ describe("activity follows the room list", () => {
         nextCursor: null,
       },
       "replace",
+      activityLoadStart(store.getState(), "all", "unread"),
     );
   });
 

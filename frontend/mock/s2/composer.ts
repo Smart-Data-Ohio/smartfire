@@ -679,12 +679,25 @@ export function createComposer(
     );
   };
 
-  /** As the wire shows it: `sendable` worked out now for a pending one, `false` otherwise. */
+  /**
+   * As the wire shows it: `sendable` worked out now for a pending one, `false` otherwise. The
+   * reply it posted is named only while the viewer can still reach it (`find_reachable`).
+   */
   const shown = (message: ScheduledMessage): ScheduledMessage => ({
     ...message,
     sendable: pending(message) && sendableNow(message),
     replyTarget: replyPreview(message),
+    sentMessageId: threadReadable(message) ? message.sentMessageId : null,
   });
+
+  /** Whether its thread, if it has one, is still there for the viewer to read. */
+  const threadReadable = (message: ScheduledMessage): boolean => {
+    if (message.threadId === null) return true;
+
+    const thread = ctx.world().threads.get(message.threadId);
+
+    return thread !== undefined && canAccessThread(ctx.world(), thread);
+  };
 
   const replyPreview = (message: ScheduledMessage): ScheduledMessage["replyTarget"] => {
     if (!sendableNow(message) || message.replyToMessageId === null) return null;
@@ -843,8 +856,8 @@ export function createComposer(
       return drop(message, "its thread was deleted");
     }
 
-    if (thread !== null && !canAccessThread(world, thread))
-      return drop(message, "you no longer have access to its thread");
+    // `ScheduledMessage::dispatch`: not sendable, and its room is still there, so no reason.
+    if (thread !== null && !canAccessThread(world, thread)) return drop(message, null);
 
     if (thread?.locked === true) return message;
 

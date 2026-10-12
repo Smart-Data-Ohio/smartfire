@@ -263,7 +263,7 @@ pub async fn next_ui(_c: &Ctx, _user: &User) -> Result<bool> {
 }
 
 /// A signed-in person who opens a classic page the SPA has (`campfire_spa::screens`) goes to that
-/// page's SPA URL, with a 301: the old URLs (bookmarks, push and mail links) are aliases. Only for
+/// page's SPA URL, with a 302: the old URLs (bookmarks, push and mail links) are aliases. Only for
 /// a signed-in person's `GET` or `HEAD` that navigates to an HTML page ([`navigates`]): not a
 /// script's, a JSON request or a bare `fetch()`. A `classic` query parameter is
 /// dropped, not obeyed. A notice or alert left for the page is kept for the SPA, whose shell shows

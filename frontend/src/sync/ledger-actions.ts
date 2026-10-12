@@ -17,7 +17,12 @@ function outcomeOf(filter: LedgerFilter) {
   return filter === "all" ? null : filter;
 }
 
-function failLoad(key: LedgerListKey, agentId: number, generation: number) {
+function failLoad(
+  key: LedgerListKey,
+  agentId: number,
+  generation: number,
+  mode: "replace" | "more",
+) {
   return (error: { readonly _tag: string; readonly message: string }) =>
     Effect.sync(() =>
       mutations.setLedgerListFailed(
@@ -26,6 +31,7 @@ function failLoad(key: LedgerListKey, agentId: number, generation: number) {
         error.message,
         Predicate.isTagged(error, "Forbidden"),
         generation,
+        mode,
       ),
     );
 }
@@ -42,7 +48,7 @@ export const load = Effect.fn("ledger.load")(function* (agentId: number, filter:
     Effect.tap((page) =>
       Effect.sync(() => mutations.landLedgerPage(key, agentId, page, "replace", generation)),
     ),
-    Effect.catch(failLoad(key, agentId, generation)),
+    Effect.catch(failLoad(key, agentId, generation, "replace")),
   );
 });
 
@@ -64,6 +70,6 @@ export const loadMore = Effect.fn("ledger.loadMore")(function* (
     Effect.tap((page) =>
       Effect.sync(() => mutations.landLedgerPage(key, agentId, page, "more", list.generation)),
     ),
-    Effect.catch(failLoad(key, agentId, list.generation)),
+    Effect.catch(failLoad(key, agentId, list.generation, "more")),
   );
 });

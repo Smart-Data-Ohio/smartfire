@@ -6,8 +6,17 @@
 import { Effect, Result, Semaphore } from "effect";
 import * as api from "../api/search-endpoints.ts";
 import type { RecentSearch } from "../gen/RecentSearch.ts";
-import { searchKey, searchMutations, searchStore } from "../store/search.ts";
-import { mutations } from "../store/store.ts";
+import type { SearchResults } from "../gen/SearchResults.ts";
+import { isRemovedThread } from "../store/conversations.ts";
+import { searchKey, searchMutations, searchStore, withoutThreads } from "../store/search.ts";
+import { mutations, store } from "../store/store.ts";
+
+/** A reply as it may land: a thread removed while it was on its way stays out of it. */
+const stillReadable = (results: SearchResults): SearchResults => {
+  const state = store.getState();
+
+  return withoutThreads(results, (threadId) => isRemovedThread(state, threadId));
+};
 
 /**
  * Loads `query`'s first page into the store (a held list keeps its rows until it lands). The
@@ -28,7 +37,7 @@ export const run = Effect.fn("search.run")(function* (query: string) {
   }
 
   mutations.mergeUsers(reply.success.users);
-  searchMutations.applyFirstPage(key, generation, reply.success);
+  searchMutations.applyFirstPage(key, generation, stillReadable(reply.success));
 });
 
 /** The next older page of `query`'s matches; a no-op while one is loading or when none is left. */
@@ -52,7 +61,7 @@ export const loadMore = Effect.fn("search.loadMore")(function* (query: string) {
   }
 
   mutations.mergeUsers(reply.success.users);
-  searchMutations.applyMorePage(key, cursor, reply.success);
+  searchMutations.applyMorePage(key, cursor, stillReadable(reply.success));
 });
 
 /** Loads the viewer's recent searches; a failure keeps whatever was shown. */

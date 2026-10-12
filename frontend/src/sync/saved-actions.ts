@@ -26,7 +26,7 @@ export const load = Effect.fn("saved.load")(function* (filter: SavedFilter) {
       Effect.sync(() => mutations.landSavedPage(filter, page, "replace", generation)),
     ),
     Effect.catch((error) =>
-      Effect.sync(() => mutations.setSavedListFailed(filter, error.message, generation)),
+      Effect.sync(() => mutations.setSavedListFailed(filter, error.message, generation, "replace")),
     ),
   );
 });
@@ -46,7 +46,9 @@ export const loadMore = Effect.fn("saved.loadMore")(function* (filter: SavedFilt
       Effect.sync(() => mutations.landSavedPage(filter, page, "more", list.generation)),
     ),
     Effect.catch((error) =>
-      Effect.sync(() => mutations.setSavedListFailed(filter, error.message, list.generation)),
+      Effect.sync(() =>
+        mutations.setSavedListFailed(filter, error.message, list.generation, "more"),
+      ),
     ),
   );
 });

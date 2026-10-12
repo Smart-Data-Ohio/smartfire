@@ -50,6 +50,8 @@ describe("the screen map and the router", () => {
       "/app/admin/workspace",
       // Private invites are new with the SPA; classic only had the shared join link.
       "/app/admin/invites",
+      // File templates are administered only in the SPA.
+      "/app/admin/templates",
       // The voice soundboard is new with the SPA; classic had no soundboard.
       "/app/admin/sounds",
       // So are stickers; classic had none.

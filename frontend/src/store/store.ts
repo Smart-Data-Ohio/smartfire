@@ -558,6 +558,23 @@ export const mutations = {
         : work.receiveWorkThread(state, { ...held, work: thread.work }, read, "read");
     }),
   upsertThread: (thread: Thread) => apply((state) => work.receiveWorkThread(state, thread)),
+  /**
+   * A private thread the viewer was added back to, its pane closed: the record and the parent's
+   * reply summary come back (`since` as for `loadThreadDetail`), and no pane is made for it.
+   */
+  regainedThread: (detail: ThreadDetail, since: number) =>
+    apply((state) => {
+      const next = work.loadWorkThreadDetail(state, detail, undefined, since);
+      const threadId = detail.thread.id;
+
+      if (state.threadPanes[threadId] !== undefined || next.threadPanes[threadId] === undefined) {
+        return next;
+      }
+
+      const { [threadId]: _pane, ...threadPanes } = next.threadPanes;
+
+      return { ...next, threadPanes };
+    }),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
   setThreadListLoading: (roomId: number, filter: ThreadFilter) =>
@@ -605,18 +622,27 @@ export const mutations = {
     tab: ActivityTab,
     status: ActivityState,
     error: string,
-    generation?: number,
+    generation: number,
+    mode: "replace" | "more",
     activityGeneration?: number,
   ) =>
     apply((state) =>
-      activity.setActivityListFailed(state, tab, status, error, generation, activityGeneration),
+      activity.setActivityListFailed(
+        state,
+        tab,
+        status,
+        error,
+        generation,
+        mode,
+        activityGeneration,
+      ),
     ),
   landActivityPage: (
     tab: ActivityTab,
     status: ActivityState,
     page: ActivityList,
     mode: "replace" | "more",
-    start?: activity.ActivityLoadStart,
+    start: activity.ActivityLoadStart,
   ) => apply((state) => activity.landActivityPage(state, tab, status, page, mode, start)),
   /** An item as the server has it now; `unread` `null` keeps the badge. */
   applyActivityItem: (item: ActivityItem, unread: ActivityUnreadCount | null) =>
@@ -635,26 +661,34 @@ export const mutations = {
     apply((state) => activity.setActivityUnreadCount(state, unread, generation, requestSequence)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
-  setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>
-    apply((state) => savedList.setSavedListFailed(state, filter, error, generation)),
+  setSavedListFailed: (
+    filter: SavedFilter,
+    error: string,
+    generation: number,
+    mode: "replace" | "more",
+  ) => apply((state) => savedList.setSavedListFailed(state, filter, error, generation, mode)),
   landSavedPage: (
     filter: SavedFilter,
     page: SavedItemList,
     mode: "replace" | "more",
-    generation?: number,
+    generation: number,
   ) => apply((state) => savedList.landSavedPage(state, filter, page, mode, generation)),
   /** A message saved, changed (`item`) or unsaved (`null`): its mark, item and lists follow. */
   applySavedChange: (messageId: number, item: SavedItem | null) =>
     apply((state) => savedList.applySavedChange(state, messageId, item)),
   setScheduledListLoading: (key: scheduled.ScheduledListKey, more: boolean) =>
     apply((state) => scheduled.setScheduledListLoading(state, key, more)),
-  setScheduledListFailed: (key: scheduled.ScheduledListKey, error: string, generation?: number) =>
-    apply((state) => scheduled.setScheduledListFailed(state, key, error, generation)),
+  setScheduledListFailed: (
+    key: scheduled.ScheduledListKey,
+    error: string,
+    generation: number,
+    mode: "replace" | "more",
+  ) => apply((state) => scheduled.setScheduledListFailed(state, key, error, generation, mode)),
   landScheduledPage: (
     key: scheduled.ScheduledListKey,
     page: ScheduledMessageList,
     mode: "replace" | "more",
-    generation?: number,
+    generation: number,
   ) => apply((state) => scheduled.landScheduledPage(state, key, page, mode, generation)),
   applyScheduled: (message: ScheduledMessage) =>
     apply((state) => scheduled.applyScheduled(state, message)),
@@ -708,13 +742,17 @@ export const mutations = {
     apply((state) => agents.setProfileFailed(state, agentId, error, missing, generation)),
   setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>
     apply((state) => approvals.setApprovalListLoading(state, key, more)),
-  setApprovalListFailed: (key: approvals.ApprovalListKey, error: string, generation?: number) =>
-    apply((state) => approvals.setApprovalListFailed(state, key, error, generation)),
+  setApprovalListFailed: (
+    key: approvals.ApprovalListKey,
+    error: string,
+    generation: number,
+    mode: "replace" | "more",
+  ) => apply((state) => approvals.setApprovalListFailed(state, key, error, generation, mode)),
   landApprovalPage: (
     key: approvals.ApprovalListKey,
     page: AgentApprovalPage,
     mode: "replace" | "more",
-    generation?: number,
+    generation: number,
     ticket?: number,
     read?: approvals.ApprovalRead,
   ) =>
@@ -727,6 +765,9 @@ export const mutations = {
     apply((state) => approvals.showApproval(state, approval)),
   rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>
     apply((state) => approvals.rollbackApproval(state, shown, before)),
+  /** A list's view left: its reads retire and it stops saying a load is on its way. */
+  retireApprovalReads: (key: approvals.ApprovalListKey) =>
+    apply((state) => approvals.retireApprovalReads(state, key)),
   /** Every approvals list reloads when next shown. */
   markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
   setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>
@@ -736,15 +777,18 @@ export const mutations = {
     agentId: number,
     error: string,
     forbidden: boolean,
-    generation?: number,
+    generation: number,
+    mode: "replace" | "more",
   ) =>
-    apply((state) => ledger.setLedgerListFailed(state, key, agentId, error, forbidden, generation)),
+    apply((state) =>
+      ledger.setLedgerListFailed(state, key, agentId, error, forbidden, generation, mode),
+    ),
   landLedgerPage: (
     key: ledger.LedgerListKey,
     agentId: number,
     page: AgentLedgerPage,
     mode: "replace" | "more",
-    generation?: number,
+    generation: number,
   ) => apply((state) => ledger.landLedgerPage(state, key, agentId, page, mode, generation)),
   /** Sidebar organisation (S3): pending changes, category replies, membership replies. */
   addSidebarOverlay: (entry: organize.SidebarOverlay) =>

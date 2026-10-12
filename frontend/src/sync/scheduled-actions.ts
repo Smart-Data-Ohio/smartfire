@@ -36,7 +36,9 @@ export const load = Effect.fn("scheduled.load")(function* (key: ScheduledListKey
       Effect.sync(() => mutations.landScheduledPage(key, page, "replace", generation)),
     ),
     Effect.catch((error) =>
-      Effect.sync(() => mutations.setScheduledListFailed(key, error.message, generation)),
+      Effect.sync(() =>
+        mutations.setScheduledListFailed(key, error.message, generation, "replace"),
+      ),
     ),
   );
 });
@@ -57,7 +59,9 @@ export const loadMore = Effect.fn("scheduled.loadMore")(function* (key: Schedule
       Effect.sync(() => mutations.landScheduledPage(key, page, "more", list.generation)),
     ),
     Effect.catch((error) =>
-      Effect.sync(() => mutations.setScheduledListFailed(key, error.message, list.generation)),
+      Effect.sync(() =>
+        mutations.setScheduledListFailed(key, error.message, list.generation, "more"),
+      ),
     ),
   );
 });

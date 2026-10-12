@@ -19,6 +19,7 @@ import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
+import { isRemovedThread } from "./conversations.ts";
 import { isIgnored } from "./ignores.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
@@ -32,6 +33,7 @@ import {
   pagedLanded,
   pagedLoading,
   pagedLoadingMore,
+  pagedOutdated,
   pagedPlaced,
   pagedStale,
   pagedWithout,
@@ -345,6 +347,7 @@ export function beginActivityGeneration(state: State, newEpoch = true): State {
       ...pagedStale(list),
       status: list.status === "ready" ? "ready" : "idle",
       loadingMore: false,
+      firstPageLoading: false,
       generation: list.generation + 1,
     })),
   });
@@ -464,14 +467,15 @@ export function setActivityListFailed(
   tab: ActivityTab,
   status: ActivityState,
   error: string,
-  generation?: number,
+  generation: number,
+  mode: "replace" | "more",
   activityGeneration = state.activity.generation,
 ): State {
   if (activityGeneration !== state.activity.generation) {
     return state;
   }
 
-  return updateList(state, tab, status, (list) => pagedFailed(list, error, generation));
+  return updateList(state, tab, status, (list) => pagedFailed(list, error, generation, mode));
 }
 
 /** The list generation a page belongs to. */
@@ -479,6 +483,8 @@ export interface ActivityLoadStart {
   readonly generation: number;
   readonly activityGeneration: number;
   readonly requestSequence?: number;
+  /** The state's `removalCount` when the load started. */
+  readonly removals: number;
 }
 
 /** What a load of `tab` in `status` started from; pass it back to `landActivityPage`. */
@@ -490,34 +496,48 @@ export function activityLoadStart(
   return {
     generation: activityListOf(state, tab, status).generation,
     activityGeneration: state.activity.generation,
+    removals: state.removalCount,
   };
 }
 
 /**
  * A page of one tab and state landed: its items join the store where newer than the copy held,
  * its people too, and the badge takes the page's count only if its revision is newer. A
- * page from a load the list has since restarted contributes only its count snapshot.
+ * page from a load the list has since restarted contributes only its count snapshot. Items from
+ * a thread removed meanwhile stay out, and a list a removal made stale while the load was on its
+ * way stays stale, so it loads again when next shown.
  */
 export function landActivityPage(
   state: State,
   tab: ActivityTab,
   status: ActivityState,
-  page: ActivityList,
+  listed: ActivityList,
   mode: "replace" | "more",
-  start?: ActivityLoadStart,
+  start: ActivityLoadStart,
 ): State {
-  if (start !== undefined && start.activityGeneration !== state.activity.generation) {
+  if (start.activityGeneration !== state.activity.generation) {
     return state;
   }
+
+  const page = {
+    ...listed,
+    items: listed.items.filter((item) => !isRemovedThread(state, item.source.threadId)),
+  };
+
+  // A thread removed while the page was on its way is a new invalidation; a page that only held
+  // rows of threads removed before it was asked for is out of date, but reloading at once could
+  // bring the same page again.
+  const removedMeanwhile = state.removalCount > start.removals;
+  const outdated = page.items.length < listed.items.length;
 
   const counted = withCounts(
     state.activity,
     page,
     confirmedUnread(state.activity, acceptedCount(state.activity, page), page.items),
-    start?.requestSequence,
+    start.requestSequence,
   );
 
-  if (!pagedCurrent(activityListOf(state, tab, status), start?.generation)) {
+  if (!pagedCurrent(activityListOf(state, tab, status), start.generation)) {
     return withActivity(state, counted);
   }
 
@@ -534,6 +554,21 @@ export function landActivityPage(
   const cursor: Cursor | null = page.nextCursor;
   const key = activityListKey(tab, status);
 
+  const landed = pagedLanded(
+    activityListOf(state, tab, status),
+    // A row whose newer copy (an event's) has left this list meanwhile stays out.
+    page.items
+      .filter((item) => {
+        const held = items[item.id] ?? item;
+
+        return held.state === status && inActivityTab(tab, held.eventType);
+      })
+      .map((item) => item.id),
+    cursor,
+    mode,
+    start.generation,
+  );
+
   return {
     ...state,
     users: mergeUserList(state.users, page.users),
@@ -543,19 +578,7 @@ export function landActivityPage(
       versions,
       lists: {
         ...state.activity.lists,
-        [key]: pagedLanded(
-          activityListOf(state, tab, status),
-          // A row whose newer copy (an event's) has left this list meanwhile stays out.
-          page.items
-            .filter((item) => {
-              const held = items[item.id] ?? item;
-
-              return held.state === status && inActivityTab(tab, held.eventType);
-            })
-            .map((item) => item.id),
-          cursor,
-          mode,
-        ),
+        [key]: removedMeanwhile ? pagedStale(landed) : outdated ? pagedOutdated(landed) : landed,
       },
     },
   };
@@ -615,7 +638,10 @@ export function applyActivityItem(
   unread: ActivityUnreadCount | null,
 ): State {
   const next = withCounts(
-    serverCopy(state.activity, item),
+    // A reply about a thread removed meanwhile (a change sent before) doesn't bring it back.
+    isRemovedThread(state, item.source.threadId)
+      ? state.activity
+      : serverCopy(state.activity, item),
     unread,
     confirmedUnread(state.activity, unread, [item]),
   );
@@ -720,7 +746,7 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
   let activity: ActivitySlice = state.activity;
   const settled = change?.serverItem?.item ?? end.settled;
 
-  if (settled !== null && !removed) {
+  if (settled !== null && !removed && !isRemovedThread(state, settled.source.threadId)) {
     const id = settled.id;
     const stillShown = end.optimistic !== null && activity.items[id] === end.optimistic;
 
@@ -759,6 +785,35 @@ export function removeActivityItem(state: State, id: number, unread: ActivityUnr
       pendingUnread,
     ),
   );
+}
+
+/**
+ * The viewer lost access to a private thread: its items leave the inbox, as the server stops
+ * listing them (`ActivityItem::query_accessible`). The badge keeps its count until the engine's
+ * refresh, which no longer counts them.
+ */
+export function forgetActivityThread(state: State, threadId: number): State {
+  const activity = state.activity;
+
+  const gone = new Set(
+    Object.values(activity.items)
+      .filter((item) => item.source.threadId === threadId)
+      .map((item) => item.id),
+  );
+
+  if (gone.size === 0) {
+    return state;
+  }
+
+  const kept = <T>(record: Readonly<Record<number, T>>) =>
+    Object.fromEntries(Object.entries(record).filter(([id]) => !gone.has(Number(id))));
+
+  return withActivity(state, {
+    ...activity,
+    items: kept(activity.items),
+    versions: kept(activity.versions),
+    lists: eachPaged(activity.lists, (list) => [...gone].reduce(pagedWithout, list)),
+  });
 }
 
 /** The badge, from `GET /activity/unread_count`. */

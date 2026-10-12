@@ -138,6 +138,29 @@ function conversationsOf(results: SearchResults, held: SearchResultList["convers
   ]);
 }
 
+/**
+ * `results` without what's in a thread `removed` says the viewer lost or saw deleted: its
+ * replies, its name and its rows in the board-post and work-thread sections. A search sent before
+ * that still lists them.
+ */
+export function withoutThreads(
+  results: SearchResults,
+  removed: (threadId: number) => boolean,
+): SearchResults {
+  const gone = (threadId: number | null) => threadId !== null && removed(threadId);
+
+  return {
+    ...results,
+    messages: results.messages.filter((message) => !gone(message.threadId)),
+    conversations: results.conversations.filter((name) => !gone(name.threadId)),
+    sections: results.sections.map((section) =>
+      section.kind === "events"
+        ? section
+        : { ...section, rows: section.rows.filter((row) => !gone(row.id)) },
+    ),
+  };
+}
+
 /** The first page landed (ignored when a later load superseded the one it answers). */
 export function applyFirstPage(
   state: SearchState,
@@ -233,6 +256,47 @@ export function setRecentsFailed(state: SearchState): SearchState {
 }
 
 /** The search store. Components read it through `useSearchStore(selector)`. */
+/**
+ * The viewer lost access to a private thread: its replies, its name and its row in the board-post
+ * and work-thread sections leave every cached query, as a fresh search wouldn't find them.
+ */
+export function forgetThread(state: SearchState, threadId: number): SearchState {
+  let changed = false;
+
+  const results = Object.fromEntries(
+    Object.entries(state.results).map(([key, list]) => {
+      const messages = list.messages.filter((message) => message.threadId !== threadId);
+
+      const conversations = Object.fromEntries(
+        Object.entries(list.conversations).filter(([, name]) => name.threadId !== threadId),
+      );
+
+      const sections = list.sections.map((section) =>
+        section.kind === "events"
+          ? section
+          : { ...section, rows: section.rows.filter((row) => row.id !== threadId) },
+      );
+
+      const same =
+        messages.length === list.messages.length &&
+        Object.keys(conversations).length === Object.keys(list.conversations).length &&
+        sections.every(
+          (section, index) => section.rows.length === list.sections[index]?.rows.length,
+        );
+
+      if (same) {
+        return [key, list] as const;
+      }
+
+      changed = true;
+
+      return [key, { ...list, messages, conversations, sections }] as const;
+    }),
+  );
+
+  return changed ? { ...state, results } : state;
+}
+
 export const searchStore = createStore<SearchState>()(() => initialSearchState);
 
 export function useSearchStore<T>(selector: (state: SearchState) => T): T {
@@ -255,6 +319,7 @@ export const searchMutations = {
   setRecentsLoading: () => apply(setRecentsLoading),
   setRecents: (searches: readonly RecentSearch[]) => apply((state) => setRecents(state, searches)),
   setRecentsFailed: () => apply(setRecentsFailed),
+  forgetThread: (threadId: number) => apply((state) => forgetThread(state, threadId)),
   /** Back to empty (tests). */
   reset: () => apply(() => initialSearchState),
 };
