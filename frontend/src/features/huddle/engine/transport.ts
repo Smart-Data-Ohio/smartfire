@@ -66,6 +66,31 @@ export const EMPTY_SNAPSHOT: CallSnapshot = {
   boostCapped: false,
 };
 
+/** One primary RTP stream, including each outbound simulcast encoding separately. */
+export interface VideoRtpStats {
+  readonly id: string;
+  readonly ssrc: number | null;
+  readonly frameWidth: number | null;
+  readonly frameHeight: number | null;
+  readonly framesPerSecond: number | null;
+  readonly codec: string | null;
+  readonly rid: string | null;
+  /** The encoder's mode, not a measurement of the currently received SVC layer. */
+  readonly scalabilityMode: string | null;
+  readonly bitrateBps: number | null;
+  readonly freezeCount: number | null;
+  readonly qualityLimitationReason: string | null;
+}
+
+export interface VideoTrackStats {
+  readonly participantId: string;
+  readonly participantName: string;
+  readonly trackSid: string;
+  readonly direction: "sending" | "receiving";
+  readonly source: VideoSource;
+  readonly layers: readonly VideoRtpStats[];
+}
+
 /** What the connection details panel shows (sampled on demand, never sent anywhere). */
 export interface ConnectionStats {
   readonly rttMs: number | null;
@@ -74,6 +99,7 @@ export interface ConnectionStats {
   readonly rxBps: number | null;
   readonly txBps: number | null;
   readonly relayed: boolean | null;
+  readonly videoTracks: readonly VideoTrackStats[];
 }
 
 export type TransportEvent =

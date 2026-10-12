@@ -292,6 +292,7 @@ export class CallController {
   #snapshotTimer: ReturnType<typeof setInterval> | null = null;
   #statsTimer: ReturnType<typeof setInterval> | null = null;
   #statsSampling = false;
+  #statsGeneration = 0;
   #statusRevision = 0;
   #previewAudio: MediaStream | null = null;
   #previewMeter: LevelMeter | null = null;
@@ -2215,6 +2216,7 @@ export class CallController {
     }
 
     this.#statsSampling = false;
+    this.#statsGeneration += 1;
   }
 
   async #sampleStats(fresh: boolean): Promise<void> {
@@ -2229,15 +2231,21 @@ export class CallController {
     }
 
     this.#statsSampling = true;
+    const generation = ++this.#statsGeneration;
 
     try {
       const stats = await transport.sampleStats(fresh);
 
-      if (transport === this.#transport && this.#state.statsOpen && stats !== null) {
+      if (
+        generation === this.#statsGeneration &&
+        transport === this.#transport &&
+        this.#state.statsOpen &&
+        stats !== null
+      ) {
         this.#set({ stats });
       }
     } finally {
-      this.#statsSampling = false;
+      if (generation === this.#statsGeneration) this.#statsSampling = false;
     }
   }
 }

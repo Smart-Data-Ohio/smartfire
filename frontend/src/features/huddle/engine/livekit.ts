@@ -36,7 +36,14 @@ import {
   screenCaptureAttempts,
   screenPublishOptions,
 } from "./screen-quality.ts";
-import { type StatsBaseline, summarizeConnectionStats } from "./stats.ts";
+import {
+  type StatEntry,
+  type StatsBaseline,
+  summarizeConnectionStats,
+  summarizeVideoStats,
+  type VideoStatsBaseline,
+  type VideoStatsInput,
+} from "./stats.ts";
 import {
   type CallParticipant,
   type CallSnapshot,
@@ -159,6 +166,8 @@ class LiveKitTransport implements CallTransport {
   readonly #captured = new Map<number, LocalTrack[]>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
+  #videoStatsBaseline: VideoStatsBaseline | null = null;
+  #statsGeneration = 0;
   readonly #focusedScreens = new Map<RemoteTrackPublication, () => void>();
   /** The microphone's encoding target, from the grant this connection joined with. */
   #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
@@ -207,6 +216,9 @@ class LiveKitTransport implements CallTransport {
     const room = this.#room;
 
     this.#room = null;
+    this.#statsGeneration += 1;
+    this.#statsBaseline = null;
+    this.#videoStatsBaseline = null;
 
     for (const restore of this.#focusedScreens.values()) {
       restore();
@@ -625,43 +637,78 @@ class LiveKitTransport implements CallTransport {
       return null;
     }
 
+    const generation = ++this.#statsGeneration;
     if (fresh) {
       this.#statsBaseline = null;
+      this.#videoStatsBaseline = null;
     }
 
-    let publisherReport: RTCStatsReport | null = null;
-    let subscriberReport: RTCStatsReport | null = null;
+    const reports = new Map<LocalTrack | RemoteTrack, Promise<RTCStatsReport | null>>();
+    const read = (
+      track: LocalTrack | RemoteTrack | undefined | null,
+    ): Promise<RTCStatsReport | null> => {
+      if (track == null) {
+        return Promise.resolve(null);
+      }
 
-    try {
-      const microphone = room.localParticipant.getTrackPublication(
-        this.#lk.Track.Source.Microphone,
-      )?.track;
+      const cached = reports.get(track);
+      if (cached !== undefined) return cached;
+      const pending = track
+        .getRTCStatsReport()
+        .then((report) => report ?? null)
+        .catch(() => null);
+      reports.set(track, pending);
 
-      publisherReport = (await microphone?.getRTCStatsReport()) ?? null;
-    } catch {
-      // A missing sender report reads as unknown.
+      return pending;
+    };
+
+    const videoInputs: Promise<VideoStatsInput>[] = [];
+    for (const participant of [room.localParticipant, ...room.remoteParticipants.values()]) {
+      for (const publication of participant.videoTrackPublications.values()) {
+        if (publication.track === undefined) continue;
+        const input: Omit<VideoStatsInput, "report"> = {
+          participantId: participant.identity,
+          participantName: participant.name || participant.identity,
+          trackSid: publication.trackSid,
+          direction: participant === room.localParticipant ? "sending" : "receiving",
+          source: publication.source === this.#lk.Track.Source.ScreenShare ? "screen" : "camera",
+        };
+        videoInputs.push(read(publication.track).then((report) => ({ ...input, report })));
+      }
     }
 
-    try {
-      subscriberReport = (await this.#subscriberTrack(room)?.getRTCStatsReport()) ?? null;
-    } catch {
-      // Alone in a room there is nothing subscribed to.
-    }
+    const microphone = room.localParticipant.getTrackPublication(
+      this.#lk.Track.Source.Microphone,
+    )?.track;
+    const [publisherReport, subscriberReport, videos] = await Promise.all([
+      read(microphone),
+      read(this.#subscriberTrack(room)),
+      Promise.all(videoInputs),
+    ]);
 
-    if (room !== this.#room) {
+    if (room !== this.#room || generation !== this.#statsGeneration) {
       return null;
     }
 
+    const publisher = new Map<string, StatEntry>(publisherReport ?? []);
+    const subscriber = new Map<string, StatEntry>(subscriberReport ?? []);
+    for (const input of videos) {
+      const combined = input.direction === "sending" ? publisher : subscriber;
+      for (const [id, entry] of input.report ?? []) combined.set(id, entry);
+    }
+    const now = Date.now();
     const sample = summarizeConnectionStats(
-      publisherReport,
-      subscriberReport,
+      publisher.size === 0 ? null : publisher,
+      subscriber.size === 0 ? null : subscriber,
       this.#statsBaseline,
-      Date.now(),
+      now,
     );
+    const videoSample = summarizeVideoStats(videos, this.#videoStatsBaseline, now);
 
     this.#statsBaseline = sample.baseline;
+    this.#videoStatsBaseline = videoSample.baseline;
 
-    return sample.stats;
+    return { ...sample.stats, videoTracks: videoSample.videoTracks };
   }
 
   playClip(url: string, volume: number): Promise<void> {

@@ -122,6 +122,21 @@ matrix("in a call: the dock and the call view", async ({ page, theme, phone }) =
   }
 });
 
+test("connection details include the active video's sampled fields", async ({ page }) => {
+  await open(page, GENERAL);
+  await join(page);
+  await dock(page).getByRole("button", { name: "Turn camera on", exact: true }).click();
+  await dock(page).getByRole("button", { name: "Call settings" }).click();
+  await dock(page).getByRole("button", { name: "Connection details", exact: true }).click();
+  const row = dock(page).locator(".huddle-stats div").filter({ hasText: "sending camera" });
+  await expect(row).toContainText("Resolution 640×360");
+  await expect(row).toContainText("FPS 15");
+  await expect(row).toContainText("Codec video/VP8");
+  await expect(row).toContainText("RID –");
+  await expect(row).toContainText("Freezes –");
+  await expect(row).toContainText("Limit –");
+});
+
 test("an ordinary screen share starts at the quality picked in call settings", async ({ page }) => {
   await open(page, GENERAL);
   await join(page);

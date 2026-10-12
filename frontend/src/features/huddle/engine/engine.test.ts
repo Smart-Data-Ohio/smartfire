@@ -76,7 +76,10 @@ describe("connection stats", () => {
     const first = summarizeConnectionStats(publisher, subscriber, null, 1000);
 
     const later = summarizeConnectionStats(
-      report([{ type: "outbound-rtp", kind: "audio", bytesSent: 16_000 + 40_000, packetsSent: 1 }]),
+      report([
+        { type: "outbound-rtp", kind: "audio", bytesSent: 16_000, packetsSent: 1 },
+        { type: "outbound-rtp", kind: "video", bytesSent: 40_000, packetsSent: 1 },
+      ]),
       report([{ type: "inbound-rtp", bytesReceived: 16_000 }]),
       first.baseline,
       3000,
@@ -84,6 +87,35 @@ describe("connection stats", () => {
 
     expect(later.stats.rxBps).toBe(32_000);
     expect(later.stats.txBps).toBe(24_000);
+  });
+
+  it("resets aggregate bitrate when a stream fails, returns, or resets its counter", () => {
+    const read = (audio: number, video?: number) =>
+      report([
+        { id: "audio", type: "outbound-rtp", kind: "audio", bytesSent: audio },
+        ...(video === undefined
+          ? []
+          : [{ id: "video", type: "outbound-rtp", kind: "video", bytesSent: video }]),
+      ]);
+    const first = summarizeConnectionStats(read(100_000, 1_000_000), null, null, 1000);
+    const missing = summarizeConnectionStats(read(105_000), null, first.baseline, 3000);
+    const recovered = summarizeConnectionStats(
+      read(110_000, 1_020_000),
+      null,
+      missing.baseline,
+      5000,
+    );
+    expect(missing.stats.txBps).toBeNull();
+    expect(recovered.stats.txBps).toBeNull();
+    const stable = summarizeConnectionStats(
+      read(115_000, 1_025_000),
+      null,
+      recovered.baseline,
+      7000,
+    );
+    expect(stable.stats.txBps).toBe(40_000);
+    const reset = summarizeConnectionStats(read(2_000_000, 0), null, stable.baseline, 9000);
+    expect(reset.stats.txBps).toBeNull();
   });
 
   it("reads a missing report as no sample, not zero", () => {
@@ -122,6 +154,7 @@ describe("connection stats", () => {
         rxBps: 64_000,
         txBps: 2_500_000,
         relayed: true,
+        videoTracks: [],
       }),
     ).toEqual({
       rtt: "42 ms",
@@ -140,6 +173,7 @@ describe("connection stats", () => {
         rxBps: null,
         txBps: null,
         relayed: null,
+        videoTracks: [],
       }),
     ).toEqual({ rtt: "–", loss: "–", jitter: "–", received: "–", sent: "–", transport: "–" });
   });

@@ -22,6 +22,8 @@ import {
   type DisconnectReason,
   EMPTY_SNAPSHOT,
   type TransportEvent,
+  type VideoSource,
+  type VideoTrackStats,
   type ViewerQuality,
 } from "./transport.ts";
 
@@ -419,6 +421,41 @@ export class FakeTransport implements CallTransport {
       rxBps: 64_000,
       txBps: 48_000,
       relayed: false,
+      videoTracks: this.snapshot().participants.flatMap((participant) =>
+        (
+          [
+            { trackSid: participant.cameraId, source: "camera" },
+            { trackSid: participant.screenId, source: "screen" },
+          ] satisfies readonly { trackSid: string | null; source: VideoSource }[]
+        ).flatMap(({ trackSid, source }): VideoTrackStats[] =>
+          trackSid === null
+            ? []
+            : [
+                {
+                  participantId: participant.identity,
+                  participantName: participant.name,
+                  trackSid,
+                  direction: participant.local ? "sending" : "receiving",
+                  source,
+                  layers: [
+                    {
+                      id: `fake-${trackSid}`,
+                      ssrc: null,
+                      frameWidth: 640,
+                      frameHeight: 360,
+                      framesPerSecond: 15,
+                      codec: "video/VP8",
+                      rid: null,
+                      scalabilityMode: null,
+                      bitrateBps: null,
+                      freezeCount: null,
+                      qualityLimitationReason: null,
+                    },
+                  ],
+                },
+              ],
+        ),
+      ),
     };
   }
 

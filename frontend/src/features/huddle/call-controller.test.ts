@@ -12,6 +12,7 @@ import {
   type CallEnvironment,
   endCallOnAccountChange,
   SERVER_MUTED_NOTICE,
+  STATS_INTERVAL_MS,
 } from "./call-controller.ts";
 import { callStore, initialCallState } from "./call-store.ts";
 import { EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
@@ -125,6 +126,62 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("connection details sampling", () => {
+  it("samples active video tracks only while the details panel is open and visible", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+    if (transport === undefined) throw new Error("no fake transport");
+    const sample = vi.spyOn(transport, "sampleStats");
+
+    try {
+      await controller.toggleCamera();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(0);
+      controller.toggleStats();
+      await settle();
+      expect(sample).toHaveBeenCalledTimes(1);
+      expect(sample).toHaveBeenLastCalledWith(true);
+      expect(
+        callStore.getState().stats?.videoTracks.map((track) => ({
+          direction: track.direction,
+          source: track.source,
+          dimensions: track.layers.map((layer) => [
+            layer.frameWidth,
+            layer.frameHeight,
+            layer.framesPerSecond,
+          ]),
+        })),
+      ).toEqual([{ direction: "sending", source: "camera", dimensions: [[640, 360, 15]] }]);
+
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(2);
+      expect(sample).toHaveBeenLastCalledWith(false);
+      visibility.mockReturnValue("hidden");
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(2);
+      visibility.mockReturnValue("visible");
+      controller.toggleStats();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(2);
+
+      controller.toggleStats();
+      await settle();
+      expect(sample).toHaveBeenCalledTimes(3);
+      expect(sample).toHaveBeenLastCalledWith(true);
+      await controller.leave();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(3);
+    } finally {
+      await controller.leave();
+      sample.mockRestore();
+      visibility.mockRestore();
+    }
+  });
 });
 
 describe("joining", () => {
@@ -703,6 +760,43 @@ describe("the microphone", () => {
 });
 
 describe("call state", () => {
+  it("discards a pending stats result after closing and reopening connection details", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+    if (transport === undefined) throw new Error("no transport");
+    const old = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+    const fresh = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+    const read = vi
+      .spyOn(transport, "sampleStats")
+      .mockImplementationOnce(() => old.promise)
+      .mockImplementationOnce(() => fresh.promise);
+    const stats = {
+      rttMs: 42,
+      lossRatio: 0,
+      jitterMs: 0,
+      rxBps: null,
+      txBps: null,
+      relayed: false,
+      videoTracks: [],
+    };
+    try {
+      controller.toggleStats();
+      controller.toggleStats();
+      controller.toggleStats();
+      old.resolve({ ...stats, rttMs: 999 });
+      await settle();
+      expect(callStore.getState().stats).toBeNull();
+      fresh.resolve(stats);
+      await settle();
+      expect(callStore.getState().stats?.rttMs).toBe(42);
+      expect(read).toHaveBeenCalledTimes(2);
+    } finally {
+      read.mockRestore();
+      await controller.leave();
+    }
+  });
+
   it("keeps an already expanded share focused when delayed stage metadata arrives", async () => {
     const { controller, transports } = harness();
     await controller.join(ROOM, "Lounge", null);
