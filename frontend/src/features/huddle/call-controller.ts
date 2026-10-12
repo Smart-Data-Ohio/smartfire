@@ -85,6 +85,12 @@ export const MICROPHONE_RESTART_ERROR =
 
 const SIGN_IN_EXPIRED = "Your sign-in expired. Sign in again to join a huddle.";
 
+interface CallAudio {
+  microphoneEnabled: boolean;
+  deafened: boolean;
+  microphoneBeforeDeafen: boolean;
+}
+
 /** Everything the controller reaches outside itself, so tests can stand in for it. */
 export interface CallEnvironment {
   join(roomId: number): Promise<HuddleCredentials>;
@@ -278,6 +284,7 @@ export class CallController {
   #authTimer: ReturnType<typeof setInterval> | null = null;
   #authCheck: Promise<void> | null = null;
   #lastActivity = -Infinity;
+  #afkSource: { identity: string; roomId: number; audio: CallAudio } | null = null;
   #meterTimer: ReturnType<typeof setInterval> | null = null;
   #snapshotTimer: ReturnType<typeof setInterval> | null = null;
   #statsTimer: ReturnType<typeof setInterval> | null = null;
@@ -416,6 +423,15 @@ export class CallController {
 
   #refreshSnapshot(): void {
     const snapshot = this.#transport?.snapshot() ?? EMPTY_SNAPSHOT;
+
+    if (this.#afkSource !== null) {
+      this.#afkSource.audio = {
+        microphoneEnabled: snapshot.microphoneEnabled,
+        deafened: this.#state.deafened,
+        microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
+      };
+    }
+
     this.#speechActivity(snapshot);
     const key = snapshotKey(snapshot);
 
@@ -437,6 +453,15 @@ export class CallController {
    * straight away; the token stays the authority on publishing.
    */
   async join(roomId: number, roomName: string, canPublishHint: boolean | null): Promise<void> {
+    await this.#join(roomId, roomName, canPublishHint, null);
+  }
+
+  async #join(
+    roomId: number,
+    roomName: string,
+    canPublishHint: boolean | null,
+    audio: CallAudio | null,
+  ): Promise<void> {
     // Another account answered the page: no call starts until it reloads.
     if (!Number.isInteger(roomId) || roomId <= 0 || store.getState().accountChanged) {
       return;
@@ -450,6 +475,7 @@ export class CallController {
       return;
     }
 
+    this.#afkSource = null;
     this.#operation += 1;
 
     const operation = this.#operation;
@@ -475,12 +501,15 @@ export class CallController {
     // so a fresh join gets a fresh attempt.
     const available = state.noise.available || (await this.#noiseSupported());
 
+    if (operation !== this.#operation) return;
+    this.#microphoneBeforeDeafen = audio?.microphoneBeforeDeafen ?? false;
+
     this.#set({
       roomId,
       roomName,
       identity: null,
       canPublish: true,
-      deafened: false,
+      deafened: audio?.deafened ?? false,
       expandedVideoId: null,
       viewOpen: this.#env.opensCallView(),
       // A retry in the same room keeps its timer, as a rejoin does.
@@ -490,7 +519,7 @@ export class CallController {
     });
     this.#holdRoom(roomId);
 
-    if (canPublishHint !== false && (await this.#env.shouldCheckDevices())) {
+    if (audio === null && canPublishHint !== false && (await this.#env.shouldCheckDevices())) {
       if (operation !== this.#operation) {
         return;
       }
@@ -504,7 +533,7 @@ export class CallController {
       return;
     }
 
-    await this.#connect(operation);
+    await this.#connect(operation, audio);
   }
 
   async #noiseSupported(): Promise<boolean> {
@@ -513,7 +542,7 @@ export class CallController {
     return noiseSuppressionSupported();
   }
 
-  async #connect(operation: number): Promise<void> {
+  async #connect(operation: number, audio: CallAudio | null = null): Promise<void> {
     const roomId = this.#state.roomId;
 
     if (roomId === null) {
@@ -571,10 +600,12 @@ export class CallController {
 
       await transport.startAudio().catch(() => undefined);
 
+      transport.setDeafened(this.#state.deafened);
+
       // A listener's token can't publish, so LiveKit would reject the microphone outright:
       // they join subscribe-only. Push-to-talk joins with the microphone closed.
       if (credentials.canPublish) {
-        await transport.setMicrophone(!this.#pushToTalk());
+        await transport.setMicrophone(audio?.microphoneEnabled ?? !this.#pushToTalk());
       }
 
       if (operation !== this.#operation || transport !== this.#transport) {
@@ -584,6 +615,15 @@ export class CallController {
       }
 
       this.#setPhase("connected", "Huddle active");
+      this.#afkSource = {
+        identity: credentials.identity,
+        roomId,
+        audio: {
+          microphoneEnabled: transport.snapshot().microphoneEnabled,
+          deafened: this.#state.deafened,
+          microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
+        },
+      };
       this.#set({ quality: "unknown" });
       this.#refreshSnapshot();
       this.#startAuthChecks();
@@ -660,9 +700,10 @@ export class CallController {
   }
 
   async afkMoved(moved: HuddleAfkMoved): Promise<void> {
-    if (this.#state.identity !== moved.identity || this.#state.roomId !== moved.sourceRoomId)
-      return;
-    await this.join(moved.roomId, moved.roomName, null);
+    const source = this.#afkSource;
+
+    if (source?.identity !== moved.identity || source.roomId !== moved.sourceRoomId) return;
+    await this.#join(moved.roomId, moved.roomName, null, source.audio);
 
     if (this.#state.phase === "connected" && this.#state.roomId === moved.roomId) {
       toast({
@@ -689,7 +730,7 @@ export class CallController {
 
   #recordActivity(): void {
     const { roomId, identity, phase } = this.#state;
-    const now = Date.now();
+    const now = performance.now();
 
     if (
       phase !== "connected" ||
@@ -709,6 +750,7 @@ export class CallController {
       return;
     }
 
+    this.#afkSource = null;
     this.#operation += 1;
 
     const operation = this.#operation;
@@ -1060,6 +1102,7 @@ export class CallController {
   async leave(): Promise<void> {
     const roomId = this.#state.roomId;
 
+    this.#afkSource = null;
     this.#operation += 1;
     await this.#disconnectCurrent();
 
@@ -1084,6 +1127,7 @@ export class CallController {
     // Mid-connect the grant may already exist: report the leave then too.
     const live = this.#transport !== null || this.#state.phase === "connecting";
 
+    this.#afkSource = null;
     this.#operation += 1;
     this.#endStreamOnDisconnect(true);
     this.#stopTimers();
@@ -1107,6 +1151,7 @@ export class CallController {
   }
 
   async #endForAccess(tag: string | null): Promise<void> {
+    this.#afkSource = null;
     this.#operation += 1;
     await this.#disconnectCurrent();
     this.#setPhase(
@@ -1221,6 +1266,8 @@ export class CallController {
   }
 
   async #unexpectedDisconnect(transport: CallTransport, reason: DisconnectReason): Promise<void> {
+    // AFK enforcement can remove the transport before its move notification arrives.
+    if (reason !== "removed") this.#afkSource = null;
     this.#operation += 1;
     this.#transport = null;
     this.#unsubscribeTransport?.();

@@ -1503,29 +1503,37 @@ async fn afk_gateway_moves_the_idle_grant_and_activity_is_scoped_to_its_session(
     let destination = voice(&a).await;
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
+    a.db().write(move |tx| Room::find(tx.conn(), destination.id)?.update_voice_user_limit(tx, Some(1))).await.unwrap();
+    let occupant = join(&mut david, destination.id).await;
+    seen(&a, occupant.grant_id).await;
     let reply = david.write(send_json(Method::PATCH, "/api/v1/admin/workspace", &json!({"afkPolicy": {"roomId": destination.id, "timeoutMinutes": 1}}))).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let refused = kevin.write(empty(Method::POST, &format!("/api/v1/rooms/{}/huddle", destination.id))).await;
+    assert_eq!(denial(&refused), (StatusCode::CONFLICT, "HuddleRoomFull".into(), "This voice room is full".into()));
     let grant = join(&mut kevin, source.id).await;
     let (addr, server) = serve(&a).await;
     let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
-    let seen = || get(&format!("/internal/huddle/grants/{}", grant.grant_id))
+    let gateway = || get(&format!("/internal/huddle/grants/{}", grant.grant_id))
         .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret");
-    assert_eq!(kevin.send(seen()).await.status, StatusCode::OK);
+    assert_eq!(kevin.send(gateway()).await.status, StatusCode::OK);
     let activity = || send_json(Method::POST, &format!("/api/v1/rooms/{}/huddle/activity", source.id), &json!({"identity": grant.identity}));
     assert_eq!(david.write(activity()).await.status, StatusCode::FORBIDDEN);
     let mut another_device = a.sign_in(KEVIN).await;
     assert_eq!(another_device.write(activity()).await.status, StatusCode::FORBIDDEN);
     for _ in 0..6 {
         clock.advance(jiff::SignedDuration::from_secs(10));
+        seen(&a, occupant.grant_id).await;
         assert_eq!(kevin.write(activity()).await.status, StatusCode::NO_CONTENT);
-        assert_eq!(kevin.send(seen()).await.status, StatusCode::OK);
+        assert_eq!(kevin.send(gateway()).await.status, StatusCode::OK);
     }
     for _ in 0..5 {
         clock.advance(jiff::SignedDuration::from_secs(10));
-        assert_eq!(kevin.send(seen()).await.status, StatusCode::OK);
+        seen(&a, occupant.grant_id).await;
+        assert_eq!(kevin.send(gateway()).await.status, StatusCode::OK);
     }
     clock.advance(jiff::SignedDuration::from_secs(10));
-    assert_eq!(kevin.send(seen()).await.status, StatusCode::NOT_FOUND);
+    seen(&a, occupant.grant_id).await;
+    assert_eq!(kevin.send(gateway()).await.status, StatusCode::NOT_FOUND);
     let moved = sync.until(|event| match &event.payload {
         api::SyncPayload::HuddleAfkMoved(moved) => Some(moved.clone()),
         _ => None,
@@ -1540,4 +1548,28 @@ async fn afk_gateway_moves_the_idle_grant_and_activity_is_scoped_to_its_session(
     assert_eq!(kevin.send(get(&format!("/internal/huddle/grants/{}", joined.grant_id))
         .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret")).await.status, StatusCode::OK);
     server.abort();
+}
+
+#[tokio::test]
+async fn afk_gateway_keeps_idle_direct_calls_connected() {
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let a = TestApp::boot_with_settings(configured(), clock.clone(), &[("SPA_ENABLED", "1")])
+        .await.expect("frozen seeds required");
+    let source = a.db().write(|tx| Room::create_for(tx, RoomType::Direct, None, DAVID, &[DAVID, KEVIN])).await.unwrap();
+    let destination = voice(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = david.write(send_json(Method::PATCH, "/api/v1/admin/workspace", &json!({"afkPolicy": {"roomId": destination.id, "timeoutMinutes": 1}}))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let grant = join(&mut kevin, source.id).await;
+    let gateway = || get(&format!("/internal/huddle/grants/{}", grant.grant_id))
+        .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret");
+    assert_eq!(kevin.send(gateway()).await.status, StatusCode::OK);
+    for _ in 0..12 {
+        clock.advance(jiff::SignedDuration::from_secs(10));
+        assert_eq!(kevin.send(gateway()).await.status, StatusCode::OK);
+    }
+    let detail: api::HuddleDetail = parse(&kevin.send(get(&format!("/api/v1/rooms/{}/huddle", source.id))).await);
+    assert_eq!(detail.presence.participants[0].identities, [grant.identity]);
 }

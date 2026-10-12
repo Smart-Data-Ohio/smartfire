@@ -990,8 +990,189 @@ describe("call state", () => {
 });
 
 describe("AFK activity and moves", () => {
+  it.each([false, true])(
+    "keeps reporting activity after clock rollback (hidden=%s)",
+    async (hidden) => {
+      vi.useFakeTimers({ toFake: ["Date", "performance", "setInterval", "clearInterval"] });
+      const activity = vi.fn(async () => undefined);
+      const { controller, transports } = harness({ activity });
+      await controller.join(ROOM, "Lounge", null);
+      const transport = transports[0];
+
+      if (transport === undefined) throw new Error("no transport");
+      const original = transport.snapshot();
+
+      const visibility = vi
+        .spyOn(document, "visibilityState", "get")
+        .mockReturnValue(hidden ? "hidden" : "visible");
+
+      const snapshot = vi.spyOn(transport, "snapshot").mockReturnValue({
+        ...original,
+        participants: original.participants.map((person) => ({
+          ...person,
+          speaking: hidden && person.local,
+        })),
+      });
+
+      try {
+        if (hidden) await vi.advanceTimersByTimeAsync(200);
+        else controller.activity();
+        expect(activity).toHaveBeenCalledTimes(1);
+        vi.setSystemTime(Date.now() - 3_600_000);
+        await vi.advanceTimersByTimeAsync(60_000);
+        controller.activity();
+        expect(activity).toHaveBeenCalledTimes(hidden ? 7 : 2);
+      } finally {
+        visibility.mockRestore();
+        snapshot.mockRestore();
+        await controller.leave();
+      }
+    },
+  );
+
+  it.each([
+    { muted: false, deafened: false, removed: false },
+    { muted: true, deafened: false, removed: false },
+    { muted: false, deafened: true, removed: false },
+    { muted: true, deafened: true, removed: false },
+    { muted: false, deafened: false, removed: true },
+    { muted: true, deafened: false, removed: true },
+    { muted: false, deafened: true, removed: true },
+    { muted: true, deafened: true, removed: true },
+  ])("preserves the caller's audio across a move: %o", async ({ muted, deafened, removed }) => {
+    const { controller, transports, env } = harness();
+    await controller.join(ROOM, "Lounge", null);
+
+    if (muted) await controller.toggleMute();
+
+    if (deafened) await controller.toggleDeafen();
+    const microphones: boolean[] = [];
+    const transportFor = env.transport;
+    env.transport = async (url, roomId) => {
+      const transport = await transportFor(url, roomId);
+      const setMicrophone = transport.setMicrophone.bind(transport);
+      vi.spyOn(transport, "setMicrophone").mockImplementation(async (enabled) => {
+        microphones.push(enabled);
+        await setMicrophone(enabled);
+      });
+
+      return transport;
+    };
+
+    const identity = callStore.getState().identity;
+
+    if (identity === null) throw new Error("no identity");
+
+    if (removed) {
+      window.__smartfireHuddle?.disconnect("removed");
+      await settle();
+    }
+
+    await controller.afkMoved({
+      identity,
+      sourceRoomId: ROOM,
+      roomId: OTHER_ROOM,
+      roomName: "AFK",
+      timeoutMinutes: 1,
+    });
+    expect(callStore.getState().snapshot.microphoneEnabled).toBe(!muted && !deafened);
+    expect(callStore.getState().deafened).toBe(deafened);
+    expect(microphones).toEqual([!muted && !deafened]);
+    const destination = transports[1];
+
+    if (destination === undefined) throw new Error("no destination transport");
+    expect(destination.playbackVolume("remote")).toBe(deafened ? 0 : 100);
+
+    if (deafened) {
+      await controller.toggleDeafen();
+      expect(callStore.getState().snapshot.microphoneEnabled).toBe(!muted);
+    }
+
+    await controller.leave();
+  });
+
+  it("ignores a move as soon as Leave starts, before disconnection finishes", async () => {
+    const { controller, calls, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const identity = callStore.getState().identity;
+    const source = transports[0];
+
+    if (identity === null || source === undefined) throw new Error("no call");
+    const disconnect = source.disconnect.bind(source);
+    let finish = () => {};
+
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+
+    vi.spyOn(source, "disconnect").mockImplementation(async () => {
+      await pending;
+      await disconnect();
+    });
+    const leaving = controller.leave();
+    await controller.afkMoved({
+      identity,
+      sourceRoomId: ROOM,
+      roomId: OTHER_ROOM,
+      roomName: "AFK",
+      timeoutMinutes: 1,
+    });
+    finish();
+    await leaving;
+    expect(calls.filter((call) => call.startsWith("join"))).toEqual([`join ${ROOM}`]);
+    expect(transports.every((transport) => transport.snapshot().participants.length === 0)).toBe(
+      true,
+    );
+    expect(callStore.getState().phase).toBe("idle");
+  });
+
+  it("moves a muted caller without another device check", async () => {
+    const { controller, env } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    await controller.toggleMute();
+    const identity = callStore.getState().identity;
+
+    if (identity === null) throw new Error("no identity");
+    env.shouldCheckDevices = async () => true;
+    await controller.afkMoved({
+      identity,
+      sourceRoomId: ROOM,
+      roomId: OTHER_ROOM,
+      roomName: "AFK",
+      timeoutMinutes: 1,
+    });
+
+    try {
+      expect(callStore.getState().phase).toBe("connected");
+      expect(callStore.getState().snapshot.microphoneEnabled).toBe(false);
+    } finally {
+      await controller.leave();
+    }
+  });
+
+  it("ignores another tab's move after its own connection was replaced", async () => {
+    const { controller, calls } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const identity = callStore.getState().identity;
+
+    if (identity === null) throw new Error("no identity");
+    window.__smartfireHuddle?.disconnect("replaced");
+    await settle();
+    expect(callStore.getState().phase).toBe("failed");
+    await controller.afkMoved({
+      identity,
+      sourceRoomId: ROOM,
+      roomId: OTHER_ROOM,
+      roomName: "AFK",
+      timeoutMinutes: 1,
+    });
+    expect(calls.filter((call) => call.startsWith("join"))).toEqual([`join ${ROOM}`]);
+    expect(callStore.getState().phase).toBe("failed");
+    await controller.leave();
+  });
+
   it("throttles app interaction and records it while muted", async () => {
-    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.useFakeTimers({ toFake: ["Date", "performance", "setInterval", "clearInterval"] });
     const activity = vi.fn(async () => undefined);
     const { controller } = harness({ activity });
     controller.activity();
@@ -1013,7 +1194,7 @@ describe("AFK activity and moves", () => {
   });
 
   it("reports continuous unmuted local speech in a hidden tab, but no hidden interaction or silence", async () => {
-    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.useFakeTimers({ toFake: ["Date", "performance", "setInterval", "clearInterval"] });
     const activity = vi.fn(async () => undefined);
     const { controller, transports } = harness({ activity });
     await controller.join(ROOM, "Lounge", null);

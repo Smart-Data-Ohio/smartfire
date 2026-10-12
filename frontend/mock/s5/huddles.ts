@@ -63,6 +63,8 @@ interface StageRecord {
 /** The calls, per world (a reset starts over with the new world). */
 interface CallWorld {
   readonly activity: Map<string, { roomId: number; at: number }>;
+  /** Destination reservations issued by AFK enforcement for this viewer. */
+  readonly pendingMoves: Map<number, number>;
   /** Room id → user id → their entry, in join order. */
   readonly calls: Map<number, Map<number, CallEntry>>;
   /** `${roomId}:${userId}` for everyone a host muted. */
@@ -132,6 +134,7 @@ export function createHuddles(
   function seedCalls(world: World): CallWorld {
     const state: CallWorld = {
       activity: new Map(),
+      pendingMoves: new Map(),
       calls: new Map(),
       muted: new Set(),
       stages: new Map(),
@@ -465,9 +468,11 @@ export function createHuddles(
     const state = calls();
     const entries = state.calls.get(roomId);
     const limit = record.room.voiceUserLimit;
+    const movedAt = state.pendingMoves.get(roomId);
+    const authorizedMove = movedAt !== undefined && ctx.now() - movedAt < 20_000;
 
     if (
-      roomId !== afkPolicy().roomId &&
+      !authorizedMove &&
       limit !== null &&
       (entries?.size ?? 0) >= limit &&
       !entries?.has(VIEWER_ID) &&
@@ -478,6 +483,7 @@ export function createHuddles(
     }
 
     const grantId = state.nextGrantId++;
+    state.pendingMoves.delete(roomId);
     const newIdentity = identity();
     state.activity.set(newIdentity, { roomId, at: ctx.now() });
 
@@ -508,6 +514,7 @@ export function createHuddles(
   };
 
   const leave = (roomId: number): void => {
+    calls().pendingMoves.delete(roomId);
     exit(callRoom(roomId), VIEWER_ID);
   };
 
@@ -800,6 +807,7 @@ export function createHuddles(
       const record = recordOf(activity.roomId);
 
       if (
+        (record.room.kind !== "voice" && record.room.kind !== "stage") ||
         activity.roomId === policy.roomId ||
         !calls().calls.get(activity.roomId)?.get(VIEWER_ID)?.identities.includes(identity) ||
         (record.room.kind === "stage" && roleOf(record, VIEWER_ID) === "listener") ||
@@ -807,6 +815,7 @@ export function createHuddles(
       )
         continue;
       exit(record, VIEWER_ID);
+      calls().pendingMoves.set(policy.roomId, ctx.now());
       ctx.publish([
         {
           topic: "user",

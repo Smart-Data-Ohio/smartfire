@@ -13,6 +13,12 @@ use crate::{CachedStatements, Connection, Errors, Event, Job, Result, Timestamp,
 pub const IN_CALL_WINDOW: i64 = 20;
 pub const SEEN_TOUCH_INTERVAL: i64 = 10;
 
+#[derive(Clone, Copy)]
+enum Admission {
+    Regular,
+    AfkMove,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct HuddleGrant {
     pub id: i64,
@@ -136,9 +142,20 @@ impl HuddleGrant {
         room_id: i64,
         config: &HuddleConfig,
     ) -> Result<Self> {
+        Self::issue_with_admission(tx, session_id, membership_id, room_id, config, Admission::Regular)
+    }
+
+    fn issue_with_admission(
+        tx: &mut Tx<'_>,
+        session_id: i64,
+        membership_id: i64,
+        room_id: i64,
+        config: &HuddleConfig,
+        admission: Admission,
+    ) -> Result<Self> {
         for attempt in 0..3 {
             let result =
-                tx.savepoint(|tx| Self::issue_once(tx, session_id, membership_id, room_id, config));
+                tx.savepoint(|tx| Self::issue_once(tx, session_id, membership_id, room_id, config, admission));
             if result
                 .as_ref()
                 .is_err_and(|error| error.is_record_not_unique())
@@ -164,6 +181,7 @@ impl HuddleGrant {
         membership_id: i64,
         expected_room_id: i64,
         config: &HuddleConfig,
+        admission: Admission,
     ) -> Result<(Self, Option<Timestamp>)> {
         let candidate: Option<(i64, i64, Option<String>, bool)> = tx.conn().query_row_cached(
             "SELECT u.id,r.id,CASE WHEN r.type='Rooms::Stage' THEN m.stage_role END,m.server_muted_at IS NOT NULL FROM sessions s JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2 JOIN memberships m ON m.id=? AND m.room_id=? AND m.user_id=u.id JOIN rooms r ON r.id=m.room_id AND r.deleted_at IS NULL WHERE s.id=?",
@@ -172,7 +190,9 @@ impl HuddleGrant {
         let Some((user_id, room_id, stage_role, server_muted)) = candidate else {
             return Err(crate::Error::Other("HuddleGrant::Ineligible".into()));
         };
-        Self::check_capacity(tx, room_id, user_id)?;
+        if matches!(admission, Admission::Regular) {
+            Self::check_capacity(tx, room_id, user_id)?;
+        }
         let grants = query_all(
             tx.conn(),
             "SELECT * FROM huddle_grants WHERE session_id=? AND revoked_at IS NULL AND ((room_id=? AND membership_id!=?) OR (room_id!=? AND last_seen_at>?)) ORDER BY id",
@@ -217,10 +237,6 @@ impl HuddleGrant {
     }
 
     fn check_capacity(tx: &Tx<'_>, room_id: i64, user_id: i64) -> Result<()> {
-        // The configured AFK destination must admit moves and their later gateway sightings.
-        if crate::Account::first(tx.conn())?.is_some_and(|account| account.settings().afk_policy().room_id == Some(room_id)) {
-            return Ok(());
-        }
         let room = crate::Room::find(tx.conn(), room_id)?;
         if let Some(limit) = room.voice_user_limit
             && !crate::User::find(tx.conn(), user_id)?.can_administer(Some(room.creator_id), false)
@@ -418,14 +434,19 @@ impl HuddleGrant {
             || self.updated_at > tx.now().ago(SignedDuration::from_secs(policy.timeout_minutes * 60))
             || !self.authorized(tx.conn())?
         { return Ok(false); }
-        if crate::Room::find(tx.conn(), self.room_id)?.stage()
+        let source = crate::Room::find(tx.conn(), self.room_id)?;
+        if !source.voice() && !source.stage() { return Ok(false); }
+        if source.stage()
             && !matches!(self.stage_role.as_deref(), Some("speaker" | "host"))
         { return Ok(false); }
         let Some(room) = crate::Room::find_by_id(tx.conn(), room_id)?.filter(|room| room.voice() && !room.deleted()) else { return Ok(false); };
-        if crate::Membership::find_by_room_and_user(tx.conn(), room_id, self.user_id)?.is_none() {
+        let Some(member) = crate::Membership::find_by_room_and_user(tx.conn(), room_id, self.user_id)? else {
             return Ok(false);
-        }
+        };
         self.revoke(tx, true, config)?;
+        // Reserve this session's destination before notifying it. Ordinary issuance and the
+        // gateway can reuse the slot for IN_CALL_WINDOW seconds, then capacity applies again.
+        Self::issue_with_admission(tx, self.session_id, member.id, room_id, config, Admission::AfkMove)?;
         tx.emit_after_commit(Event::broadcast(&super::huddle_effects::AfkMoved {
             user_id: self.user_id, identity: self.identity.clone(), source_room_id: self.room_id,
             room_id, room_name: room.name.unwrap_or_default(), timeout_minutes: policy.timeout_minutes,

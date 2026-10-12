@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { HuddleCredentials } from "../../src/gen/HuddleCredentials.ts";
 import type { HuddleDetail } from "../../src/gen/HuddleDetail.ts";
 import type { HuddlePresenceList } from "../../src/gen/HuddlePresenceList.ts";
+import type { RoomMutation } from "../../src/gen/RoomMutation.ts";
 import type { StageDetail } from "../../src/gen/StageDetail.ts";
 import type { StageState } from "../../src/gen/StageState.ts";
 import type { StageStream } from "../../src/gen/StageStream.ts";
@@ -301,9 +302,83 @@ describe("voice user limit", () => {
 });
 
 describe("AFK policy", () => {
+  it.each([rooms.dmMaya, rooms.general])(
+    "keeps an idle call in a non-voice room %s",
+    async (source) => {
+      const { server, clock } = harness();
+      const events = collect(server);
+      await expectStatus(
+        server,
+        "PATCH",
+        "/api/v1/admin/workspace",
+        { afkPolicy: { roomId: lounge, timeoutMinutes: 1 } },
+        200,
+      );
+
+      const grant = await expectStatus<HuddleCredentials>(
+        server,
+        "POST",
+        `/api/v1/rooms/${source}/huddle`,
+        {},
+        201,
+      );
+
+      clock.advance(120_000);
+      const detail = await get<HuddleDetail>(server, `/api/v1/rooms/${source}/huddle`);
+      expect(
+        detail.presence.participants.find((person) => person.userId === viewer)?.identities,
+      ).toEqual([grant.identity]);
+      expect(events.filter((event) => event.type === "huddle.afk.moved")).toEqual([]);
+    },
+  );
+
+  it("checks ordinary joins to a full AFK destination", async () => {
+    const { server } = harness();
+    const form = await get<{ userIds: number[] }>(server, `/api/v1/rooms/${lounge}/edit`);
+    await expectStatus(
+      server,
+      "PATCH",
+      `/api/v1/rooms/${lounge}`,
+      { type: "voice", userIds: form.userIds, voiceUserLimit: 2 },
+      200,
+    );
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/workspace",
+      { afkPolicy: { roomId: lounge, timeoutMinutes: 1 } },
+      200,
+    );
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    await expectStatus(server, "POST", `/api/v1/rooms/${lounge}/huddle`, {}, 409);
+  });
+
   it("records only the current grant's activity and moves it on an idle presence check", async () => {
     const { server, clock } = harness();
     const events = collect(server);
+
+    const created = await expectStatus<RoomMutation>(
+      server,
+      "POST",
+      "/api/v1/rooms",
+      {
+        type: "voice",
+        name: "Source",
+        userIds: [viewer],
+        clientRoomId: "afk-source",
+      },
+      201,
+    );
+
+    const source = created.room.id;
+    const form = await get<{ userIds: number[] }>(server, `/api/v1/rooms/${lounge}/edit`);
+    await expectStatus(
+      server,
+      "PATCH",
+      `/api/v1/rooms/${lounge}`,
+      { type: "voice", userIds: form.userIds, voiceUserLimit: 2 },
+      200,
+    );
     await expectStatus(
       server,
       "PATCH",
@@ -311,16 +386,17 @@ describe("AFK policy", () => {
       { afkPolicy: { roomId: rooms.lounge, timeoutMinutes: 1 } },
       200,
     );
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
 
     const grant = await expectStatus<HuddleCredentials>(
       server,
       "POST",
-      `/api/v1/rooms/${rooms.general}/huddle`,
+      `/api/v1/rooms/${source}/huddle`,
       {},
       201,
     );
 
-    const activityPath = `/api/v1/rooms/${rooms.general}/huddle/activity`;
+    const activityPath = `/api/v1/rooms/${source}/huddle/activity`;
     await expectStatus(server, "POST", activityPath, { identity: "another-tab" }, 403);
     clock.advance(50_000);
     await expectStatus(server, "POST", activityPath, { identity: grant.identity }, 204);
@@ -333,7 +409,7 @@ describe("AFK policy", () => {
       expect.objectContaining({
         data: {
           identity: grant.identity,
-          sourceRoomId: rooms.general,
+          sourceRoomId: source,
           roomId: rooms.lounge,
           roomName: "Lounge",
           timeoutMinutes: 1,
@@ -351,6 +427,49 @@ describe("AFK policy", () => {
     );
 
     expect(moved.roomId).toBe(rooms.lounge);
+    const detail = await get<HuddleDetail>(server, `/api/v1/rooms/${lounge}/huddle`);
+    expect(detail.presence.participants).toHaveLength(3);
+    await expectStatus(server, "POST", `/api/v1/rooms/${lounge}/huddle/leave`, {}, 204);
+    await expectStatus(server, "POST", `/api/v1/rooms/${lounge}/huddle`, {}, 409);
+  });
+
+  it("expires the capacity reservation for an AFK move", async () => {
+    const { server, clock } = harness();
+
+    const created = await expectStatus<RoomMutation>(
+      server,
+      "POST",
+      "/api/v1/rooms",
+      {
+        type: "voice",
+        name: "Source",
+        userIds: [viewer],
+        clientRoomId: "afk-source",
+      },
+      201,
+    );
+
+    const form = await get<{ userIds: number[] }>(server, `/api/v1/rooms/${lounge}/edit`);
+    await expectStatus(
+      server,
+      "PATCH",
+      `/api/v1/rooms/${lounge}`,
+      { type: "voice", userIds: form.userIds, voiceUserLimit: 2 },
+      200,
+    );
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/workspace",
+      { afkPolicy: { roomId: lounge, timeoutMinutes: 1 } },
+      200,
+    );
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    await expectStatus(server, "POST", `/api/v1/rooms/${created.room.id}/huddle`, {}, 201);
+    clock.advance(60_000);
+    await get<HuddlePresenceList>(server, "/api/v1/huddles");
+    clock.advance(20_000);
+    await expectStatus(server, "POST", `/api/v1/rooms/${lounge}/huddle`, {}, 409);
   });
 
   it("defaults to five minutes and rejects text destinations and invalid timeouts", async () => {
