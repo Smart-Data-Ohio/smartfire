@@ -1602,3 +1602,79 @@ async fn private_thread_creation_conflicts_do_not_reveal_hidden_children() {
         }
     }
 }
+
+async fn upload_file(browser: &mut crate::controllers::presenters::test_support::Browser<'_>, filename: &str, bytes: &[u8]) -> String {
+    let reply = browser.write(json_body(Method::POST, "/api/v1/uploads", &json!({
+        "filename": filename, "byteSize": bytes.len(), "contentType": "text/plain",
+        "checksum": campfire_storage::key::checksum(bytes),
+    }))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let upload: api::DirectUpload = parse(&reply);
+    let stored = browser.send(Req::new(Method::PUT, &upload.upload_url)
+        .header("content-type", "text/plain").header("content-length", bytes.len().to_string())
+        .body(String::from_utf8(bytes.to_vec()).unwrap())).await;
+    assert_eq!(stored.status, StatusCode::NO_CONTENT, "{}", stored.text());
+    upload.signed_id
+}
+
+fn files_changed(event: &api::SyncEvent) -> bool {
+    matches!(&event.payload, api::SyncPayload::RoomFilesChanged(change) if change.room_id == DESIGNERS)
+}
+
+#[tokio::test]
+async fn thread_reply_uploads_reach_room_files_viewers_live() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let (addr, server) = serve(&a).await;
+    // Kevin watches the room only, as someone with its Files pane open does.
+    let mut room_sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    room_sync.welcome().await;
+
+    let signed_id = upload_file(&mut david, "thread-notes.txt", b"thread notes").await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{THREAD}/messages"), &json!({
+        "clientMessageId": "files-live-public", "markdownSource": "Notes attached",
+        "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id,
+    }))).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let reply: api::MessageDTO = parse(&posted);
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{}", reply.id), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT, "{}", removed.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+
+    // A private thread's files reach only its readers, on their own topic.
+    let created: api::ThreadCreated = parse(&david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("files-live-private-create", "Private first reply")}))).await);
+    let private_id = created.detail.thread.id;
+    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{private_id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    let outsider = a.sign_in(JZ).await;
+    let mut outsider_sync = Sync::connect(addr, &outsider.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    outsider_sync.welcome().await;
+    a.booted.app.broadcasts.settle_sync().await;
+
+    let signed_id = upload_file(&mut david, "private-notes.txt", b"private notes").await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{private_id}/messages"), &json!({
+        "clientMessageId": "files-live-private", "markdownSource": "Private notes attached",
+        "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id,
+    }))).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, "user");
+
+    a.booted.app.broadcasts.settle_sync().await;
+    let marker = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &reply_body("files-live-marker", "Public marker"))).await;
+    assert_eq!(marker.status, StatusCode::CREATED);
+    outsider_sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "files-live-marker"),
+        files_changed,
+    ).await;
+    server.abort();
+}

@@ -558,6 +558,7 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         | api::SyncPayload::SidebarCategoryUpserted(_)
         | api::SyncPayload::SidebarCategoryRemoved(_)
         | api::SyncPayload::EventsChanged(_)
+        | api::SyncPayload::RoomFilesChanged(_)
         | api::SyncPayload::AgentStatus(_)
         | api::SyncPayload::ApprovalUpdated(_)
         | api::SyncPayload::HuddleAfkMoved(_)
