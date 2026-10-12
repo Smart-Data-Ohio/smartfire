@@ -8,6 +8,7 @@ const GENERAL = ROOM_IDS.general;
 type ControlBody =
   | { readonly role: "member" }
   | { readonly threadId: number; readonly userId: number }
+  | { readonly threadId: number; readonly userId: number; readonly markdown: string }
   | {
       readonly threadId: number;
       readonly userId: number;
@@ -20,6 +21,7 @@ type ControlBody =
       readonly name: string;
       readonly markdown: string;
       readonly withViewer?: boolean;
+      readonly notifyViewer?: boolean;
     };
 
 /** Runs one of the mock's controls, as another person's client would act. */
@@ -61,6 +63,18 @@ interface PrivateThreadStart {
   readonly name: string;
   readonly markdown: string;
   readonly withViewer?: boolean;
+  /** Its first reply also lands in the viewer's Activity inbox. */
+  readonly notifyViewer?: boolean;
+}
+
+/** Maya gives the viewer access to the thread (`added`) or takes it away. */
+async function mayaShares(request: APIRequestContext, threadId: number, added: boolean) {
+  await control(request, "thread-access", {
+    threadId,
+    userId: USER_IDS.riel,
+    actorId: USER_IDS.maya,
+    added,
+  });
 }
 
 interface PrivateThreadStarted {
@@ -222,5 +236,84 @@ for (const size of SIZES) {
       ).toBeVisible();
       expect(await readable(page.request, shared, USER_IDS.riel)).toBe(false);
     });
+
+    test("someone removed and added back gets the open thread back live", async ({ page }) => {
+      await control(page.request, "viewer-role", { role: "member" });
+
+      const threadId = await mayaStartsPrivate(page.request, {
+        name: "Maya and Riel",
+        markdown: "Can we talk about the launch date?",
+        withViewer: true,
+      });
+
+      const welcomed = syncWelcomed(page);
+
+      await openAsMember(page, `r/${GENERAL}/t/${threadId}`);
+      await expect(pane(page).getByRole("heading", { name: "Maya and Riel" })).toBeVisible();
+      await welcomed;
+
+      await mayaShares(page.request, threadId, false);
+      await expect(
+        pane(page).getByText("You no longer have access to this private thread."),
+      ).toBeVisible();
+      await expect(pane(page).getByText("Can we talk about the launch date?")).toHaveCount(0);
+
+      await mayaShares(page.request, threadId, true);
+      await expect(pane(page).getByRole("heading", { name: "Maya and Riel" })).toBeVisible();
+      await expect(pane(page).getByText("Can we talk about the launch date?")).toBeVisible();
+
+      // Following the thread again: Maya's next reply arrives without a reload.
+      await control(page.request, "thread-post", {
+        threadId,
+        userId: USER_IDS.maya,
+        markdown: "Glad you're back.",
+      });
+      await expect(pane(page).getByText("Glad you're back.")).toBeVisible();
+    });
   });
 }
+
+test.describe("private threads, cached elsewhere (desktop)", () => {
+  test.use({ viewport: DESKTOP });
+
+  test("nothing of a lost thread stays in Activity or the switcher", async ({ page }) => {
+    await control(page.request, "viewer-role", { role: "member" });
+
+    const threadId = await mayaStartsPrivate(page.request, {
+      name: "Launch date, quietly",
+      markdown: "Can we move the launch to Friday?",
+      withViewer: true,
+      notifyViewer: true,
+    });
+
+    const welcomed = syncWelcomed(page);
+
+    await openAsMember(page, "activity");
+
+    const excerpt = page.getByText("Can we move the launch to Friday?");
+
+    await expect(excerpt).toBeVisible();
+
+    const switcher = page.getByRole("dialog", { name: "Jump to a conversation" });
+    const option = switcher.getByRole("option", { name: /Launch date, quietly/ });
+
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(switcher).toBeVisible();
+    await page.keyboard.type("Launch date");
+    await expect(option).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(switcher).toBeHidden();
+
+    await welcomed;
+    await mayaShares(page.request, threadId, false);
+
+    await expect(excerpt).toHaveCount(0);
+
+    // The switcher's next answer never comes, so only its cache could still name the thread.
+    await page.route("**/api/v1/switcher", () => undefined);
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(switcher).toBeVisible();
+    await page.keyboard.type("Launch date");
+    await expect(option).toHaveCount(0);
+  });
+});

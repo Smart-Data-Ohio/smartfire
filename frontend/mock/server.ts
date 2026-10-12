@@ -93,6 +93,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { messageSource } from "./s3/sources.ts";
 import { createWelcome } from "./s3/welcome.ts";
 import { createWorkspaceLayout, workspaceLayoutOf } from "./s3/workspace-layout.ts";
 import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
@@ -1623,7 +1624,21 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
         const threadControl = threads.control(action, body);
 
-        if (threadControl !== null) return threadControl;
+        if (threadControl !== null) {
+          // `notifyViewer`: the first reply also lands in the viewer's inbox, as a mention would.
+          if (action === "private-thread" && flag("notifyViewer", false)) {
+            const threadId = intField(threadControl.json, "threadId");
+
+            const reply =
+              threadId === null ? undefined : world.threads.get(threadId)?.messages.at(-1);
+
+            if (reply !== undefined) {
+              activity.record({ eventType: "mention", source: messageSource(ctx, reply) });
+            }
+          }
+
+          return threadControl;
+        }
 
         const handled = huddles.control(action, {
           int,

@@ -37,8 +37,12 @@ export type SendFrame = (frame: ServerFrame) => void;
 /** Closes the socket from the server side without a goodbye (the transport's abrupt close). */
 export type DropSocket = () => void;
 
-/** An event to publish: where it goes and what it says. */
-export type Outgoing = { readonly topic: string } & SyncPayload;
+/**
+ * An event to publish: where it goes and what it says. `unsubscribe` is the server's
+ * `SyncPublication::unsubscribe`: every connection the event reaches stops following that topic
+ * (a thread the viewer can no longer read, say) until it subscribes again.
+ */
+export type Outgoing = { readonly topic: string; readonly unsubscribe?: string } & SyncPayload;
 
 interface Connection {
   readonly id: number;
@@ -113,7 +117,7 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
     connections.delete(connection);
   };
 
-  const record = (outgoing: Outgoing): SyncEvent => {
+  const record = ({ unsubscribe: _unsubscribe, ...outgoing }: Outgoing): SyncEvent => {
     seq += 1;
 
     const event: SyncEvent = { seq, ...outgoing };
@@ -273,6 +277,14 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
     },
     publish(events) {
       deliver(events.map(record), null);
+
+      for (const { topic, unsubscribe } of events) {
+        if (unsubscribe === undefined) continue;
+
+        for (const connection of connections) {
+          if (connection.topics.has(topic)) connection.topics.delete(unsubscribe);
+        }
+      }
     },
     presentRooms() {
       const rooms = new Set<number>();

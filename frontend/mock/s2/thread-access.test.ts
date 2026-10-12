@@ -424,3 +424,51 @@ it("lets the controls start a private thread as someone else, share it and take 
 
   expect(await readable(hidden.threadId, viewer)).toBe(true);
 });
+
+it("tells the viewer of a grant on their own topic, and drops the thread's topic with the access", async () => {
+  const { server } = harness();
+  await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+
+  const { threadId } = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "With Riel", withViewer: true },
+    201,
+  );
+
+  const heard: SyncEvent[] = [];
+
+  const connection = server.connect((frame) => {
+    if (frame.t === "batch") heard.push(...frame.events);
+  });
+
+  connection.receive({ t: "hello", v: 1, topics: [`thread:${threadId}`], resume: null });
+
+  const access = (added: boolean) =>
+    send(server, "POST", "/__mock/thread-access", { threadId, userId: viewer, added });
+
+  await access(false);
+
+  expect(heard.find((event) => event.type === "thread.removed")?.topic).toBe("user");
+
+  heard.length = 0;
+  await access(true);
+
+  // Added back: the record arrives on the viewer's own topic, the only one still followed.
+  expect(
+    heard.some(
+      (event) =>
+        event.type === "thread.updated" && event.topic === "user" && event.data.id === threadId,
+    ),
+  ).toBe(true);
+
+  heard.length = 0;
+  server.threadPost(threadId, users.maya, "Welcome back");
+  expect(heard.some((event) => event.type === "message.created")).toBe(false);
+
+  connection.receive({ t: "sub", topics: [`thread:${threadId}`] });
+  server.threadPost(threadId, users.maya, "Now you hear it");
+  expect(heard.some((event) => event.type === "message.created")).toBe(true);
+  connection.close();
+});

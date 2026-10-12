@@ -169,13 +169,52 @@ export function createThreads(
     ];
   };
 
+  /**
+   * `thread_changed`: a public thread's record on its room and thread topics; a private one's only
+   * to its current readers, on their own `user` topic (the hub keeps it from anyone else).
+   */
   const updated = (thread: ThreadRecord): Outgoing[] => {
     const data = threadDto(thread, ctx.now());
+
+    if (thread.visibility === "private") return [{ topic: "user", type: "thread.updated", data }];
 
     return [
       { topic: `room:${thread.roomId}`, type: "thread.updated", data },
       { topic: `thread:${thread.id}`, type: "thread.updated", data },
     ];
+  };
+
+  /** `thread_changed` for a new thread: as `updated`, as `thread.created` and without the thread topic. */
+  const createdEvent = (thread: ThreadRecord): Outgoing => ({
+    topic: thread.visibility === "private" ? "user" : `room:${thread.roomId}`,
+    type: "thread.created",
+    data: threadDto(thread, ctx.now()),
+  });
+
+  /**
+   * `Broadcasts::thread_access_changed` as the viewer sees it. Removed, the viewer gets
+   * `thread.removed` on their `user` topic, which also ends their subscription to the thread; added,
+   * they hear of it from the thread's record, which every current reader gets. The viewer's sidebar
+   * row is sent again either way.
+   */
+  const accessChanged = (thread: ThreadRecord, userId: number, added: boolean): Outgoing[] => {
+    const room = ctx.world().rooms.get(thread.roomId);
+    const events: Outgoing[] = [];
+
+    if (!added && userId === VIEWER_ID) {
+      events.push({
+        topic: "user",
+        type: "thread.removed",
+        data: { threadId: thread.id, roomId: thread.roomId },
+        unsubscribe: `thread:${thread.id}`,
+      });
+    }
+
+    if (userId === VIEWER_ID && room !== undefined) {
+      events.push({ topic: "user", type: "sidebar.row.upserted", data: ctx.sidebarRow(room) });
+    }
+
+    return [...events, ...updated(thread)];
   };
 
   const join = (thread: ThreadRecord, userId: number, involvement: ThreadInvolvement | null) => {
@@ -387,9 +426,7 @@ export function createThreads(
     };
 
     world.threads.set(thread.id, thread);
-    ctx.publish([
-      { topic: `room:${roomId}`, type: "thread.created", data: threadDto(thread, ctx.now()) },
-    ]);
+    ctx.publish([createdEvent(thread)]);
 
     const message = postReply(
       thread,
@@ -633,6 +670,7 @@ export function createThreads(
     if (!thread.accessMembers.has(userId)) {
       thread.accessMembers.set(userId, { userId, addedById: VIEWER_ID, createdAt: iso(ctx.now()) });
       join(thread, userId, null);
+      ctx.publish(accessChanged(thread, userId, true));
     }
 
     if (canAccessThread(world, thread)) return accessMembers(thread);
@@ -651,14 +689,10 @@ export function createThreads(
       throw accessRefused("removeForbidden", "You can't remove people from this thread");
     }
 
-    thread.accessMembers.delete(userId);
-
-    if (userId === VIEWER_ID) {
-      if (thread.viewerMembership !== null)
+    if (thread.accessMembers.delete(userId)) {
+      if (userId === VIEWER_ID && thread.viewerMembership !== null)
         thread.viewerMembership = { ...thread.viewerMembership, unreadAt: null };
-      ctx.publish([
-        { topic: "user", type: "thread.removed", data: { threadId, roomId: thread.roomId } },
-      ]);
+      ctx.publish(accessChanged(thread, userId, false));
     }
 
     return noContent();
@@ -722,13 +756,7 @@ export function createThreads(
     }
 
     world.threads.set(thread.id, thread);
-    ctx.publish([
-      {
-        topic: `room:${thread.roomId}`,
-        type: "thread.created",
-        data: threadDto(thread, ctx.now()),
-      },
-    ]);
+    ctx.publish([createdEvent(thread)]);
     postReply(
       thread,
       plainDraft(creatorId, stringField(body, "markdown") ?? "Just between us.", ctx.uuid()),
@@ -750,18 +778,10 @@ export function createThreads(
     }
 
     if (booleanField(body, "added") === false) {
-      thread.accessMembers.delete(userId);
-
-      if (userId === VIEWER_ID) {
-        if (thread.viewerMembership !== null)
+      if (thread.accessMembers.delete(userId)) {
+        if (userId === VIEWER_ID && thread.viewerMembership !== null)
           thread.viewerMembership = { ...thread.viewerMembership, unreadAt: null };
-        ctx.publish([
-          {
-            topic: "user",
-            type: "thread.removed",
-            data: { threadId: thread.id, roomId: thread.roomId },
-          },
-        ]);
+        ctx.publish(accessChanged(thread, userId, false));
       }
 
       return noContent();
@@ -774,9 +794,8 @@ export function createThreads(
     if (!thread.accessMembers.has(userId)) {
       thread.accessMembers.set(userId, { userId, addedById: actorId, createdAt: iso(ctx.now()) });
       join(thread, userId, null);
+      ctx.publish(accessChanged(thread, userId, true));
     }
-
-    ctx.publish([...updated(thread), ...syncIndicator(thread)]);
 
     return ok(accessMembers(thread));
   };
