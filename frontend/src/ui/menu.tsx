@@ -256,13 +256,15 @@ function MenuSurface({
   useFloating(id, anchorRef, surfaceRef, placement, !sheet);
   useSheetScrim(sheet && !submenu && state === "open", surfaceRef, () => onClose("sheet"));
 
-  // Show in the top layer and move focus in, once, when the surface mounts: where focus lands
+  // Show in the top layer and move focus in each time the menu opens: when the surface mounts,
+  // and when it reopens while still mounted for its exit motion (presence cancels the exit), by
+  // which time a light dismiss or an item's modal dialog may have hidden it. Where focus lands
   // depends on how the menu was opened, not on later renders.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs at mount only, by design
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs as the menu opens only, by design
   useLayoutEffect(() => {
     const surface = surfaceRef.current;
 
-    if (surface === null) {
+    if (surface === null || state !== "open") {
       return;
     }
 
@@ -277,7 +279,7 @@ function MenuSurface({
     } else if (focusOnOpen === "menu") {
       surface.focus({ preventScroll: true });
     }
-  }, [surfaceRef]);
+  }, [surfaceRef, state]);
 
   // Light dismiss: the browser closes auto popovers on an outside click; without the Popover
   // API (old browsers, unit tests) an outside pointerdown does the same.

@@ -501,4 +501,46 @@ describe("Menu in the top layer", () => {
     await nextTask();
     expect(state(trigger)).toEqual({ expanded: "true", visible: true });
   });
+
+  it("is back in the top layer when reopened during its exit, after a choice and a dismissal", () => {
+    vi.useFakeTimers();
+
+    try {
+      const chosen: string[] = [];
+
+      render(<MessageMenu onSelect={(item) => chosen.push(item)} />);
+
+      const trigger = screen.getByRole("button", { name: "More actions" });
+
+      fireEvent.click(trigger, { detail: 1 });
+      act(() => vi.advanceTimersByTime(200));
+
+      const menu = screen.getByRole("menu");
+
+      expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+
+      // Choosing an item starts the exit; the browser then hides the popover (the dialog the item
+      // opens, or a light dismiss) and its toggle lands, all inside the exit.
+      fireEvent.click(screen.getByRole("menuitem", { name: "Copy link" }));
+      menu.hidePopover();
+      act(() => vi.advanceTimersByTime(10));
+      expect(chosen).toEqual(["copy"]);
+      expect(screen.getByRole("menu")).toBe(menu);
+      expect(state(trigger)).toEqual({ expanded: "false", visible: false });
+
+      // Reopened before the exit ends: the same surface, shown again and focused.
+      fireEvent.click(trigger, { detail: 1 });
+      expect(screen.getByRole("menu")).toBe(menu);
+      expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+      expect(menu.dataset.state).toBe("open");
+      expect(document.activeElement).toBe(menu);
+
+      // The cancelled exit doesn't take it away later.
+      act(() => vi.advanceTimersByTime(500));
+      expect(screen.getByRole("menu")).toBe(menu);
+      expect(state(trigger)).toEqual({ expanded: "true", visible: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
