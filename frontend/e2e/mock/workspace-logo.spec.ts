@@ -51,7 +51,8 @@ const LOGOS = [
 /**
  * How far past the colours around it in the copy a pixel may land. A filter on a box around the
  * image (the rail tile brightens under the pointer) clips at white across the whole box, which a
- * filter on the copy alone can't match exactly.
+ * filter on the copy alone can't match exactly. So a faint overlay (8% black, say) or one in the
+ * picture's own colours passes: the check catches what visibly covers the logo, not every tint.
  */
 const TOLERANCE = 24;
 
@@ -178,16 +179,18 @@ async function hiddenParts(image: Locator): Promise<string[]> {
   if (hidden.length > 0) return hidden;
 
   // Anything that changes a pixel of the picture covers it there, however it paints: a box, a
-  // pseudo-element, a shadow, text, a clip. The page is compared with itself under a copy of the
-  // image drawn on top of everything at the image's own place and size, the image hidden beneath.
-  // The copy is absolutely positioned: a fixed one gets its own layer, which scales images less
-  // sharply.
+  // pseudo-element, a shadow, text, a clip, an open popover. The page is compared with itself under
+  // a copy of the image at the image's own place and size, the image hidden beneath. The copy sits
+  // in a bare manual popover opened last, so it's above the top layer too, and lets the pointer
+  // through so a hovered tile stays hovered. The popover is absolutely positioned: a fixed one
+  // scales images less sharply.
   const page = image.page();
   const shot = () => page.screenshot({ clip: picture, animations: "disabled" });
   const shown = await shot();
 
   const inlineStyle = await image.evaluate((element: HTMLImageElement, box) => {
     const style = getComputedStyle(element);
+    const layer = document.createElement("div");
     const copy = document.createElement("img");
     const filters: string[] = [];
     let opacity = 1;
@@ -201,15 +204,25 @@ async function hiddenParts(image: Locator): Promise<string[]> {
       if (atStyle.filter !== "none") filters.push(atStyle.filter);
     }
 
-    for (const [property, value] of Object.entries({
+    const place = {
       all: "initial",
       position: "absolute",
-      "z-index": "2147483647",
       display: "block",
+      "pointer-events": "none",
       left: `${box.left + scrollX}px`,
       top: `${box.top + scrollY}px`,
       width: `${box.width}px`,
       height: `${box.height}px`,
+    };
+
+    for (const [property, value] of Object.entries({ ...place, overflow: "visible" })) {
+      layer.style.setProperty(property, value, "important");
+    }
+
+    for (const [property, value] of Object.entries({
+      ...place,
+      left: "0",
+      top: "0",
       "object-fit": style.objectFit,
       "object-position": style.objectPosition,
       "image-rendering": style.imageRendering,
@@ -220,8 +233,11 @@ async function hiddenParts(image: Locator): Promise<string[]> {
     }
 
     copy.src = element.currentSrc;
-    copy.dataset.logoCopy = "";
-    document.body.append(copy);
+    layer.popover = "manual";
+    layer.dataset.logoCopy = "";
+    layer.append(copy);
+    document.body.append(layer);
+    layer.showPopover();
 
     const before = element.style.cssText;
 
