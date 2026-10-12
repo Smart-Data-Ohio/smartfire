@@ -11,7 +11,7 @@ import type { Reaction } from "./Reaction";
  * Replaces the message's `reactions`, `boosts` and `updatedAt` when `updatedAt` is newer than
  * the copy held.
  */
-export type MessageReactions = { messageId: number, roomId: number, threadId: number | null, reactions: Array<Reaction>, boosts: Array<Boost>, 
+export type MessageReactions = { messageId: number, roomId: number, threadId: number | null, reactions: Array<Reaction>, boosts: Array<Boost>,
 /**
  * The message's `updated_at` after the change (boosts touch it).
  */

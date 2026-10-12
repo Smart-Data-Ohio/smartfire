@@ -5,7 +5,7 @@ import type { ThreadDetail } from "./ThreadDetail";
 /**
  * The reply to `POST /api/v1/rooms/:id/threads`.
  */
-export type ThreadCreated = { detail: ThreadDetail, 
+export type ThreadCreated = { detail: ThreadDetail,
 /**
  * The first reply, to reconcile the pending row by `clientMessageId`.
  */

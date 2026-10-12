@@ -8,7 +8,7 @@
  * viewer's [`crate::SidebarRow`] for it; a new room reaches every member as
  * `sidebar.row.upserted`.
  */
-export type CreateDirect = { 
+export type CreateDirect = {
 /**
  * The other people, the viewer left out.
  */

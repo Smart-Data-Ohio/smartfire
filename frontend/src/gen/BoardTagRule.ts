@@ -4,11 +4,11 @@
  * "When a post gains this tag while it has no owner, assign it to this person": one
  * `board_tag_assignments` row.
  */
-export type BoardTagRule = { id: number, 
+export type BoardTagRule = { id: number,
 /**
  * Lower-cased, as stored.
  */
-tag: string, 
+tag: string,
 /**
  * In [`BoardAutomations::users`] (an assignee who has since left or been deactivated is
  * still listed; the rule just stops applying).

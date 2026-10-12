@@ -11,15 +11,15 @@ import type { WorkDetail } from "./WorkDetail";
  * `GET /api/v1/threads/:id/messages` (a [`crate::MessagePage`]). 404 unless the viewer belongs
  * to its room.
  */
-export type ThreadDetail = { thread: Thread, membership: ThreadMembership | null, 
+export type ThreadDetail = { thread: Thread, membership: ThreadMembership | null,
 /**
  * `null` once deleted.
  */
-parentMessage: MessageDTO | null, permissions: ThreadPermissions, 
+parentMessage: MessageDTO | null, permissions: ThreadPermissions,
 /**
  * The work section, for a tracked thread; `null` otherwise.
  */
-work: WorkDetail | null, 
+work: WorkDetail | null,
 /**
  * The thread's creator and the parent's, once each; for a tracked thread also the result's
  * editor, every history actor, owner candidate and handoff receiver. (The owner is whole

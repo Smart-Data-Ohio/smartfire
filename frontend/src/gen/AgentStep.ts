@@ -10,31 +10,31 @@ import type { AgentStepStatus } from "./AgentStepStatus";
  * `updatedAt` (on a tie, the later arrival). Changing a step doesn't touch its message's
  * `updatedAt`.
  */
-export type AgentStep = { id: number, 
+export type AgentStep = { id: number,
 /**
  * Set for a step on a message; `threadId` is `null` then.
  */
-messageId: number | null, 
+messageId: number | null,
 /**
  * Set for a step on a work thread; `messageId` is `null` then.
  */
-threadId: number | null, 
+threadId: number | null,
 /**
  * Up to 120 characters.
  */
-name: string, status: AgentStepStatus, 
+name: string, status: AgentStepStatus,
 /**
  * "In": up to 1000 characters of plain text; `null` for none.
  */
-inputSummary: string | null, 
+inputSummary: string | null,
 /**
  * "Out": as `inputSummary`.
  */
-outputSummary: string | null, 
+outputSummary: string | null,
 /**
  * Shown in ms below a second, else in seconds; `null` while unknown.
  */
-durationMs: number | null, 
+durationMs: number | null,
 /**
  * The step's place among its parent's (at most 50); the list is ordered by
  * `(position, id)`.

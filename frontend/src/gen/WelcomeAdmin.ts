@@ -7,7 +7,7 @@ import type { WelcomeRoomEdit } from "./WelcomeRoomEdit";
  * `GET /api/v1/admin/welcome` (administrators only), and the answer to the `PATCH`: the
  * configuration as this administrator may see it.
  */
-export type WelcomeAdmin = { message: string, rooms: Array<WelcomeRoomEdit>, guide: Array<GuideResourceEdit>, 
+export type WelcomeAdmin = { message: string, rooms: Array<WelcomeRoomEdit>, guide: Array<GuideResourceEdit>,
 /**
  * The rooms the editor offers, by name.
  */

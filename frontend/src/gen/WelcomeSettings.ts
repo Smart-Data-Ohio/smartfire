@@ -7,15 +7,15 @@ import type { WelcomeRoom } from "./WelcomeRoom";
  * sent as is: administrators get [`WelcomeAdmin`], everyone else [`WorkspaceWelcome`]. An empty
  * message with no rooms turns the welcome card off; an empty guide hides the guide page.
  */
-export type WelcomeSettings = { 
+export type WelcomeSettings = {
 /**
  * Short markdown, up to 1,000 characters.
  */
-message: string, 
+message: string,
 /**
  * Up to 5 suggested rooms, in order.
  */
-rooms: Array<WelcomeRoom>, 
+rooms: Array<WelcomeRoom>,
 /**
  * Up to 10 resources, in order.
  */

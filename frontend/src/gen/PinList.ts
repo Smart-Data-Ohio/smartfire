@@ -7,11 +7,11 @@ import type { User } from "./User";
  * `GET /api/v1/rooms/:id/pins`: the room's pins, newest first (`created_at DESC, id DESC`),
  * at most 50, with the pinned messages themselves so the pane renders them in full.
  */
-export type PinList = { pins: Array<Pin>, 
+export type PinList = { pins: Array<Pin>,
 /**
  * The pinned messages, one per pin, in no particular order.
  */
-messages: Array<MessageDTO>, 
+messages: Array<MessageDTO>,
 /**
  * The pinners and the messages' creators, once each.
  */

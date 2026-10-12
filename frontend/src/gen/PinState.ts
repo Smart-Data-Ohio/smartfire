@@ -9,7 +9,7 @@
  * Pinning a pinned message and unpinning an unpinned one succeed unchanged. A room holds at most
  * 50 pins (`MessagePin::MAX_PER_ROOM`): one more is a 422.
  */
-export type PinState = { messageId: number, roomId: number, pinned: boolean, 
+export type PinState = { messageId: number, roomId: number, pinned: boolean,
 /**
  * The room's pin count afterwards (`MessagePin::count_for_room`), for the header.
  */

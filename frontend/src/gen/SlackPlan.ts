@@ -7,11 +7,11 @@ import type { SlackSample } from "./SlackSample";
  * `GET /api/v1/admin/slack/runs/:id/plan` (`accounts/slack_import_runs#plan`): a completed
  * dry run's plan.
  */
-export type SlackPlan = { runId: number, conversations: Array<SlackPlanConversation>, 
+export type SlackPlan = { runId: number, conversations: Array<SlackPlanConversation>,
 /**
  * The open and closed rooms, by name.
  */
-rooms: Array<SlackRoomTarget>, samples: Array<SlackSample>, 
+rooms: Array<SlackRoomTarget>, samples: Array<SlackSample>,
 /**
  * A test import's default oldest day (`YYYY-MM-DD`, two weeks back).
  */

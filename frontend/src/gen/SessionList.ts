@@ -5,7 +5,7 @@ import type { SessionInfo } from "./SessionInfo";
  * `GET /api/v1/settings/sessions`, newest activity first; and the answer to revoking one
  * (`DELETE /api/v1/settings/sessions/:id`) or the rest (`POST .../sessions/revoke_others`).
  */
-export type SessionList = { sessions: Array<SessionInfo>, 
+export type SessionList = { sessions: Array<SessionInfo>,
 /**
  * What the last revocation did, as the classic notice words it ("Signed out 2 other
  * sessions."); `null` on a plain read. Revoking the current session signs out instead: the

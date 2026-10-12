@@ -8,20 +8,20 @@ import type { GithubReview } from "./GithubReview";
  * A fetched pull request (`github_pull_requests`), as the classic card shows it
  * (`campfire_views::github::card`).
  */
-export type GithubPullRequest = { owner: string, repo: string, number: number, title: string, url: string, status: GithubPullRequestStatus, authorLogin: string | null, authorAvatarUrl: string | null, baseBranch: string | null, headBranch: string | null, 
+export type GithubPullRequest = { owner: string, repo: string, number: number, title: string, url: string, status: GithubPullRequestStatus, authorLogin: string | null, authorAvatarUrl: string | null, baseBranch: string | null, headBranch: string | null,
 /**
  * `null` when GitHub reports none.
  */
-review: GithubReview | null, 
+review: GithubReview | null,
 /**
  * `null` for "No checks".
  */
-checks: GithubChecks | null, githubUpdatedAt: string | null, 
+checks: GithubChecks | null, githubUpdatedAt: string | null,
 /**
  * The thread discussing it in this room, for "Discuss"; `null` until someone starts one
  * (`POST /rooms/:id/github/pull_request_threads` in the classic app).
  */
-discussionThreadId: number | null, 
+discussionThreadId: number | null,
 /**
  * The thread-header variant only (`?threadId=`, `card_with_files`): the changed files
  * GitHub reported. `null` for the card under a message.

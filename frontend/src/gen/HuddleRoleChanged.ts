@@ -8,7 +8,7 @@ import type { StageRole } from "./StageRole";
  * too). Their grant was revoked, so a client in this room's call joins again for a token with the
  * new permissions, and says "A host muted you" when `serverMuted` turned on.
  */
-export type HuddleRoleChanged = { roomId: number, 
+export type HuddleRoleChanged = { roomId: number,
 /**
  * Stage rooms only; `null` elsewhere.
  */

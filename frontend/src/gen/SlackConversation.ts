@@ -3,11 +3,11 @@
 /**
  * A Slack conversation a dry run found.
  */
-export type SlackConversation = { 
+export type SlackConversation = {
 /**
  * Slack's id (`C024BE91L`), what an import checks.
  */
-id: string, name: string, 
+id: string, name: string,
 /**
  * "Public channel", "Private channel", "Direct message", "Group DM".
  */

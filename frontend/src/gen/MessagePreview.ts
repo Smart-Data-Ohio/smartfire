@@ -3,7 +3,7 @@
 /**
  * The reply to `POST /api/v1/rooms/:id/messages/preview`.
  */
-export type MessagePreview = { 
+export type MessagePreview = {
 /**
  * Sanitized, as `MessageDTO.bodyHtml` would be.
  */

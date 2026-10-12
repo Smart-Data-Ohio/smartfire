@@ -4,11 +4,11 @@
  * A room a bot is in, with the commands that post to it as that bot (`BOT_KEY` stands for the
  * key, which is shown only once).
  */
-export type BotRoom = { id: number, name: string, 
+export type BotRoom = { id: number, name: string,
 /**
  * `curl -d 'Hello!' <url>`.
  */
-messageCommand: string, 
+messageCommand: string,
 /**
  * `curl -F "attachment=@/path/to/file" <url>`.
  */

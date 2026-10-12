@@ -6,7 +6,7 @@ import type { SlackRun } from "./SlackRun";
  * `GET /api/v1/admin/slack/runs/:id?page=` (`accounts/slack_import_runs#show`): the run and a
  * page of its issues, 50 at a time.
  */
-export type SlackRunPage = { run: SlackRun, issues: Array<SlackIssue>, 
+export type SlackRunPage = { run: SlackRun, issues: Array<SlackIssue>,
 /**
  * The next page of older issues, if any.
  */

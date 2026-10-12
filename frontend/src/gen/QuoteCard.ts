@@ -11,12 +11,12 @@ import type { QuotePreview } from "./QuotePreview";
  *
  * Fill order: 5.
  */
-export type QuoteCard = { 
+export type QuoteCard = {
 /**
  * `message_references.id`: the id the fetch takes. The source message's id isn't sent
  * until the viewer is known to see it.
  */
-referenceId: number, 
+referenceId: number,
 /**
  * Same-room sources only; `null` means fetch it.
  */

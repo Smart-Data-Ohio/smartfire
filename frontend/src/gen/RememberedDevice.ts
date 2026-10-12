@@ -3,11 +3,11 @@
 /**
  * An unexpired device in the classic two-step panel, in its displayed order.
  */
-export type RememberedDevice = { id: number, 
+export type RememberedDevice = { id: number,
 /**
  * The classic row's bold line (`self.agent(device)`), already worded.
  */
-description: string, 
+description: string,
 /**
  * Where it was last used from, the start of the classic row's second line.
  */

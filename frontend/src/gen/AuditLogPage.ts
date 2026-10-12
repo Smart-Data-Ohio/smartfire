@@ -5,23 +5,23 @@ import type { AuditLogFilters } from "./AuditLogFilters";
 /**
  * `GET /api/v1/admin/audit_log`: newest first, 50 a page.
  */
-export type AuditLogPage = { filters: AuditLogFilters, entries: Array<AuditLogEntry>, 
+export type AuditLogPage = { filters: AuditLogFilters, entries: Array<AuditLogEntry>,
 /**
  * Pass as `page` for older entries; `null` on the last page.
  */
-nextPage: string | null, 
+nextPage: string | null,
 /**
  * The choices for the action and type filters.
  */
-actions: Array<string>, targetTypes: Array<string>, 
+actions: Array<string>, targetTypes: Array<string>,
 /**
  * The classic CSV download for these filters (it asks for a password confirmation).
  */
-exportUrl: string, 
+exportUrl: string,
 /**
  * The export stops at `exportLimit` rows and these filters match more.
  */
-exportTruncated: boolean, exportLimit: number, 
+exportTruncated: boolean, exportLimit: number,
 /**
  * The IANA zone the `from` and `to` dates are read in (the viewer's profile zone, UTC when
  * unset): show the entries' times in it too.

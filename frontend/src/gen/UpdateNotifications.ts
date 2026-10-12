@@ -7,15 +7,15 @@ import type { RoomNotificationUpdate } from "./RoomNotificationUpdate";
  * `PATCH /api/v1/settings/notifications` (`users/notification_settings#update`, plus the
  * profile form's `inbox_preferences`).
  */
-export type UpdateNotifications = { defaultNotificationLevel: NotificationLevel | null, roomNotification: RoomNotificationUpdate | null, roomMute: RoomMuteUpdate | null, dndEnabled: boolean | null, quietHoursEnabled: boolean | null, 
+export type UpdateNotifications = { defaultNotificationLevel: NotificationLevel | null, roomNotification: RoomNotificationUpdate | null, roomMute: RoomMuteUpdate | null, dndEnabled: boolean | null, quietHoursEnabled: boolean | null,
 /**
  * `"HH:MM"`; `""` clears it.
  */
-quietHoursStart: string | null, quietHoursEnd: string | null, meetingDndEnabled: boolean | null, oooNotifyEnabled: boolean | null, 
+quietHoursStart: string | null, quietHoursEnd: string | null, meetingDndEnabled: boolean | null, oooNotifyEnabled: boolean | null,
 /**
  * Replaces the whole list.
  */
-keywordAlerts: Array<string> | null, 
+keywordAlerts: Array<string> | null,
 /**
  * Inbox switches by key; keys not named keep their value.
  */

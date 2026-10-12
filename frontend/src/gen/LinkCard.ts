@@ -9,19 +9,19 @@
  *
  * Fill order: 4.
  */
-export type LinkCard = { 
+export type LinkCard = {
 /**
  * The link as the author wrote it (`link_embed_references.url`).
  */
-url: string, 
+url: string,
 /**
  * Up to 100 characters.
  */
-siteName: string | null, 
+siteName: string | null,
 /**
  * Up to 300 characters.
  */
-title: string | null, 
+title: string | null,
 /**
  * Up to 1000 characters.
  */

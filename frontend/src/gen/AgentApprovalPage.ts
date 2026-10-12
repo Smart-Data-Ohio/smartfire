@@ -21,11 +21,11 @@ import type { User } from "./User";
  * `agent_approval_request` `activity.item` (when their inbox preference allows), so a live
  * approvals page refetches its first page on such an item, and whenever it's shown again.
  */
-export type AgentApprovalPage = { approvals: Array<AgentApproval>, 
+export type AgentApprovalPage = { approvals: Array<AgentApproval>,
 /**
  * The agent's bot user and every `decidedById`, once each.
  */
-users: Array<User>, 
+users: Array<User>,
 /**
  * Pass as `before` for the next page; `null` when this is the last. Opaque: it encodes the
  * last row's id, and the next page holds the rows with smaller ids. **New**: the classic

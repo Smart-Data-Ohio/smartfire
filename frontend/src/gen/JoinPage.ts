@@ -9,7 +9,7 @@ import type { SignInWorkspace } from "./SignInWorkspace";
  * an unknown token), as does a submission to one. Access gates and a wrong join code answer an
  * [`AuthResponse`], as the session endpoints do.
  */
-export type JoinPage = { "kind": "join", workspace: SignInWorkspace, helpContact: SignInHelpContact | null, } | { "kind": "inviteInvalid", workspace: SignInWorkspace, helpContact: SignInHelpContact | null, refusal: InviteRefusal, 
+export type JoinPage = { "kind": "join", workspace: SignInWorkspace, helpContact: SignInHelpContact | null, } | { "kind": "inviteInvalid", workspace: SignInWorkspace, helpContact: SignInHelpContact | null, refusal: InviteRefusal,
 /**
  * The retained page's sentence for the refusal ("It has expired.").
  */

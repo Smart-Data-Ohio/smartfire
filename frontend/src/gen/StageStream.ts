@@ -4,7 +4,7 @@ import type { StreamQuality } from "./StreamQuality";
 /**
  * The stage's live stream (`Stream.live_for_room`).
  */
-export type StageStream = { id: number, membershipId: number, userId: number, 
+export type StageStream = { id: number, membershipId: number, userId: number,
 /**
  * The presenter's current LiveKit identity (their newest live grant), so viewers can put
  * that participant's screen share in theater mode; `null` if they have no live grant.

@@ -3,11 +3,11 @@
 /**
  * `room_categories`: a person's own sidebar section.
  */
-export type RoomCategory = { id: number, name: string, 
+export type RoomCategory = { id: number, name: string,
 /**
  * Shown folded.
  */
-collapsed: boolean, 
+collapsed: boolean,
 /**
  * Sort key among the person's categories (ties by id).
  */

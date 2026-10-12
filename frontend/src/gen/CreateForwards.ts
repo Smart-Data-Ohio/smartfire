@@ -10,7 +10,7 @@ import type { ForwardTarget } from "./ForwardTarget";
  * belong to its room, is in a direct room or is locked, a destination repeats, or the note is
  * over 50 000 characters.
  */
-export type CreateForwards = { 
+export type CreateForwards = {
 /**
  * Shown above the forwarded body; blank or `null` for none.
  */

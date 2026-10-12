@@ -12,12 +12,12 @@ import type { StageStream } from "./StageStream";
  * The client keeps the room's topic while it's in the room's call, so the dock follows it from
  * other rooms too.
  */
-export type StageState = { roomId: number, 
+export type StageState = { roomId: number,
 /**
  * Every member, in membership order. The roster groups them by role: hosts and speakers by
  * name, listeners with raised hands first (oldest hand first), then by name.
  */
-members: Array<StageMember>, 
+members: Array<StageMember>,
 /**
  * `null` when nobody's streaming.
  */

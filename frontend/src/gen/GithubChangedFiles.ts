@@ -5,11 +5,11 @@ import type { GithubChangedFile } from "./GithubChangedFile";
  * A pull request's changed files, as the classic thread header lists them
  * (`Github::PullRequest#changed_files_summary`).
  */
-export type GithubChangedFiles = { 
+export type GithubChangedFiles = {
 /**
  * The files stored with the pull request, in GitHub's order (a capped list).
  */
-files: Array<GithubChangedFile>, 
+files: Array<GithubChangedFile>,
 /**
  * How many files changed in all; more than `files.len()` when the list was capped
  * ("and N more").

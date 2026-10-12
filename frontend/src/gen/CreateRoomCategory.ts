@@ -6,7 +6,7 @@
  * `sidebar.category.upserted`. 422 when the name is blank or over 50 characters
  * (`RoomCategory::NAME_LIMIT`); the classic form silently does nothing instead.
  */
-export type CreateRoomCategory = { name: string, 
+export type CreateRoomCategory = { name: string,
 /**
  * Left out (or `null`) for `false`.
  */

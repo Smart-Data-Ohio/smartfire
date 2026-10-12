@@ -6,17 +6,17 @@ import type { ActivityState } from "./ActivityState";
 /**
  * One inbox entry (`activity_items`, unique per owner and source).
  */
-export type ActivityItem = { id: number, eventType: ActivityEventType, state: ActivityState, readAt: string | null, handledAt: string | null, 
+export type ActivityItem = { id: number, eventType: ActivityEventType, state: ActivityState, readAt: string | null, handledAt: string | null,
 /**
  * When the item was first recorded.
  */
-createdAt: string, 
+createdAt: string,
 /**
  * The inbox's sort key: bumped by every state change (`save_state`), when a grouped thread
  * or work item is re-pointed at newer activity, and when an old item is re-armed
  * (`refresh_unread`). New on the wire: the classic JSON sorts by it but leaves it out.
  */
-updatedAt: string, 
+updatedAt: string,
 /**
  * What it's about. Always present: an item whose source is gone isn't accessible
  * (`access.sql` joins the source), so it's never listed or published.

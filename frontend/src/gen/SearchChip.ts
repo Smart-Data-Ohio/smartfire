@@ -4,20 +4,20 @@ import type { SearchOperator } from "./SearchOperator";
 /**
  * A parsed operator (`SearchQuery::chips`).
  */
-export type SearchChip = { operator: SearchOperator, 
+export type SearchChip = { operator: SearchOperator,
 /**
  * The value as understood: `from:`/`in:` without the `@`/`#` and trailing punctuation,
  * `has:` lowercased, a date as written, and `true` for `is:thread`. E.g. `ada`.
  */
-value: string, 
+value: string,
 /**
  * The token as written in `q`, e.g. `from:@ada,`.
  */
-token: string, 
+token: string,
 /**
  * What the chip shows: `"{operator}: {value}"`, e.g. `from: ada`.
  */
-label: string, 
+label: string,
 /**
  * `q` without this token: what the chip's remove button searches for.
  */

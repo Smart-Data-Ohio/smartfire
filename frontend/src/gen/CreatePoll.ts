@@ -15,19 +15,19 @@ import type { CreatePollOptionMedia } from "./CreatePollOptionMedia";
  * a label is over 200 characters, or `closesAt` isn't in the future.
  * A thread must belong to the room (404) and be active when written (403 if closed or locked).
  */
-export type CreatePoll = { 
+export type CreatePoll = {
 /**
  * The sender's id for the question message: a UUID, as for [`crate::CreateMessage`].
  */
-clientMessageId: string, 
+clientMessageId: string,
 /**
  * Post inside this thread of the room; `null` for the root timeline.
  */
-threadId: number | null, 
+threadId: number | null,
 /**
  * Markdown, posted as the message.
  */
-question: string, options: Array<string>, multiple: boolean, anonymous: boolean, closesAt: string | null, 
+question: string, options: Array<string>, multiple: boolean, anonymous: boolean, closesAt: string | null,
 /**
  * Positional media for the original options, before blank labels are dropped.
  */

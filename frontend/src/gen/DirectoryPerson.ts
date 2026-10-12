@@ -3,15 +3,15 @@
 /**
  * A classic directory row (`users/index.html:27-31`).
  */
-export type DirectoryPerson = { userId: number, ignoredByMe: boolean, 
+export type DirectoryPerson = { userId: number, ignoredByMe: boolean,
 /**
  * The classic row's "Online" / "Offline" (`Person.online`).
  */
-online: boolean, 
+online: boolean,
 /**
  * Starred by the viewer.
  */
-starred: boolean, 
+starred: boolean,
 /**
  * Has an `agents` row (the classic "Agent" badge; a bot without one shows "Bot").
  */

@@ -5,19 +5,19 @@ import type { StageRole } from "./StageRole";
 /**
  * One person's place in a room: their notification level, read position and sidebar placement.
  */
-export type Membership = { id: number, roomId: number, userId: number, involvement: Involvement, 
+export type Membership = { id: number, roomId: number, userId: number, involvement: Involvement,
 /**
  * When the room last became unread; `null` when read.
  */
-unreadAt: string | null, 
+unreadAt: string | null,
 /**
  * The newest root message seen; the unread divider starts after it.
  */
-lastReadMessageId: number | null, roomCategoryId: number | null, 
+lastReadMessageId: number | null, roomCategoryId: number | null,
 /**
  * Position among favourites; `null` when not a favourite.
  */
-favoritePosition: number | null, 
+favoritePosition: number | null,
 /**
  * Stage rooms only.
  */

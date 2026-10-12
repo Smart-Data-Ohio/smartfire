@@ -4,7 +4,7 @@ import type { CredentialState } from "./CredentialState";
 /**
  * A bearer token for the agent API. Its secret is shown only when it is issued.
  */
-export type Credential = { id: number, name: string, lastFour: string, createdBy: string, createdAt: string, lastUsedAt: string | null, 
+export type Credential = { id: number, name: string, lastFour: string, createdBy: string, createdAt: string, lastUsedAt: string | null,
 /**
  * ISO 8601 with the viewer's offset. It can lie far outside the usual years, as typed.
  */

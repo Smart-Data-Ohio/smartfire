@@ -7,7 +7,7 @@ import type { Poll } from "./Poll";
  * choice. Ending requires the author or an administrator (403), closes voting immediately,
  * and publishes `poll.updated` to the conversation. Repeated endings leave `closedAt` unchanged.
  */
-export type PollResults = { poll: Poll, 
+export type PollResults = { poll: Poll,
 /**
  * The options the viewer chose (`voted`); empty when they haven't voted.
  */

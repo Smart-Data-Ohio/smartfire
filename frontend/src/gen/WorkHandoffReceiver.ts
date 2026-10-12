@@ -3,11 +3,11 @@
 /**
  * An agent the work can be handed off to.
  */
-export type WorkHandoffReceiver = { 
+export type WorkHandoffReceiver = {
 /**
  * Send as [`CreateWorkHandoff::receiver_agent_id`].
  */
-agentId: number, 
+agentId: number,
 /**
  * The agent's bot user, in the detail's `users`.
  */

@@ -3,19 +3,19 @@
 /**
  * The agent behind a bot: what it says it is, its daily budgets and today's use of them.
  */
-export type BotAgent = { id: number, provider: string | null, runtime: string | null, description: string | null, 
+export type BotAgent = { id: number, provider: string | null, runtime: string | null, description: string | null,
 /**
  * `null` is unlimited.
  */
-dailyMessageCap: number | null, dailyBoardPostCap: number | null, dailyExternalActionCap: number | null, 
+dailyMessageCap: number | null, dailyBoardPostCap: number | null, dailyExternalActionCap: number | null,
 /**
  * "2/50 messages · 0 board posts · 0 external actions", in the viewer's day.
  */
-usage: string, 
+usage: string,
 /**
  * The kill switch was used: it can't be undone from here.
  */
-suspended: boolean, 
+suspended: boolean,
 /**
  * The classic activity ledger and approval requests pages.
  */

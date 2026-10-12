@@ -7,7 +7,7 @@
  * A thread that isn't in this room is a 404. 422 when the text is blank with no files or over 50 000
  * characters, `sendAt` isn't in the future, or the reply target isn't in the same conversation.
  */
-export type CreateScheduledMessage = { markdownSource: string, sendAt: string, threadId: number | null, replyToMessageId: number | null, 
+export type CreateScheduledMessage = { markdownSource: string, sendAt: string, threadId: number | null, replyToMessageId: number | null,
 /**
  * The same owned upload slots as an immediate send; do not combine them.
  */

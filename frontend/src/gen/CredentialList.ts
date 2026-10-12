@@ -5,7 +5,7 @@ import type { Credential } from "./Credential";
  * `GET /api/v1/admin/bots/:id/credentials`, newest first, and the answer to a revocation
  * (`DELETE .../credentials/:credential_id`).
  */
-export type CredentialList = { botId: number, botName: string, 
+export type CredentialList = { botId: number, botName: string,
 /**
  * Only administrators issue credentials; owners may revoke them.
  */

@@ -6,15 +6,15 @@ import type { WelcomeRoomCard } from "./WelcomeRoomCard";
  * `GET /api/v1/welcome`: the welcome card and server guide for the signed-in person. Nothing
  * configured is an empty message, no rooms and no guide.
  */
-export type WorkspaceWelcome = { name: string, 
+export type WorkspaceWelcome = { name: string,
 /**
  * The workspace description (plain text), empty when unset.
  */
-description: string, 
+description: string,
 /**
  * The welcome message, rendered and sanitized; `null` when there is none.
  */
-messageHtml: string | null, rooms: Array<WelcomeRoomCard>, guide: Array<GuideEntry>, 
+messageHtml: string | null, rooms: Array<WelcomeRoomCard>, guide: Array<GuideEntry>,
 /**
  * The viewer may edit these in the workspace settings.
  */

@@ -9,11 +9,11 @@
  *
  * Fill order: 7.
  */
-export type GithubCardRef = { 
+export type GithubCardRef = {
 /**
  * `github_pull_requests.id`.
  */
-pullRequestId: number, owner: string, repo: string, number: number, 
+pullRequestId: number, owner: string, repo: string, number: number,
 /**
  * `https://github.com/{owner}/{repo}/pull/{number}`.
  */
