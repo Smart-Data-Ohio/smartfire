@@ -5,6 +5,7 @@
 import { type FileQuery, files, members, setStarred } from "../api/pane-endpoints.ts";
 import type { FileList } from "../gen/FileList.ts";
 import type { MemberList } from "../gen/MemberList.ts";
+import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { StarState } from "../gen/StarState.ts";
 import { mutations } from "../store/store.ts";
 import { onRoomRefresh } from "./room-refresh.ts";
@@ -16,13 +17,13 @@ export type { FileQuery };
 export const panes = {
   /** Mounted member readers reload only after a room-management change. */
   onRoomRefresh,
-  /** File readers must refresh even when the edited message is outside a loaded timeline. */
-  onMessageUpdate: (roomId: number, listener: () => void): (() => void) =>
+  /** Includes edits outside loaded timelines, with the message's complete attachment list. */
+  onMessageUpdate: (roomId: number, listener: (message: MessageDTO) => void): (() => void) =>
     onSyncEvents((events) => {
-      if (
-        events.some((event) => event.type === "message.updated" && event.data.roomId === roomId)
-      ) {
-        listener();
+      for (const event of events) {
+        if (event.type === "message.updated" && event.data.roomId === roomId) {
+          listener(event.data);
+        }
       }
     }),
   /** Every active member with presence and the viewer's stars. */

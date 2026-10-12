@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { RoomFile } from "../../src/gen/RoomFile.ts";
 import {
   expect,
   expectNoHorizontalOverflow,
@@ -105,6 +106,93 @@ matrix("the files pane", async ({ page, theme }) => {
   await pane(page).getByRole("tab", { name: "All" }).click();
   await pane(page).getByRole("searchbox", { name: "Search files by name" }).fill("zzz-nothing");
   await expect(pane(page).getByText('No files match "zzz-nothing".')).toBeVisible();
+});
+
+test("the files pane keeps loaded pages and scroll position after a text-only edit", async ({
+  page,
+}) => {
+  const entries = Array.from(
+    { length: 60 },
+    (_, index): RoomFile => ({
+      messageId: 100_000 + index,
+      threadId: null,
+      creatorId: 1,
+      createdAt: "2026-10-06T00:00:00.000Z",
+      attachment: {
+        filename: `file-${index}.txt`,
+        contentType: "text/plain",
+        byteSize: 100,
+        width: null,
+        height: null,
+        preview: "file",
+        spoiler: false,
+        url: `/files/file-${index}.txt`,
+        downloadUrl: `/files/file-${index}.txt?disposition=attachment`,
+        thumbnailUrl: null,
+      },
+    }),
+  );
+
+  const requests: number[] = [];
+
+  await page.route(`**/api/v1/rooms/${GENERAL}/files?*`, async (route) => {
+    const current = Number(new URL(route.request().url()).searchParams.get("page") ?? 1);
+
+    requests.push(current);
+    await route.fulfill({
+      json: {
+        files: entries.slice((current - 1) * 30, current * 30),
+        users: [],
+        nextPage: current === 1 ? 2 : null,
+      },
+    });
+  });
+  await open(page, `r/${GENERAL}`);
+  const composer = page.getByRole("textbox", { name: "Message #general" });
+
+  await composer.fill("Text edit while reading files");
+  await composer.press("Enter");
+
+  const message = page.locator(".message[data-message-id]", {
+    has: page.getByText("Text edit while reading files", { exact: true }),
+  });
+
+  await expect(message).toHaveCount(1);
+  const id = await message.getAttribute("data-message-id");
+
+  await openHeaderTool(page, /^Files/);
+  const rows = pane(page).getByRole("list", { name: "Files" }).getByRole("listitem");
+
+  await expect(rows).toHaveCount(30);
+  await pane(page).getByRole("button", { name: "Load more" }).click();
+  await expect(rows).toHaveCount(60);
+  const loadedRequests = [...requests];
+  const body = pane(page).locator(".pane-body");
+
+  const scrollTop = await body.evaluate((element) => {
+    element.scrollTop = 800;
+
+    return element.scrollTop;
+  });
+
+  expect(scrollTop).toBeGreaterThan(0);
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const response = await page.request.patch(`/api/v1/messages/${id}`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { markdownSource: "Edited while reading files" },
+  });
+
+  expect(response.ok()).toBe(true);
+  await expect(page.locator(`.message[data-message-id="${id}"]`)).toContainText(
+    "Edited while reading files",
+  );
+  await expect(rows).toHaveCount(60);
+  expect(await rows.locator(".file-row-name").allTextContents()).toEqual(
+    entries.map((file) => file.attachment.filename),
+  );
+  expect(await body.evaluate((element) => element.scrollTop)).toBe(scrollTop);
+  expect(requests).toEqual(loadedRequests);
 });
 
 matrix("the threads pane", async ({ page, theme }) => {

@@ -9,6 +9,7 @@ import {
   fileQuery,
   formatBytes,
   isFileType,
+  reconcileFiles,
   showsAsGrid,
 } from "./files.ts";
 
@@ -59,6 +60,37 @@ describe("appendFiles", () => {
     const merged = appendFiles([file(1), file(2)], [file(2), file(3)]);
 
     expect(merged.map((entry) => entry.messageId)).toEqual([1, 2, 3]);
+  });
+});
+
+describe("reconcileFiles", () => {
+  it("keeps the list and rows when a text edit leaves attachments unchanged", () => {
+    const first = file(1);
+    const held = [first, file(2)];
+
+    expect(
+      reconcileFiles(
+        held,
+        new Map([
+          [1, [first.attachment]],
+          [1000, []],
+        ]),
+      ),
+    ).toBe(held);
+  });
+
+  it("updates only the edited message when two messages attach the same blob", () => {
+    const first = file(1, "shared.png");
+    const second = file(2, "shared.png");
+
+    const files = reconcileFiles(
+      [first, second],
+      new Map([[1, [{ ...first.attachment, spoiler: true }]]]),
+    );
+
+    expect(files[0]?.attachment.spoiler).toBe(true);
+    expect(files[1]).toBe(second);
+    expect(first.attachment.spoiler).toBe(false);
   });
 });
 
