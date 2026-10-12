@@ -274,3 +274,76 @@ fn stage_audience_budget_serializes_last_slot_issuance_and_gateway_admission_acr
         );
     }
 }
+
+#[test]
+fn stage_audience_budget_demotion_preserves_admission_but_blocks_new_listeners() {
+    let db = TestDb::new();
+    let room = room(&db, 1);
+    let listener = caller(&db, room, "kevin");
+    let speaker = caller(&db, room, "jz");
+    let outsider = caller(&db, room, "jason");
+    db.write(move |tx| {
+        tx.conn()
+            .execute("UPDATE users SET role=0 WHERE id=?", [identify("jason")])?;
+        Membership::find(tx.conn(), speaker.0)?.change_stage_role_with_config(
+            tx,
+            StageRole::Speaker,
+            &config(),
+        )
+    });
+    for person in [listener, speaker] {
+        let grant = issue(&db, room, person).unwrap();
+        db.write(move |tx| admit(tx, grant.id));
+    }
+    db.write(move |tx| {
+        Membership::find(tx.conn(), speaker.0)?.change_stage_role_with_config(
+            tx,
+            StageRole::Listener,
+            &config(),
+        )
+    });
+    let replacement =
+        issue(&db, room, speaker).expect("existing speaker keeps admission after demotion");
+    db.write(move |tx| admit(tx, replacement.id));
+    assert_eq!(
+        db.read(|conn| HuddleGrant::stage_audience_usage(conn, room, 0, db.now())),
+        (2, 2, false)
+    );
+    assert!(matches!(
+        issue(&db, room, outsider),
+        Err(Error::StageAudienceFull)
+    ));
+    db.write(move |tx| {
+        HuddleGrant::find_by_id(tx.conn(), replacement.id)?
+            .unwrap()
+            .mark_out_of_call(tx, None)
+    });
+    assert!(matches!(
+        issue(&db, room, speaker),
+        Err(Error::StageAudienceFull)
+    ));
+}
+
+#[test]
+fn stage_audience_budget_reservation_only_release_publishes_once_after_commit() {
+    let db = TestDb::new();
+    let room = room(&db, 1);
+    let grant = issue(&db, room, caller(&db, room, "kevin")).unwrap();
+    db.sink.take();
+    let sink = db.sink.clone();
+    db.write(move |tx| {
+        HuddleGrant::find_by_id(tx.conn(), grant.id)?
+            .unwrap()
+            .mark_out_of_call(tx, None)?;
+        assert!(sink.events().is_empty());
+        Ok(())
+    });
+    let events = db.sink.take();
+    assert!(events.iter().any(|event| matches!(event, crate::Event::Broadcast(request) if request.kind == "HuddleGrant#broadcast_voice_presence")), "reservation release must refresh stage capacity");
+    db.write(move |tx| {
+        HuddleGrant::find_by_id(tx.conn(), grant.id)?
+            .unwrap()
+            .mark_out_of_call(tx, None)
+    });
+    assert!(db.sink.take().is_empty(), "repeat leave must not republish");
+}

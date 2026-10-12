@@ -227,3 +227,100 @@ async fn stage_audience_budget_gateway_refuses_delayed_tokens_and_preserves_pres
     assert!(grant.last_seen_at.is_some());
     assert!(!grant.revoked());
 }
+
+#[tokio::test]
+async fn stage_audience_budget_changes_publish_to_open_panes() {
+    let a = app(true).await.expect("frozen seeds required");
+    let (room, _, _, _) = stage(&a).await;
+    let room_id = room.id;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    david
+        .write(send_json(
+            Method::PATCH,
+            "/api/v1/admin/workspace",
+            &json!({"stageAudienceBudget":1}),
+        ))
+        .await;
+    seen(&a, join(&mut jason, room_id).await.grant_id).await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &jason.cookie_header(), &[format!("room:{room_id}")]).await;
+    let saved = david
+        .write(send_json(
+            Method::PATCH,
+            "/api/v1/admin/workspace",
+            &json!({"stageAudienceBudget":2}),
+        ))
+        .await;
+    assert_eq!(saved.status, StatusCode::OK);
+    let updated = sync.until(stage_of(room_id)).await;
+    assert_eq!(
+        (
+            updated.audience_count,
+            updated.audience_budget,
+            updated.audience_availability
+        ),
+        (1, 2, api::StageAudienceAvailability::Open)
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn stage_audience_budget_presence_poll_publishes_expired_reservations() {
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
+    ));
+    let a = TestApp::boot_with_settings(configured(), clock.clone(), &[])
+        .await
+        .expect("frozen seeds required");
+    let (room, _, _, _) = stage(&a).await;
+    let room_id = room.id;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    david
+        .write(send_json(
+            Method::PATCH,
+            "/api/v1/admin/workspace",
+            &json!({"stageAudienceBudget":1}),
+        ))
+        .await;
+    join(&mut jason, room_id).await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &jason.cookie_header(), &[format!("room:{room_id}")]).await;
+    clock.advance(jiff::SignedDuration::from_secs(21));
+    assert_eq!(
+        jason.send(get("/api/v1/huddles")).await.status,
+        StatusCode::OK
+    );
+    let updated = sync.until(stage_of(room_id)).await;
+    assert_eq!(
+        (
+            updated.audience_count,
+            updated.audience_budget,
+            updated.audience_availability
+        ),
+        (0, 1, api::StageAudienceAvailability::Open)
+    );
+    join(&mut jason, room_id).await;
+    assert_eq!(
+        sync.until(stage_of(room_id)).await.audience_availability,
+        api::StageAudienceAvailability::Full
+    );
+    assert_eq!(
+        jason
+            .write(empty(
+                Method::POST,
+                &format!("/api/v1/rooms/{room_id}/huddle/leave")
+            ))
+            .await
+            .status,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        sync.until(stage_of(room_id)).await.audience_availability,
+        api::StageAudienceAvailability::Open
+    );
+    server.abort();
+}

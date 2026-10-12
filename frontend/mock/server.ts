@@ -973,7 +973,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     (name) => admin.iconFile(name),
   );
 
-  const admin = createAdmin(ctx, uploads);
+  const admin = createAdmin(ctx, uploads, () => huddles.publishStages());
   const signIn = createSignIn(ctx, admin, () => csrf);
   const invites = createInvites(ctx);
   const join = createJoin(ctx, admin, invites);

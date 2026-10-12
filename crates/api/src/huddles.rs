@@ -170,6 +170,12 @@ fn room_name(conn: &Connection, room: &Room, viewer: &User) -> campfire_db::Resu
 /// `Users::HuddlePresenceController#show`: the live calls in the viewer's rooms.
 async fn index_huddles(c: &mut Ctx) -> Result {
     let viewer = before_huddle(c).await?;
+    let viewer_id = viewer.id;
+    c.app()
+        .db
+        .write(move |tx| HuddleGrant::expire_stage_reservations(tx, viewer_id))
+        .await
+        .map_err(db_error)?;
     let (secrets, now) = (c.app().secrets.clone(), Timestamp::from_jiff(c.now()));
     let list = c
         .app()

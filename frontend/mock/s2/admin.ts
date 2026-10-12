@@ -214,7 +214,11 @@ export interface AdminModule {
 }
 
 /** Creates the admin module. */
-export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
+export function createAdmin(
+  ctx: S2Context,
+  uploads: Uploads,
+  audienceBudgetChanged: () => void,
+): AdminModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
   let sudoLapsed = false;
@@ -532,7 +536,10 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     if (uploadLimit !== null) held.uploadLimitBytes = uploadLimit;
 
-    if (audienceBudget !== null) held.stageAudienceBudget = audienceBudget;
+    if (audienceBudget !== null && audienceBudget !== held.stageAudienceBudget) {
+      held.stageAudienceBudget = audienceBudget;
+      audienceBudgetChanged();
+    }
 
     if (description !== null) held.description = description.trim();
 

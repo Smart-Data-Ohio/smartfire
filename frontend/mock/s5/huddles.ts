@@ -66,6 +66,7 @@ interface CallWorld {
   /** `${roomId}:${userId}` for everyone a host muted. */
   readonly muted: Set<string>;
   readonly stages: Map<number, StageRecord>;
+  readonly reservations: Map<number, Map<number, number>>;
   nextGrantId: number;
   nextStreamId: number;
   /** `${roomId}:${identity}` → the second (ms / 1000) of its last soundboard play. */
@@ -82,6 +83,7 @@ export interface HuddleControlInput {
 
 export interface Huddles {
   readonly routes: readonly Route[];
+  readonly publishStages: () => void;
   readonly roomRoles: (record: RoomRecord) => ReadonlyMap<number, StageRole>;
   readonly reviseRoom: (record: RoomRecord, previousMembers: readonly number[]) => void;
   readonly removeRoom: (record: RoomRecord) => void;
@@ -132,6 +134,7 @@ export function createHuddles(
       calls: new Map(),
       muted: new Set(),
       stages: new Map(),
+      reservations: new Map(),
       nextGrantId: 1,
       nextStreamId: 1,
       plays: new Map(),
@@ -221,13 +224,53 @@ export function createHuddles(
   const roleOf = (record: RoomRecord, userId: number): StageRole | null =>
     record.room.kind === "stage" ? (stageOf(record).roles.get(userId) ?? "listener") : null;
 
-  const audienceCount = (record: RoomRecord): number =>
-    [...(calls().calls.get(record.room.id)?.keys() ?? [])].filter(
+  const listenerCount = (record: RoomRecord, userIds: Iterable<number>): number =>
+    [...new Set(userIds)].filter(
       (userId) =>
         roleOf(record, userId) === "listener" &&
         !isAdmin(userId) &&
         userId !== record.room.creatorId,
     ).length;
+
+  const audienceCount = (record: RoomRecord): number =>
+    listenerCount(record, calls().calls.get(record.room.id)?.keys() ?? []);
+
+  const reservedUsers = (roomId: number): number[] =>
+    [...(calls().reservations.get(roomId) ?? [])].flatMap(([userId, expires]) =>
+      expires > ctx.now() ? [userId] : [],
+    );
+
+  const occupied = (record: RoomRecord): number =>
+    listenerCount(record, [
+      ...(calls().calls.get(record.room.id)?.keys() ?? []),
+      ...reservedUsers(record.room.id),
+    ]);
+
+  const checkStageCapacity = (record: RoomRecord, userId: number): void => {
+    if (
+      record.room.kind === "stage" &&
+      roleOf(record, userId) === "listener" &&
+      !isAdmin(userId) &&
+      record.room.creatorId !== userId &&
+      !calls().calls.get(record.room.id)?.has(userId) &&
+      !reservedUsers(record.room.id).includes(userId) &&
+      occupied(record) >= audienceBudget()
+    ) {
+      throw plainError(409, "StageAudienceFull", "This stage is full");
+    }
+  };
+
+  const reserve = (record: RoomRecord, userId: number): void => {
+    checkStageCapacity(record, userId);
+    let reservations = calls().reservations.get(record.room.id);
+
+    if (reservations === undefined) {
+      reservations = new Map();
+      calls().reservations.set(record.room.id, reservations);
+    }
+
+    reservations.set(userId, ctx.now() + 20_000);
+  };
 
   const stageState = (record: RoomRecord): StageState => {
     const stage = stageOf(record);
@@ -260,7 +303,7 @@ export function createHuddles(
       roomId: record.room.id,
       audienceCount: audienceCount(record),
       audienceBudget: audienceBudget(),
-      audienceAvailability: audienceCount(record) >= audienceBudget() ? "full" : "open",
+      audienceAvailability: occupied(record) >= audienceBudget() ? "full" : "open",
       members: members.map(
         (userId): StageMember => ({
           membershipId: membershipId(record, userId),
@@ -332,6 +375,7 @@ export function createHuddles(
 
   /** Puts someone in a call (another tab of theirs adds an identity). */
   const enter = (record: RoomRecord, userId: number, newIdentity: string, replace: boolean) => {
+    checkStageCapacity(record, userId);
     const state = calls();
     const roomId = record.room.id;
     let entries = state.calls.get(roomId);
@@ -346,6 +390,7 @@ export function createHuddles(
 
     entry.identities = replace ? [newIdentity] : [...entry.identities, newIdentity];
     entries.set(userId, entry);
+    state.reservations.get(roomId)?.delete(userId);
 
     const events: Outgoing[] = [presenceEvent(record)];
 
@@ -375,8 +420,13 @@ export function createHuddles(
     const state = calls();
     const roomId = record.room.id;
     const entries = state.calls.get(roomId);
+    const released = state.reservations.get(roomId)?.delete(userId) === true;
 
-    if (entries?.delete(userId) !== true) return false;
+    if (entries?.delete(userId) !== true) {
+      if (released && record.room.kind === "stage") ctx.publish([stageEvent(record)]);
+
+      return released;
+    }
 
     if (entries.size === 0) state.calls.delete(roomId);
 
@@ -437,6 +487,23 @@ export function createHuddles(
     const rooms: HuddlePresence[] = [];
     const people = new Set<number>();
 
+    for (const [roomId, reservations] of calls().reservations) {
+      const record = ctx.world().rooms.get(roomId);
+
+      if (record === undefined || !record.memberIds.includes(VIEWER_ID)) continue;
+
+      let expired = false;
+
+      for (const [userId, expires] of reservations) {
+        if (expires <= ctx.now()) {
+          reservations.delete(userId);
+          expired = true;
+        }
+      }
+
+      if (expired && record.room.kind === "stage") ctx.publish([stageEvent(record)]);
+    }
+
     for (const roomId of calls().calls.keys()) {
       const record = ctx.world().rooms.get(roomId);
 
@@ -480,16 +547,7 @@ export function createHuddles(
       throw plainError(409, "HuddleRoomFull", "This voice room is full");
     }
 
-    if (
-      record.room.kind === "stage" &&
-      roleOf(record, VIEWER_ID) === "listener" &&
-      !isAdmin(VIEWER_ID) &&
-      record.room.creatorId !== VIEWER_ID &&
-      !entries?.has(VIEWER_ID) &&
-      audienceCount(record) >= audienceBudget()
-    ) {
-      throw plainError(409, "StageAudienceFull", "This stage is full");
-    }
+    checkStageCapacity(record, VIEWER_ID);
 
     const grantId = state.nextGrantId++;
     const newIdentity = identity();
@@ -586,6 +644,13 @@ export function createHuddles(
 
     if (stage.roles.get(userId) === "host" && role !== "host" && hosts <= 1) {
       throw validation("role", "A stage needs at least one host");
+    }
+
+    const replacing = (stage.roles.get(userId) === "listener") !== (role === "listener");
+
+    if (replacing && calls().calls.get(record.room.id)?.has(userId)) {
+      reserve(record, userId);
+      calls().calls.get(record.room.id)?.delete(userId);
     }
 
     stage.roles.set(userId, role);
@@ -921,6 +986,16 @@ export function createHuddles(
 
       if (record.room.kind === "stage") endStream(record, true);
       calls().stages.delete(record.room.id);
+      calls().reservations.delete(record.room.id);
+    },
+    publishStages() {
+      ctx.publish(
+        [...ctx.world().rooms.values()].flatMap((record) =>
+          record.room.kind === "stage" && record.memberIds.includes(VIEWER_ID)
+            ? [stageEvent(record)]
+            : [],
+        ),
+      );
     },
     control(action, input) {
       switch (action) {
@@ -928,7 +1003,13 @@ export function createHuddles(
           const record = callRoom(input.int("roomId"));
           const userId = input.int("userId");
 
-          enter(record, userId, identity(), false);
+          if (input.flag("connected", true)) {
+            enter(record, userId, identity(), false);
+          } else {
+            reserve(record, userId);
+
+            if (record.room.kind === "stage") ctx.publish([stageEvent(record)]);
+          }
 
           return done;
         }

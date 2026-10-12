@@ -415,6 +415,16 @@ async fn write_workspace(
                     .collect()
             });
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
+            if before.settings().stage_audience_budget() != account.settings().stage_audience_budget() {
+                let stages = tx.conn().prepare_cached(
+                    "SELECT id FROM rooms WHERE type='Rooms::Stage' AND deleted_at IS NULL",
+                )?.query_map([], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+                for room_id in stages {
+                    tx.emit_after_commit(campfire_db::Event::broadcast(
+                        &campfire_db::models::huddle_effects::StageRoster { room_id },
+                    ));
+                }
+            }
             attachments::assign(tx, Record::account(account.id, &secrets), "logo", logo)?;
             attachments::assign(tx, Record::account(account.id, &secrets), "banner", banner)?;
             let after_logo =
