@@ -29,6 +29,10 @@ pub use crate::messaging::{canonicalize_body, process_attachment, save_staged};
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_root_room(c).await?;
+    if campfire_runtime::navigation::alias_navigation(c)? {
+        let path = campfire_runtime::navigation::room_alias(c, room.id).await?;
+        return campfire_runtime::navigation::redirect_alias(c, &path);
+    }
     let messages = find_paged_messages(c, &room).await?;
     let json = c.format()? == Some(&format::JSON);
     if json { c.no_store(); }

@@ -20,8 +20,7 @@ function isPlainClick(event: MouseEvent): boolean {
  * The SPA path a click on `anchor` should open in place: a same-origin link to a classic page the
  * SPA has ported (a permalink pasted into a message, `/rooms/12/@34`, even with an old
  * `?classic=1`). `null` leaves the click to the browser: other origins, downloads, links to their
- * own window, and classic pages the SPA hasn't ported (they load in full, and the server serves
- * them as ever).
+ * own window, and protocol or authentication URLs outside the application screen map.
  */
 export function inPlaceTarget(
   anchor: HTMLAnchorElement,

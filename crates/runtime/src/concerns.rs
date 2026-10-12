@@ -263,7 +263,7 @@ pub async fn next_ui(_c: &Ctx, _user: &User) -> Result<bool> {
 }
 
 /// A signed-in person who opens a classic page the SPA has (`campfire_spa::screens`) goes to that
-/// page's SPA URL, with a 302: the old URLs (bookmarks, push and mail links) are aliases. Only for
+/// page's SPA URL, with a 301: the old URLs (bookmarks, push and mail links) are aliases. Only for
 /// a signed-in person's `GET` or `HEAD` that navigates to an HTML page ([`navigates`]): not a
 /// script's, a JSON request or a bare `fetch()`. A `classic` query parameter is
 /// dropped, not obeyed. A notice or alert left for the page is kept for the SPA, whose shell shows
@@ -286,8 +286,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
         return Ok(());
     }
     keep_waiting_flash(c);
-    let location = c.url_for(&location);
-    halt(c.redirect_to(&location)?)
+    halt(crate::navigation::redirect_alias(c, &location)?)
 }
 
 /// Resolve a durable alias, retaining only room-query records the viewer may open.
@@ -378,7 +377,7 @@ pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
 /// `thread` and `message_id` the viewer can open in the room `path` names. Anything else (another
 /// room, a room they aren't in, a deleted row) is left off, so the redirect stays on the plain
 /// room route.
-async fn confirmed_room_query(
+pub(crate) async fn confirmed_room_query(
     c: &Ctx,
     path: &str,
     query: Option<&str>,

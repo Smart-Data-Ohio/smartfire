@@ -1,7 +1,7 @@
 /**
  * Words, glyphs and destinations for the activity inbox: what each event type is called (the
  * classic inbox's labels), which tab holds it, what an empty tab says, and where opening an item
- * leads in the SPA (or, for a screen the SPA hasn't ported yet, on the classic site).
+ * leads in the SPA.
  */
 import type { ActivityEventType } from "../../gen/ActivityEventType.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
@@ -9,6 +9,7 @@ import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
 import type { AgentApprovalStatus } from "../../gen/AgentApprovalStatus.ts";
 import type { AgentBudgetCap } from "../../gen/AgentBudgetCap.ts";
+import { spaUrlFor } from "../../lib/screens.ts";
 import { activityDestination } from "../../store/activity.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 
@@ -203,61 +204,28 @@ export type ActivityTarget =
     }
   | { readonly kind: "scheduled" }
   | { readonly kind: "saved" }
-  | { readonly kind: "classic"; readonly href: string }
+  | { readonly kind: "page"; readonly href: string }
   | { readonly kind: "none" };
 
-function positiveId(text: string | null | undefined): number | null {
-  if (text === null || text === undefined || !/^\d+$/.test(text)) {
-    return null;
-  }
-
-  const id = Number(text);
-
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
-
-/**
- * The SPA screen for a classic path, when there is one: `/rooms/12/@9001` (a message),
- * `/rooms/12?message_id=9&thread=5` (a reply), `/rooms/12?thread=5` (a thread), `/rooms/12`,
- * `/scheduled_messages` and `/saved`. Anything else (events, approvals, sessions, settings)
- * stays on the classic site.
- */
+/** Old activity paths open their SPA screen; unknown paths reach the SPA's not-found page. */
 export function targetFromPath(path: string): ActivityTarget {
-  if (path === "") {
+  if (!isSitePath(path)) {
     return { kind: "none" };
   }
 
   const url = new URL(path, "https://smartfire.invalid");
-  const pathname = url.pathname.replace(/\/+$/, "");
+  const spa = spaUrlFor(url.pathname, url.search);
 
-  if (pathname === "/scheduled_messages") {
-    return { kind: "scheduled" };
-  }
+  const pathname =
+    url.pathname === "/app" || url.pathname.startsWith("/app/")
+      ? url.pathname
+      : `/app${url.pathname}`;
 
-  if (pathname === "/saved") {
-    return { kind: "saved" };
-  }
-
-  const room = /^\/rooms\/(\d+)(?:\/@(\d+))?$/.exec(pathname);
-  const roomId = positiveId(room?.[1]);
-
-  if (room === null || roomId === null) {
-    return { kind: "classic", href: path };
-  }
-
-  const atMessage = positiveId(room[2]);
-  const threadId = positiveId(url.searchParams.get("thread"));
-  const messageId = atMessage ?? positiveId(url.searchParams.get("message_id"));
-
-  if (threadId !== null) {
-    return { kind: "thread", roomId, threadId, messageId };
-  }
-
-  return messageId === null ? { kind: "room", roomId } : { kind: "message", roomId, messageId };
+  return { kind: "page", href: `${spa ?? `${pathname}${url.search}`}${url.hash}` };
 }
 
 /**
- * Whether `href` is a path on this site ("/rooms/12/events") the classic hand-off may follow: not
+ * Whether `href` is a path on this site ("/rooms/12/events") the SPA may follow: not
  * a URL, and not "//host" or "/\host", which browsers read as another site (the URL parser drops
  * tabs and newlines first, so they don't hide one).
  */

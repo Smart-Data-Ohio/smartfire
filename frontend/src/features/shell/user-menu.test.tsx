@@ -57,6 +57,7 @@ describe("the account menu's Help items", () => {
   it("offers the shortcuts, the tour and the public pages", async () => {
     const menu = await openMenu();
 
+    expect(within(menu).queryByRole("menuitem", { name: /classic/i })).toBeNull();
     expect(helpItems(menu)).toEqual([
       "Keyboard shortcuts",
       "Restart tour",

@@ -172,7 +172,7 @@ async fn ported_pages_send_everyone_to_the_spa() {
             ),
         ] {
             let reply = b.get(&classic).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{user} {classic}");
+            assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{user} {classic}");
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{user} {classic}");
         }
         let head = b
@@ -201,7 +201,7 @@ async fn a_stored_classic_choice_no_longer_keeps_the_classic_pages() {
         ("/account/edit".to_string(), "/app/admin".to_string()),
     ] {
         let reply = david.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
     }
     assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Classic));
@@ -230,7 +230,7 @@ async fn a_classic_query_no_longer_keeps_the_classic_page() {
             if classic.contains('?') { '&' } else { '?' }
         )]) {
             let reply = b.get(&path).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{path}: {}", reply.text());
+            assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{path}: {}", reply.text());
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
         }
     }
@@ -299,7 +299,7 @@ async fn spa_enabled_0_and_spa_default_classic_still_send_everyone_to_the_spa() 
             ("/users/me/profile/edit".to_string(), "/app/settings".to_string()),
         ] {
             let reply = b.get(&classic).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{user} {classic}");
+            assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{user} {classic}");
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{user} {classic}");
         }
         let shell = b.get("/app/").await;
@@ -339,7 +339,7 @@ async fn the_event_commands_link_opens_the_spa_form_with_its_prefill() {
         .unwrap_or_else(|| panic!("the classic new-event URL with a query: {url}"));
 
     let classic = david.get(&url).await;
-    assert_eq!(classic.status, StatusCode::FOUND, "{url}");
+    assert_eq!(classic.status, StatusCode::MOVED_PERMANENTLY, "{url}");
     assert_eq!(
         classic.location(),
         Some(to(&format!("/app/r/{room}/events/new?{query}")).as_str())
@@ -387,10 +387,10 @@ async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
         ),
     ] {
         let reply = david.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
         let bypass = david.get(&format!("{classic}?classic=1")).await;
-        assert_eq!(bypass.status, StatusCode::FOUND, "{classic}?classic=1");
+        assert_eq!(bypass.status, StatusCode::MOVED_PERMANENTLY, "{classic}?classic=1");
         assert_eq!(bypass.location(), Some(to(&spa).as_str()), "{classic}?classic=1");
     }
     let filter = "status=blocked&owner=me&tag=Release&page=2";
@@ -400,7 +400,7 @@ async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
         Some(to(&format!("/app/r/{BOARD}?{filter}")).as_str())
     );
     let reply = david.get("/work").await;
-    assert_eq!(reply.status, StatusCode::FOUND);
+    assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY);
     assert_eq!(reply.location(), Some(to("/app/work").as_str()));
     // The work filter carries over, and the handoff page's room is the SPA's to resolve.
     for (classic, spa) in [
@@ -414,7 +414,7 @@ async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
         ),
     ] {
         let reply = david.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
     }
 }
@@ -429,7 +429,7 @@ async fn message_aliases_and_room_tools_redirect_to_the_new_ui() {
     let mut david = a.sign_in(DAVID).await;
     for (classic, spa, _) in gap_pages(room, message.id) {
         let reply = david.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
     }
 }
@@ -448,7 +448,7 @@ async fn message_aliases_and_room_tools_redirect_whatever_was_chosen() {
     for (classic, spa, _) in gap_pages(room, message.id) {
         for path in [classic.clone(), format!("{classic}?classic=1")] {
             let reply = david.get(&path).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{path}");
+            assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{path}");
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
         }
         let fetched = david.classic_page(&classic).await;
@@ -486,7 +486,7 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
     for (classic, spa, _) in gap_pages(DIRECT_KEVIN_BENDER, message.id) {
         for path in [classic.clone(), format!("{classic}?classic=1")] {
             let reply = david.get(&path).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{path}");
+            assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{path}");
             assert_eq!(reply.location(), Some(to(&spa).as_str()), "{path}");
             assert!(!reply.text().contains(SECRET), "{path}");
         }
@@ -587,7 +587,7 @@ async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
         for suffix in ["", "/profile", "/profile/edit"] {
             let path = format!("/users/{id}{suffix}?source=profile");
             let reply = b.get(&path).await;
-            assert_eq!(reply.status, StatusCode::FOUND, "{path}: {}", reply.text());
+            assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{path}: {}", reply.text());
             assert_eq!(reply.location(), Some(to(&format!("{destination}?source=profile")).as_str()), "{path}");
         }
     }
@@ -635,7 +635,7 @@ async fn a_pending_flash_follows_the_redirect_into_the_spa_shell() {
     let mut b = a.sign_in(DAVID).await;
     save_profile(&mut b).await;
     let flashed = b.get(&path).await;
-    assert_eq!(flashed.status, StatusCode::FOUND);
+    assert_eq!(flashed.status, StatusCode::MOVED_PERMANENTLY);
     assert_eq!(flashed.location(), Some(to(&spa).as_str()));
     assert_shell_flash(&mut b, &spa).await;
 }
@@ -772,7 +772,7 @@ async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
         ("/account/integrations_health", "/app/admin/integrations"),
     ] {
         let reply = david.get(classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(spa).as_str()), "{classic}");
     }
 
@@ -812,7 +812,7 @@ async fn the_bot_pages_redirect_but_their_saves_stay_classic() {
         ),
     ] {
         let reply = david.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
     }
 
@@ -1084,7 +1084,7 @@ async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state()
     let mut b = a.sign_in(DAVID).await;
     for (classic, spa) in navigation_aliases(thread_room, thread) {
         let reply = b.get(&classic).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
         for path in with_classic(&classic) {
             assert_eq!(b.get(&path).await.location(), Some(to(&spa).as_str()), "{path}");
@@ -1109,7 +1109,7 @@ async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state()
                         .header("sec-fetch-dest", "empty"),
                 )
                 .await;
-            assert_eq!(forwarded.status, StatusCode::FOUND, "worker {accept} {classic}");
+            assert_eq!(forwarded.status, StatusCode::MOVED_PERMANENTLY, "worker {accept} {classic}");
             assert_eq!(
                 forwarded.location(),
                 Some(to(&spa).as_str()),
@@ -1194,10 +1194,10 @@ async fn html_suffixes_and_trailing_slashes_resolve_the_same_navigation_alias() 
                     }
                 );
                 let reply = b.get(&path).await;
-                if reply.status != StatusCode::FOUND || reply.location() != Some(to(&spa).as_str())
+                if reply.status != StatusCode::MOVED_PERMANENTLY || reply.location() != Some(to(&spa).as_str())
                 {
                     failures.push(format!(
-                        "{path}: {:?} {:?}, expected 302 {spa}",
+                        "{path}: {:?} {:?}, expected 301 {spa}",
                         reply.status,
                         reply.location()
                     ));
@@ -1208,7 +1208,7 @@ async fn html_suffixes_and_trailing_slashes_resolve_the_same_navigation_alias() 
     assert!(failures.is_empty(), "{}", failures.join("\n"));
     for path in ["/", "//", "///"] {
         let reply = b.get(path).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{path}");
+        assert_eq!(reply.status, StatusCode::MOVED_PERMANENTLY, "{path}");
         assert_eq!(reply.location(), Some(to("/app/").as_str()), "{path}");
     }
     for path in ["/.html", "/.html/", "/.xhtml", "/.xhtml/"] {
