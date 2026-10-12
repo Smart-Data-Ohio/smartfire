@@ -1,6 +1,6 @@
 //! `MessagePayloadHelper`: request-specific JSON, never a shared fragment-cache value.
 use campfire_db::{ChannelThread, Message, MessagePin, SavedItem, Timestamp, User};
-use campfire_db::channel_thread::{WorkReadFacts, WorkReadPermissions};
+use campfire_db::channel_thread::{ThreadVisibility, WorkReadFacts, WorkReadPermissions};
 use campfire_presentation::helpers::{AvatarIcon, IconSource};
 use campfire_presentation::messages::support::json_time;
 use serde_json::{Value, json};
@@ -10,7 +10,7 @@ use crate::controllers::presenters::{Presenter, Result, avatar_path};
 pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
     if let Some(thread_id) = message.thread_id {
         let thread = payload_thread(p, thread_id)?;
-        if thread.room_id != message.room_id || !thread_readable(p, &thread, viewer.id)? {
+        if thread.room_id != message.room_id || !thread_payload_readable(p, &thread, viewer.id)? {
             return Err(campfire_db::Error::RecordNotFound("Message"));
         }
     }
@@ -32,7 +32,7 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
         None=>ChannelThread::find_by_parent_message(p.conn,message.id)?,
     };
     if let Some(summary) = summary
-        && thread_readable(p, &summary, viewer.id)? {
+        && thread_payload_readable(p, &summary, viewer.id)? {
         result["thread_summary"] = thread(p, &summary, viewer, base)?;
     }
     if message.reply_to_message_id.is_some() || message.reply_target_deleted_at.is_some() {
@@ -135,7 +135,11 @@ fn payload_thread(p: &Presenter<'_>, id: i64) -> Result<ChannelThread> {
     }
 }
 
-fn thread_readable(p: &Presenter<'_>, thread: &ChannelThread, viewer: i64) -> Result<bool> {
+fn thread_payload_readable(p: &Presenter<'_>, thread: &ChannelThread, viewer: i64) -> Result<bool> {
+    // Rails still presents public-thread events in soft-deleted rooms.
+    if thread.visibility == ThreadVisibility::Public {
+        return Ok(true);
+    }
     match p.search_preloads.as_ref().and_then(|data| data.threads.as_ref()).filter(|data| data.viewer_id == viewer) {
         Some(data) => Ok(data.readable.contains(&thread.id)),
         None => thread.readable_by(p.conn, viewer),

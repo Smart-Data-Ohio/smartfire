@@ -281,7 +281,11 @@ impl<'a> PollContext<'a> {
             if let Some(actor) = actor {
                 fields.insert("actor".into(), actor);
             }
-            payload["message"] = presenter(&message)?;
+            payload["message"] = match presenter(&message) {
+                Ok(message) => message,
+                Err(crate::Error::RecordNotFound(_)) => return Ok(None),
+                Err(error) => return Err(error),
+            };
             payload["pull_request"] = super::agent_payloads::pull_request_for_message(
                 self.conn,
                 &message,
