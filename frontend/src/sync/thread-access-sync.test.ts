@@ -61,4 +61,21 @@ describe("threadAccessChanges", () => {
         .regained,
     ).toEqual([]);
   });
+
+  it("counts a removal and a grant in one batch as regained, whichever came first", () => {
+    const granted = updated("user");
+
+    // Removed, then added back, in one replay: the batch ends readable, so the pane reloads.
+    expect(
+      threadAccessChanges({ removedThreads: {} }, { removedThreads: {} }, [removed, granted]),
+    ).toEqual({ lost: [88], regained: [88] });
+
+    // Added, then removed: it ends unreadable, so nothing is regained.
+    expect(
+      threadAccessChanges({ removedThreads: {} }, { removedThreads: { 88: 1 } }, [
+        granted,
+        removed,
+      ]),
+    ).toEqual({ lost: [88], regained: [] });
+  });
 });
