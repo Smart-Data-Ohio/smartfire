@@ -51,7 +51,7 @@ import {
   touched,
 } from "../s2/model.ts";
 import { clientMessageIdOf } from "../s2/posting.ts";
-import { attachmentOf } from "../s2/uploads.ts";
+import type { Uploads } from "../s2/uploads.ts";
 import {
   BOT_ID,
   ROOM_IDS,
@@ -950,7 +950,11 @@ export interface CalendarAttendance {
   ) => MockResponse | null;
 }
 
-export function createCards(ctx: S2Context, calendar?: CalendarAttendance): CardsModule {
+export function createCards(
+  ctx: S2Context,
+  uploads: Uploads,
+  calendar?: CalendarAttendance,
+): CardsModule {
   const state = () => cardsOf(ctx.world());
 
   const pollOr404 = (roomId: number, pollId: number): PollRecord => {
@@ -1143,18 +1147,17 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
             throw validation("optionMedia", "Choose one image or emoji");
 
           if (emoji !== null) return { kind: "emoji", content: emoji };
-          const blob = ctx.world().blobs.get(signedId ?? "");
+          const attachment = uploads.attachment(signedId ?? "");
 
           if (
-            blob?.bytes == null ||
-            !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(blob.contentType)
+            !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(attachment.contentType)
           )
             throw validation("optionMedia", "Choose an uploaded image");
 
-          if (blob.byteSize > 100 * 1024 * 1024)
+          if (attachment.byteSize > 100 * 1024 * 1024)
             throw validation("optionMedia", "The image exceeds the upload limit");
 
-          return { kind: "image", url: attachmentOf(blob).url, stillUrl: null };
+          return { kind: "image", url: attachment.url, stillUrl: null };
         })
       : [];
 

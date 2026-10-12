@@ -1,8 +1,9 @@
 //! The Active Storage endpoints (`activestorage/config/routes.rb`) over `campfire_storage`, as the
 //! engine's controllers serve them, plus `ActiveStorage::Blob#purge` for the purge job.
 //!
-//! Poll option media additionally requires poll access and uses private, uncached
-//! responses, including stills and disk redirects. Other downloads stay public behind signed
+//! Poll option media and scheduled files require their viewer's access. Uploads remain
+//! uncached until attached to a sent message, including stills and disk redirects.
+//! Other downloads stay public behind signed
 //! URLs; the disk `PUT` and direct uploads require a
 //! Campfire session (`reference/config/initializers/active_storage_authentication.rb`). The disk
 //! service's `show` gets `Cache-Control: max-age=3600, public`
@@ -217,8 +218,8 @@ async fn set_blob(c: &mut Ctx) -> Result<Blob> {
 }
 
 /// Follow still/variant images back to their original, including redirected disk URLs.
-async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
-    let (restricted, rooms, schedulers) = c.app().db.read(move |conn| {
+pub async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
+    let (restricted, unpublished, rooms, schedulers) = c.app().db.read(move |conn| {
         let mut roots = conn.prepare_cached(
             "WITH RECURSIVE roots(id) AS (
                 VALUES (?1)
@@ -229,16 +230,22 @@ async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
                 UNION SELECT a.record_id FROM active_storage_attachments a JOIN roots r ON r.id=a.blob_id
                     WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image'
              ) SELECT b.id, json_extract(b.metadata, '$.poll_media') = 1,
-                 json_extract(b.metadata, '$.scheduled_by') FROM roots r JOIN active_storage_blobs b ON b.id=r.id"
+                 json_extract(b.metadata, '$.scheduled_by'),
+                 json_extract(b.metadata, '$.uploader_id') IS NOT NULL AND NOT EXISTS (
+                    SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id
+                    WHERE a.blob_id=b.id AND a.record_type='Message' AND a.name IN ('attachment','attachments')
+                 ) FROM roots r JOIN active_storage_blobs b ON b.id=r.id"
         )?;
-        let blobs = roots.query_map([blob_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<bool>>(1)?.unwrap_or(false), r.get::<_, Option<i64>>(2)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        let blobs = roots.query_map([blob_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Option<bool>>(1)?.unwrap_or(false), r.get::<_, Option<i64>>(2)?, r.get::<_, bool>(3)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
         // Purge may have committed since the URL lookup. A missing blob is never public.
-        if !blobs.iter().any(|(id, _, _)| *id == blob_id) { return Ok(None); }
+        if !blobs.iter().any(|(id, _, _, _)| *id == blob_id) { return Ok(None); }
         let mut restricted = false;
+        let mut unpublished = false;
         let mut rooms = Vec::new();
         let mut schedulers = Vec::new();
-        for (id, marked, scheduler) in blobs {
+        for (id, marked, scheduler, pending) in blobs {
             restricted |= marked;
+            unpublished |= pending;
             schedulers.extend(scheduler);
             let mut scheduled = conn.prepare_cached(
                 "SELECT s.user_id FROM active_storage_attachments a JOIN scheduled_messages s ON s.id=a.record_id
@@ -259,9 +266,9 @@ async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> {
                 rooms.extend(statement.query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
             }
         }
-        Ok(Some((restricted || !schedulers.is_empty(), rooms, schedulers)))
+        Ok(Some((restricted || !schedulers.is_empty(), unpublished, rooms, schedulers)))
     }).await.map_err(Error::internal)?.ok_or(Error::NotFound)?;
-    if !restricted { return Ok(false); }
+    if !restricted { return Ok(unpublished); }
     let (user_id, verified) = if let Some(session) = find_session_by_cookie(c).await? {
         (session.user_id, session.two_factor_verified())
     } else if crate::concerns::bot_authentication(c).await?

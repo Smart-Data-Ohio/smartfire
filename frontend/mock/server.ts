@@ -1021,7 +1021,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const soundboard = createSoundboard(ctx, uploads);
   const huddles = createHuddles(ctx, simulate, soundboard.has);
   const events = createEvents(ctx);
-  const cards = createCards(ctx, events);
+  const cards = createCards(ctx, uploads, events);
   const fizzy = createFizzy(ctx, threads);
 
   const workspaceLayout = createWorkspaceLayout(ctx);

@@ -36,6 +36,7 @@ pub(crate) async fn send_image(
         .await
         .map_err(Error::internal)?
         .ok_or(Error::NotFound)?;
+    let private = campfire_runtime::active_storage::authorize_private_media(c, blob.id).await?;
     let animated = branding::animated(&blob);
     let still = c.param_str("still") == Some("1");
     if still && !animated {
@@ -48,7 +49,7 @@ pub(crate) async fn send_image(
     };
     let small = name == "logo" && c.param_str("size") == Some("small");
     let original = animated && !still;
-    if let Some(response) = c.fresh_when(Freshness {
+    if !private && let Some(response) = c.fresh_when(Freshness {
         etag: Some(format!(
             "{etag_prefix}-{}-{}-{small}",
             blob.id,
@@ -128,9 +129,10 @@ pub(crate) async fn send_image(
             Err(_) => return Err(Error::NotFound),
         }
     };
-    c.send_file(
+    let response = c.send_file(
         c.app().storage.service.path_for(&image.key),
         SendOptions::inline(image.content_type()),
     )
-    .map_err(|_| Error::NotFound)
+    .map_err(|_| Error::NotFound)?;
+    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
 }

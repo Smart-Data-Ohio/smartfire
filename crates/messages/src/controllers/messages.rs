@@ -507,7 +507,7 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
-    let files = attachments::stage_many(c.app(), attributes.attachments).await?;
+    let files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
     let storage = c.app().storage.clone();
     let outcome = c
         .app()
@@ -582,7 +582,7 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
-    let files = attachments::stage_many(c.app(), attributes.attachments).await?;
+    let files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
@@ -657,18 +657,11 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => {
-            if matches!(policy, AttachmentPolicy::SignedBlob) {
-                let private: bool = tx.conn().query_row(
-                    "SELECT json_extract(metadata, '$.scheduled_by') IS NOT NULL OR EXISTS(
-                        SELECT 1 FROM active_storage_attachments WHERE blob_id=?1 AND record_type='ScheduledMessage'
-                     ) FROM active_storage_blobs WHERE id=?1",
-                    [blob.id], |row| row.get(0),
-                )?;
-                if private {
-                    let mut errors = campfire_db::Errors::default();
-                    errors.add(attribute, "includes a private scheduled upload");
-                    return Err(campfire_db::Error::RecordInvalid(errors));
-                }
+            if matches!(policy, AttachmentPolicy::SignedBlob)
+                && !attachments::scheduled_upload_owners(tx.conn(), blob.id)?.is_empty() {
+                let mut errors = campfire_db::Errors::default();
+                errors.add(attribute, "includes a private scheduled upload");
+                return Err(campfire_db::Error::RecordInvalid(errors));
             }
             if let AttachmentPolicy::OwnedUpload { uploader_id } | AttachmentPolicy::ScheduledUpload { uploader_id, .. } = policy {
                 let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?

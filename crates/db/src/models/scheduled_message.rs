@@ -415,7 +415,8 @@ impl ScheduledMessage {
             if blob.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64) != Some(self.user_id) {
                 return Ok(Err("an attachment is no longer owned by its scheduler".into()));
             }
-            let received = match std::fs::metadata(service.path_for(&blob.key)) {
+            let path = service.path_for(&blob.key);
+            let received = match std::fs::metadata(&path) {
                 Ok(metadata) if metadata.is_file() => metadata.len(),
                 Ok(_) => return Ok(Err("an attachment no longer exists".into())),
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -428,6 +429,18 @@ impl ScheduledMessage {
             }
             if received != blob.byte_size as u64 {
                 return Ok(Err("an attachment's size no longer matches its upload".into()));
+            }
+            if let Some(checksum) = &blob.checksum {
+                let received_checksum = match campfire_storage::key::checksum_file(&path) {
+                    Ok(checksum) => checksum,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        return Ok(Err("an attachment no longer exists".into()));
+                    }
+                    Err(error) => return Err(crate::Error::Other(error.to_string())),
+                };
+                if &received_checksum != checksum {
+                    return Ok(Err("an attachment's checksum no longer matches its upload".into()));
+                }
             }
             ids.push(blob.id);
         }

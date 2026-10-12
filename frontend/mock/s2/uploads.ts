@@ -19,6 +19,7 @@ import { type Route, route, type S2Context } from "./context.ts";
 import { base64, md5Base64 } from "./digest.ts";
 import { BRAND_ICONS, customIcon } from "./emoji.ts";
 import type { BlobRecord } from "./model.ts";
+import { filesOf } from "./posting.ts";
 
 /** A direct upload URL works for this long after `POST /uploads`. */
 export const UPLOAD_URL_TTL_MS = 5 * 60_000;
@@ -121,7 +122,7 @@ export interface Uploads {
   readonly routes: readonly Route[];
   /** Serves `PUT /rails/active_storage/disk/:token`, blobs and icons. */
   handleBinary(request: MockBinaryRequest): Promise<MockBinaryResponse>;
-  /** The attachment for a finished upload's signed id; 422 otherwise. */
+  /** A finished upload. Supplying scheduledId also requires a fresh scheduled-file claim. */
   attachment(signedId: string, scheduledId?: number | null): Attachment;
   /** While on, upload `PUT`s wait until released. Turning it off releases them. */
   hold(on: boolean): void;
@@ -261,6 +262,16 @@ export function createUploads(
     });
   };
 
+  const attachedToMessage = (blob: BlobRecord): boolean => {
+    const url = attachmentOf(blob).url;
+    const world = ctx.world();
+    const conversations = [...world.rooms.values(), ...world.threads.values()];
+
+    return conversations.some((conversation) =>
+      conversation.messages.some((message) => filesOf(message).some((file) => file.url === url)),
+    );
+  };
+
   const serveBlob = (signedId: string, filename: string, download: boolean): MockBinaryResponse => {
     const blob = ctx.world().blobs.get(signedId);
 
@@ -275,7 +286,10 @@ export function createUploads(
       bytes: blob.bytes,
       headers: {
         "Content-Disposition": `${disposition}; filename="${name.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
-        "Cache-Control": "max-age=300, private",
+        "Cache-Control":
+          blob.uploadExpiresAt > 0 && !attachedToMessage(blob)
+            ? "private, no-store"
+            : "max-age=300, private",
         ETag: `"${base64(new TextEncoder().encode(blob.checksum)).slice(0, 16)}"`,
       },
     };
@@ -296,7 +310,7 @@ export function createUploads(
       status: 200,
       contentType,
       bytes,
-      headers: { "Cache-Control": "max-age=3600" },
+      headers: { "Cache-Control": uploaded === null ? "max-age=3600" : "private, no-store" },
     });
 
     if (uploaded !== null && !(still && uploaded.animated)) {
@@ -352,7 +366,7 @@ export function createUploads(
         ? serveIcon(path, url.searchParams.get("still") === "1")
         : empty(404);
     },
-    attachment(signedId, scheduledId = null) {
+    attachment(signedId, scheduledId) {
       const blob = ctx.world().blobs.get(signedId);
 
       if (blob === undefined) throw validation("attachment", "Attachment is invalid");
@@ -361,11 +375,15 @@ export function createUploads(
         [...ctx.world().scheduled.values()].some(
           (message) =>
             message.id !== scheduledId &&
-            message.sentAt === null &&
+            (message.sentAt === null || scheduledId !== undefined) &&
             message.attachments.some((file) => file.signedId === signedId),
         )
       ) {
         throw validation("attachment", "Attachment is already attached to a scheduled message");
+      }
+
+      if (scheduledId !== undefined && attachedToMessage(blob)) {
+        throw validation("attachment", "Attachment is already attached to a message");
       }
 
       if (blob.bytes === null)

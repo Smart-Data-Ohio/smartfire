@@ -24,25 +24,33 @@ pub async fn show(c: &mut Ctx) -> Result {
     c.use_live_response(); // `include ActiveStorage::Streaming`
     concerns::before_actions(c, Before::default()).await?;
     let user = from_avatar_token(c).await?;
+    let user_id = user.id;
+    let blob = c.app().db.read(move |conn| attachments::attached_blob(conn, "User", user_id, "avatar"))
+        .await.map_err(Error::internal)?;
+    let private = match blob {
+        Some(blob) => campfire_runtime::active_storage::authorize_private_media(c, blob.id).await?,
+        None => false,
+    };
 
     let freshness = Freshness {
         etag: Some(cache_key_with_version("users", user.id, user.updated_at.jiff())),
         template: template_found(c).then(|| TEMPLATE_DIGEST.to_string()),
         ..Freshness::default()
     };
-    if let Some(not_modified) = c.fresh_when(freshness) {
+    if !private && let Some(not_modified) = c.fresh_when(freshness) {
         return Ok(not_modified);
     }
     c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
 
-    if let Some(variant) = avatar_variant(c, &user).await? {
+    let response = if let Some(variant) = avatar_variant(c, &user).await? {
         let path = c.app().storage.service.path_for(&variant.key);
         c.send_file(path, SendOptions::inline("image/webp"))
     } else if user.is_bot() {
         render_default_bot(c)
     } else {
         render_initials(c, &user)
-    }
+    }?;
+    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
 }
 
 /// `Current.user.avatar.destroy`, then back to the profile.
