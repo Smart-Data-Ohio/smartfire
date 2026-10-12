@@ -10,6 +10,7 @@ import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
 import { messageFiles } from "../messages/message-files.ts";
 import { useSpoilerReveal } from "../messages/spoilers.ts";
+import { StickerMessage } from "../messages/sticker-message.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
@@ -191,14 +192,17 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
           </time>
           {message.editedAt === null ? null : <span className="search-hit-edited">(edited)</span>}
         </div>
-        {html === "" ? null : (
-          <div
-            ref={bodyRef}
-            className="search-hit-body message-body"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: the server's sanitized body; the marks are added as DOM nodes, never as markup text
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        )}
+        <div className={message.sticker === undefined ? undefined : "message-sticker-body"}>
+          {html === "" ? null : (
+            <div
+              ref={bodyRef}
+              className="search-hit-body message-body"
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: the server's sanitized body; the marks are added as DOM nodes, never as markup text
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          )}
+          {message.sticker === undefined ? null : <StickerMessage sticker={message.sticker} />}
+        </div>
         <HitAttachment message={message} />
       </div>
       <span className="search-hit-jump" aria-hidden="true">

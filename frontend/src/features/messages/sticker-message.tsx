@@ -2,6 +2,7 @@ import type { MessageSticker } from "../../gen/MessageSticker.ts";
 import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { stickerText } from "./message-files.ts";
+import "./messages.css";
 
 /** A sticker's box in a message, in CSS pixels: stickers are at most 320 × 320, shown at half. */
 export const STICKER_SIZE = 160;
