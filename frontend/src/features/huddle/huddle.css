@@ -484,7 +484,7 @@
     grid-template:
       "head head" auto
       "stage chat" minmax(0, 1fr)
-      / minmax(0, 1fr) clamp(300px, 32%, 420px);
+      / minmax(0, 1fr) clamp(360px, 36%, 440px);
   }
 
   .room:has(> .call-view[data-chat]) > .room-part:first-child > * {
