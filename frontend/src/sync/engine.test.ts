@@ -23,6 +23,7 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { Settings } from "../gen/Settings.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
 import { activityListOf, activityLoadStart } from "../store/activity.ts";
 import { ignoresStale } from "../store/ignores.ts";
@@ -1860,7 +1861,7 @@ describe("resuming", () => {
 });
 
 /** Thread 88's header in room 12. */
-const threadDetail = (status: "active" | "closed", canClose: boolean) => ({
+const threadDetail = (status: "active" | "closed", canClose: boolean): ThreadDetail => ({
   thread: {
     id: 88,
     roomId: 12,
@@ -2233,6 +2234,239 @@ describe("resync", () => {
         expect(store.getState().threads[88]?.status).toBe("closed");
         expect(store.getState().threadPanes[88]?.permissions?.canClose).toBe(false);
         expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 7]);
+      }),
+    ),
+  );
+
+  for (const retry of [false, true]) {
+    it.effect(
+      `recovers access while a private thread's ${retry ? "retry" : "first load"} is pending`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            const socket = yield* MemorySocket;
+            const api = yield* FakeApi;
+            const release = yield* Deferred.make<void>();
+            const denied = yield* Deferred.make<void>();
+            const gone = new NotFound({ message: "gone" });
+            let headers = 0;
+            let pages = 0;
+
+            const original = threadDetail("active", true);
+
+            const secret: ThreadDetail = {
+              ...original,
+              thread: { ...original.thread, visibility: "private" },
+            };
+
+            const replies = (ids: readonly number[]) =>
+              pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
+
+            yield* serve([]);
+            yield* startEngine;
+            yield* welcome(5, false);
+
+            if (retry) {
+              yield* threadActions.open(88);
+              expect(store.getState().threadPanes[88]?.status).toBe("error");
+            }
+
+            yield* api.route("GET /threads/88", () => {
+              headers += 1;
+
+              return headers === 1
+                ? Deferred.await(denied).pipe(Effect.andThen(Effect.fail(gone)))
+                : Deferred.await(release).pipe(Effect.as(secret));
+            });
+            yield* api.route("GET /threads/88/messages", () => {
+              pages += 1;
+
+              return pages === 1
+                ? Deferred.await(denied).pipe(Effect.andThen(Effect.fail(gone)))
+                : Effect.succeed(replies([5, 6]));
+            });
+
+            const opening = yield* Effect.forkChild(
+              retry ? threadActions.reload(88) : threadActions.open(88),
+            );
+
+            yield* settle;
+            expect(store.getState().threadPanes[88]?.status).toBe("loading");
+            expect(headers).toBe(1);
+            expect(pages).toBe(1);
+            yield* socket.clearSent;
+            yield* pushEvents({
+              seq: 6,
+              topic: "user",
+              type: "thread.updated",
+              data: secret.thread,
+            });
+            yield* settle;
+
+            expect(yield* socket.sent).toContainEqual({ t: "sub", topics: ["thread:88"] });
+            expect(store.getState().threadPanes[88]?.status).toBe("loading");
+            expect(headers).toBe(2);
+            expect(pages).toBe(2);
+            yield* pushEvents({
+              seq: 7,
+              topic: "user",
+              type: "thread.updated",
+              data: secret.thread,
+            });
+            expect((yield* socket.sent).filter((frame) => frame.t === "sub")).toEqual([
+              { t: "sub", topics: ["thread:88"] },
+            ]);
+            expect(headers).toBe(2);
+            expect(pages).toBe(2);
+            yield* Deferred.succeed(denied, undefined);
+            yield* Fiber.join(opening);
+            expect(store.getState().threadPanes[88]?.status).toBe("loading");
+            expect(store.getState().threadTimelines[88]?.arrived).toEqual([]);
+            yield* Deferred.succeed(release, undefined);
+            yield* settle;
+            expect(store.getState().threadPanes[88]?.status).toBe("ready");
+            expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 6]);
+
+            yield* pushEvents({
+              seq: 8,
+              topic: "thread:88",
+              type: "message.created",
+              data: messageFixture(7, 12, { threadId: 88 }),
+            });
+
+            expect(store.getState().threadTimelines[88]?.ids).toContain(7);
+          }),
+        ),
+    );
+  }
+
+  it.effect(
+    "recovers another grant after reconnect supersedes a pending private-thread recovery",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const socket = yield* MemorySocket;
+          const api = yield* FakeApi;
+          const releaseOld = yield* Deferred.make<void>();
+          const releaseNew = yield* Deferred.make<void>();
+          const gone = new NotFound({ message: "gone" });
+          let headers = 0;
+          let pages = 0;
+
+          const original = threadDetail("active", true);
+
+          const secret: ThreadDetail = {
+            ...original,
+            thread: { ...original.thread, visibility: "private" },
+          };
+
+          const replies = (id: number) => pageFixture([messageFixture(id, 12, { threadId: 88 })]);
+
+          yield* serve([]);
+          yield* startEngine;
+          yield* welcome(5, false);
+          yield* threadActions.open(88);
+          expect(store.getState().threadPanes[88]?.status).toBe("error");
+          yield* api.route("GET /threads/88", () => {
+            headers += 1;
+
+            if (headers === 2) return Effect.fail(gone);
+
+            return Deferred.await(headers === 1 ? releaseOld : releaseNew).pipe(Effect.as(secret));
+          });
+          yield* api.route("GET /threads/88/messages", () => {
+            pages += 1;
+
+            if (pages === 2) return Effect.fail(gone);
+
+            return Deferred.await(pages === 1 ? releaseOld : releaseNew).pipe(
+              Effect.as(replies(pages === 1 ? 5 : 6)),
+            );
+          });
+
+          const grant = (seq: number): SyncEvent => ({
+            seq,
+            topic: "user",
+            type: "thread.updated",
+            data: secret.thread,
+          });
+
+          yield* pushEvents(grant(6));
+          expect(headers).toBe(1);
+          expect(pages).toBe(1);
+          expect(store.getState().threadPanes[88]?.status).toBe("loading");
+
+          // Access is removed offline. The reconnect cannot replay its removal tombstone.
+          yield* socket.drop;
+          yield* TestClock.adjust("250 millis");
+          yield* welcome(7, false);
+          yield* settle;
+          expect(headers).toBe(2);
+          expect(pages).toBe(2);
+          expect(store.getState().threadPanes[88]?.status).toBe("error");
+          expect(store.getState().removedThreads[88]).toBeUndefined();
+          expect(yield* Deferred.isDone(releaseOld)).toBe(false);
+          yield* socket.clearSent;
+
+          yield* pushEvents(grant(8));
+          expect((yield* socket.sent).filter((frame) => frame.t === "sub")).toEqual([
+            { t: "sub", topics: ["thread:88"] },
+          ]);
+          expect(headers).toBe(3);
+          expect(pages).toBe(3);
+          expect(store.getState().threadPanes[88]?.status).toBe("loading");
+
+          // Finishing the superseded recovery must not clear the new recovery's duplicate guard.
+          yield* Deferred.succeed(releaseOld, undefined);
+          yield* settle;
+          yield* pushEvents(grant(9));
+          expect((yield* socket.sent).filter((frame) => frame.t === "sub")).toEqual([
+            { t: "sub", topics: ["thread:88"] },
+          ]);
+          expect(headers).toBe(3);
+          expect(pages).toBe(3);
+          expect(store.getState().threadPanes[88]?.status).toBe("loading");
+
+          yield* Deferred.succeed(releaseNew, undefined);
+          yield* settle;
+          expect(store.getState().threadPanes[88]?.status).toBe("ready");
+          expect(store.getState().threadTimelines[88]?.ids).toEqual([6]);
+          yield* pushEvents({
+            seq: 10,
+            topic: "thread:88",
+            type: "message.created",
+            data: messageFixture(7, 12, { threadId: 88 }),
+          });
+          expect(store.getState().threadTimelines[88]?.ids).toEqual([6, 7]);
+        }),
+      ),
+  );
+
+  it.effect("subscribes again when Try again reloads a denied private thread", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(88);
+        expect(store.getState().threadPanes[88]?.status).toBe("error");
+        yield* socket.clearSent;
+
+        const detail = threadDetail("active", true);
+
+        yield* api.reply("GET /threads/88", {
+          ...detail,
+          thread: { ...detail.thread, visibility: "private" },
+        });
+        yield* api.reply("GET /threads/88/messages", pageFixture([]));
+        yield* threadActions.reload(88);
+        expect(store.getState().threadPanes[88]?.status).toBe("ready");
+        expect((yield* socket.sent).filter((frame) => frame.t === "sub")).toEqual([
+          { t: "sub", topics: ["thread:88"] },
+        ]);
       }),
     ),
   );

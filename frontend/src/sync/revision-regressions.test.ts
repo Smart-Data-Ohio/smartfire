@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Deferred, Effect, Fiber } from "effect";
+import { Deferred, Effect, Fiber, Layer } from "effect";
 import { Forbidden, ServerError } from "../api/errors.ts";
 import { FakeApi, pageFixture, rowVersionFixture, userFixture } from "../api/testing.ts";
 import { messageFixture, threadFixture } from "../features/threads/test-fixtures.ts";
@@ -15,12 +15,18 @@ import { approvalListKey, approvalListOf } from "../store/approvals.ts";
 import { mutations, store } from "../store/store.ts";
 import { workDetailStale } from "../store/work.ts";
 import * as approvals from "./approval-actions.ts";
+import { SyncLink } from "./link.ts";
 import * as threads from "./thread-actions.ts";
+import { Topics } from "./topics.ts";
 import * as work from "./work-actions.ts";
 
 const THREAD = 7;
 
 const NOW = Date.UTC(2026, 9, 6, 9, 15);
+
+const apiLayer = Topics.layer.pipe(
+  Layer.provideMerge(Layer.mergeAll(SyncLink.layer, FakeApi.layerClient)),
+);
 
 function facts(offset: number, change: Partial<WorkFacts> = {}): WorkFacts {
   return factsFixture({ updatedAt: rowVersionFixture(NOW + offset), ...change });
@@ -86,7 +92,7 @@ describe("S4 revisions through held network responses", () => {
           expect(
             (yield* fake.requests).filter((request) => request.path === `/threads/${THREAD}`),
           ).toHaveLength(2);
-        }).pipe(Effect.provide(FakeApi.layerClient)),
+        }).pipe(Effect.provide(apiLayer)),
     );
   }
 
@@ -140,7 +146,7 @@ describe("S4 revisions through held network responses", () => {
           ownerActive: false,
         });
         expect(store.getState().work.writes[THREAD]).toBeUndefined();
-      }).pipe(Effect.provide(FakeApi.layerClient)),
+      }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("keep a successful work reply after its echo and a late older refresh", () =>
@@ -186,7 +192,7 @@ describe("S4 revisions through held network responses", () => {
       expect(
         (yield* fake.requests).filter((request) => request.path === `/threads/${THREAD}`),
       ).toHaveLength(1);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("roll back a refused status while keeping eligibility learned from an older GET", () =>
@@ -340,7 +346,7 @@ describe("S4 revisions through held network responses", () => {
         status: "planned",
         updatedAt: rowVersionFixture(NOW + 2),
       });
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect(
@@ -370,7 +376,7 @@ describe("S4 revisions through held network responses", () => {
 
         expect(store.getState().threads[THREAD]?.work).toBeNull();
         expect(store.getState().work.details[THREAD]).toBeUndefined();
-      }).pipe(Effect.provide(FakeApi.layerClient)),
+      }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("keep tracked work when a held thread creation retry replies with untracked work", () =>
@@ -480,7 +486,7 @@ describe("S4 revisions through held network responses", () => {
 
       expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
       expect(store.getState().work.writes[THREAD]).toBeUndefined();
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect(
