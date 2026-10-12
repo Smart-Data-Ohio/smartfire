@@ -14,6 +14,7 @@
 import type { HuddleSoundboardPlayed } from "../../gen/HuddleSoundboardPlayed.ts";
 import type { SoundboardCatalog } from "../../gen/SoundboardCatalog.ts";
 import type { SoundboardSound } from "../../gen/SoundboardSound.ts";
+import { isIgnored } from "../../store/ignores.ts";
 import { serverNow } from "../../store/server-clock.ts";
 import { store } from "../../store/store.ts";
 import { onSoundboardPlay, soundboard } from "../../sync/huddles.ts";
@@ -246,7 +247,7 @@ export const soundboardPlayer = createSoundboardPlayer({
       callRoomId: roomId,
       identities: new Set(call.snapshot.participants.map((participant) => participant.identity)),
       userFor: (identity) => userIdForIdentity(presence, identity),
-      ignored: (userId) => state.ignoredPeople[userId]?.ignoredByMe === true,
+      ignored: (userId) => isIgnored(state.ignores, userId, undefined),
       enabled: preferences.enabled,
       deafened: call.deafened,
       serverNow: clock === undefined ? null : serverNow(clock),
