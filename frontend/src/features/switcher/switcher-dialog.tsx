@@ -26,10 +26,18 @@ import {
 import { readRecents, recordRecent } from "./recents.ts";
 import { useCatalogue } from "./use-catalogue.ts";
 import "./switcher.css";
+import { PrivateGlyph, usePrivateThread } from "../threads/private-thread.tsx";
 
 interface SwitcherDialogProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+}
+
+/** A thread's glyph: a lock once the thread is held and private (the catalogue doesn't say). */
+function ThreadGlyph({ threadId }: { readonly threadId: number | null }) {
+  const secret = usePrivateThread(threadId);
+
+  return secret ? <PrivateGlyph size={16} /> : <Icon name="thread" size={16} />;
 }
 
 function ItemGlyph({ item }: { readonly item: SwitcherItem }) {
@@ -38,7 +46,7 @@ function ItemGlyph({ item }: { readonly item: SwitcherItem }) {
   }
 
   if (item.kind === "thread") {
-    return <Icon name="thread" size={16} />;
+    return <ThreadGlyph threadId={item.threadId} />;
   }
 
   if (item.roomKind === "direct") {

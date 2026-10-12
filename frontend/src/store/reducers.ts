@@ -1236,7 +1236,7 @@ export function applyEvents(
         next = receiveWorkThread(next, event.data);
         break;
       case "thread.removed":
-        next = removeThread(next, event.data.threadId, event.data.roomId);
+        next = removeThread(next, event.data.threadId, event.data.roomId, event.topic === "user");
         break;
       case "board.automations.changed":
         next = boardAutomationsChanged(next, event.data.roomId);

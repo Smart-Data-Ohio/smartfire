@@ -16,7 +16,14 @@ import {
   setThreadPageReplacing,
 } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
-import { loadThreadList, setThreadListFailed, setThreadListLoading } from "./threads.ts";
+import {
+  loadThreadList,
+  setThreadListFailed,
+  setThreadListLoading,
+  setThreadPaneError,
+  THREAD_ACCESS_LOST,
+  THREAD_DELETED,
+} from "./threads.ts";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -351,6 +358,52 @@ describe("threads", () => {
     expect(removed.roomThreads[ROOM]?.ids).toEqual([]);
     // Nobody opened its pane, so none is kept for it.
     expect(removed.threadPanes[70]).toBeUndefined();
+  });
+
+  it("tell an open pane the viewer lost a private thread, and a deleted one that it was deleted", () => {
+    const listed = loadThreadList(
+      initialState,
+      ROOM,
+      "all",
+      {
+        threads: [
+          { thread: thread("active", 5), membership: null },
+          { thread: thread("active", 6, 71), membership: null },
+        ],
+        users: [],
+      },
+      0,
+    );
+
+    const pane = {
+      status: "ready" as const,
+      error: null,
+      permissions: null,
+      work: null,
+      workFacts: null,
+    };
+
+    const open = { ...listed, threadPanes: { [THREAD]: pane, 71: pane } };
+
+    const lost = events(open, {
+      topic: "user",
+      type: "thread.removed",
+      data: { threadId: THREAD, roomId: ROOM },
+    });
+
+    const deleted = events(lost, {
+      topic: `room:${ROOM}`,
+      type: "thread.removed",
+      data: { threadId: 71, roomId: ROOM },
+    });
+
+    expect(deleted.threadPanes[THREAD]?.error).toBe(THREAD_ACCESS_LOST);
+    expect(deleted.threadPanes[71]?.error).toBe(THREAD_DELETED);
+    expect(deleted.roomThreads[ROOM]?.ids).toEqual([]);
+    // A later failed load keeps saying which.
+    expect(setThreadPaneError(deleted, THREAD, "Not found").threadPanes[THREAD]?.error).toBe(
+      THREAD_ACCESS_LOST,
+    );
   });
 
   it("track the viewer's unread state from thread.unread and thread.read", () => {

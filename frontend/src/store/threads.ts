@@ -123,9 +123,22 @@ function tombstone(state: State, threadId: number): Partial<State> {
 /** What an open pane says once its thread is deleted. */
 export const THREAD_DELETED = "This thread was deleted.";
 
-/** A moderator deleted the thread: it leaves the lists, its pane says so, the indicator goes. */
-export function removeThread(state: State, threadId: number, roomId: number): State {
+/** What an open pane says once the viewer's access to a private thread is gone. */
+export const THREAD_ACCESS_LOST = "You no longer have access to this private thread.";
+
+/**
+ * A moderator deleted the thread, or (`accessLost`, a `thread.removed` on the viewer's own `user`
+ * topic) the viewer was removed from a private one or left it: it leaves the lists, its pane says
+ * which, the indicator goes.
+ */
+export function removeThread(
+  state: State,
+  threadId: number,
+  roomId: number,
+  accessLost = false,
+): State {
   const thread = state.threads[threadId];
+  const gone = accessLost ? THREAD_ACCESS_LOST : THREAD_DELETED;
   const { [threadId]: _gone, ...threads } = state.threads;
   const list = state.roomThreads[roomId];
   const parentId = thread?.parentMessageId ?? null;
@@ -158,7 +171,7 @@ export function removeThread(state: State, threadId: number, roomId: number): St
             ...state.threadPanes,
             [threadId]: {
               status: "error",
-              error: THREAD_DELETED,
+              error: gone,
               permissions: null,
               work: null,
               workFacts: null,
@@ -246,7 +259,12 @@ export function setThreadPaneError(state: State, threadId: number, error: string
       ...state.threadPanes,
       [threadId]: {
         status: "error",
-        error: state.removedThreads[threadId] === undefined ? error : THREAD_DELETED,
+        error:
+          state.removedThreads[threadId] === undefined
+            ? error
+            : pane?.error === THREAD_ACCESS_LOST
+              ? THREAD_ACCESS_LOST
+              : THREAD_DELETED,
         permissions: pane?.permissions ?? null,
         work: pane?.work ?? null,
         workFacts: pane?.workFacts ?? null,

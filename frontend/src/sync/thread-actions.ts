@@ -4,10 +4,14 @@
  * room's threads.
  */
 import { Effect, Result } from "effect";
+import { ThreadAccess } from "../api/errors.ts";
 import * as api from "../api/thread-endpoints.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
+import type { CreateThread } from "../gen/CreateThread.ts";
+import type { ThreadAccessRefusal } from "../gen/ThreadAccessRefusal.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { ThreadVisibility } from "../gen/ThreadVisibility.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
@@ -205,7 +209,7 @@ function threadMessage(
 
 /**
  * Starts a thread on `parentMessageId` with its first reply; answers the new thread's id so the
- * pane can move to it. Pass the same `clientMessageId` when retrying: the server answers the
+ * pane can move to it. A private thread is fixed as private from the start. Pass the same `clientMessageId` when retrying: the server answers the
  * thread the first attempt made instead of starting a second one.
  */
 export const create = Effect.fn("threads.create")(function* (
@@ -218,14 +222,22 @@ export const create = Effect.fn("threads.create")(function* (
     readonly attachmentSignedIds?: readonly string[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
+    readonly visibility?: ThreadVisibility;
   } = {},
 ) {
+  const body: CreateThread = {
+    parentMessageId,
+    name: options.name ?? null,
+    message: threadMessage(options, markdown),
+  };
+
+  // Left out for a public thread, as the server defaults it.
+  if (options.visibility === "private") {
+    body.visibility = "private";
+  }
+
   const reply = yield* settled(
-    api.createThread(roomId, {
-      parentMessageId,
-      name: options.name ?? null,
-      message: threadMessage(options, markdown),
-    }),
+    api.createThread(roomId, body),
     (previous) =>
       refetchThread(previous.detail.thread.id).pipe(
         Effect.map((detail) => (detail === null ? null : { ...previous, detail })),
@@ -297,4 +309,50 @@ export const list = Effect.fn("threads.list")(function* (roomId: number, filter:
     ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
+});
+
+/** What each private-thread refusal tells the person who tried. */
+export const THREAD_ACCESS_REFUSALS: Readonly<Record<ThreadAccessRefusal, string>> = {
+  notPrivate: "This thread is public, so everyone in the room can already see it.",
+  inviteForbidden: "You can't invite people to this thread.",
+  removeForbidden: "Only the thread's creator and admins can remove people.",
+  parentRoomRequired: "Only active members of this room can be added to the thread.",
+  visibilityImmutable: "A thread can't switch between public and private after it starts.",
+};
+
+/** A private-thread refusal, worded for the person; any other failure as it came. */
+const explained = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.mapError(effect, (error) =>
+    error instanceof ThreadAccess
+      ? new ThreadAccess({ reason: error.reason, message: THREAD_ACCESS_REFUSALS[error.reason] })
+      : error,
+  );
+
+/** The people a private thread is shared with; their profiles land in the store. */
+export const accessMembers = Effect.fn("threads.accessMembers")(function* (threadId: number) {
+  const list = yield* explained(api.threadAccessMembers(threadId));
+
+  mutations.mergeUsers(list.users);
+
+  return list;
+});
+
+/** Shares a private thread with someone in its room; answers the members as they are now. */
+export const invite = Effect.fn("threads.invite")(function* (threadId: number, userId: number) {
+  const list = yield* explained(api.addThreadAccessMember(threadId, { userId }));
+
+  mutations.mergeUsers(list.users);
+
+  return list;
+});
+
+/**
+ * Takes someone's access to a private thread away: the viewer's own is leaving it. Their
+ * `thread.removed` then takes the thread out of their lists.
+ */
+export const removeMember = Effect.fn("threads.removeMember")(function* (
+  threadId: number,
+  userId: number,
+) {
+  yield* explained(api.removeThreadAccessMember(threadId, userId));
 });
