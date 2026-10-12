@@ -1129,3 +1129,154 @@ async fn a_stage_goes_live_at_1080p60_and_every_viewer_reads_it_back() {
     );
     server.abort();
 }
+
+fn soundboard_played(event: &api::SyncEvent) -> Option<api::HuddleSoundboardPlayed> {
+    match &event.payload {
+        api::SyncPayload::HuddleSoundboard(played) => Some(played.clone()),
+        _ => None,
+    }
+}
+
+#[tokio::test]
+async fn a_soundboard_play_reaches_everyone_in_the_call_once_a_second() {
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    // Frozen, so both plays of the rate-limited pair land in the same second.
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let a = TestApp::boot_with_settings(configured(), clock.clone(), &[("SPA_ENABLED", "1")])
+        .await
+        .expect("frozen seeds required");
+    let (addr, server) = serve(&a).await;
+    let room = voice(&a).await;
+    let sound = a
+        .db()
+        .write(|tx| {
+            tx.conn().execute(
+                "INSERT INTO soundboard_sounds(name,name_key,volume,uploader_id,created_at,updated_at) VALUES('Airhorn','airhorn',1.0,?,?,?)",
+                rusqlite::params![DAVID, tx.now(), tx.now()],
+            )?;
+            Ok(tx.conn().last_insert_rowid())
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut david_sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    let mut kevin_sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    let mut jason_sync = Sync::connect(addr, &jason.cookie_header(), &[]).await;
+    let (davids, kevins) = (
+        join(&mut david, room.id).await,
+        join(&mut kevin, room.id).await,
+    );
+    seen(&a, kevins.grant_id).await;
+    seen(&a, davids.grant_id).await;
+    // Jason holds a grant but never connected: he isn't in the call.
+    let jasons = join(&mut jason, room.id).await;
+
+    let path = format!("/api/v1/rooms/{}/huddle/soundboard", room.id);
+    let play = |identity: &str, sound_id: i64| {
+        send_json(
+            Method::POST,
+            &path,
+            &json!({"identity": identity, "soundId": sound_id}),
+        )
+    };
+    let played = david.write(play(&davids.identity, sound)).await;
+    assert_eq!(played.status, StatusCode::NO_CONTENT, "{}", played.text());
+    let expected = api::HuddleSoundboardPlayed {
+        room_id: room.id,
+        sound_id: sound,
+        user_id: DAVID,
+        identity: davids.identity.clone(),
+        played_at: "2026-03-02T16:00:00.000Z".into(),
+    };
+    assert_eq!(david_sync.until(soundboard_played).await, expected);
+    assert_eq!(kevin_sync.until(soundboard_played).await, expected);
+
+    let again = david.write(play(&davids.identity, sound)).await;
+    assert_eq!(
+        denial(&again),
+        denied(
+            StatusCode::TOO_MANY_REQUESTS,
+            "RateLimited",
+            "Slow down and try again"
+        )
+    );
+    assert_eq!(again.json()["error"]["retryAfter"], 1);
+
+    // A refused play doesn't spend the second's play.
+    let unknown = kevin.write(play(&kevins.identity, sound + 1)).await;
+    assert_eq!(unknown.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        unknown.json()["error"]["fields"],
+        json!({"soundId": ["isn't in the soundboard"]})
+    );
+    let played = kevin.write(play(&kevins.identity, sound)).await;
+    assert_eq!(played.status, StatusCode::NO_CONTENT, "{}", played.text());
+    assert_eq!(kevin_sync.until(soundboard_played).await.user_id, KEVIN);
+
+    for reply in [
+        kevin.write(play(&davids.identity, sound)).await,
+        jason.write(play(&jasons.identity, sound)).await,
+    ] {
+        assert_eq!(
+            denial(&reply),
+            denied(
+                StatusCode::FORBIDDEN,
+                "Forbidden",
+                "Join the call to play sounds"
+            )
+        );
+    }
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute_cached(
+                "UPDATE huddle_grants SET server_muted=1 WHERE id=?",
+                [kevins.grant_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    let muted = kevin.write(play(&kevins.identity, sound)).await;
+    assert_eq!(
+        denial(&muted),
+        denied(
+            StatusCode::FORBIDDEN,
+            "Forbidden",
+            "You can't play sounds while you can't speak"
+        )
+    );
+    let next_second = david.write(play(&davids.identity, sound)).await;
+    assert_eq!(next_second.status, StatusCode::NO_CONTENT);
+    let anonymous = a.anonymous().write(play(&davids.identity, sound)).await;
+    assert_eq!(
+        (anonymous.status, denial(&anonymous).1),
+        (StatusCode::UNAUTHORIZED, "Unauthorized".into())
+    );
+
+    // Jason hears the presence change after the plays, and none of the plays.
+    let left = kevin
+        .write(empty(
+            Method::POST,
+            &format!("/api/v1/rooms/{}/huddle/leave", room.id),
+        ))
+        .await;
+    assert_eq!(left.status, StatusCode::NO_CONTENT);
+    jason_sync
+        .until(|event| {
+            presence_of(room.id)(event)
+                .filter(|p| p.participants.iter().map(|p| p.user_id).collect::<Vec<_>>() == [DAVID])
+        })
+        .await;
+    assert!(
+        !jason_sync
+            .pending
+            .iter()
+            .any(|event| soundboard_played(event).is_some()),
+        "{:#?}",
+        jason_sync.pending
+    );
+    server.abort();
+}

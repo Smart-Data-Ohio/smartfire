@@ -106,11 +106,12 @@
     width: 100%;
   }
 
+  /* Seven 28 px controls fit the 248 px sidebar's dock with the tighter gap. */
   .huddle-dock-controls {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-1);
+    gap: var(--space-0-5);
   }
 
   .huddle-dock-controls .button[data-off] {
@@ -1097,5 +1098,137 @@
   :root[data-motion="reduce"] .huddle-toast,
   :root[data-motion="reduce"] .huddle-ring:not([data-ended]) .huddle-ring-icon::after {
     animation: none;
+  }
+
+  /* ── The soundboard ─────────────────────────────────────────────────────── */
+
+  .soundboard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 300px;
+    max-width: 100%;
+    padding: var(--space-3);
+  }
+
+  /* A phone's sheet is the width of the screen; the grid fills it. */
+  .action-sheet .soundboard {
+    width: auto;
+    padding-inline: var(--space-1);
+  }
+
+  .soundboard-title {
+    margin: 0;
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+  }
+
+  .soundboard-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .soundboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: var(--space-1-5);
+    max-height: 264px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  .soundboard-sound {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-0-5);
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 56px;
+    padding: var(--space-1-5) var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-app);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-meta);
+    cursor: pointer;
+  }
+
+  .soundboard-sound:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .soundboard-sound:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .soundboard-sound:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .soundboard-grid[data-cooling] .soundboard-sound:not(:disabled) {
+    opacity: 0.75;
+  }
+
+  .soundboard-emoji {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .soundboard-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .soundboard-preferences {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  /* In the Calls settings the group already frames it. */
+  .settings-group .soundboard-preferences {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  /* A finger needs the slider's full touch height, not its thin track. */
+  @media (pointer: coarse) {
+    .soundboard-preferences input[type="range"] {
+      min-height: var(--touch-target);
+    }
+  }
+
+  .soundboard-wide[data-off] {
+    --button-fg: var(--danger-text);
+  }
+
+  /* The phone's call view has no dock controls of its own: the soundboard sits at its foot. */
+  .call-view-actions {
+    display: none;
+  }
+
+  @media (width < 720px) {
+    .call-view-actions {
+      display: flex;
+      justify-content: center;
+      padding-top: var(--space-2);
+    }
+
+    .soundboard-wide {
+      width: 100%;
+    }
   }
 }

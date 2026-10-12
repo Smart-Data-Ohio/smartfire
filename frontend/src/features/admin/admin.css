@@ -181,6 +181,45 @@
     flex: 1;
   }
 
+  /* ── Soundboard: emoji, name and volume, then preview, edit and delete ─────────────────── */
+
+  .admin-sound-names > :first-child {
+    flex: 2;
+  }
+
+  .admin-sound-names > :last-child {
+    flex: 1;
+  }
+
+  .admin-sound-volume {
+    width: min(100%, 320px);
+    accent-color: var(--accent);
+  }
+
+  .admin-sound-emoji {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .admin-sound-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-sound-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-1);
+  }
+
   .admin-code {
     font-family: var(--font-mono);
     font-size: var(--text-meta);
@@ -634,6 +673,18 @@
 
     .admin-invite-revoke {
       --button-height: var(--touch-target);
+    }
+
+    /* A thumb's targets: the row's buttons and the volume slider at full touch size. */
+    .admin-sound-actions .button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+    }
+
+    .admin-sound-volume {
+      width: 100%;
+      min-height: var(--touch-target);
     }
   }
 }

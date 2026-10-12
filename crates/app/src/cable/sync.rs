@@ -325,6 +325,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     // `POST /api/v1/saved` and `DELETE /api/v1/saved/:id` publish to the person's other tabs.
     ("campfire_api::saved_items", &["saved.changed"]),
+    // `POST /api/v1/rooms/:room_id/huddle/soundboard` publishes to the people in the call.
+    ("campfire_api::huddles::play_sound", &["huddle.soundboard"]),
     ("huddle_effects::Presence", &["huddle.presence"]),
     (
         "huddle_effects::StreamChanged",

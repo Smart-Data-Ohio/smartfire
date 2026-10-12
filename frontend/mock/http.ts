@@ -108,9 +108,12 @@ export const refusal = (field: string, message: string) =>
 
 const RATE_LIMITED: ApiError["_tag"] = "RateLimited";
 
-/** 429 `RateLimited` with the classic alert (`retryAfter` 0: the classic limit names no time). */
-export const rateLimited = (message: string) =>
-  new HttpError(429, { _tag: RATE_LIMITED, message, retryAfter: 0 });
+/**
+ * 429 `RateLimited` with the classic alert (`retryAfter` 0 by default: the classic limit names no
+ * time; the Rust-only limits name theirs).
+ */
+export const rateLimited = (message: string, retryAfter = 0) =>
+  new HttpError(429, { _tag: RATE_LIMITED, message, retryAfter });
 
 /** The query string of a request, from `query` or the path's own `?…`. */
 export function queryOf(request: MockRequest): URLSearchParams {

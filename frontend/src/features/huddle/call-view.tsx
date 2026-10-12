@@ -3,7 +3,7 @@
  * in a speaking ring) and a tile per screen share. A share expands into theater mode (and from
  * there to full screen); a stage stream expands itself for viewers and offers its quality. Only
  * the three loudest speakers get voice-glow (the dock's microphone is the fourth); the rest keep
- * the plain ring.
+ * the plain ring. On a phone the soundboard sits at the view's foot.
  */
 import { useEffect, useRef } from "react";
 import { useStore } from "../../store/store.ts";
@@ -26,6 +26,7 @@ import {
 import { loadStreamQuality } from "./engine/preferences.ts";
 import type { CallParticipant, ViewerQuality } from "./engine/transport.ts";
 import { ParticipantMenu } from "./participant-menu.tsx";
+import { SoundboardButton } from "./soundboard.tsx";
 
 const GLOWS = 3;
 
@@ -374,6 +375,12 @@ export function CallView({ roomId }: { readonly roomId: number }) {
           />
         ))}
       </div>
+      {/* A phone's call bar has no room for it; wider screens have it in the dock. */}
+      {phone ? (
+        <div className="call-view-actions">
+          <SoundboardButton wide />
+        </div>
+      ) : null}
     </section>
   );
 }

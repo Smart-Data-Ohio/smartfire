@@ -19,6 +19,10 @@ export const PARTICIPANT_VOLUME_PREFIX = "campfire.huddle.volume.";
 
 export const PARTICIPANT_MUTE_PREFIX = "campfire.huddle.localMute.";
 
+export const SOUNDBOARD_VOLUME_STORAGE_KEY = "campfire.huddle.soundboardVolume";
+
+export const SOUNDBOARD_ENABLED_STORAGE_KEY = "campfire.huddle.soundboard";
+
 const KINDS: readonly DeviceKind[] = ["audioinput", "audiooutput", "videoinput"];
 
 export type DevicePreferences = Readonly<Record<DeviceKind, string>>;
@@ -132,4 +136,30 @@ export function loadParticipantMuted(userId: number): boolean {
 
 export function storeParticipantMuted(userId: number, muted: boolean): void {
   write(`${PARTICIPANT_MUTE_PREFIX}${userId}`, muted ? "1" : null);
+}
+
+/** The soundboard's volume for this browser, 0–100; 100 when unset or unreadable. */
+export function loadSoundboardVolume(): number {
+  const raw = read(SOUNDBOARD_VOLUME_STORAGE_KEY);
+
+  if (raw === null || raw === "") {
+    return 100;
+  }
+
+  const value = Number(raw);
+
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 100;
+}
+
+export function storeSoundboardVolume(volume: number): void {
+  write(SOUNDBOARD_VOLUME_STORAGE_KEY, String(Math.max(0, Math.min(100, Math.round(volume)))));
+}
+
+/** Soundboard sounds play unless the person turned them off. */
+export function loadSoundboardEnabled(): boolean {
+  return read(SOUNDBOARD_ENABLED_STORAGE_KEY) !== "off";
+}
+
+export function storeSoundboardEnabled(enabled: boolean): void {
+  write(SOUNDBOARD_ENABLED_STORAGE_KEY, enabled ? null : "off");
 }

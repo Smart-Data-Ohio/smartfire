@@ -24,6 +24,7 @@ import { MessageReactions } from "./reaction.ts";
 import { RoomRead, RoomUnread } from "./read.ts";
 import { Settings } from "./settings.ts";
 import { RoomCategory, SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
+import { HuddleSoundboardPlayed } from "./soundboard.ts";
 import { StageState, StageStreamStopped } from "./stage.ts";
 import {
   Thread,
@@ -119,6 +120,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("huddle.role"), data: HuddleRoleChanged }),
   Schema.Struct({ type: Schema.Literal("huddle.notice"), data: HuddleNotice }),
   Schema.Struct({ type: Schema.Literal("huddle.ring"), data: HuddleRing }),
+  Schema.Struct({ type: Schema.Literal("huddle.soundboard"), data: HuddleSoundboardPlayed }),
   Schema.Struct({ type: Schema.Literal("stage.updated"), data: StageState }),
   Schema.Struct({ type: Schema.Literal("stage.stream.stopped"), data: StageStreamStopped }),
   Schema.Struct({ type: Schema.Literal("workspace.updated"), data: WorkspaceBranding }),
@@ -233,6 +235,11 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.role"), data: HuddleRoleChanged }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.notice"), data: HuddleNotice }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.ring"), data: HuddleRing }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("huddle.soundboard"),
+    data: HuddleSoundboardPlayed,
+  }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("stage.updated"), data: StageState }),
   Schema.Struct({
     ...eventFields,

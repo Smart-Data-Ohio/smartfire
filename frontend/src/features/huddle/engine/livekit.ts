@@ -154,6 +154,8 @@ class LiveKitTransport implements CallTransport {
   #statsBaseline: StatsBaseline | null = null;
   /** The microphone's encoding target, from the grant this connection joined with. */
   #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
+  /** Soundboard clips playing now, stopped when the call is left. */
+  readonly #clips = new Set<HTMLAudioElement>();
 
   constructor(lk: LiveKit) {
     this.#lk = lk;
@@ -186,6 +188,12 @@ class LiveKitTransport implements CallTransport {
 
     this.#meter?.stop();
     this.#meter = null;
+
+    for (const clip of [...this.#clips]) {
+      clip.pause();
+    }
+
+    this.#clips.clear();
 
     for (const tracks of this.#captured.values()) {
       for (const track of tracks) {
@@ -600,6 +608,43 @@ class LiveKitTransport implements CallTransport {
     this.#statsBaseline = sample.baseline;
 
     return sample.stats;
+  }
+
+  playClip(url: string, volume: number): Promise<void> {
+    if (this.#room === null) {
+      return Promise.resolve();
+    }
+
+    // A plain element on the call's speaker: never routed through the room or the microphone.
+    const clip = new Audio(url);
+    const sink = this.activeDevice("audiooutput");
+
+    clip.volume = Math.max(0, Math.min(1, volume));
+    this.#clips.add(clip);
+
+    return new Promise<void>((resolve) => {
+      const done = (): void => {
+        this.#clips.delete(clip);
+        clip.removeEventListener("ended", done);
+        clip.removeEventListener("error", done);
+        clip.removeEventListener("pause", done);
+        resolve();
+      };
+
+      clip.addEventListener("ended", done);
+      clip.addEventListener("error", done);
+      clip.addEventListener("pause", done);
+
+      const start = async (): Promise<void> => {
+        if (sink !== undefined && "setSinkId" in clip) {
+          await clip.setSinkId(sink).catch(() => undefined);
+        }
+
+        await clip.play();
+      };
+
+      start().catch(done);
+    });
   }
 
   #emit(event: TransportEvent): void {

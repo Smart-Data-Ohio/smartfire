@@ -5,13 +5,18 @@
  * `Forbidden`, `Unavailable`…) and whose message is fit to show.
  */
 import * as api from "../api/huddle-endpoints.ts";
+import * as soundboardApi from "../api/soundboard-endpoints.ts";
+import type { CreateSoundboardSound } from "../gen/CreateSoundboardSound.ts";
 import type { HuddleCredentials } from "../gen/HuddleCredentials.ts";
 import type { HuddleDetail } from "../gen/HuddleDetail.ts";
 import type { HuddleModeration } from "../gen/HuddleModeration.ts";
+import type { HuddleSoundboardPlayed } from "../gen/HuddleSoundboardPlayed.ts";
+import type { SoundboardCatalog } from "../gen/SoundboardCatalog.ts";
 import type { StageRole } from "../gen/StageRole.ts";
 import type { StageStream } from "../gen/StageStream.ts";
 import type { StreamQuality } from "../gen/StreamQuality.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import type { UpdateSoundboardSound } from "../gen/UpdateSoundboardSound.ts";
 import { mutations } from "../store/store.ts";
 import { runAction, runtime } from "./runtime.ts";
 import { onSyncEvents } from "./signals.ts";
@@ -134,6 +139,44 @@ export function onHuddleSignal(listener: (signal: HuddleSignal) => void): () => 
     for (const event of events) {
       if (isHuddleSignal(event)) {
         listener(event);
+      }
+    }
+  });
+}
+
+/**
+ * The voice soundboard: its catalog, the administrators' writes (each answering the whole
+ * catalog), and playing a sound to the viewer's call. Failures reject with an `ActionError`:
+ * `Validation` (with `fields`) for a refused sound, `RateLimited` for a play too soon after the
+ * last, `Forbidden` for a play from outside the call or from someone who can't speak there.
+ */
+export const soundboard = {
+  catalog: (): Promise<SoundboardCatalog> => runAction(soundboardApi.soundboardCatalog()),
+
+  create: (body: CreateSoundboardSound): Promise<SoundboardCatalog> =>
+    runAction(soundboardApi.createSoundboardSound(body)),
+
+  update: (soundId: number, body: UpdateSoundboardSound): Promise<SoundboardCatalog> =>
+    runAction(soundboardApi.updateSoundboardSound(soundId, body)),
+
+  destroy: (soundId: number): Promise<SoundboardCatalog> =>
+    runAction(soundboardApi.destroySoundboardSound(soundId)),
+
+  play: (roomId: number, identity: string, soundId: number): Promise<void> =>
+    runAction(soundboardApi.playSoundboardSound(roomId, { identity, soundId })),
+};
+
+/**
+ * Calls `listener` with each relayed soundboard play, and whether it is `live`: arriving now,
+ * not replayed from before a reconnect (which must not play).
+ */
+export function onSoundboardPlay(
+  listener: (play: HuddleSoundboardPlayed, live: boolean) => void,
+): () => void {
+  return onSyncEvents((events, liveAfter) => {
+    for (const event of events) {
+      if (event.type === "huddle.soundboard") {
+        listener(event.data, event.seq > liveAfter);
       }
     }
   });

@@ -38,7 +38,10 @@ mod events;
 mod fizzy;
 mod huddle;
 mod soundboard;
-pub use soundboard::{CreateSoundboardSound, SoundboardCatalog, SoundboardSound, UpdateSoundboardSound};
+pub use soundboard::{
+    CreateSoundboardSound, HuddleSoundboardPlayed, PlaySoundboardSound, SoundboardCatalog,
+    SoundboardSound, UpdateSoundboardSound,
+};
 mod join;
 mod invites;
 mod me;

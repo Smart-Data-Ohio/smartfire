@@ -4,7 +4,9 @@
  * stage's roster, raised hands and stream. Every change goes out as the real server sends it:
  * `huddle.presence` (and `huddle.notice`) on the `user` topic, `stage.updated` on `room:<id>`,
  * `huddle.role` and `stage.stream.stopped` on the affected person's `user` topic (only the
- * viewer's reaches this tab). Tests steer the other people through `control`.
+ * viewer's reaches this tab). A soundboard play is checked as the server does (in the call, able to
+ * speak, a known sound, one a second per tab) and relayed as `huddle.soundboard` to the viewer
+ * when they're in that call. Tests steer the other people through `control`.
  */
 import type { HuddleCredentials } from "../../src/gen/HuddleCredentials.ts";
 import type { HuddleDetail } from "../../src/gen/HuddleDetail.ts";
@@ -26,6 +28,7 @@ import {
   type MockResponse,
   noContent,
   notFound,
+  rateLimited,
   validation,
 } from "../http.ts";
 import { intField, stringField } from "../json.ts";
@@ -64,6 +67,8 @@ interface CallWorld {
   readonly stages: Map<number, StageRecord>;
   nextGrantId: number;
   nextStreamId: number;
+  /** `${roomId}:${identity}` → the second (ms / 1000) of its last soundboard play. */
+  readonly plays: Map<string, number>;
 }
 
 /** Controls the server forwards (`/__mock/<action>`), with its field readers. */
@@ -94,7 +99,15 @@ const byName = (names: ReadonlyMap<number, string>) => (a: number, b: number) =>
   return left < right ? -1 : left > right ? 1 : a - b;
 };
 
-export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
+/**
+ * `hasSound` says whether the soundboard holds a sound id; left out, every id is known (tests
+ * that don't build a soundboard).
+ */
+export function createHuddles(
+  ctx: S2Context,
+  simulate: boolean,
+  hasSound: (soundId: number) => boolean = () => true,
+): Huddles {
   const worlds = new WeakMap<World, CallWorld>();
 
   const calls = (): CallWorld => {
@@ -119,6 +132,7 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
       stages: new Map(),
       nextGrantId: 1,
       nextStreamId: 1,
+      plays: new Map(),
     };
 
     const lounge = world.rooms.get(8);
@@ -699,6 +713,54 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
     return found;
   };
 
+  /** `userId`'s tab `identity` plays `soundId` to the room's call. */
+  const playSound = (
+    roomId: number,
+    userId: number,
+    identity: string | null,
+    soundId: number | null,
+  ): void => {
+    const record = callRoom(roomId);
+    const state = calls();
+    const entry = state.calls.get(roomId)?.get(userId);
+
+    if (entry === undefined || identity === null || !entry.identities.includes(identity)) {
+      throw forbidden("Join the call to play sounds");
+    }
+
+    if (!canPublish(record, userId)) throw forbidden("You can't play sounds while you can't speak");
+
+    if (soundId === null || !hasSound(soundId)) {
+      throw validation("soundId", "isn't in the soundboard", "Sound id isn't in the soundboard");
+    }
+
+    const key = `${roomId}:${identity}`;
+    const second = Math.floor(ctx.now() / 1000);
+
+    if (state.plays.get(key) === second) {
+      throw rateLimited("Slow down and try again", 1);
+    }
+
+    state.plays.set(key, second);
+
+    // Only the viewer's `user` topic reaches this tab: the play goes out when they're in the call.
+    if (state.calls.get(roomId)?.has(VIEWER_ID) === true) {
+      ctx.publish([
+        {
+          topic: "user",
+          type: "huddle.soundboard",
+          data: {
+            roomId,
+            soundId,
+            userId,
+            identity,
+            playedAt: new Date(ctx.now()).toISOString(),
+          },
+        },
+      ]);
+    }
+  };
+
   const ok = (json: HuddlePresenceList | HuddleDetail | StageDetail | StageState) => ({
     status: 200,
     json,
@@ -722,6 +784,16 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
       if (target === null) throw validation("membershipId", "membershipId is required");
 
       moderate(firstId(request), target, moderation(stringField(request.body, "action")));
+
+      return noContent();
+    }),
+    route("POST", /^\/rooms\/(\d+)\/huddle\/soundboard$/, (request) => {
+      playSound(
+        firstId(request),
+        VIEWER_ID,
+        stringField(request.body, "identity"),
+        intField(request.body, "soundId"),
+      );
 
       return noContent();
     }),
@@ -852,6 +924,17 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
           } else {
             endStream(record, true);
           }
+
+          return done;
+        }
+
+        case "soundboard-play": {
+          // Someone else in the call playing a sound, from their first tab.
+          const roomId = input.int("roomId");
+          const userId = input.int("userId");
+          const tab = calls().calls.get(roomId)?.get(userId)?.identities[0] ?? null;
+
+          playSound(roomId, userId, tab, input.int("soundId"));
 
           return done;
         }

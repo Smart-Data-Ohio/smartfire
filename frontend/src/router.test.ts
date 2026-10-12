@@ -50,6 +50,8 @@ describe("the screen map and the router", () => {
       "/app/admin/workspace",
       // Private invites are new with the SPA; classic only had the shared join link.
       "/app/admin/invites",
+      // The voice soundboard is new with the SPA; classic had no soundboard.
+      "/app/admin/sounds",
       // The server guide (Discord's) is new with the SPA; classic had no guide page.
       "/app/guide",
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.

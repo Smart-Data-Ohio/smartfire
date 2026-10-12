@@ -201,7 +201,7 @@ test.describe("on a phone", () => {
 
     const list = nav(page);
 
-    await expect(list.getByRole("link")).toHaveCount(9);
+    await expect(list.getByRole("link")).toHaveCount(10);
     await expectTouchTargets(page, ".settings-nav");
     await expectNoHorizontalOverflow(page);
     await shot(page, "admin-list", "light");

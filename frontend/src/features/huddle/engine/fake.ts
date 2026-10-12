@@ -81,6 +81,14 @@ export interface FakeCallHooks {
   snapshot(): CallSnapshot;
   /** The microphone's encoding target (bits per second) the real engine would publish with. */
   audioBitrate(): number;
+  /** Every soundboard clip this tab played, oldest first. */
+  clips(): readonly FakeClip[];
+}
+
+/** A clip the fake "played": what the real engine would play, and how loud (0–1). */
+export interface FakeClip {
+  readonly url: string;
+  readonly volume: number;
 }
 
 declare global {
@@ -175,6 +183,7 @@ export class FakeTransport implements CallTransport {
   /** What the real engine would encode the microphone at, for this connection's grant. */
   #audioBitrate = DEFAULT_AUDIO_BITRATE;
   readonly #startedAt = Date.now();
+  readonly #clips: FakeClip[] = [];
 
   constructor(roomId: number) {
     this.#roomId = roomId;
@@ -414,6 +423,12 @@ export class FakeTransport implements CallTransport {
     };
   }
 
+  async playClip(url: string, volume: number): Promise<void> {
+    if (this.#connected) {
+      this.#clips.push({ url, volume });
+    }
+  }
+
   #emit(event: TransportEvent): void {
     for (const listener of this.#listeners) {
       listener(event);
@@ -597,6 +612,7 @@ export class FakeTransport implements CallTransport {
       },
       snapshot: () => this.snapshot(),
       audioBitrate: () => this.#audioBitrate,
+      clips: () => [...this.#clips],
     };
   }
 }

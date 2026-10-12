@@ -2,6 +2,8 @@
 //! moderation (`campfire_api_types`' `huddle` module documents each one). They run the classic
 //! actions' writes (`HuddleGrant::issue`, `mark_out_of_call`, `call_moderation::moderate`), so
 //! the grants, the LiveKit tokens, the gateway's checks and the classic broadcasts are unchanged.
+//! Soundboard plays have no classic twin: participants can't send LiveKit data, so the server
+//! relays each play to the people in the call.
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
@@ -9,15 +11,17 @@ use campfire_app::cable::huddle_sync;
 use campfire_db::models::call_moderation::{self, Action, Denial};
 use campfire_db::models::huddle_grant::{HuddleGrant, IN_CALL_WINDOW};
 use campfire_db::models::room_delete::HuddleConfig;
-use campfire_db::{Connection, Membership, Room, RoomType, Timestamp, User};
+use campfire_db::models::soundboard::SoundboardSound;
+use campfire_db::{CachedStatements, Connection, Membership, Room, RoomType, Timestamp, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_runtime::concerns::{self, AuthenticatedBy, Authentication, Before};
 use campfire_runtime::context::db_error;
 use rails_compat::jwt::livekit;
+use rusqlite::OptionalExtension;
 use serde::de::DeserializeOwned;
 
 use crate::dto;
-use crate::error::{fail, not_found};
+use crate::error::{fail, not_found, validation};
 
 /// The largest request body read; these bodies are a few fields.
 const BODY_LIMIT: usize = 1 << 16;
@@ -41,6 +45,10 @@ endpoint!(
 endpoint!(
     /// `POST /api/v1/rooms/:room_id/huddle/moderation`
     moderate => moderate_huddle
+);
+endpoint!(
+    /// `POST /api/v1/rooms/:room_id/huddle/soundboard`
+    play_sound => play_soundboard_sound
 );
 
 /// The classic pages' before-actions, answering a signed-out caller with a 401.
@@ -343,4 +351,76 @@ async fn moderate_huddle(c: &mut Ctx) -> Result {
         }
     };
     Err(fail(c, error))
+}
+
+/// Plays a soundboard sound: the caller's tab (`identity`, one of this session's grants) must be
+/// in the room's call and able to speak. Everyone in the call hears `huddle.soundboard` and plays
+/// it locally. Each identity gets one play a second, test environment included.
+async fn play_soundboard_sound(c: &mut Ctx) -> Result {
+    let viewer = before_huddle(c).await?;
+    let (_, room) = huddle_room(c).await?;
+    let input: api::PlaySoundboardSound = body(c).await?;
+    let session_id = session_id(c)?;
+    let now = c.now();
+    let (at, identity) = (Timestamp::from_jiff(now), input.identity.clone());
+    let read = c
+        .app()
+        .db
+        .read(move |conn| {
+            let grant_id: Option<i64> = conn
+                .query_row_cached(
+                    "SELECT id FROM huddle_grants WHERE identity=? AND session_id=? AND room_id=? AND revoked_at IS NULL",
+                    rusqlite::params![identity, session_id, room.id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            let grant = match grant_id {
+                Some(id) => HuddleGrant::find_by_id(conn, id)?.filter(|grant| grant.in_call(at)),
+                None => None,
+            };
+            let Some(grant) = grant else {
+                return Ok(Err(forbidden("Join the call to play sounds")));
+            };
+            let stage = room.room_type == RoomType::Stage;
+            if !livekit::can_publish(grant.server_muted, stage, grant.stage_role.as_deref()) {
+                return Ok(Err(forbidden("You can't play sounds while you can't speak")));
+            }
+            match SoundboardSound::find(conn, input.sound_id) {
+                Ok(_) => {}
+                Err(campfire_db::Error::RecordNotFound(_)) => {
+                    return Ok(Err(validation("soundId", "isn't in the soundboard")));
+                }
+                Err(error) => return Err(error),
+            }
+            Ok(Ok((room.id, huddle_sync::presence(conn, &room, at)?)))
+        })
+        .await
+        .map_err(db_error)?;
+    let (room_id, presence) = read.map_err(|error| fail(c, error))?;
+    // Counted only once the play is allowed, so refusals don't spend the second's play.
+    let key = format!(
+        "soundboard_play/{room_id}/{}/{}",
+        input.identity,
+        now.as_second()
+    );
+    let count = c
+        .kit()
+        .rate_limits()
+        .increment(&key, jiff::SignedDuration::from_secs(1), now);
+    if count > 1 {
+        let error = api::ApiError::RateLimited {
+            message: "Slow down and try again".into(),
+            retry_after: 1,
+        };
+        return Err(fail(c, error));
+    }
+    let played = api::HuddleSoundboardPlayed {
+        room_id,
+        sound_id: input.sound_id,
+        user_id: viewer.id,
+        identity: input.identity,
+        played_at: dto::time(at),
+    };
+    huddle_sync::publish_soundboard(&c.app().cable, &presence, played);
+    Ok(c.head(StatusCode::NO_CONTENT))
 }

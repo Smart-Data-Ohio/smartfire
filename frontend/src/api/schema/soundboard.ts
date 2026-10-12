@@ -1,9 +1,11 @@
 import { Schema } from "effect";
 import type { CreateSoundboardSound as GeneratedCreateSoundboardSound } from "../../gen/CreateSoundboardSound.ts";
+import type { HuddleSoundboardPlayed as GeneratedHuddleSoundboardPlayed } from "../../gen/HuddleSoundboardPlayed.ts";
+import type { PlaySoundboardSound as GeneratedPlaySoundboardSound } from "../../gen/PlaySoundboardSound.ts";
 import type { SoundboardCatalog as GeneratedSoundboardCatalog } from "../../gen/SoundboardCatalog.ts";
 import type { SoundboardSound as GeneratedSoundboardSound } from "../../gen/SoundboardSound.ts";
 import type { UpdateSoundboardSound as GeneratedUpdateSoundboardSound } from "../../gen/UpdateSoundboardSound.ts";
-import { UserId } from "./ids.ts";
+import { RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
@@ -60,4 +62,30 @@ export type UpdateSoundboardSound = typeof UpdateSoundboardSound.Type;
 
 export type UpdateSoundboardSoundPin = Assert<
   Pinned<typeof UpdateSoundboardSound, GeneratedUpdateSoundboardSound>
+>;
+
+export const PlaySoundboardSound = Schema.Struct({
+  identity: Schema.String,
+  soundId: SoundboardSoundId,
+});
+
+export type PlaySoundboardSound = typeof PlaySoundboardSound.Type;
+
+export type PlaySoundboardSoundPin = Assert<
+  Pinned<typeof PlaySoundboardSound, GeneratedPlaySoundboardSound>
+>;
+
+/** The `huddle.soundboard` event: someone in the room's call played a sound. */
+export const HuddleSoundboardPlayed = Schema.Struct({
+  roomId: RoomId,
+  soundId: SoundboardSoundId,
+  userId: UserId,
+  identity: Schema.String,
+  playedAt: Timestamp,
+});
+
+export type HuddleSoundboardPlayed = typeof HuddleSoundboardPlayed.Type;
+
+export type HuddleSoundboardPlayedPin = Assert<
+  Pinned<typeof HuddleSoundboardPlayed, GeneratedHuddleSoundboardPlayed>
 >;

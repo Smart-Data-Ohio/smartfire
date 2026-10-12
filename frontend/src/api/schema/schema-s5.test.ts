@@ -202,6 +202,18 @@ describe("S5 sync events", () => {
         },
         { seq: 7, topic: "room:40", type: "stage.updated", data: stageJson },
         { seq: 8, topic: "user", type: "stage.stream.stopped", data: { roomId: 40 } },
+        {
+          seq: 9,
+          topic: "user",
+          type: "huddle.soundboard",
+          data: {
+            roomId: 12,
+            soundId: 3,
+            userId: 8,
+            identity: "campfire-participant-abc",
+            playedAt: "2026-10-11T12:00:00Z",
+          },
+        },
       ],
     });
 
@@ -214,6 +226,7 @@ describe("S5 sync events", () => {
       "huddle.ring",
       "stage.updated",
       "stage.stream.stopped",
+      "huddle.soundboard",
     ]);
   });
 });

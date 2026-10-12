@@ -55,12 +55,12 @@ const HEALTH: IntegrationsHealth = {
 describe("the admin sections", () => {
   it("show members only the workspace and its people", () => {
     expect(visibleSections(false).map((section) => section.key)).toEqual(["workspace", "people"]);
-    expect(visibleSections(true)).toHaveLength(9);
+    expect(visibleSections(true)).toHaveLength(10);
   });
 
   it("group a member's two sections as one block of the phone list", () => {
     expect(groupSections(visibleSections(false))).toHaveLength(1);
-    expect(groupSections(visibleSections(true)).map((group) => group.length)).toEqual([3, 4, 2]);
+    expect(groupSections(visibleSections(true)).map((group) => group.length)).toEqual([3, 5, 2]);
   });
 });
 
