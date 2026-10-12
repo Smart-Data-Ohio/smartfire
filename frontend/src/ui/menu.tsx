@@ -118,6 +118,16 @@ export function Menu({
     }
   };
 
+  // Whether this run of the menu was closed from inside it (an item chosen). Its popover can
+  // still be hidden afterwards, by the modal dialog that item opens, and that is no light dismiss.
+  const closedFromInside = useRef(false);
+
+  useLayoutEffect(() => {
+    if (open) {
+      closedFromInside.current = false;
+    }
+  }, [open]);
+
   const openWith = (target: FocusTarget) => {
     setFocusOnOpen(target);
     setOpen(true);
@@ -133,10 +143,16 @@ export function Menu({
     }
   };
 
+  const closeFromInside = (restoreFocus: boolean) => {
+    closedFromInside.current = true;
+    closeAll(restoreFocus);
+  };
+
   const onClose = (reason: CloseReason) => {
-    // Only a menu still open is light-dismissed: one already closing (an item chosen) is also
-    // hidden when that item opens a modal dialog, and that mustn't swallow the trigger's next click.
-    if (reason === "dismiss" && open) {
+    // A light dismiss holds off the trigger's next click, the one that dismissed it, even when
+    // that click has already closed the menu: the browser hides the popover on pointerdown and
+    // fires its toggle after. Only a menu closed from inside lets the next click through.
+    if (reason === "dismiss" && !closedFromInside.current) {
       dismissedAt.current = performance.now();
     }
 
@@ -176,7 +192,7 @@ export function Menu({
     <>
       {trigger(triggerProps)}
       {presence.mounted ? (
-        <MenuContext value={{ closeAll, sheet }}>
+        <MenuContext value={{ closeAll: closeFromInside, sheet }}>
           <MenuSurface
             id={id}
             surfaceRef={presence.ref}
