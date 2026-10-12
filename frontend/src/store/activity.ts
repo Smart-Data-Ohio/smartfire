@@ -761,6 +761,35 @@ export function removeActivityItem(state: State, id: number, unread: ActivityUnr
   );
 }
 
+/**
+ * The viewer lost access to a private thread: its items leave the inbox, as the server stops
+ * listing them (`ActivityItem::query_accessible`). The badge keeps its count until the engine's
+ * refresh, which no longer counts them.
+ */
+export function forgetActivityThread(state: State, threadId: number): State {
+  const activity = state.activity;
+
+  const gone = new Set(
+    Object.values(activity.items)
+      .filter((item) => item.source.threadId === threadId)
+      .map((item) => item.id),
+  );
+
+  if (gone.size === 0) {
+    return state;
+  }
+
+  const kept = <T>(record: Readonly<Record<number, T>>) =>
+    Object.fromEntries(Object.entries(record).filter(([id]) => !gone.has(Number(id))));
+
+  return withActivity(state, {
+    ...activity,
+    items: kept(activity.items),
+    versions: kept(activity.versions),
+    lists: eachPaged(activity.lists, (list) => [...gone].reduce(pagedWithout, list)),
+  });
+}
+
 /** The badge, from `GET /activity/unread_count`. */
 export function setActivityUnreadCount(
   state: State,

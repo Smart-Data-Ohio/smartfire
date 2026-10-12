@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { Thread } from "../gen/Thread.ts";
+import { activityListOf, landActivityPage } from "./activity.ts";
 import { toggledReactions } from "./message-extras.ts";
 import type { MessageDTO, MessagePage, PendingMessage, SyncEvent } from "./model.ts";
 import {
@@ -15,6 +17,7 @@ import {
   setRoomDetail,
   setThreadPageReplacing,
 } from "./reducers.ts";
+import { landSavedPage, savedListOf } from "./saved-list.ts";
 import { initialState, type State } from "./state.ts";
 import {
   loadThreadList,
@@ -404,6 +407,177 @@ describe("threads", () => {
     expect(setThreadPaneError(deleted, THREAD, "Not found").threadPanes[THREAD]?.error).toBe(
       THREAD_ACCESS_LOST,
     );
+  });
+
+  it("forget everything the viewer could read of a private thread they lost", () => {
+    const secret = { ...thread("active", 5), visibility: "private" as const, name: "Layoffs" };
+
+    const listed = loadThreadList(
+      initialState,
+      ROOM,
+      "all",
+      {
+        threads: [
+          {
+            thread: secret,
+            membership: {
+              threadId: THREAD,
+              involvement: "everything",
+              unreadAt: "2026-10-06T10:05:00.000Z",
+              joinedAt: "2026-10-06T09:30:00.000Z",
+            },
+          },
+        ],
+        users: [],
+      },
+      0,
+    );
+
+    const reply = message(501, 20, { threadId: THREAD, markdownSource: "Only us" });
+    const elsewhere = message(502, 21);
+
+    const notice = (id: number, threadId: number | null): ActivityItem => ({
+      id,
+      eventType: "mention",
+      state: "unread",
+      readAt: null,
+      handledAt: null,
+      createdAt: reply.createdAt,
+      updatedAt: reply.createdAt,
+      source: {
+        sourceType: "message",
+        sourceId: id,
+        roomId: ROOM,
+        threadId,
+        messageId: id,
+        eventId: null,
+        creatorId: 2,
+        title: threadId === null ? "general" : "general · Layoffs",
+        body: "Only us",
+        occurredAt: reply.createdAt,
+        approvalStatus: null,
+        budgetCap: null,
+        path: "/",
+      },
+    });
+
+    const inbox = landActivityPage(
+      applyThreadPage(listed, THREAD, page([reply]), "replace"),
+      "all",
+      "unread",
+      {
+        items: [notice(9, THREAD), notice(8, null)],
+        users: [],
+        unreadCount: 2,
+        unreadRevision: 1,
+        evaluatedAt: "2026-10-06T11:00:00.000000000Z",
+        nextCursor: null,
+      },
+      "replace",
+    );
+
+    const held = landSavedPage(
+      inbox,
+      "all",
+      {
+        items: [
+          {
+            id: 41,
+            messageId: 501,
+            status: "in_progress",
+            remindAt: null,
+            remindedAt: null,
+            createdAt: reply.createdAt,
+          },
+          {
+            id: 42,
+            messageId: 502,
+            status: "in_progress",
+            remindAt: null,
+            remindedAt: null,
+            createdAt: reply.createdAt,
+          },
+        ],
+        messages: [reply, elsewhere],
+        users: [],
+        conversations: [
+          {
+            roomId: ROOM,
+            threadId: THREAD,
+            roomKind: "open",
+            roomName: "general",
+            roomIconName: null,
+            threadName: "Layoffs",
+          },
+        ],
+        nextCursor: null,
+      },
+      "replace",
+    );
+
+    expect(held.conversationNames[`${ROOM}:${THREAD}`]?.threadName).toBe("Layoffs");
+
+    const lost = events(held, {
+      topic: "user",
+      type: "thread.removed",
+      data: { threadId: THREAD, roomId: ROOM },
+    });
+
+    expect(lost.threads[THREAD]).toBeUndefined();
+    expect(lost.messages[501]).toBeUndefined();
+    expect(lost.threadTimelines[THREAD]).toBeUndefined();
+    expect(lost.threadMemberships[THREAD]).toBeUndefined();
+    expect(lost.conversationNames[`${ROOM}:${THREAD}`]).toBeUndefined();
+    expect(lost.activity.items[9]).toBeUndefined();
+    expect(activityListOf(lost, "all", "unread").ids).toEqual([8]);
+    expect(lost.savedList.items[41]).toBeUndefined();
+    expect(lost.saved[501]).toBeUndefined();
+    expect(savedListOf(lost, "all").ids).toEqual([42]);
+    // What was never in the thread stays.
+    expect(lost.messages[502]).toBeDefined();
+    expect(lost.activity.items[8]).toBeDefined();
+  });
+
+  it("bring a lost private thread back when the viewer is added again", () => {
+    const secret = { ...thread("active", 5), visibility: "private" as const };
+
+    const listed = loadThreadList(
+      initialState,
+      ROOM,
+      "all",
+      { threads: [{ thread: secret, membership: null }], users: [] },
+      0,
+    );
+
+    const pane = {
+      status: "ready" as const,
+      error: null,
+      permissions: null,
+      work: null,
+      workFacts: null,
+    };
+
+    const lost = events(
+      { ...listed, threadPanes: { [THREAD]: pane } },
+      { topic: "user", type: "thread.removed", data: { threadId: THREAD, roomId: ROOM } },
+    );
+
+    // A stale update on a room topic doesn't bring it back.
+    const stale = events(lost, { topic: `room:${ROOM}`, type: "thread.updated", data: secret });
+
+    expect(stale.threads[THREAD]).toBeUndefined();
+
+    const regained = events(stale, {
+      topic: "user",
+      type: "thread.updated",
+      data: { ...secret, replyCount: 3 },
+    });
+
+    expect(regained.removedThreads[THREAD]).toBeUndefined();
+    expect(regained.threads[THREAD]?.replyCount).toBe(3);
+    expect(regained.roomThreads[ROOM]?.ids).toEqual([THREAD]);
+    expect(regained.threadPanes[THREAD]?.status).toBe("loading");
+    expect(regained.threadPanes[THREAD]?.error).toBeNull();
   });
 
   it("track the viewer's unread state from thread.unread and thread.read", () => {

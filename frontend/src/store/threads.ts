@@ -2,10 +2,14 @@
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadIndicatorChanged } from "../gen/ThreadIndicatorChanged.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import { forgetActivityThread } from "./activity.ts";
 import { boardThreadChanged, mergeSteps, removeBoardPost } from "./boards.ts";
 import { reconcileMessage } from "./cards.ts";
+import { conversationKey } from "./conversations.ts";
+import { setSavedMark } from "./message-extras.ts";
 import type { Thread, ThreadFilter, ThreadMembership } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
+import { dropSavedForMessage } from "./saved-list.ts";
 import type { State } from "./state.ts";
 
 function matches(filter: ThreadFilter, thread: Thread): boolean {
@@ -137,8 +141,47 @@ export function removeThread(
   roomId: number,
   accessLost = false,
 ): State {
+  return accessLost
+    ? dropThread(forgetThreadContent(state, threadId, roomId), threadId, roomId, THREAD_ACCESS_LOST)
+    : dropThread(state, threadId, roomId, THREAD_DELETED);
+}
+
+/**
+ * What the viewer could read of a private thread they lost, wherever the store keeps it: its
+ * replies and their window, the viewer's following and unread mark, its inbox items, saved replies,
+ * its name for cross-room lists, and who was typing there. The server stops listing all of it, so
+ * nothing of the thread stays on screen. The viewer's own replies still on their way stay.
+ */
+function forgetThreadContent(state: State, threadId: number, roomId: number): State {
+  const replies = Object.values(state.messages).filter((message) => message.threadId === threadId);
+
+  const unsaved = replies.reduce(
+    (held, { id }) => setSavedMark(dropSavedForMessage(held, id), id, null),
+    forgetActivityThread(state, threadId),
+  );
+
+  const gone = new Set(replies.map(({ id }) => id));
+  const { [threadId]: _timeline, ...threadTimelines } = unsaved.threadTimelines;
+  const { [threadId]: _membership, ...threadMemberships } = unsaved.threadMemberships;
+  const nameKey = conversationKey(roomId, threadId);
+  const { [nameKey]: _name, ...conversationNames } = unsaved.conversationNames;
+  const { [`thread:${threadId}`]: _typists, ...typing } = unsaved.typing;
+
+  return {
+    ...unsaved,
+    messages: Object.fromEntries(
+      Object.entries(unsaved.messages).filter(([id]) => !gone.has(Number(id))),
+    ),
+    threadTimelines,
+    threadMemberships,
+    conversationNames,
+    typing,
+  };
+}
+
+/** Out of the lists, the board and work; an open pane says `gone`; a tombstone keeps it out. */
+function dropThread(state: State, threadId: number, roomId: number, gone: string): State {
   const thread = state.threads[threadId];
-  const gone = accessLost ? THREAD_ACCESS_LOST : THREAD_DELETED;
   const { [threadId]: _gone, ...threads } = state.threads;
   const list = state.roomThreads[roomId];
   const parentId = thread?.parentMessageId ?? null;
@@ -188,6 +231,30 @@ export function removeThread(
       parent === undefined
         ? state.messages
         : { ...state.messages, [parent.id]: { ...parent, thread: null } },
+  };
+}
+
+/**
+ * A private thread's `thread.updated` on the viewer's own `user` topic: the server sends those only
+ * to people who can read it at the time, so after a removal it means the viewer was added back. The
+ * tombstone lifts, so the update lands in the lists, and a pane that said access was lost shows as
+ * loading while the engine loads it again.
+ */
+export function regainThread(state: State, thread: Thread): State {
+  if (thread.visibility !== "private" || state.removedThreads[thread.id] === undefined) {
+    return state;
+  }
+
+  const { [thread.id]: _lifted, ...removedThreads } = state.removedThreads;
+  const pane = state.threadPanes[thread.id];
+
+  return {
+    ...state,
+    removedThreads,
+    threadPanes:
+      pane === undefined || pane.error !== THREAD_ACCESS_LOST
+        ? state.threadPanes
+        : { ...state.threadPanes, [thread.id]: { ...pane, status: "loading", error: null } },
   };
 }
 

@@ -121,6 +121,22 @@ const REMOTE_ROOM_KIND = {
   board: "board",
 } as const satisfies Record<SwitcherRoomKind, RoomKind>;
 
+/**
+ * The catalogue without threads the store has seen removed since it was read: a deleted thread, or
+ * a private one the viewer lost. The previous answer stands in while the next loads, and a reply
+ * to a request sent before the removal can still name it; neither may show its title.
+ */
+export function withoutRemovedThreads<C extends RemoteCatalogue>(
+  catalogue: C,
+  removedThreads: Readonly<Record<number, number>>,
+): C {
+  const threads = catalogue.threads.filter(
+    ({ threadId }) => removedThreads[threadId] === undefined,
+  );
+
+  return threads.length === catalogue.threads.length ? catalogue : { ...catalogue, threads };
+}
+
 /** The server's catalogue as switcher items (people own their DM rooms). */
 export function remoteItems(catalogue: RemoteCatalogue): SwitcherItem[] {
   const personByRoom = new Map(

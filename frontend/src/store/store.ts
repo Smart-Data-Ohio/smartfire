@@ -558,6 +558,23 @@ export const mutations = {
         : work.receiveWorkThread(state, { ...held, work: thread.work }, read, "read");
     }),
   upsertThread: (thread: Thread) => apply((state) => work.receiveWorkThread(state, thread)),
+  /**
+   * A private thread the viewer was added back to, its pane closed: the record and the parent's
+   * reply summary come back (`since` as for `loadThreadDetail`), and no pane is made for it.
+   */
+  regainedThread: (detail: ThreadDetail, since: number) =>
+    apply((state) => {
+      const next = work.loadWorkThreadDetail(state, detail, undefined, since);
+      const threadId = detail.thread.id;
+
+      if (state.threadPanes[threadId] !== undefined || next.threadPanes[threadId] === undefined) {
+        return next;
+      }
+
+      const { [threadId]: _pane, ...threadPanes } = next.threadPanes;
+
+      return { ...next, threadPanes };
+    }),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
   setThreadListLoading: (roomId: number, filter: ThreadFilter) =>

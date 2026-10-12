@@ -22,6 +22,7 @@ import {
   readsUnread,
   remoteItems,
   type SwitcherItem,
+  withoutRemovedThreads,
 } from "./ranking.ts";
 import { readRecents, recordRecent } from "./recents.ts";
 import { useCatalogue } from "./use-catalogue.ts";
@@ -151,6 +152,7 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
   const users = useStore((state) => state.users);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const { catalogue, loading } = useCatalogue(open);
+  const removedThreads = useStore((state) => state.removedThreads);
 
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -165,7 +167,7 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
 
   const items = mergeItems(
     localItems(sidebar, viewerId),
-    catalogue === null ? [] : remoteItems(catalogue),
+    catalogue === null ? [] : remoteItems(withoutRemovedThreads(catalogue, removedThreads)),
     (userId) => users[userId]?.name,
   );
 

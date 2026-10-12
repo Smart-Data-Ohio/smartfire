@@ -55,7 +55,7 @@ import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { compareSnapshots } from "./snapshot-order.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
-import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
+import { regainThread, removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
 import { receiveWorkThread } from "./work.ts";
 import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
 
@@ -1233,7 +1233,10 @@ export function applyEvents(
         next = addBoardPost(receiveWorkThread(next, event.data), event.data);
         break;
       case "thread.updated":
-        next = receiveWorkThread(next, event.data);
+        next = receiveWorkThread(
+          event.topic === "user" ? regainThread(next, event.data) : next,
+          event.data,
+        );
         break;
       case "thread.removed":
         next = removeThread(next, event.data.threadId, event.data.roomId, event.topic === "user");
