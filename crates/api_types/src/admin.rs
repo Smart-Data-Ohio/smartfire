@@ -26,6 +26,8 @@ pub struct Workspace {
     pub logo_still_url: Option<String>,
     pub banner_url: Option<String>,
     pub banner_still_url: Option<String>,
+    /// Decorative join/About background, a still image, or null when unset.
+    pub invite_splash_url: Option<String>,
     /// An uploaded logo is attached (it can be removed).
     pub logo_attached: bool,
     /// The full join link everyone may share (`/join/:join_code`).
@@ -90,6 +92,15 @@ pub struct UpdateLogo {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateBanner {
+    pub signed_id: String,
+}
+
+/// `PUT /api/v1/admin/workspace/invite_splash`: attach a PNG, JPEG, GIF or WebP of at most
+/// 10 MiB and at most 4096 × 2304 pixels. Public pages use its still image. `DELETE` removes it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateInviteSplash {
     pub signed_id: String,
 }
 

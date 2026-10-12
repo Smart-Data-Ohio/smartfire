@@ -93,7 +93,7 @@ pub use admin::{
     AfkPolicy, AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
     EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
-    PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    PushChannelExpiry, UpdateBanner, UpdateInviteSplash, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
 };
 pub use admin::{

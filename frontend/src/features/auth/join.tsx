@@ -110,6 +110,7 @@ export function JoinPage({ target }: { readonly target: JoinTarget }) {
   return (
     <AuthScreen
       labelledBy={titleId}
+      splashUrl={workspace?.inviteSplashUrl ?? null}
       busy={load.status === "loading"}
       flash={flash}
       below={
@@ -328,6 +329,7 @@ function JoinForm({
   return (
     <AuthScreen
       labelledBy={titleId}
+      splashUrl={page.workspace.inviteSplashUrl}
       flash={flash}
       below={
         contact === null || boot === null ? undefined : (
@@ -459,6 +461,7 @@ function DeadInvite({
   return (
     <AuthScreen
       labelledBy={titleId}
+      splashUrl={page.workspace.inviteSplashUrl}
       flash={flash}
       below={
         contact === null || boot === null ? undefined : (

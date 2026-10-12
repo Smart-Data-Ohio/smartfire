@@ -626,7 +626,7 @@ fn branding_classification(
             WHERE previews.record_type = 'ActiveStorage::Blob' AND previews.name = 'preview_image'
          ) SELECT blobs.metadata, EXISTS (
             SELECT 1 FROM active_storage_attachments attachments JOIN sources ON sources.id = attachments.blob_id
-            WHERE attachments.record_type = 'Account' AND attachments.name IN ('logo', 'banner')
+            WHERE attachments.record_type = 'Account' AND attachments.name IN ('logo', 'banner', 'invite_splash')
          ) FROM active_storage_blobs blobs WHERE blobs.id = ?1",
         [blob.id],
         |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, bool>(1)?)),

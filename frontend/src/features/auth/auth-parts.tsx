@@ -11,6 +11,7 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Popover } from "../../ui/popover.tsx";
 import { pageExit, signedOutPageFor, signInSearchFor } from "./auth-navigation.ts";
+import { InviteSplash } from "./invite-splash.tsx";
 import type { Translation } from "./translations.ts";
 import "./auth.css";
 
@@ -168,7 +169,9 @@ export function AuthScreen({
   labelledBy,
   busy,
   flash,
+  splashUrl = null,
 }: {
+  readonly splashUrl?: string | null;
   readonly children: ReactNode;
   readonly below?: ReactNode;
   readonly labelledBy: string;
@@ -180,12 +183,18 @@ export function AuthScreen({
   useKeyboardInset();
 
   return (
-    <div className="auth-view">
-      {flash === null || flash === undefined ? null : <AuthFlash flash={flash} />}
-      <main className="auth-view-card" aria-labelledby={labelledBy} aria-busy={busy || undefined}>
-        {children}
-      </main>
-      {below}
+    <div
+      className="invite-splash-surface auth-splash-surface"
+      data-splash={splashUrl !== null || undefined}
+    >
+      <InviteSplash url={splashUrl} />
+      <div className="auth-view">
+        {flash === null || flash === undefined ? null : <AuthFlash flash={flash} />}
+        <main className="auth-view-card" aria-labelledby={labelledBy} aria-busy={busy || undefined}>
+          {children}
+        </main>
+        {below}
+      </div>
     </div>
   );
 }

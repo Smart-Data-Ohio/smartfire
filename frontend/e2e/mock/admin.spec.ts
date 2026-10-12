@@ -342,7 +342,7 @@ test.describe("on a phone", () => {
   test("the workspace profile preview fits the screen", async ({ page }) => {
     await openAdmin(page, "workspace");
 
-    const preview = page.getByRole("figure", { name: "Preview" });
+    const preview = page.getByRole("figure", { name: "Preview", exact: true });
 
     await expect(preview).toBeVisible();
     await expect(preview.locator(".profile-preview-lines")).toBeHidden();

@@ -18,6 +18,7 @@ const workspace: Workspace = {
   logoStillUrl: null,
   bannerUrl: null,
   bannerStillUrl: null,
+  inviteSplashUrl: null,
   logoAttached: false,
   joinUrl: "/join/test",
   canAdminister: true,

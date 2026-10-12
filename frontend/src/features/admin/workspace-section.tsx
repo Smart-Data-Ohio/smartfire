@@ -302,7 +302,7 @@ export function WorkspaceSection() {
     >
       <SettingsGroup
         title="Workspace profile"
-        description="The icon and banner everyone sees in the rail and at the top of the sidebar."
+        description="The icon and banner in the app, and the invite splash behind join and About pages."
       >
         <WorkspaceProfile />
         <section aria-label={`About ${workspace.name}`} className="workspace-about">

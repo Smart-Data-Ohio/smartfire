@@ -236,6 +236,14 @@ pub fn fresh_user_banner(avatar_token: impl Display, blob_id: i64, still: bool) 
     )
 }
 
+/// The decorative join/About background, versioned by the attachment.
+pub fn fresh_account_invite_splash(blob_id: i64, still: bool) -> String {
+    format!(
+        "/account/invite_splash?v={blob_id}{}",
+        if still { "&still=1" } else { "" }
+    )
+}
+
 /// The workspace banner, versioned by the attached blob rather than the account timestamp.
 pub fn fresh_account_banner(blob_id: i64, still: bool) -> String {
     format!(

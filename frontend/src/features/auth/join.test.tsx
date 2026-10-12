@@ -1,4 +1,4 @@
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -293,3 +293,35 @@ describe("an invite's page", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 });
+
+it.each([null, "/account/invite_splash?v=42"])(
+  "shows join branding with splash %s and falls back on a broken image",
+  async (url) => {
+    vi.spyOn(auth, "joinPage").mockResolvedValue({
+      kind: "join",
+      workspace: {
+        name: "Harbor",
+        logoUrl: "/account/logo",
+        description: "Our community",
+        inviteSplashUrl: url,
+      },
+      helpContact: null,
+    });
+    await renderAuth(`/app/join/${MOCK_JOIN_CODE}`);
+    expect(await screen.findByRole("heading", { name: "Join Harbor" })).toBeTruthy();
+    expect(screen.getByText("Our community")).toBeTruthy();
+    expect(document.querySelector(".auth-view-logo")?.getAttribute("src")).toBe("/account/logo");
+    const image = document.querySelector(".invite-splash img");
+
+    if (url === null) {
+      expect(image).toBeNull();
+    } else {
+      expect(image?.getAttribute("src")).toBe(url);
+      expect(image?.getAttribute("alt")).toBe("");
+
+      if (image !== null) fireEvent.error(image);
+      expect(document.querySelector(".invite-splash img")).toBeNull();
+      expect(createButton()).toBeTruthy();
+    }
+  },
+);

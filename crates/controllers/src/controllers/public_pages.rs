@@ -44,7 +44,11 @@ pub async fn show_json(c: &mut Ctx) -> Result {
         "terms" => PublicPageName::Terms,
         _ => return Ok(c.head(StatusCode::NOT_FOUND)),
     };
-    let body = public_page(page, &c.app().config.public_policy).map_err(Error::internal)?;
+    let mut body = public_page(page, &c.app().config.public_policy).map_err(Error::internal)?;
+    if page == PublicPageName::About {
+        let account = c.app().db.read(campfire_db::Account::first).await.map_err(Error::internal)?;
+        body.workspace = Some(crate::controllers::presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?);
+    }
     let body = serde_json::to_string(&body).map_err(Error::internal)?;
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
 }
@@ -194,6 +198,7 @@ pub fn public_page(name: PublicPageName, policy: &PublicPolicy) -> askama::Resul
     };
     Ok(PublicPage {
         page: name,
+        workspace: None,
         title: page.title().into(),
         description: page.description().into(),
         policy: PublicPagePolicy {
