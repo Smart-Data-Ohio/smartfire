@@ -1,6 +1,3 @@
-//! Machine-facing sticker surfaces: bot and MCP reads, MCP posting, bot sending and
-//! incoming channel webhooks, through the real router.
-
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use campfire_db::models::sticker::{Sticker, StickerValues};
@@ -145,7 +142,6 @@ fn path_of(url: &str) -> String {
     }
 }
 
-/// GET a payload URL as an anonymous client, following blob redirects like a bot would.
 async fn fetch_url(app: &TestApp, url: &str) -> Reply {
     let mut path = path_of(url);
     for _ in 0..3 {
@@ -300,7 +296,6 @@ async fn mcp_call(app: &TestApp, name: &str, arguments: Value) -> Reply {
         .await
 }
 
-/// The tool result's payload, whether carried as structured content or JSON text.
 fn tool_payload(reply: &Reply) -> Value {
     let body = reply.json();
     let result = &body["result"];
@@ -910,4 +905,113 @@ async fn mcp_reads_include_stickers_and_deleted_placeholders() {
             assert_eq!(fetched.body, PNG);
         }
     }
+}
+
+#[tokio::test]
+async fn bot_sending_preserves_signed_attachments_with_stickers() {
+    let a = agent_setup().await.without_job_runner().await;
+    grant_agent(&a, AGENT, &["post_messages", "read_messages"]).await;
+    let sticker_id = db_sticker(&a, "WaveFile").await;
+    let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
+    let mut blobs = Vec::new();
+    for filename in ["kept.txt", "private.txt"] {
+        let staged = a
+            .booted
+            .app
+            .storage
+            .stage_bytes(
+                b"attachment bytes",
+                campfire_storage::Filename::new(filename),
+                Some("text/plain"),
+            )
+            .unwrap();
+        let blob = a
+            .db()
+            .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+            .await
+            .unwrap();
+        let signed =
+            campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+        blobs.push((blob.id, signed));
+    }
+    let (blob_id, signed_id) = &blobs[0];
+    let reply = bot_post(
+        &a,
+        &path,
+        "application/json",
+        json!({
+            "sticker_id":sticker_id, "attachment":signed_id, "markdown_source":"Together"
+        })
+        .to_string(),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id: i64 = reply
+        .location()
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let saved = a
+        .db()
+        .read(move |conn| {
+            let message = Message::find(conn, id)?;
+            let files = message
+                .attachments(conn)?
+                .into_iter()
+                .map(|(_, blob)| blob.id)
+                .collect::<Vec<_>>();
+            Ok((message.sticker_id, message.markdown_source, files))
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        saved,
+        (Some(sticker_id), Some("Together".into()), vec![*blob_id])
+    );
+
+    let private_blob = blobs[1].0;
+    a.db()
+        .write(move |tx| {
+            Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: HQ,
+                    creator_id: DAVID,
+                    attachment_blob_id: Some(private_blob),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let before: i64 = a
+        .db()
+        .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?))
+        .await
+        .unwrap();
+    let denied = bot_post(
+        &a,
+        &path,
+        "application/json",
+        json!({
+            "sticker_id":sticker_id, "attachment":blobs[1].1
+        })
+        .to_string(),
+    )
+    .await;
+    assert_eq!(
+        denied.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        denied.text()
+    );
+    let after: i64 = a
+        .db()
+        .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?))
+        .await
+        .unwrap();
+    assert_eq!(after, before);
 }
