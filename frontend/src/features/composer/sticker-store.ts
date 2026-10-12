@@ -22,10 +22,16 @@ export const stickerStore = createStore<{ readonly load: StickerLoad }>()(() => 
 
 let loading: Promise<StickerCatalog> | null = null;
 
-/** When the held catalog arrived (`Date.now()`), for `refreshStaleStickerCatalog`. */
-let fetchedAt = 0;
+/**
+ * When the catalog last arrived or a fetch of it last failed (`Date.now()`), for
+ * `refreshStaleStickerCatalog`: a failure waits out the same interval as a fresh catalog.
+ */
+let triedAt = 0;
 
-/** How old a held catalog may get before a room switch or the window's focus refetches it. */
+/**
+ * How old a held catalog may get, and how long after a failed fetch, before a room switch or the
+ * window's focus fetches it again.
+ */
 export const STICKER_CATALOG_MAX_AGE_MS = 60_000;
 
 /** The catalog: the one held, or one fetch shared by every caller (`fresh` skips the held one). */
@@ -48,7 +54,7 @@ export function loadStickerCatalog(fresh = false): Promise<StickerCatalog> {
     (catalog) => {
       if (loading === request) {
         loading = null;
-        fetchedAt = Date.now();
+        triedAt = Date.now();
         stickerStore.setState({ load: { status: "ready", catalog } });
       }
 
@@ -57,6 +63,7 @@ export function loadStickerCatalog(fresh = false): Promise<StickerCatalog> {
     (error: Error) => {
       if (loading === request) {
         loading = null;
+        triedAt = Date.now();
 
         // A failed refetch keeps the catalog already shown.
         if (stickerStore.getState().load.status !== "ready") {
@@ -74,28 +81,36 @@ export function loadStickerCatalog(fresh = false): Promise<StickerCatalog> {
 }
 
 /**
- * The catalog, refetched when none is held or the held one is older than
- * `STICKER_CATALOG_MAX_AGE_MS`; a fresher one is kept, so calling it often costs nothing.
+ * Fetches the catalog when none was tried yet, or the last try (a catalog or a failure) is
+ * `STICKER_CATALOG_MAX_AGE_MS` old; anything sooner does nothing, so calling it on every room
+ * switch and focus costs nothing, even while the server fails. A held catalog stays meanwhile.
+ * Opening the picker fetches regardless (`loadStickerCatalog(true)`).
  */
-export function refreshStaleStickerCatalog(): Promise<StickerCatalog> {
+export async function refreshStaleStickerCatalog(): Promise<void> {
   const held = stickerStore.getState().load;
 
-  return loadStickerCatalog(
-    held.status === "ready" && Date.now() - fetchedAt >= STICKER_CATALOG_MAX_AGE_MS,
-  );
+  if (held.status === "loading" || loading !== null) {
+    return;
+  }
+
+  if (held.status !== "idle" && Date.now() - triedAt < STICKER_CATALOG_MAX_AGE_MS) {
+    return;
+  }
+
+  await loadStickerCatalog(true);
 }
 
 /** The server's catalog after an administrator's write: every picker shows it at once. */
 export function replaceStickerCatalog(catalog: StickerCatalog): void {
   loading = null;
-  fetchedAt = Date.now();
+  triedAt = Date.now();
   stickerStore.setState({ load: { status: "ready", catalog } });
 }
 
 /** Forgets the catalog (tests, and a sign-out's fresh start). */
 export function resetStickers(): void {
   loading = null;
-  fetchedAt = 0;
+  triedAt = 0;
   stickerStore.setState({ load: { status: "idle" } });
 }
 

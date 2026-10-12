@@ -265,6 +265,42 @@ describe("the sticker button", () => {
     expect(catalog).toHaveBeenCalledTimes(2);
   });
 
+  it("waits as long after a failed refetch, keeping the catalog it holds", async () => {
+    const catalog = vi
+      .spyOn(composerActions, "stickerCatalog")
+      .mockResolvedValueOnce(CATALOG)
+      .mockRejectedValue(new Error("Service Unavailable"));
+
+    let now = Date.parse("2026-10-12T12:00:00Z");
+
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    render(<ComposerStickerButton onPick={() => {}} />);
+    await waitFor(() => expect(catalog).toHaveBeenCalledOnce());
+
+    now += STICKER_CATALOG_MAX_AGE_MS;
+
+    for (let focus = 0; focus < 20; focus += 1) {
+      await act(async () => {
+        fireEvent.focus(window);
+      });
+    }
+
+    expect(catalog).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Sticker" })).toBeTruthy();
+
+    now += STICKER_CATALOG_MAX_AGE_MS;
+    await act(async () => {
+      fireEvent.focus(window);
+    });
+    expect(catalog).toHaveBeenCalledTimes(3);
+
+    // Opening the picker still asks at once, and shows the stickers held.
+    const picker = await openPicker();
+
+    await waitFor(() => expect(catalog).toHaveBeenCalledTimes(4));
+    expect(names(picker)).toEqual(["Dance", "Hello", "Wave"]);
+  });
+
   it("refetches the catalog on opening, so another administrator's changes show", async () => {
     const catalog = vi
       .spyOn(composerActions, "stickerCatalog")
