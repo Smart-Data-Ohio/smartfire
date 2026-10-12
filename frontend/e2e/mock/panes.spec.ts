@@ -302,7 +302,10 @@ test("the files pane shows a thread reply's upload live and drops it when the re
   await expect(pane(page).getByText("thread-live.png")).toBeVisible();
   await expect(rows).toHaveCount(loaded + 1);
 
-  const threadFile = rows.filter({ hasText: "thread-live.png" });
+  const threadFile = rows.filter({
+    has: page.getByRole("button", { name: "Download thread-live.png" }),
+  });
+
   const edited = await page.request.patch(`/api/v1/messages/${reply.id}`, {
     headers: csrf,
     data: { markdownSource: "Thread live upload", attachmentSpoilers: [true] },
@@ -316,6 +319,7 @@ test("the files pane shows a thread reply's upload live and drops it when the re
   const removed = await page.request.delete(`/api/v1/messages/${reply.id}`, { headers: csrf });
 
   expect(removed.ok()).toBe(true);
+  await expect(threadFile).toHaveCount(0);
   await expect(pane(page).getByText("thread-live.png")).toHaveCount(0);
   await expect(rows).toHaveCount(loaded);
 
@@ -330,6 +334,7 @@ test("the files pane shows a thread reply's upload live and drops it when the re
 
   expect(another.ok()).toBe(true);
   await expect(pane(page).getByText("thread-live.png")).toBeVisible();
+
   const deletedThread = await page.request.delete(`/api/v1/threads/${THREAD_IDS.generalActive}`, {
     headers: csrf,
   });

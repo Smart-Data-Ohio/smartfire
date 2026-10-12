@@ -284,18 +284,22 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
             list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null;
         }
 
-        setListing({
-          status: "ready",
-          files: reconcileFiles(
-            files.filter(
-              (file) => file.threadId === null || !removedThreads.current.has(file.threadId),
+        setListing((held) => {
+          if (ticket !== request.current) return held;
+
+          return {
+            status: "ready",
+            files: reconcileFiles(
+              files.filter(
+                (file) => file.threadId === null || !removedThreads.current.has(file.threadId),
+              ),
+              liveFiles.current,
+              { type, search: query },
+              nextPage === null,
             ),
-            liveFiles.current,
-            { type, search: query },
-            nextPage === null,
-          ),
-          nextPage,
-          loadingMore: false,
+            nextPage,
+            loadingMore: false,
+          };
         });
       } catch {
         if (ticket === request.current) {

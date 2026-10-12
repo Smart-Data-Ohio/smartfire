@@ -1622,15 +1622,20 @@ fn files_changed(event: &api::SyncEvent) -> bool {
     wire == json!({"type": "room.files.changed", "data": {"roomId": DESIGNERS}})
 }
 
+async fn watch_room_files(addr: std::net::SocketAddr, cookie: &str) -> Sync {
+    let mut sync = Sync::connect(addr, cookie, &[format!("room:{DESIGNERS}")]).await;
+    sync.welcome().await;
+    sync
+}
+
 #[tokio::test]
 async fn thread_reply_uploads_reach_room_files_viewers_live() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
-    let kevin = a.sign_in(KEVIN).await;
+    let mut kevin = a.sign_in(KEVIN).await;
     let (addr, server) = serve(&a).await;
     // Kevin watches the room only, as someone with its Files pane open does.
-    let mut room_sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
-    room_sync.welcome().await;
+    let mut room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
 
     let signed_id = upload_file(&mut david, "thread-notes.txt", b"thread notes").await;
     let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{THREAD}/messages"), &json!({
@@ -1639,9 +1644,20 @@ async fn thread_reply_uploads_reach_room_files_viewers_live() {
     }))).await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
     let reply: api::MessageDTO = parse(&posted);
+    assert_eq!(reply.attachment.as_ref().unwrap().filename, "thread-notes.txt");
     let event = room_sync.until(files_changed, |_| false).await;
     assert_eq!(event.topic, format!("room:{DESIGNERS}"));
 
+    a.booted.app.broadcasts.settle_sync().await;
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{}", reply.id),
+        &json!({"markdownSource": "Notes attached", "attachmentSpoilers": [true]}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
     let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{}", reply.id), &json!({}))).await;
     assert_eq!(removed.status, StatusCode::NO_CONTENT, "{}", removed.text());
     a.booted.app.broadcasts.settle_sync().await;
@@ -1653,22 +1669,46 @@ async fn thread_reply_uploads_reach_room_files_viewers_live() {
         &format!("/api/v1/rooms/{DESIGNERS}/threads"),
         &json!({"parentMessageId": UNTHREADED, "visibility": "private",
             "message": reply_body("files-live-private-create", "Private first reply")}))).await);
+    assert_eq!(created.detail.thread.visibility, api::ThreadVisibility::Private);
     let private_id = created.detail.thread.id;
     let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{private_id}/members"), &json!({"userId": KEVIN}))).await;
     assert_eq!(added.status, StatusCode::OK, "{}", added.text());
-    let outsider = a.sign_in(JZ).await;
+    let mut outsider = a.sign_in(JZ).await;
     let mut outsider_sync = Sync::connect(addr, &outsider.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
     outsider_sync.welcome().await;
     a.booted.app.broadcasts.settle_sync().await;
 
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
     let signed_id = upload_file(&mut david, "private-notes.txt", b"private notes").await;
     let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{private_id}/messages"), &json!({
         "clientMessageId": "files-live-private", "markdownSource": "Private notes attached",
         "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id,
     }))).await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let private_reply: api::MessageDTO = parse(&posted);
+    assert_eq!(private_reply.thread_id, Some(private_id));
+    assert_eq!(private_reply.attachment.as_ref().unwrap().filename, "private-notes.txt");
     let event = room_sync.until(files_changed, |_| false).await;
     assert_eq!(event.topic, "user");
+
+    let visible: api::FileList = parse(&kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/files"))).await);
+    assert!(visible.files.iter().any(|file| file.message_id == private_reply.id));
+    let hidden: api::FileList = parse(&outsider.send(get(&format!("/api/v1/rooms/{DESIGNERS}/files"))).await);
+    assert!(!hidden.files.iter().any(|file| file.message_id == private_reply.id));
+
+    a.booted.app.broadcasts.settle_sync().await;
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{}", private_reply.id),
+        &json!({"markdownSource": "Private notes attached", "attachmentSpoilers": [true]}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    assert_eq!(room_sync.until(files_changed, |_| false).await.topic, "user");
+
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{}", private_reply.id), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT, "{}", removed.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    assert_eq!(room_sync.until(files_changed, |_| false).await.topic, "user");
 
     a.booted.app.broadcasts.settle_sync().await;
     let marker = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &reply_body("files-live-marker", "Public marker"))).await;

@@ -72,6 +72,16 @@ pub struct FileList {
     pub next_page: Option<i64>,
 }
 
+/// File attachments on thread replies in this room may have changed.
+/// Reply events stay on the thread topic, so the room Files pane reloads its loaded pages.
+/// Private-thread changes are sent only to current readers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RoomFilesChanged {
+    pub room_id: i64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -84,4 +94,20 @@ pub struct RoomFile {
     pub attachment: Attachment,
     /// When it was attached.
     pub created_at: Timestamp,
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    #[test]
+    fn room_files_changed_names_the_room() {
+        let payload = crate::SyncPayload::RoomFilesChanged(super::RoomFilesChanged { room_id: 12 });
+        let wire = json!({"type": "room.files.changed", "data": {"roomId": 12}});
+        assert_eq!(serde_json::to_value(&payload).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<crate::SyncPayload>(wire).unwrap(),
+            payload
+        );
+    }
 }

@@ -595,3 +595,23 @@ it("shows an error if a reply refresh supersedes an initial read and fails", asy
   await act(async () => stale.resolve(publicList));
   expect(screen.getByText("The files couldn't be loaded.")).toBeTruthy();
 });
+
+it("keeps a room upload that arrives while reply files are being refreshed", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  const pending = Promise.withResolvers<FileList>();
+
+  files.mockImplementationOnce(() => pending.promise);
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  await act(async () => {
+    threadRemoved(99);
+    created(messageFixture(2, ROOM, { attachment: freshAttachment }));
+    pending.resolve(publicList);
+    await Promise.resolve();
+  });
+  expect(screen.getByText("fresh.png")).toBeTruthy();
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
+});
