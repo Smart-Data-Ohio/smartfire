@@ -53,19 +53,20 @@ interface FileRefresh {
 
 const LOADING: Listing = { status: "loading", files: [], nextPage: null, loadingMore: false };
 
-/** An edit with unknown attach times needs an authoritative read before it can be sorted. */
-function liveEntry(
-  message: MessageDTO,
-  created: boolean,
-  known: ReadonlyMap<string, string>,
-): RoomFile[] | null {
+/** Known files update immediately; unknown attach times need a read before insertion. */
+function liveEntry(message: MessageDTO, created: boolean, known: ReadonlyMap<string, string>) {
   const files: RoomFile[] = [];
+  let needsRead = false;
 
   for (const attachment of messageFiles(message)) {
     const createdAt =
       known.get(`${message.id}:${attachment.url}`) ?? (created ? message.createdAt : undefined);
 
-    if (createdAt === undefined) return null;
+    if (createdAt === undefined) {
+      needsRead = true;
+      continue;
+    }
+
     files.push({
       messageId: message.id,
       threadId: message.threadId,
@@ -75,7 +76,7 @@ function liveEntry(
     });
   }
 
-  return files;
+  return { files, needsRead };
 }
 
 /** Starts a download of `url` (the `?disposition=attachment` link) without leaving the page. */
@@ -257,10 +258,9 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
     for (const [id, message] of pendingEdits.current) {
       const entry = liveEntry(message, false, knownTimes.current);
 
-      if (entry !== null) {
-        liveFiles.current.set(id, entry);
-        pendingEdits.current.delete(id);
-      }
+      liveFiles.current.set(id, entry.files);
+
+      if (!entry.needsRead) pendingEdits.current.delete(id);
     }
   };
 
@@ -339,9 +339,11 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       schedule: () => {
         refreshState.pending = true;
 
-        if (refreshState.active || pageLoading.current) return;
-        window.clearTimeout(refreshTimer);
-        refreshTimer = window.setTimeout(() => void refresh(), FILES_REFRESH_DELAY_MS);
+        if (refreshState.active || pageLoading.current || refreshTimer !== undefined) return;
+        refreshTimer = window.setTimeout(() => {
+          refreshTimer = undefined;
+          void refresh();
+        }, FILES_REFRESH_DELAY_MS);
       },
     };
 
@@ -441,17 +443,15 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       if (message.threadId !== null || deletedMessages.current.has(message.id)) return;
       const entry = liveEntry(message, created, knownTimes.current);
 
-      if (entry === null) {
+      if (entry.needsRead) {
         pendingEdits.current.set(message.id, message);
         refreshState.schedule();
-
-        return;
+      } else {
+        pendingEdits.current.delete(message.id);
       }
 
-      pendingEdits.current.delete(message.id);
-
-      for (const file of entry) knownTimes.current.set(fileKey(file), file.createdAt);
-      liveFiles.current.set(message.id, entry);
+      for (const file of entry.files) knownTimes.current.set(fileKey(file), file.createdAt);
+      liveFiles.current.set(message.id, entry.files);
       setListing((held) => {
         const files = reconcileFiles(
           held.files,

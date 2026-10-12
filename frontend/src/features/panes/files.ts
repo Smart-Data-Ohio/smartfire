@@ -165,16 +165,26 @@ export function retireFileUpdates(
   const last = read.files.at(-1);
 
   for (const [id, files] of snapshot) {
-    if (
-      updates.get(id) === files &&
-      files.every(
-        (file) =>
-          matchesFileFilter(file.attachment, read.filter) &&
-          (read.upperBound === undefined || !isNewer(file, read.upperBound)) &&
-          (read.complete || (last !== undefined && !isNewer(last, file))),
-      )
-    ) {
+    if (updates.get(id) !== files) continue;
+
+    const uncovered = files.filter(
+      (file) =>
+        !matchesFileFilter(file.attachment, read.filter) ||
+        (read.upperBound !== undefined && isNewer(file, read.upperBound)) ||
+        (!read.complete && (last === undefined || isNewer(last, file))),
+    );
+
+    if (uncovered.length === 0) {
       updates.delete(id);
+    } else {
+      // A remaining sibling must not hide an authoritative row from the same message.
+      updates.set(
+        id,
+        appendFiles(
+          read.files.filter((file) => file.messageId === id),
+          uncovered,
+        ),
+      );
     }
   }
 }

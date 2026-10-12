@@ -10,6 +10,7 @@ import {
   formatBytes,
   isFileType,
   reconcileFiles,
+  retireFileUpdates,
   showsAsGrid,
 } from "./files.ts";
 
@@ -190,4 +191,26 @@ describe("file presentation", () => {
     expect(emptyFilesText("images", " deck ")).toBe('No files match "deck".');
     expect(emptyFilesText("other", "")).toBe("No other files shared here yet.");
   });
+});
+
+it("retires covered image metadata independently of a PDF sibling", () => {
+  const image = {
+    ...file(1, "image.png"),
+    attachment: attachment("image.png", "image/png", "image"),
+  };
+
+  const pdf = { ...file(1, "notes.pdf"), attachment: attachment("notes.pdf", "application/pdf") };
+  const live = new Map([[1, [image, pdf]]]);
+  const snapshot = new Map(live);
+  const authoritative = { ...image, attachment: { ...image.attachment, spoiler: true } };
+
+  retireFileUpdates(live, snapshot, {
+    files: [authoritative],
+    filter: { type: "images", search: "" },
+    complete: true,
+  });
+  expect(reconcileFiles([authoritative], live, { type: "images", search: "" }, true)).toEqual([
+    authoritative,
+  ]);
+  expect(reconcileFiles([], live, { type: "documents", search: "" }, true)).toEqual([pdf]);
 });

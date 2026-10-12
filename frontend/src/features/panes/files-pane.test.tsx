@@ -796,3 +796,120 @@ it("review regression: refreshes unknown attachment times on an older text edit"
     screen.getAllByRole("listitem").map((item) => item.querySelector("time")?.dateTime),
   ).toEqual([file.createdAt, old.createdAt]);
 });
+
+const pdfAttachment: RoomFile["attachment"] = {
+  ...file.attachment,
+  filename: "notes.pdf",
+  contentType: "application/pdf",
+  width: null,
+  height: null,
+  preview: "file",
+  url: "/files/notes.pdf",
+  downloadUrl: "/files/notes.pdf?disposition=attachment",
+  thumbnailUrl: null,
+};
+
+it("retires a mixed image and PDF overlay after a missed deletion and Images resync", async () => {
+  const empty: FileList = { files: [], users: [], nextPage: null };
+  const files = vi.spyOn(panes, "files").mockResolvedValue(empty);
+  await mount();
+  fireEvent.click(screen.getByRole("tab", { name: "Images" }));
+  await waitFor(() => expect(screen.getByText("No images shared here yet.")).toBeTruthy());
+  act(() =>
+    created(
+      messageFixture(2, ROOM, {
+        attachment: null,
+        attachments: [freshAttachment, pdfAttachment],
+      }),
+    ),
+  );
+  expect(screen.getByRole("link", { name: "Open fresh.png" })).toBeTruthy();
+  const pending = Promise.withResolvers<FileList>();
+  const calls = files.mock.calls.length;
+
+  files.mockImplementationOnce(() => pending.promise);
+  vi.useFakeTimers();
+  // The deletion happened offline: only the empty authoritative read reports it.
+  act(() => emitResync([`room:${ROOM}`]));
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(calls + 1);
+  act(() =>
+    created(
+      messageFixture(3, ROOM, {
+        attachment: null,
+        attachments: [
+          { ...freshAttachment, filename: "concurrent.png", url: "/files/concurrent.png" },
+          pdfAttachment,
+        ],
+      }),
+    ),
+  );
+  await act(async () => pending.resolve(empty));
+  expect(screen.queryByRole("link", { name: "Open fresh.png" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Open concurrent.png" })).toBeTruthy();
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+});
+
+it("starts the dirty follow-up refresh while events continue every 50 ms", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  const first = Promise.withResolvers<FileList>();
+  const followup = Promise.withResolvers<FileList>();
+
+  files.mockImplementationOnce(() => first.promise).mockImplementationOnce(() => followup.promise);
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  let notifications = 0;
+
+  const timer = window.setInterval(() => {
+    notifications += 1;
+    filesChanged();
+  }, 50);
+
+  try {
+    await act(() => vi.advanceTimersByTimeAsync(50));
+    expect(files).toHaveBeenCalledTimes(2);
+    await act(async () => first.resolve(publicList));
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    expect(notifications).toBe(5);
+    expect(files).toHaveBeenCalledTimes(3);
+    await act(async () => followup.resolve({ ...publicList, files: [] }));
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  } finally {
+    window.clearInterval(timer);
+  }
+});
+
+it("applies a known image spoiler and removal with an unknown PDF sibling despite refresh failure", async () => {
+  const files = vi
+    .spyOn(panes, "files")
+    .mockResolvedValue({ ...publicList, files: [file, { ...file, attachment: freshAttachment }] });
+
+  const { container } = await mount();
+
+  fireEvent.click(screen.getByRole("tab", { name: "Images" }));
+  await waitFor(() => expect(files).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(2));
+  expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull();
+  expect(container.querySelector('img[src="/thumbs/fresh.png"]')).not.toBeNull();
+  files.mockRejectedValueOnce(new Error("Offline"));
+  vi.useFakeTimers();
+  act(() =>
+    updated(
+      messageFixture(file.messageId, ROOM, {
+        attachment: null,
+        attachments: [{ ...file.attachment, spoiler: true }, pdfAttachment],
+      }),
+    ),
+  );
+  expect(container.querySelector('img[src="/thumbs/image.png"]')).toBeNull();
+  expect(container.querySelector('img[src="/thumbs/fresh.png"]')).toBeNull();
+  expect(screen.getByRole("button", { name: "Spoiler, activate to reveal" })).toBeTruthy();
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(3);
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Spoiler, activate to reveal" })).toBeTruthy();
+  expect(container.querySelector("img")).toBeNull();
+});
