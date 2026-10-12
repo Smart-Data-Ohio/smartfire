@@ -17,6 +17,7 @@ import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
 import { messageFiles } from "../messages/message-files.ts";
 import { useSpoilerReveal } from "../messages/spoilers.ts";
+import { StickerMessage } from "../messages/sticker-message.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -221,12 +222,17 @@ export function SavedRow({
           {message === null ? (
             <p className="saved-body text-faint">This message is no longer available.</p>
           ) : (
-            <div
-              ref={bodyRef}
-              className="saved-body message-body"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
+            <div className={message.sticker === undefined ? undefined : "message-sticker-body"}>
+              {bodyHtml === "" ? null : (
+                <div
+                  ref={bodyRef}
+                  className="saved-body message-body"
+                  // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
+                  dangerouslySetInnerHTML={{ __html: bodyHtml }}
+                />
+              )}
+              {message.sticker === undefined ? null : <StickerMessage sticker={message.sticker} />}
+            </div>
           )}
           {files.length === 0 && reminder === null && !done ? null : (
             <div className="saved-chips">
