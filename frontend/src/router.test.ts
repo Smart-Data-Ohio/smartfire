@@ -52,6 +52,8 @@ describe("the screen map and the router", () => {
       "/app/admin/invites",
       // The voice soundboard is new with the SPA; classic had no soundboard.
       "/app/admin/sounds",
+      // So are stickers; classic had none.
+      "/app/admin/stickers",
       // The server guide (Discord's) is new with the SPA; classic had no guide page.
       "/app/guide",
       // Ignoring people (Discord's) is new with the SPA; classic had no ignore list.
