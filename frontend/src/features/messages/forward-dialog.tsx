@@ -13,7 +13,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { plainText } from "./commands.ts";
 import { filterDestinations, MAX_FORWARDS, targetKey } from "./forward-targets.ts";
-import { fileSummary, messageFiles } from "./message-files.ts";
+import { fileSummary, messageFiles, wordlessSummary } from "./message-files.ts";
 import { displayedAuthor } from "./webhook-attribution.ts";
 
 interface ForwardDialogProps {
@@ -44,7 +44,7 @@ function Preview({ message }: { readonly message: MessageDTO }) {
     <figure className="forward-preview">
       <figcaption className="forward-preview-author">{author}</figcaption>
       <p className="forward-preview-text">
-        {text === "" ? fileSummary(message) : text}
+        {text === "" ? wordlessSummary(message) : text}
         {text !== "" && messageFiles(message).length > 1 ? ` · ${fileSummary(message)}` : null}
       </p>
     </figure>

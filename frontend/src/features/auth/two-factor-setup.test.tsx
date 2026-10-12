@@ -222,7 +222,7 @@ describe("the setup screen", () => {
 
     const heading = await screen.findByRole("heading", { name: "Save your backup codes" });
 
-    expect(document.activeElement).toBe(heading);
+    await waitFor(() => expect(document.activeElement).toBe(heading));
     expect(screen.getByText("Signed out your other devices")).toBeTruthy();
 
     const codes = screen.getByRole("list", { name: "Backup codes" });

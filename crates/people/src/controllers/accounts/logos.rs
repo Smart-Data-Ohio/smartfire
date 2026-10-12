@@ -26,62 +26,64 @@ pub async fn show(c: &mut Ctx) -> Result {
         return super::banners::show_image(c, "logo").await;
     }
     let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
+    let blob = match &account {
+        Some(account) => {
+            let id = account.id;
+            c.app().db.read(move |conn| attachments::attached_blob(conn, "Account", id, "logo"))
+                .await.map_err(Error::internal)?
+        }
+        None => None,
+    };
+    let private = match &blob {
+        Some(blob) => campfire_runtime::active_storage::authorize_private_media(c, blob.id).await?,
+        None => false,
+    };
 
     // `stale?(etag: Current.account)`; there's no accounts/logos/show template to digest.
     let freshness = Freshness {
         etag: account.as_ref().map(|account| cache_key_with_version("accounts", account.id, account.updated_at.jiff())),
         ..Freshness::default()
     };
-    if let Some(not_modified) = c.fresh_when(freshness) {
+    if !private && let Some(not_modified) = c.fresh_when(freshness) {
         return Ok(not_modified);
     }
     c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
 
     let small = c.param_str("size") == Some("small");
-    let variant = match &account {
+    let variant = match blob.filter(|blob| blob.is_variable()) {
         // `logo.variant(size).processed if logo.variable?`: :small is 192, :large 512, both PNG.
-        Some(account) => {
+        Some(blob) => {
             let size = if small { 192 } else { 512 };
-            let id = account.id;
-            let blob = c
-                .app()
-                .db
-                .read(move |conn| attachments::attached_blob(conn, "Account", id, "logo"))
-                .await
-                .map_err(Error::internal)?;
-            if let Some(blob) = blob.filter(|blob| blob.is_variable()) {
-                let timeout = campfire_storage::branding::processing_timeout(&blob);
-                campfire_runtime::active_storage::processed_branding_variant_with_deadline(
-                    c.app(),
-                    blob,
-                    Variation::resize_to_limit(size, size, Some("png")),
-                    timeout,
-                    |storage, blob, variation, cancel| {
-                        campfire_storage::branding::transform_variant(
-                            storage,
-                            blob,
-                            campfire_storage::branding::Kind::Logo,
-                            variation,
-                            cancel,
-                        )
-                    },
-                )
-                .await
-                .ok()
-            } else {
-                None
-            }
+            let timeout = campfire_storage::branding::processing_timeout(&blob);
+            campfire_runtime::active_storage::processed_branding_variant_with_deadline(
+                c.app(),
+                blob,
+                Variation::resize_to_limit(size, size, Some("png")),
+                timeout,
+                |storage, blob, variation, cancel| {
+                    campfire_storage::branding::transform_variant(
+                        storage,
+                        blob,
+                        campfire_storage::branding::Kind::Logo,
+                        variation,
+                        cancel,
+                    )
+                },
+            )
+            .await
+            .ok()
         }
         None => None,
     };
-    match variant {
+    let response = match variant {
         Some(variant) => {
             let path = c.app().storage.service.path_for(&variant.key);
             c.send_file(path, SendOptions::inline("image/png"))
         }
         // send_stock_icon
         None => stock_icon(c, small),
-    }
+    }?;
+    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
 }
 
 pub(super) fn stock_icon(c: &mut Ctx, small: bool) -> Result {

@@ -28,6 +28,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     let Some(mut blob) = blob else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
+    let private = campfire_runtime::active_storage::authorize_private_media(c, blob.id).await?;
     if c.param_str("still") == Some("1") && campfire_storage::workspace_icon::animated(&blob) {
         blob = campfire_runtime::active_storage::processed_branding_variant_with_deadline(
             c.app(),
@@ -63,12 +64,12 @@ pub async fn show(c: &mut Ctx) -> Result {
             "default-src 'none'; style-src 'unsafe-inline'",
         );
     }
-    if c.is_fresh() {
+    if !private && c.is_fresh() {
         return Ok(c.head(StatusCode::NOT_MODIFIED));
     }
     let path = c.app().storage.service.path_for(&blob.key);
     let data = tokio::fs::read(path).await.map_err(Error::internal)?;
-    Ok(c.send_data(
+    let response = c.send_data(
         data,
         SendOptions {
             filename: Some(blob.filename.sanitized()),
@@ -76,5 +77,6 @@ pub async fn show(c: &mut Ctx) -> Result {
             disposition: Some("inline".into()),
             ..Default::default()
         },
-    ))
+    );
+    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
 }

@@ -73,6 +73,7 @@ import {
   startSlackImport,
   undoSlackRun,
 } from "../api/slack-endpoints.ts";
+import { createSticker, destroySticker, updateSticker } from "../api/sticker-endpoints.ts";
 import { adminWelcome, updateWelcome } from "../api/welcome-endpoints.ts";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
@@ -87,6 +88,7 @@ import type { CreateBot } from "../gen/CreateBot.ts";
 import type { CreateCredential } from "../gen/CreateCredential.ts";
 import type { CreateGrant } from "../gen/CreateGrant.ts";
 import type { CreateIcon } from "../gen/CreateIcon.ts";
+import type { CreateSticker } from "../gen/CreateSticker.ts";
 import type { CreateWorkspaceInvite } from "../gen/CreateWorkspaceInvite.ts";
 import type { CredentialCreated } from "../gen/CredentialCreated.ts";
 import type { CredentialList } from "../gen/CredentialList.ts";
@@ -110,7 +112,9 @@ import type { SlackSetupChange } from "../gen/SlackSetupChange.ts";
 import type { StartPersonalSlackImport } from "../gen/StartPersonalSlackImport.ts";
 import type { StartSlackDryRun } from "../gen/StartSlackDryRun.ts";
 import type { StartSlackImport } from "../gen/StartSlackImport.ts";
+import type { StickerCatalog } from "../gen/StickerCatalog.ts";
 import type { UpdateBot } from "../gen/UpdateBot.ts";
+import type { UpdateSticker } from "../gen/UpdateSticker.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { WelcomeAdmin } from "../gen/WelcomeAdmin.ts";
 import type { WelcomeUpdate } from "../gen/WelcomeUpdate.ts";
@@ -216,6 +220,18 @@ export const admin = {
   createIcon: (body: CreateIcon): Promise<WorkspaceIconList> => runAction(createIcon(body)),
 
   destroyIcon: (iconId: number): Promise<WorkspaceIconList> => runAction(destroyIcon(iconId)),
+
+  /**
+   * The sticker catalog's writes, each answering the whole catalog: `Validation` (with `fields`)
+   * for a refused sticker, `StickerLimitReached` when the catalog is already full.
+   */
+  createSticker: (body: CreateSticker): Promise<StickerCatalog> => runAction(createSticker(body)),
+
+  updateSticker: (stickerId: number, body: UpdateSticker): Promise<StickerCatalog> =>
+    runAction(updateSticker(stickerId, body)),
+
+  destroySticker: (stickerId: number): Promise<StickerCatalog> =>
+    runAction(destroySticker(stickerId)),
 
   auditLog: (filters: AuditLogFilters, page: string | null = null): Promise<AuditLogPage> =>
     runAction(auditLog(filters, page)),

@@ -228,6 +228,7 @@ async fn open_database(
         clock: Arc::new(DbClock(clock)),
         sink: Arc::new(jobs),
         rich_text,
+        attachment_service: Some(DiskService::new(&config.storage.files, "local")),
         bcrypt_cost: 12,
         default_url_origin: config.mail.url_origin().to_owned(),
         message_reference_syncs: vec![crate::integrations::github::references::sync],

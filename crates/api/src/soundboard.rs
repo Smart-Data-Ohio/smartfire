@@ -85,19 +85,8 @@ async fn reply_catalog(c: &mut Ctx, status: StatusCode) -> Result {
 }
 
 async fn uploaded_audio(c: &mut Ctx, signed_id: &str) -> Result<Blob> {
-    let id = campfire_storage::paths::verify_signed_blob_id(
-        &*c.app().storage.verifier,
-        signed_id,
-        c.app().clock.now(),
-    )
-    .ok_or_else(|| fail(c, validation("audio", "isn't an uploaded file")))?;
-    let blob = c
-        .app()
-        .db
-        .read(move |conn| Blob::find(conn, id).map_err(attachments::storage_error))
-        .await
-        .map_err(Error::internal)?
-        .ok_or_else(|| fail(c, validation("audio", "isn't an uploaded file")))?;
+    let blob = attachments::resolve_signed_blob(c.app(), signed_id, None).await
+        .map_err(|_| fail(c, validation("audio", "isn't an uploaded file")))?;
     if !(1..=MAX_AUDIO_BYTES).contains(&blob.byte_size) {
         return Err(fail(
             c,

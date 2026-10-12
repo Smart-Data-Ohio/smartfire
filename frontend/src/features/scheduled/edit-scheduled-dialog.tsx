@@ -200,8 +200,10 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
       <div>
         <ScheduledFiles
           files={kept}
-          onRemove={(signedId) =>
-            setKept((files) => files.filter((file) => file.signedId !== signedId))
+          onRemove={
+            busy
+              ? undefined
+              : (signedId) => setKept((files) => files.filter((file) => file.signedId !== signedId))
           }
         />
         <AttachmentTray files={uploads.files} onRemove={uploads.remove} onRetry={uploads.retry} />

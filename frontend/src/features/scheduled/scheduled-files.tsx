@@ -7,7 +7,7 @@ export function ScheduledFiles({
   onRemove,
 }: {
   readonly files: readonly ScheduledAttachment[];
-  readonly onRemove?: (signedId: string) => void;
+  readonly onRemove?: ((signedId: string) => void) | undefined;
 }) {
   if (files.length === 0) return null;
 
