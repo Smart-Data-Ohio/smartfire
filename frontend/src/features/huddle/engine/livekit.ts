@@ -287,6 +287,11 @@ class LiveKitTransport implements CallTransport {
     }
 
     this.#captured.clear();
+
+    for (const screens of this.#recoveringScreens) {
+      for (const screen of screens.values()) screen.stop();
+    }
+
     this.#recoveringScreens.clear();
 
     if (room !== null) {

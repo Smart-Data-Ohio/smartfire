@@ -206,6 +206,35 @@ async function publishingRoom(serverVersion = "1.13.7") {
 }
 
 describe("publishing with codec compatibility", () => {
+  it("stops the retained stage capture on leave during codec recovery", async () => {
+    const { transport, room, publish, reconnect } = await publishingRoom();
+    await transport.setScreenShare(true, "1080p15");
+    const publication = room.localParticipant.getTrackPublication(LiveKit.Track.Source.ScreenShare);
+    const screen = publication?.videoTrack;
+
+    if (publication === undefined || screen === undefined) throw new Error("screen missing");
+    const unpublished = Promise.withResolvers<void>();
+    reconnect.mockImplementation(() => {
+      void (async () => {
+        await room.localParticipant.unpublishTrack(screen, false);
+        room.emit(LiveKit.RoomEvent.LocalTrackUnpublished, publication, room.localParticipant);
+        unpublished.resolve();
+      })();
+    });
+    publish.mockRejectedValueOnce(new DOMException("encoder unavailable", "NotSupportedError"));
+    const camera = transport.setCamera(true);
+    const rejected = expect(camera).rejects.toThrow("call-ended");
+
+    try {
+      await unpublished.promise;
+      await transport.disconnect();
+      expect(screen.mediaStreamTrack.readyState).toBe("ended");
+    } finally {
+      await transport.disconnect();
+      await rejected;
+    }
+  });
+
   it("applies the selected 1080p60 camera encoding to the VP8 compatibility sender", async () => {
     const { transport, capture, publish } = await publishingRoom();
     capture.mockImplementation(async () => {
