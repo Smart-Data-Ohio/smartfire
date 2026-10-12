@@ -68,11 +68,26 @@ pub struct StageStream {
 #[ts(export)]
 pub struct StageState {
     pub room_id: i64,
+    /// Distinct listeners currently present, excluding hosts, speakers, room creators
+    /// and administrators.
+    pub audience_count: i64,
+    /// The instance's declared admission limit.
+    pub audience_budget: i64,
+    /// Pending join reservations also occupy slots.
+    pub audience_availability: StageAudienceAvailability,
     /// Every member, in membership order. The roster groups them by role: hosts and speakers by
     /// name, listeners with raised hands first (oldest hand first), then by name.
     pub members: Vec<StageMember>,
     /// `null` when nobody's streaming.
     pub live: Option<StageStream>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum StageAudienceAvailability {
+    Open,
+    Full,
 }
 
 /// `GET /api/v1/rooms/:id/stage`: the stage panel's data.

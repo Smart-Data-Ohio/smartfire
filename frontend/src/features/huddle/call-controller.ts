@@ -186,6 +186,8 @@ function joinErrorMessage(error: Error): string {
     case "Forbidden":
     case "NotFound":
       return "You no longer have access to this room.";
+    case "StageAudienceFull":
+      return "This stage is full. Try again when someone leaves.";
     case "HuddleRoomFull":
       return "This voice room is full. Try again when someone leaves.";
     case "Unavailable":

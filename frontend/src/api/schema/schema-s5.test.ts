@@ -48,6 +48,9 @@ const presenceJson = { roomId: 12, participants: [participantJson], live: false 
 
 const stageJson = {
   roomId: 40,
+  audienceCount: 0,
+  audienceBudget: 300,
+  audienceAvailability: "open",
   members: [
     { membershipId: 31, userId: 7, role: "host", handRaisedAt: null, serverMuted: false },
     {

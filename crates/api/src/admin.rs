@@ -277,6 +277,7 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
             .settings()
             .restrict_room_creation_to_administrators(),
         upload_limit_bytes: account.settings().upload_limit_bytes(),
+        stage_audience_budget: account.settings().stage_audience_budget(),
         version: c.app().config.app_version.clone(),
         description: account.settings().description().to_string(),
         vanity_slug: account.settings().vanity_slug().map(str::to_string),
@@ -295,6 +296,14 @@ async fn save_workspace(c: &mut Ctx) -> Result {
         return Err(fail(
             c,
             validation("uploadLimitBytes", "must be a positive safe integer"),
+        ));
+    }
+    if let Some(budget) = update.stage_audience_budget
+        && !(1..=campfire_db::models::account::MAX_UPLOAD_LIMIT_BYTES).contains(&budget)
+    {
+        return Err(fail(
+            c,
+            validation("stageAudienceBudget", "must be a positive safe integer"),
         ));
     }
     let description = update
@@ -327,6 +336,11 @@ async fn save_workspace(c: &mut Ctx) -> Result {
         settings
             .get_or_insert_with(Vec::new)
             .push(("upload_limit_bytes".into(), bytes.to_string()));
+    }
+    if let Some(budget) = update.stage_audience_budget {
+        settings
+            .get_or_insert_with(Vec::new)
+            .push(("stage_audience_budget".into(), budget.to_string()));
     }
     for (key, value) in [("description", description), ("vanity_slug", vanity_slug)] {
         if let Some(value) = value {
@@ -409,6 +423,16 @@ async fn write_workspace(
                     .collect()
             });
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
+            if before.settings().stage_audience_budget() != account.settings().stage_audience_budget() {
+                let stages = tx.conn().prepare_cached(
+                    "SELECT id FROM rooms WHERE type='Rooms::Stage' AND deleted_at IS NULL",
+                )?.query_map([], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+                for room_id in stages {
+                    tx.emit_after_commit(campfire_db::Event::broadcast(
+                        &campfire_db::models::huddle_effects::StageRoster { room_id },
+                    ));
+                }
+            }
             attachments::assign(tx, Record::account(account.id, &secrets), "logo", logo)?;
             attachments::assign(tx, Record::account(account.id, &secrets), "banner", banner)?;
             let after_logo =

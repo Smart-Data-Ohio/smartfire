@@ -36,6 +36,8 @@ pub struct Workspace {
     pub restrict_room_creation_to_administrators: bool,
     /// Maximum bytes per uploaded file. Defaults to 100 MiB.
     pub upload_limit_bytes: i64,
+    /// Declared audience admission limit per stage, default 300.
+    pub stage_audience_budget: i64,
     /// The footer's "Smartfire version" badge text.
     pub version: String,
     /// Plain-text workspace description, empty when unset.
@@ -55,6 +57,7 @@ pub struct UpdateWorkspace {
     pub name: Option<String>,
     pub restrict_room_creation_to_administrators: Option<bool>,
     pub upload_limit_bytes: Option<i64>,
+    pub stage_audience_budget: Option<i64>,
     /// An empty string clears the description; null leaves it unchanged.
     pub description: Option<String>,
     /// An empty string removes the alias; null leaves it unchanged.

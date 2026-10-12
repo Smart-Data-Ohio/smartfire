@@ -15,7 +15,7 @@ pub(crate) fn afk_moved(app: &App, moved: campfire_db::models::huddle_effects::A
 pub(crate) fn stream_changed(app: &App, room_id: i64) -> anyhow::Result<()> {
     app.db.read_blocking(|conn| {
         if let Some(room) = Room::find_by_id(conn, room_id)?.filter(|room| room.deleted_at.is_none() && room.stage()) {
-            huddle_sync::publish_stage(&app.cable, conn, room_id);
+            huddle_sync::publish_stage(&app.cable, conn, room_id, app.db.env().now());
             if app.config.huddle.configured() {
                 huddle_sync::publish_presence(&app.cable, conn, &room, app.db.env().now());
             }
@@ -34,7 +34,7 @@ pub(crate) fn stream_stopped(app: &App, room_id: i64, user_id: i64) -> anyhow::R
 pub(crate) fn stage_roster(app: &App, room_id: i64) -> anyhow::Result<()> {
     app.db.read_blocking(|conn| {
         if Room::find_by_id(conn, room_id)?.is_some_and(|room| room.deleted_at.is_none() && room.stage()) {
-            huddle_sync::publish_stage(&app.cable, conn, room_id);
+            huddle_sync::publish_stage(&app.cable, conn, room_id, app.db.env().now());
         }
         Ok(())
     })?;
@@ -56,6 +56,9 @@ pub fn presence(app: &App, room_id: i64) -> anyhow::Result<()> {
     app.db.read_blocking(|conn| {
         if let Some(room) = Room::find_by_id(conn, room_id)?.filter(|room| room.deleted_at.is_none()) {
             huddle_sync::publish_presence(&app.cable, conn, &room, app.db.env().now());
+            if room.stage() {
+                huddle_sync::publish_stage(&app.cable, conn, room_id, app.db.env().now());
+            }
         }
         Ok(())
     })?;

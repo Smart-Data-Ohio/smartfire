@@ -210,7 +210,7 @@ pub use slack::{
 };
 pub use sidebar::{RoomCategory, Sidebar, SidebarLastMessage, SidebarRow, SidebarRowRemoved};
 pub use stage::{
-    ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
+    ChangeStageRole, LowerHand, StageAudienceAvailability, StageDetail, StageMember, StageState, StageStream,
     StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
 };
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};

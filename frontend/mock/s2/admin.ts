@@ -48,6 +48,7 @@ interface State {
   vanitySlug: string | null;
   restrict: boolean;
   uploadLimitBytes: number;
+  stageAudienceBudget: number;
   css: string | null;
   icons: WorkspaceIcon[];
   /** The signed id of each uploaded icon's file, by name (the seeded icon has none). */
@@ -138,6 +139,7 @@ function initialState(world: World, now: number): State {
     vanitySlug: null,
     restrict: false,
     uploadLimitBytes: 100 * 1024 * 1024,
+    stageAudienceBudget: 300,
     css: null,
     icons: [
       {
@@ -205,6 +207,7 @@ export interface AdminModule {
   readonly customStyles: () => string | null;
   readonly roomCreationRestricted: () => boolean;
   readonly uploadLimitBytes: () => number;
+  readonly stageAudienceBudget: () => number;
   readonly hasIcon: (name: string) => boolean;
   /** The icons uploaded here, as `:name:` resolves them in reactions and the picker. */
   readonly uploadedIcons: () => readonly Icon[];
@@ -215,7 +218,11 @@ export interface AdminModule {
 }
 
 /** Creates the admin module. */
-export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
+export function createAdmin(
+  ctx: S2Context,
+  uploads: Uploads,
+  audienceBudgetChanged: () => void,
+): AdminModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
   let sudoLapsed = false;
@@ -382,6 +389,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       canAdminister: true,
       restrictRoomCreationToAdministrators: held.restrict,
       uploadLimitBytes: held.uploadLimitBytes,
+      stageAudienceBudget: held.stageAudienceBudget,
       version: "2.0.0-mock",
       description: held.description,
       vanitySlug: held.vanitySlug,
@@ -533,6 +541,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     const restrict = booleanField(body, "restrictRoomCreationToAdministrators");
     const uploadLimit = intField(body, "uploadLimitBytes");
+    const audienceBudget = intField(body, "stageAudienceBudget");
+
+    if (audienceBudget !== null && (audienceBudget <= 0 || !Number.isSafeInteger(audienceBudget))) {
+      throw validation("stageAudienceBudget", "must be a positive safe integer");
+    }
 
     if (uploadLimit !== null && (uploadLimit <= 0 || !Number.isSafeInteger(uploadLimit))) {
       throw validation("uploadLimitBytes", "must be a positive safe integer");
@@ -557,6 +570,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     }
 
     if (uploadLimit !== null) held.uploadLimitBytes = uploadLimit;
+
+    if (audienceBudget !== null && audienceBudget !== held.stageAudienceBudget) {
+      held.stageAudienceBudget = audienceBudget;
+      audienceBudgetChanged();
+    }
 
     if (description !== null) held.description = description.trim();
 
@@ -843,6 +861,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,
     uploadLimitBytes: () => current().uploadLimitBytes,
+    stageAudienceBudget: () => current().stageAudienceBudget,
     hasIcon: (name) => current().icons.some((icon) => icon.name === name),
     uploadedIcons: () => {
       const held = current();

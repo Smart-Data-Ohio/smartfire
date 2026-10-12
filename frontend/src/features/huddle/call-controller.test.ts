@@ -261,6 +261,19 @@ describe("joining", () => {
     await controller.leave();
   });
 
+  it("explains that a stage is full without starting a transport", async () => {
+    const { controller, transports } = harness({
+      join: async () => {
+        throw new ActionError("StageAudienceFull", "This stage is full");
+      },
+    });
+
+    await controller.join(ROOM, "Town Hall", false);
+    expect(callStore.getState().phase).toBe("failed");
+    expect(callStore.getState().notice).toBe("This stage is full. Try again when someone leaves.");
+    expect(transports).toHaveLength(0);
+  });
+
   it("explains that a voice room is full without starting a transport", async () => {
     const { controller, transports } = harness({
       join: async () => {

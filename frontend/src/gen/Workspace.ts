@@ -30,6 +30,10 @@ restrictRoomCreationToAdministrators: boolean,
  */
 uploadLimitBytes: number,
 /**
+ * Declared audience admission limit per stage, default 300.
+ */
+stageAudienceBudget: number,
+/**
  * The footer's "Smartfire version" badge text.
  */
 version: string,

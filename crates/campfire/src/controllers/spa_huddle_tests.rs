@@ -1573,3 +1573,6 @@ async fn afk_gateway_keeps_idle_direct_calls_connected() {
     let detail: api::HuddleDetail = parse(&kevin.send(get(&format!("/api/v1/rooms/{}/huddle", source.id))).await);
     assert_eq!(detail.presence.participants[0].identities, [grant.identity]);
 }
+
+#[path = "spa_stage_audience_budget_tests.rs"]
+mod stage_audience_budget_tests;

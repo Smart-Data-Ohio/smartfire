@@ -64,10 +64,11 @@ fn huddle_config(c: &Ctx) -> HuddleConfig {
 
 /// The roster and stream after a change.
 async fn state(c: &mut Ctx, room_id: i64) -> Result {
+    let now = Timestamp::from_jiff(c.now());
     let stage = c
         .app()
         .db
-        .read(move |conn| huddle_sync::stage(conn, room_id))
+        .read(move |conn| huddle_sync::stage(conn, room_id, now))
         .await
         .map_err(db_error)?;
     c.json(StatusCode::OK, &stage)
@@ -104,7 +105,7 @@ async fn show_stage(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let stage = huddle_sync::stage(conn, room.id)?;
+            let stage = huddle_sync::stage(conn, room.id, now)?;
             let ids: Vec<i64> = stage.members.iter().map(|member| member.user_id).collect();
             Ok(api::StageDetail {
                 users: dto::users(conn, &secrets, ids, now)?,
