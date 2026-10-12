@@ -61,6 +61,32 @@ function updated(message: MessageDTO) {
   emitSyncEvents(events);
 }
 
+function created(message: MessageDTO) {
+  const events = [
+    { seq: 1, topic: `room:${message.roomId}`, type: "message.created", data: message },
+  ] satisfies Parameters<typeof emitSyncEvents>[0];
+
+  mutations.applyEvents(events, Date.now());
+  emitSyncEvents(events);
+}
+
+function removed(id: number, roomId = ROOM) {
+  const events = [
+    { seq: 1, topic: `room:${roomId}`, type: "message.removed", data: { id, roomId, threadId: null } },
+  ] satisfies Parameters<typeof emitSyncEvents>[0];
+
+  mutations.applyEvents(events, Date.now());
+  emitSyncEvents(events);
+}
+
+const freshAttachment = {
+  ...file.attachment,
+  filename: "fresh.png",
+  url: "/files/fresh.png",
+  downloadUrl: "/files/fresh.png?disposition=attachment",
+  thumbnailUrl: "/thumbs/fresh.png",
+};
+
 function edited(roomId = ROOM) {
   updated(
     messageFixture(file.messageId, roomId, {
@@ -264,6 +290,122 @@ it("makes a spoiler public again without refetching or replacing its row", async
   expect(screen.getByRole("listitem")).toBe(row);
   expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull();
   expect(files).toHaveBeenCalledTimes(1);
+});
+
+it("shows a file uploaded while the pane is open, newest first, without refetching", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  const { container } = await mount();
+
+  await waitFor(() =>
+    expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull(),
+  );
+  act(() => created(messageFixture(2, ROOM, { attachment: freshAttachment })));
+
+  const rows = screen.getAllByRole("listitem");
+
+  expect(rows).toHaveLength(2);
+  expect(rows[0]?.querySelector('img[src="/thumbs/fresh.png"]')).not.toBeNull();
+  expect(files).toHaveBeenCalledTimes(1);
+});
+
+it("shows an attachment added by an edit to a message that had no file", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  const { container } = await mount();
+
+  await waitFor(() =>
+    expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull(),
+  );
+  act(() =>
+    updated(
+      messageFixture(2, ROOM, {
+        attachment: freshAttachment,
+        updatedAt: "2026-10-06T00:00:09.000Z",
+      }),
+    ),
+  );
+
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  expect(container.querySelector('img[src="/thumbs/fresh.png"]')).not.toBeNull();
+  expect(files).toHaveBeenCalledTimes(1);
+});
+
+it("drops every file of a message deleted while the pane is open, without refetching", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  const { container } = await mount();
+
+  await waitFor(() =>
+    expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull(),
+  );
+  act(() => removed(file.messageId));
+
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  expect(container.querySelector('img[src="/thumbs/image.png"]')).toBeNull();
+  expect(screen.getByText("No files shared here yet.")).toBeTruthy();
+  expect(files).toHaveBeenCalledTimes(1);
+});
+
+it("keeps a deleted message's files out of a page still being read", async () => {
+  const stale = Promise.withResolvers<FileList>();
+  const files = vi.spyOn(panes, "files").mockImplementation(() => stale.promise);
+
+  const { container } = await mount();
+
+  await waitFor(() => expect(files).toHaveBeenCalledTimes(1));
+  act(() => removed(file.messageId));
+  await act(async () => stale.resolve(publicList));
+
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  expect(container.querySelector('img[src="/thumbs/image.png"]')).toBeNull();
+  expect(files).toHaveBeenCalledTimes(1);
+});
+
+it("shows an upload that arrives while the first page is being read", async () => {
+  const stale = Promise.withResolvers<FileList>();
+  const files = vi.spyOn(panes, "files").mockImplementation(() => stale.promise);
+
+  const { container } = await mount();
+
+  await waitFor(() => expect(files).toHaveBeenCalledTimes(1));
+  act(() => created(messageFixture(2, ROOM, { attachment: freshAttachment })));
+  await act(async () => stale.resolve(publicList));
+
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  expect(container.querySelector('img[src="/thumbs/fresh.png"]')).not.toBeNull();
+  expect(files).toHaveBeenCalledTimes(1);
+});
+
+it("does not show a new document on the Images tab, but shows a new image", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  const { container } = await mount();
+
+  fireEvent.click(screen.getByRole("tab", { name: "Images" }));
+  await waitFor(() =>
+    expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull(),
+  );
+  act(() =>
+    created(
+      messageFixture(3, ROOM, {
+        attachment: {
+          ...freshAttachment,
+          filename: "notes.txt",
+          contentType: "text/plain",
+          preview: "file",
+          url: "/files/notes.txt",
+          downloadUrl: "/files/notes.txt?disposition=attachment",
+          thumbnailUrl: null,
+        },
+      }),
+    ),
+  );
+
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  expect(screen.queryByText("notes.txt")).toBeNull();
+
+  act(() => created(messageFixture(4, ROOM, { attachment: freshAttachment })));
+
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  expect(container.querySelector('img[src="/thumbs/fresh.png"]')).not.toBeNull();
+  expect(files).toHaveBeenCalledTimes(2);
 });
 
 it("rejects a pending response from the previous file filter", async () => {

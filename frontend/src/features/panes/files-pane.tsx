@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import type { Attachment } from "../../gen/Attachment.ts";
 import type { FileType } from "../../gen/FileType.ts";
+import type { MessageDTO } from "../../gen/MessageDTO.ts";
 import type { RoomFile } from "../../gen/RoomFile.ts";
 import { formatFull } from "../../lib/time.ts";
 import { panes } from "../../sync/panes.ts";
@@ -43,6 +43,26 @@ interface Listing {
 }
 
 const LOADING: Listing = { status: "loading", files: [], nextPage: null, loadingMore: false };
+
+/**
+ * A live message as pane rows. A file already known keeps the time it was first seen; a file
+ * first seen now was attached when the message was posted, or when the edit that added it landed.
+ */
+function liveEntry(
+  message: MessageDTO,
+  created: boolean,
+  known: ReadonlyMap<string, string>,
+): RoomFile[] {
+  const attachedAt = created ? message.createdAt : message.updatedAt;
+
+  return messageFiles(message).map((attachment) => ({
+    messageId: message.id,
+    threadId: message.threadId,
+    creatorId: message.creatorId,
+    attachment,
+    createdAt: known.get(attachment.url) ?? attachedAt,
+  }));
+}
 
 /** Starts a download of `url` (the `?disposition=attachment` link) without leaving the page. */
 function download(url: string, filename: string): void {
@@ -189,7 +209,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   const [query, setQuery] = useState("");
   const [listing, setListing] = useState<Listing>(LOADING);
   const request = useRef(0);
-  const liveFiles = useRef(new Map<number, readonly Attachment[]>());
+  const liveFiles = useRef(new Map<number, readonly RoomFile[]>());
 
   useEffect(() => {
     const timer = window.setTimeout(() => setQuery(search.trim()), SEARCH_DELAY_MS);
@@ -208,13 +228,18 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
           return;
         }
 
-        const files = reconcileFiles(list.files, liveFiles.current);
+        const nextPage =
+          list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null;
 
         setListing((held) => ({
           status: "ready",
-          files: page === 1 ? files : appendFiles(held.files, files),
-          nextPage:
-            list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null,
+          files: reconcileFiles(
+            page === 1 ? list.files : appendFiles(held.files, list.files),
+            liveFiles.current,
+            { type, search: query },
+            nextPage === null,
+          ),
+          nextPage,
           loadingMore: false,
         }));
       },
@@ -232,19 +257,54 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   useEffect(() => {
     liveFiles.current = new Map();
 
-    const stop = panes.onMessageUpdate(roomId, (message) => {
-      liveFiles.current.set(message.id, messageFiles(message));
+    const applyLive = () =>
       setListing((held) => {
-        const files = reconcileFiles(held.files, liveFiles.current);
+        const files = reconcileFiles(
+          held.files,
+          liveFiles.current,
+          { type, search: query },
+          held.nextPage === null,
+        );
 
         return files === held.files ? held : { ...held, files };
       });
+
+    const stopChange = panes.onMessageChange(roomId, (message, created) => {
+      setListing((held) => {
+        const known = new Map<string, string>();
+
+        for (const file of held.files) {
+          if (file.messageId === message.id) {
+            known.set(file.attachment.url, file.createdAt);
+          }
+        }
+
+        for (const file of liveFiles.current.get(message.id) ?? []) {
+          known.set(file.attachment.url, file.createdAt);
+        }
+
+        liveFiles.current.set(message.id, liveEntry(message, created, known));
+
+        const files = reconcileFiles(
+          held.files,
+          liveFiles.current,
+          { type, search: query },
+          held.nextPage === null,
+        );
+
+        return files === held.files ? held : { ...held, files };
+      });
+    });
+    const stopRemoved = panes.onMessageRemoved(roomId, (messageId) => {
+      liveFiles.current.set(messageId, []);
+      applyLive();
     });
 
     loadPage(1);
 
     return () => {
-      stop();
+      stopChange();
+      stopRemoved();
       request.current += 1;
     };
   }, [roomId, type, query]);
