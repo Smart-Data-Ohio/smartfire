@@ -5,6 +5,13 @@ use campfire_db::{Membership, Room};
 
 pub use crate::controllers::presenters::calls::stage_model;
 
+pub(crate) fn afk_moved(app: &App, moved: campfire_db::models::huddle_effects::AfkMoved) -> anyhow::Result<()> {
+    tracing::info!(user_id = moved.user_id, source_room_id = moved.source_room_id,
+        room_id = moved.room_id, timeout_minutes = moved.timeout_minutes, "huddle: moved idle member to AFK room");
+    huddle_sync::publish_afk_move(&app.cable, moved);
+    Ok(())
+}
+
 pub(crate) fn stream_changed(app: &App, room_id: i64) -> anyhow::Result<()> {
     app.db.read_blocking(|conn| {
         if let Some(room) = Room::find_by_id(conn, room_id)?.filter(|room| room.deleted_at.is_none() && room.stage()) {

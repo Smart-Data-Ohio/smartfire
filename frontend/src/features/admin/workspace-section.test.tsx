@@ -16,6 +16,7 @@ const workspace: Workspace = {
   joinUrl: "https://chat.example/join/test",
   canAdminister: true,
   restrictRoomCreationToAdministrators: false,
+  afkPolicy: { roomId: null, timeoutMinutes: 5 },
   uploadLimitBytes: 100 * 1024 * 1024,
   version: "test",
   description: "",
@@ -200,4 +201,63 @@ it("points administrators to private invites, and members nowhere", async () => 
     </AdminContext>,
   );
   expect(screen.queryByRole("link", { name: "create a private invite" })).toBeNull();
+});
+
+it("saves and clears the AFK voice policy with the five-minute default", async () => {
+  const { store } = await import("../../store/store.ts");
+  const { sidebarRowFixture } = await import("../../api/testing.ts");
+  const voice = sidebarRowFixture(8, "AFK");
+  const text = sidebarRowFixture(9, "Text");
+  store.setState({
+    sidebar: {
+      ...store.getState().sidebar,
+      rows: {
+        8: { ...voice, room: { ...voice.room, kind: "voice" } },
+        9: text,
+      },
+    },
+  });
+  const next = { ...workspace, afkPolicy: { roomId: 8, timeoutMinutes: 15 } };
+  const save = vi.spyOn(admin, "updateWorkspace").mockResolvedValue(next);
+  const replace = vi.fn();
+  await renderInRouter(
+    <AdminContext value={{ workspace, replace }}>
+      <WorkspaceSection />
+    </AdminContext>,
+  );
+  const room = screen.getByRole("combobox", { name: "AFK voice room" });
+  const timeout = screen.getByRole("combobox", { name: "Idle timeout" });
+  expect(timeout).toHaveProperty("value", "5");
+  expect(timeout).toHaveProperty("disabled", true);
+  expect(screen.queryByRole("option", { name: "Text" })).toBeNull();
+  fireEvent.change(room, { target: { value: "8" } });
+  expect(timeout).toHaveProperty("disabled", false);
+  expect([...timeout.querySelectorAll("option")].map((option) => option.value)).toEqual([
+    "1",
+    "5",
+    "15",
+    "30",
+    "60",
+  ]);
+  fireEvent.change(timeout, { target: { value: "15" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save AFK policy" }));
+  await waitFor(() =>
+    expect(save).toHaveBeenCalledWith({ afkPolicy: { roomId: 8, timeoutMinutes: 15 } }),
+  );
+  await waitFor(() => expect(replace).toHaveBeenCalledWith(next));
+  fireEvent.change(room, { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save AFK policy" }));
+  await waitFor(() =>
+    expect(save).toHaveBeenCalledWith({ afkPolicy: { roomId: null, timeoutMinutes: 15 } }),
+  );
+});
+
+it("keeps AFK settings read-only for members", async () => {
+  await renderInRouter(
+    <AdminContext value={{ workspace: { ...workspace, canAdminister: false }, replace: () => {} }}>
+      <WorkspaceSection />
+    </AdminContext>,
+  );
+  expect(screen.queryByRole("combobox", { name: "AFK voice room" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Save AFK policy" })).toBeNull();
 });

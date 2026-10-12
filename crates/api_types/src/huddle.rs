@@ -20,6 +20,26 @@ use ts_rs::TS;
 
 use crate::{StageRole, User};
 
+/// Observed app interaction or local unmuted speech, for this session's active grant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct HuddleActivity {
+    pub identity: String,
+}
+
+/// Only the tab holding the source identity follows this move.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct HuddleAfkMoved {
+    pub identity: String,
+    pub source_room_id: i64,
+    pub room_id: i64,
+    pub room_name: String,
+    pub timeout_minutes: i64,
+}
+
 /// Someone in a room's call.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

@@ -6,6 +6,8 @@
  * account, a revoked grant). An operation counter drops the results of anything a newer
  * action overtook. The media itself sits behind a `CallTransport`.
  */
+
+import type { HuddleAfkMoved } from "../../gen/HuddleAfkMoved.ts";
 import type { HuddleCredentials } from "../../gen/HuddleCredentials.ts";
 import type { StageRole } from "../../gen/StageRole.ts";
 import type { StageStream } from "../../gen/StageStream.ts";
@@ -15,6 +17,7 @@ import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { onAccountChange, store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { ActionError } from "../../sync/run.ts";
+import { toast } from "../../ui/toast-store.ts";
 import {
   activePhase,
   type CallBusy,
@@ -63,6 +66,8 @@ import {
 
 export const AUTH_CHECK_INTERVAL_MS = 45_000;
 
+export const ACTIVITY_INTERVAL_MS = 10_000;
+
 export const STATS_INTERVAL_MS = 2_000;
 
 export const RECONNECT_COUNTDOWN_SECONDS = 30;
@@ -87,6 +92,7 @@ export interface CallEnvironment {
   leaveOnUnload(roomId: number): void;
   /** `GET /rooms/:id/huddle`: rejects with an `ActionError` once access ended. */
   check(roomId: number): Promise<void>;
+  activity(roomId: number, identity: string): Promise<void>;
   startStream(roomId: number, quality: StreamQuality): Promise<StageStream>;
   stopStream(roomId: number, streamId: number | null): Promise<void>;
   stopStreamOnUnload(roomId: number, streamId: number | null): void;
@@ -120,6 +126,7 @@ export const browserEnvironment: CallEnvironment = {
   check: async (roomId) => {
     await huddles.room(roomId);
   },
+  activity: (roomId, identity) => huddles.activity(roomId, identity),
   startStream: (roomId, quality) => huddles.startStream(roomId, quality),
   stopStream: (roomId, streamId) => huddles.stopStream(roomId, streamId),
   stopStreamOnUnload: (roomId, streamId) => {
@@ -270,6 +277,7 @@ export class CallController {
   #reconnectTimer: ReturnType<typeof setInterval> | null = null;
   #authTimer: ReturnType<typeof setInterval> | null = null;
   #authCheck: Promise<void> | null = null;
+  #lastActivity = -Infinity;
   #meterTimer: ReturnType<typeof setInterval> | null = null;
   #snapshotTimer: ReturnType<typeof setInterval> | null = null;
   #statsTimer: ReturnType<typeof setInterval> | null = null;
@@ -408,6 +416,7 @@ export class CallController {
 
   #refreshSnapshot(): void {
     const snapshot = this.#transport?.snapshot() ?? EMPTY_SNAPSHOT;
+    this.#speechActivity(snapshot);
     const key = snapshotKey(snapshot);
 
     if (key === this.#lastSnapshotKey) {
@@ -458,6 +467,7 @@ export class CallController {
     }
 
     this.#canPublishHint = canPublishHint;
+    this.#lastActivity = -Infinity;
     this.#pushToTalkActive = false;
     this.#pushToTalkOpenedMic = false;
 
@@ -647,6 +657,49 @@ export class CallController {
     }
 
     await this.#rejoin(roomId);
+  }
+
+  async afkMoved(moved: HuddleAfkMoved): Promise<void> {
+    if (this.#state.identity !== moved.identity || this.#state.roomId !== moved.sourceRoomId)
+      return;
+    await this.join(moved.roomId, moved.roomName, null);
+
+    if (this.#state.phase === "connected" && this.#state.roomId === moved.roomId) {
+      toast({
+        title: `You were moved to ${moved.roomName} after ${moved.timeoutMinutes} ${moved.timeoutMinutes === 1 ? "minute" : "minutes"} of inactivity`,
+      });
+    }
+  }
+
+  /** Pointer, keyboard and focus events count even with a muted microphone. */
+  activity(): void {
+    if (document.visibilityState !== "hidden") this.#recordActivity();
+  }
+
+  #speechActivity(snapshot: CallState["snapshot"]): void {
+    if (
+      snapshot.microphoneEnabled &&
+      snapshot.participants.some(
+        (person) => person.local && person.speaking && !person.microphoneMuted,
+      )
+    ) {
+      this.#recordActivity();
+    }
+  }
+
+  #recordActivity(): void {
+    const { roomId, identity, phase } = this.#state;
+    const now = Date.now();
+
+    if (
+      phase !== "connected" ||
+      roomId === null ||
+      identity === null ||
+      now - this.#lastActivity < ACTIVITY_INTERVAL_MS
+    )
+      return;
+    this.#lastActivity = now;
+    void this.#env.activity(roomId, identity).catch(() => undefined);
   }
 
   async #rejoin(roomId: number): Promise<void> {
@@ -2044,8 +2097,12 @@ export class CallController {
       }
     }, METER_INTERVAL_MS);
     this.#snapshotTimer = setInterval(() => {
-      if (document.visibilityState !== "hidden" && this.#transport !== null) {
-        this.#refreshSnapshot();
+      if (this.#transport !== null) {
+        if (document.visibilityState === "hidden") {
+          this.#speechActivity(this.#transport.snapshot());
+        } else {
+          this.#refreshSnapshot();
+        }
       }
     }, SNAPSHOT_INTERVAL_MS);
   }

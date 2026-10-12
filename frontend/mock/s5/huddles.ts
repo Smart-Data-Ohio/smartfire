@@ -8,6 +8,7 @@
  * speak, a known sound, one a second per tab) and relayed as `huddle.soundboard` to the viewer
  * when they're in that call. Tests steer the other people through `control`.
  */
+import type { AfkPolicy } from "../../src/gen/AfkPolicy.ts";
 import type { HuddleCredentials } from "../../src/gen/HuddleCredentials.ts";
 import type { HuddleDetail } from "../../src/gen/HuddleDetail.ts";
 import type { HuddleModeration } from "../../src/gen/HuddleModeration.ts";
@@ -61,6 +62,7 @@ interface StageRecord {
 
 /** The calls, per world (a reset starts over with the new world). */
 interface CallWorld {
+  readonly activity: Map<string, { roomId: number; at: number }>;
   /** Room id → user id → their entry, in join order. */
   readonly calls: Map<number, Map<number, CallEntry>>;
   /** `${roomId}:${userId}` for everyone a host muted. */
@@ -108,6 +110,7 @@ export function createHuddles(
   ctx: S2Context,
   simulate: boolean,
   hasSound: (soundId: number) => boolean = () => true,
+  afkPolicy: () => AfkPolicy = () => ({ roomId: null, timeoutMinutes: 5 }),
 ): Huddles {
   const worlds = new WeakMap<World, CallWorld>();
 
@@ -128,6 +131,7 @@ export function createHuddles(
   /** A seeded starting point: Maya and Jonah are chatting in the Lounge. */
   function seedCalls(world: World): CallWorld {
     const state: CallWorld = {
+      activity: new Map(),
       calls: new Map(),
       muted: new Set(),
       stages: new Map(),
@@ -332,6 +336,10 @@ export function createHuddles(
     const rejoin = entries.has(userId);
     const entry = entries.get(userId) ?? { identities: [] };
 
+    if (replace) {
+      for (const identity of entry.identities) state.activity.delete(identity);
+    }
+
     entry.identities = replace ? [newIdentity] : [...entry.identities, newIdentity];
     entries.set(userId, entry);
 
@@ -363,8 +371,11 @@ export function createHuddles(
     const state = calls();
     const roomId = record.room.id;
     const entries = state.calls.get(roomId);
+    const identities = entries?.get(userId)?.identities ?? [];
 
     if (entries?.delete(userId) !== true) return false;
+
+    for (const identity of identities) state.activity.delete(identity);
 
     if (entries.size === 0) state.calls.delete(roomId);
 
@@ -456,6 +467,7 @@ export function createHuddles(
     const limit = record.room.voiceUserLimit;
 
     if (
+      roomId !== afkPolicy().roomId &&
       limit !== null &&
       (entries?.size ?? 0) >= limit &&
       !entries?.has(VIEWER_ID) &&
@@ -467,6 +479,7 @@ export function createHuddles(
 
     const grantId = state.nextGrantId++;
     const newIdentity = identity();
+    state.activity.set(newIdentity, { roomId, at: ctx.now() });
 
     // One call at a time per tab: the gateway notices the old connection drop within a second.
     for (const [otherId, entries] of state.calls) {
@@ -775,18 +788,80 @@ export function createHuddles(
     }
   };
 
+  const evaluateIdle = () => {
+    const policy = afkPolicy();
+
+    if (policy.roomId === null) return;
+    const destination = ctx.world().rooms.get(policy.roomId);
+
+    if (destination?.room.kind !== "voice" || !destination.memberIds.includes(VIEWER_ID)) return;
+
+    for (const [identity, activity] of calls().activity) {
+      const record = recordOf(activity.roomId);
+
+      if (
+        activity.roomId === policy.roomId ||
+        !calls().calls.get(activity.roomId)?.get(VIEWER_ID)?.identities.includes(identity) ||
+        (record.room.kind === "stage" && roleOf(record, VIEWER_ID) === "listener") ||
+        ctx.now() - activity.at < policy.timeoutMinutes * 60_000
+      )
+        continue;
+      exit(record, VIEWER_ID);
+      ctx.publish([
+        {
+          topic: "user",
+          type: "huddle.afk.moved",
+          data: {
+            identity,
+            sourceRoomId: activity.roomId,
+            roomId: policy.roomId,
+            roomName: ctx.displayName(destination),
+            timeoutMinutes: policy.timeoutMinutes,
+          },
+        },
+      ]);
+    }
+  };
+
   const ok = (json: HuddlePresenceList | HuddleDetail | StageDetail | StageState) => ({
     status: 200,
     json,
   });
 
   const routes: Route[] = [
-    route("GET", /^\/huddles$/, () => ok(list())),
-    route("GET", /^\/rooms\/(\d+)\/huddle$/, (request) => ok(detail(firstId(request)))),
+    route("GET", /^\/huddles$/, () => {
+      evaluateIdle();
+
+      return ok(list());
+    }),
+    route("GET", /^\/rooms\/(\d+)\/huddle$/, (request) => {
+      evaluateIdle();
+
+      return ok(detail(firstId(request)));
+    }),
     route("POST", /^\/rooms\/(\d+)\/huddle$/, (request) => ({
       status: 201,
       json: join(firstId(request)),
     })),
+    route("POST", /^\/rooms\/(\d+)\/huddle\/activity$/, (request) => {
+      const roomId = firstId(request);
+      callRoom(roomId);
+      const identity = stringField(request.body, "identity");
+      const activity = identity === null ? undefined : calls().activity.get(identity);
+
+      if (
+        activity === undefined ||
+        identity === null ||
+        activity.roomId !== roomId ||
+        !calls().calls.get(roomId)?.get(VIEWER_ID)?.identities.includes(identity)
+      ) {
+        throw forbidden("This huddle grant is no longer active");
+      }
+
+      activity.at = ctx.now();
+
+      return noContent();
+    }),
     route("POST", /^\/rooms\/(\d+)\/huddle\/leave$/, (request) => {
       leave(firstId(request));
 
@@ -898,6 +973,18 @@ export function createHuddles(
     },
     control(action, input) {
       switch (action) {
+        case "huddle-idle": {
+          const roomId = input.int("roomId");
+
+          for (const activity of calls().activity.values()) {
+            if (activity.roomId === roomId) activity.at = ctx.now() - input.int("seconds") * 1000;
+          }
+
+          evaluateIdle();
+
+          return done;
+        }
+
         case "huddle-join": {
           const record = callRoom(input.int("roomId"));
           const userId = input.int("userId");

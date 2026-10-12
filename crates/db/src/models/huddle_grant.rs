@@ -217,6 +217,10 @@ impl HuddleGrant {
     }
 
     fn check_capacity(tx: &Tx<'_>, room_id: i64, user_id: i64) -> Result<()> {
+        // The configured AFK destination must admit moves and their later gateway sightings.
+        if crate::Account::first(tx.conn())?.is_some_and(|account| account.settings().afk_policy().room_id == Some(room_id)) {
+            return Ok(());
+        }
         let room = crate::Room::find(tx.conn(), room_id)?;
         if let Some(limit) = room.voice_user_limit
             && !crate::User::find(tx.conn(), user_id)?.can_administer(Some(room.creator_id), false)
@@ -382,12 +386,50 @@ impl HuddleGrant {
         )?;
         self.last_seen_at = Some(now);
         if first_seen {
+            if crate::Account::first(tx.conn())?.is_some_and(|account| account.settings().afk_policy().room_id.is_some()) {
+                self.record_activity(tx)?;
+            }
             tx.emit_after_commit(Event::job(&PresenceJob { grant_id: self.id }));
             let another: bool = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE id!=? AND room_id=? AND user_id=? AND revoked_at IS NULL AND last_seen_at>?)", params![self.id, self.room_id, self.user_id, now.ago(SignedDuration::from_secs(IN_CALL_WINDOW))], |r| r.get(0))?;
             if !another {
                 tx.emit_after_commit(Event::job(&JoinNoticeJob { grant_id: self.id }));
             }
         }
+        Ok(true)
+    }
+
+    /// `updated_at` is the activity clock of a live grant. Issuance starts a new baseline;
+    /// gateway sightings only change `last_seen_at`. No microphone state enters this decision.
+    pub fn record_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        let now = tx.now();
+        if self.updated_at <= now.ago(SignedDuration::from_secs(SEEN_TOUCH_INTERVAL)) {
+            tx.conn().execute_cached("UPDATE huddle_grants SET updated_at=? WHERE id=?", params![now, self.id])?;
+            self.updated_at = now;
+        }
+        Ok(())
+    }
+
+    pub fn move_if_idle(&mut self, tx: &mut Tx<'_>, config: &HuddleConfig) -> Result<bool> {
+        let Some(account) = crate::Account::first(tx.conn())? else { return Ok(false); };
+        let policy = account.settings().afk_policy();
+        let Some(room_id) = policy.room_id else { return Ok(false); };
+        if self.revoked() || !self.in_call(tx.now()) || self.room_id == room_id
+            || self.stage_role.as_deref() == Some("listener")
+            || self.updated_at > tx.now().ago(SignedDuration::from_secs(policy.timeout_minutes * 60))
+            || !self.authorized(tx.conn())?
+        { return Ok(false); }
+        if crate::Room::find(tx.conn(), self.room_id)?.stage()
+            && !matches!(self.stage_role.as_deref(), Some("speaker" | "host"))
+        { return Ok(false); }
+        let Some(room) = crate::Room::find_by_id(tx.conn(), room_id)?.filter(|room| room.voice() && !room.deleted()) else { return Ok(false); };
+        if crate::Membership::find_by_room_and_user(tx.conn(), room_id, self.user_id)?.is_none() {
+            return Ok(false);
+        }
+        self.revoke(tx, true, config)?;
+        tx.emit_after_commit(Event::broadcast(&super::huddle_effects::AfkMoved {
+            user_id: self.user_id, identity: self.identity.clone(), source_room_id: self.room_id,
+            room_id, room_name: room.name.unwrap_or_default(), timeout_minutes: policy.timeout_minutes,
+        }));
         Ok(true)
     }
     pub fn mark_out_of_call(

@@ -39,6 +39,7 @@ fn person_json() -> serde_json::Value {
 fn the_workspace_and_its_writes() {
     assert_wire(
         &Workspace {
+            afk_policy: crate::AfkPolicy { room_id: None, timeout_minutes: 5 },
             name: "Smart Data".into(),
             logo_url: "/account/logo?v=1700000000".into(),
             logo_still_url: None,
@@ -55,6 +56,7 @@ fn the_workspace_and_its_writes() {
             vanity_url: Some("https://chat.example/join/smart-data".into()),
         },
         json!({
+            "afkPolicy": {"roomId": null, "timeoutMinutes": 5},
             "name": "Smart Data",
             "logoUrl": "/account/logo?v=1700000000",
             "logoStillUrl": null,
@@ -73,13 +75,14 @@ fn the_workspace_and_its_writes() {
     );
     assert_wire(
         &UpdateWorkspace {
+            afk_policy: None,
             name: None,
             restrict_room_creation_to_administrators: Some(true),
             upload_limit_bytes: None,
             description: None,
             vanity_slug: None,
         },
-        json!({ "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "description": null, "vanitySlug": null }),
+        json!({ "afkPolicy": null, "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "description": null, "vanitySlug": null }),
     );
     assert_wire(
         &UpdateLogo {

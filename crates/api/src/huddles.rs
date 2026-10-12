@@ -43,6 +43,10 @@ endpoint!(
     leave => leave_huddle
 );
 endpoint!(
+    /// `POST /api/v1/rooms/:room_id/huddle/activity`
+    activity => record_huddle_activity
+);
+endpoint!(
     /// `POST /api/v1/rooms/:room_id/huddle/moderation`
     moderate => moderate_huddle
 );
@@ -290,6 +294,26 @@ async fn create_huddle(c: &mut Ctx) -> Result {
         audio_bitrate_target: room.audio_bitrate_target(),
     };
     c.json(StatusCode::OK, &credentials)
+}
+
+/// An observed interaction belongs to this session's active grant, never to another tab's identity.
+async fn record_huddle_activity(c: &mut Ctx) -> Result {
+    before_huddle(c).await?;
+    let (_, room) = huddle_room(c).await?;
+    let session_id = session_id(c)?;
+    let activity: api::HuddleActivity = body(c).await?;
+    let recorded = c.app().db.write(move |tx| {
+        let id: Option<i64> = tx.conn().query_row_cached(
+            "SELECT id FROM huddle_grants WHERE session_id=? AND room_id=? AND identity=? AND revoked_at IS NULL",
+            rusqlite::params![session_id, room.id, activity.identity], |row| row.get(0),
+        ).optional()?;
+        let Some(mut grant) = id.map(|id| HuddleGrant::find_by_id(tx.conn(), id)).transpose()?.flatten() else { return Ok(false); };
+        if !grant.in_call(tx.now()) || !grant.authorized(tx.conn())? { return Ok(false); }
+        grant.record_activity(tx)?;
+        Ok(true)
+    }).await.map_err(db_error)?;
+    if !recorded { return Err(fail(c, forbidden("This huddle grant is no longer active"))); }
+    Ok(c.head(StatusCode::NO_CONTENT))
 }
 
 /// `Rooms::HuddlesController#leave`: this session's grants in the room leave the call.

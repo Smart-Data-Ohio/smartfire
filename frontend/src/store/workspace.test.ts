@@ -47,6 +47,7 @@ function workspace(extra: Partial<Workspace> = {}): Workspace {
     joinUrl: "http://127.0.0.1/join/abc",
     canAdminister: true,
     restrictRoomCreationToAdministrators: false,
+    afkPolicy: { roomId: null, timeoutMinutes: 5 },
     uploadLimitBytes: 100 * 1024 * 1024,
     version: "2.0.0",
     description: "",

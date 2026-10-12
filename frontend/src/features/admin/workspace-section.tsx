@@ -8,6 +8,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { adminFailure, useAdmin } from "./admin-parts.tsx";
+import { AfkPolicyForm } from "./afk-policy-form.tsx";
 import { WelcomeEditor } from "./welcome-editor.tsx";
 import { descriptionError, vanitySlugError } from "./workspace-identity.ts";
 import { WorkspaceProfile } from "./workspace-profile.tsx";
@@ -327,6 +328,14 @@ export function WorkspaceSection() {
             disabled={busy("restrict")}
             label="Must be admin to create new rooms"
             onCheckedChange={restrict}
+          />
+        </SettingsGroup>
+      ) : null}
+      {workspace.canAdminister ? (
+        <SettingsGroup title="Voice and huddles">
+          <AfkPolicyForm
+            key={`${workspace.afkPolicy.roomId}:${workspace.afkPolicy.timeoutMinutes}`}
+            workspace={workspace}
           />
         </SettingsGroup>
       ) : null}

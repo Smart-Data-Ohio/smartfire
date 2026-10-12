@@ -335,6 +335,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("huddle_effects::StreamStopped", &["stage.stream.stopped"]),
     ("huddle_effects::StageRoster", &["stage.updated"]),
     ("huddle_effects::RoleEvent", &["huddle.role"]),
+    ("huddle_effects::AfkMoved", &["huddle.afk.moved"]),
     ("huddle_effects::StageEndedNote", &["message.created"]),
     ("RoomRemovalBroadcast", &["sidebar.row.removed"]),
     (

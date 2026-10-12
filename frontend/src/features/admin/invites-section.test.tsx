@@ -22,6 +22,7 @@ const workspace: Workspace = {
   joinUrl: "http://127.0.0.1/join/mock-join-code",
   canAdminister: true,
   restrictRoomCreationToAdministrators: false,
+  afkPolicy: { roomId: null, timeoutMinutes: 5 },
   uploadLimitBytes: 100 * 1024 * 1024,
   version: "test",
   description: "",

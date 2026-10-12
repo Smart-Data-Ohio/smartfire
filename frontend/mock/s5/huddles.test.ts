@@ -299,3 +299,85 @@ describe("voice user limit", () => {
     expect(detail.presence.participants).toHaveLength(3);
   });
 });
+
+describe("AFK policy", () => {
+  it("records only the current grant's activity and moves it on an idle presence check", async () => {
+    const { server, clock } = harness();
+    const events = collect(server);
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/workspace",
+      { afkPolicy: { roomId: rooms.lounge, timeoutMinutes: 1 } },
+      200,
+    );
+
+    const grant = await expectStatus<HuddleCredentials>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/huddle`,
+      {},
+      201,
+    );
+
+    const activityPath = `/api/v1/rooms/${rooms.general}/huddle/activity`;
+    await expectStatus(server, "POST", activityPath, { identity: "another-tab" }, 403);
+    clock.advance(50_000);
+    await expectStatus(server, "POST", activityPath, { identity: grant.identity }, 204);
+    clock.advance(50_000);
+    await get<HuddlePresenceList>(server, "/api/v1/huddles");
+    expect(events.filter((event) => event.type === "huddle.afk.moved")).toHaveLength(0);
+    clock.advance(10_000);
+    await get<HuddlePresenceList>(server, "/api/v1/huddles");
+    expect(events.filter((event) => event.type === "huddle.afk.moved")).toEqual([
+      expect.objectContaining({
+        data: {
+          identity: grant.identity,
+          sourceRoomId: rooms.general,
+          roomId: rooms.lounge,
+          roomName: "Lounge",
+          timeoutMinutes: 1,
+        },
+      }),
+    ]);
+    await expectStatus(server, "POST", activityPath, { identity: grant.identity }, 403);
+
+    const moved = await expectStatus<HuddleCredentials>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.lounge}/huddle`,
+      {},
+      201,
+    );
+
+    expect(moved.roomId).toBe(rooms.lounge);
+  });
+
+  it("defaults to five minutes and rejects text destinations and invalid timeouts", async () => {
+    const { server } = harness();
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/workspace",
+      { afkPolicy: { roomId: rooms.general, timeoutMinutes: 5 } },
+      422,
+    );
+    await expectStatus(
+      server,
+      "PATCH",
+      "/api/v1/admin/workspace",
+      { afkPolicy: { roomId: rooms.lounge, timeoutMinutes: 2 } },
+      422,
+    );
+
+    const workspace = await expectStatus<{ afkPolicy: { roomId: number; timeoutMinutes: number } }>(
+      server,
+      "PATCH",
+      "/api/v1/admin/workspace",
+      { afkPolicy: { roomId: rooms.lounge } },
+      200,
+    );
+
+    expect(workspace.afkPolicy).toEqual({ roomId: rooms.lounge, timeoutMinutes: 5 });
+  });
+});

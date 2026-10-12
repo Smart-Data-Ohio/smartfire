@@ -471,6 +471,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             axum::routing::post(unparsed_action(huddles::leave)),
         )
         .route(
+            "/api/v1/rooms/{room_id}/huddle/activity",
+            axum::routing::post(unparsed_action(huddles::activity)),
+        )
+        .route(
             "/api/v1/rooms/{room_id}/huddle/moderation",
             axum::routing::post(unparsed_action(huddles::moderate)),
         )
