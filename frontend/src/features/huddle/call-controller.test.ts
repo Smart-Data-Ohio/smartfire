@@ -990,6 +990,97 @@ describe("call state", () => {
 });
 
 describe("AFK activity and moves", () => {
+  it.each([
+    { manuallyUnmuted: false, removed: false },
+    { manuallyUnmuted: true, removed: false },
+    { manuallyUnmuted: false, removed: true },
+    { manuallyUnmuted: true, removed: true },
+  ])(
+    "keeps push-to-talk release working across an AFK move: %o",
+    async ({ manuallyUnmuted, removed }) => {
+      pushToTalk(true);
+      const { controller } = harness();
+
+      try {
+        await controller.join(ROOM, "Lounge", null);
+
+        if (manuallyUnmuted) await controller.toggleMute();
+        controller.keyDown(key("keydown", { key: "`", code: "Backquote" }));
+        await vi.waitFor(() => expect(callStore.getState().snapshot.microphoneEnabled).toBe(true));
+        const identity = callStore.getState().identity;
+
+        if (identity === null) throw new Error("no identity");
+
+        if (removed) {
+          window.__smartfireHuddle?.disconnect("removed");
+          await settle();
+        }
+
+        await controller.afkMoved({
+          identity,
+          sourceRoomId: ROOM,
+          roomId: OTHER_ROOM,
+          roomName: "AFK",
+          timeoutMinutes: 1,
+        });
+        expect(callStore.getState().roomId).toBe(OTHER_ROOM);
+        expect(callStore.getState().phase).toBe("connected");
+        controller.keyUp(key("keyup", { key: "`", code: "Backquote" }));
+        await vi.waitFor(() =>
+          expect(callStore.getState().snapshot.microphoneEnabled).toBe(manuallyUnmuted),
+        );
+
+        for (const release of [
+          () => controller.keyUp(key("keyup", { key: "`", code: "Backquote" })),
+          () => controller.blurred(),
+          () => controller.hidden(),
+        ]) {
+          controller.keyDown(key("keydown", { key: "`", code: "Backquote" }));
+          await vi.waitFor(() =>
+            expect(callStore.getState().snapshot.microphoneEnabled).toBe(true),
+          );
+          release();
+          await vi.waitFor(() =>
+            expect(callStore.getState().snapshot.microphoneEnabled).toBe(manuallyUnmuted),
+          );
+        }
+      } finally {
+        await controller.leave();
+      }
+    },
+  );
+
+  it("preserves manual unmute after removal unpublishes the microphone", async () => {
+    const { controller, transports } = harness();
+
+    try {
+      await controller.join(ROOM, "Lounge", null);
+      await controller.toggleMute();
+      await controller.toggleMute();
+      expect(callStore.getState().snapshot.microphoneEnabled).toBe(true);
+      const identity = callStore.getState().identity;
+      const source = transports[0];
+
+      if (identity === null || source === undefined) throw new Error("no call");
+      window.__smartfireHuddle?.disconnect("removed");
+      await settle();
+      expect(source.snapshot().microphoneEnabled).toBe(false);
+      expect(callStore.getState().phase).toBe("failed");
+      await controller.afkMoved({
+        identity,
+        sourceRoomId: ROOM,
+        roomId: OTHER_ROOM,
+        roomName: "AFK",
+        timeoutMinutes: 1,
+      });
+      expect(callStore.getState().roomId).toBe(OTHER_ROOM);
+      expect(callStore.getState().phase).toBe("connected");
+      expect(callStore.getState().snapshot.microphoneEnabled).toBe(true);
+    } finally {
+      await controller.leave();
+    }
+  });
+
   it.each([false, true])(
     "keeps reporting activity after clock rollback (hidden=%s)",
     async (hidden) => {

@@ -86,6 +86,7 @@ export const MICROPHONE_RESTART_ERROR =
 const SIGN_IN_EXPIRED = "Your sign-in expired. Sign in again to join a huddle.";
 
 interface CallAudio {
+  /** The caller's setting, excluding a temporary push-to-talk hold. */
   microphoneEnabled: boolean;
   deafened: boolean;
   microphoneBeforeDeafen: boolean;
@@ -423,15 +424,6 @@ export class CallController {
 
   #refreshSnapshot(): void {
     const snapshot = this.#transport?.snapshot() ?? EMPTY_SNAPSHOT;
-
-    if (this.#afkSource !== null) {
-      this.#afkSource.audio = {
-        microphoneEnabled: snapshot.microphoneEnabled,
-        deafened: this.#state.deafened,
-        microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
-      };
-    }
-
     this.#speechActivity(snapshot);
     const key = snapshotKey(snapshot);
 
@@ -442,6 +434,16 @@ export class CallController {
     this.#lastSnapshotKey = key;
     this.#set({ snapshot });
     this.#autoExpandStream();
+  }
+
+  #rememberAudio(microphoneEnabled: boolean): void {
+    if (this.#afkSource !== null) {
+      this.#afkSource.audio = {
+        microphoneEnabled,
+        deafened: this.#state.deafened,
+        microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
+      };
+    }
   }
 
   // ── Joining ───────────────────────────────────────────────────────────────────────────────
@@ -604,8 +606,11 @@ export class CallController {
 
       // A listener's token can't publish, so LiveKit would reject the microphone outright:
       // they join subscribe-only. Push-to-talk joins with the microphone closed.
+      const microphoneEnabled =
+        credentials.canPublish && (audio?.microphoneEnabled ?? !this.#pushToTalk());
+
       if (credentials.canPublish) {
-        await transport.setMicrophone(audio?.microphoneEnabled ?? !this.#pushToTalk());
+        await transport.setMicrophone(microphoneEnabled);
       }
 
       if (operation !== this.#operation || transport !== this.#transport) {
@@ -619,7 +624,7 @@ export class CallController {
         identity: credentials.identity,
         roomId,
         audio: {
-          microphoneEnabled: transport.snapshot().microphoneEnabled,
+          microphoneEnabled,
           deafened: this.#state.deafened,
           microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
         },
@@ -1528,6 +1533,7 @@ export class CallController {
     }
 
     const enabling = !state.snapshot.microphoneEnabled;
+    const previousMicrophoneEnabled = this.#afkSource?.audio.microphoneEnabled ?? false;
 
     this.#setBusy("microphone", true);
 
@@ -1539,6 +1545,7 @@ export class CallController {
         transport.setDeafened(false);
       }
 
+      this.#rememberAudio(enabling);
       await transport.setMicrophone(enabling);
 
       if (transport === this.#transport) {
@@ -1550,6 +1557,7 @@ export class CallController {
       }
     } catch {
       if (transport === this.#transport) {
+        this.#rememberAudio(previousMicrophoneEnabled);
         this.#flash("The microphone could not be changed.");
       }
     } finally {
@@ -1569,8 +1577,14 @@ export class CallController {
     }
 
     const deafened = !state.deafened;
+    const reopenMicrophone = this.#microphoneBeforeDeafen;
+
+    this.#microphoneBeforeDeafen = deafened
+      ? (this.#afkSource?.audio.microphoneEnabled ?? false)
+      : false;
 
     this.#set({ deafened });
+    this.#rememberAudio(!deafened && reopenMicrophone);
     transport.setDeafened(deafened);
 
     if (!state.canPublish) {
@@ -1579,13 +1593,10 @@ export class CallController {
 
     try {
       if (deafened) {
-        this.#microphoneBeforeDeafen = state.snapshot.microphoneEnabled;
-
         if (state.snapshot.microphoneEnabled) {
           await transport.setMicrophone(false);
         }
-      } else if (this.#microphoneBeforeDeafen) {
-        this.#microphoneBeforeDeafen = false;
+      } else if (reopenMicrophone) {
         await transport.setMicrophone(true);
       }
     } catch {
