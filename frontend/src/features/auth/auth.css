@@ -79,13 +79,13 @@
     text-align: center;
   }
 
+  /* The whole logo, as wide as a wordmark needs. */
   .auth-view-logo {
-    width: 48px;
+    width: auto;
+    max-width: min(100%, 240px);
     height: 48px;
     margin-block-end: var(--space-2);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 0 0 1px var(--shadow-ring);
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .auth-view-title {
