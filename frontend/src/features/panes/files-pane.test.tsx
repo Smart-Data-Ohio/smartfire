@@ -615,3 +615,73 @@ it("keeps a room upload that arrives while reply files are being refreshed", asy
   expect(screen.getByText("fresh.png")).toBeTruthy();
   expect(screen.getAllByRole("listitem")).toHaveLength(2);
 });
+
+it("keeps deleted files out after creation, editing and removal arrive in one replay batch", async () => {
+  vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  const events = [
+    {
+      seq: 1,
+      topic: `room:${ROOM}`,
+      type: "message.created",
+      data: messageFixture(2, ROOM, { attachment: freshAttachment }),
+    },
+    {
+      seq: 2,
+      topic: `room:${ROOM}`,
+      type: "message.updated",
+      data: messageFixture(2, ROOM, {
+        attachment: freshAttachment,
+        updatedAt: "2026-10-06T20:30:00Z",
+      }),
+    },
+    {
+      seq: 3,
+      topic: `room:${ROOM}`,
+      type: "message.removed",
+      data: { id: 2, roomId: ROOM, threadId: null },
+    },
+  ] satisfies Parameters<typeof emitSyncEvents>[0];
+
+  act(() => {
+    mutations.applyEvents(events, Date.now());
+    emitSyncEvents(events);
+  });
+  expect(screen.queryByText("fresh.png")).toBeNull();
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+});
+
+it.each(["upload", "delete"])(
+  "preserves a reply file refresh when pagination starts during the read (%s)",
+  async (change) => {
+    const { entries, files } = paginatedFiles();
+    const oldest = entries[0];
+
+    if (oldest === undefined) throw new Error("Missing first file");
+    entries[0] = { ...oldest, threadId: 8 };
+    await mount();
+    await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(30));
+    const pending = Promise.withResolvers<FileList>();
+
+    files.mockImplementationOnce(() => pending.promise);
+    if (change === "upload") {
+      entries.unshift({ ...file, messageId: 1000, threadId: 8, attachment: freshAttachment });
+    } else {
+      entries.shift();
+    }
+    vi.useFakeTimers();
+    act(filesChanged);
+    await act(() => vi.advanceTimersByTimeAsync(100));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load more" })));
+    await act(async () =>
+      pending.resolve({ ...publicList, files: entries.slice(0, 30), nextPage: 2 }),
+    );
+    await act(() => vi.advanceTimersByTimeAsync(100));
+    if (change === "upload") {
+      expect(screen.getByText("fresh.png")).toBeTruthy();
+    } else {
+      expect(screen.queryByText("0.png")).toBeNull();
+    }
+  },
+);
