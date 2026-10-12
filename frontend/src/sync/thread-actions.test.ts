@@ -94,7 +94,7 @@ describe("thread reply paging", () => {
       expect(timeline()?.loadingNewer).toBe(false);
       expect(timeline()?.ids).toEqual([5, 6]);
       expect(timeline()?.after).toBeNull();
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("clears the flag when the replaced window fails", () =>
@@ -110,7 +110,7 @@ describe("thread reply paging", () => {
 
       expect(timeline()?.loadingNewer).toBe(false);
       expect(timeline()?.loadingOlder).toBe(false);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("clears the flag when a replace or a forward page is interrupted", () =>
@@ -158,7 +158,7 @@ describe("thread reply paging", () => {
       yield* Fiber.interrupt(forwarding);
       expect(timeline()?.loadingNewer).toBe(false);
       expect(timeline()?.ids).toEqual([5]);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("clears the older flag when a prepend is interrupted", () =>
@@ -280,7 +280,7 @@ describe("thread reply paging", () => {
       expect(timeline()?.ids).toEqual([9]);
       expect(timeline()?.before).toBe(8);
       expect(timeline()?.loadingOlder).toBe(false);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("a page started before leaving does not clear the one issued on return", () =>
@@ -332,7 +332,7 @@ describe("thread reply paging", () => {
       expect(timeline()?.loadingOlder).toBe(false);
       expect(timeline()?.ids).toEqual([8, 9]);
       expect(timeline()?.before).toBeNull();
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("interrupting a superseded older page leaves the later one loading", () =>
@@ -382,7 +382,7 @@ describe("thread reply paging", () => {
 
       expect(timeline()?.loadingOlder).toBe(false);
       expect(timeline()?.ids).toEqual([8, 9]);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("a page started before switching threads does not clear the one issued on return", () =>
@@ -494,7 +494,7 @@ describe("thread reply paging", () => {
       expect(timeline()?.loadingOlder).toBe(false);
       expect(timeline()?.ids).toEqual([8, 9]);
       expect(timeline()?.before).toBeNull();
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   it.effect("a page that arrives while a replacement is still pending is dropped", () =>
@@ -561,7 +561,7 @@ describe("thread reply paging", () => {
       expect(timeline()?.before).toBe(8);
       expect(timeline()?.loadingOlder).toBe(false);
       expect(timeline()?.loadingNewer).toBe(false);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(navigation)),
   );
 
   for (const first of ["older", "newer"] as const) {
