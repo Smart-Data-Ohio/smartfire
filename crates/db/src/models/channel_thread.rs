@@ -291,6 +291,19 @@ impl ChannelThread {
         )
     }
 
+    /// Resolve the forward picker's access in the same query as its thread records.
+    pub fn readable_for_rooms(conn: &Connection, room_ids: &[i64], viewer: i64) -> Result<Vec<Self>> {
+        if room_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!("SELECT * FROM channel_threads WHERE room_id IN (SELECT value FROM json_each(?1)) AND {} ORDER BY last_activity_at DESC, id DESC", readable_by_sql("channel_threads.id", "?2")),
+            params![serde_json::json!(room_ids).to_string(), viewer],
+            Self::from_row,
+        )
+    }
+
     /// `room.channel_threads.active.ordered`: neither closed nor locked (stale ones included:
     /// `status` reads them as closed).
     pub fn active_for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {

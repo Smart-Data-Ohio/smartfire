@@ -1528,8 +1528,7 @@ pub fn forward_destinations(
     let mut rooms = Room::for_user(conn, viewer.id)?;
     rooms.sort_by_cached_key(|room| room.name.as_ref().map(|name| name.to_ascii_lowercase()));
     let ids: Vec<i64> = rooms.iter().map(|room| room.id).collect();
-    let threads = campfire_db::ChannelThread::for_rooms(conn, &ids)?;
-    let threads = threads.into_iter().map(|thread| thread.readable_by(conn, viewer.id).map(|readable| readable.then_some(thread))).collect::<Result<Vec<_>>>()?.into_iter().flatten().collect::<Vec<_>>();
+    let threads = campfire_db::ChannelThread::readable_for_rooms(conn, &ids, viewer.id)?;
     let mut direct_names = HashMap::<i64, Vec<String>>::new();
     let mut statement = conn.prepare_cached(
         "SELECT memberships.room_id AS member_room_id, users.* FROM memberships \

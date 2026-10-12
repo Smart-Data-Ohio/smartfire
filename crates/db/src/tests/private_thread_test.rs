@@ -166,6 +166,27 @@ fn notification_memberships_never_grant_access_and_unfollowing_preserves_it() {
 }
 
 #[test]
+fn public_thread_followers_keep_historical_authors_without_granting_private_access() {
+    let t = TestDb::new();
+    let private = private(&t, "designers", "jz");
+    t.write(move |tx| {
+        private.add_access_member(tx, id("jz"), id("kevin"))?;
+        let public = ChannelThread::create(tx, NewChannelThread {
+            room_id: id("designers"), creator_id: id("jz"), name: Some("Imported public thread".into()),
+            ..Default::default()
+        })?;
+        tx.conn().execute("UPDATE users SET status=2 WHERE id=?", [id("kevin")])?;
+        let member = ThreadMembership::join(tx, public.id, id("kevin"))?;
+        assert_eq!(member.thread_id, public.id);
+        assert_eq!(member.user_id, id("kevin"));
+        assert!(!public.readable_by(tx.conn(), id("kevin"))?);
+        assert!(ThreadMembership::join(tx, private.id, id("kevin")).is_err());
+        assert!(!ThreadMembership::validate(tx.conn(), private.id, id("kevin"))?.is_empty());
+        Ok(())
+    });
+}
+
+#[test]
 fn mentions_invite_before_delivery_and_removal_filters_followers_unread_push_and_messages() {
     let t = TestDb::new();
     let thread = private(&t, "designers", "jz");

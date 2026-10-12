@@ -94,10 +94,7 @@ pub async fn destinations(c: &mut Ctx) -> Result {
         let mut rooms = Room::for_user(conn, viewer.id)?;
         rooms.sort_by_cached_key(|room| room.name.as_ref().map(|name| name.to_ascii_lowercase()));
         let ids = rooms.iter().map(|room| room.id).collect::<Vec<_>>();
-        let mut threads = Vec::new();
-        for thread in ChannelThread::for_rooms(conn, &ids)? {
-            if thread.readable_by(conn, viewer.id)? { threads.push(thread); }
-        }
+        let threads = ChannelThread::readable_for_rooms(conn, &ids, viewer.id)?;
         let mut direct_names = std::collections::HashMap::<i64, Vec<String>>::new();
         // One member query for every reachable direct; no per-room/thread/user lookup.
         let mut statement = conn.prepare("SELECT memberships.room_id AS member_room_id, users.* FROM memberships INNER JOIN users ON users.id = memberships.user_id INNER JOIN rooms ON rooms.id = memberships.room_id WHERE rooms.type = 'Rooms::Direct' AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id = ?) ORDER BY memberships.id")?;

@@ -155,7 +155,8 @@ impl ThreadMembership {
     pub fn join(tx: &mut Tx<'_>, thread_id: i64, user_id: i64) -> Result<Self> {
         let thread = ChannelThread::find(tx.conn(), thread_id)?;
         Membership::find_by_room_and_user(tx.conn(), thread.room_id, user_id)?.or_not_found("Membership")?;
-        if !thread.readable_by(tx.conn(), user_id)? {
+        if thread.visibility == super::channel_thread::ThreadVisibility::Private
+            && !thread.readable_by(tx.conn(), user_id)? {
             return Err(crate::Error::RecordNotFound("ChannelThread"));
         }
         if let Some(existing) = Self::find_by_thread_and_user(tx.conn(), thread_id, user_id)? {
@@ -189,6 +190,7 @@ impl ThreadMembership {
             errors.add("user", "must belong to the parent room");
         }
         if let Some(thread) = ChannelThread::find_by_id(conn, thread_id)?
+            && thread.visibility == super::channel_thread::ThreadVisibility::Private
             && !thread.readable_by(conn, user_id)? {
             errors.add("thread", "is inaccessible");
         }

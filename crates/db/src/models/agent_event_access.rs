@@ -55,12 +55,13 @@ pub fn readable_page(
 }
 
 /// Current thread access for both the live message and a recorded work-event context.
+/// Public events retain Rails' room lifecycle rules; private events require live access.
 /// Deleted public snapshots remain readable; deleted private snapshots do not.
 /// SQL expressions are fixed by callers, never supplied by a request.
 pub fn thread_readable_sql(event: &str, message: &str, user: &str) -> String {
     let thread = format!("CAST(json_extract({event}.metadata, '$.thread_id') AS INTEGER)");
-    let message_access = super::channel_thread::readable_by_sql(&format!("{message}.thread_id"), user);
-    let event_access = super::channel_thread::readable_by_sql(&thread, user);
+    let message_access = format!("EXISTS (SELECT 1 FROM channel_threads WHERE id={message}.thread_id AND visibility='public') OR {}", super::channel_thread::readable_by_sql(&format!("{message}.thread_id"), user));
+    let event_access = format!("EXISTS (SELECT 1 FROM channel_threads WHERE id={thread} AND visibility='public') OR {}", super::channel_thread::readable_by_sql(&thread, user));
     format!("({message}.thread_id IS NULL OR {message_access}) AND ({event_access} OR (COALESCE(json_extract({event}.metadata, '$.thread_visibility'),'public')!='private' AND (json_extract({event}.metadata,'$.thread_id') IS NULL OR NOT EXISTS (SELECT 1 FROM channel_threads WHERE id={thread}))))")
 }
 

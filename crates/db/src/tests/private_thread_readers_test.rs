@@ -145,3 +145,45 @@ fn private_thread_agent_context_and_polling_require_explicit_access() {
     });
     read(false);
 }
+
+#[test]
+fn private_thread_event_pages_keep_public_deleted_room_events_and_filter_before_limit() {
+    let (db, room, private, message) = fixture();
+    grant(&db, private, id("bender"));
+    db.write(move |tx| {
+        tx.conn().execute("DELETE FROM agent_events", [])?;
+        let public = ChannelThread::create(tx, NewChannelThread {
+            room_id: room, creator_id: id("david"), name: Some("Public event context".into()),
+            ..Default::default()
+        })?;
+        let public_message = Message::create(tx, NewMessage {
+            room_id: room, thread_id: Some(public.id), creator_id: id("david"),
+            markdown_source: Some("Public event message".into()), ..Default::default()
+        })?;
+        let mut pairs = Vec::new();
+        for kind in ["mention", "work_assigned", "slash_command"] {
+            let mut ids = Vec::new();
+            for (thread, source, visibility) in [(private, message, "private"), (public.id, public_message.id, "public")] {
+                ids.push(AgentEvent::create(tx, NewEvent {
+                    agent_id: id("bender_agent"), room_id: Some(room),
+                    message_id: (kind == "mention").then_some(source), event_type: kind.into(),
+                    outcome: Some("delivered".into()),
+                    metadata: json!({"thread_id": thread, "thread_visibility": visibility}),
+                    ..Default::default()
+                })?.id);
+            }
+            pairs.push((ids[0], ids[1]));
+        }
+        for &(hidden, _) in &pairs {
+            assert_eq!(agent_event_access::readable_page(tx.conn(), id("bender_agent"), hidden - 1, Some(1))?[0].id, hidden);
+        }
+        tx.conn().execute("UPDATE rooms SET deleted_at=? WHERE id=?", params![tx.now(), room])?;
+        for &(hidden, visible) in &pairs {
+            let page = agent_event_access::readable_page(tx.conn(), id("bender_agent"), hidden - 1, Some(1))?;
+            assert_eq!(page.iter().map(|event| event.id).collect::<Vec<_>>(), [visible]);
+        }
+        let history = agent_event_access::history_page_for_viewer(tx.conn(), id("bender_agent"), id("bender"), id("david"), None, None)?;
+        assert_eq!(history.iter().map(|event| event.id).collect::<Vec<_>>(), pairs.iter().rev().map(|&(_, visible)| visible).collect::<Vec<_>>());
+        Ok(())
+    });
+}

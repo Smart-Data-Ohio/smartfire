@@ -9,8 +9,8 @@ use crate::controllers::presenters::{Presenter, Result, avatar_path};
 
 pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
     if let Some(thread_id) = message.thread_id {
-        let thread = ChannelThread::find(p.conn, thread_id)?;
-        if thread.room_id != message.room_id || !thread.readable_by(p.conn, viewer.id)? {
+        let thread = payload_thread(p, thread_id)?;
+        if thread.room_id != message.room_id || !thread_readable(p, &thread, viewer.id)? {
             return Err(campfire_db::Error::RecordNotFound("Message"));
         }
     }
@@ -24,10 +24,7 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
         "room": {"id": message.room_id, "icon_name": room.icon_name}
     });
     if let Some(id) = message.thread_id {
-        let record = match p.search_preloads.as_ref().and_then(|d|d.threads.as_ref()) {
-            Some(data)=>data.threads.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))?,
-            None=>ChannelThread::find(p.conn,id)?,
-        };
+        let record = payload_thread(p, id)?;
         result["thread_context"] = thread(p, &record, viewer, base)?;
     }
     let summary = match p.search_preloads.as_ref().and_then(|d|d.threads.as_ref()) {
@@ -35,7 +32,7 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
         None=>ChannelThread::find_by_parent_message(p.conn,message.id)?,
     };
     if let Some(summary) = summary
-        && summary.readable_by(p.conn, viewer.id)? {
+        && thread_readable(p, &summary, viewer.id)? {
         result["thread_summary"] = thread(p, &summary, viewer, base)?;
     }
     if message.reply_to_message_id.is_some() || message.reply_target_deleted_at.is_some() {
@@ -128,6 +125,20 @@ fn payload_room(p:&Presenter<'_>,id:i64) -> Result<campfire_db::Room> {
     match &p.search_preloads {
         Some(data)=>data.records.rooms.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("Room")),
         None=>campfire_db::Room::find(p.conn,id),
+    }
+}
+
+fn payload_thread(p: &Presenter<'_>, id: i64) -> Result<ChannelThread> {
+    match p.search_preloads.as_ref().and_then(|data| data.threads.as_ref()) {
+        Some(data) => data.threads.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("ChannelThread")),
+        None => ChannelThread::find(p.conn, id),
+    }
+}
+
+fn thread_readable(p: &Presenter<'_>, thread: &ChannelThread, viewer: i64) -> Result<bool> {
+    match p.search_preloads.as_ref().and_then(|data| data.threads.as_ref()).filter(|data| data.viewer_id == viewer) {
+        Some(data) => Ok(data.readable.contains(&thread.id)),
+        None => thread.readable_by(p.conn, viewer),
     }
 }
 
