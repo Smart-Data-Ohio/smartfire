@@ -476,6 +476,83 @@
     }
   }
 
+  /* Theater mode with the room's chat beside it (theater-chat.ts): the stage on the left, the
+     conversation's own timeline and composer in a column on the right, under the room's header.
+     The chat's room part becomes a column of its own here rather than `display: contents`. */
+  .room:has(> .call-view[data-chat]) {
+    display: grid;
+    grid-template:
+      "head head" auto
+      "stage chat" minmax(0, 1fr)
+      / minmax(0, 1fr) clamp(300px, 32%, 420px);
+  }
+
+  .room:has(> .call-view[data-chat]) > .room-part:first-child > * {
+    grid-area: head;
+  }
+
+  .call-view[data-chat] {
+    position: static;
+    grid-area: stage;
+    min-width: 0;
+    max-height: none;
+    box-shadow: none;
+  }
+
+  .room:has(> .call-view[data-chat]) > .room-part:last-child {
+    display: flex;
+    flex-direction: column;
+    grid-area: chat;
+    min-width: 0;
+    min-height: 0;
+    box-shadow: -1px 0 0 var(--border);
+  }
+
+  /* Narrower screens stack them, the share over the chat. Only the share stays on the stage: the
+     dock and the sidebar still show who's in the call. */
+  @media (width < 1100px) {
+    .room:has(> .call-view[data-chat]) {
+      grid-template:
+        "head" auto
+        "stage" auto
+        "chat" minmax(0, 1fr)
+        / minmax(0, 1fr);
+    }
+
+    .room:has(> .call-view[data-chat]) > .room-part:last-child {
+      box-shadow: 0 -1px 0 var(--border);
+    }
+
+    .call-view[data-chat] :is(.call-grid, .call-view-actions) {
+      display: none;
+    }
+
+    .call-view[data-chat] .call-share[data-expanded] {
+      flex: none;
+      max-height: 45dvh;
+      aspect-ratio: 16 / 9;
+    }
+  }
+
+  /* A phone: the call bar above names the room and holds the call's controls, so the share sits
+     right under it and the chat (its composer at the foot) takes the rest. */
+  @media (width < 720px) {
+    .room:has(> .call-view[data-chat]) {
+      grid-template:
+        "stage" auto
+        "chat" minmax(0, 1fr)
+        / minmax(0, 1fr);
+    }
+
+    .room:has(> .call-view[data-chat]) > .room-part:first-child {
+      display: none;
+    }
+
+    .call-view[data-chat] {
+      padding: var(--space-2);
+    }
+  }
+
   .call-tile-button {
     display: block;
     padding: 0;
