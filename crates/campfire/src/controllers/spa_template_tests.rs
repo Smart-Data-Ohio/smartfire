@@ -334,3 +334,196 @@ async fn spa_template_conflict_preview_matches_import_and_stale_preview_is_refus
             .any(|c| c.created_name.as_deref() == Some("Repeated (4)"))
     );
 }
+
+#[tokio::test]
+async fn spa_template_review_export_excludes_nonmember_rooms_of_every_restricted_kind() {
+    use campfire_db::RoomType;
+    use campfire_db::models::workspace_category::WorkspaceCategory;
+    let a = app().await.expect("frozen seeds required");
+    let mut admin = a.sign_in(DAVID).await;
+    let category = a
+        .booted
+        .app
+        .db
+        .write(|tx| WorkspaceCategory::create(tx, "Review category"))
+        .await
+        .unwrap();
+    let before: api::WorkspaceTemplate =
+        parse(&admin.send(get("/api/v1/admin/templates/export")).await);
+    let category_id = category.id;
+    let ids = a
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            let mut ids = vec![];
+            for (position, kind) in [
+                RoomType::Closed,
+                RoomType::Voice,
+                RoomType::Stage,
+                RoomType::Board,
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let mut room = Room::create_for(
+                    tx,
+                    kind,
+                    Some(&format!("Confidential {kind:?}")),
+                    KEVIN,
+                    &[KEVIN],
+                )?;
+                room.update_topic(tx, Some("Confidential acquisition details"))?;
+                WorkspaceCategory::move_room(tx, room.id, Some(category_id), position as i64)?;
+                ids.push(room.id);
+            }
+            Ok(ids)
+        })
+        .await
+        .unwrap();
+    let reply = admin.send(get("/api/v1/admin/templates/export")).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert!(
+        !reply.text().contains("Confidential"),
+        "Export leaked a nonmember room's name or topic"
+    );
+    assert_eq!(
+        parse::<api::WorkspaceTemplate>(&reply),
+        before,
+        "Hidden rooms must add no placements or counts"
+    );
+    a.booted
+        .app
+        .db
+        .write(move |tx| {
+            for id in ids {
+                Room::find(tx.conn(), id)?.grant_to(tx, &[DAVID])?;
+            }
+            let open =
+                Room::create_for(tx, RoomType::Open, Some("Public unjoined"), KEVIN, &[KEVIN])?;
+            Ok(open.id)
+        })
+        .await
+        .unwrap();
+    // Public open rooms remain exportable after the admin leaves their membership.
+    a.booted.app.db.write(|tx| {
+        tx.conn().execute("DELETE FROM memberships WHERE user_id=? AND room_id IN (SELECT id FROM rooms WHERE name='Public unjoined')", [DAVID])?;
+        Ok(())
+    }).await.unwrap();
+    let exported: api::WorkspaceTemplate =
+        parse(&admin.send(get("/api/v1/admin/templates/export")).await);
+    let held = exported
+        .categories
+        .iter()
+        .find(|category| category.name == "Review category")
+        .unwrap();
+    assert_eq!(held.rooms.len(), 4);
+    assert!(
+        held.rooms
+            .iter()
+            .all(|room| room.topic.as_deref() == Some("Confidential acquisition details"))
+    );
+    assert!(
+        exported
+            .rooms
+            .iter()
+            .any(|room| room.name.as_deref() == Some("Public unjoined"))
+    );
+}
+
+#[tokio::test]
+async fn spa_template_review_default_membership_failure_rolls_back_every_write() {
+    let a = app().await.expect("frozen seeds required");
+    let mut admin = a.sign_in(DAVID).await;
+    let file = json!({"format":"smartfire-template","version":1,"categories":[{"name":"Atomic category","rooms":[room("open","Atomic open")]}],"rooms":[]});
+    let planned = preview(&mut admin, &file).await;
+    assert!(planned.errors.is_empty());
+    a.booted.app.db.write(|tx| {
+        tx.conn().execute_batch(&format!("CREATE TRIGGER template_membership_failure BEFORE INSERT ON memberships WHEN NEW.user_id={KEVIN} AND NEW.room_id IN (SELECT id FROM rooms WHERE name='Atomic open') BEGIN SELECT RAISE(ABORT,'default membership insert failed'); END;"))?;
+        Ok(())
+    }).await.unwrap();
+    let capture = a.booted.app.cable.capture_every_publication();
+    settle(&capture).await;
+    let before = dump(&a).await;
+    let reply = write(
+        &mut admin,
+        Method::POST,
+        "/api/v1/admin/templates/import",
+        json!({"contents":file.to_string(),"expected":planned.template}),
+    )
+    .await;
+    assert!(
+        !reply.status.is_success(),
+        "The membership trigger must refuse the import"
+    );
+    assert!(
+        dump(&a).await == before,
+        "Default-membership failure left categories, rooms, memberships or audits committed"
+    );
+    assert!(
+        settle(&capture).await.is_empty(),
+        "A failed import must publish nothing"
+    );
+}
+
+#[tokio::test]
+async fn spa_template_review_oversize_catalog_stops_before_other_validation_or_writes() {
+    let a = app().await.expect("frozen seeds required");
+    let mut admin = a.sign_in(DAVID).await;
+    let mut board = room("board", "Oversized board");
+    board["iconName"] = json!("missing_icon_review");
+    board["board"]["tags"] = json!(
+        (0..21)
+            .map(|index| json!({"name":format!("tag{index}"),"emoji":null}))
+            .collect::<Vec<_>>()
+    );
+    board["board"]["tags"][20]["name"] = json!("x".repeat(21));
+    let file = json!({"format":"smartfire-template","version":1,"categories":[],"rooms":[board]});
+    let result = preview(&mut admin, &file).await;
+    assert_eq!(
+        result.errors.len(),
+        1,
+        "An oversized catalog must stop before icon or tag-name validation"
+    );
+    assert!(
+        result.template.is_none(),
+        "An oversized collection must not be planned"
+    );
+    assert!(result.changes.is_empty());
+    let before = a.booted.app.db.write_generation();
+    let reply = write(
+        &mut admin,
+        Method::POST,
+        "/api/v1/admin/templates/import",
+        json!({"contents":file.to_string(),"expected":document()}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        a.booted.app.db.write_generation(),
+        before,
+        "Invalid uploads must never open an import transaction"
+    );
+}
+
+#[tokio::test]
+async fn spa_template_review_invalid_version_never_opens_a_write_transaction() {
+    let a = app().await.expect("frozen seeds required");
+    let mut admin = a.sign_in(DAVID).await;
+    let mut file = document();
+    file["version"] = json!(9);
+    let before = a.booted.app.db.write_generation();
+    let reply = write(
+        &mut admin,
+        Method::POST,
+        "/api/v1/admin/templates/import",
+        json!({"contents":file.to_string(),"expected":document()}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        a.booted.app.db.write_generation(),
+        before,
+        "File validation ran inside the import transaction"
+    );
+}

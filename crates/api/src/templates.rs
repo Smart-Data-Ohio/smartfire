@@ -58,13 +58,16 @@ async fn upload<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
 }
 
 async fn export_file(c: &mut Ctx) -> Result {
-    administrator(c).await?;
+    let viewer = administrator(c).await?.id;
     let document = c
         .app()
         .db
-        .read_snapshot(|conn| export_structure(conn))
+        .read_snapshot(move |conn| export_structure(conn, viewer))
         .await
         .map_err(db_error)?;
+    if let Some(error) = size_error(&document) {
+        return Err(fail(c, validation("file", &error)));
+    }
     let bytes = serde_json::to_vec_pretty(&document).map_err(Error::internal)?;
     let count = document.rooms.len()
         + document
@@ -105,6 +108,21 @@ async fn preview_file(c: &mut Ctx) -> Result {
 async fn import_file(c: &mut Ctx) -> Result {
     let user = administrator(c).await?;
     let input: api::TemplateImport = upload(c).await?;
+    let document = parse_document(&input.contents)
+        .map_err(|errors| fail(c, validation("file", &errors.join("; "))))?;
+    let checked = document.clone();
+    let preview = c
+        .app()
+        .db
+        .read_snapshot(move |conn| preview_document(conn, checked))
+        .await
+        .map_err(db_error)?;
+    if !preview.errors.is_empty() {
+        return Err(fail(c, validation("file", &preview.errors.join("; "))));
+    }
+    if preview.template.as_ref() != Some(&input.expected) {
+        return Err(stale_preview(c));
+    }
     let app = c.app().clone();
     let audit = Context {
         actor: Some((&user).into()),
@@ -115,10 +133,8 @@ async fn import_file(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let preview = plan(tx.conn(), &input.contents)?;
-            if !preview.errors.is_empty() {
-                return Ok((preview, None));
-            }
+            // Only the race-sensitive destination name allocation is repeated under the writer.
+            let preview = resolve_names(tx.conn(), document)?;
             if preview.template.as_ref() != Some(&input.expected) {
                 return Ok((preview, None));
             }
@@ -128,22 +144,23 @@ async fn import_file(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     let (preview, rooms) = result;
-    if !preview.errors.is_empty() {
-        return Err(fail(c, validation("file", &preview.errors.join("; "))));
-    }
     let Some(rooms) = rooms else {
-        return Err(fail(
-            c,
-            api::ApiError::Conflict {
-                message: "Workspace structure changed. Preview this file again before importing."
-                    .into(),
-            },
-        ));
+        return Err(stale_preview(c));
     };
     for room in rooms {
         broadcast(c, &room, false).await?;
     }
     c.json(StatusCode::CREATED, &preview)
+}
+
+fn stale_preview(c: &mut Ctx) -> Error {
+    fail(
+        c,
+        api::ApiError::Conflict {
+            message: "Workspace structure changed. Preview this file again before importing."
+                .into(),
+        },
+    )
 }
 
 fn kind(kind: api::TemplateRoomKind) -> RoomType {
@@ -198,14 +215,25 @@ fn export_room(conn: &Connection, id: i64) -> campfire_db::Result<api::TemplateR
     })
 }
 
-fn export_group(conn: &Connection, id: Option<i64>) -> campfire_db::Result<Vec<api::TemplateRoom>> {
+fn export_group(
+    conn: &Connection,
+    id: Option<i64>,
+    visible: &BTreeSet<i64>,
+) -> campfire_db::Result<Vec<api::TemplateRoom>> {
     WorkspaceCategory::rooms(conn, id)?
         .into_iter()
+        .filter(|row| visible.contains(&row.room_id))
         .map(|row| export_room(conn, row.room_id))
         .collect()
 }
 
-fn export_structure(conn: &Connection) -> campfire_db::Result<api::WorkspaceTemplate> {
+fn export_structure(conn: &Connection, viewer: i64) -> campfire_db::Result<api::WorkspaceTemplate> {
+    // The existing membership scope and public-room scope also used by the room chooser.
+    let visible = Room::for_user_without_directs(conn, viewer)?
+        .into_iter()
+        .chain(Room::of_type(conn, RoomType::Open)?)
+        .map(|room| room.id)
+        .collect();
     Ok(api::WorkspaceTemplate {
         format: api::TemplateFormat::SmartfireTemplate,
         version: 1,
@@ -213,20 +241,20 @@ fn export_structure(conn: &Connection) -> campfire_db::Result<api::WorkspaceTemp
             .into_iter()
             .map(|category| {
                 Ok(api::TemplateCategory {
-                    rooms: export_group(conn, Some(category.id))?,
+                    rooms: export_group(conn, Some(category.id), &visible)?,
                     name: category.name,
                 })
             })
             .collect::<campfire_db::Result<_>>()?,
-        rooms: export_group(conn, None)?,
+        rooms: export_group(conn, None, &visible)?,
     })
 }
 
-fn invalid_preview(message: String) -> api::TemplatePreview {
+fn invalid_preview(errors: Vec<String>) -> api::TemplatePreview {
     api::TemplatePreview {
         template: None,
         changes: vec![],
-        errors: vec![message],
+        errors,
         category_count: 0,
         room_count: 0,
     }
@@ -257,32 +285,176 @@ fn unique_name(
 }
 
 fn plan(conn: &Connection, contents: &str) -> campfire_db::Result<api::TemplatePreview> {
-    if contents.len() > FILE_LIMIT {
-        return Ok(invalid_preview(
-            "Template files must be at most 1 MiB.".into(),
-        ));
+    match parse_document(contents) {
+        Ok(document) => preview_document(conn, document),
+        Err(errors) => Ok(invalid_preview(errors)),
     }
-    let mut document: api::WorkspaceTemplate = match serde_json::from_str(contents) {
-        Ok(document) => document,
-        Err(e) => return Ok(invalid_preview(format!("Invalid template JSON: {e}"))),
-    };
+}
+
+fn parse_document(contents: &str) -> std::result::Result<api::WorkspaceTemplate, Vec<String>> {
+    if contents.len() > FILE_LIMIT {
+        return Err(vec!["Template files must be at most 1 MiB.".into()]);
+    }
+    let mut document: api::WorkspaceTemplate =
+        serde_json::from_str(contents).map_err(|e| vec![format!("Invalid template JSON: {e}")])?;
     if document.version != 1 {
-        return Ok(invalid_preview(format!(
+        return Err(vec![format!(
             "Unsupported template version {}. Expected version 1.",
             document.version
-        )));
+        )]);
     }
+    if let Some(error) = size_error(&document) {
+        return Err(vec![error]);
+    }
+    let mut errors = vec![];
+    for category in &document.categories {
+        if category.name.trim().is_empty() {
+            errors.push(format!(
+                "Category {:?}: name must contain 1 to 50 characters.",
+                category.name
+            ));
+        }
+    }
+    for room in document
+        .categories
+        .iter_mut()
+        .flat_map(|category| &mut category.rooms)
+        .chain(&mut document.rooms)
+    {
+        validate_room(room, &mut errors);
+    }
+    if errors.is_empty() {
+        Ok(document)
+    } else {
+        Err(errors)
+    }
+}
+
+fn size_error(document: &api::WorkspaceTemplate) -> Option<String> {
+    if document.categories.len() > CATEGORY_LIMIT {
+        return Some("Templates allow at most 100 categories.".into());
+    }
+    let count = document.rooms.len()
+        + document
+            .categories
+            .iter()
+            .map(|category| category.rooms.len())
+            .sum::<usize>();
+    if count > ROOM_LIMIT {
+        return Some("Templates allow at most 1000 rooms.".into());
+    }
+    for category in &document.categories {
+        if category.name.chars().count() > 50 {
+            return Some(format!(
+                "Category {:?}: name must contain 1 to 50 characters.",
+                category.name
+            ));
+        }
+    }
+    for room in document
+        .categories
+        .iter()
+        .flat_map(|category| &category.rooms)
+        .chain(&document.rooms)
+    {
+        let label = room.name.as_deref().unwrap_or("Unnamed room");
+        if let Some(board) = &room.board {
+            if board.tags.len() > campfire_db::models::thread_tag::BOARD_TAG_LIMIT {
+                return Some(format!("Room {label:?}: board tags are limited to 20."));
+            }
+            for tag in &board.tags {
+                if tag.name.trim().chars().count()
+                    > campfire_db::models::thread_tag::BOARD_TAG_NAME_LIMIT
+                {
+                    return Some(format!(
+                        "Room {label:?}: board tag names must contain 1 to 20 characters."
+                    ));
+                }
+            }
+        }
+        if let Err(error) = Room::normalize_topic(room.topic.as_deref()) {
+            return Some(format!("Room {label:?}: {error}"));
+        }
+    }
+    None
+}
+
+fn validate_room(room: &mut api::TemplateRoom, errors: &mut Vec<String>) {
+    let label = room.name.as_deref().unwrap_or("Unnamed room");
+    for error in [
+        Room::validate_voice_bitrate(room.voice_bitrate),
+        Room::validate_voice_user_limit(room.voice_user_limit),
+    ]
+    .into_iter()
+    .filter_map(std::result::Result::err)
+    {
+        errors.push(format!("Room {label:?}: {error}"));
+    }
+    if (room.kind == api::TemplateRoomKind::Board) != room.board.is_some() {
+        errors.push(format!(
+            "Room {label:?}: board settings must be present only for board rooms."
+        ));
+    }
+    if let Some(board) = &mut room.board {
+        if (board.tags_required && board.tags.is_empty())
+            || board
+                .default_tag
+                .is_some_and(|i| i as usize >= board.tags.len())
+        {
+            errors.push(format!(
+                "Room {label:?}: invalid required tags or default tag index."
+            ));
+        }
+        let mut names = BTreeSet::new();
+        for tag in &mut board.tags {
+            tag.name = tag.name.trim().into();
+            if tag.name.is_empty() || !names.insert(caseless::default_case_fold_str(&tag.name)) {
+                errors.push(format!(
+                    "Room {label:?}: board tag names must be unique and contain 1 to 20 characters."
+                ));
+            }
+        }
+    }
+    room.icon_name = Room::normalize_icon_name(room.icon_name.as_deref());
+    room.topic =
+        Room::normalize_topic(room.topic.as_deref()).unwrap_or_else(|_| room.topic.clone());
+}
+
+fn preview_document(
+    conn: &Connection,
+    document: api::WorkspaceTemplate,
+) -> campfire_db::Result<api::TemplatePreview> {
+    let mut errors = vec![];
+    for room in document
+        .categories
+        .iter()
+        .flat_map(|category| &category.rooms)
+        .chain(&document.rooms)
+    {
+        if let Some(icon) = &room.icon_name
+            && !campfire_runtime::rich_text::room_icon_resolves(conn, icon)?
+        {
+            errors.push(format!(
+                "Room {:?}: icon {icon:?} is not available in this workspace.",
+                room.name.as_deref().unwrap_or("Unnamed room")
+            ));
+        }
+    }
+    let mut preview = resolve_names(conn, document)?;
+    preview.errors = errors;
+    Ok(preview)
+}
+
+fn resolve_names(
+    conn: &Connection,
+    mut document: api::WorkspaceTemplate,
+) -> campfire_db::Result<api::TemplatePreview> {
     let room_count = document.rooms.len()
         + document
             .categories
             .iter()
-            .map(|c| c.rooms.len())
+            .map(|category| category.rooms.len())
             .sum::<usize>();
-    if document.categories.len() > CATEGORY_LIMIT || room_count > ROOM_LIMIT {
-        return Ok(invalid_preview(
-            "Templates allow at most 100 categories and 1000 rooms.".into(),
-        ));
-    }
     let mut result = api::TemplatePreview {
         template: None,
         changes: vec![],
@@ -302,12 +474,6 @@ fn plan(conn: &Connection, contents: &str) -> campfire_db::Result<api::TemplateP
         room_names.insert(name?);
     }
     for category in &mut document.categories {
-        if category.name.trim().is_empty() || category.name.chars().count() > 50 {
-            result.errors.push(format!(
-                "Category {:?}: name must contain 1 to 50 characters.",
-                category.name
-            ));
-        }
         let created_name = unique_name(Some(&category.name), &mut category_names, Some(50));
         result.changes.push(api::TemplateChange {
             entity: api::TemplateEntity::Category,
@@ -316,74 +482,21 @@ fn plan(conn: &Connection, contents: &str) -> campfire_db::Result<api::TemplateP
         });
         category.name = created_name.unwrap_or_default();
         for room in &mut category.rooms {
-            plan_room(conn, room, &mut room_names, &mut result)?;
+            plan_room(room, &mut room_names, &mut result);
         }
     }
     for room in &mut document.rooms {
-        plan_room(conn, room, &mut room_names, &mut result)?;
+        plan_room(room, &mut room_names, &mut result);
     }
     result.template = Some(document);
     Ok(result)
 }
 
 fn plan_room(
-    conn: &Connection,
     room: &mut api::TemplateRoom,
     names: &mut BTreeSet<Option<String>>,
     result: &mut api::TemplatePreview,
-) -> campfire_db::Result<()> {
-    let label = room.name.as_deref().unwrap_or("Unnamed room");
-    for error in [
-        Room::normalize_topic(room.topic.as_deref()).map(|_| ()),
-        Room::validate_voice_bitrate(room.voice_bitrate),
-        Room::validate_voice_user_limit(room.voice_user_limit),
-    ]
-    .into_iter()
-    .filter_map(std::result::Result::err)
-    {
-        result.errors.push(format!("Room {label:?}: {error}"));
-    }
-    room.icon_name = Room::normalize_icon_name(room.icon_name.as_deref());
-    if let Some(icon) = &room.icon_name {
-        let resolved = campfire_runtime::rich_text::room_icon_resolves(conn, icon)?;
-        if !resolved {
-            result.errors.push(format!(
-                "Room {label:?}: icon {icon:?} is not available in this workspace."
-            ));
-        }
-    }
-    if (room.kind == api::TemplateRoomKind::Board) != room.board.is_some() {
-        result.errors.push(format!(
-            "Room {label:?}: board settings must be present only for board rooms."
-        ));
-    }
-    if let Some(board) = &room.board {
-        if board.tags.len() > 20
-            || (board.tags_required && board.tags.is_empty())
-            || board
-                .default_tag
-                .is_some_and(|i| i as usize >= board.tags.len())
-        {
-            result.errors.push(format!(
-                "Room {label:?}: invalid board tag count, required tags or default tag index."
-            ));
-        }
-        let mut prior: Vec<&str> = vec![];
-        for tag in &board.tags {
-            let name = tag.name.trim();
-            if name.is_empty()
-                || name.chars().count() > 20
-                || prior
-                    .iter()
-                    .any(|other| caseless::default_caseless_match_str(other, name))
-            {
-                result.errors.push(format!(
-                    "Room {label:?}: board tag names must be unique and contain 1 to 20 characters."
-                ));
-            }
-            prior.push(name);
-        }
-    }
+) {
     let created_name = unique_name(room.name.as_deref(), names, None);
     result.changes.push(api::TemplateChange {
         entity: api::TemplateEntity::Room,
@@ -391,15 +504,6 @@ fn plan_room(
         created_name: created_name.clone(),
     });
     room.name = created_name;
-    // Match the existing settings and creation paths' canonical values in the preview.
-    room.topic =
-        Room::normalize_topic(room.topic.as_deref()).unwrap_or_else(|_| room.topic.clone());
-    if let Some(board) = &mut room.board {
-        for tag in &mut board.tags {
-            tag.name = tag.name.trim().into();
-        }
-    }
-    Ok(())
 }
 
 fn create_structure(
@@ -437,15 +541,33 @@ fn create_room(
     creator: i64,
     audit: &Context,
 ) -> campfire_db::Result<Room> {
-    let mut room = create_in_transaction(
-        tx,
-        app,
-        kind(input.kind),
-        input.name.as_deref(),
-        input.icon_name.as_deref(),
-        creator,
-        &[creator],
-    )?;
+    let mut room = if input.kind == api::TemplateRoomKind::Open {
+        let mut room = Room::create_for_atomically(
+            tx,
+            RoomType::Open,
+            input.name.as_deref(),
+            creator,
+            &[creator],
+        )?;
+        room.update_with_icon(
+            tx,
+            None,
+            None,
+            Some(input.icon_name.as_deref()),
+            campfire_runtime::rich_text::room_icon_resolves,
+        )?;
+        room
+    } else {
+        create_in_transaction(
+            tx,
+            app,
+            kind(input.kind),
+            input.name.as_deref(),
+            input.icon_name.as_deref(),
+            creator,
+            &[creator],
+        )?
+    };
     room.update_topic(tx, input.topic.as_deref())?;
     room.update_voice_bitrate(tx, input.voice_bitrate)?;
     room.update_voice_user_limit(tx, input.voice_user_limit)?;
@@ -498,6 +620,24 @@ mod tests {
                 .chars()
                 .count(),
             50
+        );
+    }
+    #[test]
+    fn template_oversize_catalog_is_rejected_before_database_reads() {
+        let input = serde_json::json!({"format":"smartfire-template","version":1,"categories":[],"rooms":[{
+            "kind":"board","name":"Large board","announcement":false,
+            "board":{"tags":(0..20_000).map(|index| serde_json::json!({"name":format!("tag{index}"),"emoji":null})).collect::<Vec<_>>(),"tagsRequired":false,"defaultTag":null}
+        }]});
+        let contents = input.to_string();
+        assert!(contents.len() < FILE_LIMIT);
+        let conn = Connection::open_in_memory().unwrap();
+        // No schema exists: an invalid file must not query workspace data at all.
+        let result = plan(&conn, &contents).expect("Catalog limits must precede database reads");
+        assert!(result.template.is_none());
+        assert!(result.changes.is_empty());
+        assert_eq!(
+            result.errors,
+            ["Room \"Large board\": board tags are limited to 20."]
         );
     }
 }

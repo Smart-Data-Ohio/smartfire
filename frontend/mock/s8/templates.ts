@@ -4,12 +4,13 @@ import type { TemplatePreview } from "../../src/gen/TemplatePreview.ts";
 import type { TemplateRoom } from "../../src/gen/TemplateRoom.ts";
 import type { TemplateRoomKind } from "../../src/gen/TemplateRoomKind.ts";
 import type { WorkspaceTemplate } from "../../src/gen/WorkspaceTemplate.ts";
-import { caselessEqual } from "../../src/lib/case-fold.ts";
+import { caseFold } from "../../src/lib/case-fold.ts";
 import { conflict, forbidden, ok, validation } from "../http.ts";
 import { field, isBoolean, isNumber, isRecord, isString, type Json, parseJson } from "../json.ts";
 import type { AdminModule } from "../s2/admin.ts";
 import { route, type S2Context } from "../s2/context.ts";
 import { lookupIcon } from "../s2/emoji.ts";
+import { memberRooms } from "../s2/model.ts";
 import { workspaceLayoutOf } from "../s3/workspace-layout.ts";
 import { boardTagCatalog } from "../s6/board-tags.ts";
 import { VIEWER_ID } from "../seed.ts";
@@ -120,15 +121,58 @@ function documentOf(value: Json | undefined): WorkspaceTemplate {
   if (doc.version !== 1)
     throw fileError(`Unsupported template version ${doc.version}. Expected version 1.`);
 
+  const categories = list(doc.categories);
+  const rooms = list(doc.rooms);
+
+  if (categories.length > 100) throw fileError("Templates allow at most 100 categories.");
+  let count = rooms.length;
+
+  const groups = categories.map((value) => {
+    const category = object(value, ["name", "rooms"]);
+    const name = text(category.name);
+    const rooms = list(category.rooms);
+
+    count += rooms.length;
+
+    if (count > 1000) throw fileError("Templates allow at most 1000 rooms.");
+
+    if (Array.from(name).length > 50)
+      throw fileError(`Category ${JSON.stringify(name)}: name must contain 1 to 50 characters.`);
+
+    return { name, rooms };
+  });
+
+  if (count > 1000) throw fileError("Templates allow at most 1000 rooms.");
+
+  for (const value of [...groups.flatMap((category) => category.rooms), ...rooms]) {
+    const label = JSON.stringify(nullableText(field(value, "name")) ?? "Unnamed room");
+    const rawBoard = field(value, "board");
+
+    if (rawBoard !== null && rawBoard !== undefined) {
+      const tags = list(field(rawBoard, "tags"));
+
+      if (tags.length > 20) throw fileError(`Room ${label}: board tags are limited to 20.`);
+
+      for (const tag of tags) {
+        if (Array.from(text(field(tag, "name")).trim()).length > 20)
+          throw fileError(`Room ${label}: board tag names must contain 1 to 20 characters.`);
+      }
+    }
+
+    const topic = nullableText(field(value, "topic"));
+
+    if (topic !== null && Array.from(topic.trim()).length > 1024)
+      throw fileError(`Room ${label}: topic is too long (maximum is 1024 characters).`);
+  }
+
   return {
     format: "smartfire-template",
     version: 1,
-    rooms: list(doc.rooms).map(roomOf),
-    categories: list(doc.categories).map((value) => {
-      const category = object(value, ["name", "rooms"]);
-
-      return { name: text(category.name), rooms: list(category.rooms).map(roomOf) };
-    }),
+    rooms: rooms.map(roomOf),
+    categories: groups.map((category) => ({
+      name: category.name,
+      rooms: category.rooms.map(roomOf),
+    })),
   };
 }
 
@@ -196,11 +240,12 @@ export function createTemplates(
     };
   };
 
-  const group = (categoryId: number | null) =>
+  const group = (categoryId: number | null, visible?: ReadonlySet<number>) =>
     [...ctx.world().rooms.values()]
       .filter(
         (r) =>
           r.room.kind !== "direct" &&
+          (visible === undefined || visible.has(r.room.id)) &&
           (ctx.world().workspacePlacements.get(r.room.id)?.categoryId ?? null) === categoryId,
       )
       .sort((a, b) => {
@@ -216,14 +261,22 @@ export function createTemplates(
       })
       .map((r) => exportRoom(r.room.id));
 
-  const exported = (): WorkspaceTemplate => ({
-    format: "smartfire-template",
-    version: 1,
-    categories: [...ctx.world().workspaceCategories]
-      .sort((a, b) => a.position - b.position || a.id - b.id)
-      .map((c) => ({ name: c.name, rooms: group(c.id) })),
-    rooms: group(null),
-  });
+  const exported = (): WorkspaceTemplate => {
+    const visible = new Set(memberRooms(ctx.world(), VIEWER_ID).map((record) => record.room.id));
+
+    for (const record of ctx.world().rooms.values()) {
+      if (record.room.kind === "open") visible.add(record.room.id);
+    }
+
+    return {
+      format: "smartfire-template",
+      version: 1,
+      categories: [...ctx.world().workspaceCategories]
+        .sort((a, b) => a.position - b.position || a.id - b.id)
+        .map((category) => ({ name: category.name, rooms: group(category.id, visible) })),
+      rooms: group(null, visible),
+    };
+  };
 
   const plan = (contents: string): TemplatePreview => {
     const result: TemplatePreview = {
@@ -252,9 +305,6 @@ export function createTemplates(
       );
 
       const planRoom = (room: TemplateRoom) => {
-        if (room.topic !== null && Array.from(room.topic).length > 1024)
-          result.errors.push(`Room ${room.name}: topic is too long (maximum is 1024 characters).`);
-
         if (room.voiceBitrate !== null && !BITRATES.includes(room.voiceBitrate))
           result.errors.push(`Room ${room.name}: unsupported voice bitrate.`);
 
@@ -278,7 +328,6 @@ export function createTemplates(
 
         if (board !== null) {
           if (
-            board.tags.length > 20 ||
             (board.tagsRequired && board.tags.length === 0) ||
             (board.defaultTag !== null &&
               (board.defaultTag < 0 || board.defaultTag >= board.tags.length))
@@ -287,13 +336,17 @@ export function createTemplates(
               `Room ${room.name}: invalid board tag count, required tags or default tag index.`,
             );
 
+          const names = new Set<string>();
+
           if (
-            board.tags.some(
-              (tag, i) =>
-                tag.name === "" ||
-                Array.from(tag.name).length > 20 ||
-                board.tags.slice(0, i).some((prior) => caselessEqual(prior.name, tag.name)),
-            )
+            board.tags.some((tag) => {
+              const folded = caseFold(tag.name);
+
+              if (tag.name === "" || names.has(folded)) return true;
+              names.add(folded);
+
+              return false;
+            })
           )
             result.errors.push(
               `Room ${room.name}: board tag names must be unique and contain 1 to 20 characters.`,

@@ -63,6 +63,7 @@ import {
   canAccessThread,
   locate,
   type MessageDraft,
+  memberRooms,
   pageOf,
   pinCount,
   plainDraft,
@@ -529,11 +530,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const visibleRooms = (): RoomRecord[] =>
-    [...world.rooms.values()]
-      .filter(
-        (record) =>
-          record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
-      )
+    memberRooms(world, VIEWER_ID)
+      .filter((record) => record.membership.involvement !== "invisible")
       .sort((a, b) => {
         const left = (a.room.name ?? "").toLowerCase();
         const right = (b.room.name ?? "").toLowerCase();
