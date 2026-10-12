@@ -162,6 +162,7 @@ it("shows scheduled file thumbnails and filenames", () => {
               preview: "image",
               url: "/one.png",
               downloadUrl: "/one.png?download",
+              spoiler: false,
               thumbnailUrl: "/thumb.png",
             },
           },
@@ -198,6 +199,7 @@ it("removes a scheduled file while retaining the other signed upload", async () 
     preview: "file",
     url: "/one",
     downloadUrl: "/one?download",
+    spoiler: false,
     thumbnailUrl: null,
   } as const;
 
@@ -218,7 +220,7 @@ it("removes a scheduled file while retaining the other signed upload", async () 
   );
   await user.click(screen.getByRole("button", { name: "Remove one.txt" }));
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  expect(saved).toEqual([{ attachmentSignedIds: ["signed-two"] }]);
+  expect(saved).toEqual([{ attachmentSignedIds: ["signed-two"], attachmentSpoilers: [false] }]);
 });
 
 it("adds an uploaded file after retained files and waits for its upload", async () => {
@@ -243,6 +245,7 @@ it("adds an uploaded file after retained files and waits for its upload", async 
               preview: "file",
               url: "/kept",
               downloadUrl: "/kept?download",
+              spoiler: false,
               thumbnailUrl: null,
             },
           },
@@ -283,5 +286,7 @@ it("adds an uploaded file after retained files and waits for its upload", async 
     ),
   );
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  expect(saved).toEqual([{ attachmentSignedIds: ["retained", direct.signedId] }]);
+  expect(saved).toEqual([
+    { attachmentSignedIds: ["retained", direct.signedId], attachmentSpoilers: [false, false] },
+  ]);
 });

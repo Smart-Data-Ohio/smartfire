@@ -10,6 +10,10 @@
  */
 export type UpdateMessage = {
 /**
+ * Replace the retained files' flags in attachment order. Omit to keep them.
+ */
+attachmentSpoilers?: Array<boolean>,
+/**
  * The new Markdown, up to 50 000 characters; blank only when the message has an
  * attachment or a Drive file left. Always sent: the classic update without it turns the
  * message into rich text.

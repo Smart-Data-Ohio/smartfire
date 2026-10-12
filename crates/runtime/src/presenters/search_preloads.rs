@@ -64,7 +64,7 @@ impl Preloads {
         let attachments =
             campfire_storage::Blob::attached_messages(p.conn, &records.body_ids(messages))
                 .map_err(super::storage_error)?;
-        let videos = attachments.values().flat_map(|files| &files.blobs).filter(|blob| blob.is_video()).map(|blob| blob.id).collect::<Vec<_>>();
+        let videos = attachments.values().flat_map(|files| &files.files).filter(|file| !file.spoiler && file.blob.is_video()).map(|file| file.blob.id).collect::<Vec<_>>();
         let previewed_blobs = campfire_storage::Blob::previewed_blob_ids(p.conn, &videos)
             .map_err(super::storage_error)?;
         let icons = crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
@@ -107,7 +107,7 @@ impl Preloads {
             text = self
                 .attachments
                 .get(&m.id)
-                .map(|files| files.blobs.iter().map(|blob| blob.filename.to_string()).collect::<Vec<_>>().join(", "))
+                .map(|files| files.files.iter().map(|file| file.blob.filename.to_string()).collect::<Vec<_>>().join(", "))
                 .unwrap_or_default();
         }
         Ok(m.display_text(text))

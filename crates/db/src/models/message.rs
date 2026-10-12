@@ -77,6 +77,8 @@ pub struct NewMessage {
     pub attachment_blob_id: Option<i64>,
     /// Already-saved blobs for the `attachments` slot, in insertion order.
     pub attachment_blob_ids: Vec<i64>,
+    /// Flags in file order, including the single slot first when present. Empty means public.
+    pub attachment_spoilers: Vec<bool>,
     /// Posts into a thread instead of the room's root timeline.
     pub thread_id: Option<i64>,
     pub system_note: bool,
@@ -102,6 +104,7 @@ pub struct NewMessage {
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
 #[derive(Debug, Clone, Default)]
 pub struct MessageChanges {
+    pub attachment_spoilers: Option<Vec<bool>>,
     /// Rendered into the body before validation, like a new message's.
     pub markdown_source: Option<String>,
     /// The human edit endpoint assigns nil when switching back to a legacy body.
@@ -605,11 +608,12 @@ impl Message {
             touched = true;
         }
         if let Some(blob_id) = attributes.attachment_blob_id {
-            Attachment::create(tx, RECORD_TYPE, id, "attachment", blob_id)?;
+            Attachment::create_with_spoiler(tx, RECORD_TYPE, id, "attachment", blob_id, attributes.attachment_spoilers.first().copied().unwrap_or(false))?;
             touched = true;
         }
-        for &blob_id in &attributes.attachment_blob_ids {
-            Attachment::create(tx, RECORD_TYPE, id, "attachments", blob_id)?;
+        for (index, &blob_id) in attributes.attachment_blob_ids.iter().enumerate() {
+            let offset = usize::from(attributes.attachment_blob_id.is_some());
+            Attachment::create_with_spoiler(tx, RECORD_TYPE, id, "attachments", blob_id, attributes.attachment_spoilers.get(index + offset).copied().unwrap_or(false))?;
             touched = true;
         }
         for file_id in &attributes.drive_file_ids {
@@ -761,7 +765,11 @@ impl Message {
 
     fn validate_with_associations(conn: &Connection, attributes: &NewMessage, new_record: bool, loaded_associations: bool) -> Result<Errors> {
         let mut errors = Errors::default();
-        Self::validate_attachment_count(attributes.attachment_blob_ids.len() + usize::from(attributes.attachment_blob_id.is_some()), &mut errors);
+        let file_count = attributes.attachment_blob_ids.len() + usize::from(attributes.attachment_blob_id.is_some());
+        Self::validate_attachment_count(file_count, &mut errors);
+        if !attributes.attachment_spoilers.is_empty() && attributes.attachment_spoilers.len() != file_count {
+            errors.add("attachment_spoilers", "must have one flag per file");
+        }
         // `belongs_to :room` and `:creator` (required)
         if !loaded_associations && Room::find_by_id(conn, attributes.room_id)?.is_none() {
             errors.add("room", "must exist");
@@ -1066,6 +1074,15 @@ impl Message {
         let reply_to_message_id = changes.reply_to_message_id.unwrap_or(self.reply_to_message_id);
         let reply_notify_author = changes.reply_notify_author.unwrap_or(self.reply_notify_author);
 
+        let files = self.attachments(conn)?;
+        let current_spoilers = files.iter().map(|(attachment, _)| attachment.spoiler).collect::<Vec<_>>();
+        let flags = changes.attachment_spoilers.as_ref().unwrap_or(&current_spoilers);
+        if flags.len() != files.len() {
+            let mut errors = Errors::default();
+            errors.add("attachment_spoilers", "must have one flag per file");
+            return errors.into_result();
+        }
+        let spoilers_changed = flags != &current_spoilers;
         let attributes = NewMessage {
             room_id: self.room_id,
             creator_id: self.creator_id,
@@ -1073,6 +1090,7 @@ impl Message {
             sticker_name: self.sticker_name.clone(),
             client_message_id: client_message_id.clone(),
             body: body.clone(),
+            attachment_spoilers: flags.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?
                 .map(|a| a.blob_id),
             attachment_blob_ids: self.attachments(conn)?.into_iter()
@@ -1110,7 +1128,7 @@ impl Message {
             || embeds_suppressed != self.embeds_suppressed
             || edited_at != self.edited_at;
         let drive_changed = drive_file_ids != current_drive_ids;
-        if !(columns_changed || body.is_some() || drive_changed || self.streaming) {
+        if !(columns_changed || body.is_some() || drive_changed || spoilers_changed || self.streaming) {
             return Ok(());
         }
         let previous_mentionees = if !self.streaming
@@ -1141,6 +1159,11 @@ impl Message {
                 None => {
                     RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
                 }
+            }
+        }
+        if spoilers_changed {
+            for ((attachment, _), &spoiler) in files.iter().zip(flags) {
+                tx.conn().execute_cached("UPDATE active_storage_attachments SET spoiler=? WHERE id=?", params![spoiler, attachment.id])?;
             }
         }
         if drive_changed {

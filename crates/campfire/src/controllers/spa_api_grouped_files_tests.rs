@@ -1545,3 +1545,119 @@ async fn scheduled_files_validate_unfinished_invalid_and_current_size_limit_befo
         Ok(())
     }).await.unwrap();
 }
+
+#[tokio::test]
+async fn file_spoilers_mixed_flags_dtos_edits_payloads_and_previews() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let first = upload(&mut david, "secret.png").await;
+    let second = upload(&mut david, "public.txt").await;
+    let first_id = blob_id(&a, &first);
+    // DTO readers use analyzed metadata; this test does not depend on local image codecs.
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE active_storage_blobs SET content_type='image/png',metadata=json_set(metadata,'$.width',800,'$.height',600,'$.analyzed',true) WHERE id=?", [first_id])?;
+        Ok(())
+    }).await.unwrap();
+    let created = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        &json!({"clientMessageId":"mixed-spoilers", "markdownSource":"Spoiler files", "attachmentSignedIds":[first.signed_id,second.signed_id], "attachmentSpoilers":[true,false]}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let message: api::MessageDTO = parse(&created);
+    let id = message.id;
+    let files = message.attachments.as_ref().unwrap();
+    assert!(files[0].spoiler);
+    assert!(!files[1].spoiler);
+    assert_eq!(files[0].preview, api::AttachmentPreview::Image);
+    assert!(files[0].url.contains("/blobs/redirect/"));
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"), &json!({"markdownSource":"Edited caption"}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    assert_eq!(parse::<api::MessageDTO>(&edited).attachments, message.attachments);
+    let pinned = david.write(json_body(Method::POST, &format!("/api/v1/messages/{id}/pin"), &json!({}))).await;
+    assert_eq!(pinned.status, StatusCode::CREATED, "{}", pinned.text());
+    for path in [format!("/api/v1/rooms/{ALL_TALK}/messages"), format!("/api/v1/rooms/{ALL_TALK}/pins"), format!("/api/v1/rooms/{ALL_TALK}/files"), "/api/v1/search?q=Edited".into()] {
+        let reply = david.send(get(&path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
+        assert!(reply.text().contains("\"spoiler\":true"), "{path}: {}", reply.text());
+    }
+    let app = a.booted.app.clone();
+    a.db().read(move |conn| {
+        let message = campfire_db::Message::find(conn, id)?;
+        let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+        presenter.current_user_id = Some(DAVID);
+        presenter.cache_base_url = Some("https://payload.test".into());
+        assert!(presenter.attachment(&message)?.unwrap().spoiler);
+        let payload = presenter.agent_message_payload(&message)?;
+        assert_eq!(payload["attachments"][0]["spoiler"], true);
+        assert_eq!(payload["attachments"][1]["spoiler"], false);
+        assert_eq!(presenter.preload_payload(std::slice::from_ref(&message))?.agent_message_payload(&message)?, payload);
+        let push = campfire_db::PushSubscription::payload_for(conn, &*app.db.env().rich_text, &campfire_db::Room::find(conn, ALL_TALK)?, &message)?;
+        assert!(serde_json::to_value(push).unwrap().get("image").is_none());
+        Ok(())
+    }).await.unwrap();
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"), &json!({"markdownSource":"Edited caption", "attachmentSpoilers":[false,true]}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    assert_eq!(parse::<api::MessageDTO>(&edited).attachments.unwrap().iter().map(|file|file.spoiler).collect::<Vec<_>>(), [false,true]);
+    let invalid = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"), &json!({"markdownSource":"Edited caption", "attachmentSpoilers":[]}))).await;
+    assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", invalid.text());
+}
+
+#[tokio::test]
+async fn file_spoilers_single_and_scheduled_files_preserve_flags_on_reorder_and_dispatch() {
+    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let mut david = a.sign_in(DAVID).await;
+    let single = upload(&mut david, "single.txt").await;
+    let created = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        &json!({"clientMessageId":"single-spoiler", "attachmentSignedId":single.signed_id, "attachmentSpoilers":[true]}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let single_created: api::MessageDTO = parse(&created);
+    let single_attachment = single_created.attachment.unwrap();
+    assert!(single_attachment.spoiler);
+    let shared_blob = blob_id(&a, &single);
+    let public = a.db().write(move |tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
+        room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(shared_blob),
+        ..Default::default()
+    })).await.unwrap();
+    let read = david.send(get(&format!("/api/v1/messages/{}", public.id))).await;
+    assert_eq!(read.status, StatusCode::OK, "{}", read.text());
+    let public_attachment = parse::<api::MessageRead>(&read).message.attachment.unwrap();
+    assert_eq!(public_attachment.url, single_attachment.url);
+    assert!(!public_attachment.spoiler);
+    let original = david.send(get(&format!("/api/v1/messages/{}", single_created.id))).await;
+    assert!(parse::<api::MessageRead>(&original).message.attachment.unwrap().spoiler);
+    let first = upload(&mut david, "scheduled-secret.txt").await;
+    let second = upload(&mut david, "scheduled-public.txt").await;
+    let created = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+        &json!({"markdownSource":"", "sendAt":"2026-03-03T16:00:00Z", "attachmentSignedIds":[first.signed_id,second.signed_id], "attachmentSpoilers":[true,false]}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let row: api::ScheduledMessage = parse(&created);
+    let id = row.id;
+    let edit = david.write(json_body(Method::PATCH, &format!("/api/v1/scheduled_messages/{id}"),
+        &json!({"markdownSource":"Scheduled caption", "attachmentSignedIds":[second.signed_id,first.signed_id]}))).await;
+    assert_eq!(edit.status, StatusCode::OK, "{}", edit.text());
+    assert_eq!(parse::<api::ScheduledMessage>(&edit).attachments.iter().map(|file|file.attachment.spoiler).collect::<Vec<_>>(), [false,true]);
+    let sent = david.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{id}/send_now"), &json!({}))).await;
+    assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
+    let sent: api::ScheduledMessage = parse(&sent);
+    assert_eq!(sent.attachments.iter().map(|file|file.attachment.spoiler).collect::<Vec<_>>(), [false,true]);
+    a.db().read(move |conn| {
+        let message = campfire_db::Message::find(conn, sent.sent_message_id.unwrap())?;
+        assert_eq!(message.attachments(conn)?.iter().map(|(file,_)|file.spoiler).collect::<Vec<_>>(), [false,true]);
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn file_spoilers_thread_and_board_openers_store_the_per_file_flag() {
+    for index in 1..3 {
+        let a = app(true).await.expect("restored default seed").without_job_runner().await;
+        let mut david = a.sign_in(DAVID).await;
+        let file = upload(&mut david, "opener.txt").await;
+        let (path, body) = file_posts("spoiler-opener", json!({"attachmentSignedId":file.signed_id, "attachmentSpoilers":[true]}))[index].clone();
+        let reply = david.write(json_body(Method::POST, &path, &body)).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{path}: {}", reply.text());
+        a.db().read(|conn| {
+            let id = conn.query_row("SELECT id FROM messages WHERE client_message_id='spoiler-opener'", [], |row| row.get(0))?;
+            assert!(campfire_db::Message::find(conn, id)?.attachment(conn)?.unwrap().0.spoiler);
+            Ok(())
+        }).await.unwrap();
+    }
+}

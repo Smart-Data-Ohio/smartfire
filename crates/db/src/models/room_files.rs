@@ -29,6 +29,7 @@ const DOCUMENT: &str = "b.content_type LIKE 'application/pdf' OR b.content_type 
 const OTHER: &str = "b.content_type NOT LIKE 'image/%' AND b.content_type NOT LIKE 'video/%' AND b.content_type NOT LIKE 'application/pdf' AND b.content_type NOT LIKE 'text/%' AND b.content_type NOT LIKE 'application/msword' AND b.content_type NOT LIKE 'application/vnd.ms-%' AND b.content_type NOT LIKE 'application/vnd.openxmlformats-officedocument.%' AND b.content_type NOT LIKE 'application/vnd.oasis.opendocument.%'";
 #[derive(Debug)]
 pub struct Upload {
+    pub spoiler: bool,
     pub blob_id: i64,
     pub message_id: i64,
     pub thread_id: Option<i64>,
@@ -59,7 +60,7 @@ pub fn uploads(
     };
     let mut values = vec![Value::Integer(room_id)];
     let mut sql = format!(
-        "SELECT a.blob_id,m.id AS file_message_id,m.thread_id,a.created_at AS file_created_at,u.* FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND m.room_id=? AND ({condition})"
+        "SELECT a.spoiler AS file_spoiler,a.blob_id,m.id AS file_message_id,m.thread_id,a.created_at AS file_created_at,u.* FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id=a.blob_id JOIN messages m ON m.id=a.record_id JOIN users u ON u.id=m.creator_id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND m.room_id=? AND ({condition})"
     );
     if !filename.is_empty() {
         sql.push_str(" AND LOWER(b.filename) LIKE ? ESCAPE '\\'");
@@ -75,9 +76,10 @@ pub fn uploads(
         .prepare(&sql)?
         .query_map(rusqlite::params_from_iter(values), |r| {
             Ok(Upload {
-                blob_id: r.get(0)?,
+                spoiler: r.get("file_spoiler")?,
+                blob_id: r.get("blob_id")?,
                 message_id: r.get("file_message_id")?,
-                thread_id: r.get(2)?,
+                thread_id: r.get("thread_id")?,
                 creator_name: crate::User::from_row(r)?.display_name().to_owned(),
                 created_at: r.get("file_created_at")?,
             })

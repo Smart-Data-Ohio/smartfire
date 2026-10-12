@@ -99,7 +99,13 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
   const textChanged = text !== item.markdownSource;
   const replyChanged = replyTo !== item.replyToMessageId;
-  const filesChanged = kept.length !== item.attachments.length || uploads.files.length > 0;
+
+  const filesChanged =
+    kept.length !== item.attachments.length ||
+    uploads.files.length > 0 ||
+    kept.some(
+      (file, index) => file.attachment.spoiler !== item.attachments[index]?.attachment.spoiler,
+    );
 
   const dirty =
     text !== start.text || when !== start.when || replyTo !== start.replyTo || filesChanged;
@@ -155,6 +161,10 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
     }
 
     if (filesChanged) {
+      edit.attachmentSpoilers = [
+        ...kept.map((file) => file.attachment.spoiler),
+        ...uploads.files.map((file) => file.spoiler),
+      ];
       edit.attachmentSignedIds = [
         ...kept.map((file) => file.signedId),
         ...uploads.files.flatMap((file) =>
@@ -200,11 +210,28 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
       <div>
         <ScheduledFiles
           files={kept}
+          onToggleSpoiler={(signedId) =>
+            setKept((files) =>
+              files.map((file) =>
+                file.signedId === signedId
+                  ? {
+                      ...file,
+                      attachment: { ...file.attachment, spoiler: !file.attachment.spoiler },
+                    }
+                  : file,
+              ),
+            )
+          }
           onRemove={(signedId) =>
             setKept((files) => files.filter((file) => file.signedId !== signedId))
           }
         />
-        <AttachmentTray files={uploads.files} onRemove={uploads.remove} onRetry={uploads.retry} />
+        <AttachmentTray
+          files={uploads.files}
+          onRemove={uploads.remove}
+          onRetry={uploads.retry}
+          onToggleSpoiler={uploads.toggleSpoiler}
+        />
         <label htmlFor={filesId} className="scheduled-edit-label">
           Add files
         </label>

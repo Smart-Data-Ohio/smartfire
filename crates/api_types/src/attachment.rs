@@ -9,6 +9,8 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Attachment {
+    /// Presentation flag on this attachment, independent of the shared blob.
+    pub spoiler: bool,
     /// `active_storage_blobs.filename`.
     pub filename: String,
     /// `active_storage_blobs.content_type`; `application/octet-stream` when unknown.

@@ -240,6 +240,10 @@ pub struct CreateMessage {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attachment_signed_ids: Option<Vec<String>>,
+    /// One flag per uploaded file, in signed-id order. Omitted means public on create.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_spoilers: Option<Vec<bool>>,
     /// Google Drive file ids to pin (`message[drive_file_ids][]`). Left out when there are none.
     /// At most ten; an invalid id is a 422, as the classic composer is. A message may be empty
     /// of Markdown when it carries one of these or a file.
@@ -258,6 +262,10 @@ pub struct CreateMessage {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateMessage {
+    /// Replace the retained files' flags in attachment order. Omit to keep them.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_spoilers: Option<Vec<bool>>,
     /// The new Markdown, up to 50 000 characters; blank only when the message has an
     /// attachment or a Drive file left. Always sent: the classic update without it turns the
     /// message into rich text.

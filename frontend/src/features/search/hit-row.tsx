@@ -6,6 +6,7 @@ import { formatFull } from "../../lib/time.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
 import { messageFiles } from "../messages/message-files.ts";
 import { useSpoilerReveal } from "../messages/spoilers.ts";
@@ -68,20 +69,22 @@ function HitAttachment({ message }: { readonly message: MessageDTO }) {
     return files.map((attachment, index) => (
       // biome-ignore lint/suspicious/noArrayIndexKey: attachment-id order is stable, including shared blobs
       <span key={`${index}:${attachment.url}`} className="search-hit-file">
-        {attachment.thumbnailUrl === null ? (
-          <span className="search-hit-file-icon">
-            <Icon name={fileIcon(attachment.contentType)} size={16} />
-          </span>
-        ) : (
-          <img
-            className="search-hit-thumb"
-            src={attachment.thumbnailUrl}
-            alt=""
-            width={40}
-            height={40}
-            loading="lazy"
-          />
-        )}
+        <FileSpoiler spoiler={attachment.spoiler}>
+          {attachment.thumbnailUrl === null ? (
+            <span className="search-hit-file-icon">
+              <Icon name={fileIcon(attachment.contentType)} size={16} />
+            </span>
+          ) : (
+            <img
+              className="search-hit-thumb"
+              src={attachment.thumbnailUrl}
+              alt=""
+              width={40}
+              height={40}
+              loading="lazy"
+            />
+          )}
+        </FileSpoiler>
         <span className="search-hit-file-name">{attachment.filename}</span>
         <span className="search-hit-file-size">{formatBytes(attachment.byteSize)}</span>
       </span>

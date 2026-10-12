@@ -40,6 +40,7 @@ fn a_message_carries_its_play_sound() {
 
 fn attachment() -> Attachment {
     Attachment {
+        spoiler: false,
         filename: "roadmap.png".into(),
         content_type: "image/png".into(),
         byte_size: 48_213,
@@ -125,6 +126,7 @@ fn a_message_carries_its_attachment_reactions_boosts_pin_and_thread() {
     assert_eq!(
         wire["attachment"],
         json!({
+            "spoiler": false,
             "filename": "roadmap.png",
             "contentType": "image/png",
             "byteSize": 48213,
@@ -167,6 +169,7 @@ fn attachment_previews_are_lowercase() {
 fn message_edits_and_sources_round_trip() {
     assert_wire(
         &UpdateMessage {
+            attachment_spoilers: None,
             markdown_source: "Hello **again**".into(),
             remove_drive_file_ids: None,
         },
@@ -216,6 +219,7 @@ fn uploads_round_trip() {
             sticker_id: None,
             attachment_signed_id: Some("eyJfcmFpbHMiOnt9--abc".into()),
             attachment_signed_ids: None,
+            attachment_spoilers: None,
             drive_file_ids: None,
         },
         json!({
@@ -528,6 +532,7 @@ fn preview_and_scheduled_messages_round_trip() {
             reply_to_message_id: None,
             attachment_signed_id: None,
             attachment_signed_ids: None,
+            attachment_spoilers: None,
         },
         json!({
             "markdownSource": "Standup in 5",
@@ -543,6 +548,7 @@ fn preview_and_scheduled_messages_round_trip() {
             reply_to_message_id: None,
             attachment_signed_id: None,
             attachment_signed_ids: None,
+            attachment_spoilers: None,
         },
         json!({"markdownSource": "Standup in 10"}),
     );
@@ -685,6 +691,7 @@ fn threads_round_trip() {
                 sticker_id: None,
                 attachment_signed_id: None,
                 attachment_signed_ids: None,
+            attachment_spoilers: None,
                 drive_file_ids: None,
             },
         },

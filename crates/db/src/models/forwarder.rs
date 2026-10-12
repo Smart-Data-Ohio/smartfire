@@ -225,6 +225,7 @@ fn build_forward(
     let mut attachment_blob_ids = Vec::new();
     let files = source.attachments(tx.conn())?;
     let grouped = files.iter().any(|(attachment, _)| attachment.name == "attachments");
+    let attachment_spoilers = files.iter().map(|(attachment, _)| attachment.spoiler).collect();
     for (_, blob) in files {
         let copy = copier.copy(tx, &blob)?;
         if !grouped {
@@ -241,6 +242,7 @@ fn build_forward(
         body: Some(body),
         attachment_blob_id,
         attachment_blob_ids,
+        attachment_spoilers,
         forwarded_from_message_id: Some(source.id),
         forwarded_at: Some(tx.now()),
         forwarded_markdown: source.markdown() || source.forwarded_markdown,

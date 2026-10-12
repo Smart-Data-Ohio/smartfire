@@ -16,7 +16,7 @@ use campfire_runtime::presenters::attachments::Assignment;
 use campfire_runtime::context::db_error;
 
 use crate::dto;
-use crate::endpoints::{before_actions, blob_exists, body, grouped_signed_ids, message_page, now, require_grouped_uploads, set_room};
+use crate::endpoints::{before_actions, blob_exists, body, file_spoilers, grouped_signed_ids, message_page, now, require_grouped_uploads, set_room};
 use crate::error::{fail, not_found, validation};
 
 endpoint!(
@@ -197,6 +197,7 @@ async fn message_params(
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
     let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), input.attachment_signed_ids.unwrap_or_default())?;
+    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()))?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
     if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.sticker_id.is_none() && input.markdown_source.trim().is_empty() {
@@ -236,6 +237,7 @@ async fn message_params(
         markdown_source: Some(input.markdown_source).filter(|source| !source.trim().is_empty()),
         attachment: signed_id.map(Assignment::Signed),
         attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
+                attachment_spoilers,
         attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: concerns::require_current_user(c)?.id },
         client_message_id: Some(client_message_id),
         reply_to_message_id: input.reply_to_message_id,

@@ -5,7 +5,15 @@ import type { Attachment } from "../../src/gen/Attachment.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessageSticker } from "../../src/gen/MessageSticker.ts";
 import { validation } from "../http.ts";
-import { field, intField, isRecord, type Json, stringArrayField, stringField } from "../json.ts";
+import {
+  field,
+  intField,
+  isBoolean,
+  isRecord,
+  type Json,
+  stringArrayField,
+  stringField,
+} from "../json.ts";
 import { SOURCE_LIMIT } from "./model.ts";
 
 /** A `CreateMessage` body that passed validation. */
@@ -49,7 +57,7 @@ export function groupedFiles(
     throw validation("attachmentSignedIds", "includes a duplicate file");
   }
 
-  return ids.map(attach);
+  return withSpoilers(body, ids.map(attach));
 }
 
 /** The `clientMessageId`, checked first so a retry is answered before anything else. */
@@ -90,7 +98,13 @@ export function parseMessage(
   const clientMessageId = clientMessageIdOf(body);
   const signedId = stringField(body, "attachmentSignedId");
   const attachments = groupedFiles(body, signedId, attach);
-  const single = signedId === null || signedId === "" ? null : attach(signedId);
+
+  const single =
+    signedId === null || signedId === ""
+      ? null
+      : (withSpoilers(body, [attach(signedId)])[0] ?? null);
+
+  if (attachments === null && single === null) withSpoilers(body, []);
   const attachment = attachments?.[0] ?? single;
   const driveFileIds = stringArrayField(body, "driveFileIds") ?? [];
 
@@ -144,4 +158,27 @@ export function nestedMessage(body: Json | undefined): Json | undefined {
   const message = field(body, "message");
 
   return isRecord(message) ? message : undefined;
+}
+
+/** Flags are owned by the attachment, never written back to the uploaded blob. */
+export function withSpoilers(
+  body: Json | undefined,
+  files: readonly Attachment[],
+  retained: readonly Attachment[] = [],
+): readonly Attachment[] {
+  const raw = field(body, "attachmentSpoilers");
+
+  if (
+    raw !== undefined &&
+    (!Array.isArray(raw) || raw.length !== files.length || !raw.every(isBoolean))
+  ) {
+    throw validation("attachmentSpoilers", "must have one flag per file");
+  }
+
+  const flags = Array.isArray(raw) ? raw.filter(isBoolean) : null;
+
+  return files.map((file, index) => ({
+    ...file,
+    spoiler: flags?.[index] ?? retained.find((kept) => kept.url === file.url)?.spoiler ?? false,
+  }));
 }

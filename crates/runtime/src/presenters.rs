@@ -575,9 +575,9 @@ impl<'a> Presenter<'a> {
 
     /// `message.attachment` as `Messages::AttachmentPresentation` needs it.
     pub fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
-        let blob = self.message_files(message)?.blobs.into_iter().next();
-        let Some(blob) = blob else { return Ok(None) };
-        self.attachment_blob(message, &blob).map(Some)
+        let file = self.message_files(message)?.files.into_iter().next();
+        let Some(file) = file else { return Ok(None) };
+        self.attachment_blob(message, &file.blob, file.spoiler).map(Some)
     }
 
     pub fn message_files(&self, message: &Message) -> Result<campfire_storage::blob::MessageAttachments> {
@@ -588,11 +588,13 @@ impl<'a> Presenter<'a> {
             .map_err(storage_error)?.remove(&message.id).unwrap_or_default())
     }
 
-    pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
-        if blob.is_video() && (blob.is_previewable() || blob.is_variable()) {
+    pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob, spoiler: bool) -> Result<AttachmentView> {
+        if !spoiler && blob.is_video() && (blob.is_previewable() || blob.is_variable()) {
             self.recover_attachment_preview(message, blob)?;
         }
-        self.attachment_file(blob)
+        let mut view = self.attachment_file(blob)?;
+        view.spoiler = spoiler;
+        Ok(view)
     }
 
     pub fn attachment_file(&self, blob: &campfire_storage::Blob) -> Result<AttachmentView> {
@@ -627,6 +629,7 @@ impl<'a> Presenter<'a> {
             AttachmentPreview::File
         };
         Ok(AttachmentView {
+            spoiler: false,
             filename: blob.filename.to_string(),
             filename_base: blob.filename.base().to_string(),
             blob_path: campfire_storage::paths::blob_redirect_path(verifier, blob, None),

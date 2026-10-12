@@ -44,7 +44,7 @@ import { type RoomRecord, VIEWER_ID } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { imageIcons, searchIcons } from "./emoji.ts";
 import { iso, type MessageDraft, plainDraft, SOURCE_LIMIT, type ThreadRecord } from "./model.ts";
-import { checkMarkdown, groupedFiles } from "./posting.ts";
+import { checkMarkdown, groupedFiles, withSpoilers } from "./posting.ts";
 import type { Threads } from "./threads.ts";
 import type { Uploads } from "./uploads.ts";
 import { endOfLocalDay, leadingTime, longDate, longTime, trailingTime } from "./when.ts";
@@ -739,15 +739,24 @@ export function createComposer(
   const markdownOf = (body: Json | undefined, hasFiles: boolean): string =>
     checkMarkdown(stringField(body, "markdownSource"), hasFiles);
 
-  const scheduledFiles = (body: Json | undefined): ScheduledMessage["attachments"] => {
+  const scheduledFiles = (
+    body: Json | undefined,
+    retained: ScheduledMessage["attachments"] = [],
+  ): ScheduledMessage["attachments"] => {
     const single = stringField(body, "attachmentSignedId");
-    const grouped = groupedFiles(body, single, uploads.attachment);
+    groupedFiles(body, single, uploads.attachment);
     const many = stringArrayField(body, "attachmentSignedIds") ?? [];
     const ids = many.length > 0 ? many : single ? [single] : [];
 
+    const files = withSpoilers(
+      body,
+      ids.map(uploads.attachment),
+      retained.map((file) => file.attachment),
+    );
+
     return ids.map((signedId, index) => ({
       signedId,
-      attachment: grouped?.[index] ?? uploads.attachment(signedId),
+      attachment: files[index] ?? uploads.attachment(signedId),
     }));
   };
 
@@ -954,11 +963,22 @@ export function createComposer(
   const updateScheduled = (id: number, body: Json | undefined): ScheduledMessage => {
     const current = idleOr409(id);
 
+    const retained = current.attachments.map((file) => file.attachment);
+
+    const replacing =
+      field(body, "attachmentSignedIds") !== undefined ||
+      field(body, "attachmentSignedId") !== undefined;
+
+    const flags = replacing ? retained : withSpoilers(body, retained, retained);
+
     const attachments =
       field(body, "attachmentSignedIds") === undefined &&
       field(body, "attachmentSignedId") === undefined
-        ? current.attachments
-        : scheduledFiles(body);
+        ? current.attachments.map((file, index) => ({
+            ...file,
+            attachment: flags[index] ?? file.attachment,
+          }))
+        : scheduledFiles(body, current.attachments);
 
     const markdownSource = checkMarkdown(
       stringField(body, "markdownSource") ?? current.markdownSource,

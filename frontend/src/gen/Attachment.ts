@@ -7,6 +7,10 @@ import type { AttachmentPreview } from "./AttachmentPreview";
  */
 export type Attachment = {
 /**
+ * Presentation flag on this attachment, independent of the shared blob.
+ */
+spoiler: boolean,
+/**
  * `active_storage_blobs.filename`.
  */
 filename: string,

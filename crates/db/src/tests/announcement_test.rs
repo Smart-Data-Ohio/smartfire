@@ -418,6 +418,7 @@ fn announcement_attachments_share_blobs_and_keep_distinct_attachment_rows() {
                 room_id: source,
                 creator_id: id("david"),
                 attachment_blob_id: Some(blob_id),
+                attachment_spoilers: vec![true],
                 ..Default::default()
             },
         )
@@ -428,6 +429,8 @@ fn announcement_attachments_share_blobs_and_keep_distinct_attachment_rows() {
     let source_attachment = t.read(move |c| message.attachments(c)).remove(0).0;
     for copy in t.read(move |c| announcement::copies(c, publication)) {
         let attachment = t.read(move |c| copy.attachments(c)).remove(0).0;
+        assert!(attachment.spoiler);
+        assert!(source_attachment.spoiler);
         assert_eq!(attachment.blob_id, blob_id);
         assert_ne!(attachment.id, source_attachment.id);
     }

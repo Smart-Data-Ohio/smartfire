@@ -35,6 +35,7 @@ const files: Attachment[] = ["first.txt", "second.pdf", "third.png"].map((filena
   preview: "file",
   url: `/files/${filename}`,
   downloadUrl: `/files/${filename}?disposition=attachment`,
+  spoiler: false,
   thumbnailUrl: null,
 }));
 

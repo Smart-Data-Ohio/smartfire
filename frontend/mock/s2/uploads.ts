@@ -66,6 +66,7 @@ export function attachmentOf(blob: BlobRecord): Attachment {
     preview,
     url,
     downloadUrl: `${url}?disposition=attachment`,
+    spoiler: false,
     thumbnailUrl:
       preview === "image"
         ? `${REPRESENTATION_PATH}${blob.signedId}/${THUMBNAIL_VARIATION}/${filename}`

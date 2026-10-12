@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DirectUpload } from "../../src/gen/DirectUpload.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
+import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { MockServer } from "../server.ts";
 import { SEED_IDS } from "../server.ts";
@@ -61,6 +62,7 @@ describe("direct uploads", () => {
       preview: "image",
       url: `/rails/active_storage/blobs/redirect/${upload.signedId}/pixel%20art.gif`,
       downloadUrl: `/rails/active_storage/blobs/redirect/${upload.signedId}/pixel%20art.gif?disposition=attachment`,
+      spoiler: false,
       thumbnailUrl: expect.stringMatching(
         /^\/rails\/active_storage\/representations\/redirect\/.+\/pixel%20art\.gif$/,
       ),
@@ -312,5 +314,106 @@ describe("grouped uploads", () => {
     );
 
     expect([tooMany.status, repeated.status, mixed.status]).toEqual([422, 422, 422]);
+  });
+});
+
+describe("attachment spoilers", () => {
+  it("keeps mixed flags through message edits", async () => {
+    const { server } = harness();
+    const first = await declare(server, "secret.gif", "image/gif", GIF);
+    const second = await declare(server, "public.gif", "image/gif", GIF);
+    await put(server, first, "image/gif", GIF);
+    await put(server, second, "image/gif", GIF);
+
+    const message = await expectStatus<MessageDTO>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/messages`,
+      messageBody("spoiler-mixed", "", {
+        attachmentSignedIds: [first.signedId, second.signedId],
+        attachmentSpoilers: [true, false],
+      }),
+      201,
+    );
+
+    expect(message.attachments?.map((file) => file.spoiler)).toEqual([true, false]);
+
+    const edited = await expectStatus<MessageDTO>(
+      server,
+      "PATCH",
+      `/api/v1/messages/${message.id}`,
+      { markdownSource: "Caption" },
+      200,
+    );
+
+    expect(edited.attachments?.map((file) => file.spoiler)).toEqual([true, false]);
+
+    const changed = await expectStatus<MessageDTO>(
+      server,
+      "PATCH",
+      `/api/v1/messages/${message.id}`,
+      { markdownSource: "Caption", attachmentSpoilers: [false, true] },
+      200,
+    );
+
+    expect(changed.attachments?.map((file) => file.spoiler)).toEqual([false, true]);
+
+    const invalid = await send(server, "PATCH", `/api/v1/messages/${message.id}`, {
+      markdownSource: "Caption",
+      attachmentSpoilers: [],
+    });
+
+    expect(invalid.status).toBe(422);
+  });
+
+  it("preserves scheduled flags through retained-file reordering, edits and sending", async () => {
+    const { server } = harness();
+    const first = await declare(server, "scheduled-secret.gif", "image/gif", GIF);
+    const second = await declare(server, "scheduled-public.gif", "image/gif", GIF);
+    await put(server, first, "image/gif", GIF);
+    await put(server, second, "image/gif", GIF);
+
+    const item = await expectStatus<ScheduledMessage>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/scheduled_messages`,
+      {
+        markdownSource: "",
+        sendAt: "2030-01-01T00:00:00Z",
+        attachmentSignedIds: [first.signedId, second.signedId],
+        attachmentSpoilers: [true, false],
+      },
+      201,
+    );
+
+    const reordered = await expectStatus<ScheduledMessage>(
+      server,
+      "PATCH",
+      `/api/v1/scheduled_messages/${item.id}`,
+      { attachmentSignedIds: [second.signedId, first.signedId] },
+      200,
+    );
+
+    expect(reordered.attachments.map((file) => file.attachment.spoiler)).toEqual([false, true]);
+
+    const changed = await expectStatus<ScheduledMessage>(
+      server,
+      "PATCH",
+      `/api/v1/scheduled_messages/${item.id}`,
+      { attachmentSpoilers: [true, false] },
+      200,
+    );
+
+    expect(changed.attachments.map((file) => file.attachment.spoiler)).toEqual([true, false]);
+
+    const sent = await expectStatus<ScheduledMessage>(
+      server,
+      "POST",
+      `/api/v1/scheduled_messages/${item.id}/send_now`,
+      {},
+      200,
+    );
+
+    expect(sent.attachments.map((file) => file.attachment.spoiler)).toEqual([true, false]);
   });
 });

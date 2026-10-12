@@ -209,6 +209,7 @@ export interface BoardPostInput {
   readonly brief: string;
   readonly attachmentSignedId?: string | null;
   readonly attachmentSignedIds?: readonly string[];
+  readonly attachmentSpoilers?: readonly boolean[];
   /**
    * The submission's retry identity (a UUID): keep it across retries of one post, so a retry after
    * a lost reply answers the post already made. The brief's message id is the same.
@@ -234,6 +235,9 @@ function postMessage(input: BoardPostInput): CreateMessage | null {
     replyNotifyAuthor: null,
     attachmentSignedId: input.attachmentSignedId ?? null,
   };
+
+  if (input.attachmentSpoilers !== undefined)
+    message.attachmentSpoilers = [...input.attachmentSpoilers];
 
   if (attachmentSignedIds.length > 0) {
     message.attachmentSignedIds = [...attachmentSignedIds];

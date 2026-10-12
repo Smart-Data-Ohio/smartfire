@@ -13,6 +13,7 @@ import { toast } from "../../../ui/toast-store.ts";
 
 /** One file in the composer's tray. */
 export interface TrayFile {
+  readonly spoiler: boolean;
   readonly id: string;
   readonly file: File;
   /** A `blob:` URL for an image's thumbnail, else `null`. */
@@ -30,6 +31,7 @@ export interface Attachments {
   readonly add: (files: readonly File[]) => number;
   readonly remove: (id: string) => void;
   readonly retry: (id: string) => void;
+  readonly toggleSpoiler: (id: string) => void;
   /**
    * Removes only the files captured by a send, preserving later additions. Pending rows keep
    * showing the thumbnails, so their URLs are released a little later instead of now.
@@ -57,6 +59,7 @@ export function pastedName(file: File, now: Date = new Date()): File {
 /** What a pending message row shows for a tray file. */
 export function pendingAttachment(entry: TrayFile): PendingAttachment {
   return {
+    spoiler: entry.spoiler,
     filename: entry.file.name,
     contentType: entry.file.type === "" ? "application/octet-stream" : entry.file.type,
     byteSize: entry.file.size,
@@ -77,14 +80,18 @@ export const MAX_FILES = 10;
 export function fileOptions(files: readonly TrayFile[]): SendOptions {
   const [first] = files;
 
-  if (files.length <= 1) {
+  if (first === undefined) return { attachmentSignedId: null, attachment: null };
+
+  if (files.length === 1) {
     return {
+      attachmentSpoilers: [first.spoiler],
       attachmentSignedId: first?.snapshot.signedId ?? null,
       attachment: first === undefined ? null : pendingAttachment(first),
     };
   }
 
   return {
+    attachmentSpoilers: files.map((entry) => entry.spoiler),
     attachmentSignedId: null,
     attachmentSignedIds: files.flatMap((entry) =>
       entry.snapshot.signedId === null ? [] : [entry.snapshot.signedId],
@@ -168,6 +175,7 @@ export function useAttachments(max: number): Attachments {
 
       return {
         id,
+        spoiler: false,
         file,
         previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
         snapshot: task.snapshot,
@@ -226,6 +234,10 @@ export function useAttachments(max: number): Attachments {
     add,
     remove,
     retry,
+    toggleSpoiler: (id) =>
+      setFiles((current) =>
+        current.map((entry) => (entry.id === id ? { ...entry, spoiler: !entry.spoiler } : entry)),
+      ),
     clearSent,
   };
 }

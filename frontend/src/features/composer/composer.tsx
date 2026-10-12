@@ -95,6 +95,7 @@ export interface ComposerDraft {
   readonly attachmentSignedId: string | null;
   /** Grouped uploaded files in tray order; empty for the legacy single-file slot. */
   readonly attachmentSignedIds: readonly string[];
+  readonly attachmentSpoilers: readonly boolean[];
   /** Drive files pinned on the message. Empty when there are none. */
   readonly driveFileIds: readonly string[];
 }
@@ -927,6 +928,7 @@ export function Composer({
         markdown,
         attachmentSignedId: uploaded.attachmentSignedId ?? null,
         attachmentSignedIds: uploaded.attachmentSignedIds ?? [],
+        attachmentSpoilers: uploaded.attachmentSpoilers ?? [],
         driveFileIds: drive.map((file) => file.id),
       })
         .then(
@@ -992,6 +994,7 @@ export function Composer({
         threadId,
         // Classic's schedule menu keeps the draft's reply target too.
         replyToMessageId: taken.target?.messageId ?? null,
+        attachmentSpoilers: files.map((entry) => entry.spoiler),
         attachmentSignedIds: files.flatMap((entry) =>
           entry.snapshot.signedId === null ? [] : [entry.snapshot.signedId],
         ),
@@ -1259,6 +1262,7 @@ export function Composer({
             files={attachments.files}
             onRemove={attachments.remove}
             onRetry={attachments.retry}
+            onToggleSpoiler={attachments.toggleSpoiler}
           />
           <DrivePendingChips
             files={driveFiles}

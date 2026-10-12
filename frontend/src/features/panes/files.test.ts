@@ -26,6 +26,7 @@ function attachment(
     preview,
     url: `/blobs/${filename}`,
     downloadUrl: `/blobs/${filename}?disposition=attachment`,
+    spoiler: false,
     thumbnailUrl: null,
   };
 }

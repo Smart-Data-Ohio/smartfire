@@ -371,14 +371,38 @@ impl ScheduledMessage {
     }
 
     pub(crate) fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
-        for (attachment, _) in self.attachments(tx.conn())? {
+        let current = self.attachments(tx.conn())?;
+        for (attachment, _) in &current {
             attachment.delete(tx)?;
             if !blob_ids.contains(&attachment.blob_id) {
                 tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
             }
         }
         for &blob_id in blob_ids {
-            Attachment::create(tx, "ScheduledMessage", self.id, "attachments", blob_id)?;
+            let spoiler = current.iter().find(|(attachment, _)| attachment.blob_id == blob_id).is_some_and(|(attachment, _)| attachment.spoiler);
+            Attachment::create_with_spoiler(tx, "ScheduledMessage", self.id, "attachments", blob_id, spoiler)?;
+        }
+        Ok(())
+    }
+
+    pub fn set_attachment_spoilers(&mut self, tx: &mut Tx<'_>, flags: &[bool]) -> Result<()> {
+        let files = self.attachments(tx.conn())?;
+        if flags.len() != files.len() {
+            let mut errors = Errors::default();
+            errors.add("attachment_spoilers", "must have one flag per file");
+            return errors.into_result();
+        }
+        let mut changed = false;
+        for ((attachment, _), &spoiler) in files.iter().zip(flags) {
+            if attachment.spoiler != spoiler {
+                tx.conn().execute_cached("UPDATE active_storage_attachments SET spoiler=? WHERE id=?", params![spoiler, attachment.id])?;
+                changed = true;
+            }
+        }
+        if changed {
+            tx.conn().execute_cached("UPDATE scheduled_messages SET updated_at=? WHERE id=?", params![tx.now(), self.id])?;
+            *self = Self::find(tx.conn(), self.id)?;
+            self.emit_change(tx, false);
         }
         Ok(())
     }
@@ -605,13 +629,15 @@ impl ScheduledMessage {
             return Ok(false);
         }
         let reply_id = reply_source.map(|message| message.id);
+        let files = scheduled.attachments(tx.conn())?;
         let attrs = NewMessage {
+            attachment_spoilers: files.iter().map(|(attachment, _)| attachment.spoiler).collect(),
             room_id: scheduled.room_id,
             creator_id: scheduled.user_id,
             thread_id: scheduled.thread_id,
             reply_to_message_id: reply_id,
             markdown_source: Some(scheduled.markdown_source.clone()).filter(|source| !source.trim().is_empty()),
-            attachment_blob_ids: scheduled.attachments(tx.conn())?.into_iter().map(|(attachment, _)| attachment.blob_id).collect(),
+            attachment_blob_ids: files.iter().map(|(attachment, _)| attachment.blob_id).collect(),
             ..Default::default()
         };
         // Validate before thread joins/reopening mutate state. SQL/rendering failures propagate

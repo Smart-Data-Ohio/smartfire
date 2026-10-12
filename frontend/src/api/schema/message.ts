@@ -179,6 +179,7 @@ export const CreateMessage = Schema.Struct({
   replyNotifyAuthor: Schema.NullOr(Schema.Boolean),
   attachmentSignedId: Schema.NullOr(Schema.String),
   attachmentSignedIds: Schema.optionalKey(Schema.Array(Schema.String)),
+  attachmentSpoilers: Schema.optionalKey(Schema.Array(Schema.Boolean)),
   driveFileIds: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
@@ -188,6 +189,7 @@ export type CreateMessagePin = Assert<Pinned<typeof CreateMessage, GeneratedCrea
 
 /** The body of `PATCH /api/v1/messages/:id`. Always carries the Markdown. */
 export const UpdateMessage = Schema.Struct({
+  attachmentSpoilers: Schema.optionalKey(Schema.Array(Schema.Boolean)),
   markdownSource: Schema.String,
   removeDriveFileIds: Schema.optionalKey(Schema.Array(Schema.String)),
 });

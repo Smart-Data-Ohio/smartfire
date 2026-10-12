@@ -89,6 +89,7 @@ export type ConnectionStatus = "connecting" | "online" | "reconnecting" | "offli
 
 /** What a pending row shows for the file it's sending (the upload already finished). */
 export interface PendingAttachment {
+  readonly spoiler?: boolean;
   readonly filename: string;
   readonly contentType: string;
   readonly byteSize: number;
@@ -110,6 +111,7 @@ export interface PendingMessage {
    * order; absent for none or the legacy single file above.
    */
   readonly attachmentSignedIds?: readonly string[];
+  readonly attachmentSpoilers?: readonly boolean[];
   /** What the pending row shows for those files, in the same order. */
   readonly attachments?: readonly PendingAttachment[];
   /** Drive file ids pinned on the pending message; absent when there are none. */

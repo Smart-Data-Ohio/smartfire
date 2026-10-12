@@ -9,6 +9,7 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
+import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
@@ -66,28 +67,35 @@ function FileRow({ file, now, onJump }: FileItemProps) {
 
   return (
     <li className="file-row">
-      <a className="file-row-main" href={attachment.url} target="_blank" rel="noopener noreferrer">
-        {attachment.thumbnailUrl === null ? (
-          <span className="file-glyph" data-kind={fileIcon(attachment)} aria-hidden="true">
-            <Icon name={fileIcon(attachment)} size={18} />
+      <FileSpoiler spoiler={attachment.spoiler}>
+        <a
+          className="file-row-main"
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {attachment.thumbnailUrl === null ? (
+            <span className="file-glyph" data-kind={fileIcon(attachment)} aria-hidden="true">
+              <Icon name={fileIcon(attachment)} size={18} />
+            </span>
+          ) : (
+            <img className="file-thumb" src={attachment.thumbnailUrl} alt="" loading="lazy" />
+          )}
+          <span className="file-row-text">
+            <span className="file-row-name">{attachment.filename}</span>
+            <span className="file-row-meta">
+              {extension === "" ? null : <span className="file-ext">{extension}</span>}
+              <span className="tabular">{formatBytes(attachment.byteSize)}</span>
+              <span aria-hidden="true">·</span>
+              <span className="file-row-poster">{poster?.name ?? UNKNOWN_NAME}</span>
+              <span aria-hidden="true">·</span>
+              <time dateTime={file.createdAt} title={formatFull(file.createdAt)}>
+                {timeAgo(file.createdAt, now)}
+              </time>
+            </span>
           </span>
-        ) : (
-          <img className="file-thumb" src={attachment.thumbnailUrl} alt="" loading="lazy" />
-        )}
-        <span className="file-row-text">
-          <span className="file-row-name">{attachment.filename}</span>
-          <span className="file-row-meta">
-            {extension === "" ? null : <span className="file-ext">{extension}</span>}
-            <span className="tabular">{formatBytes(attachment.byteSize)}</span>
-            <span aria-hidden="true">·</span>
-            <span className="file-row-poster">{poster?.name ?? UNKNOWN_NAME}</span>
-            <span aria-hidden="true">·</span>
-            <time dateTime={file.createdAt} title={formatFull(file.createdAt)}>
-              {timeAgo(file.createdAt, now)}
-            </time>
-          </span>
-        </span>
-      </a>
+        </a>
+      </FileSpoiler>
       <span className="file-row-actions">
         <IconButton
           icon="arrow-up-right"
@@ -112,29 +120,31 @@ function FileTile({ file, onJump }: Omit<FileItemProps, "now">) {
 
   return (
     <li className="file-tile">
-      <a
-        className="file-tile-link"
-        href={attachment.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Open ${attachment.filename}`}
-      >
-        {attachment.thumbnailUrl === null ? (
-          <span className="file-tile-glyph" aria-hidden="true">
-            <Icon name={fileIcon(attachment)} size={22} />
+      <FileSpoiler spoiler={attachment.spoiler} tile>
+        <a
+          className="file-tile-link"
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open ${attachment.filename}`}
+        >
+          {attachment.thumbnailUrl === null ? (
+            <span className="file-tile-glyph" aria-hidden="true">
+              <Icon name={fileIcon(attachment)} size={22} />
+            </span>
+          ) : (
+            <img className="file-tile-image" src={attachment.thumbnailUrl} alt="" loading="lazy" />
+          )}
+          {attachment.preview === "video" ? (
+            <span className="file-tile-badge" aria-hidden="true">
+              <Icon name="film" size={12} />
+            </span>
+          ) : null}
+          <span className="file-tile-name" aria-hidden="true">
+            {attachment.filename}
           </span>
-        ) : (
-          <img className="file-tile-image" src={attachment.thumbnailUrl} alt="" loading="lazy" />
-        )}
-        {attachment.preview === "video" ? (
-          <span className="file-tile-badge" aria-hidden="true">
-            <Icon name="film" size={12} />
-          </span>
-        ) : null}
-        <span className="file-tile-name" aria-hidden="true">
-          {attachment.filename}
-        </span>
-      </a>
+        </a>
+      </FileSpoiler>
       <span className="file-tile-actions">
         <IconButton
           icon="arrow-up-right"

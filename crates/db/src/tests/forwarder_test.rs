@@ -158,6 +158,8 @@ fn forwards_snapshot_webhook_embeds_and_attribution_after_source_deletion() {
 fn copies_a_body_and_attachment_snapshot_that_survives_source_edits_and_deletion() {
     let t = frozen();
     let source = source(&t);
+    let mut marked = source.clone();
+    t.write(move |tx| marked.edit(tx, crate::MessageChanges { attachment_spoilers: Some(vec![true]), ..Default::default() }));
     let source_html = t.read(|c| source.body_html(c)).unwrap();
     let copier = Copier::default();
     let forwarded = forward(&t, &source, vec![Destination::room(id("watercooler"))], Some("Context"), &copier).unwrap().unwrap();
@@ -166,6 +168,7 @@ fn copies_a_body_and_attachment_snapshot_that_survives_source_edits_and_deletion
     assert!(forwarded.forwarded());
     assert!(!forwarded.markdown());
     assert_eq!(t.read(|c| forwarded.body_html(c)).unwrap(), source_html);
+    assert!(t.read(|c| forwarded.attachment(c)).unwrap().0.spoiler);
     let (_, copy) = t.read(|c| forwarded.attachment(c)).unwrap();
     let (_, original) = t.read(|c| source.attachment(c)).unwrap();
     assert_ne!(copy.id, original.id);

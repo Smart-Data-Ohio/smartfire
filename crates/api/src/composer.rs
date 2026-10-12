@@ -480,11 +480,13 @@ pub(crate) fn scheduled_rows(
                 row.attachments(conn)?
             };
             let presenter = Presenter::new(conn, app, None);
-            let attachments = files.into_iter().map(|(_, blob)| {
+            let attachments = files.into_iter().map(|(file, blob)| {
                 let blob = campfire_storage::Blob::find(conn, blob.id).map_err(attachments::storage_error)?
                     .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+                let mut view = presenter.attachment_file(&blob)?;
+                view.spoiler = file.spoiler;
                 Ok(api::ScheduledAttachment {
-                    attachment: dto::attachment(presenter.attachment_file(&blob)?, blob.content_type.as_deref(), blob.byte_size),
+                    attachment: dto::attachment(view, blob.content_type.as_deref(), blob.byte_size),
                     signed_id: campfire_storage::paths::signed_blob_id(&*app.storage.verifier, blob.id, None),
                 })
             }).collect::<campfire_db::Result<Vec<_>>>()?;
@@ -606,13 +608,14 @@ async fn create_scheduled(c: &mut Ctx) -> Result {
     // A thread that isn't this room's is a 404, as `rooms/slash_commands#thread_id` makes it.
     let thread_id = room_thread(c, &room, input.thread_id).await?;
     let files = scheduled_uploads(c, input.attachment_signed_id, input.attachment_signed_ids.unwrap_or_default()).await?;
+    let flags = crate::endpoints::file_spoilers(c, input.attachment_spoilers, files.len())?;
     let markdown_source = input.markdown_source;
     let row = c
         .app()
         .db
         .write(move |tx| {
             let blob_ids = scheduled_blob_ids(tx, files, classic::AttachmentPolicy::OwnedUpload { uploader_id: user_id })?;
-            ScheduledMessage::create_with_attachments(
+            let mut row = ScheduledMessage::create_with_attachments(
                 tx,
                 NewScheduledMessage {
                     user_id,
@@ -623,7 +626,9 @@ async fn create_scheduled(c: &mut Ctx) -> Result {
                     send_at,
                 },
                 &blob_ids,
-            )
+            )?;
+            row.set_attachment_spoilers(tx, &flags)?;
+            Ok(row)
         })
         .await
         .map_err(db_error)?;
@@ -659,6 +664,13 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
     } else {
         None
     };
+    let flags = if let Some(flags) = input.attachment_spoilers {
+        let count = if let Some(files) = &files { files.len() } else {
+            let id = initial.id;
+            c.app().db.read(move |conn| Ok(ScheduledMessage::find(conn, id)?.attachments(conn)?.len())).await.map_err(db_error)?
+        };
+        Some(crate::endpoints::file_spoilers(c, Some(flags), count)?)
+    } else { None };
     let change = c
         .app()
         .db
@@ -672,6 +684,7 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
             let reply_to = reply_to.unwrap_or(row.reply_to_message_id);
             let blob_ids = files.map(|files| scheduled_blob_ids(tx, files, classic::AttachmentPolicy::ScheduledUpload { uploader_id: user_id, scheduled_id: row.id })).transpose()?;
             row.update_with_attachments(tx, &source, send_at, reply_to, blob_ids.as_deref())?;
+            if let Some(flags) = flags { row.set_attachment_spoilers(tx, &flags)?; }
             Ok(Change::Saved(Box::new(row)))
         })
         .await

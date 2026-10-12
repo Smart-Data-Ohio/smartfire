@@ -289,6 +289,7 @@ async fn post_message(c: &mut Ctx) -> Result {
         signed_id.as_deref(),
         input.attachment_signed_ids.unwrap_or_default(),
     )?;
+    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()))?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
     if signed_id.is_none()
@@ -352,6 +353,7 @@ async fn post_message(c: &mut Ctx) -> Result {
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),
                 attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
+                attachment_spoilers,
                 attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: creator_id },
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
@@ -561,4 +563,13 @@ async fn index_presence(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     c.json(StatusCode::OK, &api::PresenceList { presences })
+}
+
+/// Boundary validation for the ordered upload flags shared by immediate and scheduled sends.
+pub(crate) fn file_spoilers(c: &mut Ctx, flags: Option<Vec<bool>>, count: usize) -> Result<Vec<bool>> {
+    match flags {
+        Some(flags) if flags.len() != count => Err(fail(c, validation("attachmentSpoilers", "must have one flag per file"))),
+        Some(flags) => Ok(flags),
+        None => Ok(vec![false; count]),
+    }
 }
