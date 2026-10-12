@@ -36,6 +36,56 @@ function put(server: MockServer, upload: DirectUpload, contentType: string, byte
 }
 
 describe("direct uploads", () => {
+  it("allows sent uploads in public bot image slots", async () => {
+    const { server } = harness();
+    const upload = await declare(server, "sent.gif", "image/gif", GIF);
+
+    expect((await put(server, upload, "image/gif", GIF)).status).toBe(204);
+    await expectStatus<MessageDTO>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.quiet}/messages`,
+      messageBody("sent-bot-image", "", { attachmentSignedId: upload.signedId }),
+      201,
+    );
+    await expectStatus(
+      server,
+      "POST",
+      "/api/v1/admin/bots",
+      {
+        name: "Public bot",
+        avatar: upload.signedId,
+      },
+      200,
+    );
+  });
+
+  it("keeps uploaded workspace icon bytes out of shared caches", async () => {
+    const { server } = harness();
+    const bytes = GIF;
+    const upload = await declare(server, "private.gif", "image/gif", bytes);
+
+    expect((await put(server, upload, "image/gif", bytes)).status).toBe(204);
+    await expectStatus(
+      server,
+      "POST",
+      "/api/v1/admin/icons",
+      {
+        name: "private_upload",
+        title: "Private upload",
+        signedId: upload.signedId,
+      },
+      200,
+    );
+
+    for (const path of ["/icons/private_upload", "/icons/private_upload?still=1"]) {
+      const response = await server.handleBinary({ method: "GET", path, bytes: null });
+
+      expect(response.status).toBe(200);
+      expect(response.headers["Cache-Control"]).toBe("private, no-store");
+    }
+  });
+
   it("declares, uploads and attaches an image, reading its size", async () => {
     const { server } = harness();
     const upload = await declare(server, "pixel art.gif", "image/gif", GIF);
