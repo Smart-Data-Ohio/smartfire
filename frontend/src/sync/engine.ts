@@ -25,7 +25,8 @@ import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
-import type { SidebarState } from "../store/state.ts";
+import { searchMutations } from "../store/search.ts";
+import type { SidebarState, State } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
 import { captureWorkRead, workDetailStale } from "../store/work.ts";
 import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
@@ -44,10 +45,12 @@ import {
 import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { recoverResyncedRooms, roomVisitToken } from "./session.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
-import { paneProblem, UNAVAILABLE } from "./settle.ts";
+import { paneProblem, refetchThread, UNAVAILABLE } from "./settle.ts";
 import { answeredForThisPage, reloadForNewSignIn, stopRunForNewSignIn } from "./sign-in-change.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
+import { threadAccessChanges } from "./thread-access-sync.ts";
+import { threadTopic } from "./thread-actions.ts";
 import {
   beginThreadLoad,
   finishThreadLoad,
@@ -730,6 +733,71 @@ export class Engine extends Context.Service<
         );
       });
 
+      /**
+       * After a batch changed the viewer's access to private threads: a lost thread leaves the
+       * cached search results, and the inbox (which no longer lists it, or lists it again) reloads
+       * when next shown, with the badge now. A regained thread's open pane subscribes again (the
+       * server dropped the topic with the access) and loads afresh; a closed one gets its record
+       * and its parent's reply summary back.
+       */
+      const followThreadAccess = Effect.fnUntraced(function* (
+        before: State,
+        events: readonly SyncEvent[],
+        open: ReadonlySet<string>,
+        scope: Scope.Scope,
+      ) {
+        const { lost, regained } = threadAccessChanges(before, store.getState(), events);
+
+        if (lost.length === 0 && regained.length === 0) {
+          return;
+        }
+
+        for (const threadId of lost) {
+          searchMutations.forgetThread(threadId);
+        }
+
+        mutations.markActivityStale();
+        yield* Effect.forkIn(refreshUnreadCount(), scope);
+
+        for (const threadId of regained) {
+          const topic = threadTopic(threadId);
+
+          if (open.has(topic)) {
+            yield* topics.forgetRejected(topic);
+            yield* Effect.forkIn(
+              resyncThread(threadId).pipe(
+                Effect.catch((error) =>
+                  Effect.sync(() => mutations.setThreadPageFailed(threadId)).pipe(
+                    Effect.andThen(
+                      Effect.logWarning(`sync: ${topic} reload failed`, error.message),
+                    ),
+                  ),
+                ),
+                Effect.provideContext(api),
+              ),
+              scope,
+            );
+          } else {
+            const since = store.getState().removalCount;
+
+            yield* Effect.forkIn(
+              refetchThread(threadId).pipe(
+                Effect.tap((detail) =>
+                  Effect.sync(() => {
+                    if (detail !== null) mutations.regainedThread(detail, since);
+                  }),
+                ),
+                Effect.catch((error) =>
+                  Effect.logWarning(`sync: ${topic} reload failed`, error.message),
+                ),
+                Effect.provideContext(api),
+              ),
+              scope,
+            );
+          }
+        }
+      });
+
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */
       const applyEvents = Effect.fnUntraced(function* (
         events: readonly SyncEvent[],
@@ -797,6 +865,8 @@ export class Engine extends Context.Service<
           }
         }
 
+        const before = store.getState();
+
         mutations.applyEvents(fresh, now);
 
         if (fresh.some((event) => event.type === "blocks.updated")) {
@@ -819,6 +889,8 @@ export class Engine extends Context.Service<
         for (const threadId of workIds) {
           yield* Effect.forkIn(refreshWork(threadId).pipe(Effect.provideContext(api)), scope);
         }
+
+        yield* followThreadAccess(before, fresh, open, scope);
 
         const refreshes = roomRefreshIds(fresh)
           .map((roomId) => ({

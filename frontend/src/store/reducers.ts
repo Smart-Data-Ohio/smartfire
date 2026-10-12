@@ -21,7 +21,7 @@ import {
   invalidateGithub,
   reconcileMessage,
 } from "./cards.ts";
-import { updateConversationRoom } from "./conversations.ts";
+import { isRemovedThread, updateConversationRoom } from "./conversations.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
@@ -55,7 +55,7 @@ import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { compareSnapshots } from "./snapshot-order.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
-import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
+import { regainThread, removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
 import { receiveWorkThread } from "./work.ts";
 import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
 
@@ -546,9 +546,25 @@ export function applyPage(
     return state;
   }
 
-  const landed = landPage(state, timeline, page, mode);
+  const landed = landPage(state, timeline, withoutRemovedIndicators(state, page), mode);
 
   return withTimeline(landed.state, roomId, landed.timeline);
+}
+
+/** A page sent before a thread was removed still shows it under its parent; it shows none. */
+function withoutRemovedIndicators(state: State, page: MessagePage): MessagePage {
+  if (!page.messages.some((message) => isRemovedThread(state, message.thread?.threadId ?? null))) {
+    return page;
+  }
+
+  return {
+    ...page,
+    messages: page.messages.map((message) =>
+      isRemovedThread(state, message.thread?.threadId ?? null)
+        ? { ...message, thread: null }
+        : message,
+    ),
+  };
 }
 
 /** Lands a page of a thread's replies, as `applyPage` does for a room. */
@@ -561,7 +577,8 @@ export function applyThreadPage(
 ): State {
   const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
 
-  if (staleRequest(timeline, mode, request)) {
+  // Replies sent before the thread was deleted or taken from the viewer stay out.
+  if (staleRequest(timeline, mode, request) || isRemovedThread(state, threadId)) {
     return state;
   }
 
@@ -1233,10 +1250,13 @@ export function applyEvents(
         next = addBoardPost(receiveWorkThread(next, event.data), event.data);
         break;
       case "thread.updated":
-        next = receiveWorkThread(next, event.data);
+        next = receiveWorkThread(
+          event.topic === "user" ? regainThread(next, event.data) : next,
+          event.data,
+        );
         break;
       case "thread.removed":
-        next = removeThread(next, event.data.threadId, event.data.roomId);
+        next = removeThread(next, event.data.threadId, event.data.roomId, event.topic === "user");
         break;
       case "board.automations.changed":
         next = boardAutomationsChanged(next, event.data.roomId);

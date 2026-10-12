@@ -117,6 +117,35 @@ describe("private-thread access", () => {
     connection.close();
   });
 
+  it("drops a scheduled reply whose thread the viewer lost when it falls due, without a reason", async () => {
+    const { server, created, path } = await privateThread();
+
+    const draft = await expectStatus<ScheduledMessage>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/scheduled_messages`,
+      {
+        markdownSource: "Still mine",
+        sendAt: new Date(NOW + 60_000).toISOString(),
+        threadId: created.detail.thread.id,
+        replyToMessageId: created.message.id,
+      },
+      201,
+    );
+
+    expect((await send(server, "DELETE", `${path}/members/${viewer}`)).status).toBe(204);
+    server.fireScheduled(true);
+
+    const past = await get<ScheduledMessageList>(server, "/api/v1/scheduled_messages?status=past");
+    const dropped = past.scheduledMessages.find((message) => message.id === draft.id);
+
+    // `ScheduledMessage::dispatch` drops it unsendable; only a deleted room gives a reason.
+    expect(dropped?.state).toBe("dropped");
+    expect(dropped?.dropReason).toBeNull();
+    expect(dropped?.replyTarget).toBeNull();
+    expect(dropped?.markdownSource).toBe("Still mine");
+  });
+
   it("defaults old create requests to public and refuses visibility edits atomically", async () => {
     const { server } = harness();
 
@@ -356,4 +385,119 @@ it("keeps creator invitations after leaving without revealing the roster or cont
   await expectStatus(server, "POST", `${path}/members`, { userId: viewer }, 200);
 
   expect((await server.handle({ method: "GET", path })).status).toBe(200);
+});
+
+it("lets the controls start a private thread as someone else, share it and take it back", async () => {
+  const { server } = harness();
+  await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+  const events = collect(server, [`room:${rooms.general}`]);
+
+  const hidden = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "Maya's plans" },
+    201,
+  );
+
+  const shared = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "With Riel", withViewer: true },
+    201,
+  );
+
+  const readable = async (threadId: number, userId: number) =>
+    field(
+      (await send(server, "POST", "/__mock/thread-readable", { threadId, userId })).json,
+      "readable",
+    );
+
+  expect(await readable(hidden.threadId, users.maya)).toBe(true);
+  expect(await readable(hidden.threadId, viewer)).toBe(false);
+  expect(await readable(shared.threadId, viewer)).toBe(true);
+
+  // The viewer only hears about the one shared with them.
+  const created = events.filter((event) => event.type === "thread.created");
+
+  expect(created.map((event) => event.type === "thread.created" && event.data.id)).toEqual([
+    shared.threadId,
+  ]);
+
+  const list = await get<ThreadList>(server, `/api/v1/rooms/${rooms.general}/threads?filter=all`);
+
+  expect(list.threads.map(({ thread }) => thread.id)).toContain(shared.threadId);
+  expect(list.threads.map(({ thread }) => thread.id)).not.toContain(hidden.threadId);
+
+  const userEvents = collect(server, ["user"]);
+
+  await expectStatus(
+    server,
+    "POST",
+    "/__mock/thread-access",
+    { threadId: shared.threadId, userId: viewer, added: false },
+    204,
+  );
+
+  expect(userEvents.some((event) => event.type === "thread.removed")).toBe(true);
+  expect(await readable(shared.threadId, viewer)).toBe(false);
+
+  await expectStatus(
+    server,
+    "POST",
+    "/__mock/thread-access",
+    { threadId: hidden.threadId, userId: viewer, added: true },
+    200,
+  );
+
+  expect(await readable(hidden.threadId, viewer)).toBe(true);
+});
+
+it("tells the viewer of a grant on their own topic, and drops the thread's topic with the access", async () => {
+  const { server } = harness();
+  await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+
+  const { threadId } = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "With Riel", withViewer: true },
+    201,
+  );
+
+  const heard: SyncEvent[] = [];
+
+  const connection = server.connect((frame) => {
+    if (frame.t === "batch") heard.push(...frame.events);
+  });
+
+  connection.receive({ t: "hello", v: 1, topics: [`thread:${threadId}`], resume: null });
+
+  const access = (added: boolean) =>
+    send(server, "POST", "/__mock/thread-access", { threadId, userId: viewer, added });
+
+  await access(false);
+
+  expect(heard.find((event) => event.type === "thread.removed")?.topic).toBe("user");
+
+  heard.length = 0;
+  await access(true);
+
+  // Added back: the record arrives on the viewer's own topic, the only one still followed.
+  expect(
+    heard.some(
+      (event) =>
+        event.type === "thread.updated" && event.topic === "user" && event.data.id === threadId,
+    ),
+  ).toBe(true);
+
+  heard.length = 0;
+  server.threadPost(threadId, users.maya, "Welcome back");
+  expect(heard.some((event) => event.type === "message.created")).toBe(false);
+
+  connection.receive({ t: "sub", topics: [`thread:${threadId}`] });
+  server.threadPost(threadId, users.maya, "Now you hear it");
+  expect(heard.some((event) => event.type === "message.created")).toBe(true);
+  connection.close();
 });
