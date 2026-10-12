@@ -89,10 +89,19 @@ pub async fn sign_in_for_tests(app: &crate::app::App, user_id: i64) -> String {
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
-/// Rails omitted single-file payload details. Only a public attachment's additive field is
-/// allowed here; spoiler and grouped payloads have their own API tests. Other bytes stay exact.
-pub fn rails_message_body(actual: &str, expected: &str) -> String {
+#[derive(Clone, Copy)]
+pub enum RecordedFile<'a> {
+    SignedId(&'a str),
+    Filename(&'a str),
+}
+
+/// Rails omitted file details from the response body. The recorded case must identify the
+/// same single public file before its additive array is allowed. Other bytes stay exact.
+pub fn rails_message_body(actual: &str, expected: &str, recorded_file: Option<RecordedFile<'_>>) -> String {
     use serde_json::Value;
+    let Some(recorded_file) = recorded_file else {
+        return actual.to_owned();
+    };
     let (Ok(mut actual_json), Ok(expected_json)) = (
         serde_json::from_str::<Value>(actual),
         serde_json::from_str::<Value>(expected),
@@ -106,7 +115,16 @@ pub fn rails_message_body(actual: &str, expected: &str) -> String {
         return actual.to_owned();
     };
     let public_single = payload.get("attachments").and_then(Value::as_array).is_some_and(|files| {
-        files.len() == 1 && files[0].get("spoiler") == Some(&Value::Bool(false))
+        let [file] = files.as_slice() else { return false; };
+        let same_file = match recorded_file {
+            RecordedFile::Filename(filename) => !filename.is_empty() && file.get("filename").and_then(Value::as_str) == Some(filename),
+            RecordedFile::SignedId(signed_id) => !signed_id.is_empty() && file.get("url").and_then(Value::as_str)
+                .and_then(|url| url.parse::<axum::http::Uri>().ok())
+                .is_some_and(|url| url.path().strip_prefix("/rails/active_storage/blobs/redirect/")
+                    .and_then(|path| path.split_once('/'))
+                    .is_some_and(|(id, _)| id == signed_id)),
+        };
+        same_file && file.get("spoiler") == Some(&Value::Bool(false))
     });
     if !public_single {
         return actual.to_owned();
@@ -118,18 +136,51 @@ pub fn rails_message_body(actual: &str, expected: &str) -> String {
 #[test]
 fn post_rails_attachment_payload_allows_only_one_public_file() {
     let legacy = r#"{"id":1}"#;
-    let public = r#"{"id":1,"attachments":[{"spoiler":false}]}"#;
-    assert_eq!(rails_message_body(public, legacy), legacy);
-    assert_eq!(rails_message_body(public, public), public);
+    let public = r#"{"id":1,"attachments":[{"spoiler":false,"filename":"recorded.txt"}]}"#;
+    let recorded = Some(RecordedFile::Filename("recorded.txt"));
+    assert_eq!(rails_message_body(public, legacy, recorded), legacy);
+    assert_eq!(rails_message_body(public, public, recorded), public);
+    assert_eq!(rails_message_body(public, legacy, None), public);
+    assert_eq!(rails_message_body(public, legacy, Some(RecordedFile::Filename("other.txt"))), public);
     for payload in [
-        r#"{"id":1,"attachments":[{"spoiler":true}]}"#,
-        r#"{"id":1,"attachments":[{"spoiler":false},{"spoiler":false}]}"#,
-        r#"{"id":1,"attachments":[{}]}"#,
+        r#"{"id":1,"attachments":[{"spoiler":true,"filename":"recorded.txt"}]}"#,
+        r#"{"id":1,"attachments":[{"spoiler":false,"filename":"recorded.txt"},{"spoiler":false}]}"#,
+        r#"{"id":1,"attachments":[{"filename":"recorded.txt"}]}"#,
         r#"{"id":1,"attachments":[]}"#,
         "legacy html",
     ] {
-        assert_eq!(rails_message_body(payload, legacy), payload);
+        assert_eq!(rails_message_body(payload, legacy, recorded), payload);
     }
+}
+
+#[test]
+fn post_rails_attachment_payload_keeps_deleted_file_data_visible() {
+    let vector: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/signed-attachments.json"
+    )).unwrap();
+    let row = vector["rows"].as_array().unwrap().iter()
+        .find(|row| row["name"] == "root_null_delete").unwrap();
+    assert!(row["message"]["attachment_id"].is_null());
+    let expected = row["body"].as_str().unwrap();
+    let mut actual: serde_json::Value = serde_json::from_str(expected).unwrap();
+    actual["attachments"] = serde_json::json!([{
+        "spoiler": false,
+        "filename": "leaked.txt",
+        "url": "https://example.org/leaked.txt",
+    }]);
+    let actual = serde_json::to_string(&actual).unwrap();
+
+    assert_eq!(rails_message_body(&actual, expected, None), actual);
+}
+
+#[test]
+fn post_rails_attachment_payload_requires_the_recorded_blob_in_its_url() {
+    let legacy = r#"{"id":1}"#;
+    let public = r#"{"id":1,"attachments":[{"spoiler":false,"url":"http://campfire.test/rails/active_storage/blobs/redirect/recorded-id/notes.txt"}]}"#;
+    assert_eq!(rails_message_body(public, legacy, Some(RecordedFile::SignedId("recorded-id"))), legacy);
+    assert_eq!(rails_message_body(public, legacy, Some(RecordedFile::SignedId("other-id"))), public);
+    let misleading = r#"{"id":1,"attachments":[{"spoiler":false,"url":"http://campfire.test/rails/active_storage/blobs/redirect/other-id/recorded-id/notes.txt"}]}"#;
+    assert_eq!(rails_message_body(misleading, legacy, Some(RecordedFile::SignedId("recorded-id"))), misleading);
 }
 
 /// Failure artifacts are output, never fixture inputs. Create their parent and a private

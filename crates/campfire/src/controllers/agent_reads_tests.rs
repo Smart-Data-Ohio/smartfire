@@ -1,6 +1,6 @@
 //! Rails wire bytes for room/history/board/work reads through the production router.
 use super::agent_http_tests::{AGENT, SECRET, setup};
-use super::presenters::test_support::{Req, TestApp, rails_message_body};
+use super::presenters::test_support::{RecordedFile, Req, TestApp, rails_message_body};
 use campfire_db::{Message, NewMessage};
 use campfire_kit::Method;
 use serde_json::Value;
@@ -141,7 +141,8 @@ pub(super) async fn check(case: &Value) {
         reply.text()
     );
     assert_eq!(
-        rails_message_body(&reply.text(), case["response_body"].as_str().unwrap()),
+        rails_message_body(&reply.text(), case["response_body"].as_str().unwrap(),
+            case["attachment_state"]["attachment"]["filename"].as_str().map(RecordedFile::Filename)),
         case["response_body"].as_str().unwrap(),
         "{name}"
     );
