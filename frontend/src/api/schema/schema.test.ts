@@ -110,6 +110,7 @@ describe("DTO schemas", () => {
       ...messageJson,
       ignored: true,
       published: false,
+      announcementCopy: true,
       announcementSource: { roomId: 14, messageId: 9000, roomName: "News" },
       embeds: [{ title: "Release" }],
       webhook: { name: "Announcements", username: "Release bot", avatarUrl: null },

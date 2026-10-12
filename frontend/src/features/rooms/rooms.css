@@ -645,6 +645,53 @@
     gap: var(--space-2);
   }
 
+  /* Announcement follows: one quiet row per room, then the picker that adds one. */
+  .room-follow-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    list-style: none;
+  }
+
+  .room-follow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-md);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  }
+
+  .room-follow + .room-follow {
+    border-top: 1px solid var(--border);
+  }
+
+  .room-follow-icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .room-follow-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .room-follow-picker {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .room-follow-select {
+    flex: 1;
+    min-width: 0;
+  }
+
   /* Webhooks: one row per webhook (avatar, name, who made it), and the URL shown once. */
   .room-webhook-head {
     display: flex;
@@ -707,8 +754,9 @@
     user-select: all;
   }
 
-  /* Five settings tabs (a private channel's Members, Email and Webhooks) don't fit the dialog with
-     their glyphs: labels only, so none wraps. */
+  /* Five or more settings tabs (Announcements with a private channel's Members, Email and
+     Webhooks) don't fit the dialog with their glyphs: labels only, so none wraps, and a strip
+     still wider than the dialog scrolls sideways on its own, leaving the panel below in place. */
   .room-form-crowded .tab {
     padding-inline: var(--space-3);
     white-space: nowrap;
@@ -716,6 +764,12 @@
 
   .room-form-crowded .tab .icon {
     display: none;
+  }
+
+  .room-form-crowded .tabs .t-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
   }
 
   /* The form didn't load: the reason and a retry on one line. */
@@ -760,6 +814,7 @@
       width: 100%;
     }
 
+    .room-follow-picker,
     .room-webhook-url {
       flex-direction: column;
       align-items: stretch;
@@ -771,10 +826,14 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    /* Up to five settings tabs (a board's Tags, a channel's Email and Webhooks) share the sheet's
-       width on one line: labels only, each tab as wide as its label needs. */
+    /* The settings tabs share the sheet's width on one line: labels only, each tab as wide as its
+       label needs. More tabs than fit (a channel's Members, Announcements, Email and Webhooks)
+       scroll sideways in their strip. */
     .room-form .tabs .t-tabs {
       align-self: stretch;
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
 
     .room-form .tab {

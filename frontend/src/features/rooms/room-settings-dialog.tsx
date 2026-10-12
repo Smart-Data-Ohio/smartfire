@@ -12,6 +12,7 @@ import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
 import { BoardTagEditor } from "../boards/board-tag-editor.tsx";
+import { AnnouncementSettings } from "./announcement-settings.tsx";
 import { GithubSubscriptions } from "./github-subscriptions.tsx";
 import { InboundEmailSection } from "./inbound-email.tsx";
 import { MemberList } from "./member-list.tsx";
@@ -48,7 +49,7 @@ type Load =
 /** A refetch of membership after subscribe or unsubscribe. Save waits until it succeeds. */
 type MemberSync = "idle" | "pending" | "error";
 
-type Tab = "general" | "members" | "tags" | "github" | "email" | "webhooks";
+type Tab = "general" | "members" | "tags" | "announcements" | "github" | "email" | "webhooks";
 
 const NOUN = {
   open: "channel",
@@ -107,10 +108,12 @@ function Pending({ load }: { readonly load: Load }) {
  * and icon, whether a text channel is private, who's in it (with stage roles), the voice bitrate
  * its calls target (for those who may change it), and Delete. A board
  * has the same name, icon and members, a way through to its automations, and (for those who may
- * edit it) its curated tags, which save as they change. Every room, including
- * a board, can subscribe GitHub repositories here; inbound email and incoming webhooks are offered
- * except on a board. The creator and administrators can change them; everyone else reads the room
- * and is refused the integrations (Webhooks isn't even offered to them, as the API refuses it). Nothing about the room itself is written until "Save changes"; then the room's
+ * edit it) its curated tags, which save as they change. Every room, including a board, can be made
+ * an announcement room and subscribe GitHub repositories here; inbound email and incoming webhooks
+ * are offered except on a board, and a board can't follow an announcement room.
+ * The creator and administrators can change them; everyone else reads the room and is refused the
+ * integrations (Webhooks isn't even offered to them, as the API refuses it). Nothing about the room
+ * itself is written until "Save changes"; then the room's
  * header, sidebar row and member list update in place.
  */
 export default function RoomSettingsDialog({
@@ -258,6 +261,8 @@ export default function RoomSettingsDialog({
   if (taggable) {
     tabItems.push({ value: "tags", label: "Tags", icon: "hash" });
   }
+
+  tabItems.push({ value: "announcements", label: "Announcements", icon: "megaphone" });
 
   tabItems.push({ value: "github", label: "GitHub", icon: "code" });
 
@@ -645,6 +650,7 @@ export default function RoomSettingsDialog({
             if (
               value === "members" ||
               value === "tags" ||
+              value === "announcements" ||
               value === "github" ||
               value === "email" ||
               value === "webhooks"
@@ -677,6 +683,9 @@ export default function RoomSettingsDialog({
             />
           ) : null}
           {shownTab === "tags" ? <BoardTagEditor roomId={roomId} /> : null}
+          {shownTab === "announcements" ? (
+            <AnnouncementSettings roomId={roomId} kind={kind} manage={!readOnly} />
+          ) : null}
           {shownTab === "github" ? (
             <GithubSubscriptions roomId={roomId} onMembership={reconcileMembership} />
           ) : null}

@@ -77,13 +77,21 @@ interface RoomGlyphProps {
   readonly iconName: string | null;
   readonly size: number;
   readonly className?: string;
+  /** An announcement room without its own icon shows the megaphone, as Discord's do. */
+  readonly announcement?: boolean;
 }
 
 /**
  * A room's leading glyph: its own icon (an emoji or a workspace icon) when it has one, else its
  * kind's (`#`, the lock, the speaker…). Decorative: the name next to it says which room it is.
  */
-export function RoomGlyph({ kind, iconName, size, className }: RoomGlyphProps) {
+export function RoomGlyph({
+  kind,
+  iconName,
+  size,
+  className,
+  announcement = false,
+}: RoomGlyphProps) {
   const look = useRoomIconLook(iconName);
   const classes = `room-glyph${className === undefined ? "" : ` ${className}`}`;
 
@@ -111,7 +119,7 @@ export function RoomGlyph({ kind, iconName, size, className }: RoomGlyphProps) {
     case "none":
       return (
         <Icon
-          name={ROOM_KIND_ICON[kind]}
+          name={announcement && kind !== "direct" ? "megaphone" : ROOM_KIND_ICON[kind]}
           size={size}
           {...(className === undefined ? {} : { className })}
         />

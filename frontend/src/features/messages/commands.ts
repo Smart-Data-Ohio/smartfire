@@ -104,6 +104,19 @@ export function toggleSave(message: MessageDTO): void {
     .then(() => toast({ title: "Saved for later", tone: "success" }), failed("Couldn't save it"));
 }
 
+/**
+ * Publishes it from its announcement room: every following room gets a copy, and later edits and
+ * the delete follow it there. The server answers a second publish with the message as it is.
+ */
+export function publish(message: MessageDTO): void {
+  void actions.announcements
+    .publish(message.id)
+    .then(
+      () => toast({ title: "Published to the channels that follow this one", tone: "success" }),
+      failed("Couldn't publish the message"),
+    );
+}
+
 export function markUnread(message: MessageDTO): void {
   holdUnread(message.roomId);
 

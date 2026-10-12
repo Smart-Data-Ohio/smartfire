@@ -1361,3 +1361,104 @@ async fn announcement_copy_edit_failure_rolls_back_source_edit() {
         assert_eq!(read["message"]["webhook"], source["webhook"]);
     }
 }
+
+/// A copy is marked as one even when the viewer can't see its source, so the client never offers
+/// to publish it: an administrator outside the source room reads a copy in another announcement
+/// room with no `announcementSource`, and the server still refuses to publish it.
+#[tokio::test]
+async fn announcement_copies_are_marked_for_viewers_who_cannot_see_the_source() {
+    use campfire_db::models::announcement;
+    let a = app(true)
+        .await
+        .expect("restored seed required")
+        .without_job_runner()
+        .await;
+    a.db()
+        .write(|tx| {
+            announcement::set_flag(tx, ALL_TALK, true)?;
+            announcement::set_flag(tx, HQ, true)?;
+            announcement::follow(tx, ALL_TALK, HQ, DAVID)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+            &json!({"clientMessageId":"news-for-a-hidden-source", "markdownSource":"News"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let source_id = parse::<Value>(&reply)["id"].as_i64().unwrap();
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{source_id}/publish"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let source: Value = parse(&reply);
+    assert_eq!(source["published"], true);
+    assert_eq!(source["announcementCopy"], false);
+    let publication = a
+        .db()
+        .read(move |c| announcement::publication_id(c, source_id))
+        .await
+        .unwrap()
+        .unwrap();
+    crate::jobs::announcements::deliver(a.booted.app.clone(), publication)
+        .await
+        .unwrap();
+    let copy_id = a
+        .db()
+        .read(move |c| announcement::copies(c, publication))
+        .await
+        .unwrap()
+        .iter()
+        .find(|m| m.room_id == HQ)
+        .unwrap()
+        .id;
+    let visible: Value = parse(&david.send(get(&format!("/api/v1/messages/{copy_id}"))).await);
+    assert_eq!(visible["message"]["announcementCopy"], true);
+    assert!(!visible["message"]["announcementSource"].is_null());
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                (ALL_TALK, DAVID),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let hidden: Value = parse(&david.send(get(&format!("/api/v1/messages/{copy_id}"))).await);
+    assert!(hidden["message"]["announcementSource"].is_null());
+    assert_eq!(hidden["message"]["announcementCopy"], true);
+    let page: Value = parse(&david.send(get(&format!("/api/v1/rooms/{HQ}/messages"))).await);
+    let listed = page["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|message| message["id"] == copy_id)
+        .unwrap();
+    assert_eq!(listed["announcementCopy"], true);
+    assert!(
+        page["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|message| message["id"] != copy_id)
+            .all(|message| message["announcementCopy"] == false)
+    );
+    let refused = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{copy_id}/publish"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", refused.text());
+}
