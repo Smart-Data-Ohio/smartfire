@@ -3,7 +3,7 @@ use ts_rs::TS;
 
 /// `GET /api/v1/gifs/config`: whether the GIF picker is available on this server
 /// (a `KLIPY_API_KEY` is configured). When it is not, the other `/api/v1/gifs/*`
-/// routes answer `503 Unavailable` and the SPA shows no GIF button.
+/// routes answer `404 NotFound` and the SPA shows no GIF button.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -21,10 +21,11 @@ pub struct GifItem {
     pub slug: String,
     pub klipy_id: String,
     pub title: String,
+    pub attribution: String,
     /// Animated preview, through this server's media proxy (`/api/v1/gifs/media`).
     pub preview_url: String,
     /// A still frame, through the same proxy; shown when motion is reduced.
-    pub still_url: String,
+    pub still_url: Option<String>,
     /// The preview rendition's pixel size; `0` when KLIPY didn't say.
     pub width: i64,
     pub height: i64,
@@ -57,4 +58,12 @@ pub struct GifCategory {
 #[ts(export)]
 pub struct GifCategoryList {
     pub categories: Vec<GifCategory>,
+}
+
+/// Search terms from `GET /api/v1/gifs/suggestions?q=` or `/gifs/autocomplete?q=`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GifSuggestions {
+    pub suggestions: Vec<String>,
 }

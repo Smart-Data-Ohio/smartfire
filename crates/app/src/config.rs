@@ -20,10 +20,7 @@
 //!   sends no telemetry).
 //! - `SPA_ENABLED`, `SPA_DEFAULT`: no longer read. The React SPA (`crates/spa`) under `/app` is
 //!   the only UI for signed-in people. Legacy deployments may still supply either variable.
-//! - `KLIPY_API_KEY`: enables the composer's GIF picker (blank disables it). The key is used
-//!   only server-side and never sent to browsers. `KLIPY_CONTENT_FILTER` is KLIPY's
-//!   per-request content safety level (`off`, `low`, `medium`, `high`; default `high`, the
-//!   workplace-safe strictest level — KLIPY has no `pg` rating parameter).
+//! - `KLIPY_API_KEY`: enables GIF search. Blank disables it. Only the server uses the key.
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -69,8 +66,6 @@ pub struct Config {
     pub google_client: crate::integrations::google::api::Config,
     /// `KLIPY_API_KEY`; blank disables the GIF picker. Server-side only.
     pub klipy_api_key: Option<String>,
-    /// `KLIPY_CONTENT_FILTER`, one of `off|low|medium|high` (anything else is `high`).
-    pub klipy_content_filter: String,
 }
 
 #[derive(Debug, Clone)]
@@ -181,10 +176,7 @@ impl Config {
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
             },
             klipy_api_key: present("KLIPY_API_KEY"),
-            klipy_content_filter: match present("KLIPY_CONTENT_FILTER").as_deref() {
-                Some(filter @ ("off" | "low" | "medium" | "high")) => filter.into(),
-                _ => "high".into(),
-            },
+
         })
     }
 }
@@ -216,6 +208,16 @@ mod tests {
     fn requires_a_secret_key_base() {
         assert!(config(&[]).is_err());
         assert_eq!(config(&[("SECRET_KEY_BASE_DUMMY", "1")]).unwrap().secret_key_base.len(), 128);
+    }
+
+    #[test]
+    fn klipy_key_is_optional_and_blank_disables_gifs() {
+        for value in [None, Some(""), Some("  ")] {
+            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
+            if let Some(value) = value { vars.push(("KLIPY_API_KEY", value)); }
+            assert!(config(&vars).unwrap().klipy_api_key.is_none());
+        }
+        assert_eq!(config(&[("SECRET_KEY_BASE", "abc"), ("KLIPY_API_KEY", "test-key")]).unwrap().klipy_api_key.as_deref(), Some("test-key"));
     }
 
     #[test]

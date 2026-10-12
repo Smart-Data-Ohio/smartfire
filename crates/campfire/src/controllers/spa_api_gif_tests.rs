@@ -3,12 +3,15 @@
 
 use std::sync::Arc;
 
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use crate::controllers::presenters::test_support::{
-    ALL_TALK, Browser, DAVID, Reply, Req, TestApp, seed_clock,
+    ALL_TALK, Browser, DAVID, JASON, Reply, Req, TestApp, seed_clock,
 };
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
 
@@ -25,7 +28,6 @@ fn item_json() -> Value {
         "tags": ["hello"],
         "file": {
             "md": {
-                "webp": {"url": "https://static.klipy.com/ii/x/md.webp", "width": 498, "height": 498, "size": 1200},
                 "gif": {"url": "https://static.klipy.com/ii/x/md.gif", "width": 498, "height": 498, "size": 9000}
             },
             "sm": {
@@ -48,14 +50,14 @@ async fn klipy_app() -> (TestApp, FakeServer) {
         vec![
             "api.klipy.com".into(),
             "static.klipy.com".into(),
-            "static.klipy.co".into(),
+            "static1.klipy.com".into(),
         ],
     )
     .await;
     let resolver = Arc::new(FakeResolver::new([
         ("api.klipy.com", vec!["93.184.216.34"]),
         ("static.klipy.com", vec!["93.184.216.35"]),
-        ("static.klipy.co", vec!["93.184.216.36"]),
+        ("static1.klipy.com", vec!["93.184.216.36"]),
     ]));
     let dialer = Arc::new(MappingDialer {
         public: [
@@ -80,19 +82,25 @@ async fn klipy_app() -> (TestApp, FakeServer) {
 }
 
 fn customer(app: &TestApp) -> String {
-    crate::integrations::klipy::customer_id(&app.booted.app.config.secret_key_base, DAVID)
+    customer_for(app, DAVID)
+}
+
+fn customer_for(app: &TestApp, id: i64) -> String {
+    let mut mac = Hmac::<Sha256>::new_from_slice(app.booted.app.config.secret_key_base.as_bytes()).unwrap();
+    mac.update(format!("klipy-customer:{id}").as_bytes());
+    mac.finalize().into_bytes().iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn search_path(app: &TestApp, q: &str, page: u32) -> String {
     format!(
-        "/api/v1/{KEY}/gifs/search?q={q}&page={page}&per_page=24&customer_id={}&content_filter=high",
+        "/api/v1/{KEY}/gifs/search?q={q}&page={page}&per_page=24&customer_id={}&content_filter=high&rating=pg",
         customer(app)
     )
 }
 
 fn trending_path(app: &TestApp, page: u32) -> String {
     format!(
-        "/api/v1/{KEY}/gifs/trending?page={page}&per_page=24&customer_id={}&content_filter=high",
+        "/api/v1/{KEY}/gifs/trending?page={page}&per_page=24&customer_id={}&content_filter=high&rating=pg",
         customer(app)
     )
 }
@@ -132,8 +140,13 @@ async fn gifs_report_unavailable_without_a_key() {
     let config: api::GifConfig = parse(&config);
     assert!(!config.enabled);
     let trending = get(&mut b, "/api/v1/gifs/trending").await;
-    assert_eq!(trending.status, StatusCode::SERVICE_UNAVAILABLE);
-    assert_eq!(tag(&trending), "Unavailable");
+    assert_eq!(trending.status, StatusCode::NOT_FOUND);
+    assert_eq!(tag(&trending), "NotFound");
+    assert!(trending.text().contains("GIFs are disabled"));
+    for path in ["/api/v1/gifs/search?q=hi", "/api/v1/gifs/suggestions?q=hi", "/api/v1/gifs/autocomplete?q=hi", "/api/v1/gifs/categories", "/api/v1/gifs/media?u=https://static.klipy.com/x.gif"] {
+        let reply = get(&mut b, path).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}: {}", reply.text());
+    }
 }
 
 #[tokio::test]
@@ -144,7 +157,7 @@ async fn gifs_search_trending_and_categories_proxy_klipy() {
         json_route("api.klipy.com", &trending_path(&app, 1), 200, list_body()),
         json_route(
             "api.klipy.com",
-            &format!("/api/v1/{KEY}/gifs/categories"),
+            &format!("/api/v1/{KEY}/gifs/categories?customer_id={}&content_filter=high&rating=pg", customer(&app)),
             200,
             json!({"result": true, "data": {"locale": "en_US", "categories": [
                 {"category": "smile", "query": "smile", "preview_url": "https://static.klipy.com/ii/c/smile.jpg"}
@@ -167,7 +180,7 @@ async fn gifs_search_trending_and_categories_proxy_klipy() {
     assert_eq!(item.klipy_id, "8041071659142944");
     assert_eq!(item.title, "Hello Wave");
     assert!(item.preview_url.starts_with("/api/v1/gifs/media?u="), "{}", item.preview_url);
-    assert!(item.still_url.starts_with("/api/v1/gifs/media?u="), "{}", item.still_url);
+    assert!(item.still_url.as_deref().is_some_and(|url| url.starts_with("/api/v1/gifs/media?u=")), "{:?}", item.still_url);
     assert_eq!((item.width, item.height), (220, 220));
     assert!(list.has_next);
     assert_eq!(list.page, 1);
@@ -195,7 +208,7 @@ async fn gifs_search_trending_and_categories_proxy_klipy() {
         "the raw user id must not go to KLIPY: {}",
         search.target
     );
-    assert!(search.target.contains("content_filter=high"), "{}", search.target);
+    assert!(search.target.contains("content_filter=high&rating=pg"), "{}", search.target);
 }
 
 #[tokio::test]
@@ -262,6 +275,12 @@ async fn gifs_search_is_rate_limited_per_user() {
     }
     let limited = limited.expect("searching must eventually be rate limited");
     assert_eq!(tag(&limited), "RateLimited");
+    assert_eq!(limited.headers.get("retry-after").unwrap(), "60");
+    assert_eq!(server.received().len(), 30);
+    server.replace_routes(vec![json_route("api.klipy.com", &format!("/api/v1/{KEY}/gifs/trending?page=1&per_page=24&customer_id={}&content_filter=high&rating=pg", customer_for(&app, JASON)), 200, list_body())]);
+    let mut other = app.sign_in(JASON).await;
+    let reply = get(&mut other, "/api/v1/gifs/trending").await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
 }
 
 #[tokio::test]
@@ -316,8 +335,10 @@ async fn gifs_media_proxy_enforces_host_allowlist_type_and_size() {
 async fn gifs_require_sign_in() {
     let (app, _server) = klipy_app().await;
     let mut b = app.anonymous();
-    let reply = get(&mut b, "/api/v1/gifs/trending").await;
-    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    for path in ["config", "trending", "search?q=hi", "suggestions?q=hi", "autocomplete?q=hi", "categories", "media?u=https://static.klipy.com/x.gif"] {
+        let reply = get(&mut b, &format!("/api/v1/gifs/{path}")).await;
+        assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    }
 }
 
 #[tokio::test]
@@ -326,12 +347,12 @@ async fn sending_a_gif_stores_it_as_a_normal_attachment() {
     server.replace_routes(vec![
         json_route(
             "api.klipy.com",
-            &format!("/api/v1/{KEY}/gifs/items?slugs=hello-hi-662"),
+            &format!("/api/v1/{KEY}/gifs/items?slugs=hello-hi-662&customer_id={}&content_filter=high&rating=pg", customer(&app)),
             200,
             list_body(),
         ),
-        Route::new("GET", "static.klipy.com", "/ii/x/md.webp", 200)
-            .header("Content-Type", "image/webp")
+        Route::new("GET", "static.klipy.com", "/ii/x/md.gif", 200)
+            .header("Content-Type", "image/gif")
             .body(GIF_BYTES.to_vec()),
     ]);
     let mut b = app.sign_in(DAVID).await;
@@ -373,7 +394,7 @@ async fn sending_a_gif_stores_it_as_a_normal_attachment() {
         .db()
         .read(move |conn| {
             Ok(conn.query_row(
-                "SELECT metadata FROM active_storage_blobs WHERE filename LIKE 'hello%' ORDER BY id DESC LIMIT 1",
+                "SELECT metadata FROM active_storage_blobs WHERE lower(filename) LIKE 'hello%' ORDER BY id DESC LIMIT 1",
                 [],
                 |row| row.get(0),
             )?)
@@ -382,9 +403,86 @@ async fn sending_a_gif_stores_it_as_a_normal_attachment() {
         .unwrap();
     assert!(metadata.contains("8041071659142944"), "{metadata}");
     assert!(metadata.contains("Hello Wave"), "{metadata}");
+    assert!(metadata.contains("Powered by KLIPY"), "{metadata}");
+    assert!(metadata.contains("hello-hi-662"), "{metadata}");
+    let stored_key: String = app.db().read(|conn| Ok(conn.query_row("SELECT key FROM active_storage_blobs WHERE filename = 'Hello-Wave.gif' ORDER BY id DESC LIMIT 1", [], |row| row.get(0))?)).await.unwrap();
+    assert_eq!(app.booted.app.storage.service.download(&stored_key).unwrap(), GIF_BYTES);
 
     // And it shows up in the room's Files pane like any other upload.
     let files = get(&mut b, &format!("/api/v1/rooms/{ALL_TALK}/files")).await;
     assert_eq!(files.status, StatusCode::OK, "{}", files.text());
     assert!(files.text().to_lowercase().contains("hello"), "{}", files.text());
+}
+
+#[tokio::test]
+async fn gifs_suggestions_and_autocomplete_proxy_encoded_queries_and_cache() {
+    let (app, server) = klipy_app().await;
+    server.replace_routes(["search-suggestions", "autocomplete"].into_iter().map(|endpoint| {
+        json_route("api.klipy.com", &format!("/api/v1/{KEY}/{endpoint}/hello%20%26%20hi?limit=10&customer_id={}&content_filter=high&rating=pg", customer(&app)), 200, json!({"result": true, "data": ["hello there", "hi"]}).to_string())
+    }).collect());
+    let mut b = app.sign_in(DAVID).await;
+    for endpoint in ["suggestions", "autocomplete"] {
+        for _ in 0..2 {
+            let reply = get(&mut b, &format!("/api/v1/gifs/{endpoint}?q=hello%20%26%20hi")).await;
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+            assert_eq!(serde_json::from_slice::<Value>(&reply.body).unwrap(), json!({"suggestions":["hello there", "hi"]}));
+            assert!(!reply.text().contains(KEY));
+        }
+    }
+    assert_eq!(server.received().len(), 2);
+}
+
+#[tokio::test]
+async fn gifs_media_never_follows_redirects_or_accepts_nonstandard_ports() {
+    let (app, server) = klipy_app().await;
+    server.replace_routes(vec![
+        Route::new("GET", "static.klipy.com", "/redirect.gif", 302)
+            .header("Location", "https://evil.example/private.gif"),
+        Route::new("GET", "static.klipy.com", "/other.gif", 302)
+            .header("Location", "https://static1.klipy.com/target.gif"),
+        Route::new("GET", "static1.klipy.com", "/target.gif", 200)
+            .header("Content-Type", "image/gif").body(GIF_BYTES.to_vec()),
+    ]);
+    let mut b = app.sign_in(DAVID).await;
+    for path in ["redirect.gif", "other.gif"] {
+        let reply = get(&mut b, &format!("/api/v1/gifs/media?u=https://static.klipy.com/{path}")).await;
+        assert_eq!(reply.status, StatusCode::SERVICE_UNAVAILABLE, "{}", reply.text());
+    }
+    let reply = get(&mut b, "/api/v1/gifs/media?u=https://static.klipy.com:444/target.gif").await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    assert_eq!(server.received().len(), 2);
+    assert!(server.received().iter().all(|r| r.header("host") == Some("static.klipy.com")));
+}
+
+#[tokio::test]
+async fn gif_selection_is_validated_before_any_provider_download() {
+    let (app, server) = klipy_app().await;
+    let mut b = app.sign_in(DAVID).await;
+    for (id, extra) in [
+        ("too-many", json!({"gifSlug":"hello-hi-662", "attachmentSignedIds":vec!["invalid"; 10]})),
+        ("single", json!({"gifSlug":"hello-hi-662", "attachmentSignedId":"invalid"})),
+        ("bad-slug", json!({"gifSlug":"hello,other"})),
+    ] {
+        let mut body = json!({"clientMessageId":id, "markdownSource":""});
+        body.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        let reply = b.write(Req::new(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"))
+            .header("accept", "application/json").header("content-type", "application/json").body(body.to_string())).await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    }
+    assert!(server.received().is_empty());
+}
+
+#[tokio::test]
+async fn gif_failed_search_is_not_cached_and_bad_inputs_never_reach_klipy() {
+    let (app, server) = klipy_app().await;
+    let mut b = app.sign_in(DAVID).await;
+    for path in ["search?q=", "autocomplete?q=", "trending?page=0", "trending?page=10001"] {
+        assert_eq!(get(&mut b, &format!("/api/v1/gifs/{path}")).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+    assert!(server.received().is_empty());
+    server.replace_routes(vec![json_route("api.klipy.com", &search_path(&app, "hello", 1), 200, json!({"result":false,"data":null}).to_string())]);
+    assert_eq!(get(&mut b, "/api/v1/gifs/search?q=hello").await.status, StatusCode::SERVICE_UNAVAILABLE);
+    server.replace_routes(vec![json_route("api.klipy.com", &search_path(&app, "hello", 1), 200, list_body())]);
+    for _ in 0..2 { assert_eq!(get(&mut b, "/api/v1/gifs/search?q=hello").await.status, StatusCode::OK); }
+    assert_eq!(server.received().len(), 2);
 }

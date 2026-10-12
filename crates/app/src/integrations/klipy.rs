@@ -1,18 +1,14 @@
-//! The KLIPY GIF API client (native API, not the Tenor-compatibility layer):
-//! `GET {base}/api/v1/{app_key}/gifs/{search,trending,categories,items}`.
-//! See https://docs.klipy.com/gifs-api (facts recorded in `.scratch/klipy-api.md`).
-//!
-//! Requests are server-side only: the API key goes in the path, and the only
-//! per-user value sent is an HMAC of the user id ([`customer_id`]), never the
-//! user's name, email or raw id. Identical list requests are cached briefly and
-//! calls are rate limited per user so one typist cannot exhaust the key's quota.
+//! KLIPY's native API and bounded per-app request state.
+//! Contract: https://docs.klipy.com/gifs-api and /search-suggestions-and-autocomplete.
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use tokio::time::Instant;
 
 use hmac::{Hmac, Mac};
 use hyper::Method;
+use tokio::sync::Semaphore;
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::Sha256;
@@ -24,13 +20,16 @@ use crate::net::{
 
 pub const DEFAULT_BASE: &str = "https://api.klipy.com";
 /// Hosts the media proxy will fetch from (KLIPY's media CDN).
-pub const MEDIA_HOSTS: &[&str] = &["static.klipy.com", "static.klipy.co"];
+pub const MEDIA_HOSTS: &[&str] = &["static.klipy.com", "static1.klipy.com", "static2.klipy.com"];
 const TIMEOUTS: Timeouts = Timeouts {
     open: Duration::from_secs(5),
     read: Duration::from_secs(10),
     write: Duration::from_secs(5),
 };
 const CACHE_TTL: Duration = Duration::from_secs(60);
+const CACHE_ENTRIES: usize = 512;
+const RATE_ENTRIES: usize = 10_000;
+const SAFETY: &str = "content_filter=high&rating=pg";
 const JSON_LIMIT: usize = 2 * 1024 * 1024;
 
 /// The opaque per-user value sent as KLIPY's `customer_id`: an HMAC-SHA256 of
@@ -85,6 +84,7 @@ impl Item {
         self.rendition("sm", "webp")
             .or_else(|| self.rendition("sm", "gif"))
             .or_else(|| self.rendition("xs", "webp"))
+            .or_else(|| self.rendition("xs", "gif"))
             .or_else(|| self.rendition("md", "webp"))
     }
 
@@ -93,7 +93,7 @@ impl Item {
         self.rendition("sm", "jpg")
             .or_else(|| self.rendition("xs", "jpg"))
             .or_else(|| self.rendition("md", "jpg"))
-            .or_else(|| self.preview())
+
     }
 
     /// The rendition to download when the GIF is sent: the smallest reasonable
@@ -134,12 +134,38 @@ pub struct Category {
 enum Cached {
     List(ListPage),
     Categories(Vec<Category>),
+    Suggestions(Vec<String>),
 }
 
-#[derive(Default)]
 struct Inner {
     cache: Mutex<HashMap<String, (Instant, Cached)>>,
     hits: Mutex<HashMap<(i64, &'static str), VecDeque<Instant>>>,
+    media_slots: Semaphore,
+}
+
+impl Default for Inner {
+    fn default() -> Self {
+        Self {
+            cache: Mutex::default(),
+            hits: Mutex::default(),
+            media_slots: Semaphore::new(8),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum SuggestionKind {
+    Suggestions,
+    Autocomplete,
+}
+
+impl SuggestionKind {
+    fn endpoint(self) -> &'static str {
+        match self {
+            Self::Suggestions => "search-suggestions",
+            Self::Autocomplete => "autocomplete",
+        }
+    }
 }
 
 /// Per-app KLIPY transport, cache and rate limiter. The API key itself lives in
@@ -161,8 +187,7 @@ impl State {
     }
 
     pub fn system() -> Self {
-        let base = std::env::var("KLIPY_API_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE.into());
-        Self::new(Network::system(), base)
+        Self::new(Network::system(), DEFAULT_BASE.into())
     }
 
     /// Records a call for `user_id` in `bucket` and says whether it is allowed:
@@ -170,10 +195,14 @@ impl State {
     pub fn allow(&self, user_id: i64, bucket: &'static str, limit: usize) -> bool {
         let now = Instant::now();
         let mut hits = self.inner.hits.lock().unwrap();
+        hits.retain(|_, calls| calls.back().is_some_and(|at| now.duration_since(*at) < CACHE_TTL));
+        if hits.len() >= RATE_ENTRIES && !hits.contains_key(&(user_id, bucket)) {
+            return false;
+        }
         let entry = hits.entry((user_id, bucket)).or_default();
         while entry
             .front()
-            .is_some_and(|at| now.duration_since(*at) > Duration::from_secs(60))
+            .is_some_and(|at| now.duration_since(*at) >= CACHE_TTL)
         {
             entry.pop_front();
         }
@@ -191,11 +220,14 @@ impl State {
     }
 
     fn store(&self, key: String, value: Cached) {
-        self.inner
-            .cache
-            .lock()
-            .unwrap()
-            .insert(key, (Instant::now(), value));
+        let mut cache = self.inner.cache.lock().unwrap();
+        cache.retain(|_, (at, _)| at.elapsed() < CACHE_TTL);
+        if cache.len() >= CACHE_ENTRIES
+            && let Some(oldest) = cache.iter().min_by_key(|(_, (at, _))| *at).map(|(key, _)| key.clone())
+        {
+            cache.remove(&oldest);
+        }
+        cache.insert(key, (Instant::now(), value));
     }
 
     async fn get_json(&self, target: String) -> Result<Value, Unavailable> {
@@ -254,39 +286,38 @@ impl State {
     pub async fn search(
         &self,
         key: &str,
-        content_filter: &str,
         customer: &str,
         query: &str,
         page: u32,
     ) -> Result<ListPage, Unavailable> {
         let target = format!(
-            "/api/v1/{key}/gifs/search?q={}&page={page}&per_page=24&customer_id={customer}&content_filter={content_filter}",
-            escape_query(query)
+            "/api/v1/{}/gifs/search?q={}&page={page}&per_page=24&customer_id={customer}&{SAFETY}",
+            escape_query(key), escape_query(query)
         );
-        self.list(target, format!("search:{query}:{page}:{content_filter}"))
+        self.list(target.clone(), target)
             .await
     }
 
     pub async fn trending(
         &self,
         key: &str,
-        content_filter: &str,
         customer: &str,
         page: u32,
     ) -> Result<ListPage, Unavailable> {
         let target = format!(
-            "/api/v1/{key}/gifs/trending?page={page}&per_page=24&customer_id={customer}&content_filter={content_filter}"
+            "/api/v1/{}/gifs/trending?page={page}&per_page=24&customer_id={customer}&{SAFETY}", escape_query(key)
         );
-        self.list(target, format!("trending:{page}:{content_filter}"))
+        self.list(target.clone(), target)
             .await
     }
 
-    pub async fn categories(&self, key: &str) -> Result<Vec<Category>, Unavailable> {
-        if let Some(Cached::Categories(categories)) = self.cached("categories") {
+    pub async fn categories(&self, key: &str, customer: &str) -> Result<Vec<Category>, Unavailable> {
+        let target = format!("/api/v1/{}/gifs/categories?customer_id={customer}&{SAFETY}", escape_query(key));
+        if let Some(Cached::Categories(categories)) = self.cached(&target) {
             return Ok(categories);
         }
         let value = self
-            .get_json(format!("/api/v1/{key}/gifs/categories"))
+            .get_json(target.clone())
             .await?;
         let parsed: CategoriesResponse =
             serde_json::from_value(value).map_err(|_| Unavailable)?;
@@ -306,16 +337,28 @@ impl State {
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
-        self.store("categories".into(), Cached::Categories(categories.clone()));
+        self.store(target, Cached::Categories(categories.clone()));
         Ok(categories)
     }
 
+    pub async fn suggestions(&self, key: &str, customer: &str, query: &str, kind: SuggestionKind) -> Result<Vec<String>, Unavailable> {
+        let target = format!("/api/v1/{}/{}/{}?limit=10&customer_id={customer}&{SAFETY}", escape_query(key), kind.endpoint(), escape_query(query));
+        if let Some(Cached::Suggestions(terms)) = self.cached(&target) {
+            return Ok(terms);
+        }
+        let parsed: SuggestionsResponse = serde_json::from_value(self.get_json(target.clone()).await?).map_err(|_| Unavailable)?;
+        if !parsed.result { return Err(Unavailable); }
+        let terms: Vec<String> = parsed.data.into_iter().take(10).map(|term| term.chars().take(200).collect()).collect();
+        self.store(target, Cached::Suggestions(terms.clone()));
+        Ok(terms)
+    }
+
     /// The one item behind `slug`, through the Items endpoint.
-    pub async fn item(&self, key: &str, slug: &str) -> Result<Item, Unavailable> {
+    pub async fn item(&self, key: &str, customer: &str, slug: &str) -> Result<Item, Unavailable> {
         let value = self
             .get_json(format!(
-                "/api/v1/{key}/gifs/items?slugs={}",
-                escape_query(slug)
+                "/api/v1/{}/gifs/items?slugs={}&customer_id={customer}&{SAFETY}",
+                escape_query(key), escape_query(slug)
             ))
             .await?;
         let parsed: ListResponse = serde_json::from_value(value).map_err(|_| Unavailable)?;
@@ -329,25 +372,23 @@ impl State {
 
     /// Fetches a KLIPY media URL's bytes, refusing anything past `limit`.
     pub async fn fetch_media(&self, url: &str, limit: usize) -> Result<(Vec<u8>, String), MediaError> {
-        let parsed = allowed_media_url(url).ok_or(MediaError::NotAllowed)?;
-        let response = http::exchange(&self.network, &parsed.endpoint, parsed.request, &TIMEOUTS)
-            .await
-            .map_err(|_| MediaError::Unavailable)?;
-        if !(200..300).contains(&response.status) {
-            return Err(MediaError::Unavailable);
-        }
-        let content_type = response
-            .content_type()
-            .unwrap_or_default()
-            .to_ascii_lowercase();
-        if !ALLOWED_MEDIA_TYPES.contains(&content_type.as_str()) {
-            return Err(MediaError::BadType);
-        }
-        match response.read_body(limit).await.map_err(|_| MediaError::Unavailable)? {
-            Body::Complete(bytes) => Ok((bytes, content_type)),
-            Body::TooLarge => Err(MediaError::TooLarge),
-        }
+        let mut parsed = allowed_media_url(url).ok_or(MediaError::NotAllowed)?;
+        let _permit = self.inner.media_slots.try_acquire().map_err(|_| MediaError::Unavailable)?;
+        tokio::time::timeout(Duration::from_secs(15), async {
+            let ip = crate::net::guard::resolve(&*self.network.resolver, &parsed.endpoint.host).await.map_err(|_| MediaError::NotAllowed)?;
+            parsed.endpoint.pinned_ip = Some(ip);
+            let response = http::exchange(&self.network, &parsed.endpoint, parsed.request, &TIMEOUTS)
+                .await.map_err(|_| MediaError::Unavailable)?;
+            if !(200..300).contains(&response.status) { return Err(MediaError::Unavailable); }
+            let content_type = response.content_type().unwrap_or_default().to_ascii_lowercase();
+            if !ALLOWED_MEDIA_TYPES.contains(&content_type.as_str()) { return Err(MediaError::BadType); }
+            match response.read_body(limit).await.map_err(|_| MediaError::Unavailable)? {
+                Body::Complete(bytes) => Ok((bytes, content_type)),
+                Body::TooLarge => Err(MediaError::TooLarge),
+            }
+        }).await.map_err(|_| MediaError::Unavailable)?
     }
+
 }
 
 const ALLOWED_MEDIA_TYPES: &[&str] = &[
@@ -377,6 +418,7 @@ struct MediaTarget {
 
 /// Parses `url` and keeps it only when it is https on a KLIPY media host.
 fn allowed_media_url(url: &str) -> Option<MediaTarget> {
+    if url.len() > 2048 { return None; }
     let parsed = campfire_richtext::uri::parse(url).ok()?;
     if parsed.scheme.as_deref() != Some("https") || parsed.userinfo.is_some() {
         return None;
@@ -385,7 +427,8 @@ fn allowed_media_url(url: &str) -> Option<MediaTarget> {
     if !MEDIA_HOSTS.contains(&host.as_str()) {
         return None;
     }
-    let port: u16 = parsed.port.unwrap_or(443).try_into().ok()?;
+    if !matches!(parsed.port, None | Some(443)) { return None; }
+    let port = 443;
     let mut target = parsed.path.filter(|path| !path.is_empty()).unwrap_or_else(|| "/".into());
     if let Some(query) = parsed.query {
         target.push('?');
@@ -408,8 +451,9 @@ fn allowed_media_url(url: &str) -> Option<MediaTarget> {
 }
 
 /// Our proxy path for a KLIPY media URL (`/api/v1/gifs/media?u=…`).
-pub fn media_proxy_path(url: &str) -> String {
-    format!("/api/v1/gifs/media?u={}", escape_query(url))
+pub fn media_proxy_path(url: &str) -> Option<String> {
+    allowed_media_url(url)?;
+    Some(format!("/api/v1/gifs/media?u={}", escape_query(url)))
 }
 
 fn escape_query(value: &str) -> String {
@@ -424,8 +468,11 @@ fn escape_query(value: &str) -> String {
         .collect()
 }
 
-// The typed response boundary: a wrong field name from KLIPY is a one-line fix
-// in these structs, nowhere else.
+#[derive(Deserialize)]
+struct SuggestionsResponse {
+    result: bool,
+    data: Vec<String>,
+}
 
 #[derive(Deserialize)]
 struct ListResponse {
@@ -508,17 +555,37 @@ mod tests {
         assert_eq!(first, customer_id("secret-one", 42));
         assert_ne!(first, customer_id("secret-one", 43));
         assert_ne!(first, customer_id("secret-two", 42));
-        assert_eq!(first.len(), 64);
+        assert_eq!(first, "52c34cd05f76dbc52b91898df4d2784a7a545872122caacea52b8239a59ccd41");
     }
 
     #[test]
     fn media_urls_are_limited_to_klipy_hosts_over_https() {
         assert!(allowed_media_url("https://static.klipy.com/ii/x/y.webp").is_some());
-        assert!(allowed_media_url("https://static.klipy.co/ii/x/y.webp").is_some());
+        assert!(allowed_media_url("https://static1.klipy.com/ii/x/y.webp").is_some());
         assert!(allowed_media_url("http://static.klipy.com/ii/x/y.webp").is_none());
         assert!(allowed_media_url("https://static.klipy.com.evil.example/x.webp").is_none());
         assert!(allowed_media_url("https://evil.example/x.webp").is_none());
         assert!(allowed_media_url("https://user@static.klipy.com/x.webp").is_none());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cache_and_rate_windows_expire_and_cache_stays_bounded() {
+        let state = State::system();
+        for i in 0..(CACHE_ENTRIES + 10) {
+            state.store(i.to_string(), Cached::Suggestions(vec!["hello".into()]));
+        }
+        assert_eq!(state.inner.cache.lock().unwrap().len(), CACHE_ENTRIES);
+        assert!(state.cached("0").is_none());
+        assert!(state.cached(&(CACHE_ENTRIES + 9).to_string()).is_some());
+        assert!(state.allow(1, "api", 1));
+        assert!(!state.allow(1, "api", 1));
+        assert!(state.allow(2, "api", 1));
+        tokio::time::advance(CACHE_TTL).await;
+        assert!(state.cached(&(CACHE_ENTRIES + 9).to_string()).is_none());
+        assert!(state.allow(1, "api", 1));
+        state.store("fresh".into(), Cached::Suggestions(vec![]));
+        assert_eq!(state.inner.cache.lock().unwrap().len(), 1);
+        assert_eq!(state.inner.hits.lock().unwrap().len(), 1);
     }
 
     #[test]

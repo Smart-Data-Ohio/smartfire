@@ -5,6 +5,7 @@
  */
 
 import { ThreadAccess } from "../../src/api/errors.ts";
+import type { Attachment } from "../../src/gen/Attachment.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessageSticker } from "../../src/gen/MessageSticker.ts";
 import type { ThreadAccessMembers } from "../../src/gen/ThreadAccessMembers.ts";
@@ -94,6 +95,7 @@ export function createThreads(
   uploads: Uploads,
   held: (run: () => MockResponse) => MockResponse | Promise<MockResponse>,
   sticker: ((id: number) => MessageSticker) | undefined = undefined,
+  gif: ((slug: string) => Attachment) | undefined = undefined,
 ): Threads {
   const threadOr404 = (threadId: number): ThreadRecord => {
     const thread = ctx.world().threads.get(threadId);
@@ -395,7 +397,7 @@ export function createThreads(
 
     const visibility = rawVisibility === "private" ? "private" : "public";
 
-    const parsed = parseMessage(messageBody, uploads.attachment, sticker);
+    const parsed = parseMessage(messageBody, uploads.attachment, sticker, gif);
     const requested = stringField(body, "name")?.trim() ?? "";
 
     if ([...requested].length > THREAD_NAME_LIMIT) {
@@ -464,7 +466,7 @@ export function createThreads(
 
     if (duplicate !== undefined) return ok(duplicate);
 
-    const parsed = parseMessage(body, uploads.attachment, sticker);
+    const parsed = parseMessage(body, uploads.attachment, sticker, gif);
     const replyTo = parsed.replyToMessageId;
 
     if (replyTo !== null && !thread.messages.some((message) => message.id === replyTo)) {

@@ -1,14 +1,9 @@
-//! The composer's GIF picker, backed by KLIPY, proxied by this server: search,
-//! trending and categories (`campfire_app::integrations::klipy`), picker previews
-//! through a media proxy limited to KLIPY's media hosts, and sending, which
-//! downloads the chosen GIF and stores it as a normal message attachment (see
-//! `CreateMessage.gifSlug`). Browsers never talk to KLIPY — their addresses and
-//! the API key stay here — and a sent GIF never hotlinks KLIPY.
+//! Authenticated GIF discovery, preview proxying and Active Storage imports.
 
 use axum::{Router, routing::get};
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_app::integrations::klipy::{self, Item, MediaError};
+use campfire_app::integrations::klipy::{self, Item, MediaError, SuggestionKind};
 use campfire_db::CachedStatements;
 use campfire_kit::{Ctx, Error, Kit, Result, SendOptions, StatusCode, action};
 use campfire_storage::Filename;
@@ -20,7 +15,8 @@ use crate::error::{fail, validation};
 const API_LIMIT: usize = 30;
 /// Preview fetches one user may make per minute (a picker page shows many).
 const MEDIA_LIMIT: usize = 240;
-/// Picker previews are small renditions; anything bigger is not a preview.
+const GIF_MAX_BYTES: i64 = 20 * 1024 * 1024;
+const SEND_LIMIT: usize = 10;
 const MEDIA_MAX_BYTES: usize = 5 * 1024 * 1024;
 
 pub fn routes() -> Router<Kit> {
@@ -29,6 +25,8 @@ pub fn routes() -> Router<Kit> {
         .route("/api/v1/gifs/search", get(action(search)))
         .route("/api/v1/gifs/trending", get(action(trending)))
         .route("/api/v1/gifs/categories", get(action(categories)))
+        .route("/api/v1/gifs/suggestions", get(action(suggestions)))
+        .route("/api/v1/gifs/autocomplete", get(action(autocomplete)))
         .route("/api/v1/gifs/media", get(action(media)))
 }
 
@@ -36,6 +34,8 @@ endpoint!(config => show_config);
 endpoint!(search => search_gifs);
 endpoint!(trending => trending_gifs);
 endpoint!(categories => list_categories);
+endpoint!(suggestions => search_suggestions);
+endpoint!(autocomplete => search_autocomplete);
 endpoint!(media => proxy_media);
 
 fn unavailable(c: &mut Ctx) -> Error {
@@ -47,13 +47,13 @@ fn unavailable(c: &mut Ctx) -> Error {
     )
 }
 
-/// The configured key, or the typed unavailable error when GIFs are off.
+/// A configured key, or a feature-off 404.
 fn key(c: &mut Ctx) -> Result<String> {
     c.app()
         .config
         .klipy_api_key
         .clone()
-        .ok_or_else(|| unavailable(c))
+        .ok_or_else(|| fail(c, api::ApiError::NotFound { message: "GIFs are disabled on this server".into() }))
 }
 
 fn customer(c: &Ctx, user_id: i64) -> String {
@@ -73,63 +73,69 @@ fn limited(c: &mut Ctx, user_id: i64, bucket: &'static str, limit: usize) -> Res
     ))
 }
 
-fn page(c: &Ctx) -> u32 {
-    c.param_str("page")
-        .and_then(|page| page.parse().ok())
-        .filter(|page| *page >= 1)
-        .unwrap_or(1)
+fn page(c: &mut Ctx) -> Result<u32> {
+    match c.param_str("page") {
+        None => Ok(1),
+        Some(value) => value.parse::<u32>().ok().filter(|page| (1..=10000).contains(page))
+            .ok_or_else(|| fail(c, validation("page", "must be between 1 and 10000"))),
+    }
+}
+
+fn query(c: &mut Ctx) -> Result<String> {
+    let query = c.param_str("q").unwrap_or_default().trim().to_owned();
+    if query.is_empty() || query.chars().count() > 200 {
+        return Err(fail(c, validation("q", "must contain 1 to 200 characters")));
+    }
+    Ok(query)
+}
+
+pub(crate) fn selection(c: &mut Ctx, slug: Option<&str>, single: Option<&str>, grouped: usize) -> Result<Option<String>> {
+    let Some(slug) = slug.map(str::trim).filter(|slug| !slug.is_empty()) else { return Ok(None); };
+    if slug.len() > 200 || !slug.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_')) {
+        return Err(fail(c, validation("gifSlug", "is not a valid GIF slug")));
+    }
+    if single.is_some() { return Err(fail(c, validation("gifSlug", "cannot be combined with attachmentSignedId"))); }
+    if grouped >= campfire_db::message::ATTACHMENTS_PER_MESSAGE {
+        return Err(fail(c, validation("attachmentSignedIds", "has too many files (maximum is 10)")));
+    }
+    Ok(Some(slug.to_owned()))
 }
 
 fn item_dto(item: &Item) -> Option<api::GifItem> {
     let preview = item.preview()?;
-    let still = item.still().unwrap_or(preview);
     Some(api::GifItem {
         slug: item.slug.clone(),
         klipy_id: item.klipy_id.clone(),
         title: item.title.clone(),
-        preview_url: klipy::media_proxy_path(&preview.url),
-        still_url: klipy::media_proxy_path(&still.url),
+        attribution: "Powered by KLIPY".into(),
+        preview_url: klipy::media_proxy_path(&preview.url)?,
+        still_url: item.still().and_then(|rendition| klipy::media_proxy_path(&rendition.url)),
         width: preview.width,
         height: preview.height,
     })
 }
 
 fn list_reply(c: &mut Ctx, page: &klipy::ListPage) -> Result {
-    c.json(
-        StatusCode::OK,
-        &api::GifList {
-            items: page.items.iter().filter_map(item_dto).collect(),
-            page: page.page,
-            has_next: page.has_next,
-        },
-    )
+    c.json(StatusCode::OK, &api::GifList {
+        items: page.items.iter().filter_map(item_dto).collect(),
+        page: page.page,
+        has_next: page.has_next,
+    })
 }
 
 async fn show_config(c: &mut Ctx) -> Result {
     viewer(c).await?;
-    c.json(
-        StatusCode::OK,
-        &api::GifConfig {
-            enabled: c.app().config.klipy_api_key.is_some(),
-        },
-    )
+    c.json(StatusCode::OK, &api::GifConfig { enabled: c.app().config.klipy_api_key.is_some() })
 }
 
 async fn search_gifs(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
     let key = key(c)?;
-    let query = c.param_str("q").unwrap_or_default().trim().to_string();
-    if query.is_empty() {
-        return Err(fail(c, validation("q", "can't be blank")));
-    }
+    let query = query(c)?;
+    let page_number = page(c)?;
     limited(c, user.id, "api", API_LIMIT)?;
-    let filter = c.app().config.klipy_content_filter.clone();
-    let page = c
-        .app()
-        .klipy
-        .search(&key, &filter, &customer(c, user.id), &query, page(c))
-        .await
-        .map_err(|_| unavailable(c))?;
+    let page = c.app().klipy.search(&key, &customer(c, user.id), &query, page_number)
+        .await.map_err(|_| unavailable(c))?;
     list_reply(c, &page)
 }
 
@@ -137,11 +143,11 @@ async fn trending_gifs(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
     let key = key(c)?;
     limited(c, user.id, "api", API_LIMIT)?;
-    let filter = c.app().config.klipy_content_filter.clone();
+    let page_number = page(c)?;
     let page = c
         .app()
         .klipy
-        .trending(&key, &filter, &customer(c, user.id), page(c))
+        .trending(&key, &customer(c, user.id), page_number)
         .await
         .map_err(|_| unavailable(c))?;
     list_reply(c, &page)
@@ -154,7 +160,7 @@ async fn list_categories(c: &mut Ctx) -> Result {
     let categories = c
         .app()
         .klipy
-        .categories(&key)
+        .categories(&key, &customer(c, user.id))
         .await
         .map_err(|_| unavailable(c))?;
     c.json(
@@ -165,12 +171,25 @@ async fn list_categories(c: &mut Ctx) -> Result {
                 .map(|category| api::GifCategory {
                     name: category.name,
                     query: category.query,
-                    preview_url: category.preview_url.map(|url| klipy::media_proxy_path(&url)),
+                    preview_url: category.preview_url.and_then(|url| klipy::media_proxy_path(&url)),
                 })
                 .collect(),
         },
     )
 }
+
+async fn terms(c: &mut Ctx, kind: SuggestionKind) -> Result {
+    let user = viewer(c).await?;
+    let key = key(c)?;
+    let query = query(c)?;
+    limited(c, user.id, "api", API_LIMIT)?;
+    let suggestions = c.app().klipy.suggestions(&key, &customer(c, user.id), &query, kind)
+        .await.map_err(|_| unavailable(c))?;
+    c.json(StatusCode::OK, &api::GifSuggestions { suggestions })
+}
+
+async fn search_suggestions(c: &mut Ctx) -> Result { terms(c, SuggestionKind::Suggestions).await }
+async fn search_autocomplete(c: &mut Ctx) -> Result { terms(c, SuggestionKind::Autocomplete).await }
 
 async fn proxy_media(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
@@ -202,36 +221,47 @@ async fn proxy_media(c: &mut Ctx) -> Result {
 /// the title, so the attachment is described in the Files pane and search.
 pub(crate) async fn stage_gif(c: &mut Ctx, user_id: i64, slug: &str) -> Result<String> {
     let key = key(c)?;
-    limited(c, user_id, "api", API_LIMIT)?;
+    limited(c, user_id, "send", SEND_LIMIT)?;
     let item = c
         .app()
         .klipy
-        .item(&key, slug)
+        .item(&key, &customer(c, user_id), slug)
         .await
         .map_err(|_| unavailable(c))?;
-    let cap = campfire_runtime::active_storage::upload_limit_bytes(c.app()).await?;
+    let cap = campfire_runtime::active_storage::upload_limit_bytes(c.app()).await?.min(GIF_MAX_BYTES);
     let Some((rendition, format, ext)) = item.send_rendition(cap) else {
         return Err(fail(c, validation("gifSlug", "is too large to attach")));
     };
     let (rendition_url, format, ext) = (rendition.url.clone(), format, ext);
     let limit = usize::try_from(cap.max(0)).unwrap_or(0);
-    let (bytes, _content_type) = c
+    let (bytes, content_type) = c
         .app()
         .klipy
         .fetch_media(&rendition_url, limit)
         .await
-        .map_err(|_| unavailable(c))?;
+        .map_err(|error| match error {
+            MediaError::TooLarge => fail(c, validation("gifSlug", "is too large to attach")),
+            MediaError::BadType | MediaError::NotAllowed => fail(c, validation("gifSlug", "is not supported KLIPY media")),
+            MediaError::Unavailable => unavailable(c),
+        })?;
     let declared = match format {
         "webp" => "image/webp",
         "mp4" => "video/mp4",
         _ => "image/gif",
     };
+    if content_type != declared {
+        return Err(fail(c, validation("gifSlug", "has an unexpected media type")));
+    }
     let filename = Filename::new(format!("{}.{}", filename_stem(&item), ext));
     let storage = c.app().storage.clone();
     let staged = tokio::task::spawn_blocking(move || storage.stage_bytes(&bytes, filename, Some(declared)))
         .await
         .map_err(Error::internal)?
         .map_err(Error::internal)?;
+    if staged.blob().content_type.as_deref() != Some(declared) {
+        return Err(fail(c, validation("gifSlug", "has an unexpected file format")));
+    }
+    let slug = item.slug.clone();
     let (klipy_id, title) = (item.klipy_id.clone(), item.title.clone());
     let blob = c
         .app()
@@ -246,6 +276,8 @@ pub(crate) async fn stage_gif(c: &mut Ctx, user_id: i64, slug: &str) -> Result<S
                 .set("klipy_id", campfire_storage::Json::String(klipy_id));
             blob.metadata
                 .set("klipy_title", campfire_storage::Json::String(title));
+            blob.metadata.set("klipy_slug", campfire_storage::Json::String(slug));
+            blob.metadata.set("klipy_attribution", campfire_storage::Json::String("Powered by KLIPY".into()));
             tx.conn().execute_cached(
                 "UPDATE active_storage_blobs SET metadata=? WHERE id=?",
                 rusqlite::params![blob.metadata.encode(), blob.id],

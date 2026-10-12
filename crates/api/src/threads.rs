@@ -220,11 +220,7 @@ async fn message_params(
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
     let mut signed_ids = grouped_signed_ids(c, signed_id.as_deref(), input.attachment_signed_ids.unwrap_or_default())?;
-    let gif_slug = input
-        .gif_slug
-        .as_deref()
-        .map(str::trim)
-        .filter(|slug| !slug.is_empty());
+    let gif_slug = crate::gifs::selection(c, input.gif_slug.as_deref(), signed_id.as_deref(), signed_ids.len())?;
     let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
@@ -261,7 +257,7 @@ async fn message_params(
     }
     if let Some(slug) = gif_slug {
         let creator_id = concerns::require_current_user(c)?.id;
-        let gif_signed_id = crate::gifs::stage_gif(c, creator_id, slug).await?;
+        let gif_signed_id = crate::gifs::stage_gif(c, creator_id, &slug).await?;
         signed_ids.push(gif_signed_id);
     }
     require_grouped_uploads(c, &signed_ids).await?;

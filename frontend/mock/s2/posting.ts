@@ -42,10 +42,11 @@ export function groupedFiles(
   attach: (signedId: string) => Attachment,
 ): readonly Attachment[] | null {
   const ids = stringArrayField(body, "attachmentSignedIds") ?? [];
+  const gif = (stringField(body, "gifSlug") ?? "").trim();
 
   if (ids.length === 0) return null;
 
-  if (ids.length > MAX_MESSAGE_FILES) {
+  if (ids.length + Number(gif !== "") > MAX_MESSAGE_FILES) {
     throw validation("attachmentSignedIds", "has too many files (maximum is 10)");
   }
 
@@ -57,10 +58,9 @@ export function groupedFiles(
     throw validation("attachmentSignedIds", "includes a duplicate file");
   }
 
-  return withSpoilers(
-    body,
-    ids.map((signedId) => attach(signedId)),
-  );
+  const files = ids.map((signedId) => attach(signedId));
+
+  return gif === "" ? withSpoilers(body, files) : files;
 }
 
 /** The `clientMessageId`, checked first so a retry is answered before anything else. */
@@ -97,10 +97,22 @@ export function parseMessage(
   resolveSticker: (id: number) => MessageSticker = () => {
     throw validation("stickerId", "must exist");
   },
+  resolveGif: (slug: string) => Attachment = () => {
+    throw validation("gifSlug", "must exist");
+  },
 ): ParsedMessage {
   const clientMessageId = clientMessageIdOf(body);
   const signedId = stringField(body, "attachmentSignedId");
-  const attachments = groupedFiles(body, signedId, attach);
+  const gifSlug = (stringField(body, "gifSlug") ?? "").trim();
+
+  if (gifSlug !== "" && signedId !== null && signedId !== "")
+    throw validation("gifSlug", "cannot be combined with attachmentSignedId");
+
+  const grouped = groupedFiles(body, signedId, attach);
+  const attachments =
+    grouped !== null || gifSlug !== ""
+      ? withSpoilers(body, [...(grouped ?? []), ...(gifSlug === "" ? [] : [resolveGif(gifSlug)])])
+      : null;
 
   const single =
     signedId === null || signedId === ""

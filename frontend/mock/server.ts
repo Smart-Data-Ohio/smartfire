@@ -55,6 +55,7 @@ import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
 import { createDrive, pickerFiles } from "./s2/drive.ts";
+import { createGifs } from "./s2/gifs.ts";
 import { createInvites } from "./s2/invites.ts";
 import { createJoin, type MockJoined } from "./s2/join.ts";
 import { createMessages } from "./s2/messages.ts";
@@ -183,6 +184,7 @@ export const SEED_IDS = {
 } as const;
 
 export interface MockServerOptions {
+  readonly gifsEnabled?: boolean;
   /** The clock (ms since the epoch); seed data is placed relative to it. */
   readonly now?: () => number;
   /** Seeds the PRNG behind the data, ids and simulation. */
@@ -888,7 +890,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       return { status: 200, json: duplicate };
     }
 
-    const parsed = parseMessage(body, uploads.attachment, stickers.reference);
+    const parsed = parseMessage(body, uploads.attachment, stickers.reference, gifs.attachment);
     const replyTo = parsed.replyToMessageId;
 
     if (replyTo !== null && !record.messages.some((message) => message.id === replyTo)) {
@@ -1077,8 +1079,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const join = createJoin(ctx, admin, invites);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
+  const gifs = createGifs(options.gifsEnabled ?? true);
   const stickers = createStickers(ctx);
-  const threads = createThreads(ctx, uploads, whenReleased, stickers.reference);
+  const threads = createThreads(ctx, uploads, whenReleased, stickers.reference, gifs.attachment);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
 
@@ -1149,6 +1152,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...huddles.routes,
     ...soundboard.routes,
     ...stickers.routes,
+    ...gifs.routes,
     ...cards.routes,
     ...fizzy.routes,
     ...uploads.routes,
@@ -1715,7 +1719,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       }
     },
     handleBinary: async (request) =>
-      stickers.handleBinary(request) ?? uploads.handleBinary(request),
+      gifs.handleBinary(request) ?? stickers.handleBinary(request) ?? uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
     joined: () => join.joined(),
