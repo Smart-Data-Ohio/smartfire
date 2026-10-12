@@ -9,12 +9,22 @@ import type { StarState } from "../gen/StarState.ts";
 import { mutations } from "../store/store.ts";
 import { onRoomRefresh } from "./room-refresh.ts";
 import { runAction } from "./runtime.ts";
+import { onSyncEvents } from "./signals.ts";
 
 export type { FileQuery };
 
 export const panes = {
   /** Mounted member readers reload only after a room-management change. */
   onRoomRefresh,
+  /** File readers must refresh even when the edited message is outside a loaded timeline. */
+  onMessageUpdate: (roomId: number, listener: () => void): (() => void) =>
+    onSyncEvents((events) => {
+      if (
+        events.some((event) => event.type === "message.updated" && event.data.roomId === roomId)
+      ) {
+        listener();
+      }
+    }),
   /** Every active member with presence and the viewer's stars. */
   members: async (roomId: number): Promise<MemberList> => {
     const list = await runAction(members(roomId));

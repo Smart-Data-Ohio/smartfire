@@ -223,7 +223,13 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new room, type or search starts over at page 1
-  useEffect(() => loadPage(1), [roomId, type, query]);
+  useEffect(() => {
+    const stop = panes.onMessageUpdate(roomId, () => loadPage(1));
+
+    loadPage(1);
+
+    return stop;
+  }, [roomId, type, query]);
 
   const jump = (file: RoomFile) => {
     if (file.threadId === null) {
