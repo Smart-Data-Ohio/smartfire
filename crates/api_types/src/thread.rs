@@ -270,6 +270,7 @@ pub struct ThreadMembershipState {
 #[ts(export)]
 pub struct ThreadIndicator {
     pub thread_id: i64,
+    pub visibility: ThreadVisibility,
     /// `messages_count`, as the classic indicator shows it. 0 hides the indicator.
     pub reply_count: i64,
     /// The thread's `last_activity_at`.
