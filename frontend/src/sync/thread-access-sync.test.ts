@@ -111,4 +111,47 @@ describe("threadAccessChanges", () => {
       threadAccessChanges({ removedThreads: {}, ...held }, after, [updated("user")]).regained,
     ).toEqual([]);
   });
+
+  it("recovers a pending first load without a tombstone", () => {
+    expect(
+      threadAccessChanges(
+        {
+          removedThreads: {},
+          threadPanes: {
+            88: {
+              status: "loading",
+              error: null,
+              permissions: null,
+              work: null,
+              workFacts: null,
+            },
+          },
+        },
+        { removedThreads: {} },
+        [updated("user")],
+      ).regained,
+    ).toEqual([88]);
+  });
+
+  it("does not recover twice even if the pending recovery's pane shows an error", () => {
+    expect(
+      threadAccessChanges(
+        {
+          removedThreads: {},
+          threadPanes: {
+            88: {
+              status: "error",
+              error: "gone",
+              permissions: null,
+              work: null,
+              workFacts: null,
+            },
+          },
+        },
+        { removedThreads: {} },
+        [updated("user")],
+        new Map([[88, 1]]),
+      ).regained,
+    ).toEqual([]);
+  });
 });

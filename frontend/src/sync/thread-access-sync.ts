@@ -11,6 +11,7 @@ export function threadAccessChanges(
   before: Pick<State, "removedThreads" | "threadPanes">,
   after: Pick<State, "removedThreads">,
   events: readonly SyncEvent[],
+  recovering: ReadonlyMap<number, number> = new Map(),
 ): ThreadAccessChanges {
   const lost = new Set<number>();
   const regained = new Set<number>();
@@ -25,9 +26,14 @@ export function threadAccessChanges(
     if (event.type === "thread.updated" && event.data.visibility === "private") {
       const id = event.data.id;
       const wasRemoved = before.removedThreads[id] !== undefined || lost.has(id);
-      const unreadable = wasRemoved || before.threadPanes[id]?.status === "error";
+      const status = before.threadPanes[id]?.status;
+      const unreadable = wasRemoved || status === "loading" || status === "error";
 
-      if (unreadable && after.removedThreads[id] === undefined) {
+      if (
+        unreadable &&
+        after.removedThreads[id] === undefined &&
+        (wasRemoved || !recovering.has(id))
+      ) {
         regained.add(id);
       }
     }
