@@ -683,10 +683,11 @@ pub(crate) fn touch_attachment_records(
                 record_id,
                 tx.now(),
             )?,
-            "Account" | "WorkspaceIcon" => {
+            "Account" | "WorkspaceIcon" | "SoundboardSound" => {
                 let table = match record_type.as_str() {
                     "Account" => "accounts",
-                    _ => "workspace_icons",
+                    "WorkspaceIcon" => "workspace_icons",
+                    _ => "soundboard_sounds",
                 };
                 tx.conn().execute_cached(
                     &format!("UPDATE {table} SET updated_at = ?1 WHERE id = ?2"),
