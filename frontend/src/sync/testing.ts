@@ -3,8 +3,8 @@
  * server side the test plays, and browser lifecycle events the test fires. Only tests import this.
  */
 import { Clock, Context, Effect, Layer, PubSub, Queue, Ref, Stream } from "effect";
+import type { ServerFrameWire as ServerFrame } from "../api/schema/sync.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
-import type { ServerFrame } from "../gen/ServerFrame.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { decodeFrames } from "./protocol.ts";
 import { type SyncConnection, SyncSocket, SyncSocketError } from "./socket.ts";

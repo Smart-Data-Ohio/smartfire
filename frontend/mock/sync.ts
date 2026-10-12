@@ -164,7 +164,14 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
       resume !== null && resume.epoch === epoch && resume.seq <= seq && resume.seq >= oldest - 1;
 
     if (!canResume) {
-      transmit(connection, { t: "welcome", epoch, seq, resumed: false, replayThrough: seq });
+      transmit(connection, {
+        t: "welcome",
+        epoch,
+        seq,
+        resumed: false,
+        replayThrough: seq,
+        viewerId,
+      });
 
       return;
     }
@@ -177,6 +184,7 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
       seq: resume.seq,
       resumed: true,
       replayThrough: seq,
+      viewerId,
     });
 
     const missed = ring.filter(

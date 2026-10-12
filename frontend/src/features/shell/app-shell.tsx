@@ -15,6 +15,7 @@ import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
+import { AccountChangedNotice } from "./account-changed.tsx";
 import { useBootFlash } from "./boot-flash.ts";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
@@ -131,6 +132,11 @@ export function AppShell() {
 
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const updateRequired = useAppUpdateRequired();
+  const accountChanged = useStore((state) => state.accountChanged);
+
+  if (accountChanged) {
+    return <AccountChangedNotice />;
+  }
 
   return (
     <div
