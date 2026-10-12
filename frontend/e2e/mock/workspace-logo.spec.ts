@@ -49,9 +49,16 @@ const LOGOS = [
 ] as const;
 
 /**
+ * How far past the colours around it in the copy a pixel may land. A filter on a box around the
+ * image (the rail tile brightens under the pointer) clips at white across the whole box, which a
+ * filter on the copy alone can't match exactly.
+ */
+const TOLERANCE = 24;
+
+/**
  * What hides part of the picture `image` draws: its own box under `object-fit`, a rounded corner
- * of the image or of a box around it that clips, or anything painted over it. Empty when the
- * whole picture shows.
+ * of the image or of a box around it that clips, or anything that changes how it looks. Empty
+ * when the whole picture shows.
  */
 async function hiddenParts(image: Locator): Promise<string[]> {
   // `complete` is true for a failed load too, which would leave nothing to measure.
@@ -65,7 +72,7 @@ async function hiddenParts(image: Locator): Promise<string[]> {
   expect(Math.min(...natural), "the logo's decoded size").toBeGreaterThan(0);
   await image.scrollIntoViewIfNeeded();
 
-  return image.evaluate((element: HTMLImageElement) => {
+  const { hidden, content, picture } = await image.evaluate((element: HTMLImageElement) => {
     const px = (value: string) => Number.parseFloat(value) || 0;
     const style = getComputedStyle(element);
     const box = element.getBoundingClientRect();
@@ -89,8 +96,15 @@ async function hiddenParts(image: Locator): Promise<string[]> {
     const y1 = y0 + drawnHeight - 1;
     const hidden: string[] = [];
 
+    const content = { left, top, width, height };
+    const picture = { x: x0 - 0.5, y: y0 - 0.5, width: drawnWidth, height: drawnHeight };
+
     if (drawnWidth > width + 0.5 || drawnHeight > height + 0.5) {
-      return [`object-fit: ${fit} crops it to its ${width} × ${height} box`];
+      return {
+        hidden: [`object-fit: ${fit} crops it to its ${width} × ${height} box`],
+        content,
+        picture,
+      };
     }
 
     const name = (clipper: Element) =>
@@ -158,69 +172,126 @@ async function hiddenParts(image: Locator): Promise<string[]> {
       }
     }
 
-    // Whether a box, or its ::before or ::after, paints anything: a transparent wrapper doesn't.
-    const clear = (colour: string) => colour === "transparent" || /[,/]\s*0\)$/.test(colour);
+    return { hidden, content, picture };
+  });
 
-    const paints = (box: CSSStyleDeclaration) =>
-      box.opacity !== "0" &&
-      box.visibility !== "hidden" &&
-      (!clear(box.backgroundColor) ||
-        box.backgroundImage !== "none" ||
-        ["Top", "Right", "Bottom", "Left"].some(
-          (side) =>
-            borderWidth(box, side) > 0 &&
-            !clear(box.getPropertyValue(`border-${side.toLowerCase()}-color`)),
-        ));
+  if (hidden.length > 0) return hidden;
 
-    const pseudoPaints = (box: Element) =>
-      ["::before", "::after"].some((pseudo) => {
-        const pseudoStyle = getComputedStyle(box, pseudo);
+  // Anything that changes a pixel of the picture covers it there, however it paints: a box, a
+  // pseudo-element, a shadow, text, a clip. The page is compared with itself under a copy of the
+  // image drawn on top of everything at the image's own place and size, the image hidden beneath.
+  // The copy is absolutely positioned: a fixed one gets its own layer, which scales images less
+  // sharply.
+  const page = image.page();
+  const shot = () => page.screenshot({ clip: picture, animations: "disabled" });
+  const shown = await shot();
 
-        return (
-          pseudoStyle.content !== "none" &&
-          (paints(pseudoStyle) || /^".+"$/.test(pseudoStyle.content))
-        );
-      });
+  const inlineStyle = await image.evaluate((element: HTMLImageElement, box) => {
+    const style = getComputedStyle(element);
+    const copy = document.createElement("img");
+    const filters: string[] = [];
+    let opacity = 1;
 
-    const ownPaints = (box: Element) =>
-      paints(getComputedStyle(box)) ||
-      ["img", "svg", "canvas", "video"].includes(box.localName) ||
-      [...box.childNodes].some((node) => node.nodeType === 3 && node.textContent?.trim());
+    // The boxes around the image fade and filter it; nothing else may change it.
+    for (let at: Element | null = element; at !== null; at = at.parentElement) {
+      const atStyle = getComputedStyle(at);
 
-    // Anything hit before the image at a point of its picture is painted over it there. Every
-    // box is made hittable for the check, so `pointer-events: none` can't hide an overlay.
-    const hittable = document.createElement("style");
-    hittable.textContent = "* { pointer-events: auto !important; }";
-    document.head.append(hittable);
+      opacity *= Number(atStyle.opacity);
 
-    try {
-      for (let i = 0; i <= 8; i++) {
-        for (let j = 0; j <= 8; j++) {
-          const x = x0 + ((x1 - x0) * i) / 8;
-          const y = y0 + ((y1 - y0) * j) / 8;
-          const stack = document.elementsFromPoint(x, y);
-          const at = stack.indexOf(element);
-
-          if (at === -1) {
-            hidden.push("part of it is off screen or clipped away");
-            continue;
-          }
-
-          for (const over of stack.slice(0, at)) {
-            const covers = over.contains(element)
-              ? pseudoPaints(over)
-              : ownPaints(over) || pseudoPaints(over);
-
-            if (covers) hidden.push(`${name(over).replace(/'s$/, "")} covers part of it`);
-          }
-        }
-      }
-    } finally {
-      hittable.remove();
+      if (atStyle.filter !== "none") filters.push(atStyle.filter);
     }
 
-    return [...new Set(hidden)];
-  });
+    for (const [property, value] of Object.entries({
+      all: "initial",
+      position: "absolute",
+      "z-index": "2147483647",
+      display: "block",
+      left: `${box.left + scrollX}px`,
+      top: `${box.top + scrollY}px`,
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+      "object-fit": style.objectFit,
+      "object-position": style.objectPosition,
+      "image-rendering": style.imageRendering,
+      opacity: String(opacity),
+      filter: filters.join(" ") || "none",
+    })) {
+      copy.style.setProperty(property, value, "important");
+    }
+
+    copy.src = element.currentSrc;
+    copy.dataset.logoCopy = "";
+    document.body.append(copy);
+
+    const before = element.style.cssText;
+
+    element.style.setProperty("visibility", "hidden", "important");
+
+    return copy.decode().then(() => before);
+  }, content);
+
+  let bare: Buffer;
+
+  try {
+    bare = await shot();
+  } finally {
+    await image.evaluate((element: HTMLImageElement, before) => {
+      element.style.cssText = before;
+      document.querySelector("[data-logo-copy]")?.remove();
+    }, inlineStyle);
+  }
+
+  const changed = await page.evaluate(
+    async ([a, b, tolerance]) => {
+      const pixels = async (png: string) => {
+        const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+        const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+
+        if (context === null) throw new Error("no 2D canvas");
+        context.drawImage(bitmap, 0, 0);
+
+        return context.getImageData(0, 0, bitmap.width, bitmap.height);
+      };
+
+      const [shown, bare] = await Promise.all([pixels(a), pixels(b)]);
+      const { width, height } = shown;
+
+      // The page and the copy scale the image separately, so an edge can land a little
+      // differently in each. A pixel changed only when a channel falls outside the range that
+      // channel spans within a pixel of it in the copy.
+      const changed: [number, number][] = [];
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const outside = [0, 1, 2].some((channel) => {
+            const near: number[] = [];
+
+            for (let by = Math.max(0, y - 1); by <= Math.min(height - 1, y + 1); by++) {
+              for (let bx = Math.max(0, x - 1); bx <= Math.min(width - 1, x + 1); bx++) {
+                near.push(bare.data[(by * width + bx) * 4 + channel] ?? 0);
+              }
+            }
+
+            const value = shown.data[(y * width + x) * 4 + channel] ?? 0;
+
+            return value < Math.min(...near) - tolerance || value > Math.max(...near) + tolerance;
+          });
+
+          if (outside) changed.push([x, y]);
+        }
+      }
+
+      return { count: changed.length, total: width * height, first: changed[0] ?? [0, 0] };
+    },
+    [shown.toString("base64"), bare.toString("base64"), TOLERANCE] as const,
+  );
+
+  return changed.count === 0
+    ? []
+    : [
+        `something over it changes ${changed.count} of its ${changed.total} pixels, the first ${changed.first.join(", ")} device pixels from its top left`,
+      ];
 }
 
 /** Every check is soft, so one run names each place that crops the logo. */
@@ -337,5 +408,13 @@ for (const { label, file } of LOGOS) {
     }
 
     await expectWhole(page.locator(".sidebar-workspace-logo"), "phone sidebar header");
+
+    for (const [refusal, token] of Object.entries(MOCK_DEAD_INVITES)) {
+      await page.goto(`/app/invite/${token}`);
+      await expectWhole(
+        page.locator(".auth-view-invite-mark .auth-view-logo"),
+        `${refusal} invite page on a phone`,
+      );
+    }
   });
 }
