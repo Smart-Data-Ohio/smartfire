@@ -155,6 +155,8 @@ pub struct SoundImage {
 /// The message's Active Storage attachment.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct AttachmentView {
+    #[serde(default)]
+    pub spoiler: bool,
     /// `attachment.filename.to_s`.
     pub filename: String,
     /// `attachment.filename.base.to_s`, derived from the stored unsanitized filename.

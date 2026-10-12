@@ -225,6 +225,7 @@ pub struct MessageParams {
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub attachments: Vec<Assignment>,
+    pub attachment_spoilers: Vec<bool>,
     pub attachment_policy: AttachmentPolicy,
     pub client_message_id: Option<String>,
     pub reply_to_message_id: Option<i64>,
@@ -330,7 +331,7 @@ pub async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: 
 /// The SPA's edit (`PATCH /api/v1/messages/:id`): the classic update given
 /// `message[markdown_source]`, and `remove_drive_file_ids` dropped from the current set
 /// (`message[drive_file_ids][]` on the classic edit form is what remains).
-pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Message, markdown_source: String, remove_drive_file_ids: &[String]) -> Result<Message> {
+pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Message, markdown_source: String, remove_drive_file_ids: &[String], attachment_spoilers: Option<Vec<bool>>) -> Result<Message> {
     let drive_file_ids = if remove_drive_file_ids.is_empty() {
         None
     } else {
@@ -338,7 +339,7 @@ pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Me
         let current = c.app().db.read(move |conn| Message::find(conn, id)?.drive_file_ids(conn)).await.map_err(db_error)?;
         Some(current.into_iter().filter(|file_id| !remove_drive_file_ids.iter().any(|removed| removed == file_id)).collect())
     };
-    let changes = campfire_db::MessageChanges { mention_inviter_id: Some(require_current_user(c)?.id), markdown_source: Some(markdown_source), drive_file_ids, ..Default::default() };
+    let changes = campfire_db::MessageChanges { attachment_spoilers, mention_inviter_id: Some(require_current_user(c)?.id), markdown_source: Some(markdown_source), drive_file_ids, ..Default::default() };
     let attachment = Assignment::Unchanged.stage(c.app()).await?;
     apply_human_edit(c, thread_id, message, changes, attachment, false).await
 }
@@ -563,6 +564,7 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
                 client_message_id: attributes.client_message_id,
                 attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                 attachment_blob_ids: files.iter().map(|blob| blob.id).collect(),
+                attachment_spoilers: attributes.attachment_spoilers.clone(),
                 reply_to_message_id: attributes.reply_to_message_id,
                 reply_notify_author: attributes.reply_notify_author,
                 ..Default::default()
@@ -644,6 +646,7 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     attachment_blob_ids: files.iter().map(|blob| blob.id).collect(),
+                attachment_spoilers: attributes.attachment_spoilers.clone(),
                     ..Default::default()
                 };
             files.extend(blob);

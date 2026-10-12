@@ -450,6 +450,7 @@ fn scheduled_messages_carry_their_state() {
             reply_to_message_id: None,
             attachment_signed_id: None,
             attachment_signed_ids: None,
+            attachment_spoilers: None,
         },
         json!({"sendAt": "2026-10-07T14:00:00.000Z"}),
     );

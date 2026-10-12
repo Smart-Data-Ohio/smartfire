@@ -163,6 +163,7 @@ async fn update_message(c: &mut Ctx) -> Result {
         message,
         input.markdown_source,
         &remove,
+        input.attachment_spoilers,
     )
     .await
     {

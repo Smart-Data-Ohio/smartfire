@@ -260,6 +260,7 @@ const threads = {
       readonly name?: string | null;
       readonly attachmentSignedId?: string | null;
       readonly attachmentSignedIds?: readonly string[];
+      readonly attachmentSpoilers?: readonly boolean[];
       readonly clientMessageId?: string;
       readonly driveFileIds?: readonly string[];
       readonly visibility?: ThreadVisibility;

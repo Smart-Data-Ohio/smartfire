@@ -162,6 +162,7 @@ it("shows scheduled file thumbnails and filenames", () => {
               preview: "image",
               url: "/one.png",
               downloadUrl: "/one.png?download",
+              spoiler: false,
               thumbnailUrl: "/thumb.png",
             },
           },
@@ -185,9 +186,10 @@ it("shows scheduled file thumbnails and filenames", () => {
   expect(screen.getByAltText("one.png").getAttribute("src")).toBe("/thumb.png");
 });
 
-it("removes a scheduled file while retaining the other signed upload", async () => {
+it("retains the other file's spoiler flag and locks file controls while saving a removal", async () => {
   const user = userEvent.setup();
   const saved: unknown[] = [];
+  const saving = Promise.withResolvers<void>();
 
   const attachment = {
     filename: "one.txt",
@@ -198,6 +200,7 @@ it("removes a scheduled file while retaining the other signed upload", async () 
     preview: "file",
     url: "/one",
     downloadUrl: "/one?download",
+    spoiler: false,
     thumbnailUrl: null,
   } as const;
 
@@ -211,14 +214,23 @@ it("removes a scheduled file while retaining the other signed upload", async () 
         ],
       }}
       onClose={() => undefined}
-      onSave={async (_item, edit) => {
+      onSave={(_item, edit) => {
         saved.push(edit);
+
+        return saving.promise;
       }}
     />,
   );
   await user.click(screen.getByRole("button", { name: "Remove one.txt" }));
+  await user.click(screen.getByRole("button", { name: "Mark two.txt as spoiler" }));
+  expect(
+    screen.getByRole("button", { name: "Mark two.txt as spoiler" }).getAttribute("aria-pressed"),
+  ).toBe("true");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  expect(saved).toEqual([{ attachmentSignedIds: ["signed-two"] }]);
+  expect(saved).toEqual([{ attachmentSignedIds: ["signed-two"], attachmentSpoilers: [true] }]);
+  expect(screen.queryByRole("button", { name: "Remove two.txt" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Mark two.txt as spoiler" })).toBeNull();
+  await act(async () => saving.resolve());
 });
 
 it("adds an uploaded file after retained files and waits for its upload", async () => {
@@ -243,6 +255,7 @@ it("adds an uploaded file after retained files and waits for its upload", async 
               preview: "file",
               url: "/kept",
               downloadUrl: "/kept?download",
+              spoiler: false,
               thumbnailUrl: null,
             },
           },
@@ -283,5 +296,7 @@ it("adds an uploaded file after retained files and waits for its upload", async 
     ),
   );
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  expect(saved).toEqual([{ attachmentSignedIds: ["retained", direct.signedId] }]);
+  expect(saved).toEqual([
+    { attachmentSignedIds: ["retained", direct.signedId], attachmentSpoilers: [false, false] },
+  ]);
 });

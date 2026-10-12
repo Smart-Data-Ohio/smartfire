@@ -261,6 +261,10 @@ pub struct CreateScheduledMessage {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attachment_signed_ids: Option<Vec<String>>,
+    /// One flag per uploaded file, in signed-id order. Omitted means public on create.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_spoilers: Option<Vec<bool>>,
 }
 
 /// `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time, files or reply target
@@ -303,6 +307,10 @@ pub struct UpdateScheduledMessage {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attachment_signed_ids: Option<Vec<String>>,
+    /// One flag per uploaded file, in signed-id order. Omitted means public on create.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment_spoilers: Option<Vec<bool>>,
 }
 
 #[derive(Deserialize)]
@@ -318,6 +326,8 @@ struct UpdateScheduledMessageFields {
     attachment_signed_id: Option<String>,
     #[serde(default)]
     attachment_signed_ids: Option<Vec<String>>,
+    #[serde(default)]
+    attachment_spoilers: Option<Vec<bool>>,
 }
 
 impl<'de> Deserialize<'de> for UpdateScheduledMessage {
@@ -329,6 +339,7 @@ impl<'de> Deserialize<'de> for UpdateScheduledMessage {
             reply_to_message_id: fields.reply_to_message_id,
             attachment_signed_id: fields.attachment_signed_id,
             attachment_signed_ids: fields.attachment_signed_ids,
+            attachment_spoilers: fields.attachment_spoilers,
         })
     }
 }

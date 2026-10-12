@@ -179,6 +179,7 @@ function threadMessage(
   options: {
     readonly attachmentSignedId?: string | null;
     readonly attachmentSignedIds?: readonly string[];
+    readonly attachmentSpoilers?: readonly boolean[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
   },
@@ -191,6 +192,9 @@ function threadMessage(
     replyNotifyAuthor: null,
     attachmentSignedId: options.attachmentSignedId ?? null,
   };
+
+  if (options.attachmentSpoilers !== undefined)
+    message.attachmentSpoilers = [...options.attachmentSpoilers];
 
   const attachmentSignedIds = options.attachmentSignedIds;
 
@@ -220,6 +224,7 @@ export const create = Effect.fn("threads.create")(function* (
     readonly name?: string | null;
     readonly attachmentSignedId?: string | null;
     readonly attachmentSignedIds?: readonly string[];
+    readonly attachmentSpoilers?: readonly boolean[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
     readonly visibility?: ThreadVisibility;

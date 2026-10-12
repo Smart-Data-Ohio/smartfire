@@ -89,6 +89,7 @@ impl Blob {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Attachment {
+    pub spoiler: bool,
     pub id: i64,
     pub name: String,
     pub record_type: String,
@@ -100,6 +101,7 @@ pub struct Attachment {
 impl Attachment {
     pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
+            spoiler: row.get("spoiler")?,
             id: row.get("id")?,
             name: row.get("name")?,
             record_type: row.get("record_type")?,
@@ -131,10 +133,14 @@ impl Attachment {
         name: &str,
         blob_id: i64,
     ) -> Result<Self> {
+        Self::create_with_spoiler(tx, record_type, record_id, name, blob_id, false)
+    }
+
+    pub fn create_with_spoiler(tx: &Tx<'_>, record_type: &str, record_id: i64, name: &str, blob_id: i64, spoiler: bool) -> Result<Self> {
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "active_storage_attachments" ("blob_id", "created_at", "name", "record_id", "record_type") VALUES (?, ?, ?, ?, ?) RETURNING "id""#,
-            params![blob_id, now, name, record_id, record_type],
+            r#"INSERT INTO "active_storage_attachments" ("blob_id", "created_at", "name", "record_id", "record_type", "spoiler") VALUES (?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            params![blob_id, now, name, record_id, record_type, spoiler],
             |r| r.get(0),
         )?;
         let private: bool = tx.conn().query_row(
@@ -145,6 +151,7 @@ impl Attachment {
             tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(COALESCE(NULLIF(metadata,''),'{}'),'$.private_thread_media',json('true')) WHERE id=?", [blob_id])?;
         }
         Ok(Self {
+            spoiler,
             id,
             name: name.into(),
             record_type: record_type.into(),

@@ -68,8 +68,8 @@ pub(super) fn row(
     .unwrap_or(Value::Null))
 }
 /// Columns added after the Rails port. Rails recordings don't have them, so a row
-/// matches when such a column is absent from the recording and still NULL here.
-const POST_RAILS_COLUMNS: &[&str] = &["sticker_id", "sticker_name"];
+/// matches when such a column is absent from the recording and still at its default here.
+const POST_RAILS_COLUMNS: &[&str] = &["sticker_id", "sticker_name", "spoiler"];
 
 pub(super) fn same_row(actual: &Value, expected: &Value, context: &str) {
     if expected.is_null() {
@@ -83,7 +83,8 @@ pub(super) fn same_row(actual: &Value, expected: &Value, context: &str) {
         .iter()
         .filter(|(key, value)| {
             expected_columns.contains_key(*key)
-                || !(POST_RAILS_COLUMNS.contains(&key.as_str()) && value.is_null())
+                || !(POST_RAILS_COLUMNS.contains(&key.as_str())
+                    && (value.is_null() || (key.as_str() == "spoiler" && value.as_i64() == Some(0))))
         })
         .count();
     assert_eq!(actual_columns, expected_columns.len(), "{context} columns");

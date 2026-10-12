@@ -80,7 +80,7 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
     });
     let blob_ids = blobs.each_ref().map(|blob| blob.id);
     let row = t.write(move |tx| {
-        ScheduledMessage::create_with_attachments(
+        let mut row = ScheduledMessage::create_with_attachments(
             tx,
             NewScheduledMessage {
                 user_id: id("david"),
@@ -91,7 +91,9 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
                 send_at: tx.now().since(jiff::SignedDuration::from_secs(60)),
             },
             &blob_ids,
-        )
+        )?;
+        row.set_attachment_spoilers(tx, &[true, false])?;
+        Ok(row)
     });
     std::fs::write(service.path_for(&blobs[1].key), b"jello").unwrap();
     assert_eq!(
@@ -149,6 +151,7 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
         blob_ids
     );
     assert_eq!(drop_item(&t, &row).event_type, "scheduled_message_dropped");
+    assert_eq!(t.read(|conn| row.attachment_spoilers_for(conn, &blob_ids)), [true, false]);
     assert!(!t.events().iter().any(|event| matches!(
         event.as_broadcast(),
         Some(crate::broadcasts::Broadcast::MessageCreated { .. })
@@ -156,7 +159,7 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
 
     std::fs::write(service.path_for(&blobs[1].key), b"hello").unwrap();
     let retry = t.write(move |tx| {
-        ScheduledMessage::create_with_attachments(
+        let mut retry = ScheduledMessage::create_with_attachments(
             tx,
             NewScheduledMessage {
                 user_id: row.user_id,
@@ -167,7 +170,20 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
                 send_at: tx.now().since(jiff::SignedDuration::from_secs(60)),
             },
             &blob_ids,
-        )
+        )?;
+        retry.set_attachment_spoilers(tx, &[true, false])?;
+        let source = retry.markdown_source.clone();
+        retry.update_with_attachments(tx, &source, retry.send_at, None, Some(&[blob_ids[1], blob_ids[0]]))?;
+        Ok(retry)
+    });
+    assert_eq!(t.read(|conn| retry.attachment_spoilers_for(conn, &[blob_ids[1], blob_ids[0]])), [false, true]);
+    assert_eq!(t.read(|conn| retry.attachment_spoilers_for(conn, &[blob_ids[0]])), [true]);
+    t.read(|conn| {
+        for (_, blob) in retry.attachments(conn)? {
+            let metadata: serde_json::Value = serde_json::from_str(blob.metadata.as_deref().unwrap()).unwrap();
+            assert_eq!(metadata["scheduled_by"], retry.user_id);
+        }
+        Ok(())
     });
     t.travel(120);
     assert_eq!(
@@ -181,8 +197,16 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
             .iter()
             .map(|(_, blob)| blob.id)
             .collect::<Vec<_>>(),
-        blob_ids
+        [blob_ids[1], blob_ids[0]]
     );
+    assert_eq!(t.read(|conn| message.attachments(conn))
+        .iter().map(|(attachment, _)| attachment.spoiler).collect::<Vec<_>>(), [false, true]);
+    t.read(|conn| {
+        for (_, blob) in message.attachments(conn)? {
+            assert!(!blob.metadata.unwrap().contains("scheduled_by"));
+        }
+        Ok(())
+    });
 }
 
 #[test]

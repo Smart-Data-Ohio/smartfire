@@ -30,7 +30,7 @@ export function fileQuery(type: FileType, search: string, page: number): FileQue
   };
 }
 
-/** A file's identity in the list: its message (one file per message) and its blob URL. */
+/** A file's identity in the list: its message and its blob URL. */
 export function fileKey(file: RoomFile): string {
   return `${file.messageId}:${file.attachment.url}`;
 }
@@ -40,6 +40,37 @@ export function appendFiles(held: readonly RoomFile[], page: readonly RoomFile[]
   const seen = new Set(held.map(fileKey));
 
   return [...held, ...page.filter((file) => !seen.has(fileKey(file)))];
+}
+
+/** Live attachment flags and removals keep loaded pages in order, including pending reads. */
+export function reconcileFiles(
+  held: readonly RoomFile[],
+  updates: ReadonlyMap<number, readonly Attachment[]>,
+): readonly RoomFile[] {
+  let changed = false;
+  const files: RoomFile[] = [];
+
+  for (const file of held) {
+    const attachments = updates.get(file.messageId);
+
+    if (attachments === undefined) {
+      files.push(file);
+      continue;
+    }
+
+    const attachment = attachments.find((candidate) => candidate.url === file.attachment.url);
+
+    if (attachment === undefined) {
+      changed = true;
+    } else if (attachment.spoiler !== file.attachment.spoiler) {
+      changed = true;
+      files.push({ ...file, attachment: { ...file.attachment, spoiler: attachment.spoiler } });
+    } else {
+      files.push(file);
+    }
+  }
+
+  return changed ? files : held;
 }
 
 /** Images and videos show as tiles; everything else as rows. */

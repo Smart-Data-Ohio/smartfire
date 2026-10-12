@@ -11,4 +11,8 @@ export type CreateScheduledMessage = { markdownSource: string, sendAt: string, t
 /**
  * The same owned upload slots as an immediate send; do not combine them.
  */
-attachmentSignedId?: string, attachmentSignedIds?: Array<string>, };
+attachmentSignedId?: string, attachmentSignedIds?: Array<string>,
+/**
+ * One flag per uploaded file, in signed-id order. Omitted means public on create.
+ */
+attachmentSpoilers?: Array<boolean>, };

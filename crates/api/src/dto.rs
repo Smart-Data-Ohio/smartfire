@@ -465,17 +465,17 @@ fn messages_and_fetches_inner(
     let pinned: BTreeSet<i64> = flags.iter().filter(|flag| flag.1).map(|flag| flag.0).collect();
     let published: BTreeSet<i64> = flags.iter().filter(|flag| flag.2).map(|flag| flag.0).collect();
     let copies: BTreeSet<i64> = flags.iter().filter(|flag| flag.3).map(|flag| flag.0).collect();
-    let file_rows: Vec<(i64, String, i64)> = ids_query(
+    let file_rows: Vec<(i64, String, i64, bool)> = ids_query(
         conn,
-        r#"SELECT record_id, name, blob_id FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
+        r#"SELECT record_id, name, blob_id, spoiler FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
         &ids,
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )?;
-    let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob)| *blob).collect::<Vec<_>>())
+    let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob, _)| *blob).collect::<Vec<_>>())
         .map_err(campfire_runtime::presenters::storage_error)?;
-    let mut files = HashMap::<i64, Vec<(String, i64)>>::new();
-    for (message_id, name, blob_id) in file_rows {
-        files.entry(message_id).or_default().push((name, blob_id));
+    let mut files = HashMap::<i64, Vec<(String, i64, bool)>>::new();
+    for (message_id, name, blob_id, spoiler) in file_rows {
+        files.entry(message_id).or_default().push((name, blob_id, spoiler));
     }
     let threads = thread_indicators(conn, messages)?;
     let mut steps = message_steps(conn, &ids)?;
@@ -485,13 +485,13 @@ fn messages_and_fetches_inner(
         .map(|message| {
             let rows = files.get(&message.id).map_or(&[][..], Vec::as_slice);
             let mut attachments = Vec::with_capacity(rows.len());
-            for (_, blob_id) in rows {
+            for (_, blob_id, spoiler) in rows {
                 if let Some(blob) = blobs.get(blob_id) {
-                    attachments.push(attachment(presenter.attachment_blob(message, blob)?, blob.content_type.as_deref(), blob.byte_size));
+                    attachments.push(attachment(presenter.attachment_blob(message, blob, *spoiler)?, blob.content_type.as_deref(), blob.byte_size));
                 }
             }
             let attachment = attachments.first().cloned();
-            let attachments = rows.iter().any(|(name, _)| name == "attachments").then_some(attachments);
+            let attachments = rows.iter().any(|(name, _, _)| name == "attachments").then_some(attachments);
             let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
             let sound = if attachment.is_none() {
                 campfire_db::message::sound_in(&presenter.plain_text_body(message)?)
@@ -656,6 +656,7 @@ pub(crate) fn attachment(
         AttachmentPreview::File => (api::AttachmentPreview::File, None),
     };
     api::Attachment {
+        spoiler: view.spoiler,
         filename: view.filename,
         content_type: present(content_type)
             .unwrap_or_else(|| "application/octet-stream".to_string()),
@@ -1839,7 +1840,7 @@ fn room_file_rows(
         else {
             continue;
         };
-        let view = presenter.attachment_blob(message, blob)?;
+        let view = presenter.attachment_blob(message, blob, row.spoiler)?;
         files.push(api::RoomFile {
             message_id: message.id,
             thread_id: row.thread_id,

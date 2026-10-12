@@ -3,6 +3,7 @@ import type { ApiClient } from "../api/client.ts";
 import { createMessage } from "../api/endpoints.ts";
 import { type ApiFailure, NetworkError, ServerError } from "../api/errors.ts";
 import { createThreadMessage } from "../api/thread-endpoints.ts";
+import type { CreateMessage } from "../gen/CreateMessage.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import type { AvailableSticker, PendingAttachment, PendingMessage } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
@@ -47,6 +48,7 @@ export interface SendOptions {
    * Left out, or empty, for none.
    */
   readonly attachmentSignedIds?: readonly string[];
+  readonly attachmentSpoilers?: readonly boolean[];
   /** What the pending row shows for those files. */
   readonly attachments?: readonly PendingAttachment[];
   /** Drive files pinned on this message. Left out when there are none. */
@@ -96,13 +98,16 @@ export class Outbox extends Context.Service<
         const driveFileIds = pending.driveFileIds;
         const signedIds = pending.attachmentSignedIds;
 
-        const message = {
+        const message: CreateMessage = {
           clientMessageId: pending.clientMessageId,
           markdownSource: pending.markdownSource,
           replyToMessageId: pending.replyToMessageId,
           replyNotifyAuthor: pending.replyNotifyAuthor,
           attachmentSignedId: pending.attachmentSignedId,
         };
+
+        if (pending.attachmentSpoilers !== undefined)
+          message.attachmentSpoilers = [...pending.attachmentSpoilers];
 
         const grouped =
           signedIds !== undefined && signedIds.length > 0
@@ -180,14 +185,19 @@ export class Outbox extends Context.Service<
           error: null,
         };
 
+        const withSpoilers =
+          options.attachmentSpoilers === undefined
+            ? pendingBase
+            : { ...pendingBase, attachmentSpoilers: options.attachmentSpoilers };
+
         const grouped: PendingMessage =
           signedIds !== undefined && signedIds.length > 0
             ? {
-                ...pendingBase,
+                ...withSpoilers,
                 attachmentSignedIds: signedIds,
                 attachments: options.attachments ?? [],
               }
-            : pendingBase;
+            : withSpoilers;
 
         const withDrive: PendingMessage =
           driveFileIds !== undefined && driveFileIds.length > 0

@@ -46,6 +46,10 @@ attachmentSignedId: string | null,
  */
 attachmentSignedIds?: Array<string>,
 /**
+ * One flag per uploaded file, in signed-id order. Omitted means public on create.
+ */
+attachmentSpoilers?: Array<boolean>,
+/**
  * Google Drive file ids to pin (`message[drive_file_ids][]`). Left out when there are none.
  * At most ten; an invalid id is a 422, as the classic composer is. A message may be empty
  * of Markdown when it carries one of these or a file.

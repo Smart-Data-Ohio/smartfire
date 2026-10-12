@@ -381,3 +381,40 @@
     font-size: var(--text-ui);
   }
 }
+
+@layer app {
+  .tray-chip[data-kind="image"] {
+    width: 120px;
+    height: 108px;
+    padding-bottom: 44px;
+  }
+  .tray-chip[data-kind="file"] {
+    height: 100px;
+    padding-bottom: 44px;
+  }
+  .tray-chip[data-spoiler] .tray-thumb img {
+    filter: blur(8px);
+  }
+  .tray-spoiler {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    background: var(--bg-raised);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    cursor: pointer;
+  }
+  .tray-spoiler[aria-pressed="true"] {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .tray-spoiler:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}

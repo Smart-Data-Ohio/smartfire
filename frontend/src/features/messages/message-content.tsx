@@ -218,7 +218,7 @@ function Body({ message }: { readonly message: MessageDTO }) {
 }
 
 function Files({ message }: { readonly message: MessageDTO }) {
-  return <AttachmentGallery attachments={messageFiles(message)} />;
+  return <AttachmentGallery key={message.id} attachments={messageFiles(message)} />;
 }
 
 /**

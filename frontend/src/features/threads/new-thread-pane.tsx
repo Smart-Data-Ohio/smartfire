@@ -85,6 +85,7 @@ export function NewThreadPane({
         name: name.trim() === "" ? null : name.trim(),
         attachmentSignedId: draft.attachmentSignedId,
         attachmentSignedIds: draft.attachmentSignedIds,
+        attachmentSpoilers: draft.attachmentSpoilers,
         driveFileIds: draft.driveFileIds,
         clientMessageId,
         visibility: secret ? "private" : "public",

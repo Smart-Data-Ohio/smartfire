@@ -7,6 +7,7 @@ interface AttachmentTrayProps {
   readonly files: readonly TrayFile[];
   readonly onRemove: (id: string) => void;
   readonly onRetry: (id: string) => void;
+  readonly onToggleSpoiler: (id: string) => void;
 }
 
 /** "1.2 MB", "820 KB", "12 bytes". */
@@ -102,7 +103,7 @@ function statusText(entry: TrayFile): string {
  * The files waiting to go with the message: image thumbnails and file cards, each with its
  * upload progress, a remove button and (after a failure) retry. New chips pop in.
  */
-export function AttachmentTray({ files, onRemove, onRetry }: AttachmentTrayProps) {
+export function AttachmentTray({ files, onRemove, onRetry, onToggleSpoiler }: AttachmentTrayProps) {
   if (files.length === 0) {
     return null;
   }
@@ -120,6 +121,7 @@ export function AttachmentTray({ files, onRemove, onRetry }: AttachmentTrayProps
             className="tray-chip"
             data-kind={entry.previewUrl === null ? "file" : "image"}
             data-phase={phase}
+            data-spoiler={entry.spoiler || undefined}
             aria-label={`${entry.file.name}: ${status}`}
             aria-busy={busy || undefined}
           >
@@ -161,6 +163,15 @@ export function AttachmentTray({ files, onRemove, onRetry }: AttachmentTrayProps
                 />
               </span>
             ) : null}
+            <button
+              type="button"
+              className="tray-spoiler"
+              aria-label={`Mark ${entry.file.name} as spoiler`}
+              aria-pressed={entry.spoiler}
+              onClick={() => onToggleSpoiler(entry.id)}
+            >
+              {entry.spoiler ? "Spoiler" : "Mark as spoiler"}
+            </button>
             <IconButton
               icon="x"
               label={busy ? `Cancel ${entry.file.name}` : `Remove ${entry.file.name}`}

@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import type { Attachment } from "../../gen/Attachment.ts";
 import type { FileType } from "../../gen/FileType.ts";
 import type { RoomFile } from "../../gen/RoomFile.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -9,6 +10,8 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
+import { FileSpoiler } from "../messages/file-spoiler.tsx";
+import { messageFiles } from "../messages/message-files.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
@@ -23,6 +26,7 @@ import {
   formatBytes,
   isFileType,
   LAST_FILE_PAGE,
+  reconcileFiles,
   showsAsGrid,
 } from "./files.ts";
 import { PaneFrame, RoomName } from "./pane-frame.tsx";
@@ -66,28 +70,35 @@ function FileRow({ file, now, onJump }: FileItemProps) {
 
   return (
     <li className="file-row">
-      <a className="file-row-main" href={attachment.url} target="_blank" rel="noopener noreferrer">
-        {attachment.thumbnailUrl === null ? (
-          <span className="file-glyph" data-kind={fileIcon(attachment)} aria-hidden="true">
-            <Icon name={fileIcon(attachment)} size={18} />
+      <FileSpoiler spoiler={attachment.spoiler}>
+        <a
+          className="file-row-main"
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {attachment.thumbnailUrl === null ? (
+            <span className="file-glyph" data-kind={fileIcon(attachment)} aria-hidden="true">
+              <Icon name={fileIcon(attachment)} size={18} />
+            </span>
+          ) : (
+            <img className="file-thumb" src={attachment.thumbnailUrl} alt="" loading="lazy" />
+          )}
+          <span className="file-row-text">
+            <span className="file-row-name">{attachment.filename}</span>
+            <span className="file-row-meta">
+              {extension === "" ? null : <span className="file-ext">{extension}</span>}
+              <span className="tabular">{formatBytes(attachment.byteSize)}</span>
+              <span aria-hidden="true">·</span>
+              <span className="file-row-poster">{poster?.name ?? UNKNOWN_NAME}</span>
+              <span aria-hidden="true">·</span>
+              <time dateTime={file.createdAt} title={formatFull(file.createdAt)}>
+                {timeAgo(file.createdAt, now)}
+              </time>
+            </span>
           </span>
-        ) : (
-          <img className="file-thumb" src={attachment.thumbnailUrl} alt="" loading="lazy" />
-        )}
-        <span className="file-row-text">
-          <span className="file-row-name">{attachment.filename}</span>
-          <span className="file-row-meta">
-            {extension === "" ? null : <span className="file-ext">{extension}</span>}
-            <span className="tabular">{formatBytes(attachment.byteSize)}</span>
-            <span aria-hidden="true">·</span>
-            <span className="file-row-poster">{poster?.name ?? UNKNOWN_NAME}</span>
-            <span aria-hidden="true">·</span>
-            <time dateTime={file.createdAt} title={formatFull(file.createdAt)}>
-              {timeAgo(file.createdAt, now)}
-            </time>
-          </span>
-        </span>
-      </a>
+        </a>
+      </FileSpoiler>
       <span className="file-row-actions">
         <IconButton
           icon="arrow-up-right"
@@ -112,29 +123,31 @@ function FileTile({ file, onJump }: Omit<FileItemProps, "now">) {
 
   return (
     <li className="file-tile">
-      <a
-        className="file-tile-link"
-        href={attachment.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Open ${attachment.filename}`}
-      >
-        {attachment.thumbnailUrl === null ? (
-          <span className="file-tile-glyph" aria-hidden="true">
-            <Icon name={fileIcon(attachment)} size={22} />
+      <FileSpoiler spoiler={attachment.spoiler} tile>
+        <a
+          className="file-tile-link"
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open ${attachment.filename}`}
+        >
+          {attachment.thumbnailUrl === null ? (
+            <span className="file-tile-glyph" aria-hidden="true">
+              <Icon name={fileIcon(attachment)} size={22} />
+            </span>
+          ) : (
+            <img className="file-tile-image" src={attachment.thumbnailUrl} alt="" loading="lazy" />
+          )}
+          {attachment.preview === "video" ? (
+            <span className="file-tile-badge" aria-hidden="true">
+              <Icon name="film" size={12} />
+            </span>
+          ) : null}
+          <span className="file-tile-name" aria-hidden="true">
+            {attachment.filename}
           </span>
-        ) : (
-          <img className="file-tile-image" src={attachment.thumbnailUrl} alt="" loading="lazy" />
-        )}
-        {attachment.preview === "video" ? (
-          <span className="file-tile-badge" aria-hidden="true">
-            <Icon name="film" size={12} />
-          </span>
-        ) : null}
-        <span className="file-tile-name" aria-hidden="true">
-          {attachment.filename}
-        </span>
-      </a>
+        </a>
+      </FileSpoiler>
       <span className="file-tile-actions">
         <IconButton
           icon="arrow-up-right"
@@ -176,6 +189,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   const [query, setQuery] = useState("");
   const [listing, setListing] = useState<Listing>(LOADING);
   const request = useRef(0);
+  const liveFiles = useRef(new Map<number, readonly Attachment[]>());
 
   useEffect(() => {
     const timer = window.setTimeout(() => setQuery(search.trim()), SEARCH_DELAY_MS);
@@ -194,9 +208,11 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
           return;
         }
 
+        const files = reconcileFiles(list.files, liveFiles.current);
+
         setListing((held) => ({
           status: "ready",
-          files: page === 1 ? list.files : appendFiles(held.files, list.files),
+          files: page === 1 ? files : appendFiles(held.files, files),
           nextPage:
             list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null,
           loadingMore: false,
@@ -213,7 +229,25 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new room, type or search starts over at page 1
-  useEffect(() => loadPage(1), [roomId, type, query]);
+  useEffect(() => {
+    liveFiles.current = new Map();
+
+    const stop = panes.onMessageUpdate(roomId, (message) => {
+      liveFiles.current.set(message.id, messageFiles(message));
+      setListing((held) => {
+        const files = reconcileFiles(held.files, liveFiles.current);
+
+        return files === held.files ? held : { ...held, files };
+      });
+    });
+
+    loadPage(1);
+
+    return () => {
+      stop();
+      request.current += 1;
+    };
+  }, [roomId, type, query]);
 
   const jump = (file: RoomFile) => {
     if (file.threadId === null) {

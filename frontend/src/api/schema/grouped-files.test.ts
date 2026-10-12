@@ -14,6 +14,7 @@ describe("grouped file wire contracts", () => {
       preview: "file",
       url: "/file",
       downloadUrl: "/file?disposition=attachment",
+      spoiler: false,
       thumbnailUrl: null,
     };
 
