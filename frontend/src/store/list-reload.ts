@@ -39,6 +39,15 @@ export function useListReload(signal: ReloadSignal, load: () => void, everyShow 
 
   const { idle, staleMark } = signal;
 
+  // Leaving (or StrictMode's rehearsal of it) may retire the reads on their way: shown again, the
+  // list loads as if new.
+  useEffect(
+    () => () => {
+      answered.current = null;
+    },
+    [],
+  );
+
   useEffect(() => {
     const last = answered.current;
     const shown = last?.load !== load;

@@ -765,6 +765,9 @@ export const mutations = {
     apply((state) => approvals.showApproval(state, approval)),
   rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>
     apply((state) => approvals.rollbackApproval(state, shown, before)),
+  /** A list's view left: its reads retire and it stops saying a load is on its way. */
+  retireApprovalReads: (key: approvals.ApprovalListKey) =>
+    apply((state) => approvals.retireApprovalReads(state, key)),
   /** Every approvals list reloads when next shown. */
   markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
   setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>

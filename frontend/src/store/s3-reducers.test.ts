@@ -31,6 +31,7 @@ import {
   emptyPagedList,
   type IdOrder,
   type PagedList,
+  pagedAbandoned,
   pagedFailed,
   pagedLanded,
   pagedLoading,
@@ -469,6 +470,17 @@ describe("a keyset-paged list", () => {
     const failed = pagedFailed(pagedLoading(once), "Down", reloading.generation, "replace");
 
     expect(pagedReloadMark(failed)).toBe(once.staleMark);
+  });
+
+  it("says nothing is on its way once the loads on their way are abandoned", () => {
+    const list = ready([2, 4], "c");
+    const both = pagedLoadingMore(pagedLoading(pagedStale(list)));
+    const abandoned = pagedAbandoned(both);
+
+    expect(abandoned).toMatchObject({ firstPageLoading: false, loadingMore: false, stale: true });
+    expect(pagedReloadMark(abandoned)).toBe(both.staleMark);
+    expect(pagedLanded(abandoned, [6], null, "replace", both.generation)).toBe(abandoned);
+    expect(pagedAbandoned(list)).toBe(list);
   });
 
   it("keeps a page that landed out of date stale without a new invalidation", () => {

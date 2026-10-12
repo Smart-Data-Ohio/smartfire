@@ -77,6 +77,24 @@ export function pagedLoading(list: PagedList): PagedList {
   };
 }
 
+/**
+ * The loads on their way were abandoned (their view left and retired their reads): none of them
+ * lands, so the list says nothing is on its way, and a first load never finished loads again.
+ */
+export function pagedAbandoned(list: PagedList): PagedList {
+  if (!list.firstPageLoading && !list.loadingMore) {
+    return list;
+  }
+
+  return {
+    ...list,
+    status: list.status === "ready" ? "ready" : "idle",
+    loadingMore: false,
+    firstPageLoading: false,
+    generation: list.generation + 1,
+  };
+}
+
 /** Whether a load that started in `generation` may still land. */
 export function pagedCurrent(list: PagedList, generation: number): boolean {
   return generation === list.generation;

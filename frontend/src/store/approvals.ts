@@ -16,13 +16,14 @@ import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../gen/ApprovalUpdated.ts";
 import { nextObservation, observationOf } from "../lib/request-observation.ts";
-import { membership, observeMembership, placeId, replay } from "./freshness.ts";
+import { membership, observeMembership, placeId, replay, retireReads } from "./freshness.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   eachPaged,
   emptyPagedList,
   type IdOrder,
   type PagedList,
+  pagedAbandoned,
   pagedCurrent,
   pagedFailed,
   pagedLanded,
@@ -106,6 +107,21 @@ function updateList(
       lists: { ...state.approvals.lists, [key]: change(approvalListOf(state, key)) },
     },
   };
+}
+
+/**
+ * The list's view left: its reads retire, so their pages won't land, and the list stops saying a
+ * load is on its way (the next view loads it again).
+ */
+export function retireApprovalReads(state: State, key: ApprovalListKey): State {
+  const retired = {
+    ...state,
+    freshness: retireReads(state.freshness, `approvals:${key}`).freshness,
+  };
+
+  const list = approvalListOf(state, key);
+
+  return pagedAbandoned(list) === list ? retired : updateList(retired, key, pagedAbandoned);
 }
 
 export function setApprovalListLoading(state: State, key: ApprovalListKey, more: boolean): State {

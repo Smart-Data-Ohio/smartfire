@@ -13,6 +13,7 @@ import {
   decidedLocally,
   landApprovalPage,
   markApprovalsStale,
+  retireApprovalReads,
   rollbackApproval,
   setApprovalListLoading,
   settleApproval,
@@ -275,6 +276,40 @@ describe("approval requests in the store", () => {
     expect(approvalListOf(landed, key).ids).toEqual([2]);
     expect(landed.freshness.reads).toEqual({});
     expect(landed.freshness.deltas).toEqual([]);
+  });
+
+  it("stops saying a load is on its way once its view retires the reads", () => {
+    const key = approvalListKey(AGENT, "pending");
+    const page = { approvals: [approval(100)], users: [], nextCursor: null };
+    const loaded = landApprovalPage(initialState, key, page, "replace", 0);
+    const reloading = setApprovalListLoading(loaded, key, false);
+    const read = startRead(reloading.freshness, `approvals:${key}`);
+    const started = approvalListOf(reloading, key).generation;
+    const retired = retireApprovalReads({ ...reloading, freshness: read.freshness }, key);
+
+    expect(approvalListOf(retired, key)).toMatchObject({
+      ids: [100],
+      status: "ready",
+      firstPageLoading: false,
+    });
+    expect(retired.freshness.reads).toEqual({});
+
+    // Its page, if it still comes, doesn't land.
+    const late = landApprovalPage(
+      retired,
+      key,
+      { ...page, approvals: [approval(101), approval(100)] },
+      "replace",
+      started,
+      read.ticket,
+    );
+
+    expect(approvalListOf(late, key).ids).toEqual([100]);
+
+    // A first load that never finished loads again when next shown.
+    const never = retireApprovalReads(setApprovalListLoading(initialState, key, false), key);
+
+    expect(approvalListOf(never, key)).toMatchObject({ status: "idle", firstPageLoading: false });
   });
 
   it("removes an item from a decided-status list when a newer copy changes its status", () => {

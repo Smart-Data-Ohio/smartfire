@@ -100,7 +100,7 @@ export function useAgentApprovals(
     [agentId, filter],
   );
 
-  useEffect(() => () => mutations.retireReads(`approvals:${key}`), [key]);
+  useEffect(() => () => mutations.retireApprovalReads(key), [key]);
 
   // Once each time this list is shown, then again for each invalidation while it's shown.
   useListReload(pagedReloadSignal(list), callbacks.load, true);

@@ -1,6 +1,7 @@
 /**
  * Shown lists reload for each invalidation, even one that arrives while a reload is on its way
- * (the list lands still stale), with the real load actions against a fake server.
+ * (the list lands still stale) or after the list was reopened under StrictMode while a reload was
+ * on its way, with the real load actions against a fake server.
  */
 import {
   createMemoryHistory,
@@ -13,6 +14,7 @@ import {
 } from "@tanstack/react-router";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { Effect, ManagedRuntime, type Schema } from "effect";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotFound } from "../api/errors.ts";
 import { FakeApi, type FakeHandler, meFixture } from "../api/testing.ts";
@@ -64,18 +66,19 @@ function fakeServer() {
   };
 }
 
-/** Answers with `page()` as the server holds it when asked, held once while `hold` is set. */
-function answering<A extends Schema.Json>(page: () => A, hold: HeldRead) {
+/** Answers with `page` as the server held it when asked, held once while `hold` is set. */
+function answering<A extends Schema.Json>(page: A, hold: HeldRead) {
   const held = hold.next;
 
   hold.next = null;
 
   return held === null
-    ? Effect.succeed(page())
-    : Effect.promise(() => held.promise).pipe(Effect.map(page));
+    ? Effect.succeed(page)
+    : Effect.promise(() => held.promise).pipe(Effect.as(page));
 }
 
-function renderAt(component: RouteComponent) {
+/** Renders `component` as the app's page, under StrictMode when `strict`. */
+function renderAt(component: RouteComponent, strict = false) {
   const root = createRootRoute({ component: Outlet });
   const home = createRoute({ getParentRoute: () => root, path: "/", component });
 
@@ -84,7 +87,7 @@ function renderAt(component: RouteComponent) {
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
 
-  render(<RouterProvider router={router} />);
+  render(<RouterProvider router={router} />, { wrapper: strict ? StrictMode : undefined });
 
   return act(() => router.load());
 }
@@ -205,15 +208,21 @@ describe("pending approvals", () => {
     },
   });
 
-  it("loads again for requests that arrive while a reload is on its way", async () => {
+  const path = `/agents/${AGENT}/approvals`;
+  const list = () => approvalListOf(store.getState(), approvalListKey(AGENT, "pending"));
+
+  const Pending = () => (
+    <AgentApprovals agentId={AGENT} filter="pending" onFilterChange={() => undefined} />
+  );
+
+  /** The server holds `pending.ids`, newest first; the hooks load through the real actions. */
+  async function serve() {
     const server = fakeServer();
     const hold: HeldRead = { next: null };
-    let pending = [100];
-    const path = `/agents/${AGENT}/approvals`;
-    const list = () => approvalListOf(store.getState(), approvalListKey(AGENT, "pending"));
+    const pending = { ids: [100] };
 
     await server.route(`GET ${path}`, () =>
-      answering(() => ({ approvals: pending.map(approval), users: [], nextCursor: null }), hold),
+      answering({ approvals: pending.ids.map(approval), users: [], nextCursor: null }, hold),
     );
     vi.spyOn(actions.approvals, "load").mockImplementation((agentId, filter) =>
       server.runtime.runPromise(approvalActions.load(agentId, filter)),
@@ -222,32 +231,73 @@ describe("pending approvals", () => {
       server.runtime.runPromise(approvalActions.loadMore(agentId, filter)),
     );
 
-    await renderAt(() => (
-      <AgentApprovals agentId={AGENT} filter="pending" onFilterChange={() => undefined} />
-    ));
+    return { server, hold, pending };
+  }
+
+  it("loads again for requests that arrive while a reload is on its way", async () => {
+    const { server, hold, pending } = await serve();
+
+    await renderAt(Pending);
     await screen.findByText("Request 100");
 
     // 101 arrives; the reload it asks for is held.
     const held = Promise.withResolvers<void>();
 
     hold.next = held;
-    pending = [101, 100];
+    pending.ids = [101, 100];
     act(() => mutations.applyEvents([requested(1, 101)], Date.now()));
     await waitFor(async () => expect(await server.reads(path)).toBe(2));
 
     // 102 arrives while that reload is on its way, then it lands without 102.
-    pending = [102, 101, 100];
+    pending.ids = [102, 101, 100];
     act(() => mutations.applyEvents([requested(2, 102)], Date.now()));
     await act(async () => held.resolve());
     await waitFor(async () => expect(await server.reads(path)).toBe(3));
 
-    pending = [103, 102, 101, 100];
+    pending.ids = [103, 102, 101, 100];
     act(() => mutations.applyEvents([requested(3, 103)], Date.now()));
 
     await screen.findByText("Request 103");
     expect(screen.getByText("Request 102")).toBeTruthy();
     await waitFor(() =>
       expect(list()).toMatchObject({ ids: [103, 102, 101, 100], stale: false, status: "ready" }),
+    );
+
+    await server.runtime.dispose();
+  });
+
+  it("keeps refreshing once reopened under StrictMode while its refresh was on its way", async () => {
+    const { server, hold, pending } = await serve();
+
+    await renderAt(Pending, true);
+    await screen.findByText("Request 100");
+    cleanup();
+
+    // Reopened: StrictMode's rehearsed leave retires the refresh it started, which is held.
+    const held = Promise.withResolvers<void>();
+    const before = await server.reads(path);
+
+    hold.next = held;
+    pending.ids = [101, 100];
+    await renderAt(Pending, true);
+    await waitFor(async () => expect(await server.reads(path)).toBeGreaterThan(before));
+    await act(async () => held.resolve());
+
+    // The reopening still refreshes it.
+    await waitFor(() => expect(list()).toMatchObject({ ids: [101, 100], firstPageLoading: false }));
+
+    pending.ids = [102, 101, 100];
+    act(() => mutations.applyEvents([requested(1, 102)], Date.now()));
+
+    await screen.findByText("Request 102");
+    expect(screen.getByText("Request 101")).toBeTruthy();
+    await waitFor(() =>
+      expect(list()).toMatchObject({
+        ids: [102, 101, 100],
+        stale: false,
+        firstPageLoading: false,
+        loadingMore: false,
+      }),
     );
 
     await server.runtime.dispose();
@@ -274,26 +324,27 @@ describe("the scheduled page", () => {
     attachments: [],
   });
 
-  it("loads again for a cancel refused while a reload is on its way", async () => {
+  const list = () => scheduledListOf(store.getState(), "pending");
+
+  /** The server holds `pending.ids` (each cancel finds its message already sent elsewhere). */
+  async function serve() {
     const server = fakeServer();
     const hold: HeldRead = { next: null };
-    let pending = [1, 2, 3, 4];
-    const list = () => scheduledListOf(store.getState(), "pending");
+    const pending = { ids: [1, 2, 3, 4] };
 
     await server.route("GET /scheduled_messages", (request) => {
       const mine = request.query?.status === "pending";
 
       return answering(
-        () => ({
-          scheduledMessages: mine ? pending.map(scheduled) : [],
+        {
+          scheduledMessages: mine ? pending.ids.map(scheduled) : [],
           conversations: [],
           nextCursor: null,
-        }),
+        },
         mine ? hold : { next: null },
       );
     });
 
-    // Each was sent from another device meanwhile: the cancel finds it gone.
     for (const id of [1, 2, 3]) {
       await server.route(`DELETE /scheduled_messages/${id}`, () =>
         Effect.fail(new NotFound({ message: "Not found" })),
@@ -312,6 +363,12 @@ describe("the scheduled page", () => {
 
     const pendingReads = () => server.reads("/scheduled_messages", "pending");
 
+    return { server, hold, pending, cancel, pendingReads };
+  }
+
+  it("loads again for a cancel refused while a reload is on its way", async () => {
+    const { server, hold, pending, cancel, pendingReads } = await serve();
+
     await renderAt(ScheduledPage);
     // The page shows the soonest first (jsdom lays out only the first row).
     await screen.findByText("Draft 1");
@@ -320,22 +377,57 @@ describe("the scheduled page", () => {
     const held = Promise.withResolvers<void>();
 
     hold.next = held;
-    pending = [2, 3, 4];
+    pending.ids = [2, 3, 4];
     await cancel(1);
     await waitFor(async () => expect(await pendingReads()).toBe(2));
 
     // 2 is gone too before that reload lands, with 2 still in it.
-    pending = [3, 4];
+    pending.ids = [3, 4];
     await cancel(2);
     await act(async () => held.resolve());
     await waitFor(async () => expect(await pendingReads()).toBe(3));
 
-    pending = [4];
+    pending.ids = [4];
     await cancel(3);
 
     await waitFor(() => expect(list()).toMatchObject({ ids: [4], stale: false, status: "ready" }));
     await screen.findByText("Draft 4");
     expect(screen.queryByText("Draft 2")).toBeNull();
+
+    await server.runtime.dispose();
+  });
+
+  it("keeps refreshing once reopened under StrictMode while its refresh was on its way", async () => {
+    const { server, hold, pending, cancel, pendingReads } = await serve();
+
+    await renderAt(ScheduledPage, true);
+    await screen.findByText("Draft 1");
+    cleanup();
+
+    // Gone while the page was closed: reopened, it reloads, and that reload is held.
+    pending.ids = [2, 3, 4];
+    await cancel(1);
+
+    const held = Promise.withResolvers<void>();
+    const before = await pendingReads();
+
+    hold.next = held;
+    await renderAt(ScheduledPage, true);
+    await waitFor(async () => expect(await pendingReads()).toBeGreaterThan(before));
+    await act(async () => held.resolve());
+
+    pending.ids = [3, 4];
+    await cancel(2);
+
+    await waitFor(() =>
+      expect(list()).toMatchObject({
+        ids: [3, 4],
+        stale: false,
+        firstPageLoading: false,
+        loadingMore: false,
+      }),
+    );
+    await screen.findByText("Draft 3");
 
     await server.runtime.dispose();
   });
