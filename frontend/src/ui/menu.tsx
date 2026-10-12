@@ -134,7 +134,9 @@ export function Menu({
   };
 
   const onClose = (reason: CloseReason) => {
-    if (reason === "dismiss") {
+    // Only a menu still open is light-dismissed: one already closing (an item chosen) is also
+    // hidden when that item opens a modal dialog, and that mustn't swallow the trigger's next click.
+    if (reason === "dismiss" && open) {
       dismissedAt.current = performance.now();
     }
 
