@@ -678,12 +678,22 @@ async fn incoming_webhooks_accept_a_sticker_id() {
 
 #[tokio::test]
 async fn outgoing_webhooks_deliver_fetchable_stickers() {
-    outgoing_stickers(false).await;
+    outgoing_stickers(false, Some("https://chat.example:9443")).await;
 }
 
 #[tokio::test]
 async fn agent_webhooks_deliver_fetchable_stickers() {
-    outgoing_stickers(true).await;
+    outgoing_stickers(true, Some("https://chat.example:9443")).await;
+}
+
+#[tokio::test]
+async fn outgoing_webhooks_omit_sticker_urls_without_app_url() {
+    outgoing_stickers(false, None).await;
+}
+
+#[tokio::test]
+async fn agent_webhooks_omit_sticker_urls_without_app_url() {
+    outgoing_stickers(true, None).await;
 }
 
 async fn deliver_to_receiver(
@@ -734,7 +744,7 @@ async fn deliver_to_receiver(
     }
 }
 
-async fn outgoing_stickers(agent: bool) {
+async fn outgoing_stickers(agent: bool, origin: Option<&str>) {
     use crate::integrations::test_support::{
         FakeResolver, FakeServer, MappingDialer, Route, network,
     };
@@ -743,7 +753,15 @@ async fn outgoing_stickers(agent: bool) {
         sync::{Arc, Mutex},
     };
 
-    let a = spa_app().await;
+    let a = TestApp::boot_seed_with_env(
+        "default",
+        seed_clock(),
+        &[("SPA_ENABLED", "1"), ("APP_URL", origin.unwrap_or_default())],
+    )
+    .await
+    .expect("restored default seed")
+    .without_job_runner()
+    .await;
     let mut david = a.sign_in(DAVID).await;
     let sticker_id = http_sticker(&mut david, "WaveOutgoing", GIF).await;
     let bot = a
@@ -803,6 +821,11 @@ async fn outgoing_stickers(agent: bool) {
     assert_eq!(requests.len(), 3);
     for (index, plain) in ["Ahoy", "Sticker: WaveOutgoing"].iter().enumerate() {
         let body: Value = serde_json::from_slice(&requests[index].body).unwrap();
+        assert_eq!(body["message"]["body"]["plain"], *plain);
+        let Some(origin) = origin else {
+            assert!(body["message"].get("sticker").is_none(), "{body}");
+            continue;
+        };
         let sticker: api::MessageSticker =
             serde_json::from_value(body["message"]["sticker"].clone()).unwrap();
         let api::MessageSticker::Available {
@@ -820,11 +843,13 @@ async fn outgoing_stickers(agent: bool) {
             (sticker_id, "WaveOutgoing", true)
         );
         assert!(image_url.contains("/rails/active_storage/blobs/redirect/"));
+        for url in [&image_url, &still_url] {
+            assert_eq!(url::Url::parse(url).unwrap().origin().ascii_serialization(), origin);
+        }
         assert_eq!(fetch_url(&a, &image_url).await.body, GIF);
         let still = fetch_url(&a, &still_url).await;
         assert_eq!(still.status, StatusCode::OK);
         assert!(still.body.starts_with(b"\x89PNG"));
-        assert_eq!(body["message"]["body"]["plain"], *plain);
     }
     let plain: Value = serde_json::from_slice(&requests[2].body).unwrap();
     assert!(plain["message"].get("sticker").is_none());
@@ -840,10 +865,14 @@ async fn outgoing_stickers(agent: bool) {
     let requests = server.received();
     assert_eq!(requests.len(), 4);
     let body: Value = serde_json::from_slice(&requests[3].body).unwrap();
-    assert_eq!(
-        body["message"]["sticker"],
-        json!({"kind":"deleted","name":"WaveOutgoing"})
-    );
+    if origin.is_some() {
+        assert_eq!(
+            body["message"]["sticker"],
+            json!({"kind":"deleted","name":"WaveOutgoing"})
+        );
+    } else {
+        assert!(body["message"].get("sticker").is_none(), "{body}");
+    }
 }
 
 #[tokio::test]
@@ -905,6 +934,90 @@ async fn mcp_reads_include_stickers_and_deleted_placeholders() {
             assert_eq!(fetched.body, PNG);
         }
     }
+}
+
+#[tokio::test]
+async fn agent_cannot_reuse_a_sticker_image_in_a_private_thread() {
+    let a = agent_setup().await.without_job_runner().await;
+    grant_agent(&a, AGENT, &["post_messages", "read_messages"]).await;
+    let sticker_id = db_sticker(&a, "WaveReuse").await;
+    let posted = mcp_call(
+        &a,
+        "post_message",
+        json!({"room_id":ALL_TALK,"sticker_id":sticker_id}),
+    )
+    .await;
+    let posted = tool_payload(&posted);
+    let image_url = posted["sticker"]["imageUrl"].as_str().unwrap();
+    let path = path_of(image_url);
+    let signed_id = path
+        .strip_prefix("/rails/active_storage/blobs/redirect/")
+        .unwrap()
+        .split('/')
+        .next()
+        .unwrap();
+    assert_eq!(fetch_url(&a, image_url).await.body, PNG);
+    let thread_id = a
+        .db()
+        .write(|tx| {
+            Ok(campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: BENDER,
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let endpoint = format!("/rooms/{ALL_TALK}/agents/messages");
+    let authorization = format!("{} {SECRET}", ["Be", "arer"].concat());
+    let allowed = a
+        .anonymous()
+        .send(
+            json_req(Method::POST, &endpoint, &json!({
+                "thread_id":thread_id,"message":{"markdown_source":"Private reply"}
+            }))
+            .header("authorization", &authorization),
+        )
+        .await;
+    assert_eq!(allowed.status, StatusCode::CREATED, "{}", allowed.text());
+    let denied = a
+        .anonymous()
+        .send(
+            json_req(Method::POST, &endpoint, &json!({
+                "thread_id":thread_id,"message":{"attachment":signed_id}
+            }))
+            .header("authorization", &authorization),
+        )
+        .await;
+    let downloaded = fetch_url(&a, image_url).await;
+    assert_eq!(
+        denied.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}; anonymous sticker download: {}",
+        denied.text(),
+        downloaded.status
+    );
+    assert_eq!(downloaded.status, StatusCode::OK);
+    assert_eq!(downloaded.body, PNG);
+    let mut david = a.sign_in(DAVID).await;
+    let session_image = david
+        .send(Req::new(Method::GET, &format!("/stickers/{sticker_id}")))
+        .await;
+    assert_eq!(session_image.status, StatusCode::OK);
+    assert_eq!(session_image.body, PNG);
+    let count: i64 = a
+        .db()
+        .read(move |conn| {
+            Ok(conn.query_row("SELECT COUNT(*) FROM messages WHERE thread_id=?", [thread_id], |r| r.get(0))?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1, "rejected reuse creates no message");
 }
 
 #[tokio::test]
