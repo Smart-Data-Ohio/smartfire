@@ -222,6 +222,7 @@ fn uploads_round_trip() {
             attachment_signed_ids: None,
             attachment_spoilers: None,
             drive_file_ids: None,
+            gif_slug: None,
         },
         json!({
             "clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",
@@ -696,6 +697,7 @@ fn threads_round_trip() {
                 attachment_signed_ids: None,
             attachment_spoilers: None,
                 drive_file_ids: None,
+            gif_slug: None,
             },
         },
         json!({

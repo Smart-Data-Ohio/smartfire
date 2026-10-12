@@ -36,6 +36,8 @@ mod drive;
 mod error;
 mod events;
 mod fizzy;
+mod gif;
+pub use gif::{GifCategory, GifCategoryList, GifConfig, GifItem, GifList};
 mod huddle;
 mod sticker;
 pub use sticker::*;

@@ -146,6 +146,19 @@ Calendar and Drive use additional configuration. Follow the
 `APP_URL` for links created by background Calendar jobs and the restricted
 browser key for Drive Picker.
 
+#### GIF picker (optional)
+
+Set `KLIPY_API_KEY` to enable the composer's GIF picker (keys come from the
+KLIPY Partner Panel). The key is used only by the server and never reaches
+browsers; search, trending, previews and downloads are proxied through this
+server, so members' browsers never contact KLIPY, and a sent GIF is stored as
+a normal file attachment. Without the variable the picker is hidden.
+`KLIPY_CONTENT_FILTER` sets KLIPY's content safety level (`off`, `low`,
+`medium`, `high`); it defaults to `high`. Note that KLIPY's integration
+requirements ask partners to get written approval for server-side proxying
+and re-hosting — confirm your KLIPY agreement covers this before enabling it
+with a production key.
+
 #### Public privacy and terms pages
 
 `/about`, `/privacy`, and `/terms` are available without sign-in. Set

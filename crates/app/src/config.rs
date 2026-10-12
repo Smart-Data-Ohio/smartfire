@@ -20,6 +20,10 @@
 //!   sends no telemetry).
 //! - `SPA_ENABLED`, `SPA_DEFAULT`: no longer read. The React SPA (`crates/spa`) under `/app` is
 //!   the only UI for signed-in people. Legacy deployments may still supply either variable.
+//! - `KLIPY_API_KEY`: enables the composer's GIF picker (blank disables it). The key is used
+//!   only server-side and never sent to browsers. `KLIPY_CONTENT_FILTER` is KLIPY's
+//!   per-request content safety level (`off`, `low`, `medium`, `high`; default `high`, the
+//!   workplace-safe strictest level — KLIPY has no `pg` rating parameter).
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -63,6 +67,10 @@ pub struct Config {
     pub sign_in_google_domains: Vec<String>,
     /// Shared provider configuration from the same injected environment lookup.
     pub google_client: crate::integrations::google::api::Config,
+    /// `KLIPY_API_KEY`; blank disables the GIF picker. Server-side only.
+    pub klipy_api_key: Option<String>,
+    /// `KLIPY_CONTENT_FILTER`, one of `off|low|medium|high` (anything else is `high`).
+    pub klipy_content_filter: String,
 }
 
 #[derive(Debug, Clone)]
@@ -171,6 +179,11 @@ impl Config {
                 client_id: get("GOOGLE_CLIENT_ID").unwrap_or_default(),
                 client_secret: get("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
+            },
+            klipy_api_key: present("KLIPY_API_KEY"),
+            klipy_content_filter: match present("KLIPY_CONTENT_FILTER").as_deref() {
+                Some(filter @ ("off" | "low" | "medium" | "high")) => filter.into(),
+                _ => "high".into(),
             },
         })
     }

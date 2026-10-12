@@ -87,7 +87,7 @@ pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock,
 }
 
 pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
-    boot_with_integrations(config, clock, BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy: crate::integrations::fizzy::State::system() }, intervals).await
+    boot_with_integrations(config, clock, BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy: crate::integrations::fizzy::State::system(), klipy: crate::integrations::klipy::State::system() }, intervals).await
 }
 
 /// Per-app transports, including fixture transports; production uses the shared clients.
@@ -97,10 +97,11 @@ pub(crate) struct BootIntegrations {
     pub github_network: crate::net::Network,
     pub subscription_network: crate::net::Network,
     pub fizzy: crate::integrations::fizzy::State,
+    pub klipy: crate::integrations::klipy::State,
 }
 
 pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, integrations: BootIntegrations, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
-    let BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy } = integrations;
+    let BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy, klipy } = integrations;
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
@@ -181,6 +182,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         jobs,
         mail,
         fizzy,
+        klipy,
         agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
         agent_repositories,
         sudo: crate::concerns::sudo::State::default(),

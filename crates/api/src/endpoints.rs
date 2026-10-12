@@ -288,18 +288,24 @@ async fn post_message(c: &mut Ctx) -> Result {
     let signed_id = input
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
-    let signed_ids = grouped_signed_ids(
+    let mut signed_ids = grouped_signed_ids(
         c,
         signed_id.as_deref(),
         input.attachment_signed_ids.unwrap_or_default(),
     )?;
-    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()))?;
+    let gif_slug = input
+        .gif_slug
+        .as_deref()
+        .map(str::trim)
+        .filter(|slug| !slug.is_empty());
+    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
     if signed_id.is_none()
         && signed_ids.is_empty()
         && drive_file_ids.is_empty()
         && input.sticker_id.is_none()
+        && gif_slug.is_none()
         && input.markdown_source.trim().is_empty()
     {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
@@ -347,6 +353,10 @@ async fn post_message(c: &mut Ctx) -> Result {
                     c,
                     validation("attachmentSignedId", "isn't a finished upload"),
                 ));
+            }
+            if let Some(slug) = gif_slug {
+                let gif_signed_id = crate::gifs::stage_gif(c, creator_id, slug).await?;
+                signed_ids.push(gif_signed_id);
             }
             require_grouped_uploads(c, &signed_ids).await?;
             let markdown_source =
