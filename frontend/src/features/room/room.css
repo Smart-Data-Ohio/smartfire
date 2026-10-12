@@ -503,8 +503,15 @@
       display: block;
     }
 
+    /* Production bodies wrap their blocks in a `trix-content` div (crates/richtext content.rs),
+       which runs inline too; bare bodies (the mock, some other producers) have none. */
     .message-body-row:has(> .message-edited, > .message-published) > .message-body,
+    .message-body-row:has(> .message-edited, > .message-published) > .message-body > .trix-content,
     .message-body-row:has(> .message-edited, > .message-published) > .message-body > p:last-child,
+    .message-body-row:has(> .message-edited, > .message-published)
+      > .message-body
+      > .trix-content
+      > p:last-child,
     .message-body-row:has(> .message-edited, > .message-published) > .message-forward-note {
       display: inline;
     }
@@ -512,6 +519,10 @@
     /* The inline last paragraph drops its top margin, so the block before it keeps the gap. */
     .message-body-row:has(> .message-edited, > .message-published)
       > .message-body
+      > :nth-last-child(2),
+    .message-body-row:has(> .message-edited, > .message-published)
+      > .message-body
+      > .trix-content
       > :nth-last-child(2) {
       margin-bottom: var(--space-1);
     }

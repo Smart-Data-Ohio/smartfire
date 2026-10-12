@@ -5,7 +5,9 @@ import type { PinList } from "../../src/gen/PinList.ts";
 import type { SearchResults } from "../../src/gen/SearchResults.ts";
 import {
   expect,
+  openApp,
   openHeaderTool,
+  PHONE_TOUCH,
   ROOM_IDS,
   shot,
   THEMES,
@@ -18,7 +20,8 @@ import {
  * A Markdown document pasted into a message (headings, a rule, lists) reads with a chat-sized
  * rhythm: more room above a heading than below it, a visible rule with space on both sides, and
  * list items a step apart, while ordinary paragraphs keep their 4 px step so a short message
- * doesn't change. Clamped previews (pins, search hits) still show whole lines.
+ * doesn't change. Clamped previews (pins, search hits) still show whole lines, and on a phone
+ * "(edited)" runs on after the last word whether or not the body has its production wrapper.
  */
 
 const VIEWPORT = { width: 1280, height: 1200 } as const;
@@ -298,4 +301,90 @@ test("ordinary short messages keep their height", async ({ page, request }) => {
   expect(second.marginTop).toBe(4);
   expect((await metrics(body)).height).toBeCloseTo(first.height + 4 + second.height, 0);
   expect(first.height).toBeCloseTo(22, 0);
+});
+
+test.describe("on a touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  const FIRST = "Notes from the call";
+
+  const LAST =
+    "A last paragraph long enough to wrap onto a second line on a phone screen, now edited";
+
+  const BLOCKS = `<p>${FIRST}</p><p>${LAST}</p>`;
+
+  for (const rendering of [
+    { name: "wrapped", html: wrapped(BLOCKS) },
+    { name: "bare", html: BLOCKS },
+  ] as const) {
+    test(`(edited) runs on after an edited body's last word (${rendering.name})`, async ({
+      page,
+      request,
+    }) => {
+      // A continuation of the group: a group's first row shows "(edited)" in its header instead.
+      await post(request, "First of two, so the next one continues the group");
+
+      const id = await post(request, "To be edited");
+
+      await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages*`, async (route) => {
+        const response = await route.fetch();
+        const reply: MessagePage = await response.json();
+
+        await route.fulfill({
+          response,
+          json: {
+            ...reply,
+            // Edited, so the row carries "(edited)".
+            messages: swapBody(reply.messages, id, rendering.html).map((message) =>
+              message.id === id ? { ...message, editedAt: message.createdAt } : message,
+            ),
+          },
+        });
+      });
+
+      await openApp(page, `r/${ROOM_IDS.general}/m/${id}`);
+
+      const bodyRow = row(page, id).locator(".message-body-row");
+
+      await expect(bodyRow.locator(":scope > .message-edited")).toBeVisible();
+      await expect(bodyRow.locator(".message-body p").nth(1)).toHaveText(LAST);
+
+      const placement = await bodyRow.evaluate((element) => {
+        const paragraphs = element.querySelectorAll(".message-body p");
+        const first = paragraphs[0]?.getBoundingClientRect();
+        const last = paragraphs[1];
+        const mark = element.querySelector(".message-edited")?.getBoundingClientRect();
+
+        if (first === undefined || last === undefined || mark === undefined) {
+          throw new Error("no paragraphs or no (edited)");
+        }
+
+        const range = document.createRange();
+
+        range.selectNodeContents(last);
+
+        const lines = [...range.getClientRects()].filter((rect) => rect.width > 0);
+        const end = lines.at(-1);
+        const start = lines.at(0);
+
+        if (end === undefined || start === undefined) {
+          throw new Error("the last paragraph has no text");
+        }
+
+        return {
+          lines: new Set(lines.map((rect) => Math.round(rect.top))).size,
+          sameLine: mark.top < end.bottom && mark.bottom > end.top,
+          gap: mark.left - end.right,
+          step: start.top - first.bottom,
+        };
+      });
+
+      expect(placement.lines, "the last paragraph wraps").toBeGreaterThan(1);
+      expect(placement.sameLine, "(edited) sits on the body's last line").toBe(true);
+      expect(placement.gap, "right after the last word").toBeGreaterThanOrEqual(0);
+      expect(placement.gap, "right after the last word").toBeLessThan(12);
+      // The paragraph before the inline last one keeps the 4 px step.
+      expect(placement.step).toBeGreaterThanOrEqual(3.5);
+    });
+  }
 });
