@@ -248,7 +248,7 @@ async fn index_bots(c: &mut Ctx) -> Result {
 
 /// `bot` as its classic edit page shows it.
 async fn load_bot(c: &Ctx, bot: &User) -> Result<api::Bot> {
-    let form = classic::edit_form(c, bot).await?;
+    let form = presenters::bots::edit_form(c, bot).await?;
     let secrets = c.app().secrets.clone();
     let summary = presenters::user_summary(&secrets, bot);
     let can_administer = concerns::current_user(c).is_some_and(User::is_administrator);
@@ -470,7 +470,7 @@ async fn unlink_github(c: &mut Ctx) -> Result {
 
 /// The bot's credentials, newest first, as `accounts/bots/credentials#index` lists them.
 async fn credential_list(c: &Ctx, bot: &User, agent_id: i64) -> Result<api::CredentialList> {
-    let zone = classic::viewer_zone(c).await?;
+    let zone = presenters::bots::viewer_zone(c).await?;
     let rows = c
         .app()
         .db
@@ -530,7 +530,7 @@ async fn save_credential(c: &mut Ctx) -> Result {
     require_sudo(c).await?;
     let agent = classic::ensure_agent(c, &bot).await?;
     let create: api::CreateCredential = body(c).await?;
-    let zone = classic::viewer_zone(c).await?;
+    let zone = presenters::bots::viewer_zone(c).await?;
     let raw = create.expires_at.map(Param::Str);
     let expires_at = campfire_runtime::presenters::bot_input_casts::datetime(
         raw.as_ref(),

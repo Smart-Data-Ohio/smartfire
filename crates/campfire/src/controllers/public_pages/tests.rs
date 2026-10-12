@@ -11,7 +11,7 @@ fn article(app: &TestApp, page: &str) -> String {
         "terms" => PublicPageName::Terms,
         _ => unreachable!("{page}"),
     };
-    let page = super::public_page(name, &app.booted.app.config.public_policy).unwrap();
+    let page = campfire_api::public_pages::public_page(name, &app.booted.app.config.public_policy).unwrap();
     page.html
         .replace("href=\"/app/privacy\"", "href=\"/privacy\"")
         .replace("href=\"/app/terms\"", "href=\"/terms\"")
@@ -23,9 +23,9 @@ fn article(app: &TestApp, page: &str) -> String {
 fn assert_rails_page(page: &str, article: &str, rails: &str) {
     use crate::form_contracts::{links, page_content, text};
     let name = match page {
-        "about" => super::Page::About,
-        "privacy" => super::Page::Privacy,
-        _ => super::Page::Terms,
+        "about" => campfire_api::public_pages::Page::About,
+        "privacy" => campfire_api::public_pages::Page::Privacy,
+        _ => campfire_api::public_pages::Page::Terms,
     };
     assert!(rails.contains(&format!("<title>{}</title>", name.title())), "{page}");
     assert!(

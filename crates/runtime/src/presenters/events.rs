@@ -1,6 +1,8 @@
 //! Preload event card facts once, with no request or viewer state in the provider.
 use campfire_db::{CalendarEvent, Connection, Message, Result, Room, User};
 use campfire_presentation::events::CardView;
+use campfire_kit::{Ctx, Error, StatusCode};
+use crate::app::AppCtx;
 
 pub fn for_message(conn: &Connection, message: &Message) -> Result<Vec<CardView>> {
     Ok(for_messages(conn, std::slice::from_ref(message))?
@@ -329,4 +331,22 @@ pub fn form(
         error_fields: errors.0.iter().map(|(f, _)| f.to_string()).collect(),
         venues,
     })
+}
+
+pub async fn viewer_zone(c: &Ctx, id: i64) -> campfire_kit::Result<String> {
+    c.app()
+        .db
+        .read(move |conn| {
+            Ok(conn
+                .query_row("SELECT time_zone FROM users WHERE id=?", [id], |r| {
+                    r.get::<_, Option<String>>(0)
+                })?
+                .filter(|z| campfire_db::slash_commands::time_parser::known_calendar_zone(z))
+                .unwrap_or_else(|| "UTC".into()))
+        })
+        .await
+        .map_err(|error| match error {
+            campfire_db::Error::RecordNotFound(_) => Error::Halt(Box::new(crate::concerns::head(StatusCode::NOT_FOUND))),
+            other => crate::context::db_error(other),
+        })
 }

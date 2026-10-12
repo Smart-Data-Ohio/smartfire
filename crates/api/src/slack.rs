@@ -21,6 +21,7 @@ use campfire_controllers::controllers::slack::{
 use campfire_db::{Timestamp, User, models::slack_import::SlackImport};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
 use campfire_presentation::slack::{RunData, SetupData, conversation_type, target_value};
+use campfire_runtime::presenters::slack as reads;
 use serde_json::Value;
 
 use crate::admin::{administrator, body, refusal, require_sudo, viewer};
@@ -274,7 +275,7 @@ fn setup_wire(data: SetupData) -> Result<api::SlackSetup> {
         team_known: data.team_known,
         active_run,
         manifest: data.manifest,
-        connect_path: classic::connect_path(true).into(),
+        connect_path: reads::connect_path(true).into(),
     })
 }
 
@@ -385,7 +386,7 @@ async fn run_data(c: &Ctx, id: i64) -> Result<RunData> {
         .read(move |conn| {
             let run = SlackImport::find(conn, id)?
                 .ok_or(campfire_db::Error::RecordNotFound("SlackImport"))?;
-            runs::data(conn, run, now)
+            reads::data(conn, run, now)
         })
         .await
         .map_err(Error::internal)
@@ -422,7 +423,7 @@ fn conversation_ids(ids: Vec<String>) -> Vec<Value> {
 }
 
 async fn reply_setup(c: &mut Ctx, user: &User, notice: Option<&str>) -> Result {
-    let setup = setup_wire(setup::data(c, user.id).await?)?;
+    let setup = setup_wire(reads::setup_data(c, user.id).await?)?;
     match notice {
         Some(notice) => c.json(
             StatusCode::OK,
@@ -493,7 +494,7 @@ async fn drop_connection(c: &mut Ctx) -> Result {
 /// `accounts/slack_import_runs#index`.
 async fn index_runs(c: &mut Ctx) -> Result {
     administrator(c).await?;
-    let runs = runs::list(c, None)
+    let runs = reads::list(c, None)
         .await?
         .iter()
         .map(row)
@@ -524,7 +525,7 @@ async fn show_admin_run(c: &mut Ctx) -> Result {
     let (issues, next_page) = c
         .app()
         .db
-        .read(move |conn| runs::issues_page(conn, id, count, page.as_deref()))
+        .read(move |conn| reads::issues_page(conn, id, count, page.as_deref()))
         .await
         .map_err(Error::internal)?;
     let page = api::SlackRunPage {
@@ -559,7 +560,7 @@ async fn show_plan(c: &mut Ctx) -> Result {
     if run.kind != "workspace" || run.mode != "dry_run" || run.status != "completed" {
         return Err(refusal(c, "The plan is ready when the dry run completes."));
     }
-    let (data, rooms, oldest) = runs::plan_data(c, &user, run).await?;
+    let (data, rooms, oldest) = reads::plan_data(c, &user, run).await?;
     let plan = api::SlackPlan {
         run_id: data.id,
         conversations: data
@@ -645,8 +646,8 @@ async fn undo_admin_run(c: &mut Ctx) -> Result {
 /// `slack/imports#index`.
 async fn show_personal(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
-    let data = runs::personal_data(c, user.id).await?;
-    let runs = runs::list(c, Some(user.id))
+    let data = reads::personal_data(c, user.id).await?;
+    let runs = reads::list(c, Some(user.id))
         .await?
         .iter()
         .map(row)
@@ -654,7 +655,7 @@ async fn show_personal(c: &mut Ctx) -> Result {
     let page = api::SlackPersonal {
         team_known: data.team_known,
         connection: connection(&data),
-        connect_path: classic::connect_path(false).into(),
+        connect_path: reads::connect_path(false).into(),
         runs,
     };
     c.json(StatusCode::OK, &page)

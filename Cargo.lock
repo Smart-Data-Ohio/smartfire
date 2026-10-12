@@ -437,6 +437,7 @@ dependencies = [
 name = "campfire_api"
 version = "0.1.0"
 dependencies = [
+ "askama",
  "async-trait",
  "axum",
  "base64 0.22.1",

@@ -30,6 +30,7 @@ campfire_richtext.workspace = true
 campfire_rooms.workspace = true
 campfire_storage.workspace = true
 rails_compat.workspace = true
+askama.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 base64.workspace = true

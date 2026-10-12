@@ -1,5 +1,5 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
-use campfire_presentation::accounts;
+use campfire_runtime::presenters::bots::viewer_zone;
 
 pub mod credentials;
 pub mod github_connections;
@@ -15,7 +15,6 @@ use serde_json::{Value, json};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
-use crate::controllers::presenters;
 use crate::controllers::presenters::attachments::{self, Assignment, Record};
 
 /// Rails creates a workspace Agent and reveals the digest-backed key once.
@@ -448,49 +447,6 @@ pub fn audit_target(bot: &User, agent: Option<&Agent>) -> Target {
         .unwrap_or_else(|| Target::from(bot))
 }
 
-pub async fn edit_form(c: &Ctx, bot: &User) -> Result<accounts::BotForm> {
-    let viewer_id = concerns::require_current_user(c)?.id;
-    let zone = c
-        .app()
-        .db
-        .read(move |conn| {
-            Ok(conn.query_row(
-                "SELECT time_zone FROM users WHERE id=?",
-                [viewer_id],
-                |row| row.get::<_, Option<String>>(0),
-            )?)
-        })
-        .await
-        .map_err(Error::internal)?;
-    let zone = campfire_presentation::time::Zone::for_user(zone.as_deref());
-    // `usable?` may mark an unreadable linked token disconnected. The owner
-    // service performs that write outside the view reader and never returns a token.
-    let id = bot.id;
-    let account = c
-        .app()
-        .db
-        .read(move |conn| crate::integrations::github::accounts::Account::for_user(conn, id))
-        .await
-        .map_err(Error::internal)?;
-    let github_usable = if let Some(account) = account {
-        c.app()
-            .github_accounts
-            .usable(account.id)
-            .await
-            .map_err(Error::internal)?
-    } else {
-        false
-    };
-    let (app, base_url, bot) = (c.app().clone(), c.url_for(""), bot.clone());
-    c.app()
-        .db
-        .read(move |conn| {
-            presenters::accounts::bot_form(conn, &app, &base_url, &bot, &zone, github_usable)
-        })
-        .await
-        .map_err(Error::internal)
-}
-
 /// Preserve strong-parameter scalars for WS11's before-type-cast validation.
 fn agent_params(c: &Ctx) -> AgentChanges {
     let params = c
@@ -618,21 +574,4 @@ pub async fn ensure_agent(c: &Ctx, bot: &User) -> Result<Agent> {
 }
 pub fn error_sentence(errors: &campfire_db::Errors) -> String {
     campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and ")
-}
-
-pub async fn viewer_zone(c: &Ctx) -> Result<campfire_presentation::time::Zone> {
-    let id = concerns::require_current_user(c)?.id;
-    let name = c
-        .app()
-        .db
-        .read(move |conn| {
-            Ok(
-                conn.query_row("SELECT time_zone FROM users WHERE id=?", [id], |r| {
-                    r.get::<_, Option<String>>(0)
-                })?,
-            )
-        })
-        .await
-        .map_err(Error::internal)?;
-    Ok(campfire_presentation::time::Zone::for_user(name.as_deref()))
 }
