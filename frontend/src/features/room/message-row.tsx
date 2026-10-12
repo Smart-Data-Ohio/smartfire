@@ -20,6 +20,7 @@ import {
 } from "../messages/message-content.tsx";
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
+import { StickerMessage } from "../messages/sticker-message.tsx";
 import { useViewerId } from "../messages/use-message.ts";
 import { displayedAuthor, webhookName } from "../messages/webhook-attribution.ts";
 import { AgentBadge, AppTag } from "../people/agent-badge.tsx";
@@ -285,6 +286,7 @@ export function PendingRow({ pending, groupStart }: PendingRowProps) {
             ) : pending.attachment === null ? null : (
               <PendingAttachmentView attachment={pending.attachment} />
             )}
+            {pending.sticker === undefined ? null : <StickerMessage sticker={pending.sticker} />}
           </div>
           {failed ? null : (
             <span className="message-sending">

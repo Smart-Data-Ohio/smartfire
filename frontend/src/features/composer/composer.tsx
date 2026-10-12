@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../../gen/SlashCommandResult.ts";
+import type { Sticker } from "../../gen/Sticker.ts";
 import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
@@ -84,6 +85,7 @@ import {
   subcommandsOf,
   withProblems,
 } from "./slash.ts";
+import { ComposerStickerButton } from "./sticker-picker.tsx";
 import { TypingIndicator, useAgentReplying } from "./typing-indicator.tsx";
 import "./composer.css";
 import "./schedule/schedule.css";
@@ -577,6 +579,33 @@ export function Composer({
       submitting.current = false;
       setRunning(false);
     }
+  };
+
+  /**
+   * Sends a sticker at once as its own message, as Discord does, answering the reply the chip
+   * holds; the draft's text and files stay for the next send.
+   */
+  const sendSticker = (sticker: Sticker) => {
+    const snapshot = currentReply();
+    const target = snapshot.target;
+    const clientMessageId = uuid7(Date.now());
+
+    void toPresent();
+    actions.send(roomId, "", {
+      threadId,
+      reply: target === null ? null : { messageId: target.messageId, notify: target.notify },
+      clientMessageId,
+      sticker: {
+        kind: "available",
+        id: sticker.id,
+        name: sticker.name,
+        imageUrl: sticker.imageUrl,
+        stillUrl: sticker.stillUrl,
+        animated: sticker.animated,
+      },
+    });
+    trackSentReply(key, snapshot, [clientMessageId]);
+    focusInput();
   };
 
   const showResult = (
@@ -1342,6 +1371,8 @@ export function Composer({
             {entry === null ? (
               <>
                 <ComposerEmojiButton onInsert={insertAtCaret} />
+                {/* A new thread's first reply can't carry a sticker: it starts the thread. */}
+                {creating ? null : <ComposerStickerButton onPick={sendSticker} />}
                 <IconButton
                   icon="at"
                   label="Mention someone"

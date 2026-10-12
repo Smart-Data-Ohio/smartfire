@@ -5,6 +5,7 @@
  */
 import type { AppearancePreferences } from "../gen/AppearancePreferences.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { MessageSticker } from "../gen/MessageSticker.ts";
 import type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
@@ -96,6 +97,9 @@ export interface PendingAttachment {
   readonly previewUrl: string | null;
 }
 
+/** A catalog sticker as a message carries it while it exists. */
+export type AvailableSticker = Extract<MessageSticker, { readonly kind: "available" }>;
+
 /** A message written here and not yet confirmed by the server. */
 export interface PendingMessage {
   readonly clientMessageId: string;
@@ -114,6 +118,8 @@ export interface PendingMessage {
   readonly attachments?: readonly PendingAttachment[];
   /** Drive file ids pinned on the pending message; absent when there are none. */
   readonly driveFileIds?: readonly string[];
+  /** The catalog sticker it sends (`stickerId`); absent for none. */
+  readonly sticker?: AvailableSticker;
   /** The message it replies to (inline, on the same timeline), or `null`. */
   readonly replyToMessageId: number | null;
   /** Whether the replied-to author is notified; `null` when it isn't a reply. */

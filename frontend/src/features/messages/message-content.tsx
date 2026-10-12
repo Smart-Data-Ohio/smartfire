@@ -10,19 +10,23 @@ import { UNKNOWN_NAME, useIgnored, useUser } from "../people/people.ts";
 import { AttachmentGallery } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
-import { fileSummary, messageFiles } from "./message-files.ts";
+import { fileSummary, messageFiles, wordlessSummary } from "./message-files.ts";
 import { SoundMessage } from "./sound-message.tsx";
+import { StickerMessage } from "./sticker-message.tsx";
 import { type DisplayedAuthor, displayedAuthor, forwardedAuthor } from "./webhook-attribution.ts";
 
 /** How much of a quoted message the reply line shows before it trails off. */
 const QUOTE_CHARS = 140;
 
-/** One line of a message for a quote: its text, flattened and trimmed, or its file's name. */
+/**
+ * One line of a message for a quote: its text, flattened and trimmed, or its file's name (its
+ * sticker's, for a sticker on its own).
+ */
 export function snippet(message: MessageDTO): string {
   const text = plainText(message).replace(/\s+/g, " ");
 
   if (text === "") {
-    return fileSummary(message);
+    return wordlessSummary(message);
   }
 
   const summary = messageFiles(message).length > 1 ? ` · ${fileSummary(message)}` : "";
@@ -196,6 +200,18 @@ export function ReplyQuote({
 function Body({ message }: { readonly message: MessageDTO }) {
   if (message.sound !== null) {
     return <SoundMessage sound={message.sound} />;
+  }
+
+  // A sticker shows under its caption, if it has one.
+  if (message.sticker !== undefined) {
+    return (
+      <div className="message-sticker-body">
+        {plainText(message).trim() === "" ? null : (
+          <BodyHtml html={message.bodyHtml} className="message-body" />
+        )}
+        <StickerMessage sticker={message.sticker} />
+      </div>
+    );
   }
 
   return <BodyHtml html={message.bodyHtml} className="message-body" />;
