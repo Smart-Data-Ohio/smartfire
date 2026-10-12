@@ -98,6 +98,14 @@ export const validation = (
     fields: { [field]: [message] },
   });
 
+/** 422 `Validation` naming several fields, under one sentence (`api::error`'s `Validation`). */
+export const invalidFields = (message: string, fields: ReadonlyMap<string, readonly string[]>) =>
+  new HttpError(422, {
+    _tag: VALIDATION,
+    message,
+    fields: Object.fromEntries([...fields].map(([key, messages]) => [key, [...messages]])),
+  });
+
 /** 422 `Validation` with no fields: a classic alert, word for word (`api::admin::refusal`). */
 export const refused = (message: string) =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
