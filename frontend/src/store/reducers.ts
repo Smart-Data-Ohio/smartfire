@@ -1,6 +1,11 @@
 import type { BlockList } from "../gen/BlockList.ts";
 import type { BlockState } from "../gen/BlockState.ts";
 import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
+import {
+  applyBlockChange,
+  applyBlockSnapshot,
+  invalidateIgnores as invalidateIgnoresIn,
+} from "./ignores.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
@@ -440,7 +445,7 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
     }
 
     // A stale page must not undo a newer live edit (nor an older poll or cards a newer one).
-    const kept = reconcileMessage(held, ignoredMessage(state, message), true);
+    const kept = reconcileMessage(held, message, true);
 
     if (kept !== held) {
       messages[message.id] = kept;
@@ -788,7 +793,7 @@ export function receiveMessage(state: State, message: MessageDTO): State {
   const reconciled = removePending(state, message.clientMessageId);
   const held = reconciled.messages[message.id];
 
-  const kept = reconcileMessage(held, ignoredMessage(state, message), false);
+  const kept = reconcileMessage(held, message, false);
 
   if (held !== undefined && kept === held) {
     return reconciled;
@@ -834,37 +839,30 @@ export function receiveMessage(state: State, message: MessageDTO): State {
     : withThreadTimeline({ ...reconciled, messages }, threadId, next);
 }
 
-export function setBlocks(state: State, snapshot: BlockList): State {
-  if (snapshot.revision < state.ignoreSnapshotRevision) return state;
-  const ignoredPeople: Record<number, BlockState> = {};
+/** A `GET /blocks` snapshot: the viewer's whole ignore set, keeping any newer change. */
+export function setBlocks(
+  state: State,
+  snapshot: BlockList,
+  coveredAt = Number.NEGATIVE_INFINITY,
+): State {
+  const ignores = applyBlockSnapshot(state.ignores, snapshot, coveredAt, state.me?.user.id ?? null);
 
-  for (const person of snapshot.people) {
-    ignoredPeople[person.user.id] = {
-      userId: person.user.id,
-      ignoredByMe: true,
-      revision: snapshot.revision,
-    };
-  }
-
-  for (const change of Object.values(state.ignoredPeople)) {
-    if (change.revision > snapshot.revision) ignoredPeople[change.userId] = change;
-  }
-
-  const next = { ...state, ignoredPeople, ignoreSnapshotRevision: snapshot.revision };
-  const messages = { ...state.messages };
-
-  for (const message of Object.values(messages))
-    messages[message.id] = ignoredMessage(next, message);
-
-  return { ...next, messages };
+  return ignores === state.ignores ? state : { ...state, ignores };
 }
 
-function ignoredMessage(state: State, message: MessageDTO): MessageDTO {
-  const preference = state.ignoredPeople[message.creatorId];
+/**
+ * One ignore change, from the sync event or the write's own reply. Messages keep the server's
+ * flag; whoever shows them reads the set, so the change collapses (or opens) them everywhere.
+ */
+export function applyBlockState(state: State, change: BlockState): State {
+  const ignores = applyBlockChange(state.ignores, change, state.me?.user.id ?? null);
 
-  return preference === undefined && state.ignoreSnapshotRevision < 0
-    ? message
-    : { ...message, ignored: preference?.ignoredByMe ?? false };
+  return ignores === state.ignores ? state : { ...state, ignores };
+}
+
+/** A change may have been missed: the ignore set is stale until a later request lands. */
+export function invalidateIgnores(state: State): State {
+  return { ...state, ignores: invalidateIgnoresIn(state.ignores) };
 }
 
 /**
@@ -878,7 +876,7 @@ export function updateMessage(state: State, message: MessageDTO): State {
     return state;
   }
 
-  const kept = reconcileMessage(held, ignoredMessage(state, message), false);
+  const kept = reconcileMessage(held, message, false);
 
   return kept === held ? state : { ...state, messages: { ...state.messages, [message.id]: kept } };
 }
@@ -1143,33 +1141,9 @@ export function applyEvents(
       case "user.updated":
         next = mergeUsers(next, [event.data]);
         break;
-      case "blocks.updated": {
-        const change = event.data;
-        const held = next.ignoredPeople[change.userId];
-
-        if (
-          change.revision <= next.ignoreSnapshotRevision ||
-          (held !== undefined && held.revision >= change.revision)
-        )
-          break;
-        const messages = { ...next.messages };
-
-        for (const message of Object.values(messages)) {
-          if (message.creatorId === change.userId) {
-            messages[message.id] = { ...message, ignored: change.ignoredByMe };
-          }
-        }
-
-        next = {
-          ...next,
-          messages,
-          ignoredPeople: {
-            ...next.ignoredPeople,
-            [change.userId]: change,
-          },
-        };
+      case "blocks.updated":
+        next = applyBlockState(next, event.data);
         break;
-      }
 
       case "message.created":
         next = stopTypingFor(receiveMessage(next, event.data), event.topic, event.data.creatorId);

@@ -33,6 +33,7 @@ import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
 import { NEW_ROOM_SLUGS } from "./features/rooms/room-forms.ts";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
+import { BlockedSection } from "./features/settings/blocked-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
 import { DevicesSection } from "./features/settings/devices-section.tsx";
 import { IntegrationsSection } from "./features/settings/integrations-section.tsx";
@@ -467,6 +468,7 @@ const settingsSections = [
     path: "sessions",
     component: SessionsSection,
   }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "ignored", component: BlockedSection }),
   createRoute({ getParentRoute: () => settingsRoute, path: "devices", component: DevicesSection }),
   createRoute({
     getParentRoute: () => settingsRoute,

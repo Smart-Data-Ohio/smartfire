@@ -2,13 +2,16 @@
  * The people directory and a person's page (S7), `users#index` and `users#show` as JSON. The
  * directory and the page read the world's users, presence, stars and the viewer's DND exceptions
  * (the settings mock's set); banning flips a user's status. The viewer is
- * an administrator unless the admin mock made them a member.
+ * an administrator unless the admin mock made them a member. Ignoring someone records them in the
+ * world's `ignored`, which marks their messages on every page.
  */
+import type { BlockList } from "../../src/gen/BlockList.ts";
+import type { BlockState } from "../../src/gen/BlockState.ts";
 import type { DirectoryPerson } from "../../src/gen/DirectoryPerson.ts";
 import type { PeopleDirectory } from "../../src/gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../../src/gen/PersonProfile.ts";
 import type { User } from "../../src/gen/User.ts";
-import { forbidden, notFound, ok } from "../http.ts";
+import { forbidden, notFound, ok, validation } from "../http.ts";
 import { type Agents, viewerManages } from "../s4/agents.ts";
 import { rowTimestamp, VIEWER_ID } from "../seed.ts";
 import { MOCK_TRANSFER_QR_SVG } from "./account.ts";
@@ -55,7 +58,7 @@ export function createPeople(
     const people = users.map(
       (user): DirectoryPerson => ({
         userId: user.id,
-        ignoredByMe: false,
+        ignoredByMe: world.ignored.has(user.id),
         // A live lease counts as online in the classic directory, whatever the presence says.
         online:
           user.role === "bot"
@@ -96,7 +99,7 @@ export function createPeople(
       transferUrl,
       transferQrSvg: transferUrl === null ? null : MOCK_TRANSFER_QR_SVG,
       canBan: admin && person && other,
-      ignoredByMe: false,
+      ignoredByMe: world.ignored.has(userId),
       canManageBot:
         user.role === "bot" &&
         user.status === "active" &&
@@ -123,9 +126,54 @@ export function createPeople(
     return ok(profile(userId));
   };
 
+  /** `GET /blocks`: the people the viewer ignores, oldest first. */
+  const blocks = (): BlockList => {
+    const world = ctx.world();
+
+    const people = [...world.ignored].flatMap(([userId, createdAt]) => {
+      const user = world.users.get(userId);
+
+      return user === undefined ? [] : [{ user, ignoredByMe: true, createdAt }];
+    });
+
+    return { viewerId: VIEWER_ID, people, revision: world.ignoreRevision };
+  };
+
+  /** `PUT` / `DELETE /people/:id/block`: idempotent, never for yourself, and published to the viewer. */
+  const setIgnored = (userId: number, ignored: boolean): BlockState => {
+    const world = ctx.world();
+
+    if (userId === VIEWER_ID) throw validation("person", "must be someone else");
+
+    if (!world.users.has(userId)) throw notFound("User not found");
+
+    if (ignored && !world.ignored.has(userId)) {
+      world.ignored.set(userId, rowTimestamp(ctx.now()));
+      world.ignoreRevision += 1;
+    } else if (!ignored && world.ignored.delete(userId)) {
+      world.ignoreRevision += 1;
+    }
+
+    const state = {
+      viewerId: VIEWER_ID,
+      userId,
+      ignoredByMe: ignored,
+      revision: world.ignoreRevision,
+    };
+
+    // Every write, a no-op too, tells the viewer's other sessions, as the server does.
+    ctx.publish([{ topic: "user", type: "blocks.updated", data: state }]);
+
+    return state;
+  };
+
   return {
     routes: [
-      route("GET", /^\/blocks$/, () => ok({ people: [], revision: 0 })),
+      route("GET", /^\/blocks$/, () => ok(blocks())),
+      route("PUT", /^\/people\/(\d+)\/block$/, (request) => ok(setIgnored(firstId(request), true))),
+      route("DELETE", /^\/people\/(\d+)\/block$/, (request) =>
+        ok(setIgnored(firstId(request), false)),
+      ),
       route("GET", /^\/people$/, () => ok(directory())),
       route("GET", /^\/people\/(\d+)$/, (request) => ok(profile(firstId(request)))),
       route("POST", /^\/people\/(\d+)\/ban$/, (request) => setBanned(firstId(request), true)),

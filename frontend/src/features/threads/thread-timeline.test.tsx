@@ -1,10 +1,28 @@
-import { render, screen } from "@testing-library/react";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { REPLIES_FAILED, ThreadTimeline } from "./thread-timeline.tsx";
+
+/** Renders `ui` inside a router: the timeline reads the navigation a permalink arrived by. */
+async function mount(ui: ReactNode) {
+  const router = createRouter({
+    routeTree: createRootRoute({ component: () => ui }),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+}
 
 beforeEach(() => {
   // These failure states draw no list; jsdom still needs the anchor's observer API.
@@ -31,7 +49,7 @@ describe("the thread timeline", () => {
     const reload = vi.spyOn(actions.threads, "reload").mockResolvedValue(undefined);
     const user = userEvent.setup();
 
-    render(
+    await mount(
       <ThreadTimeline
         threadId={1}
         parent={null}
@@ -49,10 +67,10 @@ describe("the thread timeline", () => {
     expect(reload).toHaveBeenCalledWith(1, 5);
   });
 
-  it("keeps the skeleton while the header is still loading", () => {
+  it("keeps the skeleton while the header is still loading", async () => {
     store.setState({ threadTimelines: { 1: { ...emptyTimeline, status: "error" } } });
 
-    render(
+    await mount(
       <ThreadTimeline
         threadId={1}
         parent={null}

@@ -1,4 +1,5 @@
 import { dayKey, formatDay, toMillis } from "../../lib/time.ts";
+import { emptyIgnores, type IgnoreSet, messageIgnored } from "../../store/ignores.ts";
 import type { MessageDTO, PendingMessage, Timeline } from "../../store/model.ts";
 import { displayedAuthor } from "../messages/webhook-attribution.ts";
 
@@ -21,6 +22,17 @@ export type TimelineItem =
       /** Starts a group: shows the avatar, name and time. */
       readonly groupStart: boolean;
     }
+  /**
+   * A run of messages from people the viewer ignores, collapsed into one line; while `revealed`,
+   * the line heads the run's message rows, which follow it.
+   */
+  | {
+      readonly kind: "ignored";
+      /** `ignored-<clientMessageId>` of the run's first message. */
+      readonly key: string;
+      readonly ids: readonly number[];
+      readonly revealed: boolean;
+    }
   | {
       readonly kind: "pending";
       readonly key: string;
@@ -35,6 +47,13 @@ interface Previous {
   readonly millis: number;
   readonly day: string;
   readonly quiet: boolean;
+}
+
+/** A forward of a webhook's message, at any depth, is the forwarder's, and groups with their own. */
+function persona(message: MessageDTO): string | null {
+  const author = displayedAuthor(message);
+
+  return author.kind === "webhook" ? author.name : null;
 }
 
 /** The key a message or pending row renders under. */
@@ -67,13 +86,28 @@ interface TimelineInput {
    * remain (a board post: its work belongs above the discussion, however long that is).
    */
   readonly introFirst?: boolean;
+  /**
+   * Messages from ignored people the reader chose to show. A run opens when it holds any of these
+   * (or the focused message), so it stays open as the run grows at either end.
+   */
+  readonly revealed?: ReadonlySet<number>;
+  /** The permalinked message, whose run opens so the link lands on it. */
+  readonly focusId?: number | null;
+  /**
+   * Who the viewer ignores (the store's set). Until it loads, a message's own `ignored` flag
+   * decides.
+   */
+  readonly ignores?: IgnoreSet;
 }
+
+const NOTHING_REVEALED: ReadonlySet<number> = new Set();
 
 /**
  * Lays a room's loaded window out as rows: the room intro at the very start, a spinner row at an
  * edge that's still loading, day dividers, the unread divider before the first unread message,
- * and messages grouped by author. Pending sends follow the confirmed messages once the window
- * reaches the present or while its replacement page loads.
+ * and messages grouped by author. Consecutive messages from people the viewer ignores collapse
+ * into one line (a day or the unread divider ends the run). Pending sends follow the confirmed messages
+ * once the window reaches the present or while its replacement page loads.
  */
 export function timelineItems({
   timeline,
@@ -81,9 +115,64 @@ export function timelineItems({
   pending,
   now,
   introFirst = false,
+  revealed = NOTHING_REVEALED,
+  focusId = null,
+  ignores = emptyIgnores,
 }: TimelineInput): TimelineItem[] {
   const items: TimelineItem[] = [];
   let previous: Previous | null = null;
+  let run: MessageDTO[] = [];
+
+  /** Lays out the ignored run held so far: its line, then its rows while it's open. */
+  const flush = () => {
+    const first = run[0];
+
+    if (first === undefined) {
+      return;
+    }
+
+    const open = run.some((message) => revealed.has(message.id) || message.id === focusId);
+
+    items.push({
+      kind: "ignored",
+      key: `ignored-${first.clientMessageId}`,
+      ids: run.map((message) => message.id),
+      revealed: open,
+    });
+
+    if (open) {
+      let before: Previous | null = null;
+
+      for (const message of run) {
+        const millis = toMillis(message.createdAt);
+        const shownAs = persona(message);
+
+        const groupStart =
+          message.systemNote || !continues(before, message.creatorId, shownAs, millis);
+
+        before = {
+          creatorId: message.creatorId,
+          persona: shownAs,
+          millis,
+          day: dayKey(millis),
+          quiet: message.systemNote,
+        };
+        items.push({
+          kind: "message",
+          key: messageKey(message.clientMessageId),
+          message,
+          groupStart,
+        });
+      }
+    }
+
+    run = [];
+
+    // Whatever follows the run starts a group of its own.
+    if (previous !== null) {
+      previous = { ...previous, quiet: true };
+    }
+  };
 
   if (timeline.before === null || introFirst) {
     items.push({ kind: "intro", key: "intro" });
@@ -105,6 +194,8 @@ export function timelineItems({
     const day = dayKey(millis);
     let breaks = false;
 
+    flush();
+
     if (previous?.day !== day) {
       items.push({ kind: "day", key: `day-${day}`, label: formatDay(millis, now) });
       breaks = true;
@@ -117,6 +208,26 @@ export function timelineItems({
     return groupStart;
   };
 
+  /** Adds an ignored message to the run, which a new day ends first. */
+  const hold = (message: MessageDTO) => {
+    const millis = toMillis(message.createdAt);
+    const day = dayKey(millis);
+
+    if (previous?.day !== day) {
+      flush();
+      items.push({ kind: "day", key: `day-${day}`, label: formatDay(millis, now) });
+    }
+
+    run.push(message);
+    previous = {
+      creatorId: message.creatorId,
+      persona: persona(message),
+      millis,
+      day,
+      quiet: true,
+    };
+  };
+
   for (const id of timeline.ids) {
     const message = messages[id];
 
@@ -127,19 +238,23 @@ export function timelineItems({
     let forced = false;
 
     if (id === timeline.unreadFromId) {
+      flush();
       items.push({ kind: "unread", key: "unread", count: timeline.unreadCount });
       forced = true;
     }
 
-    // A forward of a webhook's message, at any depth, is the forwarder's, and groups with their own.
-    const author = displayedAuthor(message);
-    const persona = author.kind === "webhook" ? author.name : null;
+    if (messageIgnored(ignores, message)) {
+      hold(message);
+      continue;
+    }
 
     const groupStart =
-      place(message.creatorId, message.createdAt, message.systemNote, persona) || forced;
+      place(message.creatorId, message.createdAt, message.systemNote, persona(message)) || forced;
 
     items.push({ kind: "message", key: messageKey(message.clientMessageId), message, groupStart });
   }
+
+  flush();
 
   if (timeline.after !== null) {
     if (timeline.loadingNewer) {

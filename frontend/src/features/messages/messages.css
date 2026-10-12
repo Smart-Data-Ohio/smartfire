@@ -879,6 +879,61 @@
     }
   }
 
+  /* Messages from someone you ignore: one quiet line where they'd be, in the message grid. */
+  .message-ignored {
+    display: grid;
+    grid-template-columns: var(--message-gutter) minmax(0, 1fr);
+    margin-top: var(--message-group-gap);
+    padding: var(--space-1) var(--space-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: 18px;
+  }
+
+  /* The words wrap on a narrow screen; "— Show" stays together at their end. */
+  .message-ignored-line {
+    display: flex;
+    grid-column: 2;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+  }
+
+  .message-ignored-icon {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .message-ignored-text {
+    min-width: 0;
+  }
+
+  .message-ignored-toggle {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  .message-ignored .button[data-variant="link"] {
+    font-size: inherit;
+  }
+
+  /* Phones: the line takes the avatar's column too, so it fits on one line. */
+  @media (width < 720px) {
+    .message-ignored-line {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* A phone's thumb needs more than the word to land on. */
+  @media (width < 720px) and (pointer: coarse) {
+    .message-ignored .button[data-variant="link"] {
+      min-width: var(--touch-target);
+      min-height: var(--touch-target);
+    }
+  }
+
   @media (width < 720px) and (pointer: coarse) {
     .lightbox-step.button {
       --button-height: var(--touch-target);

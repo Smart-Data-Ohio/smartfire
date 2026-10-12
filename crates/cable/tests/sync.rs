@@ -225,6 +225,7 @@ async fn delivers_the_users_and_authorized_topics_events_in_batches() {
     assert_eq!(welcome["resumed"], false);
     assert_eq!(welcome["seq"], 0);
     assert_eq!(welcome["epoch"].as_str().unwrap().len(), 24);
+    assert_eq!(welcome["viewerId"], 1, "the welcome says whose socket it is");
 
     // Room 2 was refused, and someone else's user topic isn't ours.
     let first = app.publish(Audience::Topic("room:2".into()), json!("other room"));
@@ -308,6 +309,7 @@ async fn resumes_within_the_ring_and_starts_over_otherwise() {
     assert_eq!(welcome["resumed"], true);
     assert_eq!(welcome["seq"], a);
     assert_eq!(welcome["replayThrough"], c);
+    assert_eq!(welcome["viewerId"], 1, "a resumed welcome says whose socket it is too");
     assert_eq!(
         client.batch().await,
         [

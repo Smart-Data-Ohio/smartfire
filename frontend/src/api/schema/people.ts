@@ -71,6 +71,7 @@ export const BlockedPerson = Schema.Struct({
 export type BlockedPersonPin = Assert<Pinned<typeof BlockedPerson, GeneratedBlockedPerson>>;
 
 export const BlockList = Schema.Struct({
+  viewerId: UserId,
   people: Schema.Array(BlockedPerson),
   revision: Schema.Int,
 });
@@ -78,6 +79,7 @@ export const BlockList = Schema.Struct({
 export type BlockListPin = Assert<Pinned<typeof BlockList, GeneratedBlockList>>;
 
 export const BlockState = Schema.Struct({
+  viewerId: UserId,
   userId: UserId,
   ignoredByMe: Schema.Boolean,
   revision: Schema.Int,

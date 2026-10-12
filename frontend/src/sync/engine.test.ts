@@ -25,6 +25,7 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
 import { activityListOf } from "../store/activity.ts";
+import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { Boot } from "../store/model.ts";
 import { roomMuted } from "../store/notification-preferences.ts";
@@ -44,6 +45,7 @@ import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refre
 import * as session from "./session.ts";
 import { settings } from "./settings.ts";
 import { applySettingsSnapshot, beginSettingsEpoch } from "./settings-snapshot.ts";
+import { answeredForThisPage, pageReload } from "./sign-in-change.ts";
 import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -75,7 +77,7 @@ const serve = (roomMessages: readonly MessageDTO[]) =>
     const api = yield* FakeApi;
 
     yield* api.reply("GET /boot", { ...workspaceBoot, csrfToken: "token" });
-    yield* api.reply("GET /blocks", { people: [], revision: 0 });
+    yield* api.reply("GET /blocks", { viewerId: 7, people: [], revision: 0 });
     yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
     yield* api.reply("GET /rooms/12", roomDetailFixture(12));
     yield* api.reply("GET /rooms/12/messages", pageFixture(roomMessages));
@@ -98,11 +100,17 @@ const pushEvents = (...events: readonly SyncEvent[]) =>
     yield* settle;
   });
 
-const welcome = (seq: number, resumed: boolean, epoch = "e1", replayThrough = seq) =>
+const welcome = (
+  seq: number,
+  resumed: boolean,
+  epoch = "e1",
+  replayThrough = seq,
+  viewerId = meFixture.user.id,
+) =>
   Effect.gen(function* () {
     const socket = yield* MemorySocket;
 
-    yield* socket.push({ t: "welcome", epoch, seq, resumed, replayThrough });
+    yield* socket.push({ t: "welcome", epoch, seq, resumed, replayThrough, viewerId });
     yield* settle;
   });
 
@@ -2984,6 +2992,7 @@ describe("outbox", () => {
       Effect.andThen(Deferred.await(gate), confirmed),
     );
     yield* startEngine;
+    yield* welcome(0, false);
     yield* session.openRoom(12, null);
 
     const id = yield* session.send(12, "hello");
@@ -3265,6 +3274,7 @@ describe("tombstones", () => {
 
         yield* serve([1, 2, 3].map((id) => messageFixture(id, 12)));
         yield* startEngine;
+        yield* welcome(0, false);
         yield* session.openRoom(12, null);
         yield* pushEvents({
           seq: 1,
@@ -3328,6 +3338,7 @@ describe("typing", () => {
     withSync(
       Effect.gen(function* () {
         yield* startEngine;
+        yield* welcome(0, false);
         yield* pushEvents(
           { seq: 1, topic: "room:12", type: "typing", data: { userId: 9, on: true } },
           { seq: 2, topic: "room:12", type: "typing", data: { userId: 7, on: true } },
@@ -3359,6 +3370,7 @@ describe("typing", () => {
           pushEvents({ seq, topic: "room:12", type: "typing", data: { userId: 9, on: true } });
 
         yield* startEngine;
+        yield* welcome(0, false);
         yield* typing(1);
         yield* TestClock.adjust(4000);
         yield* typing(2);
@@ -3402,6 +3414,483 @@ describe("people", () => {
         expect(lookups.at(-1)?.query).toEqual({ ids: "8" });
         expect(store.getState().activity.items[40]?.source.creatorId).toBe(8);
         expect(store.getState().users[8]?.name).toBe("Lucía Fernández");
+      }),
+    ),
+  );
+});
+
+describe("ignores", () => {
+  const blocksUpdated = (seq: number, userId: number, ignoredByMe: boolean, revision: number) =>
+    ({
+      seq,
+      topic: "user",
+      type: "blocks.updated",
+      data: { viewerId: 7, userId, ignoredByMe, revision },
+    }) as const;
+
+  const listed = (revision: number, ...ids: number[]) => ({
+    viewerId: 7,
+    people: ids.map((id) => ({
+      user: userFixture(id),
+      ignoredByMe: true,
+      createdAt: "2026-10-01T12:00:00Z",
+    })),
+    revision,
+  });
+
+  const unavailable = () =>
+    Effect.fail(new ServerError({ status: 503, message: "Try again later" }));
+
+  const blockRequests = Effect.gen(function* () {
+    const api = yield* FakeApi;
+
+    return (yield* api.requests).filter((request) => request.path === "/blocks").length;
+  });
+
+  const stale = () => ignoresStale(store.getState().ignores);
+
+  /** Answers `GET /blocks` with `json` once `release` completes. */
+  const held = (release: Deferred.Deferred<void>, json: Schema.Json) =>
+    Effect.flatMap(FakeApi, (api) =>
+      api.route("GET /blocks", () => Deferred.await(release).pipe(Effect.as(json))),
+    );
+
+  it.effect("retries a failed snapshot, then refetches it on the next resume", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        expect(store.getState().ignores.snapshot).toBe(0);
+        expect(stale()).toBe(false);
+
+        yield* api.route("GET /blocks", unavailable);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        // Three retries with backoff (0.5 s, 1 s, 2 s), then it waits for the next chance.
+        yield* TestClock.adjust("4 seconds");
+
+        expect((yield* blockRequests) - before).toBe(4);
+        expect(stale()).toBe(true);
+
+        yield* api.reply("GET /blocks", listed(2, 3));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+
+        const resumed = yield* blockRequests;
+
+        yield* welcome(6, true);
+
+        expect((yield* blockRequests) - resumed).toBe(1);
+        expect(store.getState().ignores.snapshot).toBe(2);
+        expect(stale()).toBe(false);
+
+        // A clean resume after that makes no further snapshot request.
+        yield* socket.drop;
+        yield* TestClock.adjust(500);
+        yield* welcome(6, true);
+        expect((yield* blockRequests) - resumed).toBe(1);
+      }),
+    ),
+  );
+
+  it.effect("times out a stuck snapshot request, then a reconnect recovers the miss", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Every request hangs: each try times out at 10 s, then the set is left stale.
+        yield* api.route("GET /blocks", () => Effect.never);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* TestClock.adjust("60 seconds");
+
+        expect((yield* blockRequests) - before).toBe(4);
+        expect(stale()).toBe(true);
+
+        // Disconnected meanwhile, an ignore at 2 is missed; the reconnect can't replay it.
+        yield* api.reply("GET /blocks", listed(2, 3, 4));
+        yield* socket.drop;
+        yield* TestClock.adjust(500);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect((yield* blockRequests) - before).toBe(5);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(stale()).toBe(false);
+      }),
+    ),
+  );
+
+  it.effect("abandons a request stuck from before a reconnect that can't replay", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        // The first snapshot request hangs.
+        yield* api.route("GET /blocks", () => Effect.never);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Before it would time out, the socket drops and comes back with nothing to replay.
+        yield* api.reply("GET /blocks", listed(11, 4));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect(yield* blockRequests).toBe(2);
+        expect(store.getState().ignores.snapshot).toBe(11);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(stale()).toBe(false);
+
+        // Nothing is left pending: no further request goes out.
+        yield* TestClock.adjust("120 seconds");
+        expect(yield* blockRequests).toBe(2);
+      }),
+    ),
+  );
+
+  /** Answers `/boot` as A again. */
+  const bootAsA = Effect.flatMap(FakeApi, (api) =>
+    api.reply("GET /boot", { ...workspaceBoot, csrfToken: "token" }),
+  );
+
+  /** Answers `/boot` as B, signed in from another tab. */
+  const bootAsB = Effect.flatMap(FakeApi, (api) =>
+    api.reply("GET /boot", {
+      ...workspaceBoot,
+      user: { ...workspaceBoot.user, id: 8 },
+      csrfToken: "token",
+    }),
+  );
+
+  /** Stubs the page reload, noting whether the socket was still open each time. */
+  const stubReload = Effect.gen(function* () {
+    const socket = yield* MemorySocket;
+    const openAtReload: boolean[] = [];
+
+    vi.spyOn(pageReload, "reload").mockImplementation(() => {
+      openAtReload.push(Effect.runSync(socket.isOpen));
+    });
+
+    return openAtReload;
+  });
+
+  it.effect("never lets B's snapshot vouch for A's set when /boot fails", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+        yield* api.reply("GET /blocks", listed(100, 3));
+        yield* startEngine;
+        yield* welcome(5, false);
+        expect(store.getState().ignores).toMatchObject({ userId: 7, snapshot: 100 });
+
+        // B signs in elsewhere; this tab reconnects as B, and its `/boot` read fails.
+        yield* api.route("GET /boot", () =>
+          Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
+        );
+        yield* api.reply("GET /blocks", { ...listed(2, 4), viewerId: 8 });
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        // B's snapshot says whose it is: it never lands, and the page reloads as B.
+        const ignores = store.getState().ignores;
+
+        expect(ignores).toMatchObject({ userId: 7, snapshot: 100 });
+        expect(Object.keys(ignores.people)).toEqual(["3"]);
+        expect(stale()).toBe(true);
+        expect(reloads).toEqual([false]);
+      }),
+    ),
+  );
+
+  it.effect("reloads once, after the engine stops, when /boot says B signed in", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+        sessionStorage.setItem("smartfire.draft.12", "A's draft");
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+
+        yield* bootAsB;
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+
+        const sidebars = (yield* api.requests).filter((r) => r.path === "/sidebar").length;
+
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect(reloads).toEqual([false]);
+        expect(running.pollUnsafe()).toBeDefined();
+        expect(sessionStorage.getItem("smartfire.draft.12")).toBeNull();
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
+        // B's sidebar was never read, so it never rendered over A's page.
+        expect((yield* api.requests).filter((r) => r.path === "/sidebar").length).toBe(sidebars);
+      }),
+    ),
+  );
+
+  it.effect("reloads before a resume answered for B replays any of B's events", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+
+        const requests = (yield* api.requests).length;
+
+        // The cookie now signs in B; A's cursor resumes, and the server replays B's events.
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* socket.push({
+          t: "welcome",
+          epoch: "e1",
+          seq: 5,
+          resumed: true,
+          replayThrough: 6,
+          viewerId: 8,
+        });
+        yield* socket.push({
+          t: "batch",
+          events: [
+            {
+              seq: 6,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: sidebarRowFixture(99, "B's room"),
+            },
+          ],
+        });
+        yield* settle;
+
+        expect(reloads).toEqual([false]);
+        expect(running.pollUnsafe()).toBeDefined();
+        expect(store.getState().sidebar.rows[99]).toBeUndefined();
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
+        // Nothing was read for B either.
+        expect((yield* api.requests).length).toBe(requests);
+      }),
+    ),
+  );
+
+  it.effect("stops before reloading when a reply read outside it finds B", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const reloads = yield* stubReload;
+
+        yield* serve([]);
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+
+        // Settings read `/blocks` and the server answered for B.
+        expect(answeredForThisPage(8)).toBe(false);
+        yield* settle;
+
+        expect(reloads).toEqual([false]);
+        expect(running.pollUnsafe()).toBeDefined();
+      }),
+    ),
+  );
+
+  it.effect("drops A's snapshot still in flight when B's sign-in is found", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const reloads = yield* stubReload;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        expect(store.getState().ignores.snapshot).toBe(0);
+
+        // A's next snapshot is held in flight.
+        yield* held(release, listed(101, 3, 5));
+        yield* pushEvents(blocksUpdated(6, 5, true, 101));
+        yield* settle;
+
+        yield* bootAsB;
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+
+        expect(store.getState().ignores.snapshot).toBe(0);
+        expect(store.getState().ignores.people[3]).toBeUndefined();
+        expect(reloads).toEqual([false]);
+      }),
+    ),
+  );
+
+  it.effect("asks for the snapshot at once while the boot and sidebar reads stall", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // Reconnected with nothing to replay; boot and sidebar never answer.
+        yield* api.route("GET /boot", () => Effect.never);
+        yield* api.route("GET /sidebar", () => Effect.never);
+        yield* api.reply("GET /blocks", listed(2, 4));
+
+        const before = yield* blockRequests;
+
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* settle;
+
+        expect((yield* blockRequests) - before).toBe(1);
+        expect(store.getState().ignores.people[4]?.ignored).toBe(true);
+        expect(stale()).toBe(false);
+
+        // The stalled reads time out; the next resume reads them again.
+        yield* TestClock.adjust("40 seconds");
+        yield* bootAsA;
+        yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
+        yield* socket.drop;
+        yield* TestClock.adjust("30 seconds");
+
+        const sidebars = (yield* api.requests).filter((r) => r.path === "/sidebar").length;
+
+        yield* welcome(1, true, "e2");
+        yield* settle;
+
+        expect((yield* api.requests).filter((r) => r.path === "/sidebar").length).toBe(
+          sidebars + 1,
+        );
+      }),
+    ),
+  );
+
+  it.effect("runs one fetch with its retries however many events ask during it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* api.route("GET /blocks", unavailable);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* pushEvents(blocksUpdated(7, 4, true, 2));
+        yield* TestClock.adjust("600 millis");
+        yield* pushEvents(blocksUpdated(8, 5, true, 3));
+        yield* TestClock.adjust("10 seconds");
+
+        expect((yield* blockRequests) - before).toBe(4);
+        expect(stale()).toBe(true);
+      }),
+    ),
+  );
+
+  it.effect("makes exactly one follow-up for an ask that lands mid-flight", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* held(release, listed(1, 3));
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* settle;
+        expect((yield* blockRequests) - before).toBe(1);
+
+        yield* pushEvents(blocksUpdated(7, 4, true, 2));
+        yield* pushEvents(blocksUpdated(8, 4, false, 3));
+        yield* settle;
+        expect((yield* blockRequests) - before).toBe(1);
+
+        yield* api.reply("GET /blocks", listed(3, 3));
+        yield* Deferred.succeed(release, undefined);
+        yield* TestClock.adjust("5 seconds");
+
+        expect((yield* blockRequests) - before).toBe(2);
+        expect(store.getState().ignores.snapshot).toBe(3);
+        expect(stale()).toBe(false);
+      }),
+    ),
+  );
+
+  it.effect("cancels pending retries when the engine stops", () =>
+    withSync(
+      Effect.gen(function* () {
+        const engine = yield* Engine;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+
+        const running = yield* Effect.forkChild(engine.run);
+
+        yield* settle;
+        yield* welcome(5, false);
+        yield* api.route("GET /blocks", unavailable);
+
+        const before = yield* blockRequests;
+
+        yield* pushEvents(blocksUpdated(6, 3, true, 1));
+        yield* settle;
+        expect((yield* blockRequests) - before).toBe(1);
+
+        yield* Fiber.interrupt(running);
+        yield* TestClock.adjust("10 seconds");
+
+        expect((yield* blockRequests) - before).toBe(1);
       }),
     ),
   );
@@ -4721,6 +5210,99 @@ describe("decoding", () => {
 
         expect(unreadCount(12)).toBe(1);
         expect(yield* socket.isOpen).toBe(true);
+      }),
+    ),
+  );
+});
+
+describe("each connection's welcome", () => {
+  const cursorAt = (seq: number) => JSON.stringify({ epoch: "e1", seq });
+
+  it.effect("applies nothing sent before it, nor moves the cursor", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const reload = vi.spyOn(pageReload, "reload").mockImplementation(() => undefined);
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* pushEvents(unreadEvent(11));
+        expect(unreadCount(12)).toBe(1);
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(cursorAt(11));
+
+        // A's cursor resumes under B's cookie, and B's events come before B's welcome.
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* socket.push({
+          t: "batch",
+          events: [
+            unreadEvent(12),
+            {
+              seq: 13,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: sidebarRowFixture(99, "B's room"),
+            },
+          ],
+        });
+        yield* settle;
+
+        expect(unreadCount(12)).toBe(1);
+        expect(store.getState().sidebar.rows[99]).toBeUndefined();
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(cursorAt(11));
+        expect(reload).not.toHaveBeenCalled();
+
+        yield* welcome(11, true, "e1", 13, 8);
+
+        expect(reload).toHaveBeenCalledTimes(1);
+        expect(store.getState().sidebar.rows[99]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("closes and reconnects when it doesn't decode, applying nothing", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+
+        yield* serve([]);
+        yield* startEngine;
+
+        const before = unreadCount(12);
+
+        yield* socket.pushText(JSON.stringify({ t: "welcome", epoch: "e1" }));
+        yield* socket.pushText(JSON.stringify({ t: "batch", events: [unreadEvent(1)] }));
+        yield* settle;
+
+        expect(yield* socket.isOpen).toBe(false);
+        expect(unreadCount(12)).toBe(before);
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBeNull();
+
+        // The usual backoff dials again.
+        yield* TestClock.adjust(1000);
+        expect((yield* socket.dials).length).toBe(2);
+        expect(yield* socket.isOpen).toBe(true);
+      }),
+    ),
+  );
+
+  it.effect("takes one without viewerId as from a server before it, mid rolling deploy", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const reload = vi.spyOn(pageReload, "reload").mockImplementation(() => undefined);
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* socket.push({ t: "welcome", epoch: "e1", seq: 0, resumed: false, replayThrough: 0 });
+        yield* settle;
+        yield* pushEvents(unreadEvent(1));
+
+        expect(unreadCount(12)).toBe(1);
+        expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(cursorAt(1));
+        expect(yield* socket.isOpen).toBe(true);
+        expect(reload).not.toHaveBeenCalled();
       }),
     ),
   );

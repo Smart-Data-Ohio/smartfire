@@ -4,12 +4,12 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { userFixture } from "../../api/testing.ts";
 import type { User } from "../../store/model.ts";
-import { mutations } from "../../store/store.ts";
-import { peoplePages } from "../../sync/admin.ts";
+import { mutations, store } from "../../store/store.ts";
+import { ignores, peoplePages } from "../../sync/admin.ts";
 import { PersonPage } from "./person-page.tsx";
 
 afterEach(() => {
@@ -22,6 +22,7 @@ async function mount(
   accountName: string,
   pronouns: string | null,
   banner: Partial<User> = {},
+  ignoredByMe = false,
 ) {
   vi.spyOn(peoplePages, "profile").mockResolvedValue({
     user: { ...userFixture(2, name), accountName, pronouns, ...banner },
@@ -31,7 +32,7 @@ async function mount(
     transferUrl: null,
     transferQrSvg: null,
     canBan: false,
-    ignoredByMe: false,
+    ignoredByMe,
     canManageBot: false,
   });
 
@@ -44,6 +45,21 @@ async function mount(
 
   render(<RouterProvider router={router} />);
   await act(() => router.load());
+}
+
+/** Answers an ignore write as the server would, landing it in the store as the facade does. */
+function answerIgnores() {
+  let revision = 10;
+
+  return vi.spyOn(ignores, "set").mockImplementation((userId, ignored) => {
+    revision += 1;
+
+    const change = { viewerId: 7, userId, ignoredByMe: ignored, revision };
+
+    mutations.applyBlockState(change);
+
+    return Promise.resolve(change);
+  });
 }
 
 it("shows the nickname, muted pronouns and secondary account name", async () => {
@@ -86,4 +102,57 @@ it("shows the avatar's tint where someone has no banner", async () => {
   expect(document.querySelector<HTMLElement>(".person .profile-banner")?.dataset.empty).toBe(
     "true",
   );
+});
+
+it("ignores someone after a confirm that says what it does, and stops without one", async () => {
+  await mount("Maya", "Maya", null);
+
+  const set = answerIgnores();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Ignore" }));
+
+  const dialog = await screen.findByRole("alertdialog", { name: "Ignore Maya?" });
+
+  expect(dialog.textContent).toContain("Their messages will be collapsed for you");
+  expect(dialog.textContent).toContain("won't be able to start new DMs with you");
+  expect(set).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Ignore Maya" }));
+  expect(set).toHaveBeenCalledWith(2, true);
+  expect(await screen.findByRole("button", { name: "Stop ignoring" })).toBeTruthy();
+  expect(screen.getByText("Ignored")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "Stop ignoring" }));
+  expect(set).toHaveBeenLastCalledWith(2, false);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Ignore" })).toBeTruthy());
+  expect(screen.queryByText("Ignored")).toBeNull();
+  expect(screen.queryByRole("alertdialog", { name: "Ignore Maya?" })).toBeNull();
+});
+
+it("follows an ignore made in another session", async () => {
+  await mount("Maya", "Maya", null);
+  await screen.findByRole("button", { name: "Ignore" });
+
+  act(() => mutations.applyBlockState({ viewerId: 7, userId: 2, ignoredByMe: true, revision: 3 }));
+
+  expect(screen.getByRole("button", { name: "Stop ignoring" })).toBeTruthy();
+  expect(store.getState().ignores.people[2]?.ignored).toBe(true);
+});
+
+it("follows an unignore made in another session once the snapshot drops them", async () => {
+  mutations.setBlocks({
+    viewerId: 7,
+    revision: 4,
+    people: [
+      { user: userFixture(2, "Maya"), ignoredByMe: true, createdAt: "2026-10-01T12:00:00Z" },
+    ],
+  });
+  await mount("Maya", "Maya", null, {}, true);
+  expect(await screen.findByRole("button", { name: "Stop ignoring" })).toBeTruthy();
+
+  // The other session's write echoes here as a refetch of the list, which no longer has Maya.
+  act(() => mutations.setBlocks({ viewerId: 7, revision: 5, people: [] }));
+
+  expect(screen.getByRole("button", { name: "Ignore" })).toBeTruthy();
+  expect(screen.queryByText("Ignored")).toBeNull();
 });

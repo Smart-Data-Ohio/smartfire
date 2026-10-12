@@ -12,7 +12,7 @@ import type { StageStream } from "../../gen/StageStream.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { PHONE_QUERY } from "../../lib/breakpoints.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
-import { store } from "../../store/store.ts";
+import { onAccountChange, store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { ActionError } from "../../sync/run.ts";
 import {
@@ -426,7 +426,8 @@ export class CallController {
    * straight away; the token stays the authority on publishing.
    */
   async join(roomId: number, roomName: string, canPublishHint: boolean | null): Promise<void> {
-    if (!Number.isInteger(roomId) || roomId <= 0) {
+    // Another account answered the page: no call starts until it reloads.
+    if (!Number.isInteger(roomId) || roomId <= 0 || store.getState().accountChanged) {
       return;
     }
 
@@ -534,6 +535,14 @@ export class CallController {
       this.#adopt(transport);
 
       const noise = this.#state.noise;
+
+      // Credentials that land after another account answered the page never reach LiveKit. The
+      // account-change hook bumps the operation, so they stop above; this is the last check.
+      if (store.getState().accountChanged) {
+        await this.#drop(transport);
+
+        return;
+      }
 
       await transport.connect(
         credentials.url,
@@ -2107,3 +2116,17 @@ export class CallController {
 }
 
 export const callController = new CallController(browserEnvironment);
+
+/**
+ * Ends `controller`'s call the moment another account answers the page (`accountChanged`): it
+ * leaves the room, releases the microphone, camera and screen share, stops the checks and timers,
+ * and drops a join still waiting on its credentials. Registered with the store, not as a React
+ * effect: the shell gives way to a notice then, and its effects go with it. Returns the removal.
+ */
+export function endCallOnAccountChange(controller: CallController): () => void {
+  return onAccountChange("huddle-call", () => {
+    controller.endForPageChange();
+  });
+}
+
+endCallOnAccountChange(callController);

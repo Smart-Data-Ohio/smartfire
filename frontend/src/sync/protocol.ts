@@ -4,13 +4,14 @@
  */
 import { Effect, Option, Schema, Stream } from "effect";
 import {
+  type ServerFrameWire as ServerFrame,
   ServerFrame as ServerFrameSchema,
   SyncEvent as SyncEventSchema,
 } from "../api/schema/sync.ts";
 import { wire } from "../api/wire.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
-import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { SyncSocketError } from "./socket-error.ts";
 
 /** Every server frame, with a batch's events left undecoded until they're taken one by one. */
 const Envelope = Schema.Union([
@@ -32,7 +33,9 @@ const dropped = (what: string) => (error: Schema.SchemaError) =>
 /**
  * One text frame from the server, decoded and typed as the generated `ServerFrame` (the wire
  * value, as the store keeps it). A frame that doesn't decode is logged and dropped (`None`), and so
- * is each batch event of a type this client doesn't know yet: the server may deploy first.
+ * is each batch event of a type this client doesn't know yet: the server may deploy first. A
+ * `welcome` that doesn't decode fails instead: nothing on that connection can be trusted without
+ * it, so the engine closes the socket and reconnects.
  */
 export const decodeServerFrame = Effect.fnUntraced(function* (text: string) {
   const decoded = yield* decodeJsonText(text).pipe(
@@ -48,6 +51,16 @@ export const decodeServerFrame = Effect.fnUntraced(function* (text: string) {
   const { json, envelope } = decoded.value;
 
   if (!("events" in envelope)) {
+    if (envelope.t === "welcome") {
+      return Option.some(
+        yield* decodeOther(json).pipe(
+          Effect.mapError(
+            (error) => new SyncSocketError({ reason: `undecodable welcome: ${error.message}` }),
+          ),
+        ),
+      );
+    }
+
     return yield* decodeOther(json).pipe(Effect.tapError(dropped("a frame")), Effect.option);
   }
 
@@ -64,8 +77,10 @@ export const decodeServerFrame = Effect.fnUntraced(function* (text: string) {
   return Option.some<ServerFrame>({ t: "batch", events });
 });
 
-/** Decodes a stream of text frames, dropping what doesn't decode. */
-export function decodeFrames<E>(texts: Stream.Stream<string, E>): Stream.Stream<ServerFrame, E> {
+/** Decodes a stream of text frames, dropping what doesn't decode; fails on a broken `welcome`. */
+export function decodeFrames<E>(
+  texts: Stream.Stream<string, E>,
+): Stream.Stream<ServerFrame, E | SyncSocketError> {
   return texts.pipe(
     Stream.mapEffect(decodeServerFrame),
     Stream.filter(Option.isSome),
