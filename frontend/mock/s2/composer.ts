@@ -3,6 +3,8 @@
  * slash commands (listed and run, mirroring the Rust registry), Markdown preview and scheduled
  * messages, which a timer on the scheduler posts when they fall due.
  */
+import type { CommandOption } from "../../src/gen/CommandOption.ts";
+import type { CommandSchema } from "../../src/gen/CommandSchema.ts";
 import type { Icon } from "../../src/gen/Icon.ts";
 import type { IconList } from "../../src/gen/IconList.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
@@ -17,13 +19,24 @@ import {
   conflict,
   forbidden,
   HttpError,
+  invalidFields,
   type MockResponse,
   noContent,
   notFound,
   ok,
   validation,
 } from "../http.ts";
-import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
+import {
+  field,
+  intField,
+  isBoolean,
+  isNumber,
+  isRecord,
+  isString,
+  type Json,
+  stringArrayField,
+  stringField,
+} from "../json.ts";
 import { mockExcerpt, renderMarkdown } from "../markdown.ts";
 import { conversationNames } from "../s3/conversations.ts";
 import { beforeOf, keysetPage } from "../s3/model.ts";
@@ -35,6 +48,112 @@ import { checkMarkdown, groupedFiles } from "./posting.ts";
 import type { Threads } from "./threads.ts";
 import type { Uploads } from "./uploads.ts";
 import { endOfLocalDay, leadingTime, longDate, longTime, trailingTime } from "./when.ts";
+
+/**
+ * `CommandOption::validate_value`: what's wrong with one value. Like Rust, a limit and choice
+ * membership are both checked, so a value can have two problems.
+ */
+function valueProblems(option: CommandOption, value: Json): readonly string[] {
+  switch (option.type) {
+    case "string": {
+      if (!isString(value)) return ["has the wrong type"];
+
+      const length = [...value].length;
+
+      return [
+        ...((option.min_length !== undefined && length < option.min_length) ||
+        (option.max_length !== undefined && length > option.max_length)
+          ? ["length is out of range"]
+          : []),
+        ...(option.choices !== undefined && !option.choices.some((c) => c.value === value)
+          ? ["must be one of the choices"]
+          : []),
+      ];
+    }
+
+    case "integer":
+    case "number": {
+      if (!isNumber(value) || (option.type === "integer" && !Number.isInteger(value))) {
+        return ["has the wrong type"];
+      }
+
+      return [
+        ...((option.min !== undefined && value < option.min) ||
+        (option.max !== undefined && value > option.max)
+          ? ["is out of range"]
+          : []),
+        ...(option.choices !== undefined && !option.choices.some((c) => c.value === value)
+          ? ["must be one of the choices"]
+          : []),
+      ];
+    }
+
+    case "boolean":
+      return isBoolean(value) ? [] : ["has the wrong type"];
+    case "user":
+    case "room":
+      return isNumber(value) && Number.isInteger(value) && value > 0 ? [] : ["has the wrong type"];
+  }
+}
+
+/**
+ * `CommandSchema::validate_values`: a typed command's `options` against its schema, as the 422's
+ * fields (`options.subcommand`, `options.values.<name>`); empty when they're good.
+ */
+export function optionProblems(
+  schema: CommandSchema,
+  options: Json | undefined,
+): ReadonlyMap<string, readonly string[]> {
+  const subcommand = stringField(options, "subcommand");
+  const values = field(options, "values");
+  const given = isRecord(values) ? values : {};
+
+  const misplaced = new Map([
+    ["options.subcommand", ["is required only for commands with subcommands"]],
+  ]);
+
+  let accepted: readonly CommandOption[];
+
+  if ("options" in schema) {
+    if (subcommand !== null) return misplaced;
+
+    accepted = schema.options;
+  } else {
+    if (subcommand === null) return misplaced;
+
+    const found = schema.subcommands.find((candidate) => candidate.name === subcommand);
+
+    if (found === undefined) return new Map([["options.subcommand", ["is unknown"]]]);
+
+    accepted = found.options;
+  }
+
+  const problems = new Map<string, readonly string[]>();
+
+  const add = (name: string, message: string) => {
+    const key = `options.values.${name}`;
+
+    problems.set(key, [...(problems.get(key) ?? []), message]);
+  };
+
+  for (const name of Object.keys(given)) {
+    if (!accepted.some((option) => option.name === name)) add(name, "is unknown");
+  }
+
+  for (const option of accepted) {
+    const value = given[option.name];
+
+    if (value === undefined) {
+      if (option.required) add(option.name, "is required");
+
+      continue;
+    }
+
+    for (const problem of valueProblems(option, value)) add(option.name, problem);
+  }
+
+  return problems;
+}
 
 /** The viewer's time zone (`Me.preferences.timeZone`), which slash command times are read in. */
 export const VIEWER_TIME_ZONE = "America/New_York";
@@ -284,7 +403,16 @@ export function createComposer(
     if (command === undefined) {
       const agent = agentCommands(roomId).find((candidate) => candidate.name === name);
 
-      if (agent !== undefined) return ephemeral(`Sent to ${agent.agentName}`);
+      if (agent !== undefined) {
+        const problems =
+          agent.optionSchema === undefined
+            ? new Map()
+            : optionProblems(agent.optionSchema, field(body, "options"));
+
+        if (problems.size > 0) throw invalidFields("Invalid slash command options", problems);
+
+        return ephemeral(`Sent to ${agent.agentName}`);
+      }
 
       const names = [
         ...SLASH_COMMANDS.filter((candidate) => thread === null || candidate.thread),

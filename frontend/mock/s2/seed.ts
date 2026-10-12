@@ -541,6 +541,47 @@ export function seedS2(world: World, now: number, random: Random): void {
 
   world.agentCommands.set(ROOM_IDS.engineering, [
     {
+      name: "deploy",
+      description: "Ship a service",
+      agentName: "Ember",
+      optionSchema: {
+        subcommands: [
+          {
+            name: "run",
+            description: "Start a deploy",
+            options: [
+              {
+                name: "service",
+                description: "The service to deploy",
+                type: "string",
+                required: true,
+                min_length: 2,
+                max_length: 40,
+              },
+              {
+                name: "environment",
+                description: "Where it goes",
+                type: "string",
+                required: true,
+                choices: [
+                  { name: "Staging", value: "staging" },
+                  { name: "Production", value: "production" },
+                ],
+              },
+              {
+                name: "replicas",
+                description: "How many copies to run",
+                type: "integer",
+                required: false,
+                min: 1,
+                max: 10,
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       name: "deploy-status",
       description: "Summarize the latest deploy",
       agentName: "Ember",
