@@ -44,6 +44,8 @@ pub struct Env {
     pub clock: Arc<dyn Clock>,
     pub sink: Arc<dyn EventSink>,
     pub rich_text: Arc<dyn RichText>,
+    /// Originals checked by scheduled dispatch before transferring their attachments.
+    pub attachment_service: Option<campfire_storage::DiskService>,
     /// BCrypt cost for `has_secure_password`. Rails uses `BCrypt::Engine.cost` (12), or
     /// `MIN_COST` (4) in the test environment.
     pub bcrypt_cost: u32,
@@ -85,6 +87,7 @@ impl Default for Env {
             clock: Arc::new(SystemClock),
             sink: Arc::new(NullSink),
             rich_text: Arc::new(BasicRichText),
+            attachment_service: None,
             bcrypt_cost: 12,
             default_url_origin: "http://example.com".into(),
             message_reference_syncs: Vec::new(),

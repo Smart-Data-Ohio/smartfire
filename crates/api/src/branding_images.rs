@@ -3,7 +3,7 @@
 //! animated image's first frame and stays bounded through analysis.
 
 use campfire_app::app::AppCtx;
-use campfire_kit::{Ctx, Error, Result};
+use campfire_kit::{Ctx, Result};
 use campfire_runtime::presenters::attachments;
 use campfire_storage::branding::{self, Kind, Prepared};
 
@@ -18,21 +18,8 @@ pub(crate) async fn prepare(
     kind: Kind,
     max_bytes: u64,
 ) -> Result<Prepared> {
-    let id = campfire_storage::paths::verify_signed_blob_id(
-        &*c.app().storage.verifier,
-        signed_id,
-        c.app().clock.now(),
-    )
-    .ok_or_else(|| fail(c, validation("signedId", "isn't an uploaded file")))?;
-    let blob = c
-        .app()
-        .db
-        .read(move |conn| {
-            campfire_storage::Blob::find(conn, id).map_err(attachments::storage_error)
-        })
-        .await
-        .map_err(Error::internal)?
-        .ok_or_else(|| fail(c, validation("signedId", "isn't an uploaded file")))?;
+    let blob = attachments::resolve_signed_blob(c.app(), signed_id, None).await
+        .map_err(|_| fail(c, validation("signedId", "isn't an uploaded file")))?;
     if !matches!(
         blob.content_type(),
         "image/png" | "image/jpeg" | "image/gif" | "image/webp"
