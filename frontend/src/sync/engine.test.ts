@@ -1865,6 +1865,7 @@ const threadDetail = (status: "active" | "closed", canClose: boolean) => ({
     replyCount: 2,
     lastActivityAt: "2026-10-06T00:00:10.000Z",
     autoArchiveAfterMinutes: 4320,
+    visibility: "public",
     createdAt: "2026-10-06T00:00:01.000Z",
     work: null,
   },

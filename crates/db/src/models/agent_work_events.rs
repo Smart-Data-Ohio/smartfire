@@ -35,6 +35,14 @@ fn queue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<Option<crate::Ti
     if !webhook_eligible(tx, event.agent_id, room_id)? {
         return Ok(None);
     }
+    if let Some(id) = event.metadata.get("thread_id").and_then(Value::as_i64) {
+        let user: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [event.agent_id], |row| row.get(0))?;
+        match ChannelThread::find_by_id(tx.conn(), id)? {
+            Some(thread) if !thread.readable_by(tx.conn(), user)? => return Ok(None),
+            None if event.metadata.get("thread_visibility").and_then(Value::as_str) == Some("private") => return Ok(None),
+            _ => (),
+        }
+    }
     let next_attempt_at = tx.now();
     let changed=tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND webhook_status='none'",params![next_attempt_at,event.id])?;
     if changed != 0 {
@@ -78,6 +86,7 @@ fn record(
     let (actor_id, actor_name) = actor;
     let (hop, chain) = hop_chain;
     let mut metadata = json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":actor_name,"hop":hop});
+    if thread.visibility == crate::channel_thread::ThreadVisibility::Private { metadata["thread_visibility"] = json!("private"); }
     if let Some(extra) = extra.as_object() {
         metadata
             .as_object_mut()
@@ -232,6 +241,7 @@ pub fn publish_deleted_webhook(
             let event = AgentEvent::create_captured(tx, captured)?;
             if let (Some(agent), Some(room)) =
                 (Agent::find(tx.conn(), event.agent_id)?, event.room_id)
+                && event.metadata.get("thread_visibility").and_then(Value::as_str) != Some("private")
                 && webhook_eligible(tx, agent.id, room)?
             {
                 tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
@@ -260,6 +270,7 @@ pub(crate) fn capture_deleted(
     // Rails captures without an Agent collaborator: private PR data is redacted.
     let mut snapshot = agent_payloads::work_payload(tx.conn(), thread, None, &Default::default())?;
     snapshot["thread_id"] = json!(thread.id);
+    if thread.visibility == crate::channel_thread::ThreadVisibility::Private { snapshot["thread_visibility"] = json!("private"); }
     snapshot["status"] = json!(thread.work_status);
     snapshot["assigned_by"] = json!(
         actor_id
@@ -278,10 +289,12 @@ pub(crate) fn record_deleted(
 ) -> Result<()> {
     if let Some(deleted) = deleted {
         let agent = Agent::find(tx.conn(), deleted.agent_id)?;
-        let deliverable = agent
+        let deliverable = thread.visibility != crate::channel_thread::ThreadVisibility::Private && agent
             .map(|agent| webhook_eligible(tx, agent.id, thread.room_id))
             .transpose()?
             .unwrap_or(false);
+        let mut metadata = json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":deleted.snapshot["assigned_by"],"hop":0,"work_snapshot":deleted.snapshot});
+        if thread.visibility == crate::channel_thread::ThreadVisibility::Private { metadata["thread_visibility"] = json!("private"); }
         let event = NewEvent {
             agent_id: deleted.agent_id,
             room_id: Some(thread.room_id),
@@ -289,7 +302,7 @@ pub(crate) fn record_deleted(
             event_type: "work_unassigned".into(),
             outcome: Some("delivered".into()),
             chain_id: Some(uuid::Uuid::new_v4().to_string()),
-            metadata: json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":deleted.snapshot["assigned_by"],"hop":0,"work_snapshot":deleted.snapshot}),
+            metadata,
             ..Default::default()
         };
         // The durable job shares deletion's transaction; a rejected enqueue

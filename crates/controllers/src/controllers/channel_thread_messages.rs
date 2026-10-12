@@ -12,9 +12,10 @@ async fn scope(c: &mut Ctx) -> Result<(Room, ChannelThread)> {
     if room.deleted_at.is_some() { return Err(Error::NotFound); }
     let id = c.param_str("thread_id").and_then(cast_integer).ok_or(Error::NotFound)?;
     let room_id = room.id;
+    let viewer_id = require_current_user(c)?.id;
     let thread = c.app().db.read(move |conn| {
         let thread = ChannelThread::find(conn, id)?;
-        if thread.room_id != room_id { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
+        if thread.room_id != room_id || !thread.readable_by(conn, viewer_id)? { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
         Ok(thread)
     }).await.map_err(db_error)?;
     Ok((room, thread))
@@ -23,7 +24,13 @@ async fn scope(c: &mut Ctx) -> Result<(Room, ChannelThread)> {
 async fn set_message(c: &Ctx, thread: &ChannelThread) -> Result<Message> {
     let id = c.param_str("id").and_then(cast_integer).ok_or(Error::NotFound)?;
     let thread_id = thread.id;
-    c.app().db.read(move |conn| Message::find_in(conn, Timeline::Thread(thread_id), id)).await.map_err(db_error)
+    let viewer_id = require_current_user(c)?.id;
+    c.app().db.read(move |conn| {
+        if !ChannelThread::find(conn, thread_id)?.readable_by(conn, viewer_id)? {
+            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+        }
+        Message::find_in(conn, Timeline::Thread(thread_id), id)
+    }).await.map_err(db_error)
 }
 
 pub async fn index(c: &mut Ctx) -> Result {
@@ -32,10 +39,16 @@ pub async fn index(c: &mut Ctx) -> Result {
     let timeline = Timeline::Thread(thread.id);
     let before = c.params.get("before").filter(|value| value.is_present()).cloned();
     let after = c.params.get("after").filter(|value| value.is_present()).cloned();
-    let records = c.app().db.read(move |conn| match (before, after) {
+    let viewer_id = require_current_user(c)?.id;
+    let records = c.app().db.read(move |conn| {
+        if !ChannelThread::find(conn, thread.id)?.readable_by(conn, viewer_id)? {
+            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+        }
+        match (before, after) {
         (Some(value), _) => Message::page_before(conn, timeline, &messages::paging_anchor(conn, timeline, &value)?),
         (None, Some(value)) => Message::page_after(conn, timeline, &messages::paging_anchor(conn, timeline, &value)?),
         _ => Message::last_page(conn, timeline),
+        }
     }).await.map_err(db_error)?;
     if c.format()? == Some(&format::JSON) { c.no_store(); }
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {

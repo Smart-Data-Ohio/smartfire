@@ -208,6 +208,7 @@ fn work_thread() -> Thread {
         creator_id: 7,
         name: "Speed up search".into(),
         status: ThreadStatus::Active,
+        visibility: ThreadVisibility::Public,
         reply_count: 3,
         last_activity_at: "2026-10-06T10:00:00.000Z".into(),
         auto_archive_after_minutes: 4320,

@@ -281,6 +281,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("agent_approval::ApprovalChange", &["approval.updated"]),
     ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
+    ("channel_thread::ThreadAccessChange", &["thread.updated", "thread.removed", "sidebar.row.upserted"]),
+    ("Broadcasts::thread_access_changed", &["thread.updated", "thread.removed", "sidebar.row.upserted"]),
     ("activity_item::ActivityItemRecorded", &["activity.item"]),
     ("Broadcasts::sync_activity_recorded", &["activity.item", "sidebar.row.upserted", "sidebar.row.removed"]),
     ("membership::PresentRead", &["sidebar.row.upserted"]),
@@ -507,25 +509,30 @@ pub fn message_pinned(server: &Cable, conn: &Connection, message_id: i64) {
     if !server.sync_wanted() {
         return;
     }
-    let state = (|| -> campfire_db::Result<Option<PinState>> {
+    let states = in_snapshot(conn, 0, |conn| (|| -> campfire_db::Result<Vec<(i64, PinState)>> {
         let Some(message) = Message::find_by_id(conn, message_id)? else {
-            return Ok(None);
+            return Ok(Vec::new());
         };
-        Ok(Some(PinState {
-            message_id,
-            room_id: message.room_id,
-            pinned: campfire_db::MessagePin::pinned(conn, message_id)?,
-            pin_count: campfire_db::MessagePin::count_for_room(conn, message.room_id)?,
-        }))
-    })();
-    match state {
-        Ok(Some(state)) => send(
-            server,
-            Audience::Topic(room_topic(state.room_id)),
-            &SyncPayload::MessagePinned(state),
-            |publication| publication,
-        ),
-        Ok(None) => {}
+        let pinned = campfire_db::MessagePin::pinned(conn, message_id)?;
+        let mut states = Vec::new();
+        for membership in Membership::for_room(conn, message.room_id)? {
+            if let Some(thread_id) = message.thread_id
+                && !ChannelThread::find(conn, thread_id)?.readable_by(conn, membership.user_id)? {
+                continue;
+            }
+            states.push((membership.user_id, PinState {
+                message_id,
+                room_id: message.room_id,
+                pinned,
+                pin_count: campfire_db::MessagePin::count_for_viewer(conn, message.room_id, membership.user_id)?,
+            }));
+        }
+        Ok(states)
+    })()).unwrap_or_else(|| Ok(Vec::new()));
+    match states {
+        Ok(states) => for (user_id, state) in states {
+            send(server, Audience::User(user_id), &SyncPayload::MessagePinned(state), |publication| publication);
+        },
         Err(error) => tracing::warn!(%error, message_id, "sync: pin state not read"),
     }
 }
@@ -1065,20 +1072,43 @@ fn thread_indicator(
         }
     };
     let thread_id = indicator.as_ref().map(|indicator| indicator.thread_id);
-    send(
-        server,
-        Audience::Topic(room_topic(parent.room_id)),
-        &SyncPayload::ThreadIndicator(ThreadIndicatorChanged {
-            room_id: parent.room_id,
-            parent_message_id,
-            thread: indicator,
-        }),
-        |publication| publication,
-    );
+    let payload = SyncPayload::ThreadIndicator(ThreadIndicatorChanged {
+        room_id: parent.room_id,
+        parent_message_id,
+        thread: indicator,
+    });
+    if let Some(id) = thread_id {
+        match ChannelThread::find_by_id(conn, id) {
+            Ok(Some(thread)) if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private => {
+                match thread_readers(conn, &thread) {
+                    Ok(readers) => for user_id in readers {
+                        send(server, Audience::User(user_id), &payload, |publication| publication);
+                    },
+                    Err(error) => tracing::warn!(%error, thread_id = id, "sync: private indicator readers not resolved"),
+                }
+                return thread_id;
+            }
+            Ok(_) => {},
+            Err(error) => {
+                tracing::warn!(%error, thread_id = id, "sync: indicator thread not read");
+                return thread_id;
+            }
+        }
+    }
+    send(server, Audience::Topic(room_topic(parent.room_id)), &payload, |publication| publication);
     thread_id
 }
 
-/// `thread.created` on the thread's room, or `thread.updated` on its room and its own topic.
+fn thread_readers(conn: &Connection, thread: &ChannelThread) -> campfire_db::Result<Vec<i64>> {
+    let predicate = campfire_db::models::channel_thread::readable_by_sql("?1", "memberships.user_id");
+    let mut statement = conn.prepare_cached(&format!(
+        "SELECT user_id FROM memberships WHERE room_id=?2 AND {predicate} ORDER BY user_id"
+    ))?;
+    Ok(statement.query_map([thread.id, thread.room_id], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?)
+}
+
+/// Public metadata follows room/thread topics; private metadata is addressed to current readers.
 /// The caller holds the thread's lock and the reader `conn`, taken in that order (see
 /// [`thread_changed_later`]).
 fn thread_changed(
@@ -1096,6 +1126,16 @@ fn thread_changed(
     let Some(dto) = renderer.thread(conn, &thread) else {
         return;
     };
+    if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private {
+        let payload = if created { SyncPayload::ThreadCreated(dto) } else { SyncPayload::ThreadUpdated(dto) };
+        match thread_readers(conn, &thread) {
+            Ok(readers) => for user_id in readers {
+                send(server, Audience::User(user_id), &payload, |publication| publication);
+            },
+            Err(error) => tracing::warn!(%error, thread_id, "sync: private thread readers not resolved"),
+        }
+        return;
+    }
     if created {
         let payload = SyncPayload::ThreadCreated(dto);
         send(
@@ -2010,6 +2050,44 @@ pub fn workspace_organized_later(server: &Cable, slot: &RendererSlot) {
             });
         });
     });
+}
+
+pub fn thread_access_changed(
+    server: &Cable,
+    slot: &RendererSlot,
+    change: campfire_db::models::channel_thread::ThreadAccessChange,
+) {
+    if !change.added {
+        send(server, Audience::User(change.user_id), &SyncPayload::ThreadRemoved(ThreadRemoved {
+            thread_id: change.thread_id,
+            room_id: change.room_id,
+        }), |publication| SyncPublication {
+            unsubscribe: Some(thread_topic(change.thread_id)),
+            ..publication
+        });
+    }
+    sidebar_rows_later(server, slot, change.room_id, Some(vec![change.user_id]));
+    let Some(renderer) = slot.get(server) else { return; };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer_unread(Box::new(move |reader| {
+        let Some(server) = server.upgrade() else { return; };
+        let Some(renderer) = slot.get(&server) else { return; };
+        let lock = slot.thread_lock(change.thread_id);
+        let _publication = hold(&lock);
+        reader.read(&mut |conn| {
+            let outcome = (|| -> campfire_db::Result<_> {
+                let Some(thread) = ChannelThread::find_by_id(conn, change.thread_id)? else { return Ok(None); };
+                if !thread.readable_by(conn, change.user_id)? { return Ok(None); }
+                Ok(renderer.thread(conn, &thread))
+            })();
+            match outcome {
+                Ok(Some(thread)) => send(&server, Audience::User(change.user_id), &SyncPayload::ThreadUpdated(thread), |publication| publication),
+                Ok(None) => {},
+                Err(error) => tracing::warn!(%error, thread_id = change.thread_id, "sync: granted thread not read"),
+            }
+            thread_changed(&server, renderer.as_ref(), conn, change.thread_id, false);
+        });
+    }));
 }
 
 #[cfg(test)]

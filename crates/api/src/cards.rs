@@ -467,7 +467,12 @@ pub(crate) fn cards(
         for (reference_id, source) in quotes.remove(&message.id).unwrap_or_default() {
             // Anyone who sees this message sees a source in its own room; another room's
             // source is fetched per viewer.
-            let preview = if source.room_id == message.room_id {
+            let public_source = match source.thread_id {
+                Some(id) => campfire_db::ChannelThread::find(conn, id)?.visibility == campfire_db::channel_thread::ThreadVisibility::Public,
+                None => true,
+            };
+            if !public_source { continue; }
+            let preview = if source.room_id == message.room_id && public_source {
                 let room = source_rooms
                     .get(&source.room_id)
                     .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
@@ -871,6 +876,9 @@ async fn post_poll(c: &mut Ctx) -> Result {
             // Claim only fresh uploads. Reusing a room's attachment would share its signed URL.
             for image in &media {
                 if let PreparedPollMedia::Image(prepared) = image {
+                    if !campfire_db::Blob::reusable_by(tx.conn(), prepared.blob.id, creator_id)? {
+                        return Ok(Err(validation("optionMedia", "must be an accessible uploaded image")));
+                    }
                     let attached: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [prepared.blob.id], |r| r.get(0))?;
                     if attached { return Ok(Err(validation("optionMedia", "must be a new uploaded image"))); }
                 }
@@ -944,6 +952,13 @@ async fn set_poll(c: &mut Ctx) -> Result<(Room, i64, i64)> {
     features::active_human(c)?;
     let poll_id = path_id(c, "poll_id")?;
     let viewer_id = concerns::require_current_user(c)?.id;
+    let room_id = room.id;
+    c.app().db.read(move |conn| {
+        let poll = Poll::find_in_room(conn, room_id, poll_id)?;
+        let message = Message::find(conn, poll.message_id)?;
+        if !message_quote::visible(conn, &message, viewer_id)? { return Err(campfire_db::Error::RecordNotFound("Poll")); }
+        Ok(())
+    }).await.map_err(db_error)?;
     Ok((room, poll_id, viewer_id))
 }
 
@@ -1173,10 +1188,14 @@ async fn show_github_card(c: &mut Ctx) -> Result {
         return Err(fail(c, not_found()));
     }
     let room_id = room.id;
+    let scope_viewer = concerns::require_current_user(c)?.id;
     let context = c
         .app()
         .db
         .read(move |conn| {
+            if let Some(message_id) = message_id { Message::find_reachable(conn, scope_viewer, message_id)?; }
+            if let Some(thread_id) = thread_id
+                && !campfire_db::ChannelThread::find(conn, thread_id)?.readable_by(conn, scope_viewer)? { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
             pull_requests::viewer_card_context(conn, room_id, id, message_id, thread_id)
         })
         .await
@@ -1463,7 +1482,7 @@ async fn show_quote_card(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let source = message_quote::source(conn, room.id, reference_id)?;
+            let source = message_quote::source_for_viewer(conn, room.id, reference_id, viewer_id)?;
             if !message_quote::visible(conn, &source, viewer_id)? {
                 return Ok(api::QuotePreviewResult::Hidden);
             }

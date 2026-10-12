@@ -3,6 +3,7 @@ import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { WorkList } from "../../src/gen/WorkList.ts";
 import type { Json } from "../json.ts";
+import type { ThreadRecord } from "../s2/model.ts";
 import { collect, errorOf, expectStatus, get, harness, messageBody, send } from "../s2/testing.ts";
 import { SEED_IDS } from "../server.ts";
 import { AGENT_IDS } from "./agents.ts";
@@ -115,7 +116,7 @@ describe("work facts and detail", () => {
   });
 
   it("derives the five flags from tracking, managing and owning", () => {
-    const base = {
+    const base: ThreadRecord = {
       id: 1,
       roomId: 1,
       parentMessageId: null,
@@ -125,6 +126,8 @@ describe("work facts and detail", () => {
       locked: false,
       lastActivityAt: "",
       autoArchiveAfterMinutes: 1,
+      visibility: "public",
+      accessMembers: new Map(),
       createdAt: "",
       messages: [],
       memberIds: new Set<number>(),

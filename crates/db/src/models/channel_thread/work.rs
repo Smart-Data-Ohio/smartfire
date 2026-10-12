@@ -103,6 +103,10 @@ impl ChannelThread {
         };
         let owner = User::find_by_id(conn, id)?;
         let member = Membership::find_by_room_and_user(conn, self.room_id, id)?.is_some();
+        if self.visibility == super::ThreadVisibility::Private
+            && (if self.id == 0 { id != self.creator_id && !owner.as_ref().is_some_and(User::is_administrator) } else { !self.readable_by(conn, id)? }) {
+            errors.add("work_owner", "must have access to the private thread");
+        }
         if let Some(owner) = owner.as_ref().filter(|u| u.is_bot()) {
             let eligible = if let Some(agent) = Agent::for_user(conn, owner.id)? {
                 member && Agent::capabilities_for_rooms(conn, "post_messages", &[(agent.id, Some(self.room_id))])?
@@ -307,7 +311,7 @@ impl ChannelThread {
     }
     pub fn work_viewable_by(&self, conn: &Connection, user: &User) -> Result<bool> {
         Ok(Self::work_viewable_with_membership(user, true)
-            && Membership::find_by_room_and_user(conn, self.room_id, user.id)?.is_some())
+            && self.readable_by(conn, user.id)?)
     }
 
     pub fn work_viewable_with_membership(user: &User, member: bool) -> bool {

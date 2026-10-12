@@ -114,6 +114,11 @@ impl ChannelThread {
         use rusqlite::types::Value;
         let mut sql = "SELECT channel_threads.* FROM channel_threads WHERE room_id=?".to_string();
         let mut values = vec![Value::Integer(room_id)];
+        if let Some(viewer) = viewer_id {
+            sql.push_str(&format!(" AND {}", super::readable_by_sql("channel_threads.id", &viewer.to_string())));
+        } else {
+            sql.push_str(" AND visibility='public'");
+        }
         match status {
             "done" => sql.push_str(" AND work_status='done'"),
             "all" => (),
@@ -156,18 +161,19 @@ impl ChannelThread {
         )
     }
 
-    pub fn board_tag_counts(conn: &Connection, room_id: i64) -> Result<Vec<(String, i64)>> {
+    pub fn board_tag_counts(conn: &Connection, room_id: i64, viewer_id: Option<i64>) -> Result<Vec<(String, i64)>> {
+        let readable = viewer_id.map_or_else(|| "channel_threads.visibility='public'".into(), |viewer| super::readable_by_sql("channel_threads.id", &viewer.to_string()));
         query_all(
             conn,
-            "SELECT name, COUNT(*) FROM thread_tags WHERE channel_thread_id IN (SELECT id FROM channel_threads WHERE room_id=?) GROUP BY name ORDER BY name",
+            &format!("SELECT name, COUNT(*) FROM thread_tags WHERE channel_thread_id IN (SELECT id FROM channel_threads WHERE room_id=? AND {readable}) GROUP BY name ORDER BY name"),
             [room_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
     }
 
-    pub fn board_has_posts(conn: &Connection, room_id: i64) -> Result<bool> {
+    pub fn board_has_posts(conn: &Connection, room_id: i64, viewer_id: i64) -> Result<bool> {
         Ok(conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM channel_threads WHERE room_id=?)",
+            &format!("SELECT EXISTS(SELECT 1 FROM channel_threads WHERE room_id=? AND {})", super::readable_by_sql("channel_threads.id", &viewer_id.to_string())),
             [room_id],
             |row| row.get(0),
         )?)
@@ -243,7 +249,7 @@ impl ChannelThread {
                 return Ok(());
             };
             let room = thread.room(tx.conn())?;
-            let recipients = Membership::for_room(tx.conn(), room.id)?
+            let mut recipients = Membership::for_room(tx.conn(), room.id)?
                 .into_iter()
                 .filter(|membership| {
                     membership.user_id != thread.creator_id
@@ -255,6 +261,13 @@ impl ChannelThread {
                             .is_none_or(|at| at < Membership::connection_cutoff(tx.now()))
                 })
                 .collect::<Vec<_>>();
+            let mut readable = Vec::with_capacity(recipients.len());
+            for membership in recipients.drain(..) {
+                if thread.readable_by(tx.conn(), membership.user_id)? {
+                    readable.push(membership);
+                }
+            }
+            let recipients = readable;
             if !recipients.is_empty() {
                 let ids = recipients
                     .iter()
@@ -284,7 +297,7 @@ impl ChannelThread {
 
     pub(super) fn register_board_destruction(&self, tx: &mut Tx<'_>) -> Result<()> {
         let room = self.room(tx.conn())?;
-        if room.board() {
+        if room.board() && self.visibility != super::ThreadVisibility::Private {
             let thread_id = self.id;
             tx.after_commit_record("channel_threads", thread_id, move |tx| {
                 tx.emit_after_commit(Event::broadcast(&Broadcast::ThreadRemoved { thread_id, room_id: room.id }));

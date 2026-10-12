@@ -266,3 +266,48 @@ async fn forward_picker_excludes_boards_names_directs_and_keeps_query_count_cons
     assert_eq!(response.json()["destinations"].as_array().unwrap().len(),rows.len()+6);
     let large=log.lock().unwrap().len();assert_eq!(small,large,"forward picker reader queries grow: {small} to {large}");
 }
+
+
+#[tokio::test]
+async fn classic_forward_picker_filters_private_threads_before_serializing_them() {
+    let app = TestApp::boot().await.unwrap();
+    let (source, private_id, public_id) = app.db().write(|tx| {
+        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+        let source = Message::create(tx, NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Public forward source".into()),
+            ..Default::default()
+        })?;
+        let private = ChannelThread::create(tx, NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, name: Some("Secret forward destination".into()),
+            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        let public = ChannelThread::create(tx, NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, name: Some("Public forward destination".into()),
+            ..Default::default()
+        })?;
+        Ok((source.id, private.id, public.id))
+    }).await.unwrap();
+    let mut kevin = app.sign_in(KEVIN).await;
+    let path = format!("/messages/{source}/forwards/destinations.json");
+    for visible in [false, true, false] {
+        if visible {
+            app.db().write(move |tx| {
+                ChannelThread::find(tx.conn(), private_id)?.add_access_member(tx, DAVID, KEVIN)?;
+                Ok(())
+            }).await.unwrap();
+        }
+        let response = kevin.get(&path).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let value = response.json();
+        let room = value["destinations"].as_array().unwrap().iter()
+            .find(|room| room["room_id"] == ALL_TALK).unwrap();
+        let threads = room["threads"].as_array().unwrap();
+        assert!(threads.iter().any(|thread| thread["id"] == public_id));
+        assert_eq!(threads.iter().any(|thread| thread["id"] == private_id), visible);
+        assert_eq!(response.text().contains("Secret forward destination"), visible);
+        if visible {
+            app.db().write(move |tx| ChannelThread::find(tx.conn(), private_id)?
+                .remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+        }
+    }
+}

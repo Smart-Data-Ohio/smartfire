@@ -43,7 +43,7 @@ pub fn candidates(
     let threads: Vec<(i64, ThreadInvolvement)> = match message.thread_id {
         Some(id) => query_all(
             conn,
-            "SELECT user_id,involvement FROM thread_memberships WHERE thread_id=?",
+            &format!("SELECT user_id,involvement FROM thread_memberships WHERE thread_id=? AND {}", crate::channel_thread::readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")),
             [id],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )?,

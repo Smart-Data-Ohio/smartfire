@@ -92,21 +92,28 @@ impl MessagePin {
         sql::count(conn, r#"SELECT COUNT(*) FROM "message_pins" WHERE "message_pins"."room_id" = ?"#, [room_id])
     }
 
+    pub fn count_for_viewer(conn: &Connection, room_id: i64, viewer: i64) -> Result<i64> {
+        sql::count(conn, &format!("SELECT COUNT(*) FROM message_pins p JOIN messages m ON m.id=p.message_id WHERE p.room_id=? AND (m.thread_id IS NULL OR {})", crate::channel_thread::readable_by_sql("m.thread_id", &viewer.to_string())), [room_id])
+    }
+
     /// `MessagePin.pin!(message:, pinner:)`: the existing pin when the message is already pinned
     /// (checked before the cap, so re-pinning in a full room succeeds); otherwise
     /// [`CapReached`] at [`MAX_PER_ROOM`], or the new pin and its note. The count runs inside the
-    /// write transaction, which SQLite serializes, so two pins can't both pass the cap. The note's
+    /// write transaction, which SQLite serializes. Only pins readable by the pinner consume the cap. The note's
     /// append goes out after commit, like `note&.broadcast_create`.
     pub fn pin(tx: &mut Tx<'_>, message: &Message, pinner_id: i64) -> Result<std::result::Result<Self, CapReached>> {
+        if let Some(thread_id) = message.thread_id && !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), pinner_id)? {
+            return Err(crate::Error::RecordNotFound("Message"));
+        }
         if let Some(pin) = Self::find_by_message(tx.conn(), message.id)? {
             return Ok(Ok(pin));
         }
-        if Self::count_for_room(tx.conn(), message.room_id)? >= MAX_PER_ROOM {
+        if Self::count_for_viewer(tx.conn(), message.room_id, pinner_id)? >= MAX_PER_ROOM {
             return Ok(Err(CapReached(format!("This channel already has {MAX_PER_ROOM} pinned messages"))));
         }
         let pin = Self::create(tx, message, message.room_id, pinner_id)?;
         if let Some(note) = pin.post_pin_note(tx, message)? {
-                        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: note.id }));
+            tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: note.id }));
         }
         Ok(Ok(pin))
     }
@@ -188,15 +195,20 @@ impl MessagePin {
         Ok(())
     }
 
-    /// `post_pin_note!`: a quiet root system note by the pinner, unless the room already holds the
-    /// same note from the last [`PIN_NOTE_WINDOW`].
+    /// `post_pin_note!`: a quiet system note by the pinner. Private-message notes stay in
+    /// their thread; public-message notes remain in the room. Deduplicated per conversation.
     fn post_pin_note(&self, tx: &mut Tx<'_>, message: &Message) -> Result<Option<Message>> {
         let source = format!("pinned a message: [jump to message]({})", message_path(message));
+        let note_thread_id = match message.thread_id {
+            Some(id) if crate::ChannelThread::find(tx.conn(), id)?.visibility
+                == crate::channel_thread::ThreadVisibility::Private => Some(id),
+            _ => None,
+        };
         let since = tx.now().ago(PIN_NOTE_WINDOW);
         let recent = sql::exists(
             tx.conn(),
-            r#"SELECT 1 AS one FROM "messages" WHERE "messages"."room_id" = ? AND "messages"."thread_id" IS NULL AND "messages"."system_note" = 1 AND "messages"."markdown_source" = ? AND "messages"."created_at" >= ? LIMIT 1"#,
-            params![self.room_id, source, since],
+            r#"SELECT 1 AS one FROM "messages" WHERE "messages"."room_id" = ? AND "messages"."thread_id" IS ? AND "messages"."system_note" = 1 AND "messages"."markdown_source" = ? AND "messages"."created_at" >= ? LIMIT 1"#,
+            params![self.room_id, note_thread_id, source, since],
         )?;
         if recent {
             return Ok(None);
@@ -206,6 +218,7 @@ impl MessagePin {
             NewMessage {
                 room_id: self.room_id,
                 creator_id: self.pinner_id,
+                thread_id: note_thread_id,
                 markdown_source: Some(source),
                 system_note: true,
                 ..Default::default()

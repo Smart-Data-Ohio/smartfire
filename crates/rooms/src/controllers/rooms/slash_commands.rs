@@ -17,11 +17,12 @@ pub async fn thread_id(c: &Ctx, room: &Room) -> Result<Option<i64>> {
         .and_then(|s| cast_integer(&s))
         .ok_or(Error::NotFound)?;
     let room_id = room.id;
+    let user_id = require_current_user(c)?.id;
     c.app()
         .db
         .read(move |conn| {
             let thread = ChannelThread::find(conn, id)?;
-            if thread.room_id != room_id {
+            if thread.room_id != room_id || !thread.readable_by(conn, user_id)? {
                 return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
             }
             Ok(Some(thread.id))
@@ -36,6 +37,12 @@ pub fn dispatch(
     text: &str,
     storage: std::sync::Arc<campfire_storage::Storage>,
 ) -> campfire_db::Result<slash_commands::CommandResult> {
+    if let Some(id) = context.thread_id {
+        let thread = ChannelThread::find(tx.conn(), id)?;
+        if thread.room_id != context.room_id || !thread.readable_by(tx.conn(), context.user_id)? {
+            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+        }
+    }
     let result = slash_commands::dispatch_in_user_time_zone(tx, context, text)?;
     if let Some(id) = result.message_id {
         let message = campfire_db::Message::find(tx.conn(), id)?;

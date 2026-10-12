@@ -6,7 +6,7 @@ import { caselessEqual } from "../../src/lib/case-fold.ts";
 import { notFound, ok, validation } from "../http.ts";
 import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
 import { firstId, route, type S2Context } from "../s2/context.ts";
-import { iso, plainDraft, type ThreadRecord, threadDto } from "../s2/model.ts";
+import { canAccessThread, iso, plainDraft, type ThreadRecord, threadDto } from "../s2/model.ts";
 import { clientMessageIdOf, draftFiles, parseMessage } from "../s2/posting.ts";
 import type { Threads } from "../s2/threads.ts";
 import type { Uploads } from "../s2/uploads.ts";
@@ -43,7 +43,9 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
   };
 
   const posts = (roomId: number) =>
-    [...ctx.world().threads.values()].filter((thread) => thread.roomId === roomId);
+    [...ctx.world().threads.values()].filter(
+      (thread) => thread.roomId === roomId && canAccessThread(ctx.world(), thread),
+    );
 
   const tagCounts = (roomId: number) => {
     const counts = new Map<string, number>();
@@ -237,6 +239,8 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
       locked: false,
       lastActivityAt: at,
       autoArchiveAfterMinutes: 1440,
+      visibility: "public",
+      accessMembers: new Map(),
       createdAt: at,
       updatedAt: at,
       messages: [],

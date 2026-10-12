@@ -29,6 +29,7 @@ impl campfire_db::models::forwarder::BlobCopier for ForwarderCopier {
         let saved = staged
             .insert(tx.conn(), tx.now().jiff())
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+        tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_remove(metadata,'$.private_thread_media') WHERE id=? AND json_extract(metadata,'$.private_thread_media')=1", [saved.id])?;
         let row = Blob::find(tx.conn(), saved.id)?;
         // The guard belongs to this transaction, not just to forward()'s return value.
         // A deferred enqueue failure drops the guard and deletes the uploaded file.

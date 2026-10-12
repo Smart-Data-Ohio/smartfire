@@ -2,6 +2,8 @@ use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error(transparent)]
+    ThreadAccess(#[from] crate::models::channel_thread::ThreadAccessError),
     #[error("This voice room is full")]
     HuddleRoomFull,
     #[error("Invalid slash command options")]

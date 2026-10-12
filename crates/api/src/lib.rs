@@ -369,6 +369,14 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             get(action(threads::messages)).post(unparsed_action(threads::reply)),
         )
         .route(
+            "/api/v1/threads/{thread_id}/members",
+            get(action(threads::members)).post(unparsed_action(threads::add_member)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}/members/{user_id}",
+            axum::routing::delete(action(threads::remove_member)),
+        )
+        .route(
             "/api/v1/threads/{thread_id}/join",
             post(unparsed_action(threads::join)).delete(action(threads::leave)),
         )

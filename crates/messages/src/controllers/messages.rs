@@ -200,15 +200,18 @@ pub(crate) fn ensure_can_administer(c: &mut Ctx, message: &Message) -> Result<()
 }
 
 /// The caller's rule for assigning a verified blob.
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum AttachmentPolicy {
     /// A verified signed blob is reusable, as on the legacy endpoints.
-    #[default]
-    SignedBlob,
+    SignedBlob { actor_id: Option<i64> },
     /// SPA uploads belong to the poster and can only be attached once.
     OwnedUpload { uploader_id: i64 },
     /// Editing a scheduled draft may keep uploads already attached to that draft.
     ScheduledUpload { uploader_id: i64, scheduled_id: i64 },
+}
+
+impl Default for AttachmentPolicy {
+    fn default() -> Self { Self::SignedBlob { actor_id: None } }
 }
 
 /// What `create_with_attachment!`/`update!` receive.
@@ -238,7 +241,7 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
         body: text("body"),
         markdown_source: text("markdown_source"),
         attachment: attachment_assignment(&permitted)?,
-        attachment_policy: AttachmentPolicy::SignedBlob,
+        attachment_policy: AttachmentPolicy::SignedBlob { actor_id: Some(require_current_user(c)?.id) },
         client_message_id: text("client_message_id"),
         ..Default::default()
     })
@@ -310,6 +313,7 @@ pub async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: 
     let attachment = stage_attachment(c, attributes.attachment.unwrap_or(Assignment::Unchanged)).await?;
     if matches!(attachment, Assignment::Invalid) { return Err(invalid_attachment()); }
     let changes = campfire_db::MessageChanges {
+        mention_inviter_id: Some(require_current_user(c)?.id),
         clear_markdown_source: attributes.markdown_source.is_none(),
         markdown_source: attributes.markdown_source,
         body: attributes.body,
@@ -333,7 +337,7 @@ pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Me
         let current = c.app().db.read(move |conn| Message::find(conn, id)?.drive_file_ids(conn)).await.map_err(db_error)?;
         Some(current.into_iter().filter(|file_id| !remove_drive_file_ids.iter().any(|removed| removed == file_id)).collect())
     };
-    let changes = campfire_db::MessageChanges { markdown_source: Some(markdown_source), drive_file_ids, ..Default::default() };
+    let changes = campfire_db::MessageChanges { mention_inviter_id: Some(require_current_user(c)?.id), markdown_source: Some(markdown_source), drive_file_ids, ..Default::default() };
     let attachment = Assignment::Unchanged.stage(c.app()).await?;
     apply_human_edit(c, thread_id, message, changes, attachment, false).await
 }
@@ -345,10 +349,16 @@ async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, cha
     let id = message.id;
     let app = c.app().clone();
     let host = Some(c.request.host());
+    let actor_id = require_current_user(c)?.id;
     let id = c.app().db.write(move |tx| {
-        if let Some(thread) = thread_id
-            && campfire_db::ChannelThread::find(tx.conn(), thread)?.locked_at.is_some() {
-            return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
+        if let Some(thread_id) = thread_id {
+            let thread = campfire_db::ChannelThread::find(tx.conn(), thread_id)?;
+            if !thread.readable_by(tx.conn(), actor_id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
+            if thread.locked_at.is_some() {
+                return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
+            }
         }
         let mut message = message;
         let mut changes = changes;
@@ -357,8 +367,8 @@ async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, cha
             changes.legacy_attachment_snapshot = Some(campfire_richtext::legacy_markdown::non_mention_attachments(&body)
                 .map_err(|error| campfire_db::Error::Other(error.to_string()))?);
         }
-        let blob = attachment_blob(tx, attachment, AttachmentPolicy::SignedBlob, "attachment")?;
-        if attachment_given { message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?; }
+        let blob = attachment_blob(tx, attachment, AttachmentPolicy::SignedBlob { actor_id: Some(actor_id) }, "attachment")?;
+        if attachment_given { message.replace_attachment_for(tx, blob.as_ref().map(|blob| blob.id), actor_id)?; }
         message.edit(tx, changes)?;
         if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
         Ok(id)
@@ -499,7 +509,7 @@ pub enum ThreadOutcome {
 /// creator's thread membership and the first reply, in one write. A retry of the reply's
 /// `client_message_id` finds the thread its first attempt started. Posts nothing itself; the
 /// thread's frames come from its write, as the classic action's do.
-pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64, name: Option<String>, attributes: MessageParams) -> Result<ThreadOutcome> {
+pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64, name: Option<String>, visibility: campfire_db::models::channel_thread::ThreadVisibility, attributes: MessageParams) -> Result<ThreadOutcome> {
     use campfire_db::{ChannelThread, Membership, NewChannelThread, ThreadMembership};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
@@ -517,7 +527,13 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
                 && let Some(duplicate) = Message::find_duplicate(tx.conn(), room_id, creator_id, client_message_id)?
             {
                 return Ok(match duplicate.thread_id {
-                    Some(thread_id) => ThreadOutcome::Replay(ChannelThread::find(tx.conn(), thread_id)?, duplicate),
+                    Some(thread_id) => {
+                        let thread = ChannelThread::find(tx.conn(), thread_id)?;
+                        if !thread.readable_by(tx.conn(), creator_id)? {
+                            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+                        }
+                        ThreadOutcome::Replay(thread, duplicate)
+                    },
                     None => ThreadOutcome::ClientMessageIdTaken,
                 });
             }
@@ -525,11 +541,16 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
             if room.deleted_at.is_some() || Membership::find_by_room_and_user(tx.conn(), room_id, creator_id)?.is_none() {
                 return Err(campfire_db::Error::RecordNotFound("Membership"));
             }
+            if let Some(existing) = ChannelThread::find_by_parent_message(tx.conn(), parent_message_id)?
+                && !existing.readable_by(tx.conn(), creator_id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             let mut thread = ChannelThread::create(tx, NewChannelThread {
                 room_id,
                 creator_id,
                 parent_message_id: Some(parent_message_id),
                 name,
+                visibility,
                 ..Default::default()
             })?;
             ThreadMembership::join(tx, thread.id, creator_id)?;
@@ -657,6 +678,15 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => {
+            let actor_id = match policy {
+                AttachmentPolicy::SignedBlob { actor_id } => actor_id,
+                AttachmentPolicy::OwnedUpload { uploader_id } | AttachmentPolicy::ScheduledUpload { uploader_id, .. } => Some(uploader_id),
+            };
+            if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id.unwrap_or(0))? {
+                let mut errors = campfire_db::Errors::default();
+                errors.add(attribute, "is inaccessible");
+                return Err(campfire_db::Error::RecordInvalid(errors));
+            }
             if let AttachmentPolicy::OwnedUpload { uploader_id } | AttachmentPolicy::ScheduledUpload { uploader_id, .. } = policy {
                 let current = Blob::find(tx.conn(), blob.id).map_err(attachments::storage_error)?
                     .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
@@ -706,16 +736,22 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
+    let actor_id = require_current_user(c)?.id;
     let id = c
         .app()
         .db
         .write(move |tx| {
             let mut message = message;
+            if let Some(thread_id) = message.thread_id
+                && !campfire_db::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), actor_id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             let blob = attachment_blob(tx, attachment, attributes.attachment_policy, "attachment")?;
             if attachment_given {
-                message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
+                message.replace_attachment_for(tx, blob.as_ref().map(|blob| blob.id), actor_id)?;
             }
             message.edit(tx, campfire_db::MessageChanges {
+                mention_inviter_id: Some(actor_id),
                 clear_markdown_source: attributes.clear_markdown_source,
                 markdown_source: attributes.markdown_source,
                 body,
@@ -734,7 +770,12 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
+    let actor_id = require_current_user(c)?.id;
     let (replies, thread) = c.app().db.write(move |tx| {
+        if let Some(thread_id) = destroyed.thread_id
+            && !campfire_db::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), actor_id)? {
+            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+        }
         let replies = tx.conn().prepare("SELECT id FROM messages WHERE reply_to_message_id = ? ORDER BY id")?
             .query_map([destroyed.id], |row| row.get::<_, i64>(0))?.collect::<std::result::Result<Vec<_>, _>>()?;
         let thread = campfire_db::ChannelThread::find_by_parent_message(tx.conn(), destroyed.id)?.map(|thread| thread.id);

@@ -78,10 +78,12 @@ export interface SyncHubOptions {
    * as the real server does until a membership exists. Omitted, every room is allowed.
    */
   readonly memberOf?: (roomId: number) => boolean;
+  readonly threadAccess?: (threadId: number) => boolean;
+  readonly canReadEvent?: (event: SyncEvent) => boolean;
 }
 
 export function createSyncHub(options: SyncHubOptions): SyncHub {
-  const { scheduler, viewerId, memberOf } = options;
+  const { scheduler, viewerId, memberOf, threadAccess, canReadEvent } = options;
   const connections = new Set<Connection>();
   let epoch = options.epoch;
   let seq = 0;
@@ -127,7 +129,9 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
     for (const connection of connections) {
       if (connection === except) continue;
 
-      const mine = events.filter((event) => connection.topics.has(event.topic));
+      const mine = events.filter(
+        (event) => connection.topics.has(event.topic) && (canReadEvent?.(event) ?? true),
+      );
 
       if (mine.length > 0) transmit(connection, { t: "batch", events: mine });
     }
@@ -141,6 +145,9 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
 
   /** Room topics the viewer isn't a member of are dropped; everything else is followed. */
   const admit = (topic: string): boolean => {
+    const thread = /^thread:(\d+)$/.exec(topic);
+
+    if (thread !== null && !(threadAccess?.(Number(thread[1])) ?? true)) return false;
     const roomId = roomIdOf(topic);
 
     return roomId === null || memberOf === undefined || memberOf(roomId);
@@ -189,7 +196,10 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
 
     const missed = ring.filter(
       (event) =>
-        event.seq > resume.seq && event.type !== "typing" && connection.topics.has(event.topic),
+        event.seq > resume.seq &&
+        event.type !== "typing" &&
+        connection.topics.has(event.topic) &&
+        (canReadEvent?.(event) ?? true),
     );
 
     if (missed.length > 0) transmit(connection, { t: "batch", events: missed });
@@ -220,6 +230,7 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
 
         break;
       case "typing":
+        if (!admit(frame.conv)) return;
         deliver(
           [record({ topic: frame.conv, type: "typing", data: { userId: viewerId, on: frame.on } })],
           connection,

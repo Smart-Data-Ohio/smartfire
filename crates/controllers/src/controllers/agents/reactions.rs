@@ -16,6 +16,9 @@ pub(super) async fn operation(c: &Ctx, agent_id: i64, args: Value) -> Result<Ser
         if Room::find_for_user(tx.conn(),agent.user_id,message.room_id)?.is_none() {
             return Ok(ServiceResult::fail("Message not found",404));
         }
+        if message.thread_id.is_some() && !campfire_db::message_quote::visible(tx.conn(), &message, agent.user_id)? {
+            return Ok(ServiceResult::fail("Message not found",404));
+        }
         if !agent_access::capability_for_agent(tx.conn(),agent_id,"react",Some(message.room_id))? {
             return Ok(ServiceResult::fail("Forbidden: agent lacks react capability",403));
         }

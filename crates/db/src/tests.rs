@@ -60,6 +60,7 @@ mod audit_log_test;
 mod callbacks_test;
 mod calendar_dispatch_test;
 mod channel_thread_test;
+mod private_thread_test;
 mod board_test;
 mod board_catalog_test;
 mod work_mutations_test;

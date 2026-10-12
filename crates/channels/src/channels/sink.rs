@@ -128,6 +128,9 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::agent::AgentSyncChange::KIND => decode::<campfire_db::models::agent::AgentSyncChange>(request).map(|change| {
             if let Some(app) = app { app.broadcasts.sync_agent_status(change.agent_id); }
         }),
+        campfire_db::models::channel_thread::ThreadAccessChange::KIND => decode::<campfire_db::models::channel_thread::ThreadAccessChange>(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.thread_access_changed(change); }
+        }),
         campfire_db::models::channel_thread::ThreadWorkChange::KIND => decode::<campfire_db::models::channel_thread::ThreadWorkChange>(request).map(|change| {
             if let Some(app) = app { app.broadcasts.thread_updated(change.thread_id); }
         }),

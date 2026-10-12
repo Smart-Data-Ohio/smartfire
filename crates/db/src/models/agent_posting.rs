@@ -327,6 +327,10 @@ fn check_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveIn
                 404,
             ))));
         };
+        let user: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
+        if !thread.readable_by(tx.conn(), user)? {
+            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail("Thread not found",404))));
+        }
         if thread.locked_at.is_some() {
             return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail(
                 "This thread is locked",

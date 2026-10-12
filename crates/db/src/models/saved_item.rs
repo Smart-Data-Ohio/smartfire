@@ -116,7 +116,7 @@ impl SavedItem {
         }
         query_all(
             conn,
-            r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ? WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ? ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC"#,
+            &format!(r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ? WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ? AND (messages.thread_id IS NULL OR {thread_access}) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC"#, thread_access = super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())),
             params![user_id, user_id],
             Self::from_row,
         )
@@ -139,7 +139,7 @@ impl SavedItem {
         let (after_at, after_id) = after.map_or((None, None), |(at, id)| (Some(at), Some(id)));
         query_all(
             conn,
-            r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ?1 WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ?1 AND (?2 IS NULL OR "saved_items"."status" = ?2) AND (?3 IS NULL OR "saved_items"."created_at" < ?3 OR ("saved_items"."created_at" = ?3 AND "saved_items"."id" < ?4)) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC LIMIT ?5"#,
+            &format!(r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ?1 WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ?1 AND (?2 IS NULL OR "saved_items"."status" = ?2) AND (?3 IS NULL OR "saved_items"."created_at" < ?3 OR ("saved_items"."created_at" = ?3 AND "saved_items"."id" < ?4)) AND (messages.thread_id IS NULL OR {thread_access}) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC LIMIT ?5"#, thread_access = super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())),
             params![user_id, status, after_at, after_id, i64::try_from(limit).unwrap_or(i64::MAX)],
             Self::from_row,
         )
@@ -297,7 +297,7 @@ impl SavedItem {
     fn room_member(conn: &Connection, message_id: i64, user_id: i64) -> Result<bool> {
         sql::exists(
             conn,
-            r#"SELECT 1 AS one FROM "memberships" INNER JOIN "messages" ON "messages"."room_id" = "memberships"."room_id" WHERE "messages"."id" = ? AND "memberships"."user_id" = ? LIMIT 1"#,
+            &format!(r#"SELECT 1 FROM messages JOIN memberships ON memberships.room_id=messages.room_id JOIN rooms ON rooms.id=messages.room_id WHERE messages.id=? AND memberships.user_id=? AND rooms.deleted_at IS NULL AND (messages.thread_id IS NULL OR {})"#, super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())),
             params![message_id, user_id],
         )
     }

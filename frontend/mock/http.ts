@@ -63,7 +63,12 @@ export class HttpError extends Error {
 /** The `ApiError` variants that carry only a message. */
 type PlainErrorTag = Exclude<
   ApiError["_tag"],
-  "Validation" | "RateLimited" | "FizzyReplyFailed" | "SudoRequired" | "TwoFactorRequired"
+  | "Validation"
+  | "RateLimited"
+  | "FizzyReplyFailed"
+  | "SudoRequired"
+  | "TwoFactorRequired"
+  | "ThreadAccess"
 >;
 
 /**

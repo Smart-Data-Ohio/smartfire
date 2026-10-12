@@ -522,6 +522,8 @@ export function seedWork(world: World, now: number): World {
       lastActivityAt: updatedAt,
       // Board posts never go quiet on their own.
       autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES * 365,
+      visibility: "public",
+      accessMembers: new Map(),
       createdAt,
       messages: [],
       memberIds: new Set([post.creatorId]),

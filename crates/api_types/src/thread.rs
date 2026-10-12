@@ -10,7 +10,7 @@ use ts_rs::TS;
 
 use crate::{CreateMessage, MessageDTO, Timestamp, User, WorkDetail, WorkFacts};
 
-/// A thread as every room member sees it (`channel_threads`).
+/// A thread as a viewer with access sees it (`channel_threads`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -23,6 +23,7 @@ pub struct Thread {
     /// Up to 100 characters; defaults to the parent's first line ("New thread" without one).
     pub name: String,
     pub status: ThreadStatus,
+    pub visibility: ThreadVisibility,
     /// Replies that count (`messages_count`: not system notes, not still streaming).
     pub reply_count: i64,
     /// Bumped by every reply, and by reopening a stale thread (`last_activity_at`).
@@ -44,6 +45,41 @@ pub enum ThreadStatus {
     Active,
     Closed,
     Locked,
+}
+
+/// Private-thread access is separate from following and notification involvement.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum ThreadVisibility {
+    #[default]
+    Public,
+    Private,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ThreadAccessMember {
+    pub user_id: i64,
+    pub added_by_id: Option<i64>,
+    pub created_at: Timestamp,
+}
+
+/// The explicit access grants to a private thread, with their people.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ThreadAccessMembers {
+    pub members: Vec<ThreadAccessMember>,
+    pub users: Vec<User>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AddThreadAccessMember {
+    pub user_id: i64,
 }
 
 /// `thread_memberships.involvement`.
@@ -173,6 +209,10 @@ pub struct ThreadDetail {
 #[ts(export)]
 pub struct CreateThread {
     pub parent_message_id: i64,
+    /// Omit to create a public thread. Visibility is fixed at creation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub visibility: Option<ThreadVisibility>,
     /// `null` takes the default from the parent's first line.
     pub name: Option<String>,
     pub message: CreateMessage,

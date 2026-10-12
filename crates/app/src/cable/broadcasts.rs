@@ -240,6 +240,11 @@ impl Broadcasts {
         self.sync_read_row(user_id, room_id);
     }
 
+    /// Access grants also change discovery and existing subscriptions.
+    pub fn thread_access_changed(&self, change: campfire_db::models::channel_thread::ThreadAccessChange) {
+        sync::thread_access_changed(&self.server, &self.sync, change);
+    }
+
     /// `sidebar.row.upserted` for the person's own row after they read the room or one of its
     /// threads, left a thread, or marked it unread, read afresh later: the server's count agrees
     /// with the read (and with the client's own clearing of it), so a reload doesn't bring a

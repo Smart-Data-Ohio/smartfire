@@ -172,3 +172,39 @@ fn ignore_queued_board_nudge_rechecks_its_authors_policy_at_delivery() {
     });
     t.read(|conn| { assert!(board_nudge_push(conn, nudge_id, now)?.is_none()); Ok(()) });
 }
+
+
+#[test]
+fn queued_private_board_nudge_rechecks_thread_access_at_delivery() {
+    let golden = vectors();
+    let now = stamp(golden["now"].as_str().unwrap());
+    let row = golden["rows"].as_array().unwrap().iter().find(|row| row["name"] == "board_nudge").unwrap();
+    let t = TestDb::with_clock(TestClock::frozen_at(now), 4);
+    let setup = row["setup_sql"].as_str().unwrap().to_owned();
+    let nudge_id = row["nudge_id"].as_i64().unwrap();
+    t.write(move |tx| {
+        tx.conn().execute_batch(&setup)?;
+        let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
+        let original = crate::ChannelThread::find(tx.conn(), nudge.thread_id)?;
+        let private = crate::ChannelThread::create(tx, crate::NewChannelThread {
+            room_id: original.room_id, creator_id: original.creator_id, name: Some("Private nudge".into()), work_status: Some("in_progress".into()), visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        tx.conn().execute("UPDATE board_sla_nudges SET channel_thread_id=? WHERE id=?", [private.id, nudge_id])?;
+        tx.conn().execute("UPDATE users SET role=0 WHERE id=?", [nudge.recipient_id])?;
+
+        Ok(())
+    });
+    assert!(t.read(|conn| board_nudge_push(conn, nudge_id, now)).is_none());
+    t.write(move |tx| {
+        let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
+        tx.conn().execute("INSERT INTO thread_access_memberships(thread_id,user_id,created_at) VALUES (?,?,?)", rusqlite::params![nudge.thread_id,nudge.recipient_id,tx.now()])?;
+        Ok(())
+    });
+    assert!(t.read(|conn| board_nudge_push(conn, nudge_id, now)).is_some());
+    t.write(move |tx| {
+        let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
+        tx.conn().execute("DELETE FROM thread_access_memberships WHERE thread_id=? AND user_id=?", [nudge.thread_id,nudge.recipient_id])?;
+        Ok(())
+    });
+    assert!(t.read(|conn| board_nudge_push(conn, nudge_id, now)).is_none());
+}

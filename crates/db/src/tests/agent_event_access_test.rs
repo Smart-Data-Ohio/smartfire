@@ -264,3 +264,75 @@ fn ws11_anywhere_capability_reads_live_activity_without_a_grant_cache() {
         Ok(())
     });
 }
+
+#[test]
+fn management_history_checks_live_message_and_metadata_context_for_both_identities() {
+    let t = super::channel_thread_test::frozen();
+    let (thread_id, event_id, public_id) = t.write(|tx| {
+        let room_id = id("designers");
+        Room::find(tx.conn(), room_id)?.grant_to(tx, &[id("bender"), id("kevin")])?;
+        tx.conn().execute("DELETE FROM agent_events", [])?;
+        let thread = crate::ChannelThread::create(tx, crate::NewChannelThread {
+            room_id, creator_id: id("jz"), name: Some("Private event".into()),
+            visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        let message = crate::Message::create(tx, crate::NewMessage {
+            room_id, thread_id: Some(thread.id), creator_id: id("jz"),
+            markdown_source: Some("Secret message".into()), ..Default::default()
+        })?;
+        let public_id = add(tx, "public", "posted", Some(room_id), Some(id("first")), Some("delivered"))?;
+        let event_id = add(tx, "private", "posted", Some(room_id), Some(message.id), Some("delivered"))?;
+        Ok((thread.id, event_id, public_id))
+    });
+    let page = |t: &TestDb| t.read(|conn| Ok(access::history_page_for_viewer(conn, id("bender_agent"), id("bender"), id("kevin"), None, None)?.iter().map(|row| row.id).collect::<Vec<_>>()));
+    assert_eq!(page(&t), [public_id]);
+    t.write(move |tx| {
+        let thread = crate::ChannelThread::find(tx.conn(), thread_id)?;
+        thread.add_access_member(tx, id("jz"), id("bender"))?;
+        Ok(())
+    });
+    assert_eq!(page(&t), [public_id], "human viewer must independently read the live message");
+    t.write(move |tx| {
+        crate::ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, id("jz"), id("kevin"))?;
+        Ok(())
+    });
+    assert_eq!(page(&t), [event_id, public_id]);
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE agent_events SET message_id=?1,metadata=?2 WHERE id=?3", params![id("first"),json!({"thread_id":thread_id,"thread_visibility":"private"}).to_string(),event_id])?;
+        crate::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, id("jz"), id("bender"))
+    });
+    assert_eq!(page(&t), [public_id], "root message association cannot bypass private metadata");
+    t.write(move |tx| crate::ChannelThread::find(tx.conn(), thread_id)?.destroy(tx));
+    assert_eq!(page(&t), [public_id], "private snapshots fail closed after thread deletion");
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE agent_events SET metadata=? WHERE id=?", params![json!({"thread_id":thread_id,"thread_visibility":"public"}).to_string(),event_id])?;
+        Ok(())
+    });
+    assert_eq!(page(&t), [event_id, public_id], "deleted public snapshots retain their management history");
+}
+
+#[test]
+fn actual_private_agent_posts_keep_the_private_snapshot_marker_after_deletion() {
+    let t = super::channel_thread_test::frozen();
+    let (thread_id, event_id) = t.write(|tx| {
+        let room_id = id("designers");
+        Room::find(tx.conn(), room_id)?.grant_to(tx, &[id("bender"),id("kevin")])?;
+        let thread = crate::ChannelThread::create(tx, crate::NewChannelThread {
+            room_id, creator_id: id("jz"), name: Some("Private post snapshot".into()),
+            visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
+        })?;
+        thread.add_access_member(tx, id("jz"), id("bender"))?;
+        thread.add_access_member(tx, id("jz"), id("kevin"))?;
+        let message = crate::Message::create(tx, crate::NewMessage {
+            room_id, thread_id: Some(thread.id), creator_id: id("bender"),
+            markdown_source: Some("Secret posted snapshot".into()), ..Default::default()
+        })?;
+        Ok((thread.id,message.id))
+    });
+    // Message's after-commit enqueue has finished before reading its recorded event.
+    let event_id = t.read(|conn| Ok(access::history_page_for_viewer(conn, id("bender_agent"), id("bender"), id("kevin"), None, None)?.into_iter().find(|event| event.message_id == Some(event_id)).unwrap().id));
+    let event = t.read(|conn| AgentEvent::find(conn, event_id)).unwrap();
+    assert_eq!(event.metadata["thread_visibility"], "private");
+    t.write(move |tx| crate::ChannelThread::find(tx.conn(), thread_id)?.destroy(tx));
+    assert!(!t.read(|conn| Ok(access::history_page_for_viewer(conn, id("bender_agent"), id("bender"), id("kevin"), None, None)?.iter().any(|event| event.id == event_id))));
+}

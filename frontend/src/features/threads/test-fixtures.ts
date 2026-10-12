@@ -50,6 +50,7 @@ export function threadFixture(id: number, extra: Partial<Thread> = {}): Thread {
     replyCount: 1,
     lastActivityAt: "2026-10-06T09:00:00.000Z",
     autoArchiveAfterMinutes: 1440,
+    visibility: "public",
     createdAt: "2026-10-06T08:00:00.000Z",
     work: null,
     ...extra,

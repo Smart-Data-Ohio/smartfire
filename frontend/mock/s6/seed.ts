@@ -231,6 +231,8 @@ export function seedBoards(world: World, now: number, seed: number): void {
       locked: post.id === 9010,
       lastActivityAt,
       autoArchiveAfterMinutes: 1440,
+      visibility: "public",
+      accessMembers: new Map(),
       createdAt,
       updatedAt: lastActivityAt,
       messages: [],

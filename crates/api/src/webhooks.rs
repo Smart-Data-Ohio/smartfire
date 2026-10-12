@@ -224,7 +224,7 @@ fn save_avatar(
         let blob = messages::attachment_blob(
             tx,
             assignment,
-            AttachmentPolicy::SignedBlob,
+            AttachmentPolicy::SignedBlob { actor_id: None },
             "avatarSignedId",
         )?;
         if let Some(blob) = &blob {

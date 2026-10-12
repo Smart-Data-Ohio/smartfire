@@ -101,6 +101,17 @@ fn envelope(c: &Ctx, error: &Error) -> Option<ApiError> {
         },
         Error::Internal(error) => match error.downcast_ref::<campfire_db::Error>()? {
             campfire_db::Error::RecordNotFound(_) => not_found(),
+            campfire_db::Error::ThreadAccess(reason) => {
+                use campfire_db::models::channel_thread::ThreadAccessError as Db;
+                let reason = match reason {
+                    Db::NotPrivate => campfire_api_types::ThreadAccessRefusal::NotPrivate,
+                    Db::InviteForbidden => campfire_api_types::ThreadAccessRefusal::InviteForbidden,
+                    Db::RemoveForbidden => campfire_api_types::ThreadAccessRefusal::RemoveForbidden,
+                    Db::ParentRoomRequired => campfire_api_types::ThreadAccessRefusal::ParentRoomRequired,
+                    Db::VisibilityImmutable => campfire_api_types::ThreadAccessRefusal::VisibilityImmutable,
+                };
+                ApiError::ThreadAccess { message: error.to_string(), reason }
+            },
             campfire_db::Error::FieldValidation(fields) => ApiError::Validation {
                 message: "Invalid slash command options".into(),
                 fields: fields.clone(),

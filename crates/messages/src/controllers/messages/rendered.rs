@@ -37,8 +37,11 @@ pub async fn broadcast_tombstones(c: &Ctx, ids: Vec<i64>) -> Result<()> {
 pub async fn broadcast_thread_refresh(app: &App, room_id: i64, thread_id: i64) -> Result<()> {
     let runtime = app.clone();
     app.db.read(move |conn| {
+        let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, thread_id)? else { return Ok(()); };
         for membership in campfire_db::Membership::for_room(conn, room_id)? {
-            runtime.broadcasts.thread_refresh(membership.user_id, room_id, thread_id);
+            if thread.readable_by(conn, membership.user_id)? {
+                runtime.broadcasts.thread_refresh(membership.user_id, room_id, thread_id);
+            }
         }
         Ok(())
     }).await.map_err(db_error)

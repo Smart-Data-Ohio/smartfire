@@ -60,12 +60,14 @@ import { createJoin, type MockJoined } from "./s2/join.ts";
 import { createMessages } from "./s2/messages.ts";
 import {
   buildMessage,
+  canAccessThread,
   locate,
   type MessageDraft,
   pageOf,
   pinCount,
   plainDraft,
   threadStatus,
+  visibleMessage,
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
 import { createPeople } from "./s2/people.ts";
@@ -313,6 +315,30 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     epoch: epochFor(),
     viewerId: VIEWER_ID,
     memberOf: (roomId) => world.rooms.get(roomId)?.memberIds.includes(VIEWER_ID) ?? false,
+    threadAccess: (threadId) => {
+      const thread = world.threads.get(threadId);
+
+      return thread !== undefined && canAccessThread(world, thread);
+    },
+    canReadEvent: (event) => {
+      const topicThread = /^thread:(\d+)$/.exec(event.topic);
+
+      const threadId =
+        topicThread !== null
+          ? Number(topicThread[1])
+          : event.type === "thread.created" || event.type === "thread.updated"
+            ? event.data.id
+            : event.type === "thread.indicator"
+              ? event.data.thread?.threadId
+              : event.type === "thread.unread" || event.type === "thread.read"
+                ? event.data.threadId
+                : undefined;
+
+      if (threadId === undefined) return true;
+      const thread = world.threads.get(threadId);
+
+      return thread === undefined || canAccessThread(world, thread);
+    },
   });
 
   // --- reads over the world ---
@@ -688,6 +714,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       usersFor,
       saved: world.saved,
       ignored: world.ignored,
+      visibleMessage: (message) => visibleMessage(world, message),
     });
 
   // --- writes ---
@@ -788,7 +815,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const key = `${roomId}:${VIEWER_ID}:${clientMessageId}`;
     const duplicate = world.sentByClientId.get(key);
 
-    if (duplicate !== undefined) return { status: 200, json: duplicate };
+    if (duplicate !== undefined) {
+      const sourceThread =
+        duplicate.threadId == null ? null : world.threads.get(duplicate.threadId);
+
+      if (
+        duplicate.threadId != null &&
+        (sourceThread == null || !canAccessThread(world, sourceThread))
+      )
+        throw notFound("Message not found");
+
+      return { status: 200, json: duplicate };
+    }
 
     const parsed = parseMessage(body, uploads.attachment);
     const replyTo = parsed.replyToMessageId;
