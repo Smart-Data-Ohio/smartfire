@@ -120,6 +120,46 @@ test.describe("the product tour on desktop", () => {
     await expect(account).toBeFocused();
   });
 
+  test("is skipped on first sign-in, restarts from Help, and Help opens the privacy policy", async ({
+    page,
+    request,
+  }) => {
+    await newcomer(request);
+    await openApp(page, `r/${ROOM_IDS.general}`);
+
+    const first = step(page, TITLES[0]);
+
+    await first.getByRole("button", { name: "Skip tour" }).click();
+    await expect(tourDialog(page)).toHaveCount(0);
+    await expect.poll(() => stamps(request)).toBe(1);
+
+    const account = page.getByRole("button", { name: "Your account" });
+    const menu = page.getByRole("menu", { name: "Your account" });
+    const help = menu.getByRole("group", { name: "Help" });
+
+    await account.click();
+    await help.getByRole("menuitem", { name: "Restart tour" }).click();
+    await expect(first).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tourDialog(page)).toHaveCount(0);
+    await expect.poll(() => stamps(request)).toBe(2);
+
+    // Straight back to the menu (the tour's modal hid the closing menu, which is no dismiss); the
+    // policy opens in its own tab, signed in, and the conversation stays put.
+    await account.click();
+
+    const opened = page.context().waitForEvent("page");
+
+    await help.getByRole("menuitem", { name: "Privacy Policy" }).click();
+
+    const privacy = await opened;
+
+    await expect(privacy).toHaveURL(/\/app\/privacy$/);
+    await expect(privacy.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}$`));
+    await privacy.close();
+  });
+
   test("glides between anchors only where motion is allowed, and always fades", async ({
     page,
     request,
