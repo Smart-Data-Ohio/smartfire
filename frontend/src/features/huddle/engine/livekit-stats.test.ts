@@ -111,8 +111,10 @@ it("ignores pending samples from before a fresh read without changing its bitrat
       return this.tracks.filter((track) => track.kind === "audio");
     }
   }
+
   vi.stubGlobal("MediaStream", MediaStreamStub);
   const rooms: LiveKit.Room[] = [];
+
   class OfflineRoom extends LiveKit.Room {
     constructor(options?: Partial<LiveKit.RoomOptions>) {
       super(options);
@@ -121,6 +123,7 @@ it("ignores pending samples from before a fresh read without changing its bitrat
       rooms.push(this);
     }
   }
+
   const media = Object.assign(new EventTarget(), {
     id: "camera",
     kind: "video",
@@ -131,8 +134,11 @@ it("ignores pending samples from before a fresh read without changing its bitrat
     getConstraints: () => ({}),
     stop: vi.fn(),
   });
+
   const track: unknown = Reflect.construct(LiveKit.LocalVideoTrack, [media]);
+
   if (!(track instanceof LiveKit.LocalVideoTrack)) throw new Error("SDK track missing");
+
   const publication: unknown = Reflect.construct(LiveKit.LocalTrackPublication, [
     LiveKit.Track.Kind.Video,
     {
@@ -145,22 +151,27 @@ it("ignores pending samples from before a fresh read without changing its bitrat
     },
     track,
   ]);
+
   if (!(publication instanceof LiveKit.LocalTrackPublication))
     throw new Error("SDK publication missing");
   const transport = liveKitTransport({ ...LiveKit, Room: OfflineRoom });
   await transport.connect("wss://livekit.test", "token", false, 48_000);
   const room = rooms[0];
+
   if (room === undefined) throw new Error("SDK room missing");
   room.localParticipant.trackPublications.set("camera", publication);
   room.localParticipant.videoTrackPublications.set("camera", publication);
   const old = Promise.withResolvers<RTCStatsReport | undefined>();
   const fresh = Promise.withResolvers<RTCStatsReport | undefined>();
+
   const read = vi
     .spyOn(track, "getRTCStatsReport")
     .mockImplementationOnce(() => old.promise)
     .mockImplementationOnce(() => fresh.promise)
     .mockResolvedValueOnce(report(21_000));
+
   const now = vi.spyOn(Date, "now").mockReturnValue(1000);
+
   try {
     const beforeClose = transport.sampleStats(false);
     const reopened = transport.sampleStats(true);

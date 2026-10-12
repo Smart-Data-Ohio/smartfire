@@ -164,6 +164,7 @@ export function screenPublishOptions(
   Preset: VideoPresetClass,
 ): TrackPublishOptions {
   const { encoding, layer, motion } = PROFILES[quality];
+
   const options: TrackPublishOptions = {
     dtx: false,
     screenShareEncoding: { ...encoding },

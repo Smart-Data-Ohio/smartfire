@@ -54,6 +54,7 @@ describe("screen capture", () => {
         ).toEqual([undefined, undefined]);
       }
     }
+
     expect(
       screenCaptureAttempts("1080p15", { name: "Safari", version: "18.4" })[0]?.resolution,
     ).toEqual({ width: 1920, height: 1080, frameRate: 15 });
@@ -68,6 +69,7 @@ describe("screen capture", () => {
 
     for (const rejects of [false, true]) {
       let hint = "";
+
       const unsupported = {
         get contentHint() {
           return hint;
@@ -80,6 +82,7 @@ describe("screen capture", () => {
           }
         },
       };
+
       applyScreenContentHint(unsupported, "720p15");
       expect(unsupported.contentHint).toBe("detail");
     }

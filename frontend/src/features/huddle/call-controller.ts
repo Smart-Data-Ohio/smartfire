@@ -1038,7 +1038,12 @@ export class CallController {
 
     const open = !this.#state.devicesOpen;
 
-    this.#set({ devicesOpen: open });
+    if (!open) {
+      this.#stopStats();
+      this.#set({ devicesOpen: false, statsOpen: false, stats: null });
+    } else {
+      this.#set({ devicesOpen: true });
+    }
 
     if (open) {
       void this.#refreshDevices();
@@ -2114,6 +2119,7 @@ export class CallController {
     }
 
     this.#autoExpanded = videoId;
+
     if (state.expandedVideoId === null) {
       this.#set({ expandedVideoId: videoId, viewOpen: true });
     }
