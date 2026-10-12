@@ -141,11 +141,8 @@ async fn join_workspace(c: &Ctx, description: String) -> Result<(SignInWorkspace
         .read(|conn| Ok((Account::first(conn)?, presenters::accounts::help_contact(conn)?)))
         .await
         .map_err(Error::internal)?;
-    let logo_url = match &account {
-        Some(account) => presenters::workspace_branding::for_account(c.app(), account).await?.logo_url,
-        None => None,
-    };
-    let workspace = SignInWorkspace { name: account.map(|account| account.name), logo_url, description };
+    let mut workspace = presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?;
+    workspace.description = description;
     let help_contact = help_contact.map(|owner| SignInHelpContact { name: owner.name, email_address: owner.email_address });
     Ok((workspace, help_contact))
 }

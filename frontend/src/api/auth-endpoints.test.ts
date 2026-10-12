@@ -74,7 +74,12 @@ describe("signed-out auth contracts", () => {
 
       const boot = {
         kind: "signedOut",
-        workspace: { name: "Smart Data", logoUrl: null, description: "Hello" },
+        workspace: {
+          inviteSplashUrl: null,
+          name: "Smart Data",
+          logoUrl: null,
+          description: "Hello",
+        },
         signInMethods: { password: true, google: true, googleDomains: ["smartdata.net"] },
         firstRunPending: false,
         helpContact: { name: "Ada", emailAddress: "ada@example.com" },

@@ -186,7 +186,7 @@ async fn json_join_pages_describe_the_workspace_and_keep_the_retained_gates() {
     assert_eq!(page.headers["cache-control"], "no-store");
     assert_eq!(
         page.json(),
-        json!({"kind":"join","workspace":{"name":account_name,"logoUrl":null,"description":""},"helpContact":{"name":help.name,"emailAddress":help.email_address}})
+        json!({"kind":"join","workspace":{"name":account_name,"logoUrl":null,"description":"","inviteSplashUrl":null},"helpContact":{"name":help.name,"emailAddress":help.email_address}})
     );
     let (_, token) = invite(&app, None).await;
     let page = browser.send(json_get(&format!("/api/v1/invite/{token}"))).await;

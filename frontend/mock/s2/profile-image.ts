@@ -139,6 +139,7 @@ export function readProfileImage(bytes: Uint8Array): ProfileImageInfo | null {
 export const PROFILE_MAX_SIZE = {
   logo: [4096, 4096],
   banner: [4096, 2304],
+  invite_splash: [4096, 2304],
 } as const;
 
 /** What a logo or banner may be, as the server checks it. */

@@ -291,6 +291,7 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
         .merge(controllers::pwa::routes(IMMUTABLE_CACHE_CONTROL))
         .merge(controllers::spa::routes(IMMUTABLE_CACHE_CONTROL))
+        .route("/account/invite_splash", axum::routing::get(campfire_kit::action(controllers::accounts::banners::invite_splash)))
         .route("/account/banner", axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)))
         .route("/users/{user_id}/banner", axum::routing::get(campfire_kit::action(controllers::users::banners::show)))
         .route("/invite/{token}", axum::routing::get(campfire_kit::action(controllers::users::invite_new)).post(campfire_kit::action(controllers::users::invite_create)))

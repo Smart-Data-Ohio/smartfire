@@ -19,6 +19,7 @@ const workspace: Workspace = {
   bannerUrl: null,
   bannerStillUrl: null,
   logoAttached: false,
+  inviteSplashUrl: null,
   joinUrl: "http://127.0.0.1/join/mock-join-code",
   canAdminister: true,
   restrictRoomCreationToAdministrators: false,

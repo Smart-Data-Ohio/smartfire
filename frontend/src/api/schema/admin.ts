@@ -19,6 +19,7 @@ import type { PersonRemoved as GeneratedPersonRemoved } from "../../gen/PersonRe
 import type { PersonRole as GeneratedPersonRole } from "../../gen/PersonRole.ts";
 import type { PushChannelExpiry as GeneratedPushChannelExpiry } from "../../gen/PushChannelExpiry.ts";
 import type { UpdateBanner as GeneratedUpdateBanner } from "../../gen/UpdateBanner.ts";
+import type { UpdateInviteSplash as GeneratedUpdateInviteSplash } from "../../gen/UpdateInviteSplash.ts";
 import type { UpdateLogo as GeneratedUpdateLogo } from "../../gen/UpdateLogo.ts";
 import type { UpdatePerson as GeneratedUpdatePerson } from "../../gen/UpdatePerson.ts";
 import type { UpdateWorkspace as GeneratedUpdateWorkspace } from "../../gen/UpdateWorkspace.ts";
@@ -49,6 +50,7 @@ export const Workspace = Schema.Struct({
   bannerUrl: Schema.NullOr(Schema.String),
   /** An animated banner's first frame; `null` when the banner isn't animated. */
   bannerStillUrl: Schema.NullOr(Schema.String),
+  inviteSplashUrl: Schema.NullOr(Schema.String),
   joinUrl: Schema.String,
   canAdminister: Schema.Boolean,
   restrictRoomCreationToAdministrators: Schema.Boolean,
@@ -88,6 +90,12 @@ export type UpdateLogoPin = Assert<Pinned<typeof UpdateLogo, GeneratedUpdateLogo
 export const UpdateBanner = Schema.Struct({ signedId: Schema.String });
 
 export type UpdateBannerPin = Assert<Pinned<typeof UpdateBanner, GeneratedUpdateBanner>>;
+
+export const UpdateInviteSplash = Schema.Struct({ signedId: Schema.String });
+
+export type UpdateInviteSplashPin = Assert<
+  Pinned<typeof UpdateInviteSplash, GeneratedUpdateInviteSplash>
+>;
 
 /**
  * `workspace.updated`, on everyone's `user` topic: the workspace's name, logo or banner changed.

@@ -58,7 +58,7 @@ export interface SlotCopy {
 
 interface SlotProps {
   /** Shapes the thumbnail: a square icon, or a wide banner. */
-  readonly kind: "logo" | "banner";
+  readonly kind: "logo" | "banner" | "invite_splash";
   readonly slot: SlotCopy;
   readonly image: Shown;
   readonly pending: Pending | null;

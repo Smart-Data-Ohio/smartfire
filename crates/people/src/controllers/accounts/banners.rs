@@ -14,6 +14,12 @@ pub async fn show(c: &mut Ctx) -> Result {
     show_image(c, "banner").await
 }
 
+pub async fn invite_splash(c: &mut Ctx) -> Result {
+    c.use_live_response();
+    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    show_image(c, "invite_splash").await
+}
+
 pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
     let account = super::current_account(c).await?;
     send_image(c, "Account", account.id, name, format!("workspace-{name}")).await
@@ -67,7 +73,7 @@ pub(crate) async fn send_image(
     c.expires_in(
         5 * 60,
         ExpiresIn {
-            public: name == "logo",
+            public: matches!(name, "logo" | "invite_splash"),
             stale_while_revalidate: Some(7 * 24 * 60 * 60),
             ..ExpiresIn::default()
         },
@@ -96,7 +102,7 @@ pub(crate) async fn send_image(
             }
             return super::logos::stock_icon(c, small);
         }
-        let (width, height) = if name == "banner" {
+        let (width, height) = if name != "logo" {
             (1920, 1080)
         } else if small {
             (192, 192)

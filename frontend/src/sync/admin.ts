@@ -15,6 +15,7 @@ import {
   invites,
   people,
   removeBanner,
+  removeInviteSplash,
   removeLogo,
   removePerson,
   resetJoinCode,
@@ -23,6 +24,7 @@ import {
   setGoogleLink,
   updateBanner,
   updateCustomStyles,
+  updateInviteSplash,
   updateLogo,
   updatePerson,
   updateWorkspace,
@@ -162,6 +164,11 @@ export const admin = {
   setBanner: (signedId: string): Promise<Workspace> => branded(runAction(updateBanner(signedId))),
 
   removeBanner: (): Promise<Workspace> => branded(runAction(removeBanner())),
+
+  setInviteSplash: (signedId: string): Promise<Workspace> =>
+    runAction(updateInviteSplash(signedId)),
+
+  removeInviteSplash: (): Promise<Workspace> => runAction(removeInviteSplash()),
 
   resetJoinCode: (): Promise<Workspace> => runAction(resetJoinCode()),
 

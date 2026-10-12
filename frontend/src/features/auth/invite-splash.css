@@ -1,0 +1,64 @@
+@layer app {
+  .invite-splash-surface {
+    isolation: isolate;
+    background: var(--bg-app);
+  }
+
+  .auth-splash-surface {
+    position: fixed;
+    inset: 0;
+  }
+
+  .invite-splash {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .invite-splash img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .invite-splash:has(img)::after {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in oklch, var(--bg-app) 72%, transparent);
+    content: "";
+  }
+
+  .auth-splash-surface[data-splash] .auth-view-help,
+  .auth-splash-surface[data-splash] .auth-view-links {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-app);
+  }
+
+  .public-view-main[data-about] {
+    width: min(calc(100% - var(--space-6)), 720px);
+    margin-block: var(--space-6);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .public-view-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    margin-block-end: var(--space-8);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  @media (width < 720px) {
+    .public-view-main[data-about] {
+      padding: var(--space-5);
+    }
+  }
+}

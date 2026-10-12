@@ -72,6 +72,17 @@ export const updateBanner = Effect.fn("api.updateBanner")(function* (signedId: s
   );
 });
 
+export const updateInviteSplash = Effect.fn("api.updateInviteSplash")(function* (signedId: string) {
+  return yield* call(
+    { method: "PUT", path: "/admin/workspace/invite_splash", body: { signedId } },
+    workspaceReply,
+  );
+});
+
+export const removeInviteSplash = Effect.fn("api.removeInviteSplash")(function* () {
+  return yield* call({ method: "DELETE", path: "/admin/workspace/invite_splash" }, workspaceReply);
+});
+
 /** `DELETE /admin/workspace/banner`: back to the plain header. */
 export const removeBanner = Effect.fn("api.removeBanner")(function* () {
   return yield* call({ method: "DELETE", path: "/admin/workspace/banner" }, workspaceReply);
