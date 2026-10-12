@@ -39,6 +39,7 @@ describe("received video quality", () => {
   it.each([1, 2, 3])("requests real display pixels at DPR %i", async (ratio) => {
     vi.useFakeTimers();
     vi.stubGlobal("devicePixelRatio", ratio);
+
     const track: unknown = Reflect.construct(LiveKit.RemoteVideoTrack, [
       { id: "video", kind: "video", getSettings: () => ({}) },
       "screen",
@@ -49,6 +50,7 @@ describe("received video quality", () => {
     if (!(track instanceof LiveKit.RemoteVideoTrack)) throw new Error("SDK video missing");
 
     const changed = vi.fn();
+
     const element = {
       element: {},
       width: () => 640,
@@ -88,6 +90,7 @@ describe("received video quality", () => {
     const transport = liveKitTransport({ ...LiveKit, Room: OfflineRoom });
     await transport.connect("wss://livekit.test", "token", false, 48_000);
     const room = rooms[0];
+
     if (room === undefined) throw new Error("SDK room missing");
     expect(room.options.adaptiveStream).toEqual({ pixelDensity: "screen" });
 

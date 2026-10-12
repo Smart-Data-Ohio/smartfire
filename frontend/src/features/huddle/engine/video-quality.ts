@@ -13,14 +13,22 @@ export function focusScreenPublication(publication: RemoteTrackPublication): () 
   const emit = publication.emitTrackUpdate;
 
   publication.emitTrackUpdate = () => {
-    const dimensions: unknown = Reflect.get(publication, "videoDimensionsAdaptiveStream");
+    const state: unknown = publication;
 
-    Object.assign(publication, { videoDimensionsAdaptiveStream: undefined });
+    if (!(state instanceof Object) || !("videoDimensionsAdaptiveStream" in state)) {
+      emit.call(publication);
+
+      return;
+    }
+
+    const dimensions = state.videoDimensionsAdaptiveStream;
+
+    state.videoDimensionsAdaptiveStream = undefined;
 
     try {
       emit.call(publication);
     } finally {
-      Object.assign(publication, { videoDimensionsAdaptiveStream: dimensions });
+      state.videoDimensionsAdaptiveStream = dimensions;
     }
   };
 

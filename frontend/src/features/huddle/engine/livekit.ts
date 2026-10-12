@@ -111,6 +111,7 @@ function withCaptureFallback<T>(
   browser: ReturnType<LiveKit["getBrowser"]>,
 ): Promise<T> {
   const [first, ...rest] = screenCaptureAttempts(quality, browser);
+
   // The SDK assigns the hint during capture. Start with its compatible detail hint, then try
   // text on the native track with read-back, so a rejected text hint cannot reopen the picker.
   const attempt = (options: ScreenShareCaptureOptions): Promise<T> =>
@@ -638,12 +639,14 @@ class LiveKitTransport implements CallTransport {
     }
 
     const generation = ++this.#statsGeneration;
+
     if (fresh) {
       this.#statsBaseline = null;
       this.#videoStatsBaseline = null;
     }
 
     const reports = new Map<LocalTrack | RemoteTrack, Promise<RTCStatsReport | null>>();
+
     const read = (
       track: LocalTrack | RemoteTrack | undefined | null,
     ): Promise<RTCStatsReport | null> => {
@@ -652,20 +655,25 @@ class LiveKitTransport implements CallTransport {
       }
 
       const cached = reports.get(track);
+
       if (cached !== undefined) return cached;
+
       const pending = track
         .getRTCStatsReport()
         .then((report) => report ?? null)
         .catch(() => null);
+
       reports.set(track, pending);
 
       return pending;
     };
 
     const videoInputs: Promise<VideoStatsInput>[] = [];
+
     for (const participant of [room.localParticipant, ...room.remoteParticipants.values()]) {
       for (const publication of participant.videoTrackPublications.values()) {
         if (publication.track === undefined) continue;
+
         const input: Omit<VideoStatsInput, "report"> = {
           participantId: participant.identity,
           participantName: participant.name || participant.identity,
@@ -673,6 +681,7 @@ class LiveKitTransport implements CallTransport {
           direction: participant === room.localParticipant ? "sending" : "receiving",
           source: publication.source === this.#lk.Track.Source.ScreenShare ? "screen" : "camera",
         };
+
         videoInputs.push(read(publication.track).then((report) => ({ ...input, report })));
       }
     }
@@ -680,6 +689,7 @@ class LiveKitTransport implements CallTransport {
     const microphone = room.localParticipant.getTrackPublication(
       this.#lk.Track.Source.Microphone,
     )?.track;
+
     const [publisherReport, subscriberReport, videos] = await Promise.all([
       read(microphone),
       read(this.#subscriberTrack(room)),
@@ -692,17 +702,22 @@ class LiveKitTransport implements CallTransport {
 
     const publisher = new Map<string, StatEntry>(publisherReport ?? []);
     const subscriber = new Map<string, StatEntry>(subscriberReport ?? []);
+
     for (const input of videos) {
       const combined = input.direction === "sending" ? publisher : subscriber;
+
       for (const [id, entry] of input.report ?? []) combined.set(id, entry);
     }
+
     const now = Date.now();
+
     const sample = summarizeConnectionStats(
       publisher.size === 0 ? null : publisher,
       subscriber.size === 0 ? null : subscriber,
       this.#statsBaseline,
       now,
     );
+
     const videoSample = summarizeVideoStats(videos, this.#videoStatsBaseline, now);
 
     this.#statsBaseline = sample.baseline;

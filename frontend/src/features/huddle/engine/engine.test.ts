@@ -97,22 +97,27 @@ describe("connection stats", () => {
           ? []
           : [{ id: "video", type: "outbound-rtp", kind: "video", bytesSent: video }]),
       ]);
+
     const first = summarizeConnectionStats(read(100_000, 1_000_000), null, null, 1000);
     const missing = summarizeConnectionStats(read(105_000), null, first.baseline, 3000);
+
     const recovered = summarizeConnectionStats(
       read(110_000, 1_020_000),
       null,
       missing.baseline,
       5000,
     );
+
     expect(missing.stats.txBps).toBeNull();
     expect(recovered.stats.txBps).toBeNull();
+
     const stable = summarizeConnectionStats(
       read(115_000, 1_025_000),
       null,
       recovered.baseline,
       7000,
     );
+
     expect(stable.stats.txBps).toBe(40_000);
     const reset = summarizeConnectionStats(read(2_000_000, 0), null, stable.baseline, 9000);
     expect(reset.stats.txBps).toBeNull();

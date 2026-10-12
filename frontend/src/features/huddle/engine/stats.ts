@@ -54,12 +54,15 @@ export interface StatsBaseline {
 
 function streamCounters(report: StatsReport | null, type: "outbound-rtp" | "inbound-rtp") {
   const counters = new Map<string, number>();
+
   for (const [id, stat] of report ?? []) {
     const bytes = type === "outbound-rtp" ? stat.bytesSent : stat.bytesReceived;
+
     if (stat.type === type && stat.isRemote !== true && finite(bytes) && bytes >= 0) {
       counters.set(JSON.stringify([id, stat.ssrc ?? null]), bytes);
     }
   }
+
   return counters;
 }
 
@@ -72,6 +75,7 @@ function comparableStreams(
     previous?.size === current.size &&
     [...current].every(([id, bytes]) => {
       const before = previous.get(id);
+
       return before !== undefined && bytes >= before;
     })
   );
@@ -374,6 +378,7 @@ export function summarizeVideoStats(
   now: number,
 ): VideoStatsSample {
   const baseline = new Map<string, VideoLayerBaseline>();
+
   const videoTracks = inputs.map((input): VideoTrackStats => {
     const { report, ...context } = input;
     const layers: VideoRtpStats[] = [];
@@ -487,6 +492,7 @@ export function formatVideoTrackStats(
       track.participantName.length > 0
         ? `${track.participantName} (${track.participantId})`
         : track.participantId;
+
     const label = `${participant} · ${track.direction} ${track.source} · ${track.trackSid}`;
     const key = JSON.stringify([track.participantId, track.direction, track.trackSid]);
 

@@ -170,6 +170,7 @@ describe("video track stats", () => {
       null,
       1000,
     );
+
     const next = summarizeVideoStats(
       [
         sending(report([outbound(12_000, 50, "low"), outbound(100_000, 120)])),
@@ -196,6 +197,7 @@ describe("video track stats", () => {
 
   it("prefers the reported FPS, including zero, over a frame-counter fallback", () => {
     const first = summarizeVideoStats([sending(report([outbound(1_000, 30)]))], null, 1000);
+
     const next = summarizeVideoStats(
       [sending(report([{ ...outbound(2_000, 90), framesPerSecond: 0 }]))],
       first.baseline,
@@ -211,6 +213,7 @@ describe("video track stats", () => {
       null,
       1000,
     );
+
     const changed = summarizeVideoStats(
       [
         { ...sending(report([outbound(10_000, 60)])), participantId: "another-tab" },
@@ -233,11 +236,13 @@ describe("video track stats", () => {
   it("drops failed and empty reports so their recovery starts with unknown rates", () => {
     const first = summarizeVideoStats([sending(report([outbound(1_000, 30)]))], null, 1000);
     const failed = summarizeVideoStats([sending(null)], first.baseline, 2000);
+
     const recovered = summarizeVideoStats(
       [sending(report([outbound(9_000, 100)]))],
       failed.baseline,
       3000,
     );
+
     const empty = summarizeVideoStats([sending(report([]))], recovered.baseline, 4000);
 
     expect(failed.videoTracks[0]?.layers).toEqual([]);
@@ -257,11 +262,13 @@ describe("video track stats", () => {
       null,
       1000,
     );
+
     const reduced = summarizeVideoStats(
       [sending(report([outbound(2_000, 60, "low")]))],
       first.baseline,
       2000,
     );
+
     const returned = summarizeVideoStats(
       [
         sending(report([outbound(3_000, 90, "low"), outbound(50_000, 200)])),
@@ -270,6 +277,7 @@ describe("video track stats", () => {
       reduced.baseline,
       3000,
     );
+
     const removed = summarizeVideoStats([], returned.baseline, 4000);
 
     expect(reduced.baseline.size).toBe(1);
@@ -283,16 +291,19 @@ describe("video track stats", () => {
   it("treats counter resets, repeated times and time reversal as unknown rates", () => {
     const first = summarizeVideoStats([sending(report([outbound(10_000, 60)]))], null, 2000);
     const reset = summarizeVideoStats([sending(report([outbound(100, 1)]))], first.baseline, 3000);
+
     const later = summarizeVideoStats(
       [sending(report([outbound(1_100, 31)]))],
       reset.baseline,
       4000,
     );
+
     const repeated = summarizeVideoStats(
       [sending(report([outbound(2_100, 61)]))],
       later.baseline,
       4000,
     );
+
     const reversed = summarizeVideoStats(
       [sending(report([outbound(3_100, 91)]))],
       repeated.baseline,
@@ -348,6 +359,7 @@ describe("video track stats", () => {
       null,
       1000,
     );
+
     const next = summarizeVideoStats(
       [
         receiving(
@@ -423,6 +435,7 @@ describe("video track stats", () => {
 describe("video track stats text", () => {
   it("labels actual measurements, RID and scalability mode separately", () => {
     const first = summarizeVideoStats([receiving(report([inbound(1_000, 30)]))], null, 1000);
+
     const next = summarizeVideoStats(
       [
         receiving(

@@ -129,12 +129,56 @@ afterEach(() => {
 });
 
 describe("connection details sampling", () => {
+  it("stops sampling and discards pending results when Call settings closes", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no transport");
+    const pending = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+    const sample = vi.spyOn(transport, "sampleStats");
+    const fresh = await transport.sampleStats(true);
+    sample.mockClear().mockImplementationOnce(() => pending.promise);
+
+    try {
+      controller.toggleDevices();
+      controller.toggleStats();
+      expect(sample).toHaveBeenCalledExactlyOnceWith(true);
+      controller.toggleDevices();
+      expect(callStore.getState().statsOpen).toBe(false);
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS * 2);
+      expect(sample).toHaveBeenCalledTimes(1);
+      controller.toggleDevices();
+      expect(callStore.getState().statsOpen).toBe(false);
+      controller.toggleStats();
+      await settle();
+      expect(sample).toHaveBeenCalledTimes(2);
+      expect(sample).toHaveBeenLastCalledWith(true);
+      expect(callStore.getState().stats).toEqual(fresh);
+
+      if (fresh === null) throw new Error("fake stats missing");
+      pending.resolve({ ...fresh, rttMs: 999 });
+      await settle();
+      expect(callStore.getState().stats).toEqual(fresh);
+      controller.toggleDevices();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS * 2);
+      expect(sample).toHaveBeenCalledTimes(2);
+      expect(callStore.getState().stats).toBeNull();
+    } finally {
+      pending.resolve(fresh);
+      sample.mockRestore();
+      await controller.leave();
+    }
+  });
+
   it("samples active video tracks only while the details panel is open and visible", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     const { controller, transports } = harness();
     await controller.join(ROOM, "Lounge", null);
     const transport = transports[0];
+
     if (transport === undefined) throw new Error("no fake transport");
     const sample = vi.spyOn(transport, "sampleStats");
 
@@ -764,13 +808,16 @@ describe("call state", () => {
     const { controller, transports } = harness();
     await controller.join(ROOM, "Lounge", null);
     const transport = transports[0];
+
     if (transport === undefined) throw new Error("no transport");
     const old = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
     const fresh = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+
     const read = vi
       .spyOn(transport, "sampleStats")
       .mockImplementationOnce(() => old.promise)
       .mockImplementationOnce(() => fresh.promise);
+
     const stats = {
       rttMs: 42,
       lossRatio: 0,
@@ -780,6 +827,7 @@ describe("call state", () => {
       relayed: false,
       videoTracks: [],
     };
+
     try {
       controller.toggleStats();
       controller.toggleStats();
@@ -801,9 +849,11 @@ describe("call state", () => {
     const { controller, transports } = harness();
     await controller.join(ROOM, "Lounge", null);
     const transport = transports[0];
+
     if (transport === undefined) throw new Error("no transport");
     const original = transport.snapshot();
     let speaking = false;
+
     const snapshot = vi.spyOn(transport, "snapshot").mockImplementation(() => ({
       ...original,
       participants: [
@@ -821,6 +871,7 @@ describe("call state", () => {
         },
       ],
     }));
+
     const shown = vi.spyOn(transport, "showScreen");
     const preference = vi.spyOn(transport, "setViewerQuality");
 
