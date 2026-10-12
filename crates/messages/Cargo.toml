@@ -17,4 +17,3 @@ anyhow.workspace = true
 serde_json.workspace = true
 jiff.workspace = true
 tracing.workspace = true
-askama.workspace = true

@@ -369,7 +369,6 @@ name = "campfire"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "async-trait",
  "axum",
  "base64 0.22.1",
@@ -558,7 +557,6 @@ name = "campfire_channels"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "async-trait",
  "axum",
  "campfire_api_types",
@@ -753,7 +751,6 @@ name = "campfire_messages"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "campfire_app",
  "campfire_db",
  "campfire_kit",
@@ -773,7 +770,6 @@ name = "campfire_people"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "campfire_api_types",
  "campfire_app",
  "campfire_channels",
@@ -831,7 +827,6 @@ name = "campfire_rooms"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "campfire_app",
  "campfire_cable",
  "campfire_channels",
@@ -865,7 +860,6 @@ name = "campfire_runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "askama",
  "axum",
  "bytes",
  "campfire_api_types",

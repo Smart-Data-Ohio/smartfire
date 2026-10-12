@@ -32,7 +32,6 @@ jiff.workspace = true
 tracing.workspace = true
 regex.workspace = true
 indexmap = { workspace = true, features = ["serde"] }
-askama.workspace = true
 futures-util.workspace = true
 rusqlite.workspace = true
 rand.workspace = true

@@ -1,4 +1,3 @@
-pub mod composer;
 pub mod support;
 pub mod reactions;
 pub mod parts;

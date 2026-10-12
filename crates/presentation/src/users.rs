@@ -3,7 +3,6 @@ pub mod statuses;
 pub mod appearance;
 pub mod people;
 pub mod summary;
-pub mod sidebar_composition;
 pub mod google;
 
 pub use summary::*;
