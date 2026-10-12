@@ -101,6 +101,10 @@ fn envelope(c: &Ctx, error: &Error) -> Option<ApiError> {
         },
         Error::Internal(error) => match error.downcast_ref::<campfire_db::Error>()? {
             campfire_db::Error::RecordNotFound(_) => not_found(),
+            campfire_db::Error::StickerLimitReached => ApiError::StickerLimitReached {
+                message: "Sticker capacity reached (limit: 60 stickers)".into(),
+                capacity: campfire_db::models::sticker::CAPACITY,
+            },
             campfire_db::Error::FieldValidation(fields) => ApiError::Validation {
                 message: "Invalid slash command options".into(),
                 fields: fields.clone(),

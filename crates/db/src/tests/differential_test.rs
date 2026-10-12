@@ -156,6 +156,9 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
     while let Some(row) = rows.next().unwrap() {
         let mut fields: Vec<(String, String)> = Vec::new();
         for (i, name) in names.iter().enumerate() {
+            if table == "messages" && matches!(name.as_str(), "sticker_id" | "sticker_name") {
+                continue;
+            }
             if table == "rooms"
                 && matches!(
                     name.as_str(),

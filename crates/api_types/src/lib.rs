@@ -37,6 +37,8 @@ mod error;
 mod events;
 mod fizzy;
 mod huddle;
+mod sticker;
+pub use sticker::*;
 mod soundboard;
 pub use soundboard::{
     CreateSoundboardSound, HuddleSoundboardPlayed, PlaySoundboardSound, SoundboardCatalog,
@@ -240,6 +242,8 @@ pub type Timestamp = String;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_sticker;
 #[cfg(test)]
 mod tests_s2;
 #[cfg(test)]

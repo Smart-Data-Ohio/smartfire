@@ -16,6 +16,7 @@ mod announcement_test;
 mod user_block_test;
 mod workspace_invite_test;
 mod soundboard_test;
+mod sticker_test;
 mod channel_webhook_test;
 mod slack_import_test;
 mod slack_test;

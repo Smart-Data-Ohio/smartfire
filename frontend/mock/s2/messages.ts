@@ -117,7 +117,9 @@ export function createMessages(
 
     const markdown = checkMarkdown(
       stringField(body, "markdownSource"),
-      filesOf(current).length > 0 || cards.some((card) => card.kind === "drive"),
+      filesOf(current).length > 0 ||
+        cards.some((card) => card.kind === "drive") ||
+        current.sticker !== undefined,
     );
 
     const updatedAt = touched(ctx.now(), current.updatedAt);
@@ -555,7 +557,12 @@ export function createMessages(
         forward: { messageId: original.id, at: forwardedAt, note, bodyHtml: original.bodyHtml },
       };
 
-      return thread === null ? ctx.postToRoom(record, draft) : threads.postReply(thread, draft);
+      const forwarded =
+        original.sticker === undefined ? draft : { ...draft, sticker: original.sticker };
+
+      return thread === null
+        ? ctx.postToRoom(record, forwarded)
+        : threads.postReply(thread, forwarded);
     });
 
     const result: ForwardResult = { forwards };

@@ -63,7 +63,12 @@ export class HttpError extends Error {
 /** The `ApiError` variants that carry only a message. */
 type PlainErrorTag = Exclude<
   ApiError["_tag"],
-  "Validation" | "RateLimited" | "FizzyReplyFailed" | "SudoRequired" | "TwoFactorRequired"
+  | "StickerLimitReached"
+  | "Validation"
+  | "RateLimited"
+  | "FizzyReplyFailed"
+  | "SudoRequired"
+  | "TwoFactorRequired"
 >;
 
 /**
@@ -83,6 +88,15 @@ export const forbidden = (message = "You aren't allowed to do that") =>
 
 /** 409 `Conflict`. */
 export const conflict = (message: string) => plainError(409, "Conflict", message);
+
+const STICKER_LIMIT: ApiError["_tag"] = "StickerLimitReached";
+
+export const stickerLimitReached = (capacity: number) =>
+  new HttpError(422, {
+    _tag: STICKER_LIMIT,
+    message: `Sticker capacity reached (limit: ${capacity} stickers)`,
+    capacity,
+  });
 
 const VALIDATION: ApiError["_tag"] = "Validation";
 

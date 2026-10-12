@@ -169,6 +169,7 @@ export interface ForwardOrigin {
 
 /** Everything needed to make a message, before it has an id. */
 export interface MessageDraft {
+  readonly sticker?: MessageDTO["sticker"];
   readonly creatorId: number;
   readonly markdown: string;
   readonly clientMessageId: string;
@@ -251,6 +252,8 @@ export function buildMessage(
     announcementCopy: false,
     announcementSource: null,
   };
+
+  if (draft.sticker !== undefined) message.sticker = draft.sticker;
 
   return draft.attachments === undefined
     ? message

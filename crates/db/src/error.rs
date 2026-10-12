@@ -2,6 +2,8 @@ use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Sticker capacity reached (limit: 60 stickers)")]
+    StickerLimitReached,
     #[error("This voice room is full")]
     HuddleRoomFull,
     #[error("Invalid slash command options")]

@@ -180,3 +180,4 @@ pub mod workspace_category;
 pub use workspace_category::WorkspaceCategory;
 
 pub mod soundboard;
+pub mod sticker;

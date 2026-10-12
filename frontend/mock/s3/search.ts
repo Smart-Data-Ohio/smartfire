@@ -300,6 +300,14 @@ export function plainText(html: string): string {
     .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/gu, (entity) => ENTITIES.get(entity) ?? entity);
 }
 
+function messageText(message: MessageDTO): string {
+  const text = plainText(message.bodyHtml);
+
+  return text.trim() === "" && message.sticker !== undefined
+    ? `Sticker: ${message.sticker.name}`
+    : text;
+}
+
 /** The instant a day in the viewer's zone starts, `offset` days after `date`. */
 function midnight(date: string, offset = 0): string {
   const [year = 0, month = 0, day = 0] = date.split("-").map(Number);
@@ -499,7 +507,7 @@ export function createSearch(ctx: S2Context): Search {
 
       if (stems.length === 0) return true;
 
-      const words = new Set(textTokens(plainText(message.bodyHtml)).map(stem));
+      const words = new Set(textTokens(messageText(message)).map(stem));
 
       return stems.every((word) => words.has(word));
     };
@@ -702,7 +710,7 @@ export function createSearch(ctx: S2Context): Search {
 
     const ranks = new Map(
       matched.map((message) => {
-        const words = textTokens(plainText(message.bodyHtml)).map(stem);
+        const words = textTokens(messageText(message)).map(stem);
         const count = words.filter((word) => terms.includes(word)).length;
 
         return [message.id, count];
