@@ -583,11 +583,11 @@ export function Composer({
 
   /**
    * Sends a sticker at once as its own message, as Discord does, answering the reply the chip
-   * holds; the draft's text and files stay for the next send.
+   * holds. The draft keeps its text, files and reply chip for the next send: the sticker doesn't
+   * take the reply (`trackSentReply`), so the text sent after it answers the same message.
    */
   const sendSticker = (sticker: Sticker) => {
-    const snapshot = currentReply();
-    const target = snapshot.target;
+    const target = currentReply().target;
     const clientMessageId = uuid7(Date.now());
 
     void toPresent();
@@ -604,7 +604,6 @@ export function Composer({
         animated: sticker.animated,
       },
     });
-    trackSentReply(key, snapshot, [clientMessageId]);
     focusInput();
   };
 
@@ -1372,7 +1371,7 @@ export function Composer({
               <>
                 <ComposerEmojiButton onInsert={insertAtCaret} />
                 {/* A new thread's first reply can't carry a sticker: it starts the thread. */}
-                {creating ? null : <ComposerStickerButton onPick={sendSticker} />}
+                {creating ? null : <ComposerStickerButton key={roomId} onPick={sendSticker} />}
                 <IconButton
                   icon="at"
                   label="Mention someone"

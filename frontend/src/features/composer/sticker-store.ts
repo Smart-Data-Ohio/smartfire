@@ -1,7 +1,8 @@
 /**
  * The sticker catalog on the client: fetched on first use and kept for the session, as the
- * soundboard's is. An administrator's write replaces it, and opening the picker refetches it in
- * the background so another administrator's changes show.
+ * soundboard's is. An administrator's write replaces it; opening the picker refetches it in the
+ * background, and a room switch or the window's focus refetches a stale one, so another
+ * administrator's changes show.
  */
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
@@ -20,6 +21,12 @@ export const stickerStore = createStore<{ readonly load: StickerLoad }>()(() => 
 }));
 
 let loading: Promise<StickerCatalog> | null = null;
+
+/** When the held catalog arrived (`Date.now()`), for `refreshStaleStickerCatalog`. */
+let fetchedAt = 0;
+
+/** How old a held catalog may get before a room switch or the window's focus refetches it. */
+export const STICKER_CATALOG_MAX_AGE_MS = 60_000;
 
 /** The catalog: the one held, or one fetch shared by every caller (`fresh` skips the held one). */
 export function loadStickerCatalog(fresh = false): Promise<StickerCatalog> {
@@ -41,6 +48,7 @@ export function loadStickerCatalog(fresh = false): Promise<StickerCatalog> {
     (catalog) => {
       if (loading === request) {
         loading = null;
+        fetchedAt = Date.now();
         stickerStore.setState({ load: { status: "ready", catalog } });
       }
 
@@ -65,15 +73,29 @@ export function loadStickerCatalog(fresh = false): Promise<StickerCatalog> {
   return request;
 }
 
+/**
+ * The catalog, refetched when none is held or the held one is older than
+ * `STICKER_CATALOG_MAX_AGE_MS`; a fresher one is kept, so calling it often costs nothing.
+ */
+export function refreshStaleStickerCatalog(): Promise<StickerCatalog> {
+  const held = stickerStore.getState().load;
+
+  return loadStickerCatalog(
+    held.status === "ready" && Date.now() - fetchedAt >= STICKER_CATALOG_MAX_AGE_MS,
+  );
+}
+
 /** The server's catalog after an administrator's write: every picker shows it at once. */
 export function replaceStickerCatalog(catalog: StickerCatalog): void {
   loading = null;
+  fetchedAt = Date.now();
   stickerStore.setState({ load: { status: "ready", catalog } });
 }
 
 /** Forgets the catalog (tests, and a sign-out's fresh start). */
 export function resetStickers(): void {
   loading = null;
+  fetchedAt = 0;
   stickerStore.setState({ load: { status: "idle" } });
 }
 

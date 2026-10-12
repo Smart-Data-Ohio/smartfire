@@ -12,9 +12,16 @@ import { Composer } from "./composer.tsx";
 import { draftKey, readDraft, writeDraft } from "./draft.ts";
 import { startReply } from "./reply-store.ts";
 import { ComposerStickerButton } from "./sticker-picker.tsx";
-import { replaceStickerCatalog, resetStickers, searchStickers } from "./sticker-store.ts";
+import {
+  replaceStickerCatalog,
+  resetStickers,
+  STICKER_CATALOG_MAX_AGE_MS,
+  searchStickers,
+} from "./sticker-store.ts";
 
 const ROOM = 12;
+
+const OTHER_ROOM = 13;
 
 function sticker(id: number, name: string, tags: string, animated = false): Sticker {
   return {
@@ -143,6 +150,37 @@ describe("the sticker button", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("leaves an input method's keys to it: Enter, arrows and Escape while composing", async () => {
+    vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
+
+    const pick = vi.fn();
+
+    render(<ComposerStickerButton onPick={pick} />);
+
+    const picker = await openPicker();
+    const search = within(picker).getByRole("combobox", { name: "Search stickers" });
+
+    const activeName = () =>
+      document
+        .getElementById(search.getAttribute("aria-activedescendant") ?? "")
+        ?.getAttribute("aria-label");
+
+    fireEvent.keyDown(search, { key: "ArrowRight", isComposing: true });
+    expect(activeName()).toBe("Dance");
+
+    fireEvent.keyDown(search, { key: "Enter", isComposing: true });
+    expect(pick).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(search, { key: "Escape", isComposing: true });
+    expect(screen.getByRole("dialog", { name: "Send a sticker" })).toBe(picker);
+
+    // The composition over, the same keys work.
+    fireEvent.keyDown(search, { key: "ArrowRight" });
+    expect(activeName()).toBe("Hello");
+    fireEvent.keyDown(search, { key: "Enter" });
+    expect(pick).toHaveBeenCalledExactlyOnceWith(HELLO);
+  });
+
   it("says when nothing matches", async () => {
     vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
     render(<ComposerStickerButton onPick={() => {}} />);
@@ -170,6 +208,61 @@ describe("the sticker button", () => {
     fireEvent.pointerMove(within(picker).getByRole("option", { name: "Dance" }));
     document.documentElement.dataset.motion = "reduce";
     await waitFor(() => expect(dance()?.getAttribute("src")).toBe("/stickers/2?still=1"));
+  });
+
+  it("refetches a stale catalog on a room switch, so a workspace's first sticker shows", async () => {
+    const catalog = vi
+      .spyOn(composerActions, "stickerCatalog")
+      .mockResolvedValueOnce({ stickers: [], capacity: 60 })
+      .mockResolvedValue({ stickers: [WAVE], capacity: 60 });
+
+    let now = Date.parse("2026-10-12T12:00:00Z");
+
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    store.setState({
+      timelines: {
+        [ROOM]: { ...emptyTimeline, status: "ready", after: null },
+        [OTHER_ROOM]: { ...emptyTimeline, status: "ready", after: null },
+      },
+    });
+
+    const { rerender } = render(<Composer roomId={ROOM} />);
+
+    await waitFor(() => expect(catalog).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("button", { name: "Sticker" })).toBeNull();
+
+    // A fresh catalog is kept: switching back and forth asks nothing.
+    rerender(<Composer roomId={OTHER_ROOM} />);
+    rerender(<Composer roomId={ROOM} />);
+    expect(catalog).toHaveBeenCalledOnce();
+
+    now += STICKER_CATALOG_MAX_AGE_MS;
+    rerender(<Composer roomId={OTHER_ROOM} />);
+
+    expect(await screen.findByRole("button", { name: "Sticker" })).toBeTruthy();
+    expect(catalog).toHaveBeenCalledTimes(2);
+  });
+
+  it("refetches a stale catalog when the window regains focus", async () => {
+    const catalog = vi
+      .spyOn(composerActions, "stickerCatalog")
+      .mockResolvedValueOnce({ stickers: [], capacity: 60 })
+      .mockResolvedValue({ stickers: [WAVE], capacity: 60 });
+
+    let now = Date.parse("2026-10-12T12:00:00Z");
+
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    render(<ComposerStickerButton onPick={() => {}} />);
+    await waitFor(() => expect(catalog).toHaveBeenCalledOnce());
+
+    fireEvent.focus(window);
+    expect(catalog).toHaveBeenCalledOnce();
+
+    now += STICKER_CATALOG_MAX_AGE_MS;
+    fireEvent.focus(window);
+
+    expect(await screen.findByRole("button", { name: "Sticker" })).toBeTruthy();
+    expect(catalog).toHaveBeenCalledTimes(2);
   });
 
   it("refetches the catalog on opening, so another administrator's changes show", async () => {
@@ -222,6 +315,32 @@ describe("sending a sticker from the composer", () => {
     expect(screen.getByRole("textbox", { name: /Message/ })).toHaveProperty(
       "value",
       "still typing",
+    );
+  });
+
+  it("leaves the reply on the draft, so the text sent next answers it too", async () => {
+    vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
+
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    const quoted = messageFixture(9, ROOM);
+
+    store.setState({ messages: { [quoted.id]: quoted } });
+    startReply(quoted);
+    render(<Composer roomId={ROOM} />);
+
+    fireEvent.click(within(await openPicker()).getByRole("option", { name: "Dance" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    const input = screen.getByRole("textbox", { name: /Message/ });
+
+    fireEvent.change(input, { target: { value: "and this" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send).toHaveBeenLastCalledWith(
+      ROOM,
+      "and this",
+      expect.objectContaining({ reply: { messageId: 9, notify: true } }),
     );
   });
 

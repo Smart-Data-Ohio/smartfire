@@ -6,7 +6,12 @@ import { useActionSheet } from "../../ui/action-sheet.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Popover } from "../../ui/popover.tsx";
-import { loadStickerCatalog, searchStickers, useHeldStickers } from "./sticker-store.ts";
+import {
+  loadStickerCatalog,
+  refreshStaleStickerCatalog,
+  searchStickers,
+  useHeldStickers,
+} from "./sticker-store.ts";
 import "./sticker-picker.css";
 
 /** Stickers per grid row, in a popover and in a phone's sheet alike. */
@@ -53,6 +58,14 @@ export function StickerPicker({ onPick }: StickerPickerProps) {
   });
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    // An input method's keys (Enter confirms a candidate, arrows choose one, Escape cancels it)
+    // are its own: none picks, moves or closes, so the popover mustn't see them either.
+    if (event.nativeEvent.isComposing) {
+      event.stopPropagation();
+
+      return;
+    }
+
     if (event.key === "Enter") {
       event.preventDefault();
 
@@ -161,12 +174,23 @@ export function StickerPicker({ onPick }: StickerPickerProps) {
 /**
  * The composer's sticker button: shown once the workspace has stickers, it opens the picker above
  * the toolbar (a bottom sheet on a touch phone), and a pick is sent at once as its own message.
+ *
+ * It mounts again for each conversation (the composer keys it by room), and the window regaining
+ * focus counts too: either refetches a catalog older than `STICKER_CATALOG_MAX_AGE_MS`, so a
+ * workspace's first sticker shows without the picker it unlocks.
  */
 export function ComposerStickerButton({ onPick }: StickerPickerProps) {
   const count = useHeldStickers().length;
 
   useEffect(() => {
-    void loadStickerCatalog().catch(() => undefined);
+    const refresh = () => {
+      void refreshStaleStickerCatalog().catch(() => undefined);
+    };
+
+    refresh();
+    window.addEventListener("focus", refresh);
+
+    return () => window.removeEventListener("focus", refresh);
   }, []);
 
   if (count === 0) {
