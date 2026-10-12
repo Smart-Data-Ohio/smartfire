@@ -11,10 +11,12 @@ import {
   suggestIcons,
   suggestUsers,
 } from "../api/composer-endpoints.ts";
+import { stickerCatalog } from "../api/sticker-endpoints.ts";
 import type { CommandValues } from "../gen/CommandValues.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { SlashCommand } from "../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../gen/SlashCommandResult.ts";
+import type { StickerCatalog } from "../gen/StickerCatalog.ts";
 import type { UserSuggestion } from "../gen/UserSuggestion.ts";
 import { runAction } from "./runtime.ts";
 
@@ -41,6 +43,9 @@ export const composerActions = {
     threadId: number | null,
     options: CommandValues | null = null,
   ): Promise<SlashCommandResult> => runAction(runSlashCommand(roomId, text, threadId, options)),
+
+  /** The workspace's stickers, by name, and how many it may hold. */
+  stickerCatalog: (): Promise<StickerCatalog> => runAction(stickerCatalog()),
 
   /** The server's sanitized rendering of a draft. */
   preview: async (roomId: number, markdown: string): Promise<string> =>

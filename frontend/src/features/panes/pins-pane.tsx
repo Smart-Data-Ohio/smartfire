@@ -11,7 +11,7 @@ import { SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { BodyHtml } from "../messages/body-html.tsx";
-import { messageFiles } from "../messages/message-files.ts";
+import { messageFiles, stickerText } from "../messages/message-files.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -94,6 +94,9 @@ function PinCard({ entry, now, onJump, onUnpin }: PinCardProps) {
           {file.filename}
         </p>
       ))}
+      {message.sticker === undefined ? null : (
+        <p className="pin-card-file">{stickerText(message.sticker.name)}</p>
+      )}
       <footer className="pin-card-footer">
         Pinned by {pinner?.name ?? UNKNOWN_NAME} · {timeAgo(pin.pinnedAt, now)}
       </footer>

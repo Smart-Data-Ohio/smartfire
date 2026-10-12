@@ -53,6 +53,14 @@ export const ADMIN_SECTIONS = [
     group: "content",
   },
   {
+    key: "stickers",
+    label: "Stickers",
+    icon: "sticker",
+    path: "/admin/stickers",
+    admin: true,
+    group: "content",
+  },
+  {
     key: "bots",
     label: "Chat bots",
     icon: "bot",
@@ -210,6 +218,44 @@ export function soundFieldError(field: string, message: string | undefined): str
 /** A sound's default volume (0–1) as the list shows it. */
 export function soundVolumeLabel(volume: number): string {
   return `${Math.round(Math.max(0, Math.min(1, volume)) * 100)}%`;
+}
+
+/** How full the sticker catalog is: its stickers of the workspace's limit. */
+export function stickerCapacity(count: number, capacity: number): string {
+  const full = count >= capacity ? " The catalog is full: delete a sticker to add another." : "";
+
+  return `Stickers: ${count} of ${capacity} used.${full}`;
+}
+
+/** What the catalog's limit refusal (`StickerLimitReached`) says. */
+export function stickerLimitMessage(capacity: number): string {
+  return `The workspace already has ${capacity} stickers, its limit. Delete one to add another.`;
+}
+
+/** What each sticker field is called in front of the server's message about it. */
+const STICKER_FIELD_LABELS = new Map([
+  ["name", "Name"],
+  ["description", "Description"],
+  ["tags", "Tags"],
+  ["image", "Image"],
+]);
+
+/** A sticker field's error as it shows: the server's `must be…` after the field's name. */
+export function stickerFieldError(field: string, message: string | undefined): string | undefined {
+  if (message === undefined) {
+    return undefined;
+  }
+
+  if (
+    field === "image" &&
+    (message === "isn't an uploaded file" || message === "must be attached")
+  ) {
+    return "Choose an image to upload.";
+  }
+
+  const label = STICKER_FIELD_LABELS.get(field);
+
+  return label === undefined ? message : `${label} ${message}.`;
 }
 
 /** No filters set. */
