@@ -49,49 +49,50 @@ import type { Threads } from "./threads.ts";
 import type { Uploads } from "./uploads.ts";
 import { endOfLocalDay, leadingTime, longDate, longTime, trailingTime } from "./when.ts";
 
-/** `OptionValue` checks (`CommandOption::validate_value`), in the server's words. */
-function valueProblem(option: CommandOption, value: Json): string | null {
+/**
+ * `CommandOption::validate_value`: what's wrong with one value. Like Rust, a limit and choice
+ * membership are both checked, so a value can have two problems.
+ */
+function valueProblems(option: CommandOption, value: Json): readonly string[] {
   switch (option.type) {
     case "string": {
-      if (!isString(value)) return "has the wrong type";
+      if (!isString(value)) return ["has the wrong type"];
 
       const length = [...value].length;
 
-      if (
-        (option.min_length !== undefined && length < option.min_length) ||
+      return [
+        ...((option.min_length !== undefined && length < option.min_length) ||
         (option.max_length !== undefined && length > option.max_length)
-      ) {
-        return "length is out of range";
-      }
-
-      return option.choices !== undefined && !option.choices.some((c) => c.value === value)
-        ? "must be one of the choices"
-        : null;
+          ? ["length is out of range"]
+          : []),
+        ...(option.choices !== undefined && !option.choices.some((c) => c.value === value)
+          ? ["must be one of the choices"]
+          : []),
+      ];
     }
 
     case "integer":
     case "number": {
       if (!isNumber(value) || (option.type === "integer" && !Number.isInteger(value))) {
-        return "has the wrong type";
+        return ["has the wrong type"];
       }
 
-      if (
-        (option.min !== undefined && value < option.min) ||
+      return [
+        ...((option.min !== undefined && value < option.min) ||
         (option.max !== undefined && value > option.max)
-      ) {
-        return "is out of range";
-      }
-
-      return option.choices !== undefined && !option.choices.some((c) => c.value === value)
-        ? "must be one of the choices"
-        : null;
+          ? ["is out of range"]
+          : []),
+        ...(option.choices !== undefined && !option.choices.some((c) => c.value === value)
+          ? ["must be one of the choices"]
+          : []),
+      ];
     }
 
     case "boolean":
-      return isBoolean(value) ? null : "has the wrong type";
+      return isBoolean(value) ? [] : ["has the wrong type"];
     case "user":
     case "room":
-      return isNumber(value) && Number.isInteger(value) && value > 0 ? null : "has the wrong type";
+      return isNumber(value) && Number.isInteger(value) && value > 0 ? [] : ["has the wrong type"];
   }
 }
 
@@ -148,9 +149,7 @@ export function optionProblems(
       continue;
     }
 
-    const problem = valueProblem(option, value);
-
-    if (problem !== null) add(option.name, problem);
+    for (const problem of valueProblems(option, value)) add(option.name, problem);
   }
 
   return problems;

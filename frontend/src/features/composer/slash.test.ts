@@ -7,12 +7,14 @@ import {
   commandText,
   commandUsage,
   commandValues,
+  dropExtra,
   editOption,
   entryErrors,
   entryText,
   entryValid,
   filterCommands,
   hideOption,
+  lineArguments,
   looksLikeCommand,
   optionKind,
   parseEntry,
@@ -332,5 +334,160 @@ describe("typed command entry", () => {
     expect(service && optionKind(service)).toBe("Text, 2 to 5 characters");
     expect(environment && optionKind(environment)).toBe("Choice");
     expect(replicas && optionKind(replicas)).toBe("Whole number, 1 to 10");
+  });
+});
+
+describe("typed lines, as the server reads their values", () => {
+  it("keeps arguments that fit no option, and refuses to send them", () => {
+    const misspelt = parseEntry(
+      DEPLOY,
+      DEPLOY_SCHEMA,
+      "run service:api environment:staging replica:10 again",
+    );
+
+    expect(misspelt.extra).toEqual(["replica:10", "again"]);
+    expect(entryErrors(misspelt).general).toEqual(["Not options here: replica:10, again."]);
+    expect(entryValid(misspelt)).toBe(false);
+    // Back to text they're still there, to fix by hand.
+    expect(entryText(misspelt)).toBe(
+      "/deploy run service:api environment:staging replica:10 again",
+    );
+
+    const removed = dropExtra(misspelt);
+
+    expect(entryErrors(removed).general).toEqual([]);
+    expect(entryValid(removed)).toBe(true);
+    expect(entryErrors(parseEntry(DEPLOY, DEPLOY_SCHEMA, "run region:eu")).general).toEqual([
+      "Not an option here: region:eu.",
+    ]);
+  });
+
+  it("reads a person and a channel back from their ids, named when they're known", () => {
+    const picked = editOption(
+      editOption(startEntry(DEPLOY, TYPES_SCHEMA), "who", {
+        text: "Maya Okafor",
+        picked: { label: "Maya Okafor", value: 12 },
+      }),
+      "where",
+      { text: "#ops", picked: { label: "#ops", value: 3 } },
+    );
+
+    const line = entryText(picked);
+
+    expect(line).toBe("/deploy who:12 where:3");
+
+    const names = (type: "user" | "room", id: number) =>
+      type === "user" && id === 12 ? "Maya Okafor" : type === "room" && id === 3 ? "ops" : null;
+
+    const parsed = parseEntry(DEPLOY, TYPES_SCHEMA, lineArguments(line), names);
+
+    expect(entryValid(parsed)).toBe(true);
+    expect(commandValues(parsed)).toEqual({ subcommand: null, values: { who: 12, where: 3 } });
+    expect(parsed.inputs.who).toEqual({
+      text: "Maya Okafor",
+      picked: { label: "Maya Okafor", value: 12 },
+    });
+    expect(parsed.inputs.where?.text).toBe("#ops");
+
+    // An id this tab hasn't loaded still goes: the server looks it up.
+    const unnamed = parseEntry(DEPLOY, TYPES_SCHEMA, "who:40");
+
+    expect(commandValues(unnamed).values).toEqual({ who: 40 });
+    expect(unnamed.inputs.who?.text).toBe("40");
+    expect(entryErrors(parseEntry(DEPLOY, TYPES_SCHEMA, "who:0 where:ops")).options).toEqual({
+      who: "Pick a person.",
+      where: "Pick a channel.",
+    });
+  });
+
+  it("matches a choice by its exact value before any case-folded match", () => {
+    const schema: CommandSchema = {
+      options: [
+        {
+          name: "env",
+          description: "Env",
+          type: "string",
+          required: true,
+          choices: [
+            { name: "Loud", value: "PROD" },
+            { name: "Quiet", value: "prod" },
+          ],
+        },
+      ],
+    };
+
+    const quiet = editOption(startEntry(DEPLOY, schema), "env", {
+      text: "Quiet",
+      picked: { label: "Quiet", value: "prod" },
+    });
+
+    const line = entryText(quiet);
+
+    expect(line).toBe("/deploy env:prod");
+    expect(commandValues(parseEntry(DEPLOY, schema, lineArguments(line))).values).toEqual({
+      env: "prod",
+    });
+    expect(commandValues(parseEntry(DEPLOY, schema, "env:PROD")).values).toEqual({ env: "PROD" });
+    expect(commandValues(parseEntry(DEPLOY, schema, "env:quiet")).values).toEqual({
+      env: "prod",
+    });
+  });
+
+  it("checks a choice's limits as well as its membership, as slash_schema does", () => {
+    const schema: CommandSchema = {
+      options: [
+        {
+          name: "code",
+          description: "Code",
+          type: "string",
+          required: false,
+          min_length: 2,
+          max_length: 3,
+          choices: [
+            { name: "Short", value: "ab" },
+            { name: "Long", value: "toolong" },
+          ],
+        },
+        {
+          name: "size",
+          description: "Size",
+          type: "integer",
+          required: false,
+          max: 10,
+          choices: [
+            { name: "Small", value: 5 },
+            { name: "Huge", value: 50 },
+          ],
+        },
+      ],
+    };
+
+    const entry = startEntry(DEPLOY, schema);
+
+    const errorFor = (name: string, label: string, value: string | number) =>
+      entryErrors(editOption(entry, name, { text: label, picked: { label, value } })).options[name];
+
+    expect(errorFor("code", "Short", "ab")).toBeUndefined();
+    expect(errorFor("code", "Long", "toolong")).toBe("Must be 2 to 3 characters.");
+    expect(errorFor("size", "Small", 5)).toBeUndefined();
+    expect(errorFor("size", "Huge", 50)).toBe("Must be at most 10.");
+    // Outside both: both, as the server reports both.
+    expect(entryErrors(editOption(entry, "code", { text: "x", picked: null })).options.code).toBe(
+      "Must be 2 to 3 characters. Pick one of the choices.",
+    );
+  });
+
+  it("puts a subcommand error on the alert when the form has no subcommand field", () => {
+    const entry = startEntry(DEPLOY, TYPES_SCHEMA);
+
+    expect(
+      serverProblems(entry, {
+        "options.subcommand": ["is required only for commands with subcommands"],
+      }),
+    ).toEqual({
+      options: {},
+      subcommand: null,
+      general: ["subcommand: Is required only for commands with subcommands."],
+    });
   });
 });

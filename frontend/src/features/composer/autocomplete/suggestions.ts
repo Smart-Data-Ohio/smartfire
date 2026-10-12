@@ -84,6 +84,11 @@ export function loadCommands(
   return loading;
 }
 
+/** Forgets one conversation's command list, so the next lookup reads the server's current one. */
+export function forgetCommands(roomId: number, threadId: number | null): void {
+  commandCache.delete(`${roomId}:${threadId ?? ""}`);
+}
+
 /** Forgets cached command lists (tests, and a mock reset). */
 export function clearCommandCache(): void {
   commandCache.clear();

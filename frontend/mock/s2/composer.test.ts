@@ -11,7 +11,7 @@ import type { SlashCommandResult } from "../../src/gen/SlashCommandResult.ts";
 import type { UserSuggestionList } from "../../src/gen/UserSuggestionList.ts";
 import { field, type Json } from "../json.ts";
 import { SEED_IDS } from "../server.ts";
-import { SHRUG } from "./composer.ts";
+import { optionProblems, SHRUG } from "./composer.ts";
 import { readProfileImage } from "./profile-image.ts";
 import { collect, expectStatus, get, harness, NOW, send } from "./testing.ts";
 
@@ -390,6 +390,29 @@ describe("typed slash command options", () => {
       "options.values.environment": ["is required"],
       "options.values.replicas": ["has the wrong type"],
     });
+  });
+
+  it("reports a choice's limit and its membership both, as Rust does", () => {
+    const problems = optionProblems(
+      {
+        options: [
+          {
+            name: "code",
+            description: "Code",
+            type: "string",
+            required: true,
+            max_length: 3,
+            choices: [{ name: "Long", value: "toolong" }],
+          },
+        ],
+      },
+      { subcommand: null, values: { code: "much too long" } },
+    );
+
+    expect(problems.get("options.values.code")).toEqual([
+      "length is out of range",
+      "must be one of the choices",
+    ]);
   });
 
   it("needs a known subcommand, and none without options", async () => {

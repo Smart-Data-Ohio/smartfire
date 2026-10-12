@@ -9,6 +9,7 @@ import { actions } from "../../sync/runtime.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
 import { clearCommandCache } from "./autocomplete/suggestions.ts";
 import { Composer } from "./composer.tsx";
+import { draftKey, readDraft } from "./draft.ts";
 
 const ROOM = 12;
 
@@ -287,5 +288,208 @@ describe("a typed command's fields", () => {
     fireEvent.change(textbox(), { target: { value: "/remind in 5m stretch" } });
     fireEvent.keyDown(textbox(), { key: "Enter" });
     await waitFor(() => expect(run).toHaveBeenCalledWith(ROOM, "/remind in 5m stretch", null));
+  });
+});
+
+/** Fills /deploy's required fields from `openDeploy`: service `api`, environment Production. */
+async function fillDeploy(): Promise<void> {
+  fireEvent.change(field("service"), { target: { value: "api" } });
+  fireEvent.keyDown(field("service"), { key: "Tab" });
+  await waitFor(() => expect(document.activeElement).toBe(field("environment")));
+  fireEvent.keyDown(field("environment"), { key: "ArrowDown" });
+  fireEvent.keyDown(field("environment"), { key: "Enter" });
+}
+
+/** A promise settled from outside, to hold a lookup in flight. */
+function deferred<T>() {
+  let settle: (value: T) => void = () => undefined;
+
+  const promise = new Promise<T>((resolve) => {
+    settle = resolve;
+  });
+
+  return { promise, settle };
+}
+
+describe("a typed command's fields across time", () => {
+  it("keeps the fields as the conversation's draft, and opens them again without the focus", async () => {
+    await openDeploy();
+    await fillDeploy();
+    fireEvent.click(screen.getByRole("button", { name: "Add replicas" }));
+    fireEvent.change(field("replicas"), { target: { value: "3" } });
+
+    const key = draftKey(ROOM, null);
+
+    await waitFor(() =>
+      expect(readDraft(key)).toBe("/deploy run service:api environment:production replicas:3"),
+    );
+
+    // Away and back (or a reload): the same fields, with what they held.
+    cleanup();
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+
+    await waitFor(() => expect(field("service")).toHaveProperty("value", "api"));
+    expect(field("environment")).toHaveProperty("value", "Production");
+    expect(field("replicas")).toHaveProperty("value", "3");
+    expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+
+    // Escape: the draft is text again.
+    fireEvent.keyDown(field("service"), { key: "Escape" });
+    await waitFor(() =>
+      expect(textbox()).toHaveProperty(
+        "value",
+        "/deploy run service:api environment:production replicas:3 ",
+      ),
+    );
+    cleanup();
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    expect(textbox()).toHaveProperty(
+      "value",
+      "/deploy run service:api environment:production replicas:3 ",
+    );
+  });
+
+  it("keeps a thread's fields apart from the room's", async () => {
+    render(<Composer roomId={ROOM} threadId={88} placeholder="Message" />);
+    fireEvent.change(textbox(), { target: { value: "/deploy run service:web" } });
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+    await waitFor(() => expect(field("service")).toHaveProperty("value", "web"));
+    await waitFor(() => expect(readDraft(draftKey(ROOM, 88))).toBe("/deploy run service:web"));
+    expect(readDraft(draftKey(ROOM, null))).toBe("");
+
+    cleanup();
+    render(<Composer roomId={ROOM} threadId={88} placeholder="Message" />);
+    await waitFor(() => expect(field("service")).toHaveProperty("value", "web"));
+  });
+
+  it("doesn't cover newer text with fields from a lookup that was still loading", async () => {
+    const lookup = deferred<readonly SlashCommand[]>();
+
+    vi.spyOn(composerActions, "slashCommands").mockReturnValue(lookup.promise);
+
+    const run = vi.spyOn(composerActions, "runSlashCommand");
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    fireEvent.change(textbox(), { target: { value: "/deploy run" } });
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+    fireEvent.change(textbox(), { target: { value: "Something else entirely" } });
+
+    await act(async () => {
+      lookup.settle([REMIND, DEPLOY]);
+      await lookup.promise;
+    });
+
+    expect(screen.queryByRole("group", { name: "Options for /deploy" })).toBeNull();
+    expect(textbox()).toHaveProperty("value", "Something else entirely");
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("doesn't put refused fields back over newer text either", async () => {
+    const lookup = deferred<readonly SlashCommand[]>();
+
+    vi.spyOn(composerActions, "slashCommands").mockReturnValue(lookup.promise);
+    vi.spyOn(composerActions, "runSlashCommand").mockRejectedValue(
+      new ActionError("Validation", "Invalid slash command options", {
+        "options.values.service": ["length is out of range"],
+      }),
+    );
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    fireEvent.change(textbox(), {
+      target: { value: "/deploy run service:api environment:staging" },
+    });
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+    fireEvent.change(textbox(), { target: { value: "Something else entirely" } });
+
+    await act(async () => {
+      lookup.settle([REMIND, DEPLOY]);
+      await lookup.promise;
+    });
+
+    await waitFor(() => expect(toastSnapshot().at(-1)?.title).toBe("That command didn't run"));
+    expect(screen.queryByRole("group", { name: "Options for /deploy" })).toBeNull();
+    expect(textbox()).toHaveProperty("value", "Something else entirely");
+  });
+
+  it("refuses a typed line's misspelt option until it's removed", async () => {
+    const run = vi
+      .spyOn(composerActions, "runSlashCommand")
+      .mockResolvedValue({ status: "ephemeral", message: "Sent to Ember" });
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    fireEvent.change(textbox(), {
+      target: { value: "/deploy run service:api environment:staging replica:10" },
+    });
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+
+    const alert = await screen.findByRole("alert");
+
+    expect(alert.textContent).toContain("Not an option here: replica:10.");
+    expect(run).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Send message" })).toHaveProperty("disabled", true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove replica:10" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() =>
+      expect(run).toHaveBeenCalledWith(ROOM, "/deploy run service:api environment:staging", null, {
+        subcommand: "run",
+        values: { service: "api", environment: "staging" },
+      }),
+    );
+  });
+
+  it("reads a changed schema again after a refusal, and moves the fields onto it", async () => {
+    const regional: SlashCommand = {
+      ...DEPLOY,
+      optionSchema: {
+        subcommands: [
+          {
+            name: "run",
+            description: "Start a deploy",
+            options: [
+              {
+                name: "service",
+                description: "The service to deploy",
+                type: "string",
+                required: true,
+              },
+              {
+                name: "region",
+                description: "Where it runs",
+                type: "string",
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const lists = vi
+      .spyOn(composerActions, "slashCommands")
+      .mockResolvedValueOnce([REMIND, DEPLOY])
+      .mockResolvedValue([REMIND, regional]);
+
+    vi.spyOn(composerActions, "runSlashCommand").mockRejectedValue(
+      new ActionError("Validation", "Invalid slash command options", {
+        "options.values.region": ["is required"],
+        "options.values.environment": ["is unknown"],
+      }),
+    );
+
+    await openDeploy();
+    await fillDeploy();
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    // The new schema's field takes its error; the old option is left over, on the alert.
+    await waitFor(() => expect(field("region").getAttribute("aria-invalid")).toBe("true"));
+    expect(screen.getByText("Is required.")).toBeTruthy();
+    expect(field("service")).toHaveProperty("value", "api");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Not an option here: environment:production.",
+    );
+    expect(lists).toHaveBeenCalledTimes(2);
   });
 });

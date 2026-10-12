@@ -63,7 +63,7 @@ async function deployFlow(page: Page, phone: boolean): Promise<void> {
   await expect(page.getByRole("listbox", { name: "Choices" })).toBeVisible();
 
   if (phone) {
-    await expectTouchTargets(page, ".autocomplete");
+    await expectTouchTargets(page, ".command-options .autocomplete");
     await expectNoHorizontalOverflow(page);
   }
 

@@ -17,6 +17,7 @@ import type { Autocomplete } from "./autocomplete/use-autocomplete.ts";
 import {
   type CommandEntry,
   chooseSubcommand,
+  dropExtra,
   editOption,
   entryErrors,
   entryOptions,
@@ -65,6 +66,8 @@ interface CommandOptionsProps {
   readonly onCancel: () => void;
   /** Bumped after a refused send: focus goes to the first field showing an error. */
   readonly focusRequest: number;
+  /** Whether the fields take the focus as they open (not when a saved draft reopens them). */
+  readonly autoFocus?: boolean;
 }
 
 /** What a pick list's row puts in its field. */
@@ -109,6 +112,7 @@ export function CommandOptions({
   onSubmit,
   onCancel,
   focusRequest,
+  autoFocus = true,
 }: CommandOptionsProps) {
   const baseId = useId();
   const listboxId = `${baseId}-menu`;
@@ -125,6 +129,8 @@ export function CommandOptions({
   ];
 
   const optional = options.filter((option) => !entry.shown.includes(option.name));
+  // What no field owns: a typed line's leftovers (the client's), then the server's.
+  const general = [...errors.general, ...entry.server.general];
   const [focused, setFocused] = useState<string | null>(null);
 
   const textOf = (field: Field): string =>
@@ -143,7 +149,10 @@ export function CommandOptions({
     return (wrong ?? empty ?? fields.at(-1))?.key ?? null;
   };
 
-  const [pendingFocus, setPendingFocus] = useState<string | null>(startKey);
+  const [pendingFocus, setPendingFocus] = useState<string | null>(() =>
+    autoFocus ? startKey() : null,
+  );
+
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [people, setPeople] = useState<PeopleResults | null>(null);
@@ -612,10 +621,24 @@ export function CommandOptions({
           ))}
         </div>
       )}
-      {entry.server.general.length === 0 ? null : (
-        <p className="command-options-alert" role="alert">
-          {entry.server.general.join(" ")}
-        </p>
+      {general.length === 0 ? null : (
+        <div className="command-options-alert" role="alert">
+          <p className="command-options-alert-text">{general.join(" ")}</p>
+          {entry.extra.length === 0 ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Remove ${entry.extra.join(", ")}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onChange(dropExtra);
+                setPendingFocus(startKey());
+              }}
+            >
+              Remove
+            </Button>
+          )}
+        </div>
       )}
     </fieldset>
   );

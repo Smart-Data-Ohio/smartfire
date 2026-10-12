@@ -106,11 +106,16 @@ export interface OptionProblems {
   readonly general: readonly string[];
 }
 
-/** What the client finds wrong with an entry, by field. */
+/** What the client finds wrong with an entry, by field, and what no field owns. */
 export interface EntryErrors {
   readonly options: Readonly<Record<string, string>>;
   readonly subcommand: string | null;
+  /** A typed line's arguments that fit no field. */
+  readonly general: readonly string[];
 }
+
+/** A person's or channel's name for an id a typed line holds, when it's known here. */
+export type NameOf = (type: "user" | "room", id: number) => string | null;
 
 /** A schema-backed command being filled in, Discord-style: a subcommand, then option fields. */
 export interface CommandEntry {
@@ -129,6 +134,11 @@ export interface CommandEntry {
   readonly attempted: boolean;
   /** The server's 422, each until the field it names is edited. */
   readonly server: OptionProblems;
+  /**
+   * What a typed line held that fits no field (`replica:10` for `replicas`, a stray word): never
+   * dropped silently, it blocks the send until it's removed or the line is fixed as text.
+   */
+  readonly extra: readonly string[];
 }
 
 export const NO_PROBLEMS: OptionProblems = { options: {}, subcommand: null, general: [] };
@@ -166,6 +176,7 @@ export function startEntry(command: SlashCommand, schema: CommandSchema): Comman
     touched: [],
     attempted: false,
     server: NO_PROBLEMS,
+    extra: [],
   };
 
   const options = entryOptions(entry);
@@ -253,6 +264,11 @@ export function touchField(entry: CommandEntry, name: string): CommandEntry {
   return entry.touched.includes(name) ? entry : { ...entry, touched: [...entry.touched, name] };
 }
 
+/** Drops what a typed line held that fits no field. */
+export function dropExtra(entry: CommandEntry): CommandEntry {
+  return entry.extra.length === 0 ? entry : { ...entry, extra: [] };
+}
+
 /** The server refused it: its errors go on the fields, and every client error shows too. */
 export function withProblems(entry: CommandEntry, problems: OptionProblems): CommandEntry {
   return { ...entry, attempted: true, server: problems };
@@ -294,26 +310,54 @@ const BOOLEAN_WORDS = new Map([
   ["no", false],
 ]);
 
-/** A typed word that names a choice (by label or value, any case), as if it were picked. */
-function typedChoice(option: CommandOption, text: string): PickedValue | null {
-  const needle = text.trim().toLowerCase();
+const ID = /^\d+$/;
 
-  if (needle === "") {
+/** A person's or channel's id as typed (`12`): the server takes any positive id and looks it up. */
+function typedId(text: string): PickedValue | null {
+  const id = Number(text);
+
+  return ID.test(text) && Number.isSafeInteger(id) && id > 0 ? { label: text, value: id } : null;
+}
+
+/**
+ * A typed word as if it were picked: a choice by its value exactly as written (the server compares
+ * values exactly, so `prod` never becomes `PROD`), else by its label as written, else either in
+ * any case; yes/no words; a person's or channel's id.
+ */
+function typedChoice(option: CommandOption, text: string): PickedValue | null {
+  const typed = text.trim();
+
+  if (typed === "") {
     return null;
   }
 
-  if (option.type === "boolean") {
-    const value = BOOLEAN_WORDS.get(needle);
+  switch (option.type) {
+    case "boolean": {
+      const value = BOOLEAN_WORDS.get(typed.toLowerCase());
 
-    return BOOLEAN_CHOICES.find((choice) => choice.value === value) ?? null;
+      return BOOLEAN_CHOICES.find((choice) => choice.value === value) ?? null;
+    }
+
+    case "user":
+    case "room":
+      return typedId(typed);
+    case "string":
+    case "integer":
+    case "number": {
+      const choices = optionChoices(option) ?? [];
+      const needle = typed.toLowerCase();
+
+      return (
+        choices.find((choice) => String(choice.value) === typed) ??
+        choices.find((choice) => choice.label === typed) ??
+        choices.find(
+          (choice) =>
+            String(choice.value).toLowerCase() === needle || choice.label.toLowerCase() === needle,
+        ) ??
+        null
+      );
+    }
   }
-
-  return (
-    optionChoices(option)?.find(
-      (choice) =>
-        choice.label.toLowerCase() === needle || String(choice.value).toLowerCase() === needle,
-    ) ?? null
-  );
 }
 
 function between(min: number | undefined, max: number | undefined, unit: string): string {
@@ -335,7 +379,25 @@ function refused(error: string): OptionRead {
   return { value: null, error };
 }
 
-/** A field's value as the server takes it, or why it isn't one (mirrors slash_schema's checks). */
+/** A typed number, or why it isn't one (a choice field asks for a pick instead). */
+function typedNumber(text: string, whole: boolean, choices: boolean): OptionRead {
+  if (!(whole ? INTEGER : DECIMAL).test(text)) {
+    return refused(
+      choices ? "Pick one of the choices." : whole ? "Enter a whole number." : "Enter a number.",
+    );
+  }
+
+  const value = Number(text);
+
+  return (whole ? Number.isSafeInteger(value) : Number.isFinite(value))
+    ? { value, error: null }
+    : refused("Enter a smaller number.");
+}
+
+/**
+ * A field's value as the server takes it, or why it isn't one. Mirrors slash_schema's
+ * `validate_value`: limits and choice membership are both checked, a choice by exact value.
+ */
 function readOption(option: CommandOption, input: OptionInput | undefined): OptionRead {
   const text = input?.text.trim() ?? "";
   const picked = input?.picked ?? typedChoice(option, text);
@@ -346,52 +408,56 @@ function readOption(option: CommandOption, input: OptionInput | undefined): Opti
 
   switch (option.type) {
     case "string": {
-      if (option.choices !== undefined) {
-        return picked !== null && option.choices.some((choice) => choice.value === picked.value)
-          ? { value: picked.value, error: null }
-          : refused("Pick one of the choices.");
-      }
-
-      const length = [...text].length;
+      const value = picked === null ? text : String(picked.value);
+      const length = [...value].length;
+      const problems: string[] = [];
 
       if (
         (option.min_length !== undefined && length < option.min_length) ||
         (option.max_length !== undefined && length > option.max_length)
       ) {
-        return refused(between(option.min_length, option.max_length, " characters"));
+        problems.push(between(option.min_length, option.max_length, " characters"));
       }
 
-      return { value: text, error: null };
+      if (
+        option.choices !== undefined &&
+        !option.choices.some((choice) => choice.value === value)
+      ) {
+        problems.push("Pick one of the choices.");
+      }
+
+      return problems.length === 0 ? { value, error: null } : refused(problems.join(" "));
     }
 
     case "integer":
     case "number": {
-      if (option.choices !== undefined) {
-        return picked !== null && option.choices.some((choice) => choice.value === picked.value)
-          ? { value: picked.value, error: null }
-          : refused("Pick one of the choices.");
+      const read =
+        picked === null
+          ? typedNumber(text, option.type === "integer", option.choices !== undefined)
+          : { value: picked.value, error: null };
+
+      if (read.error !== null) {
+        return read;
       }
 
-      const whole = option.type === "integer";
-
-      if (!(whole ? INTEGER : DECIMAL).test(text)) {
-        return refused(whole ? "Enter a whole number." : "Enter a number.");
-      }
-
-      const value = Number(text);
-
-      if (whole ? !Number.isSafeInteger(value) : !Number.isFinite(value)) {
-        return refused("Enter a smaller number.");
-      }
+      const value = Number(read.value);
+      const problems: string[] = [];
 
       if (
         (option.min !== undefined && value < option.min) ||
         (option.max !== undefined && value > option.max)
       ) {
-        return refused(between(option.min, option.max, ""));
+        problems.push(between(option.min, option.max, ""));
       }
 
-      return { value, error: null };
+      if (
+        option.choices !== undefined &&
+        !option.choices.some((choice) => choice.value === value)
+      ) {
+        problems.push("Pick one of the choices.");
+      }
+
+      return problems.length === 0 ? { value, error: null } : refused(problems.join(" "));
     }
 
     case "boolean":
@@ -405,12 +471,24 @@ function readOption(option: CommandOption, input: OptionInput | undefined): Opti
   }
 }
 
-/** Everything the client finds wrong: a missing subcommand, and each option's problem. */
+/** What a typed line held that fits no field, as a sentence (the server calls these unknown). */
+function extraProblems(entry: CommandEntry): readonly string[] {
+  if (entry.extra.length === 0) {
+    return [];
+  }
+
+  const list = entry.extra.join(", ");
+
+  return [entry.extra.length === 1 ? `Not an option here: ${list}.` : `Not options here: ${list}.`];
+}
+
+/** Everything the client finds wrong: a missing subcommand, each option's problem, extras. */
 export function entryErrors(entry: CommandEntry): EntryErrors {
   const options = entryOptions(entry);
+  const general = extraProblems(entry);
 
   if (options === null) {
-    return { options: {}, subcommand: "Pick a subcommand." };
+    return { options: {}, subcommand: "Pick a subcommand.", general };
   }
 
   const errors: Record<string, string> = {};
@@ -423,14 +501,18 @@ export function entryErrors(entry: CommandEntry): EntryErrors {
     }
   }
 
-  return { options: errors, subcommand: null };
+  return { options: errors, subcommand: null, general };
 }
 
 /** Whether Send may go: a subcommand where one is needed, and every option valid. */
 export function entryValid(entry: CommandEntry): boolean {
   const errors = entryErrors(entry);
 
-  return errors.subcommand === null && Object.keys(errors.options).length === 0;
+  return (
+    errors.subcommand === null &&
+    Object.keys(errors.options).length === 0 &&
+    errors.general.length === 0
+  );
 }
 
 /** The error a field shows now: the server's, else the client's once the field was left. */
@@ -493,15 +575,25 @@ export function commandText(entry: CommandEntry): string {
   });
 }
 
-/** The entry as plain text (Escape): picks as their values, the rest as typed. */
+/**
+ * The entry as plain text (Escape, and the saved draft): picks as their values (a person or a
+ * channel by id), the rest as typed, then whatever fit no field.
+ */
 export function entryText(entry: CommandEntry): string {
-  return lineFor(entry, (option) => {
+  const line = lineFor(entry, (option) => {
     const input = entry.inputs[option.name];
 
     return input?.picked === null || input?.picked === undefined
       ? (input?.text.trim() ?? "")
       : String(input.picked.value);
   });
+
+  return [line, ...entry.extra].join(" ");
+}
+
+/** A command line's arguments: `/deploy run service:api` -> `run service:api`. */
+export function lineArguments(line: string): string {
+  return line.trim().replace(/^\/\S+\s*/, "");
 }
 
 const ARGUMENT = /([a-z0-9_-]+):("(?:[^"\\]|\\.)*"|\S*)|(\S+)/gi;
@@ -519,23 +611,47 @@ function unquote(value: string): string {
   }
 }
 
+/** A pick's label for the field: a person's or channel's name when it's known here. */
+function pickLabel(option: CommandOption, picked: PickedValue, nameOf: NameOf): string {
+  if (option.type !== "user" && option.type !== "room") {
+    return picked.label;
+  }
+
+  const name = nameOf(option.type, Number(picked.value));
+
+  if (name === null) {
+    return picked.label;
+  }
+
+  return option.type === "room" ? `#${name}` : name;
+}
+
 /**
  * An entry from a typed line's arguments (`run service:api replicas:2`), the form `entryText`
- * writes: a leading bare word picks the subcommand, `name:value` fills that option.
+ * writes: a leading bare word picks the subcommand, `name:value` fills that option (a choice by
+ * its value, a person or channel by id). Anything else is kept in `extra`, never dropped.
  */
 export function parseEntry(
   command: SlashCommand,
   schema: CommandSchema,
   args: string,
+  nameOf: NameOf = () => null,
 ): CommandEntry {
   let entry = startEntry(command, schema);
+  const extra: string[] = [];
 
   for (const match of args.matchAll(ARGUMENT)) {
-    const [, name, raw, bare] = match;
+    const [whole, name, raw, bare] = match;
 
     if (bare !== undefined) {
-      if (subcommandsOf(schema) !== null && entry.subcommand === null) {
+      if (
+        subcommandsOf(schema) !== null &&
+        entry.subcommand === null &&
+        entry.subcommandText === ""
+      ) {
         entry = typeSubcommand(entry, bare);
+      } else {
+        extra.push(bare);
       }
 
       continue;
@@ -545,18 +661,21 @@ export function parseEntry(
     const option = (entryOptions(entry) ?? []).find((candidate) => candidate.name === key);
 
     if (option === undefined) {
+      extra.push(whole);
+
       continue;
     }
 
     const text = unquote(raw ?? "");
+    const picked = typedChoice(option, text);
 
     entry = editOption(showOption(entry, key), key, {
-      text,
-      picked: typedChoice(option, text),
+      text: picked === null ? text : pickLabel(option, picked, nameOf),
+      picked: picked === null ? null : { ...picked, label: pickLabel(option, picked, nameOf) },
     });
   }
 
-  return entry;
+  return extra.length === 0 ? entry : { ...entry, extra };
 }
 
 const VALUE_FIELD = /^options\.values\.([a-z0-9_-]+)$/;
@@ -570,14 +689,17 @@ function sentence(messages: readonly string[]): string {
 
 /**
  * A 422 `Validation` envelope's fields mapped onto the form: `options.values.<name>` onto that
- * option, `options.subcommand` onto the subcommand, anything else (an unreadable schema's
- * `options`) to the form as a whole. An option the form doesn't show goes there too, named.
+ * option, `options.subcommand` onto the subcommand field, anything else (an unreadable schema's
+ * `options`) to the form as a whole. A field the form doesn't show (an option not added, a
+ * subcommand error for a schema without them, after the schema changed) goes there too, named,
+ * so no error is ever invisible.
  */
 export function serverProblems(
   entry: CommandEntry,
   fields: Readonly<Record<string, readonly string[]>>,
 ): OptionProblems {
   const shown = new Set(entry.shown);
+  const subcommandField = subcommandsOf(entry.schema) !== null;
   const options: Record<string, string> = {};
   const general: string[] = [];
   let subcommand: string | null = null;
@@ -587,8 +709,10 @@ export function serverProblems(
 
     if (name !== undefined && shown.has(name)) {
       options[name] = sentence(messages);
-    } else if (field === "options.subcommand") {
+    } else if (field === "options.subcommand" && subcommandField) {
       subcommand = sentence(messages);
+    } else if (field === "options.subcommand") {
+      general.push(`subcommand: ${sentence(messages)}`);
     } else {
       general.push(name === undefined ? sentence(messages) : `${name}: ${sentence(messages)}`);
     }

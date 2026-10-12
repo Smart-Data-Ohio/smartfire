@@ -132,9 +132,19 @@
   }
 
   .command-options-alert {
-    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    min-width: 0;
     color: var(--danger-text);
     font-size: var(--text-meta);
+  }
+
+  .command-options-alert-text {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
   }
 
   /* Phones: a field per row, as wide as the card. */

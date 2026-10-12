@@ -33,11 +33,17 @@ import {
   useAttachments,
 } from "./attachments/use-attachments.ts";
 import { AutocompleteList } from "./autocomplete/autocomplete-list.tsx";
-import { loadCommands, selectable } from "./autocomplete/suggestions.ts";
+import { forgetCommands, loadCommands, selectable } from "./autocomplete/suggestions.ts";
 import { applyCompletion, findTrigger } from "./autocomplete/trigger.ts";
 import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
 import { CommandOptions } from "./command-options.tsx";
-import { draftKey as conversationDraftKey, readDraft, writeDraft } from "./draft.ts";
+import {
+  draftKey as conversationDraftKey,
+  readDraft,
+  readFieldsDraft,
+  writeDraft,
+  writeFieldsDraft,
+} from "./draft.ts";
 import { attachDriveFile, type DrivePick } from "./drive-picker.ts";
 import { DrivePendingChips, DrivePicker } from "./drive-picker.tsx";
 import { ComposerEmojiButton } from "./emoji-button.tsx";
@@ -67,7 +73,9 @@ import {
   entryOptions,
   entryText,
   entryValid,
+  lineArguments,
   looksLikeCommand,
+  type NameOf,
   parseEntry,
   routeSlash,
   serverProblems,
@@ -196,6 +204,15 @@ function linkOnPaste(edit: TextEdit, pasted: string): TextEdit | null {
   return { value, start: caret, end: caret };
 }
 
+/** A person's or channel's name from what this tab has loaded, for ids in a typed line. */
+const loadedName: NameOf = (type, id) => {
+  const state = store.getState();
+
+  return type === "user"
+    ? (state.users[id]?.name ?? null)
+    : (state.sidebar.rows[id]?.displayName ?? null);
+};
+
 /**
  * The Markdown composer: a card that grows with its text (to half the viewport), sends on Enter
  * (Shift+Enter for a new line), formats with the toolbar or the chords, completes `@` `:` `/`
@@ -212,7 +229,9 @@ export function Composer({
 }: ComposerProps) {
   const key = draftKey ?? conversationDraftKey(roomId, threadId);
   const creating = onSubmit !== undefined;
-  const [text, setText] = useState(() => readDraft(key));
+  /** A typed command's fields saved as this conversation's draft: their line, to open again. */
+  const [savedFields] = useState(() => (readFieldsDraft(key) ? readDraft(key) : null));
+  const [text, setText] = useState(() => (savedFields === null ? readDraft(key) : ""));
   const textRef = useRef(text);
   /** Bumps on every edit and clear: a later outcome only puts back a draft nobody has touched. */
   const draftEdits = useRef(0);
@@ -235,6 +254,10 @@ export function Composer({
   /** A typed command being filled in: its fields stand in for the text until it runs or Esc. */
   const [entry, setEntry] = useState<CommandEntry | null>(null);
   const [entryFocus, setEntryFocus] = useState(0);
+  /** Fields opened by the author take the focus; fields put back from a saved draft don't. */
+  const [entryAutoFocus, setEntryAutoFocus] = useState(true);
+  /** Whether the entry's draft is written: not until a saved one has been opened again. */
+  const entrySaving = useRef(savedFields === null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -313,6 +336,65 @@ export function Composer({
     hadEntry.current = entry !== null;
   }, [entry]);
 
+  // A typed command's fields are the conversation's draft as long as they're open: their line,
+  // marked as fields, so leaving the conversation or reloading opens them again.
+  useEffect(() => {
+    if (!entrySaving.current) {
+      return;
+    }
+
+    writeDraft(key, entry === null ? textRef.current : entryText(entry));
+    writeFieldsDraft(key, entry !== null);
+  }, [key, entry]);
+
+  // A saved typed command opens as fields once the command list says it still has its options
+  // (as text otherwise), unless the author has started something else meanwhile.
+  useEffect(() => {
+    if (savedFields === null || entrySaving.current) {
+      return;
+    }
+
+    let live = true;
+
+    loadCommands(roomId, threadId)
+      .catch(() => [])
+      .then((commands) => {
+        if (!live) {
+          return;
+        }
+
+        entrySaving.current = true;
+
+        if (draftEdits.current !== 0) {
+          return;
+        }
+
+        const route = routeSlash(savedFields, commands);
+
+        if (route.kind === "command" && route.command.optionSchema !== null) {
+          setEntryAutoFocus(false);
+          setEntry(
+            parseEntry(
+              route.command,
+              route.command.optionSchema,
+              lineArguments(route.text),
+              loadedName,
+            ),
+          );
+        } else {
+          // Its command is gone or takes plain text now: the line comes back as text.
+          textRef.current = savedFields;
+          setText(savedFields);
+          writeDraft(key, savedFields);
+          writeFieldsDraft(key, false);
+        }
+      });
+
+    return () => {
+      live = false;
+    };
+  }, [savedFields, key, roomId, threadId]);
+
   // The usage line for a command being typed: `/remind <when> <text>`.
   const typedCommand = creating ? null : slashName(text);
 
@@ -350,9 +432,11 @@ export function Composer({
 
   const update = (next: string) => {
     draftEdits.current += 1;
+    entrySaving.current = true;
     textRef.current = next;
     setText(next);
     writeDraft(key, next);
+    writeFieldsDraft(key, false);
     actions.noteActivity();
     actions.setTyping(roomId, next.trim() !== "", threadId);
   };
@@ -392,9 +476,11 @@ export function Composer({
 
   const clear = () => {
     draftEdits.current += 1;
+    entrySaving.current = true;
     textRef.current = "";
     setText("");
     writeDraft(key, "");
+    writeFieldsDraft(key, false);
     setPreviewOpen(false);
     focusInput();
   };
@@ -546,14 +632,56 @@ export function Composer({
   };
 
   /**
+   * The server refused a typed command's values: the command list may be stale (an agent changed
+   * the schema), so it's read again, and fields open on an older schema move to the new one with
+   * what they held, the refusal's errors mapped onto them (on the alert where no field owns one).
+   */
+  const refreshSchema = async (
+    name: string,
+    fields: Readonly<Record<string, readonly string[]>>,
+  ) => {
+    forgetCommands(roomId, threadId);
+
+    const commands = await loadCommands(roomId, threadId).catch(() => null);
+    const fresh = commands?.find((command) => command.name === name);
+    const schema = fresh?.optionSchema ?? null;
+
+    if (fresh === undefined || schema === null) {
+      return;
+    }
+
+    setEntry((open) => {
+      if (
+        open === null ||
+        open.command.name !== name ||
+        JSON.stringify(open.schema) === JSON.stringify(schema)
+      ) {
+        return open;
+      }
+
+      const moved = parseEntry(fresh, schema, lineArguments(entryText(open)), loadedName);
+
+      return withProblems(moved, serverProblems(moved, fields));
+    });
+  };
+
+  /**
    * Runs a typed command with its values. Fields with problems keep it open (showing them all);
    * a refusal puts the fields back, with a 422's errors on the fields they name, unless the author
-   * has started something newer meanwhile.
+   * has started something newer meanwhile (or `owned` is false: the composer already holds
+   * something newer than the line this came from), when a toast says what happened instead.
    */
-  const runEntry = async (current: CommandEntry, snapshot: ReplySnapshot = currentReply()) => {
+  const runEntry = async (
+    current: CommandEntry,
+    snapshot: ReplySnapshot = currentReply(),
+    owned = true,
+  ) => {
     if (!entryValid(current)) {
-      setEntry({ ...current, attempted: true });
-      setEntryFocus((request) => request + 1);
+      if (owned) {
+        setEntryAutoFocus(true);
+        setEntry({ ...current, attempted: true });
+        setEntryFocus((request) => request + 1);
+      }
 
       return;
     }
@@ -565,12 +693,20 @@ export function Composer({
     const edits = draftEdits.current;
     const line = commandText(current);
 
-    const putBack = (restored: CommandEntry) => {
-      if (draftEdits.current === edits) {
-        setEntry((newer) => newer ?? restored);
-        setEntryFocus((request) => request + 1);
+    const putBack = (restored: CommandEntry): boolean => {
+      if (!owned || draftEdits.current !== edits) {
+        return false;
       }
+
+      setEntryAutoFocus(true);
+      setEntry((newer) => newer ?? restored);
+      setEntryFocus((request) => request + 1);
+
+      return true;
     };
+
+    const failed = (description: string) =>
+      toast({ title: "That command didn't run", description, tone: "danger" });
 
     try {
       const result = await composerActions.runSlashCommand(
@@ -590,20 +726,21 @@ export function Composer({
           problems.general.length > 0 ||
           Object.keys(problems.options).length > 0;
 
-        putBack(
-          withProblems(current, named ? problems : { ...problems, general: [error.message] }),
-        );
+        if (
+          !putBack(
+            withProblems(current, named ? problems : { ...problems, general: [error.message] }),
+          )
+        ) {
+          failed(error.message);
+        }
+
+        void refreshSchema(current.command.name, error.fields);
 
         return;
       }
 
       putBack(current);
-      toast({
-        title: "That command didn't run",
-        description:
-          error instanceof Error ? error.message : "Check your connection and try again.",
-        tone: "danger",
-      });
+      failed(error instanceof Error ? error.message : "Check your connection and try again.");
     } finally {
       setRunning(false);
     }
@@ -617,6 +754,7 @@ export function Composer({
       return;
     }
 
+    setEntryAutoFocus(true);
     setEntry(next);
   };
 
@@ -650,16 +788,21 @@ export function Composer({
     }
 
     // A typed command written out by hand (`/deploy run service:api`) runs when it's complete;
-    // otherwise its fields open with what was written in them.
+    // otherwise its fields open with what was written in them. Text typed while the command list
+    // loaded is newer: the fields don't cover it, and a refusal doesn't put them back over it.
     if (route.command.optionSchema !== null) {
-      const args = route.text.replace(/^\/\S+\s*/, "");
-      const parsed = parseEntry(route.command, route.command.optionSchema, args);
+      const parsed = parseEntry(
+        route.command,
+        route.command.optionSchema,
+        lineArguments(route.text),
+        loadedName,
+      );
 
-      clearSubmitted(submitted);
+      const cleared = clearSubmitted(submitted);
 
       if (entryValid(parsed)) {
-        await runEntry(parsed, snapshot);
-      } else {
+        await runEntry(parsed, snapshot, cleared);
+      } else if (cleared) {
         openEntry(parsed, snapshot);
       }
 
@@ -1173,6 +1316,7 @@ export function Composer({
               roomId={roomId}
               entry={entry}
               focusRequest={entryFocus}
+              autoFocus={entryAutoFocus}
               onChange={(edit) => setEntry((current) => (current === null ? null : edit(current)))}
               onSubmit={() => send()}
               onCancel={cancelEntry}
