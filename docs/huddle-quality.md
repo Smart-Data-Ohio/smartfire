@@ -96,8 +96,13 @@ picker, using the existing picker components and classes. It is stored at
 stays 720p30. Native `getCapabilities()` bounds hide unsupported higher modes;
 a saved unavailable mode remains disabled so switching devices does not silently
 overwrite the preference. Unknown capabilities offer only the 720p30 fallback.
-Capability maxima do not guarantee every size/fps combination; ideal capture
-constraints permit a camera's closest supported mode. Check the sampled output.
+Capability bounds identify candidates, not supported combinations. After capture,
+Smartfire reads width, height and frame rate together from `getSettings()`. If a
+higher profile was not delivered, it stops that capture and requests the matching
+lower profile, then updates encoding, persistence and the selector to that result.
+Pre-join previews use the same validation. The 720p30 baseline remains an advisory
+fallback for weaker devices; stats report the actual output. See the
+[capability specification](https://w3c.github.io/mediacapture-main/#capabilities).
 
 | Profile | Requested capture | Top encoding ceiling | Lower simulcast layers |
 | --- | --- | --- | --- |
@@ -116,7 +121,9 @@ new encoding options; the normal successful path does not reconnect participants
 and microphone mute is preserved. Codec rejection uses the bounded recovery below.
 A muted camera stays muted with its native capture stopped. The original capture
 stays owned until replacement succeeds. Capture denial retains the original;
-unpublish or publication failure restores its prior publication. This avoids the
+unpublish or publication failure restores its prior publication. Compatibility
+sender captures are stopped before SDK unpublish clears its codec map, including
+the rollback path. This avoids the
 pinned SDK restart path, which can leak newly acquired media when applying
 constraints fails before adoption. A camera that
 cannot be recovered is removed and the caller receives the existing notice.
@@ -132,12 +139,15 @@ encoder. Codec rejection during publication retains a native capture clone, wait
 one bounded SDK full reconnect, and retries VP8 without reopening the screen
 picker. The reconnect clears a pending server AddTrack reservation and partial
 local senders; the protocol has no per-track cancellation. Other media briefly
-reconnects through the SDK and preserves its mute state. Permissions and connection failures are
+reconnects through the SDK and preserves its mute state. Temporary screen
+unpublish events during successful recovery do not end the stage stream. A native
+capture that ends, or a screen that cannot be republished, still ends the stage. Permissions and connection failures are
 reported normally rather than mistaken for codec failures.
 
 Advanced codecs set `backupCodec: { codec: "vp8" }` and
 `backupCodecPolicy: SIMULCAST`. Dynacast permits a requested VP8 sender alongside
-the primary when a viewer cannot decode it. This receive-compatibility backup is
+the primary when a viewer cannot decode it. Camera backup encoding uses the same
+selected ceiling as the primary, including 6 Mbps/60 fps for 1080p60. This receive-compatibility backup is
 separate from the local encoder retry. H.264 remains an interoperable browser
 codec but is not selected by this preference: VP8 is the requested backup.
 
@@ -196,7 +206,7 @@ The meter next to Mute is driven by the SDK's `createAudioAnalyser` over the loc
 
 The huddle header carries a three-level indicator driven by `ConnectionQualityChanged` for the local participant. The server reports four states; the header compresses them to three: excellent reads good, good reads fair, poor and lost read poor, and unknown — before the first update — reads fair, so an unmeasured connection never claims to be healthy.
 
-Opening Connection details in Call settings shows the last-sampled round-trip time, packet loss, jitter, received and sent bitrate, and whether transport is direct or relayed (TURN). Each local and subscribed remote video track adds resolution, FPS, codec MIME type, RID, scalability mode, bitrate, cumulative freeze count, and quality limitation reason. Local simulcast encodings appear separately. Samples come from `getStats` every 2 seconds, only while the panel is open and the page visible. No values are logged or sent to the server; nothing in this slice writes to the server.
+Opening Connection details in Call settings shows the last-sampled round-trip time, packet loss, jitter, received and sent bitrate, and whether transport is direct or relayed (TURN). Each local and subscribed remote video track adds resolution, FPS, codec MIME type, RID, scalability mode, bitrate, cumulative freeze count, and quality limitation reason. Local simulcast encodings appear separately. Samples come from `getStats` every 2 seconds, only while Connection details and its parent Call settings panel are open and the page is visible. Closing settings cancels sampling and invalidates pending results; reopening details starts fresh baselines. No values are logged or sent to the server; nothing in this slice writes to the server.
 
 **Measured exactly.** The publisher report is read from the local microphone track's sender, the subscriber report from a subscribed remote track's receiver (audio preferred; any subscribed track shares the same subscriber peer connection):
 

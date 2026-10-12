@@ -21,17 +21,22 @@ it("samples actual primary and backup video senders only when connection details
   const transport = liveKitTransport(lk);
   await transport.connect("wss://livekit.test", "token", false, 48_000);
   const room = rooms[0];
+
   if (room === undefined) throw new Error("SDK room missing");
   const track = videoTrack();
   const publication = videoPublication(track);
   room.localParticipant.trackPublications.set(publication.trackSid, publication);
   room.localParticipant.videoTrackPublications.set(publication.trackSid, publication);
+
   const primary = vi.spyOn(track, "getRTCStatsReport").mockImplementation(async () => {
     const sample = report(10_000);
     sample.set("codec", { type: "codec", mimeType: "video/AV1" });
+
     return sample;
   });
+
   const backup = videoSender(track.mediaStreamTrack.clone());
+
   const sampleBackup = vi.spyOn(backup, "getStats").mockImplementation(
     async () =>
       new Map([
@@ -51,11 +56,13 @@ it("samples actual primary and backup video senders only when connection details
         ["backup-codec", { type: "codec", mimeType: "video/VP8" }],
       ]),
   );
+
   track.simulcastCodecs.set("vp8", {
     codec: "vp8",
     mediaStreamTrack: track.mediaStreamTrack.clone(),
     sender: backup,
   });
+
   try {
     transport.snapshot();
     expect(primary).not.toHaveBeenCalled();

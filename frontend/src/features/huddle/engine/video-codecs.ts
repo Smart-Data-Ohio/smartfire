@@ -29,7 +29,9 @@ export function supportsVideoSimulcast(
   ) {
     return false;
   }
+
   const [major = 0, minor = 0, patch = 0] = serverVersion?.split(".").map(Number) ?? [];
+
   return major > 1 || (major === 1 && (minor > 13 || (minor === 13 && patch > 6)));
 }
 
@@ -37,21 +39,28 @@ export function supportsVideoSimulcast(
 export async function selectVideoCodec(query: EncoderQuery): Promise<PreferredVideoCodec> {
   if (!query.advancedAllowed) return "vp8";
   let capabilities: RTCRtpCapabilities | null;
+
   try {
     capabilities = query.getCapabilities?.() ?? RTCRtpSender.getCapabilities("video");
   } catch {
     return "vp8";
   }
+
   const advertised = new Set(capabilities?.codecs.map((codec) => codec.mimeType.toLowerCase()));
+
   for (const codec of ["av1", "vp9"] as const) {
     try {
       const allowed = codec === "av1" ? query.supportsAV1() : query.supportsVP9();
+
       if (!allowed || !advertised.has(`video/${codec}`)) continue;
+
       const probe =
         query.encodingInfo ??
         navigator.mediaCapabilities?.encodingInfo?.bind(navigator.mediaCapabilities);
+
       if (probe !== undefined) {
         let timeout: ReturnType<typeof setTimeout> | undefined;
+
         try {
           const info = await Promise.race([
             probe({
@@ -69,6 +78,7 @@ export async function selectVideoCodec(query: EncoderQuery): Promise<PreferredVi
               timeout = setTimeout(() => resolve(null), 750);
             }),
           ]);
+
           if (info?.supported === false) continue;
         } catch {
           // WebRTC encodingInfo is absent or incomplete in some browsers; sender capabilities remain authoritative.
@@ -76,25 +86,27 @@ export async function selectVideoCodec(query: EncoderQuery): Promise<PreferredVi
           clearTimeout(timeout);
         }
       }
+
       return codec;
     } catch {
       // The SDK support predicate itself can fail on an older browser.
     }
   }
+
   return "vp8";
 }
 
 /** Retry encoder/negotiation failures, never permission denials or an ended connection. */
-export function videoCodecRejected(error: unknown): boolean {
-  return (
-    (error instanceof Error ||
-      (typeof DOMException === "function" && error instanceof DOMException)) &&
+export function parseVideoCodecError(cause: unknown): "encoder" | "other" {
+  const retry =
+    (cause instanceof Error || cause instanceof DOMException) &&
     ([
       "NotSupportedError",
       "OperationError",
       "InvalidModificationError",
       "NegotiationError",
-    ].includes(error.name) ||
-      (error.name === "PublishTrackError" && /codec|encoder|encoding/i.test(error.message)))
-  );
+    ].includes(cause.name) ||
+      (cause.name === "PublishTrackError" && /codec|encoder|encoding/i.test(cause.message)));
+
+  return retry ? "encoder" : "other";
 }

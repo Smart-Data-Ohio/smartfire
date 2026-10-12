@@ -42,6 +42,7 @@ export function installVideoMedia(): void {
       return [];
     }
   }
+
   vi.stubGlobal("MediaStream", MediaStreamStub);
   vi.stubGlobal("MediaStreamTrack", VideoMediaStub);
 }
@@ -52,8 +53,10 @@ export function videoTrack(): LiveKit.LocalVideoTrack {
     undefined,
     false,
   ]);
+
   if (!(track instanceof LiveKit.LocalVideoTrack)) throw new Error("SDK video track missing");
   track.source = LiveKit.Track.Source.Camera;
+
   return track;
 }
 
@@ -70,13 +73,16 @@ export function videoPublication(track: LiveKit.LocalTrack): LiveKit.LocalTrackP
     },
     track,
   ]);
+
   if (!(publication instanceof LiveKit.LocalTrackPublication))
     throw new Error("SDK publication missing");
+
   return publication;
 }
 
 export function offlineLiveKit() {
   const rooms: LiveKit.Room[] = [];
+
   class OfflineRoom extends LiveKit.Room {
     constructor(options?: Partial<LiveKit.RoomOptions>) {
       super(options);
@@ -85,6 +91,7 @@ export function offlineLiveKit() {
       rooms.push(this);
     }
   }
+
   return { lk: { ...LiveKit, Room: OfflineRoom }, rooms };
 }
 

@@ -30,7 +30,11 @@ import {
   streamVideoIdOf,
   userIdForIdentity,
 } from "./call-store.ts";
-import { type CameraQuality, cameraCaptureOptions } from "./engine/camera-quality.ts";
+import {
+  type CameraQuality,
+  cameraCaptureOptions,
+  verifiedCameraCapture,
+} from "./engine/camera-quality.ts";
 import {
   canShareScreen,
   type DeviceLists,
@@ -431,9 +435,14 @@ export class CallController {
   #refreshSnapshot(): void {
     const snapshot = this.#transport?.snapshot() ?? EMPTY_SNAPSHOT;
     const cameraCapabilities = this.#transport?.cameraCapabilities() ?? null;
+    const cameraQuality = this.#transport?.cameraQuality() ?? loadCameraQuality();
+
+    if (cameraQuality !== this.#state.cameraQuality) this.#set({ cameraQuality });
+
     if (JSON.stringify(cameraCapabilities) !== JSON.stringify(this.#state.cameraCapabilities)) {
       this.#set({ cameraCapabilities });
     }
+
     this.#speechActivity(snapshot);
     const key = snapshotKey(snapshot);
 
@@ -911,7 +920,7 @@ export class CallController {
     const preview = this.#previewVideoOperation;
 
     this.#stopPreviewVideo();
-    this.#set({ cameraCapabilities: null });
+    this.#set({ cameraCapabilities: null, cameraQuality: loadCameraQuality() });
 
     const deviceId = this.#state.prejoin?.selected.videoinput ?? "";
 
@@ -920,16 +929,34 @@ export class CallController {
     }
 
     try {
-      const capture = cameraCaptureOptions(loadCameraQuality());
-      const stream = await this.#env.getUserMedia({
-        video: {
-          deviceId: { exact: deviceId },
-          width: { ideal: capture.resolution?.width ?? 1280 },
-          height: { ideal: capture.resolution?.height ?? 720 },
-          frameRate: capture.frameRate ?? { ideal: 30 },
-        },
-        audio: false,
+      const captured = await verifiedCameraCapture(loadCameraQuality(), async (quality) => {
+        if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin")
+          throw new Error("preview-ended");
+        const capture = cameraCaptureOptions(quality);
+
+        const stream = await this.#env.getUserMedia({
+          video: {
+            deviceId: { exact: deviceId },
+            width: { ideal: capture.resolution?.width ?? 1280 },
+            height: { ideal: capture.resolution?.height ?? 720 },
+            frameRate: capture.frameRate ?? { ideal: 30 },
+          },
+          audio: false,
+        });
+
+        if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
+          stopStream(stream);
+          throw new Error("preview-ended");
+        }
+
+        return {
+          track: stream,
+          getSettings: () => stream.getVideoTracks()[0]?.getSettings?.() ?? {},
+          stop: () => stopStream(stream),
+        };
       });
+
+      const stream = captured.track;
 
       if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
         stopStream(stream);
@@ -938,7 +965,11 @@ export class CallController {
       }
 
       this.#setPrejoin({ preview: stream });
-      this.#set({ cameraCapabilities: stream.getVideoTracks()[0]?.getCapabilities?.() ?? null });
+      storeCameraQuality(captured.quality);
+      this.#set({
+        cameraCapabilities: stream.getVideoTracks()[0]?.getCapabilities?.() ?? null,
+        cameraQuality: captured.quality,
+      });
     } catch {
       if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
         return;
@@ -1085,6 +1116,7 @@ export class CallController {
 
     if (kind === "videoinput") this.#setBusy("camera", true);
     let switched = false;
+
     try {
       switched = await transport.switchDevice(kind, deviceId);
     } finally {
@@ -1810,19 +1842,31 @@ export class CallController {
   async setCameraQuality(quality: CameraQuality): Promise<void> {
     if (this.#state.busy.camera) return;
     storeCameraQuality(quality);
+
     if (this.#state.phase === "prejoin") {
       await this.#startPreviewVideo();
+
       return;
     }
+
     const transport = this.#transport;
+
     if (transport === null || this.#state.phase !== "connected") return;
     this.#setBusy("camera", true);
+
     try {
       await transport.setCameraQuality(quality);
-      if (transport === this.#transport) this.#refreshSnapshot();
+
+      if (transport === this.#transport) {
+        storeCameraQuality(transport.cameraQuality());
+        this.#refreshSnapshot();
+      }
     } catch {
-      if (transport === this.#transport)
+      if (transport === this.#transport) {
+        storeCameraQuality(transport.cameraQuality());
+        this.#refreshSnapshot();
         this.#showNotice("Camera quality could not be changed. Try again.");
+      }
     } finally {
       if (transport === this.#transport) this.#setBusy("camera", false);
     }

@@ -28,6 +28,8 @@ import {
   type CameraQuality,
   cameraCaptureOptions,
   cameraPublishOptions,
+  cameraQualityFromSettings,
+  verifiedCameraCapture,
 } from "./camera-quality.ts";
 import { canShareScreen, permissionDenied } from "./devices.ts";
 import { createLevelMeter, type LevelMeter } from "./meter.ts";
@@ -36,7 +38,7 @@ import {
   NoiseSuppressor,
   noiseSuppressionSupported,
 } from "./noise.ts";
-import { loadCameraQuality, loadDevicePreferences } from "./preferences.ts";
+import { loadCameraQuality, loadDevicePreferences, storeCameraQuality } from "./preferences.ts";
 import {
   applyScreenContentHint,
   DEFAULT_SHARE_QUALITY,
@@ -65,7 +67,7 @@ import {
   type TransportEvent,
   type ViewerQuality,
 } from "./transport.ts";
-import { selectVideoCodec, supportsVideoSimulcast, videoCodecRejected } from "./video-codecs.ts";
+import { parseVideoCodecError, selectVideoCodec, supportsVideoSimulcast } from "./video-codecs.ts";
 import { focusScreenPublication, VIDEO_ADAPTIVE_STREAM } from "./video-quality.ts";
 
 type LiveKit = typeof import("livekit-client");
@@ -111,26 +113,31 @@ function sinkable(context: AudioContext): context is SinkableAudioContext {
 /** A failed AddTrack cannot be cancelled on the server without leaving its old session. */
 function restartVideoPublisher(room: Room) {
   let cancel: () => void = () => undefined;
+
   const ready = new Promise<void>((resolve, reject) => {
     const finish = (error?: Error) => {
       clearTimeout(timeout);
       room.engine.off("restarted", restarted);
       room.engine.off("closing", closing);
+
       if (error === undefined) resolve();
       else reject(error);
     };
+
     const restarted = () => finish();
     const closing = () => finish(new Error("call-ended"));
     const timeout = setTimeout(() => finish(new Error("video-reconnect-timeout")), 20_000);
     cancel = closing;
     room.engine.on("restarted", restarted);
     room.engine.on("closing", closing);
+
     try {
       room.engine.reconnect();
     } catch {
       finish(new Error("video-reconnect-failed"));
     }
   });
+
   return { ready, cancel };
 }
 
@@ -199,6 +206,7 @@ class LiveKitTransport implements CallTransport {
   /** The microphone track the "ended" restore listens on (the SDK reuses it across restarts). */
   #watchedMicrophone: LocalAudioTrack | null = null;
   readonly #captured = new Map<number, LocalTrack[]>();
+  readonly #recoveringScreens = new Set<Map<string, LocalVideoTrack>>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
   #videoStatsBaseline: VideoStatsBaseline | null = null;
@@ -279,6 +287,7 @@ class LiveKitTransport implements CallTransport {
     }
 
     this.#captured.clear();
+    this.#recoveringScreens.clear();
 
     if (room !== null) {
       for (const publication of room.localParticipant.trackPublications.values()) {
@@ -373,30 +382,49 @@ class LiveKitTransport implements CallTransport {
     const room = this.#room;
     const local = room?.localParticipant;
 
-    if (local === undefined) {
+    if (room === null || local === undefined) {
       return;
     }
 
     if (enabled) {
       const existing = local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack;
+
       if (existing !== undefined) {
         await existing.unmute();
+
+        const applied = cameraQualityFromSettings(
+          this.#cameraQuality,
+          existing.mediaStreamTrack.getSettings(),
+        );
+
+        if (applied !== this.#cameraQuality) await this.setCameraQuality(applied);
+
         return;
       }
-      const track = await this.#lk.createLocalVideoTrack(
-        cameraCaptureOptions(this.#cameraQuality, loadDevicePreferences().videoinput),
-      );
+
+      const captured = await this.#captureCamera(room, this.#cameraQuality);
+      const { track } = captured;
       track.source = this.#lk.Track.Source.Camera;
+
       if (room !== this.#room) {
         track.stop();
+
         return;
       }
+
       try {
         await this.#publishVideo(
           track,
-          cameraPublishOptions(this.#cameraQuality, this.#lk.VideoPreset),
+          cameraPublishOptions(captured.quality, this.#lk.VideoPreset),
           null,
         );
+        this.#cameraQuality = captured.quality;
+        storeCameraQuality(captured.quality);
+        room.options.videoCaptureDefaults = cameraCaptureOptions(
+          captured.quality,
+          loadDevicePreferences().videoinput,
+        );
+        this.#emit({ type: "changed" });
       } catch (error) {
         track.stop();
         throw error;
@@ -418,11 +446,37 @@ class LiveKitTransport implements CallTransport {
     const track = this.#room?.localParticipant.getTrackPublication(
       this.#lk.Track.Source.Camera,
     )?.track;
+
     try {
       return track?.mediaStreamTrack.getCapabilities?.() ?? null;
     } catch {
       return null;
     }
+  }
+
+  cameraQuality(): CameraQuality {
+    return this.#cameraQuality;
+  }
+
+  #captureCamera(room: Room, quality: CameraQuality) {
+    return verifiedCameraCapture(quality, async (candidate) => {
+      if (room !== this.#room) throw new Error("call-ended");
+
+      const track = await this.#lk.createLocalVideoTrack(
+        cameraCaptureOptions(candidate, loadDevicePreferences().videoinput),
+      );
+
+      if (room !== this.#room) {
+        track.stop();
+        throw new Error("call-ended");
+      }
+
+      return {
+        track,
+        getSettings: () => track.mediaStreamTrack.getSettings(),
+        stop: () => track.stop(),
+      };
+    });
   }
 
   async setCameraQuality(quality: CameraQuality): Promise<void> {
@@ -432,58 +486,83 @@ class LiveKitTransport implements CallTransport {
     const track = publication?.videoTrack;
     const previous = this.#cameraQuality;
     const previousDefaults = room?.options.videoCaptureDefaults ?? cameraCaptureOptions(previous);
+
     if (this.#room !== null) {
       this.#room.options.videoCaptureDefaults = cameraCaptureOptions(
         quality,
         loadDevicePreferences().videoinput,
       );
     }
+
     if (room === null || local === undefined || track === undefined) {
       this.#cameraQuality = quality;
+
       return;
     }
+
     const muted = track.isMuted;
     let replacement: LocalVideoTrack | undefined;
+
     const stopPending = () => {
       track.stop();
       replacement?.stop();
     };
+
     this.#unbind.push(stopPending);
+
     try {
       // Own the replacement before releasing the working camera. SDK restartTrack can leak a
       // capture when its separate applyConstraints step rejects before adopting the native track.
-      replacement = await this.#lk.createLocalVideoTrack(
-        cameraCaptureOptions(quality, loadDevicePreferences().videoinput),
-      );
+      const captured = await this.#captureCamera(room, quality);
+      replacement = captured.track;
       replacement.source = this.#lk.Track.Source.Camera;
+
       if (
         room !== this.#room ||
         local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack !== track
       ) {
         replacement.stop();
+
         return;
       }
+
       if (muted) await replacement.mute();
+
+      // The SDK clears this map during unpublish(false) without stopping its native clones.
+      for (const backup of track.simulcastCodecs.values()) backup.mediaStreamTrack.stop();
       await local.unpublishTrack(track, false);
+
       if (room !== this.#room) {
         replacement.stop();
         track.stop();
+
         return;
       }
+
       await this.#publishVideo(
         replacement,
-        cameraPublishOptions(quality, this.#lk.VideoPreset),
+        cameraPublishOptions(captured.quality, this.#lk.VideoPreset),
         null,
       );
       track.stop();
-      this.#cameraQuality = quality;
+      this.#cameraQuality = captured.quality;
+      storeCameraQuality(captured.quality);
+      room.options.videoCaptureDefaults = cameraCaptureOptions(
+        captured.quality,
+        loadDevicePreferences().videoinput,
+      );
+      this.#emit({ type: "changed" });
     } catch (error) {
       replacement?.stop();
+
       if (room !== this.#room) {
         track.stop();
+
         return;
       }
+
       room.options.videoCaptureDefaults = previousDefaults;
+
       // unpublishTrack can remove its maps before negotiation rejects. The original capture
       // remains owned and usable; restore its publication if the maps have already changed.
       try {
@@ -498,9 +577,11 @@ class LiveKitTransport implements CallTransport {
         await local.unpublishTrack(track).catch(() => undefined);
         track.stop();
       }
+
       throw error;
     } finally {
       const index = this.#unbind.indexOf(stopPending);
+
       if (index >= 0) this.#unbind.splice(index, 1);
     }
   }
@@ -526,6 +607,7 @@ class LiveKitTransport implements CallTransport {
     }
 
     const captured = await this.captureScreen(quality);
+
     try {
       await this.publishScreen(captured, quality);
     } catch (error) {
@@ -576,6 +658,7 @@ class LiveKitTransport implements CallTransport {
     const publish = screenPublishOptions(streamQuality, this.#lk.VideoPreset);
 
     const published = [];
+
     try {
       for (const track of tracks) {
         published.push(
@@ -589,6 +672,7 @@ class LiveKitTransport implements CallTransport {
         if (publication.track !== undefined)
           await local.unpublishTrack(publication.track).catch(() => undefined);
       }
+
       throw error;
     }
 
@@ -601,24 +685,30 @@ class LiveKitTransport implements CallTransport {
     screenQuality: StreamQuality | null,
   ) {
     const room = this.#room;
+
     if (room === null) throw new Error("call-ended");
     let active: LocalVideoTrack | MediaStreamTrack = track;
     const stopPending = () => active.stop();
     this.#unbind.push(stopPending);
+
     try {
       const publishTrack = async (video: LocalVideoTrack, publishOptions: TrackPublishOptions) => {
         const publication = await room.localParticipant.publishTrack(video, publishOptions);
+
         if (room !== this.#room) {
           await room.localParticipant.unpublishTrack(video).catch(() => undefined);
           video.stop();
           throw new Error("call-ended");
         }
+
         return publication;
       };
+
       const simulcast = supportsVideoSimulcast(this.#lk.getBrowser(), room.engine.serverVersion);
       const textScreen = screenQuality !== null && screenQuality !== "1080p60";
       const encoding = screenQuality === null ? options.videoEncoding : options.screenShareEncoding;
       const settings = track.mediaStreamTrack.getSettings();
+
       const codec = await selectVideoCodec({
         width: settings.width ?? 1280,
         height: settings.height ?? 720,
@@ -629,60 +719,113 @@ class LiveKitTransport implements CallTransport {
         supportsAV1: this.#lk.supportsAV1,
         supportsVP9: this.#lk.supportsVP9,
       });
+
       if (room !== this.#room) throw new Error("call-ended");
+
       const publish: TrackPublishOptions = {
         ...options,
         videoCodec: codec,
-        backupCodec: codec === "vp8" ? false : { codec: "vp8" },
+        backupCodec:
+          codec === "vp8"
+            ? false
+            : encoding === undefined
+              ? { codec: "vp8" }
+              : { codec: "vp8", encoding: { ...encoding } },
         backupCodecPolicy: this.#lk.BackupCodecPolicy.SIMULCAST,
       };
+
       if (codec !== "vp8")
         publish.scalabilityMode = screenQuality !== null || simulcast ? "L1T3" : "L3T3_KEY";
+
       try {
         return await publishTrack(track, publish);
       } catch (error) {
-        if (codec === "vp8" || !videoCodecRejected(error) || room !== this.#room) throw error;
+        if (codec === "vp8" || parseVideoCodecError(error) !== "encoder" || room !== this.#room)
+          throw error;
         const muted = track.isMuted;
         const media = track.mediaStreamTrack.clone();
         active = media;
         track.stop();
+        const screens = new Map<string, LocalVideoTrack>();
+
+        for (const publication of room.localParticipant.videoTrackPublications.values()) {
+          if (publication.videoTrack !== undefined) {
+            for (const backup of publication.videoTrack.simulcastCodecs.values())
+              backup.mediaStreamTrack.stop();
+          }
+
+          if (
+            publication.source === this.#lk.Track.Source.ScreenShare &&
+            publication.videoTrack !== undefined
+          ) {
+            screens.set(publication.trackSid, publication.videoTrack);
+          }
+        }
+
+        this.#recoveringScreens.add(screens);
+
         try {
           // A failed publish may have sent AddTrack before creating any sender. A full SDK
           // restart clears both the server reservation and local partial senders/resolvers.
           const restart = restartVideoPublisher(room);
           this.#unbind.push(restart.cancel);
+
           try {
             await restart.ready;
           } finally {
             const index = this.#unbind.indexOf(restart.cancel);
+
             if (index >= 0) this.#unbind.splice(index, 1);
+          }
+
+          if (room !== this.#room) throw error;
+          const fallback = new this.#lk.LocalVideoTrack(media, undefined, false);
+          active = fallback;
+          fallback.source = track.source;
+
+          if (screenQuality !== null) applyScreenContentHint(media, screenQuality);
+
+          if (muted) await fallback.mute();
+
+          try {
+            return await publishTrack(fallback, {
+              ...options,
+              videoCodec: "vp8",
+              backupCodec: false,
+            });
+          } catch (fallbackError) {
+            fallback.stop();
+            throw fallbackError;
           }
         } catch (cleanupError) {
           media.stop();
           throw cleanupError;
-        }
-        if (room !== this.#room) {
-          media.stop();
-          throw error;
-        }
-        const fallback = new this.#lk.LocalVideoTrack(media, undefined, false);
-        active = fallback;
-        fallback.source = track.source;
-        if (screenQuality !== null) applyScreenContentHint(media, screenQuality);
-        if (muted) await fallback.mute();
-        try {
-          return await publishTrack(fallback, {
-            ...options,
-            videoCodec: "vp8",
-            backupCodec: false,
-          });
-        } catch (fallbackError) {
-          fallback.stop();
-          throw fallbackError;
+        } finally {
+          this.#recoveringScreens.delete(screens);
+
+          if (room === this.#room) {
+            const published = new Set(
+              [...room.localParticipant.videoTrackPublications.values()].map(
+                (publication) => publication.videoTrack?.mediaStreamTrack.id,
+              ),
+            );
+
+            for (const screen of screens.values()) {
+              if (
+                screen.mediaStreamTrack.readyState === "ended" ||
+                !published.has(screen.mediaStreamTrack.id)
+              ) {
+                screen.stop();
+                this.#emit({ type: "screen-ended" });
+                break;
+              }
+            }
+          }
         }
       }
     } finally {
       const index = this.#unbind.indexOf(stopPending);
+
       if (index >= 0) this.#unbind.splice(index, 1);
     }
   }
@@ -718,6 +861,19 @@ class LiveKitTransport implements CallTransport {
 
     if (kind === "videoinput" && room.options.videoCaptureDefaults !== undefined) {
       room.options.videoCaptureDefaults.deviceId = { ideal: deviceId };
+
+      const track = room.localParticipant.getTrackPublication(
+        this.#lk.Track.Source.Camera,
+      )?.videoTrack;
+
+      if (track !== undefined && !track.isMuted) {
+        const applied = cameraQualityFromSettings(
+          this.#cameraQuality,
+          track.mediaStreamTrack.getSettings(),
+        );
+
+        if (applied !== this.#cameraQuality) await this.setCameraQuality(applied);
+      }
     }
 
     if (kind === "audioinput") {
@@ -913,6 +1069,7 @@ class LiveKitTransport implements CallTransport {
           .then((report) => report ?? null)
           .catch(() => null),
       ];
+
       if (track instanceof this.#lk.LocalVideoTrack) {
         for (const codec of track.simulcastCodecs.values()) {
           if (codec.sender !== undefined && codec.sender !== track.sender) {
@@ -920,14 +1077,18 @@ class LiveKitTransport implements CallTransport {
           }
         }
       }
+
       const pending = Promise.all(sources).then((samples) => {
         const combined = new Map<string, StatEntry>();
         let available = false;
+
         for (const sample of samples) {
           if (sample === null) continue;
           available = true;
+
           for (const [id, entry] of sample) combined.set(id, entry);
         }
+
         return available ? combined : null;
       });
 
@@ -1211,6 +1372,11 @@ class LiveKitTransport implements CallTransport {
       changed();
 
       if (publication.source === this.#lk.Track.Source.ScreenShare) {
+        for (const screens of this.#recoveringScreens) {
+          if (screens.get(publication.trackSid)?.mediaStreamTrack.readyState === "live") return;
+        }
+
+        for (const screens of this.#recoveringScreens) screens.delete(publication.trackSid);
         this.#emit({ type: "screen-ended" });
       }
     });

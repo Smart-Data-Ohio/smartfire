@@ -8,7 +8,11 @@ import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import type { HuddlePresence } from "../../gen/HuddlePresence.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
-import type { CameraCapabilities } from "./engine/camera-quality.ts";
+import {
+  type CameraCapabilities,
+  type CameraQuality,
+  DEFAULT_CAMERA_QUALITY,
+} from "./engine/camera-quality.ts";
 import { type DeviceLists, EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
 import type { DevicePreferences } from "./engine/preferences.ts";
 import {
@@ -100,6 +104,7 @@ export interface CallState {
   /** The device each picker shows (the active one in a call, else the remembered one). */
   readonly selectedDevices: DevicePreferences;
   readonly cameraCapabilities: CameraCapabilities | null;
+  readonly cameraQuality: CameraQuality;
   readonly busy: CallBusy;
   readonly statsOpen: boolean;
   readonly stats: ConnectionStats | null;
@@ -136,6 +141,7 @@ export const initialCallState: CallState = {
   devices: EMPTY_DEVICE_LISTS,
   selectedDevices: NO_DEVICES,
   cameraCapabilities: null,
+  cameraQuality: DEFAULT_CAMERA_QUALITY,
   busy: { microphone: false, camera: false, screen: false },
   statsOpen: false,
   stats: null,

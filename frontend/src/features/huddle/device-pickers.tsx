@@ -5,15 +5,11 @@ import {
   CAMERA_QUALITIES,
   type CameraCapabilities,
   type CameraQuality,
+  cameraQualityCandidates,
   knownCameraQuality,
-  supportedCameraQualities,
 } from "./engine/camera-quality.ts";
 import { audioOutputSupported, type DeviceLists, EMPTY_LABEL } from "./engine/devices.ts";
-import {
-  type DevicePreferences,
-  loadCameraQuality,
-  loadShareQuality,
-} from "./engine/preferences.ts";
+import { type DevicePreferences, loadShareQuality } from "./engine/preferences.ts";
 import { knownStreamQuality, STREAM_QUALITIES } from "./engine/screen-quality.ts";
 import type { DeviceKind } from "./engine/transport.ts";
 
@@ -111,15 +107,20 @@ export function DevicePickers({
 }
 
 interface CameraQualityPickerProps {
+  readonly quality: CameraQuality;
   readonly capabilities: CameraCapabilities | null;
   readonly busy: boolean;
   readonly onSelect: (quality: CameraQuality) => void;
 }
 
-export function CameraQualityPicker({ capabilities, busy, onSelect }: CameraQualityPickerProps) {
+export function CameraQualityPicker({
+  quality,
+  capabilities,
+  busy,
+  onSelect,
+}: CameraQualityPickerProps) {
   const id = useId();
-  const [quality, setQuality] = useState(loadCameraQuality);
-  const supported = supportedCameraQualities(capabilities);
+  const supported = cameraQualityCandidates(capabilities);
 
   return (
     <div className="huddle-picker">
@@ -137,7 +138,6 @@ export function CameraQualityPicker({ capabilities, busy, onSelect }: CameraQual
           const next = knownCameraQuality(event.currentTarget.value);
 
           if (!busy && next !== null && supported.includes(next)) {
-            setQuality(next);
             onSelect(next);
           }
         }}

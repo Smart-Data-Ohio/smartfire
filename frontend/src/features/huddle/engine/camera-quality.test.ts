@@ -4,7 +4,7 @@ import {
   CAMERA_QUALITIES,
   cameraCaptureOptions,
   cameraPublishOptions,
-  supportedCameraQualities,
+  cameraQualityCandidates,
   cameraQualityFromSettings,
   DEFAULT_CAMERA_QUALITY,
   knownCameraQuality,
@@ -95,10 +95,10 @@ describe("camera capability bounds", () => {
   });
 
   it("keeps 720p as the fallback for unknown and smaller cameras", () => {
-    expect(supportedCameraQualities(null)).toEqual(["720p30"]);
-    expect(supportedCameraQualities({})).toEqual(["720p30"]);
+    expect(cameraQualityCandidates(null)).toEqual(["720p30"]);
+    expect(cameraQualityCandidates({})).toEqual(["720p30"]);
     expect(
-      supportedCameraQualities({
+      cameraQualityCandidates({
         width: { min: 160, max: 640 },
         height: { min: 90, max: 480 },
         frameRate: { min: 1, max: 15 },
@@ -109,26 +109,26 @@ describe("camera capability bounds", () => {
   it("allows full HD at 30 fps and adds 60 fps only with a sufficient frame-rate bound", () => {
     const size = { width: { min: 160, max: 1920 }, height: { min: 90, max: 1080 } };
 
-    expect(supportedCameraQualities({ ...size, frameRate: { min: 1, max: 30 } })).toEqual([
+    expect(cameraQualityCandidates({ ...size, frameRate: { min: 1, max: 30 } })).toEqual([
       "720p30",
       "1080p30",
     ]);
-    expect(supportedCameraQualities({ ...size, frameRate: { min: 1, max: 60 } })).toEqual(
+    expect(cameraQualityCandidates({ ...size, frameRate: { min: 1, max: 60 } })).toEqual(
       CAMERA_QUALITIES,
     );
-    expect(supportedCameraQualities(size)).toEqual(["720p30"]);
+    expect(cameraQualityCandidates(size)).toEqual(["720p30"]);
   });
 
   it("requires both size bounds even when the frame-rate bound is high", () => {
     expect(
-      supportedCameraQualities({
+      cameraQualityCandidates({
         width: { min: 160, max: 1280 },
         height: { min: 90, max: 1080 },
         frameRate: { min: 1, max: 60 },
       }),
     ).toEqual(["720p30"]);
     expect(
-      supportedCameraQualities({
+      cameraQualityCandidates({
         width: { min: 160, max: 1920 },
         height: { min: 90, max: 720 },
         frameRate: { min: 1, max: 60 },

@@ -97,6 +97,7 @@ function SettingsPanel() {
   const devices = useCall((state) => state.devices);
   const selected = useCall((state) => state.selectedDevices);
   const cameraCapabilities = useCall((state) => state.cameraCapabilities);
+  const cameraQuality = useCall((state) => state.cameraQuality);
   const cameraBusy = useCall((state) => state.busy.camera);
   const noise = useCall((state) => state.noise);
   const statsOpen = useCall((state) => state.statsOpen);
@@ -117,6 +118,7 @@ function SettingsPanel() {
         cameraQuality={
           canPublish
             ? {
+                quality: cameraQuality,
                 capabilities: cameraCapabilities,
                 busy: cameraBusy,
                 onSelect: (quality) => void callController.setCameraQuality(quality),

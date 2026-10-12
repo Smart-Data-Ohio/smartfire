@@ -165,6 +165,7 @@ test("camera quality follows available modes and keeps the caller muted when it 
   await dock(page).getByRole("button", { name: "Call settings" }).click();
 
   const quality = dock(page).getByLabel("Camera quality", { exact: true });
+
   const precedingLabel = await quality.evaluate((element) =>
     element
       .closest(".huddle-picker")

@@ -18,9 +18,42 @@ const FULL_HD_CAMERA: CameraCapabilities = {
 beforeEach(() => localStorage.clear());
 
 describe("camera quality picker", () => {
+  it("shows the applied fallback when capture could not deliver the requested combined mode", () => {
+    storeCameraQuality("1080p60");
+
+    const view = render(
+      <CameraQualityPicker
+        quality="1080p60"
+        capabilities={FULL_HD_CAMERA}
+        busy={true}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    view.rerender(
+      <CameraQualityPicker
+        quality="1080p30"
+        capabilities={FULL_HD_CAMERA}
+        busy={false}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Camera quality" })).toHaveProperty(
+      "value",
+      "1080p30",
+    );
+  });
+
   it("offers only the default while camera capabilities are unknown", () => {
     const onSelect = vi.fn();
-    render(<CameraQualityPicker capabilities={null} busy={false} onSelect={onSelect} />);
+    render(
+      <CameraQualityPicker
+        quality={loadCameraQuality()}
+        capabilities={null}
+        busy={false}
+        onSelect={onSelect}
+      />,
+    );
 
     const picker = screen.getByRole("combobox", { name: "Camera quality" });
 
@@ -38,6 +71,7 @@ describe("camera quality picker", () => {
   it("hides 60 fps when the active camera only reports 30 fps", () => {
     render(
       <CameraQualityPicker
+        quality={loadCameraQuality()}
         capabilities={{ ...FULL_HD_CAMERA, frameRate: { min: 1, max: 30 } }}
         busy={false}
         onSelect={vi.fn()}
@@ -51,9 +85,16 @@ describe("camera quality picker", () => {
   it("preserves an unavailable preferred mode until the camera reports its bounds", () => {
     storeCameraQuality("1080p60");
     const onSelect = vi.fn();
+
     const view = render(
-      <CameraQualityPicker capabilities={null} busy={false} onSelect={onSelect} />,
+      <CameraQualityPicker
+        quality={loadCameraQuality()}
+        capabilities={null}
+        busy={false}
+        onSelect={onSelect}
+      />,
     );
+
     const saved = screen.getByRole("option", { name: "1080p60 (unavailable)" });
 
     expect(saved.hasAttribute("disabled")).toBe(true);
@@ -62,7 +103,12 @@ describe("camera quality picker", () => {
     expect(onSelect).not.toHaveBeenCalled();
 
     view.rerender(
-      <CameraQualityPicker capabilities={FULL_HD_CAMERA} busy={false} onSelect={onSelect} />,
+      <CameraQualityPicker
+        quality={loadCameraQuality()}
+        capabilities={FULL_HD_CAMERA}
+        busy={false}
+        onSelect={onSelect}
+      />,
     );
     const supported = screen.getByRole("option", { name: "1080p60" });
 
@@ -75,8 +121,14 @@ describe("camera quality picker", () => {
   it("passes a selected supported mode to the controller and remembers its result on remount", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn((quality: CameraQuality) => storeCameraQuality(quality));
+
     const view = render(
-      <CameraQualityPicker capabilities={FULL_HD_CAMERA} busy={false} onSelect={onSelect} />,
+      <CameraQualityPicker
+        quality={loadCameraQuality()}
+        capabilities={FULL_HD_CAMERA}
+        busy={false}
+        onSelect={onSelect}
+      />,
     );
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Camera quality" }), "1080p30");
@@ -84,7 +136,14 @@ describe("camera quality picker", () => {
     expect(onSelect).toHaveBeenCalledExactlyOnceWith("1080p30");
     expect(loadCameraQuality()).toBe("1080p30");
     view.unmount();
-    render(<CameraQualityPicker capabilities={FULL_HD_CAMERA} busy={false} onSelect={onSelect} />);
+    render(
+      <CameraQualityPicker
+        quality={loadCameraQuality()}
+        capabilities={FULL_HD_CAMERA}
+        busy={false}
+        onSelect={onSelect}
+      />,
+    );
 
     const saved = screen.getByRole("option", { name: "1080p30" });
 
@@ -94,7 +153,14 @@ describe("camera quality picker", () => {
   it("waits while a camera change is in progress", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    render(<CameraQualityPicker capabilities={FULL_HD_CAMERA} busy={true} onSelect={onSelect} />);
+    render(
+      <CameraQualityPicker
+        quality={loadCameraQuality()}
+        capabilities={FULL_HD_CAMERA}
+        busy={true}
+        onSelect={onSelect}
+      />,
+    );
     const picker = screen.getByRole("combobox", { name: "Camera quality" });
 
     expect(picker.hasAttribute("disabled")).toBe(true);
@@ -115,10 +181,16 @@ it("places the optional camera quality picker directly after the camera device",
     cameraOptional: false,
     onSelect: vi.fn(),
   };
+
   const view = render(
     <DevicePickers
       {...props}
-      cameraQuality={{ capabilities: FULL_HD_CAMERA, busy: false, onSelect: vi.fn() }}
+      cameraQuality={{
+        quality: loadCameraQuality(),
+        capabilities: FULL_HD_CAMERA,
+        busy: false,
+        onSelect: vi.fn(),
+      }}
     />,
   );
 

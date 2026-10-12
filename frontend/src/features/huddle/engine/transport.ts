@@ -157,6 +157,7 @@ export interface CallTransport {
   /** On publishes a camera track; off unpublishes it, releasing the device. */
   setCamera(enabled: boolean): Promise<void>;
   cameraCapabilities(): CameraCapabilities | null;
+  cameraQuality(): CameraQuality;
   /** Applies capture and encoding together without rejoining; a muted publication stays muted. */
   setCameraQuality(quality: CameraQuality): Promise<void>;
   /**

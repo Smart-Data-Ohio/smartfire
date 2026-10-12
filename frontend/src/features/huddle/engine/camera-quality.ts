@@ -64,7 +64,7 @@ export function knownCameraQuality(value: string | null): CameraQuality | null {
 }
 
 /** Bounds exclude impossible targets; every remaining candidate needs capture verification. */
-export function supportedCameraQualities(
+export function cameraQualityCandidates(
   capabilities: CameraCapabilities | null,
 ): readonly CameraQuality[] {
   return CAMERA_QUALITIES.filter((quality) => {

@@ -231,12 +231,32 @@ describe("connection details sampling", () => {
 });
 
 describe("camera quality", () => {
+  it("persists and displays the camera profile actually delivered", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("transport missing");
+    const applied = vi.spyOn(transport, "cameraQuality").mockReturnValue("1080p30");
+
+    try {
+      await controller.setCameraQuality("1080p60");
+      expect(localStorage.getItem("campfire.huddle.cameraQuality")).toBe("1080p30");
+      expect(callStore.getState().cameraQuality).toBe("1080p30");
+    } finally {
+      applied.mockRestore();
+      await controller.leave();
+    }
+  });
+
   it("applies and remembers a quality while keeping the connected room and microphone mute", async () => {
     const { controller, transports, calls } = harness();
     await controller.join(ROOM, "Lounge", null);
     const transport = transports[0];
+
     if (transport === undefined) throw new Error("no fake transport");
     const apply = vi.spyOn(transport, "setCameraQuality");
+
     try {
       await controller.toggleCamera();
       await controller.toggleMute();
@@ -269,11 +289,13 @@ describe("camera quality", () => {
     const { controller, transports } = harness();
     await controller.join(ROOM, "Lounge", null);
     const transport = transports[0];
+
     if (transport === undefined) throw new Error("no fake transport");
     const pending = Promise.withResolvers<void>();
     const apply = vi.spyOn(transport, "setCameraQuality").mockImplementation(() => pending.promise);
     const toggle = vi.spyOn(transport, "setCamera");
     const switchDevice = vi.spyOn(transport, "switchDevice");
+
     try {
       const changing = controller.setCameraQuality("1080p60");
       expect(callStore.getState().busy.camera).toBe(true);
@@ -308,17 +330,25 @@ describe("camera quality", () => {
     const hdCapabilities = { width: { max: 1280 }, height: { max: 720 }, frameRate: { max: 30 } };
     const fullHdRead = vi.spyOn(fullHd, "getCapabilities");
     const hdRead = vi.spyOn(hd, "getCapabilities").mockReturnValue(hdCapabilities);
+
     const streamFor = (track: VideoMediaStub): MediaStream => {
       const stream: unknown = Reflect.construct(MediaStream, [[track]]);
+
       if (!(stream instanceof MediaStream)) throw new Error("native preview stream required");
+
       return stream;
     };
+
     let next = streamFor(fullHd);
+
     const capture = vi.fn(async (constraints: MediaStreamConstraints) => {
       if (constraints.audio !== false) throw new Error("no microphone in preview test");
+
       return next;
     });
+
     const { controller } = harness({ shouldCheckDevices: async () => true, getUserMedia: capture });
+
     try {
       await controller.join(ROOM, "Lounge", null);
       await controller.selectDevice("videoinput", "full-hd-camera");

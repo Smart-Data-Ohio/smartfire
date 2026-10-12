@@ -38,6 +38,7 @@ export default function PrejoinDialog() {
   const devices = useCall((state) => state.devices);
   const meter = useCall((state) => state.meter);
   const cameraCapabilities = useCall((state) => state.cameraCapabilities);
+  const cameraQuality = useCall((state) => state.cameraQuality);
 
   if (prejoin === null) {
     return null;
@@ -83,6 +84,7 @@ export default function PrejoinDialog() {
           onSelect={(kind, deviceId) => void callController.selectDevice(kind, deviceId)}
           cameraOptional
           cameraQuality={{
+            quality: cameraQuality,
             capabilities: cameraCapabilities,
             busy: false,
             onSelect: (quality) => void callController.setCameraQuality(quality),

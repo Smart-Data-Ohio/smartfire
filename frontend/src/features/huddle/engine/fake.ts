@@ -11,6 +11,7 @@ import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { store } from "../../../store/store.ts";
 import { DEFAULT_AUDIO_BITRATE, microphonePreset } from "./audio-quality.ts";
 import type { CameraCapabilities, CameraQuality } from "./camera-quality.ts";
+import { loadCameraQuality } from "./preferences.ts";
 import { DEFAULT_SHARE_QUALITY } from "./screen-quality.ts";
 import {
   type CallParticipant,
@@ -418,6 +419,10 @@ export class FakeTransport implements CallTransport {
           frameRate: { min: 1, max: 60 },
         }
       : null;
+  }
+
+  cameraQuality(): CameraQuality {
+    return loadCameraQuality();
   }
 
   async setCameraQuality(_quality: CameraQuality): Promise<void> {
