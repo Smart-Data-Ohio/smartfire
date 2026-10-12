@@ -361,6 +361,89 @@ describe("ThreadPane, private", () => {
     expect(screen.getByRole("button", { name: "Members: 3 people" })).toBeTruthy();
   });
 
+  it("follows people others add or remove while the list is open", async () => {
+    stubPane();
+    privatePane(2);
+    let roster = [member(2), member(VIEWER)];
+
+    vi.spyOn(actions.threads, "accessMembers").mockImplementation(() =>
+      Promise.resolve({ members: roster, users: [] }),
+    );
+    const user = userEvent.setup();
+
+    await mount("/app/r/4/t/9");
+    await user.click(await screen.findByRole("button", { name: "Members: 2 people" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Private thread members" });
+
+    await waitFor(() => expect(within(dialog).getAllByRole("listitem")).toHaveLength(2));
+
+    // Grace added Katherine: every reader gets the thread's record again.
+    roster = [member(2), member(VIEWER), member(3)];
+    act(() => {
+      store.setState((state) => ({
+        threads: {
+          ...state.threads,
+          9: { ...threadFixture(9, { creatorId: 2, visibility: "private" }) },
+        },
+      }));
+    });
+
+    await waitFor(() => expect(within(dialog).getAllByRole("listitem")).toHaveLength(3));
+    expect(screen.getByRole("button", { name: "Members: 3 people" })).toBeTruthy();
+  });
+
+  it("keeps an invite when a list read sent before it answers after it", async () => {
+    stubPane();
+    privatePane(2);
+    vi.spyOn(panes, "members").mockResolvedValue({
+      members: [VIEWER, 2, 3].map((userId) => ({
+        userId,
+        presence: "online" as const,
+        statusText: null,
+        starred: false,
+      })),
+      users: [],
+    });
+
+    const before = { members: [member(2), member(VIEWER)], users: [] };
+    let answerLate: (list: typeof before) => void = () => undefined;
+
+    vi.spyOn(actions.threads, "accessMembers")
+      .mockResolvedValueOnce(before)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerLate = resolve;
+          }),
+      );
+
+    vi.spyOn(actions.threads, "invite").mockResolvedValue({
+      members: [member(2), member(VIEWER), member(3)],
+      users: [],
+    });
+
+    const user = userEvent.setup();
+
+    await mount("/app/r/4/t/9");
+    // Opening the list reads it again; that read is held back.
+    await user.click(await screen.findByRole("button", { name: "Members: 2 people" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Private thread members" });
+
+    await user.type(within(dialog).getByRole("combobox", { name: "Add people" }), "kath");
+    await user.click(await within(dialog).findByRole("option", { name: /Katherine Johnson/ }));
+    await waitFor(() => expect(within(dialog).getAllByRole("listitem")).toHaveLength(3));
+
+    await act(async () => {
+      answerLate(before);
+      await Promise.resolve();
+    });
+
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Members: 3 people" })).toBeTruthy();
+  });
+
   it("says why an invite was refused", async () => {
     stubPane();
     privatePane(2);

@@ -5,7 +5,7 @@
  * Access is separate from following: being added doesn't make anyone follow, and unfollowing
  * doesn't take access away.
  */
-import { type KeyboardEvent, useCallback, useEffect, useId, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import type { ThreadAccessMember } from "../../gen/ThreadAccessMember.ts";
 import { useStore } from "../../store/store.ts";
 import { panes } from "../../sync/panes.ts";
@@ -64,10 +64,22 @@ interface Held {
   readonly error: string | null;
 }
 
-/** Loads a private thread's members while `enabled`, again on `reload`. */
+/**
+ * Loads a private thread's members while `enabled`, again on `reload`, and again whenever the
+ * thread's record changes: the server sends every reader a `thread.updated` when someone is added
+ * or removed (by anyone, or by a mention in a reply), and the record carries no member count to
+ * tell those apart from other changes.
+ *
+ * Reads and the viewer's own changes are ordered: `replace` and `drop` carry what the server said
+ * after a change, so a read sent before them can't land over them.
+ */
 export function useThreadAccess(threadId: number, enabled: boolean): ThreadAccess {
   const [held, setHeld] = useState<Held>({ threadId, members: null, error: null });
   const [ticket, setTicket] = useState(0);
+  // Bumped by every change applied here; a read lands only if none came after it was sent.
+  const revision = useRef(0);
+  const thread = useStore((state) => state.threads[threadId]);
+  const seen = useRef(thread);
   // Another thread's list never shows under this one while its own loads.
   const current = held.threadId === threadId ? held : { threadId, members: null, error: null };
 
@@ -78,13 +90,15 @@ export function useThreadAccess(threadId: number, enabled: boolean): ThreadAcces
     }
 
     let live = true;
+    const sent = revision.current;
+    const landed = () => live && revision.current === sent;
 
     actions.threads.accessMembers(threadId).then(
       (list) => {
-        if (live) setHeld({ threadId, members: list.members, error: null });
+        if (landed()) setHeld({ threadId, members: list.members, error: null });
       },
       (error: Error) => {
-        if (live) {
+        if (landed()) {
           setHeld((last) => ({
             threadId,
             members: last.threadId === threadId ? last.members : null,
@@ -101,19 +115,31 @@ export function useThreadAccess(threadId: number, enabled: boolean): ThreadAcces
 
   const reload = useCallback(() => setTicket((count) => count + 1), []);
 
+  useEffect(() => {
+    const last = seen.current;
+
+    seen.current = thread;
+
+    if (enabled && last !== undefined && thread !== undefined && last !== thread) {
+      reload();
+    }
+  }, [thread, enabled, reload]);
+
   const replace = useCallback(
-    (members: readonly ThreadAccessMember[]) => setHeld({ threadId, members, error: null }),
+    (members: readonly ThreadAccessMember[]) => {
+      revision.current += 1;
+      setHeld({ threadId, members, error: null });
+    },
     [threadId],
   );
 
-  const drop = useCallback(
-    (userId: number) =>
-      setHeld((last) => ({
-        ...last,
-        members: last.members?.filter((member) => member.userId !== userId) ?? null,
-      })),
-    [],
-  );
+  const drop = useCallback((userId: number) => {
+    revision.current += 1;
+    setHeld((last) => ({
+      ...last,
+      members: last.members?.filter((member) => member.userId !== userId) ?? null,
+    }));
+  }, []);
 
   return { members: current.members, error: current.error, reload, replace, drop };
 }
