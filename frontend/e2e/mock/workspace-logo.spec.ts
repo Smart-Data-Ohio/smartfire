@@ -49,11 +49,21 @@ const LOGOS = [
 ] as const;
 
 /**
- * What hides part of the picture `image` draws: its own box under `object-fit`, or a rounded
- * corner of the image or of a box around it that clips. Empty when the whole picture shows.
+ * What hides part of the picture `image` draws: its own box under `object-fit`, a rounded corner
+ * of the image or of a box around it that clips, or anything painted over it. Empty when the
+ * whole picture shows.
  */
 async function hiddenParts(image: Locator): Promise<string[]> {
-  await expect(image).toHaveJSProperty("complete", true);
+  // `complete` is true for a failed load too, which would leave nothing to measure.
+  await image.evaluate((element: HTMLImageElement) => element.decode());
+
+  const natural = await image.evaluate((element: HTMLImageElement) => [
+    element.naturalWidth,
+    element.naturalHeight,
+  ]);
+
+  expect(Math.min(...natural), "the logo's decoded size").toBeGreaterThan(0);
+  await image.scrollIntoViewIfNeeded();
 
   return image.evaluate((element: HTMLImageElement) => {
     const px = (value: string) => Number.parseFloat(value) || 0;
@@ -146,6 +156,67 @@ async function hiddenParts(image: Locator): Promise<string[]> {
       if (parentStyle.overflowX !== "visible" || parentStyle.overflowY !== "visible") {
         clips(parent, (side) => borderWidth(parentStyle, side));
       }
+    }
+
+    // Whether a box, or its ::before or ::after, paints anything: a transparent wrapper doesn't.
+    const clear = (colour: string) => colour === "transparent" || /[,/]\s*0\)$/.test(colour);
+
+    const paints = (box: CSSStyleDeclaration) =>
+      box.opacity !== "0" &&
+      box.visibility !== "hidden" &&
+      (!clear(box.backgroundColor) ||
+        box.backgroundImage !== "none" ||
+        ["Top", "Right", "Bottom", "Left"].some(
+          (side) =>
+            borderWidth(box, side) > 0 &&
+            !clear(box.getPropertyValue(`border-${side.toLowerCase()}-color`)),
+        ));
+
+    const pseudoPaints = (box: Element) =>
+      ["::before", "::after"].some((pseudo) => {
+        const pseudoStyle = getComputedStyle(box, pseudo);
+
+        return (
+          pseudoStyle.content !== "none" &&
+          (paints(pseudoStyle) || /^".+"$/.test(pseudoStyle.content))
+        );
+      });
+
+    const ownPaints = (box: Element) =>
+      paints(getComputedStyle(box)) ||
+      ["img", "svg", "canvas", "video"].includes(box.localName) ||
+      [...box.childNodes].some((node) => node.nodeType === 3 && node.textContent?.trim());
+
+    // Anything hit before the image at a point of its picture is painted over it there. Every
+    // box is made hittable for the check, so `pointer-events: none` can't hide an overlay.
+    const hittable = document.createElement("style");
+    hittable.textContent = "* { pointer-events: auto !important; }";
+    document.head.append(hittable);
+
+    try {
+      for (let i = 0; i <= 8; i++) {
+        for (let j = 0; j <= 8; j++) {
+          const x = x0 + ((x1 - x0) * i) / 8;
+          const y = y0 + ((y1 - y0) * j) / 8;
+          const stack = document.elementsFromPoint(x, y);
+          const at = stack.indexOf(element);
+
+          if (at === -1) {
+            hidden.push("part of it is off screen or clipped away");
+            continue;
+          }
+
+          for (const over of stack.slice(0, at)) {
+            const covers = over.contains(element)
+              ? pseudoPaints(over)
+              : ownPaints(over) || pseudoPaints(over);
+
+            if (covers) hidden.push(`${name(over).replace(/'s$/, "")} covers part of it`);
+          }
+        }
+      }
+    } finally {
+      hittable.remove();
     }
 
     return [...new Set(hidden)];
@@ -243,8 +314,19 @@ for (const { label, file } of LOGOS) {
     await expectWhole(page.locator(".auth-view-logo"), "sign-in page");
     await page.goto(`/app/invite/${MOCK_INVITE}`);
     await expectWhole(page.locator(".auth-view-logo"), "invite page");
-    await page.goto(`/app/invite/${MOCK_DEAD_INVITES.expired}`);
-    await expectWhole(page.locator(".auth-view-invite-mark .auth-view-logo"), "dead invite page");
+
+    for (const [refusal, token] of Object.entries(MOCK_DEAD_INVITES)) {
+      await page.goto(`/app/invite/${token}`);
+      const mark = page.locator(".auth-view-invite-mark");
+
+      for (const theme of THEMES) {
+        await page.emulateMedia({ colorScheme: theme });
+        await closeUp(mark, `dead-invite-${refusal}-${slug}`, theme);
+      }
+
+      await page.emulateMedia({ colorScheme: "light" });
+      await expectWhole(mark.locator(".auth-view-logo"), `${refusal} invite page`);
+    }
 
     await page.setViewportSize(PHONE);
     await page.goto("/app/");
