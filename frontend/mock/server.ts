@@ -1621,6 +1621,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
         if (boardControl !== null) return boardControl;
 
+        const threadControl = threads.control(action, body);
+
+        if (threadControl !== null) return threadControl;
+
         const handled = huddles.control(action, {
           int,
           text,

@@ -357,3 +357,70 @@ it("keeps creator invitations after leaving without revealing the roster or cont
 
   expect((await server.handle({ method: "GET", path })).status).toBe(200);
 });
+
+it("lets the controls start a private thread as someone else, share it and take it back", async () => {
+  const { server } = harness();
+  await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+  const events = collect(server, [`room:${rooms.general}`]);
+
+  const hidden = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "Maya's plans" },
+    201,
+  );
+
+  const shared = await expectStatus<{ threadId: number }>(
+    server,
+    "POST",
+    "/__mock/private-thread",
+    { roomId: rooms.general, creatorId: users.maya, name: "With Riel", withViewer: true },
+    201,
+  );
+
+  const readable = async (threadId: number, userId: number) =>
+    field(
+      (await send(server, "POST", "/__mock/thread-readable", { threadId, userId })).json,
+      "readable",
+    );
+
+  expect(await readable(hidden.threadId, users.maya)).toBe(true);
+  expect(await readable(hidden.threadId, viewer)).toBe(false);
+  expect(await readable(shared.threadId, viewer)).toBe(true);
+
+  // The viewer only hears about the one shared with them.
+  const created = events.filter((event) => event.type === "thread.created");
+
+  expect(created.map((event) => event.type === "thread.created" && event.data.id)).toEqual([
+    shared.threadId,
+  ]);
+
+  const list = await get<ThreadList>(server, `/api/v1/rooms/${rooms.general}/threads?filter=all`);
+
+  expect(list.threads.map(({ thread }) => thread.id)).toContain(shared.threadId);
+  expect(list.threads.map(({ thread }) => thread.id)).not.toContain(hidden.threadId);
+
+  const userEvents = collect(server, ["user"]);
+
+  await expectStatus(
+    server,
+    "POST",
+    "/__mock/thread-access",
+    { threadId: shared.threadId, userId: viewer, added: false },
+    204,
+  );
+
+  expect(userEvents.some((event) => event.type === "thread.removed")).toBe(true);
+  expect(await readable(shared.threadId, viewer)).toBe(false);
+
+  await expectStatus(
+    server,
+    "POST",
+    "/__mock/thread-access",
+    { threadId: hidden.threadId, userId: viewer, added: true },
+    200,
+  );
+
+  expect(await readable(hidden.threadId, viewer)).toBe(true);
+});
